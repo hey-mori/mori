@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
+import { createDeterministicQuickPassProvider } from "../analysis";
 import { normalizeAiConversationText, normalizeManualNote, normalizeUrlSource } from "../import";
 import { createMoriPackageFromSession } from "../mori-package";
 import { createSessionDraft } from "../session/createSessionDraft";
@@ -93,6 +94,60 @@ describe("BrowserDraftRepository", () => {
     expect(repository.listSessionImports(draft.session.id)).toHaveLength(0);
   });
 
+  it("persists, loads, and clears analysis results per session", async () => {
+    const storage = new MemoryKeyValueStorage();
+    const repository = new BrowserDraftRepository(storage);
+    const draft = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Analysis test session",
+        projectName: "Analysis Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+
+    const note = normalizeManualNote({
+      projectId: draft.project.id,
+      sessionId: draft.session.id,
+      title: "Risk",
+      note: "위험: 인증 토큰 회전이 미정. TODO: rotate.",
+      capturedAt: "2026-05-12T13:05:00+09:00",
+    });
+    repository.addSessionImport(draft.session.id, note);
+
+    const provider = createDeterministicQuickPassProvider();
+    const events = [note.events[0]];
+    const result = await provider.analyze({
+      project: draft.project,
+      session: draft.session,
+      sources: [note.source],
+      events,
+      now: "2026-05-12T13:30:00+09:00",
+    });
+    expect(result.issues.length).toBeGreaterThan(0);
+
+    const saved = repository.saveSessionAnalysis(draft.session.id, result);
+    expect(saved.adapter).toBe("browser-local-storage");
+
+    const loaded = repository.loadSessionAnalysis(draft.session.id);
+    expect(loaded?.result.runId).toBe(result.runId);
+    expect(loaded?.result.issues.length).toBe(result.issues.length);
+
+    repository.clearSessionAnalysis(draft.session.id);
+    expect(repository.loadSessionAnalysis(draft.session.id)).toBeNull();
+  });
+
+  it("ignores corrupt analysis JSON in storage", () => {
+    const storage = new MemoryKeyValueStorage();
+    storage.setItem("mori.sessionAnalysis.sess-bad", "{not-valid}");
+    const repository = new BrowserDraftRepository(storage);
+    expect(repository.loadSessionAnalysis("sess-bad")).toBeNull();
+  });
+
   it("clears the active session draft including its imports", () => {
     const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
     const draft = repository.saveCurrentSessionDraft(
@@ -124,5 +179,6 @@ describe("BrowserDraftRepository", () => {
     expect(repository.loadCurrentSessionDraft()).toBeNull();
     expect(repository.listSessionImports(draft.session.id)).toHaveLength(0);
     expect(repository.listStoredSessions()).toHaveLength(0);
+    expect(repository.loadSessionAnalysis(draft.session.id)).toBeNull();
   });
 });

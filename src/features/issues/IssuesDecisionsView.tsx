@@ -1,11 +1,19 @@
 import { Calendar, FileText, Filter, KanbanSquare, List, MoreHorizontal, Plus, Sparkles, Table2 } from "lucide-react";
+import { useEffect } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { moriMockSession } from "../../domain/mock-data";
 import type { Decision, Issue, IssueStatus } from "../../domain/types";
 import { issueStatusLabels, priorityLabels } from "../../domain/constants";
 import { formatDate, formatTime } from "../../lib/formatting/time";
+import {
+  selectHasRealAnalysis,
+  selectSessionMode,
+  selectSessionView,
+  useMoriSessionStore,
+} from "../../app/sessionStore";
+import { useMoriAppStore } from "../../app/store";
 
 const issueColumns: Array<{ status: IssueStatus; tone: string }> = [
   { status: "open", tone: "red" },
@@ -15,6 +23,27 @@ const issueColumns: Array<{ status: IssueStatus; tone: string }> = [
 ];
 
 export function IssuesDecisionsView() {
+  const hydrate = useMoriSessionStore((state) => state.hydrate);
+  const initialized = useMoriSessionStore((state) => state.initialized);
+  const view = useMoriSessionStore(selectSessionView);
+  const mode = useMoriSessionStore(selectSessionMode);
+  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
+  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
+  const analysisError = useMoriSessionStore((state) => state.analysisError);
+  const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
+  const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
+  const imports = useMoriSessionStore((state) => state.imports);
+  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+
+  useEffect(() => {
+    if (!initialized) hydrate();
+  }, [initialized, hydrate]);
+
+  const issues = view.issues;
+  const decisions = view.decisions;
+  const showEmptyDraft = mode === "draft" && !hasAnalysis;
+  const canRun = imports.length > 0 && analysisStatus !== "running";
+
   return (
     <div className="page page-tight">
       <PageHeader
@@ -22,13 +51,23 @@ export function IssuesDecisionsView() {
         subtitle="작업 중 발견된 이슈와 중요한 결정을 한 곳에서 관리하세요."
         right={
           <div className="toolbar">
-            <Button>Mori 앱 기획</Button>
-            <Button icon={Calendar}>2026.05.12 (화)</Button>
+            <Button>{view.project.name}</Button>
+            <Button icon={Calendar}>{formatDate(view.session.startedAt)}</Button>
             <Button icon={Filter}>필터</Button>
             <Button variant="primary" icon={Plus}>새 항목</Button>
           </div>
         }
       />
+      <SessionModeBanner />
+      {mode === "draft" ? (
+        <AnalysisBanner
+          status={analysisStatus}
+          providerLabel={analysisProviderLabel}
+          error={analysisError}
+          canRun={canRun}
+          onRun={() => runQuickPass()}
+        />
+      ) : null}
       <div className="tabs">
         <button className="active" type="button"><KanbanSquare size={16} /> Issue Garden</button>
         <button type="button"><Table2 size={16} /> Decision Log</button>
@@ -37,30 +76,85 @@ export function IssuesDecisionsView() {
         <Button icon={List}>리스트</Button>
         <Button icon={Sparkles}>AI 추천 보기</Button>
       </div>
-      <div className="issue-layout">
-        <section className="issue-main">
-          <h2>Issue Garden</h2>
-          <div className="issue-board">
-            {issueColumns.map((column) => {
-              const issues = moriMockSession.issues.filter((issue) => issue.status === column.status);
-              return (
-                <div className="issue-column" key={column.status}>
-                  <header>
-                    <h3>
-                      <i className={`legend-dot ${column.tone}`} />
-                      {issueStatusLabels[column.status]} <span>{issues.length}</span>
-                    </h3>
-                    <Button icon={Plus} />
-                  </header>
-                  {issues.map((issue) => <IssueCard issue={issue} key={issue.id} />)}
-                </div>
-              );
-            })}
-          </div>
-          <DecisionLog />
-        </section>
-        <IssueInsights />
+      {showEmptyDraft ? (
+        <div className="evidence-empty">
+          <Sparkles size={28} />
+          <h2>Quick Pass를 실행해 이슈와 결정을 추출하세요</h2>
+          <p>현재 세션에 가져온 소스가 있다면 위 배너의 “Run Quick Pass” 버튼을 사용할 수 있습니다.</p>
+          {imports.length === 0 ? (
+            <Button variant="primary" icon={Plus} onClick={() => setCurrentView("sources")}>
+              소스 가져오기로 이동
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="issue-layout">
+          <section className="issue-main">
+            <h2>Issue Garden</h2>
+            <div className="issue-board">
+              {issueColumns.map((column) => {
+                const columnIssues = issues.filter((issue) => issue.status === column.status);
+                return (
+                  <div className="issue-column" key={column.status}>
+                    <header>
+                      <h3>
+                        <i className={`legend-dot ${column.tone}`} />
+                        {issueStatusLabels[column.status]} <span>{columnIssues.length}</span>
+                      </h3>
+                      <Button icon={Plus} />
+                    </header>
+                    {columnIssues.map((issue) => <IssueCard issue={issue} key={issue.id} />)}
+                    {columnIssues.length === 0 ? (
+                      <div className="issue-column-empty">없음</div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+            <DecisionLog decisions={decisions} />
+          </section>
+          <IssueInsights issues={issues} hasAnalysis={hasAnalysis} providerLabel={analysisProviderLabel} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AnalysisBanner({
+  status,
+  providerLabel,
+  error,
+  canRun,
+  onRun,
+}: {
+  status: string;
+  providerLabel: string | null;
+  error: string | null;
+  canRun: boolean;
+  onRun: () => void;
+}) {
+  return (
+    <div className={`analysis-banner status-${status}`}>
+      <div>
+        <strong>Quick Pass</strong>
+        <span>
+          {status === "running"
+            ? "분석 중..."
+            : status === "succeeded"
+              ? `완료 (${providerLabel ?? "deterministic"})`
+              : status === "failed"
+                ? `실패: ${error ?? "알 수 없는 오류"}`
+                : "현재 세션의 가져온 소스로 이슈/결정을 추출합니다."}
+        </span>
       </div>
+      <Button
+        variant="primary"
+        icon={Sparkles}
+        onClick={onRun}
+        disabled={!canRun}
+      >
+        Run Quick Pass
+      </Button>
     </div>
   );
 }
@@ -78,22 +172,24 @@ function IssueCard({ issue }: { issue: Issue }) {
         <span><Calendar size={14} /> {formatDate(issue.createdAt)}</span>
         <span>이벤트 {issue.sourceEventIds.length}</span>
         <span>결정 {issue.relatedDecisionIds.length}</span>
-        <b>KM</b>
+        <Badge tone={issue.trustLevel === "verified" ? "green" : issue.trustLevel === "observed" ? "blue" : "purple"}>
+          {issue.trustLevel}
+        </Badge>
       </footer>
     </article>
   );
 }
 
-function IssueInsights() {
-  const open = moriMockSession.issues.filter((issue) => issue.status === "open").length;
-  const progress = moriMockSession.issues.filter((issue) => issue.status === "inProgress").length;
-  const resolved = moriMockSession.issues.filter((issue) => issue.status === "resolved").length;
-  const watching = moriMockSession.issues.filter((issue) => issue.status === "watching").length;
+function IssueInsights({ issues, hasAnalysis, providerLabel }: { issues: Issue[]; hasAnalysis: boolean; providerLabel: string | null }) {
+  const open = issues.filter((issue) => issue.status === "open").length;
+  const progress = issues.filter((issue) => issue.status === "inProgress").length;
+  const resolved = issues.filter((issue) => issue.status === "resolved").length;
+  const watching = issues.filter((issue) => issue.status === "watching").length;
 
   return (
     <aside className="issue-sidebar">
       <h2>이슈 통계</h2>
-      <div className="donut"><span>{moriMockSession.issues.length}<small>Total</small></span></div>
+      <div className="donut"><span>{issues.length}<small>Total</small></span></div>
       <dl className="stats-list">
         <div><dt>Open</dt><dd>{open}</dd></div>
         <div><dt>In Progress</dt><dd>{progress}</dd></div>
@@ -102,15 +198,18 @@ function IssueInsights() {
       </dl>
       <Button icon={FileText}>이슈 리포트 보기</Button>
       <div className="highlight-box">
-        <h3>AI 추천</h3>
-        <p>유사 이슈 병합, 우선순위 제안, 다음 액션 추천, Linear/Jira/Todo export는 backend boundary 이후 연결합니다.</p>
-        <Button icon={Sparkles}>추천 확인</Button>
+        <h3>출처</h3>
+        <p>
+          {hasAnalysis
+            ? `현재 표시 중인 이슈/결정은 ${providerLabel ?? "Quick Pass"}가 가져온 소스로부터 추출한 결과입니다.`
+            : "데모 모드에서는 정적 mock 데이터를 보여줍니다. 실제 세션을 시작하고 Quick Pass를 실행하면 가져온 소스 기반의 분석 결과가 표시됩니다."}
+        </p>
       </div>
     </aside>
   );
 }
 
-function DecisionLog() {
+function DecisionLog({ decisions }: { decisions: Decision[] }) {
   return (
     <section className="decision-log">
       <div className="section-heading">
@@ -124,23 +223,27 @@ function DecisionLog() {
           <Button icon={MoreHorizontal} />
         </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>결정 항목</th>
-            <th>결정 시각</th>
-            <th>중요도</th>
-            <th>결정 내용</th>
-            <th>이유</th>
-            <th>폐기한 대안</th>
-            <th>영향</th>
-            <th>상태</th>
-          </tr>
-        </thead>
-        <tbody>
-          {moriMockSession.decisions.map((decision) => <DecisionRow decision={decision} key={decision.id} />)}
-        </tbody>
-      </table>
+      {decisions.length === 0 ? (
+        <div className="decision-empty">표시할 결정이 없습니다.</div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>결정 항목</th>
+              <th>결정 시각</th>
+              <th>중요도</th>
+              <th>결정 내용</th>
+              <th>이유</th>
+              <th>폐기한 대안</th>
+              <th>영향</th>
+              <th>상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {decisions.map((decision) => <DecisionRow decision={decision} key={decision.id} />)}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import type { Project, Session, SourceRef, TimelineEvent } from "../../domain/types";
+import type { MoriAnalysisResult } from "../analysis";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 
@@ -34,6 +35,13 @@ export type StoredSessionImport = {
   adapter: "browser-local-storage";
 };
 
+export type StoredSessionAnalysis = {
+  sessionId: string;
+  result: MoriAnalysisResult;
+  savedAt: string;
+  adapter: "browser-local-storage";
+};
+
 export type MoriDraftRepository = {
   saveCurrentSessionDraft: (draft: Omit<StoredSessionDraft, "savedAt" | "adapter">) => StoredSessionDraft;
   loadCurrentSessionDraft: () => StoredSessionDraft | null;
@@ -46,6 +54,9 @@ export type MoriDraftRepository = {
   listSessionImports: (sessionId: string) => StoredSessionImport[];
   removeSessionImport: (sessionId: string, importId: string) => void;
   clearSessionImports: (sessionId: string) => void;
+  saveSessionAnalysis: (sessionId: string, result: MoriAnalysisResult) => StoredSessionAnalysis;
+  loadSessionAnalysis: (sessionId: string) => StoredSessionAnalysis | null;
+  clearSessionAnalysis: (sessionId: string) => void;
 };
 
 export type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key"> & {

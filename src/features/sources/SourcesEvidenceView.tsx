@@ -1,9 +1,14 @@
-import { Archive, Link, Search } from "lucide-react";
+import { Archive, Link, RotateCcw, Search, Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
+import {
+  selectHasRealAnalysis,
+  selectSessionMode,
+  selectSessionView,
+  useMoriSessionStore,
+} from "../../app/sessionStore";
 import { getTrustDisplay } from "../../lib/privacy/trust";
 import { ImportPanel } from "../import/ImportPanel";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
@@ -12,6 +17,15 @@ export function SourcesEvidenceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
+  const mode = useMoriSessionStore(selectSessionMode);
+  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
+  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
+  const analysisError = useMoriSessionStore((state) => state.analysisError);
+  const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
+  const analysis = useMoriSessionStore((state) => state.analysis);
+  const imports = useMoriSessionStore((state) => state.imports);
+  const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
+  const clearAnalysis = useMoriSessionStore((state) => state.clearAnalysis);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -25,6 +39,23 @@ export function SourcesEvidenceView() {
       />
       <SessionModeBanner />
       <ImportPanel />
+      {mode === "draft" ? (
+        <QuickPassControl
+          status={analysisStatus}
+          providerLabel={analysisProviderLabel}
+          error={analysisError}
+          canRun={imports.length > 0 && analysisStatus !== "running"}
+          hasAnalysis={hasAnalysis}
+          summary={analysis?.summary.sessionSummary ?? null}
+          issueCount={analysis?.issues.length ?? 0}
+          decisionCount={analysis?.decisions.length ?? 0}
+          nextActionCount={analysis?.nextActions.length ?? 0}
+          confidence={analysis?.confidence ?? null}
+          notes={analysis?.notes ?? []}
+          onRun={() => runQuickPass()}
+          onClear={clearAnalysis}
+        />
+      ) : null}
       {view.sources.length === 0 ? (
         <div className="evidence-empty">
           <Archive size={28} />
@@ -64,6 +95,89 @@ export function SourcesEvidenceView() {
           Inferred는 AI가 소스와 맥락을 바탕으로 만든 이벤트, 이슈, 결정, 관계입니다.
         </p>
       </div>
+    </div>
+  );
+}
+
+function QuickPassControl({
+  status,
+  providerLabel,
+  error,
+  canRun,
+  hasAnalysis,
+  summary,
+  issueCount,
+  decisionCount,
+  nextActionCount,
+  confidence,
+  notes,
+  onRun,
+  onClear,
+}: {
+  status: string;
+  providerLabel: string | null;
+  error: string | null;
+  canRun: boolean;
+  hasAnalysis: boolean;
+  summary: string | null;
+  issueCount: number;
+  decisionCount: number;
+  nextActionCount: number;
+  confidence: number | null;
+  notes: string[];
+  onRun: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className={`analysis-panel status-${status}`}>
+      <div className="analysis-panel-header">
+        <div>
+          <h2>Quick Pass 분석</h2>
+          <p>
+            현재 세션에 가져온 소스와 이벤트로부터 이슈, 결정, 다음 액션을 추출합니다. 기본 제공자는 결정론적
+            로컬 휴리스틱이며, 추후 로컬 LLM 제공자로 교체할 수 있습니다.
+          </p>
+        </div>
+        <div className="analysis-panel-actions">
+          <Button variant="primary" icon={Sparkles} onClick={onRun} disabled={!canRun}>
+            {status === "running" ? "분석 중..." : "Run Quick Pass"}
+          </Button>
+          {hasAnalysis ? (
+            <Button icon={RotateCcw} onClick={onClear}>분석 초기화</Button>
+          ) : null}
+        </div>
+      </div>
+      <div className="analysis-panel-status">
+        <Badge tone={status === "succeeded" ? "green" : status === "failed" ? "red" : status === "running" ? "purple" : "gray"}>
+          {status}
+        </Badge>
+        <span>
+          {status === "succeeded"
+            ? `${providerLabel ?? "deterministic"} · 신뢰도 ${Math.round((confidence ?? 0) * 100)}%`
+            : status === "failed"
+              ? error ?? "Quick Pass failed"
+              : status === "running"
+                ? "Heuristic Quick Pass running..."
+                : hasAnalysis
+                  ? `이전 결과: ${providerLabel ?? "deterministic"}`
+                  : "아직 실행하지 않음"}
+        </span>
+      </div>
+      {hasAnalysis ? (
+        <>
+          {summary ? <p className="analysis-panel-summary">{summary}</p> : null}
+          <ul className="analysis-panel-metrics">
+            <li><strong>{issueCount}</strong><span>이슈</span></li>
+            <li><strong>{decisionCount}</strong><span>결정</span></li>
+            <li><strong>{nextActionCount}</strong><span>다음 액션</span></li>
+          </ul>
+          {notes.length ? (
+            <ul className="analysis-panel-notes">
+              {notes.map((note) => <li key={note}>{note}</li>)}
+            </ul>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

@@ -29,6 +29,8 @@ This repository currently contains the frontend foundation for Mori:
 - Import normalizers for manual notes, URLs, and AI conversation text
 - Import MVP: in-app import panel that persists imports per session and renders them in Sources and Timeline
 - Session view composition that switches between the demo mock session and a real persisted draft session
+- Local Quick Pass analysis: deterministic heuristic provider that extracts issues, decisions, relationships, and next actions from imported sources; results persist per session and render in Issues, Decisions, and Reports
+- Ollama Quick Pass provider boundary with strict JSON prompt template (network-only; not required for tests)
 - Tauri v2 desktop shell foundation with native `.mori v0 JSON` save/open commands
 - SQLite migration catalog, normalized row snapshot mapping, validation, and desktop command boundaries
 
@@ -77,7 +79,7 @@ npm run build
 - SQLite schema, snapshot mapping, and Tauri command boundaries exist; the `rusqlite` runtime runner and real row writes are not implemented yet.
 - Tauri is scaffolded, but this environment could not run Rust checks because `cargo` is unavailable.
 - `.mori` v0 JSON export and desktop save/open commands are implemented; real zip-like packaging is not implemented yet.
-- Local LLM analysis is not implemented yet.
+- Quick Pass currently ships with a deterministic local heuristic. A real local LLM provider (Ollama) is wired through the same boundary but is not the default and is not exercised by tests.
 - Import MVP covers manual notes, URLs, and AI conversation text via the in-app panel; git diff import, file watcher, and browser extension capture are not implemented yet.
 - Browser localStorage is a temporary draft adapter and not final persistence.
 - Native file picker integration is not implemented yet; desktop save uses Mori's default storage directory.
@@ -90,6 +92,7 @@ npm run build
 - [Domain Model](docs/domain-model.md)
 - [Mori Package v0](docs/mori-package-v0.md)
 - [Persistence](docs/persistence.md)
+- [Quick Pass Analysis](docs/quick-pass-analysis.md)
 - [Desktop Shell](docs/desktop-shell.md)
 - [SQLite Migrations](docs/sqlite-migrations.md)
 - [Roadmap](docs/roadmap.md)
@@ -97,7 +100,7 @@ npm run build
 
 ## Next Milestones
 
-1. Local LLM Quick Pass analysis over imported sources
+1. Real local LLM (Ollama) Quick Pass run path inside the UI with provider selection
 2. Implement the `rusqlite` migration runner and SQLite row writes in Rust
 3. Git diff import and native file picker for `.mori v0 JSON` save/open
 4. Zip-like `.mori` package bundling

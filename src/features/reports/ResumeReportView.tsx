@@ -1,14 +1,20 @@
-import { Calendar, ClipboardCopy, FileText, PanelRightOpen, Search } from "lucide-react";
+import { Calendar, ClipboardCopy, FileText, PanelRightOpen, Search, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { createMoriPackageFromSession, serializeMoriPackage } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
+import {
+  selectHasRealAnalysis,
+  selectSessionMode,
+  selectSessionView,
+  useMoriSessionStore,
+} from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
 export function ResumeReportView() {
@@ -16,13 +22,25 @@ export function ResumeReportView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
+  const mode = useMoriSessionStore(selectSessionMode);
+  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
+  const analysis = useMoriSessionStore((state) => state.analysis);
+  const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
+  const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
+  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
+  const imports = useMoriSessionStore((state) => state.imports);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const prompt = buildResumePrompt(view);
+  const prompt = hasAnalysis && analysis ? analysis.summary.resumePrompt : buildResumePrompt(view);
   const openIssues = view.issues.filter((issue) => issue.status !== "resolved");
+  const reportBasis = mode === "demo"
+    ? "demo mock"
+    : hasAnalysis
+      ? `${analysisProviderLabel ?? "Quick Pass"} 분석`
+      : "가져온 세션 데이터 (분석 전)";
 
   return (
     <div className="page">
@@ -39,6 +57,18 @@ export function ResumeReportView() {
         }
       />
       <SessionModeBanner />
+      <div className="report-basis-row">
+        <Badge tone={mode === "demo" ? "orange" : hasAnalysis ? "green" : "purple"}>{reportBasis}</Badge>
+        {mode === "draft" && !hasAnalysis ? (
+          <Button
+            icon={Sparkles}
+            onClick={() => runQuickPass()}
+            disabled={imports.length === 0 || analysisStatus === "running"}
+          >
+            {analysisStatus === "running" ? "Quick Pass 실행 중..." : "Quick Pass 실행"}
+          </Button>
+        ) : null}
+      </div>
       <div className="report-layout">
         <section className="resume-area">
           <div className="resume-card">
@@ -53,7 +83,7 @@ export function ResumeReportView() {
               <Metric title="이벤트" value={view.events.length.toString()} meta="가져온 이벤트 수" />
               <Metric title="다음 액션" value={view.nextActions.length.toString()} meta={`높음 ${view.nextActions.filter((a) => a.priority === "high").length}건`} />
               <Metric title="열린 이슈" value={openIssues.length.toString()} meta="해결 전 항목" />
-              <Metric title="최근 결정" value={view.decisions.length.toString()} meta="제품 방향 결정" />
+              <Metric title="최근 결정" value={view.decisions.length.toString()} meta={hasAnalysis ? "Quick Pass 분석 결과" : "분석 전"} />
             </div>
             <div className="resume-body">
               <div>

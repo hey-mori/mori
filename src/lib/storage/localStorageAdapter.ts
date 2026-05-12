@@ -1,9 +1,11 @@
+import type { MoriAnalysisResult } from "../analysis";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 import type {
   KeyValueStorage,
   MoriDraftRepository,
   StoredMoriPackageDraft,
+  StoredSessionAnalysis,
   StoredSessionDraft,
   StoredSessionImport,
   StoredSessionSummary,
@@ -13,6 +15,7 @@ const CURRENT_SESSION_KEY = "mori.currentSessionDraft";
 const SESSION_PREFIX = "mori.sessionDraft.";
 const PACKAGE_PREFIX = "mori.packageDraft.";
 const IMPORTS_PREFIX = "mori.sessionImports.";
+const ANALYSIS_PREFIX = "mori.sessionAnalysis.";
 
 export class BrowserDraftRepository implements MoriDraftRepository {
   constructor(private readonly storage: KeyValueStorage = window.localStorage) {}
@@ -74,6 +77,7 @@ export class BrowserDraftRepository implements MoriDraftRepository {
   clearStoredSession(sessionId: string): void {
     this.storage.removeItem(`${SESSION_PREFIX}${sessionId}`);
     this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);
+    this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
     const current = this.loadCurrentSessionDraft();
     if (current?.session.id === sessionId) {
       this.storage.removeItem(CURRENT_SESSION_KEY);
@@ -86,6 +90,7 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     if (current) {
       this.storage.removeItem(`${SESSION_PREFIX}${current.session.id}`);
       this.storage.removeItem(`${IMPORTS_PREFIX}${current.session.id}`);
+      this.storage.removeItem(`${ANALYSIS_PREFIX}${current.session.id}`);
     }
   }
 
@@ -125,6 +130,25 @@ export class BrowserDraftRepository implements MoriDraftRepository {
 
   clearSessionImports(sessionId: string): void {
     this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);
+  }
+
+  saveSessionAnalysis(sessionId: string, result: MoriAnalysisResult): StoredSessionAnalysis {
+    const stored: StoredSessionAnalysis = {
+      sessionId,
+      result,
+      savedAt: new Date().toISOString(),
+      adapter: "browser-local-storage",
+    };
+    this.write(`${ANALYSIS_PREFIX}${sessionId}`, stored);
+    return stored;
+  }
+
+  loadSessionAnalysis(sessionId: string): StoredSessionAnalysis | null {
+    return this.read<StoredSessionAnalysis>(`${ANALYSIS_PREFIX}${sessionId}`);
+  }
+
+  clearSessionAnalysis(sessionId: string): void {
+    this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
   }
 
   private write(key: string, value: unknown): void {

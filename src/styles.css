@@ -2083,3 +2083,150 @@ pre {
   color: #1f5a30;
 }
 
+.analysis-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.analysis-banner div {
+  display: grid;
+  gap: 2px;
+}
+
+.analysis-banner strong {
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.analysis-banner.status-running {
+  background: #f3efff;
+  border-color: #d5c5ff;
+}
+
+.analysis-banner.status-failed {
+  background: #fff0ee;
+  border-color: #f3b9b1;
+}
+
+.analysis-banner.status-succeeded {
+  background: #ecf7ee;
+  border-color: #b9dec3;
+}
+
+.analysis-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: var(--shadow-soft);
+}
+
+.analysis-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.analysis-panel-header h2 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+}
+
+.analysis-panel-header p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 720px;
+}
+
+.analysis-panel-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.analysis-panel-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.analysis-panel-summary {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid #6e62ff;
+  background: #f7f6ff;
+  color: var(--text);
+  border-radius: 4px;
+  line-height: 1.6;
+}
+
+.analysis-panel-metrics {
+  display: flex;
+  gap: 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.analysis-panel-metrics li {
+  display: grid;
+  gap: 2px;
+}
+
+.analysis-panel-metrics strong {
+  font-size: 20px;
+}
+
+.analysis-panel-metrics span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.analysis-panel-notes {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.analysis-panel.status-running {
+  border-color: #d5c5ff;
+}
+
+.analysis-panel.status-failed {
+  border-color: #f3b9b1;
+}
+
+.issue-column-empty,
+.decision-empty {
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.report-basis-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
