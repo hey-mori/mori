@@ -5,10 +5,17 @@ export type DatabaseStatus = {
   path: string;
   initialized: boolean;
   appliedMigrations: string[];
+  pendingMigrations: string[];
+  migrationTableName: string;
+  strategy: "rusqlite-custom-runner";
 };
 
 export type PersistSessionSnapshotInput = {
   session: MoriMockSession;
+};
+
+export type PersistSqliteSnapshotInput = {
+  snapshot: SqlitePersistenceSnapshot;
 };
 
 export type PersistSessionSnapshotOutput = {

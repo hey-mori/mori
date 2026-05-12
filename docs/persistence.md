@@ -23,6 +23,9 @@ What is real:
 - Reports can call the Tauri desktop command to save `.mori v0 JSON` when running inside the desktop app.
 - Tauri can save/open/list `.mori.json` files in the Mori records directory.
 - Import normalizers can produce `SourceRef` and `TimelineEvent` candidates for manual notes, URLs, and AI conversation text.
+- Mori can map a session into normalized SQLite row snapshots.
+- SQLite snapshots are validated for required rows, foreign-key shape, and JSON-array columns before desktop persistence.
+- A desktop SQLite repository boundary can call Tauri commands for initialization, snapshot persistence, session loading, and session listing.
 
 What is temporary:
 
@@ -31,11 +34,12 @@ What is temporary:
 - `.mori` export is JSON, not zip-like.
 - Tauri commands work only in the desktop runtime. In browser mode they throw clear desktop-required errors.
 - Native file picker path selection is still planned.
+- SQLite Tauri commands are registered, but database initialization and row writes still return explicit not-implemented errors until `rusqlite` is added.
 
 Expected replacement path:
 
 1. Add Rust-native SQLite migration runner using `rusqlite`.
-2. Add SQLite-backed session storage.
+2. Replace SQLite command stubs with real migration and row-write operations.
 3. Add native file picker support.
 4. Replace browser drafts with desktop persistence where appropriate.
 5. Add zip-like `.mori` package save/open in Rust.

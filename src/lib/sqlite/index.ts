@@ -10,7 +10,9 @@ export {
   validateMigrationCatalog,
 } from "./schema";
 export type { SqliteMigration } from "./schema";
+export { createDesktopSqliteRepository, DesktopSqliteRepository } from "./desktopSqliteRepository";
 export { createSqlitePersistenceSnapshot } from "./records";
+export { validateSqlitePersistenceSnapshot } from "./snapshotValidation";
 export type {
   ArtifactRow,
   DecisionRow,
@@ -31,5 +33,7 @@ export type {
   MoriSqliteRepository,
   PersistSessionSnapshotInput,
   PersistSessionSnapshotOutput,
+  PersistSqliteSnapshotInput,
   SqlitePersistenceAdapter,
 } from "./repositoryContracts";
+export type { SqliteSnapshotValidationResult } from "./snapshotValidation";

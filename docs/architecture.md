@@ -18,6 +18,7 @@ Current implementation includes:
 - Tauri v2 shell under `src-tauri/`
 - Runtime-aware desktop command bridge under `src/lib/desktop/`
 - Native `.mori v0 JSON` save/open/list commands
+- SQLite migration catalog, row snapshot mapping, snapshot validation, and desktop SQLite repository boundary
 
 Current limitation: Rust validation requires `cargo`; the current execution environment did not provide Rust tooling.
 
@@ -158,6 +159,14 @@ SQLite should store normalized Mori records:
 - redaction records
 
 FTS5 can index event titles/summaries, source titles/details, issue descriptions, decision rationale, and generated summaries.
+
+Current SQLite boundary:
+
+- `src-tauri/migrations/V001__initial_schema.sql` defines the initial normalized schema and FTS5 tables.
+- `src/lib/sqlite/records.ts` maps Mori domain objects to row snapshots.
+- `src/lib/sqlite/snapshotValidation.ts` validates snapshot references and JSON-array columns before persistence.
+- `src/lib/sqlite/desktopSqliteRepository.ts` sends validated snapshots through Tauri command boundaries.
+- `src-tauri/src/sqlite.rs` registers command names and returns explicit not-implemented errors for real DB writes until `rusqlite` is added.
 
 ## `.mori` Package Format
 

@@ -10,4 +10,8 @@ describe("desktop command bridge", () => {
   it("throws a clear error for desktop commands in web mode", async () => {
     await expect(invokeTauriCommand("get_app_info", undefined)).rejects.toThrow("requires the Tauri app");
   });
+
+  it("throws a clear error for SQLite persistence commands in web mode", async () => {
+    await expect(invokeTauriCommand("initialize_sqlite_database", undefined)).rejects.toThrow("requires the Tauri app");
+  });
 });

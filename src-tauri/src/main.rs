@@ -2,6 +2,7 @@ mod commands;
 mod migrations;
 mod package;
 mod session;
+mod sqlite;
 
 fn main() {
     tauri::Builder::default()
@@ -11,6 +12,11 @@ fn main() {
             package::save_mori_package_json,
             package::open_mori_package_json,
             package::list_recent_mori_packages,
+            sqlite::get_sqlite_migration_status,
+            sqlite::initialize_sqlite_database,
+            sqlite::persist_session_snapshot,
+            sqlite::load_sqlite_session_snapshot,
+            sqlite::list_sqlite_sessions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

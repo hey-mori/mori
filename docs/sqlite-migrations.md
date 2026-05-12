@@ -50,13 +50,28 @@ App startup
 ```text
 src-tauri/migrations/V001__initial_schema.sql
 src-tauri/src/migrations.rs
+src-tauri/src/sqlite.rs
 src/lib/sqlite/schema.ts
 src/lib/sqlite/records.ts
 src/lib/sqlite/repositoryContracts.ts
+src/lib/sqlite/snapshotValidation.ts
+src/lib/sqlite/desktopSqliteRepository.ts
 ```
 
 The TypeScript catalog mirrors the migration metadata so frontend/backend contracts and tests can validate ordering, file naming, and checksums before Rust SQLite is wired.
 
+## Current Command Boundary
+
+The Tauri shell now registers SQLite command names so the frontend has a stable desktop boundary:
+
+- `get_sqlite_migration_status`
+- `initialize_sqlite_database`
+- `persist_session_snapshot`
+- `load_sqlite_session_snapshot`
+- `list_sqlite_sessions`
+
+Only migration status is informational today. The persistence commands intentionally return clear not-implemented errors until the `rusqlite` runner and repository are added. The frontend already builds and validates `SqlitePersistenceSnapshot` payloads before sending them to this boundary.
+
 ## Current Limitation
 
-The migration runner is not implemented yet because the current environment does not provide `cargo`. The next Rust-enabled milestone should add `rusqlite`, implement the runner, and run `cargo check` plus Rust tests.
+The migration runner is not implemented yet because the current environment does not provide `cargo`. The next Rust-enabled milestone should add `rusqlite`, implement the runner, replace the command errors with real database operations, and run `cargo check` plus Rust tests.

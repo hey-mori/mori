@@ -8,6 +8,12 @@ import type {
   QuickPassOutput,
 } from "../../domain/backend-contracts";
 import type { MoriMockSession, Session, SourceRef } from "../../domain/types";
+import type {
+  DatabaseStatus,
+  ListSessionsOutput,
+  PersistSessionSnapshotOutput,
+  PersistSqliteSnapshotInput,
+} from "../sqlite/repositoryContracts";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 
 export type TauriCommandName =
@@ -16,6 +22,11 @@ export type TauriCommandName =
   | "save_mori_package_json"
   | "open_mori_package_json"
   | "list_recent_mori_packages"
+  | "get_sqlite_migration_status"
+  | "initialize_sqlite_database"
+  | "persist_session_snapshot"
+  | "load_sqlite_session_snapshot"
+  | "list_sqlite_sessions"
   | "create_session"
   | "import_ai_conversation"
   | "import_git_diff"
@@ -55,6 +66,11 @@ export type TauriCommandMap = {
   save_mori_package_json: { input: SaveMoriPackageJsonInput; output: SavedMoriPackage };
   open_mori_package_json: { input: { path: string }; output: string };
   list_recent_mori_packages: { input: undefined; output: RecentMoriPackage[] };
+  get_sqlite_migration_status: { input: undefined; output: DatabaseStatus };
+  initialize_sqlite_database: { input: undefined; output: DatabaseStatus };
+  persist_session_snapshot: { input: PersistSqliteSnapshotInput; output: PersistSessionSnapshotOutput };
+  load_sqlite_session_snapshot: { input: { sessionId: string }; output: MoriMockSession };
+  list_sqlite_sessions: { input: undefined; output: ListSessionsOutput };
   create_session: { input: CreateSessionInput; output: Session };
   import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
   import_git_diff: { input: ImportSourceInput; output: SourceRef };
@@ -89,6 +105,21 @@ export const tauriCommands = {
   listRecentMoriPackages(): Promise<RecentMoriPackage[]> {
     return invokeTauriCommand("list_recent_mori_packages", undefined);
   },
+  getSqliteMigrationStatus(): Promise<DatabaseStatus> {
+    return invokeTauriCommand("get_sqlite_migration_status", undefined);
+  },
+  initializeSqliteDatabase(): Promise<DatabaseStatus> {
+    return invokeTauriCommand("initialize_sqlite_database", undefined);
+  },
+  persistSessionSnapshot(input: PersistSqliteSnapshotInput): Promise<PersistSessionSnapshotOutput> {
+    return invokeTauriCommand("persist_session_snapshot", input);
+  },
+  loadSqliteSessionSnapshot(sessionId: string): Promise<MoriMockSession> {
+    return invokeTauriCommand("load_sqlite_session_snapshot", { sessionId });
+  },
+  listSqliteSessions(): Promise<ListSessionsOutput> {
+    return invokeTauriCommand("list_sqlite_sessions", undefined);
+  },
   createSession(input: CreateSessionInput): Promise<Session> {
     return invokeTauriCommand("create_session", input);
   },
@@ -107,6 +138,11 @@ export const tauriCommands = {
 };
 
 export type DesktopLoadedSession = MoriMockSession;
+
+export type TauriSqliteCommands = Pick<
+  typeof tauriCommands,
+  "initializeSqliteDatabase" | "persistSessionSnapshot" | "loadSqliteSessionSnapshot" | "listSqliteSessions"
+>;
 
 function toTauriArgs<TCommand extends TauriCommandName>(input: TauriCommandMap[TCommand]["input"]): Record<string, unknown> | undefined {
   if (!input) return undefined;

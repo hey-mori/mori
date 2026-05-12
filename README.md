@@ -28,6 +28,7 @@ This repository currently contains the frontend foundation for Mori:
 - Browser draft repository for temporary local session/package persistence
 - Import normalizers for manual notes, URLs, and AI conversation text
 - Tauri v2 desktop shell foundation with native `.mori v0 JSON` save/open commands
+- SQLite migration catalog, normalized row snapshot mapping, validation, and desktop command boundaries
 
 ## Tech Stack
 
@@ -71,7 +72,7 @@ npm run build
 
 ## Current Limitations
 
-- SQLite persistence is not implemented yet.
+- SQLite schema, snapshot mapping, and Tauri command boundaries exist; the `rusqlite` runtime runner and real row writes are not implemented yet.
 - Tauri is scaffolded, but this environment could not run Rust checks because `cargo` is unavailable.
 - `.mori` v0 JSON export and desktop save/open commands are implemented; real zip-like packaging is not implemented yet.
 - Local LLM analysis is not implemented yet.
@@ -94,7 +95,7 @@ npm run build
 
 ## Next Milestones
 
-1. SQLite schema and session persistence
+1. Implement the `rusqlite` migration runner and SQLite row writes in Rust
 2. Native file picker for `.mori v0 JSON` save/open
 3. Import MVP for AI conversation text, Git diff, browser URLs, and manual notes
 4. Local LLM Quick Pass analysis

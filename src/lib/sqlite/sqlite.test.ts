@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
 import {
   checksumMigrationSql,
+  createDesktopSqliteRepository,
   createSqlitePersistenceSnapshot,
   getSqliteSchemaSql,
   isValidMigrationFilename,
@@ -11,6 +12,7 @@ import {
   sortMigrations,
   sqliteMigrations,
   validateMigrationCatalog,
+  validateSqlitePersistenceSnapshot,
 } from "./index";
 
 describe("SQLite persistence foundation", () => {
@@ -51,5 +53,54 @@ describe("SQLite persistence foundation", () => {
     expect(snapshot.decisions).toHaveLength(moriMockSession.decisions.length);
     expect(snapshot.relationships).toHaveLength(moriMockSession.relationships.length);
     expect(snapshot.events[0]?.source_refs_json).toMatch(/^\[/);
+  });
+
+  it("validates snapshot foreign keys and JSON array columns before persistence", () => {
+    const snapshot = createSqlitePersistenceSnapshot(moriMockSession);
+
+    expect(validateSqlitePersistenceSnapshot(snapshot)).toEqual({ valid: true, issues: [] });
+
+    const invalid = {
+      ...snapshot,
+      events: [{ ...snapshot.events[0]!, source_refs_json: JSON.stringify(["missing-source"]) }],
+    };
+
+    const result = validateSqlitePersistenceSnapshot(invalid);
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContain(`Event ${snapshot.events[0]?.id} references missing source missing-source`);
+  });
+
+  it("creates a desktop SQLite repository that sends validated snapshots to command boundaries", async () => {
+    const calls: string[] = [];
+    const repository = createDesktopSqliteRepository({
+      initializeSqliteDatabase: async () => ({
+        path: "/tmp/mori.db",
+        initialized: true,
+        appliedMigrations: ["001"],
+        pendingMigrations: [],
+        migrationTableName: "_mori_migrations",
+        strategy: "rusqlite-custom-runner",
+      }),
+      persistSessionSnapshot: async ({ snapshot }) => {
+        calls.push(snapshot.sessions[0]?.id ?? "");
+        return {
+          sessionId: snapshot.sessions[0]?.id ?? "",
+          projectId: snapshot.projects[0]?.id ?? "",
+          eventsPersisted: snapshot.events.length,
+          sourcesPersisted: snapshot.sources.length,
+          issuesPersisted: snapshot.issues.length,
+          decisionsPersisted: snapshot.decisions.length,
+        };
+      },
+      loadSqliteSessionSnapshot: async () => moriMockSession,
+      listSqliteSessions: async () => ({ sessions: [moriMockSession.session] }),
+    });
+
+    const status = await repository.initializeDatabase();
+    const persisted = await repository.persistSessionSnapshot({ session: moriMockSession });
+
+    expect(status.initialized).toBe(true);
+    expect(calls).toEqual([moriMockSession.session.id]);
+    expect(persisted.eventsPersisted).toBe(moriMockSession.events.length);
   });
 });
