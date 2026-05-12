@@ -1219,6 +1219,23 @@ hr {
   background: var(--purple-50);
 }
 
+.draft-status-panel {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 14px;
+  color: #253352;
+  border: 1px solid #d9d0ff;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff, #fbf9ff);
+}
+
+.draft-status-panel span {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .page-tight {
   padding-bottom: 20px;
 }

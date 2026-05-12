@@ -1,13 +1,39 @@
-import { Bot, Check, Cloud, Database, FileCode2, Folder, Lock, Play, Plus, ShieldCheck, X } from "lucide-react";
+import { Bot, Check, Cloud, Database, FileCode2, Lock, Play, Plus, ShieldCheck, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { sourceOptions } from "../../domain/mock-data";
 import { recordingModeLabels } from "../../domain/constants";
+import { createSessionDraft } from "../../lib/session/createSessionDraft";
+import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
 
 export function StartSessionView() {
+  const [sessionTitle, setSessionTitle] = useState("Mori 앱 기획");
+  const [projectName, setProjectName] = useState("Mori Product");
+  const [savedDraft, setSavedDraft] = useState<StoredSessionDraft | null>(null);
+  const repository = useMemo(() => createBrowserDraftRepository(), []);
+
+  useEffect(() => {
+    setSavedDraft(repository.loadCurrentSessionDraft());
+  }, [repository]);
+
+  function handleStartSession() {
+    const draft = createSessionDraft({
+      sessionTitle,
+      projectName,
+      selectedSources: sourceOptions,
+      recordingMode: "summary",
+      llmProvider: "ollama",
+      llmModel: "llama3.1:8b",
+      storageLocation: "~/Mori/Records",
+    });
+    setSavedDraft(repository.saveCurrentSessionDraft(draft));
+  }
+
   return (
     <div className="page">
       <PageHeader title="Start Mori / Session Setup" subtitle="기록할 범위와 방식을 설정하고 Mori 세션을 시작합니다." right={<Button icon={X} />} />
@@ -15,8 +41,8 @@ export function StartSessionView() {
         <div className="setup-stack">
           <SetupBlock number="1" title="세션 정보">
             <div className="form-row">
-              <label>세션 이름<input defaultValue="Mori 앱 기획" /></label>
-              <label>프로젝트<div className="select-like"><Folder size={16} /> Mori Product</div></label>
+              <label>세션 이름<input value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} /></label>
+              <label>프로젝트<input value={projectName} onChange={(event) => setProjectName(event.target.value)} /></label>
               <Button icon={Plus}>새 프로젝트</Button>
             </div>
           </SetupBlock>
@@ -58,11 +84,11 @@ export function StartSessionView() {
             </div>
           </SetupBlock>
           <div className="setup-actions">
-            <Button variant="primary" icon={Play}>Mori 세션 시작</Button>
+            <Button variant="primary" icon={Play} onClick={handleStartSession}>Mori 세션 시작</Button>
             <Button>취소</Button>
           </div>
         </div>
-        <SessionSummary />
+        <SessionSummary savedDraft={savedDraft} sessionTitle={sessionTitle} projectName={projectName} />
       </div>
     </div>
   );
@@ -109,12 +135,12 @@ function EngineCard({ title, detail, icon: Icon, active, muted }: { title: strin
   );
 }
 
-function SessionSummary() {
+function SessionSummary({ savedDraft, sessionTitle, projectName }: { savedDraft: StoredSessionDraft | null; sessionTitle: string; projectName: string }) {
   return (
     <aside className="summary-panel">
       <h2>세션 요약</h2>
-      <SummaryRow label="세션 이름" value="Mori 앱 기획" />
-      <SummaryRow label="프로젝트" value="Mori Product" />
+      <SummaryRow label="세션 이름" value={sessionTitle || "Untitled Mori Session"} />
+      <SummaryRow label="프로젝트" value={projectName || "Untitled Project"} />
       <hr />
       <SummaryRow label="기록할 소스" value="9개 선택됨" />
       <ul className="summary-source-list">
@@ -127,6 +153,17 @@ function SessionSummary() {
       <SummaryRow label="저장 위치" value="~/Mori/Records" />
       <SummaryRow label="예상 저장 공간" value="하루 약 50MB ~ 200MB" />
       <SummaryRow label="민감 앱" value="기본 차단" />
+      <div className="draft-status-panel">
+        <strong>{savedDraft ? "Session draft saved" : "Session draft not saved yet"}</strong>
+        <span>Storage adapter: browser localStorage</span>
+        <span>Package version: .mori v0.1.0 JSON-ready</span>
+        {savedDraft ? (
+          <>
+            <span>Current session: {savedDraft.session.id}</span>
+            <span>Saved at: {new Date(savedDraft.savedAt).toLocaleString()}</span>
+          </>
+        ) : null}
+      </div>
       <div className="local-first-note">
         <Lock size={18} />
         <strong>모든 데이터는 로컬에 안전하게 저장됩니다.</strong>

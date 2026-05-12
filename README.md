@@ -24,6 +24,9 @@ This repository currently contains the frontend foundation for Mori:
 - Start Mori / Session Setup
 - Settings / Privacy / Local AI
 - Pure utility functions prepared for Vitest coverage
+- `.mori` package v0 JSON serialization/deserialization
+- Browser draft repository for temporary local session/package persistence
+- Import normalizers for manual notes, URLs, and AI conversation text
 
 ## Tech Stack
 
@@ -61,11 +64,10 @@ npm run build
 
 - Tauri is not scaffolded yet.
 - SQLite persistence is not implemented yet.
-- `.mori` save/open is not implemented yet.
+- `.mori` v0 JSON export is implemented; real zip-like save/open is not implemented yet.
 - Local LLM analysis is not implemented yet.
-- Import adapters are represented by frontend domain boundaries and mock data only.
-- Report export actions are UI placeholders; Markdown generation logic is limited to the Resume Prompt utility.
-- The current active app entrypoint is known to fail typecheck/build until missing feature view files are implemented or rewired.
+- Import normalization exists for manual notes, URLs, and AI conversation text, but no live import UI or desktop watcher exists yet.
+- Browser localStorage is a temporary draft adapter and not final persistence.
 
 ## Documentation
 
@@ -73,6 +75,8 @@ npm run build
 - [UX Reference](docs/ux-reference.md)
 - [Architecture](docs/architecture.md)
 - [Domain Model](docs/domain-model.md)
+- [Mori Package v0](docs/mori-package-v0.md)
+- [Persistence](docs/persistence.md)
 - [Roadmap](docs/roadmap.md)
 - [Development Notes](docs/development-notes.md)
 

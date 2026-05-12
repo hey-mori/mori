@@ -15,7 +15,7 @@ export function deserializeMoriPackage(serialized: string): MoriPackageV0 {
     throw new Error(`Invalid Mori package: ${messages}`);
   }
 
-  return parsed;
+  return parsed as MoriPackageV0;
 }
 
 export function importMoriPackageFromJson(serialized: string): MoriPackageV0 {

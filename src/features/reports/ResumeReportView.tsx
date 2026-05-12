@@ -1,9 +1,12 @@
 import { Calendar, ClipboardCopy, FileText, PanelRightOpen, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
 import { moriMockSession } from "../../domain/mock-data";
+import { createMoriPackageFromSession, serializeMoriPackage } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
+import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { useMoriAppStore } from "../../app/store";
 
 export function ResumeReportView() {
@@ -85,6 +88,16 @@ function Metric({ title, value, meta }: { title: string; value: string; meta: st
 function ReportBuilder() {
   const reportTypes = ["Personal retrospective", "Team share", "Client report", "Dev standup", "Billing work log", "Custom report"];
   const include = ["Summary", "Timeline", "Decisions", "Issues", "File changes", "AI conversations", "Web/research", "Next actions"];
+  const repository = useMemo(() => createBrowserDraftRepository(), []);
+  const [exportStatus, setExportStatus] = useState<string>("Ready to export .mori v0 JSON");
+
+  function handleExportMoriJson() {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const serialized = serializeMoriPackage(pkg);
+    repository.saveMoriPackageDraft(pkg);
+    downloadTextFile(`${pkg.manifest.packageId}.mori.json`, serialized, "application/vnd.mori.package+json");
+    setExportStatus(`Exported ${pkg.manifest.packageId} and saved browser draft`);
+  }
 
   return (
     <aside className="report-builder">
@@ -122,8 +135,24 @@ function ReportBuilder() {
       <div className="toggle-row"><span>AI 대화 원문 제외</span><Toggle active /></div>
       <div className="toggle-row"><span>파일 경로 마스킹</span><Toggle /></div>
       <div className="toggle-row"><span>.mori 파일 첨부</span><Toggle /></div>
-      <Button variant="primary" icon={FileText}>리포트 생성</Button>
+      <div className="draft-status-panel">
+        <strong>.mori package status</strong>
+        <span>{exportStatus}</span>
+        <span>Storage adapter: browser localStorage draft</span>
+        <span>Format: v0.1.0 JSON, zip-like package later</span>
+      </div>
+      <Button variant="primary" icon={FileText} onClick={handleExportMoriJson}>Export .mori v0 JSON</Button>
       <Button icon={Search}>미리보기</Button>
     </aside>
   );
+}
+
+function downloadTextFile(filename: string, contents: string, mimeType: string) {
+  const blob = new Blob([contents], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
