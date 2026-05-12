@@ -1,0 +1,62 @@
+# SQLite Migration Strategy
+
+Mori uses SQLite as the local database and SQLite FTS5 for local search.
+
+## Decision
+
+Use Rust-native app runtime migrations with Flyway-style file naming.
+
+Current direction:
+
+- Runtime runner: `rusqlite + custom migration runner`
+- Migration table: `_mori_migrations`
+- Migration file names: `V001__initial_schema.sql`, `V002__example.sql`
+- Flyway: not used at app runtime
+
+## Why Not Flyway Runtime
+
+Flyway can support SQLite through JDBC, but it would add Java/JDBC tooling to a local-first Tauri desktop app. That is unnecessary runtime weight for Mori right now.
+
+Flyway may be useful later for developer or CI-only migration validation, but the shipped desktop app should migrate itself using Rust.
+
+## Why Custom Rust Runner First
+
+Mori's current Rust shell is minimal and synchronous. A `rusqlite` runner is a good fit for early local persistence:
+
+- simple SQLite access
+- no Java/JDBC runtime
+- easy app-start migration flow
+- explicit `_mori_migrations` table
+- readable SQL files
+
+SQLx remains a reasonable future option if Mori adopts async database access broadly. For now, adding SQLx without a Rust toolchain available would be premature.
+
+## Startup Flow
+
+```text
+App startup
+  -> determine app data path
+  -> open SQLite database
+  -> enable PRAGMA foreign_keys = ON
+  -> ensure _mori_migrations table
+  -> read applied migration versions and checksums
+  -> apply pending V###__name.sql files in order
+  -> record version, name, checksum, applied_at
+  -> continue app boot
+```
+
+## Current Files
+
+```text
+src-tauri/migrations/V001__initial_schema.sql
+src-tauri/src/migrations.rs
+src/lib/sqlite/schema.ts
+src/lib/sqlite/records.ts
+src/lib/sqlite/repositoryContracts.ts
+```
+
+The TypeScript catalog mirrors the migration metadata so frontend/backend contracts and tests can validate ordering, file naming, and checksums before Rust SQLite is wired.
+
+## Current Limitation
+
+The migration runner is not implemented yet because the current environment does not provide `cargo`. The next Rust-enabled milestone should add `rusqlite`, implement the runner, and run `cargo check` plus Rust tests.

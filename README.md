@@ -88,6 +88,7 @@ npm run build
 - [Mori Package v0](docs/mori-package-v0.md)
 - [Persistence](docs/persistence.md)
 - [Desktop Shell](docs/desktop-shell.md)
+- [SQLite Migrations](docs/sqlite-migrations.md)
 - [Roadmap](docs/roadmap.md)
 - [Development Notes](docs/development-notes.md)
 

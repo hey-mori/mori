@@ -34,8 +34,15 @@ What is temporary:
 
 Expected replacement path:
 
-1. Add SQLite-backed session storage.
-2. Add native file picker support.
-3. Replace browser drafts with desktop persistence where appropriate.
-4. Add zip-like `.mori` package save/open in Rust.
-5. Keep the frontend using repository/command boundaries rather than direct filesystem access.
+1. Add Rust-native SQLite migration runner using `rusqlite`.
+2. Add SQLite-backed session storage.
+3. Add native file picker support.
+4. Replace browser drafts with desktop persistence where appropriate.
+5. Add zip-like `.mori` package save/open in Rust.
+6. Keep the frontend using repository/command boundaries rather than direct filesystem access.
+
+Migration strategy:
+
+- Runtime migrations should be Rust-native.
+- Migration files use Flyway-style names such as `V001__initial_schema.sql`.
+- Flyway is not used in the app runtime because Java/JDBC is unnecessary for Mori's desktop bundle.

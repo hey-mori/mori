@@ -1,4 +1,5 @@
 mod commands;
+mod migrations;
 mod package;
 mod session;
 
