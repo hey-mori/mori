@@ -8,7 +8,7 @@ Mori is not a surveillance app, task manager, wiki, or autonomous work agent. It
 
 ## Current Foundation
 
-This repository currently contains the frontend production foundation for Mori:
+This repository currently contains the frontend foundation for Mori:
 
 - React + TypeScript + Vite app
 - Tailwind-ready styling pipeline with Formal Theme CSS tokens
@@ -23,7 +23,7 @@ This repository currently contains the frontend production foundation for Mori:
 - Resume Prompt and Report Export UI
 - Start Mori / Session Setup
 - Settings / Privacy / Local AI
-- Pure utility functions with Vitest coverage
+- Pure utility functions prepared for Vitest coverage
 
 ## Tech Stack
 
@@ -65,6 +65,16 @@ npm run build
 - Local LLM analysis is not implemented yet.
 - Import adapters are represented by frontend domain boundaries and mock data only.
 - Report export actions are UI placeholders; Markdown generation logic is limited to the Resume Prompt utility.
+- The current active app entrypoint is known to fail typecheck/build until missing feature view files are implemented or rewired.
+
+## Documentation
+
+- [Product Spec](docs/product-spec.md)
+- [UX Reference](docs/ux-reference.md)
+- [Architecture](docs/architecture.md)
+- [Domain Model](docs/domain-model.md)
+- [Roadmap](docs/roadmap.md)
+- [Development Notes](docs/development-notes.md)
 
 ## Next Milestones
 

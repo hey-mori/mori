@@ -1,3 +1,39 @@
+# Mori Product Spec
+
+Canonical product planning document for Mori.
+
+This file consolidates the provided `mori_final_product_spec.md` into the repository documentation. The original planning document is preserved below because it contains detailed product rationale, feature definitions, collection strategy, MVP scope, risks, and roadmap.
+
+Product sentence:
+
+> Mori remembers how the work happened.
+
+Key sections covered in this document:
+
+- Product identity
+- Executive summary
+- Differentiation from wiki/task manager/time tracker/screen recorder
+- Target users
+- Core product objects
+- Core features
+- Start Mori / Session Setup
+- Narrative Timeline
+- Flow Focus
+- Event Detail / Inspector
+- Issue Garden
+- Decision Log
+- Sources / Evidence
+- Resume / Report
+- Split / Merge Assistant
+- Privacy principles
+- Collection strategy
+- MVP scope
+- Roadmap
+- Risks
+- Final product definition
+
+---
+
 # Mori 최종 제품 기획서
 
 ## 문서 버전
@@ -2866,4 +2902,3 @@ Mori는 사용자가 일한 흐름을 잃어버리지 않게 해주는 조용한
 # 21. 최종 한 문장
 
 > **Mori는 AI와 함께 일한 과정을 잃어버리지 않게 해주는 로컬 작업 기억 앱이다. 작업이 끝나면 Mori는 그 흐름을 타임라인, 이슈, 결정, 다음 액션으로 정리하고, 사용자가 언제든 다시 이어갈 수 있게 만든다.**
-
