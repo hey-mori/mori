@@ -4,6 +4,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
 import { moriMockSession } from "../../domain/mock-data";
+import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { createMoriPackageFromSession, serializeMoriPackage } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
@@ -91,12 +92,28 @@ function ReportBuilder() {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [exportStatus, setExportStatus] = useState<string>("Ready to export .mori v0 JSON");
 
-  function handleExportMoriJson() {
+  async function handleExportMoriJson() {
     const pkg = createMoriPackageFromSession(moriMockSession);
     const serialized = serializeMoriPackage(pkg);
     repository.saveMoriPackageDraft(pkg);
-    downloadTextFile(`${pkg.manifest.packageId}.mori.json`, serialized, "application/vnd.mori.package+json");
-    setExportStatus(`Exported ${pkg.manifest.packageId} and saved browser draft`);
+    const filename = `${pkg.manifest.packageId}.mori.json`;
+
+    if (isTauriRuntime()) {
+      try {
+        const saved = await tauriCommands.saveMoriPackageJson({
+          serializedPackage: serialized,
+          suggestedFilename: filename,
+        });
+        setExportStatus(`Saved desktop package: ${saved.path}`);
+        return;
+      } catch (error) {
+        setExportStatus(`Desktop save failed: ${error instanceof Error ? error.message : "unknown error"}`);
+        return;
+      }
+    }
+
+    downloadTextFile(filename, serialized, "application/vnd.mori.package+json");
+    setExportStatus(`Downloaded ${filename} and saved browser draft. Desktop save requires the Tauri app.`);
   }
 
   return (

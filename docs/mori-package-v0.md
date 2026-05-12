@@ -11,6 +11,8 @@ Implemented now:
 - `exportMoriPackageAsJson`
 - `importMoriPackageFromJson`
 - `serializeEventsJsonl`
+- Tauri desktop command for saving serialized `.mori v0 JSON`
+- Tauri desktop command for opening JSON package contents from a path
 
 Current JSON shape:
 
@@ -55,3 +57,4 @@ Limitations:
 - The exported file is currently `.mori.json`, not a real zip package.
 - Raw source file folders are represented as metadata, not bundled files.
 - Validation is structural and minimal. Full schema validation should be added before external import is trusted.
+- Native file picker integration is not implemented yet.

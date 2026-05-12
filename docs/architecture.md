@@ -1,10 +1,10 @@
 # Architecture
 
-This document describes Mori's intended engineering architecture and the current frontend foundation. It does not claim that unfinished desktop, backend, persistence, capture, or LLM pieces are implemented.
+This document describes Mori's intended engineering architecture and the current frontend plus desktop-shell foundation. It does not claim that unfinished SQLite, capture, import, or LLM pieces are implemented.
 
-## Current Frontend Foundation
+## Current Foundation
 
-The current repository is a React + TypeScript + Vite frontend foundation with a product UI prototype and typed domain model.
+The current repository is a React + TypeScript + Vite frontend foundation with a Tauri v2 desktop shell and typed domain model.
 
 Current implementation includes:
 
@@ -14,9 +14,12 @@ Current implementation includes:
 - Domain types, constants, and mock data under `src/domain/`
 - Pure helper logic under `src/lib/`
 - Tailwind CSS v4 Vite integration plus custom CSS tokens/styles
-- Empty feature folders under `src/features/`
+- Feature views under `src/features/`
+- Tauri v2 shell under `src-tauri/`
+- Runtime-aware desktop command bridge under `src/lib/desktop/`
+- Native `.mori v0 JSON` save/open/list commands
 
-Current limitation: the active app entrypoint imports feature view files that are not present yet, so the TypeScript/build path is known to fail until those feature views are implemented or the entrypoint is intentionally rewired.
+Current limitation: Rust validation requires `cargo`; the current execution environment did not provide Rust tooling.
 
 ## Intended Product Architecture
 
@@ -115,10 +118,10 @@ Frontend screens should not know filesystem paths, SQLite details, LLM provider 
 
 Planned Rust/Tauri backend responsibilities:
 
-- session persistence
+- session persistence beyond the current package JSON shell
 - project persistence
 - SQLite access
-- `.mori` save/open
+- zip-like `.mori` save/open beyond the current JSON implementation
 - import pipeline
 - local LLM calls
 - git diff import
