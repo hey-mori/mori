@@ -1,4 +1,4 @@
-import { Bot, Check, Cloud, Database, FileCode2, Lock, Play, Plus, ShieldCheck, X } from "lucide-react";
+import { Bot, Check, Cloud, Database, FileCode2, Lock, Play, Plus, ShieldCheck, Sparkles, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -10,12 +10,17 @@ import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
+import { useMoriSessionStore } from "../../app/sessionStore";
+import { useMoriAppStore } from "../../app/store";
 
 export function StartSessionView() {
   const [sessionTitle, setSessionTitle] = useState("Mori 앱 기획");
   const [projectName, setProjectName] = useState("Mori Product");
   const [savedDraft, setSavedDraft] = useState<StoredSessionDraft | null>(null);
   const repository = useMemo(() => createBrowserDraftRepository(), []);
+  const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
+  const resetSessionToDemo = useMoriSessionStore((state) => state.resetToDemo);
+  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   useEffect(() => {
     setSavedDraft(repository.loadCurrentSessionDraft());
@@ -31,7 +36,15 @@ export function StartSessionView() {
       llmModel: "llama3.1:8b",
       storageLocation: "~/Mori/Records",
     });
-    setSavedDraft(repository.saveCurrentSessionDraft(draft));
+    const stored = repository.saveCurrentSessionDraft(draft);
+    setSavedDraft(stored);
+    setSessionDraft(stored);
+    setCurrentView("sources");
+  }
+
+  function handleResetToDemo() {
+    resetSessionToDemo();
+    setSavedDraft(null);
   }
 
   return (
@@ -85,7 +98,11 @@ export function StartSessionView() {
           </SetupBlock>
           <div className="setup-actions">
             <Button variant="primary" icon={Play} onClick={handleStartSession}>Mori 세션 시작</Button>
-            <Button>취소</Button>
+            {savedDraft ? (
+              <Button icon={Sparkles} onClick={handleResetToDemo}>데모로 되돌리기</Button>
+            ) : (
+              <Button>취소</Button>
+            )}
           </div>
         </div>
         <SessionSummary savedDraft={savedDraft} sessionTitle={sessionTitle} projectName={projectName} />

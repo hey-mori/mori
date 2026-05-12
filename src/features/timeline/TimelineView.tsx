@@ -1,23 +1,28 @@
 import { Archive, Bell, FileText, Grid2X2, Info, Link, MessageSquare, Plus, Search, Sparkles } from "lucide-react";
+import { useEffect } from "react";
 import { TopSessionBar } from "../../components/layout/TopSessionBar";
+import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
 import { eventTypeIcons, eventTypeLabels, eventTypeTone, laneOrder } from "../../domain/constants";
-import { moriMockSession } from "../../domain/mock-data";
-import type { EventType, Relationship, TimelineEvent } from "../../domain/types";
+import type { EventType, MoriMockSession, Relationship, TimelineEvent } from "../../domain/types";
 import { formatTime, formatTimeRange } from "../../lib/formatting/time";
 import { getCauseRelationships, getFocusedEntitySet, getRelationshipsForEntity, getResultRelationships } from "../../lib/relationships/traversal";
 import { groupEventsByLane, positionEvents, type PositionedEvent } from "../../lib/timeline/layout";
 import { getTrustDisplay } from "../../lib/privacy/trust";
+import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
-const timelineRange = {
-  start: moriMockSession.session.startedAt,
-  end: moriMockSession.session.endedAt,
-};
-
 export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
+  const hydrate = useMoriSessionStore((state) => state.hydrate);
+  const initialized = useMoriSessionStore((state) => state.initialized);
+  const view = useMoriSessionStore(selectSessionView);
+
+  useEffect(() => {
+    if (!initialized) hydrate();
+  }, [initialized, hydrate]);
+
   const selectedEventId = useMoriAppStore((state) => state.selectedEventId);
   const hoveredEventId = useMoriAppStore((state) => state.hoveredEventId);
   const activeFilters = useMoriAppStore((state) => state.activeFilters);
@@ -26,18 +31,44 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const toggleFilter = useMoriAppStore((state) => state.toggleFilter);
 
+  if (view.events.length === 0) {
+    return (
+      <>
+        <TopSessionBar />
+        <SessionModeBanner />
+        <div className="timeline-empty">
+          <Search size={24} />
+          <h2>아직 타임라인에 표시할 이벤트가 없습니다</h2>
+          <p>
+            Sources / Evidence 화면에서 메모, URL, AI 대화를 가져오면 이벤트로 자동 변환되어 여기에 표시됩니다.
+          </p>
+          <Button variant="primary" icon={Plus} onClick={() => setCurrentView("sources")}>
+            소스 가져오기
+          </Button>
+        </div>
+      </>
+    );
+  }
+
+  const timelineRange = {
+    start: view.session.startedAt,
+    end: view.session.endedAt,
+  };
+
   const visibleEvents = activeFilters.length
-    ? moriMockSession.events.filter((event) => activeFilters.includes(event.type))
-    : moriMockSession.events;
+    ? view.events.filter((event) => activeFilters.includes(event.type))
+    : view.events;
+  const fallbackEvent = view.events[0];
   const selectedEvent =
-    moriMockSession.events.find((event) => event.id === selectedEventId) ?? moriMockSession.events[0];
+    view.events.find((event) => event.id === selectedEventId) ?? fallbackEvent;
   const focusedEntityId = hoveredEventId ?? selectedEvent.id;
-  const focusedSet = getFocusedEntitySet(focusedEntityId, moriMockSession.relationships, mode === "flow" ? 2 : 1);
+  const focusedSet = getFocusedEntitySet(focusedEntityId, view.relationships, mode === "flow" ? 2 : 1);
   const positionedEvents = positionEvents(visibleEvents, laneOrder, timelineRange);
 
   return (
     <>
       <TopSessionBar />
+      <SessionModeBanner />
       <div className={`content-grid ${mode === "flow" ? "flow-grid" : ""}`}>
         <section className="timeline-main">
           {mode === "flow" ? (
@@ -53,7 +84,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             events={positionedEvents}
             selectedEventId={selectedEvent.id}
             focusedSet={focusedSet}
-            relationships={moriMockSession.relationships}
+            relationships={view.relationships}
             mode={mode}
             onSelect={setSelectedEventId}
             onHover={setHoveredEventId}
@@ -61,9 +92,9 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           <MiniMap events={positionedEvents} focusedEntityId={focusedEntityId} />
         </section>
         {mode === "flow" ? (
-          <TracePanel selectedEvent={selectedEvent} />
+          <TracePanel selectedEvent={selectedEvent} session={view} />
         ) : (
-          <EventInspector selectedEvent={selectedEvent} onTrace={() => setCurrentView("flow")} />
+          <EventInspector selectedEvent={selectedEvent} session={view} onTrace={() => setCurrentView("flow")} />
         )}
       </div>
     </>
@@ -250,13 +281,13 @@ function TimelineEventCard({
   );
 }
 
-function EventInspector({ selectedEvent, onTrace }: { selectedEvent: TimelineEvent; onTrace: () => void }) {
+function EventInspector({ selectedEvent, session, onTrace }: { selectedEvent: TimelineEvent; session: MoriMockSession; onTrace: () => void }) {
   const trust = getTrustDisplay(selectedEvent.trustLevel);
-  const sources = moriMockSession.sources.filter((source) => selectedEvent.sourceRefs.includes(source.id));
-  const issues = moriMockSession.issues.filter((issue) => selectedEvent.linkedIssueIds.includes(issue.id));
-  const decisions = moriMockSession.decisions.filter((decision) => selectedEvent.linkedDecisionIds.includes(decision.id));
-  const artifacts = moriMockSession.artifacts.filter((artifact) => selectedEvent.artifactIds?.includes(artifact.id));
-  const nextActions = moriMockSession.nextActions.filter((action) => action.relatedEventIds.includes(selectedEvent.id));
+  const sources = session.sources.filter((source) => selectedEvent.sourceRefs.includes(source.id));
+  const issues = session.issues.filter((issue) => selectedEvent.linkedIssueIds.includes(issue.id));
+  const decisions = session.decisions.filter((decision) => selectedEvent.linkedDecisionIds.includes(decision.id));
+  const artifacts = session.artifacts.filter((artifact) => selectedEvent.artifactIds?.includes(artifact.id));
+  const nextActions = session.nextActions.filter((action) => action.relatedEventIds.includes(selectedEvent.id));
 
   return (
     <aside className="inspector">
@@ -309,10 +340,10 @@ function EventInspector({ selectedEvent, onTrace }: { selectedEvent: TimelineEve
   );
 }
 
-function TracePanel({ selectedEvent }: { selectedEvent: TimelineEvent }) {
-  const causes = getCauseRelationships(selectedEvent.id, moriMockSession.relationships);
-  const results = getResultRelationships(selectedEvent.id, moriMockSession.relationships);
-  const allRelationships = getRelationshipsForEntity(selectedEvent.id, moriMockSession.relationships);
+function TracePanel({ selectedEvent, session }: { selectedEvent: TimelineEvent; session: MoriMockSession }) {
+  const causes = getCauseRelationships(selectedEvent.id, session.relationships);
+  const results = getResultRelationships(selectedEvent.id, session.relationships);
+  const allRelationships = getRelationshipsForEntity(selectedEvent.id, session.relationships);
 
   return (
     <aside className="inspector trace">
@@ -326,9 +357,9 @@ function TracePanel({ selectedEvent }: { selectedEvent: TimelineEvent }) {
         <h3>{selectedEvent.title}</h3>
         <p>{selectedEvent.summary}</p>
       </div>
-      <TraceSection title={`이 이벤트의 원인 (${causes.length})`} relationships={causes} reverse />
+      <TraceSection title={`이 이벤트의 원인 (${causes.length})`} relationships={causes} session={session} reverse />
       <div className="trace-arrow">↓</div>
-      <TraceSection title={`이 이벤트의 결과 (${results.length})`} relationships={results} />
+      <TraceSection title={`이 이벤트의 결과 (${results.length})`} relationships={results} session={session} />
       <section className="panel-section">
         <h4>관계 신뢰도</h4>
         <div className="trace-stack">
@@ -356,7 +387,7 @@ function TracePanel({ selectedEvent }: { selectedEvent: TimelineEvent }) {
   );
 }
 
-function TraceSection({ title, relationships, reverse = false }: { title: string; relationships: Relationship[]; reverse?: boolean }) {
+function TraceSection({ title, relationships, session, reverse = false }: { title: string; relationships: Relationship[]; session: MoriMockSession; reverse?: boolean }) {
   return (
     <section className="panel-section">
       <h4>{title}</h4>
@@ -364,7 +395,7 @@ function TraceSection({ title, relationships, reverse = false }: { title: string
         {relationships.length ? (
           relationships.map((relationship) => {
             const eventId = reverse ? relationship.fromId : relationship.toId;
-            const event = moriMockSession.events.find((candidate) => candidate.id === eventId);
+            const event = session.events.find((candidate) => candidate.id === eventId);
             return (
               <div key={relationship.id}>
                 <span>{event ? formatTime(event.start) : "--:--"}</span>

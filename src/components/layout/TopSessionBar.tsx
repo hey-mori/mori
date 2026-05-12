@@ -1,17 +1,27 @@
 import { Calendar, ChevronDown, Filter, MoreHorizontal, Search } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
+import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 
 export function TopSessionBar() {
+  const view = useMoriSessionStore(selectSessionView);
+  const statusLabel = view.session.status === "recording" ? "진행 중" : view.session.status === "analyzing" ? "분석 중" : "완료";
+  const started = new Date(view.session.startedAt);
+  const ended = new Date(view.session.endedAt);
+  const sameDay = started.toDateString() === ended.toDateString();
+  const dateLine = sameDay
+    ? `${started.toLocaleDateString()} ${started.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${ended.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+    : `${started.toLocaleString()} → ${ended.toLocaleString()}`;
+
   return (
     <header className="topbar">
       <div>
         <div className="title-row">
-          <h1>Mori 앱 기획</h1>
+          <h1>{view.session.title}</h1>
           <ChevronDown size={16} />
-          <Badge tone="green">진행 중</Badge>
+          <Badge tone={view.session.status === "complete" ? "gray" : "green"}>{statusLabel}</Badge>
         </div>
-        <p>오늘 2026.05.12 (화) 13:00 - 18:00</p>
+        <p>{dateLine}</p>
       </div>
       <div className="toolbar">
         <div className="segmented">

@@ -1,27 +1,44 @@
 import { Calendar, ClipboardCopy, FileText, PanelRightOpen, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
-import { moriMockSession } from "../../domain/mock-data";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { createMoriPackageFromSession, serializeMoriPackage } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
 export function ResumeReportView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
-  const prompt = buildResumePrompt(moriMockSession);
-  const openIssues = moriMockSession.issues.filter((issue) => issue.status !== "resolved");
+  const hydrate = useMoriSessionStore((state) => state.hydrate);
+  const initialized = useMoriSessionStore((state) => state.initialized);
+  const view = useMoriSessionStore(selectSessionView);
+
+  useEffect(() => {
+    if (!initialized) hydrate();
+  }, [initialized, hydrate]);
+
+  const prompt = buildResumePrompt(view);
+  const openIssues = view.issues.filter((issue) => issue.status !== "resolved");
 
   return (
     <div className="page">
       <PageHeader
         title="Resume & Report"
         subtitle="작업을 이어가거나, 공유 가능한 리포트로 정리하세요."
-        right={<div className="toolbar"><Button>Mori 앱 기획</Button><Button icon={Calendar}>2026.05.12 13:00 - 18:00</Button></div>}
+        right={
+          <div className="toolbar">
+            <Button>{view.project.name}</Button>
+            <Button icon={Calendar}>
+              {new Date(view.session.startedAt).toLocaleString()} - {new Date(view.session.endedAt).toLocaleString()}
+            </Button>
+          </div>
+        }
       />
+      <SessionModeBanner />
       <div className="report-layout">
         <section className="resume-area">
           <div className="resume-card">
@@ -33,10 +50,10 @@ export function ResumeReportView() {
               <Button icon={ClipboardCopy}>Claude/ChatGPT/Codex용 프롬프트 복사</Button>
             </div>
             <div className="resume-metrics">
-              <Metric title="마지막 작업" value="회의 메모" meta="16:30" />
-              <Metric title="다음 액션" value={moriMockSession.nextActions.length.toString()} meta="높음 2 · 중간 2" />
+              <Metric title="이벤트" value={view.events.length.toString()} meta="가져온 이벤트 수" />
+              <Metric title="다음 액션" value={view.nextActions.length.toString()} meta={`높음 ${view.nextActions.filter((a) => a.priority === "high").length}건`} />
               <Metric title="열린 이슈" value={openIssues.length.toString()} meta="해결 전 항목" />
-              <Metric title="최근 결정" value={moriMockSession.decisions.length.toString()} meta="제품 방향 결정" />
+              <Metric title="최근 결정" value={view.decisions.length.toString()} meta="제품 방향 결정" />
             </div>
             <div className="resume-body">
               <div>
@@ -45,13 +62,17 @@ export function ResumeReportView() {
               </div>
               <div className="resource-list">
                 <h3>관련 리소스 빠르게 열기</h3>
-                {moriMockSession.artifacts.map((artifact) => (
-                  <button key={artifact.id} type="button">
-                    <FileText size={16} />
-                    {artifact.title}
-                    <small>{artifact.path}</small>
-                  </button>
-                ))}
+                {view.artifacts.length ? (
+                  view.artifacts.map((artifact) => (
+                    <button key={artifact.id} type="button">
+                      <FileText size={16} />
+                      {artifact.title}
+                      <small>{artifact.path}</small>
+                    </button>
+                  ))
+                ) : (
+                  <small className="muted">아직 등록된 산출물이 없습니다.</small>
+                )}
               </div>
             </div>
           </div>
@@ -61,12 +82,19 @@ export function ResumeReportView() {
               <Button icon={PanelRightOpen} onClick={() => setCurrentView("timeline")}>타임라인 열기</Button>
             </div>
             <div className="report-summary-list">
-              {moriMockSession.events.slice(0, 8).map((event) => (
-                <div key={event.id}>
-                  <strong>{event.title}</strong>
-                  <span>{event.summary}</span>
+              {view.events.length ? (
+                view.events.slice(0, 8).map((event) => (
+                  <div key={event.id}>
+                    <strong>{event.title}</strong>
+                    <span>{event.summary}</span>
+                  </div>
+                ))
+              ) : (
+                <div>
+                  <strong>아직 이벤트가 없습니다</strong>
+                  <span>Sources / Evidence 화면에서 메모, URL, AI 대화를 가져와 시작하세요.</span>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </section>
@@ -87,13 +115,14 @@ function Metric({ title, value, meta }: { title: string; value: string; meta: st
 }
 
 function ReportBuilder() {
+  const view = useMoriSessionStore(selectSessionView);
   const reportTypes = ["Personal retrospective", "Team share", "Client report", "Dev standup", "Billing work log", "Custom report"];
   const include = ["Summary", "Timeline", "Decisions", "Issues", "File changes", "AI conversations", "Web/research", "Next actions"];
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [exportStatus, setExportStatus] = useState<string>("Ready to export .mori v0 JSON");
 
   async function handleExportMoriJson() {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(view);
     const serialized = serializeMoriPackage(pkg);
     repository.saveMoriPackageDraft(pkg);
     const filename = `${pkg.manifest.packageId}.mori.json`;

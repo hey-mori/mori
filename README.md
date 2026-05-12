@@ -27,6 +27,8 @@ This repository currently contains the frontend foundation for Mori:
 - `.mori` package v0 JSON serialization/deserialization
 - Browser draft repository for temporary local session/package persistence
 - Import normalizers for manual notes, URLs, and AI conversation text
+- Import MVP: in-app import panel that persists imports per session and renders them in Sources and Timeline
+- Session view composition that switches between the demo mock session and a real persisted draft session
 - Tauri v2 desktop shell foundation with native `.mori v0 JSON` save/open commands
 - SQLite migration catalog, normalized row snapshot mapping, validation, and desktop command boundaries
 
@@ -76,7 +78,7 @@ npm run build
 - Tauri is scaffolded, but this environment could not run Rust checks because `cargo` is unavailable.
 - `.mori` v0 JSON export and desktop save/open commands are implemented; real zip-like packaging is not implemented yet.
 - Local LLM analysis is not implemented yet.
-- Import normalization exists for manual notes, URLs, and AI conversation text, but no live import UI or desktop watcher exists yet.
+- Import MVP covers manual notes, URLs, and AI conversation text via the in-app panel; git diff import, file watcher, and browser extension capture are not implemented yet.
 - Browser localStorage is a temporary draft adapter and not final persistence.
 - Native file picker integration is not implemented yet; desktop save uses Mori's default storage directory.
 
@@ -95,9 +97,8 @@ npm run build
 
 ## Next Milestones
 
-1. Implement the `rusqlite` migration runner and SQLite row writes in Rust
-2. Native file picker for `.mori v0 JSON` save/open
-3. Import MVP for AI conversation text, Git diff, browser URLs, and manual notes
-4. Local LLM Quick Pass analysis
-5. Zip-like `.mori` package bundling
-6. Markdown report export
+1. Local LLM Quick Pass analysis over imported sources
+2. Implement the `rusqlite` migration runner and SQLite row writes in Rust
+3. Git diff import and native file picker for `.mori v0 JSON` save/open
+4. Zip-like `.mori` package bundling
+5. Markdown report export

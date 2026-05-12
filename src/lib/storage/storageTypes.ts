@@ -1,4 +1,5 @@
-import type { Project, Session } from "../../domain/types";
+import type { Project, Session, SourceRef, TimelineEvent } from "../../domain/types";
+import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 
 export type StoredSessionDraft = {
@@ -24,13 +25,27 @@ export type StoredSessionSummary = {
   status: Session["status"];
 };
 
+export type StoredSessionImport = {
+  id: string;
+  sessionId: string;
+  source: SourceRef;
+  events: TimelineEvent[];
+  savedAt: string;
+  adapter: "browser-local-storage";
+};
+
 export type MoriDraftRepository = {
   saveCurrentSessionDraft: (draft: Omit<StoredSessionDraft, "savedAt" | "adapter">) => StoredSessionDraft;
   loadCurrentSessionDraft: () => StoredSessionDraft | null;
+  clearCurrentSessionDraft: () => void;
   listStoredSessions: () => StoredSessionSummary[];
   saveMoriPackageDraft: (pkg: MoriPackageV0) => StoredMoriPackageDraft;
   loadMoriPackageDraft: (packageId: string) => StoredMoriPackageDraft | null;
   clearStoredSession: (sessionId: string) => void;
+  addSessionImport: (sessionId: string, candidate: NormalizedImportCandidate) => StoredSessionImport;
+  listSessionImports: (sessionId: string) => StoredSessionImport[];
+  removeSessionImport: (sessionId: string, importId: string) => void;
+  clearSessionImports: (sessionId: string) => void;
 };
 
 export type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key"> & {
