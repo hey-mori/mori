@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { TopSessionBar } from "../../components/layout/TopSessionBar";
 import { Button } from "../../components/ui/Button";
-import { laneOrder } from "../../domain/constants";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -13,7 +12,7 @@ import {
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { getFocusedEntitySet } from "../../lib/relationships/traversal";
-import { getTimelineRange, positionEvents } from "../../lib/timeline/layout";
+import { getTimelineRange } from "../../lib/timeline/layout";
 import { EventInspector } from "./EventInspector";
 import { TimelineCanvas } from "./TimelineCanvas";
 import { TimelineEmptyState, type TimelineEmptyVariant } from "./TimelineEmptyState";
@@ -41,10 +40,13 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const selectedEventId = useMoriAppStore((state) => state.selectedEventId);
   const hoveredEventId = useMoriAppStore((state) => state.hoveredEventId);
   const activeFilters = useMoriAppStore((state) => state.activeFilters);
+  const density = useMoriAppStore((state) => state.timelineDensity);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const setHoveredEventId = useMoriAppStore((state) => state.setHoveredEventId);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const toggleFilter = useMoriAppStore((state) => state.toggleFilter);
+  const clearFilters = useMoriAppStore((state) => state.clearFilters);
+  const toggleDensity = useMoriAppStore((state) => state.toggleTimelineDensity);
 
   const emptyVariant = chooseEmptyVariant({
     mode: sessionMode,
@@ -81,7 +83,6 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
     view.events.find((event) => event.id === selectedEventId) ?? fallbackEvent;
   const focusedEntityId = hoveredEventId ?? selectedEvent.id;
   const focusedSet = getFocusedEntitySet(focusedEntityId, view.relationships, mode === "flow" ? 2 : 1);
-  const positionedEvents = positionEvents(visibleEvents, laneOrder, range);
 
   return (
     <>
@@ -98,21 +99,37 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             />
           ) : (
             <div className="timeline-controls">
-              <Button icon={Filter}>All categories</Button>
-              <Button icon={Grid2X2} aria-label="Toggle lane density" />
+              <Button
+                icon={Filter}
+                onClick={() => clearFilters()}
+                disabled={activeFilters.length === 0}
+                title={activeFilters.length ? "Clear all category filters" : "No filters applied"}
+              >
+                {activeFilters.length ? `Clear filters (${activeFilters.length})` : "All categories"}
+              </Button>
+              <Button
+                icon={Grid2X2}
+                onClick={() => toggleDensity()}
+                title={`Switch to ${density === "comfortable" ? "compact" : "comfortable"} density`}
+              >
+                {density === "comfortable" ? "Comfortable" : "Compact"}
+              </Button>
               <TimelineFilters activeFilters={activeFilters} onToggle={toggleFilter} />
             </div>
           )}
-          <TimelineCanvas
-            events={positionedEvents}
-            relationships={view.relationships}
-            range={range}
-            selectedEventId={selectedEvent.id}
-            focusedSet={focusedSet}
-            mode={mode}
-            onSelect={setSelectedEventId}
-            onHover={setHoveredEventId}
-          />
+          <div className="timeline-scroller">
+            <TimelineCanvas
+              events={visibleEvents}
+              relationships={view.relationships}
+              range={range}
+              selectedEventId={selectedEvent.id}
+              focusedSet={focusedSet}
+              mode={mode}
+              density={density}
+              onSelect={setSelectedEventId}
+              onHover={setHoveredEventId}
+            />
+          </div>
         </section>
         {mode === "flow" ? (
           <TracePanel

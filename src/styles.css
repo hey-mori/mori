@@ -425,20 +425,22 @@ kbd {
 .legend-dot.orange,
 .mini-dot.orange { background: var(--orange); }
 
-.timeline-frame {
-  position: relative;
-  min-height: 790px;
-  padding-top: 58px;
-  overflow: auto;
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, transparent 0, transparent 8%, rgba(214, 219, 232, 0.65) 8.1%, transparent 8.2%) repeat-x,
-    white;
-  border: 1px solid transparent;
+.timeline-scroller {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
 }
 
-.timeline-frame.compact {
-  min-height: 680px;
+.timeline-frame {
+  position: relative;
+  padding-top: 48px;
+  background:
+    linear-gradient(90deg, transparent 0, transparent 8%, rgba(214, 219, 232, 0.35) 8.1%, transparent 8.2%) repeat-x,
+    white;
 }
 
 .time-axis {
@@ -489,10 +491,10 @@ kbd {
 
 .connection-layer {
   position: absolute;
-  inset: 58px 0 auto 0;
-  width: 1180px;
-  height: 780px;
+  top: 0;
+  left: 0;
   pointer-events: none;
+  z-index: 1;
 }
 
 .connector {
@@ -517,26 +519,31 @@ kbd {
 
 .lanes {
   position: relative;
-  width: 1180px;
+  width: 100%;
 }
 
 .lane {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
   border-bottom: 1px solid #eef0f6;
 }
 
 .lane-label {
   position: sticky;
+  top: 0;
   left: 0;
   z-index: 5;
-  display: grid;
-  grid-template-columns: 24px 1fr 28px;
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
-  width: 132px;
-  height: 100%;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px 0 16px;
+  margin-top: 8px;
   color: #1c2638;
-  background: linear-gradient(90deg, white 78%, rgba(255, 255, 255, 0));
+  background: linear-gradient(90deg, white 80%, rgba(255, 255, 255, 0));
+  font-size: 12px;
+  letter-spacing: 0.02em;
 }
 
 .lane-label span {
@@ -553,11 +560,11 @@ kbd {
 
 .event-card {
   position: absolute;
-  top: 26px;
-  z-index: 6;
-  display: grid;
-  gap: 5px;
-  padding: 13px 15px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
   color: #172033;
   text-align: left;
   border: 1px solid var(--line);
@@ -565,6 +572,13 @@ kbd {
   background: white;
   box-shadow: var(--shadow-soft);
   transition: opacity 140ms ease, transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.event-card.is-compact {
+  padding: 8px 10px;
+  gap: 2px;
 }
 
 .event-card:hover,
@@ -608,29 +622,41 @@ kbd {
 }
 
 .event-card-title {
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 700;
+}
+
+.event-card.is-compact .event-card-title {
+  font-size: 12px;
 }
 
 .event-card-summary {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .event-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 2px;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.event-card.is-compact .event-card-footer {
+  gap: 4px;
 }
 
 .event-card-tag {
@@ -1001,6 +1027,15 @@ kbd {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+}
+
+.inspector-actions.planned {
+  opacity: 0.72;
+  filter: saturate(0.85);
+}
+
+.inspector-actions.planned button {
+  font-size: 12px;
 }
 
 .linked-grid {

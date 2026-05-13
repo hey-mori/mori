@@ -1,27 +1,23 @@
 import { eventTypeTone } from "../../domain/constants";
 import type { Relationship } from "../../domain/types";
-import type { PositionedEvent } from "../../lib/timeline/layout";
+import type { LaidOutEvent } from "../../lib/timeline/collisionLayout";
 
 export function RelationshipLineLayer({
-  events,
+  layouts,
   relationships,
   focusedSet,
+  focusActive,
   frameWidth,
-  laneHeight,
-  cardWidth,
-  laneOffset,
+  frameHeight,
 }: {
-  events: PositionedEvent[];
+  layouts: Map<string, LaidOutEvent>;
   relationships: Relationship[];
   focusedSet: Set<string>;
+  focusActive: boolean;
   frameWidth: number;
-  laneHeight: number;
-  cardWidth: number;
-  laneOffset: number;
+  frameHeight: number;
 }) {
-  if (!events.length) return null;
-  const eventIndex = new Map(events.map((event) => [event.id, event] as const));
-  const frameHeight = laneOffset + 8 * laneHeight;
+  if (!layouts.size) return null;
 
   return (
     <svg
@@ -29,22 +25,28 @@ export function RelationshipLineLayer({
       viewBox={`0 0 ${frameWidth} ${frameHeight}`}
       preserveAspectRatio="none"
       aria-hidden="true"
+      style={{ width: `${frameWidth}px`, height: `${frameHeight}px` }}
     >
       {relationships.map((relationship) => {
-        const from = eventIndex.get(relationship.fromId);
-        const to = eventIndex.get(relationship.toId);
+        const from = layouts.get(relationship.fromId);
+        const to = layouts.get(relationship.toId);
         if (!from || !to) return null;
-        const active = focusedSet.has(from.id) && focusedSet.has(to.id);
-        const x1 = (from.xPercent / 100) * frameWidth + cardWidth / 2;
-        const y1 = laneOffset + from.laneIndex * laneHeight + laneHeight / 2;
-        const x2 = (to.xPercent / 100) * frameWidth + cardWidth / 2;
-        const y2 = laneOffset + to.laneIndex * laneHeight + laneHeight / 2;
-        const mid = (x1 + x2) / 2;
+        const active = focusedSet.has(from.eventId) && focusedSet.has(to.eventId);
+        if (focusActive && !active) return null;
+
+        // Anchor at the right edge of the upstream card and the left edge of
+        // the downstream card so the curve enters/exits at the card border
+        // instead of crashing into card text.
+        const isForward = from.anchorRight.x <= to.anchorLeft.x;
+        const start = isForward ? from.anchorRight : from.anchorLeft;
+        const end = isForward ? to.anchorLeft : to.anchorRight;
+        const midX = (start.x + end.x) / 2;
+
         return (
           <path
             key={relationship.id}
             className={`connector tone-${eventTypeTone[from.type]} ${active ? "active" : "context"}`}
-            d={`M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`}
+            d={`M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${end.y}, ${end.x} ${end.y}`}
           />
         );
       })}

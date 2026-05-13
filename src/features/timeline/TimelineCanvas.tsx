@@ -1,8 +1,13 @@
 import { Search } from "lucide-react";
+import { useMemo } from "react";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { eventTypeIcons, eventTypeLabels, laneOrder } from "../../domain/constants";
-import type { Relationship } from "../../domain/types";
-import { groupEventsByLane, type PositionedEvent } from "../../lib/timeline/layout";
+import type { Relationship, TimelineEvent } from "../../domain/types";
+import {
+  computeTimelineLayout,
+  indexLayout,
+  type TimelineDensity,
+} from "../../lib/timeline/collisionLayout";
 import { computeAxisTicks } from "../../lib/timeline/timeScale";
 import type { TimelineRange } from "../../lib/timeline/layout";
 import { TimelineAxis } from "./TimelineAxis";
@@ -11,18 +16,18 @@ import { TimelineMiniMap } from "./TimelineMiniMap";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
 
 export type TimelineCanvasProps = {
-  events: PositionedEvent[];
+  events: TimelineEvent[];
   relationships: Relationship[];
   range: TimelineRange;
   selectedEventId: string | null;
   focusedSet: Set<string>;
   mode: "timeline" | "flow";
+  density: TimelineDensity;
   onSelect: (eventId: string) => void;
   onHover: (eventId: string | null) => void;
 };
 
-const LANE_OFFSET = 56;
-const FRAME_WIDTH = 1180;
+const FRAME_WIDTH = 1200;
 
 export function TimelineCanvas({
   events,
@@ -31,9 +36,22 @@ export function TimelineCanvas({
   selectedEventId,
   focusedSet,
   mode,
+  density,
   onSelect,
   onHover,
 }: TimelineCanvasProps) {
+  const layout = useMemo(
+    () =>
+      computeTimelineLayout(events, range, {
+        frameWidth: FRAME_WIDTH,
+        density,
+        laneOrder,
+      }),
+    [events, range, density],
+  );
+  const layoutIndex = useMemo(() => indexLayout(layout), [layout]);
+  const ticks = useMemo(() => computeAxisTicks(range, { maxTicks: 6 }), [range]);
+
   if (!events.length) {
     return (
       <EmptyState
@@ -44,32 +62,39 @@ export function TimelineCanvas({
     );
   }
 
-  const grouped = groupEventsByLane(events, laneOrder);
-  const laneHeight = mode === "flow" ? 102 : 122;
-  const cardWidth = mode === "flow" ? 184 : 198;
-  const ticks = computeAxisTicks(range, { maxTicks: 6 });
+  const laneEvents = new Map<string, TimelineEvent[]>();
+  for (const lane of layout.lanes) laneEvents.set(lane.type, []);
+  for (const event of events) {
+    const bucket = laneEvents.get(event.type);
+    if (bucket) bucket.push(event);
+  }
+
+  const focusActive = mode === "flow" || focusedSet.size > 0;
 
   return (
-    <div className={`timeline-frame ${mode === "flow" ? "compact" : ""}`}>
-      <TimelineAxis ticks={ticks} />
+    <div
+      className={`timeline-frame ${mode === "flow" ? "compact" : ""}`}
+      style={{ width: `${FRAME_WIDTH}px`, minHeight: `${layout.frameHeight}px` }}
+    >
+      <TimelineAxis ticks={ticks} frameWidth={FRAME_WIDTH} />
       <RelationshipLineLayer
-        events={events}
+        layouts={layoutIndex}
         relationships={relationships}
         focusedSet={focusedSet}
+        focusActive={focusActive}
         frameWidth={FRAME_WIDTH}
-        laneHeight={laneHeight}
-        cardWidth={cardWidth}
-        laneOffset={LANE_OFFSET}
+        frameHeight={layout.frameHeight}
       />
-      <div className="lanes">
-        {laneOrder.map((type) => (
+      <div className="lanes" style={{ height: `${layout.frameHeight - layout.laneOffsetPx}px` }}>
+        {layout.lanes.map((lane) => (
           <TimelineLane
-            key={type}
-            icon={eventTypeIcons[type]}
-            label={eventTypeLabels[type]}
-            events={grouped[type] ?? []}
-            height={laneHeight}
-            cardWidth={cardWidth}
+            key={lane.type}
+            icon={eventTypeIcons[lane.type]}
+            label={eventTypeLabels[lane.type]}
+            lane={lane}
+            events={laneEvents.get(lane.type) ?? []}
+            layouts={layoutIndex}
+            density={density}
             selectedEventId={selectedEventId}
             focusedSet={focusedSet}
             onSelect={onSelect}
@@ -78,7 +103,7 @@ export function TimelineCanvas({
         ))}
       </div>
       <TimelineMiniMap
-        events={events}
+        layout={layout}
         ticks={ticks}
         selectedEventId={selectedEventId}
         focusedSet={focusedSet}

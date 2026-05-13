@@ -112,10 +112,63 @@ runtime conditions:
 Once Quick Pass runs against a real session, the full Timeline + Flow Focus
 renders the analyzed events with the same focus tiers.
 
+## Layout engine
+
+Timeline card positions are produced by
+`computeTimelineLayout(events, range, options)` in
+[`src/lib/timeline/collisionLayout.ts`](../src/lib/timeline/collisionLayout.ts).
+The algorithm:
+
+1. Groups events by lane in the documented `laneOrder`.
+2. Sorts each lane by start time.
+3. Computes each card's intended `x` from the time range and clamps it so a
+   card never starts past `frameWidth - cardWidth`.
+4. Packs cards greedily into sub-rows: each new card lands on the lowest
+   row whose previous card has cleared (`x + cardWidth + gap`). If no
+   existing row fits, a new row is created.
+5. Derives every lane's pixel height from its row count
+   (`laneVerticalPadding * 2 + rows * cardHeight + (rows - 1) * rowGap`),
+   so busy lanes grow taller and quiet lanes stay short.
+6. Emits an absolute `(x, y, width, height)` plus `anchorLeft`,
+   `anchorRight`, and `anchorCenter` for every card. The relationship line
+   layer reads these anchors directly — no duplicate math, no rough
+   approximations.
+
+Two density modes ship today:
+
+| Density        | Card size  | Notes |
+| -------------- | ---------- | ----- |
+| `comfortable`  | 220 × 110  | Default. Title + 2-line summary + footer. |
+| `compact`      | 184 × 78   | Drops the summary, keeps title + footer. Useful for dense sessions. |
+
+The mode lives in `useMoriAppStore.timelineDensity` and toggles via the
+"Comfortable / Compact" button in the Timeline controls.
+
+Rules the layout guarantees (covered by `collisionLayout.test.ts`):
+
+- No two cards in the same lane visually overlap.
+- Lane height grows monotonically with row count.
+- Compact mode produces smaller cards but never breaks the no-overlap
+  rule.
+- Anchor points are stable and inside each card's bounding box.
+
+## Relationship line rules
+
+`RelationshipLineLayer` reads the same `LaidOutEvent` anchors:
+
+- Lines enter / exit at the right edge of the upstream card and the left
+  edge of the downstream card (whichever is forward in time).
+- When focus is **active** (Flow Focus mode or a hovered/selected event in
+  Timeline mode), only relationships where both endpoints are in the
+  focused set render — unrelated lines are removed entirely, not just
+  faded.
+- Unrelated connectors in the static Timeline view stay at ~32% opacity so
+  they don't compete with card text.
+- The SVG sits at `z-index: 1`; cards at `z-index: 2`. Lines never cover
+  card text.
+
 ## Known limitations
 
-- The "All categories" button and the lane density toggle in
-  `TimelineView` are placeholders. They render but do nothing yet.
 - The Inspector's correction note is read-only; persisting user
   corrections is a planned milestone.
 - Manual relationship edits, event split/merge, manual issue creation, and
@@ -123,3 +176,6 @@ renders the analyzed events with the same focus tiers.
   with planning tooltips.
 - The mini-map shows event dots but does not yet act as a viewport
   navigator.
+- Lanes with zero events still allocate one row of vertical space; this is
+  intentional so the structural rhythm stays steady but could be hidden in
+  a future "active lanes only" toggle.

@@ -92,7 +92,7 @@ export function EventInspector({
         />
       </section>
       <section className="panel-section">
-        <SectionHeader title="Actions" />
+        <SectionHeader title="Available actions" hint="These work today." />
         <div className="inspector-actions">
           <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
             Show flow trace
@@ -100,6 +100,14 @@ export function EventInspector({
           <Button icon={ClipboardCopy} onClick={handleCopy}>
             Copy summary
           </Button>
+        </div>
+      </section>
+      <section className="panel-section">
+        <SectionHeader
+          title="Planned actions"
+          hint="Disabled until the matching milestone lands."
+        />
+        <div className="inspector-actions planned">
           <Button icon={FileText} disabled title="Editing events is planned">
             Edit summary
           </Button>

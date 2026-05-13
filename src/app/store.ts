@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { EventType, ViewKey } from "../domain/types";
+import type { TimelineDensity } from "../lib/timeline/collisionLayout";
 
 type MoriAppState = {
   currentView: ViewKey;
@@ -7,11 +8,15 @@ type MoriAppState = {
   hoveredEventId: string | null;
   activeFilters: EventType[];
   searchQuery: string;
+  timelineDensity: TimelineDensity;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
   toggleFilter: (eventType: EventType) => void;
+  clearFilters: () => void;
   setSearchQuery: (query: string) => void;
+  setTimelineDensity: (density: TimelineDensity) => void;
+  toggleTimelineDensity: () => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -20,6 +25,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   hoveredEventId: null,
   activeFilters: [],
   searchQuery: "",
+  timelineDensity: "comfortable",
   setCurrentView: (currentView) => set({ currentView }),
   setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
@@ -29,5 +35,11 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
         ? state.activeFilters.filter((value) => value !== eventType)
         : [...state.activeFilters, eventType],
     })),
+  clearFilters: () => set({ activeFilters: [] }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
+  setTimelineDensity: (timelineDensity) => set({ timelineDensity }),
+  toggleTimelineDensity: () =>
+    set((state) => ({
+      timelineDensity: state.timelineDensity === "comfortable" ? "compact" : "comfortable",
+    })),
 }));
