@@ -437,10 +437,7 @@ kbd {
 
 .timeline-frame {
   position: relative;
-  padding-top: 48px;
-  background:
-    linear-gradient(90deg, transparent 0, transparent 8%, rgba(214, 219, 232, 0.35) 8.1%, transparent 8.2%) repeat-x,
-    white;
+  background: white;
 }
 
 .time-axis {
@@ -529,33 +526,43 @@ kbd {
   border-bottom: 1px solid #eef0f6;
 }
 
+.lane:last-child {
+  border-bottom: 0;
+}
+
 .lane-label {
-  position: sticky;
+  position: absolute;
   top: 0;
+  bottom: 0;
   left: 0;
-  z-index: 5;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 32px;
-  padding: 0 14px 0 16px;
-  margin-top: 8px;
+  padding: 0 14px 0 18px;
   color: #1c2638;
-  background: linear-gradient(90deg, white 80%, rgba(255, 255, 255, 0));
+  background: linear-gradient(90deg, white 84%, rgba(255, 255, 255, 0));
   font-size: 12px;
+  font-weight: 600;
   letter-spacing: 0.02em;
+  border-right: 1px solid rgba(214, 219, 232, 0.55);
+}
+
+.lane-label strong {
+  font-weight: 700;
 }
 
 .lane-label span {
-  display: grid;
+  display: inline-grid;
   place-items: center;
-  min-width: 26px;
-  min-height: 26px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
   color: var(--purple);
   border-radius: 999px;
   background: var(--purple-50);
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .event-card {
@@ -787,16 +794,25 @@ kbd {
   position: sticky;
   top: 0;
   z-index: 4;
-  height: 36px;
-  border-bottom: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.9);
+  height: 32px;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+
+.timeline-axis-track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
 }
 
 .timeline-axis-tick {
   position: absolute;
   bottom: 8px;
-  color: #4f5a70;
-  font-size: 13px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  transform: translateX(-50%);
+  letter-spacing: 0.02em;
 }
 
 .timeline-header {

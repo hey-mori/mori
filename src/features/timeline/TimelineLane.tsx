@@ -8,6 +8,7 @@ export function TimelineLane({
   icon: Icon,
   label,
   lane,
+  laneLabelWidthPx,
   events,
   layouts,
   density,
@@ -19,6 +20,7 @@ export function TimelineLane({
   icon: LucideIcon;
   label: string;
   lane: LaneLayout;
+  laneLabelWidthPx: number;
   events: TimelineEvent[];
   layouts: Map<string, LaidOutEvent>;
   density: TimelineDensity;
@@ -29,8 +31,8 @@ export function TimelineLane({
 }) {
   return (
     <div className="lane" style={{ top: `${lane.top}px`, height: `${lane.height}px` }}>
-      <div className="lane-label">
-        <Icon size={15} />
+      <div className="lane-label" style={{ width: `${laneLabelWidthPx}px` }}>
+        <Icon size={14} />
         <strong>{label}</strong>
         <span>{events.length}</span>
       </div>

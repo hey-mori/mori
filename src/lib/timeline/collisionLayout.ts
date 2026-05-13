@@ -9,6 +9,12 @@ export type TimelineLayoutOptions = {
   cardGapPx?: number;
   rowGapPx?: number;
   laneOffsetPx?: number;
+  /** Width of the fixed left lane-label column. Cards are placed inside the
+   *  remaining content area. Defaults to 140px so 8 lanes feel like a real
+   *  swim-lane diagram. */
+  laneLabelWidthPx?: number;
+  /** Right padding inside the content area. */
+  contentRightPaddingPx?: number;
   laneOrder: EventType[];
 };
 
@@ -40,6 +46,9 @@ export type TimelineLayout = {
   frameWidth: number;
   frameHeight: number;
   laneOffsetPx: number;
+  laneLabelWidthPx: number;
+  contentLeftPx: number;
+  contentWidthPx: number;
   density: TimelineDensity;
   cardWidth: number;
   cardHeight: number;
@@ -47,24 +56,25 @@ export type TimelineLayout = {
 };
 
 const DENSITY_CARD_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
-  comfortable: { width: 220, height: 110 },
-  compact: { width: 184, height: 78 },
+  comfortable: { width: 156, height: 76 },
+  compact: { width: 132, height: 54 },
 };
 
-const DEFAULT_LANE_OFFSET = 48;
+const DEFAULT_LANE_OFFSET = 44;
+const DEFAULT_LANE_LABEL_WIDTH = 140;
+const DEFAULT_CONTENT_RIGHT_PADDING = 16;
 const DEFAULT_CARD_GAP = 8;
 const DEFAULT_ROW_GAP = 6;
-const LANE_VERTICAL_PADDING = 14;
+const LANE_VERTICAL_PADDING = 10;
 
 /**
- * Compute a deterministic, collision-free Timeline layout.
+ * Compute a deterministic, collision-free Timeline layout in swim-lane form.
  *
- * Within each lane, events are packed greedily into rows so two cards that
- * would visually collide (their pixel rectangles overlap on the x-axis) are
- * placed on different rows. Lane height is derived from its row count, so
- * busy lanes grow taller and quiet lanes stay short. The returned record
- * exposes left/right/center anchors for every card so the relationship line
- * layer can attach to real positions without duplicating math.
+ * Lane labels sit in a fixed-width left column. Each lane is a horizontal
+ * band; cards are positioned by time inside the content area and packed
+ * greedily into sub-rows so two cards never visually collide. Lane height is
+ * derived from row count, so busy lanes grow taller and quiet lanes stay a
+ * single row.
  */
 export function computeTimelineLayout(
   events: TimelineEvent[],
@@ -76,7 +86,11 @@ export function computeTimelineLayout(
   const cardGap = options.cardGapPx ?? DEFAULT_CARD_GAP;
   const rowGap = options.rowGapPx ?? DEFAULT_ROW_GAP;
   const laneOffsetPx = options.laneOffsetPx ?? DEFAULT_LANE_OFFSET;
+  const laneLabelWidthPx = options.laneLabelWidthPx ?? DEFAULT_LANE_LABEL_WIDTH;
+  const contentRightPadding = options.contentRightPaddingPx ?? DEFAULT_CONTENT_RIGHT_PADDING;
   const rowHeight = cardHeight + rowGap;
+  const contentLeftPx = laneLabelWidthPx;
+  const contentWidthPx = Math.max(cardWidth, options.frameWidth - contentLeftPx - contentRightPadding);
 
   const grouped = new Map<EventType, TimelineEvent[]>();
   for (const lane of options.laneOrder) grouped.set(lane, []);
@@ -99,7 +113,7 @@ export function computeTimelineLayout(
     const laneEventsLayout: LaidOutEvent[] = [];
 
     for (const event of laneEvents) {
-      const x = computeCardLeft(event, range, options.frameWidth, cardWidth);
+      const x = computeCardLeft(event, range, contentLeftPx, contentWidthPx, cardWidth);
       const rowIndex = pickRow(rowEnds, x, cardGap);
       rowEnds[rowIndex] = x + cardWidth;
       laneEventsLayout.push({
@@ -107,7 +121,7 @@ export function computeTimelineLayout(
         type,
         rowIndex,
         x,
-        y: 0, // resolved once we know lane top
+        y: 0,
         width: cardWidth,
         height: cardHeight,
         laneTop,
@@ -141,6 +155,9 @@ export function computeTimelineLayout(
     frameWidth: options.frameWidth,
     frameHeight: cursorY,
     laneOffsetPx,
+    laneLabelWidthPx,
+    contentLeftPx,
+    contentWidthPx,
     density,
     cardWidth,
     cardHeight,
@@ -157,13 +174,14 @@ export function indexLayout(layout: TimelineLayout): Map<string, LaidOutEvent> {
 function computeCardLeft(
   event: TimelineEvent,
   range: TimelineRange,
-  frameWidth: number,
+  contentLeftPx: number,
+  contentWidthPx: number,
   cardWidth: number,
 ): number {
   const percent = timestampToXPercent(event.start, range);
-  const ideal = (percent / 100) * frameWidth;
-  const maxLeft = Math.max(0, frameWidth - cardWidth);
-  return Math.min(maxLeft, Math.max(0, ideal));
+  const ideal = contentLeftPx + (percent / 100) * contentWidthPx;
+  const maxLeft = contentLeftPx + Math.max(0, contentWidthPx - cardWidth);
+  return Math.min(maxLeft, Math.max(contentLeftPx, ideal));
 }
 
 function pickRow(rowEnds: number[], cardLeft: number, cardGap: number): number {

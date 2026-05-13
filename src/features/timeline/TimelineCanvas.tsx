@@ -27,7 +27,8 @@ export type TimelineCanvasProps = {
   onHover: (eventId: string | null) => void;
 };
 
-const FRAME_WIDTH = 1200;
+const FRAME_WIDTH = 1240;
+const LANE_LABEL_WIDTH = 132;
 
 export function TimelineCanvas({
   events,
@@ -46,6 +47,7 @@ export function TimelineCanvas({
         frameWidth: FRAME_WIDTH,
         density,
         laneOrder,
+        laneLabelWidthPx: LANE_LABEL_WIDTH,
       }),
     [events, range, density],
   );
@@ -76,7 +78,12 @@ export function TimelineCanvas({
       className={`timeline-frame ${mode === "flow" ? "compact" : ""}`}
       style={{ width: `${FRAME_WIDTH}px`, minHeight: `${layout.frameHeight}px` }}
     >
-      <TimelineAxis ticks={ticks} frameWidth={FRAME_WIDTH} />
+      <TimelineAxis
+        ticks={ticks}
+        frameWidth={FRAME_WIDTH}
+        contentLeftPx={layout.contentLeftPx}
+        contentWidthPx={layout.contentWidthPx}
+      />
       <RelationshipLineLayer
         layouts={layoutIndex}
         relationships={relationships}
@@ -92,6 +99,7 @@ export function TimelineCanvas({
             icon={eventTypeIcons[lane.type]}
             label={eventTypeLabels[lane.type]}
             lane={lane}
+            laneLabelWidthPx={layout.laneLabelWidthPx}
             events={laneEvents.get(lane.type) ?? []}
             layouts={layoutIndex}
             density={density}

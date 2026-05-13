@@ -138,6 +138,18 @@ describe("computeTimelineLayout", () => {
     expect(a.anchorCenter.y).toBeLessThanOrEqual(a.laneTop + a.laneHeight);
   });
 
+  it("places cards inside the content area to the right of the lane label column", () => {
+    const events = [buildEvent("a", "aiConversation", "2026-05-12T13:00:00Z")];
+    const layout = computeTimelineLayout(events, range, {
+      frameWidth: 1200,
+      laneOrder,
+      laneLabelWidthPx: 160,
+    });
+    expect(layout.laneLabelWidthPx).toBe(160);
+    expect(layout.contentLeftPx).toBe(160);
+    expect(layout.events[0].x).toBeGreaterThanOrEqual(160);
+  });
+
   it("frame height aggregates lane heights and the axis offset", () => {
     const events = [
       buildEvent("a", "decision", "2026-05-12T14:00:00Z"),
