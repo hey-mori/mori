@@ -2230,3 +2230,85 @@ pre {
   margin-bottom: 12px;
 }
 
+.analysis-panel-provider {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+}
+
+.analysis-panel-provider small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.analysis-panel-fallback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.settings-field {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.settings-field input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+.settings-field.disabled input {
+  background: #f5f5f7;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.settings-help {
+  margin: 0 0 12px 0;
+  color: var(--muted);
+  max-width: 720px;
+  line-height: 1.6;
+}
+
+.settings-stack {
+  flex-direction: column;
+  align-items: flex-start !important;
+  gap: 8px;
+}
+
+.settings-row.settings-stack {
+  display: flex;
+}
+
+.settings-probe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-probe .tone-ok,
+.settings-probe .tone-err {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.settings-probe small {
+  color: var(--muted);
+}
+

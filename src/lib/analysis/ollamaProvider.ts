@@ -176,6 +176,43 @@ export function createOllamaQuickPassProvider(config: OllamaProviderConfig): Oll
   return new OllamaQuickPassProvider(config);
 }
 
+export type OllamaConnectionProbe = {
+  ok: boolean;
+  message: string;
+  models?: string[];
+};
+
+export async function probeOllamaConnection(
+  config: Pick<OllamaProviderConfig, "endpoint" | "timeoutMs" | "fetchImpl">,
+): Promise<OllamaConnectionProbe> {
+  const fetchImpl = config.fetchImpl ?? (typeof fetch === "function" ? fetch.bind(globalThis) : null);
+  if (!fetchImpl) {
+    return { ok: false, message: "No fetch implementation available in this runtime." };
+  }
+
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), config.timeoutMs ?? 5_000) : null;
+  try {
+    const response = await fetchImpl(`${stripTrailingSlash(config.endpoint)}/api/tags`, {
+      method: "GET",
+      signal: controller?.signal,
+    });
+    if (!response.ok) {
+      return { ok: false, message: `Ollama responded with HTTP ${response.status}` };
+    }
+    const payload = (await response.json()) as { models?: Array<{ name?: string }> };
+    const models = Array.isArray(payload.models)
+      ? payload.models.map((entry) => entry.name).filter((name): name is string => Boolean(name))
+      : [];
+    return { ok: true, message: `Reachable (${models.length} models)`, models };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { ok: false, message };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 type ParsedQuickPass = {
   summary?: Partial<AnalysisSummary>;
   issues: Array<{

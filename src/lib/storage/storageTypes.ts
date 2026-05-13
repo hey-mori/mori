@@ -1,5 +1,5 @@
 import type { Project, Session, SourceRef, TimelineEvent } from "../../domain/types";
-import type { MoriAnalysisResult } from "../analysis";
+import type { MoriAnalysisResult, QuickPassAnalysisSettings } from "../analysis";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 
@@ -57,6 +57,8 @@ export type MoriDraftRepository = {
   saveSessionAnalysis: (sessionId: string, result: MoriAnalysisResult) => StoredSessionAnalysis;
   loadSessionAnalysis: (sessionId: string) => StoredSessionAnalysis | null;
   clearSessionAnalysis: (sessionId: string) => void;
+  saveQuickPassSettings: (settings: QuickPassAnalysisSettings) => QuickPassAnalysisSettings;
+  loadQuickPassSettings: () => QuickPassAnalysisSettings;
 };
 
 export type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key"> & {

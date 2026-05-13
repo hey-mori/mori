@@ -5,4 +5,7 @@ dist/
 .env.*
 !.env.example
 src-tauri/target/
+src-tauri/gen/
+src-tauri/Cargo.lock
+.claude/
 *.log

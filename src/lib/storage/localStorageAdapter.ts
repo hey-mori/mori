@@ -1,4 +1,5 @@
-import type { MoriAnalysisResult } from "../analysis";
+import type { MoriAnalysisResult, QuickPassAnalysisSettings } from "../analysis";
+import { DEFAULT_QUICK_PASS_SETTINGS, sanitizeQuickPassSettings } from "../analysis";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 import type {
@@ -16,6 +17,7 @@ const SESSION_PREFIX = "mori.sessionDraft.";
 const PACKAGE_PREFIX = "mori.packageDraft.";
 const IMPORTS_PREFIX = "mori.sessionImports.";
 const ANALYSIS_PREFIX = "mori.sessionAnalysis.";
+const QUICK_PASS_SETTINGS_KEY = "mori.quickPassSettings";
 
 export class BrowserDraftRepository implements MoriDraftRepository {
   constructor(private readonly storage: KeyValueStorage = window.localStorage) {}
@@ -149,6 +151,18 @@ export class BrowserDraftRepository implements MoriDraftRepository {
 
   clearSessionAnalysis(sessionId: string): void {
     this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
+  }
+
+  saveQuickPassSettings(settings: QuickPassAnalysisSettings): QuickPassAnalysisSettings {
+    const sanitized = sanitizeQuickPassSettings(settings);
+    this.write(QUICK_PASS_SETTINGS_KEY, sanitized);
+    return sanitized;
+  }
+
+  loadQuickPassSettings(): QuickPassAnalysisSettings {
+    const raw = this.read<unknown>(QUICK_PASS_SETTINGS_KEY);
+    if (!raw) return { ...DEFAULT_QUICK_PASS_SETTINGS };
+    return sanitizeQuickPassSettings(raw);
   }
 
   private write(key: string, value: unknown): void {

@@ -19,6 +19,8 @@ Implemented now:
 - `saveSessionAnalysis`
 - `loadSessionAnalysis`
 - `clearSessionAnalysis`
+- `saveQuickPassSettings`
+- `loadQuickPassSettings`
 
 This repository uses browser `localStorage` and is deliberately named as a browser draft adapter. It is not the final persistence layer.
 
@@ -34,6 +36,7 @@ What is real:
 - The in-app import panel persists normalized imports per session through `BrowserDraftRepository` and surfaces them in Sources and Timeline.
 - `composeSessionView` derives a `MoriMockSession`-shaped view from a draft plus its imports, so feature views can swap between the demo mock and a real persisted session without duplicating UI.
 - Quick Pass analysis results are persisted per session through `BrowserDraftRepository.saveSessionAnalysis` and hydrated by the session store on boot. The composed session view merges analysis output (issues, decisions, relationships, next actions, summary) when present.
+- Quick Pass provider settings (`provider`, `ollamaEndpoint`, `ollamaModel`, `ollamaTimeoutMs`, `fallbackToDeterministic`) are persisted globally through `saveQuickPassSettings`. Settings are sanitized on save and on load, so corrupt or partial values fall back to the defaults instead of breaking the analyzer.
 - Mori can map a session into normalized SQLite row snapshots.
 - SQLite snapshots are validated for required rows, foreign-key shape, and JSON-array columns before desktop persistence.
 - A desktop SQLite repository boundary can call Tauri commands for initialization, snapshot persistence, session loading, and session listing.

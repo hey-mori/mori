@@ -5,8 +5,14 @@ import type {
   MoriAnalysisProvider,
   MoriAnalysisResult,
   MoriAnalysisStatus,
+  QuickPassAnalysisSettings,
 } from "../lib/analysis";
-import { createDeterministicQuickPassProvider } from "../lib/analysis";
+import {
+  DEFAULT_QUICK_PASS_SETTINGS,
+  createDeterministicQuickPassProvider,
+  createOllamaQuickPassProvider,
+  sanitizeQuickPassSettings,
+} from "../lib/analysis";
 import type { NormalizedImportCandidate } from "../lib/import";
 import { composeSessionView } from "../lib/session/composeSessionView";
 import { createBrowserDraftRepository } from "../lib/storage/localStorageAdapter";
@@ -26,6 +32,8 @@ export type MoriSessionState = {
   analysisStatus: MoriAnalysisStatus;
   analysisError: string | null;
   analysisProviderLabel: string | null;
+  analysisFallbackUsed: boolean;
+  analysisSettings: QuickPassAnalysisSettings;
   hydrate: () => void;
   setDraft: (draft: StoredSessionDraft) => void;
   addImport: (candidate: NormalizedImportCandidate) => StoredSessionImport | null;
@@ -33,6 +41,7 @@ export type MoriSessionState = {
   resetToDemo: () => void;
   runQuickPass: (provider?: MoriAnalysisProvider) => Promise<MoriAnalysisResult | null>;
   clearAnalysis: () => void;
+  updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
 };
 
 const demoView: SessionViewModel = { ...moriMockSession, isDemo: true };
@@ -70,11 +79,14 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   analysisStatus: "idle",
   analysisError: null,
   analysisProviderLabel: null,
+  analysisFallbackUsed: false,
+  analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
   hydrate: () => {
     const repository = getRepository();
     const draft = repository.loadCurrentSessionDraft();
     const imports = draft ? repository.listSessionImports(draft.session.id) : [];
     const analysisRecord = draft ? repository.loadSessionAnalysis(draft.session.id) : null;
+    const analysisSettings = repository.loadQuickPassSettings();
     set({
       initialized: true,
       draft,
@@ -83,6 +95,8 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,
       analysisProviderLabel: analysisRecord?.result.providerLabel ?? null,
+      analysisFallbackUsed: false,
+      analysisSettings,
     });
   },
   setDraft: (draft) => {
@@ -96,6 +110,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,
       analysisProviderLabel: analysisRecord?.result.providerLabel ?? null,
+      analysisFallbackUsed: false,
       initialized: true,
     });
   },
@@ -125,6 +140,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisStatus: "idle",
       analysisError: null,
       analysisProviderLabel: null,
+      analysisFallbackUsed: false,
     });
   },
   runQuickPass: async (provider) => {
@@ -132,37 +148,97 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     const state = get();
     const draft = state.draft;
     if (!draft) {
-      set({ analysisStatus: "failed", analysisError: "Start a session and import data before running Quick Pass." });
+      set({
+        analysisStatus: "failed",
+        analysisError: "Start a session and import data before running Quick Pass.",
+        analysisFallbackUsed: false,
+      });
       return null;
     }
     const imports = state.imports;
     if (!imports.length) {
-      set({ analysisStatus: "failed", analysisError: "Import a note, URL, or AI conversation before running Quick Pass." });
+      set({
+        analysisStatus: "failed",
+        analysisError: "Import a note, URL, or AI conversation before running Quick Pass.",
+        analysisFallbackUsed: false,
+      });
       return null;
     }
 
-    const chosen = provider ?? getDefaultProvider();
-    set({ analysisStatus: "running", analysisError: null, analysisProviderLabel: chosen.label });
+    const settings = state.analysisSettings;
+    const primary = provider ?? resolveProviderFromSettings(settings);
+    const events = imports.flatMap((entry) => entry.events);
+    const sources = imports.map((entry) => entry.source);
+    const analysisInput = {
+      project: draft.project,
+      session: draft.session,
+      sources,
+      events,
+    };
+
+    set({
+      analysisStatus: "running",
+      analysisError: null,
+      analysisProviderLabel: primary.label,
+      analysisFallbackUsed: false,
+    });
+
     try {
-      const events = imports.flatMap((entry) => entry.events);
-      const sources = imports.map((entry) => entry.source);
-      const result = await chosen.analyze({
-        project: draft.project,
-        session: draft.session,
-        sources,
-        events,
-      });
+      const result = await primary.analyze(analysisInput);
       repository.saveSessionAnalysis(draft.session.id, result);
       set({
         analysis: result,
         analysisStatus: "succeeded",
         analysisError: null,
-        analysisProviderLabel: chosen.label,
+        analysisProviderLabel: primary.label,
+        analysisFallbackUsed: false,
       });
       return result;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Quick Pass failed";
-      set({ analysisStatus: "failed", analysisError: message, analysisProviderLabel: chosen.label });
+    } catch (primaryError) {
+      const primaryMessage = primaryError instanceof Error ? primaryError.message : "Quick Pass failed";
+
+      if (
+        settings.provider === "ollama" &&
+        settings.fallbackToDeterministic &&
+        primary.name !== "deterministic-heuristic-v1"
+      ) {
+        const deterministic = getDefaultProvider();
+        try {
+          const fallbackResult = await deterministic.analyze(analysisInput);
+          const annotated: MoriAnalysisResult = {
+            ...fallbackResult,
+            notes: [
+              `Ollama provider (${primary.label}) failed: ${primaryMessage}. Fell back to ${deterministic.label}.`,
+              ...fallbackResult.notes,
+            ],
+          };
+          repository.saveSessionAnalysis(draft.session.id, annotated);
+          set({
+            analysis: annotated,
+            analysisStatus: "succeeded",
+            analysisError: null,
+            analysisProviderLabel: deterministic.label,
+            analysisFallbackUsed: true,
+          });
+          return annotated;
+        } catch (fallbackError) {
+          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : "Fallback failed";
+          set({
+            analysisStatus: "failed",
+            analysisError: `Primary failed: ${primaryMessage}. Fallback failed: ${fallbackMessage}.`,
+            analysisProviderLabel: deterministic.label,
+            analysisFallbackUsed: true,
+          });
+          return null;
+        }
+      }
+
+      set({
+        analysisStatus: "failed",
+        analysisError: primaryMessage,
+        analysisProviderLabel: primary.label,
+        analysisFallbackUsed: false,
+      });
       return null;
     }
   },
@@ -175,9 +251,28 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisStatus: "idle",
       analysisError: null,
       analysisProviderLabel: null,
+      analysisFallbackUsed: false,
     });
   },
+  updateAnalysisSettings: (patch) => {
+    const repository = getRepository();
+    const next = sanitizeQuickPassSettings({ ...get().analysisSettings, ...patch });
+    repository.saveQuickPassSettings(next);
+    set({ analysisSettings: next });
+    return next;
+  },
 }));
+
+function resolveProviderFromSettings(settings: QuickPassAnalysisSettings): MoriAnalysisProvider {
+  if (settings.provider === "ollama") {
+    return createOllamaQuickPassProvider({
+      endpoint: settings.ollamaEndpoint,
+      model: settings.ollamaModel,
+      timeoutMs: settings.ollamaTimeoutMs,
+    });
+  }
+  return getDefaultProvider();
+}
 
 type ViewCache = {
   draft: StoredSessionDraft | null;

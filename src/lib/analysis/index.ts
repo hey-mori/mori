@@ -12,6 +12,12 @@ export type {
   MoriAnalysisStatus,
 } from "./analysisTypes";
 export {
+  DEFAULT_QUICK_PASS_SETTINGS,
+  sanitizeQuickPassSettings,
+  type QuickPassAnalysisSettings,
+  type QuickPassProviderKind,
+} from "./analysisSettings";
+export {
   createDeterministicQuickPassProvider,
   DeterministicQuickPassProvider,
   extractFromInput,
@@ -20,6 +26,8 @@ export {
   createOllamaQuickPassProvider,
   OllamaQuickPassProvider,
   parseOllamaQuickPassJson,
+  probeOllamaConnection,
+  type OllamaConnectionProbe,
   type OllamaProviderConfig,
 } from "./ollamaProvider";
 export { buildQuickPassPrompt } from "./promptTemplates";
