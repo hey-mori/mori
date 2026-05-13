@@ -98,6 +98,7 @@ npm run build
 
 - [Product Spec](docs/product-spec.md)
 - [UX Reference](docs/ux-reference.md)
+- [Timeline UX](docs/timeline-ux.md)
 - [Architecture](docs/architecture.md)
 - [Domain Model](docs/domain-model.md)
 - [Mori Package v0](docs/mori-package-v0.md)
