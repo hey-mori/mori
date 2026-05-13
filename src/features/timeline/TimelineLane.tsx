@@ -1,8 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import { TimelineEventCard } from "./TimelineEventCard";
+import { TimelineBundleCard } from "./TimelineBundleCard";
 import { eventTypeTone } from "../../domain/constants";
 import type { EventType, TimelineEvent } from "../../domain/types";
-import type { LaidOutEvent, LaneLayout, TimelineDensity } from "../../lib/timeline/collisionLayout";
+import type { LaidOutTimelineItem, LaneLayout, TimelineDensity } from "../../lib/timeline/collisionLayout";
+import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import { getEventFocusState } from "../../lib/timeline/focusState";
 
 export function TimelineLane({
@@ -11,10 +13,11 @@ export function TimelineLane({
   tone,
   lane,
   laneLabelWidthPx,
-  events,
+  items,
+  eventCount,
   layouts,
   density,
-  selectedEventId,
+  selectedItemId,
   focusedSet,
   onSelect,
   onHover,
@@ -24,16 +27,17 @@ export function TimelineLane({
   tone: EventType;
   lane: LaneLayout;
   laneLabelWidthPx: number;
-  events: TimelineEvent[];
-  layouts: Map<string, LaidOutEvent>;
+  items: TimelineDisplayItem[];
+  eventCount: number;
+  layouts: Map<string, LaidOutTimelineItem>;
   density: TimelineDensity;
-  selectedEventId: string | null;
+  selectedItemId: string | null;
   focusedSet: Set<string>;
-  onSelect: (eventId: string) => void;
-  onHover: (eventId: string | null) => void;
+  onSelect: (itemId: string) => void;
+  onHover: (itemId: string | null) => void;
 }) {
   const colorClass = `lane-tone-${eventTypeTone[tone]}`;
-  const isEmpty = events.length === 0;
+  const isEmpty = items.length === 0;
   return (
     <div
       className={`lane ${colorClass} ${isEmpty ? "is-empty" : ""}`}
@@ -44,22 +48,39 @@ export function TimelineLane({
           <Icon size={14} />
         </span>
         <strong>{label}</strong>
-        {events.length > 0 ? <span className="lane-label-count">{events.length}</span> : null}
+        {eventCount > 0 ? <span className="lane-label-count">{eventCount}</span> : null}
       </div>
-      {events.map((event) => {
-        const layout = layouts.get(event.id);
+      {items.map((item) => {
+        const layout = layouts.get(item.id);
         if (!layout) return null;
+        const focusState = getEventFocusState({
+          itemId: item.id,
+          itemEntityIds: item.memberEventIds,
+          selectedItemId,
+          focusedSet,
+        });
+
+        if (item.kind === "bundle") {
+          return (
+            <TimelineBundleCard
+              key={item.id}
+              bundle={item}
+              layout={layout}
+              density={density}
+              focusState={focusState}
+              onSelect={onSelect}
+              onHover={onHover}
+            />
+          );
+        }
+
         return (
           <TimelineEventCard
-            key={event.id}
-            event={event}
+            key={item.id}
+            event={item.event}
             layout={layout}
             density={density}
-            focusState={getEventFocusState({
-              eventId: event.id,
-              selectedEventId,
-              focusedSet,
-            })}
+            focusState={focusState}
             onSelect={onSelect}
             onHover={onHover}
           />

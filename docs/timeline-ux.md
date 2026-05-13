@@ -16,12 +16,14 @@ src/features/timeline/
   TimelineFilters.tsx     - lane filter chips
   TimelineCanvas.tsx      - frame, axis, relationship layer, lanes, mini-map
   TimelineAxis.tsx        - axis ticks generated from time scale helpers
-  TimelineLane.tsx        - one lane row, list of event cards
+  TimelineLane.tsx        - one lane row, list of display items
   TimelineEventCard.tsx   - single event card UI (no math)
+  TimelineBundleCard.tsx  - dense-moment bundle card UI
   TimelineMiniMap.tsx     - mini-map dots driven by the same focus state
   RelationshipLineLayer.tsx - SVG connectors with tone classes
   TimelineEmptyState.tsx  - demo-empty / no-imports / needs-quick-pass copies
   EventInspector.tsx      - trust, evidence, linked items, correction notes
+  TimelineBundleInspector.tsx - bundle details + included events/evidence
 
 src/features/flow-focus/
   FlowFocusHeader.tsx     - legend + clear-focus + back-to-timeline
@@ -31,6 +33,8 @@ src/features/flow-focus/
 
 src/lib/timeline/
   layout.ts               - existing positioning helpers
+  displayItems.ts         - event vs bundle display model
+  bundleEvents.ts         - dense-moment bundle generation
   timeScale.ts            - axis ticks + duration summary, no UI
   focusState.ts           - selected / related / context state machine
 
@@ -43,7 +47,7 @@ src/lib/relationships/
 Rules:
 
 - Timeline math lives in `src/lib/timeline`. Components never compute axis
-  ticks, focus states, or positions inline.
+  ticks, bundle generation, focus states, or positions inline.
 - Relationship traversal and labeling lives in `src/lib/relationships`.
 - Shared primitives (`Badge`, `Button`, `Toggle`, `MetricCard`,
   `SectionHeader`, `EmptyState`) live in `src/components/ui` and are reused
@@ -51,6 +55,75 @@ Rules:
 - Domain data and mock data never live inside Timeline JSX. The active view
   is always `selectSessionView(state)` from the session store, which already
   switches between the demo mock and a composed real session.
+
+## Single-row lane model
+
+The base Timeline stays lane-based and mostly single-row. Mori should feel
+close to the reference: stable lanes, readable cards, secondary
+relationships, and a right inspector that does the explanatory work.
+
+That means dense periods are **not** solved with unlimited lane stacking,
+and they are **not** solved with a generic `+N more` cluster. Dense moments
+must be represented as meaningful **work-flow bundles**.
+
+A display item is therefore one of:
+
+- `event` — a raw timeline event that remains individually inspectable
+- `bundle` — a dense work moment summarized into one intentional card
+
+The layout engine operates on display items, not directly on raw events.
+
+## Work-flow bundle model
+
+Bundles are the first-layer compression strategy for dense periods.
+
+Current implementation supports **same-lane sequence bundles** and prepares
+the type model for richer bundle kinds later:
+
+- `sequence`
+- `cross-lane`
+- `decision-burst`
+- `issue-burst`
+- `evidence-burst`
+- `code-burst`
+
+Each bundle records:
+
+- time range
+- bundle title
+- summary
+- member event ids
+- event-type counts
+- source count
+- represented decisions
+- represented issues
+- trust level
+- bundle reason
+
+### Bundle generation rules
+
+`createTimelineBundles(events, relationships, options)` applies these rules:
+
+1. Sort events by lane and start time.
+2. Group nearby same-lane events inside a short time window.
+3. Preserve important events as individual cards:
+   - selected event
+   - decision events
+   - events linked to decisions
+   - events with stronger evidence density
+4. Bundle low-importance secondary context when those events would make the
+   lane unreadable.
+5. Generate a title and summary from the dominant lane/type mix instead of
+   collapsing to a generic count.
+6. If a lane still becomes too dense, merge only secondary neighbors while
+   keeping preserved items individual.
+
+Examples from the sample session:
+
+- web research around Dayflow / screenpipe / SpecStory / Pieces becomes a
+  research-flow bundle
+- selected positioning decision remains an individual card
+- dense AI context around the same moment may become an AI work-flow bundle
 
 ## Focus interaction model
 
@@ -62,14 +135,19 @@ The Timeline has exactly three focus tiers:
 | related   | `focus-related`  | full opacity, same surface treatment |
 | context   | `focus-context`  | 55% opacity, hover restores full opacity |
 
-The mapping is centralized in `getEventFocusState({ eventId, selectedEventId,
-focusedSet })`. The mini-map dots use the same mapping so "dimmed" never
-means three different things across two views.
+The mapping is centralized in
+`getEventFocusState({ itemId, itemEntityIds, selectedItemId, focusedSet })`.
+The mini-map dots use the same mapping so "dimmed" never means three
+different things across two views.
 
 - **Hover** an event card → it becomes the focus pivot for as long as the
   pointer stays on it (`onHover(eventId)` / `onHover(null)`).
 - **Click** an event card → pins the selection. The Inspector and the
   relationship layer follow the pinned selection.
+- **Hover / click a bundle** → Mori focuses the bundle's member events and
+  any directly related downstream/upstream entities. The bundle itself is
+  treated as the visible anchor, but the reasoning still comes from real
+  member events.
 - **Clear focus** on Flow Focus moves the selection back to the first event
   so the user can start fresh without leaving the page.
 
@@ -98,6 +176,24 @@ The Event Inspector is the trust surface. Sections, in order:
 Every placeholder is `disabled` with a `title` tooltip explaining what's
 planned. Mori does not show fake working buttons.
 
+## Bundle Inspector
+
+When the selected display item is a bundle, the right inspector switches to
+`TimelineBundleInspector`.
+
+It shows:
+
+1. bundle kind, trust, and lane badges
+2. bundle title and time range
+3. a short explanation of why the events were bundled
+4. the included events list
+5. represented sources, decisions, and issues
+6. `Open Flow Focus` action
+7. a disabled `Expand bundle inline` action labeled as planned
+
+Inline expansion is intentionally not shipped yet. The bundle must be
+inspectable before it becomes expandable.
+
 ## Empty state policy
 
 `TimelineEmptyState` only has three variants and they map cleanly to real
@@ -114,50 +210,54 @@ renders the analyzed events with the same focus tiers.
 
 ## Layout engine
 
-Timeline card positions are produced by
-`computeTimelineLayout(events, range, options)` in
+Timeline display-item positions are produced by
+`computeTimelineLayout(items, range, options)` in
 [`src/lib/timeline/collisionLayout.ts`](../src/lib/timeline/collisionLayout.ts).
 The algorithm:
 
-1. Groups events by lane in the documented `laneOrder`.
+1. Groups display items by lane in the documented `laneOrder`.
 2. Sorts each lane by start time.
-3. Computes each card's intended `x` from the time range and clamps it so a
-   card never starts past `frameWidth - cardWidth`.
-4. Packs cards greedily into sub-rows: each new card lands on the lowest
-   row whose previous card has cleared (`x + cardWidth + gap`). If no
-   existing row fits, a new row is created.
-5. Derives every lane's pixel height from its row count
-   (`laneVerticalPadding * 2 + rows * cardHeight + (rows - 1) * rowGap`),
-   so busy lanes grow taller and quiet lanes stay short.
+3. Computes each item's intended `x` from the time range and clamps it so a
+   card never starts past `frameWidth - itemWidth`.
+4. Keeps the lane mostly single-row by applying limited left-shift
+   backpressure before falling back to extra height.
+5. Uses bundle generation as the primary density control; stacking is no
+   longer the first answer to crowded time windows.
 6. Emits an absolute `(x, y, width, height)` plus `anchorLeft`,
-   `anchorRight`, and `anchorCenter` for every card. The relationship line
-   layer reads these anchors directly — no duplicate math, no rough
-   approximations.
+   `anchorRight`, and `anchorCenter` for every display item. Raw event ids
+   are also indexed back to their visible anchor so relationship lines can
+   point at a bundle when needed.
 
 Two density modes ship today:
 
-| Density        | Card size  | Notes |
-| -------------- | ---------- | ----- |
-| `comfortable`  | 220 × 110  | Default. Title + 2-line summary + footer. |
-| `compact`      | 184 × 78   | Drops the summary, keeps title + footer. Useful for dense sessions. |
+| Density        | Event size | Bundle size | Notes |
+| -------------- | ---------- | ----------- | ----- |
+| `comfortable`  | 220 × 110  | 236 × 124   | Default. Summary visible and bundle metadata readable. |
+| `compact`      | 184 × 78   | 208 × 94    | Shorter copy, same bundle meaning, still single-row-first. |
 
 The mode lives in `useMoriAppStore.timelineDensity` and toggles via the
 "Comfortable / Compact" button in the Timeline controls.
 
-Rules the layout guarantees (covered by `collisionLayout.test.ts`):
+Rules the layout guarantees (covered by `collisionLayout.test.ts` and
+`bundleEvents.test.ts`):
 
-- No two cards in the same lane visually overlap.
-- Lane height grows monotonically with row count.
-- Compact mode produces smaller cards but never breaks the no-overlap
-  rule.
-- Anchor points are stable and inside each card's bounding box.
+- No two visible display items in the same lane visually overlap.
+- Selected / important events can remain individual while nearby secondary
+  events bundle around them.
+- Compact mode produces smaller cards but never breaks the no-overlap rule.
+- Anchor points are stable and inside each visible item's bounding box.
 
 ## Relationship line rules
 
-`RelationshipLineLayer` reads the same `LaidOutEvent` anchors:
+`RelationshipLineLayer` reads the same visible-item anchors:
 
 - Lines enter / exit at the right edge of the upstream card and the left
   edge of the downstream card (whichever is forward in time).
+- If multiple raw relationships resolve to the same bundle/item pair, Mori
+  aggregates them to one visible connector instead of drawing parallel
+  spaghetti.
+- If an event inside a bundle is related to the current focus, the line
+  anchors to the bundle card. The inspector explains the hidden detail.
 - When focus is **active** (Flow Focus mode or a hovered/selected event in
   Timeline mode), only relationships where both endpoints are in the
   focused set render — unrelated lines are removed entirely, not just
@@ -169,6 +269,10 @@ Rules the layout guarantees (covered by `collisionLayout.test.ts`):
 
 ## Known limitations
 
+- Cross-lane workflow bundles are prepared in the type model but not yet
+  generated automatically.
+- Inline bundle expansion is intentionally deferred; this milestone focuses
+  on readable single-row lanes plus inspectable bundles.
 - The Inspector's correction note is read-only; persisting user
   corrections is a planned milestone.
 - Manual relationship edits, event split/merge, manual issue creation, and

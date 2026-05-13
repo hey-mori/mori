@@ -5,8 +5,8 @@ describe("getEventFocusState", () => {
   it("marks the selected event regardless of related set membership", () => {
     expect(
       getEventFocusState({
-        eventId: "evt-1",
-        selectedEventId: "evt-1",
+        itemId: "evt-1",
+        selectedItemId: "evt-1",
         focusedSet: new Set(["evt-1", "evt-2"]),
       }),
     ).toBe("selected");
@@ -15,8 +15,8 @@ describe("getEventFocusState", () => {
   it("treats focusedSet membership as related", () => {
     expect(
       getEventFocusState({
-        eventId: "evt-2",
-        selectedEventId: "evt-1",
+        itemId: "evt-2",
+        selectedItemId: "evt-1",
         focusedSet: new Set(["evt-1", "evt-2"]),
       }),
     ).toBe("related");
@@ -25,8 +25,8 @@ describe("getEventFocusState", () => {
   it("falls back to context for non-focused events", () => {
     expect(
       getEventFocusState({
-        eventId: "evt-99",
-        selectedEventId: "evt-1",
+        itemId: "evt-99",
+        selectedItemId: "evt-1",
         focusedSet: new Set(["evt-1", "evt-2"]),
       }),
     ).toBe("context");
@@ -35,9 +35,20 @@ describe("getEventFocusState", () => {
   it("treats missing selection as context-only", () => {
     expect(
       getEventFocusState({
-        eventId: "evt-1",
-        selectedEventId: null,
+        itemId: "evt-1",
+        selectedItemId: null,
         focusedSet: new Set(["evt-1"]),
+      }),
+    ).toBe("related");
+  });
+
+  it("treats bundle member matches as related", () => {
+    expect(
+      getEventFocusState({
+        itemId: "bundle-1",
+        itemEntityIds: ["evt-2", "evt-3"],
+        selectedItemId: null,
+        focusedSet: new Set(["evt-3"]),
       }),
     ).toBe("related");
   });

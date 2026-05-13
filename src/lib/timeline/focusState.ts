@@ -1,8 +1,9 @@
 export type EventFocusState = "selected" | "related" | "context";
 
 export type ComputeFocusStateInput = {
-  eventId: string;
-  selectedEventId: string | null | undefined;
+  itemId: string;
+  itemEntityIds?: string[];
+  selectedItemId: string | null | undefined;
   focusedSet: Set<string>;
 };
 
@@ -13,8 +14,9 @@ export type ComputeFocusStateInput = {
  * means three different things.
  */
 export function getEventFocusState(input: ComputeFocusStateInput): EventFocusState {
-  if (input.selectedEventId && input.eventId === input.selectedEventId) return "selected";
-  if (input.focusedSet.has(input.eventId)) return "related";
+  if (input.selectedItemId && input.itemId === input.selectedItemId) return "selected";
+  const entityIds = input.itemEntityIds ?? [input.itemId];
+  if (entityIds.some((entityId) => input.focusedSet.has(entityId))) return "related";
   return "context";
 }
 

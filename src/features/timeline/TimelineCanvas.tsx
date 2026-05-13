@@ -2,12 +2,15 @@ import { Search } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { eventTypeIcons, eventTypeLabels, laneOrder } from "../../domain/constants";
-import type { EventType, Relationship, TimelineEvent } from "../../domain/types";
+import type { EventType, Relationship, TimelineEvent, Decision } from "../../domain/types";
+import { createTimelineBundles } from "../../lib/timeline/bundleEvents";
 import {
   computeTimelineLayout,
+  indexEventAnchors,
   indexLayout,
   type TimelineDensity,
 } from "../../lib/timeline/collisionLayout";
+import { isTimelineBundle, type TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import { computeAxisTicks } from "../../lib/timeline/timeScale";
 import type { TimelineRange } from "../../lib/timeline/layout";
 import { TimelineAxis } from "./TimelineAxis";
@@ -17,13 +20,14 @@ import { RelationshipLineLayer } from "./RelationshipLineLayer";
 export type TimelineCanvasProps = {
   events: TimelineEvent[];
   relationships: Relationship[];
+  decisions: Decision[];
   range: TimelineRange;
-  selectedEventId: string | null;
+  selectedItemId: string | null;
   focusedSet: Set<string>;
   mode: "timeline" | "flow";
   density: TimelineDensity;
-  onSelect: (eventId: string) => void;
-  onHover: (eventId: string | null) => void;
+  onSelect: (itemId: string) => void;
+  onHover: (itemId: string | null) => void;
 };
 
 const MIN_FRAME_WIDTH = 1180;
@@ -34,8 +38,9 @@ const LANE_LABEL_WIDTH = 148;
 export function TimelineCanvas({
   events,
   relationships,
+  decisions,
   range,
-  selectedEventId,
+  selectedItemId,
   focusedSet,
   mode,
   density,
@@ -68,17 +73,34 @@ export function TimelineCanvas({
     return laneOrder.filter((type) => present.has(type));
   }, [events]);
 
+  const displayItems = useMemo<TimelineDisplayItem[]>(
+    () =>
+      createTimelineBundles(events, relationships, {
+        timeWindowMinutes: density === "comfortable" ? 12 : 10,
+        minEventsForBundle: 3,
+        preserveSelectedEventId: selectedItemId,
+        preserveImportantEventIds: events
+          .filter((event) => event.type === "decision" || event.linkedDecisionIds.length > 0 || event.sourceRefs.length > 1)
+          .map((event) => event.id),
+        maxVisibleItemsPerLane: density === "comfortable" ? 4 : 5,
+        laneDensity: density,
+        decisions,
+      }),
+    [events, relationships, selectedItemId, density, decisions],
+  );
+
   const layout = useMemo(
     () =>
-      computeTimelineLayout(events, range, {
+      computeTimelineLayout(displayItems, range, {
         frameWidth,
         density,
         laneOrder: activeLaneOrder,
         laneLabelWidthPx: LANE_LABEL_WIDTH,
       }),
-    [events, range, density, activeLaneOrder, frameWidth],
+    [displayItems, range, density, activeLaneOrder, frameWidth],
   );
   const layoutIndex = useMemo(() => indexLayout(layout), [layout]);
+  const eventAnchorIndex = useMemo(() => indexEventAnchors(layout), [layout]);
   const ticks = useMemo(() => computeAxisTicks(range, { maxTicks: 6 }), [range]);
 
   // Default to "only the selected event's neighbourhood draws connectors" —
@@ -97,10 +119,16 @@ export function TimelineCanvas({
   }
 
   const laneEvents = new Map<string, TimelineEvent[]>();
-  for (const lane of layout.lanes) laneEvents.set(lane.type, []);
+  const laneItems = new Map<string, TimelineDisplayItem[]>();
+  for (const lane of layout.lanes) {
+    laneEvents.set(lane.type, []);
+    laneItems.set(lane.type, []);
+  }
   for (const event of events) {
-    const bucket = laneEvents.get(event.type);
-    if (bucket) bucket.push(event);
+    laneEvents.get(event.type)?.push(event);
+  }
+  for (const item of displayItems) {
+    laneItems.get(item.laneType)?.push(item);
   }
 
   return (
@@ -116,7 +144,8 @@ export function TimelineCanvas({
           contentWidthPx={layout.contentWidthPx}
         />
         <RelationshipLineLayer
-          layouts={layoutIndex}
+          itemLayouts={layoutIndex}
+          eventAnchorLayouts={eventAnchorIndex}
           relationships={relationships}
           focusedSet={focusedSet}
           focusActive={focusActive}
@@ -132,10 +161,11 @@ export function TimelineCanvas({
               tone={lane.type}
               lane={lane}
               laneLabelWidthPx={layout.laneLabelWidthPx}
-              events={laneEvents.get(lane.type) ?? []}
+              items={laneItems.get(lane.type) ?? []}
+              eventCount={(laneEvents.get(lane.type) ?? []).length}
               layouts={layoutIndex}
               density={density}
-              selectedEventId={selectedEventId}
+              selectedItemId={selectedItemId}
               focusedSet={focusedSet}
               onSelect={onSelect}
               onHover={onHover}
@@ -146,4 +176,3 @@ export function TimelineCanvas({
     </div>
   );
 }
-

@@ -1,33 +1,55 @@
 import { eventTypeTone } from "../../domain/constants";
 import type { Relationship } from "../../domain/types";
-import type { LaidOutEvent } from "../../lib/timeline/collisionLayout";
+import type { LaidOutTimelineItem } from "../../lib/timeline/collisionLayout";
 
 export function RelationshipLineLayer({
-  layouts,
+  itemLayouts,
+  eventAnchorLayouts,
   relationships,
   focusedSet,
   focusActive,
   frameWidth,
   frameHeight,
 }: {
-  layouts: Map<string, LaidOutEvent>;
+  itemLayouts: Map<string, LaidOutTimelineItem>;
+  eventAnchorLayouts: Map<string, LaidOutTimelineItem>;
   relationships: Relationship[];
   focusedSet: Set<string>;
   focusActive: boolean;
   frameWidth: number;
   frameHeight: number;
 }) {
-  if (!layouts.size) return null;
+  if (!eventAnchorLayouts.size) return null;
 
   // Only render relationships that touch the focus neighbourhood. The previous
   // behaviour drew every edge by default, which buried the cards under a
   // curtain of lines. Selecting an event or entering Flow mode lights up the
   // relevant subgraph; otherwise the canvas stays clean.
-  const visible = relationships.filter((relationship) => {
-    return focusedSet.has(relationship.fromId) && focusedSet.has(relationship.toId);
-  });
+  const visible = relationships.filter(
+    (relationship) => focusedSet.has(relationship.fromId) && focusedSet.has(relationship.toId),
+  );
 
   if (visible.length === 0) return null;
+
+  const aggregated = new Map<string, { from: LaidOutTimelineItem; to: LaidOutTimelineItem; count: number; tone: string }>();
+  for (const relationship of visible) {
+    const from = eventAnchorLayouts.get(relationship.fromId);
+    const to = eventAnchorLayouts.get(relationship.toId);
+    if (!from || !to || from.itemId === to.itemId) continue;
+
+    const key = `${from.itemId}->${to.itemId}`;
+    const existing = aggregated.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      aggregated.set(key, {
+        from,
+        to,
+        count: 1,
+        tone: eventTypeTone[from.laneType],
+      });
+    }
+  }
 
   return (
     <svg
@@ -37,10 +59,9 @@ export function RelationshipLineLayer({
       aria-hidden="true"
       style={{ width: `${frameWidth}px`, height: `${frameHeight}px` }}
     >
-      {visible.map((relationship) => {
-        const from = layouts.get(relationship.fromId);
-        const to = layouts.get(relationship.toId);
-        if (!from || !to) return null;
+      {[...aggregated.entries()].map(([key, aggregate]) => {
+        const from = itemLayouts.get(aggregate.from.itemId) ?? aggregate.from;
+        const to = itemLayouts.get(aggregate.to.itemId) ?? aggregate.to;
         const isForward = from.anchorRight.x <= to.anchorLeft.x;
         const start = isForward ? from.anchorRight : from.anchorLeft;
         const end = isForward ? to.anchorLeft : to.anchorRight;
@@ -48,8 +69,9 @@ export function RelationshipLineLayer({
 
         return (
           <path
-            key={relationship.id}
-            className={`connector tone-${eventTypeTone[from.type]} ${focusActive ? "active" : "subtle"}`}
+            key={key}
+            className={`connector tone-${aggregate.tone} ${focusActive ? "active" : "subtle"}`}
+            strokeWidth={aggregate.count > 1 ? 2.2 : 1.35}
             d={`M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${end.y}, ${end.x} ${end.y}`}
           />
         );

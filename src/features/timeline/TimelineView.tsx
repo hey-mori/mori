@@ -9,9 +9,12 @@ import {
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { getFocusedEntitySet } from "../../lib/relationships/traversal";
+import { createTimelineBundles } from "../../lib/timeline/bundleEvents";
+import { isTimelineBundle } from "../../lib/timeline/displayItems";
 import { getTimelineRange } from "../../lib/timeline/layout";
 import { computeAxisTicks } from "../../lib/timeline/timeScale";
 import { EventInspector } from "./EventInspector";
+import { TimelineBundleInspector } from "./TimelineBundleInspector";
 import { TimelineCanvas } from "./TimelineCanvas";
 import { TimelineEmptyState, type TimelineEmptyVariant } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
@@ -74,15 +77,33 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const visibleEvents = activeFilters.length
     ? view.events.filter((event) => activeFilters.includes(event.type))
     : view.events;
-  const fallbackEvent = view.events[0];
-  const selectedEvent =
-    view.events.find((event) => event.id === selectedEventId) ?? fallbackEvent;
-  const focusedEntityId = hoveredEventId ?? selectedEvent.id;
-  const focusedSet = getFocusedEntitySet(
-    focusedEntityId,
-    view.relationships,
-    mode === "flow" ? 2 : 1,
-  );
+  const visibleDisplayItems = createTimelineBundles(visibleEvents, view.relationships, {
+    timeWindowMinutes: density === "comfortable" ? 12 : 10,
+    minEventsForBundle: 3,
+    preserveSelectedEventId: selectedEventId,
+    preserveImportantEventIds: visibleEvents
+      .filter((event) => event.type === "decision" || event.linkedDecisionIds.length > 0 || event.sourceRefs.length > 1)
+      .map((event) => event.id),
+    maxVisibleItemsPerLane: density === "comfortable" ? 4 : 5,
+    laneDensity: density,
+    decisions: view.decisions,
+  });
+  const fallbackItem = visibleDisplayItems[0];
+  const selectedItem =
+    visibleDisplayItems.find((item) => item.id === selectedEventId) ??
+    visibleDisplayItems.find((item) => item.memberEventIds.includes(selectedEventId ?? "")) ??
+    fallbackItem;
+  const focusSeeds = selectedItem
+    ? hoveredEventId
+      ? visibleDisplayItems.find((item) => item.id === hoveredEventId)?.memberEventIds ?? [hoveredEventId]
+      : selectedItem.memberEventIds
+    : [];
+  const focusedSet = new Set<string>();
+  for (const focusSeed of focusSeeds) {
+    for (const entityId of getFocusedEntitySet(focusSeed, view.relationships, mode === "flow" ? 2 : 1)) {
+      focusedSet.add(entityId);
+    }
+  }
   const ticks = computeAxisTicks(range, { maxTicks: 6 });
 
   return (
@@ -109,8 +130,9 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           <TimelineCanvas
             events={visibleEvents}
             relationships={view.relationships}
+            decisions={view.decisions}
             range={range}
-            selectedEventId={selectedEvent.id}
+            selectedItemId={selectedItem?.id ?? null}
             focusedSet={focusedSet}
             mode={mode}
             density={density}
@@ -119,27 +141,33 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           />
           {mode === "timeline" ? (
             <TimelineMiniMap
-              events={visibleEvents}
+              items={visibleDisplayItems}
               range={range}
               ticks={ticks}
-              selectedEventId={selectedEvent.id}
+              selectedItemId={selectedItem?.id ?? null}
               focusedSet={focusedSet}
             />
           ) : null}
         </section>
-        {mode === "flow" ? (
-          <TracePanel
-            selectedEvent={selectedEvent}
-            session={view}
-            onClearFocus={() => setSelectedEventId(view.events[0]?.id ?? "")}
-          />
-        ) : (
-          <EventInspector
-            selectedEvent={selectedEvent}
+        {selectedItem && isTimelineBundle(selectedItem) ? (
+          <TimelineBundleInspector
+            bundle={selectedItem}
             session={view}
             onTrace={() => setCurrentView("flow")}
           />
-        )}
+        ) : mode === "flow" && selectedItem && "event" in selectedItem ? (
+          <TracePanel
+            selectedEvent={selectedItem.event}
+            session={view}
+            onClearFocus={() => setSelectedEventId(view.events[0]?.id ?? "")}
+          />
+        ) : selectedItem && "event" in selectedItem ? (
+          <EventInspector
+            selectedEvent={selectedItem.event}
+            session={view}
+            onTrace={() => setCurrentView("flow")}
+          />
+        ) : null}
       </div>
     </>
   );

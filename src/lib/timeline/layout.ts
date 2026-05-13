@@ -52,7 +52,11 @@ export function getTimelineRange(events: TimelineEvent[], fallback: TimelineRang
   const sorted = [...events].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   const last = sorted[sorted.length - 1];
   return {
-    start: sorted[0]?.start ?? fallback.start,
-    end: last?.end ?? last?.start ?? fallback.end,
+    start: new Date(fallback.start).getTime() <= new Date(sorted[0]?.start ?? fallback.start).getTime()
+      ? fallback.start
+      : sorted[0]?.start ?? fallback.start,
+    end: new Date(fallback.end).getTime() >= new Date(last?.end ?? last?.start ?? fallback.end).getTime()
+      ? fallback.end
+      : last?.end ?? last?.start ?? fallback.end,
   };
 }

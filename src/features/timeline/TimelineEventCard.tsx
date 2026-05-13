@@ -1,6 +1,6 @@
 import { eventTypeIcons, eventTypeLabels, eventTypeTone } from "../../domain/constants";
 import { formatTime } from "../../lib/formatting/time";
-import type { LaidOutEvent, TimelineDensity } from "../../lib/timeline/collisionLayout";
+import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { TimelineEvent } from "../../domain/types";
 
@@ -13,7 +13,7 @@ export function TimelineEventCard({
   onHover,
 }: {
   event: TimelineEvent;
-  layout: LaidOutEvent;
+  layout: LaidOutTimelineItem;
   focusState: EventFocusState;
   density: TimelineDensity;
   onSelect: (eventId: string) => void;

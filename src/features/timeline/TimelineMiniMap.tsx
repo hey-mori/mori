@@ -2,36 +2,34 @@ import { useMemo } from "react";
 import { eventTypeTone, laneOrder } from "../../domain/constants";
 import { focusStateClassName, getEventFocusState } from "../../lib/timeline/focusState";
 import { timestampToXPercent, type TimelineRange } from "../../lib/timeline/layout";
-import type { TimelineEvent } from "../../domain/types";
+import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import type { AxisTick } from "../../lib/timeline/timeScale";
 
 export function TimelineMiniMap({
-  events,
+  items,
   range,
   ticks,
-  selectedEventId,
+  selectedItemId,
   focusedSet,
 }: {
-  events: TimelineEvent[];
+  items: TimelineDisplayItem[];
   range: TimelineRange;
   ticks: AxisTick[];
-  selectedEventId: string | null;
+  selectedItemId: string | null;
   focusedSet: Set<string>;
 }) {
-  // Place dots by real time position (not by lane index modulo) so the rail
-  // reads as a true bird's-eye-view of when events happened.
   const placed = useMemo(() => {
-    return events.map((event) => {
-      const xPercent = timestampToXPercent(event.start, range);
-      const laneIndex = Math.max(0, laneOrder.indexOf(event.type));
-      return { event, xPercent, laneIndex };
+    return items.map((item) => {
+      const xPercent = timestampToXPercent(item.start, range);
+      const laneIndex = Math.max(0, laneOrder.indexOf(item.laneType));
+      return { item, xPercent, laneIndex };
     });
-  }, [events, range]);
+  }, [items, range]);
 
   if (placed.length === 0) return null;
 
   const totalLanes = laneOrder.length;
-  const selectedDot = placed.find((dot) => dot.event.id === selectedEventId);
+  const selectedDot = placed.find((dot) => dot.item.id === selectedItemId);
 
   return (
     <div className="mini-map" aria-label="Timeline overview">
@@ -43,22 +41,23 @@ export function TimelineMiniMap({
         ))}
       </div>
       <div className="mini-track">
-        {placed.map(({ event, xPercent, laneIndex }) => {
+        {placed.map(({ item, xPercent, laneIndex }) => {
           const state = getEventFocusState({
-            eventId: event.id,
-            selectedEventId,
+            itemId: item.id,
+            itemEntityIds: item.memberEventIds,
+            selectedItemId,
             focusedSet,
           });
           const topPercent = (laneIndex / Math.max(1, totalLanes - 1)) * 80 + 10;
           return (
             <i
-              key={event.id}
-              className={`mini-dot tone-${eventTypeTone[event.type]} ${focusStateClassName(state)}`}
+              key={item.id}
+              className={`mini-dot tone-${eventTypeTone[item.laneType]} ${focusStateClassName(state)} ${item.kind === "bundle" ? "is-bundle" : ""}`}
               style={{
                 left: `${xPercent}%`,
                 top: `${topPercent}%`,
               }}
-              title={event.title}
+              title={item.kind === "bundle" ? item.title : item.event.title}
             />
           );
         })}

@@ -1,4 +1,5 @@
-import type { EventType, TimelineEvent } from "../../domain/types";
+import type { EventType } from "../../domain/types";
+import type { TimelineDisplayItem } from "./displayItems";
 import { timestampToXPercent, type TimelineRange } from "./layout";
 
 export type TimelineDensity = "comfortable" | "compact";
@@ -9,19 +10,16 @@ export type TimelineLayoutOptions = {
   cardGapPx?: number;
   rowGapPx?: number;
   laneOffsetPx?: number;
-  /** Width of the fixed left lane-label column. Cards are placed inside the
-   *  remaining content area. Defaults to 140px so 8 lanes feel like a real
-   *  swim-lane diagram. */
   laneLabelWidthPx?: number;
-  /** Right padding inside the content area. */
   contentRightPaddingPx?: number;
   laneOrder: EventType[];
 };
 
-export type LaidOutEvent = {
-  eventId: string;
-  type: EventType;
-  rowIndex: number;
+export type LaidOutTimelineItem = {
+  itemId: string;
+  kind: TimelineDisplayItem["kind"];
+  laneType: EventType;
+  memberEventIds: string[];
   x: number;
   y: number;
   width: number;
@@ -41,7 +39,7 @@ export type LaneLayout = {
 };
 
 export type TimelineLayout = {
-  events: LaidOutEvent[];
+  items: LaidOutTimelineItem[];
   lanes: LaneLayout[];
   frameWidth: number;
   frameHeight: number;
@@ -55,108 +53,82 @@ export type TimelineLayout = {
   rowHeight: number;
 };
 
-const DENSITY_CARD_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
+const DENSITY_EVENT_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
   comfortable: { width: 188, height: 88 },
   compact: { width: 152, height: 56 },
+};
+
+const DENSITY_BUNDLE_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
+  comfortable: { width: 224, height: 102 },
+  compact: { width: 180, height: 74 },
 };
 
 const DEFAULT_LANE_OFFSET = 40;
 const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
 const DEFAULT_CARD_GAP = 8;
-const DEFAULT_ROW_GAP = 6;
 const LANE_VERTICAL_PADDING = 12;
 
-/**
- * Compute a deterministic, collision-free Timeline layout in swim-lane form.
- *
- * Lane labels sit in a fixed-width left column. Each lane is a horizontal
- * band; cards are positioned by time inside the content area and packed
- * greedily into sub-rows so two cards never visually collide. Lane height is
- * derived from row count, so busy lanes grow taller and quiet lanes stay a
- * single row.
- */
 export function computeTimelineLayout(
-  events: TimelineEvent[],
+  items: TimelineDisplayItem[],
   range: TimelineRange,
   options: TimelineLayoutOptions,
 ): TimelineLayout {
   const density: TimelineDensity = options.density ?? "comfortable";
-  const { width: cardWidth, height: cardHeight } = DENSITY_CARD_DIMENSIONS[density];
+  const { width: cardWidth, height: cardHeight } = DENSITY_EVENT_DIMENSIONS[density];
   const cardGap = options.cardGapPx ?? DEFAULT_CARD_GAP;
-  const rowGap = options.rowGapPx ?? DEFAULT_ROW_GAP;
   const laneOffsetPx = options.laneOffsetPx ?? DEFAULT_LANE_OFFSET;
   const laneLabelWidthPx = options.laneLabelWidthPx ?? DEFAULT_LANE_LABEL_WIDTH;
   const contentRightPadding = options.contentRightPaddingPx ?? DEFAULT_CONTENT_RIGHT_PADDING;
-  const rowHeight = cardHeight + rowGap;
+  const rowHeight = cardHeight;
   const contentLeftPx = laneLabelWidthPx;
   const contentWidthPx = Math.max(cardWidth, options.frameWidth - contentLeftPx - contentRightPadding);
 
-  const grouped = new Map<EventType, TimelineEvent[]>();
+  const grouped = new Map<EventType, TimelineDisplayItem[]>();
   for (const lane of options.laneOrder) grouped.set(lane, []);
-  for (const event of events) {
-    if (!grouped.has(event.type)) grouped.set(event.type, []);
-    grouped.get(event.type)!.push(event);
+  for (const item of items) {
+    const bucket = grouped.get(item.laneType);
+    if (bucket) {
+      bucket.push(item);
+    } else {
+      grouped.set(item.laneType, [item]);
+    }
   }
-  for (const [, laneEvents] of grouped) {
-    laneEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+  for (const [, laneItems] of grouped) {
+    laneItems.sort((left, right) => new Date(left.start).getTime() - new Date(right.start).getTime());
   }
 
-  const placed: LaidOutEvent[] = [];
+  const placed: LaidOutTimelineItem[] = [];
   const lanes: LaneLayout[] = [];
   let cursorY = laneOffsetPx;
 
   for (const type of options.laneOrder) {
-    const laneEvents = grouped.get(type) ?? [];
-    const rowEnds: number[] = [];
+    const laneItems = grouped.get(type) ?? [];
     const laneTop = cursorY;
-    const laneEventsLayout: LaidOutEvent[] = [];
-
-    for (const event of laneEvents) {
-      const x = computeCardLeft(event, range, contentLeftPx, contentWidthPx, cardWidth);
-      const rowIndex = pickRow(rowEnds, x, cardGap);
-      rowEnds[rowIndex] = x + cardWidth;
-      laneEventsLayout.push({
-        eventId: event.id,
-        type,
-        rowIndex,
-        x,
-        y: 0,
-        width: cardWidth,
-        height: cardHeight,
-        laneTop,
-        laneHeight: 0,
-        anchorLeft: { x: 0, y: 0 },
-        anchorRight: { x: 0, y: 0 },
-        anchorCenter: { x: 0, y: 0 },
-      });
-    }
-
-    // Empty lanes collapse to a short header strip so a quiet category does
-    // not blow up the canvas height. Lanes that contain at least one event
-    // grow with row count.
-    const hasEvents = rowEnds.length > 0;
-    const rowCount = hasEvents ? rowEnds.length : 0;
-    const laneHeight = hasEvents
-      ? LANE_VERTICAL_PADDING * 2 + rowCount * cardHeight + Math.max(0, rowCount - 1) * rowGap
+    const laneHeight = laneItems.length > 0
+      ? LANE_VERTICAL_PADDING * 2 + getLaneHeight(laneItems, density)
       : 36;
+    const y = laneTop + LANE_VERTICAL_PADDING;
+    const laneLayouts = layoutLaneItems(
+      laneItems,
+      type,
+      range,
+      density,
+      contentLeftPx,
+      contentWidthPx,
+      laneTop,
+      laneHeight,
+      y,
+      cardGap,
+    );
 
-    for (const item of laneEventsLayout) {
-      const y = laneTop + LANE_VERTICAL_PADDING + item.rowIndex * rowHeight;
-      item.y = y;
-      item.laneHeight = laneHeight;
-      item.anchorLeft = { x: item.x, y: y + cardHeight / 2 };
-      item.anchorRight = { x: item.x + cardWidth, y: y + cardHeight / 2 };
-      item.anchorCenter = { x: item.x + cardWidth / 2, y: y + cardHeight / 2 };
-    }
-
-    placed.push(...laneEventsLayout);
-    lanes.push({ type, top: laneTop, height: laneHeight, rowCount });
+    placed.push(...laneLayouts);
+    lanes.push({ type, top: laneTop, height: laneHeight, rowCount: laneItems.length > 0 ? 1 : 0 });
     cursorY += laneHeight;
   }
 
   return {
-    events: placed,
+    items: placed,
     lanes,
     frameWidth: options.frameWidth,
     frameHeight: cursorY,
@@ -171,31 +143,103 @@ export function computeTimelineLayout(
   };
 }
 
-export function indexLayout(layout: TimelineLayout): Map<string, LaidOutEvent> {
-  const map = new Map<string, LaidOutEvent>();
-  for (const item of layout.events) map.set(item.eventId, item);
+export function indexLayout(layout: TimelineLayout): Map<string, LaidOutTimelineItem> {
+  const map = new Map<string, LaidOutTimelineItem>();
+  for (const item of layout.items) map.set(item.itemId, item);
   return map;
 }
 
-function computeCardLeft(
-  event: TimelineEvent,
+export function indexEventAnchors(layout: TimelineLayout): Map<string, LaidOutTimelineItem> {
+  const map = new Map<string, LaidOutTimelineItem>();
+  for (const item of layout.items) {
+    for (const eventId of item.memberEventIds) {
+      map.set(eventId, item);
+    }
+  }
+  return map;
+}
+
+function layoutLaneItems(
+  items: TimelineDisplayItem[],
+  laneType: EventType,
+  range: TimelineRange,
+  density: TimelineDensity,
+  contentLeftPx: number,
+  contentWidthPx: number,
+  laneTop: number,
+  laneHeight: number,
+  y: number,
+  cardGap: number,
+): LaidOutTimelineItem[] {
+  const maxRight = contentLeftPx + contentWidthPx;
+  const placements = items.map((item) => {
+    const dimensions =
+      item.kind === "bundle" ? DENSITY_BUNDLE_DIMENSIONS[density] : DENSITY_EVENT_DIMENSIONS[density];
+    const idealX = computeItemLeft(item.start, range, contentLeftPx, contentWidthPx, dimensions.width);
+
+    return {
+      item,
+      x: idealX,
+      idealX,
+      width: dimensions.width,
+      height: dimensions.height,
+    };
+  });
+
+  for (let index = 1; index < placements.length; index += 1) {
+    const previous = placements[index - 1]!;
+    const current = placements[index]!;
+    current.x = Math.max(current.idealX, previous.x + previous.width + cardGap);
+  }
+
+  const last = placements[placements.length - 1];
+  if (last) {
+    let overflow = last.x + last.width - maxRight;
+
+    for (let index = placements.length - 1; index >= 0 && overflow > 0; index -= 1) {
+      const current = placements[index]!;
+      const minLeft =
+        index === 0 ? contentLeftPx : placements[index - 1]!.x + placements[index - 1]!.width + cardGap;
+      const shift = Math.min(overflow, current.x - minLeft);
+      current.x -= shift;
+      overflow -= shift;
+    }
+  }
+
+  return placements.map(({ item, x, width, height }) => ({
+    itemId: item.id,
+    kind: item.kind,
+    laneType,
+    memberEventIds: item.memberEventIds,
+    x,
+    y,
+    width,
+    height,
+    laneTop,
+    laneHeight,
+    anchorLeft: { x, y: y + height / 2 },
+    anchorRight: { x: x + width, y: y + height / 2 },
+    anchorCenter: { x: x + width / 2, y: y + height / 2 },
+  }));
+}
+
+function getLaneHeight(items: TimelineDisplayItem[], density: TimelineDensity): number {
+  return Math.max(
+    ...items.map((item) =>
+      item.kind === "bundle" ? DENSITY_BUNDLE_DIMENSIONS[density].height : DENSITY_EVENT_DIMENSIONS[density].height,
+    ),
+  );
+}
+
+function computeItemLeft(
+  start: string,
   range: TimelineRange,
   contentLeftPx: number,
   contentWidthPx: number,
-  cardWidth: number,
+  width: number,
 ): number {
-  const percent = timestampToXPercent(event.start, range);
+  const percent = timestampToXPercent(start, range);
   const ideal = contentLeftPx + (percent / 100) * contentWidthPx;
-  const maxLeft = contentLeftPx + Math.max(0, contentWidthPx - cardWidth);
+  const maxLeft = contentLeftPx + Math.max(0, contentWidthPx - width);
   return Math.min(maxLeft, Math.max(contentLeftPx, ideal));
-}
-
-function pickRow(rowEnds: number[], cardLeft: number, cardGap: number): number {
-  for (let row = 0; row < rowEnds.length; row += 1) {
-    if (rowEnds[row] + cardGap <= cardLeft) {
-      return row;
-    }
-  }
-  rowEnds.push(0);
-  return rowEnds.length - 1;
 }

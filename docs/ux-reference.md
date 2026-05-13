@@ -46,12 +46,26 @@ Key elements:
 - left sidebar
 - top session header
 - horizontal time axis
-- timeline lanes
-- event cards
+- single-row-first timeline lanes
+- event cards for major moments
+- work-flow bundles for dense periods
 - right event detail panel
 - bottom mini map
 
 The horizontal lane structure lets users scan how work moved across AI conversation, decisions, issues, file/code changes, web research, and notes. The right inspector keeps evidence, impact, related items, and notes close to the selected event.
+
+Dense periods should not collapse into a generic `+N more` chip. Mori's
+job is to explain how work unfolded, so crowded moments need intentional
+bundle cards such as:
+
+- research burst
+- decision flow
+- issue burst
+- code change burst
+- AI-to-decision sequence
+
+Each bundle should still communicate time range, dominant meaning, included
+types, evidence/trust, and what it represents in the work flow.
 
 ## Flow Focus / Trace View
 
@@ -107,6 +121,8 @@ Resume Prompt should be immediately useful in a new AI session. Reports should b
 ## UX Principles
 
 - Timeline first, graph second
+- Single-row lanes first, unlimited stacking never as the default
+- Dense moments become work-flow bundles, not generic hidden clusters
 - Evidence must be inspectable
 - AI output must be correctable
 - Local-first trust must be visible

@@ -882,6 +882,154 @@ kbd {
   margin-top: auto;
 }
 
+.timeline-bundle-card {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 6px;
+  padding: 11px 12px 10px;
+  color: #172033;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(20, 25, 36, 0.05), 0 8px 18px rgba(20, 25, 36, 0.05);
+  transition: opacity 140ms ease, transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.timeline-bundle-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: currentColor;
+  opacity: 0.18;
+}
+
+.timeline-bundle-card.is-compact {
+  grid-template-rows: auto auto auto auto;
+  gap: 4px;
+  padding: 9px 10px;
+}
+
+.timeline-bundle-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 8px 20px rgba(20, 25, 36, 0.09);
+  transform: translateY(-1px);
+}
+
+.timeline-bundle-card.focus-selected {
+  border-color: var(--purple);
+  box-shadow: 0 12px 28px rgba(98, 70, 245, 0.2);
+  outline: 2px solid var(--purple);
+  outline-offset: -2px;
+  z-index: 3;
+}
+
+.timeline-bundle-card.focus-related {
+  opacity: 1;
+}
+
+.timeline-bundle-card.focus-context {
+  opacity: 0.72;
+}
+
+.timeline-bundle-card.focus-context:hover {
+  opacity: 1;
+}
+
+.timeline-bundle-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.timeline-bundle-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.06);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.timeline-bundle-title {
+  font-size: 13px;
+  line-height: 1.34;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-bundle-card.is-compact .timeline-bundle-title {
+  font-size: 12px;
+}
+
+.timeline-bundle-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.48;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.timeline-bundle-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 0;
+}
+
+.timeline-bundle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.timeline-bundle-chip.tone-purple { color: var(--purple); background: var(--purple-50); }
+.timeline-bundle-chip.tone-green  { color: var(--green); background: var(--green-50); }
+.timeline-bundle-chip.tone-red    { color: var(--red); background: var(--red-50); }
+.timeline-bundle-chip.tone-blue   { color: var(--blue); background: var(--blue-50); }
+.timeline-bundle-chip.tone-cyan   { color: var(--cyan); background: var(--cyan-50); }
+.timeline-bundle-chip.tone-orange { color: #b46100; background: var(--orange-50); }
+.timeline-bundle-chip.tone-gray   { color: #5b6477; background: var(--gray-50); }
+
+.timeline-bundle-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .event-card-meta {
   color: var(--muted-2);
   font-size: 10px;
@@ -992,6 +1140,15 @@ kbd {
 .mini-dot.tone-cyan   { background: var(--cyan); }
 .mini-dot.tone-orange { background: var(--orange); }
 .mini-dot.tone-gray   { background: #9aa3b2; }
+
+.mini-dot.is-bundle {
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.88);
+}
 
 .mini-dot.focus-selected {
   width: 9px;
@@ -3524,4 +3681,3 @@ pre {
   gap: 6px;
   flex-wrap: wrap;
 }
-
