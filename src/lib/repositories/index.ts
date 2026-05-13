@@ -1,13 +1,17 @@
 export {
   DEFAULT_REPOSITORY_SETTINGS,
+  UNVERIFIED_VERIFICATION,
   addRepositoryConfig,
   createRepositoryId,
   deriveLabelFromPath,
   removeRepositoryConfig,
   sanitizeRepositorySettings,
+  setRepositoryVerification,
   setSelectedRepository,
   updateRepositoryConfig,
   type AddRepositoryInput,
   type MoriRepositoryConfig,
   type RepositorySettings,
+  type RepositoryVerificationMetadata,
+  type RepositoryVerificationStatus,
 } from "./repositorySettings";

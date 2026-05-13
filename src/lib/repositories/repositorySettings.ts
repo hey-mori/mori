@@ -1,9 +1,25 @@
+export type RepositoryVerificationStatus = "unverified" | "verified" | "failed";
+
+export type RepositoryVerificationMetadata = {
+  status: RepositoryVerificationStatus;
+  verifiedAt?: string;
+  gitRoot?: string;
+  currentBranch?: string;
+  headCommit?: string;
+  shortHeadCommit?: string;
+  isDirty?: boolean;
+  error?: string;
+};
+
+export const UNVERIFIED_VERIFICATION: RepositoryVerificationMetadata = { status: "unverified" };
+
 export type MoriRepositoryConfig = {
   id: string;
   label: string;
   path: string;
   createdAt: string;
   lastUsedAt?: string;
+  verification?: RepositoryVerificationMetadata;
 };
 
 export type RepositorySettings = {
@@ -44,6 +60,7 @@ export function sanitizeRepositorySettings(input: unknown): RepositorySettings {
     const lastUsedAt = typeof entry.lastUsedAt === "string" && entry.lastUsedAt.trim()
       ? entry.lastUsedAt.trim()
       : undefined;
+    const verification = sanitizeVerificationMetadata((entry as { verification?: unknown }).verification);
 
     repositories.push({
       id: idCandidate ?? createRepositoryId(normalizedPath),
@@ -51,6 +68,7 @@ export function sanitizeRepositorySettings(input: unknown): RepositorySettings {
       path: normalizedPath,
       createdAt,
       ...(lastUsedAt ? { lastUsedAt } : {}),
+      ...(verification ? { verification } : {}),
     });
   }
 
@@ -139,6 +157,60 @@ export function updateRepositoryConfig(
           },
     ),
   };
+}
+
+export function setRepositoryVerification(
+  settings: RepositorySettings,
+  repositoryId: string,
+  verification: RepositoryVerificationMetadata | null,
+): RepositorySettings {
+  return {
+    ...settings,
+    repositories: settings.repositories.map((entry) => {
+      if (entry.id !== repositoryId) return entry;
+      if (!verification) {
+        const { verification: _drop, ...rest } = entry;
+        return rest;
+      }
+      return { ...entry, verification: sanitizeVerificationMetadata(verification) ?? UNVERIFIED_VERIFICATION };
+    }),
+  };
+}
+
+function sanitizeVerificationMetadata(input: unknown): RepositoryVerificationMetadata | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const candidate = input as Partial<RepositoryVerificationMetadata>;
+  const status: RepositoryVerificationStatus =
+    candidate.status === "verified" || candidate.status === "failed" || candidate.status === "unverified"
+      ? candidate.status
+      : "unverified";
+
+  const result: RepositoryVerificationMetadata = { status };
+  if (typeof candidate.verifiedAt === "string" && candidate.verifiedAt.trim()) {
+    result.verifiedAt = candidate.verifiedAt.trim();
+  }
+  if (typeof candidate.gitRoot === "string" && candidate.gitRoot.trim()) {
+    result.gitRoot = candidate.gitRoot.trim();
+  }
+  if (typeof candidate.currentBranch === "string" && candidate.currentBranch.trim()) {
+    result.currentBranch = candidate.currentBranch.trim();
+  }
+  if (typeof candidate.headCommit === "string" && candidate.headCommit.trim()) {
+    result.headCommit = candidate.headCommit.trim();
+    result.shortHeadCommit =
+      typeof candidate.shortHeadCommit === "string" && candidate.shortHeadCommit.trim()
+        ? candidate.shortHeadCommit.trim()
+        : candidate.headCommit.trim().slice(0, 7);
+  } else if (typeof candidate.shortHeadCommit === "string" && candidate.shortHeadCommit.trim()) {
+    result.shortHeadCommit = candidate.shortHeadCommit.trim();
+  }
+  if (typeof candidate.isDirty === "boolean") {
+    result.isDirty = candidate.isDirty;
+  }
+  if (typeof candidate.error === "string" && candidate.error.trim()) {
+    result.error = candidate.error.trim();
+  }
+  return result;
 }
 
 export function setSelectedRepository(

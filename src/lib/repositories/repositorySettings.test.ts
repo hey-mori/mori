@@ -5,8 +5,10 @@ import {
   deriveLabelFromPath,
   removeRepositoryConfig,
   sanitizeRepositorySettings,
+  setRepositoryVerification,
   setSelectedRepository,
   updateRepositoryConfig,
+  type RepositoryVerificationMetadata,
 } from "./repositorySettings";
 
 const fixedNow = "2026-05-12T13:00:00+09:00";
@@ -96,5 +98,101 @@ describe("repository settings operations", () => {
     expect(deriveLabelFromPath("/home/me/mori")).toBe("mori");
     expect(deriveLabelFromPath("C:\\dev\\mori")).toBe("mori");
     expect(deriveLabelFromPath("/")).toBe("repository");
+  });
+});
+
+describe("repository verification metadata", () => {
+  it("preserves verified metadata through sanitize", () => {
+    const sanitized = sanitizeRepositorySettings({
+      repositories: [
+        {
+          id: "r-a",
+          label: "A",
+          path: "/repo/a",
+          createdAt: fixedNow,
+          verification: {
+            status: "verified",
+            verifiedAt: fixedNow,
+            gitRoot: "/repo/a",
+            currentBranch: "main",
+            headCommit: "0123456789abcdef",
+            shortHeadCommit: "0123456",
+            isDirty: true,
+          },
+        },
+      ],
+      selectedRepositoryId: "r-a",
+    });
+    expect(sanitized.repositories[0].verification?.status).toBe("verified");
+    expect(sanitized.repositories[0].verification?.currentBranch).toBe("main");
+    expect(sanitized.repositories[0].verification?.shortHeadCommit).toBe("0123456");
+    expect(sanitized.repositories[0].verification?.isDirty).toBe(true);
+  });
+
+  it("derives shortHeadCommit when missing", () => {
+    const sanitized = sanitizeRepositorySettings({
+      repositories: [
+        {
+          id: "r-a",
+          label: "A",
+          path: "/repo/a",
+          createdAt: fixedNow,
+          verification: { status: "verified", headCommit: "deadbeefcafe1234" },
+        },
+      ],
+    });
+    expect(sanitized.repositories[0].verification?.shortHeadCommit).toBe("deadbee");
+  });
+
+  it("rejects unknown verification status values", () => {
+    const sanitized = sanitizeRepositorySettings({
+      repositories: [
+        {
+          id: "r-a",
+          label: "A",
+          path: "/repo/a",
+          createdAt: fixedNow,
+          verification: { status: "rogue" },
+        },
+      ],
+    });
+    expect(sanitized.repositories[0].verification?.status).toBe("unverified");
+  });
+
+  it("setRepositoryVerification persists a verified result and can clear it", () => {
+    const { settings } = addRepositoryConfig(DEFAULT_REPOSITORY_SETTINGS, {
+      path: "/repo/mori",
+      now: fixedNow,
+    });
+    const repoId = settings.repositories[0].id;
+    const verification: RepositoryVerificationMetadata = {
+      status: "verified",
+      verifiedAt: fixedNow,
+      gitRoot: "/repo/mori",
+      currentBranch: "main",
+      headCommit: "0123456789abcdef",
+      shortHeadCommit: "0123456",
+      isDirty: false,
+    };
+    const withVerified = setRepositoryVerification(settings, repoId, verification);
+    expect(withVerified.repositories[0].verification?.status).toBe("verified");
+
+    const cleared = setRepositoryVerification(withVerified, repoId, null);
+    expect(cleared.repositories[0].verification).toBeUndefined();
+  });
+
+  it("setRepositoryVerification stores failed status and error text", () => {
+    const { settings } = addRepositoryConfig(DEFAULT_REPOSITORY_SETTINGS, {
+      path: "/repo/mori",
+      now: fixedNow,
+    });
+    const repoId = settings.repositories[0].id;
+    const updated = setRepositoryVerification(settings, repoId, {
+      status: "failed",
+      verifiedAt: fixedNow,
+      error: "fatal: not a git repository",
+    });
+    expect(updated.repositories[0].verification?.status).toBe("failed");
+    expect(updated.repositories[0].verification?.error).toContain("not a git repository");
   });
 });

@@ -22,6 +22,7 @@ fn main() {
             sqlite::load_sqlite_session_snapshot,
             sqlite::list_sqlite_sessions,
             git::diff::run_git_diff,
+            git::verify::verify_repository_path,
             repositories::picker::pick_repository_directory,
         ])
         .run(tauri::generate_context!())

@@ -2511,3 +2511,22 @@ pre {
   width: 160px;
 }
 
+.repo-verification {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.repo-verification small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.repository-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+

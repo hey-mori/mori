@@ -17,6 +17,7 @@ import type {
 import type { SqlitePersistenceSnapshot } from "../sqlite/records";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
+import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./repositoryCommands";
 
 export type TauriCommandName =
   | "get_app_info"
@@ -34,6 +35,7 @@ export type TauriCommandName =
   | "import_git_diff"
   | "run_git_diff"
   | "pick_repository_directory"
+  | "verify_repository_path"
   | "analyze_session_quick_pass"
   | "generate_report";
 
@@ -83,6 +85,7 @@ export type TauriCommandMap = {
     input: { input?: { initialDirectory?: string; title?: string } };
     output: { path: string | null; cancelled: boolean };
   };
+  verify_repository_path: { input: { request: VerifyRepositoryRequest }; output: RepositoryVerificationResult };
   analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
   generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };
 };

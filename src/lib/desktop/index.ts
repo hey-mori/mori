@@ -11,5 +11,10 @@ export type {
 export { invokeTauriCommand, tauriCommands } from "./tauriCommands";
 export { runGitDiff } from "./gitCommands";
 export type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
-export { pickRepositoryDirectory } from "./repositoryCommands";
-export type { PickRepositoryRequest, PickRepositoryResult } from "./repositoryCommands";
+export { pickRepositoryDirectory, verifyRepositoryPath } from "./repositoryCommands";
+export type {
+  PickRepositoryRequest,
+  PickRepositoryResult,
+  RepositoryVerificationResult,
+  VerifyRepositoryRequest,
+} from "./repositoryCommands";

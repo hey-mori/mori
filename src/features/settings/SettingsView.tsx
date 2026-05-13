@@ -1,4 +1,4 @@
-import { Bot, Cloud, Database, DownloadCloud, FolderOpen, FolderPlus, Folder, HardDrive, Plug, RefreshCw, Save, ShieldCheck, Star, Trash2 } from "lucide-react";
+import { Bot, CheckCircle2, Cloud, Database, DownloadCloud, FolderOpen, FolderPlus, Folder, HardDrive, Plug, RefreshCw, RotateCcw, Save, ShieldCheck, Star, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -11,7 +11,7 @@ import { selectActiveRepository, useMoriRepositoryStore } from "../../app/reposi
 import type { QuickPassProviderKind } from "../../lib/analysis";
 import { probeOllamaConnection } from "../../lib/analysis";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
-import { deriveLabelFromPath } from "../../lib/repositories";
+import { deriveLabelFromPath, type RepositoryVerificationMetadata } from "../../lib/repositories";
 
 type ProbeState =
   | { status: "idle" }
@@ -46,6 +46,9 @@ export function SettingsView() {
   const removeRepository = useMoriRepositoryStore((state) => state.removeRepository);
   const renameRepository = useMoriRepositoryStore((state) => state.renameRepository);
   const selectRepository = useMoriRepositoryStore((state) => state.selectRepository);
+  const verifyRepository = useMoriRepositoryStore((state) => state.verifyRepository);
+  const clearRepositoryVerification = useMoriRepositoryStore((state) => state.clearRepositoryVerification);
+  const verifyingId = useMoriRepositoryStore((state) => state.verifyingId);
   const activeRepository = useMoriRepositoryStore(selectActiveRepository);
   const [repoPathInput, setRepoPathInput] = useState("");
   const [repoLabelInput, setRepoLabelInput] = useState("");
@@ -336,11 +339,14 @@ export function SettingsView() {
             <ul className="repository-list">
               {repositorySettings.repositories.map((repo) => {
                 const isSelected = activeRepository?.id === repo.id;
+                const isVerifying = verifyingId === repo.id;
+                const verification = repo.verification;
                 return (
                   <li key={repo.id} className={isSelected ? "selected" : ""}>
                     <div className="repository-info">
                       <strong>{repo.label}</strong>
                       <small title={repo.path}>{repo.path}</small>
+                      <RepoVerificationBadge verification={verification} isVerifying={isVerifying} />
                       {repo.lastUsedAt ? (
                         <small className="muted">마지막 사용: {new Date(repo.lastUsedAt).toLocaleString()}</small>
                       ) : null}
@@ -349,24 +355,46 @@ export function SettingsView() {
                       currentLabel={repo.label}
                       onSave={(label) => renameRepository(repo.id, label)}
                     />
-                    <Button
-                      icon={Star}
-                      onClick={() => selectRepository(repo.id)}
-                      disabled={isSelected}
-                      title="Set as default for Git diff capture"
-                    >
-                      {isSelected ? "기본" : "기본으로"}
-                    </Button>
-                    <Button
-                      icon={Trash2}
-                      onClick={() => removeRepository(repo.id)}
-                      aria-label="리포지토리 제거"
-                    />
+                    <div className="repository-actions">
+                      <Button
+                        icon={CheckCircle2}
+                        onClick={() => verifyRepository(repo.id)}
+                        disabled={!desktopRuntime || isVerifying}
+                        title={desktopRuntime ? "Run git rev-parse / branch / status against this path" : "Verification requires the Tauri desktop app"}
+                      >
+                        {isVerifying ? "검증 중..." : "Verify"}
+                      </Button>
+                      {verification && verification.status !== "unverified" ? (
+                        <Button
+                          icon={RotateCcw}
+                          onClick={() => clearRepositoryVerification(repo.id)}
+                          title="Clear verification metadata"
+                          aria-label="Clear verification"
+                        />
+                      ) : null}
+                      <Button
+                        icon={Star}
+                        onClick={() => selectRepository(repo.id)}
+                        disabled={isSelected}
+                        title="Set as default for Git diff capture"
+                      >
+                        {isSelected ? "기본" : "기본으로"}
+                      </Button>
+                      <Button
+                        icon={Trash2}
+                        onClick={() => removeRepository(repo.id)}
+                        aria-label="리포지토리 제거"
+                      />
+                    </div>
                   </li>
                 );
               })}
             </ul>
           )}
+          <p className="settings-help">
+            Mori는 사용자가 <b>Verify</b> 버튼을 누르거나 Git 가져오기를 실행할 때만 리포지토리를 확인합니다.
+            앱 시작 시나 백그라운드에서는 절대 확인하지 않습니다.
+          </p>
         </section>
         <section>
           <h2>Storage / Export</h2>
@@ -381,6 +409,40 @@ export function SettingsView() {
         </section>
       </div>
     </div>
+  );
+}
+
+function RepoVerificationBadge({
+  verification,
+  isVerifying,
+}: {
+  verification: RepositoryVerificationMetadata | undefined;
+  isVerifying: boolean;
+}) {
+  if (isVerifying) {
+    return <Badge tone="purple">검증 중</Badge>;
+  }
+  if (!verification || verification.status === "unverified") {
+    return <Badge tone="gray">Unverified</Badge>;
+  }
+  if (verification.status === "failed") {
+    return (
+      <span className="repo-verification">
+        <Badge tone="red">Verify failed</Badge>
+        {verification.error ? <small>{verification.error}</small> : null}
+      </span>
+    );
+  }
+  const branch = verification.currentBranch ?? "detached";
+  const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "—";
+  return (
+    <span className="repo-verification">
+      <Badge tone="green">Verified · {branch} · {sha}</Badge>
+      {verification.isDirty ? <Badge tone="orange">dirty</Badge> : null}
+      {verification.verifiedAt ? (
+        <small className="muted">at {verification.verifiedAt}</small>
+      ) : null}
+    </span>
   );
 }
 

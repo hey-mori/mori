@@ -330,10 +330,15 @@ export function ImportPanel() {
                       <option value="">(직접 입력)</option>
                       {repositorySettings.repositories.map((repo) => (
                         <option key={repo.id} value={repo.id}>
-                          {repo.label} — {repo.path}
+                          {formatRepoOption(repo)}
                         </option>
                       ))}
                     </select>
+                    {selectedRepoId ? (
+                      <RepoVerificationHint
+                        repo={repositorySettings.repositories.find((entry) => entry.id === selectedRepoId)}
+                      />
+                    ) : null}
                   </label>
                 ) : (
                   <p className="git-fetch-help">
@@ -465,5 +470,46 @@ function KindTab({ active, icon: Icon, label, onClick }: { active: boolean; icon
       <Icon size={16} />
       <span>{label}</span>
     </button>
+  );
+}
+
+function formatRepoOption(repo: import("../../lib/repositories").MoriRepositoryConfig): string {
+  const verification = repo.verification;
+  if (!verification || verification.status === "unverified") {
+    return `${repo.label} · unverified — ${repo.path}`;
+  }
+  if (verification.status === "failed") {
+    return `${repo.label} · verify failed — ${repo.path}`;
+  }
+  const branch = verification.currentBranch ?? "detached";
+  const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "";
+  const dirty = verification.isDirty ? " · dirty" : "";
+  return `${repo.label} · ${branch} ${sha}${dirty} — ${repo.path}`;
+}
+
+function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories").MoriRepositoryConfig | undefined }) {
+  if (!repo) return null;
+  const verification = repo.verification;
+  if (!verification || verification.status === "unverified") {
+    return (
+      <small className="git-fetch-help">
+        이 리포지토리는 아직 검증되지 않았습니다. Settings에서 Verify를 실행하면 branch/SHA가 표시됩니다.
+      </small>
+    );
+  }
+  if (verification.status === "failed") {
+    return (
+      <small className="git-fetch-help" role="alert">
+        마지막 verify 실패: {verification.error ?? "unknown error"}
+      </small>
+    );
+  }
+  const branch = verification.currentBranch ?? "detached";
+  const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "";
+  const dirty = verification.isDirty ? " · dirty" : "";
+  return (
+    <small className="git-fetch-help">
+      Verified · {branch} · {sha}{dirty}
+    </small>
   );
 }

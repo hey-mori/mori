@@ -142,6 +142,60 @@ Limitations called out elsewhere in this doc still apply:
 - No submodule handling.
 - No branch browser or commit picker yet.
 
+### Repository verification
+
+Saved repositories can also be **verified** on demand. The Verify button in
+**Settings → Repositories** runs four small, explicit Git calls against the
+saved path through the Tauri command `verify_repository_path`
+([src-tauri/src/git/verify.rs](../src-tauri/src/git/verify.rs)):
+
+- `git -C <path> rev-parse --show-toplevel` — confirms the path is inside a
+  Git work tree and resolves the repository root.
+- `git -C <path> rev-parse HEAD` — captures the current commit SHA.
+- `git -C <path> branch --show-current` — current branch name, or `null` on
+  detached HEAD.
+- `git -C <path> status --porcelain` — used only to determine `isDirty`
+  (the porcelain output is not stored, just whether it was empty).
+
+The same safety rules as `run_git_diff` apply: explicit args, no shell
+interpolation, no scanning, and a structured `Result<_, String>` returned
+to the frontend. The frontend bridge is `verifyRepositoryPath` in
+[src/lib/desktop/repositoryCommands.ts](../src/lib/desktop/repositoryCommands.ts);
+the store wires it via `useMoriRepositoryStore.verifyRepository(id)`.
+
+Verification metadata persists on each `MoriRepositoryConfig` as:
+
+```ts
+verification?: {
+  status: "unverified" | "verified" | "failed";
+  verifiedAt?: string;
+  gitRoot?: string;
+  currentBranch?: string;
+  headCommit?: string;
+  shortHeadCommit?: string;
+  isDirty?: boolean;
+  error?: string;
+};
+```
+
+The Settings panel shows a `Verified · <branch> · <sha7>` badge plus a
+`dirty` chip when the work tree is modified, or `Verify failed` with the
+exact stderr returned by Git. The Git Diff dropdown adds the same summary
+inline so users see what is about to be captured before they fetch.
+
+Privacy promises:
+
+- **Mori never verifies a repository automatically.** The Settings copy
+  spells this out: "Mori는 사용자가 Verify 버튼을 누르거나 Git 가져오기를
+  실행할 때만 리포지토리를 확인합니다."
+- App start, store hydrate, focus, and SQLite hydrate never call
+  `verify_repository_path`.
+- Browser mode disables the Verify button and the bridge throws the
+  standard "requires the Tauri app" error — manual repo paths remain
+  editable in the prototype.
+- Clearing verification metadata is one click and drops everything except
+  the saved label/path.
+
 ### Quick Pass interaction
 
 Quick Pass receives the diff event the same way it receives any other event.
