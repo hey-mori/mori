@@ -1,4 +1,4 @@
-import { Bot, FileText, GitCommit, Globe, Plus, Trash2 } from "lucide-react";
+import { Bot, Download, FileText, GitCommit, Globe, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -12,6 +12,7 @@ import {
 } from "../../lib/import";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
+import { isTauriRuntime, runGitDiff } from "../../lib/desktop";
 
 type ImportKind = "note" | "url" | "ai" | "git";
 
@@ -32,8 +33,13 @@ export function ImportPanel() {
   const [provider, setProvider] = useState("Claude");
   const [origin, setOrigin] = useState("");
   const [status, setStatus] = useState<ImportStatus>(null);
+  const [repoPath, setRepoPath] = useState("");
+  const [repoRange, setRepoRange] = useState("HEAD");
+  const [staged, setStaged] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   const canImport = useMemo(() => Boolean(draft), [draft]);
+  const desktopRuntime = useMemo(() => isTauriRuntime(), []);
 
   if (!draft) {
     return (
@@ -63,6 +69,54 @@ export function ImportPanel() {
     setBody("");
     setUrl("");
     setOrigin("");
+  }
+
+  async function handleFetchGitDiff() {
+    if (!desktopRuntime) {
+      setStatus({
+        tone: "error",
+        message: "Git diff 캡처는 Tauri 데스크톱 앱에서만 사용할 수 있습니다.",
+      });
+      return;
+    }
+    if (!repoPath.trim()) {
+      setStatus({ tone: "error", message: "리포지토리 경로를 입력하세요." });
+      return;
+    }
+
+    setFetching(true);
+    setStatus({ tone: "info", message: "git diff 실행 중..." });
+    try {
+      const result = await runGitDiff({
+        repoPath: repoPath.trim(),
+        range: repoRange.trim() || undefined,
+        staged,
+      });
+      if (!result.diffText.trim()) {
+        setStatus({
+          tone: "error",
+          message: `git diff returned empty output (exit ${result.exitCode}).${result.stderr ? ` stderr: ${result.stderr}` : ""}`,
+        });
+        return;
+      }
+      setBody(result.diffText);
+      const originLabel = staged
+        ? `${result.repoPath} (--staged${result.range ? ` ${result.range}` : ""})`
+        : `${result.repoPath}${result.range ? ` ${result.range}` : ""}`;
+      setOrigin(originLabel);
+      const truncatedHint = result.truncated ? " (truncated)" : "";
+      setStatus({
+        tone: "ok",
+        message: `Fetched ${result.fileCountHint} file${result.fileCountHint === 1 ? "" : "s"} in ${result.durationMs} ms${truncatedHint}. Review and click '세션에 추가' to import.`,
+      });
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Git diff capture failed.",
+      });
+    } finally {
+      setFetching(false);
+    }
   }
 
   function buildCandidate(): NormalizedImportCandidate | null {
@@ -198,14 +252,63 @@ export function ImportPanel() {
           </label>
         ) : null}
         {kind === "git" ? (
-          <label>
-            출처 <small>(선택, 예: HEAD~3..HEAD 또는 PR URL)</small>
-            <input
-              placeholder="HEAD~1..HEAD"
-              value={origin}
-              onChange={(event) => setOrigin(event.target.value)}
-            />
-          </label>
+          <>
+            <div className="git-fetch-card">
+              <div className="git-fetch-header">
+                <strong>리포지토리에서 가져오기</strong>
+                <Badge tone={desktopRuntime ? "green" : "gray"}>
+                  {desktopRuntime ? "Tauri 데스크톱" : "데스크톱 필요"}
+                </Badge>
+              </div>
+              <p className="git-fetch-help">
+                명시적으로 입력한 리포지토리 경로에서 <code>git diff</code>를 실행합니다. Mori는 디렉터리를
+                자동으로 스캔하지 않으며, 입력한 경로 외에는 어떤 파일도 읽지 않습니다.
+              </p>
+              <div className="git-fetch-grid">
+                <label>
+                  리포지토리 경로
+                  <input
+                    placeholder="C:\\dev\\mori"
+                    value={repoPath}
+                    onChange={(event) => setRepoPath(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Range <small>(예: HEAD, HEAD~1..HEAD, main..feature)</small>
+                  <input
+                    placeholder="HEAD"
+                    value={repoRange}
+                    onChange={(event) => setRepoRange(event.target.value)}
+                  />
+                </label>
+                <label className="git-fetch-toggle">
+                  <input
+                    type="checkbox"
+                    checked={staged}
+                    onChange={(event) => setStaged(event.target.checked)}
+                  />
+                  <span>--staged (인덱스의 변경분만)</span>
+                </label>
+                <div className="git-fetch-actions">
+                  <Button
+                    icon={Download}
+                    onClick={() => handleFetchGitDiff()}
+                    disabled={fetching || !desktopRuntime}
+                  >
+                    {fetching ? "가져오는 중..." : "Fetch Git Diff"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <label>
+              출처 <small>(선택, fetch 시 자동 채워짐)</small>
+              <input
+                placeholder="HEAD~1..HEAD"
+                value={origin}
+                onChange={(event) => setOrigin(event.target.value)}
+              />
+            </label>
+          </>
         ) : null}
         <label className="import-body">
           {kind === "url"

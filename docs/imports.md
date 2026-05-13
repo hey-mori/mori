@@ -58,13 +58,57 @@ The generated event:
 - Binary files are noted in the header detection but otherwise ignored.
 - Merge conflict markers and three-way diffs.
 - Submodule diffs.
-- Automatic `git diff` execution from a configured repo. The next milestone
-  candidate is a Tauri/Rust command that runs `git diff <range>` against a
-  selected repository so the user does not need to paste manually.
 - A semantic interpreter that says "this diff added auth logic" — Mori
   intentionally only reports verified evidence. Quick Pass still applies its
   heuristic keyword scan to the summary text, and a future local-LLM Quick
   Pass run can read the same source/event.
+
+### Tauri Git diff capture
+
+When Mori runs inside the Tauri desktop app, the Git diff tab also exposes a
+**리포지토리에서 가져오기** card that runs `git diff` against an explicitly
+provided repository path. The implementation lives in
+[src-tauri/src/git/diff.rs](../src-tauri/src/git/diff.rs) and is exposed as the
+Tauri command `run_git_diff`. The frontend uses
+[`runGitDiff` in src/lib/desktop/gitCommands.ts](../src/lib/desktop/gitCommands.ts)
+— React components never invoke Tauri directly.
+
+Supported range examples:
+
+- `HEAD` — unstaged working-tree changes (the default).
+- `HEAD~1..HEAD` — last commit.
+- `main..feature-branch` — branch diff.
+- Empty range with **`--staged`** toggle — index vs HEAD.
+
+Safety constraints, all in `src-tauri/src/git/diff.rs`:
+
+- The repo path is required and must already exist as a directory; no
+  auto-discovery, no filesystem scan.
+- Mori runs `git -C <repo_path> rev-parse --show-toplevel` first to refuse
+  non-Git directories.
+- The actual diff call uses `std::process::Command::new("git").arg(...)` with
+  explicit args — never shell interpolation, never string concatenation.
+- Output is capped at ~2 MB. Larger diffs are returned with `truncated: true`
+  so the UI can show that detection without exploding the renderer.
+- Errors are returned as `Result<_, String>` with the exit code and stderr,
+  including the friendly `git` not found case.
+
+The user flow is intentionally three-step:
+
+1. Click **Fetch Git Diff** with the repo path / range.
+2. Mori populates the unified-diff textarea and an origin label like
+   `C:\dev\mori HEAD~1..HEAD`. The user can edit either before importing.
+3. Click **세션에 추가**. The text flows through the existing
+   `normalizeGitDiff` → `addImport` path, just like a pasted diff. Browser
+   mode shows a "Tauri 데스크톱 앱에서만 사용할 수 있습니다." message and the
+   Fetch button stays disabled.
+
+Limitations called out elsewhere in this doc still apply:
+
+- No file watching, no automatic repo scan, no background capture.
+- No multiple-repo configuration store yet — the path is typed each time.
+- No binary diff parsing.
+- No submodule handling.
 
 ### Quick Pass interaction
 

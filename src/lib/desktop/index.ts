@@ -9,3 +9,5 @@ export type {
   TauriCommandName,
 } from "./tauriCommands";
 export { invokeTauriCommand, tauriCommands } from "./tauriCommands";
+export { runGitDiff } from "./gitCommands";
+export type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";

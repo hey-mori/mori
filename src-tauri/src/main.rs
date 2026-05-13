@@ -1,5 +1,6 @@
 mod commands;
 mod db;
+mod git;
 mod package;
 mod session;
 mod sqlite;
@@ -18,6 +19,7 @@ fn main() {
             sqlite::persist_session_snapshot,
             sqlite::load_sqlite_session_snapshot,
             sqlite::list_sqlite_sessions,
+            git::diff::run_git_diff,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

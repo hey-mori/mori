@@ -16,6 +16,7 @@ import type {
 } from "../sqlite/repositoryContracts";
 import type { SqlitePersistenceSnapshot } from "../sqlite/records";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
+import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
 
 export type TauriCommandName =
   | "get_app_info"
@@ -31,6 +32,7 @@ export type TauriCommandName =
   | "create_session"
   | "import_ai_conversation"
   | "import_git_diff"
+  | "run_git_diff"
   | "analyze_session_quick_pass"
   | "generate_report";
 
@@ -75,6 +77,7 @@ export type TauriCommandMap = {
   create_session: { input: CreateSessionInput; output: Session };
   import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
   import_git_diff: { input: ImportSourceInput; output: SourceRef };
+  run_git_diff: { input: { request: GitDiffCaptureRequest }; output: GitDiffCaptureResult };
   analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
   generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };
 };
