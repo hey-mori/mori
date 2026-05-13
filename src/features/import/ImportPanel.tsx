@@ -1,5 +1,5 @@
-import { Bot, Download, FileText, GitCommit, Globe, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Bot, Download, FileText, FolderOpen, GitCommit, Globe, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import {
@@ -12,7 +12,8 @@ import {
 } from "../../lib/import";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
-import { isTauriRuntime, runGitDiff } from "../../lib/desktop";
+import { selectActiveRepository, useMoriRepositoryStore } from "../../app/repositoryStore";
+import { isTauriRuntime, pickRepositoryDirectory, runGitDiff } from "../../lib/desktop";
 
 type ImportKind = "note" | "url" | "ai" | "git";
 
@@ -37,9 +38,26 @@ export function ImportPanel() {
   const [repoRange, setRepoRange] = useState("HEAD");
   const [staged, setStaged] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const repositorySettings = useMoriRepositoryStore((state) => state.settings);
+  const selectRepository = useMoriRepositoryStore((state) => state.selectRepository);
+  const markRepositoryUsed = useMoriRepositoryStore((state) => state.markRepositoryUsed);
+  const activeRepository = useMoriRepositoryStore(selectActiveRepository);
+  const [selectedRepoId, setSelectedRepoId] = useState<string>(activeRepository?.id ?? "");
 
   const canImport = useMemo(() => Boolean(draft), [draft]);
   const desktopRuntime = useMemo(() => isTauriRuntime(), []);
+
+  // Keep the local dropdown in sync with the persisted default and prefill the
+  // path field whenever the saved selection arrives from hydrate or changes in
+  // Settings. We only auto-fill when the user has not typed anything yet so we
+  // never overwrite an in-progress manual edit.
+  useEffect(() => {
+    if (!activeRepository) return;
+    if (selectedRepoId && repoPath.trim()) return;
+    setSelectedRepoId(activeRepository.id);
+    setRepoPath(activeRepository.path);
+  }, [activeRepository, repoPath, selectedRepoId]);
 
   if (!draft) {
     return (
@@ -71,6 +89,40 @@ export function ImportPanel() {
     setOrigin("");
   }
 
+  function handleSelectRepository(id: string) {
+    setSelectedRepoId(id);
+    if (!id) return;
+    const repo = repositorySettings.repositories.find((entry) => entry.id === id);
+    if (repo) {
+      setRepoPath(repo.path);
+      selectRepository(id);
+    }
+  }
+
+  async function handlePickRepository() {
+    if (!desktopRuntime) {
+      setStatus({
+        tone: "error",
+        message: "Native folder picker는 Tauri 데스크톱 앱에서만 사용할 수 있습니다.",
+      });
+      return;
+    }
+    setPicking(true);
+    try {
+      const result = await pickRepositoryDirectory({ title: "Mori: Select repository for Git diff" });
+      if (result.cancelled || !result.path) return;
+      setRepoPath(result.path);
+      setSelectedRepoId("");
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Folder picker failed.",
+      });
+    } finally {
+      setPicking(false);
+    }
+  }
+
   async function handleFetchGitDiff() {
     if (!desktopRuntime) {
       setStatus({
@@ -80,7 +132,7 @@ export function ImportPanel() {
       return;
     }
     if (!repoPath.trim()) {
-      setStatus({ tone: "error", message: "리포지토리 경로를 입력하세요." });
+      setStatus({ tone: "error", message: "리포지토리 경로를 입력하거나 저장된 리포지토리를 선택하세요." });
       return;
     }
 
@@ -109,6 +161,8 @@ export function ImportPanel() {
         tone: "ok",
         message: `Fetched ${result.fileCountHint} file${result.fileCountHint === 1 ? "" : "s"} in ${result.durationMs} ms${truncatedHint}. Review and click '세션에 추가' to import.`,
       });
+      const matched = repositorySettings.repositories.find((entry) => entry.path === repoPath.trim());
+      if (matched) markRepositoryUsed(matched.id);
     } catch (error) {
       setStatus({
         tone: "error",
@@ -265,13 +319,47 @@ export function ImportPanel() {
                 자동으로 스캔하지 않으며, 입력한 경로 외에는 어떤 파일도 읽지 않습니다.
               </p>
               <div className="git-fetch-grid">
+                {repositorySettings.repositories.length ? (
+                  <label>
+                    저장된 리포지토리
+                    <select
+                      className="git-fetch-select"
+                      value={selectedRepoId}
+                      onChange={(event) => handleSelectRepository(event.target.value)}
+                    >
+                      <option value="">(직접 입력)</option>
+                      {repositorySettings.repositories.map((repo) => (
+                        <option key={repo.id} value={repo.id}>
+                          {repo.label} — {repo.path}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <p className="git-fetch-help">
+                    저장된 리포지토리가 없습니다. <b>Settings → Repositories</b>에서 추가하거나 아래에 경로를 직접 입력하세요.
+                  </p>
+                )}
                 <label>
                   리포지토리 경로
-                  <input
-                    placeholder="C:\\dev\\mori"
-                    value={repoPath}
-                    onChange={(event) => setRepoPath(event.target.value)}
-                  />
+                  <div className="git-fetch-path-row">
+                    <input
+                      placeholder="C:\\dev\\mori"
+                      value={repoPath}
+                      onChange={(event) => {
+                        setRepoPath(event.target.value);
+                        setSelectedRepoId("");
+                      }}
+                    />
+                    <Button
+                      icon={FolderOpen}
+                      onClick={() => handlePickRepository()}
+                      disabled={!desktopRuntime || picking}
+                      title={desktopRuntime ? "Open native folder picker" : "Native picker requires the Tauri app"}
+                    >
+                      {picking ? "..." : "Browse"}
+                    </Button>
+                  </div>
                 </label>
                 <label>
                   Range <small>(예: HEAD, HEAD~1..HEAD, main..feature)</small>

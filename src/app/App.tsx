@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { AppShell } from "../components/layout/AppShell";
 import { useMoriAppStore } from "./store";
 import { useMoriSessionStore } from "./sessionStore";
+import { useMoriRepositoryStore } from "./repositoryStore";
 import { StartSessionView } from "../features/start-session/StartSessionView";
 import { TimelineView } from "../features/timeline/TimelineView";
 import { IssuesDecisionsView } from "../features/issues/IssuesDecisionsView";
@@ -14,10 +15,16 @@ export default function App() {
   const currentView = useMoriAppStore((state) => state.currentView);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
+  const hydrateRepositories = useMoriRepositoryStore((state) => state.hydrate);
+  const repositoriesInitialized = useMoriRepositoryStore((state) => state.initialized);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
+
+  useEffect(() => {
+    if (!repositoriesInitialized) hydrateRepositories();
+  }, [repositoriesInitialized, hydrateRepositories]);
 
   return (
     <AppShell>

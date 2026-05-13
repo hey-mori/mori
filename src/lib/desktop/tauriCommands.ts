@@ -33,6 +33,7 @@ export type TauriCommandName =
   | "import_ai_conversation"
   | "import_git_diff"
   | "run_git_diff"
+  | "pick_repository_directory"
   | "analyze_session_quick_pass"
   | "generate_report";
 
@@ -78,6 +79,10 @@ export type TauriCommandMap = {
   import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
   import_git_diff: { input: ImportSourceInput; output: SourceRef };
   run_git_diff: { input: { request: GitDiffCaptureRequest }; output: GitDiffCaptureResult };
+  pick_repository_directory: {
+    input: { input?: { initialDirectory?: string; title?: string } };
+    output: { path: string | null; cancelled: boolean };
+  };
   analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
   generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };
 };

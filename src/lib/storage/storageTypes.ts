@@ -2,6 +2,7 @@ import type { Project, Session, SourceRef, TimelineEvent } from "../../domain/ty
 import type { MoriAnalysisResult, QuickPassAnalysisSettings } from "../analysis";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
+import type { RepositorySettings } from "../repositories";
 
 export type StoredSessionDraft = {
   project: Project;
@@ -59,6 +60,8 @@ export type MoriDraftRepository = {
   clearSessionAnalysis: (sessionId: string) => void;
   saveQuickPassSettings: (settings: QuickPassAnalysisSettings) => QuickPassAnalysisSettings;
   loadQuickPassSettings: () => QuickPassAnalysisSettings;
+  saveRepositorySettings: (settings: RepositorySettings) => RepositorySettings;
+  loadRepositorySettings: () => RepositorySettings;
 };
 
 export type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key"> & {

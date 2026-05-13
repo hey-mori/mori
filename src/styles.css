@@ -2410,3 +2410,104 @@ pre {
   justify-content: flex-end;
 }
 
+.git-fetch-select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+.git-fetch-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.git-fetch-path-row input {
+  flex: 1;
+}
+
+.repository-add {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.repository-add label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.repository-add input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+.repository-add-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.repository-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.repository-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.repository-list li.selected {
+  border-color: #5d9eff;
+  box-shadow: 0 0 0 2px rgba(93, 158, 255, 0.18);
+}
+
+.repository-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.repository-info strong {
+  display: block;
+}
+
+.repository-info small {
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.repository-label-input {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+  width: 160px;
+}
+

@@ -181,4 +181,30 @@ describe("BrowserDraftRepository", () => {
     expect(repository.listStoredSessions()).toHaveLength(0);
     expect(repository.loadSessionAnalysis(draft.session.id)).toBeNull();
   });
+
+  it("persists, hydrates, and sanitizes repository settings", () => {
+    const storage = new MemoryKeyValueStorage();
+    const repository = new BrowserDraftRepository(storage);
+    expect(repository.loadRepositorySettings().repositories).toHaveLength(0);
+
+    const saved = repository.saveRepositorySettings({
+      repositories: [
+        { id: "r-a", label: "A", path: "/repo/a", createdAt: "2026-05-12T13:00:00+09:00" },
+        // duplicate path should collapse
+        { id: "r-b", label: "B", path: "/repo/a", createdAt: "2026-05-12T13:00:00+09:00" },
+        // missing path should be dropped
+        { id: "r-c", label: "C", path: "", createdAt: "2026-05-12T13:00:00+09:00" },
+      ],
+      selectedRepositoryId: "r-missing",
+    });
+    expect(saved.repositories).toHaveLength(1);
+    expect(saved.selectedRepositoryId).toBe("r-a");
+
+    const reloaded = repository.loadRepositorySettings();
+    expect(reloaded.repositories[0].path).toBe("/repo/a");
+    expect(reloaded.selectedRepositoryId).toBe("r-a");
+
+    storage.setItem("mori.repositorySettings", "{not valid json");
+    expect(repository.loadRepositorySettings().repositories).toHaveLength(0);
+  });
 });

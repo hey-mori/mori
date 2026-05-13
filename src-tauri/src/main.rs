@@ -2,11 +2,13 @@ mod commands;
 mod db;
 mod git;
 mod package;
+mod repositories;
 mod session;
 mod sqlite;
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(sqlite::SqliteState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
@@ -20,6 +22,7 @@ fn main() {
             sqlite::load_sqlite_session_snapshot,
             sqlite::list_sqlite_sessions,
             git::diff::run_git_diff,
+            repositories::picker::pick_repository_directory,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

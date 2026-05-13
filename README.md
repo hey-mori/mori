@@ -29,6 +29,7 @@ This repository currently contains the frontend foundation for Mori:
 - Import normalizers for manual notes, URLs, and AI conversation text
 - Import MVP: in-app import panel that persists imports per session and renders them in Sources and Timeline
 - Git diff import: paste a unified `git diff`, or in the Tauri desktop app run `git diff` against an explicitly-typed repo path/range through a sandboxed Rust command. Both paths share the same verified `gitDiff` source + `fileCode` event normalization
+- Repository settings: explicit user-added repo paths persisted through the existing storage repository, a native folder picker in Tauri (via `tauri-plugin-dialog`), and a Git Diff dropdown that fills the capture path from the saved default — no filesystem scanning, no background capture
 - Session view composition that switches between the demo mock session and a real persisted draft session
 - Local Quick Pass analysis: deterministic heuristic provider that extracts issues, decisions, relationships, and next actions from imported sources; results persist per session and render in Issues, Decisions, and Reports
 - Ollama Quick Pass provider with configurable endpoint/model, settings UI, connection probe, and Quick Pass control provider selector (still experimental for output quality)

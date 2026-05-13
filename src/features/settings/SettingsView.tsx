@@ -1,4 +1,4 @@
-import { Bot, Cloud, Database, DownloadCloud, Folder, HardDrive, Plug, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { Bot, Cloud, Database, DownloadCloud, FolderOpen, FolderPlus, Folder, HardDrive, Plug, RefreshCw, Save, ShieldCheck, Star, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -7,8 +7,11 @@ import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
 import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriSqliteStore } from "../../app/sqliteStore";
+import { selectActiveRepository, useMoriRepositoryStore } from "../../app/repositoryStore";
 import type { QuickPassProviderKind } from "../../lib/analysis";
 import { probeOllamaConnection } from "../../lib/analysis";
+import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
+import { deriveLabelFromPath } from "../../lib/repositories";
 
 type ProbeState =
   | { status: "idle" }
@@ -36,10 +39,67 @@ export function SettingsView() {
   const initializeSqlite = useMoriSqliteStore((state) => state.initialize);
   const persistSqlite = useMoriSqliteStore((state) => state.persist);
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
+  const repositorySettings = useMoriRepositoryStore((state) => state.settings);
+  const repositoriesInitialized = useMoriRepositoryStore((state) => state.initialized);
+  const hydrateRepositories = useMoriRepositoryStore((state) => state.hydrate);
+  const addRepository = useMoriRepositoryStore((state) => state.addRepository);
+  const removeRepository = useMoriRepositoryStore((state) => state.removeRepository);
+  const renameRepository = useMoriRepositoryStore((state) => state.renameRepository);
+  const selectRepository = useMoriRepositoryStore((state) => state.selectRepository);
+  const activeRepository = useMoriRepositoryStore(selectActiveRepository);
+  const [repoPathInput, setRepoPathInput] = useState("");
+  const [repoLabelInput, setRepoLabelInput] = useState("");
+  const [repoError, setRepoError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const desktopRuntime = isTauriRuntime();
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
+
+  useEffect(() => {
+    if (!repositoriesInitialized) hydrateRepositories();
+  }, [repositoriesInitialized, hydrateRepositories]);
+
+  async function handlePickRepository() {
+    if (!desktopRuntime) {
+      setRepoError("Native folder picker requires the Tauri desktop app.");
+      return;
+    }
+    setRepoError(null);
+    setPicking(true);
+    try {
+      const result = await pickRepositoryDirectory({ title: "Mori: Select repository" });
+      if (result.cancelled || !result.path) return;
+      setRepoPathInput(result.path);
+      if (!repoLabelInput.trim()) {
+        setRepoLabelInput(deriveLabelFromPath(result.path));
+      }
+    } catch (error) {
+      setRepoError(error instanceof Error ? error.message : "Folder picker failed.");
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  function handleAddRepository() {
+    const path = repoPathInput.trim();
+    if (!path) {
+      setRepoError("리포지토리 경로를 입력하거나 폴더를 선택하세요.");
+      return;
+    }
+    const created = addRepository({
+      path,
+      label: repoLabelInput.trim() || undefined,
+    });
+    if (!created) {
+      setRepoError("리포지토리를 저장하지 못했습니다. 경로를 확인하세요.");
+      return;
+    }
+    setRepoPathInput("");
+    setRepoLabelInput("");
+    setRepoError(null);
+  }
 
   useEffect(() => {
     if (sqliteAvailable) void refreshSqlite();
@@ -233,6 +293,82 @@ export function SettingsView() {
           )}
         </section>
         <section>
+          <h2>Repositories</h2>
+          <p className="settings-help">
+            Mori는 사용자가 명시적으로 추가한 리포지토리 경로만 기억합니다. 디스크를 자동으로 스캔하거나
+            백그라운드에서 감시하지 않으며, 저장된 경로는 Git diff 가져오기를 실행할 때만 읽습니다.
+          </p>
+          <div className="repository-add">
+            <label>
+              경로
+              <input
+                placeholder={desktopRuntime ? "C:\\dev\\mori 또는 폴더 선택" : "C:\\dev\\mori"}
+                value={repoPathInput}
+                onChange={(event) => setRepoPathInput(event.target.value)}
+              />
+            </label>
+            <label>
+              라벨 <small>(선택, 기본값은 폴더명)</small>
+              <input
+                placeholder="Mori"
+                value={repoLabelInput}
+                onChange={(event) => setRepoLabelInput(event.target.value)}
+              />
+            </label>
+            <div className="repository-add-actions">
+              <Button
+                icon={FolderOpen}
+                onClick={() => handlePickRepository()}
+                disabled={!desktopRuntime || picking}
+                title={desktopRuntime ? "Open native folder picker" : "Native picker requires the Tauri app"}
+              >
+                {picking ? "선택 중..." : "폴더 선택"}
+              </Button>
+              <Button variant="primary" icon={FolderPlus} onClick={handleAddRepository}>
+                리포지토리 추가
+              </Button>
+            </div>
+            {repoError ? <p className="tone-err" role="alert">{repoError}</p> : null}
+          </div>
+          {repositorySettings.repositories.length === 0 ? (
+            <p className="muted">저장된 리포지토리가 없습니다. 위 입력란에서 직접 추가하세요.</p>
+          ) : (
+            <ul className="repository-list">
+              {repositorySettings.repositories.map((repo) => {
+                const isSelected = activeRepository?.id === repo.id;
+                return (
+                  <li key={repo.id} className={isSelected ? "selected" : ""}>
+                    <div className="repository-info">
+                      <strong>{repo.label}</strong>
+                      <small title={repo.path}>{repo.path}</small>
+                      {repo.lastUsedAt ? (
+                        <small className="muted">마지막 사용: {new Date(repo.lastUsedAt).toLocaleString()}</small>
+                      ) : null}
+                    </div>
+                    <RepoLabelEditor
+                      currentLabel={repo.label}
+                      onSave={(label) => renameRepository(repo.id, label)}
+                    />
+                    <Button
+                      icon={Star}
+                      onClick={() => selectRepository(repo.id)}
+                      disabled={isSelected}
+                      title="Set as default for Git diff capture"
+                    >
+                      {isSelected ? "기본" : "기본으로"}
+                    </Button>
+                    <Button
+                      icon={Trash2}
+                      onClick={() => removeRepository(repo.id)}
+                      aria-label="리포지토리 제거"
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+        <section>
           <h2>Storage / Export</h2>
           <div className="settings-row"><Folder size={18} /><span>~/Mori/Records</span><Badge tone="green">local</Badge></div>
           <div className="settings-row"><ShieldCheck size={18} /><span>.mori package save/open</span><Badge tone="purple">planned</Badge></div>
@@ -245,6 +381,26 @@ export function SettingsView() {
         </section>
       </div>
     </div>
+  );
+}
+
+function RepoLabelEditor({ currentLabel, onSave }: { currentLabel: string; onSave: (label: string) => void }) {
+  const [draft, setDraft] = useState(currentLabel);
+  useEffect(() => {
+    setDraft(currentLabel);
+  }, [currentLabel]);
+  return (
+    <input
+      className="repository-label-input"
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        const next = draft.trim();
+        if (next && next !== currentLabel) onSave(next);
+        else setDraft(currentLabel);
+      }}
+      aria-label="Repository label"
+    />
   );
 }
 

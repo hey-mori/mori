@@ -73,6 +73,35 @@ Tauri command `run_git_diff`. The frontend uses
 [`runGitDiff` in src/lib/desktop/gitCommands.ts](../src/lib/desktop/gitCommands.ts)
 — React components never invoke Tauri directly.
 
+### Saved repositories
+
+The Git Diff card supports saved repositories so users don't have to retype a
+path on every capture. The store lives at
+[src/lib/repositories/repositorySettings.ts](../src/lib/repositories/repositorySettings.ts)
+and persists through `BrowserDraftRepository.saveRepositorySettings` /
+`loadRepositorySettings`. The UI lives in two places:
+
+- **Settings → Repositories** lets the user add a repo by typing a path, or by
+  clicking **폴더 선택** (which calls the native Tauri folder picker), label
+  it, set the default repo, rename it, or remove it. The section spells out
+  the privacy guarantee:
+
+  > Mori는 사용자가 명시적으로 추가한 리포지토리 경로만 기억합니다. 디스크를
+  > 자동으로 스캔하거나 백그라운드에서 감시하지 않으며, 저장된 경로는 Git diff
+  > 가져오기를 실행할 때만 읽습니다.
+
+- **Sources → Git diff** shows a "저장된 리포지토리" dropdown listing saved
+  repos and a **Browse** button (also wired to the native picker) next to the
+  manual path field. Selecting a repo fills the path and marks it as the
+  default. A successful `runGitDiff` updates the repo's `lastUsedAt`.
+
+The native picker is implemented in
+[src-tauri/src/repositories/picker.rs](../src-tauri/src/repositories/picker.rs)
+using `tauri-plugin-dialog`. In browser/preview mode the picker bridge throws
+the same "requires the Tauri app" error other desktop commands use; the Browse
+button stays disabled but manual path entry remains available so the prototype
+keeps working.
+
 Supported range examples:
 
 - `HEAD` — unstaged working-tree changes (the default).
@@ -106,9 +135,12 @@ The user flow is intentionally three-step:
 Limitations called out elsewhere in this doc still apply:
 
 - No file watching, no automatic repo scan, no background capture.
-- No multiple-repo configuration store yet — the path is typed each time.
+- Saved repositories are explicit user-added paths only. Mori does not walk
+  parent or sibling directories, never enumerates drives, and only reads the
+  selected path when `runGitDiff` runs.
 - No binary diff parsing.
 - No submodule handling.
+- No branch browser or commit picker yet.
 
 ### Quick Pass interaction
 
