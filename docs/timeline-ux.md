@@ -125,6 +125,15 @@ Examples from the sample session:
 - selected positioning decision remains an individual card
 - dense AI context around the same moment may become an AI work-flow bundle
 
+### Product-quality bundle card policy
+
+Bundle cards must explain a work moment without becoming another dense debug
+panel. The card surface prioritizes time range, event count, a meaningful
+title, one-line context, and evidence/decision/issue counts. The full type
+mix, member event list, represented issues/decisions, sources, and bundling
+reason live in the Bundle Inspector. This keeps the lane readable while
+preserving the exact events Mori used to create the bundle.
+
 ## Focus interaction model
 
 The Timeline has exactly three focus tiers:
@@ -211,8 +220,11 @@ renders the analyzed events with the same focus tiers.
 ## Layout engine
 
 Timeline display-item positions are produced by
-`computeTimelineLayout(items, range, options)` in
-[`src/lib/timeline/collisionLayout.ts`](../src/lib/timeline/collisionLayout.ts).
+`computeSingleRowLaneLayout(items, range, options)` in
+[`src/lib/timeline/singleRowLaneLayout.ts`](../src/lib/timeline/singleRowLaneLayout.ts).
+It wraps the collision-aware implementation in
+[`src/lib/timeline/collisionLayout.ts`](../src/lib/timeline/collisionLayout.ts)
+so components use the product language of single-row lanes.
 The algorithm:
 
 1. Groups display items by lane in the documented `laneOrder`.
@@ -227,6 +239,9 @@ The algorithm:
    `anchorRight`, and `anchorCenter` for every display item. Raw event ids
    are also indexed back to their visible anchor so relationship lines can
    point at a bundle when needed.
+7. Keeps the axis, lanes, relationship layer, and cards in one frame
+   coordinate system so the Timeline does not create an inner vertical
+   scrolling viewport.
 
 Two density modes ship today:
 
@@ -262,10 +277,20 @@ Rules the layout guarantees (covered by `collisionLayout.test.ts` and
   Timeline mode), only relationships where both endpoints are in the
   focused set render — unrelated lines are removed entirely, not just
   faded.
-- Unrelated connectors in the static Timeline view stay at ~32% opacity so
-  they don't compete with card text.
+- Timeline-mode connectors are capped and rendered with low opacity so the
+  base view remains a timeline first. Flow Focus can show a larger focused
+  subgraph with stronger lines.
 - The SVG sits at `z-index: 1`; cards at `z-index: 2`. Lines never cover
   card text.
+
+## Responsive behavior
+
+The Timeline prefers readable cards over squeezing. At wide desktop sizes the
+frame grows with the available column. Around 1440px, the inspector and
+sidebar remain stable and the lane frame allows intentional horizontal scroll
+instead of shrinking cards below readable density. The mini-map remains the
+orientation surface below the lanes and shows a viewport highlight plus the
+selected item marker.
 
 ## Known limitations
 

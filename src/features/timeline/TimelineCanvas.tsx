@@ -3,13 +3,13 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { eventTypeIcons, eventTypeLabels, laneOrder } from "../../domain/constants";
 import type { EventType, Relationship, TimelineEvent, Decision } from "../../domain/types";
-import { createTimelineBundles } from "../../lib/timeline/bundleEvents";
+import { createTimelineDisplayItems } from "../../lib/timeline/bundleEvents";
 import {
-  computeTimelineLayout,
+  computeSingleRowLaneLayout,
   indexEventAnchors,
   indexLayout,
   type TimelineDensity,
-} from "../../lib/timeline/collisionLayout";
+} from "../../lib/timeline/singleRowLaneLayout";
 import { isTimelineBundle, type TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import { computeAxisTicks } from "../../lib/timeline/timeScale";
 import type { TimelineRange } from "../../lib/timeline/layout";
@@ -30,9 +30,9 @@ export type TimelineCanvasProps = {
   onHover: (itemId: string | null) => void;
 };
 
-const MIN_FRAME_WIDTH = 1180;
-const MAX_FRAME_WIDTH = 1680;
-const DEFAULT_FRAME_WIDTH = 1240;
+const MIN_FRAME_WIDTH = 1080;
+const MAX_FRAME_WIDTH = 1600;
+const DEFAULT_FRAME_WIDTH = 1160;
 const LANE_LABEL_WIDTH = 148;
 
 export function TimelineCanvas({
@@ -66,16 +66,14 @@ export function TimelineCanvas({
     return () => observer.disconnect();
   }, []);
 
-  // Only render lanes that actually have events in the current filter set, so
-  // the canvas does not waste vertical space on empty categories.
   const activeLaneOrder = useMemo<EventType[]>(() => {
-    const present = new Set(events.map((event) => event.type));
-    return laneOrder.filter((type) => present.has(type));
-  }, [events]);
+    if (!events.length) return laneOrder;
+    return laneOrder;
+  }, [events.length]);
 
   const displayItems = useMemo<TimelineDisplayItem[]>(
     () =>
-      createTimelineBundles(events, relationships, {
+      createTimelineDisplayItems(events, relationships, {
         timeWindowMinutes: density === "comfortable" ? 12 : 10,
         minEventsForBundle: 3,
         preserveSelectedEventId: selectedItemId,
@@ -91,7 +89,7 @@ export function TimelineCanvas({
 
   const layout = useMemo(
     () =>
-      computeTimelineLayout(displayItems, range, {
+      computeSingleRowLaneLayout(displayItems, range, {
         frameWidth,
         density,
         laneOrder: activeLaneOrder,
@@ -135,7 +133,7 @@ export function TimelineCanvas({
     <div className="timeline-scroller" ref={scrollerRef}>
       <div
         className={`timeline-frame ${mode === "flow" ? "compact" : ""}`}
-        style={{ width: `${frameWidth}px`, minHeight: `${layout.frameHeight}px` }}
+        style={{ width: `${frameWidth}px`, height: `${layout.frameHeight}px` }}
       >
         <TimelineAxis
           ticks={ticks}
@@ -149,6 +147,7 @@ export function TimelineCanvas({
           relationships={relationships}
           focusedSet={focusedSet}
           focusActive={focusActive}
+          mode={mode}
           frameWidth={frameWidth}
           frameHeight={layout.frameHeight}
         />

@@ -43,7 +43,24 @@ export function TimelineBundleInspector({
 
       <section className="inspector-section">
         <SectionHeader title="왜 묶였는가" hint={`${bundle.count} events`} />
-        <p className="inspector-summary">{bundle.reason.message}</p>
+        <div className="inspector-trust-card">
+          <strong>{bundleReasonLabel(bundle.reason.code)}</strong>
+          <span>{bundle.reason.message}</span>
+          <small>
+            {bundle.sourceCount} sources · {bundle.decisionCount} decisions · {bundle.issueCount} issues
+          </small>
+        </div>
+      </section>
+
+      <section className="inspector-section">
+        <SectionHeader title="이벤트 타입 구성" />
+        <div className="inspector-mix-row">
+          {Object.entries(bundle.eventTypeCounts).map(([type, count]) => (
+            <Badge key={type} tone={eventTypeTone[type as keyof typeof eventTypeTone]}>
+              {eventTypeLabels[type as keyof typeof eventTypeLabels]} {count}
+            </Badge>
+          ))}
+        </div>
       </section>
 
       <section className="inspector-section">
@@ -64,7 +81,7 @@ export function TimelineBundleInspector({
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="대표 항목" />
+        <SectionHeader title="대표 항목 / 증거" />
         <ul className="inspector-linked-rows">
           <li>
             <Badge tone="cyan">소스</Badge>
@@ -94,4 +111,11 @@ export function TimelineBundleInspector({
       </section>
     </aside>
   );
+}
+
+function bundleReasonLabel(code: TimelineDisplayBundle["reason"]["code"]): string {
+  if (code === "laneDensity") return "Lane density";
+  if (code === "timeWindow") return "Nearby work moment";
+  if (code === "microSequence") return "Micro-sequence";
+  return "Single-row preservation";
 }

@@ -64,7 +64,15 @@ export function EventInspector({
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="근거" hint={`${sources.length} source${sources.length === 1 ? "" : "s"}`} />
+        <SectionHeader title="근거 / 신뢰" hint={`${sources.length} source${sources.length === 1 ? "" : "s"}`} />
+        <div className="inspector-trust-card">
+          <strong>{trust.label}</strong>
+          <span>{trustCopy(selectedEvent.trustLevel)}</span>
+          <small>
+            Created by {selectedEvent.createdBy}
+            {selectedEvent.userModified ? " · user modified" : ""}
+          </small>
+        </div>
         <SourcesList sources={sources} />
       </section>
 
@@ -164,6 +172,12 @@ function confidenceTone(pct: number): string {
   if (pct >= 60) return "blue";
   if (pct >= 40) return "orange";
   return "red";
+}
+
+function trustCopy(trustLevel: TimelineEvent["trustLevel"]): string {
+  if (trustLevel === "verified") return "This event is backed by captured source evidence.";
+  if (trustLevel === "observed") return "This event is derived from observed work context.";
+  return "This event was inferred by analysis and should remain correctable.";
 }
 
 export { formatTime };

@@ -67,6 +67,20 @@ bundle cards such as:
 Each bundle should still communicate time range, dominant meaning, included
 types, evidence/trust, and what it represents in the work flow.
 
+Current implementation notes:
+
+- The Timeline operates on display items: raw events or workflow bundles.
+- Same-lane dense moments can be bundled while selected and important
+  decision events remain individual cards.
+- Relationship lines are secondary in the Timeline view and stronger in Flow
+  Focus.
+- The bottom overview rail is an orientation surface with event dots, a
+  viewport highlight, and a selected marker; direct minimap navigation remains
+  planned.
+- At narrower desktop widths Mori keeps the sidebar and inspector stable and
+  lets the lane frame scroll horizontally instead of compressing cards until
+  they become unreadable.
+
 ## Flow Focus / Trace View
 
 ![Flow Focus / Trace View](./assets/screenshots/flow-focus.png)

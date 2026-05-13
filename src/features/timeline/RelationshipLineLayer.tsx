@@ -8,6 +8,7 @@ export function RelationshipLineLayer({
   relationships,
   focusedSet,
   focusActive,
+  mode,
   frameWidth,
   frameHeight,
 }: {
@@ -16,6 +17,7 @@ export function RelationshipLineLayer({
   relationships: Relationship[];
   focusedSet: Set<string>;
   focusActive: boolean;
+  mode: "timeline" | "flow";
   frameWidth: number;
   frameHeight: number;
 }) {
@@ -25,9 +27,9 @@ export function RelationshipLineLayer({
   // behaviour drew every edge by default, which buried the cards under a
   // curtain of lines. Selecting an event or entering Flow mode lights up the
   // relevant subgraph; otherwise the canvas stays clean.
-  const visible = relationships.filter(
-    (relationship) => focusedSet.has(relationship.fromId) && focusedSet.has(relationship.toId),
-  );
+  const visible = relationships
+    .filter((relationship) => focusedSet.has(relationship.fromId) && focusedSet.has(relationship.toId))
+    .slice(0, mode === "flow" ? 12 : 5);
 
   if (visible.length === 0) return null;
 
@@ -70,8 +72,8 @@ export function RelationshipLineLayer({
         return (
           <path
             key={key}
-            className={`connector tone-${aggregate.tone} ${focusActive ? "active" : "subtle"}`}
-            strokeWidth={aggregate.count > 1 ? 2.2 : 1.35}
+            className={`connector tone-${aggregate.tone} ${mode} ${focusActive ? "active" : "subtle"}`}
+            strokeWidth={aggregate.count > 1 ? 1.8 : 1.15}
             d={`M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${end.y}, ${end.x} ${end.y}`}
           />
         );

@@ -41,6 +41,7 @@ export function TimelineMiniMap({
         ))}
       </div>
       <div className="mini-track">
+        <span className="mini-map-viewport" aria-hidden="true" />
         {placed.map(({ item, xPercent, laneIndex }) => {
           const state = getEventFocusState({
             itemId: item.id,

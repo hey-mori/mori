@@ -1,9 +1,12 @@
 import { ChevronDown, Search } from "lucide-react";
 import { Badge } from "../ui/Badge";
+import { useMoriAppStore } from "../../app/store";
 import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 
 export function TopSessionBar() {
   const view = useMoriSessionStore(selectSessionView);
+  const searchQuery = useMoriAppStore((state) => state.searchQuery);
+  const setSearchQuery = useMoriAppStore((state) => state.setSearchQuery);
   const statusLabel =
     view.session.status === "recording"
       ? "진행 중"
@@ -33,13 +36,14 @@ export function TopSessionBar() {
         </div>
         <p>{dateLine}</p>
       </div>
-      <div className="topbar-search" aria-label="Event search (planned)">
+      <div className="topbar-search" aria-label="Search timeline events">
         <Search size={16} aria-hidden="true" />
         <input
           type="search"
-          placeholder="이벤트 검색 (다음 마일스톤)"
-          disabled
-          aria-label="Search events (planned)"
+          placeholder="이벤트 검색..."
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          aria-label="Search events"
         />
         <kbd>⌘K</kbd>
       </div>

@@ -54,20 +54,20 @@ export type TimelineLayout = {
 };
 
 const DENSITY_EVENT_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
-  comfortable: { width: 188, height: 88 },
-  compact: { width: 152, height: 56 },
+  comfortable: { width: 200, height: 82 },
+  compact: { width: 166, height: 62 },
 };
 
 const DENSITY_BUNDLE_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
-  comfortable: { width: 224, height: 102 },
-  compact: { width: 180, height: 74 },
+  comfortable: { width: 232, height: 96 },
+  compact: { width: 194, height: 76 },
 };
 
-const DEFAULT_LANE_OFFSET = 40;
+const DEFAULT_LANE_OFFSET = 48;
 const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
-const DEFAULT_CARD_GAP = 8;
-const LANE_VERTICAL_PADDING = 12;
+const DEFAULT_CARD_GAP = 10;
+const LANE_VERTICAL_PADDING = 10;
 
 export function computeTimelineLayout(
   items: TimelineDisplayItem[],
@@ -107,7 +107,7 @@ export function computeTimelineLayout(
     const laneTop = cursorY;
     const laneHeight = laneItems.length > 0
       ? LANE_VERTICAL_PADDING * 2 + getLaneHeight(laneItems, density)
-      : 36;
+      : 28;
     const y = laneTop + LANE_VERTICAL_PADDING;
     const laneLayouts = layoutLaneItems(
       laneItems,

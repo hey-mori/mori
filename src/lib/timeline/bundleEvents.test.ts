@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
-import { createTimelineBundles } from "./bundleEvents";
+import { createTimelineBundles, createTimelineDisplayItems } from "./bundleEvents";
 import { isTimelineBundle } from "./displayItems";
 
 describe("timeline workflow bundles", () => {
@@ -55,5 +55,27 @@ describe("timeline workflow bundles", () => {
 
     const noteBundles = items.filter((item) => item.kind === "bundle" && item.laneType === "documentNote");
     expect(noteBundles).toHaveLength(0);
+  });
+
+  it("records meaningful bundle counts and member ids instead of generic hidden clusters", () => {
+    const items = createTimelineDisplayItems(moriMockSession.events, moriMockSession.relationships, {
+      timeWindowMinutes: 12,
+      minEventsForBundle: 3,
+      preserveSelectedEventId: "evt-positioning",
+      maxVisibleItemsPerLane: 4,
+      decisions: moriMockSession.decisions,
+    });
+
+    const researchBundle = items.find((item) => item.id.includes("bundle-webResearch"));
+    expect(researchBundle && isTimelineBundle(researchBundle)).toBe(true);
+    if (!researchBundle || !isTimelineBundle(researchBundle)) return;
+
+    expect(researchBundle.memberEventIds).toEqual(
+      expect.arrayContaining(["evt-dayflow", "evt-screenpipe", "evt-specstory", "evt-pieces"]),
+    );
+    expect(researchBundle.sourceCount).toBe(1);
+    expect(researchBundle.eventTypeCounts.webResearch).toBe(4);
+    expect(researchBundle.reason.message).not.toContain("+");
+    expect(researchBundle.summary).toContain("research burst");
   });
 });

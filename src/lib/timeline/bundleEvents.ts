@@ -52,6 +52,14 @@ export function createTimelineBundles(
   });
 }
 
+export function createTimelineDisplayItems(
+  events: TimelineEvent[],
+  relationships: Relationship[],
+  options: CreateTimelineBundlesOptions,
+): TimelineDisplayItem[] {
+  return createTimelineBundles(events, relationships, options);
+}
+
 function createLaneItems(
   laneEvents: TimelineEvent[],
   relationships: Relationship[],

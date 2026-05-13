@@ -9,7 +9,7 @@ import {
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { getFocusedEntitySet } from "../../lib/relationships/traversal";
-import { createTimelineBundles } from "../../lib/timeline/bundleEvents";
+import { createTimelineDisplayItems } from "../../lib/timeline/bundleEvents";
 import { isTimelineBundle } from "../../lib/timeline/displayItems";
 import { getTimelineRange } from "../../lib/timeline/layout";
 import { computeAxisTicks } from "../../lib/timeline/timeScale";
@@ -39,6 +39,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const selectedEventId = useMoriAppStore((state) => state.selectedEventId);
   const hoveredEventId = useMoriAppStore((state) => state.hoveredEventId);
   const activeFilters = useMoriAppStore((state) => state.activeFilters);
+  const searchQuery = useMoriAppStore((state) => state.searchQuery);
   const density = useMoriAppStore((state) => state.timelineDensity);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const setHoveredEventId = useMoriAppStore((state) => state.setHoveredEventId);
@@ -74,10 +75,14 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
     end: view.session.endedAt,
   });
 
-  const visibleEvents = activeFilters.length
-    ? view.events.filter((event) => activeFilters.includes(event.type))
-    : view.events;
-  const visibleDisplayItems = createTimelineBundles(visibleEvents, view.relationships, {
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
+  const visibleEvents = view.events.filter((event) => {
+    const matchesFilter = activeFilters.length ? activeFilters.includes(event.type) : true;
+    if (!matchesFilter) return false;
+    if (!normalizedSearch) return true;
+    return `${event.title} ${event.summary}`.toLocaleLowerCase().includes(normalizedSearch);
+  });
+  const visibleDisplayItems = createTimelineDisplayItems(visibleEvents, view.relationships, {
     timeWindowMinutes: density === "comfortable" ? 12 : 10,
     minEventsForBundle: 3,
     preserveSelectedEventId: selectedEventId,
