@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   selectHasRealAnalysis,
+  setSessionPersistenceServiceForSessionStore,
   setSessionRepositoryForTesting,
   useMoriSessionStore,
 } from "./sessionStore";
@@ -10,6 +11,9 @@ import { BrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import { MemoryKeyValueStorage } from "../lib/storage/memoryStorage";
 import type { MoriAnalysisProvider, MoriAnalysisResult } from "../lib/analysis";
 import { DEFAULT_QUICK_PASS_SETTINGS } from "../lib/analysis";
+import { moriMockSession } from "../domain/mock-data";
+import { SessionPersistenceService } from "../lib/storage/sessionPersistenceService";
+import { createSqlitePersistenceSnapshot } from "../lib/sqlite";
 
 const fixedNow = "2026-05-12T13:00:00+09:00";
 
@@ -65,6 +69,7 @@ function resetStore() {
     analysisProviderLabel: null,
     analysisFallbackUsed: false,
     analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
+    source: "demo",
   });
 }
 
@@ -73,11 +78,15 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
     const storage = new MemoryKeyValueStorage();
     const repository = new BrowserDraftRepository(storage);
     setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
     resetStore();
   });
 
   afterEach(() => {
     setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
     resetStore();
   });
 
@@ -110,7 +119,7 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
     useMoriSessionStore.getState().addImport(note);
   }
 
-  it("persists provider settings through the repository boundary", () => {
+  it("persists provider settings through the repository boundary", async () => {
     const next = useMoriSessionStore.getState().updateAnalysisSettings({
       provider: "ollama",
       ollamaEndpoint: "http://localhost:9999",
@@ -119,7 +128,7 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
     expect(next.provider).toBe("ollama");
 
     resetStore();
-    useMoriSessionStore.getState().hydrate();
+    await useMoriSessionStore.getState().hydrate();
     const hydrated = useMoriSessionStore.getState().analysisSettings;
     expect(hydrated.provider).toBe("ollama");
     expect(hydrated.ollamaEndpoint).toBe("http://localhost:9999");
@@ -173,5 +182,92 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
     expect(state.analysisFallbackUsed).toBe(false);
     expect(state.analysis?.providerName).toBe("ollama-quick-pass-v1");
     expect(state.analysisProviderLabel).toBe("Ollama ok");
+  });
+});
+
+describe("useMoriSessionStore desktop persistence", () => {
+  beforeEach(() => {
+    const storage = new MemoryKeyValueStorage();
+    const repository = new BrowserDraftRepository(storage);
+    setSessionRepositoryForTesting(repository);
+    const service = new SessionPersistenceService({
+      runtime: "desktop",
+      repository,
+      commands: {
+        getSqliteMigrationStatus: async () => ({
+          path: "/tmp/mori.sqlite",
+          initialized: true,
+          appliedMigrations: ["001"],
+          pendingMigrations: [],
+          migrationTableName: "_mori_migrations",
+          strategy: "rusqlite-custom-runner",
+          tables: [],
+          migrationRecords: [],
+        }),
+        initializeSqliteDatabase: async () => ({
+          path: "/tmp/mori.sqlite",
+          initialized: true,
+          appliedMigrations: ["001"],
+          pendingMigrations: [],
+          migrationTableName: "_mori_migrations",
+          strategy: "rusqlite-custom-runner",
+          tables: [],
+          migrationRecords: [],
+        }),
+        persistSessionSnapshot: async ({ snapshot }) => ({
+          sessionId: snapshot.sessions[0]?.id ?? "",
+          projectId: snapshot.projects[0]?.id ?? "",
+          eventsPersisted: snapshot.events.length,
+          sourcesPersisted: snapshot.sources.length,
+          issuesPersisted: snapshot.issues.length,
+          decisionsPersisted: snapshot.decisions.length,
+        }),
+        loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(moriMockSession),
+        listSqliteSessions: async () => ({ sessions: [] }),
+      },
+    });
+    setSessionPersistenceServiceForSessionStore(service);
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  it("loads a saved SQLite session into the active session view", async () => {
+    const loaded = await useMoriSessionStore.getState().loadDesktopSession(moriMockSession.session.id);
+    expect(loaded).toBe(true);
+
+    const state = useMoriSessionStore.getState();
+    expect(state.draft?.session.id).toBe(moriMockSession.session.id);
+    expect(state.imports.length).toBe(moriMockSession.sources.length);
+    expect(state.source).toBe("desktop-sqlite");
+  });
+
+  it("marks the active session as desktop SQLite after an explicit persist", () => {
+    useMoriSessionStore.setState({
+      draft: {
+        project: moriMockSession.project,
+        session: moriMockSession.session,
+        savedAt: fixedNow,
+        adapter: "browser-local-storage",
+      },
+      source: "browser-draft",
+    });
+    useMoriSessionStore.getState().markPersistedToDesktop();
+    expect(useMoriSessionStore.getState().source).toBe("desktop-sqlite");
+  });
+
+  it("returns false from loadDesktopSession when running in browser mode", async () => {
+    const browserService = new SessionPersistenceService({
+      runtime: "browser",
+      repository: new BrowserDraftRepository(new MemoryKeyValueStorage()),
+    });
+    setSessionPersistenceServiceForSessionStore(browserService);
+    const loaded = await useMoriSessionStore.getState().loadDesktopSession("sess-anything");
+    expect(loaded).toBe(false);
+    expect(useMoriSessionStore.getState().source).toBe("demo");
   });
 });

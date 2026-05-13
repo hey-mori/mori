@@ -16,9 +16,15 @@ import {
 import type { NormalizedImportCandidate } from "../lib/import";
 import { composeSessionView } from "../lib/session/composeSessionView";
 import { createBrowserDraftRepository } from "../lib/storage/localStorageAdapter";
+import {
+  getSessionPersistenceService,
+  type SessionPersistenceService,
+} from "../lib/storage/sessionPersistenceService";
 import type { MoriDraftRepository, StoredSessionDraft, StoredSessionImport } from "../lib/storage/storageTypes";
 
 export type SessionMode = "demo" | "draft";
+
+export type SessionSource = "demo" | "browser-draft" | "desktop-sqlite";
 
 export type SessionViewModel = MoriMockSession & {
   isDemo: boolean;
@@ -34,7 +40,8 @@ export type MoriSessionState = {
   analysisProviderLabel: string | null;
   analysisFallbackUsed: boolean;
   analysisSettings: QuickPassAnalysisSettings;
-  hydrate: () => void;
+  source: SessionSource;
+  hydrate: () => Promise<void>;
   setDraft: (draft: StoredSessionDraft) => void;
   addImport: (candidate: NormalizedImportCandidate) => StoredSessionImport | null;
   removeImport: (importId: string) => void;
@@ -42,12 +49,15 @@ export type MoriSessionState = {
   runQuickPass: (provider?: MoriAnalysisProvider) => Promise<MoriAnalysisResult | null>;
   clearAnalysis: () => void;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
+  loadDesktopSession: (sessionId: string) => Promise<boolean>;
+  markPersistedToDesktop: () => void;
 };
 
 const demoView: SessionViewModel = { ...moriMockSession, isDemo: true };
 
 let lazyRepository: MoriDraftRepository | null = null;
 let lazyProvider: MoriAnalysisProvider | null = null;
+let lazyPersistenceService: SessionPersistenceService | null = null;
 
 function getRepository(): MoriDraftRepository {
   if (!lazyRepository) {
@@ -63,12 +73,21 @@ function getDefaultProvider(): MoriAnalysisProvider {
   return lazyProvider;
 }
 
+function getPersistenceService(): SessionPersistenceService {
+  if (!lazyPersistenceService) lazyPersistenceService = getSessionPersistenceService();
+  return lazyPersistenceService;
+}
+
 export function setSessionRepositoryForTesting(repository: MoriDraftRepository | null): void {
   lazyRepository = repository;
 }
 
 export function setDefaultQuickPassProviderForTesting(provider: MoriAnalysisProvider | null): void {
   lazyProvider = provider;
+}
+
+export function setSessionPersistenceServiceForSessionStore(service: SessionPersistenceService | null): void {
+  lazyPersistenceService = service;
 }
 
 export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
@@ -81,12 +100,73 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   analysisProviderLabel: null,
   analysisFallbackUsed: false,
   analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
-  hydrate: () => {
+  source: "demo",
+  hydrate: async () => {
     const repository = getRepository();
-    const draft = repository.loadCurrentSessionDraft();
-    const imports = draft ? repository.listSessionImports(draft.session.id) : [];
-    const analysisRecord = draft ? repository.loadSessionAnalysis(draft.session.id) : null;
+    const service = getPersistenceService();
     const analysisSettings = repository.loadQuickPassSettings();
+    const localDraft = repository.loadCurrentSessionDraft();
+    const localImports = localDraft ? repository.listSessionImports(localDraft.session.id) : [];
+    const localAnalysisRecord = localDraft ? repository.loadSessionAnalysis(localDraft.session.id) : null;
+
+    if (!service.isDesktop()) {
+      const source: SessionSource = localDraft ? "browser-draft" : "demo";
+      set({
+        initialized: true,
+        draft: localDraft,
+        imports: localImports,
+        analysis: localAnalysisRecord?.result ?? null,
+        analysisStatus: localAnalysisRecord ? "succeeded" : "idle",
+        analysisError: null,
+        analysisProviderLabel: localAnalysisRecord?.result.providerLabel ?? null,
+        analysisFallbackUsed: false,
+        analysisSettings,
+        source,
+      });
+      return;
+    }
+
+    // Desktop runtime: prefer the SQLite-stored snapshot when one is available
+    // for the active draft session id. Falls back to the browser draft when
+    // SQLite has nothing for that session, or when SQLite is unreachable.
+    let hydratedFromSqlite = false;
+    let draft: StoredSessionDraft | null = localDraft;
+    let imports: StoredSessionImport[] = localImports;
+    let analysisRecord = localAnalysisRecord;
+
+    if (localDraft) {
+      try {
+        const loaded = await service.loadSessionFromDesktop(localDraft.session.id);
+        const sqliteDraft: StoredSessionDraft = {
+          ...loaded.draft,
+          savedAt: localDraft.savedAt,
+        };
+        repository.saveCurrentSessionDraft(sqliteDraft);
+        repository.clearSessionImports(sqliteDraft.session.id);
+        for (const entry of loaded.imports) {
+          repository.addSessionImport(sqliteDraft.session.id, {
+            source: entry.source,
+            events: entry.events,
+          });
+        }
+        draft = sqliteDraft;
+        imports = repository.listSessionImports(sqliteDraft.session.id);
+        analysisRecord = repository.loadSessionAnalysis(sqliteDraft.session.id);
+        hydratedFromSqlite = true;
+      } catch {
+        // SQLite empty for this session id, or DB not initialized — keep the
+        // existing browser draft. Logging the error is intentional only at the
+        // service layer; the store stays quiet so first-run does not look like
+        // a failure.
+      }
+    }
+
+    const source: SessionSource = !draft
+      ? "demo"
+      : hydratedFromSqlite
+        ? "desktop-sqlite"
+        : "browser-draft";
+
     set({
       initialized: true,
       draft,
@@ -97,12 +177,15 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisProviderLabel: analysisRecord?.result.providerLabel ?? null,
       analysisFallbackUsed: false,
       analysisSettings,
+      source,
     });
   },
   setDraft: (draft) => {
     const repository = getRepository();
     const imports = repository.listSessionImports(draft.session.id);
     const analysisRecord = repository.loadSessionAnalysis(draft.session.id);
+    // A freshly created draft has not been persisted to SQLite yet, so the
+    // source is reported as browser-draft until an explicit save runs.
     set({
       draft,
       imports,
@@ -112,6 +195,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisProviderLabel: analysisRecord?.result.providerLabel ?? null,
       analysisFallbackUsed: false,
       initialized: true,
+      source: "browser-draft",
     });
   },
   addImport: (candidate) => {
@@ -141,6 +225,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisError: null,
       analysisProviderLabel: null,
       analysisFallbackUsed: false,
+      source: "demo",
     });
   },
   runQuickPass: async (provider) => {
@@ -261,6 +346,51 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     set({ analysisSettings: next });
     return next;
   },
+  markPersistedToDesktop: () => {
+    if (!get().draft) return;
+    set({ source: "desktop-sqlite" });
+  },
+  loadDesktopSession: async (sessionId) => {
+    const service = getPersistenceService();
+    if (!service.isDesktop()) {
+      return false;
+    }
+    const repository = getRepository();
+    let loaded;
+    try {
+      loaded = await service.loadSessionFromDesktop(sessionId);
+    } catch {
+      return false;
+    }
+
+    const storedDraft = repository.saveCurrentSessionDraft({
+      project: loaded.draft.project,
+      session: loaded.draft.session,
+    });
+    repository.clearSessionImports(storedDraft.session.id);
+    for (const entry of loaded.imports) {
+      repository.addSessionImport(storedDraft.session.id, {
+        source: entry.source,
+        events: entry.events,
+      });
+    }
+
+    const refreshedImports = repository.listSessionImports(storedDraft.session.id);
+    const analysisRecord = repository.loadSessionAnalysis(storedDraft.session.id);
+
+    set({
+      draft: storedDraft,
+      imports: refreshedImports,
+      analysis: analysisRecord?.result ?? null,
+      analysisStatus: analysisRecord ? "succeeded" : "idle",
+      analysisError: null,
+      analysisProviderLabel: analysisRecord?.result.providerLabel ?? null,
+      analysisFallbackUsed: false,
+      initialized: true,
+      source: "desktop-sqlite",
+    });
+    return true;
+  },
 }));
 
 function resolveProviderFromSettings(settings: QuickPassAnalysisSettings): MoriAnalysisProvider {
@@ -302,6 +432,10 @@ export function selectSessionView(state: MoriSessionState): SessionViewModel {
 
 export function selectSessionMode(state: MoriSessionState): SessionMode {
   return state.draft ? "draft" : "demo";
+}
+
+export function selectSessionSource(state: MoriSessionState): SessionSource {
+  return state.source;
 }
 
 export function selectHasRealAnalysis(state: MoriSessionState): boolean {

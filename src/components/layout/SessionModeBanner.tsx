@@ -1,10 +1,15 @@
 import { Sparkles } from "lucide-react";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { selectSessionMode, useMoriSessionStore } from "../../app/sessionStore";
+import {
+  selectSessionMode,
+  selectSessionSource,
+  useMoriSessionStore,
+} from "../../app/sessionStore";
 
 export function SessionModeBanner() {
   const mode = useMoriSessionStore(selectSessionMode);
+  const source = useMoriSessionStore(selectSessionSource);
   const draft = useMoriSessionStore((state) => state.draft);
   const imports = useMoriSessionStore((state) => state.imports);
   const resetToDemo = useMoriSessionStore((state) => state.resetToDemo);
@@ -21,13 +26,18 @@ export function SessionModeBanner() {
     );
   }
 
+  const sourceBadge = source === "desktop-sqlite"
+    ? { tone: "green", label: "Desktop SQLite", detail: "저장 위치 ~/Mori/Records/mori.sqlite" }
+    : { tone: "blue", label: "Browser Draft", detail: "저장 위치 browser localStorage 초안" };
+
   return (
     <div className="session-mode-banner tone-draft">
       <span>
         <Badge tone="green">실제 세션</Badge>
+        <Badge tone={sourceBadge.tone}>{sourceBadge.label}</Badge>
         <strong style={{ marginLeft: 8 }}>{draft?.session.title}</strong>
         <span style={{ marginLeft: 6 }}>
-          가져온 소스 {imports.length}건 · 저장 위치 browser localStorage 초안
+          가져온 소스 {imports.length}건 · {sourceBadge.detail}
         </span>
       </span>
       <Button icon={Sparkles} onClick={resetToDemo}>데모로 되돌리기</Button>

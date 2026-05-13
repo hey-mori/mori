@@ -1,4 +1,4 @@
-import { Bot, Cloud, Database, Folder, HardDrive, Plug, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { Bot, Cloud, Database, DownloadCloud, Folder, HardDrive, Plug, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -23,6 +23,9 @@ export function SettingsView() {
   const updateAnalysisSettings = useMoriSessionStore((state) => state.updateAnalysisSettings);
   const sessionView = useMoriSessionStore(selectSessionView);
   const sessionDraft = useMoriSessionStore((state) => state.draft);
+  const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
   const sqliteAvailable = useMoriSqliteStore((state) => state.available);
   const sqliteStatus = useMoriSqliteStore((state) => state.status);
   const sqliteSessions = useMoriSqliteStore((state) => state.sessions);
@@ -193,13 +196,34 @@ export function SettingsView() {
                 <ul className="sqlite-session-list">
                   {sqliteSessions.map((entry) => (
                     <li key={entry.sessionId}>
-                      <strong>{entry.title}</strong>
-                      <small>{entry.projectName} · events {entry.eventCount} · sources {entry.sourceCount}</small>
+                      <div className="sqlite-session-info">
+                        <strong>{entry.title}</strong>
+                        <small>{entry.projectName} · events {entry.eventCount} · sources {entry.sourceCount}</small>
+                      </div>
                       <Badge tone={entry.status === "complete" ? "gray" : "green"}>{entry.status}</Badge>
+                      <Button
+                        icon={DownloadCloud}
+                        disabled={loadingSessionId === entry.sessionId}
+                        onClick={async () => {
+                          setLoadError(null);
+                          setLoadingSessionId(entry.sessionId);
+                          try {
+                            const ok = await loadDesktopSession(entry.sessionId);
+                            if (!ok) setLoadError("Failed to load session from SQLite.");
+                          } catch (error) {
+                            setLoadError(error instanceof Error ? error.message : "Load failed");
+                          } finally {
+                            setLoadingSessionId(null);
+                          }
+                        }}
+                      >
+                        {loadingSessionId === entry.sessionId ? "불러오는 중..." : "Load"}
+                      </Button>
                     </li>
                   ))}
                 </ul>
               ) : null}
+              {loadError ? <p className="tone-err" role="alert">{loadError}</p> : null}
             </>
           ) : (
             <p className="muted">

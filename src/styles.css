@@ -2322,13 +2322,18 @@ pre {
 
 .sqlite-session-list li {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
+}
+
+.sqlite-session-info {
+  display: grid;
+  gap: 2px;
 }
 
 .sqlite-session-list strong {

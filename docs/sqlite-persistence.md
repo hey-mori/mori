@@ -105,22 +105,64 @@ save/load round-trip with an in-memory `rusqlite` database.
 - [src/lib/sqlite/reconstruct.ts](../src/lib/sqlite/reconstruct.ts) turns a
   raw `SqlitePersistenceSnapshot` back into the rich `MoriMockSession` shape
   the rest of the app already consumes.
+- [src/lib/storage/sessionPersistenceService.ts](../src/lib/storage/sessionPersistenceService.ts)
+  is the runtime router. Components and stores call this service so that
+  "use SQLite in Tauri, use localStorage in the browser" lives in exactly
+  one place. The service holds a lazy `BrowserDraftRepository` so importing
+  the module in Node (e.g. tests) doesn't touch `window.localStorage`.
 - [src/app/sqliteStore.ts](../src/app/sqliteStore.ts) holds the SQLite UI
-  state (available / status / sessions / lastPersist / error) so views can
-  read it without touching Tauri directly.
+  state (available / status / sessions / lastPersist / error) and now
+  routes every action through the persistence service, including marking
+  the session source as `desktop-sqlite` after a successful save.
+- [src/app/sessionStore.ts](../src/app/sessionStore.ts) gains an async
+  `hydrate()` that prefers the SQLite snapshot in Tauri mode (and silently
+  falls back to the browser draft if SQLite is empty for that session id),
+  `loadDesktopSession(sessionId)`, and `markPersistedToDesktop()`. The
+  derived `source` flag is `demo` / `browser-draft` / `desktop-sqlite` and
+  is rendered as a badge by `SessionModeBanner`.
 - In browser mode the bridge throws a clear "SQLite desktop persistence
   requires the Tauri app" error and the Settings panel renders an
   "unavailable" status with a help line. The existing
   `BrowserDraftRepository` continues to handle session drafts, imports, and
   analysis in localStorage.
 
+## Running the desktop app
+
+```bash
+npm install            # once, to pull frontend deps
+npm run tauri:dev      # build Rust, launch desktop window, hot-reload UI
+```
+
+On first launch:
+
+1. Open **Settings → SQLite Desktop Persistence**.
+2. Click **마이그레이션 적용** to create `~/Mori/Records/mori.sqlite` and
+   apply V001. The path, applied migrations, and table count appear inline.
+3. Start a session (Home → "Mori 세션 시작").
+4. Import a note, URL, or AI conversation from **Sources / Evidence**.
+5. Optionally run **Quick Pass** to generate issues, decisions, and a
+   resume prompt.
+6. Back in Settings, click **현재 세션 SQLite 저장**. The Session Mode
+   banner flips to `Desktop SQLite`.
+7. The saved-session list updates with event/source counts. Restart the
+   app to confirm it loads from SQLite first; or click **Load** on any
+   saved session to replace the active view.
+
 ## What still uses localStorage
+
+In Tauri mode, the active session is *also* persisted to SQLite and SQLite
+is the preferred read on next launch. Localstorage still holds:
 
 - Active session draft (`mori.currentSessionDraft`)
 - Per-session imports (`mori.sessionImports.*`)
 - Quick Pass analysis result (`mori.sessionAnalysis.*`)
 - Quick Pass provider settings (`mori.quickPassSettings`)
 - Mori package drafts (`mori.packageDraft.*`)
+
+This is intentional for this milestone: the browser-mode prototype keeps
+working unchanged, the persistence service can fall back to localStorage if
+SQLite is empty for a given session id, and the next milestones will move
+these stores into SQLite one at a time.
 
 A follow-up milestone will migrate these to SQLite when running inside the
 desktop runtime, and adopt SQLite as the source of truth for Sources,
@@ -131,6 +173,11 @@ Timeline, and Reports.
 - The migration table currently records `applied_at` as `"epoch:<seconds>"`.
   Replace with ISO-8601 when a `chrono`/`time` dependency lands.
 - FTS5 indexes are created but not populated.
-- No end-to-end `tauri:dev` exercise yet; the validated path is `cargo test`
-  + the browser-mode "unavailable" UI rendering.
+- Auto write-through after Import / Quick Pass is not implemented yet — the
+  user has to click **현재 세션 SQLite 저장** explicitly. This is the next
+  milestone candidate.
 - No deletion or merge commands yet.
+- One live `tauri:dev` cycle this milestone confirmed the desktop window
+  launches and renders. A full live click-through of
+  Initialize → Save → Load → restart still needs to be captured as a smoke
+  checklist.

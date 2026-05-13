@@ -1,12 +1,16 @@
 import { create } from "zustand";
-import { isTauriRuntime, tauriCommands } from "../lib/desktop";
-import { createSqlitePersistenceSnapshot, validateSqlitePersistenceSnapshot } from "../lib/sqlite";
+import {
+  getSessionPersistenceService,
+  type PersistenceStatus,
+  type SessionPersistenceService,
+} from "../lib/storage/sessionPersistenceService";
+import type { MoriMockSession } from "../domain/types";
 import type {
   DatabaseStatus,
   PersistSessionSnapshotOutput,
   SqliteSessionListEntry,
 } from "../lib/sqlite/repositoryContracts";
-import type { MoriMockSession } from "../domain/types";
+import { useMoriSessionStore } from "./sessionStore";
 
 export type SqliteStatusKind = "unavailable" | "checking" | "ok" | "error";
 
@@ -22,57 +26,77 @@ export type MoriSqliteState = {
   persist: (session: MoriMockSession) => Promise<PersistSessionSnapshotOutput | null>;
 };
 
+let lazyService: SessionPersistenceService | null = null;
+
+function getService(): SessionPersistenceService {
+  if (!lazyService) lazyService = getSessionPersistenceService();
+  return lazyService;
+}
+
+export function setSqliteStoreServiceForTesting(service: SessionPersistenceService | null): void {
+  lazyService = service;
+}
+
+function deriveInitialState(): Pick<MoriSqliteState, "available" | "kind"> {
+  const service = getService();
+  return {
+    available: service.isDesktop(),
+    kind: service.isDesktop() ? "checking" : "unavailable",
+  };
+}
+
 export const useMoriSqliteStore = create<MoriSqliteState>((set, get) => ({
-  available: isTauriRuntime(),
+  ...deriveInitialState(),
   status: null,
   sessions: [],
-  kind: isTauriRuntime() ? "checking" : "unavailable",
   error: null,
   lastPersist: null,
   refresh: async () => {
-    if (!isTauriRuntime()) {
-      set({ available: false, kind: "unavailable", error: null });
+    const service = getService();
+    if (!service.isDesktop()) {
+      set({ available: false, kind: "unavailable", error: null, status: null, sessions: [] });
       return;
     }
     set({ available: true, kind: "checking", error: null });
     try {
-      const status = await tauriCommands.getSqliteMigrationStatus();
-      const sessions = status.initialized
-        ? (await tauriCommands.listSqliteSessions()).sessions
-        : [];
-      set({ status, sessions, kind: "ok", error: null });
+      const status = await service.getStatus();
+      applyStatus(set, status);
+      if (status.sqliteInitialized) {
+        const sessions = await service.listDesktopSessions();
+        set({ sessions });
+      } else {
+        set({ sessions: [] });
+      }
     } catch (error) {
       set({ kind: "error", error: errorMessage(error) });
     }
   },
   initialize: async () => {
-    if (!isTauriRuntime()) {
+    const service = getService();
+    if (!service.isDesktop()) {
       set({ available: false, kind: "unavailable", error: null });
       return;
     }
     set({ available: true, kind: "checking", error: null });
     try {
-      const status = await tauriCommands.initializeSqliteDatabase();
-      const sessions = (await tauriCommands.listSqliteSessions()).sessions;
-      set({ status, sessions, kind: "ok", error: null });
+      const status = await service.initializeDesktop();
+      set({ status, kind: "ok", error: null });
+      const sessions = await service.listDesktopSessions();
+      set({ sessions });
     } catch (error) {
       set({ kind: "error", error: errorMessage(error) });
     }
   },
   persist: async (session) => {
-    if (!isTauriRuntime()) {
+    const service = getService();
+    if (!service.isDesktop()) {
       set({ kind: "unavailable", error: "SQLite desktop persistence requires the Tauri app." });
       return null;
     }
-    const snapshot = createSqlitePersistenceSnapshot(session);
-    const validation = validateSqlitePersistenceSnapshot(snapshot);
-    if (!validation.valid) {
-      set({ kind: "error", error: `Invalid snapshot: ${validation.issues.join("; ")}` });
-      return null;
-    }
     try {
-      const result = await tauriCommands.persistSessionSnapshot({ snapshot });
+      const result = await service.saveSessionToDesktop(session);
       set({ lastPersist: result, error: null });
+      useMoriSessionStore.getState().markPersistedToDesktop();
       await get().refresh();
       return result;
     } catch (error) {
@@ -81,6 +105,21 @@ export const useMoriSqliteStore = create<MoriSqliteState>((set, get) => ({
     }
   },
 }));
+
+function applyStatus(
+  set: (partial: Partial<MoriSqliteState>) => void,
+  status: PersistenceStatus,
+): void {
+  if (!status.sqliteAvailable) {
+    set({ available: false, kind: "unavailable", status: null, error: null });
+    return;
+  }
+  if (status.sqliteError) {
+    set({ available: true, kind: "error", error: status.sqliteError, status: status.databaseStatus });
+    return;
+  }
+  set({ available: true, kind: "ok", status: status.databaseStatus, error: null });
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
