@@ -8,6 +8,7 @@ import {
   isValidMigrationFilename,
   migrationMentionsRequiredTables,
   migrationTableName,
+  reconstructMoriSession,
   requiredSqliteTables,
   sortMigrations,
   sqliteMigrations,
@@ -55,6 +56,18 @@ describe("SQLite persistence foundation", () => {
     expect(snapshot.events[0]?.source_refs_json).toMatch(/^\[/);
   });
 
+  it("round-trips a Mori session through snapshot and reconstruct", () => {
+    const snapshot = createSqlitePersistenceSnapshot(moriMockSession);
+    const rebuilt = reconstructMoriSession(snapshot);
+
+    expect(rebuilt.project.id).toBe(moriMockSession.project.id);
+    expect(rebuilt.session.id).toBe(moriMockSession.session.id);
+    expect(rebuilt.events).toHaveLength(moriMockSession.events.length);
+    expect(rebuilt.events[0]?.sourceRefs).toEqual(moriMockSession.events[0]?.sourceRefs);
+    expect(rebuilt.sources).toHaveLength(moriMockSession.sources.length);
+    expect(rebuilt.decisions[0]?.rejectedOptions).toEqual(moriMockSession.decisions[0]?.rejectedOptions);
+  });
+
   it("validates snapshot foreign keys and JSON array columns before persistence", () => {
     const snapshot = createSqlitePersistenceSnapshot(moriMockSession);
 
@@ -72,15 +85,26 @@ describe("SQLite persistence foundation", () => {
 
   it("creates a desktop SQLite repository that sends validated snapshots to command boundaries", async () => {
     const calls: string[] = [];
+    const baseStatus = {
+      path: "/tmp/mori.db",
+      initialized: true,
+      appliedMigrations: ["001"],
+      pendingMigrations: [],
+      migrationTableName: "_mori_migrations",
+      strategy: "rusqlite-custom-runner" as const,
+      tables: ["projects", "sessions", "events"],
+      migrationRecords: [
+        {
+          version: "001",
+          name: "initial_schema",
+          checksum: "stub-checksum",
+          appliedAt: "epoch:0",
+        },
+      ],
+    };
     const repository = createDesktopSqliteRepository({
-      initializeSqliteDatabase: async () => ({
-        path: "/tmp/mori.db",
-        initialized: true,
-        appliedMigrations: ["001"],
-        pendingMigrations: [],
-        migrationTableName: "_mori_migrations",
-        strategy: "rusqlite-custom-runner",
-      }),
+      getSqliteMigrationStatus: async () => baseStatus,
+      initializeSqliteDatabase: async () => baseStatus,
       persistSessionSnapshot: async ({ snapshot }) => {
         calls.push(snapshot.sessions[0]?.id ?? "");
         return {
@@ -92,15 +116,32 @@ describe("SQLite persistence foundation", () => {
           decisionsPersisted: snapshot.decisions.length,
         };
       },
-      loadSqliteSessionSnapshot: async () => moriMockSession,
-      listSqliteSessions: async () => ({ sessions: [moriMockSession.session] }),
+      loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(moriMockSession),
+      listSqliteSessions: async () => ({
+        sessions: [
+          {
+            sessionId: moriMockSession.session.id,
+            projectId: moriMockSession.project.id,
+            title: moriMockSession.session.title,
+            projectName: moriMockSession.project.name,
+            startedAt: moriMockSession.session.startedAt,
+            endedAt: moriMockSession.session.endedAt,
+            status: moriMockSession.session.status,
+            eventCount: moriMockSession.events.length,
+            sourceCount: moriMockSession.sources.length,
+          },
+        ],
+      }),
     });
 
     const status = await repository.initializeDatabase();
     const persisted = await repository.persistSessionSnapshot({ session: moriMockSession });
+    const listed = await repository.listSessions();
 
     expect(status.initialized).toBe(true);
     expect(calls).toEqual([moriMockSession.session.id]);
     expect(persisted.eventsPersisted).toBe(moriMockSession.events.length);
+    expect(listed.sessions[0].sessionId).toBe(moriMockSession.session.id);
+    expect(listed.sessions[0].eventCount).toBe(moriMockSession.events.length);
   });
 });

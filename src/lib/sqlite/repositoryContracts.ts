@@ -1,5 +1,12 @@
-import type { MoriMockSession, Session } from "../../domain/types";
+import type { MoriMockSession } from "../../domain/types";
 import type { SqlitePersistenceSnapshot } from "./records";
+
+export type MigrationRecord = {
+  version: string;
+  name: string;
+  checksum: string;
+  appliedAt: string;
+};
 
 export type DatabaseStatus = {
   path: string;
@@ -8,6 +15,8 @@ export type DatabaseStatus = {
   pendingMigrations: string[];
   migrationTableName: string;
   strategy: "rusqlite-custom-runner";
+  tables?: string[];
+  migrationRecords?: MigrationRecord[];
 };
 
 export type PersistSessionSnapshotInput = {
@@ -31,14 +40,26 @@ export type LoadSessionSnapshotInput = {
   sessionId: string;
 };
 
+export type SqliteSessionListEntry = {
+  sessionId: string;
+  projectId: string;
+  title: string;
+  projectName: string;
+  startedAt: string;
+  endedAt: string;
+  status: string;
+  eventCount: number;
+  sourceCount: number;
+};
+
 export type ListSessionsOutput = {
-  sessions: Session[];
+  sessions: SqliteSessionListEntry[];
 };
 
 export type MoriSqliteRepository = {
   initializeDatabase: () => Promise<DatabaseStatus>;
   persistSessionSnapshot: (input: PersistSessionSnapshotInput) => Promise<PersistSessionSnapshotOutput>;
-  loadSessionSnapshot: (input: LoadSessionSnapshotInput) => Promise<MoriMockSession>;
+  loadSessionSnapshot: (input: LoadSessionSnapshotInput) => Promise<SqlitePersistenceSnapshot>;
   listSessions: () => Promise<ListSessionsOutput>;
 };
 

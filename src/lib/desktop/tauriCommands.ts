@@ -14,6 +14,7 @@ import type {
   PersistSessionSnapshotOutput,
   PersistSqliteSnapshotInput,
 } from "../sqlite/repositoryContracts";
+import type { SqlitePersistenceSnapshot } from "../sqlite/records";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 
 export type TauriCommandName =
@@ -69,7 +70,7 @@ export type TauriCommandMap = {
   get_sqlite_migration_status: { input: undefined; output: DatabaseStatus };
   initialize_sqlite_database: { input: undefined; output: DatabaseStatus };
   persist_session_snapshot: { input: PersistSqliteSnapshotInput; output: PersistSessionSnapshotOutput };
-  load_sqlite_session_snapshot: { input: { sessionId: string }; output: MoriMockSession };
+  load_sqlite_session_snapshot: { input: { sessionId: string }; output: SqlitePersistenceSnapshot };
   list_sqlite_sessions: { input: undefined; output: ListSessionsOutput };
   create_session: { input: CreateSessionInput; output: Session };
   import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
@@ -114,7 +115,7 @@ export const tauriCommands = {
   persistSessionSnapshot(input: PersistSqliteSnapshotInput): Promise<PersistSessionSnapshotOutput> {
     return invokeTauriCommand("persist_session_snapshot", input);
   },
-  loadSqliteSessionSnapshot(sessionId: string): Promise<MoriMockSession> {
+  loadSqliteSessionSnapshot(sessionId: string): Promise<SqlitePersistenceSnapshot> {
     return invokeTauriCommand("load_sqlite_session_snapshot", { sessionId });
   },
   listSqliteSessions(): Promise<ListSessionsOutput> {
@@ -141,7 +142,11 @@ export type DesktopLoadedSession = MoriMockSession;
 
 export type TauriSqliteCommands = Pick<
   typeof tauriCommands,
-  "initializeSqliteDatabase" | "persistSessionSnapshot" | "loadSqliteSessionSnapshot" | "listSqliteSessions"
+  | "getSqliteMigrationStatus"
+  | "initializeSqliteDatabase"
+  | "persistSessionSnapshot"
+  | "loadSqliteSessionSnapshot"
+  | "listSqliteSessions"
 >;
 
 function toTauriArgs<TCommand extends TauriCommandName>(input: TauriCommandMap[TCommand]["input"]): Record<string, unknown> | undefined {

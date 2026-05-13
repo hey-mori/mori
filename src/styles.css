@@ -2312,3 +2312,30 @@ pre {
   color: var(--muted);
 }
 
+.sqlite-session-list {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sqlite-session-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.sqlite-session-list strong {
+  display: block;
+}
+
+.sqlite-session-list small {
+  color: var(--muted);
+}
+

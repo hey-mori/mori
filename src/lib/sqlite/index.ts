@@ -12,6 +12,7 @@ export {
 export type { SqliteMigration } from "./schema";
 export { createDesktopSqliteRepository, DesktopSqliteRepository } from "./desktopSqliteRepository";
 export { createSqlitePersistenceSnapshot } from "./records";
+export { reconstructMoriSession } from "./reconstruct";
 export { validateSqlitePersistenceSnapshot } from "./snapshotValidation";
 export type {
   ArtifactRow,
@@ -30,10 +31,12 @@ export type {
   DatabaseStatus,
   ListSessionsOutput,
   LoadSessionSnapshotInput,
+  MigrationRecord,
   MoriSqliteRepository,
   PersistSessionSnapshotInput,
   PersistSessionSnapshotOutput,
   PersistSqliteSnapshotInput,
   SqlitePersistenceAdapter,
+  SqliteSessionListEntry,
 } from "./repositoryContracts";
 export type { SqliteSnapshotValidationResult } from "./snapshotValidation";

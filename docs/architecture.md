@@ -18,9 +18,10 @@ Current implementation includes:
 - Tauri v2 shell under `src-tauri/`
 - Runtime-aware desktop command bridge under `src/lib/desktop/`
 - Native `.mori v0 JSON` save/open/list commands
-- SQLite migration catalog, row snapshot mapping, snapshot validation, and desktop SQLite repository boundary
+- Rust-native SQLite persistence under `src-tauri/src/db/` (migration runner, connection helper, repository, snapshot records) plus typed Tauri commands in `src-tauri/src/sqlite.rs`
+- Frontend SQLite snapshot mapping, validation, repository, and reconstruct helper under `src/lib/sqlite/`, with a dedicated `useMoriSqliteStore` for desktop status
 
-Current limitation: Rust validation requires `cargo`; the current execution environment did not provide Rust tooling.
+Rust validation runs locally via `cargo check` and `cargo test`. See [SQLite Persistence](sqlite-persistence.md) for the migration strategy, schema, and what still lives in browser localStorage.
 
 ## Intended Product Architecture
 

@@ -1,11 +1,12 @@
 mod commands;
-mod migrations;
+mod db;
 mod package;
 mod session;
 mod sqlite;
 
 fn main() {
     tauri::Builder::default()
+        .manage(sqlite::SqliteState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
             commands::get_storage_location,

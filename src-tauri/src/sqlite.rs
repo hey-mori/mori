@@ -1,18 +1,22 @@
+use std::sync::Mutex;
+
+use rusqlite::Connection;
 use serde::Serialize;
-use serde_json::Value;
 
-use crate::migrations::{MIGRATIONS, MIGRATION_TABLE_NAME};
-use crate::package::default_storage_dir;
+use crate::db::{
+    apply_migrations, applied_migrations, database_path, list_sessions, load_session_snapshot,
+    open_database, save_session_snapshot, DatabaseStatus, MIGRATIONS, MIGRATION_TABLE_NAME,
+};
+use crate::db::records::{SessionListEntry, SessionSnapshot, SnapshotPersistResult};
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DatabaseStatus {
-    pub path: String,
-    pub initialized: bool,
-    pub applied_migrations: Vec<String>,
-    pub pending_migrations: Vec<String>,
-    pub migration_table_name: String,
-    pub strategy: String,
+/// State container shared across Tauri commands. Holds a single mutex-guarded
+/// SQLite connection. Mori is a desktop app with one user, one DB file.
+pub struct SqliteState(pub Mutex<Option<Connection>>);
+
+impl Default for SqliteState {
+    fn default() -> Self {
+        Self(Mutex::new(None))
+    }
 }
 
 #[derive(Serialize)]
@@ -26,59 +30,142 @@ pub struct PersistSessionSnapshotOutput {
     pub decisions_persisted: usize,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SqliteSessionListOutput {
+    pub sessions: Vec<SessionListEntry>,
+}
+
 #[tauri::command]
-pub fn get_sqlite_migration_status() -> Result<DatabaseStatus, String> {
-    Ok(DatabaseStatus {
-        path: database_path()?,
-        initialized: false,
-        applied_migrations: Vec::new(),
-        pending_migrations: MIGRATIONS.iter().map(|migration| migration.version.to_string()).collect(),
-        migration_table_name: MIGRATION_TABLE_NAME.to_string(),
-        strategy: "rusqlite-custom-runner".to_string(),
+pub fn get_sqlite_migration_status(state: tauri::State<'_, SqliteState>) -> Result<DatabaseStatus, String> {
+    with_connection(&state, |conn, path| {
+        let records = applied_migrations(conn)?;
+        let applied_versions: Vec<String> = records.iter().map(|record| record.version.clone()).collect();
+        let pending_versions: Vec<String> = MIGRATIONS
+            .iter()
+            .map(|migration| migration.version.to_string())
+            .filter(|version| !applied_versions.contains(version))
+            .collect();
+        Ok(DatabaseStatus {
+            path,
+            initialized: !records.is_empty(),
+            applied_migrations: applied_versions,
+            pending_migrations: pending_versions,
+            migration_table_name: MIGRATION_TABLE_NAME.to_string(),
+            strategy: "rusqlite-custom-runner".to_string(),
+            tables: list_tables(conn)?,
+            migration_records: records,
+        })
     })
 }
 
 #[tauri::command]
-pub fn initialize_sqlite_database() -> Result<DatabaseStatus, String> {
-    Err("SQLite runtime migrations are not implemented yet. Mori will use a Rust-native rusqlite runner at app startup.".to_string())
-}
-
-#[tauri::command]
-pub fn persist_session_snapshot(snapshot: Value) -> Result<PersistSessionSnapshotOutput, String> {
-    let session_id = first_string_at(&snapshot, &["sessions", "0", "id"]).unwrap_or_default();
-    let project_id = first_string_at(&snapshot, &["projects", "0", "id"]).unwrap_or_default();
-
-    Err(format!(
-        "SQLite snapshot persistence is not implemented yet for session '{session_id}' in project '{project_id}'. The command boundary is registered for the upcoming rusqlite repository."
-    ))
-}
-
-#[tauri::command]
-pub fn load_sqlite_session_snapshot(session_id: String) -> Result<Value, String> {
-    Err(format!(
-        "SQLite session loading is not implemented yet for session '{session_id}'. The rusqlite repository will reconstruct Mori sessions from normalized rows."
-    ))
-}
-
-#[tauri::command]
-pub fn list_sqlite_sessions() -> Result<Value, String> {
-    Err("SQLite session listing is not implemented yet. Use browser drafts or .mori JSON export until the rusqlite repository lands.".to_string())
-}
-
-fn database_path() -> Result<String, String> {
-    Ok(default_storage_dir()?.join("mori.sqlite").to_string_lossy().to_string())
-}
-
-fn first_string_at(value: &Value, path: &[&str]) -> Option<String> {
-    let mut current = value;
-
-    for segment in path {
-        if let Ok(index) = segment.parse::<usize>() {
-            current = current.as_array()?.get(index)?;
-        } else {
-            current = current.get(*segment)?;
-        }
+pub fn initialize_sqlite_database(state: tauri::State<'_, SqliteState>) -> Result<DatabaseStatus, String> {
+    let path = database_path()?;
+    let path_string = path.to_string_lossy().to_string();
+    let mut guard = state.0.lock().map_err(|error| error.to_string())?;
+    if guard.is_none() {
+        *guard = Some(open_database(&path)?);
     }
-
-    current.as_str().map(ToString::to_string)
+    let conn = guard.as_mut().expect("connection initialized above");
+    let outcome = apply_migrations(conn)?;
+    let records = applied_migrations(conn)?;
+    let applied_versions: Vec<String> = records.iter().map(|record| record.version.clone()).collect();
+    let pending_versions: Vec<String> = MIGRATIONS
+        .iter()
+        .map(|migration| migration.version.to_string())
+        .filter(|version| !applied_versions.contains(version))
+        .collect();
+    let _ = outcome;
+    Ok(DatabaseStatus {
+        path: path_string,
+        initialized: !records.is_empty(),
+        applied_migrations: applied_versions,
+        pending_migrations: pending_versions,
+        migration_table_name: MIGRATION_TABLE_NAME.to_string(),
+        strategy: "rusqlite-custom-runner".to_string(),
+        tables: list_tables(conn)?,
+        migration_records: records,
+    })
 }
+
+#[tauri::command]
+pub fn persist_session_snapshot(
+    state: tauri::State<'_, SqliteState>,
+    snapshot: SessionSnapshot,
+) -> Result<PersistSessionSnapshotOutput, String> {
+    let mut guard = state.0.lock().map_err(|error| error.to_string())?;
+    if guard.is_none() {
+        let path = database_path()?;
+        *guard = Some(open_database(&path)?);
+    }
+    let conn = guard.as_mut().expect("connection ready");
+    ensure_migrated(conn)?;
+    let result: SnapshotPersistResult = save_session_snapshot(conn, &snapshot)?;
+    Ok(PersistSessionSnapshotOutput {
+        session_id: result.session_id,
+        project_id: result.project_id,
+        events_persisted: result.events_written,
+        sources_persisted: result.sources_written,
+        issues_persisted: result.issues_written,
+        decisions_persisted: result.decisions_written,
+    })
+}
+
+#[tauri::command]
+pub fn load_sqlite_session_snapshot(
+    state: tauri::State<'_, SqliteState>,
+    session_id: String,
+) -> Result<SessionSnapshot, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        load_session_snapshot(conn, &session_id)
+    })
+}
+
+#[tauri::command]
+pub fn list_sqlite_sessions(
+    state: tauri::State<'_, SqliteState>,
+) -> Result<SqliteSessionListOutput, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        Ok(SqliteSessionListOutput {
+            sessions: list_sessions(conn)?,
+        })
+    })
+}
+
+fn with_connection<R>(
+    state: &tauri::State<'_, SqliteState>,
+    handler: impl FnOnce(&mut Connection, String) -> Result<R, String>,
+) -> Result<R, String> {
+    let path = database_path()?;
+    let path_string = path.to_string_lossy().to_string();
+    let mut guard = state.0.lock().map_err(|error| error.to_string())?;
+    if guard.is_none() {
+        *guard = Some(open_database(&path)?);
+    }
+    let conn = guard.as_mut().expect("connection ready");
+    handler(conn, path_string)
+}
+
+fn ensure_migrated(conn: &mut Connection) -> Result<(), String> {
+    // Idempotent: this only applies pending migrations, so calls during normal
+    // command paths are cheap once the DB is current.
+    apply_migrations(conn).map(|_| ())
+}
+
+fn list_tables(conn: &Connection) -> Result<Vec<String>, String> {
+    let mut stmt = conn
+        .prepare("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%' ORDER BY name")
+        .map_err(|error| error.to_string())?;
+    let rows = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|error| error.to_string())?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(|error| error.to_string())?);
+    }
+    Ok(out)
+}
+

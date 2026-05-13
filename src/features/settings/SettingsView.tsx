@@ -1,11 +1,12 @@
-import { Bot, Cloud, Database, Folder, Plug, ShieldCheck } from "lucide-react";
+import { Bot, Cloud, Database, Folder, HardDrive, Plug, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
-import { useMoriSessionStore } from "../../app/sessionStore";
+import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
+import { useMoriSqliteStore } from "../../app/sqliteStore";
 import type { QuickPassProviderKind } from "../../lib/analysis";
 import { probeOllamaConnection } from "../../lib/analysis";
 
@@ -20,11 +21,26 @@ export function SettingsView() {
   const initialized = useMoriSessionStore((state) => state.initialized);
   const settings = useMoriSessionStore((state) => state.analysisSettings);
   const updateAnalysisSettings = useMoriSessionStore((state) => state.updateAnalysisSettings);
+  const sessionView = useMoriSessionStore(selectSessionView);
+  const sessionDraft = useMoriSessionStore((state) => state.draft);
+  const sqliteAvailable = useMoriSqliteStore((state) => state.available);
+  const sqliteStatus = useMoriSqliteStore((state) => state.status);
+  const sqliteSessions = useMoriSqliteStore((state) => state.sessions);
+  const sqliteKind = useMoriSqliteStore((state) => state.kind);
+  const sqliteError = useMoriSqliteStore((state) => state.error);
+  const lastPersist = useMoriSqliteStore((state) => state.lastPersist);
+  const refreshSqlite = useMoriSqliteStore((state) => state.refresh);
+  const initializeSqlite = useMoriSqliteStore((state) => state.initialize);
+  const persistSqlite = useMoriSqliteStore((state) => state.persist);
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
+
+  useEffect(() => {
+    if (sqliteAvailable) void refreshSqlite();
+  }, [sqliteAvailable, refreshSqlite]);
 
   async function handleTest() {
     setProbe({ status: "checking" });
@@ -116,6 +132,81 @@ export function SettingsView() {
           {["Summary Mode 기본값", "민감 앱 기본 차단", "Raw data retention 30일", "Cloud API 명시적 opt-in", "Incognito/browser private pages 차단"].map((item) => (
             <div className="toggle-row" key={item}><span>{item}</span><Toggle active /></div>
           ))}
+        </section>
+        <section>
+          <h2>SQLite Desktop Persistence</h2>
+          <p className="settings-help">
+            로컬 SQLite 파일에 세션, 소스, 이벤트를 저장합니다. 브라우저 prototype 모드에서는 사용할 수 없습니다.
+          </p>
+          <div className="settings-row">
+            <HardDrive size={18} />
+            <span>
+              {sqliteAvailable
+                ? sqliteStatus?.path ?? "Path will appear after applying migrations."
+                : "SQLite desktop persistence requires the Tauri app."}
+            </span>
+            <Badge tone={sqliteAvailable ? (sqliteKind === "ok" ? "green" : sqliteKind === "error" ? "red" : "purple") : "gray"}>
+              {sqliteAvailable ? sqliteKind : "unavailable"}
+            </Badge>
+          </div>
+          {sqliteAvailable ? (
+            <>
+              <dl className="source-meta">
+                <div>
+                  <dt>Applied migrations</dt>
+                  <dd>{sqliteStatus?.appliedMigrations.join(", ") || "(none)"}</dd>
+                </div>
+                <div>
+                  <dt>Pending migrations</dt>
+                  <dd>{sqliteStatus?.pendingMigrations.join(", ") || "(none)"}</dd>
+                </div>
+                <div>
+                  <dt>Tables</dt>
+                  <dd>{sqliteStatus?.tables?.length ?? 0}</dd>
+                </div>
+                <div>
+                  <dt>Saved sessions</dt>
+                  <dd>{sqliteSessions.length}</dd>
+                </div>
+              </dl>
+              <div className="settings-probe">
+                <Button icon={Plug} onClick={() => initializeSqlite()}>마이그레이션 적용</Button>
+                <Button icon={RefreshCw} onClick={() => refreshSqlite()}>새로고침</Button>
+                <Button
+                  icon={Save}
+                  onClick={() => persistSqlite(sessionView)}
+                  disabled={!sessionDraft || sqliteKind === "checking"}
+                >
+                  현재 세션 SQLite 저장
+                </Button>
+              </div>
+              {sqliteError ? (
+                <p className="tone-err" role="alert">{sqliteError}</p>
+              ) : null}
+              {lastPersist ? (
+                <p className="muted">
+                  Last persist: session {lastPersist.sessionId} · events {lastPersist.eventsPersisted} ·
+                  sources {lastPersist.sourcesPersisted}
+                </p>
+              ) : null}
+              {sqliteSessions.length ? (
+                <ul className="sqlite-session-list">
+                  {sqliteSessions.map((entry) => (
+                    <li key={entry.sessionId}>
+                      <strong>{entry.title}</strong>
+                      <small>{entry.projectName} · events {entry.eventCount} · sources {entry.sourceCount}</small>
+                      <Badge tone={entry.status === "complete" ? "gray" : "green"}>{entry.status}</Badge>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          ) : (
+            <p className="muted">
+              브라우저 prototype 모드에서는 SQLite 저장이 비활성화되어 있습니다. 데스크톱(Tauri) 앱에서 실행하면
+              마이그레이션과 세션 저장이 자동으로 활성화됩니다. 브라우저 모드에서는 기존 localStorage 초안 저장이 계속 동작합니다.
+            </p>
+          )}
         </section>
         <section>
           <h2>Storage / Export</h2>
