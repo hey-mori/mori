@@ -19,6 +19,16 @@ export function RelationshipLineLayer({
 }) {
   if (!layouts.size) return null;
 
+  // Only render relationships that touch the focus neighbourhood. The previous
+  // behaviour drew every edge by default, which buried the cards under a
+  // curtain of lines. Selecting an event or entering Flow mode lights up the
+  // relevant subgraph; otherwise the canvas stays clean.
+  const visible = relationships.filter((relationship) => {
+    return focusedSet.has(relationship.fromId) && focusedSet.has(relationship.toId);
+  });
+
+  if (visible.length === 0) return null;
+
   return (
     <svg
       className="connection-layer"
@@ -27,16 +37,10 @@ export function RelationshipLineLayer({
       aria-hidden="true"
       style={{ width: `${frameWidth}px`, height: `${frameHeight}px` }}
     >
-      {relationships.map((relationship) => {
+      {visible.map((relationship) => {
         const from = layouts.get(relationship.fromId);
         const to = layouts.get(relationship.toId);
         if (!from || !to) return null;
-        const active = focusedSet.has(from.eventId) && focusedSet.has(to.eventId);
-        if (focusActive && !active) return null;
-
-        // Anchor at the right edge of the upstream card and the left edge of
-        // the downstream card so the curve enters/exits at the card border
-        // instead of crashing into card text.
         const isForward = from.anchorRight.x <= to.anchorLeft.x;
         const start = isForward ? from.anchorRight : from.anchorLeft;
         const end = isForward ? to.anchorLeft : to.anchorRight;
@@ -45,7 +49,7 @@ export function RelationshipLineLayer({
         return (
           <path
             key={relationship.id}
-            className={`connector tone-${eventTypeTone[from.type]} ${active ? "active" : "context"}`}
+            className={`connector tone-${eventTypeTone[from.type]} ${focusActive ? "active" : "subtle"}`}
             d={`M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${end.y}, ${end.x} ${end.y}`}
           />
         );

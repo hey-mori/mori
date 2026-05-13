@@ -1,12 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import { TimelineEventCard } from "./TimelineEventCard";
-import type { TimelineEvent } from "../../domain/types";
+import { eventTypeTone } from "../../domain/constants";
+import type { EventType, TimelineEvent } from "../../domain/types";
 import type { LaidOutEvent, LaneLayout, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { getEventFocusState } from "../../lib/timeline/focusState";
 
 export function TimelineLane({
   icon: Icon,
   label,
+  tone,
   lane,
   laneLabelWidthPx,
   events,
@@ -19,6 +21,7 @@ export function TimelineLane({
 }: {
   icon: LucideIcon;
   label: string;
+  tone: EventType;
   lane: LaneLayout;
   laneLabelWidthPx: number;
   events: TimelineEvent[];
@@ -29,12 +32,19 @@ export function TimelineLane({
   onSelect: (eventId: string) => void;
   onHover: (eventId: string | null) => void;
 }) {
+  const colorClass = `lane-tone-${eventTypeTone[tone]}`;
+  const isEmpty = events.length === 0;
   return (
-    <div className="lane" style={{ top: `${lane.top}px`, height: `${lane.height}px` }}>
+    <div
+      className={`lane ${colorClass} ${isEmpty ? "is-empty" : ""}`}
+      style={{ top: `${lane.top}px`, height: `${lane.height}px` }}
+    >
       <div className="lane-label" style={{ width: `${laneLabelWidthPx}px` }}>
-        <Icon size={14} />
+        <span className="lane-label-icon">
+          <Icon size={14} />
+        </span>
         <strong>{label}</strong>
-        <span>{events.length}</span>
+        {events.length > 0 ? <span className="lane-label-count">{events.length}</span> : null}
       </div>
       {events.map((event) => {
         const layout = layouts.get(event.id);

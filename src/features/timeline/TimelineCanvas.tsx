@@ -1,8 +1,8 @@
 import { Search } from "lucide-react";
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { eventTypeIcons, eventTypeLabels, laneOrder } from "../../domain/constants";
-import type { Relationship, TimelineEvent } from "../../domain/types";
+import type { EventType, Relationship, TimelineEvent } from "../../domain/types";
 import {
   computeTimelineLayout,
   indexLayout,
@@ -12,7 +12,6 @@ import { computeAxisTicks } from "../../lib/timeline/timeScale";
 import type { TimelineRange } from "../../lib/timeline/layout";
 import { TimelineAxis } from "./TimelineAxis";
 import { TimelineLane } from "./TimelineLane";
-import { TimelineMiniMap } from "./TimelineMiniMap";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
 
 export type TimelineCanvasProps = {
@@ -27,8 +26,10 @@ export type TimelineCanvasProps = {
   onHover: (eventId: string | null) => void;
 };
 
-const FRAME_WIDTH = 1240;
-const LANE_LABEL_WIDTH = 132;
+const MIN_FRAME_WIDTH = 1180;
+const MAX_FRAME_WIDTH = 1680;
+const DEFAULT_FRAME_WIDTH = 1240;
+const LANE_LABEL_WIDTH = 148;
 
 export function TimelineCanvas({
   events,
@@ -41,18 +42,49 @@ export function TimelineCanvas({
   onSelect,
   onHover,
 }: TimelineCanvasProps) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
+
+  // Grow the canvas with the surrounding column so wide laptops fill the space
+  // and narrow ones get an honest horizontal scroll instead of a squished UI.
+  useLayoutEffect(() => {
+    const element = scrollerRef.current;
+    if (!element) return;
+    const update = () => {
+      const width = element.clientWidth;
+      if (!width) return;
+      setFrameWidth(Math.min(MAX_FRAME_WIDTH, Math.max(MIN_FRAME_WIDTH, width)));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  // Only render lanes that actually have events in the current filter set, so
+  // the canvas does not waste vertical space on empty categories.
+  const activeLaneOrder = useMemo<EventType[]>(() => {
+    const present = new Set(events.map((event) => event.type));
+    return laneOrder.filter((type) => present.has(type));
+  }, [events]);
+
   const layout = useMemo(
     () =>
       computeTimelineLayout(events, range, {
-        frameWidth: FRAME_WIDTH,
+        frameWidth,
         density,
-        laneOrder,
+        laneOrder: activeLaneOrder,
         laneLabelWidthPx: LANE_LABEL_WIDTH,
       }),
-    [events, range, density],
+    [events, range, density, activeLaneOrder, frameWidth],
   );
   const layoutIndex = useMemo(() => indexLayout(layout), [layout]);
   const ticks = useMemo(() => computeAxisTicks(range, { maxTicks: 6 }), [range]);
+
+  // Default to "only the selected event's neighbourhood draws connectors" —
+  // showing every relationship at once turned the canvas into a curtain of
+  // lines. Flow mode and explicit focus still light up the wider graph.
+  const focusActive = mode === "flow" || focusedSet.size > 1;
 
   if (!events.length) {
     return (
@@ -71,51 +103,47 @@ export function TimelineCanvas({
     if (bucket) bucket.push(event);
   }
 
-  const focusActive = mode === "flow" || focusedSet.size > 0;
-
   return (
-    <div
-      className={`timeline-frame ${mode === "flow" ? "compact" : ""}`}
-      style={{ width: `${FRAME_WIDTH}px`, minHeight: `${layout.frameHeight}px` }}
-    >
-      <TimelineAxis
-        ticks={ticks}
-        frameWidth={FRAME_WIDTH}
-        contentLeftPx={layout.contentLeftPx}
-        contentWidthPx={layout.contentWidthPx}
-      />
-      <RelationshipLineLayer
-        layouts={layoutIndex}
-        relationships={relationships}
-        focusedSet={focusedSet}
-        focusActive={focusActive}
-        frameWidth={FRAME_WIDTH}
-        frameHeight={layout.frameHeight}
-      />
-      <div className="lanes" style={{ height: `${layout.frameHeight - layout.laneOffsetPx}px` }}>
-        {layout.lanes.map((lane) => (
-          <TimelineLane
-            key={lane.type}
-            icon={eventTypeIcons[lane.type]}
-            label={eventTypeLabels[lane.type]}
-            lane={lane}
-            laneLabelWidthPx={layout.laneLabelWidthPx}
-            events={laneEvents.get(lane.type) ?? []}
-            layouts={layoutIndex}
-            density={density}
-            selectedEventId={selectedEventId}
-            focusedSet={focusedSet}
-            onSelect={onSelect}
-            onHover={onHover}
-          />
-        ))}
+    <div className="timeline-scroller" ref={scrollerRef}>
+      <div
+        className={`timeline-frame ${mode === "flow" ? "compact" : ""}`}
+        style={{ width: `${frameWidth}px`, minHeight: `${layout.frameHeight}px` }}
+      >
+        <TimelineAxis
+          ticks={ticks}
+          frameWidth={frameWidth}
+          contentLeftPx={layout.contentLeftPx}
+          contentWidthPx={layout.contentWidthPx}
+        />
+        <RelationshipLineLayer
+          layouts={layoutIndex}
+          relationships={relationships}
+          focusedSet={focusedSet}
+          focusActive={focusActive}
+          frameWidth={frameWidth}
+          frameHeight={layout.frameHeight}
+        />
+        <div className="lanes" style={{ height: `${layout.frameHeight - layout.laneOffsetPx}px` }}>
+          {layout.lanes.map((lane) => (
+            <TimelineLane
+              key={lane.type}
+              icon={eventTypeIcons[lane.type]}
+              label={eventTypeLabels[lane.type]}
+              tone={lane.type}
+              lane={lane}
+              laneLabelWidthPx={layout.laneLabelWidthPx}
+              events={laneEvents.get(lane.type) ?? []}
+              layouts={layoutIndex}
+              density={density}
+              selectedEventId={selectedEventId}
+              focusedSet={focusedSet}
+              onSelect={onSelect}
+              onHover={onHover}
+            />
+          ))}
+        </div>
       </div>
-      <TimelineMiniMap
-        layout={layout}
-        ticks={ticks}
-        selectedEventId={selectedEventId}
-        focusedSet={focusedSet}
-      />
     </div>
   );
 }
+

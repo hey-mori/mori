@@ -1,23 +1,21 @@
-import { Filter, Grid2X2 } from "lucide-react";
 import { useEffect } from "react";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { TopSessionBar } from "../../components/layout/TopSessionBar";
-import { Button } from "../../components/ui/Button";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
-  selectSessionSource,
   selectSessionView,
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { getFocusedEntitySet } from "../../lib/relationships/traversal";
 import { getTimelineRange } from "../../lib/timeline/layout";
+import { computeAxisTicks } from "../../lib/timeline/timeScale";
 import { EventInspector } from "./EventInspector";
 import { TimelineCanvas } from "./TimelineCanvas";
 import { TimelineEmptyState, type TimelineEmptyVariant } from "./TimelineEmptyState";
-import { TimelineFilters } from "./TimelineFilters";
-import { TimelineHeader } from "./TimelineHeader";
+import { TimelineToolbar } from "./TimelineHeader";
+import { TimelineMiniMap } from "./TimelineMiniMap";
 import { FlowFocusHeader } from "../flow-focus/FlowFocusHeader";
 import { TracePanel } from "../flow-focus/TracePanel";
 
@@ -25,9 +23,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
-  const source = useMoriSessionStore(selectSessionSource);
   const sessionMode = useMoriSessionStore(selectSessionMode);
-  const analysis = useMoriSessionStore((state) => state.analysis);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
   const imports = useMoriSessionStore((state) => state.imports);
   const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
@@ -82,13 +78,17 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const selectedEvent =
     view.events.find((event) => event.id === selectedEventId) ?? fallbackEvent;
   const focusedEntityId = hoveredEventId ?? selectedEvent.id;
-  const focusedSet = getFocusedEntitySet(focusedEntityId, view.relationships, mode === "flow" ? 2 : 1);
+  const focusedSet = getFocusedEntitySet(
+    focusedEntityId,
+    view.relationships,
+    mode === "flow" ? 2 : 1,
+  );
+  const ticks = computeAxisTicks(range, { maxTicks: 6 });
 
   return (
     <>
       <TopSessionBar />
       <SessionModeBanner />
-      <TimelineHeader view={view} source={source} analysis={analysis} />
       <div className={`content-grid ${mode === "flow" ? "flow-grid" : ""}`}>
         <section className="timeline-main">
           {mode === "flow" ? (
@@ -98,38 +98,34 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
               onClearFocus={() => setSelectedEventId(view.events[0]?.id ?? "")}
             />
           ) : (
-            <div className="timeline-controls">
-              <Button
-                icon={Filter}
-                onClick={() => clearFilters()}
-                disabled={activeFilters.length === 0}
-                title={activeFilters.length ? "Clear all category filters" : "No filters applied"}
-              >
-                {activeFilters.length ? `Clear filters (${activeFilters.length})` : "All categories"}
-              </Button>
-              <Button
-                icon={Grid2X2}
-                onClick={() => toggleDensity()}
-                title={`Switch to ${density === "comfortable" ? "compact" : "comfortable"} density`}
-              >
-                {density === "comfortable" ? "Comfortable" : "Compact"}
-              </Button>
-              <TimelineFilters activeFilters={activeFilters} onToggle={toggleFilter} />
-            </div>
+            <TimelineToolbar
+              density={density}
+              onToggleDensity={toggleDensity}
+              activeFilters={activeFilters}
+              onToggleFilter={toggleFilter}
+              onClearFilters={clearFilters}
+            />
           )}
-          <div className="timeline-scroller">
-            <TimelineCanvas
+          <TimelineCanvas
+            events={visibleEvents}
+            relationships={view.relationships}
+            range={range}
+            selectedEventId={selectedEvent.id}
+            focusedSet={focusedSet}
+            mode={mode}
+            density={density}
+            onSelect={setSelectedEventId}
+            onHover={setHoveredEventId}
+          />
+          {mode === "timeline" ? (
+            <TimelineMiniMap
               events={visibleEvents}
-              relationships={view.relationships}
               range={range}
+              ticks={ticks}
               selectedEventId={selectedEvent.id}
               focusedSet={focusedSet}
-              mode={mode}
-              density={density}
-              onSelect={setSelectedEventId}
-              onHover={setHoveredEventId}
             />
-          </div>
+          ) : null}
         </section>
         {mode === "flow" ? (
           <TracePanel

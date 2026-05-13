@@ -58,7 +58,13 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
         </div>
         <span className="status-dot" />
       </div>
-      <button className="collapse" type="button" aria-label="Collapse sidebar">
+      <button
+        className="collapse"
+        type="button"
+        aria-label="사이드바 접기 (다음 마일스톤)"
+        title="사이드바 접기는 다음 마일스톤에서 활성화됩니다"
+        disabled
+      >
         <ChevronLeft size={18} />
       </button>
     </aside>

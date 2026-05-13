@@ -56,16 +56,16 @@ export type TimelineLayout = {
 };
 
 const DENSITY_CARD_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
-  comfortable: { width: 156, height: 76 },
-  compact: { width: 132, height: 54 },
+  comfortable: { width: 188, height: 88 },
+  compact: { width: 152, height: 56 },
 };
 
-const DEFAULT_LANE_OFFSET = 44;
-const DEFAULT_LANE_LABEL_WIDTH = 140;
-const DEFAULT_CONTENT_RIGHT_PADDING = 16;
+const DEFAULT_LANE_OFFSET = 40;
+const DEFAULT_LANE_LABEL_WIDTH = 148;
+const DEFAULT_CONTENT_RIGHT_PADDING = 20;
 const DEFAULT_CARD_GAP = 8;
 const DEFAULT_ROW_GAP = 6;
-const LANE_VERTICAL_PADDING = 10;
+const LANE_VERTICAL_PADDING = 12;
 
 /**
  * Compute a deterministic, collision-free Timeline layout in swim-lane form.
@@ -132,8 +132,14 @@ export function computeTimelineLayout(
       });
     }
 
-    const rowCount = Math.max(1, rowEnds.length);
-    const laneHeight = LANE_VERTICAL_PADDING * 2 + rowCount * cardHeight + Math.max(0, rowCount - 1) * rowGap;
+    // Empty lanes collapse to a short header strip so a quiet category does
+    // not blow up the canvas height. Lanes that contain at least one event
+    // grow with row count.
+    const hasEvents = rowEnds.length > 0;
+    const rowCount = hasEvents ? rowEnds.length : 0;
+    const laneHeight = hasEvents
+      ? LANE_VERTICAL_PADDING * 2 + rowCount * cardHeight + Math.max(0, rowCount - 1) * rowGap
+      : 36;
 
     for (const item of laneEventsLayout) {
       const y = laneTop + LANE_VERTICAL_PADDING + item.rowIndex * rowHeight;
