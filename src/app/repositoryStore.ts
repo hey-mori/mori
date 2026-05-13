@@ -15,6 +15,10 @@ import { createBrowserDraftRepository } from "../lib/storage/localStorageAdapter
 import type { MoriDraftRepository } from "../lib/storage/storageTypes";
 import { verifyRepositoryPath } from "../lib/desktop";
 
+export type RefreshMetadataOutcome =
+  | { ok: true; verification: RepositoryVerificationMetadata }
+  | { ok: false; error: string };
+
 export type MoriRepositoryState = {
   initialized: boolean;
   settings: RepositorySettings;
@@ -26,6 +30,7 @@ export type MoriRepositoryState = {
   selectRepository: (repositoryId: string | null) => void;
   markRepositoryUsed: (repositoryId: string, now?: string) => void;
   verifyRepository: (repositoryId: string) => Promise<RepositoryVerificationMetadata | null>;
+  refreshRepositoryMetadataAfterCapture: (repositoryId: string) => Promise<RefreshMetadataOutcome>;
   clearRepositoryVerification: (repositoryId: string) => void;
 };
 
@@ -119,6 +124,54 @@ export const useMoriRepositoryStore = create<MoriRepositoryState>((set, get) => 
       const persisted = store.saveRepositorySettings(next);
       set({ settings: persisted });
       return verification;
+    } finally {
+      if (get().verifyingId === repositoryId) {
+        set({ verifyingId: null });
+      }
+    }
+  },
+  refreshRepositoryMetadataAfterCapture: async (repositoryId) => {
+    const store = getRepository();
+    const repo = get().settings.repositories.find((entry) => entry.id === repositoryId);
+    if (!repo) {
+      return { ok: false, error: `Repository ${repositoryId} not found.` };
+    }
+
+    set({ verifyingId: repositoryId });
+    try {
+      const result = await verifyRepositoryPath({ repoPath: repo.path });
+      const verification: RepositoryVerificationMetadata = {
+        status: "verified",
+        verifiedAt: result.verifiedAt,
+        gitRoot: result.gitRoot,
+        currentBranch: result.currentBranch ?? undefined,
+        headCommit: result.headCommit,
+        shortHeadCommit: result.shortHeadCommit,
+        isDirty: result.isDirty,
+      };
+      const next = setRepositoryVerification(get().settings, repositoryId, verification);
+      const persisted = store.saveRepositorySettings(next);
+      set({ settings: persisted });
+      return { ok: true, verification };
+    } catch (error) {
+      // A successful capture should never erase a previously verified result
+      // just because the post-capture refresh failed. We only flip the stored
+      // status to "failed" when there is no prior verified metadata to
+      // preserve; otherwise we keep the existing record so the user can
+      // re-verify explicitly later.
+      const message = error instanceof Error ? error.message : String(error);
+      const previous = repo.verification;
+      if (!previous || previous.status !== "verified") {
+        const failed: RepositoryVerificationMetadata = {
+          status: "failed",
+          verifiedAt: new Date().toISOString(),
+          error: message,
+        };
+        const next = setRepositoryVerification(get().settings, repositoryId, failed);
+        const persisted = store.saveRepositorySettings(next);
+        set({ settings: persisted });
+      }
+      return { ok: false, error: message };
     } finally {
       if (get().verifyingId === repositoryId) {
         set({ verifyingId: null });

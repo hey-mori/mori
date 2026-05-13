@@ -196,6 +196,57 @@ Privacy promises:
 - Clearing verification metadata is one click and drops everything except
   the saved label/path.
 
+### Verification freshness
+
+Saved verifications get stale. Mori treats anything older than
+**24 hours** (`STALE_VERIFICATION_THRESHOLD_MS` in
+[src/lib/repositories/verificationFreshness.ts](../src/lib/repositories/verificationFreshness.ts))
+as a stale record and flags it in both Settings and the Git Diff dropdown:
+
+- **Verified just now / N hours ago / N days ago** — the green badge plus
+  a small grey age label.
+- **Stale · `<branch> <sha7>` (N days ago)** — orange badge in both
+  places. The Settings button flips from `Verify` to `Re-verify` so the
+  intent is obvious.
+- **Unverified** / **Verification failed** — unchanged.
+
+The threshold and labels are pure functions and fully covered by tests.
+None of them trigger any Git or filesystem activity — they only describe
+what is already stored.
+
+### Refresh after explicit Git diff capture
+
+The user is already reading the repository when they click **Fetch Git
+Diff**, so Mori uses the same explicit action to refresh verification
+metadata. After a successful `runGitDiff`:
+
+1. The fetched diff fills the textarea and the origin label.
+2. `markRepositoryUsed(id)` records `lastUsedAt` for the saved repo.
+3. `refreshRepositoryMetadataAfterCapture(id)` calls
+   `verify_repository_path` once and updates `verifiedAt`, branch, HEAD,
+   short SHA, and dirty status.
+4. If step 3 fails, the diff stays in the textarea, the status line shows
+   "Diff fetched, but repository metadata refresh failed: \<reason\>",
+   and any previously verified metadata is **preserved** — a transient
+   refresh failure never erases earlier good metadata. Only repos that
+   had no prior verified record get a `failed` status written.
+
+Strict boundaries that did not change:
+
+- Manual path entries (paths not associated with a saved repo) trigger no
+  refresh.
+- The refresh path never runs from app start, hydrate, focus, navigation,
+  or import-history rendering.
+- Stale verification is purely advisory: it never blocks a fetch.
+- Browser mode still rejects with "requires the Tauri app"; the diff
+  textarea remains usable for pasted diffs.
+
+Limitations still apply:
+
+- No file watching, no background watcher, no auto re-verify on app start.
+- No branch picker, no commit picker yet.
+- Stale threshold is a single constant; per-repo tuning is future work.
+
 ### Quick Pass interaction
 
 Quick Pass receives the diff event the same way it receives any other event.

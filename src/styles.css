@@ -2373,6 +2373,10 @@ pre {
   border-radius: 4px;
 }
 
+.git-fetch-help.tone-warn {
+  color: #a16207;
+}
+
 .git-fetch-grid {
   display: grid;
   gap: 10px;

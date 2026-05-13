@@ -10,6 +10,7 @@ import {
   normalizeUrlSource,
   type NormalizedImportCandidate,
 } from "../../lib/import";
+import { getRepositoryVerificationFreshness } from "../../lib/repositories";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { selectActiveRepository, useMoriRepositoryStore } from "../../app/repositoryStore";
@@ -42,6 +43,9 @@ export function ImportPanel() {
   const repositorySettings = useMoriRepositoryStore((state) => state.settings);
   const selectRepository = useMoriRepositoryStore((state) => state.selectRepository);
   const markRepositoryUsed = useMoriRepositoryStore((state) => state.markRepositoryUsed);
+  const refreshRepositoryMetadataAfterCapture = useMoriRepositoryStore(
+    (state) => state.refreshRepositoryMetadataAfterCapture,
+  );
   const activeRepository = useMoriRepositoryStore(selectActiveRepository);
   const [selectedRepoId, setSelectedRepoId] = useState<string>(activeRepository?.id ?? "");
 
@@ -157,12 +161,22 @@ export function ImportPanel() {
         : `${result.repoPath}${result.range ? ` ${result.range}` : ""}`;
       setOrigin(originLabel);
       const truncatedHint = result.truncated ? " (truncated)" : "";
-      setStatus({
-        tone: "ok",
-        message: `Fetched ${result.fileCountHint} file${result.fileCountHint === 1 ? "" : "s"} in ${result.durationMs} ms${truncatedHint}. Review and click '세션에 추가' to import.`,
-      });
+      const okMessage = `Fetched ${result.fileCountHint} file${result.fileCountHint === 1 ? "" : "s"} in ${result.durationMs} ms${truncatedHint}. Review and click '세션에 추가' to import.`;
+      setStatus({ tone: "ok", message: okMessage });
       const matched = repositorySettings.repositories.find((entry) => entry.path === repoPath.trim());
-      if (matched) markRepositoryUsed(matched.id);
+      if (matched) {
+        markRepositoryUsed(matched.id);
+        // The user explicitly clicked Fetch, so we can piggy-back a quick
+        // verification refresh on the same intentional action. Failures here
+        // never affect the diff the user already received.
+        const outcome = await refreshRepositoryMetadataAfterCapture(matched.id);
+        if (!outcome.ok) {
+          setStatus({
+            tone: "info",
+            message: `${okMessage} (Repository metadata refresh failed: ${outcome.error})`,
+          });
+        }
+      }
     } catch (error) {
       setStatus({
         tone: "error",
@@ -473,7 +487,7 @@ function KindTab({ active, icon: Icon, label, onClick }: { active: boolean; icon
   );
 }
 
-function formatRepoOption(repo: import("../../lib/repositories").MoriRepositoryConfig): string {
+export function formatRepoOption(repo: import("../../lib/repositories").MoriRepositoryConfig): string {
   const verification = repo.verification;
   if (!verification || verification.status === "unverified") {
     return `${repo.label} · unverified — ${repo.path}`;
@@ -484,7 +498,10 @@ function formatRepoOption(repo: import("../../lib/repositories").MoriRepositoryC
   const branch = verification.currentBranch ?? "detached";
   const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "";
   const dirty = verification.isDirty ? " · dirty" : "";
-  return `${repo.label} · ${branch} ${sha}${dirty} — ${repo.path}`;
+  const freshness = getRepositoryVerificationFreshness(verification);
+  const staleMarker = freshness.isStale ? " · stale" : "";
+  const age = freshness.ageLabel ? ` (${freshness.ageLabel})` : "";
+  return `${repo.label} · ${branch} ${sha}${dirty}${staleMarker}${age} — ${repo.path}`;
 }
 
 function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories").MoriRepositoryConfig | undefined }) {
@@ -507,9 +524,13 @@ function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories")
   const branch = verification.currentBranch ?? "detached";
   const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "";
   const dirty = verification.isDirty ? " · dirty" : "";
+  const freshness = getRepositoryVerificationFreshness(verification);
+  const stalePrefix = freshness.isStale ? "Stale · " : "Verified · ";
+  const age = freshness.ageLabel ? ` (${freshness.ageLabel})` : "";
   return (
-    <small className="git-fetch-help">
-      Verified · {branch} · {sha}{dirty}
+    <small className={`git-fetch-help${freshness.isStale ? " tone-warn" : ""}`}>
+      {stalePrefix}{branch} · {sha}{dirty}{age}
+      {freshness.isStale ? " — Re-verify or fetch to refresh." : ""}
     </small>
   );
 }

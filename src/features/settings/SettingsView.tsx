@@ -11,7 +11,11 @@ import { selectActiveRepository, useMoriRepositoryStore } from "../../app/reposi
 import type { QuickPassProviderKind } from "../../lib/analysis";
 import { probeOllamaConnection } from "../../lib/analysis";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
-import { deriveLabelFromPath, type RepositoryVerificationMetadata } from "../../lib/repositories";
+import {
+  deriveLabelFromPath,
+  getRepositoryVerificationFreshness,
+  type RepositoryVerificationMetadata,
+} from "../../lib/repositories";
 
 type ProbeState =
   | { status: "idle" }
@@ -362,7 +366,13 @@ export function SettingsView() {
                         disabled={!desktopRuntime || isVerifying}
                         title={desktopRuntime ? "Run git rev-parse / branch / status against this path" : "Verification requires the Tauri desktop app"}
                       >
-                        {isVerifying ? "검증 중..." : "Verify"}
+                        {isVerifying
+                          ? "검증 중..."
+                          : verification && verification.status === "verified"
+                            ? getRepositoryVerificationFreshness(verification).isStale
+                              ? "Re-verify"
+                              : "Verify"
+                            : "Verify"}
                       </Button>
                       {verification && verification.status !== "unverified" ? (
                         <Button
@@ -433,14 +443,18 @@ function RepoVerificationBadge({
       </span>
     );
   }
+  const freshness = getRepositoryVerificationFreshness(verification);
   const branch = verification.currentBranch ?? "detached";
   const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "—";
   return (
     <span className="repo-verification">
-      <Badge tone="green">Verified · {branch} · {sha}</Badge>
+      <Badge tone={freshness.isStale ? "orange" : "green"}>
+        {freshness.isStale ? "Stale · " : "Verified · "}
+        {branch} · {sha}
+      </Badge>
       {verification.isDirty ? <Badge tone="orange">dirty</Badge> : null}
-      {verification.verifiedAt ? (
-        <small className="muted">at {verification.verifiedAt}</small>
+      {freshness.ageLabel ? (
+        <small className="muted">{freshness.ageLabel}</small>
       ) : null}
     </span>
   );

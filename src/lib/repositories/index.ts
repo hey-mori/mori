@@ -15,3 +15,13 @@ export {
   type RepositoryVerificationMetadata,
   type RepositoryVerificationStatus,
 } from "./repositorySettings";
+export {
+  STALE_VERIFICATION_THRESHOLD_MS,
+  formatVerificationAge,
+  getRepositoryFreshness,
+  getRepositoryVerificationFreshness,
+  isRepositoryVerificationStale,
+  type VerificationFreshness,
+  type VerificationFreshnessOptions,
+  type VerificationFreshnessTone,
+} from "./verificationFreshness";
