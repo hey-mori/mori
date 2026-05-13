@@ -1,9 +1,11 @@
-import { Bot, FileText, Globe, Plus, Trash2 } from "lucide-react";
+import { Bot, FileText, GitCommit, Globe, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import {
+  GitDiffParseError,
   normalizeAiConversationText,
+  normalizeGitDiff,
   normalizeManualNote,
   normalizeUrlSource,
   type NormalizedImportCandidate,
@@ -11,7 +13,7 @@ import {
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
-type ImportKind = "note" | "url" | "ai";
+type ImportKind = "note" | "url" | "ai" | "git";
 
 type ImportStatus = { tone: "ok" | "error" | "info"; message: string } | null;
 
@@ -28,6 +30,7 @@ export function ImportPanel() {
   const [body, setBody] = useState("");
   const [url, setUrl] = useState("");
   const [provider, setProvider] = useState("Claude");
+  const [origin, setOrigin] = useState("");
   const [status, setStatus] = useState<ImportStatus>(null);
 
   const canImport = useMemo(() => Boolean(draft), [draft]);
@@ -59,6 +62,7 @@ export function ImportPanel() {
     setTitle("");
     setBody("");
     setUrl("");
+    setOrigin("");
   }
 
   function buildCandidate(): NormalizedImportCandidate | null {
@@ -93,6 +97,27 @@ export function ImportPanel() {
         url: url.trim(),
         selectedText: body.trim() || undefined,
       });
+    }
+
+    if (kind === "git") {
+      if (!body.trim()) {
+        setStatus({ tone: "error", message: "Git diff 텍스트를 붙여넣으세요." });
+        return null;
+      }
+      try {
+        return normalizeGitDiff({
+          ...base,
+          title: title.trim() || undefined,
+          diffText: body,
+          origin: origin.trim() || undefined,
+        });
+      } catch (error) {
+        if (error instanceof GitDiffParseError) {
+          setStatus({ tone: "error", message: error.message });
+          return null;
+        }
+        throw error;
+      }
     }
 
     if (!body.trim()) {
@@ -141,6 +166,7 @@ export function ImportPanel() {
         <KindTab active={kind === "note"} icon={FileText} label="메모" onClick={() => setKind("note")} />
         <KindTab active={kind === "url"} icon={Globe} label="URL" onClick={() => setKind("url")} />
         <KindTab active={kind === "ai"} icon={Bot} label="AI 대화" onClick={() => setKind("ai")} />
+        <KindTab active={kind === "git"} icon={GitCommit} label="Git diff" onClick={() => setKind("git")} />
       </div>
       <div className="import-form">
         <label>
@@ -171,17 +197,35 @@ export function ImportPanel() {
             />
           </label>
         ) : null}
+        {kind === "git" ? (
+          <label>
+            출처 <small>(선택, 예: HEAD~3..HEAD 또는 PR URL)</small>
+            <input
+              placeholder="HEAD~1..HEAD"
+              value={origin}
+              onChange={(event) => setOrigin(event.target.value)}
+            />
+          </label>
+        ) : null}
         <label className="import-body">
-          {kind === "url" ? "발췌 / 메모 (선택)" : kind === "ai" ? "대화 전문" : "메모 본문"}
+          {kind === "url"
+            ? "발췌 / 메모 (선택)"
+            : kind === "ai"
+              ? "대화 전문"
+              : kind === "git"
+                ? "Unified Git diff 텍스트"
+                : "메모 본문"}
           <textarea
             placeholder={
               kind === "ai"
                 ? "User: ...\n\nAssistant: ..."
                 : kind === "url"
                   ? "관련 문장을 옮겨두면 검색과 분석에 도움이 됩니다."
-                  : "Mori는 work-flow reconstruction, not searchable memory."
+                  : kind === "git"
+                    ? "diff --git a/src/lib/foo.ts b/src/lib/foo.ts\n@@ -1,4 +1,5 @@\n ..."
+                    : "Mori는 work-flow reconstruction, not searchable memory."
             }
-            rows={kind === "ai" ? 6 : 4}
+            rows={kind === "ai" || kind === "git" ? 8 : 4}
             value={body}
             onChange={(event) => setBody(event.target.value)}
           />
@@ -199,7 +243,17 @@ export function ImportPanel() {
           <ul>
             {imports.map((entry) => (
               <li key={entry.id}>
-                <Badge tone={entry.source.kind === "browser" ? "cyan" : entry.source.kind === "aiConversation" ? "purple" : "gray"}>
+                <Badge
+                  tone={
+                    entry.source.kind === "browser"
+                      ? "cyan"
+                      : entry.source.kind === "aiConversation"
+                        ? "purple"
+                        : entry.source.kind === "gitDiff"
+                          ? "blue"
+                          : "gray"
+                  }
+                >
                   {entry.source.kind}
                 </Badge>
                 <strong>{entry.source.title}</strong>

@@ -174,6 +174,32 @@ describe("DeterministicQuickPassProvider", () => {
     expect(extraction.summary.highlights.length).toBeGreaterThan(0);
     expect(extraction.summary.sessionSummary).toMatch(/2 imported events/);
   });
+
+  it("runs cleanly when a Git diff event is included in the input", async () => {
+    const events: TimelineEvent[] = [
+      event(
+        "evt-git",
+        "fileCode",
+        "Updated src/lib/foo.ts",
+        "Git diff covering 1 file (+2 / -1). Top changes: src/lib/foo.ts +2/-1. TODO: rotate token.",
+        "src-git",
+      ),
+    ];
+    const provider = createDeterministicQuickPassProvider();
+    const result = await provider.analyze({
+      project,
+      session,
+      sources: [source("src-git", "gitDiff", "Git diff", "evt-git")],
+      events,
+    });
+
+    expect(result.providerName).toBe("deterministic-heuristic-v1");
+    expect(result.inputEventCount).toBe(1);
+    expect(result.notes).toBeDefined();
+    // The TODO keyword inside the summary should surface as an issue candidate.
+    expect(result.issues.length).toBeGreaterThan(0);
+    expect(result.issues[0]?.sourceEventIds).toContain("evt-git");
+  });
 });
 
 describe("OllamaQuickPassProvider response parsing", () => {

@@ -133,6 +133,16 @@ stored record. SQLite-based persistence will replace localStorage when the
   shows a basis badge clarifying whether the report is built from demo mock,
   imported session data without analysis, or a Quick Pass run.
 
+## Working with Git diff imports
+
+Git diff imports flow through the same path as every other source: the
+deterministic Quick Pass provider scans the event title and summary, so the
+file list and any `TODO` / `fix` / `error` text in the summary surface as
+issue candidates with the event id as `sourceEventIds`. The provider does
+not attempt to reason about per-line code — for that, run Quick Pass with
+the Ollama provider. See [Imports](imports.md) for the Git diff input
+format and the limits of the parser.
+
 ## What is still heuristic / experimental
 
 - The deterministic provider has no language model behind it. It cannot
