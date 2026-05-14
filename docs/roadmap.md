@@ -8,6 +8,12 @@ is tagged Implemented / Partial / Planned / Reference only so the roadmap below
 can map cleanly to a specific screen without overclaiming. Original design
 prompts are preserved in [Product Screen Prompts](product-screen-prompts.md).
 
+The engineering boundaries that back this roadmap are documented in
+[Modular Architecture](modular-architecture.md). All Planned items below are
+also rows in the feature-status registry at
+`src/app/featureStatus.ts`, so the codebase keeps an honest single source of
+truth for which capabilities exist.
+
 ## Phase 0: UI Prototype
 
 Goal: establish the product experience and visual model.

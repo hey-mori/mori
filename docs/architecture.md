@@ -2,6 +2,9 @@
 
 This document describes Mori's intended engineering architecture and the current frontend plus desktop-shell foundation. It does not claim that unfinished SQLite, capture, import, or LLM pieces are implemented.
 
+The full module-by-module map (boundaries, shared concepts, data flow,
+extension paths) lives in [Modular Architecture](modular-architecture.md).
+
 ## Current Foundation
 
 The current repository is a React + TypeScript + Vite frontend foundation with a Tauri v2 desktop shell and typed domain model.
@@ -9,7 +12,7 @@ The current repository is a React + TypeScript + Vite frontend foundation with a
 Current implementation includes:
 
 - React app entry under `src/main.tsx`
-- App shell and view state in `src/app/`
+- App shell and view state in `src/app/`. Includes the feature-status registry (`featureStatus.ts`) and the unified session lifecycle snapshot (`sessionLifecycle.ts`).
 - Reusable layout/UI foundations under `src/components/`
 - Domain types, constants, and mock data under `src/domain/`
 - Pure helper logic under `src/lib/`
@@ -123,6 +126,9 @@ Pipeline notes:
 - `lib`: pure logic such as timeline layout, relationship traversal, trust formatting, resume prompt generation, session status derivation
   - `session/sessionStatus.ts`: centralized helper that derives consistent demo/draft/analysis/persistence status labels and metrics for UI consistency across pages
   - `session/sessionTiming.ts`: pure helper that derives lifecycle state (demo / active / analyzing / draft / ended), duration labels, and the `isLive` flag that drives the TopSessionBar and Sidebar live timers
+  - `evidence/`: trust display (`trust.ts`), provenance / capture-method labels (`provenance.ts`), and evidence joins (`sourceLinks.ts`). `lib/sources/traceability.ts` is a backward-compat barrel that re-exports these helpers
+  - `reports/reportContext.ts`: pulls report data-basis + evidence summary + analysis provider + resume prompt into one snapshot
+  - `memory/projectMemoryContext.ts`: project-memory scope snapshot (`scope`, `scopeLabel`, `isCrossSession`, `dataBasisLabel`, `scopeCaveat`) on top of the existing project-memory derivations
   - `timeline/timelineViewModel.ts`: builds the Timeline `RenderModel` (visible events, display items, lanes, range, ticks, layout, focused set) and the inspector's view model so React components never compute math inline
   - `timeline/timelineControls.ts`: typed registry of Timeline + Inspector controls with `implemented | planned | hidden` status. The toolbar and inspector read tooltips from here so no JSX hand-rolls planned-control copy
   - `timeline/relationshipPolicy.ts`: visibility policy and connector aggregation. Timeline mode hides connectors by default and only reveals a focused subgraph; Flow Focus widens to a 2-hop graph. Both modes aggregate parallel raw relationships into weighted connectors

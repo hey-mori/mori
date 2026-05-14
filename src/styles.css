@@ -8963,3 +8963,65 @@ pre {
     columns: 2;
   }
 }
+
+/* ───────────────────────────────────────────────────────────────────────
+ * Mori UI primitives — semantic surface + planned-action styles
+ *
+ * These rules back the `MoriCard`, `MoriPlannedAction`, and `MoriScrollArea`
+ * components. They prefer the new `--mori-*` semantic tokens from
+ * `styles/theme.css` so a future theme switch only has to remap one layer.
+ * ─────────────────────────────────────────────────────────────────────── */
+
+.mori-card {
+  display: block;
+  padding: 16px 18px;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface);
+  box-shadow: var(--mori-shadow-card);
+  color: var(--mori-text);
+}
+
+.mori-card-subtle {
+  background: var(--mori-surface-subtle);
+  box-shadow: none;
+}
+
+.mori-card-accent {
+  border-color: rgba(98, 70, 245, 0.18);
+  background: linear-gradient(180deg, var(--mori-surface) 0%, var(--mori-accent-soft) 140%);
+}
+
+.mori-card-outline {
+  background: transparent;
+  box-shadow: none;
+  border-color: var(--mori-border-strong);
+}
+
+.mori-planned-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px dashed rgba(193, 197, 209, 0.85);
+  border-radius: var(--mori-radius-sm);
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.mori-planned-action[data-mori-status="unavailable"] {
+  opacity: 0.8;
+}
+
+.mori-scroll-horizontal {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.mori-scroll-both {
+  overflow: auto;
+}

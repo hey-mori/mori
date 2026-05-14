@@ -2,6 +2,15 @@
 
 This document captures the visual direction and product intent behind the current Mori UI references.
 
+Visual tokens (background, surface, text, accents, statuses, shadows, radii)
+are declared in `src/styles/tokens.css` and given semantic role names in
+`src/styles/theme.css`. UI primitives that adopt these tokens live in
+`src/components/ui/` (`MoriCard`, `MoriStatusBadge`, `MoriTrustBadge`,
+`MoriPlannedAction`, `MoriScrollArea`). New surfaces should consume the
+semantic `--mori-*` variables rather than the raw token values so a future
+theme switcher (Planned, registry id `settings.themeSwitcher`) can remap one
+layer.
+
 ## Visual Direction
 
 Mori should feel like a formal productivity app: calm, dense, professional, local-first, and privacy-aware. The visual language sits near Linear, Figma, Notion, and Apple productivity software rather than a marketing site or decorative dashboard.

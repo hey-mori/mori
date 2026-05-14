@@ -1,0 +1,177 @@
+/**
+ * Mori theme tokens — semantic layer.
+ *
+ * The raw color and shadow values live in `tokens.css` (alongside the
+ * Tailwind preflight import). This file organises them into semantic
+ * categories so future themes can override individual roles without
+ * editing every surface CSS rule.
+ *
+ * Adoption guideline:
+ *   - Surfaces (cards, panels, scroll areas) should reference
+ *     `--mori-surface-*` instead of `--panel` directly.
+ *   - Text uses `--mori-text-*`.
+ *   - Status / accent uses `--mori-status-*`.
+ *   - Borders use `--mori-border-*`.
+ *   - Shadows use `--mori-shadow-*`.
+ *
+ * Backward compatibility: the original token names (`--bg`, `--panel`,
+ * `--text`, `--purple`, …) keep working — the semantic tokens reference
+ * them via `var()`. Existing CSS is untouched; new CSS should prefer the
+ * semantic names so a future `[data-theme="dark"]` override only needs to
+ * remap one set of variables.
+ */
+
+:root {
+  /* ─── Background + surfaces ──────────────────────────────────────── */
+  --mori-bg: var(--bg);
+  --mori-surface: var(--panel);
+  --mori-surface-subtle: var(--panel-soft);
+  --mori-surface-overlay: rgba(255, 255, 255, 0.96);
+
+  /* ─── Text ───────────────────────────────────────────────────────── */
+  --mori-text: var(--text);
+  --mori-text-muted: var(--muted);
+  --mori-text-muted-2: var(--muted-2);
+  --mori-text-inverse: #ffffff;
+
+  /* ─── Borders ────────────────────────────────────────────────────── */
+  --mori-border: var(--line);
+  --mori-border-strong: var(--line-strong);
+  --mori-border-focus: var(--purple);
+
+  /* ─── Accent ─────────────────────────────────────────────────────── */
+  --mori-accent: var(--purple);
+  --mori-accent-soft: var(--purple-50);
+  --mori-accent-strong: var(--purple-100);
+
+  /* ─── Status (semantic) ──────────────────────────────────────────── */
+  --mori-status-success: var(--green);
+  --mori-status-success-soft: var(--green-50);
+  --mori-status-info: var(--blue);
+  --mori-status-info-soft: var(--blue-50);
+  --mori-status-warning: var(--orange);
+  --mori-status-warning-soft: var(--orange-50);
+  --mori-status-danger: var(--red);
+  --mori-status-danger-soft: var(--red-50);
+  --mori-status-neutral: var(--muted);
+  --mori-status-neutral-soft: var(--gray-50);
+
+  /* ─── Trust palette (matches evidence/trust.ts tones) ────────────── */
+  --mori-trust-verified: var(--green);
+  --mori-trust-verified-soft: var(--green-50);
+  --mori-trust-observed: var(--blue);
+  --mori-trust-observed-soft: var(--blue-50);
+  --mori-trust-inferred: var(--purple);
+  --mori-trust-inferred-soft: var(--purple-50);
+
+  /* ─── Radius ─────────────────────────────────────────────────────── */
+  --mori-radius-xs: 4px;
+  --mori-radius-sm: var(--radius-sm);
+  --mori-radius-md: var(--radius-md);
+  --mori-radius-lg: 12px;
+  --mori-radius-xl: 16px;
+  --mori-radius-pill: 999px;
+
+  /* ─── Shadows ────────────────────────────────────────────────────── */
+  --mori-shadow-card: var(--shadow-soft);
+  --mori-shadow-card-strong: var(--shadow);
+  --mori-shadow-overlay: 0 18px 38px rgba(20, 25, 36, 0.12);
+
+  /* ─── Scrollbars ─────────────────────────────────────────────────── */
+  --mori-scrollbar-thumb: rgba(98, 105, 124, 0.16);
+  --mori-scrollbar-thumb-hover: rgba(98, 105, 124, 0.32);
+  --mori-scrollbar-track: transparent;
+  --mori-scrollbar-size: 10px;
+
+  /* ─── Motion ─────────────────────────────────────────────────────── */
+  --mori-transition-fast: 100ms ease;
+  --mori-transition: 140ms ease;
+  --mori-transition-slow: 220ms ease;
+}
+
+/**
+ * Theme switching is a Planned milestone. Reserve the selector so we can
+ * land the runtime switcher without re-plumbing all surfaces.
+ */
+[data-mori-theme="dark"] {
+  /* Intentionally empty for now — see roadmap.md → "theme switcher". */
+}
+
+/**
+ * Reusable subtle scrollbar mixin (apply via the class).
+ */
+.mori-scroll {
+  scrollbar-gutter: stable;
+}
+
+.mori-scroll::-webkit-scrollbar {
+  width: var(--mori-scrollbar-size);
+  height: var(--mori-scrollbar-size);
+}
+
+.mori-scroll::-webkit-scrollbar-track {
+  background: var(--mori-scrollbar-track);
+}
+
+.mori-scroll::-webkit-scrollbar-thumb {
+  background: var(--mori-scrollbar-thumb);
+  border-radius: var(--mori-radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.mori-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--mori-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+/**
+ * Reusable status badge styling. Adopters set `data-mori-tone` to one of
+ * verified / observed / inferred / success / info / warning / danger / neutral.
+ */
+.mori-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: var(--mori-radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--mori-status-neutral-soft);
+  color: var(--mori-status-neutral);
+}
+
+.mori-status-badge[data-mori-tone="success"],
+.mori-status-badge[data-mori-tone="verified"] {
+  background: var(--mori-status-success-soft);
+  color: var(--mori-status-success);
+}
+
+.mori-status-badge[data-mori-tone="info"],
+.mori-status-badge[data-mori-tone="observed"] {
+  background: var(--mori-status-info-soft);
+  color: var(--mori-status-info);
+}
+
+.mori-status-badge[data-mori-tone="warning"] {
+  background: var(--mori-status-warning-soft);
+  color: #8a5a08;
+}
+
+.mori-status-badge[data-mori-tone="danger"] {
+  background: var(--mori-status-danger-soft);
+  color: var(--mori-status-danger);
+}
+
+.mori-status-badge[data-mori-tone="inferred"],
+.mori-status-badge[data-mori-tone="accent"] {
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
+}
+
+.mori-status-badge[data-mori-tone="neutral"] {
+  background: var(--mori-status-neutral-soft);
+  color: var(--mori-status-neutral);
+}

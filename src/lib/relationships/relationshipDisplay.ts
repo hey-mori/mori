@@ -1,4 +1,5 @@
 import type { RelationshipType, TrustLevel } from "../../domain/types";
+import { describeConfidence as describeConfidenceShared, getTrustDisplay } from "../evidence/trust";
 
 export type RelationshipDisplay = {
   label: string;
@@ -26,14 +27,10 @@ export function getRelationshipDisplay(type: RelationshipType): RelationshipDisp
 export function describeRelationshipConfidence(confidence: number): { label: string; tone: string } {
   if (!Number.isFinite(confidence)) return { label: "—", tone: "gray" };
   const pct = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
-  if (pct >= 85) return { label: `${pct}% confidence`, tone: "green" };
-  if (pct >= 60) return { label: `${pct}% confidence`, tone: "blue" };
-  if (pct >= 40) return { label: `${pct}% confidence`, tone: "orange" };
-  return { label: `${pct}% confidence`, tone: "red" };
+  return describeConfidenceShared(pct);
 }
 
 export function describeTrustLevel(trust: TrustLevel): { label: string; tone: string } {
-  if (trust === "verified") return { label: "Verified", tone: "green" };
-  if (trust === "observed") return { label: "Observed", tone: "blue" };
-  return { label: "Inferred", tone: "purple" };
+  const display = getTrustDisplay(trust);
+  return { label: display.label, tone: display.tone };
 }

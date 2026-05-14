@@ -14,10 +14,7 @@ import type { ViewKey } from "../../domain/types";
 import { moriMockSession } from "../../domain/mock-data";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { deriveSessionTiming } from "../../lib/session/sessionTiming";
-import {
-  TIMELINE_CONTROLS,
-  getPlannedHint,
-} from "../../lib/timeline/timelineControls";
+import { getFeatureControlProps } from "../../app/featureStatus";
 
 const navItems: Array<{ key: ViewKey; label: string; badge?: string; icon: typeof Play }> = [
   { key: "start", label: "Start Session", icon: Play },
@@ -95,7 +92,7 @@ function SidebarSessionCard() {
   const startHint = timing.startTimeLabel
     ? `시작 ${timing.startTimeLabel}`
     : "시작 기록 없음";
-  const endSessionHint = getPlannedHint("endSession");
+  const endSessionFeature = getFeatureControlProps("appShell.endSession");
 
   return (
     <div className="session-card" role="region" aria-label="Current session">
@@ -106,11 +103,11 @@ function SidebarSessionCard() {
         {timing.durationLabel}
       </time>
       <Button
-        disabled={!TIMELINE_CONTROLS.endSession || timing.state === "demo"}
+        disabled={!endSessionFeature.enabled || timing.state === "demo"}
         title={
           timing.state === "demo"
             ? "Demo sessions do not need to be ended."
-            : endSessionHint
+            : endSessionFeature.title
         }
       >
         세션 종료
@@ -133,13 +130,14 @@ function SidebarProfile() {
 }
 
 function SidebarCollapseButton() {
+  const collapseFeature = getFeatureControlProps("appShell.sidebarCollapse");
   return (
     <button
       className="collapse"
       type="button"
       aria-label="사이드바 접기"
-      title={getPlannedHint("sidebarCollapse")}
-      disabled
+      title={collapseFeature.title}
+      disabled={!collapseFeature.enabled}
     >
       <ChevronLeft size={18} />
     </button>

@@ -31,6 +31,7 @@ import {
   TIMELINE_CONTROLS,
   getPlannedHint,
 } from "../../lib/timeline/timelineControls";
+import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 
 export function EventInspector({
   selectedEvent,
@@ -145,29 +146,29 @@ export function EventInspector({
       <section className="inspector-section">
         <SectionHeader title="Planned actions" hint="Planned" />
         <div className="inspector-actions-row inspector-actions-planned">
-          <PlannedActionButton
+          <MoriPlannedAction
+            feature="timeline.inspector.editEvent"
             label={TIMELINE_CONTROLS.inspectorEditEvent.label}
-            tooltip={getPlannedHint("inspectorEditEvent")}
             icon={Pencil}
           />
-          <PlannedActionButton
+          <MoriPlannedAction
+            feature="timeline.inspector.split"
             label={TIMELINE_CONTROLS.inspectorSplitEvent.label}
-            tooltip={getPlannedHint("inspectorSplitEvent")}
             icon={Split}
           />
-          <PlannedActionButton
+          <MoriPlannedAction
+            feature="timeline.inspector.merge"
             label={TIMELINE_CONTROLS.inspectorMergeEvent.label}
-            tooltip={getPlannedHint("inspectorMergeEvent")}
             icon={Combine}
           />
-          <PlannedActionButton
+          <MoriPlannedAction
+            feature="timeline.inspector.createIssue"
             label={TIMELINE_CONTROLS.inspectorCreateIssue.label}
-            tooltip={getPlannedHint("inspectorCreateIssue")}
             icon={PlusCircle}
           />
-          <PlannedActionButton
+          <MoriPlannedAction
+            feature="timeline.inspector.addNote"
             label={TIMELINE_CONTROLS.inspectorAddNote.label}
-            tooltip={getPlannedHint("inspectorAddNote")}
             icon={StickyNote}
           />
         </div>
@@ -182,23 +183,6 @@ export function EventInspector({
         />
       </section>
     </aside>
-  );
-}
-
-function PlannedActionButton({
-  label,
-  tooltip,
-  icon: Icon,
-}: {
-  label: string;
-  tooltip?: string;
-  icon: typeof Pencil;
-}) {
-  return (
-    <button type="button" className="inspector-planned-action" disabled title={tooltip}>
-      <Icon size={13} aria-hidden="true" />
-      {label}
-    </button>
   );
 }
 

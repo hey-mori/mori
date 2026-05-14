@@ -2,6 +2,17 @@
 
 This document describes all source integrations in Mori, their implementation status, capture methods, privacy boundaries, and trust models.
 
+The source integration registry (`src/lib/sources/sourceRegistry.ts`)
+catalogues every integration with its `IntegrationStatus`, `CaptureMode`,
+`RawDataPolicy`, default trust level, and privacy note. Newer connector
+work (`src/lib/connectors/captureSurfaces.ts`) catalogues capture **surfaces**
+— the paste / hook / CLI / desktop / web / IDE paths a user actually clicks.
+The two registries cover overlapping concerns and are bridged by the
+[Modular Architecture](modular-architecture.md) doc. A future cleanup will
+fold them into one registry; today they remain separate so the live UI
+(Evidence Hub) doesn't have to migrate at the same time as the connector
+matrix.
+
 The Evidence Hub surfaces a curated subset of this registry to users; the
 hub grouping logic is in
 [`src/lib/sources/integrationGroups.ts`](../src/lib/sources/integrationGroups.ts).
