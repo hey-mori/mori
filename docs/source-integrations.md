@@ -69,17 +69,37 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 
 **Usage**: User opens Import panel, selects "URL", pastes link and optional excerpt, and saves.
 
-### 3. AI Conversation (`aiConversation`)
+### 3. Claude Transcript (`claudeTranscript`)
 
 - **Status**: Implemented
 - **Capture Mode**: Manual input
 - **Trust Level**: Verified
 - **Raw Data Policy**: Summary only (full transcript not retained)
-- **Privacy Note**: User explicitly pastes conversation text. No API key access or automatic capture.
+- **Privacy Note**: User explicitly pastes Claude conversation text. No API key access, OAuth, or automatic capture. Direct Claude API connector remains planned.
 
-**Usage**: User opens Import panel, selects "AI Conversation", pastes conversation text, and saves. Mori extracts title and summary but does not store full transcript.
+**Usage**: User opens Import panel, selects "AI 대화" tab, chooses "Claude" from platform dropdown, pastes conversation text, and saves. Mori parses turn structure (User/Assistant/System roles), detects code blocks and tool use, generates turn counts and token estimates, but does not store full transcript.
 
-### 4. Git Diff (Pasted) (`gitDiff`)
+### 4. ChatGPT Transcript (`chatgptTranscript`)
+
+- **Status**: Implemented
+- **Capture Mode**: Manual input
+- **Trust Level**: Verified
+- **Raw Data Policy**: Summary only (full transcript not retained)
+- **Privacy Note**: User explicitly pastes ChatGPT conversation text. No API key access, OAuth, or automatic capture. Direct ChatGPT API connector remains planned.
+
+**Usage**: User opens Import panel, selects "AI 대화" tab, chooses "ChatGPT" from platform dropdown, pastes conversation text, and saves. Mori parses turn structure, detects code blocks and tool use, generates metadata, but does not store full transcript.
+
+### 5. AI Conversation (Other) (`aiConversation`)
+
+- **Status**: Implemented
+- **Capture Mode**: Manual input
+- **Trust Level**: Verified
+- **Raw Data Policy**: Summary only (full transcript not retained)
+- **Privacy Note**: User explicitly pastes conversation text from generic AI chat tools. No API key access or automatic capture.
+
+**Usage**: User opens Import panel, selects "AI 대화" tab, chooses "Other AI Chat" from platform dropdown, pastes conversation text, and saves. Mori parses turn structure and generates metadata for AI chats that aren't Claude, ChatGPT, or Codex.
+
+### 6. Git Diff (Pasted) (`gitDiff`)
 
 - **Status**: Implemented
 - **Capture Mode**: Manual input
@@ -89,7 +109,7 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 
 **Usage**: User runs `git diff` in terminal, copies output, opens Import panel, selects "Git Diff", pastes diff, and saves.
 
-### 5. Git Diff (Tauri Desktop Command) (`tauriGitDiff`)
+### 7. Git Diff (Tauri Desktop Command) (`tauriGitDiff`)
 
 - **Status**: Implemented (desktop app only)
 - **Capture Mode**: Desktop command
@@ -99,7 +119,7 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 
 **Usage**: User opens Settings, adds repository path, returns to Import panel, selects "Git Diff", chooses repo/range from dropdown, and clicks Capture. Desktop app runs `git diff` command and imports result.
 
-### 6. Repository (`repository`)
+### 8. Repository (`repository`)
 
 - **Status**: Implemented (metadata only)
 - **Capture Mode**: Manual input
@@ -109,7 +129,7 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 
 **Usage**: User opens Settings → Repositories, clicks "Add Repository", selects folder (desktop app) or types path (browser), optionally clicks "Verify" to check Git status. Repository path stored for Git diff dropdown convenience only.
 
-### 7. Quick Pass Analysis (`quickPass`)
+### 9. Quick Pass Analysis (`quickPass`)
 
 - **Status**: Implemented (deterministic heuristic + experimental Ollama)
 - **Capture Mode**: Manual trigger
@@ -123,7 +143,7 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 
 These integrations are **not yet implemented**. They appear in planning documents and type definitions but have no real capture logic.
 
-### 8. Terminal History (`terminal`)
+### 10. Terminal History (`terminal`)
 
 - **Status**: Planned
 - **Capture Mode**: Planned connector (opt-in after explicit setup)
@@ -133,7 +153,7 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: After user opts in, Mori would parse `~/.bash_history` or equivalent and import recent commands related to work session.
 
-### 9. File System Watcher (`fileSystem`)
+### 11. File System Watcher (`fileSystem`)
 
 - **Status**: Planned
 - **Capture Mode**: Planned connector (opt-in per directory)
@@ -143,7 +163,7 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: User adds project directory to watched list. Mori records file create/modify/delete events during session.
 
-### 10. Editor Activity (`editor`)
+### 12. Editor Activity (`editor`)
 
 - **Status**: Planned
 - **Capture Mode**: Planned connector (opt-in per editor)
@@ -153,7 +173,7 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: User installs Mori editor extension (VS Code, Vim, etc.) and enables session recording.
 
-### 11. VS Code Integration (`vscode`)
+### 13. VS Code Integration (`vscode`)
 
 - **Status**: Planned
 - **Capture Mode**: Planned connector
@@ -163,7 +183,7 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: VS Code extension sends workspace events (file opens, test runs, debug sessions) to Mori.
 
-### 12. Cursor Integration (`cursor`)
+### 14. Cursor Integration (`cursor`)
 
 - **Status**: Planned
 - **Capture Mode**: Planned connector
@@ -173,7 +193,7 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: Cursor extension sends AI interaction events to Mori.
 
-### 13. Browser Tab History (`browserTab`)
+### 15. Browser Tab History (`browserTab`)
 
 - **Status**: Planned
 - **Capture Mode**: Planned connector
@@ -183,27 +203,17 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: Browser extension sends tab navigation events to Mori during active session.
 
-### 14. Claude Transcript (`claudeTranscript`)
+### 16. Codex Transcript (`codexTranscript`)
 
 - **Status**: Planned
-- **Capture Mode**: Explicit import
+- **Capture Mode**: Manual input (planned)
 - **Trust Level**: Verified
 - **Raw Data Policy**: Summary only
-- **Privacy Note**: User exports conversation from Claude Projects and imports into Mori.
+- **Privacy Note**: User would explicitly paste Codex conversation text. No API key access, OAuth, or automatic capture. Direct Codex API connector remains planned. Paste workflow not yet implemented.
 
-**Future Usage**: User downloads Claude conversation export (if API available) and imports file.
+**Future Usage**: User would open Import panel, select Codex from platform dropdown, paste conversation text, and save.
 
-### 15. Codex Transcript (`codexTranscript`)
-
-- **Status**: Planned
-- **Capture Mode**: Explicit import
-- **Trust Level**: Verified
-- **Raw Data Policy**: Summary only
-- **Privacy Note**: User exports conversation from Codex and imports into Mori.
-
-**Future Usage**: User downloads Codex conversation export and imports file.
-
-### 16. Documentation Reference (`docs`)
+### 17. Documentation Reference (`docs`)
 
 - **Status**: Planned
 - **Capture Mode**: Explicit import or manual input
@@ -213,7 +223,7 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: User pastes documentation URLs during session, Mori stores reference.
 
-### 17. Slack Message (`slack`)
+### 18. Slack Message (`slack`)
 
 - **Status**: Planned
 - **Capture Mode**: Explicit import
@@ -223,7 +233,7 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: User copies Slack message permalinks or exports conversation, imports into Mori.
 
-### 18. Figma File (`figma`)
+### 19. Figma File (`figma`)
 
 - **Status**: Planned
 - **Capture Mode**: Manual input
@@ -233,7 +243,7 @@ These integrations are **not yet implemented**. They appear in planning document
 
 **Future Usage**: User pastes Figma file link, Mori stores reference.
 
-### 19. Notion Page (`notion`)
+### 20. Notion Page (`notion`)
 
 - **Status**: Planned
 - **Capture Mode**: Explicit import

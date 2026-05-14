@@ -5,9 +5,11 @@ import { Button } from "../../components/ui/Button";
 import {
   GitDiffParseError,
   normalizeAiConversationText,
+  normalizeAiTranscript,
   normalizeGitDiff,
   normalizeManualNote,
   normalizeUrlSource,
+  type AiTranscriptPlatform,
   type NormalizedImportCandidate,
 } from "../../lib/import";
 import { getRepositoryVerificationFreshness } from "../../lib/repositories";
@@ -32,7 +34,7 @@ export function ImportPanel() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [url, setUrl] = useState("");
-  const [provider, setProvider] = useState("Claude");
+  const [platform, setPlatform] = useState<AiTranscriptPlatform>("claude");
   const [origin, setOrigin] = useState("");
   const [status, setStatus] = useState<ImportStatus>(null);
   const [repoPath, setRepoPath] = useState("");
@@ -246,10 +248,10 @@ export function ImportPanel() {
       setStatus({ tone: "error", message: "AI 대화 본문을 붙여넣으세요." });
       return null;
     }
-    return normalizeAiConversationText({
+    return normalizeAiTranscript({
       ...base,
       title: title.trim() || undefined,
-      provider: provider.trim() || undefined,
+      platform,
       text: body,
     });
   }
@@ -310,14 +312,22 @@ export function ImportPanel() {
           </label>
         ) : null}
         {kind === "ai" ? (
-          <label>
-            제공자 <small>(선택)</small>
-            <input
-              placeholder="Claude / ChatGPT / Codex"
-              value={provider}
-              onChange={(event) => setProvider(event.target.value)}
-            />
-          </label>
+          <>
+            <label>
+              AI 플랫폼
+              <select value={platform} onChange={(event) => setPlatform(event.target.value as AiTranscriptPlatform)}>
+                <option value="claude">Claude</option>
+                <option value="chatgpt">ChatGPT</option>
+                <option value="codex">Codex</option>
+                <option value="other">Other AI Chat</option>
+              </select>
+            </label>
+            <p className="import-privacy-note">
+              <small>
+                수동 붙여넣기 전용. Claude/ChatGPT/Codex 직접 연동은 계획 단계입니다. 현재 Mori는 브라우저 탭이나 앱을 자동 스캔하지 않습니다.
+              </small>
+            </p>
+          </>
         ) : null}
         {kind === "git" ? (
           <>

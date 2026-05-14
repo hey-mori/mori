@@ -141,7 +141,7 @@ Frontend screens should not know filesystem paths, SQLite details, LLM provider 
 
 ### Source Integration Registry
 
-Mori's source integration architecture is centralized in `src/lib/sources/sourceRegistry.ts`, which defines all 19 source integrations (7 implemented, 12 planned) with complete metadata:
+Mori's source integration architecture is centralized in `src/lib/sources/sourceRegistry.ts`, which defines all 20 source integrations (9 implemented, 11 planned) with complete metadata:
 
 - **Integration Status**: `implemented`, `partial`, `planned`, `mockOnly`, or `unavailable`
 - **Capture Mode**: `manual`, `explicitImport`, `desktopCommand`, `plannedConnector`, or `mock`
@@ -149,9 +149,29 @@ Mori's source integration architecture is centralized in `src/lib/sources/source
 - **Raw Data Policy**: `retained`, `summaryOnly`, `redacted`, or `notCaptured`
 - **Privacy Note**: Clear boundaries about when and how Mori accesses data
 
-**Implemented Integrations**: manualNote, url, aiConversation, gitDiff, tauriGitDiff, repository, quickPass
+**Implemented Integrations**: manualNote, url, aiConversation, claudeTranscript, chatgptTranscript, gitDiff, tauriGitDiff, repository, quickPass
 
-**Planned Integrations**: terminal, fileSystem, editor, vscode, cursor, browserTab, claudeTranscript, codexTranscript, docs, slack, figma, notion
+**Planned Integrations**: terminal, fileSystem, editor, vscode, cursor, browserTab, codexTranscript, docs, slack, figma, notion
+
+### AI Transcript Import Flow
+
+The AI Transcript import is the first paste-based AI evidence path that
+preserves source/event provenance end to end:
+
+```text
+Evidence Import Panel (ImportPanel.tsx, AI 대화 tab + platform dropdown)
+  -> normalizeAiTranscript (src/lib/import/normalizeAiTranscript.ts)
+  -> SourceRef (claudeTranscript | chatgptTranscript | codexTranscript | aiConversation)
+     + TimelineEvent (type: "aiConversation", trustLevel: "verified")
+  -> Timeline Inspector / Review / Reports (existing source-traceability helpers)
+  -> Persistence (browser draft + .mori package + SQLite snapshot)
+```
+
+The platform dropdown decides the integration ID; the rest of Mori reads
+provenance through the existing `SourceRef` traceability helpers in
+`src/lib/sources/traceability.ts`. Direct AI-service connectors (Claude /
+ChatGPT / Codex API or app integrations) remain explicitly planned, not
+fake-active.
 
 **Traceability Helpers** (`src/lib/sources/traceability.ts`):
 - `getSourceDisplayStatus()` — Integration label, status, capture method, trust label, raw data policy

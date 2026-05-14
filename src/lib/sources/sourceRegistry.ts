@@ -106,13 +106,13 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   aiConversation: {
     id: "aiConversation",
-    label: "AI Conversation",
-    description: "Imported AI conversation transcripts (Claude, ChatGPT, etc.)",
+    label: "AI Conversation (Other)",
+    description: "Generic AI conversation transcripts from other AI assistants",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
     captureMode: "manual",
-    privacyNote: "User explicitly pastes conversation text. Redaction pending by default.",
+    privacyNote: "User explicitly pastes conversation text from any AI assistant. No automatic capture.",
     supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,
@@ -327,13 +327,13 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   claudeTranscript: {
     id: "claudeTranscript",
     label: "Claude Transcript",
-    description: "Claude AI conversation transcripts via API or export",
-    status: "planned",
+    description: "Claude AI conversation transcripts via manual paste",
+    status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
-    captureMode: "explicitImport",
-    privacyNote: "Future: explicit Claude transcript import. User controls which conversations to import.",
-    supportedInputTypes: ["application/json", "text/plain"],
+    captureMode: "manual",
+    privacyNote: "User explicitly pastes Claude conversation text. Direct Claude API connector is planned for future.",
+    supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,
       timelineEvents: true,
@@ -354,6 +354,26 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
     captureMode: "explicitImport",
     privacyNote: "Future: explicit Codex transcript import. User controls which sessions to import.",
     supportedInputTypes: ["application/json", "text/plain"],
+    outputRecords: {
+      sources: true,
+      timelineEvents: true,
+      issues: false,
+      decisions: false,
+      relationships: false,
+      artifacts: false,
+    },
+  },
+
+  chatgptTranscript: {
+    id: "chatgptTranscript",
+    label: "ChatGPT Transcript",
+    description: "ChatGPT conversation transcripts via manual paste or export",
+    status: "implemented",
+    trustDefault: "verified",
+    rawDataPolicy: "summaryOnly",
+    captureMode: "manual",
+    privacyNote: "User explicitly pastes ChatGPT conversation text. Direct ChatGPT API connector is planned for future.",
+    supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,
       timelineEvents: true,

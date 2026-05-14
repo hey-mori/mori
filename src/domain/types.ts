@@ -5,7 +5,16 @@ export type ViewKey = "start" | "timeline" | "flow" | "evidence" | "review" | "r
 export type TrustLevel = "verified" | "observed" | "inferred";
 export type RecordingMode = "summary" | "full" | "ephemeral";
 export type LlmProvider = "ollama" | "lmStudio" | "openAiCompatible" | "cloudApi";
-export type SourceKind = "aiConversation" | "browser" | "file" | "terminal" | "manualNote" | "gitDiff";
+export type SourceKind = 
+  | "aiConversation" 
+  | "claudeTranscript" 
+  | "chatgptTranscript" 
+  | "codexTranscript" 
+  | "browser" 
+  | "file" 
+  | "terminal" 
+  | "manualNote" 
+  | "gitDiff";
 export type RelationshipType =
   | "ledTo"
   | "caused"

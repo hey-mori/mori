@@ -7,23 +7,115 @@ produces a `NormalizedImportCandidate` (one `SourceRef` + one or more
 `useMoriSessionStore.addImport`, which persists them per session through the
 browser draft repository today and through SQLite when running in Tauri mode.
 
-## Supported import kinds
+## Import support matrix
 
-| Kind | Source kind | Event type | Trust | Notes |
-| ---- | ----------- | ---------- | ----- | ----- |
+| Kind | Source kind(s) | Event type | Trust | Notes |
+| ---- | -------------- | ---------- | ----- | ----- |
 | Manual note | `manualNote` | `documentNote` | verified | Free-form text, optional title |
 | URL / page excerpt | `browser` | `webResearch` | verified | URL must parse; optional excerpt |
-| AI conversation | `aiConversation` | `aiConversation` | verified | Splits on blank lines to count messages |
-| **Git diff** | `gitDiff` | `fileCode` | **verified** | Pasted unified diff; parsed structurally |
+| AI transcript | `claudeTranscript`, `chatgptTranscript`, `codexTranscript`, `aiConversation` | `aiConversation` | verified | Platform-aware paste; turn / code-block / tool-use detection |
+| Git diff | `gitDiff` | `fileCode` | verified | Pasted unified diff, or Tauri `git diff` capture |
 
 All imports are stored as-is in localStorage today. In Tauri mode the active
-session can be saved to SQLite from Settings; that path covers Git diff
-imports the same way it covers any other source.
+session can be saved to SQLite from Settings; that path covers every import
+kind the same way.
+
+## AI transcript import
+
+Paste an AI conversation transcript into the **Evidence → 소스 가져오기 → AI
+대화** tab. Mori parses the transcript with platform-specific logic in
+[src/lib/import/normalizeAiTranscript.ts](../src/lib/import/normalizeAiTranscript.ts).
+
+### User flow
+
+1. Open the Evidence / Import panel.
+2. Pick the **AI 대화** tab.
+3. Choose a platform from the dropdown:
+   - **Claude**
+   - **ChatGPT**
+   - **Codex**
+   - **Other AI Chat**
+4. Optionally set a title.
+5. Paste the conversation text.
+6. Click **세션에 추가**. Mori normalizes the transcript into one `SourceRef`
+   and one `TimelineEvent`.
+
+Direct account integration is **not** implemented:
+
+- No OAuth.
+- No API-key access to Claude / ChatGPT / Codex services.
+- No background browser, tab, or app scanning.
+- No automatic capture from any AI-assistant client.
+
+The platform dropdown carries this privacy reminder, also stored alongside
+the source record:
+
+> 수동 붙여넣기 전용. Claude/ChatGPT/Codex 직접 연동은 계획 단계입니다.
+> 현재 Mori는 브라우저 탭이나 앱을 자동 스캔하지 않습니다.
+
+### Platform mapping
+
+The platform dropdown maps to a stable `SourceKind` so the rest of Mori can
+trace provenance.
+
+| Platform | Source kind | Integration label |
+| -------- | ----------- | ----------------- |
+| `claude` | `claudeTranscript` | Claude Transcript |
+| `chatgpt` | `chatgptTranscript` | ChatGPT Transcript |
+| `codex` | `codexTranscript` | Codex Transcript |
+| `other` | `aiConversation` | AI Conversation (Other) |
+
+### Parser behaviour
+
+`normalizeAiTranscript` splits the pasted text into turns by scanning each
+line for a role prefix. Continuation lines without a role prefix are appended
+to the previous turn so multi-line responses survive paste.
+
+Detected roles:
+
+- **User**: `User:`, `Human:`, `You:`, `Me:`
+- **Assistant**: `Assistant:`, `AI:`, `Claude:`, `ChatGPT:`, `Codex:`, `Bot:`
+- **System**: `System:`
+
+Per-turn signals:
+
+- `hasCodeBlocks` — at least one triple-backtick fence in the turn.
+- `hasToolUse` — `<function`, `<tool`, or `tool_use` markers in the turn.
+
+Aggregate metadata stored on the resulting `SourceRef`:
+
+- `turnCount` (total), `userTurns`, `assistantTurns`.
+- `codeBlockCount` — number of turns containing fenced code.
+- `estimatedTokens` — rough character / 4 estimate. Word-based variants are
+  similar to a 0.75 words-per-token approximation.
+
+The generated `TimelineEvent`:
+
+- `type: "aiConversation"`, `trustLevel: "verified"`, `confidence: 0.88`.
+- `title` defaults to `<Platform> conversation` when no override is given.
+- `summary` is the first user message, normalized to a single line and
+  truncated to 160 characters (with a trailing `...` when truncated).
+
+`rawRetention` is `summaryOnly` for every AI-transcript source: Mori keeps
+the per-turn metadata and summary but does **not** persist the full pasted
+transcript.
+
+### Example transcript
+
+The parser only needs role prefixes at the start of lines; any AI assistant
+output that follows that pattern works.
+
+```text
+User: Mori 가져오기 흐름을 어떻게 설계해야 해?
+Assistant: 명시적 붙여넣기로만 시작하고, 출처와 trust level을 유지하세요.
+User: 코드 블록도 인식돼?
+Assistant: 네, 트리플 백틱 블록을 감지하고 카운트합니다.
+```
 
 ## Git diff import
 
-Paste a unified diff into the **Sources / Evidence → 소스 가져오기 → Git diff**
-tab. Mori parses the diff in
+Paste a unified diff into the **Evidence → 소스 가져오기 → Git diff** tab.
+Mori parses the diff in
 [src/lib/import/parseGitDiff.ts](../src/lib/import/parseGitDiff.ts) and
 normalizes it in
 [src/lib/import/normalizeGitDiff.ts](../src/lib/import/normalizeGitDiff.ts).

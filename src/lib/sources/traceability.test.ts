@@ -56,7 +56,7 @@ describe("traceability", () => {
       const status = getSourceDisplayStatus(source);
 
       expect(status.integration).toBe("aiConversation");
-      expect(status.integrationLabel).toBe("AI Conversation");
+      expect(status.integrationLabel).toBe("AI Conversation (Other)");
       expect(status.rawDataLabel).toBe("Summary only");
     });
 

@@ -26,6 +26,7 @@ describe("sourceRegistry", () => {
         "cursor",
         "browserTab",
         "claudeTranscript",
+        "chatgptTranscript",
         "codexTranscript",
         "docs",
         "slack",
@@ -61,6 +62,8 @@ describe("sourceRegistry", () => {
       expect(implementedIds).toContain("manualNote");
       expect(implementedIds).toContain("url");
       expect(implementedIds).toContain("aiConversation");
+      expect(implementedIds).toContain("claudeTranscript");
+      expect(implementedIds).toContain("chatgptTranscript");
       expect(implementedIds).toContain("gitDiff");
       expect(implementedIds).toContain("tauriGitDiff");
       expect(implementedIds).toContain("repository");
@@ -70,6 +73,7 @@ describe("sourceRegistry", () => {
       expect(implementedIds).not.toContain("terminal");
       expect(implementedIds).not.toContain("vscode");
       expect(implementedIds).not.toContain("slack");
+      expect(implementedIds).not.toContain("codexTranscript");
     });
 
     it("marks planned integrations correctly", () => {
@@ -82,7 +86,6 @@ describe("sourceRegistry", () => {
       expect(plannedIds).toContain("vscode");
       expect(plannedIds).toContain("cursor");
       expect(plannedIds).toContain("browserTab");
-      expect(plannedIds).toContain("claudeTranscript");
       expect(plannedIds).toContain("codexTranscript");
       expect(plannedIds).toContain("docs");
       expect(plannedIds).toContain("slack");
@@ -92,6 +95,8 @@ describe("sourceRegistry", () => {
       // Should NOT contain implemented integrations
       expect(plannedIds).not.toContain("manualNote");
       expect(plannedIds).not.toContain("url");
+      expect(plannedIds).not.toContain("claudeTranscript");
+      expect(plannedIds).not.toContain("chatgptTranscript");
     });
 
     it("sets correct trust defaults", () => {
