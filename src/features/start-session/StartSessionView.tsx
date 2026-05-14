@@ -39,7 +39,7 @@ export function StartSessionView() {
     const stored = repository.saveCurrentSessionDraft(draft);
     setSavedDraft(stored);
     setSessionDraft(stored);
-    setCurrentView("sources");
+    setCurrentView("evidence");
   }
 
   function handleResetToDemo() {
@@ -49,7 +49,7 @@ export function StartSessionView() {
 
   return (
     <div className="page">
-      <PageHeader title="Start Mori / Session Setup" subtitle="기록할 범위와 방식을 설정하고 Mori 세션을 시작합니다." right={<Button icon={X} />} />
+      <PageHeader title="Start Session" subtitle="Configure recording scope and begin new work memory session" right={<Button icon={X} />} />
       <div className="setup-grid">
         <div className="setup-stack">
           <SetupBlock number="1" title="세션 정보">

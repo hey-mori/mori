@@ -1,25 +1,23 @@
 import {
   ChevronLeft,
-  Columns3,
-  FileArchive,
   FileText,
-  Folder,
-  Home,
+  FolderClock,
   PanelRightOpen,
+  Play,
   Settings,
   SlidersHorizontal,
+  ListChecks,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import type { ViewKey } from "../../domain/types";
 
-const navItems: Array<{ key: ViewKey; label: string; badge?: string; icon: typeof Home }> = [
-  { key: "start", label: "Home", icon: Home },
+const navItems: Array<{ key: ViewKey; label: string; badge?: string; icon: typeof Play }> = [
+  { key: "start", label: "Start Session", icon: Play },
   { key: "timeline", label: "Timeline", icon: SlidersHorizontal },
-  { key: "issues", label: "Issues", icon: Columns3, badge: "7" },
-  { key: "issues", label: "Decisions", icon: FileArchive, badge: "7" },
-  { key: "sources", label: "Sources", icon: FileText },
+  { key: "evidence", label: "Evidence", icon: FileText },
+  { key: "review", label: "Review", icon: ListChecks, badge: "7" },
   { key: "reports", label: "Reports", icon: PanelRightOpen },
-  { key: "projects", label: "Projects", icon: Folder },
+  { key: "memory", label: "Memory", icon: FolderClock },
   { key: "settings", label: "Settings", icon: Settings },
 ];
 

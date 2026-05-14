@@ -5,11 +5,11 @@ import { Button } from "../../components/ui/Button";
 import { moriMockSession } from "../../domain/mock-data";
 import { useMoriAppStore } from "../../app/store";
 
-export function ProjectView() {
+export function MemoryView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   return (
     <div className="page">
-      <PageHeader title="Project View" subtitle="하나의 프로젝트에 여러 Mori 세션이 쌓인 장기 기억을 봅니다." right={<Button icon={Plus}>새 세션</Button>} />
+      <PageHeader title="Project Memory" subtitle="Long-term session history across this project" right={<Button icon={Plus}>새 세션</Button>} />
       <div className="project-grid">
         <div className="project-hero">
           <Badge tone="green">Local-first</Badge>

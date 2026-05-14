@@ -15,7 +15,7 @@ import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib
 import { ImportPanel } from "../import/ImportPanel";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 
-export function SourcesEvidenceView() {
+export function EvidenceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -40,8 +40,8 @@ export function SourcesEvidenceView() {
   return (
     <div className="page">
       <PageHeader
-        title="Sources / Evidence"
-        subtitle="Mori가 어떤 근거로 이벤트, 이슈, 결정을 만들었는지 확인합니다."
+        title="Evidence"
+        subtitle="Sources and inputs Mori uses to reconstruct this session"
       />
       <SessionModeBanner />
       <ImportPanel />

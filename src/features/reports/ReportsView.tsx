@@ -17,7 +17,7 @@ import {
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
-export function ResumeReportView() {
+export function ReportsView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
@@ -45,8 +45,8 @@ export function ResumeReportView() {
   return (
     <div className="page">
       <PageHeader
-        title="Resume & Report"
-        subtitle="작업을 이어가거나, 공유 가능한 리포트로 정리하세요."
+        title="Reports"
+        subtitle="Resume prompts and shareable reports for this session"
         right={
           <div className="toolbar">
             <Button>{view.project.name}</Button>

@@ -5,10 +5,10 @@ import { useMoriSessionStore } from "./sessionStore";
 import { useMoriRepositoryStore } from "./repositoryStore";
 import { StartSessionView } from "../features/start-session/StartSessionView";
 import { TimelineView } from "../features/timeline/TimelineView";
-import { IssuesDecisionsView } from "../features/issues/IssuesDecisionsView";
-import { SourcesEvidenceView } from "../features/sources/SourcesEvidenceView";
-import { ResumeReportView } from "../features/reports/ResumeReportView";
-import { ProjectView } from "../features/projects/ProjectView";
+import { ReviewView } from "../features/review/ReviewView";
+import { EvidenceView } from "../features/evidence/EvidenceView";
+import { ReportsView } from "../features/reports/ReportsView";
+import { MemoryView } from "../features/memory/MemoryView";
 import { SettingsView } from "../features/settings/SettingsView";
 
 export default function App() {
@@ -31,10 +31,10 @@ export default function App() {
       {currentView === "start" ? <StartSessionView /> : null}
       {currentView === "timeline" ? <TimelineView mode="timeline" /> : null}
       {currentView === "flow" ? <TimelineView mode="flow" /> : null}
-      {currentView === "issues" ? <IssuesDecisionsView /> : null}
-      {currentView === "sources" ? <SourcesEvidenceView /> : null}
-      {currentView === "reports" ? <ResumeReportView /> : null}
-      {currentView === "projects" ? <ProjectView /> : null}
+      {currentView === "evidence" ? <EvidenceView /> : null}
+      {currentView === "review" ? <ReviewView /> : null}
+      {currentView === "reports" ? <ReportsView /> : null}
+      {currentView === "memory" ? <MemoryView /> : null}
       {currentView === "settings" ? <SettingsView /> : null}
     </AppShell>
   );

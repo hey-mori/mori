@@ -22,7 +22,7 @@ const issueColumns: Array<{ status: IssueStatus; tone: string }> = [
   { status: "watching", tone: "gray" },
 ];
 
-export function IssuesDecisionsView() {
+export function ReviewView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -47,8 +47,8 @@ export function IssuesDecisionsView() {
   return (
     <div className="page page-tight">
       <PageHeader
-        title="Issues & Decisions"
-        subtitle="작업 중 발견된 이슈와 중요한 결정을 한 곳에서 관리하세요."
+        title="Review"
+        subtitle="Issues, decisions, and next actions discovered in this session"
         right={
           <div className="toolbar">
             <Button>{view.project.name}</Button>
@@ -82,7 +82,7 @@ export function IssuesDecisionsView() {
           <h2>Quick Pass를 실행해 이슈와 결정을 추출하세요</h2>
           <p>현재 세션에 가져온 소스가 있다면 위 배너의 “Run Quick Pass” 버튼을 사용할 수 있습니다.</p>
           {imports.length === 0 ? (
-            <Button variant="primary" icon={Plus} onClick={() => setCurrentView("sources")}>
+            <Button variant="primary" icon={Plus} onClick={() => setCurrentView("evidence")}>
               소스 가져오기로 이동
             </Button>
           ) : null}

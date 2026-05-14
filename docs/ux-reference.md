@@ -101,11 +101,11 @@ Key elements:
 
 The trace panel should make the AI-generated structure inspectable. Users need to understand why Mori thinks one event caused, supported, influenced, or produced another.
 
-## Issues & Decisions
+## Review (Issues & Decisions)
 
 ![Issues & Decisions](./assets/screenshots/issues-decisions.png)
 
-Issues & Decisions turns the session into actionable product memory.
+Issues & Decisions (now consolidated in the Review page) turns the session into actionable product memory.
 
 Key elements:
 
@@ -117,11 +117,11 @@ Key elements:
 
 Issue Garden should separate open, in-progress, resolved, and watching items. Decision Log should capture important choices with rationale, related issues, source events, and evidence.
 
-## Resume & Report
+## Reports (Resume & Report)
 
 ![Resume & Report](./assets/screenshots/resume-report.png)
 
-Resume & Report helps users continue the work or communicate what happened.
+Resume & Report (now consolidated in the Reports page) helps users continue the work or communicate what happened.
 
 Key elements:
 

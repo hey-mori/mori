@@ -2,9 +2,21 @@
 
 Mori remembers how the work happened.
 
-Mori is a local-first AI work memory app. It records selected AI work sessions and reconstructs them into a Narrative Timeline, Flow Focus / Trace View, Issue Garden, Decision Log, Sources / Evidence View, Resume Prompt, Reports, and eventually `.mori` local work memory files.
+Mori is a local-first AI work memory app. It records selected AI work sessions and reconstructs them into a Narrative Timeline, Flow Focus / Trace View, Review page (issues and decisions), Evidence view, Resume Prompt, Reports, and eventually `.mori` local work memory files.
 
 Mori is not a surveillance app, task manager, wiki, or autonomous work agent. It is a quiet work memory app that helps users understand and resume how their work happened.
+
+## App Structure
+
+Mori's primary navigation:
+
+- **Start Session**: Configure recording scope and begin new work memory session
+- **Timeline**: Reconstructed narrative of how your work unfolded (main work reconstruction view)
+- **Evidence**: Sources and inputs Mori uses to reconstruct this session (import and source management)
+- **Review**: Issues, decisions, and next actions discovered in this session (extracted insights)
+- **Reports**: Resume prompts and shareable reports for this session (resume and export)
+- **Memory**: Long-term session history across this project (cross-session memory)
+- **Settings**: Privacy, local AI, repositories, and storage configuration
 
 ## Current Foundation
 
@@ -18,22 +30,22 @@ This repository currently contains the frontend foundation for Mori:
 - Data-driven Narrative Timeline with timestamp-based horizontal positioning
 - Flow Focus relationship highlighting and Trace panel
 - Event Inspector with trust, confidence, evidence, related items, note, and correction placeholders
-- Issue Garden and Decision Log
-- Sources / Evidence View
+- Review page with Issue Garden and Decision Log
+- Evidence view for source management
 - Resume Prompt and Report Export UI
-- Start Mori / Session Setup
+- Start Session setup flow
 - Settings / Privacy / Local AI
 - Pure utility functions prepared for Vitest coverage
 - `.mori` package v0 JSON serialization/deserialization
 - Browser draft repository for temporary local session/package persistence
 - Import normalizers for manual notes, URLs, and AI conversation text
-- Import MVP: in-app import panel that persists imports per session and renders them in Sources and Timeline
+- Import MVP: in-app import panel that persists imports per session and renders them in Evidence and Timeline
 - Git diff import: paste a unified `git diff`, or in the Tauri desktop app run `git diff` against an explicitly-typed repo path/range through a sandboxed Rust command. Both paths share the same verified `gitDiff` source + `fileCode` event normalization
 - Repository settings: explicit user-added repo paths persisted through the existing storage repository, a native folder picker in Tauri (via `tauri-plugin-dialog`), and a Git Diff dropdown that fills the capture path from the saved default — no filesystem scanning, no background capture
 - On-demand repository verification: a `verify_repository_path` Tauri command runs `git rev-parse --show-toplevel`, `rev-parse HEAD`, `branch --show-current`, and `status --porcelain` against a user-chosen repo only when the user clicks Verify. Resulting branch, SHA, and dirty status persist alongside the repo entry and surface in both Settings and the Git Diff dropdown
 - Verification freshness: pure age/staleness helpers (24h default threshold) drive `Verified N hours ago` / `Stale · N days ago` badges, plus a `Re-verify` action label, in Settings and the Git Diff dropdown. After a successful explicit Git diff capture against a saved repo, Mori refreshes that repo's verification metadata using the same `verify_repository_path` path — failures are non-blocking and never erase prior verified records
 - Session view composition that switches between the demo mock session and a real persisted draft session
-- Local Quick Pass analysis: deterministic heuristic provider that extracts issues, decisions, relationships, and next actions from imported sources; results persist per session and render in Issues, Decisions, and Reports
+- Local Quick Pass analysis: deterministic heuristic provider that extracts issues, decisions, relationships, and next actions from imported sources; results persist per session and render in Review and Reports
 - Ollama Quick Pass provider with configurable endpoint/model, settings UI, connection probe, and Quick Pass control provider selector (still experimental for output quality)
 - Optional deterministic fallback when an Ollama Quick Pass run fails, honestly labeled in the analysis result
 - Placeholder Tauri icon assets so `cargo check` can run against the Rust shell

@@ -110,9 +110,31 @@ Pipeline notes:
 - `app`: app shell, route/view selection, cross-screen state, session-level UI state
 - `components`: reusable layout primitives, UI controls, panels, buttons, badges, sidebars, headers
 - `domain`: product data types, constants, mock data, event/source/session definitions
-- `features`: product screens such as Start Session, Timeline, Issues, Sources, Reports, Projects, Settings
+- `features`: product screens organized by primary pages:
+  - `start-session`: Start Session setup flow
+  - `timeline`: Timeline main view and Flow Focus
+  - `evidence`: Evidence view (formerly Sources)
+  - `review`: Review page with issues and decisions (formerly Issues/Decisions)
+  - `reports`: Reports with resume prompts (formerly ResumeReport)
+  - `memory`: Project Memory cross-session view (formerly Projects)
+  - `settings`: Settings / Privacy / Local AI
+  - `import`: Import panel (shared across features)
+  - `flow-focus`: Flow Focus components (shared with Timeline)
 - `lib`: pure logic such as timeline layout, relationship traversal, trust formatting, resume prompt generation
 - `styles`: tokens, themes, global CSS, Tailwind entry
+
+### Page Responsibilities
+
+| Page | Route | Primary Purpose | Key Components |
+|------|-------|----------------|----------------|
+| Start Session | `start` | Session initialization and configuration | StartSessionView |
+| Timeline | `timeline` | Main narrative timeline reconstruction | TimelineView (mode=timeline) |
+| Flow Focus | `flow` | Relationship-focused timeline view | TimelineView (mode=flow) |
+| Evidence | `evidence` | Source and import management | EvidenceView, ImportPanel |
+| Review | `review` | Issues, decisions, and next actions | ReviewView (Issue Garden + Decision Log) |
+| Reports | `reports` | Resume prompts and report generation | ReportsView |
+| Memory | `memory` | Long-term project session history | MemoryView |
+| Settings | `settings` | All configuration surfaces | SettingsView |
 
 Frontend screens should not know filesystem paths, SQLite details, LLM provider APIs, or package internals directly. Those should arrive as typed data from backend commands.
 

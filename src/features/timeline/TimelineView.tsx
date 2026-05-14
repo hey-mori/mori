@@ -62,7 +62,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
         <SessionModeBanner />
         <TimelineEmptyState
           variant={emptyVariant}
-          onOpenSources={() => setCurrentView("sources")}
+          onOpenSources={() => setCurrentView("evidence")}
           onRunQuickPass={() => runQuickPass()}
           canRunQuickPass={analysisStatus !== "running"}
         />
