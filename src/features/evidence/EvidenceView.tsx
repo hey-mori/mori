@@ -11,6 +11,7 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
+import { useMoriReviewStore } from "../../app/reviewStore";
 import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib/analysis";
 import {
   getHubAiPlatform,
@@ -22,6 +23,7 @@ import {
 import { SOURCE_REGISTRY } from "../../lib/sources/sourceRegistry";
 import type { AiTranscriptPlatform } from "../../lib/import";
 import { ImportPanel } from "../import/ImportPanel";
+import { ImportReviewView } from "../review-import/ImportReviewView";
 import { IntegrationCard } from "./IntegrationCard";
 import { ImportedSourceRow } from "./ImportedSourceRow";
 import {
@@ -51,6 +53,10 @@ export function EvidenceView() {
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
+
+  const reviewDraft = useMoriReviewStore((state) => state.draft);
+  const lastApplied = useMoriReviewStore((state) => state.lastApplied);
+  const clearLastApplied = useMoriReviewStore((state) => state.clearLastApplied);
 
   const availableIntegrations = useMemo(() => getHubAvailableIntegrations(), []);
   const plannedIntegrations = useMemo(() => getHubPlannedIntegrations(), []);
@@ -83,6 +89,13 @@ export function EvidenceView() {
   const importedSources = view.sources;
   const isDemoSession = mode === "demo";
 
+  // After all hooks are called, defer rendering to the review screen if a
+  // draft is in flight. Cancel / apply on the review screen clears the draft
+  // and falls through back to the Evidence Hub on the next render.
+  if (reviewDraft) {
+    return <ImportReviewView />;
+  }
+
   return (
     <div className="page evidence-page">
       <PageHeader
@@ -106,6 +119,16 @@ export function EvidenceView() {
         }
       />
       <SessionModeBanner />
+
+      {lastApplied ? (
+        <div className="review-applied-banner" role="status">
+          <Sparkles size={14} aria-hidden="true" />
+          <span>
+            방금 Apply된 가져오기: <strong>{lastApplied.appliedCount}개의 이벤트</strong>가 세션 타임라인에 추가되었습니다.
+          </span>
+          <Button onClick={clearLastApplied}>닫기</Button>
+        </div>
+      ) : null}
 
       <div className="evidence-hub-layout">
         <section className="evidence-hub-main">

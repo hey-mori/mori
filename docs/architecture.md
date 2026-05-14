@@ -173,6 +173,37 @@ provenance through the existing `SourceRef` traceability helpers in
 ChatGPT / Codex API or app integrations) remain explicitly planned, not
 fake-active.
 
+### Import Review (review-before-apply)
+
+AI Transcript and Git Diff imports route through Import Review before they
+reach the session store. The flow:
+
+```text
+ImportPanel.handleAdd
+  (kind === "ai" || kind === "git")
+    -> useMoriReviewStore.startReview(candidate, origin)
+         -> ImportReviewDraft { source, events: pending[], candidate, origin }
+    -> EvidenceView swaps the Hub for <ImportReviewView />
+         -> Accept / Discard / Edit per event card
+         -> Apply footer (disabled until >= 1 accepted)
+    -> useMoriReviewStore.apply((candidate) => addImport(candidate))
+         -> buildAcceptedCandidate filters discarded events + applies edits
+         -> useMoriSessionStore.addImport commits to the session
+         -> Draft cleared, EvidenceView returns to the Hub with a banner
+```
+
+Cancel paths drop the draft without committing anything, so the original
+import text never reaches the store. Manual Note and URL imports skip the
+review and apply directly because they each produce exactly one user-typed
+event. The Generated items column on Import Review stays empty by design:
+Quick Pass is still the explicit session-wide pass for issues / decisions
+/ next actions, and Import Review must not silently trigger it.
+
+Pure logic for the review lives in `src/lib/review/reviewDraft.ts`
+(create / set status / edit / counts / apply) and is fully covered by
+`reviewDraft.test.ts`. The React surface (`src/features/review-import/`)
+is a thin composition over those helpers + `useMoriReviewStore`.
+
 **Traceability Helpers** (`src/lib/sources/traceability.ts`):
 - `getSourceDisplayStatus()` — Integration label, status, capture method, trust label, raw data policy
 - `getEventEvidenceSources()` — Sources for an event

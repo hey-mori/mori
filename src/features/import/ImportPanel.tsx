@@ -16,6 +16,8 @@ import { getRepositoryVerificationFreshness } from "../../lib/repositories";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { selectActiveRepository, useMoriRepositoryStore } from "../../app/repositoryStore";
+import { useMoriReviewStore } from "../../app/reviewStore";
+import type { ReviewOrigin } from "../../lib/review";
 import { isTauriRuntime, pickRepositoryDirectory, runGitDiff } from "../../lib/desktop";
 
 type ImportKind = "note" | "url" | "ai" | "git";
@@ -52,6 +54,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
   const removeImport = useMoriSessionStore((state) => state.removeImport);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
+  const startReview = useMoriReviewStore((state) => state.startReview);
 
   const [kind, setKind] = useState<ImportKind>(initialKind ?? "note");
   const [title, setTitle] = useState("");
@@ -296,6 +299,21 @@ export function ImportPanel(props: ImportPanelProps = {}) {
   function handleAdd() {
     const candidate = buildCandidate();
     if (!candidate) return;
+
+    // AI transcripts and Git diffs flow through Import Review so the user can
+    // inspect / accept / discard extracted events before they hit the session.
+    // Manual notes and URLs are single user-typed items, so direct-apply
+    // remains the right default for them.
+    if (kind === "ai" || kind === "git") {
+      const origin: ReviewOrigin = kind === "ai" ? "ai-transcript" : "git-diff";
+      startReview(candidate, origin);
+      setStatus({
+        tone: "info",
+        message: `'${candidate.source.title}' 가져오기 후보를 Import Review에서 확인하세요.`,
+      });
+      onClose?.();
+      return;
+    }
 
     const stored = addImport(candidate);
     if (!stored) {

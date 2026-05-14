@@ -348,6 +348,35 @@ surfaces as an issue candidate. The provider never invents per-line
 explanations. Run Quick Pass with an Ollama provider for richer
 interpretation.
 
+## Import Review (review-before-apply)
+
+AI Transcript and Git Diff imports do not commit to the session store on
+their own. Instead, clicking "세션에 추가" on those flows hands the
+`NormalizedImportCandidate` to the **Import Review** screen
+(`src/features/review-import/ImportReviewView.tsx`):
+
+1. The candidate becomes an `ImportReviewDraft` in `useMoriReviewStore`.
+2. Each extracted timeline event is rendered as a card with `Accept` /
+   `Discard` / `Edit` actions and starts in `pending` state.
+3. Inline edit covers `title`, `summary`, and `type`. Edited events flip
+   `userModified: true` once the apply step runs.
+4. The "Apply to Timeline" footer is disabled until at least one event is
+   accepted; clicking it calls `useMoriSessionStore.addImport` with a
+   filtered candidate (only accepted events, source `relatedEventIds` kept
+   in sync).
+5. "Cancel" clears the draft without committing anything; the original
+   text never reaches the session store.
+
+Manual Note and URL imports skip the review and apply directly today —
+each produces exactly one user-typed event, so the review step adds no
+real safety. That trade-off is documented in
+[product-screen-reference.md#import-review-evidence-mapping](product-screen-reference.md#import-review-evidence-mapping).
+
+The right "Generated items" column on the review screen stays empty by
+design. Issues, decisions, and next actions are still produced by Quick
+Pass running over the whole session — Import Review does not silently
+trigger Quick Pass.
+
 ## Evidence Hub entry point
 
 The **Evidence** page is the user-facing way into every import flow. Each
@@ -379,6 +408,8 @@ once it lands.
 - UI: [src/features/import/ImportPanel.tsx](../src/features/import/ImportPanel.tsx) — accepts `initialKind` and `initialAiPlatform` props for Evidence Hub embedding
 - Evidence Hub entry point: [src/features/evidence/EvidenceView.tsx](../src/features/evidence/EvidenceView.tsx)
 - Integration grouping helper: [src/lib/sources/integrationGroups.ts](../src/lib/sources/integrationGroups.ts)
+- Review-before-apply state: [src/lib/review/](../src/lib/review/) + [src/app/reviewStore.ts](../src/app/reviewStore.ts)
+- Review UI: [src/features/review-import/ImportReviewView.tsx](../src/features/review-import/ImportReviewView.tsx)
 - Per-session storage: `BrowserDraftRepository.addSessionImport` in
   [src/lib/storage/localStorageAdapter.ts](../src/lib/storage/localStorageAdapter.ts)
 - Tauri SQLite persistence path:

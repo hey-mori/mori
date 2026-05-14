@@ -17,7 +17,7 @@ These screenshots are product and UX references for Mori. They are not all imple
 | [Evidence Hub](#evidence-hub) | Implemented | [evidence-hub-reference.png](assets/screenshots/evidence-hub-reference.png) | [product-screen-prompts.md#1-evidence-hub](product-screen-prompts.md#1-evidence-hub) |
 | [AI Transcript Import](#ai-transcript-import) | Partial | [ai-transcript-import-reference.png](assets/screenshots/ai-transcript-import-reference.png) | [product-screen-prompts.md#2-ai-transcript-import](product-screen-prompts.md#2-ai-transcript-import) |
 | [Git Diff Import](#git-diff-import) | Partial | [git-diff-import-reference.png](assets/screenshots/git-diff-import-reference.png) | [product-screen-prompts.md#3-git-diff-import](product-screen-prompts.md#3-git-diff-import) |
-| [Import Review / Evidence Mapping](#import-review-evidence-mapping) | Planned | [import-review-evidence-mapping-reference.png](assets/screenshots/import-review-evidence-mapping-reference.png) | [product-screen-prompts.md#4-import-review--evidence-mapping](product-screen-prompts.md#4-import-review--evidence-mapping) |
+| [Import Review / Evidence Mapping](#import-review-evidence-mapping) | Partial | [import-review-evidence-mapping-reference.png](assets/screenshots/import-review-evidence-mapping-reference.png) | [product-screen-prompts.md#4-import-review--evidence-mapping](product-screen-prompts.md#4-import-review--evidence-mapping) |
 | [Narrative Timeline](#narrative-timeline) | Partial | [narrative-timeline-reference.png](assets/screenshots/narrative-timeline-reference.png) | [product-screen-prompts.md#5-narrative-timeline](product-screen-prompts.md#5-narrative-timeline) |
 | [Flow Focus / Trace View](#flow-focus-trace-view) | Partial | [flow-focus-trace-view-reference.png](assets/screenshots/flow-focus-trace-view-reference.png) | [product-screen-prompts.md#6-flow-focus--trace-view](product-screen-prompts.md#6-flow-focus--trace-view) |
 | [Review](#review) | Partial | [review-reference.png](assets/screenshots/review-reference.png) | [product-screen-prompts.md#7-review](product-screen-prompts.md#7-review) |
@@ -109,16 +109,22 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ![Import Review / Evidence Mapping reference](assets/screenshots/import-review-evidence-mapping-reference.png)
 
-- **Status:** Planned
+- **Status:** Partial — AI Transcript and Git Diff imports now flow through a
+  three-column review-before-apply screen with Accept / Discard / Edit per
+  extracted event and an Apply / Cancel footer. Manual Note and URL imports
+  still apply directly because they each produce exactly one user-typed
+  record. The right "Generated items" column renders the intended
+  ([이슈] / [결정] / [다음 액션]) sections but stays empty by design — those
+  records are produced by Quick Pass running across the whole session.
 - **Product purpose:** Review extracted events/items before applying them to the timeline.
 - **Primary user job:** Accept, edit, or discard AI interpretations produced from an import.
-- **Key UI elements:** Original evidence card, extracted timeline event list, generated Issues/Decisions/Next Actions, review banner, apply bar.
-- **Main actions:** Accept, edit, discard, add manual event, apply to timeline.
-- **Data shown:** Candidate events, confidence, source mapping, generated items, review state.
-- **Source/provenance expectations:** Every candidate item must point back to its source chunk/evidence.
-- **Privacy expectations:** AI output remains provisional until user review.
-- **Persistence expectations:** Only accepted/edited items become durable timeline/review records.
-- **Implementation notes:** Do not silently apply AI-generated interpretations.
+- **Key UI elements:** Left source summary card (title, integration label, trust, raw retention, capture method, imported time, privacy note); center extracted-events list (title, time, type, confidence, trust, source link, Accept / Discard / Edit per item, bulk Accept / Discard toolbar); right Generated-items panel with empty-by-design Issues / Decisions / Next Actions sections and a Quick Pass hint; sticky apply footer with counts and Apply / Cancel.
+- **Main actions:** Accept, discard, inline edit (title / summary / type), bulk accept-all / discard-all, apply accepted events to the session, cancel without applying.
+- **Data shown:** Candidate events, confidence, source mapping, edits, accept / discard counts, source provenance.
+- **Source/provenance expectations:** Every candidate item points back to the originating SourceRef; the left panel uses `getSourceDisplayStatus()` exactly like Evidence Hub.
+- **Privacy expectations:** AI output remains provisional until user review. Nothing reaches the session store until Apply is clicked.
+- **Persistence expectations:** Only accepted (and optionally edited) events become durable through `useMoriSessionStore.addImport`. Discarded events leave no record. Cancelling the draft drops everything; the original import was never committed.
+- **Implementation notes:** Built around `src/features/review-import/`, `src/lib/review/`, `src/app/reviewStore.ts`. Quick Pass-generated issues / decisions / next actions stay out of this flow — they keep their existing session-wide entry point on Evidence Hub. Inline edit covers title / summary / type today; correction notes and per-item source-mapping diffs are still planned.
 - **Prompt/spec source:** [product-screen-prompts.md#4-import-review--evidence-mapping](product-screen-prompts.md#4-import-review--evidence-mapping)
 
 <a id="narrative-timeline"></a>
