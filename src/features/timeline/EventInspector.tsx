@@ -60,11 +60,14 @@ export function EventInspector({
       </header>
 
       <section className="inspector-section">
-        <p className="inspector-summary">{selectedEvent.summary}</p>
+        <div className="inspector-summary-card">
+          <span>Summary</span>
+          <p>{selectedEvent.summary}</p>
+        </div>
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="근거 / 신뢰" hint={`${sources.length} source${sources.length === 1 ? "" : "s"}`} />
+        <SectionHeader title="Evidence / trust" hint={`${sources.length} source${sources.length === 1 ? "" : "s"}`} />
         <div className="inspector-trust-card">
           <strong>{trust.label}</strong>
           <span>{trustCopy(selectedEvent.trustLevel)}</span>
@@ -77,7 +80,7 @@ export function EventInspector({
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="연결된 항목" />
+        <SectionHeader title="Linked items" />
         <LinkedRows
           issues={issues}
           decisions={decisions}
@@ -86,19 +89,33 @@ export function EventInspector({
         />
       </section>
 
-      <section className="inspector-section inspector-actions-row">
-        <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
-          Flow trace 보기
-        </Button>
-        <Button icon={ClipboardCopy} onClick={handleCopy}>
-          요약 복사
-        </Button>
+      {decisions.length > 0 ? (
+        <section className="inspector-section">
+          <SectionHeader title="Impact" />
+          <ul className="inspector-impact-list">
+            {decisions.flatMap((decision) => decision.impact).slice(0, 3).map((impact) => (
+              <li key={impact}>{impact}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section className="inspector-section">
+        <SectionHeader title="Actions" />
+        <div className="inspector-actions-row">
+          <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
+            Flow trace
+          </Button>
+          <Button icon={ClipboardCopy} onClick={handleCopy}>
+            Copy summary
+          </Button>
+        </div>
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="메모" hint="작성·편집 기능은 다음 마일스톤에서 활성화됩니다." />
+        <SectionHeader title="Memo / correction" hint="Planned" />
         <textarea
-          placeholder="메모는 다음 마일스톤에서 저장됩니다."
+          placeholder="Corrections and notes will be saved in a future milestone."
           disabled
           className="inspector-memo"
         />
@@ -142,10 +159,10 @@ function LinkedRows({
   nextActions: NextAction[];
 }) {
   const rows: Array<{ label: string; tone: string; items: string[] }> = [
-    { label: "이슈", tone: "red", items: issues.map((issue) => issue.title) },
-    { label: "결정", tone: "green", items: decisions.map((decision) => decision.title) },
-    { label: "파일", tone: "blue", items: artifacts.map((artifact) => artifact.title) },
-    { label: "다음 액션", tone: "purple", items: nextActions.map((action) => action.title) },
+    { label: "Issues", tone: "red", items: issues.map((issue) => issue.title) },
+    { label: "Decisions", tone: "green", items: decisions.map((decision) => decision.title) },
+    { label: "Files", tone: "blue", items: artifacts.map((artifact) => artifact.title) },
+    { label: "Next actions", tone: "purple", items: nextActions.map((action) => action.title) },
   ];
   return (
     <ul className="inspector-linked-rows">

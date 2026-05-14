@@ -72,8 +72,11 @@ Current implementation notes:
 - The Timeline operates on display items: raw events or workflow bundles.
 - Same-lane dense moments can be bundled while selected and important
   decision events remain individual cards.
-- Relationship lines are secondary in the Timeline view and stronger in Flow
-  Focus.
+- Relationship lines are hidden in the default Timeline and reserved for Flow
+  Focus, where relationship inspection is the primary task.
+- Lane cards keep to time, title, evidence/trust, and compact metadata. Longer
+  summaries and bundle reasoning move to the right inspector so the grid stays
+  aligned and readable.
 - The bottom overview rail is an orientation surface with event dots, a
   viewport highlight, and a selected marker; direct minimap navigation remains
   planned.

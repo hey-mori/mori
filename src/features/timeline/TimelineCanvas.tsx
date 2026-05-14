@@ -30,10 +30,10 @@ export type TimelineCanvasProps = {
   onHover: (itemId: string | null) => void;
 };
 
-const MIN_FRAME_WIDTH = 1080;
-const MAX_FRAME_WIDTH = 1600;
-const DEFAULT_FRAME_WIDTH = 1160;
-const LANE_LABEL_WIDTH = 148;
+const MIN_FRAME_WIDTH = 1160;
+const MAX_FRAME_WIDTH = 1560;
+const DEFAULT_FRAME_WIDTH = 1240;
+const LANE_LABEL_WIDTH = 138;
 
 export function TimelineCanvas({
   events,

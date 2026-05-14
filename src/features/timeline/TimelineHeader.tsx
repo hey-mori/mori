@@ -24,21 +24,21 @@ export function TimelineToolbar({
       <div className="timeline-toolbar-row">
         <div className="timeline-toolbar-left">
           <div className="segmented" role="group" aria-label="Time range (planned)">
-            <button type="button" disabled title="일 단위 보기는 다음 마일스톤">
-              일
+            <button type="button" disabled title="Day view is planned">
+              Day
             </button>
-            <button type="button" disabled title="주 단위 보기는 다음 마일스톤">
-              주
+            <button type="button" disabled title="Week view is planned">
+              Week
             </button>
             <button type="button" className="active" aria-pressed="true">
-              세션
+              Session
             </button>
           </div>
           <div className="zoom-group" role="group" aria-label="Zoom (planned)">
             <button
               type="button"
               disabled
-              title="확대/축소는 다음 마일스톤"
+              title="Zoom controls are planned"
               aria-label="Zoom out (planned)"
             >
               <ZoomOut size={14} />
@@ -46,7 +46,7 @@ export function TimelineToolbar({
             <button
               type="button"
               disabled
-              title="확대/축소는 다음 마일스톤"
+              title="Zoom controls are planned"
               aria-label="Zoom in (planned)"
             >
               <ZoomIn size={14} />
@@ -60,7 +60,7 @@ export function TimelineToolbar({
             disabled={activeFilters.length === 0}
             title={activeFilters.length ? "Clear all category filters" : "No filters applied"}
           >
-            {activeFilters.length ? `필터 해제 (${activeFilters.length})` : "전체 카테고리"}
+            {activeFilters.length ? `Clear filters (${activeFilters.length})` : "All categories"}
           </Button>
           <Button
             icon={Grid2X2}

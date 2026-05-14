@@ -53,6 +53,7 @@ export function TimelineLane({
       {items.map((item) => {
         const layout = layouts.get(item.id);
         if (!layout) return null;
+        const visualLayout = { ...layout, y: layout.y - lane.top };
         const focusState = getEventFocusState({
           itemId: item.id,
           itemEntityIds: item.memberEventIds,
@@ -65,7 +66,7 @@ export function TimelineLane({
             <TimelineBundleCard
               key={item.id}
               bundle={item}
-              layout={layout}
+              layout={visualLayout}
               density={density}
               focusState={focusState}
               onSelect={onSelect}
@@ -78,7 +79,7 @@ export function TimelineLane({
           <TimelineEventCard
             key={item.id}
             event={item.event}
-            layout={layout}
+            layout={visualLayout}
             density={density}
             focusState={focusState}
             onSelect={onSelect}

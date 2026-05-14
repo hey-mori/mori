@@ -21,6 +21,7 @@ export function RelationshipLineLayer({
   frameWidth: number;
   frameHeight: number;
 }) {
+  if (mode === "timeline") return null;
   if (!eventAnchorLayouts.size) return null;
 
   // Only render relationships that touch the focus neighbourhood. The previous

@@ -1,4 +1,4 @@
-# Timeline UX
+﻿# Timeline UX
 
 Mori's main screen is the Timeline and Flow Focus surface. This doc records
 the component structure, focus interaction model, and trust display
@@ -29,7 +29,7 @@ src/features/flow-focus/
   FlowFocusHeader.tsx     - legend + clear-focus + back-to-timeline
   TracePanel.tsx          - upstream / downstream / linked relationships
   TraceRelationshipList.tsx - one direction of the trace
-  FocusPathSummary.tsx    - cause → selected → result strip
+  FocusPathSummary.tsx    - cause ??selected ??result strip
 
 src/lib/timeline/
   layout.ts               - existing positioning helpers
@@ -68,8 +68,8 @@ must be represented as meaningful **work-flow bundles**.
 
 A display item is therefore one of:
 
-- `event` — a raw timeline event that remains individually inspectable
-- `bundle` — a dense work moment summarized into one intentional card
+- `event` ??a raw timeline event that remains individually inspectable
+- `bundle` ??a dense work moment summarized into one intentional card
 
 The layout engine operates on display items, not directly on raw events.
 
@@ -129,10 +129,11 @@ Examples from the sample session:
 
 Bundle cards must explain a work moment without becoming another dense debug
 panel. The card surface prioritizes time range, event count, a meaningful
-title, one-line context, and evidence/decision/issue counts. The full type
-mix, member event list, represented issues/decisions, sources, and bundling
-reason live in the Bundle Inspector. This keeps the lane readable while
-preserving the exact events Mori used to create the bundle.
+title, dominant type mix, and evidence/decision/issue counts. Long summary
+copy lives in the inspector, not inside the lane card. The full type mix,
+member event list, represented issues/decisions, sources, and bundling reason
+live in the Bundle Inspector. This keeps the lane readable while preserving
+the exact events Mori used to create the bundle.
 
 ## Focus interaction model
 
@@ -149,36 +150,36 @@ The mapping is centralized in
 The mini-map dots use the same mapping so "dimmed" never means three
 different things across two views.
 
-- **Hover** an event card → it becomes the focus pivot for as long as the
+- **Hover** an event card ??it becomes the focus pivot for as long as the
   pointer stays on it (`onHover(eventId)` / `onHover(null)`).
-- **Click** an event card → pins the selection. The Inspector and the
+- **Click** an event card ??pins the selection. The Inspector and the
   relationship layer follow the pinned selection.
-- **Hover / click a bundle** → Mori focuses the bundle's member events and
+- **Hover / click a bundle** ??Mori focuses the bundle's member events and
   any directly related downstream/upstream entities. The bundle itself is
   treated as the visible anchor, but the reasoning still comes from real
   member events.
 - **Clear focus** on Flow Focus moves the selection back to the first event
   so the user can start fresh without leaving the page.
 
-Unrelated context never drops below ~55% opacity — Flow Focus must remain
+Unrelated context never drops below ~55% opacity ??Flow Focus must remain
 legible, not washed out.
 
 ## Trust and evidence in the Inspector
 
 The Event Inspector is the trust surface. Sections, in order:
 
-1. **Type / trust / confidence badges** — `Verified`, `Observed`, or
+1. **Type / trust / confidence badges** ??`Verified`, `Observed`, or
    `Inferred`. Inferred events get an honest `NN% confidence` badge.
-2. **Summary** — the event summary text.
-3. **Trust** — short prose ("Verified evidence — source is a real, captured
+2. **Summary** ??the event summary text.
+3. **Trust** ??short prose ("Verified evidence ??source is a real, captured
    input." etc.) plus `Created by` and `(user-modified)` if applicable.
-4. **Source evidence** — every linked source with kind + raw-retention
+4. **Source evidence** ??every linked source with kind + raw-retention
    policy.
-5. **Linked items** — counts and top three titles for issues, decisions,
+5. **Linked items** ??counts and top three titles for issues, decisions,
    files/artifacts, next actions.
-6. **Correction** — a disabled note textarea labeled as a planned
+6. **Correction** ??a disabled note textarea labeled as a planned
    milestone. Mori never offers a save button it can't honor.
-7. **Actions** — `Show flow trace` (real), `Copy summary` (real, copies
+7. **Actions** ??`Show flow trace` (real), `Copy summary` (real, copies
    ISO time range + title + summary to clipboard), plus disabled
    placeholders for `Edit`, `Create issue`, `Split`, `Merge`, `Add note`.
 
@@ -208,10 +209,10 @@ inspectable before it becomes expandable.
 `TimelineEmptyState` only has three variants and they map cleanly to real
 runtime conditions:
 
-- **demo-empty** — demo mock had no events (rare; shouldn't ship empty).
-- **draft-no-imports** — real session, zero imports. CTA opens Sources /
+- **demo-empty** ??demo mock had no events (rare; shouldn't ship empty).
+- **draft-no-imports** ??real session, zero imports. CTA opens Sources /
   Evidence.
-- **draft-needs-quick-pass** — real session, has imports, no analysis yet.
+- **draft-needs-quick-pass** ??real session, has imports, no analysis yet.
   CTA runs Quick Pass.
 
 Once Quick Pass runs against a real session, the full Timeline + Flow Focus
@@ -247,11 +248,16 @@ Two density modes ship today:
 
 | Density        | Event size | Bundle size | Notes |
 | -------------- | ---------- | ----------- | ----- |
-| `comfortable`  | 220 × 110  | 236 × 124   | Default. Summary visible and bundle metadata readable. |
-| `compact`      | 184 × 78   | 208 × 94    | Shorter copy, same bundle meaning, still single-row-first. |
+| `comfortable`  | 184 x 68   | 216 x 76    | Default. Time, title, trust, and metadata remain readable. |
+| `compact`      | 158 x 54   | 184 x 62    | Tighter scan mode with the same single-row-first rules. |
 
 The mode lives in `useMoriAppStore.timelineDensity` and toggles via the
 "Comfortable / Compact" button in the Timeline controls.
+
+Card summaries are intentionally suppressed in the lane grid. The Timeline is
+for scanning chronology; the inspector is the place for event prose, evidence,
+and correction context. This keeps the lane rhythm closer to the product
+reference and avoids clipped text at 1440px and 1280px desktop widths.
 
 Rules the layout guarantees (covered by `collisionLayout.test.ts` and
 `bundleEvents.test.ts`):
@@ -275,11 +281,10 @@ Rules the layout guarantees (covered by `collisionLayout.test.ts` and
   anchors to the bundle card. The inspector explains the hidden detail.
 - When focus is **active** (Flow Focus mode or a hovered/selected event in
   Timeline mode), only relationships where both endpoints are in the
-  focused set render — unrelated lines are removed entirely, not just
+  focused set render ??unrelated lines are removed entirely, not just
   faded.
-- Timeline-mode connectors are capped and rendered with low opacity so the
-  base view remains a timeline first. Flow Focus can show a larger focused
-  subgraph with stronger lines.
+- Timeline-mode connectors are hidden by default. Flow Focus is the graph
+  surface and can show a larger focused subgraph with stronger lines.
 - The SVG sits at `z-index: 1`; cards at `z-index: 2`. Lines never cover
   card text.
 
@@ -308,3 +313,5 @@ selected item marker.
 - Lanes with zero events still allocate one row of vertical space; this is
   intentional so the structural rhythm stays steady but could be hidden in
   a future "active lanes only" toggle.
+
+

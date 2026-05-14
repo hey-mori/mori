@@ -22,9 +22,11 @@ export function TimelineBundleCard({
   onHover: (itemId: string | null) => void;
 }) {
   const compact = density === "compact";
-  const chips = Object.entries(bundle.eventTypeCounts)
+  const typeMixLabel = Object.entries(bundle.eventTypeCounts)
     .filter((entry): entry is [EventType, number] => Boolean(entry[1]))
-    .slice(0, 3);
+    .slice(0, 2)
+    .map(([type, count]) => `${eventTypeLabels[type]} ${count}`)
+    .join(" · ");
 
   return (
     <button
@@ -51,14 +53,8 @@ export function TimelineBundleCard({
       </header>
       <strong className="timeline-bundle-title">{bundle.title}</strong>
       {!compact ? <p className="timeline-bundle-summary">{bundle.summary}</p> : null}
-      <div className="timeline-bundle-chips">
-        {chips.map(([type, count]) => (
-          <span key={type} className={`timeline-bundle-chip tone-${eventTypeTone[type]}`}>
-            {eventTypeLabels[type]} {count}
-          </span>
-        ))}
-      </div>
       <footer className="timeline-bundle-footer">
+        {typeMixLabel ? <span>{typeMixLabel}</span> : null}
         <span>{bundle.sourceCount} sources</span>
         {bundle.decisionCount > 0 ? <span>{bundle.decisionCount} decisions</span> : null}
         {bundle.issueCount > 0 ? <span>{bundle.issueCount} issues</span> : null}
