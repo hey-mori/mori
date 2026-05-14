@@ -1,0 +1,83 @@
+import { Archive, ChevronRight, HardDrive, Layers, Play } from "lucide-react";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import type { DerivedSession } from "../../lib/project-memory/projectMemory";
+
+const SCOPE_TONE: Record<string, "green" | "purple" | "blue" | "gray"> = {
+  "current-session": "green",
+  "browser-draft": "blue",
+  "sqlite-saved": "purple",
+  demo: "gray",
+};
+
+export function RecentSessionsList({
+  sessions,
+  onOpenSession,
+  onStartNewSession,
+}: {
+  sessions: DerivedSession[];
+  /** Called for sessions we can actually open (current or SQLite). Browser drafts pass through but the action is informational. */
+  onOpenSession?: (entry: DerivedSession) => void;
+  onStartNewSession: () => void;
+}) {
+  return (
+    <section className="memory-sessions" aria-label="Recent sessions">
+      <header className="memory-section-head">
+        <div>
+          <h3>최근 세션</h3>
+          <p>현재 세션 + 저장된 browser draft + Desktop SQLite 세션을 한곳에서 보여줍니다.</p>
+        </div>
+        <Button icon={Play} onClick={onStartNewSession}>
+          새 세션 시작
+        </Button>
+      </header>
+      {sessions.length === 0 ? (
+        <p className="memory-empty">아직 저장된 세션이 없습니다. 새 세션을 시작하면 여기 목록이 채워집니다.</p>
+      ) : (
+        <ul className="memory-session-list">
+          {sessions.map((entry) => (
+            <li key={`${entry.scope}-${entry.sessionId}`}>
+              <button
+                type="button"
+                className={`memory-session-row ${entry.isCurrent ? "is-current" : ""}`}
+                onClick={() => onOpenSession?.(entry)}
+                aria-current={entry.isCurrent ? "true" : undefined}
+              >
+                <span className="memory-session-icon">
+                  {entry.scope === "sqlite-saved" ? (
+                    <HardDrive size={14} aria-hidden="true" />
+                  ) : entry.scope === "browser-draft" ? (
+                    <Archive size={14} aria-hidden="true" />
+                  ) : (
+                    <Layers size={14} aria-hidden="true" />
+                  )}
+                </span>
+                <div className="memory-session-titles">
+                  <strong>{entry.title}</strong>
+                  <span>
+                    {entry.projectName ?? "(project unknown)"}
+                    {entry.savedAt ? ` · 저장 ${formatShort(entry.savedAt)}` : entry.startedAt ? ` · 시작 ${formatShort(entry.startedAt)}` : ""}
+                  </span>
+                </div>
+                <div className="memory-session-meta">
+                  <Badge tone={SCOPE_TONE[entry.scope] ?? "gray"}>{entry.scopeLabel}</Badge>
+                  {entry.eventCount !== null ? <span>{entry.eventCount} events</span> : null}
+                  {entry.sourceCount !== null ? <span>{entry.sourceCount} sources</span> : null}
+                </div>
+                <ChevronRight size={12} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function formatShort(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString();
+  } catch {
+    return iso;
+  }
+}

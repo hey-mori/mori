@@ -55,6 +55,25 @@ What is temporary:
 - Native file picker path selection is still planned.
 - SQLite Tauri commands are registered, but database initialization and row writes still return explicit not-implemented errors until `rusqlite` is added.
 
+Project Memory scope (read-only, single-session aggregation):
+
+- The Project Memory page reads through the existing
+  `BrowserDraftRepository.listStoredSessions()`,
+  `useMoriSqliteStore.sessions`, and `selectSessionView` boundaries. It
+  does **not** introduce a new persistence layer.
+- Stats (decisions / issues / sources / events / next-actions) come from
+  the active session only. Saved browser-draft + SQLite sessions appear
+  in the Recent Sessions list with their metadata (`title`, `savedAt`,
+  `eventCount`, `sourceCount`) but their payloads are not loaded into
+  the page.
+- Saved `.mori` package listing today is limited to
+  `loadMoriPackageDraft(sessionId)` for the active session. A future
+  `listMoriPackageDrafts()` API on `BrowserDraftRepository` is required
+  before the Saved Reports section can show the full package library.
+- Cross-session aggregation (multi-session decisions, recurring issues,
+  long-term trends, saved Markdown reports) is **Planned** and called
+  out in the UI's scope note + summary caveat.
+
 Expected replacement path:
 
 1. Add Rust-native SQLite migration runner using `rusqlite`.

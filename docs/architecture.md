@@ -173,6 +173,50 @@ provenance through the existing `SourceRef` traceability helpers in
 ChatGPT / Codex API or app integrations) remain explicitly planned, not
 fake-active.
 
+### Project Memory workspace
+
+The Memory page surfaces accumulated project context. Its read path
+deliberately stays single-session for aggregation today; cross-session
+roll-ups are honestly Planned.
+
+```text
+useMoriSessionStore (selectSessionView)
+useMoriSqliteStore (sessions / kind / refresh)
+BrowserDraftRepository.listStoredSessions()
+BrowserDraftRepository.loadMoriPackageDraft(sessionId)
+  -> src/lib/project-memory/projectMemory.ts
+       (deriveProjectMemoryStats / getRecentDecisions /
+        getDecisionTimeline / getRecurringIssues / getKeyEvidence /
+        getProjectMemorySummary / buildFollowUpPrompt /
+        scopeLabelFor)
+  -> src/features/memory/
+       ProjectMemoryHero (stat tiles + Follow-up + Latest Report)
+       DataScopeNote (mode + sqlite kind + saved session count)
+       DecisionTimelineCard (chronological list, no chart lib)
+       KeyEvidenceCard + RecurringIssuesCard
+       RecentSessionsList (current + browser draft + SQLite)
+       SavedReportsCard (.mori package drafts)
+       ProjectMemorySummaryPanel (latest decision / risks /
+         recommended next session / follow-up prompt + copy)
+```
+
+Honest scope rules baked into the page:
+
+- Stats (`issueCount`, `decisionCount`, `nextActionCount`,
+  `sourceCount`, `eventCount`) are always the **active session** only.
+  The hero tile labels say so (`현재 세션 기준`, `Open N건`, etc.).
+- `aggregatedSessionCount` is always 1 today. The hero shows
+  `1건 집계 / N건 목록` so the user sees the difference between
+  "sessions visible in the list" and "sessions whose data is rolled up".
+- The scope caveat on the summary panel always re-explains what is
+  *not* aggregated, including SQLite saved sessions and Quick Pass
+  re-runs.
+- `loadDesktopSession(sessionId)` is the only path that actually loads a
+  saved-session payload. Clicking a SQLite row routes through that and
+  then jumps to Timeline. Browser-draft rows route to Start Session
+  because `BrowserDraftRepository` does not yet expose a load-by-id
+  beyond the singleton `loadCurrentSessionDraft`.
+
 ### Reports workspace
 
 The Reports page consumes every prior milestone's output (sources, events,
