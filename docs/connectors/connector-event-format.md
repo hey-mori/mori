@@ -173,3 +173,35 @@ The pure parser / validator / normalizer lives in
 
 - [`connectors/claude-code/sample-event.jsonl`](../../connectors/claude-code/sample-event.jsonl)
 - [`connectors/codex-cli/sample-event.jsonl`](../../connectors/codex-cli/sample-event.jsonl)
+
+## Related docs
+
+- [Capture surface matrix](./capture-surface-matrix.md) — every capture
+  path with honest status.
+- [Desktop / web capture boundaries](./desktop-web-capture.md) — what
+  Mori never does for Claude / ChatGPT / Codex Desktop and Web.
+- [GitHub PR import (planning)](./github-pr-import.md) — manual-paste
+  path today + Planned `githubPrImport` design.
+
+## Extended connector ids (this milestone)
+
+The schema now includes additional connector ids alongside the original
+five so the type matches the capture surface matrix:
+
+| Connector id | Status |
+|---|---|
+| `claudeCodeHook` | Docs-template-only |
+| `codexCliWrapper` | Docs-template-only |
+| `terminalShell` | Planned |
+| `terminal` | Planned (legacy alias) |
+| `gitCommand` | Planned |
+| `git` | Planned (legacy alias) |
+| `desktopTranscriptImport` | Manual-only today |
+| `githubPrImport` | Planned |
+| `manual` | Manual-only |
+
+The new `transcript_imported` event kind sits alongside the existing
+session / prompt / tool / command / git / commit / file kinds. It maps
+to the `aiConversation` TimelineEvent type, so pasted Claude Desktop /
+Codex Desktop transcripts and future GitHub PR imports flow through the
+same downstream traceability helpers as a paste through the AI 대화 tab.

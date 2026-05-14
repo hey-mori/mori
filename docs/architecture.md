@@ -209,6 +209,39 @@ Honest scope rules baked into this milestone:
   dedicated **Connector JSONL** import tab is Planned and explicitly
   documented as such in `docs/imports.md`.
 
+#### Capture surface matrix
+
+Alongside the schema, Mori exports a typed **capture surface matrix**
+from
+[`src/lib/connectors/captureSurfaces.ts`](../src/lib/connectors/captureSurfaces.ts)
+that enumerates every paste / hook / CLI / desktop / web / IDE /
+browser / GitHub / MCP surface with explicit `status` (Implemented ·
+Partial · Manual-only · Docs-template-only · Planned · Unavailable).
+Helpers group surfaces by family / status, look up the surface for a
+registry integration id, and pick the single highest-value next
+milestone.
+
+Test invariants enforced at build time:
+
+- `planned` surfaces cannot claim `canEnterImportReview`,
+  `canCreateSource`, or `canCreateEvents`.
+- `planned` surfaces cannot carry the `retained` raw data policy.
+- Every row carries a non-empty `privacyBoundary` and at least one
+  `whatMoriNeverAccesses` line.
+
+Settings, Evidence Hub, and the screen-reference docs read from the
+matrix rather than hand-rolling status copy. Companion docs:
+[`docs/connectors/capture-surface-matrix.md`](./connectors/capture-surface-matrix.md),
+[`docs/connectors/desktop-web-capture.md`](./connectors/desktop-web-capture.md),
+[`docs/connectors/github-pr-import.md`](./connectors/github-pr-import.md).
+
+The connector event schema was extended to match the matrix: the new
+connector ids `terminalShell`, `gitCommand`, `desktopTranscriptImport`,
+and `githubPrImport` join the original five, and the new event kind
+`transcript_imported` slots into the existing AI-conversation
+TimelineEvent type so pasted desktop / web transcripts flow through
+every existing traceability helper without registry churn.
+
 ### Settings workspace
 
 Settings is Mori's local-first trust surface. Every visible row comes

@@ -36,3 +36,24 @@ export {
   buildCandidatesFromEvents,
 } from "./localConnectorIngest";
 export { redactText, containsLikelySecret, type RedactionResult } from "./redaction";
+export {
+  describeCaptureSurfaceStatus,
+  getAllCaptureSurfaces,
+  getCaptureSurfaceForIntegration,
+  getCaptureSurfacesByFamily,
+  getCaptureSurfacesByStatus,
+  getImplementedCaptureSurfaces,
+  getNextConnectorMilestone,
+  getPlannedCaptureSurfaces,
+} from "./captureSurfaces";
+export type {
+  CaptureSurfaceCaptureMode,
+  CaptureSurfaceId,
+  CaptureSurfaceRawDataPolicy,
+  CaptureSurfaceRow,
+  CaptureSurfaceStatus,
+  CaptureSurfaceStatusDescription,
+  CaptureSurfaceSurface,
+  CaptureSurfaceToolFamily,
+  NextConnectorMilestone,
+} from "./captureSurfaces";

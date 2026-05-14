@@ -363,6 +363,26 @@ What the connector path explicitly does not do:
 - No cloud sync
 - No silent execution outside the explicit hook / wrapper invocation
 
+### Capture surface matrix
+
+Beyond the `SourceIntegration` registry, Mori tracks a **capture surface
+matrix** — every user-visible path that moves evidence into the app,
+with explicit status per surface (Implemented · Partial · Manual-only ·
+Docs-template-only · Planned · Unavailable). The matrix covers paste
+flows, local commands, hook templates, desktop / web imports, IDE
+extensions, browser extensions, GitHub workflows, and the planned MCP
+server.
+
+- [`docs/connectors/capture-surface-matrix.md`](./connectors/capture-surface-matrix.md)
+- [`docs/connectors/desktop-web-capture.md`](./connectors/desktop-web-capture.md)
+- [`docs/connectors/github-pr-import.md`](./connectors/github-pr-import.md)
+
+The matrix data is exported from
+[`src/lib/connectors/captureSurfaces.ts`](../src/lib/connectors/captureSurfaces.ts).
+UI surfaces (Settings, Evidence Hub) should read status copy from the
+matrix rather than re-deriving it, so "no fake active connector buttons"
+is enforced by data, not by code review.
+
 ## See Also
 
 - [Imports Documentation](./imports.md) — Import panel UI and normalizer architecture

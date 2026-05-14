@@ -141,10 +141,18 @@ function connectorLabel(connectorId: ConnectorId): string {
       return "Claude Code session";
     case "codexCliWrapper":
       return "Codex CLI session";
+    case "terminalShell":
+      return "Terminal shell session";
     case "terminal":
       return "Terminal session";
+    case "gitCommand":
+      return "Git command capture";
     case "git":
       return "Git session";
+    case "desktopTranscriptImport":
+      return "Desktop transcript import";
+    case "githubPrImport":
+      return "GitHub PR import";
     case "manual":
       return "Manual connector batch";
     default:
@@ -164,9 +172,19 @@ function mapConnectorToSourceKind(connectorId: ConnectorId, events: ConnectorEve
       return "claudeTranscript";
     case "codexCliWrapper":
       return "codexTranscript";
+    case "terminalShell":
     case "terminal":
       return "terminal";
+    case "gitCommand":
     case "git":
+      return "gitDiff";
+    case "desktopTranscriptImport":
+      // Desktop / web transcript imports come in via file paste — treat them
+      // as AI conversations so they hit the existing AI-transcript path.
+      return "aiConversation";
+    case "githubPrImport":
+      // GitHub PR import is planned; until a richer path lands, treat the
+      // imported text as a gitDiff-style source so existing helpers run.
       return "gitDiff";
     case "manual":
       return "manualNote";
@@ -175,6 +193,7 @@ function mapConnectorToSourceKind(connectorId: ConnectorId, events: ConnectorEve
       const dominant = events[0]?.kind;
       if (dominant === "git_diff_captured" || dominant === "commit_created") return "gitDiff";
       if (dominant === "command_finished" || dominant === "command_started") return "terminal";
+      if (dominant === "transcript_imported") return "aiConversation";
       return "manualNote";
     }
   }
@@ -196,6 +215,7 @@ function describeBucket(
     command_finished: 0,
     git_diff_captured: 0,
     commit_created: 0,
+    transcript_imported: 0,
     session_finished: 0,
   };
   for (const event of events) totals[event.kind] += 1;
@@ -207,6 +227,7 @@ function describeBucket(
   if (totals.file_changed) parts.push(`${totals.file_changed} files`);
   if (totals.git_diff_captured) parts.push(`${totals.git_diff_captured} diffs`);
   if (totals.commit_created) parts.push(`${totals.commit_created} commits`);
+  if (totals.transcript_imported) parts.push(`${totals.transcript_imported} transcripts`);
   const summary = parts.length > 0 ? parts.join(" · ") : `${events.length} events`;
   const session = externalSessionId ? ` · session ${externalSessionId}` : "";
   return `${connectorLabel(connectorId)} · ${summary}${session}`;
@@ -302,6 +323,7 @@ function mapConnectorKindToEventType(kind: ConnectorEventKind): EventType | null
     case "assistant_message":
     case "tool_started":
     case "tool_finished":
+    case "transcript_imported":
       return "aiConversation";
     case "command_started":
     case "command_finished":

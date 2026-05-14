@@ -263,6 +263,101 @@ describe("ingestConnectorEventBatch", () => {
   });
 });
 
+describe("New connector ids + transcript_imported kind", () => {
+  it("desktopTranscriptImport maps to the aiConversation source kind", () => {
+    const events = [
+      event({
+        id: "import-1",
+        connectorId: "desktopTranscriptImport",
+        sessionId: "claude-desktop-export-001",
+        kind: "transcript_imported",
+        summary: "Pasted Claude Desktop transcript: refactor Timeline",
+        privacy: { captureMethod: "manual_paste", rawDataPolicy: "summary_only" },
+      }),
+    ];
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events,
+      applyRedaction: false,
+    });
+    expect(candidate.source.kind).toBe("aiConversation");
+    expect(candidate.events).toHaveLength(1);
+    expect(candidate.events[0].type).toBe("aiConversation");
+    expect(candidate.source.trustLevel).toBe("verified");
+  });
+
+  it("githubPrImport maps to the gitDiff source kind for now (Planned)", () => {
+    const events = [
+      event({
+        id: "pr-1",
+        connectorId: "githubPrImport",
+        sessionId: "pr-1234",
+        kind: "transcript_imported",
+        summary: "Pasted GitHub PR #1234 description + comments",
+        privacy: { captureMethod: "manual_paste", rawDataPolicy: "summary_only" },
+      }),
+    ];
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events,
+      applyRedaction: false,
+    });
+    expect(candidate.source.kind).toBe("gitDiff");
+    expect(candidate.events).toHaveLength(1);
+  });
+
+  it("terminalShell + gitCommand reuse terminal + gitDiff source kinds", () => {
+    const events = [
+      event({
+        id: "ts-1",
+        connectorId: "terminalShell",
+        sessionId: "shell-zsh-001",
+        kind: "command_finished",
+        command: "pnpm test",
+        summary: "pnpm test · exit 0",
+      }),
+      event({
+        id: "gc-1",
+        connectorId: "gitCommand",
+        sessionId: "git-001",
+        kind: "git_diff_captured",
+        summary: "git diff --shortstat",
+        git: { repoPath: "/x", additions: 2, deletions: 0, files: [{ path: "src/x.ts" }] },
+      }),
+    ];
+    const candidates = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events,
+      applyRedaction: false,
+    });
+    const kinds = new Set(candidates.map((c) => c.source.kind));
+    expect(kinds.has("terminal")).toBe(true);
+    expect(kinds.has("gitDiff")).toBe(true);
+  });
+
+  it("transcript_imported on an unknown connectorId falls back to aiConversation", () => {
+    const events = [
+      event({
+        id: "custom-1",
+        connectorId: "some-future-connector",
+        kind: "transcript_imported",
+        summary: "Imported via future connector",
+        privacy: { captureMethod: "manual_paste", rawDataPolicy: "summary_only" },
+      }),
+    ];
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events,
+      applyRedaction: false,
+    });
+    expect(candidate.source.kind).toBe("aiConversation");
+  });
+});
+
 describe("Sample Claude Code + Codex CLI events", () => {
   it("normalises a realistic Claude Code hook batch", () => {
     const jsonl = [

@@ -385,6 +385,16 @@ still paste connector JSONL contents into the existing AI 대화 tab while
 the pure parser + normalizer is wired into the UI in a follow-on
 milestone.
 
+The full **capture surface matrix** — every paste / hook / CLI /
+desktop / web / IDE / browser / GitHub path that Mori does and does not
+support today — lives in
+[`docs/connectors/capture-surface-matrix.md`](./connectors/capture-surface-matrix.md).
+The matching honest boundaries for Claude Desktop, Claude Web, ChatGPT,
+Codex Desktop, Codex Web, and Codex's GitHub workflow live in
+[`docs/connectors/desktop-web-capture.md`](./connectors/desktop-web-capture.md);
+the planned GitHub PR / commit import design lives in
+[`docs/connectors/github-pr-import.md`](./connectors/github-pr-import.md).
+
 ## Import Review (review-before-apply)
 
 AI Transcript and Git Diff imports do not commit to the session store on

@@ -20,16 +20,24 @@ import type { SourceRef, TimelineEvent } from "../../domain/types";
 export type ConnectorId =
   | "claudeCodeHook"
   | "codexCliWrapper"
+  | "terminalShell"
   | "terminal"
+  | "gitCommand"
   | "git"
+  | "desktopTranscriptImport"
+  | "githubPrImport"
   | "manual"
   | (string & {});
 
 export const KNOWN_CONNECTOR_IDS = [
   "claudeCodeHook",
   "codexCliWrapper",
+  "terminalShell",
   "terminal",
+  "gitCommand",
   "git",
+  "desktopTranscriptImport",
+  "githubPrImport",
   "manual",
 ] as const;
 
@@ -44,6 +52,7 @@ export type ConnectorEventKind =
   | "command_finished"
   | "git_diff_captured"
   | "commit_created"
+  | "transcript_imported"
   | "session_finished";
 
 export const CONNECTOR_EVENT_KINDS: readonly ConnectorEventKind[] = [
@@ -57,6 +66,7 @@ export const CONNECTOR_EVENT_KINDS: readonly ConnectorEventKind[] = [
   "command_finished",
   "git_diff_captured",
   "commit_created",
+  "transcript_imported",
   "session_finished",
 ];
 
