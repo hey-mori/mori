@@ -55,11 +55,15 @@ The script truncates the captured payload to **2 KB** before writing.
    at the script you installed.
 4. Run Claude Code as usual. After each event, the hook script appends
    one JSON line to `<target>/YYYY-MM-DD.jsonl`.
-5. In Mori, open Evidence → 소스 추가 → **Connector JSONL** tab. Paste
-   the contents of the JSONL file the hook produced and click
-   **Parse / Preview**. The preview card shows valid event count,
-   invalid lines with line numbers, connector ids, event kinds, and the
-   time range Mori detected.
+5. In Mori, open Evidence → 소스 추가 → **Connector JSONL** tab.
+   - **Tauri desktop**: click **Refresh inbox**, pick a file from the
+     `claude-code` row, and Mori loads the contents into the textarea
+     and auto-runs Parse / Preview.
+   - **Browser**: paste the contents of the JSONL file the hook
+     produced into the textarea and click **Parse / Preview**.
+   The preview card shows valid event count, invalid lines with line
+   numbers, connector ids, event kinds, and the time range Mori
+   detected.
 6. Click **Import to Review** to send the normalized events into Import
    Review. Accept the events you want; discard the rest. Mori never
    persists anything until you click **Apply** on the Review screen.
@@ -102,13 +106,11 @@ to clean up.
 
 ## Next steps (planned)
 
-- A native file picker in the **Connector JSONL** tab so users can
-  select a `.jsonl` file directly instead of opening and pasting it.
-- A Tauri-side ingest command that reads JSONL files from a watched
-  inbox directory after the user clicks an explicit "Refresh" button
-  (still no background polling).
 - A Mori-specific Claude Code hook plugin that ships richer event data
   (with the same `summary_only` default).
+- Optional duplicate-event detection across repeated inbox refreshes so
+  users can re-import the same JSONL without paying for duplicate
+  Review items.
 
 The **Connector JSONL** paste import path is implemented today — the
 schema, parser, normaliser, redaction, and Evidence Hub UI all ship.

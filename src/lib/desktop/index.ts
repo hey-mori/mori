@@ -18,3 +18,17 @@ export type {
   RepositoryVerificationResult,
   VerifyRepositoryRequest,
 } from "./repositoryCommands";
+export {
+  ConnectorInboxUnavailableError,
+  formatConnectorFamily,
+  formatInboxFileSize,
+  formatInboxModifiedAt,
+  isConnectorInboxAvailable,
+  listConnectorJsonlInbox,
+  readConnectorJsonlFile,
+} from "./connectorInbox";
+export type {
+  ConnectorInboxFile,
+  ConnectorInboxListing,
+  ConnectorJsonlFile,
+} from "./connectorInbox";

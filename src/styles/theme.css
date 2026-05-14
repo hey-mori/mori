@@ -765,3 +765,172 @@
     grid-template-columns: 1fr;
   }
 }
+
+/**
+ * Connector inbox surface inside the ImportPanel's Connector JSONL tab.
+ *
+ * Desktop-only feature — the `.is-browser` variant renders a calmer
+ * help row so browser-mode users see the boundary explicitly instead of
+ * a broken Refresh button.
+ */
+.connector-jsonl-inbox {
+  display: grid;
+  gap: var(--mori-space-3);
+  padding: var(--mori-space-5) var(--mori-space-6);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
+}
+
+.connector-jsonl-inbox.is-browser {
+  background: var(--mori-surface-subtle);
+}
+
+.connector-jsonl-inbox > header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--mori-space-3);
+}
+
+.connector-jsonl-inbox > header strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mori-text);
+}
+
+.connector-jsonl-inbox > header span {
+  font-size: 12px;
+  color: var(--mori-text-muted);
+  line-height: 1.5;
+}
+
+.connector-jsonl-inbox > header code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  background: var(--mori-surface-subtle);
+  padding: 1px 5px;
+  border-radius: var(--mori-radius-xs);
+}
+
+.connector-jsonl-inbox p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--mori-text-muted);
+}
+
+.connector-jsonl-inbox-status {
+  margin: 0;
+  font-size: 12px;
+  padding: var(--mori-space-2) var(--mori-space-3);
+  border-radius: var(--mori-radius-sm);
+}
+
+.connector-jsonl-inbox-status.tone-info {
+  background: var(--mori-status-info-soft);
+  color: var(--mori-status-info);
+}
+
+.connector-jsonl-inbox-status.tone-error {
+  background: var(--mori-status-danger-soft);
+  color: var(--mori-status-danger);
+}
+
+.connector-jsonl-inbox-empty {
+  margin: 0;
+  padding: var(--mori-space-3) var(--mori-space-4);
+  border: 1px dashed var(--mori-border);
+  border-radius: var(--mori-radius-sm);
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.connector-jsonl-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--mori-space-2);
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.connector-jsonl-inbox-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--mori-space-3);
+  width: 100%;
+  padding: var(--mori-space-3) var(--mori-space-4);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-sm);
+  background: var(--mori-surface);
+  color: var(--mori-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.connector-jsonl-inbox-row:hover:not(:disabled) {
+  border-color: var(--mori-border-strong);
+}
+
+.connector-jsonl-inbox-row.is-selected {
+  border-color: var(--mori-accent);
+  background: var(--mori-accent-soft);
+}
+
+.connector-jsonl-inbox-row:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.connector-jsonl-inbox-row-main {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  min-width: 0;
+}
+
+.connector-jsonl-inbox-row-main strong {
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connector-jsonl-inbox-row-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--mori-space-3);
+  color: var(--mori-text-muted);
+  font-size: 11.5px;
+  flex-shrink: 0;
+}
+
+.connector-jsonl-inbox-row-meta small {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--mori-text-muted-2);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .connector-jsonl-inbox > header {
+    grid-template-columns: 1fr;
+  }
+  .connector-jsonl-inbox-row {
+    grid-template-columns: 1fr;
+  }
+  .connector-jsonl-inbox-row-meta {
+    margin-top: var(--mori-space-1);
+  }
+}

@@ -149,6 +149,16 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 
 **Usage**: User opens Settings → Repositories, clicks "Add Repository", selects folder (desktop app) or types path (browser), optionally clicks "Verify" to check Git status. Repository path stored for Git diff dropdown convenience only.
 
+### 8b. Connector JSONL (`connectorJsonl`)
+
+- **Status**: Implemented (paste + desktop inbox)
+- **Capture Mode**: Explicit import — paste or desktop inbox file pick
+- **Trust Level**: Inherited from the underlying connector event (verified / observed / inferred per row)
+- **Raw Data Policy**: Summary only by default; individual connector events declare their own policy
+- **Privacy Note**: Mori reads JSONL **only** when the user pastes content or clicks **Refresh inbox** in the Connector JSONL tab. On Tauri desktop the Rust side restricts file access to `~/.mori/connectors/<family>/` (canonicalised, 8 MB cap, allowed extensions only). No background watching, no automatic polling, no symlink-escape, no live Claude/Codex/terminal sync.
+
+**Usage**: User runs the Claude Code hook / Codex CLI wrapper / a terminal connector / a Git connector script, which appends to `~/.mori/connectors/<family>/*.jsonl`. In Evidence Hub the user opens **Connector JSONL** and either pastes the contents (browser fallback) or clicks **Refresh inbox** and picks a file (desktop). Parse / Preview runs automatically; the user reviews the preview card; clicking **Import to Review** sends the normalized events through Import Review before they reach the session.
+
 ### 9. Quick Pass Analysis (`quickPass`)
 
 - **Status**: Implemented (deterministic heuristic + experimental Ollama)

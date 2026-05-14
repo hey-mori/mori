@@ -396,6 +396,33 @@ the multi-bucket normalized output is merged into one Review draft via
 `mergeConnectorCandidatesForReview` in
 [`src/lib/connectors/mergeForReview.ts`](../src/lib/connectors/mergeForReview.ts).
 
+### Connector inbox (desktop)
+
+On the Tauri desktop build, the Connector JSONL tab also exposes a
+**Connector inbox** section above the paste textarea. It lists the
+`.jsonl` / `.ndjson` / `.log` / `.txt` files Mori finds under
+`~/.mori/connectors/` (Windows: `%USERPROFILE%\.mori\connectors\`). The
+listing is **driven entirely by the Refresh inbox button** — Mori does
+not watch the folder, does not poll it, and does not auto-read files on
+startup. The Rust side restricts file access to that single directory:
+
+- Path canonicalisation rejects `..` traversal + symlinks that resolve
+  outside the inbox root.
+- Only the canonical family folders are recognised: `claude-code`,
+  `codex-cli`, `terminal`, `git`, plus an `other` bucket for loose files
+  at the inbox root.
+- Only `.jsonl`, `.ndjson`, `.log`, `.txt` extensions are read.
+- Files above an 8 MB cap are rejected.
+- The Rust side never parses or normalises the JSONL content — it only
+  returns the file's bytes; the existing TypeScript parser owns the
+  parse/preview pass.
+
+When the user clicks a file row, Mori reads the file via
+`read_connector_jsonl_file`, drops the contents into the paste
+textarea, and auto-runs Parse / Preview. **Import to Review remains an
+explicit click.** In browser mode the inbox section renders a help row
+instead of a Refresh button, and the paste flow stays fully available.
+
 The full **capture surface matrix** — every paste / hook / CLI /
 desktop / web / IDE / browser / GitHub path that Mori does and does not
 support today — lives in

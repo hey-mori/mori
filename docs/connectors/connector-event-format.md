@@ -11,12 +11,26 @@ captures to Mori in a structured way.
 > Import.
 
 The user-facing path is **Evidence Hub → 소스 추가 → Connector JSONL
-tab**. The tab parses the pasted JSONL with `parseConnectorJsonl`, runs
+tab**. On the Tauri desktop build the tab also exposes a **Connector
+inbox** section that lists `.jsonl` files under
+`~/.mori/connectors/<family>/` (Windows: `%USERPROFILE%\.mori\connectors\
+<family>\`). Listing runs only when the user clicks **Refresh inbox** —
+Mori does not watch the folder, does not poll it, and does not auto-read
+files on startup. Selecting a file reads it (path canonicalised under
+the inbox root, 8 MB cap) and loads the contents into the same paste
+textarea. The tab then parses the JSONL with `parseConnectorJsonl`, runs
 `buildConnectorJsonlPreview` for the visible preview snapshot, normalises
 valid events with `normalizeConnectorEventBatch`, merges multi-bucket
 output with `mergeConnectorCandidatesForReview`, and sends the result to
 Import Review with origin `connector-jsonl`. No connector event is
 applied to a session until the user confirms in Import Review.
+
+The Rust implementation lives in
+[`src-tauri/src/connectors/inbox.rs`](../../src-tauri/src/connectors/inbox.rs);
+the TypeScript adapter lives in
+[`src/lib/desktop/connectorInbox.ts`](../../src/lib/desktop/connectorInbox.ts).
+In browser mode the inbox section is replaced with a calm "desktop only"
+help row so paste-based import remains the supported fallback.
 
 ## File format
 

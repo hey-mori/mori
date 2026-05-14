@@ -29,6 +29,17 @@ import {
   normalizeConnectorEventBatch,
   type ConnectorJsonlPreview,
 } from "../../lib/connectors";
+import {
+  ConnectorInboxUnavailableError,
+  formatConnectorFamily,
+  formatInboxFileSize,
+  formatInboxModifiedAt,
+  isConnectorInboxAvailable,
+  listConnectorJsonlInbox,
+  readConnectorJsonlFile,
+  type ConnectorInboxFile,
+  type ConnectorInboxListing,
+} from "../../lib/desktop/connectorInbox";
 import { getRepositoryVerificationFreshness } from "../../lib/repositories";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
@@ -96,6 +107,17 @@ export function ImportPanel(props: ImportPanelProps = {}) {
 
   /** Live preview snapshot for the Connector JSONL tab; null until the user clicks Parse. */
   const [connectorPreview, setConnectorPreview] = useState<ConnectorJsonlPreview | null>(null);
+  /** Inbox listing returned from the desktop runtime; null until the user clicks Refresh. */
+  const [connectorInbox, setConnectorInbox] = useState<ConnectorInboxListing | null>(null);
+  /** Path of the inbox file currently loaded into the textarea, when any. */
+  const [connectorInboxSelectedPath, setConnectorInboxSelectedPath] = useState<string | null>(null);
+  /** True while the desktop bridge is refreshing or reading a file. */
+  const [connectorInboxBusy, setConnectorInboxBusy] = useState(false);
+  /** Inline status / error message for the inbox section. */
+  const [connectorInboxStatus, setConnectorInboxStatus] = useState<
+    { tone: "info" | "error"; message: string } | null
+  >(null);
+  const connectorInboxAvailable = useMemo(() => isConnectorInboxAvailable(), []);
 
   const canImport = useMemo(() => Boolean(draft), [draft]);
   const desktopRuntime = useMemo(() => isTauriRuntime(), []);
@@ -367,6 +389,92 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     }
   }
 
+  async function handleRefreshConnectorInbox() {
+    if (!connectorInboxAvailable) {
+      setConnectorInboxStatus({
+        tone: "error",
+        message: "Connector inbox file reading은 Tauri 데스크톱 앱에서만 사용할 수 있습니다.",
+      });
+      return;
+    }
+    setConnectorInboxBusy(true);
+    setConnectorInboxStatus({ tone: "info", message: "Refreshing inbox..." });
+    try {
+      const listing = await listConnectorJsonlInbox();
+      setConnectorInbox(listing);
+      if (!listing.rootExists) {
+        setConnectorInboxStatus({
+          tone: "info",
+          message: `Inbox 디렉터리가 아직 없습니다: ${listing.rootPath}`,
+        });
+      } else if (listing.files.length === 0) {
+        setConnectorInboxStatus({
+          tone: "info",
+          message: `Inbox는 비어 있습니다 (${listing.rootPath})`,
+        });
+      } else {
+        setConnectorInboxStatus({
+          tone: "info",
+          message: `${listing.files.length}개 파일을 찾았습니다.`,
+        });
+      }
+    } catch (error) {
+      if (error instanceof ConnectorInboxUnavailableError) {
+        setConnectorInboxStatus({ tone: "error", message: error.message });
+      } else {
+        setConnectorInboxStatus({
+          tone: "error",
+          message: error instanceof Error ? error.message : "Inbox 조회 실패",
+        });
+      }
+    } finally {
+      setConnectorInboxBusy(false);
+    }
+  }
+
+  async function handleLoadConnectorInboxFile(file: ConnectorInboxFile) {
+    if (!connectorInboxAvailable) return;
+    setConnectorInboxBusy(true);
+    setConnectorInboxStatus({ tone: "info", message: `Loading ${file.displayName}...` });
+    try {
+      const result = await readConnectorJsonlFile(file.path);
+      setBody(result.text);
+      setConnectorInboxSelectedPath(result.path);
+      // Run Parse / Preview automatically — the user just made an explicit
+      // file selection, so refreshing the preview is exactly what they want.
+      const preview = buildConnectorJsonlPreview(result.text);
+      setConnectorPreview(preview);
+      if (preview.kind === "errors-only") {
+        setConnectorInboxStatus({
+          tone: "error",
+          message: `${file.displayName}: ${preview.invalidLineCount}개 라인이 파싱에 실패했습니다.`,
+        });
+      } else if (preview.kind === "empty") {
+        setConnectorInboxStatus({
+          tone: "error",
+          message: `${file.displayName}: 유효한 이벤트가 없습니다.`,
+        });
+      } else {
+        setConnectorInboxStatus({
+          tone: "info",
+          message: `${file.displayName} loaded · ${preview.headline}`,
+        });
+      }
+    } catch (error) {
+      setConnectorInboxSelectedPath(null);
+      if (error instanceof ConnectorInboxUnavailableError) {
+        setConnectorInboxStatus({ tone: "error", message: error.message });
+      } else {
+        setConnectorInboxStatus({
+          tone: "error",
+          message: error instanceof Error ? error.message : "Inbox 파일 읽기 실패",
+        });
+      }
+    } finally {
+      setConnectorInboxBusy(false);
+    }
+  }
+
   function handleConnectorJsonlImportToReview() {
     if (!draft) {
       setStatus({ tone: "error", message: "세션이 없습니다. Start Session에서 새 세션을 시작하세요." });
@@ -565,6 +673,17 @@ export function ImportPanel(props: ImportPanelProps = {}) {
           </>
         ) : null}
         {kind === "connector" ? (
+          <ConnectorJsonlInbox
+            available={connectorInboxAvailable}
+            inbox={connectorInbox}
+            selectedPath={connectorInboxSelectedPath}
+            busy={connectorInboxBusy}
+            status={connectorInboxStatus}
+            onRefresh={() => handleRefreshConnectorInbox()}
+            onLoadFile={(file) => handleLoadConnectorInboxFile(file)}
+          />
+        ) : null}
+        {kind === "connector" ? (
           <ConnectorJsonlPrivacyNote />
         ) : null}
         <label className="import-body">
@@ -598,6 +717,9 @@ export function ImportPanel(props: ImportPanelProps = {}) {
                 // explicitly click Parse to refresh it. This prevents the UI
                 // from claiming a preview that doesn't match the current text.
                 if (connectorPreview) setConnectorPreview(null);
+                // The textarea no longer reflects the loaded file; drop the
+                // "selected from inbox" tag so the UI doesn't lie about it.
+                if (connectorInboxSelectedPath) setConnectorInboxSelectedPath(null);
               }
             }}
           />
@@ -706,6 +828,93 @@ function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories")
       {stalePrefix}{branch} · {sha}{dirty}{age}
       {freshness.isStale ? " — Re-verify or fetch to refresh." : ""}
     </small>
+  );
+}
+
+function ConnectorJsonlInbox({
+  available,
+  inbox,
+  selectedPath,
+  busy,
+  status,
+  onRefresh,
+  onLoadFile,
+}: {
+  available: boolean;
+  inbox: ConnectorInboxListing | null;
+  selectedPath: string | null;
+  busy: boolean;
+  status: { tone: "info" | "error"; message: string } | null;
+  onRefresh: () => void;
+  onLoadFile: (file: ConnectorInboxFile) => void;
+}) {
+  if (!available) {
+    return (
+      <div className="connector-jsonl-inbox is-browser" role="region" aria-label="Connector inbox">
+        <header>
+          <strong>Connector inbox</strong>
+          <Badge tone="gray">데스크톱 전용</Badge>
+        </header>
+        <p>
+          로컬 JSONL 파일을 자동으로 불러오는 기능은 Tauri 데스크톱 앱에서만 동작합니다. 브라우저
+          모드에서는 아래 textarea에 JSONL 내용을 직접 붙여넣어 동일한 Parse / Preview 흐름을
+          사용할 수 있습니다.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="connector-jsonl-inbox" role="region" aria-label="Connector inbox">
+      <header>
+        <strong>Connector inbox</strong>
+        <span>
+          Mori는 <code>~/.mori/connectors/</code> 아래의 파일만 읽습니다. 폴더를 자동으로
+          감시하지 않으며, Refresh를 누를 때만 목록을 다시 가져옵니다.
+        </span>
+        <Button onClick={onRefresh} disabled={busy}>
+          {busy ? "Refreshing..." : "Refresh inbox"}
+        </Button>
+      </header>
+      {status ? (
+        <p className={`connector-jsonl-inbox-status tone-${status.tone}`}>{status.message}</p>
+      ) : null}
+      {inbox ? (
+        inbox.files.length === 0 ? (
+          <p className="connector-jsonl-inbox-empty">
+            {inbox.rootExists
+              ? "Inbox는 비어 있습니다. Claude Code hook 또는 Codex CLI wrapper가 JSONL 파일을 생성하면 여기 표시됩니다."
+              : `Mori는 다음 경로에서 connector JSONL을 찾습니다: ${inbox.rootPath}. 해당 디렉터리를 만들고 hook/wrapper 결과 파일을 저장하세요.`}
+          </p>
+        ) : (
+          <ul className="connector-jsonl-inbox-list">
+            {inbox.files.map((file) => {
+              const isSelected = selectedPath === file.path;
+              return (
+                <li key={file.path}>
+                  <button
+                    type="button"
+                    className={`connector-jsonl-inbox-row ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => onLoadFile(file)}
+                    disabled={busy}
+                    title={file.path}
+                  >
+                    <div className="connector-jsonl-inbox-row-main">
+                      <Badge tone="purple">{formatConnectorFamily(file.connectorFamily)}</Badge>
+                      <strong>{file.displayName}</strong>
+                    </div>
+                    <div className="connector-jsonl-inbox-row-meta">
+                      <span>{formatInboxFileSize(file.sizeBytes)}</span>
+                      <span>{formatInboxModifiedAt(file.modifiedAt)}</span>
+                      <small>{file.relativePath}</small>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )
+      ) : null}
+    </div>
   );
 }
 

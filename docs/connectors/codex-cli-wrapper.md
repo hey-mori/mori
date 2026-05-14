@@ -52,8 +52,12 @@ on import.
    ```
 
 4. After Codex exits, open Mori → Evidence → 소스 추가 → **Connector
-   JSONL** tab. Paste the JSONL contents (file picker is the next
-   step), click **Parse / Preview**, then **Import to Review**.
+   JSONL** tab. On the Tauri desktop build click **Refresh inbox** and
+   pick the `codex-cli` row Mori finds in `~/.mori/connectors/codex-cli/`
+   — the contents load into the textarea and Parse / Preview runs
+   automatically. In the browser build paste the JSONL contents into the
+   textarea and click **Parse / Preview** manually. Then click **Import
+   to Review**.
 5. Walk through Import Review. Apply only the events you want.
 
 ## Uninstall

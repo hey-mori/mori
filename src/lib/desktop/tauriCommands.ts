@@ -36,6 +36,8 @@ export type TauriCommandName =
   | "run_git_diff"
   | "pick_repository_directory"
   | "verify_repository_path"
+  | "list_connector_jsonl_inbox"
+  | "read_connector_jsonl_file"
   | "analyze_session_quick_pass"
   | "generate_report";
 
@@ -86,8 +88,32 @@ export type TauriCommandMap = {
     output: { path: string | null; cancelled: boolean };
   };
   verify_repository_path: { input: { request: VerifyRepositoryRequest }; output: RepositoryVerificationResult };
+  list_connector_jsonl_inbox: { input: undefined; output: ConnectorInboxListing };
+  read_connector_jsonl_file: { input: { input: { path: string } }; output: ConnectorJsonlFile };
   analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
   generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };
+};
+
+export type ConnectorInboxListing = {
+  rootPath: string;
+  rootExists: boolean;
+  files: ConnectorInboxFile[];
+};
+
+export type ConnectorInboxFile = {
+  path: string;
+  displayName: string;
+  connectorFamily: string;
+  sizeBytes: number;
+  modifiedAt: string;
+  relativePath: string;
+};
+
+export type ConnectorJsonlFile = {
+  path: string;
+  text: string;
+  sizeBytes: number;
+  modifiedAt: string;
 };
 
 export async function invokeTauriCommand<TCommand extends TauriCommandName>(

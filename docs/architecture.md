@@ -200,7 +200,13 @@ event passes through Import Review before reaching the session store:
 ```text
 External tool (Claude Code hook | Codex CLI wrapper | git command | terminal | manual)
   -> writes JSONL line(s) to ~/.mori/connectors/<connector>/<date>.jsonl
-  -> user opens Mori, Evidence Hub -> Connector JSONL tab, pastes the JSONL
+  -> user opens Mori, Evidence Hub -> Connector JSONL tab
+       Desktop (Tauri): clicks Refresh inbox -> picks a row ->
+         src-tauri/connectors/inbox::list_connector_jsonl_inbox()
+         src-tauri/connectors/inbox::read_connector_jsonl_file({path})
+           (path canonicalised under ~/.mori/connectors/, 8 MB cap,
+            symlink-escape rejected, allowed extensions only)
+       Browser: pastes the JSONL contents into the textarea
   -> src/lib/connectors/parseConnectorJsonl(text)
        -> validateConnectorEvent (schema + kind-specific clusters)
   -> src/lib/connectors/jsonlPreview.buildConnectorJsonlPreview

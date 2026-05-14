@@ -1,4 +1,5 @@
 mod commands;
+mod connectors;
 mod db;
 mod git;
 mod package;
@@ -24,6 +25,8 @@ fn main() {
             git::diff::run_git_diff,
             git::verify::verify_repository_path,
             repositories::picker::pick_repository_directory,
+            connectors::inbox::list_connector_jsonl_inbox,
+            connectors::inbox::read_connector_jsonl_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");
