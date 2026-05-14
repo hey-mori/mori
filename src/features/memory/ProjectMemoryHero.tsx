@@ -1,6 +1,8 @@
 import { Archive, FileText, Play, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriFeatureStatusBadge } from "../../components/ui/MoriFeatureStatusBadge";
+import type { SavedReportAvailability } from "../../lib/memory/projectMemoryContext";
 import type { ProjectMemoryDataScope, ProjectMemoryStats } from "../../lib/project-memory/projectMemory";
 
 export function ProjectMemoryHero({
@@ -12,6 +14,7 @@ export function ProjectMemoryHero({
   onStartFollowUp,
   onOpenLatestReport,
   reportAvailable,
+  savedReportAvailability,
 }: {
   projectName: string;
   projectDescription: string;
@@ -21,12 +24,22 @@ export function ProjectMemoryHero({
   onStartFollowUp: () => void;
   onOpenLatestReport: () => void;
   reportAvailable: boolean;
+  /** Optional — when provided, renders a saved-reports chip from the context. */
+  savedReportAvailability?: SavedReportAvailability;
 }) {
   return (
     <section className="memory-hero" aria-label="Project overview">
       <header className="memory-hero-head">
         <div>
-          <Badge tone={scope === "demo" ? "gray" : "green"}>{scopeLabel}</Badge>
+          <div className="memory-hero-badge-row">
+            <Badge tone={scope === "demo" ? "gray" : "green"}>{scopeLabel}</Badge>
+            <MoriFeatureStatusBadge feature="memory.crossSessionAggregation" />
+            {savedReportAvailability ? (
+              <Badge tone={savedReportAvailability.tone}>
+                {savedReportAvailability.label}
+              </Badge>
+            ) : null}
+          </div>
           <h2>{projectName}</h2>
           <p>{projectDescription || "이 프로젝트의 설명이 아직 등록되지 않았습니다."}</p>
         </div>

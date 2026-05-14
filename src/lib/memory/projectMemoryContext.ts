@@ -19,6 +19,19 @@ import {
   type ProjectMemoryStats,
 } from "../project-memory/projectMemory";
 
+export type SavedReportAvailability = {
+  /** Total saved .mori v0 packages / Markdown reports the user can revisit. */
+  total: number;
+  /** Whether at least one report exists. */
+  hasAny: boolean;
+  /** Human label ready for the UI ("3 saved reports" / "No saved reports yet"). */
+  label: string;
+  /** Tone for the surrounding badge. */
+  tone: "green" | "blue" | "gray";
+  /** Concrete next step shown when `hasAny` is false. */
+  emptyHint: string;
+};
+
 export type ProjectMemorySnapshot = {
   scope: ProjectMemoryDataScope;
   scopeLabel: string;
@@ -38,6 +51,12 @@ export type ProjectMemorySnapshot = {
   dataBasisLabel: string;
   /** Caveat string that explains what is NOT yet aggregated. */
   scopeCaveat: string;
+  /**
+   * Whether the user has any saved reports / `.mori v0` packages to revisit.
+   * Surfaced as its own field so the Memory page can render a dedicated chip
+   * without re-deriving the boolean from `stats.reportCount`.
+   */
+  savedReportAvailability: SavedReportAvailability;
 };
 
 export function deriveProjectMemoryContext(args: {
@@ -70,6 +89,31 @@ export function deriveProjectMemoryContext(args: {
     stats,
     dataBasisLabel: evidenceSummary.dataBasis,
     scopeCaveat,
+    savedReportAvailability: deriveSavedReportAvailability(args.reportCount),
+  };
+}
+
+/**
+ * Pure derivation. Exposed so the Memory page can render the chip without
+ * pulling in the full snapshot, and so tests can assert the label shape
+ * directly.
+ */
+export function deriveSavedReportAvailability(reportCount: number): SavedReportAvailability {
+  if (reportCount <= 0) {
+    return {
+      total: 0,
+      hasAny: false,
+      label: "No saved reports yet",
+      tone: "gray",
+      emptyHint: "Reports 화면에서 Markdown을 복사하거나 .mori v0 JSON을 내보내면 목록에 추가됩니다.",
+    };
+  }
+  return {
+    total: reportCount,
+    hasAny: true,
+    label: `${reportCount} saved report${reportCount === 1 ? "" : "s"}`,
+    tone: reportCount >= 3 ? "green" : "blue",
+    emptyHint: "",
   };
 }
 

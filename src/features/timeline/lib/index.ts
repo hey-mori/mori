@@ -11,3 +11,4 @@ export * from "./timelineViewModel";
 export * from "./timelineLanes";
 export * from "./timelineRelationships";
 export * from "./timelineControls";
+export * from "./timelineCards";

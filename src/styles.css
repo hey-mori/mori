@@ -6152,6 +6152,13 @@ pre {
   gap: 16px;
 }
 
+.memory-hero-badge-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--mori-space-2);
+  margin-bottom: var(--mori-space-1);
+}
+
 .memory-hero-head h2 {
   margin: 6px 0 4px 0;
   font-size: 22px;

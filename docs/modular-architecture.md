@@ -15,7 +15,9 @@ src/
 │   ├─ sqliteStore.ts           - desktop SQLite availability
 │   ├─ reviewStore.ts           - import review draft state
 │   ├─ featureStatus.ts         - feature catalogue (implemented/planned/…)
-│   └─ sessionLifecycle.ts      - unified session lifecycle snapshot
+│   ├─ sessionLifecycle.ts      - unified session lifecycle snapshot
+│   ├─ productFlow.ts           - product loop + surface rollups (audit layer)
+│   └─ dataPipeline.ts          - typed pipeline contract + provenance records
 │
 ├─ domain/           Plain data types + constants + mock data. No React.
 │   ├─ types.ts                 - TimelineEvent, SourceRef, Decision, …
@@ -216,3 +218,33 @@ This milestone introduced new modules without breaking old ones:
 
 Future milestones can deprecate the legacy paths once every caller has
 migrated.
+
+## Gap-closure pass
+
+After the initial modular-architecture milestone landed, a follow-up pass
+closed the remaining gaps relative to the brief without rewriting working
+code:
+
+- **Card view-models added.** `src/features/timeline/lib/timelineCards.ts`
+  introduces `TimelineEventCardViewModel` and `TimelineBundleViewModel`
+  plus their builders (`buildTimelineEventCardViewModel`,
+  `buildTimelineBundleViewModel`, `buildTrustGlyph`). The Timeline event
+  card and bundle card now consume these view models instead of recomputing
+  time labels / trust glyphs / footer parts inline.
+- **Section + Inspector primitives added.** `MoriSection` and
+  `MoriInspectorPanel` were added to `src/components/ui/`. They use the
+  `--mori-*` semantic tokens and the `.mori-scroll` mixin so adopters get
+  consistent header / scroll / shadow behavior without hand-rolling rules.
+- **Saved-report availability** is now a first-class field on
+  `ProjectMemorySnapshot.savedReportAvailability` with its own
+  `deriveSavedReportAvailability(reportCount)` helper. Tone goes
+  gray → blue (1–2) → green (3+), label singularises at 1.
+- **Feature registry adoption widened.** `PlannedConnectorsCard`
+  (Settings) and `ProjectMemoryHero` (Memory) now render
+  `MoriFeatureStatusBadge` + `MoriPlannedAction` for capabilities the
+  registry covers. Integrations that have no registry counterpart yet
+  (slack / notion / figma / docs) keep their legacy badge as a fallback so
+  no registry rows are fabricated.
+
+These additions remained backward-compatible: every previous import path
+still resolves, every prior test still passes (489 total, was 473).

@@ -23,6 +23,7 @@ import {
   type DerivedSession,
   type ProjectMemoryDataScope,
 } from "../../lib/project-memory/projectMemory";
+import { deriveSavedReportAvailability } from "../../lib/memory/projectMemoryContext";
 import { ProjectMemoryHero } from "./ProjectMemoryHero";
 import { RecentSessionsList } from "./RecentSessionsList";
 import { DecisionTimelineCard } from "./DecisionTimelineCard";
@@ -147,6 +148,11 @@ export function MemoryView() {
     [view, savedSessions, packageDrafts.length],
   );
 
+  const savedReportAvailability = useMemo(
+    () => deriveSavedReportAvailability(packageDrafts.length),
+    [packageDrafts.length],
+  );
+
   const decisionTimeline = useMemo(() => getDecisionTimeline(view), [view]);
   const recurringIssues = useMemo(() => getRecurringIssues(view, primaryScope), [view, primaryScope]);
   const keyEvidence = useMemo(() => getKeyEvidence(view, 6), [view]);
@@ -216,6 +222,7 @@ export function MemoryView() {
             onStartFollowUp={() => setCurrentView("start")}
             onOpenLatestReport={() => setCurrentView("reports")}
             reportAvailable={packageDrafts.length > 0 || hasAnalysis}
+            savedReportAvailability={savedReportAvailability}
           />
 
           <DataScopeNote

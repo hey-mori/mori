@@ -1,16 +1,24 @@
 import { ShieldCheck, ShieldQuestion, Eye, type LucideIcon } from "lucide-react";
-import { eventTypeIcons, eventTypeLabels, eventTypeTone } from "../../domain/constants";
-import { formatTime, formatTimeRange, minutesBetween } from "../../lib/formatting/time";
+import { eventTypeIcons } from "../../domain/constants";
 import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { TimelineEvent, TrustLevel } from "../../domain/types";
+import { buildTimelineEventCardViewModel } from "./lib/timelineCards";
 
-const TRUST_GLYPHS: Record<TrustLevel, { icon: LucideIcon; label: string; tone: string }> = {
-  verified: { icon: ShieldCheck, label: "Verified", tone: "verified" },
-  observed: { icon: Eye, label: "Observed", tone: "observed" },
-  inferred: { icon: ShieldQuestion, label: "Inferred", tone: "inferred" },
+const TRUST_ICONS: Record<TrustLevel, LucideIcon> = {
+  verified: ShieldCheck,
+  observed: Eye,
+  inferred: ShieldQuestion,
 };
 
+/**
+ * Event card.
+ *
+ * Reads from `TimelineEventCardViewModel` (built once per event) so the JSX
+ * only handles layout + class names. The view model carries the time label,
+ * trust glyph, footer meta, aria label, and tooltip — never recompute those
+ * inline.
+ */
 export function TimelineEventCard({
   event,
   layout,
@@ -26,32 +34,14 @@ export function TimelineEventCard({
   onSelect: (eventId: string) => void;
   onHover: (eventId: string | null) => void;
 }) {
+  const vm = buildTimelineEventCardViewModel(event);
   const Icon = eventTypeIcons[event.type];
-  const trust = TRUST_GLYPHS[event.trustLevel];
-  const TrustIcon = trust.icon;
-  const issueCount = event.linkedIssueIds.length;
-  const decisionCount = event.linkedDecisionIds.length;
-  const sourceCount = event.sourceRefs.length;
-  const tone = eventTypeTone[event.type];
+  const TrustIcon = TRUST_ICONS[event.trustLevel];
   const compact = density === "compact";
-
-  // Time label: show a range when the event covers a meaningful span, otherwise
-  // show the single start time. We never show "00:00 - 00:00" type degenerate
-  // ranges — those add visual noise without helping orientation.
-  const hasRange = event.end ? minutesBetween(event.start, event.end) >= 1 : false;
-  const timeLabel = hasRange && event.end ? formatTimeRange(event.start, event.end) : formatTime(event.start);
-
-  // Footer meta: a single trust-anchored summary "verified · 2 src · 3 issues",
-  // never uppercase tracking. We hide it altogether on compact density to
-  // reduce noise, since the inspector already exposes everything.
-  const metaParts: string[] = [];
-  if (sourceCount > 0) metaParts.push(`${sourceCount} src`);
-  if (issueCount > 0) metaParts.push(`${issueCount} issue${issueCount === 1 ? "" : "s"}`);
-  if (decisionCount > 0) metaParts.push(`${decisionCount} dec`);
 
   return (
     <button
-      className={`event-card card-${tone} trust-${trust.tone} ${focusStateClassName(focusState)} ${compact ? "is-compact" : ""}`}
+      className={`event-card card-${vm.tone} trust-${vm.trust.tone} ${focusStateClassName(focusState)} ${compact ? "is-compact" : ""}`}
       onClick={() => onSelect(event.id)}
       onMouseEnter={() => onHover(event.id)}
       onMouseLeave={() => onHover(null)}
@@ -63,17 +53,17 @@ export function TimelineEventCard({
       }}
       type="button"
       aria-pressed={focusState === "selected"}
-      aria-label={`${eventTypeLabels[event.type]} · ${event.title} · ${trust.label}`}
-      title={`${eventTypeLabels[event.type]} · ${event.title}`}
+      aria-label={vm.ariaLabel}
+      title={vm.buttonTitle}
     >
       <header className="event-card-header">
-        <span className={`event-card-time tone-${tone}`}>
+        <span className={`event-card-time tone-${vm.tone}`}>
           <Icon size={11} aria-hidden="true" />
-          {timeLabel}
+          {vm.timeLabel}
         </span>
         <span
-          className={`event-card-trust trust-${trust.tone}`}
-          title={`${trust.label}${event.trustLevel === "inferred" ? ` · ${Math.round(event.confidence * 100)}% confidence` : ""}`}
+          className={`event-card-trust trust-${vm.trust.tone}`}
+          title={vm.trust.tooltip}
           aria-hidden="true"
         >
           {/* Identical badge width across all trust levels so card headers
@@ -82,10 +72,10 @@ export function TimelineEventCard({
           <TrustIcon size={11} />
         </span>
       </header>
-      <strong className="event-card-title">{event.title}</strong>
-      {!compact && metaParts.length > 0 ? (
+      <strong className="event-card-title">{vm.title}</strong>
+      {!compact && vm.metaParts.length > 0 ? (
         <footer className="event-card-footer">
-          <span className="event-card-meta">{metaParts.join(" · ")}</span>
+          <span className="event-card-meta">{vm.metaParts.join(" · ")}</span>
         </footer>
       ) : null}
     </button>

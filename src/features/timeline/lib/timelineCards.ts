@@ -1,0 +1,179 @@
+/**
+ * Card-level view models for the Timeline canvas.
+ *
+ * The existing `TimelineRenderModel` carries the LAYOUT (where each card
+ * sits) but the cards themselves still read raw domain types
+ * (`TimelineEvent`, `TimelineDisplayBundle`) to compute their tone, trust
+ * glyph, time label, and footer parts. This module pulls those derivations
+ * out so:
+ *
+ *   1. Card components render from a finished view model — no inline
+ *      `event.linkedIssueIds.length` style domain access.
+ *   2. Tests can assert the card content without rendering React.
+ *   3. New connector data (when the JSONL ingest UI ships) can reuse the
+ *      same card view model, since the only thing it has to do is hand in a
+ *      TimelineEvent + the SourceRef list.
+ *
+ * Inspector view model lives next door in `timelineViewModel.ts`. This file
+ * is the boundary for the cards rendered INSIDE the lanes.
+ */
+import { eventTypeLabels, eventTypeTone } from "../../../domain/constants";
+import type { TimelineEvent, TrustLevel } from "../../../domain/types";
+import { formatTime, formatTimeRange, minutesBetween } from "../../../lib/formatting/time";
+import type { TimelineDisplayBundle } from "../../../lib/timeline/displayItems";
+
+export type TimelineCardTrustTone = "verified" | "observed" | "inferred";
+
+export type TimelineCardTrustGlyph = {
+  level: TrustLevel;
+  label: string;
+  tone: TimelineCardTrustTone;
+  /** Tooltip used for accessibility / hover. Includes confidence when inferred. */
+  tooltip: string;
+};
+
+export type TimelineEventCardViewModel = {
+  kind: "event";
+  /** Stable event id (matches `event.id`). */
+  id: string;
+  /** Tone used for the card body (`purple / green / red / blue / cyan / orange / gray`). */
+  tone: string;
+  /** Lane label for screen readers. */
+  laneLabel: string;
+  /** "13:02" or "13:02 – 13:18" depending on whether the event spans ≥1 minute. */
+  timeLabel: string;
+  /** Whether the time label is a range or a single time. */
+  hasTimeRange: boolean;
+  /** Card title (matches `event.title`). */
+  title: string;
+  /** Trust glyph (icon + label + tone + tooltip). */
+  trust: TimelineCardTrustGlyph;
+  /** Footer meta strings ("2 src", "3 issues", "1 dec"). Empty when nothing to show. */
+  metaParts: string[];
+  /** ARIA label for the rendered button. */
+  ariaLabel: string;
+  /** HTML `title` attribute (short summary). */
+  buttonTitle: string;
+  /** Raw event, kept for callers that need to invoke handlers / read more. */
+  event: TimelineEvent;
+};
+
+export type TimelineBundleViewModel = {
+  kind: "bundle";
+  id: string;
+  tone: string;
+  /** "13:02 – 14:18" — bundles always carry a range. */
+  timeLabel: string;
+  title: string;
+  /** "AI 대화 5 · 결정 2" — top two event-type counts. */
+  typeMixLabel: string;
+  /** Footer "2 src · 1 dec · 3 issues" parts. */
+  metaParts: string[];
+  /** ARIA + tooltip text. */
+  ariaLabel: string;
+  buttonTitle: string;
+  bundle: TimelineDisplayBundle;
+};
+
+export type TimelineCardViewModel = TimelineEventCardViewModel | TimelineBundleViewModel;
+
+// ─── Builders ───────────────────────────────────────────────────────────────
+
+export function buildTimelineEventCardViewModel(event: TimelineEvent): TimelineEventCardViewModel {
+  const tone = eventTypeTone[event.type] ?? "gray";
+  const laneLabel = eventTypeLabels[event.type] ?? event.type;
+  const hasRange = event.end ? minutesBetween(event.start, event.end) >= 1 : false;
+  const timeLabel = hasRange && event.end
+    ? formatTimeRange(event.start, event.end)
+    : formatTime(event.start);
+
+  const trust = buildTrustGlyph(event.trustLevel, event.confidence);
+
+  const metaParts: string[] = [];
+  if (event.sourceRefs.length > 0) {
+    metaParts.push(`${event.sourceRefs.length} src`);
+  }
+  if (event.linkedIssueIds.length > 0) {
+    metaParts.push(`${event.linkedIssueIds.length} issue${event.linkedIssueIds.length === 1 ? "" : "s"}`);
+  }
+  if (event.linkedDecisionIds.length > 0) {
+    metaParts.push(`${event.linkedDecisionIds.length} dec`);
+  }
+
+  const ariaLabel = `${laneLabel} · ${event.title} · ${trust.label}`;
+  const buttonTitle = `${laneLabel} · ${event.title}`;
+
+  return {
+    kind: "event",
+    id: event.id,
+    tone,
+    laneLabel,
+    timeLabel,
+    hasTimeRange: hasRange,
+    title: event.title,
+    trust,
+    metaParts,
+    ariaLabel,
+    buttonTitle,
+    event,
+  };
+}
+
+export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): TimelineBundleViewModel {
+  const tone = eventTypeTone[bundle.laneType] ?? "gray";
+
+  const typeMixEntries = Object.entries(bundle.eventTypeCounts ?? {})
+    .filter((entry): entry is [keyof typeof eventTypeLabels, number] => Boolean(entry[1]));
+  typeMixEntries.sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0));
+  const typeMixLabel = typeMixEntries
+    .slice(0, 2)
+    .map(([type, count]) => `${eventTypeLabels[type]} ${count}`)
+    .join(" · ");
+
+  const metaParts: string[] = [];
+  if (bundle.sourceCount > 0) metaParts.push(`${bundle.sourceCount} src`);
+  if (bundle.decisionCount > 0) metaParts.push(`${bundle.decisionCount} dec`);
+  if (bundle.issueCount > 0) {
+    metaParts.push(`${bundle.issueCount} issue${bundle.issueCount === 1 ? "" : "s"}`);
+  }
+
+  const timeLabel = formatTimeRange(bundle.start, bundle.end);
+  const buttonTitle = `${bundle.title} · ${bundle.count} events`;
+
+  return {
+    kind: "bundle",
+    id: bundle.id,
+    tone,
+    timeLabel,
+    title: bundle.title,
+    typeMixLabel,
+    metaParts,
+    ariaLabel: buttonTitle,
+    buttonTitle,
+    bundle,
+  };
+}
+
+// ─── Trust glyph table ──────────────────────────────────────────────────────
+
+const TRUST_LABEL: Record<TrustLevel, string> = {
+  verified: "Verified",
+  observed: "Observed",
+  inferred: "Inferred",
+};
+
+const TRUST_TONE: Record<TrustLevel, TimelineCardTrustTone> = {
+  verified: "verified",
+  observed: "observed",
+  inferred: "inferred",
+};
+
+export function buildTrustGlyph(level: TrustLevel, confidence: number): TimelineCardTrustGlyph {
+  const label = TRUST_LABEL[level];
+  const tone = TRUST_TONE[level];
+  const confidencePct = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
+  const tooltip = level === "inferred"
+    ? `${label} · ${confidencePct}% confidence`
+    : label;
+  return { level, label, tone, tooltip };
+}

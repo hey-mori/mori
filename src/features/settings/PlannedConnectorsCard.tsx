@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriFeatureStatusBadge } from "../../components/ui/MoriFeatureStatusBadge";
+import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
+import type { FeatureId } from "../../app/featureStatus";
 import { getPlannedConnectorRows } from "../../lib/settings/settingsStatus";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -27,6 +30,26 @@ const ICONS: Record<string, LucideIcon> = {
   notion: Layers,
   figma: Boxes,
   codexTranscript: Code2,
+};
+
+/**
+ * Bridge from the legacy `sourceRegistry` ids to the canonical
+ * `featureStatus.ts` ids. When an integration row maps cleanly to a feature,
+ * the status badge + setup/test buttons read from the registry. When the
+ * legacy integration has no feature counterpart yet (slack / notion / figma
+ * etc.), we fall back to the legacy "Planned" badge so we don't fabricate
+ * registry rows just to render this card.
+ */
+const FEATURE_ID_BY_INTEGRATION: Record<string, FeatureId | undefined> = {
+  terminal: "connector.terminalShellIntegration",
+  fileSystem: "connector.fileDocumentImport",
+  editor: "connector.vscodeExtension",
+  vscode: "connector.vscodeExtension",
+  cursor: "connector.cursorExtension",
+  browserTab: "connector.browserExtension",
+  codexTranscript: "connector.codexDesktopImport",
+  // slack / notion / figma / docs have no feature row yet — they stay on
+  // the fallback Badge.
 };
 
 export function PlannedConnectorsCard() {
@@ -46,6 +69,7 @@ export function PlannedConnectorsCard() {
       <ul className="settings-connector-grid">
         {rows.map(({ integration, willAccess, willNotAccess }) => {
           const Icon = ICONS[integration.id] ?? Sparkles;
+          const featureId = FEATURE_ID_BY_INTEGRATION[integration.id];
           return (
             <li key={integration.id}>
               <article className="settings-connector-card">
@@ -57,7 +81,11 @@ export function PlannedConnectorsCard() {
                     <strong>{integration.label}</strong>
                     <span>{integration.description}</span>
                   </div>
-                  <Badge tone="gray">Planned</Badge>
+                  {featureId ? (
+                    <MoriFeatureStatusBadge feature={featureId} />
+                  ) : (
+                    <Badge tone="gray">Planned</Badge>
+                  )}
                 </header>
                 <dl>
                   <div>
@@ -91,9 +119,13 @@ export function PlannedConnectorsCard() {
                 </section>
                 <p className="settings-connector-privacy">{integration.privacyNote}</p>
                 <footer>
-                  <Button disabled title="다음 마일스톤에서 활성화됩니다.">
-                    Setup · Planned
-                  </Button>
+                  {featureId ? (
+                    <MoriPlannedAction feature={featureId} label="Setup" />
+                  ) : (
+                    <Button disabled title="다음 마일스톤에서 활성화됩니다.">
+                      Setup · Planned
+                    </Button>
+                  )}
                   <Button disabled title="연결 테스트는 다음 마일스톤에서 활성화됩니다.">
                     Test · Planned
                   </Button>
