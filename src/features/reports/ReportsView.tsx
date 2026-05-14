@@ -17,6 +17,7 @@ import {
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { deriveSessionStatus } from "../../lib/session/sessionStatus";
+import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 
 export function ReportsView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
@@ -35,6 +36,8 @@ export function ReportsView() {
     sourceCount: view.sources.length,
     eventCount: view.events.length,
   });
+  
+  const evidenceSummary = getReportEvidenceSummary(view);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -60,6 +63,18 @@ export function ReportsView() {
       <SessionModeBanner />
       <div className="report-basis-row">
         <Badge tone={status.dataBasisTone}>{status.dataBasisLabel}</Badge>
+        {evidenceSummary.sourceCount > 0 ? (
+          <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+            {Object.entries(evidenceSummary.integrationBreakdown)
+              .map(([integration, count]) => `${count} ${integration}`)
+              .join(", ")} · {
+              Object.entries(evidenceSummary.trustBreakdown)
+                .filter(([_, count]) => count > 0)
+                .map(([level, count]) => `${count} ${level}`)
+                .join(", ")
+            }
+          </span>
+        ) : null}
         {mode === "draft" && !hasAnalysis ? (
           <Button
             icon={Sparkles}

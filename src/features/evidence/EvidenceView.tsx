@@ -14,6 +14,7 @@ import { getTrustDisplay } from "../../lib/privacy/trust";
 import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib/analysis";
 import { ImportPanel } from "../import/ImportPanel";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
+import { getSourceDisplayStatus } from "../../lib/sources/traceability";
 
 export function EvidenceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
@@ -78,16 +79,20 @@ export function EvidenceView() {
         <div className="evidence-grid">
           {view.sources.map((source) => {
             const trust = getTrustDisplay(source.trustLevel);
+            const displayStatus = getSourceDisplayStatus(source);
             return (
               <article className="evidence-card" key={source.id}>
                 <Archive size={22} />
                 <Badge tone={trust.tone}>{trust.label}</Badge>
+                <Badge tone={displayStatus.status === "implemented" ? "green" : displayStatus.status === "partial" ? "blue" : "gray"}>
+                  {displayStatus.statusLabel}
+                </Badge>
                 <h2>{source.title}</h2>
                 <p>{source.detail}</p>
                 <dl className="source-meta">
-                  <div><dt>Kind</dt><dd>{source.kind}</dd></div>
-                  <div><dt>Redaction</dt><dd>{source.redactionStatus}</dd></div>
-                  <div><dt>Raw data</dt><dd>{source.rawRetention}</dd></div>
+                  <div><dt>Integration</dt><dd>{displayStatus.integrationLabel}</dd></div>
+                  <div><dt>Capture method</dt><dd>{displayStatus.captureMethod}</dd></div>
+                  <div><dt>Raw data</dt><dd>{displayStatus.rawDataLabel}</dd></div>
                   <div><dt>Events</dt><dd>{source.relatedEventIds.length}</dd></div>
                 </dl>
                 <div>

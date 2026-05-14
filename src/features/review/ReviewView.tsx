@@ -14,6 +14,7 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
+import { getIssueEvidenceSources, getDecisionEvidenceSources } from "../../lib/sources/traceability";
 
 const issueColumns: Array<{ status: IssueStatus; tone: string }> = [
   { status: "open", tone: "red" },
@@ -160,6 +161,9 @@ function AnalysisBanner({
 }
 
 function IssueCard({ issue }: { issue: Issue }) {
+  const view = useMoriSessionStore(selectSessionView);
+  const evidence = getIssueEvidenceSources(issue, view.events, view.sources);
+  
   return (
     <article className="issue-card">
       <div>
@@ -170,7 +174,8 @@ function IssueCard({ issue }: { issue: Issue }) {
       <p className="suggested-action">{issue.suggestedNextAction}</p>
       <footer>
         <span><Calendar size={14} /> {formatDate(issue.createdAt)}</span>
-        <span>이벤트 {issue.sourceEventIds.length}</span>
+        <span>이벤트 {evidence.eventCount}</span>
+        <span>소스 {evidence.sourceCount}</span>
         <span>결정 {issue.relatedDecisionIds.length}</span>
         <Badge tone={issue.trustLevel === "verified" ? "green" : issue.trustLevel === "observed" ? "blue" : "purple"}>
           {issue.trustLevel}
@@ -249,9 +254,15 @@ function DecisionLog({ decisions }: { decisions: Decision[] }) {
 }
 
 function DecisionRow({ decision }: { decision: Decision }) {
+  const view = useMoriSessionStore(selectSessionView);
+  const evidence = getDecisionEvidenceSources(decision, view.events, view.sources);
+  
   return (
     <tr>
-      <td><strong>{decision.title}</strong><span>{decision.sourceEventIds.length} source events</span></td>
+      <td>
+        <strong>{decision.title}</strong>
+        <span>{evidence.eventCount} events, {evidence.sourceCount} sources</span>
+      </td>
       <td>{formatTime(decision.createdAt)}</td>
       <td><Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge></td>
       <td>{decision.decision}</td>

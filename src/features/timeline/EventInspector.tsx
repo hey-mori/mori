@@ -14,6 +14,7 @@ import type {
 } from "../../domain/types";
 import { formatTime, formatTimeRange } from "../../lib/formatting/time";
 import { describeTrustLevel } from "../../lib/relationships/relationshipDisplay";
+import { getSourceDisplayStatus } from "../../lib/sources/traceability";
 
 export function EventInspector({
   selectedEvent,
@@ -130,19 +131,22 @@ function SourcesList({ sources }: { sources: SourceRef[] }) {
   }
   return (
     <ul className="inspector-source-list">
-      {sources.map((source) => (
-        <li key={source.id}>
-          <div>
-            <strong>{source.title}</strong>
-            <small>
-              {source.kind} · {source.rawRetention}
-            </small>
-          </div>
-          <Badge tone={describeTrustLevel(source.trustLevel).tone}>
-            {describeTrustLevel(source.trustLevel).label}
-          </Badge>
-        </li>
-      ))}
+      {sources.map((source) => {
+        const displayStatus = getSourceDisplayStatus(source);
+        return (
+          <li key={source.id}>
+            <div>
+              <strong>{source.title}</strong>
+              <small>
+                {displayStatus.integrationLabel} · {displayStatus.captureMethod} · {displayStatus.rawDataLabel}
+              </small>
+            </div>
+            <Badge tone={describeTrustLevel(source.trustLevel).tone}>
+              {describeTrustLevel(source.trustLevel).label}
+            </Badge>
+          </li>
+        );
+      })}
     </ul>
   );
 }

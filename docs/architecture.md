@@ -139,6 +139,32 @@ Pipeline notes:
 
 Frontend screens should not know filesystem paths, SQLite details, LLM provider APIs, or package internals directly. Those should arrive as typed data from backend commands.
 
+### Source Integration Registry
+
+Mori's source integration architecture is centralized in `src/lib/sources/sourceRegistry.ts`, which defines all 19 source integrations (7 implemented, 12 planned) with complete metadata:
+
+- **Integration Status**: `implemented`, `partial`, `planned`, `mockOnly`, or `unavailable`
+- **Capture Mode**: `manual`, `explicitImport`, `desktopCommand`, `plannedConnector`, or `mock`
+- **Trust Level**: `verified` (user-provided), `observed` (Mori-captured), or `inferred` (analysis-generated)
+- **Raw Data Policy**: `retained`, `summaryOnly`, `redacted`, or `notCaptured`
+- **Privacy Note**: Clear boundaries about when and how Mori accesses data
+
+**Implemented Integrations**: manualNote, url, aiConversation, gitDiff, tauriGitDiff, repository, quickPass
+
+**Planned Integrations**: terminal, fileSystem, editor, vscode, cursor, browserTab, claudeTranscript, codexTranscript, docs, slack, figma, notion
+
+**Traceability Helpers** (`src/lib/sources/traceability.ts`):
+- `getSourceDisplayStatus()` — Integration label, status, capture method, trust label, raw data policy
+- `getEventEvidenceSources()` — Sources for an event
+- `getIssueEvidenceSources()` — Trace issue → events → sources
+- `getDecisionEvidenceSources()` — Trace decision → events + direct sources
+- `getBundleEvidenceSummary()` — Integration/trust mix for bundles
+- `getReportEvidenceSummary()` — Full session evidence breakdown
+
+**Evidence Flow**: Imports → SourceRef records → TimelineEvent sourceRefs → Issue/Decision sourceEventIds/relatedSourceIds → Report evidence summary
+
+See [Source Integrations](source-integrations.md) for complete integration documentation, privacy boundaries, and implementation checklist.
+
 ## Backend Boundaries
 
 Planned Rust/Tauri backend responsibilities:
