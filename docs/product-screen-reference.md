@@ -20,7 +20,7 @@ These screenshots are product and UX references for Mori. They are not all imple
 | [Import Review / Evidence Mapping](#import-review-evidence-mapping) | Partial | [import-review-evidence-mapping-reference.png](assets/screenshots/import-review-evidence-mapping-reference.png) | [product-screen-prompts.md#4-import-review--evidence-mapping](product-screen-prompts.md#4-import-review--evidence-mapping) |
 | [Narrative Timeline](#narrative-timeline) | Partial | [narrative-timeline-reference.png](assets/screenshots/narrative-timeline-reference.png) | [product-screen-prompts.md#5-narrative-timeline](product-screen-prompts.md#5-narrative-timeline) |
 | [Flow Focus / Trace View](#flow-focus-trace-view) | Partial | [flow-focus-trace-view-reference.png](assets/screenshots/flow-focus-trace-view-reference.png) | [product-screen-prompts.md#6-flow-focus--trace-view](product-screen-prompts.md#6-flow-focus--trace-view) |
-| [Review](#review) | Partial | [review-reference.png](assets/screenshots/review-reference.png) | [product-screen-prompts.md#7-review](product-screen-prompts.md#7-review) |
+| [Review](#review) | Implemented | [review-reference.png](assets/screenshots/review-reference.png) | [product-screen-prompts.md#7-review](product-screen-prompts.md#7-review) |
 | [Resume & Reports](#resume-reports) | Partial | [resume-reports-reference.png](assets/screenshots/resume-reports-reference.png) | [product-screen-prompts.md#8-resume--reports](product-screen-prompts.md#8-resume--reports) |
 | [End Session / Session Summary](#end-session-session-summary) | Planned | [end-session-summary-reference.png](assets/screenshots/end-session-summary-reference.png) | [product-screen-prompts.md#9-end-session--session-summary](product-screen-prompts.md#9-end-session--session-summary) |
 | [Project Memory](#project-memory) | Partial | [project-memory-reference.png](assets/screenshots/project-memory-reference.png) | [product-screen-prompts.md#10-project-memory](product-screen-prompts.md#10-project-memory) |
@@ -169,16 +169,16 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ![Review reference](assets/screenshots/review-reference.png)
 
-- **Status:** Partial
-- **Product purpose:** Review issues, decisions, next actions, unresolved items, and suggestions.
-- **Primary user job:** Turn reconstructed work into actionable review records without becoming a task manager.
-- **Key UI elements:** Tabs, Issue Garden board, Decision Log table, right Review Summary, statistics, suggestions.
-- **Main actions:** Filter, inspect issue/decision, add item, switch board/list/timeline views.
-- **Data shown:** Issues, decisions, next actions, priorities, statuses, evidence links, related events.
-- **Source/provenance expectations:** Every issue/decision should link to evidence or source events.
-- **Privacy expectations:** AI suggestions should be marked as suggestions until accepted.
-- **Persistence expectations:** Accepted review records persist to session/project memory.
-- **Implementation notes:** Existing Review page is partial and should be refined against this reference.
+- **Status:** Implemented — 5 working tabs (Issue Garden, Decision Log, Next Actions, Unresolved, Suggestions) backed by `selectSessionView`, with a sticky right column that hosts both a per-item detail panel and a session-wide summary panel. Mutating controls (status change, edit, promote-to-next-action, confirm/reject decision) are explicitly disabled with "다음 마일스톤" tooltips — the milestone does not pretend write-side review is wired.
+- **Product purpose:** Turn the session into actionable issues, decisions, and next actions.
+- **Primary user job:** Inspect Quick Pass / mock output, follow evidence + timeline links, and triage what still needs review.
+- **Key UI elements:** Page header (demo/draft badge); analysis strip (Quick Pass status, provider, generatedAt, counts, dataBasis, Re-run button); 5-tab nav with per-tab counts; Issue Garden 4-column kanban; Decision Log 5-column table; Next Action list; Unresolved reason-tagged feed; Suggestions list; sticky right column with `ReviewDetailPanel` + `ReviewSummaryPanel` (metrics, status stats, priority bar, alerts, next-action preview, data basis).
+- **Main actions:** Switch tab, select an item to drive the detail panel, click a related Timeline event to navigate into Timeline, run / re-run Quick Pass (real session), navigate to Evidence Hub when no imports exist.
+- **Data shown:** Issues (status, priority, trust, confidence, evidence count, related decisions), decisions (rationale, rejected options, impact, confirmed flag, evidence count), next actions (priority, related issues, related events), unresolved feed (Open / In-Progress / low-confidence / unconfirmed / pending-action reasons), suggestions (per-issue `suggestedNextAction`), summary panel (counts, priority distribution, alerts, data basis).
+- **Source/provenance expectations:** Every list and detail surface uses `getIssueEvidenceSources`, `getDecisionEvidenceSources`, `getSourceDisplayStatus`, and `getReportEvidenceSummary` from `src/lib/sources/traceability.ts`. Nothing hand-rolled.
+- **Privacy expectations:** Quick Pass never runs silently — only the explicit "Run Quick Pass" button on the analysis strip triggers it. Suggestions tab is gated behind `mode === "demo" || hasAnalysis` so a fresh real session never shows AI suggestions before the user opts in.
+- **Persistence expectations:** Reads through `useMoriSessionStore` (browser draft + SQLite). The milestone does not introduce new persistence.
+- **Implementation notes:** Pure helpers in `src/lib/review-workspace/reviewWorkspace.ts` (grouping, counts, summary, unresolved feed, default selection, tone helpers) are unit-tested. React surface in `src/features/review/`. Sticky right column collapses below the main column at ≤1180 px, and the 4-column Issue Garden falls back to a 2-column grid at ≤1440 px.
 - **Prompt/spec source:** [product-screen-prompts.md#7-review](product-screen-prompts.md#7-review)
 
 <a id="resume-reports"></a>

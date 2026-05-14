@@ -1,12 +1,18 @@
-import { Calendar, FileText, Filter, KanbanSquare, List, MoreHorizontal, Plus, Sparkles, Table2 } from "lucide-react";
-import { useEffect } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  KanbanSquare,
+  ListChecks,
+  Sparkles,
+  Table2,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import type { Decision, Issue, IssueStatus } from "../../domain/types";
-import { issueStatusLabels, priorityLabels } from "../../domain/constants";
-import { formatDate, formatTime } from "../../lib/formatting/time";
+import { issueStatusLabels } from "../../domain/constants";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -14,13 +20,33 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
-import { getIssueEvidenceSources, getDecisionEvidenceSources } from "../../lib/sources/traceability";
+import { getReportEvidenceSummary } from "../../lib/sources/traceability";
+import {
+  getReviewSummary,
+  getUnresolvedItems,
+  groupIssuesByStatus,
+  ISSUE_STATUS_ORDER,
+  issueStatusTone,
+  pickDefaultReviewSelection,
+  priorityTone,
+  UNRESOLVED_REASON_LABEL,
+  type ReviewSelection,
+  type UnresolvedItem,
+} from "../../lib/review-workspace/reviewWorkspace";
+import { ReviewIssueCard } from "./ReviewIssueCard";
+import { ReviewDecisionRow } from "./ReviewDecisionRow";
+import { ReviewNextActionRow } from "./ReviewNextActionRow";
+import { ReviewDetailPanel } from "./ReviewDetailPanel";
+import { ReviewSummaryPanel } from "./ReviewSummaryPanel";
 
-const issueColumns: Array<{ status: IssueStatus; tone: string }> = [
-  { status: "open", tone: "red" },
-  { status: "inProgress", tone: "orange" },
-  { status: "resolved", tone: "green" },
-  { status: "watching", tone: "gray" },
+type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";
+
+const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare }> = [
+  { id: "issues", label: "Issue Garden", icon: KanbanSquare },
+  { id: "decisions", label: "Decision Log", icon: Table2 },
+  { id: "nextActions", label: "Next Actions", icon: ListChecks },
+  { id: "unresolved", label: "Unresolved", icon: AlertTriangle },
+  { id: "suggestions", label: "Suggestions", icon: Sparkles },
 ];
 
 export function ReviewView() {
@@ -32,250 +58,666 @@ export function ReviewView() {
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
   const analysisError = useMoriSessionStore((state) => state.analysisError);
   const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
+  const analysis = useMoriSessionStore((state) => state.analysis);
   const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
   const imports = useMoriSessionStore((state) => state.imports);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const issues = view.issues;
-  const decisions = view.decisions;
-  const showEmptyDraft = mode === "draft" && !hasAnalysis;
-  const canRun = imports.length > 0 && analysisStatus !== "running";
+  const [activeTab, setActiveTab] = useState<ReviewTab>("issues");
+  const [selection, setSelection] = useState<ReviewSelection | null>(null);
+
+  const grouped = useMemo(() => groupIssuesByStatus(view.issues), [view.issues]);
+  const summary = useMemo(
+    () =>
+      getReviewSummary({
+        issues: view.issues,
+        decisions: view.decisions,
+        nextActions: view.nextActions,
+      }),
+    [view.issues, view.decisions, view.nextActions],
+  );
+  const unresolved = useMemo(
+    () =>
+      getUnresolvedItems({
+        issues: view.issues,
+        decisions: view.decisions,
+        nextActions: view.nextActions,
+      }),
+    [view.issues, view.decisions, view.nextActions],
+  );
+  const dataBasis = useMemo(() => getReportEvidenceSummary(view).dataBasis, [view]);
+  const defaultSelection = useMemo(
+    () =>
+      pickDefaultReviewSelection({
+        issues: view.issues,
+        decisions: view.decisions,
+        nextActions: view.nextActions,
+      }),
+    [view.issues, view.decisions, view.nextActions],
+  );
+
+  // Keep selection in sync with the active view. We never overwrite the
+  // user's selection without cause; we only fill in the default when none
+  // is set yet or when the previously-selected id disappears.
+  const effectiveSelection: ReviewSelection = (() => {
+    if (!selection) return defaultSelection;
+    if (selection.kind === "issue" && !view.issues.some((issue) => issue.id === selection.issueId)) {
+      return defaultSelection;
+    }
+    if (
+      selection.kind === "decision" &&
+      !view.decisions.some((decision) => decision.id === selection.decisionId)
+    ) {
+      return defaultSelection;
+    }
+    if (
+      selection.kind === "nextAction" &&
+      !view.nextActions.some((action) => action.id === selection.nextActionId)
+    ) {
+      return defaultSelection;
+    }
+    return selection;
+  })();
+
+  const canRunQuickPass = imports.length > 0 && analysisStatus !== "running";
+  const showQuickPassEmpty = mode === "draft" && !hasAnalysis;
+
+  function selectAndOpen(next: ReviewSelection, tab: ReviewTab) {
+    setSelection(next);
+    setActiveTab(tab);
+  }
+
+  function handleShowTimeline(eventId: string) {
+    setSelectedEventId(eventId);
+    setCurrentView("timeline");
+  }
 
   return (
-    <div className="page page-tight">
+    <div className="page review-workspace">
       <PageHeader
         title="Review"
-        subtitle="Issues, decisions, and next actions discovered in this session"
+        subtitle="가져온 증거와 Timeline 분석을 바탕으로 Mori가 추출한 이슈, 결정, 다음 액션을 검토하세요. 모든 항목은 Apply된 소스에서 추적할 수 있습니다."
         right={
-          <div className="toolbar">
-            <Button>{view.project.name}</Button>
-            <Button icon={Calendar}>{formatDate(view.session.startedAt)}</Button>
-            <Button icon={Filter}>필터</Button>
-            <Button variant="primary" icon={Plus}>새 항목</Button>
+          <div className="evidence-page-actions">
+            <Badge tone={mode === "demo" ? "gray" : "green"}>
+              {mode === "demo" ? "데모 세션" : "실제 세션"}
+            </Badge>
           </div>
         }
       />
       <SessionModeBanner />
-      {mode === "draft" ? (
-        <AnalysisBanner
-          status={analysisStatus}
-          providerLabel={analysisProviderLabel}
-          error={analysisError}
-          canRun={canRun}
-          onRun={() => runQuickPass()}
-        />
-      ) : null}
-      <div className="tabs">
-        <button className="active" type="button"><KanbanSquare size={16} /> Issue Garden</button>
-        <button type="button"><Table2 size={16} /> Decision Log</button>
-        <span />
-        <Button icon={KanbanSquare}>보드</Button>
-        <Button icon={List}>리스트</Button>
-        <Button icon={Sparkles}>AI 추천 보기</Button>
-      </div>
-      {showEmptyDraft ? (
-        <div className="evidence-empty">
-          <Sparkles size={28} />
-          <h2>Quick Pass를 실행해 이슈와 결정을 추출하세요</h2>
-          <p>현재 세션에 가져온 소스가 있다면 위 배너의 “Run Quick Pass” 버튼을 사용할 수 있습니다.</p>
-          {imports.length === 0 ? (
-            <Button variant="primary" icon={Plus} onClick={() => setCurrentView("evidence")}>
-              소스 가져오기로 이동
-            </Button>
+
+      <AnalysisStrip
+        mode={mode}
+        hasAnalysis={hasAnalysis}
+        status={analysisStatus}
+        providerLabel={analysisProviderLabel}
+        providerName={analysis?.providerName ?? null}
+        analysisGeneratedAt={analysis?.generatedAt ?? null}
+        error={analysisError}
+        canRun={canRunQuickPass}
+        importsCount={imports.length}
+        summary={summary}
+        dataBasis={dataBasis}
+        onRun={() => runQuickPass()}
+        onGoToEvidence={() => setCurrentView("evidence")}
+      />
+
+      <nav className="review-tabs" role="tablist" aria-label="Review tabs">
+        {TAB_DEFS.map((tab) => {
+          const Icon = tab.icon;
+          const count = countForTab(tab.id, view, summary, unresolved);
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`review-tab ${activeTab === tab.id ? "active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <Icon size={14} aria-hidden="true" />
+              <span>{tab.label}</span>
+              <Badge tone={activeTab === tab.id ? "purple" : "gray"}>{count}</Badge>
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="review-layout">
+        <section className="review-main">
+          {activeTab === "issues" ? (
+            <IssueGardenTab
+              grouped={grouped}
+              view={view}
+              selection={effectiveSelection}
+              onSelectIssue={(id) => selectAndOpen({ kind: "issue", issueId: id }, "issues")}
+              showQuickPassEmpty={showQuickPassEmpty}
+              onRunQuickPass={() => runQuickPass()}
+              canRunQuickPass={canRunQuickPass}
+              hasImports={imports.length > 0}
+              onGoToEvidence={() => setCurrentView("evidence")}
+            />
           ) : null}
+          {activeTab === "decisions" ? (
+            <DecisionLogTab
+              decisions={view.decisions}
+              view={view}
+              selection={effectiveSelection}
+              onSelectDecision={(id) =>
+                selectAndOpen({ kind: "decision", decisionId: id }, "decisions")
+              }
+            />
+          ) : null}
+          {activeTab === "nextActions" ? (
+            <NextActionsTab
+              view={view}
+              selection={effectiveSelection}
+              onSelectNextAction={(id) =>
+                selectAndOpen({ kind: "nextAction", nextActionId: id }, "nextActions")
+              }
+              hasAnalysis={hasAnalysis}
+            />
+          ) : null}
+          {activeTab === "unresolved" ? (
+            <UnresolvedTab
+              items={unresolved}
+              selection={effectiveSelection}
+              onSelectIssue={(id) => selectAndOpen({ kind: "issue", issueId: id }, "unresolved")}
+              onSelectDecision={(id) =>
+                selectAndOpen({ kind: "decision", decisionId: id }, "unresolved")
+              }
+              onSelectNextAction={(id) =>
+                selectAndOpen({ kind: "nextAction", nextActionId: id }, "unresolved")
+              }
+            />
+          ) : null}
+          {activeTab === "suggestions" ? (
+            <SuggestionsTab
+              issues={view.issues}
+              hasAnalysis={hasAnalysis}
+              providerLabel={analysisProviderLabel}
+              mode={mode}
+            />
+          ) : null}
+        </section>
+
+        <div className="review-sidebar">
+          <ReviewDetailPanel
+            selection={effectiveSelection}
+            view={view}
+            onShowTimeline={handleShowTimeline}
+          />
+          <ReviewSummaryPanel
+            summary={summary}
+            issues={view.issues}
+            decisions={view.decisions}
+            nextActions={view.nextActions}
+            hasAnalysis={hasAnalysis}
+            providerLabel={analysisProviderLabel}
+            dataBasis={dataBasis}
+          />
         </div>
-      ) : (
-        <div className="issue-layout">
-          <section className="issue-main">
-            <h2>Issue Garden</h2>
-            <div className="issue-board">
-              {issueColumns.map((column) => {
-                const columnIssues = issues.filter((issue) => issue.status === column.status);
-                return (
-                  <div className="issue-column" key={column.status}>
-                    <header>
-                      <h3>
-                        <i className={`legend-dot ${column.tone}`} />
-                        {issueStatusLabels[column.status]} <span>{columnIssues.length}</span>
-                      </h3>
-                      <Button icon={Plus} />
-                    </header>
-                    {columnIssues.map((issue) => <IssueCard issue={issue} key={issue.id} />)}
-                    {columnIssues.length === 0 ? (
-                      <div className="issue-column-empty">없음</div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-            <DecisionLog decisions={decisions} />
-          </section>
-          <IssueInsights issues={issues} hasAnalysis={hasAnalysis} providerLabel={analysisProviderLabel} />
-        </div>
-      )}
+      </div>
     </div>
   );
 }
 
-function AnalysisBanner({
+function countForTab(
+  tab: ReviewTab,
+  view: ReturnType<typeof selectSessionView>,
+  summary: ReturnType<typeof getReviewSummary>,
+  unresolved: UnresolvedItem[],
+): number {
+  switch (tab) {
+    case "issues":
+      return view.issues.length;
+    case "decisions":
+      return view.decisions.length;
+    case "nextActions":
+      return view.nextActions.length;
+    case "unresolved":
+      return unresolved.length;
+    case "suggestions":
+      return summary.issueCount; // suggestions derive from issue.suggestedNextAction
+  }
+}
+
+function AnalysisStrip({
+  mode,
+  hasAnalysis,
   status,
   providerLabel,
+  providerName,
+  analysisGeneratedAt,
   error,
   canRun,
+  importsCount,
+  summary,
+  dataBasis,
   onRun,
+  onGoToEvidence,
 }: {
+  mode: "demo" | "draft";
+  hasAnalysis: boolean;
   status: string;
   providerLabel: string | null;
+  providerName: string | null;
+  analysisGeneratedAt: string | null;
   error: string | null;
   canRun: boolean;
+  importsCount: number;
+  summary: ReturnType<typeof getReviewSummary>;
+  dataBasis: string;
   onRun: () => void;
+  onGoToEvidence: () => void;
 }) {
+  const isDemo = mode === "demo";
+  const providerCopy = providerLabel ?? "deterministic";
+  const providerKind = providerName === "ollama-quick-pass-v1" ? "local LLM" : "heuristic";
+
   return (
-    <div className={`analysis-banner status-${status}`}>
-      <div>
-        <strong>Quick Pass</strong>
-        <span>
-          {status === "running"
-            ? "분석 중..."
-            : status === "succeeded"
-              ? `완료 (${providerLabel ?? "deterministic"})`
-              : status === "failed"
-                ? `실패: ${error ?? "알 수 없는 오류"}`
-                : "현재 세션의 가져온 소스로 이슈/결정을 추출합니다."}
-        </span>
+    <div className={`review-analysis-strip status-${status}`} role="region" aria-label="Analysis state">
+      <div className="review-analysis-info">
+        <div>
+          <strong>분석 상태</strong>
+          <span>
+            {isDemo
+              ? "데모 세션의 mock 분석 결과를 보여줍니다."
+              : status === "running"
+                ? "Quick Pass 실행 중..."
+                : status === "failed"
+                  ? `Quick Pass 실패: ${error ?? "알 수 없는 오류"}`
+                  : hasAnalysis
+                    ? `${providerCopy} · ${providerKind}`
+                    : importsCount === 0
+                      ? "아직 가져온 소스가 없습니다. Evidence Hub에서 자료를 추가하세요."
+                      : "가져온 소스가 있습니다. Quick Pass를 실행하면 이슈/결정 후보가 생성됩니다."}
+          </span>
+        </div>
+        <div className="review-analysis-counts">
+          <Badge tone="purple">{summary.issueCount} issues</Badge>
+          <Badge tone="green">{summary.decisionCount} decisions</Badge>
+          <Badge tone="blue">{summary.nextActionCount} next actions</Badge>
+          <Badge tone="gray">{dataBasis}</Badge>
+          {analysisGeneratedAt ? (
+            <span className="review-analysis-time">
+              {new Date(analysisGeneratedAt).toLocaleString()}
+            </span>
+          ) : null}
+        </div>
       </div>
-      <Button
-        variant="primary"
-        icon={Sparkles}
-        onClick={onRun}
-        disabled={!canRun}
-      >
-        Run Quick Pass
-      </Button>
+      <div className="review-analysis-actions">
+        {!isDemo && importsCount === 0 ? (
+          <Button onClick={onGoToEvidence}>Evidence Hub로 이동</Button>
+        ) : null}
+        {!isDemo ? (
+          <Button
+            variant="primary"
+            icon={Sparkles}
+            onClick={onRun}
+            disabled={!canRun}
+            title={canRun ? "Quick Pass 실행" : importsCount === 0 ? "먼저 소스를 가져오세요." : "이미 실행 중입니다."}
+          >
+            {status === "running" ? "분석 중..." : hasAnalysis ? "Re-run Quick Pass" : "Run Quick Pass"}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function IssueCard({ issue }: { issue: Issue }) {
-  const view = useMoriSessionStore(selectSessionView);
-  const evidence = getIssueEvidenceSources(issue, view.events, view.sources);
-  
-  return (
-    <article className="issue-card">
-      <div>
-        <strong>{issue.title}</strong>
-        <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
-      </div>
-      <p>{issue.description}</p>
-      <p className="suggested-action">{issue.suggestedNextAction}</p>
-      <footer>
-        <span><Calendar size={14} /> {formatDate(issue.createdAt)}</span>
-        <span>이벤트 {evidence.eventCount}</span>
-        <span>소스 {evidence.sourceCount}</span>
-        <span>결정 {issue.relatedDecisionIds.length}</span>
-        <Badge tone={issue.trustLevel === "verified" ? "green" : issue.trustLevel === "observed" ? "blue" : "purple"}>
-          {issue.trustLevel}
-        </Badge>
-      </footer>
-    </article>
-  );
-}
-
-function IssueInsights({ issues, hasAnalysis, providerLabel }: { issues: Issue[]; hasAnalysis: boolean; providerLabel: string | null }) {
-  const open = issues.filter((issue) => issue.status === "open").length;
-  const progress = issues.filter((issue) => issue.status === "inProgress").length;
-  const resolved = issues.filter((issue) => issue.status === "resolved").length;
-  const watching = issues.filter((issue) => issue.status === "watching").length;
-
-  return (
-    <aside className="issue-sidebar">
-      <h2>이슈 통계</h2>
-      <div className="donut"><span>{issues.length}<small>Total</small></span></div>
-      <dl className="stats-list">
-        <div><dt>Open</dt><dd>{open}</dd></div>
-        <div><dt>In Progress</dt><dd>{progress}</dd></div>
-        <div><dt>Resolved</dt><dd>{resolved}</dd></div>
-        <div><dt>Watching</dt><dd>{watching}</dd></div>
-      </dl>
-      <Button icon={FileText}>이슈 리포트 보기</Button>
-      <div className="highlight-box">
-        <h3>출처</h3>
+function IssueGardenTab({
+  grouped,
+  view,
+  selection,
+  onSelectIssue,
+  showQuickPassEmpty,
+  onRunQuickPass,
+  canRunQuickPass,
+  hasImports,
+  onGoToEvidence,
+}: {
+  grouped: ReturnType<typeof groupIssuesByStatus>;
+  view: ReturnType<typeof selectSessionView>;
+  selection: ReviewSelection;
+  onSelectIssue: (id: string) => void;
+  showQuickPassEmpty: boolean;
+  onRunQuickPass: () => void;
+  canRunQuickPass: boolean;
+  hasImports: boolean;
+  onGoToEvidence: () => void;
+}) {
+  if (showQuickPassEmpty) {
+    return (
+      <div className="review-empty">
+        <Sparkles size={28} aria-hidden="true" />
+        <h3>Quick Pass를 실행하면 이슈가 생성됩니다</h3>
         <p>
-          {hasAnalysis
-            ? `현재 표시 중인 이슈/결정은 ${providerLabel ?? "Quick Pass"}가 가져온 소스로부터 추출한 결과입니다.`
-            : "데모 모드에서는 정적 mock 데이터를 보여줍니다. 실제 세션을 시작하고 Quick Pass를 실행하면 가져온 소스 기반의 분석 결과가 표시됩니다."}
+          Review는 가져온 소스와 Timeline 이벤트를 기반으로 이슈/결정/다음 액션을 추출합니다.
+          {hasImports
+            ? " 위의 'Run Quick Pass' 버튼을 사용해 분석을 시작하세요."
+            : " 먼저 Evidence Hub에서 소스를 가져온 뒤 분석을 실행하세요."}
         </p>
+        <div className="review-empty-actions">
+          {hasImports ? (
+            <Button variant="primary" icon={Sparkles} onClick={onRunQuickPass} disabled={!canRunQuickPass}>
+              Run Quick Pass
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={onGoToEvidence}>
+              Evidence Hub로 이동
+            </Button>
+          )}
+        </div>
       </div>
-    </aside>
-  );
-}
+    );
+  }
 
-function DecisionLog({ decisions }: { decisions: Decision[] }) {
-  return (
-    <section className="decision-log">
-      <div className="section-heading">
-        <div>
-          <h2>Decision Log <Badge tone="orange">contextual</Badge></h2>
-          <p>어떤 정보를 바탕으로 어떤 결정을 했는지 근거와 영향까지 남깁니다.</p>
-        </div>
-        <div>
-          <Button>중요도: 전체</Button>
-          <Button>내보내기</Button>
-          <Button icon={MoreHorizontal} />
-        </div>
+  const totalIssues = ISSUE_STATUS_ORDER.reduce((acc, status) => acc + grouped[status].length, 0);
+  if (totalIssues === 0) {
+    return (
+      <div className="review-empty">
+        <CheckCircle2 size={28} aria-hidden="true" />
+        <h3>이슈가 없습니다</h3>
+        <p>이번 세션에서는 처리할 이슈가 없습니다. Quick Pass가 새 이슈를 추출하면 여기에 표시됩니다.</p>
       </div>
-      {decisions.length === 0 ? (
-        <div className="decision-empty">표시할 결정이 없습니다.</div>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>결정 항목</th>
-              <th>결정 시각</th>
-              <th>중요도</th>
-              <th>결정 내용</th>
-              <th>이유</th>
-              <th>폐기한 대안</th>
-              <th>영향</th>
-              <th>상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            {decisions.map((decision) => <DecisionRow decision={decision} key={decision.id} />)}
-          </tbody>
-        </table>
-      )}
+    );
+  }
+
+  return (
+    <section className="review-issue-board">
+      <header className="review-section-head">
+        <div>
+          <h2>Issue Garden</h2>
+          <p>상태별로 이슈를 정리합니다. 카드를 클릭하면 오른쪽 패널에 출처와 관련 이벤트가 표시됩니다.</p>
+        </div>
+      </header>
+      <div className="review-issue-board-columns">
+        {ISSUE_STATUS_ORDER.map((status) => {
+          const columnIssues = grouped[status];
+          return (
+            <article className="review-issue-column" key={status}>
+              <header>
+                <span className="review-issue-column-label">
+                  <Badge tone={issueStatusTone(status)}>{issueStatusLabels[status]}</Badge>
+                  <strong>{columnIssues.length}</strong>
+                </span>
+              </header>
+              <div className="review-issue-column-list">
+                {columnIssues.length === 0 ? (
+                  <p className="review-issue-column-empty">없음</p>
+                ) : (
+                  columnIssues.map((issue) => (
+                    <ReviewIssueCard
+                      key={issue.id}
+                      issue={issue}
+                      events={view.events}
+                      sources={view.sources}
+                      selected={selection.kind === "issue" && selection.issueId === issue.id}
+                      onSelect={() => onSelectIssue(issue.id)}
+                    />
+                  ))
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
 
-function DecisionRow({ decision }: { decision: Decision }) {
-  const view = useMoriSessionStore(selectSessionView);
-  const evidence = getDecisionEvidenceSources(decision, view.events, view.sources);
-  
+function DecisionLogTab({
+  decisions,
+  view,
+  selection,
+  onSelectDecision,
+}: {
+  decisions: ReturnType<typeof selectSessionView>["decisions"];
+  view: ReturnType<typeof selectSessionView>;
+  selection: ReviewSelection;
+  onSelectDecision: (id: string) => void;
+}) {
+  if (decisions.length === 0) {
+    return (
+      <div className="review-empty">
+        <Table2 size={28} aria-hidden="true" />
+        <h3>아직 결정이 없습니다</h3>
+        <p>Quick Pass가 결정을 추출하면 여기 표 형태로 표시됩니다. 각 결정은 근거와 영향까지 함께 보관됩니다.</p>
+      </div>
+    );
+  }
+
   return (
-    <tr>
-      <td>
-        <strong>{decision.title}</strong>
-        <span>{evidence.eventCount} events, {evidence.sourceCount} sources</span>
-      </td>
-      <td>{formatTime(decision.createdAt)}</td>
-      <td><Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge></td>
-      <td>{decision.decision}</td>
-      <td>{decision.rationale}</td>
-      <td>{decision.rejectedOptions.join(", ")}</td>
-      <td>{decision.impact.join(", ")}</td>
-      <td><Badge tone={decision.confirmed ? "green" : "purple"}>{decision.confirmed ? "Confirmed" : decision.trustLevel}</Badge></td>
-    </tr>
+    <section className="review-decision-log">
+      <header className="review-section-head">
+        <div>
+          <h2>Decision Log</h2>
+          <p>결정 시각, 중요도, 근거 출처를 한 행에서 확인합니다. 행을 클릭하면 오른쪽 패널에 자세한 내용이 표시됩니다.</p>
+        </div>
+      </header>
+      <div className="review-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">결정</th>
+              <th scope="col">시각</th>
+              <th scope="col">중요도</th>
+              <th scope="col">근거</th>
+              <th scope="col">상태</th>
+            </tr>
+          </thead>
+          <tbody>
+            {decisions.map((decision) => (
+              <ReviewDecisionRow
+                key={decision.id}
+                decision={decision}
+                events={view.events}
+                sources={view.sources}
+                selected={
+                  selection.kind === "decision" && selection.decisionId === decision.id
+                }
+                onSelect={() => onSelectDecision(decision.id)}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
-function priorityTone(priority: Issue["priority"]): string {
-  if (priority === "high") return "red";
-  if (priority === "medium") return "orange";
-  return "blue";
+function NextActionsTab({
+  view,
+  selection,
+  onSelectNextAction,
+  hasAnalysis,
+}: {
+  view: ReturnType<typeof selectSessionView>;
+  selection: ReviewSelection;
+  onSelectNextAction: (id: string) => void;
+  hasAnalysis: boolean;
+}) {
+  const actions = view.nextActions;
+  if (actions.length === 0) {
+    return (
+      <div className="review-empty">
+        <ListChecks size={28} aria-hidden="true" />
+        <h3>다음 액션이 없습니다</h3>
+        <p>
+          {hasAnalysis
+            ? "Quick Pass는 다음 액션 후보를 만들지 않았습니다. 이슈를 검토해 직접 다음 액션을 등록하는 기능은 다음 마일스톤입니다."
+            : "Quick Pass를 실행하면 추천 다음 액션 후보가 표시됩니다."}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <section className="review-next-actions">
+      <header className="review-section-head">
+        <div>
+          <h2>Next Actions</h2>
+          <p>이슈와 연결된 다음 작업 후보입니다. Apply된 소스에서 직접 추적됩니다.</p>
+        </div>
+      </header>
+      <ul className="review-next-action-list">
+        {actions.map((action) => (
+          <li key={action.id}>
+            <ReviewNextActionRow
+              nextAction={action}
+              relatedIssues={view.issues.filter((issue) => action.relatedIssueIds.includes(issue.id))}
+              selected={
+                selection.kind === "nextAction" && selection.nextActionId === action.id
+              }
+              onSelect={() => onSelectNextAction(action.id)}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function UnresolvedTab({
+  items,
+  selection,
+  onSelectIssue,
+  onSelectDecision,
+  onSelectNextAction,
+}: {
+  items: UnresolvedItem[];
+  selection: ReviewSelection;
+  onSelectIssue: (id: string) => void;
+  onSelectDecision: (id: string) => void;
+  onSelectNextAction: (id: string) => void;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="review-empty">
+        <Activity size={28} aria-hidden="true" />
+        <h3>처리되지 않은 항목이 없습니다</h3>
+        <p>현재 세션에는 추가로 검토할 Open / 미확정 / 낮은 신뢰도 항목이 없습니다.</p>
+      </div>
+    );
+  }
+  return (
+    <section className="review-unresolved">
+      <header className="review-section-head">
+        <div>
+          <h2>Unresolved</h2>
+          <p>Open 이슈, 미확정 결정, 추론 신뢰도가 낮은 항목, 대기 중인 다음 액션을 모아 보여줍니다.</p>
+        </div>
+      </header>
+      <ul className="review-unresolved-list">
+        {items.map((item) => {
+          const reasonLabel = UNRESOLVED_REASON_LABEL[item.reason];
+          if (item.kind === "issue") {
+            const issue = item.issue;
+            const selected = selection.kind === "issue" && selection.issueId === issue.id;
+            return (
+              <li key={`issue-${issue.id}`} className={selected ? "is-selected" : ""}>
+                <button type="button" onClick={() => onSelectIssue(issue.id)}>
+                  <Badge tone={issueStatusTone(issue.status)}>{reasonLabel}</Badge>
+                  <strong>{issue.title}</strong>
+                  <span>{issue.description}</span>
+                  <Badge tone={priorityTone(issue.priority)}>{issue.priority}</Badge>
+                </button>
+              </li>
+            );
+          }
+          if (item.kind === "decision") {
+            const decision = item.decision;
+            const selected = selection.kind === "decision" && selection.decisionId === decision.id;
+            return (
+              <li key={`decision-${decision.id}`} className={selected ? "is-selected" : ""}>
+                <button type="button" onClick={() => onSelectDecision(decision.id)}>
+                  <Badge tone="orange">{reasonLabel}</Badge>
+                  <strong>{decision.title}</strong>
+                  <span>{decision.decision}</span>
+                  <Badge tone={priorityTone(decision.importance)}>{decision.importance}</Badge>
+                </button>
+              </li>
+            );
+          }
+          const action = item.nextAction;
+          const selected = selection.kind === "nextAction" && selection.nextActionId === action.id;
+          return (
+            <li key={`na-${action.id}`} className={selected ? "is-selected" : ""}>
+              <button type="button" onClick={() => onSelectNextAction(action.id)}>
+                <Badge tone="purple">{reasonLabel}</Badge>
+                <strong>{action.title}</strong>
+                <span>다음 액션 후보</span>
+                <Badge tone={priorityTone(action.priority)}>{action.priority}</Badge>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function SuggestionsTab({
+  issues,
+  hasAnalysis,
+  providerLabel,
+  mode,
+}: {
+  issues: ReturnType<typeof selectSessionView>["issues"];
+  hasAnalysis: boolean;
+  providerLabel: string | null;
+  mode: "demo" | "draft";
+}) {
+  const suggestions = issues.filter((issue) => issue.suggestedNextAction?.trim().length);
+  // Demo session ships pre-baked suggestions inside mock issues, so we render
+  // them straight through. In a real session we only render after the user
+  // explicitly runs Quick Pass; we never invent suggestions on our own.
+  if (mode === "draft" && !hasAnalysis) {
+    return (
+      <div className="review-empty">
+        <Sparkles size={28} aria-hidden="true" />
+        <h3>Quick Pass 분석 후 추천이 표시됩니다</h3>
+        <p>Quick Pass가 각 이슈에 대해 제안한 다음 액션을 한 곳에서 검토할 수 있습니다.</p>
+      </div>
+    );
+  }
+  if (suggestions.length === 0) {
+    return (
+      <div className="review-empty">
+        <Sparkles size={28} aria-hidden="true" />
+        <h3>현재 분석에서 추천된 액션이 없습니다</h3>
+        <p>{providerLabel ?? "Quick Pass"}는 이번 세션에서 별도의 다음 액션 제안을 만들지 않았습니다.</p>
+      </div>
+    );
+  }
+  return (
+    <section className="review-suggestions">
+      <header className="review-section-head">
+        <div>
+          <h2>Suggestions</h2>
+          <p>각 이슈에서 Quick Pass가 제안한 다음 액션입니다. 직접 승격하는 기능은 다음 마일스톤입니다.</p>
+        </div>
+      </header>
+      <ul className="review-suggestions-list">
+        {suggestions.map((issue) => (
+          <li key={issue.id}>
+            <header>
+              <Badge tone={priorityTone(issue.priority)}>{issue.priority}</Badge>
+              <strong>{issue.title}</strong>
+            </header>
+            <p>
+              <Sparkles size={11} aria-hidden="true" />
+              <span>{issue.suggestedNextAction}</span>
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }

@@ -173,6 +173,40 @@ provenance through the existing `SourceRef` traceability helpers in
 ChatGPT / Codex API or app integrations) remain explicitly planned, not
 fake-active.
 
+### Review workspace
+
+Once accepted events land in the session via Import Review and a user
+explicitly runs Quick Pass, the Review screen turns the analysis output
+into a triage workspace. The flow is read-only today (state changes are
+visibly disabled) but the read path already uses the full traceability
+chain:
+
+```text
+useMoriSessionStore (selectSessionView)
+  -> view.issues / decisions / nextActions
+  -> src/lib/review-workspace/reviewWorkspace.ts
+       (groupIssuesByStatus / getReviewSummary / getUnresolvedItems /
+        pickDefaultReviewSelection / trust + priority + status tones)
+  -> src/features/review/ ReviewView
+       - 5-tab nav (Issue Garden, Decision Log, Next Actions, Unresolved, Suggestions)
+       - sticky right column: ReviewDetailPanel + ReviewSummaryPanel
+       - "Go to Timeline" link uses setSelectedEventId + setCurrentView
+  -> src/lib/sources/traceability.ts
+       (getIssueEvidenceSources / getDecisionEvidenceSources /
+        getSourceDisplayStatus / getReportEvidenceSummary.dataBasis)
+```
+
+Quick Pass is never run from the Review screen automatically. The
+analysis strip surfaces the current provider + generatedAt + counts and
+exposes a "Run Quick Pass" button that calls
+`useMoriSessionStore.runQuickPass()` — the same entry point Evidence Hub
+uses, so there is exactly one analysis path.
+
+Suggestions are gated behind `mode === "demo" || hasAnalysis`. Demo
+sessions ship pre-baked `suggestedNextAction` strings inside mock issues;
+real sessions only render suggestions after the user has explicitly run
+Quick Pass.
+
 ### Import Review (review-before-apply)
 
 AI Transcript and Git Diff imports route through Import Review before they
