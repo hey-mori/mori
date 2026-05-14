@@ -1,8 +1,9 @@
-import { Archive, Link, RotateCcw, Search, Settings as SettingsIcon, Sparkles } from "lucide-react";
-import { useEffect } from "react";
-import { PageHeader } from "../../components/layout/PageHeader";
+import { Plus, RotateCcw, Settings as SettingsIcon, Shield, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { PageHeader } from "../../components/layout/PageHeader";
+import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -10,11 +11,23 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
-import { getTrustDisplay } from "../../lib/privacy/trust";
 import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib/analysis";
+import {
+  getHubAiPlatform,
+  getHubAvailableIntegrations,
+  getHubImportKind,
+  getHubPlannedIntegrations,
+  type HubImportKind,
+} from "../../lib/sources/integrationGroups";
+import { SOURCE_REGISTRY } from "../../lib/sources/sourceRegistry";
+import type { AiTranscriptPlatform } from "../../lib/import";
 import { ImportPanel } from "../import/ImportPanel";
-import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
-import { getSourceDisplayStatus } from "../../lib/sources/traceability";
+import { IntegrationCard } from "./IntegrationCard";
+import { ImportedSourceRow } from "./ImportedSourceRow";
+import {
+  SourceDetailPanel,
+  type EvidenceDetailSelection,
+} from "./SourceDetailPanel";
 
 export function EvidenceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
@@ -32,86 +45,244 @@ export function EvidenceView() {
   const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
   const clearAnalysis = useMoriSessionStore((state) => state.clearAnalysis);
   const updateAnalysisSettings = useMoriSessionStore((state) => state.updateAnalysisSettings);
+  const removeImport = useMoriSessionStore((state) => state.removeImport);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
+  const availableIntegrations = useMemo(() => getHubAvailableIntegrations(), []);
+  const plannedIntegrations = useMemo(() => getHubPlannedIntegrations(), []);
+  const integrationLookup = useMemo(() => {
+    const map = new Map<string, (typeof availableIntegrations)[number]>();
+    for (const integration of Object.values(SOURCE_REGISTRY)) {
+      map.set(integration.id, integration);
+    }
+    return map;
+  }, [availableIntegrations]);
+
+  const [selection, setSelection] = useState<EvidenceDetailSelection>({ kind: "empty" });
+  const [importOpen, setImportOpen] = useState(false);
+  const [importKind, setImportKind] = useState<HubImportKind>("note");
+  const [importPlatform, setImportPlatform] = useState<AiTranscriptPlatform | undefined>(undefined);
+
+  function openImport(kind: HubImportKind, platform?: AiTranscriptPlatform) {
+    setImportKind(kind);
+    setImportPlatform(platform);
+    setImportOpen(true);
+  }
+
+  function handleIntegrationPrimary(integrationId: string) {
+    const kind = getHubImportKind(integrationId);
+    if (!kind) return;
+    const platform = getHubAiPlatform(integrationId) ?? undefined;
+    openImport(kind, platform as AiTranscriptPlatform | undefined);
+  }
+
+  const importedSources = view.sources;
+  const isDemoSession = mode === "demo";
+
   return (
-    <div className="page">
+    <div className="page evidence-page">
       <PageHeader
         title="Evidence"
-        subtitle="Sources and inputs Mori uses to reconstruct this session"
+        subtitle="Mori가 작업을 복원할 때 사용하는 소스를 관리하세요. 사용자가 명시적으로 가져온 자료만 분석에 사용됩니다."
+        right={
+          <div className="evidence-page-actions">
+            <Badge tone={isDemoSession ? "gray" : "green"}>
+              {isDemoSession ? "데모 세션" : "실제 세션"}
+            </Badge>
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={() => openImport(importKind ?? "note")}
+              disabled={isDemoSession}
+              title={isDemoSession ? "실제 세션을 시작하면 소스를 추가할 수 있습니다." : "새 소스 추가"}
+            >
+              소스 추가
+            </Button>
+          </div>
+        }
       />
       <SessionModeBanner />
-      <ImportPanel />
-      {mode === "draft" ? (
-        <QuickPassControl
-          status={analysisStatus}
-          providerLabel={analysisProviderLabel}
-          providerName={analysis?.providerName ?? null}
-          error={analysisError}
-          canRun={imports.length > 0 && analysisStatus !== "running"}
-          hasAnalysis={hasAnalysis}
-          fallbackUsed={analysisFallbackUsed}
-          summary={analysis?.summary.sessionSummary ?? null}
-          issueCount={analysis?.issues.length ?? 0}
-          decisionCount={analysis?.decisions.length ?? 0}
-          nextActionCount={analysis?.nextActions.length ?? 0}
-          confidence={analysis?.confidence ?? null}
-          notes={analysis?.notes ?? []}
-          settings={analysisSettings}
-          onProviderChange={(provider) => updateAnalysisSettings({ provider })}
-          onFallbackChange={(value) => updateAnalysisSettings({ fallbackToDeterministic: value })}
-          onOpenSettings={() => setCurrentView("settings")}
-          onRun={() => runQuickPass()}
-          onClear={clearAnalysis}
+
+      <div className="evidence-hub-layout">
+        <section className="evidence-hub-main">
+          <section className="evidence-section">
+            <header className="evidence-section-header">
+              <div>
+                <h2>사용 가능한 소스</h2>
+                <p>지금 바로 가져올 수 있는 소스 유형입니다. 모두 사용자가 직접 입력하거나 붙여넣는 방식이며, Mori가 자동으로 수집하지 않습니다.</p>
+              </div>
+              <Badge tone="green">{availableIntegrations.length} integrations</Badge>
+            </header>
+            <div className="evidence-card-grid">
+              {availableIntegrations.map((integration) => {
+                const importKindForCard = getHubImportKind(integration.id);
+                const selected =
+                  selection.kind === "integration" && selection.integrationId === integration.id;
+                return (
+                  <IntegrationCard
+                    key={integration.id}
+                    integration={integration}
+                    selected={selected}
+                    importKind={importKindForCard}
+                    onPrimary={() => handleIntegrationPrimary(integration.id)}
+                    primaryDisabled={isDemoSession}
+                    primaryDisabledReason="데모 세션에서는 소스를 추가할 수 없습니다. Start Session에서 실제 세션을 시작하세요."
+                    onInspect={() =>
+                      setSelection({ kind: "integration", integrationId: integration.id })
+                    }
+                  />
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="evidence-section">
+            <header className="evidence-section-header">
+              <div>
+                <h2>계획된 커넥터</h2>
+                <p>아직 활성화되지 않은 통합입니다. 모두 명시적인 사용자 설정이 도착할 때만 작동합니다.</p>
+              </div>
+              <Badge tone="gray">{plannedIntegrations.length} planned</Badge>
+            </header>
+            <div className="evidence-card-grid evidence-card-grid-dense">
+              {plannedIntegrations.map((integration) => {
+                const selected =
+                  selection.kind === "integration" && selection.integrationId === integration.id;
+                return (
+                  <IntegrationCard
+                    key={integration.id}
+                    integration={integration}
+                    selected={selected}
+                    importKind={null}
+                    onInspect={() =>
+                      setSelection({ kind: "integration", integrationId: integration.id })
+                    }
+                  />
+                );
+              })}
+            </div>
+          </section>
+
+          {importOpen ? (
+            <section className="evidence-section evidence-import-section">
+              <ImportPanel
+                variant="embedded"
+                initialKind={importKind}
+                initialAiPlatform={importPlatform}
+                onClose={() => setImportOpen(false)}
+              />
+            </section>
+          ) : null}
+
+          <section className="evidence-section">
+            <header className="evidence-section-header">
+              <div>
+                <h2>가져온 소스</h2>
+                <p>이 세션에 등록된 출처입니다. 각 항목을 클릭하면 오른쪽 패널에서 자세한 정보를 확인할 수 있습니다.</p>
+              </div>
+              <Badge tone={importedSources.length ? "purple" : "gray"}>
+                {importedSources.length} source{importedSources.length === 1 ? "" : "s"}
+              </Badge>
+            </header>
+            {importedSources.length === 0 ? (
+              <EvidenceEmptyState
+                isDemo={isDemoSession}
+                onAdd={() => openImport("note")}
+              />
+            ) : (
+              <div className="imported-source-list">
+                {importedSources.map((source) => {
+                  const importEntry = imports.find((entry) => entry.source.id === source.id);
+                  const selected = selection.kind === "source" && selection.sourceId === source.id;
+                  return (
+                    <ImportedSourceRow
+                      key={source.id}
+                      source={source}
+                      events={view.events}
+                      selected={selected}
+                      onSelect={() => setSelection({ kind: "source", sourceId: source.id })}
+                      onRemove={
+                        importEntry && !isDemoSession
+                          ? () => {
+                              removeImport(importEntry.id);
+                              if (selected) setSelection({ kind: "empty" });
+                            }
+                          : undefined
+                      }
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {mode === "draft" ? (
+            <QuickPassControl
+              status={analysisStatus}
+              providerLabel={analysisProviderLabel}
+              providerName={analysis?.providerName ?? null}
+              error={analysisError}
+              canRun={imports.length > 0 && analysisStatus !== "running"}
+              hasAnalysis={hasAnalysis}
+              fallbackUsed={analysisFallbackUsed}
+              summary={analysis?.summary.sessionSummary ?? null}
+              issueCount={analysis?.issues.length ?? 0}
+              decisionCount={analysis?.decisions.length ?? 0}
+              nextActionCount={analysis?.nextActions.length ?? 0}
+              confidence={analysis?.confidence ?? null}
+              notes={analysis?.notes ?? []}
+              settings={analysisSettings}
+              onProviderChange={(provider) => updateAnalysisSettings({ provider })}
+              onFallbackChange={(value) => updateAnalysisSettings({ fallbackToDeterministic: value })}
+              onOpenSettings={() => setCurrentView("settings")}
+              onRun={() => runQuickPass()}
+              onClear={clearAnalysis}
+            />
+          ) : null}
+
+          <aside className="evidence-privacy-footer">
+            <Shield size={14} aria-hidden="true" />
+            <p>
+              Mori는 사용자가 직접 추가한 소스만 사용합니다. 백그라운드 캡처, 브라우저 자동 스캔,
+              계정 자동 연결은 없습니다. 계획된 커넥터도 사용자가 직접 설정하기 전까지는 비활성 상태로 유지됩니다.
+            </p>
+          </aside>
+        </section>
+
+        <SourceDetailPanel
+          selection={selection}
+          view={view}
+          integrationLookup={integrationLookup}
         />
-      ) : null}
-      {view.sources.length === 0 ? (
-        <div className="evidence-empty">
-          <Archive size={28} />
-          <h2>아직 가져온 소스가 없습니다</h2>
-          <p>위의 가져오기 패널에서 메모, URL, AI 대화를 추가하면 여기 표시됩니다.</p>
-        </div>
-      ) : (
-        <div className="evidence-grid">
-          {view.sources.map((source) => {
-            const trust = getTrustDisplay(source.trustLevel);
-            const displayStatus = getSourceDisplayStatus(source);
-            return (
-              <article className="evidence-card" key={source.id}>
-                <Archive size={22} />
-                <Badge tone={trust.tone}>{trust.label}</Badge>
-                <Badge tone={displayStatus.status === "implemented" ? "green" : displayStatus.status === "partial" ? "blue" : "gray"}>
-                  {displayStatus.statusLabel}
-                </Badge>
-                <h2>{source.title}</h2>
-                <p>{source.detail}</p>
-                <dl className="source-meta">
-                  <div><dt>Integration</dt><dd>{displayStatus.integrationLabel}</dd></div>
-                  <div><dt>Capture method</dt><dd>{displayStatus.captureMethod}</dd></div>
-                  <div><dt>Raw data</dt><dd>{displayStatus.rawDataLabel}</dd></div>
-                  <div><dt>Events</dt><dd>{source.relatedEventIds.length}</dd></div>
-                </dl>
-                <div>
-                  <Button icon={Search}>원본 보기</Button>
-                  <Button icon={Link}>연결 이벤트</Button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-      <div className="source-principles">
-        <h2>Trust model</h2>
-        <p>
-          Verified는 git diff, file changed, imported transcript, user note, explicit browser add처럼 원본 근거가 명확한 항목입니다.
-          Observed는 active window, terminal command summary, file watcher, browser tab title처럼 관찰되었지만 의미 해석이 필요한 항목입니다.
-          Inferred는 AI가 소스와 맥락을 바탕으로 만든 이벤트, 이슈, 결정, 관계입니다.
-        </p>
       </div>
+    </div>
+  );
+}
+
+function EvidenceEmptyState({
+  isDemo,
+  onAdd,
+}: {
+  isDemo: boolean;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="evidence-empty">
+      <h3>아직 가져온 소스가 없습니다</h3>
+      <p>
+        {isDemo
+          ? "데모 세션은 미리 정의된 소스만 보여줍니다. 실제 세션을 시작하면 위 카드에서 소스를 추가할 수 있습니다."
+          : "위의 카드에서 AI 대화, Git diff, 메모, URL을 추가하세요. Mori는 사용자가 명시적으로 가져온 자료만 사용합니다."}
+      </p>
+      {!isDemo ? (
+        <Button variant="primary" icon={Plus} onClick={onAdd}>
+          소스 추가
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -157,9 +328,10 @@ function QuickPassControl({
   onRun: () => void;
   onClear: () => void;
 }) {
-  const providerKindLabel = settings.provider === "ollama"
-    ? `Ollama · ${settings.ollamaModel} (${settings.ollamaEndpoint})`
-    : "Deterministic local heuristic (no network)";
+  const providerKindLabel =
+    settings.provider === "ollama"
+      ? `Ollama · ${settings.ollamaModel} (${settings.ollamaEndpoint})`
+      : "Deterministic local heuristic (no network)";
 
   return (
     <div className={`analysis-panel status-${status}`}>
@@ -176,7 +348,9 @@ function QuickPassControl({
             {status === "running" ? "분석 중..." : "Run Quick Pass"}
           </Button>
           {hasAnalysis ? (
-            <Button icon={RotateCcw} onClick={onClear}>분석 초기화</Button>
+            <Button icon={RotateCcw} onClick={onClear}>
+              분석 초기화
+            </Button>
           ) : null}
         </div>
       </div>
@@ -210,10 +384,22 @@ function QuickPassControl({
             <span>실패 시 결정론적 제공자로 폴백</span>
           </label>
         ) : null}
-        <Button icon={SettingsIcon} onClick={onOpenSettings}>설정으로 이동</Button>
+        <Button icon={SettingsIcon} onClick={onOpenSettings}>
+          설정으로 이동
+        </Button>
       </div>
       <div className="analysis-panel-status">
-        <Badge tone={status === "succeeded" ? "green" : status === "failed" ? "red" : status === "running" ? "purple" : "gray"}>
+        <Badge
+          tone={
+            status === "succeeded"
+              ? "green"
+              : status === "failed"
+                ? "red"
+                : status === "running"
+                  ? "purple"
+                  : "gray"
+          }
+        >
           {status}
         </Badge>
         <span>
@@ -233,13 +419,24 @@ function QuickPassControl({
         <>
           {summary ? <p className="analysis-panel-summary">{summary}</p> : null}
           <ul className="analysis-panel-metrics">
-            <li><strong>{issueCount}</strong><span>이슈</span></li>
-            <li><strong>{decisionCount}</strong><span>결정</span></li>
-            <li><strong>{nextActionCount}</strong><span>다음 액션</span></li>
+            <li>
+              <strong>{issueCount}</strong>
+              <span>이슈</span>
+            </li>
+            <li>
+              <strong>{decisionCount}</strong>
+              <span>결정</span>
+            </li>
+            <li>
+              <strong>{nextActionCount}</strong>
+              <span>다음 액션</span>
+            </li>
           </ul>
           {notes.length ? (
             <ul className="analysis-panel-notes">
-              {notes.map((note) => <li key={note}>{note}</li>)}
+              {notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
             </ul>
           ) : null}
         </>

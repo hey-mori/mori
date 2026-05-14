@@ -1,5 +1,5 @@
-import { Bot, Download, FileText, FolderOpen, GitCommit, Globe, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Bot, Download, FileText, FolderOpen, GitCommit, Globe, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import {
@@ -22,7 +22,30 @@ type ImportKind = "note" | "url" | "ai" | "git";
 
 type ImportStatus = { tone: "ok" | "error" | "info"; message: string } | null;
 
-export function ImportPanel() {
+export type ImportPanelProps = {
+  /**
+   * Pre-select an import tab when the panel mounts. Used by the Evidence Hub
+   * so clicking an "Available now" card opens the right import surface.
+   */
+  initialKind?: ImportKind;
+  /**
+   * Pre-select an AI platform when the panel mounts with `initialKind: "ai"`.
+   * Lets the Hub send the user straight into Claude / ChatGPT / Codex / Other.
+   */
+  initialAiPlatform?: AiTranscriptPlatform;
+  /**
+   * When true (Hub-embedded mode), the panel renders as a focused sub-card
+   * with an optional close button instead of the full standalone surface.
+   */
+  variant?: "standalone" | "embedded";
+  /**
+   * Called when the user dismisses the embedded import surface.
+   */
+  onClose?: () => void;
+};
+
+export function ImportPanel(props: ImportPanelProps = {}) {
+  const { initialKind, initialAiPlatform, variant = "standalone", onClose } = props;
   const draft = useMoriSessionStore((state) => state.draft);
   const imports = useMoriSessionStore((state) => state.imports);
   const addImport = useMoriSessionStore((state) => state.addImport);
@@ -30,11 +53,11 @@ export function ImportPanel() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
 
-  const [kind, setKind] = useState<ImportKind>("note");
+  const [kind, setKind] = useState<ImportKind>(initialKind ?? "note");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [url, setUrl] = useState("");
-  const [platform, setPlatform] = useState<AiTranscriptPlatform>("claude");
+  const [platform, setPlatform] = useState<AiTranscriptPlatform>(initialAiPlatform ?? "claude");
   const [origin, setOrigin] = useState("");
   const [status, setStatus] = useState<ImportStatus>(null);
   const [repoPath, setRepoPath] = useState("");
@@ -64,6 +87,20 @@ export function ImportPanel() {
     setSelectedRepoId(activeRepository.id);
     setRepoPath(activeRepository.path);
   }, [activeRepository, repoPath, selectedRepoId]);
+
+  // When the Evidence Hub opens this panel with a fresh kind / platform, sync
+  // the local state so the right tab is active without forcing a remount.
+  const lastInitial = useRef<{ kind?: ImportKind; platform?: AiTranscriptPlatform }>({});
+  useEffect(() => {
+    if (initialKind && initialKind !== lastInitial.current.kind) {
+      setKind(initialKind);
+      lastInitial.current.kind = initialKind;
+    }
+    if (initialAiPlatform && initialAiPlatform !== lastInitial.current.platform) {
+      setPlatform(initialAiPlatform);
+      lastInitial.current.platform = initialAiPlatform;
+    }
+  }, [initialKind, initialAiPlatform]);
 
   if (!draft) {
     return (
@@ -278,13 +315,18 @@ export function ImportPanel() {
   }
 
   return (
-    <div className="import-panel">
+    <div className={`import-panel ${variant === "embedded" ? "is-embedded" : ""}`.trim()}>
       <div className="import-header">
         <div>
           <h2>소스 가져오기</h2>
           <p>메모, URL, AI 대화를 정규화해 현재 세션의 소스와 이벤트로 저장합니다.</p>
         </div>
-        <Badge tone="green">실제 세션</Badge>
+        <div className="import-header-meta">
+          <Badge tone="green">실제 세션</Badge>
+          {onClose ? (
+            <Button icon={X} onClick={onClose} aria-label="가져오기 패널 닫기" title="가져오기 패널 닫기" />
+          ) : null}
+        </div>
       </div>
       <div className="import-kind-tabs">
         <KindTab active={kind === "note"} icon={FileText} label="메모" onClick={() => setKind("note")} />

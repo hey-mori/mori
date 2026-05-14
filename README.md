@@ -31,7 +31,7 @@ This repository currently contains the frontend foundation for Mori:
 - Flow Focus relationship highlighting and Trace panel
 - Event Inspector with trust, confidence, evidence, related items, note, and correction placeholders
 - Review page with Issue Garden and Decision Log
-- Evidence view for source management
+- Evidence Hub: Available-now and Planned-connector card grids backed by the source registry, embedded import flow that opens with the right tab + AI platform pre-selected, imported-sources list with badges, and a sticky right-side detail panel that exposes integration status, capture method, raw-data policy, privacy note, and related events for the selected source or integration
 - Resume Prompt and Report Export UI
 - Start Session setup flow
 - Settings / Privacy / Local AI

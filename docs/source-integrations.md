@@ -2,6 +2,15 @@
 
 This document describes all source integrations in Mori, their implementation status, capture methods, privacy boundaries, and trust models.
 
+The Evidence Hub surfaces a curated subset of this registry to users; the
+hub grouping logic is in
+[`src/lib/sources/integrationGroups.ts`](../src/lib/sources/integrationGroups.ts).
+"Available now" cards must be `implemented` or `partial` (and user-facing —
+`tauriGitDiff`, `quickPass`, and `repository` are intentionally hidden so the
+Hub never advertises internals as standalone import paths). "Planned
+connectors" cards must be `planned` — Mori does not invent connectors that
+have no registry entry.
+
 ## Overview
 
 Mori reconstructs work sessions from **explicitly imported sources**. Every source has:

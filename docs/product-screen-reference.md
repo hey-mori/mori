@@ -14,7 +14,7 @@ These screenshots are product and UX references for Mori. They are not all imple
 | Screen | Status | Reference | Prompt/spec |
 | --- | --- | --- | --- |
 | [Start Session / Session Setup](#start-session-session-setup) | Partial | [start-session-reference.png](assets/screenshots/start-session-reference.png) | [product-screen-prompts.md](product-screen-prompts.md) |
-| [Evidence Hub](#evidence-hub) | Partial | [evidence-hub-reference.png](assets/screenshots/evidence-hub-reference.png) | [product-screen-prompts.md#1-evidence-hub](product-screen-prompts.md#1-evidence-hub) |
+| [Evidence Hub](#evidence-hub) | Implemented | [evidence-hub-reference.png](assets/screenshots/evidence-hub-reference.png) | [product-screen-prompts.md#1-evidence-hub](product-screen-prompts.md#1-evidence-hub) |
 | [AI Transcript Import](#ai-transcript-import) | Partial | [ai-transcript-import-reference.png](assets/screenshots/ai-transcript-import-reference.png) | [product-screen-prompts.md#2-ai-transcript-import](product-screen-prompts.md#2-ai-transcript-import) |
 | [Git Diff Import](#git-diff-import) | Partial | [git-diff-import-reference.png](assets/screenshots/git-diff-import-reference.png) | [product-screen-prompts.md#3-git-diff-import](product-screen-prompts.md#3-git-diff-import) |
 | [Import Review / Evidence Mapping](#import-review-evidence-mapping) | Planned | [import-review-evidence-mapping-reference.png](assets/screenshots/import-review-evidence-mapping-reference.png) | [product-screen-prompts.md#4-import-review--evidence-mapping](product-screen-prompts.md#4-import-review--evidence-mapping) |
@@ -55,16 +55,16 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ![Evidence Hub reference](assets/screenshots/evidence-hub-reference.png)
 
-- **Status:** Partial
+- **Status:** Implemented
 - **Product purpose:** Central source/evidence management for Mori.
 - **Primary user job:** Add, inspect, and understand the evidence Mori can use to reconstruct work.
-- **Key UI elements:** Available source cards, planned connector cards, selected source inspector, provenance details, add source action.
-- **Main actions:** Add/import source, inspect source detail, distinguish available from planned connectors.
-- **Data shown:** Source kind, capture method, raw policy, trust level, privacy note, provenance, recent imports.
-- **Source/provenance expectations:** Evidence cards must expose provenance and capture method.
-- **Privacy expectations:** Explicit import only; planned connectors are opt-in and not silently active.
-- **Persistence expectations:** Imported SourceRef records persist with raw retention policy.
-- **Implementation notes:** Current Evidence view exists, but this richer hub is only partial.
+- **Key UI elements:** Available source cards (Claude / ChatGPT / AI Conversation / Git Diff / Manual Note / URL), planned connector cards (Codex Transcript / VS Code / Cursor / Terminal / Browser Tabs / Slack / Notion / Figma / File System / Code Editor / Documentation Sites), embedded ImportPanel that opens with the right tab pre-selected, imported sources list, sticky right-side detail panel for the selected source or integration, "Add Source" action, persistent privacy footer.
+- **Main actions:** Click an Available card to open the matching import flow with platform pre-selected, click Inspect on any card to see status / capture method / raw policy / privacy in the right panel, click an imported source to see its provenance and related events, remove imported sources, run Quick Pass from the same surface.
+- **Data shown:** For each integration: registry status (`Available` / `Partial` / `Planned`), capture method, raw data policy, default trust level, privacy note. For each imported source: integration label, trust level, raw retention, related event count, captured timestamp, related issues/decisions.
+- **Source/provenance expectations:** All visible source rows trace back to a `SourceRef`; the detail panel uses `getSourceDisplayStatus()` and `getEventEvidenceSources()` so nothing is hand-rolled.
+- **Privacy expectations:** Planned connector cards are disabled with explicit Korean tooltips. The persistent footer reaffirms no background capture, no browser scanning, no automatic account connection.
+- **Persistence expectations:** Imports flow through the existing `useMoriSessionStore.addImport` path, so they land in browser draft today and SQLite in Tauri mode automatically.
+- **Implementation notes:** Built around `src/features/evidence/`, `src/lib/sources/integrationGroups.ts`, and reuses `src/lib/sources/sourceRegistry.ts` + `traceability.ts` without duplication.
 - **Prompt/spec source:** [product-screen-prompts.md#1-evidence-hub](product-screen-prompts.md#1-evidence-hub)
 
 <a id="ai-transcript-import"></a>

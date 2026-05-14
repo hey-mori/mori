@@ -348,10 +348,37 @@ surfaces as an issue candidate. The provider never invents per-line
 explanations. Run Quick Pass with an Ollama provider for richer
 interpretation.
 
+## Evidence Hub entry point
+
+The **Evidence** page is the user-facing way into every import flow. Each
+card under "사용 가능한 소스" maps to a single tab in the existing
+`ImportPanel`:
+
+| Hub card | Integration ID | Import tab | Pre-selected platform |
+| -------- | -------------- | ---------- | --------------------- |
+| Claude Transcript | `claudeTranscript` | AI 대화 | `claude` |
+| ChatGPT Transcript | `chatgptTranscript` | AI 대화 | `chatgpt` |
+| AI Conversation (Other) | `aiConversation` | AI 대화 | `other` |
+| Git Diff (Paste) | `gitDiff` | Git diff | – |
+| Manual Note | `manualNote` | 메모 | – |
+| URL / Browser Page | `url` | URL | – |
+
+The mapping lives in
+[`src/lib/sources/integrationGroups.ts`](../src/lib/sources/integrationGroups.ts);
+clicking a card opens the `ImportPanel` embedded inside the Hub with
+`initialKind` (and `initialAiPlatform` for AI transcripts) set, so the user
+never has to find the correct tab manually.
+
+Planned connector cards never open an import flow — they are kept in the Hub
+only so the user can inspect what each connector will and will not access
+once it lands.
+
 ## Where imports live
 
 - Pure normalizers: [src/lib/import/](../src/lib/import/)
-- UI: [src/features/import/ImportPanel.tsx](../src/features/import/ImportPanel.tsx)
+- UI: [src/features/import/ImportPanel.tsx](../src/features/import/ImportPanel.tsx) — accepts `initialKind` and `initialAiPlatform` props for Evidence Hub embedding
+- Evidence Hub entry point: [src/features/evidence/EvidenceView.tsx](../src/features/evidence/EvidenceView.tsx)
+- Integration grouping helper: [src/lib/sources/integrationGroups.ts](../src/lib/sources/integrationGroups.ts)
 - Per-session storage: `BrowserDraftRepository.addSessionImport` in
   [src/lib/storage/localStorageAdapter.ts](../src/lib/storage/localStorageAdapter.ts)
 - Tauri SQLite persistence path:
