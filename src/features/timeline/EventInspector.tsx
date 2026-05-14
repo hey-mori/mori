@@ -1,4 +1,12 @@
-import { ClipboardCopy, Link as LinkIcon } from "lucide-react";
+import {
+  ClipboardCopy,
+  Link as LinkIcon,
+  Pencil,
+  Split,
+  Combine,
+  PlusCircle,
+  StickyNote,
+} from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { SectionHeader } from "../../components/ui/SectionHeader";
@@ -15,29 +23,32 @@ import type {
 import { formatTime, formatTimeRange } from "../../lib/formatting/time";
 import { describeTrustLevel } from "../../lib/relationships/relationshipDisplay";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
+import {
+  buildInspectorViewModel,
+  type TimelineRenderModel,
+} from "../../lib/timeline/timelineViewModel";
+import {
+  TIMELINE_CONTROLS,
+  getPlannedHint,
+} from "../../lib/timeline/timelineControls";
 
 export function EventInspector({
   selectedEvent,
   session,
+  model,
   onTrace,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
+  model: TimelineRenderModel;
   onTrace: () => void;
 }) {
+  const inspector = buildInspectorViewModel({
+    event: selectedEvent,
+    view: session,
+    model,
+  });
   const trust = describeTrustLevel(selectedEvent.trustLevel);
-  const sources = session.sources.filter((source) => selectedEvent.sourceRefs.includes(source.id));
-  const issues = session.issues.filter((issue) => selectedEvent.linkedIssueIds.includes(issue.id));
-  const decisions = session.decisions.filter((decision) =>
-    selectedEvent.linkedDecisionIds.includes(decision.id),
-  );
-  const artifacts = session.artifacts.filter((artifact) =>
-    selectedEvent.artifactIds?.includes(artifact.id),
-  );
-  const nextActions = session.nextActions.filter((action) =>
-    action.relatedEventIds.includes(selectedEvent.id),
-  );
-  const confidencePct = Math.round(selectedEvent.confidence * 100);
 
   function handleCopy() {
     const text = `${formatTimeRange(selectedEvent.start, selectedEvent.end)}\n${selectedEvent.title}\n\n${selectedEvent.summary}`;
@@ -53,8 +64,9 @@ export function EventInspector({
           <Badge tone={eventTypeTone[selectedEvent.type]}>{eventTypeLabels[selectedEvent.type]}</Badge>
           <Badge tone={trust.tone}>{trust.label}</Badge>
           {selectedEvent.trustLevel === "inferred" ? (
-            <Badge tone={confidenceTone(confidencePct)}>{confidencePct}%</Badge>
+            <Badge tone={confidenceTone(inspector.confidencePct)}>{inspector.confidencePct}%</Badge>
           ) : null}
+          {selectedEvent.userModified ? <Badge tone="orange">User-modified</Badge> : null}
         </div>
         <h3 className="inspector-title">{selectedEvent.title}</h3>
         <p className="inspector-time">{formatTimeRange(selectedEvent.start, selectedEvent.end)}</p>
@@ -68,7 +80,10 @@ export function EventInspector({
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Evidence / trust" hint={`${sources.length} source${sources.length === 1 ? "" : "s"}`} />
+        <SectionHeader
+          title="Evidence / trust"
+          hint={`${inspector.sources.length} source${inspector.sources.length === 1 ? "" : "s"}`}
+        />
         <div className="inspector-trust-card">
           <strong>{trust.label}</strong>
           <span>{trustCopy(selectedEvent.trustLevel)}</span>
@@ -77,32 +92,46 @@ export function EventInspector({
             {selectedEvent.userModified ? " · user modified" : ""}
           </small>
         </div>
-        <SourcesList sources={sources} />
+        <SourcesList sources={inspector.sources} />
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Linked items" />
-        <LinkedRows
-          issues={issues}
-          decisions={decisions}
-          artifacts={artifacts}
-          nextActions={nextActions}
+        <SectionHeader
+          title="Linked items"
+          hint={inspector.hiddenRelationshipCount > 0 ? `+${inspector.hiddenRelationshipCount} hidden` : undefined}
         />
+        <LinkedRows
+          issues={inspector.issues}
+          decisions={inspector.decisions}
+          artifacts={inspector.artifacts}
+          nextActions={inspector.nextActions}
+        />
+        {inspector.hiddenRelationshipCount > 0 ? (
+          <p className="inspector-hidden-note">
+            {inspector.hiddenRelationshipCount} related event
+            {inspector.hiddenRelationshipCount === 1 ? "" : "s"} are outside the
+            current focus. Open <strong>Flow trace</strong> to see the wider
+            graph.
+          </p>
+        ) : null}
       </section>
 
-      {decisions.length > 0 ? (
+      {inspector.decisions.length > 0 ? (
         <section className="inspector-section">
           <SectionHeader title="Impact" />
           <ul className="inspector-impact-list">
-            {decisions.flatMap((decision) => decision.impact).slice(0, 3).map((impact) => (
-              <li key={impact}>{impact}</li>
-            ))}
+            {inspector.decisions
+              .flatMap((decision) => decision.impact)
+              .slice(0, 3)
+              .map((impact) => (
+                <li key={impact}>{impact}</li>
+              ))}
           </ul>
         </section>
       ) : null}
 
       <section className="inspector-section">
-        <SectionHeader title="Actions" />
+        <SectionHeader title="Actions" hint="Implemented" />
         <div className="inspector-actions-row">
           <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
             Flow trace
@@ -114,14 +143,62 @@ export function EventInspector({
       </section>
 
       <section className="inspector-section">
+        <SectionHeader title="Planned actions" hint="Planned" />
+        <div className="inspector-actions-row inspector-actions-planned">
+          <PlannedActionButton
+            label={TIMELINE_CONTROLS.inspectorEditEvent.label}
+            tooltip={getPlannedHint("inspectorEditEvent")}
+            icon={Pencil}
+          />
+          <PlannedActionButton
+            label={TIMELINE_CONTROLS.inspectorSplitEvent.label}
+            tooltip={getPlannedHint("inspectorSplitEvent")}
+            icon={Split}
+          />
+          <PlannedActionButton
+            label={TIMELINE_CONTROLS.inspectorMergeEvent.label}
+            tooltip={getPlannedHint("inspectorMergeEvent")}
+            icon={Combine}
+          />
+          <PlannedActionButton
+            label={TIMELINE_CONTROLS.inspectorCreateIssue.label}
+            tooltip={getPlannedHint("inspectorCreateIssue")}
+            icon={PlusCircle}
+          />
+          <PlannedActionButton
+            label={TIMELINE_CONTROLS.inspectorAddNote.label}
+            tooltip={getPlannedHint("inspectorAddNote")}
+            icon={StickyNote}
+          />
+        </div>
+      </section>
+
+      <section className="inspector-section">
         <SectionHeader title="Memo / correction" hint="Planned" />
         <textarea
-          placeholder="Corrections and notes will be saved in a future milestone."
+          placeholder={getPlannedHint("memoSave") ?? "Corrections and notes will save in a future milestone."}
           disabled
           className="inspector-memo"
         />
       </section>
     </aside>
+  );
+}
+
+function PlannedActionButton({
+  label,
+  tooltip,
+  icon: Icon,
+}: {
+  label: string;
+  tooltip?: string;
+  icon: typeof Pencil;
+}) {
+  return (
+    <button type="button" className="inspector-planned-action" disabled title={tooltip}>
+      <Icon size={13} aria-hidden="true" />
+      {label}
+    </button>
   );
 }
 
@@ -138,7 +215,8 @@ function SourcesList({ sources }: { sources: SourceRef[] }) {
             <div>
               <strong>{source.title}</strong>
               <small>
-                {displayStatus.integrationLabel} · {displayStatus.captureMethod} · {displayStatus.rawDataLabel}
+                {displayStatus.integrationLabel} · {displayStatus.captureMethod} ·{" "}
+                {displayStatus.rawDataLabel}
               </small>
             </div>
             <Badge tone={describeTrustLevel(source.trustLevel).tone}>

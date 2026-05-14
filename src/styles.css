@@ -781,30 +781,32 @@ kbd {
 .event-card {
   position: absolute;
   z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 8px 11px;
+  display: grid;
+  grid-template-rows: 14px 1fr 13px; /* header / title / footer slot */
+  row-gap: 4px;
+  padding: 9px 11px;
   color: #172033;
   text-align: left;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.04), 0 3px 10px rgba(20, 25, 36, 0.035);
-  transition: opacity 140ms ease, transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  /* No `transform` in the transition list — hover must not move the card. */
+  transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   overflow: hidden;
   cursor: pointer;
 }
 
 .event-card.is-compact {
-  gap: 3px;
-  padding: 8px 10px;
+  grid-template-rows: 12px 1fr 0; /* compact hides the footer slot entirely */
+  row-gap: 3px;
+  padding: 7px 10px 8px;
 }
 
 .event-card:hover {
+  /* No transform — cards must not pop up under the cursor (calmer feel). */
   border-color: var(--line-strong);
-  box-shadow: 0 6px 18px rgba(20, 25, 36, 0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20, 25, 36, 0.06);
 }
 
 .event-card.focus-selected {
@@ -902,39 +904,35 @@ kbd {
   position: absolute;
   z-index: 2;
   display: grid;
-  grid-template-rows: auto auto auto auto;
-  gap: 4px;
-  padding: 9px 12px 8px;
+  grid-template-rows: 14px 1fr 13px; /* same slot grid as event-card */
+  row-gap: 4px;
+  padding: 9px 12px;
   color: #172033;
   text-align: left;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.04), 0 4px 12px rgba(20, 25, 36, 0.04);
-  transition: opacity 140ms ease, transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  /* No `transform` in the transition list. */
+  transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   overflow: hidden;
   cursor: pointer;
 }
 
-.timeline-bundle-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 2px;
-  background: currentColor;
-  opacity: 0.18;
-}
+/* Intentionally no ::before left bar — the calm direction has no accent
+ * stripes on the side of cards. Tone is conveyed by the card-${tone} body
+ * gradient and the time-row icon color. */
 
 .timeline-bundle-card.is-compact {
-  grid-template-rows: auto auto auto;
-  gap: 4px;
-  padding: 9px 10px;
+  grid-template-rows: 12px 1fr 0;
+  row-gap: 3px;
+  padding: 7px 10px 8px;
 }
 
 .timeline-bundle-card:hover {
+  /* No transform — calm hover (border + soft shadow only). */
   border-color: var(--line-strong);
-  box-shadow: 0 8px 20px rgba(20, 25, 36, 0.09);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20, 25, 36, 0.07);
 }
 
 .timeline-bundle-card.focus-selected {
@@ -8374,4 +8372,594 @@ pre {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+/* ===========================================================================
+ * Timeline product hardening (milestone: Timeline product architecture).
+ *
+ * Layout contract:
+ *   - The TopSessionBar is sticky to the viewport top.
+ *   - The SessionModeBanner is non-sticky (deliberate — see component doc).
+ *   - The Timeline scroller is the only horizontally-scrolling element.
+ *   - The time ruler is sticky to the top of the scroller.
+ *   - Lane labels are sticky to the left edge of the scroller.
+ *   - The right inspector is sticky to the viewport top below the TopSessionBar.
+ * ===========================================================================
+ */
+
+/* Sticky TopSessionBar with subtle elevation when scrolled. */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+}
+
+.topbar-live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(21, 149, 90, 0.16);
+  animation: mori-live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes mori-live-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(21, 149, 90, 0.16);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(21, 149, 90, 0.04);
+  }
+}
+
+.topbar-search {
+  position: relative;
+}
+
+.topbar-search kbd {
+  display: none; /* No global hotkey ships today; we don't claim ⌘K. */
+}
+
+/* Timeline main column ─ tighter, with deliberate scroll behavior. */
+.timeline-main {
+  display: grid;
+  gap: 12px;
+  padding: 14px 20px 24px;
+  min-width: 0;
+  overflow: visible;
+}
+
+/* Compact one-row toolbar. Filter chips moved into a popover. */
+.timeline-toolbar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
+}
+
+.timeline-toolbar-left,
+.timeline-toolbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.timeline-toolbar-right {
+  justify-self: end;
+}
+
+.timeline-toolbar-honesty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px dashed rgba(214, 219, 232, 0.7);
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.timeline-toolbar-honesty .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--orange);
+  vertical-align: middle;
+}
+
+.timeline-toolbar-honesty strong {
+  font-weight: 700;
+  color: #4a3206;
+  margin: 0 2px;
+}
+
+.timeline-toolbar .segmented button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.toolbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.toolbar-toggle:hover {
+  border-color: var(--line-strong);
+  background: var(--gray-50);
+}
+
+.toolbar-toggle.is-active {
+  border-color: var(--purple);
+  background: var(--purple-50);
+  color: #3a25c6;
+}
+
+.filter-pop-wrap {
+  position: relative;
+}
+
+.filter-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  min-width: 240px;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 18px 38px rgba(20, 25, 36, 0.12);
+}
+
+.filter-popover header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.filter-popover-clear {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.filter-popover-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.filter-popover ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.filter-pop-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+
+.filter-pop-item:hover {
+  border-color: var(--line-strong);
+}
+
+.filter-pop-item.active {
+  border-color: var(--purple);
+  background: var(--purple-50);
+  color: #3a25c6;
+}
+
+.filter-popover footer {
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(214, 219, 232, 0.7);
+}
+
+.filter-popover footer small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.screen-reader-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Scroller: ONE horizontally-scrolling region; cards and the ruler share its
+ * coordinate system. We give it `position: relative` so the sticky children
+ * pin against its content box. */
+.timeline-scroller {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: 12px;
+  background: white;
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px rgba(34, 41, 56, 0.04);
+  scrollbar-gutter: stable;
+}
+
+/* Subtle scrollbars that match Mori's calm direction. */
+.timeline-scroller::-webkit-scrollbar,
+.inspector::-webkit-scrollbar,
+.summary-panel::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.timeline-scroller::-webkit-scrollbar-track,
+.inspector::-webkit-scrollbar-track,
+.summary-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeline-scroller::-webkit-scrollbar-thumb,
+.inspector::-webkit-scrollbar-thumb,
+.summary-panel::-webkit-scrollbar-thumb {
+  background: rgba(98, 105, 124, 0.16);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.timeline-scroller::-webkit-scrollbar-thumb:hover,
+.inspector::-webkit-scrollbar-thumb:hover,
+.summary-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(98, 105, 124, 0.32);
+  background-clip: padding-box;
+}
+
+.timeline-frame {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(247, 248, 251, 0.72) 0%, transparent 92px),
+    white;
+  overflow: visible;
+}
+
+.timeline-empty-inset {
+  padding: 32px;
+}
+
+/* Sticky axis — pinned to the top of the scroller. */
+.timeline-axis {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  height: 40px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+/* Sticky lane labels — pinned to the left edge of the scroller. */
+.lane-label {
+  position: sticky;
+  left: 0;
+  top: auto;
+  bottom: auto;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px 0 16px;
+  color: #1c2638;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.985) 86%, rgba(255, 255, 255, 0));
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-right: 1px solid rgba(214, 219, 232, 0.55);
+  height: 100%;
+}
+
+/* Lane background — subtle alternating stripes for rhythm without padding. */
+.lane:nth-child(even) {
+  background: rgba(247, 248, 251, 0.38);
+}
+
+.lane.is-empty {
+  background: transparent;
+  opacity: 0.4;
+}
+
+/* Sticky inspector — pinned to the viewport below the TopSessionBar. */
+.inspector {
+  position: sticky;
+  top: 76px;
+  align-self: start;
+  max-height: calc(100vh - 76px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.inspector-hidden-note {
+  margin: 6px 0 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--orange-50);
+  color: #8a5a08;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.inspector-hidden-note strong {
+  color: #6e3e00;
+}
+
+.inspector-actions-planned {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 6px;
+}
+
+.inspector-planned-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px dashed rgba(193, 197, 209, 0.85);
+  border-radius: 7px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+/* Event card: trust glyph + cleaner footer.
+ *
+ * The slot grid is defined once at the base rule (line ~781) so this
+ * overlay does NOT redeclare grid-template-rows. The fixed slot heights
+ * keep the card tidy: header / title / footer always pin to the same
+ * y-positions regardless of which optional elements are present. */
+.event-card-header {
+  align-items: center;
+  align-self: start;
+  min-width: 0;
+}
+
+.event-card-trust {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(17, 24, 39, 0.05);
+  color: var(--muted);
+}
+
+.event-card-trust.trust-verified {
+  background: rgba(21, 149, 90, 0.08);
+  color: var(--green);
+}
+
+.event-card-trust.trust-observed {
+  background: rgba(35, 105, 246, 0.08);
+  color: var(--blue);
+}
+
+.event-card-trust.trust-inferred {
+  background: var(--orange-50);
+  color: #8a5a08;
+}
+
+/* No trust accent stripe on cards. Trust is communicated by the
+ * `event-card-trust` badge in the card header and (when selected) by the
+ * purple outline ring. Side bars look AI-template-y and break the calm. */
+
+.event-card-summary {
+  display: none; /* The inspector owns prose; cards stay scannable. */
+}
+
+.event-card-footer {
+  /* The footer always occupies the same slot at the bottom of the card.
+   * Whether or not the JSX emits meta content, the slot height is fixed
+   * by `.event-card { grid-template-rows: ... 12px }`. */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: end;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.event-card-meta {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-card-title {
+  align-self: center; /* center vertically inside its 1fr slot */
+}
+
+/* Bundle card footer in line with the new event card style. */
+.timeline-bundle-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: end;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.timeline-bundle-footer > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.timeline-bundle-title {
+  align-self: center;
+}
+
+.timeline-bundle-card-header {
+  align-self: start;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Sidebar session card — live timer rhythm. */
+.session-card time.is-live {
+  color: var(--green);
+}
+
+.session-card time.is-live::after {
+  content: "";
+  display: inline-block;
+  margin-left: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  vertical-align: middle;
+  animation: mori-live-pulse 1.6s ease-in-out infinite;
+}
+
+/* Responsive contract.
+ *   - 1180px → inspector stacks below; toolbar still single-row.
+ *   - 1380px → toolbar gap tightens.
+ *   - 1600px → roomier padding.
+ */
+@media (max-width: 1180px) {
+  .timeline-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-toolbar-right {
+    justify-self: start;
+  }
+
+  .inspector {
+    position: static;
+    max-height: none;
+    border-left: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 1380px) {
+  .timeline-toolbar {
+    padding: 8px 12px;
+  }
+
+  .timeline-toolbar-left,
+  .timeline-toolbar-right {
+    gap: 6px;
+  }
+
+  .toolbar-toggle {
+    padding: 0 10px;
+    font-size: 11.5px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .timeline-main {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+/* Start Session honesty strip. */
+.capture-surface-strip {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  align-items: start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(214, 219, 232, 0.85);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.capture-surface-strip strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Stack the Start Session summary panel cleanly on narrower desktops. */
+@media (max-width: 1340px) {
+  .setup-grid .summary-panel {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 1180px) {
+  .summary-panel .summary-source-list {
+    columns: 2;
+  }
 }

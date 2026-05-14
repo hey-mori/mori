@@ -8,14 +8,22 @@ import {
   SlidersHorizontal,
   ListChecks,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "../ui/Button";
 import type { ViewKey } from "../../domain/types";
+import { moriMockSession } from "../../domain/mock-data";
+import { useMoriSessionStore } from "../../app/sessionStore";
+import { deriveSessionTiming } from "../../lib/session/sessionTiming";
+import {
+  TIMELINE_CONTROLS,
+  getPlannedHint,
+} from "../../lib/timeline/timelineControls";
 
 const navItems: Array<{ key: ViewKey; label: string; badge?: string; icon: typeof Play }> = [
   { key: "start", label: "Start Session", icon: Play },
   { key: "timeline", label: "Timeline", icon: SlidersHorizontal },
   { key: "evidence", label: "Evidence", icon: FileText },
-  { key: "review", label: "Review", icon: ListChecks, badge: "7" },
+  { key: "review", label: "Review", icon: ListChecks },
   { key: "reports", label: "Reports", icon: PanelRightOpen },
   { key: "memory", label: "Memory", icon: FolderClock },
   { key: "settings", label: "Settings", icon: Settings },
@@ -33,7 +41,12 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
           const Icon = item.icon;
           const active = item.key === currentView || (currentView === "flow" && item.key === "timeline");
           return (
-            <button className={`nav-item ${active ? "active" : ""}`} key={`${item.label}-${index}`} onClick={() => onNavigate(item.key)} type="button">
+            <button
+              className={`nav-item ${active ? "active" : ""}`}
+              key={`${item.label}-${index}`}
+              onClick={() => onNavigate(item.key)}
+              type="button"
+            >
               <Icon size={17} />
               <span>{item.label}</span>
               {item.badge ? <b>{item.badge}</b> : null}
@@ -41,30 +54,94 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
           );
         })}
       </nav>
-      <div className="session-card">
-        <span className="muted">진행 중인 세션</span>
-        <strong>Mori 앱 기획</strong>
-        <small>시작: 13:02</small>
-        <time>04:32:19</time>
-        <Button>세션 종료</Button>
-      </div>
-      <div className="profile">
-        <div className="avatar">KM</div>
-        <div>
-          <strong>Kim Mori</strong>
-          <small>Local Mode</small>
-        </div>
-        <span className="status-dot" />
-      </div>
-      <button
-        className="collapse"
-        type="button"
-        aria-label="사이드바 접기 (다음 마일스톤)"
-        title="사이드바 접기는 다음 마일스톤에서 활성화됩니다"
-        disabled
-      >
-        <ChevronLeft size={18} />
-      </button>
+      <SidebarSessionCard />
+      <SidebarProfile />
+      <SidebarCollapseButton />
     </aside>
+  );
+}
+
+function SidebarSessionCard() {
+  const draft = useMoriSessionStore((state) => state.draft);
+  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
+
+  const initialTiming = deriveSessionTiming({
+    draft,
+    demoSession: moriMockSession.session,
+    analysisStatus,
+  });
+  const [timing, setTiming] = useState(initialTiming);
+  useEffect(() => {
+    const snapshot = deriveSessionTiming({
+      draft,
+      demoSession: moriMockSession.session,
+      analysisStatus,
+    });
+    setTiming(snapshot);
+    if (!snapshot.isLive) return;
+    const interval = window.setInterval(() => {
+      setTiming(
+        deriveSessionTiming({
+          draft,
+          demoSession: moriMockSession.session,
+          analysisStatus,
+        }),
+      );
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [draft, analysisStatus]);
+
+  const title = draft?.session.title ?? moriMockSession.session.title;
+  const startHint = timing.startTimeLabel
+    ? `시작 ${timing.startTimeLabel}`
+    : "시작 기록 없음";
+  const endSessionHint = getPlannedHint("endSession");
+
+  return (
+    <div className="session-card" role="region" aria-label="Current session">
+      <span className="muted">진행 중인 세션</span>
+      <strong>{title}</strong>
+      <small>{startHint} · {timing.stateLabel}</small>
+      <time className={timing.isLive ? "is-live" : ""} aria-live={timing.isLive ? "polite" : "off"}>
+        {timing.durationLabel}
+      </time>
+      <Button
+        disabled={!TIMELINE_CONTROLS.endSession || timing.state === "demo"}
+        title={
+          timing.state === "demo"
+            ? "Demo sessions do not need to be ended."
+            : endSessionHint
+        }
+      >
+        세션 종료
+      </Button>
+    </div>
+  );
+}
+
+function SidebarProfile() {
+  return (
+    <div className="profile">
+      <div className="avatar">KM</div>
+      <div>
+        <strong>Kim Mori</strong>
+        <small>Local Mode</small>
+      </div>
+      <span className="status-dot" />
+    </div>
+  );
+}
+
+function SidebarCollapseButton() {
+  return (
+    <button
+      className="collapse"
+      type="button"
+      aria-label="사이드바 접기"
+      title={getPlannedHint("sidebarCollapse")}
+      disabled
+    >
+      <ChevronLeft size={18} />
+    </button>
   );
 }

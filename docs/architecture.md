@@ -122,6 +122,10 @@ Pipeline notes:
   - `flow-focus`: Flow Focus components (shared with Timeline)
 - `lib`: pure logic such as timeline layout, relationship traversal, trust formatting, resume prompt generation, session status derivation
   - `session/sessionStatus.ts`: centralized helper that derives consistent demo/draft/analysis/persistence status labels and metrics for UI consistency across pages
+  - `session/sessionTiming.ts`: pure helper that derives lifecycle state (demo / active / analyzing / draft / ended), duration labels, and the `isLive` flag that drives the TopSessionBar and Sidebar live timers
+  - `timeline/timelineViewModel.ts`: builds the Timeline `RenderModel` (visible events, display items, lanes, range, ticks, layout, focused set) and the inspector's view model so React components never compute math inline
+  - `timeline/timelineControls.ts`: typed registry of Timeline + Inspector controls with `implemented | planned | hidden` status. The toolbar and inspector read tooltips from here so no JSX hand-rolls planned-control copy
+  - `timeline/relationshipPolicy.ts`: visibility policy and connector aggregation. Timeline mode hides connectors by default and only reveals a focused subgraph; Flow Focus widens to a 2-hop graph. Both modes aggregate parallel raw relationships into weighted connectors
 - `styles`: tokens, themes, global CSS, Tailwind entry
 
 ### Page Responsibilities

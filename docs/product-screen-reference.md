@@ -37,16 +37,16 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ![Start Session / Session Setup reference](assets/screenshots/start-session-reference.png)
 
-- **Status:** Partial
+- **Status:** Partial — Honesty strip added above the source-tile grid that reads the live counts from `getImplementedCaptureSurfaces()` / `getPlannedCaptureSurfaces()` so the screen cannot over-promise. Source tile copy is unchanged; tiles still represent the **future** capture set, not a live integration list.
 - **Product purpose:** Define a deliberate recording boundary before any work memory exists.
 - **Primary user job:** Start a scoped Mori session with clear sources, mode, project, local AI, and storage expectations.
-- **Key UI elements:** Session name, project picker, source choices, recording mode cards, local AI engine choices, privacy/storage summary.
+- **Key UI elements:** Session name, project picker, capture-surface honesty strip, source tiles (Claude Code, Codex CLI, Cursor, VS Code, Terminal, Chrome tabs, Finder, Git diff, manual notes), recording mode cards, local AI engine choices, privacy/storage summary.
 - **Main actions:** Start Mori, cancel, choose sources/mode/engine, review session summary.
-- **Data shown:** Project, selected source types, recording mode, AI engine, save location, estimated storage.
+- **Data shown:** Project, selected source types, recording mode, AI engine, save location, estimated storage, live counts of implemented vs. planned capture surfaces.
 - **Source/provenance expectations:** All future evidence must come from selected or explicitly imported sources.
-- **Privacy expectations:** User-controlled session start; no ambient recording.
-- **Persistence expectations:** Session metadata should be saved locally and later to SQLite/.mori.
-- **Implementation notes:** Existing app has a Start Session surface; keep status Partial until it fully matches the reference.
+- **Privacy expectations:** User-controlled session start; no ambient recording. The honesty strip explicitly states that Claude Code hook, Codex CLI wrapper, terminal, IDE, and browser surfaces are docs-template-only or planned.
+- **Persistence expectations:** Session metadata is saved to browser localStorage today and routed through SQLite + `.mori v0` JSON as the persistence path completes.
+- **Implementation notes:** Owned by `src/features/start-session/StartSessionView.tsx`. The honesty strip reads from `src/lib/connectors/captureSurfaces.ts`. Source tile selection state is mock-backed today (`sourceOptions`); selection persistence is part of the Start Session persistence milestone.
 - **Prompt/spec source:** [product-screen-prompts.md](product-screen-prompts.md)
 
 <a id="evidence-hub"></a>
@@ -133,16 +133,16 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ![Narrative Timeline reference](assets/screenshots/narrative-timeline-reference.png)
 
-- **Status:** Partial
+- **Status:** Partial — Timeline layout contract, view model, session timing, control honesty, sticky behavior, and relationship policy are now implemented; cross-session aggregation, manual relationship edits, event split/merge, manual issue creation, inline bundle expansion, mini-map viewport navigation, Day / Week / Zoom controls, and event-correction persistence remain Planned.
 - **Product purpose:** Primary chronological reconstruction of how work happened.
 - **Primary user job:** Scan a session as structured lanes, inspect evidence, and understand major work moments.
-- **Key UI elements:** Sidebar, session header, toolbar, category chips, time ruler, lane grid, cards/bundles, inspector, minimap.
-- **Main actions:** Search/filter, select event/bundle, open Flow Focus, inspect evidence, adjust view.
-- **Data shown:** Events, bundles, trust/confidence, evidence counts, related issues/decisions, source links.
-- **Source/provenance expectations:** Cards and bundles must remain evidence-backed and inspectable.
-- **Privacy expectations:** Timeline should show provenance rather than implying omniscient capture.
+- **Key UI elements:** Sticky TopSessionBar (live timing badge + search), SessionModeBanner, compact one-row toolbar (Day / Week / Session segmented, Zoom group, `Active lanes only`, `Filter` popover, `Comfortable / Compact` density), sticky time ruler, sticky lane labels, lane grid with single-row event/bundle cards, relationship layer (focused-only in Timeline mode, full subgraph in Flow Focus), right inspector with hidden-relationship hint and a separate Planned actions row, mini-map.
+- **Main actions:** Search/filter, select event/bundle, toggle active-lanes-only, toggle density, open Flow Focus, inspect evidence, copy summary.
+- **Data shown:** Events, bundles, trust/confidence, evidence counts, related issues/decisions, source links, hidden-relationship counts.
+- **Source/provenance expectations:** Cards and bundles remain evidence-backed and inspectable. The inspector reuses `getSourceDisplayStatus()` plus the new `buildInspectorViewModel` helper so capture method, raw-retention policy, and trust badges stay accurate.
+- **Privacy expectations:** Timeline shows provenance rather than implying omniscient capture. No background capture, no terminal scraping, no browser-tab scanning.
 - **Persistence expectations:** Timeline items come from stored sources/events/analysis results.
-- **Implementation notes:** Reference alignment remains ongoing; Timeline is partial, not done because tests pass.
+- **Implementation notes:** Owned by `src/features/timeline/`. Pure logic lives in `src/lib/timeline/`: `timelineViewModel.ts`, `relationshipPolicy.ts`, `timelineControls.ts`, `bundleEvents.ts`, `collisionLayout.ts`, `timeScale.ts`. Session timing is centralized in `src/lib/session/sessionTiming.ts`. Day / Week / Zoom buttons render disabled with explanatory tooltips sourced from `TIMELINE_CONTROLS`; the Inspector's Planned actions row uses the same registry.
 - **Prompt/spec source:** [product-screen-prompts.md#5-narrative-timeline](product-screen-prompts.md#5-narrative-timeline)
 
 <a id="flow-focus-trace-view"></a>

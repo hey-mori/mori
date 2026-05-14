@@ -22,15 +22,21 @@ export function TimelineBundleCard({
   onHover: (itemId: string | null) => void;
 }) {
   const compact = density === "compact";
+  const tone = eventTypeTone[bundle.laneType];
   const typeMixLabel = Object.entries(bundle.eventTypeCounts)
     .filter((entry): entry is [EventType, number] => Boolean(entry[1]))
     .slice(0, 2)
     .map(([type, count]) => `${eventTypeLabels[type]} ${count}`)
     .join(" · ");
 
+  const footerParts: string[] = [];
+  if (bundle.sourceCount > 0) footerParts.push(`${bundle.sourceCount} src`);
+  if (bundle.decisionCount > 0) footerParts.push(`${bundle.decisionCount} dec`);
+  if (bundle.issueCount > 0) footerParts.push(`${bundle.issueCount} issue${bundle.issueCount === 1 ? "" : "s"}`);
+
   return (
     <button
-      className={`timeline-bundle-card card-${eventTypeTone[bundle.laneType]} ${focusStateClassName(focusState)} ${compact ? "is-compact" : ""}`}
+      className={`timeline-bundle-card card-${tone} ${focusStateClassName(focusState)} ${compact ? "is-compact" : ""}`}
       onClick={() => onSelect(bundle.id)}
       onMouseEnter={() => onHover(bundle.id)}
       onMouseLeave={() => onHover(null)}
@@ -42,23 +48,23 @@ export function TimelineBundleCard({
       }}
       type="button"
       aria-pressed={focusState === "selected"}
+      aria-label={`${bundle.title} · ${bundle.count} events`}
       title={`${bundle.title} · ${bundle.count} events`}
     >
       <header className="timeline-bundle-card-header">
-        <span className={`event-card-time tone-${eventTypeTone[bundle.laneType]}`}>
-          <Layers3 size={12} />
+        <span className={`event-card-time tone-${tone}`}>
+          <Layers3 size={11} aria-hidden="true" />
           {formatTimeRange(bundle.start, bundle.end)}
         </span>
         <span className="timeline-bundle-count">{bundle.count} events</span>
       </header>
       <strong className="timeline-bundle-title">{bundle.title}</strong>
-      {!compact ? <p className="timeline-bundle-summary">{bundle.summary}</p> : null}
-      <footer className="timeline-bundle-footer">
-        {typeMixLabel ? <span>{typeMixLabel}</span> : null}
-        <span>{bundle.sourceCount} sources</span>
-        {bundle.decisionCount > 0 ? <span>{bundle.decisionCount} decisions</span> : null}
-        {bundle.issueCount > 0 ? <span>{bundle.issueCount} issues</span> : null}
-      </footer>
+      {!compact ? (
+        <footer className="timeline-bundle-footer">
+          {typeMixLabel ? <span>{typeMixLabel}</span> : null}
+          {footerParts.length ? <span>{footerParts.join(" · ")}</span> : null}
+        </footer>
+      ) : null}
     </button>
   );
 }

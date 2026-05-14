@@ -9,6 +9,10 @@ type MoriAppState = {
   activeFilters: EventType[];
   searchQuery: string;
   timelineDensity: TimelineDensity;
+  /** When true, the canvas hides lanes with zero items to tighten the rhythm. */
+  activeLanesOnly: boolean;
+  /** When true, the inspector is collapsed (used at narrow widths). */
+  inspectorCollapsed: boolean;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -17,6 +21,8 @@ type MoriAppState = {
   setSearchQuery: (query: string) => void;
   setTimelineDensity: (density: TimelineDensity) => void;
   toggleTimelineDensity: () => void;
+  toggleActiveLanesOnly: () => void;
+  setInspectorCollapsed: (collapsed: boolean) => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -26,6 +32,8 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   activeFilters: [],
   searchQuery: "",
   timelineDensity: "comfortable",
+  activeLanesOnly: false,
+  inspectorCollapsed: false,
   setCurrentView: (currentView) => set({ currentView }),
   setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
@@ -42,4 +50,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
     set((state) => ({
       timelineDensity: state.timelineDensity === "comfortable" ? "compact" : "comfortable",
     })),
+  toggleActiveLanesOnly: () =>
+    set((state) => ({ activeLanesOnly: !state.activeLanesOnly })),
+  setInspectorCollapsed: (inspectorCollapsed) => set({ inspectorCollapsed }),
 }));

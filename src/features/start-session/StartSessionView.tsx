@@ -1,4 +1,4 @@
-import { Bot, Check, Cloud, Database, FileCode2, Lock, Play, Plus, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Bot, Check, Cloud, Database, FileCode2, Info, Lock, Play, Plus, ShieldCheck, Sparkles, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -9,6 +9,10 @@ import { sourceOptions } from "../../domain/mock-data";
 import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import {
+  getImplementedCaptureSurfaces,
+  getPlannedCaptureSurfaces,
+} from "../../lib/connectors/captureSurfaces";
 import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
@@ -60,6 +64,7 @@ export function StartSessionView() {
             </div>
           </SetupBlock>
           <SetupBlock number="2" title="기록할 앱 / 소스 선택" note="선택한 앱과 소스의 활동만 기록합니다. Mori는 전체 컴퓨터를 감시하지 않습니다.">
+            <CaptureSurfaceHonestyStrip />
             <div className="source-grid">
               {sourceOptions.map((source) => {
                 const Icon = source.icon;
@@ -106,6 +111,30 @@ export function StartSessionView() {
           </div>
         </div>
         <SessionSummary savedDraft={savedDraft} sessionTitle={sessionTitle} projectName={projectName} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Honest strip above the source-tile grid: which capture surfaces actually
+ * work today vs. which are still planned. Reads from the capture surface
+ * matrix so the copy can never drift out of sync with the connector docs.
+ */
+function CaptureSurfaceHonestyStrip() {
+  const implementedCount = getImplementedCaptureSurfaces().length;
+  const plannedCount = getPlannedCaptureSurfaces().length;
+  return (
+    <div className="capture-surface-strip" role="note">
+      <Info size={14} aria-hidden="true" />
+      <div>
+        <strong>{implementedCount} capture surface{implementedCount === 1 ? "" : "s"} live today</strong>
+        <span> · </span>
+        <span>
+          {plannedCount} Planned (Claude Code hook, Codex CLI wrapper,
+          terminal, IDE, and browser surfaces are docs-template-only or
+          planned — Mori never silently scrapes them).
+        </span>
       </div>
     </div>
   );

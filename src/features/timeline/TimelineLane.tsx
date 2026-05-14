@@ -2,11 +2,20 @@ import type { LucideIcon } from "lucide-react";
 import { TimelineEventCard } from "./TimelineEventCard";
 import { TimelineBundleCard } from "./TimelineBundleCard";
 import { eventTypeTone } from "../../domain/constants";
-import type { EventType, TimelineEvent } from "../../domain/types";
+import type { EventType } from "../../domain/types";
 import type { LaidOutTimelineItem, LaneLayout, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import { getEventFocusState } from "../../lib/timeline/focusState";
 
+/**
+ * One lane row.
+ *
+ * The lane label is `position: sticky; left: 0` (driven by CSS) so it stays
+ * pinned to the left edge of the scrolling frame during horizontal scroll.
+ * The label's parent (the lane row itself) is `position: absolute`, which
+ * is fine — `position: sticky` honours its nearest scrolling ancestor, not
+ * its positioned ancestor.
+ */
 export function TimelineLane({
   icon: Icon,
   label,
@@ -45,7 +54,7 @@ export function TimelineLane({
     >
       <div className="lane-label" style={{ width: `${laneLabelWidthPx}px` }}>
         <span className="lane-label-icon">
-          <Icon size={14} />
+          <Icon size={14} aria-hidden="true" />
         </span>
         <strong>{label}</strong>
         {eventCount > 0 ? <span className="lane-label-count">{eventCount}</span> : null}

@@ -53,14 +53,18 @@ export type TimelineLayout = {
   rowHeight: number;
 };
 
+// Event cards and bundle cards share the same height per density mode so the
+// lane row height stays constant regardless of which items the lane carries.
+// Width differs: bundles are slightly wider so they can carry their longer
+// titles + count + type-mix line without truncating.
 const DENSITY_EVENT_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
   comfortable: { width: 184, height: 68 },
   compact: { width: 158, height: 54 },
 };
 
 const DENSITY_BUNDLE_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
-  comfortable: { width: 216, height: 76 },
-  compact: { width: 184, height: 62 },
+  comfortable: { width: 216, height: 68 },
+  compact: { width: 184, height: 54 },
 };
 
 const DEFAULT_LANE_OFFSET = 38;

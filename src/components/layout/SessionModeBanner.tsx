@@ -7,38 +7,54 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 
+/**
+ * Banner that sits between the TopSessionBar and the Timeline canvas.
+ *
+ * Honesty contract:
+ *   - The banner never duplicates the title that the TopSessionBar already
+ *     shows. It is purely about storage / mode origin.
+ *   - In demo mode it offers a clear path back to the real flow.
+ *   - In draft mode it surfaces the storage source (browser draft / desktop
+ *     SQLite) and the import count so the user can see when Quick Pass will
+ *     have something to chew on.
+ *   - It is non-sticky on purpose. Scrolling the page should reveal more of
+ *     the canvas without the banner clinging to the top.
+ */
 export function SessionModeBanner() {
   const mode = useMoriSessionStore(selectSessionMode);
   const source = useMoriSessionStore(selectSessionSource);
-  const draft = useMoriSessionStore((state) => state.draft);
   const imports = useMoriSessionStore((state) => state.imports);
   const resetToDemo = useMoriSessionStore((state) => state.resetToDemo);
 
   if (mode === "demo") {
     return (
-      <div className="session-mode-banner tone-demo">
+      <div className="session-mode-banner tone-demo" role="status">
         <span>
           <Badge tone="purple">Demo</Badge>
           <strong>Mori demo memory</strong>
-          <span>Reference data only. Start a session to work with local sources.</span>
+          <span>Reference data only — start a session to capture local sources.</span>
         </span>
       </div>
     );
   }
 
-  const sourceBadge = source === "desktop-sqlite"
-    ? { tone: "green", label: "Desktop SQLite", detail: "저장 위치 ~/Mori/Records/mori.sqlite" }
-    : { tone: "blue", label: "Browser Draft", detail: "저장 위치 browser localStorage 초안" };
+  const sourceBadge =
+    source === "desktop-sqlite"
+      ? { tone: "green" as const, label: "Desktop SQLite", detail: "~/Mori/Records/mori.sqlite" }
+      : { tone: "blue" as const, label: "Browser Draft", detail: "browser localStorage" };
 
   return (
-    <div className="session-mode-banner tone-draft">
+    <div className="session-mode-banner tone-draft" role="status">
       <span>
         <Badge tone="green">Live session</Badge>
         <Badge tone={sourceBadge.tone}>{sourceBadge.label}</Badge>
-        <strong>{draft?.session.title}</strong>
-        <span>{imports.length} imported sources · {sourceBadge.detail}</span>
+        <span>
+          {imports.length} imported source{imports.length === 1 ? "" : "s"} · {sourceBadge.detail}
+        </span>
       </span>
-      <Button icon={Sparkles} onClick={resetToDemo}>Show demo</Button>
+      <Button icon={Sparkles} onClick={resetToDemo} title="Switch back to the demo session memory">
+        Show demo
+      </Button>
     </div>
   );
 }

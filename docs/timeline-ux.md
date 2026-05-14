@@ -1,60 +1,178 @@
-﻿# Timeline UX
+# Timeline UX
 
 Mori's main screen is the Timeline and Flow Focus surface. This doc records
-the component structure, focus interaction model, and trust display
-principles so they don't drift.
+the layout contract, the view-model architecture, the focus interaction
+model, the relationship line policy, and the honest catalog of which
+controls are real today.
 
 ## Component structure
 
 ```
 src/features/timeline/
-  TimelineView.tsx        - thin orchestrator: chooses empty state / canvas /
-                            inspector / flow trace, owns no math
-  TimelineHeader.tsx      - session title, data-source badge, analysis badge,
-                            metric cards (events / sources / open issues /
-                            decisions)
-  TimelineFilters.tsx     - lane filter chips
-  TimelineCanvas.tsx      - frame, axis, relationship layer, lanes, mini-map
-  TimelineAxis.tsx        - axis ticks generated from time scale helpers
-  TimelineLane.tsx        - one lane row, list of display items
-  TimelineEventCard.tsx   - single event card UI (no math)
-  TimelineBundleCard.tsx  - dense-moment bundle card UI
-  TimelineMiniMap.tsx     - mini-map dots driven by the same focus state
-  RelationshipLineLayer.tsx - SVG connectors with tone classes
-  TimelineEmptyState.tsx  - demo-empty / no-imports / needs-quick-pass copies
-  EventInspector.tsx      - trust, evidence, linked items, correction notes
-  TimelineBundleInspector.tsx - bundle details + included events/evidence
+  TimelineView.tsx        - thin orchestrator: builds the render model,
+                            swaps Timeline / Flow chrome, picks the right
+                            inspector. Owns no math.
+  TimelineHeader.tsx      - compact one-row Timeline toolbar, filter popover,
+                            planned-control honesty strip.
+  TimelineCanvas.tsx      - scroll frame, sticky axis, sticky lane labels,
+                            relationship layer, lane rows.
+  TimelineAxis.tsx        - axis ticks generated from time scale helpers.
+  TimelineLane.tsx        - one lane row with a sticky-left label and a
+                            list of display items.
+  TimelineEventCard.tsx   - single event card UI: time, title, trust glyph,
+                            calm meta footer.
+  TimelineBundleCard.tsx  - dense-moment bundle card UI.
+  TimelineMiniMap.tsx     - mini-map dots driven by the same focus state.
+  RelationshipLineLayer.tsx - SVG connectors with tone classes.
+  TimelineEmptyState.tsx  - demo-empty / no-imports / needs-quick-pass copies.
+  EventInspector.tsx      - trust, evidence, linked items, hidden-relationship
+                            note, real Actions row, Planned actions row.
+  TimelineBundleInspector.tsx - bundle details + included events/evidence.
 
 src/features/flow-focus/
-  FlowFocusHeader.tsx     - legend + clear-focus + back-to-timeline
-  TracePanel.tsx          - upstream / downstream / linked relationships
-  TraceRelationshipList.tsx - one direction of the trace
-  FocusPathSummary.tsx    - cause ??selected ??result strip
+  FlowFocusHeader.tsx     - legend + clear-focus + back-to-timeline.
+  TracePanel.tsx          - upstream / downstream / linked relationships.
+  TraceRelationshipList.tsx - one direction of the trace.
+  FocusPathSummary.tsx    - cause → selected → result strip.
 
 src/lib/timeline/
-  layout.ts               - existing positioning helpers
-  displayItems.ts         - event vs bundle display model
-  bundleEvents.ts         - dense-moment bundle generation
-  timeScale.ts            - axis ticks + duration summary, no UI
-  focusState.ts           - selected / related / context state machine
+  layout.ts               - time range + percent helpers.
+  displayItems.ts         - event vs bundle display model.
+  bundleEvents.ts         - dense-moment bundle generation.
+  collisionLayout.ts      - low-level frame coordinate engine.
+  singleRowLaneLayout.ts  - product alias of computeTimelineLayout.
+  timeScale.ts            - axis ticks + duration summary.
+  focusState.ts           - selected / related / context state machine.
+  timelineViewModel.ts    - the pure boundary between session/UI state and
+                            the React components. The page's render-time
+                            decisions live here.
+  timelineControls.ts     - registry of which Timeline / Inspector controls
+                            are implemented vs. planned.
+  relationshipPolicy.ts   - relationship visibility + aggregation policy.
 
 src/lib/relationships/
-  traversal.ts            - existing direct/causal/result traversal
-  focusGraph.ts           - selected-event focus summary
-  relationshipDisplay.ts  - labels, tones, confidence buckets, trust display
+  traversal.ts            - direct / causal / result traversal.
+  focusGraph.ts           - selected-event focus summary.
+  relationshipDisplay.ts  - labels, tones, confidence buckets, trust display.
+
+src/lib/session/
+  sessionStatus.ts        - cross-page status labels.
+  sessionTiming.ts        - real lifecycle + duration + start time labels
+                            consumed by TopSessionBar and the Sidebar
+                            session card.
 ```
 
 Rules:
 
 - Timeline math lives in `src/lib/timeline`. Components never compute axis
   ticks, bundle generation, focus states, or positions inline.
+- The orchestrator (`TimelineView`) hands a finished `TimelineRenderModel`
+  to the canvas. Components do not reach into `event.linkedIssueIds.length`
+  style domain access.
 - Relationship traversal and labeling lives in `src/lib/relationships`.
 - Shared primitives (`Badge`, `Button`, `Toggle`, `MetricCard`,
-  `SectionHeader`, `EmptyState`) live in `src/components/ui` and are reused
-  across features.
-- Domain data and mock data never live inside Timeline JSX. The active view
-  is always `selectSessionView(state)` from the session store, which already
-  switches between the demo mock and a composed real session.
+  `SectionHeader`, `EmptyState`) live in `src/components/ui`.
+- Mock data and domain data never live inside Timeline JSX. The active view
+  is always `selectSessionView(state)` from the session store.
+
+## Layout contract
+
+The Timeline page has stable zones. Each is documented in the React
+component that owns it.
+
+| Zone | Owner | Sticky? |
+|---|---|---|
+| App sidebar | `Sidebar` | sticky to viewport (`position: sticky` since the original shell) |
+| Main product header (TopSessionBar) | `TopSessionBar` | **sticky to viewport top** |
+| Session mode banner | `SessionModeBanner` | non-sticky on purpose |
+| Timeline toolbar | `TimelineToolbar` | non-sticky (one tight row) |
+| Scroll frame | `TimelineCanvas` | the **only** horizontally-scrolling element |
+| Time ruler | `TimelineAxis` | **sticky to the top of the scroll frame** |
+| Lane labels | `TimelineLane` | **sticky to the left edge of the scroll frame** |
+| Relationship layer | `RelationshipLineLayer` | `z-index: 1` behind cards |
+| Event card layer | `TimelineEventCard` / `TimelineBundleCard` | `z-index: 2` |
+| Right inspector | `EventInspector` / `TimelineBundleInspector` | **sticky below the TopSessionBar** at desktop widths |
+| Bottom mini-map / overview rail | `TimelineMiniMap` | scrolls with the page |
+
+Behavior:
+
+- The TopSessionBar stays visible above the canvas while the user scrolls
+  down through the page. The bar carries the live session badge plus the
+  session-search input.
+- The time ruler pins to the top of the scrolling canvas so the time scale
+  is always readable.
+- Lane labels pin to the left edge of the scrolling canvas. Long horizontal
+  sessions keep their category structure visible.
+- The right inspector stays in view at desktop widths so the user can keep
+  the selected event's evidence visible while scanning the lanes.
+- At widths under 1180 px the inspector stacks below the lane grid and
+  loses its sticky behavior; the canvas drops the inner horizontal padding
+  to give cards more room.
+
+## Category controls
+
+- The Timeline toolbar is a single row with `Day / Week / Session`,
+  zoom controls, an `Active lanes only` toggle, a `Filter` button that
+  opens the category popover, and a `Comfortable / Compact` density
+  toggle.
+- The popover is the **only** place where the eight event-type filters
+  render. Lane labels carry the primary categorical structure; the popover
+  is a focused control, not a permanent legend.
+- `Day / Week / Zoom in / Zoom out` ship disabled today with explanatory
+  tooltips from `timelineControls.ts`. The toolbar carries a single dashed
+  honesty line confirming that Session is the only working scope.
+- Active filters are visible on the toolbar via a `Filter · N` count
+  badge. The popover's `Clear` button resets them.
+
+## View model
+
+`buildTimelineRenderModel(input)` returns a `TimelineRenderModel`:
+
+| Field | Description |
+|---|---|
+| `emptyVariant` | `demo-empty` / `draft-no-imports` / `draft-needs-quick-pass`. Non-null short-circuits the canvas. |
+| `visibleEvents` | After filter + search. |
+| `visibleDisplayItems` | After bundle generation. |
+| `lanes` | `{ type, eventCount, itemCount, items }[]` in lane order. |
+| `range` | `{ start, end }` for the time scale. |
+| `ticks` | Axis ticks for the ruler. |
+| `layout` | Frame width / height plus absolute item coords. |
+| `layoutIndex` / `eventAnchorIndex` | Direct lookup maps. |
+| `selectedItem` / `selectedIsBundle` | Resolved selection. |
+| `focusedSet` / `focusActive` | Focused entity ids and the visibility regime flag. |
+
+The model also exposes `getActiveLanes(model)` for the "active lanes only"
+toggle and `getFocusedRelationships` / `countHiddenRelationships` for the
+inspector's hidden-relationship line.
+
+The inspector's input comes from `buildInspectorViewModel(...)`. The
+inspector component receives a finished bundle of `sources`, `issues`,
+`decisions`, `artifacts`, `nextActions`, `confidencePct`, and
+`hiddenRelationshipCount` instead of re-filtering domain arrays inline.
+
+## Card design rules
+
+The Timeline canvas is a calm reading surface. Cards follow strict visual
+rules:
+
+- **No left accent bar.** Tone is conveyed by the card body gradient
+  (`card-purple`, `card-green`, …) and the time-row icon color. No `::before`
+  side stripe is used on event cards or bundle cards — it looks AI-template-y
+  and breaks the calm.
+- **No hover lift.** Hover changes only the border tone and the soft shadow.
+  `transform: translateY(...)` is **not** in either card's transition list.
+- **Fixed slot heights.** The internal grid is `14px 1fr 13px` (header /
+  title / footer) so the header always pins to the top, the title always
+  occupies the middle, and the footer slot always sits at the bottom —
+  whether or not the footer contains content. Cards never visually jitter
+  when a neighbour has different optional metadata.
+- **Constant card height per density.** Event cards and bundle cards share
+  the same height per density mode (`68px` comfortable, `54px` compact).
+  Lane rows therefore stay the same height regardless of the lane's
+  event/bundle mix.
+- **Constant trust-badge width.** The trust badge in the card header is a
+  single icon pill — the confidence percent lives only in the tooltip and
+  the inspector. This keeps the header alignment identical across cards.
 
 ## Single-row lane model
 
@@ -62,45 +180,18 @@ The base Timeline stays lane-based and mostly single-row. Mori should feel
 close to the reference: stable lanes, readable cards, secondary
 relationships, and a right inspector that does the explanatory work.
 
-That means dense periods are **not** solved with unlimited lane stacking,
-and they are **not** solved with a generic `+N more` cluster. Dense moments
-must be represented as meaningful **work-flow bundles**.
+Dense periods are not solved with unlimited lane stacking, and they are
+not solved with a generic `+N more` cluster. Dense moments must be
+represented as meaningful **work-flow bundles**.
 
 A display item is therefore one of:
 
-- `event` ??a raw timeline event that remains individually inspectable
-- `bundle` ??a dense work moment summarized into one intentional card
+- `event` — a raw timeline event that remains individually inspectable.
+- `bundle` — a dense work moment summarized into one intentional card.
 
 The layout engine operates on display items, not directly on raw events.
 
 ## Work-flow bundle model
-
-Bundles are the first-layer compression strategy for dense periods.
-
-Current implementation supports **same-lane sequence bundles** and prepares
-the type model for richer bundle kinds later:
-
-- `sequence`
-- `cross-lane`
-- `decision-burst`
-- `issue-burst`
-- `evidence-burst`
-- `code-burst`
-
-Each bundle records:
-
-- time range
-- bundle title
-- summary
-- member event ids
-- event-type counts
-- source count
-- represented decisions
-- represented issues
-- trust level
-- bundle reason
-
-### Bundle generation rules
 
 `createTimelineBundles(events, relationships, options)` applies these rules:
 
@@ -118,22 +209,9 @@ Each bundle records:
 6. If a lane still becomes too dense, merge only secondary neighbors while
    keeping preserved items individual.
 
-Examples from the sample session:
-
-- web research around Dayflow / screenpipe / SpecStory / Pieces becomes a
-  research-flow bundle
-- selected positioning decision remains an individual card
-- dense AI context around the same moment may become an AI work-flow bundle
-
-### Product-quality bundle card policy
-
-Bundle cards must explain a work moment without becoming another dense debug
-panel. The card surface prioritizes time range, event count, a meaningful
-title, dominant type mix, and evidence/decision/issue counts. Long summary
-copy lives in the inspector, not inside the lane card. The full type mix,
-member event list, represented issues/decisions, sources, and bundling reason
-live in the Bundle Inspector. This keeps the lane readable while preserving
-the exact events Mori used to create the bundle.
+Bundle cards prioritise: time range, event count, a meaningful title, the
+dominant type mix, and evidence/decision/issue counts. Long summary copy
+lives in the inspector, not inside the lane card.
 
 ## Focus interaction model
 
@@ -145,173 +223,168 @@ The Timeline has exactly three focus tiers:
 | related   | `focus-related`  | full opacity, same surface treatment |
 | context   | `focus-context`  | 55% opacity, hover restores full opacity |
 
-The mapping is centralized in
-`getEventFocusState({ itemId, itemEntityIds, selectedItemId, focusedSet })`.
-The mini-map dots use the same mapping so "dimmed" never means three
-different things across two views.
-
-- **Hover** an event card ??it becomes the focus pivot for as long as the
-  pointer stays on it (`onHover(eventId)` / `onHover(null)`).
-- **Click** an event card ??pins the selection. The Inspector and the
+- **Hover** an event card → it becomes the focus pivot for as long as the
+  pointer stays on it.
+- **Click** an event card → pins the selection. The Inspector and the
   relationship layer follow the pinned selection.
-- **Hover / click a bundle** ??Mori focuses the bundle's member events and
-  any directly related downstream/upstream entities. The bundle itself is
-  treated as the visible anchor, but the reasoning still comes from real
-  member events.
+- **Hover / click a bundle** → Mori focuses the bundle's member events and
+  any directly related downstream/upstream entities.
 - **Clear focus** on Flow Focus moves the selection back to the first event
   so the user can start fresh without leaving the page.
 
-Unrelated context never drops below ~55% opacity ??Flow Focus must remain
+Unrelated context never drops below ~55% opacity — Flow Focus must remain
 legible, not washed out.
 
-## Trust and evidence in the Inspector
+## Relationship line policy
 
-The Event Inspector is the trust surface. Sections, in order:
+`relationshipPolicy.ts` makes the policy explicit so it can be tested
+without rendering React.
 
-1. **Type / trust / confidence badges** ??`Verified`, `Observed`, or
-   `Inferred`. Inferred events get an honest `NN% confidence` badge.
-2. **Summary** ??the event summary text.
-3. **Trust** ??short prose ("Verified evidence ??source is a real, captured
-   input." etc.) plus `Created by` and `(user-modified)` if applicable.
-4. **Source evidence** ??every linked source with kind + raw-retention
-   policy.
-5. **Linked items** ??counts and top three titles for issues, decisions,
-   files/artifacts, next actions.
-6. **Correction** ??a disabled note textarea labeled as a planned
-   milestone. Mori never offers a save button it can't honor.
-7. **Actions** ??`Show flow trace` (real), `Copy summary` (real, copies
-   ISO time range + title + summary to clipboard), plus disabled
-   placeholders for `Edit`, `Create issue`, `Split`, `Merge`, `Add note`.
+`chooseRelationshipVisibility({ mode, focusedSet, focusActive })` returns:
 
-Every placeholder is `disabled` with a `title` tooltip explaining what's
-planned. Mori does not show fake working buttons.
+- `always-hidden` — Timeline mode with no active focus (default). No
+  connectors render. The canvas stays a calm reading surface.
+- `focused-only` — Timeline mode with an active focus. Only relationships
+  where **both** endpoints land in the focused set render. Lines are
+  subtle, drawn behind cards, anchored to the right/left edges of the
+  upstream/downstream items.
+- `graph` — Flow Focus mode. Wider 2-hop subgraph; stronger, brighter
+  lines; aggregation still applies so duplicate `(from, to)` pairs collapse
+  to a single weighted connector.
+
+`buildVisibleConnectors(...)` aggregates raw relationships into visible
+connectors:
+
+- Multiple raw relationships that share the same visible `(from, to)` pair
+  collapse into one connector with `weight = N` and `contributingIds`.
+- The connector cap defaults to 8 in Timeline focus mode and 16 in Flow
+  Focus mode.
+- If a bundle absorbs a relationship endpoint, the line anchors to the
+  bundle. The inspector explains the hidden detail via its
+  `+N hidden` note.
+
+Lines never cover card text. Cards sit at `z-index: 2`; lines at
+`z-index: 1`.
+
+## Inspector
+
+Sections, in order:
+
+1. **Type / trust / confidence badges** — `Verified`, `Observed`, or
+   `Inferred`. Inferred events get a confidence percentage. `User-modified`
+   shows when applicable.
+2. **Summary** — the event summary text.
+3. **Evidence / trust** — short prose plus the sources list with capture
+   method and raw-retention policy.
+4. **Linked items** — counts and top titles for issues, decisions,
+   files/artifacts, next actions. The section header carries a
+   `+N hidden` hint when relationships are outside the focused set.
+5. **Impact** — only shown when the event has decisions attached.
+6. **Actions** — two real buttons: `Flow trace` (navigates to Flow mode)
+   and `Copy summary` (clipboard).
+7. **Planned actions** — explicit row of disabled buttons:
+   `Edit event`, `Split`, `Merge`, `Create issue`, `Add note`. Each carries
+   a tooltip from `timelineControls.ts` explaining what is planned.
+8. **Memo / correction** — disabled textarea labeled as Planned.
+
+Mori never shows fake working buttons.
 
 ## Bundle Inspector
 
-When the selected display item is a bundle, the right inspector switches to
-`TimelineBundleInspector`.
-
-It shows:
-
-1. bundle kind, trust, and lane badges
-2. bundle title and time range
-3. a short explanation of why the events were bundled
-4. the included events list
-5. represented sources, decisions, and issues
-6. `Open Flow Focus` action
-7. a disabled `Expand bundle inline` action labeled as planned
-
-Inline expansion is intentionally not shipped yet. The bundle must be
-inspectable before it becomes expandable.
+When the selected display item is a bundle, the right inspector switches
+to `TimelineBundleInspector`. It shows the bundle kind, the time range,
+the bundling reason, the included events, the represented sources,
+decisions, and issues, an `Open Flow Focus` action, and a disabled
+`Expand bundle inline` action labeled as planned.
 
 ## Empty state policy
 
-`TimelineEmptyState` only has three variants and they map cleanly to real
-runtime conditions:
+`TimelineEmptyState` has three variants that map cleanly to runtime
+conditions:
 
-- **demo-empty** ??demo mock had no events (rare; shouldn't ship empty).
-- **draft-no-imports** ??real session, zero imports. CTA opens Sources /
-  Evidence.
-- **draft-needs-quick-pass** ??real session, has imports, no analysis yet.
+- **demo-empty** — demo mock had no events (rare).
+- **draft-no-imports** — real session, zero imports. CTA opens Evidence.
+- **draft-needs-quick-pass** — real session, has imports, no analysis yet.
   CTA runs Quick Pass.
 
-Once Quick Pass runs against a real session, the full Timeline + Flow Focus
-renders the analyzed events with the same focus tiers.
+Once Quick Pass runs against a real session, the full Timeline + Flow
+Focus renders the analyzed events with the same focus tiers.
 
-## Layout engine
+## Session timing model
 
-Timeline display-item positions are produced by
-`computeSingleRowLaneLayout(items, range, options)` in
-[`src/lib/timeline/singleRowLaneLayout.ts`](../src/lib/timeline/singleRowLaneLayout.ts).
-It wraps the collision-aware implementation in
-[`src/lib/timeline/collisionLayout.ts`](../src/lib/timeline/collisionLayout.ts)
-so components use the product language of single-row lanes.
-The algorithm:
+`deriveSessionTiming({ draft, demoSession, analysisStatus, now })` is the
+single source of truth for session lifecycle + duration labels. It returns:
 
-1. Groups display items by lane in the documented `laneOrder`.
-2. Sorts each lane by start time.
-3. Computes each item's intended `x` from the time range and clamps it so a
-   card never starts past `frameWidth - itemWidth`.
-4. Keeps the lane mostly single-row by applying limited left-shift
-   backpressure before falling back to extra height.
-5. Uses bundle generation as the primary density control; stacking is no
-   longer the first answer to crowded time windows.
-6. Emits an absolute `(x, y, width, height)` plus `anchorLeft`,
-   `anchorRight`, and `anchorCenter` for every display item. Raw event ids
-   are also indexed back to their visible anchor so relationship lines can
-   point at a bundle when needed.
-7. Keeps the axis, lanes, relationship layer, and cards in one frame
-   coordinate system so the Timeline does not create an inner vertical
-   scrolling viewport.
+- `state`: `demo | active | analyzing | draft | ended`.
+- `stateLabel`: human label for the badge.
+- `stateTone`: visual tone.
+- `startIso` / `endIso`: ISO timestamps (active sessions bind `endIso` to
+  `now`).
+- `durationSeconds` and `durationLabel`: zero-padded `HH:MM:SS`.
+- `startTimeLabel`: `13:02` style start time.
+- `isLive`: whether callers should re-render every second.
 
-Two density modes ship today:
-
-| Density        | Event size | Bundle size | Notes |
-| -------------- | ---------- | ----------- | ----- |
-| `comfortable`  | 184 x 68   | 216 x 76    | Default. Time, title, trust, and metadata remain readable. |
-| `compact`      | 158 x 54   | 184 x 62    | Tighter scan mode with the same single-row-first rules. |
-
-The mode lives in `useMoriAppStore.timelineDensity` and toggles via the
-"Comfortable / Compact" button in the Timeline controls.
-
-Card summaries are intentionally suppressed in the lane grid. The Timeline is
-for scanning chronology; the inspector is the place for event prose, evidence,
-and correction context. This keeps the lane rhythm closer to the product
-reference and avoids clipped text at 1440px and 1280px desktop widths.
-
-Rules the layout guarantees (covered by `collisionLayout.test.ts` and
-`bundleEvents.test.ts`):
-
-- No two visible display items in the same lane visually overlap.
-- Selected / important events can remain individual while nearby secondary
-  events bundle around them.
-- Compact mode produces smaller cards but never breaks the no-overlap rule.
-- Anchor points are stable and inside each visible item's bounding box.
-
-## Relationship line rules
-
-`RelationshipLineLayer` reads the same visible-item anchors:
-
-- Lines enter / exit at the right edge of the upstream card and the left
-  edge of the downstream card (whichever is forward in time).
-- If multiple raw relationships resolve to the same bundle/item pair, Mori
-  aggregates them to one visible connector instead of drawing parallel
-  spaghetti.
-- If an event inside a bundle is related to the current focus, the line
-  anchors to the bundle card. The inspector explains the hidden detail.
-- When focus is **active** (Flow Focus mode or a hovered/selected event in
-  Timeline mode), only relationships where both endpoints are in the
-  focused set render ??unrelated lines are removed entirely, not just
-  faded.
-- Timeline-mode connectors are hidden by default. Flow Focus is the graph
-  surface and can show a larger focused subgraph with stronger lines.
-- The SVG sits at `z-index: 1`; cards at `z-index: 2`. Lines never cover
-  card text.
+The TopSessionBar and the Sidebar session card both consume this snapshot
+and re-render once per second only when `isLive` is true. The sidebar
+timer is no longer hard-coded; ended sessions show the stored duration
+verbatim; demo mode shows the demo session's baked range.
 
 ## Responsive behavior
 
-The Timeline prefers readable cards over squeezing. At wide desktop sizes the
-frame grows with the available column. Around 1440px, the inspector and
-sidebar remain stable and the lane frame allows intentional horizontal scroll
-instead of shrinking cards below readable density. The mini-map remains the
-orientation surface below the lanes and shows a viewport highlight plus the
-selected item marker.
+The Timeline prefers readable cards over squeezing.
+
+| Width | Behavior |
+|---|---|
+| ≥ 1600 px | `timeline-main` gets roomier padding. |
+| 1180 – 1599 px | Default layout: sticky inspector, single-row toolbar, sticky lane labels and axis. |
+| ≤ 1380 px | Toolbar tightens its gaps; toggle buttons compact their padding. |
+| ≤ 1180 px | Inspector stacks below the canvas (non-sticky). Toolbar wraps to a single column. The Start Session summary panel's source list wraps to two columns. |
+
+At desktop app widths similar to the screenshots, the canvas grows with
+the column. At narrower widths the canvas allows intentional horizontal
+scroll instead of shrinking cards below readable density.
+
+## Scroll behavior
+
+- `.timeline-scroller` is the ONLY horizontally-scrolling element.
+- The browser scrollbars on the scroller and the inspector are styled
+  subtly via `::-webkit-scrollbar` to stay calm and thin.
+- The inspector is sticky at desktop widths and uses its own
+  `overflow-y: auto` so its content can scroll independently when long.
+- The page itself scrolls vertically; nothing else creates a nested
+  vertical-scroll trap.
+
+## Control honesty (`timelineControls.ts`)
+
+The registry is the single source of truth for which Timeline / Inspector
+controls are real today vs. planned. Components read from it; no string
+literal `"planned"` lives inside JSX.
+
+| Implemented | Planned |
+|---|---|
+| Density (Comfortable / Compact) | Day view, Week view |
+| Category filter (popover) | Zoom in / Zoom out |
+| Active lanes only toggle | Session end + final report writeback |
+| Event search (toolbar input) | Sidebar collapse |
+| Flow trace (inspector) | Edit event, Split, Merge, Create issue, Add note |
+| Copy summary (inspector) | Save event memo |
+| Export report | — |
+
+The toolbar carries a single dashed line confirming that `Day / Week /
+Zoom` are Planned. The inspector carries an explicit `Planned actions`
+row instead of mixing planned buttons into the live row.
 
 ## Known limitations
 
+- The bottom mini-map shows event dots but does not yet drive horizontal
+  viewport navigation; the viewport indicator stays decorative.
 - Cross-lane workflow bundles are prepared in the type model but not yet
   generated automatically.
-- Inline bundle expansion is intentionally deferred; this milestone focuses
-  on readable single-row lanes plus inspectable bundles.
+- Inline bundle expansion is intentionally deferred.
 - The Inspector's correction note is read-only; persisting user
   corrections is a planned milestone.
-- Manual relationship edits, event split/merge, manual issue creation, and
-  Quick Pass re-runs from Flow Focus are all visible as disabled buttons
-  with planning tooltips.
-- The mini-map shows event dots but does not yet act as a viewport
-  navigator.
-- Lanes with zero events still allocate one row of vertical space; this is
-  intentional so the structural rhythm stays steady but could be hidden in
-  a future "active lanes only" toggle.
-
-
+- Manual relationship edits, event split/merge, manual issue creation,
+  and Quick Pass re-runs from Flow Focus are all visible as disabled
+  buttons.
+- Active-lanes-only is a per-session UI toggle; the hidden-lane preference
+  does not persist across reload yet.
