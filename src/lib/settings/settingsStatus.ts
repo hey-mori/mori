@@ -1,0 +1,389 @@
+import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../analysis";
+import {
+  getIntegrationsByStatus,
+  type IntegrationStatus,
+  type SourceIntegration,
+} from "../sources/sourceRegistry";
+
+/**
+ * Pure derivations for the Settings page.
+ *
+ * Everything user-facing on Settings is rendered from one of these helpers
+ * so the React layer never invents status copy and tests can assert the
+ * derivation rules directly.
+ */
+
+export type RuntimeMode = "browser" | "tauri-desktop";
+
+export type ProviderStatus = "implemented" | "partial" | "planned" | "unavailable";
+
+export type ProviderRow = {
+  id: QuickPassProviderKind | "lmStudio" | "openAiCompatible" | "cloudApi";
+  label: string;
+  description: string;
+  /** UI-facing status: implemented / partial / planned / unavailable. */
+  status: ProviderStatus;
+  /** Whether the provider runs entirely on the user's machine. */
+  isLocal: boolean;
+  privacyNote: string;
+  receivesData: string;
+  setupRequirement: string;
+  selected: boolean;
+  /** Whether the provider has a real "test connection" path. */
+  canTest: boolean;
+};
+
+/**
+ * Build the rows shown by the Local AI section. The currently-selected
+ * Quick Pass provider in `settings` drives the `selected` flag so the UI can
+ * highlight without re-computing.
+ */
+export function getProviderRows(
+  settings: QuickPassAnalysisSettings,
+): ProviderRow[] {
+  const provider: QuickPassProviderKind = settings.provider;
+  return [
+    {
+      id: "deterministic",
+      label: "Deterministic Quick Pass",
+      description: "결정론적 로컬 휴리스틱 — 네트워크 없음, LLM 없음.",
+      status: "implemented",
+      isLocal: true,
+      privacyNote: "네트워크 호출이 없고 모델도 사용하지 않습니다. 기본 안전 모드입니다.",
+      receivesData: "현재 세션의 이벤트 + 소스 (메모리에만 사용)",
+      setupRequirement: "설정 불필요",
+      selected: provider === "deterministic",
+      canTest: false,
+    },
+    {
+      id: "ollama",
+      label: "Ollama (Local LLM)",
+      description: "로컬에서 실행되는 Ollama 인스턴스. 엔드포인트 / 모델 / 타임아웃을 직접 입력합니다.",
+      status: "implemented",
+      isLocal: true,
+      privacyNote:
+        "사용자가 입력한 엔드포인트에만 요청을 보냅니다. Mori는 외부 호스트를 자동으로 추가하지 않습니다.",
+      receivesData: "현재 세션의 이벤트 + 소스 텍스트 (요약 생성용)",
+      setupRequirement: "로컬 Ollama 인스턴스 + 모델",
+      selected: provider === "ollama",
+      canTest: true,
+    },
+    {
+      id: "lmStudio",
+      label: "LM Studio",
+      description: "OpenAI 호환 로컬 엔드포인트로 LM Studio를 사용할 계획입니다.",
+      status: "planned",
+      isLocal: true,
+      privacyNote: "구현 시 사용자가 명시적으로 추가한 엔드포인트에만 요청합니다.",
+      receivesData: "(구현 시) 현재 세션의 이벤트 + 소스 텍스트",
+      setupRequirement: "다음 마일스톤",
+      selected: false,
+      canTest: false,
+    },
+    {
+      id: "openAiCompatible",
+      label: "OpenAI-compatible endpoint",
+      description: "vLLM / LocalAI 등 OpenAI 호환 로컬 엔드포인트.",
+      status: "planned",
+      isLocal: true,
+      privacyNote: "구현 시 사용자가 명시적으로 입력한 엔드포인트에만 요청합니다.",
+      receivesData: "(구현 시) 현재 세션의 이벤트 + 소스 텍스트",
+      setupRequirement: "다음 마일스톤",
+      selected: false,
+      canTest: false,
+    },
+    {
+      id: "cloudApi",
+      label: "Cloud API (explicit opt-in)",
+      description: "Anthropic / OpenAI 등 외부 API. 명시적 opt-in 후에만 사용됩니다.",
+      status: "planned",
+      isLocal: false,
+      privacyNote: "기본은 차단. 사용자가 직접 활성화하기 전까지 어떤 외부 API에도 데이터를 보내지 않습니다.",
+      receivesData: "(구현 시) opt-in 시 명시적으로 선택한 데이터",
+      setupRequirement: "Mori는 현재 cloud API 키를 저장하지 않습니다.",
+      selected: false,
+      canTest: false,
+    },
+  ];
+}
+
+export type PrivacyPolicyRow = {
+  id: string;
+  label: string;
+  detail: string;
+  /** "enforced" → the app guarantees this today. "default" → ships on by default in current session settings.
+   *  "planned" → the controlled behavior is not yet wired. */
+  state: "enforced" | "default" | "planned";
+};
+
+/**
+ * Privacy section is intentionally **read-only status cards**, not toggles.
+ * Several of these guarantees are baked into the app's design (no background
+ * capture, no browser scanning) and are not user-controllable.
+ */
+export function getPrivacyPolicy(): PrivacyPolicyRow[] {
+  return [
+    {
+      id: "no-background-capture",
+      label: "백그라운드 캡처 없음",
+      detail: "Mori는 활성 세션이 있어도 사용자가 명시적으로 import를 누르기 전까지 어떤 데이터도 수집하지 않습니다.",
+      state: "enforced",
+    },
+    {
+      id: "no-browser-scan",
+      label: "브라우저 / 앱 자동 스캔 없음",
+      detail: "Mori는 브라우저 탭이나 다른 앱의 창을 읽지 않습니다. URL은 사용자가 직접 붙여넣기로 추가합니다.",
+      state: "enforced",
+    },
+    {
+      id: "no-fs-scan",
+      label: "파일 시스템 자동 스캔 없음",
+      detail: "Mori는 사용자가 추가한 리포지토리 경로만 기억하고, Git diff를 실행할 때만 그 경로를 읽습니다.",
+      state: "enforced",
+    },
+    {
+      id: "no-oauth",
+      label: "OAuth / 계정 자동 연결 없음",
+      detail: "Claude, ChatGPT, Codex 직접 연동은 명시적으로 Planned 상태이며 자동으로 로그인하지 않습니다.",
+      state: "enforced",
+    },
+    {
+      id: "ai-transcript-summary-only",
+      label: "AI Transcript는 요약/메타데이터만 보관",
+      detail: "Claude / ChatGPT / Codex / Other AI 대화는 turn 수 + 첫 user 메시지 요약만 저장합니다.",
+      state: "default",
+    },
+    {
+      id: "client-safe-report-mode",
+      label: "Client-safe report 모드",
+      detail: "리포트 빌더에서 client-safe 모드를 켜면 원본 텍스트 / 출처 상세 / 파일 경로가 제외됩니다.",
+      state: "default",
+    },
+    {
+      id: "robust-redaction",
+      label: "Robust redaction (PII 자동 마스킹)",
+      detail: "Markdown 리포트의 추가 PII 자동 마스킹은 다음 마일스톤입니다. 현재는 섹션 단위 필터만 제공됩니다.",
+      state: "planned",
+    },
+  ];
+}
+
+export type StorageStatusKind = "browser-draft" | "desktop-sqlite";
+
+export type StorageStatusRow = {
+  id: string;
+  label: string;
+  description: string;
+  state: "active" | "available" | "unavailable" | "planned";
+  hint: string;
+  badgeTone: "green" | "blue" | "purple" | "gray" | "orange";
+};
+
+export function getStorageStatusRows({
+  mode,
+  sqliteAvailable,
+  sqliteKind,
+  sqliteSessionCount,
+  packageDraftCount,
+}: {
+  mode: RuntimeMode;
+  sqliteAvailable: boolean;
+  sqliteKind: "ok" | "checking" | "error" | "unavailable";
+  sqliteSessionCount: number;
+  packageDraftCount: number;
+}): StorageStatusRow[] {
+  return [
+    {
+      id: "browser-draft",
+      label: "Browser draft (localStorage)",
+      description: "활성 세션, 가져온 소스, 분석 결과, 리포지토리 목록을 브라우저에 임시 보관합니다.",
+      state: "active",
+      hint: "데스크톱 모드에서는 SQLite가 source of truth이지만, browser draft는 fallback으로 계속 사용됩니다.",
+      badgeTone: "blue",
+    },
+    {
+      id: "desktop-sqlite",
+      label: "Desktop SQLite",
+      description: "Tauri 데스크톱 앱에서 활성화되는 로컬 SQLite 저장소.",
+      state:
+        mode === "browser"
+          ? "unavailable"
+          : sqliteAvailable
+            ? sqliteKind === "ok"
+              ? "active"
+              : sqliteKind === "checking"
+                ? "available"
+                : "unavailable"
+            : "unavailable",
+      hint:
+        mode === "browser"
+          ? "브라우저 prototype 모드에서는 비활성화됩니다. Tauri 앱에서 자동으로 활성화됩니다."
+          : sqliteKind === "ok"
+            ? `저장된 세션 ${sqliteSessionCount}건`
+            : "마이그레이션 적용 후 사용 가능합니다.",
+      badgeTone: mode === "tauri-desktop" && sqliteKind === "ok" ? "green" : "gray",
+    },
+    {
+      id: "mori-package",
+      label: ".mori v0 패키지 (JSON)",
+      description: "세션 전체를 직렬화해 로컬로 내보내는 JSON 패키지.",
+      state: packageDraftCount > 0 ? "active" : "available",
+      hint:
+        packageDraftCount > 0
+          ? `브라우저 드래프트에 ${packageDraftCount}건의 패키지가 있습니다.`
+          : "Reports 화면의 \".mori v0 JSON 내보내기\" 버튼으로 생성합니다.",
+      badgeTone: packageDraftCount > 0 ? "purple" : "gray",
+    },
+    {
+      id: "markdown-report",
+      label: "Markdown 리포트",
+      description: "Reports 화면에서 Markdown으로 복사 / .md로 다운로드합니다.",
+      state: "active",
+      hint: "PDF / HTML 내보내기는 다음 마일스톤입니다.",
+      badgeTone: "green",
+    },
+    {
+      id: "zip-mori",
+      label: ".mori 패키지 (zip-like)",
+      description: "Markdown / 첨부 / 자산을 묶는 zip 형식 패키지.",
+      state: "planned",
+      hint: "현재는 JSON 패키지만 지원합니다.",
+      badgeTone: "gray",
+    },
+  ];
+}
+
+export type ConnectorRow = {
+  integration: SourceIntegration;
+  /** What Mori would access once implemented. */
+  willAccess: string[];
+  willNotAccess: string[];
+};
+
+export function getPlannedConnectorRows(): ConnectorRow[] {
+  const planned = getIntegrationsByStatus("planned");
+  return planned.map((integration) => ({
+    integration,
+    willAccess: derivePlannedAccess(integration),
+    willNotAccess: [
+      "백그라운드 자동 캡처",
+      "사용자 동의 없는 데이터 수집",
+      "Mori 외부 호스트로의 자동 전송",
+    ],
+  }));
+}
+
+function derivePlannedAccess(integration: SourceIntegration): string[] {
+  const out: string[] = [];
+  if (integration.captureMode === "plannedConnector") {
+    out.push("사용자가 활성화한 connector에서 명시적으로 가져온 이벤트");
+  } else if (integration.captureMode === "explicitImport") {
+    out.push("사용자가 직접 import한 데이터");
+  }
+  if (integration.outputRecords.sources) out.push("정규화된 SourceRef");
+  if (integration.outputRecords.timelineEvents) out.push("정규화된 Timeline Event");
+  if (integration.outputRecords.artifacts) out.push("연결된 산출물 메타데이터");
+  return out;
+}
+
+export type RepositorySummary = {
+  total: number;
+  verified: number;
+  stale: number;
+  failed: number;
+  unverified: number;
+  default: string | null;
+};
+
+export function summarizeRepositories(repositories: Array<{
+  id: string;
+  isDefault?: boolean;
+  verification?: {
+    status: "unverified" | "verified" | "failed";
+    verifiedAt?: string;
+  };
+}>): RepositorySummary {
+  const summary: RepositorySummary = {
+    total: repositories.length,
+    verified: 0,
+    stale: 0,
+    failed: 0,
+    unverified: 0,
+    default: null,
+  };
+  const STALE_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  for (const repo of repositories) {
+    if (repo.isDefault) summary.default = repo.id;
+    const status = repo.verification?.status ?? "unverified";
+    if (status === "failed") summary.failed += 1;
+    else if (status === "verified") {
+      const verifiedAt = repo.verification?.verifiedAt;
+      const stale = verifiedAt ? now - new Date(verifiedAt).getTime() > STALE_MS : false;
+      if (stale) summary.stale += 1;
+      else summary.verified += 1;
+    } else {
+      summary.unverified += 1;
+    }
+  }
+  return summary;
+}
+
+export type RecommendedSetupStep =
+  | { id: "import-source"; label: string }
+  | { id: "run-quickpass"; label: string }
+  | { id: "verify-repository"; label: string }
+  | { id: "save-to-sqlite"; label: string }
+  | { id: "configure-ollama"; label: string }
+  | { id: "all-good"; label: string };
+
+/**
+ * Recommend the single next setup step a user should take. Order is the
+ * same as the product flow: get evidence in, analyse, verify storage,
+ * upgrade local AI.
+ */
+export function getRecommendedSetupStep({
+  importsCount,
+  hasAnalysis,
+  repositoriesTotal,
+  mode,
+  sqliteKind,
+  hasUnsavedDraft,
+  providerKind,
+}: {
+  importsCount: number;
+  hasAnalysis: boolean;
+  repositoriesTotal: number;
+  mode: RuntimeMode;
+  sqliteKind: "ok" | "checking" | "error" | "unavailable";
+  hasUnsavedDraft: boolean;
+  providerKind: QuickPassProviderKind;
+}): RecommendedSetupStep {
+  if (importsCount === 0) {
+    return { id: "import-source", label: "Evidence Hub에서 첫 소스를 가져오세요." };
+  }
+  if (!hasAnalysis) {
+    return { id: "run-quickpass", label: "Review 또는 Reports에서 Quick Pass를 실행하세요." };
+  }
+  if (mode === "tauri-desktop" && sqliteKind === "ok" && hasUnsavedDraft) {
+    return { id: "save-to-sqlite", label: "현재 세션을 SQLite에 저장하면 Project Memory가 영속됩니다." };
+  }
+  if (repositoriesTotal === 0) {
+    return { id: "verify-repository", label: "Repositories에서 작업 중인 리포지토리를 추가하세요." };
+  }
+  if (providerKind === "deterministic") {
+    return {
+      id: "configure-ollama",
+      label: "더 풍부한 분석을 원하면 Ollama 등 로컬 LLM 제공자를 설정하세요.",
+    };
+  }
+  return { id: "all-good", label: "설정이 모두 완료되었습니다. 다음 세션을 시작하세요." };
+}
+
+export function statusLabelForIntegrationStatus(status: IntegrationStatus): string {
+  if (status === "implemented") return "Available";
+  if (status === "partial") return "Partial";
+  if (status === "planned") return "Planned";
+  if (status === "mockOnly") return "Demo only";
+  return "Unavailable";
+}

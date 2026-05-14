@@ -173,6 +173,43 @@ provenance through the existing `SourceRef` traceability helpers in
 ChatGPT / Codex API or app integrations) remain explicitly planned, not
 fake-active.
 
+### Settings workspace
+
+Settings is Mori's local-first trust surface. Every visible row comes
+from a pure helper so the UI never invents status copy:
+
+```text
+useMoriSessionStore (analysisSettings + selectSessionView + hasAnalysis)
+useMoriSqliteStore (available / kind / status / sessions / lastPersist)
+useMoriRepositoryStore (settings / verifyingId)
+  -> src/lib/settings/settingsStatus.ts
+       (getProviderRows / getPrivacyPolicy / getStorageStatusRows /
+        getPlannedConnectorRows / summarizeRepositories /
+        getRecommendedSetupStep / statusLabelForIntegrationStatus)
+  -> src/features/settings/
+       SettingsView (5-tab nav + status strip + layout)
+       LocalAiCard (provider cards + Ollama probe + endpoint/model/timeout/fallback)
+       PrivacyDefaultsCard (Enforced / Default on / Planned status cards — no fake toggles)
+       StorageCard (browser draft + SQLite + .mori v0 + Markdown + zip-planned)
+       RepositoriesCard (summary badges + verify / select / rename / remove)
+       PlannedConnectorsCard (every getIntegrationsByStatus("planned") row)
+       TrustSummaryPanel (Runtime / Storage / Provider / Session grid +
+         "what Mori accesses" + "what Mori never does" + recommended next step)
+```
+
+Every action the user can take ties back to an already-implemented store
+(`updateAnalysisSettings`, `verifyRepository`, `persistSqlite`, etc.) so
+no fake controls ship on this screen. Provider switching is restricted to
+the two implemented providers (Deterministic, Ollama); LM Studio /
+OpenAI-compatible / Cloud API render as Planned cards with disabled
+"Planned" buttons.
+
+The recommended-next-step button on the Trust panel navigates the user
+through the seven-step setup chain (`import-source` → `run-quickpass` →
+`save-to-sqlite` → `verify-repository` → `configure-ollama` →
+`all-good`) and selects the matching tab so the user lands exactly on
+the control that needs attention.
+
 ### Project Memory workspace
 
 The Memory page surfaces accumulated project context. Its read path
