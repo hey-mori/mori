@@ -16,19 +16,25 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
+import { deriveSessionStatus } from "../../lib/session/sessionStatus";
 
 export function ReportsView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
+  const sessionState = useMoriSessionStore((state) => state);
   const view = useMoriSessionStore(selectSessionView);
   const mode = useMoriSessionStore(selectSessionMode);
   const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
   const analysis = useMoriSessionStore((state) => state.analysis);
-  const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
   const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
   const imports = useMoriSessionStore((state) => state.imports);
+  
+  const status = deriveSessionStatus(sessionState, {
+    sourceCount: view.sources.length,
+    eventCount: view.events.length,
+  });
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -36,11 +42,6 @@ export function ReportsView() {
 
   const prompt = hasAnalysis && analysis ? analysis.summary.resumePrompt : buildResumePrompt(view);
   const openIssues = view.issues.filter((issue) => issue.status !== "resolved");
-  const reportBasis = mode === "demo"
-    ? "demo mock"
-    : hasAnalysis
-      ? `${analysisProviderLabel ?? "Quick Pass"} 분석`
-      : "가져온 세션 데이터 (분석 전)";
 
   return (
     <div className="page">
@@ -58,14 +59,15 @@ export function ReportsView() {
       />
       <SessionModeBanner />
       <div className="report-basis-row">
-        <Badge tone={mode === "demo" ? "orange" : hasAnalysis ? "green" : "purple"}>{reportBasis}</Badge>
+        <Badge tone={status.dataBasisTone}>{status.dataBasisLabel}</Badge>
         {mode === "draft" && !hasAnalysis ? (
           <Button
             icon={Sparkles}
             onClick={() => runQuickPass()}
             disabled={imports.length === 0 || analysisStatus === "running"}
+            title={imports.length === 0 ? "Import sources first" : analysisStatus === "running" ? "Quick Pass is running..." : "Run Quick Pass to generate analysis"}
           >
-            {analysisStatus === "running" ? "Quick Pass 실행 중..." : "Quick Pass 실행"}
+            {analysisStatus === "running" ? "Running Quick Pass..." : "Run Quick Pass"}
           </Button>
         ) : null}
       </div>

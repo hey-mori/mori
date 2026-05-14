@@ -20,7 +20,7 @@ export function TimelineEmptyState({
       <EmptyState
         icon={Sparkles}
         title="Demo session has no events"
-        description="Switch to a real session from Start Mori or import a source from Sources / Evidence."
+        description="Switch to a real session from Start Session or import a source from Evidence."
       />
     );
   }
@@ -32,7 +32,7 @@ export function TimelineEmptyState({
         description="Mori only shows verified evidence you explicitly import — manual notes, URLs, AI conversations, and Git diffs all land here."
         actions={
           <Button variant="primary" icon={ListPlus} onClick={onOpenSources}>
-            Open Sources / Evidence
+            Open Evidence
           </Button>
         }
       />
