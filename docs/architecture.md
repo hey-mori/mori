@@ -173,6 +173,48 @@ provenance through the existing `SourceRef` traceability helpers in
 ChatGPT / Codex API or app integrations) remain explicitly planned, not
 fake-active.
 
+### Reports workspace
+
+The Reports page consumes every prior milestone's output (sources, events,
+issues, decisions, next actions, Quick Pass analysis) and turns them into
+a Resume Prompt + a live Markdown report + a `.mori v0` package export.
+The flow:
+
+```text
+useMoriSessionStore (selectSessionView + analysis state)
+  -> src/lib/report/resume-prompt.ts buildResumePrompt(view)
+       (fallback when Quick Pass has not run)
+  -> src/features/reports/ResumePromptCard
+       (provider badge + copy-to-clipboard + copied confirmation)
+  -> src/features/reports/SessionSummaryStrip
+       (duration / sources / events / issues / decisions / next actions)
+  -> src/features/reports/WorkContinuationCards
+       (Next Actions, Open Issues, Recent Decisions, Resources)
+  -> src/features/reports/ReportBuilderPanel
+       -> src/lib/report/reportBuilder.ts buildReportMarkdown({
+            type, sections, privacy, view, resumePromptOverride
+          })
+            -> live Markdown preview
+            -> Markdown 복사 (clipboard) + .md 다운로드 (Blob)
+       -> Format buttons: Markdown active, PDF + HTML disabled with
+          "Planned" sublabel — these are honestly not implemented.
+       -> Privacy toggles: clientSafe / excludeRawTranscripts /
+          excludeSourceDetails. Full PII redaction is still a future
+          milestone (the caveat is rendered below the toggles).
+  -> .mori v0 JSON export keeps the existing
+       createMoriPackageFromSession -> serializeMoriPackage -> Tauri save
+       or browser Blob download path.
+```
+
+Quick Pass is never auto-run from Reports. The analysis strip exposes
+Run / Re-run buttons that call the same `useMoriSessionStore.runQuickPass()`
+entry point Evidence Hub and Review use.
+
+The right-side Report Builder is the only place that mutates report
+state. Choosing a report type sets default sections + default privacy
+from `REPORT_TYPE_DEFINITIONS`; the user can override either axis
+afterwards and the preview re-renders synchronously.
+
 ### Review workspace
 
 Once accepted events land in the session via Import Review and a user
