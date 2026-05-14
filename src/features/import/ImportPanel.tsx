@@ -25,6 +25,7 @@ import {
 } from "../../lib/import";
 import {
   buildConnectorJsonlPreview,
+  buildConnectorJsonlPreviewWithSession,
   mergeConnectorCandidatesForReview,
   normalizeConnectorEventBatch,
   type ConnectorJsonlPreview,
@@ -41,7 +42,7 @@ import {
   type ConnectorInboxListing,
 } from "../../lib/desktop/connectorInbox";
 import { getRepositoryVerificationFreshness } from "../../lib/repositories";
-import { useMoriSessionStore } from "../../app/sessionStore";
+import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { selectActiveRepository, useMoriRepositoryStore } from "../../app/repositoryStore";
 import { useMoriReviewStore } from "../../app/reviewStore";
@@ -77,6 +78,7 @@ export type ImportPanelProps = {
 export function ImportPanel(props: ImportPanelProps = {}) {
   const { initialKind, initialAiPlatform, variant = "standalone", onClose } = props;
   const draft = useMoriSessionStore((state) => state.draft);
+  const sessionView = useMoriSessionStore(selectSessionView);
   const imports = useMoriSessionStore((state) => state.imports);
   const addImport = useMoriSessionStore((state) => state.addImport);
   const removeImport = useMoriSessionStore((state) => state.removeImport);
@@ -107,6 +109,8 @@ export function ImportPanel(props: ImportPanelProps = {}) {
 
   /** Live preview snapshot for the Connector JSONL tab; null until the user clicks Parse. */
   const [connectorPreview, setConnectorPreview] = useState<ConnectorJsonlPreview | null>(null);
+  /** Opt-in toggle that overrides the default skip-duplicates behavior. */
+  const [connectorIncludeDuplicates, setConnectorIncludeDuplicates] = useState(false);
   /** Inbox listing returned from the desktop runtime; null until the user clicks Refresh. */
   const [connectorInbox, setConnectorInbox] = useState<ConnectorInboxListing | null>(null);
   /** Path of the inbox file currently loaded into the textarea, when any. */
@@ -375,7 +379,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       setConnectorPreview(null);
       return;
     }
-    const preview = buildConnectorJsonlPreview(body);
+    const preview = buildConnectorJsonlPreviewWithSession(body, sessionView);
     setConnectorPreview(preview);
     if (preview.kind === "empty") {
       setStatus({ tone: "error", message: "유효한 라인이 없습니다." });
@@ -383,6 +387,11 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       setStatus({
         tone: "error",
         message: `${preview.invalidLineCount}개 라인이 파싱에 실패했습니다. 라인 번호를 확인하세요.`,
+      });
+    } else if (preview.duplicateEventCount > 0 && preview.newEventCount === 0) {
+      setStatus({
+        tone: "info",
+        message: "모든 이벤트가 이미 가져온 항목입니다. Import Review는 비활성화됩니다.",
       });
     } else {
       setStatus({ tone: "ok", message: preview.headline });
@@ -442,7 +451,9 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       setConnectorInboxSelectedPath(result.path);
       // Run Parse / Preview automatically — the user just made an explicit
       // file selection, so refreshing the preview is exactly what they want.
-      const preview = buildConnectorJsonlPreview(result.text);
+      // The session-aware preview also lights up duplicate detection so the
+      // user sees "Already imported · N" without a second click.
+      const preview = buildConnectorJsonlPreviewWithSession(result.text, sessionView);
       setConnectorPreview(preview);
       if (preview.kind === "errors-only") {
         setConnectorInboxStatus({
@@ -480,28 +491,52 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       setStatus({ tone: "error", message: "세션이 없습니다. Start Session에서 새 세션을 시작하세요." });
       return;
     }
-    const preview = connectorPreview ?? buildConnectorJsonlPreview(body);
-    if (!preview.canImport || preview.events.length === 0) {
+    const preview = connectorPreview ?? buildConnectorJsonlPreviewWithSession(body, sessionView);
+    if (preview.kind === "empty" || preview.kind === "errors-only") {
       setStatus({
         tone: "error",
         message: "유효한 이벤트가 없습니다. Parse 후 오류 라인을 수정하거나 다른 파일을 가져오세요.",
       });
       return;
     }
+    // Skip duplicates by default. The toggle flips us back to the full set
+    // (which still flows through the normal Import Review accept / discard
+    // flow — the user controls every event before it reaches Timeline).
+    const eventsToImport = connectorIncludeDuplicates ? preview.events : preview.newEvents;
+    if (eventsToImport.length === 0) {
+      setStatus({
+        tone: "error",
+        message: "모든 이벤트가 이미 가져온 항목입니다. Include duplicates를 활성화하거나 다른 파일을 선택하세요.",
+      });
+      return;
+    }
     const candidates = normalizeConnectorEventBatch({
       projectId: draft.project.id,
       sessionId: draft.session.id,
-      events: preview.events,
+      events: eventsToImport,
     });
     const merged = mergeConnectorCandidatesForReview(candidates);
     if (!merged) {
       setStatus({ tone: "error", message: "정규화된 후보가 없습니다." });
       return;
     }
-    startReview(merged, "connector-jsonl");
+    startReview(merged, "connector-jsonl", {
+      newEventCount: preview.newEventCount,
+      duplicateSkippedCount: connectorIncludeDuplicates ? 0 : preview.duplicateEventCount,
+      duplicateIncludedCount: connectorIncludeDuplicates ? preview.duplicateEventCount : 0,
+      invalidLineCount: preview.invalidLineCount,
+      includeDuplicates: connectorIncludeDuplicates,
+    });
+    const skipped = preview.duplicateEventCount;
+    const skipMessage =
+      !connectorIncludeDuplicates && skipped > 0
+        ? ` (중복 ${skipped}개 제외)`
+        : connectorIncludeDuplicates && skipped > 0
+          ? ` (중복 ${skipped}개 포함)`
+          : "";
     setStatus({
       tone: "info",
-      message: `'${merged.source.title}' 후보를 Import Review에서 확인하세요.`,
+      message: `'${merged.source.title}' 후보를 Import Review에서 확인하세요${skipMessage}.`,
     });
     onClose?.();
   }
@@ -725,7 +760,11 @@ export function ImportPanel(props: ImportPanelProps = {}) {
           />
         </label>
         {kind === "connector" ? (
-          <ConnectorJsonlPreviewCard preview={connectorPreview} />
+          <ConnectorJsonlPreviewCard
+            preview={connectorPreview}
+            includeDuplicates={connectorIncludeDuplicates}
+            onIncludeDuplicatesChange={setConnectorIncludeDuplicates}
+          />
         ) : null}
       </div>
       <div className="import-actions">
@@ -733,6 +772,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
           <ConnectorJsonlActions
             preview={connectorPreview}
             canImport={canImport}
+            includeDuplicates={connectorIncludeDuplicates}
             onPreview={() => handlePreviewConnectorJsonl()}
             onImport={() => handleConnectorJsonlImportToReview()}
           />
@@ -933,7 +973,15 @@ function ConnectorJsonlPrivacyNote() {
   );
 }
 
-function ConnectorJsonlPreviewCard({ preview }: { preview: ConnectorJsonlPreview | null }) {
+function ConnectorJsonlPreviewCard({
+  preview,
+  includeDuplicates,
+  onIncludeDuplicatesChange,
+}: {
+  preview: ConnectorJsonlPreview | null;
+  includeDuplicates: boolean;
+  onIncludeDuplicatesChange: (next: boolean) => void;
+}) {
   if (!preview || preview.kind === "empty") return null;
   const timeRange =
     preview.earliestOccurredAt && preview.latestOccurredAt
@@ -941,6 +989,8 @@ function ConnectorJsonlPreviewCard({ preview }: { preview: ConnectorJsonlPreview
           preview.latestOccurredAt,
         ).toLocaleString()}`
       : "—";
+  const hasDuplicates = preview.duplicateEventCount > 0;
+  const allDuplicate = hasDuplicates && preview.newEventCount === 0;
   return (
     <section
       className={`connector-jsonl-preview tone-${preview.kind}`}
@@ -950,6 +1000,30 @@ function ConnectorJsonlPreviewCard({ preview }: { preview: ConnectorJsonlPreview
         <strong>{preview.headline}</strong>
         <span>{preview.totalLines} lines · {preview.skippedBlankLines} skipped</span>
       </header>
+      {hasDuplicates ? (
+        <div className="connector-jsonl-duplicate-row" role="status">
+          <span className="connector-jsonl-duplicate-counts">
+            <Badge tone="green">New · {preview.newEventCount}</Badge>
+            <Badge tone="orange">Already imported · {preview.duplicateEventCount}</Badge>
+          </span>
+          <label className="connector-jsonl-duplicate-toggle">
+            <input
+              type="checkbox"
+              checked={includeDuplicates}
+              onChange={(event) => onIncludeDuplicatesChange(event.target.checked)}
+              disabled={allDuplicate && preview.duplicateEventCount === 0}
+            />
+            <span>
+              Include duplicates
+              <small>
+                {includeDuplicates
+                  ? "중복 이벤트도 Import Review에 포함됩니다. Timeline에 같은 카드가 반복될 수 있습니다."
+                  : "Mori가 connector event ID로 이미 가져온 이벤트를 감지했습니다. 기본적으로 중복은 Import Review에서 제외됩니다."}
+              </small>
+            </span>
+          </label>
+        </div>
+      ) : null}
       <dl>
         <div>
           <dt>Valid events</dt>
@@ -1029,15 +1103,22 @@ function ConnectorJsonlPreviewCard({ preview }: { preview: ConnectorJsonlPreview
 function ConnectorJsonlActions({
   preview,
   canImport,
+  includeDuplicates,
   onPreview,
   onImport,
 }: {
   preview: ConnectorJsonlPreview | null;
   canImport: boolean;
+  includeDuplicates: boolean;
   onPreview: () => void;
   onImport: () => void;
 }) {
-  const canSendToReview = canImport && Boolean(preview?.canImport);
+  // The session-aware preview marks `canImport: false` when every event is
+  // a duplicate. The Include-duplicates toggle re-enables the button in
+  // that case because the user has opted in to repeated Timeline cards.
+  const previewBlocksImport =
+    Boolean(preview) && !preview!.canImport && !(includeDuplicates && (preview?.events.length ?? 0) > 0);
+  const canSendToReview = canImport && Boolean(preview) && !previewBlocksImport;
   return (
     <>
       <Button onClick={onPreview}>Parse / Preview</Button>
@@ -1051,9 +1132,13 @@ function ConnectorJsonlActions({
             ? "세션이 없습니다."
             : !preview
               ? "먼저 Parse / Preview를 실행하세요."
-              : preview.canImport
-                ? "유효한 이벤트를 Import Review로 전달합니다."
-                : "유효한 이벤트가 없습니다."
+              : previewBlocksImport
+                ? "모든 이벤트가 이미 가져온 항목입니다. Include duplicates를 활성화하면 다시 가져올 수 있습니다."
+                : includeDuplicates && (preview?.duplicateEventCount ?? 0) > 0
+                  ? `${preview!.newEventCount}개 새 + ${preview!.duplicateEventCount}개 중복을 Import Review로 전달합니다.`
+                  : (preview?.duplicateEventCount ?? 0) > 0
+                    ? `${preview!.newEventCount}개 새 이벤트를 Import Review로 전달합니다 (중복 ${preview!.duplicateEventCount}개 제외).`
+                    : "유효한 이벤트를 Import Review로 전달합니다."
         }
       >
         Import to Review

@@ -423,6 +423,37 @@ textarea, and auto-runs Parse / Preview. **Import to Review remains an
 explicit click.** In browser mode the inbox section renders a help row
 instead of a Refresh button, and the paste flow stays fully available.
 
+### Duplicate detection
+
+The Connector JSONL preview compares every parsed event's
+`(connectorId, externalSessionId, event.id)` identity against the
+identities already stamped on this session's TimelineEvents. Events with
+a matching identity are tagged as **Already imported** and skipped by
+default when the user clicks Import to Review. The preview card surfaces:
+
+- `New · N` and `Already imported · N` badges so the user can see the
+  split before clicking anything.
+- An **Include duplicates** toggle (off by default). When the user opts
+  in, duplicate events ride through Import Review again — useful for
+  re-running Quick Pass over the same batch, at the cost of repeated
+  Timeline cards.
+- An `all_duplicate` warning + a disabled Import to Review button when
+  every event is a duplicate, with an explicit message ("모든 이벤트가
+  이미 가져온 항목입니다").
+
+Identity preservation is **forward-only** — events imported before this
+milestone don't carry `connectorEventId` and are treated as unknown
+rather than as duplicates. The Import Review header now also surfaces a
+`New events / Skipped duplicates / Included duplicates / Invalid lines`
+meta strip so the user can confirm what's about to be applied before
+hitting Apply. Detection is **local + session-scoped**; cross-session
+duplicate detection follows whenever cross-session persistence lands.
+
+Helpers live in
+[`src/lib/connectors/connectorEventIdentity.ts`](../src/lib/connectors/connectorEventIdentity.ts);
+the preview overlay is `buildConnectorJsonlPreviewWithSession` in
+[`src/lib/connectors/jsonlPreview.ts`](../src/lib/connectors/jsonlPreview.ts).
+
 The full **capture surface matrix** — every paste / hook / CLI /
 desktop / web / IDE / browser / GitHub path that Mori does and does not
 support today — lives in

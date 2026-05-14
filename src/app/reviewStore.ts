@@ -20,14 +20,34 @@ export type ApplyImportFn = (
 
 export type ApplyResult = { ok: true; appliedCount: number } | { ok: false; reason: string };
 
+/**
+ * Optional meta the boundary (Evidence Hub Connector JSONL import) passes
+ * to Import Review so the Review surface can show "Skipped N duplicates"
+ * alongside the source title. Today only the connector path produces
+ * non-zero values; other import kinds pass nothing.
+ */
+export type ReviewDraftMeta = {
+  newEventCount?: number;
+  duplicateSkippedCount?: number;
+  duplicateIncludedCount?: number;
+  invalidLineCount?: number;
+  includeDuplicates?: boolean;
+};
+
 export type ImportReviewState = {
   draft: ImportReviewDraft | null;
+  /** Optional meta surfaced by the Import Review header (skipped count etc.). */
+  draftMeta: ReviewDraftMeta | null;
   /**
    * Set when the user just applied a draft. The Evidence Hub uses this to
    * surface a "Applied N items" status banner without keeping the modal open.
    */
   lastApplied: { sourceId: string; appliedCount: number; appliedAt: string } | null;
-  startReview: (candidate: NormalizedImportCandidate, origin: ReviewOrigin) => void;
+  startReview: (
+    candidate: NormalizedImportCandidate,
+    origin: ReviewOrigin,
+    meta?: ReviewDraftMeta,
+  ) => void;
   setItemStatus: (kind: ReviewItemKind, itemId: string, status: ReviewItemStatus) => void;
   setAllStatus: (status: ReviewItemStatus) => void;
   editEvent: (itemId: string, edits: ReviewEventEdits) => void;
@@ -38,9 +58,13 @@ export type ImportReviewState = {
 
 export const useMoriReviewStore = create<ImportReviewState>((set, get) => ({
   draft: null,
+  draftMeta: null,
   lastApplied: null,
-  startReview: (candidate, origin) => {
-    set({ draft: createImportReviewDraft(candidate, origin) });
+  startReview: (candidate, origin, meta) => {
+    set({
+      draft: createImportReviewDraft(candidate, origin),
+      draftMeta: meta ?? null,
+    });
   },
   setItemStatus: (kind, itemId, status) => {
     const draft = get().draft;
@@ -70,6 +94,7 @@ export const useMoriReviewStore = create<ImportReviewState>((set, get) => ({
     const appliedCount = candidate.events.length;
     set({
       draft: null,
+      draftMeta: null,
       lastApplied: {
         sourceId: candidate.source.id,
         appliedCount,
@@ -79,7 +104,7 @@ export const useMoriReviewStore = create<ImportReviewState>((set, get) => ({
     return { ok: true, appliedCount };
   },
   cancel: () => {
-    set({ draft: null });
+    set({ draft: null, draftMeta: null });
   },
   clearLastApplied: () => {
     set({ lastApplied: null });

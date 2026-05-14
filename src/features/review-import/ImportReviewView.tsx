@@ -4,7 +4,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
-import { useMoriReviewStore } from "../../app/reviewStore";
+import { useMoriReviewStore, type ReviewDraftMeta } from "../../app/reviewStore";
 import {
   getReviewCounts,
   isReviewApplyable,
@@ -26,6 +26,7 @@ const ORIGIN_LABEL: Record<ReviewOrigin, string> = {
 
 export function ImportReviewView() {
   const draft = useMoriReviewStore((state) => state.draft);
+  const draftMeta = useMoriReviewStore((state) => state.draftMeta);
   const setItemStatus = useMoriReviewStore((state) => state.setItemStatus);
   const setAllStatus = useMoriReviewStore((state) => state.setAllStatus);
   const editEvent = useMoriReviewStore((state) => state.editEvent);
@@ -86,6 +87,8 @@ export function ImportReviewView() {
           <Badge tone="gray">{draft.id}</Badge>
         </div>
       </header>
+
+      {draftMeta ? <ReviewDraftMetaStrip meta={draftMeta} /> : null}
 
       {statusBanner ? (
         <div className={`review-status tone-${statusBanner.tone}`}>{statusBanner.message}</div>
@@ -205,5 +208,37 @@ function EmptyEventList() {
       <h3>추출된 이벤트가 없습니다</h3>
       <p>이 가져오기에서는 Timeline 이벤트 후보가 생성되지 않았습니다. Cancel을 눌러 Evidence Hub로 돌아가거나 다른 소스를 가져오세요.</p>
     </div>
+  );
+}
+
+function ReviewDraftMetaStrip({ meta }: { meta: ReviewDraftMeta }) {
+  const cells: Array<{ tone: "green" | "orange" | "blue" | "gray"; label: string; value: number }> = [];
+  if (typeof meta.newEventCount === "number") {
+    cells.push({ tone: "green", label: "New events", value: meta.newEventCount });
+  }
+  if (typeof meta.duplicateSkippedCount === "number" && meta.duplicateSkippedCount > 0) {
+    cells.push({ tone: "orange", label: "Skipped duplicates", value: meta.duplicateSkippedCount });
+  }
+  if (typeof meta.duplicateIncludedCount === "number" && meta.duplicateIncludedCount > 0) {
+    cells.push({ tone: "blue", label: "Included duplicates", value: meta.duplicateIncludedCount });
+  }
+  if (typeof meta.invalidLineCount === "number" && meta.invalidLineCount > 0) {
+    cells.push({ tone: "gray", label: "Invalid lines", value: meta.invalidLineCount });
+  }
+  if (cells.length === 0) return null;
+  return (
+    <section className="review-meta-strip" role="status" aria-label="Import meta">
+      {cells.map((cell) => (
+        <span key={cell.label} className={`review-meta-cell tone-${cell.tone}`}>
+          <strong>{cell.value}</strong>
+          <small>{cell.label}</small>
+        </span>
+      ))}
+      {meta.includeDuplicates ? (
+        <span className="review-meta-note">
+          Include duplicates 가 활성화되어 있어, 이미 가져온 connector 이벤트도 Apply 시 Timeline에 추가됩니다.
+        </span>
+      ) : null}
+    </section>
   );
 }

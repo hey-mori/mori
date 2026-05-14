@@ -1,6 +1,7 @@
 import type { CreatedBy, EventType, SourceKind, SourceRef, TimelineEvent, TrustLevel } from "../../domain/types";
 import { createImportId } from "../import/id";
 import { redactText } from "./redaction";
+import { getConnectorEventIdentity } from "./connectorEventIdentity";
 import type {
   ConnectorEvent,
   ConnectorEventKind,
@@ -314,6 +315,9 @@ function mapConnectorEventToTimelineEvent({
     confidence: confidenceForEvent(event),
     createdBy,
     userModified: false,
+    // Preserve the connector identity so subsequent imports can detect
+    // duplicates without re-parsing the original connector event id.
+    connectorEventId: getConnectorEventIdentity(event),
   };
 }
 

@@ -25,6 +25,12 @@ import type {
 } from "./types";
 import { parseConnectorJsonl } from "./validation";
 import { redactText } from "./redaction";
+import {
+  collectImportedConnectorEventIds,
+  partitionConnectorEventsByIdentity,
+  type ConnectorEventIdentity,
+} from "./connectorEventIdentity";
+import type { TimelineEvent } from "../../domain/types";
 
 export type ConnectorJsonlPreviewKind = "empty" | "errors-only" | "valid" | "mixed";
 
@@ -78,10 +84,30 @@ export type ConnectorJsonlPreview = {
   headline: string;
   /** The validated events themselves — passed downstream to the normalizer. */
   events: ConnectorEvent[];
+  /**
+   * Duplicate summary populated by `buildConnectorJsonlPreviewWithSession`.
+   * The plain `buildConnectorJsonlPreview` helper returns the zero-value
+   * (no session to compare against) so callers can read this field without
+   * branching on session-aware vs session-less previews.
+   */
+  newEventCount: number;
+  duplicateEventCount: number;
+  /** Events whose `connectorEventId` is NOT in the imported set. */
+  newEvents: ConnectorEvent[];
+  /** Events whose `connectorEventId` collides with an already-imported event. */
+  duplicateEvents: ConnectorEvent[];
+  /** Identities (encoded as `connectorId::session::id`) of the duplicates. */
+  duplicateIdentities: ConnectorEventIdentity[];
 };
 
 export type ConnectorPreviewWarning = {
-  code: "redacted" | "missing_session_id" | "unknown_connector_id" | "all_invalid";
+  code:
+    | "redacted"
+    | "missing_session_id"
+    | "unknown_connector_id"
+    | "all_invalid"
+    | "all_duplicate"
+    | "partial_duplicate";
   message: string;
   affectedLines?: number[];
 };
@@ -143,6 +169,11 @@ function emptyPreview(): ConnectorJsonlPreview {
     canImport: false,
     headline: "JSONL을 붙여넣으면 미리보기가 표시됩니다.",
     events: [],
+    newEventCount: 0,
+    duplicateEventCount: 0,
+    newEvents: [],
+    duplicateEvents: [],
+    duplicateIdentities: [],
   };
 }
 
@@ -260,6 +291,13 @@ function summarisePreview(outcome: ConnectorParseOutcome): ConnectorJsonlPreview
     canImport,
     headline,
     events,
+    // Default duplicate fields. `buildConnectorJsonlPreviewWithSession`
+    // overlays the real values once we have a session to compare against.
+    newEventCount: events.length,
+    duplicateEventCount: 0,
+    newEvents: events,
+    duplicateEvents: [],
+    duplicateIdentities: [],
   };
 }
 
@@ -362,5 +400,87 @@ function buildHeadline(args: {
     return `유효한 이벤트가 없습니다. ${args.invalidLineCount}개 라인이 파싱에 실패했습니다.`;
   }
   return "JSONL을 붙여넣으면 미리보기가 표시됩니다.";
+}
+
+// ─── duplicate-aware preview ────────────────────────────────────────────────
+
+/**
+ * Same shape as `buildConnectorJsonlPreview`, plus duplicate detection
+ * against the active session's already-applied TimelineEvents.
+ *
+ * Events whose `connectorEventId` is already present in the session are
+ * classified as duplicates. The preview's `events` field still carries the
+ * full validated set so callers that opt into "Include duplicates" can use
+ * it; the `newEvents` / `duplicateEvents` partitions are what the default
+ * skip-duplicates path reads from.
+ *
+ * Edge cases:
+ *   - When there is no session (e.g. demo) the importedIds set is empty
+ *     and every valid event ends up in `newEvents`.
+ *   - When everything is a duplicate, `canImport` is flipped to `false`
+ *     and an `all_duplicate` warning is emitted. The UI surfaces this
+ *     state by disabling Import to Review with a clear message.
+ *   - When the batch is a partial duplicate, `canImport` stays true (the
+ *     new events ARE importable) and a `partial_duplicate` warning is
+ *     emitted so the UI can show the skip count.
+ */
+export function buildConnectorJsonlPreviewWithSession(
+  text: string,
+  session: { events: TimelineEvent[] } | null | undefined,
+): ConnectorJsonlPreview {
+  const base = buildConnectorJsonlPreview(text);
+  return applyDuplicateOverlay(base, session);
+}
+
+/**
+ * Pure version of the overlay so callers that already have a parsed
+ * outcome (tests, future Tauri ingest) can re-use it without re-parsing.
+ */
+export function applyDuplicateOverlay(
+  preview: ConnectorJsonlPreview,
+  session: { events: TimelineEvent[] } | null | undefined,
+): ConnectorJsonlPreview {
+  if (preview.kind === "empty" || preview.kind === "errors-only") {
+    return preview;
+  }
+  const importedIds = session
+    ? collectImportedConnectorEventIds(session)
+    : new Set<ConnectorEventIdentity>();
+  const { newEvents, duplicateEvents, duplicateIdentities } =
+    partitionConnectorEventsByIdentity(preview.events, importedIds);
+
+  const warnings = [...preview.warnings];
+  if (duplicateEvents.length > 0 && newEvents.length === 0) {
+    warnings.push({
+      code: "all_duplicate",
+      message:
+        `모든 ${duplicateEvents.length}개 이벤트가 이미 가져온 connector 이벤트와 동일합니다. 같은 JSONL을 한 번 더 import하셨거나 successor 파일이 동일 세션을 반복하는지 확인하세요.`,
+    });
+  } else if (duplicateEvents.length > 0) {
+    warnings.push({
+      code: "partial_duplicate",
+      message:
+        `${duplicateEvents.length}개 이벤트는 이미 가져왔습니다. 기본적으로 새 이벤트 ${newEvents.length}개만 Import Review로 전달됩니다.`,
+    });
+  }
+
+  const canImport = newEvents.length > 0;
+  const headline = duplicateEvents.length > 0
+    ? canImport
+      ? `${newEvents.length}개 새 이벤트 / ${duplicateEvents.length}개 중복 (기본 스킵).`
+      : `모든 이벤트가 이미 가져온 항목입니다. Import Review는 비활성화됩니다.`
+    : preview.headline;
+
+  return {
+    ...preview,
+    warnings,
+    canImport,
+    headline,
+    newEventCount: newEvents.length,
+    duplicateEventCount: duplicateEvents.length,
+    newEvents,
+    duplicateEvents,
+    duplicateIdentities,
+  };
 }
 

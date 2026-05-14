@@ -37,6 +37,8 @@ export {
 } from "./localConnectorIngest";
 export {
   buildConnectorJsonlPreview,
+  buildConnectorJsonlPreviewWithSession,
+  applyDuplicateOverlay,
   summariseParseOutcome,
   type ConnectorJsonlPreview,
   type ConnectorJsonlPreviewKind,
@@ -46,6 +48,18 @@ export {
 export {
   mergeConnectorCandidatesForReview,
 } from "./mergeForReview";
+export {
+  collectConnectorEventIdsFromCandidates,
+  collectImportedConnectorEventIds,
+  getConnectorEventIdentity,
+  getConnectorEventIdentityFromSourceRef,
+  getConnectorEventIdentityFromTimelineEvent,
+  markConnectorEventsAsDuplicate,
+  parseConnectorEventIdentity,
+  partitionConnectorEventsByIdentity,
+  type ConnectorEventIdentity,
+  type MarkedConnectorEvent,
+} from "./connectorEventIdentity";
 export { redactText, containsLikelySecret, type RedactionResult } from "./redaction";
 export {
   describeCaptureSurfaceStatus,

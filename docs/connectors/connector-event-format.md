@@ -19,11 +19,22 @@ Mori does not watch the folder, does not poll it, and does not auto-read
 files on startup. Selecting a file reads it (path canonicalised under
 the inbox root, 8 MB cap) and loads the contents into the same paste
 textarea. The tab then parses the JSONL with `parseConnectorJsonl`, runs
-`buildConnectorJsonlPreview` for the visible preview snapshot, normalises
-valid events with `normalizeConnectorEventBatch`, merges multi-bucket
-output with `mergeConnectorCandidatesForReview`, and sends the result to
-Import Review with origin `connector-jsonl`. No connector event is
-applied to a session until the user confirms in Import Review.
+`buildConnectorJsonlPreview` for the visible preview snapshot (or
+`buildConnectorJsonlPreviewWithSession` when a session view is
+available, which adds duplicate detection against already-imported
+events), normalises valid events with `normalizeConnectorEventBatch`,
+merges multi-bucket output with `mergeConnectorCandidatesForReview`,
+and sends the result to Import Review with origin `connector-jsonl`.
+No connector event is applied to a session until the user confirms in
+Import Review.
+
+Every TimelineEvent produced by `normalizeConnectorEventBatch` carries
+a `connectorEventId = <connectorId>::<externalSessionId|unscoped>::<event.id>`
+field. Mori uses that identity to detect duplicates when the same JSONL
+is loaded a second time (paste, inbox refresh, or a successor file from
+the same Claude / Codex session). Duplicates are skipped by default;
+the preview card surfaces a `Include duplicates` toggle so the user can
+opt in to re-importing the same batch when needed.
 
 The Rust implementation lives in
 [`src-tauri/src/connectors/inbox.rs`](../../src-tauri/src/connectors/inbox.rs);

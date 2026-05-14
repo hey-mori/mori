@@ -448,3 +448,41 @@ describe("Sample Claude Code + Codex CLI events", () => {
     expect(candidates[0].events.length).toBe(2);
   });
 });
+
+describe("Connector event identity preservation", () => {
+  it("stamps connectorEventId onto every produced TimelineEvent", () => {
+    const candidates = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events: [
+        {
+          id: "claude-001",
+          connectorId: "claudeCodeHook",
+          kind: "prompt_submitted",
+          occurredAt: "2026-05-14T10:00:00Z",
+          sessionId: "claude-2026-05-14",
+          summary: "Test prompt",
+          privacy: { captureMethod: "local_hook", rawDataPolicy: "summary_only" },
+          provenance: { toolName: "mori-claude-hook.sh" },
+        },
+        {
+          id: "claude-002",
+          connectorId: "claudeCodeHook",
+          kind: "tool_finished",
+          occurredAt: "2026-05-14T10:01:00Z",
+          sessionId: "claude-2026-05-14",
+          summary: "Edited src/foo.ts",
+          tool: { name: "Edit" },
+          privacy: { captureMethod: "local_hook", rawDataPolicy: "summary_only" },
+          provenance: { toolName: "mori-claude-hook.sh" },
+        },
+      ],
+    });
+    expect(candidates).toHaveLength(1);
+    const identities = candidates[0].events.map((event) => event.connectorEventId);
+    expect(identities).toEqual([
+      "claudeCodeHook::claude-2026-05-14::claude-001",
+      "claudeCodeHook::claude-2026-05-14::claude-002",
+    ]);
+  });
+});

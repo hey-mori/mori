@@ -85,6 +85,17 @@ export type TimelineEvent = {
   confidence: number;
   createdBy: CreatedBy;
   userModified: boolean;
+  /**
+   * Stable identity from an external connector (Claude Code hook / Codex
+   * CLI wrapper / terminal / git connector). Optional — only present on
+   * events imported through a Mori connector JSONL pass. Mori uses this
+   * for duplicate detection on subsequent connector imports.
+   *
+   * Encoded as `<connectorId>::<externalSessionId|unscoped>::<eventId>` so
+   * the same raw `event.id` re-used across distinct connector sessions
+   * stays distinct in the duplicate index.
+   */
+  connectorEventId?: string;
 };
 
 export type Issue = {

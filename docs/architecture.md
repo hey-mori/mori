@@ -212,12 +212,19 @@ External tool (Claude Code hook | Codex CLI wrapper | git command | terminal | m
   -> src/lib/connectors/jsonlPreview.buildConnectorJsonlPreview
        (typed snapshot: valid count, invalid lines, connector ids, event
         kinds, time range, project paths, warnings for secrets / missing
-        session ids / unknown connector ids)
+        session ids / unknown connector ids, PLUS new vs duplicate counts
+        derived from src/lib/connectors/connectorEventIdentity against the
+        current session's already-imported TimelineEvents — invoked as
+        buildConnectorJsonlPreviewWithSession when a session is available)
   -> src/lib/connectors/redaction.redactText
        (best-effort secret masking before persistence)
+  -> Skip duplicates by default (preview.newEvents) unless the user opts
+     into Include duplicates from the preview card.
   -> src/lib/connectors/normalizeConnectorEventBatch
        (buckets by (connectorId, sessionId), maps each event to an existing
-        SourceKind, emits one SourceRef + N TimelineEvents per bucket)
+        SourceKind, emits one SourceRef + N TimelineEvents per bucket,
+        stamps connectorEventId on every produced TimelineEvent so the
+        next import pass can detect duplicates)
   -> src/lib/connectors/mergeForReview.mergeConnectorCandidatesForReview
        (collapses multi-bucket output into one composite candidate so the
         existing Import Review UI can host the whole batch in one draft)
