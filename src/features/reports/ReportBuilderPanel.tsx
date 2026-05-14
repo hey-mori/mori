@@ -16,17 +16,19 @@ import {
   type ReportSectionId,
   type ReportType,
 } from "../../lib/report/reportBuilder";
+import { getFeatureControlProps, type FeatureId } from "../../app/featureStatus";
 
+// Format status is sourced from the feature registry so the panel can never
+// drift from `docs/feature-status.md` or the rest of the app.
 const FORMAT_DEFS: Array<{
   id: ReportFormat;
   label: string;
   ext: string;
-  status: "implemented" | "planned";
-  hint: string;
+  featureId: FeatureId;
 }> = [
-  { id: "markdown", label: "Markdown", ext: ".md", status: "implemented", hint: "Copy + download 지원" },
-  { id: "pdf", label: "PDF", ext: ".pdf", status: "planned", hint: "다음 마일스톤" },
-  { id: "html", label: "HTML", ext: ".html", status: "planned", hint: "다음 마일스톤" },
+  { id: "markdown", label: "Markdown", ext: ".md", featureId: "reports.export.markdown" },
+  { id: "pdf", label: "PDF", ext: ".pdf", featureId: "reports.export.pdf" },
+  { id: "html", label: "HTML", ext: ".html", featureId: "reports.export.html" },
 ];
 
 export function ReportBuilderPanel({
@@ -158,7 +160,8 @@ export function ReportBuilderPanel({
         <SectionHeader title="3. 출력 형식" hint="Markdown만 활성화" />
         <div className="report-format-list">
           {FORMAT_DEFS.map((def) => {
-            const disabled = def.status !== "implemented";
+            const feature = getFeatureControlProps(def.featureId);
+            const disabled = !feature.enabled;
             return (
               <button
                 key={def.id}
@@ -169,11 +172,11 @@ export function ReportBuilderPanel({
                 onClick={() => !disabled && setFormat(def.id)}
                 disabled={disabled}
                 aria-pressed={format === def.id}
-                title={disabled ? def.hint : `${def.label} 형식 선택`}
+                title={feature.title ?? `${def.label} 형식 선택`}
               >
                 <strong>{def.label}</strong>
                 <small>
-                  {def.ext} · {def.status === "implemented" ? "Active" : "Planned"}
+                  {def.ext} · {feature.statusLabel}
                 </small>
               </button>
             );

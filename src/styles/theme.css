@@ -90,11 +90,69 @@
 }
 
 /**
- * Theme switching is a Planned milestone. Reserve the selector so we can
- * land the runtime switcher without re-plumbing all surfaces.
+ * Spacing tokens. The Mori product surfaces use only these step values so a
+ * future visual refresh can adjust density in one place.
  */
-[data-mori-theme="dark"] {
-  /* Intentionally empty for now — see roadmap.md → "theme switcher". */
+:root {
+  --mori-space-0: 0;
+  --mori-space-1: 4px;
+  --mori-space-2: 6px;
+  --mori-space-3: 8px;
+  --mori-space-4: 10px;
+  --mori-space-5: 12px;
+  --mori-space-6: 14px;
+  --mori-space-7: 16px;
+  --mori-space-8: 20px;
+  --mori-space-9: 24px;
+  --mori-space-10: 32px;
+  --mori-space-12: 40px;
+}
+
+/**
+ * Theme catalogue.
+ *
+ * Mori ships with two themes today:
+ *   - `formal`  — the existing calm productivity look (default).
+ *   - `forest`  — slightly warmer cousin of `formal`, surfaces drift toward
+ *                 sage / spruce. Token-only today; the runtime switcher is a
+ *                 Planned capability (`settings.themeSwitcher`).
+ *
+ * `nightLake` is reserved here as a Planned dark theme — the selector is
+ * declared but every override is intentionally a no-op (so callers cannot
+ * accidentally render half-themed surfaces before the switcher ships).
+ */
+[data-mori-theme="formal"] {
+  /* Intentionally empty — `formal` is the default; tokens above already
+   * describe it. */
+}
+
+[data-mori-theme="forest"] {
+  --mori-bg: #f4f6f1;
+  --mori-surface: #ffffff;
+  --mori-surface-subtle: #f8faf5;
+  --mori-surface-overlay: rgba(252, 254, 247, 0.97);
+  --mori-border: #dde3d3;
+  --mori-border-strong: #c4cdb2;
+  --mori-border-focus: #3e7f49;
+  --mori-accent: #2f6f3c;
+  --mori-accent-soft: #e8f3e6;
+  --mori-accent-strong: #d3e8cf;
+  --mori-status-success: #2f6f3c;
+  --mori-status-success-soft: #e8f3e6;
+  --mori-status-info: #2a6c8c;
+  --mori-status-info-soft: #e6f1f7;
+  --mori-trust-verified: var(--mori-status-success);
+  --mori-trust-verified-soft: var(--mori-status-success-soft);
+  --mori-trust-observed: var(--mori-status-info);
+  --mori-trust-observed-soft: var(--mori-status-info-soft);
+  --mori-trust-inferred: var(--mori-accent);
+  --mori-trust-inferred-soft: var(--mori-accent-soft);
+}
+
+[data-mori-theme="nightLake"] {
+  /* Planned — see roadmap.md → "theme switcher". Token overrides intentionally
+   * omitted so half-themed surfaces never ship. The selector is reserved to
+   * keep the future migration cheap. */
 }
 
 /**
@@ -174,4 +232,222 @@
 .mori-status-badge[data-mori-tone="neutral"] {
   background: var(--mori-status-neutral-soft);
   color: var(--mori-status-neutral);
+}
+
+/**
+ * Feature status chip — a thicker pill that surfaces "Available / Partial /
+ * Planned / Unavailable" for whole surfaces. Built on top of the same tone
+ * vocabulary as `.mori-status-badge`.
+ */
+.mori-feature-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--mori-radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  background: var(--mori-status-neutral-soft);
+  color: var(--mori-status-neutral);
+}
+
+.mori-feature-status-chip::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mori-feature-status-chip[data-mori-tone="success"],
+.mori-feature-status-chip[data-mori-tone="verified"] {
+  background: var(--mori-status-success-soft);
+  color: var(--mori-status-success);
+  border-color: rgba(21, 149, 90, 0.18);
+}
+
+.mori-feature-status-chip[data-mori-tone="info"],
+.mori-feature-status-chip[data-mori-tone="observed"] {
+  background: var(--mori-status-info-soft);
+  color: var(--mori-status-info);
+  border-color: rgba(35, 105, 246, 0.18);
+}
+
+.mori-feature-status-chip[data-mori-tone="warning"] {
+  background: var(--mori-status-warning-soft);
+  color: #8a5a08;
+  border-color: rgba(245, 158, 11, 0.18);
+}
+
+.mori-feature-status-chip[data-mori-tone="danger"] {
+  background: var(--mori-status-danger-soft);
+  color: var(--mori-status-danger);
+  border-color: rgba(240, 68, 68, 0.18);
+}
+
+.mori-feature-status-chip[data-mori-tone="accent"],
+.mori-feature-status-chip[data-mori-tone="inferred"] {
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
+  border-color: rgba(98, 70, 245, 0.18);
+}
+
+.mori-feature-status-chip[data-mori-tone="neutral"] {
+  background: var(--mori-status-neutral-soft);
+  color: var(--mori-status-neutral);
+  border-color: var(--mori-border);
+}
+
+/**
+ * Stat card primitive — a single KPI cell. Used by surface honesty strips
+ * (Reports / Settings / Memory) where we display "X implemented · Y partial
+ * · Z planned" rollups.
+ */
+.mori-stat-card {
+  display: grid;
+  gap: 2px;
+  padding: var(--mori-space-4) var(--mori-space-5);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
+  min-width: 0;
+}
+
+.mori-stat-card[data-mori-tone="success"] { border-color: rgba(21, 149, 90, 0.18); }
+.mori-stat-card[data-mori-tone="info"]    { border-color: rgba(35, 105, 246, 0.18); }
+.mori-stat-card[data-mori-tone="warning"] { border-color: rgba(245, 158, 11, 0.18); }
+.mori-stat-card[data-mori-tone="danger"]  { border-color: rgba(240, 68, 68, 0.18); }
+.mori-stat-card[data-mori-tone="accent"]  { border-color: rgba(98, 70, 245, 0.18); }
+
+.mori-stat-card-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mori-text-muted);
+}
+
+.mori-stat-card-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--mori-text);
+  line-height: 1.1;
+}
+
+.mori-stat-card-hint {
+  font-size: 11px;
+  color: var(--mori-text-muted);
+}
+
+/**
+ * MoriToolbar — a horizontal flex strip with calm spacing tokens. Adopters
+ * compose their controls inside; we only style the container.
+ */
+.mori-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-3);
+  flex-wrap: wrap;
+}
+
+.mori-toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+/**
+ * MoriEmptyState — a calm empty surface used by Timeline / Evidence / Memory
+ * when there is no data to show.
+ */
+.mori-empty-state {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--mori-space-3);
+  min-height: 220px;
+  padding: var(--mori-space-10);
+  border: 1px dashed var(--mori-border-strong);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface);
+  text-align: center;
+  color: var(--mori-text-muted);
+}
+
+.mori-empty-state-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
+}
+
+.mori-empty-state-title {
+  margin: 0;
+  color: var(--mori-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.mori-empty-state-description {
+  margin: 0;
+  max-width: 440px;
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+/**
+ * Reports capability strip — adopter of MoriStatCard + MoriFeatureStatusBadge.
+ */
+.reports-capability-strip {
+  display: grid;
+  gap: var(--mori-space-5);
+  padding: var(--mori-space-7) var(--mori-space-8);
+  margin-top: var(--mori-space-6);
+}
+
+.reports-capability-strip header {
+  display: grid;
+  gap: var(--mori-space-1);
+}
+
+.reports-capability-strip header h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mori-text);
+}
+
+.reports-capability-strip header p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--mori-text-muted);
+}
+
+.reports-capability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: var(--mori-space-3);
+}
+
+.reports-capability-feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mori-space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (max-width: 980px) {
+  .reports-capability-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
 }

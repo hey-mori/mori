@@ -93,7 +93,43 @@ export type FeatureId =
   | "settings.storage.moriPackageJson"
   | "settings.storage.moriPackageZip"
   | "settings.repositories.crud"
-  | "settings.themeSwitcher";
+  | "settings.themeSwitcher"
+  | "settings.privacy.policy"
+  // ─────────────────────── Surface-level rollups ─────────────────────
+  // These ids exist so dashboards / docs / status strips can report
+  // "is this whole surface live?" without enumerating every
+  // sub-capability. They mirror the brief's rollup catalogue.
+  | "rollup.aiTranscriptImport"
+  | "rollup.gitDiffImport"
+  | "rollup.manualNoteImport"
+  | "rollup.urlImport"
+  | "rollup.repositoryMetadata"
+  | "rollup.importReview"
+  | "rollup.timeline"
+  | "rollup.flowFocus"
+  | "rollup.reviewWorkspace"
+  | "rollup.reportsMarkdown"
+  | "rollup.reportsPdf"
+  | "rollup.reportsHtml"
+  | "rollup.projectMemoryCurrentSession"
+  | "rollup.projectMemoryCrossSession"
+  | "rollup.sqlitePersistence"
+  | "rollup.moriPackageExport"
+  | "rollup.moriPackageImport"
+  | "rollup.themeSystem"
+  // ─────────────────────── Connector capabilities ────────────────────
+  // Mirrors `src/lib/connectors/captureSurfaces.ts`. These rows are how
+  // the UI honestly states "Claude Code hook is docs-template-only" etc.
+  | "connector.claudeCodeHook"
+  | "connector.codexCliWrapper"
+  | "connector.claudeDesktopImport"
+  | "connector.codexDesktopImport"
+  | "connector.vscodeExtension"
+  | "connector.cursorExtension"
+  | "connector.terminalShellIntegration"
+  | "connector.browserExtension"
+  | "connector.githubPrImport"
+  | "connector.fileDocumentImport";
 
 /**
  * One capability row.
@@ -101,6 +137,8 @@ export type FeatureId =
  * `actionEnabled` is the boolean components should bind to. `disabledReason`
  * is the tooltip components should render when `actionEnabled === false`.
  */
+export type FeatureRuntimeRequirement = "any" | "desktop" | "browser";
+
 export type FeatureCapability = {
   id: FeatureId;
   label: string;
@@ -116,6 +154,13 @@ export type FeatureCapability = {
   nextStep?: string;
   /** Optional doc path that explains the capability in depth. */
   docsPath?: string;
+  /**
+   * Runtime gate. `desktop` means the row is only truly active inside the
+   * Tauri shell (e.g. SQLite, Tauri Git diff). Callers can downgrade the
+   * status to `unavailable` when running in the browser build via
+   * `getFeatureControlPropsInRuntime`.
+   */
+  runtime?: FeatureRuntimeRequirement;
 };
 
 /**
@@ -204,6 +249,37 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "settings.storage.moriPackageZip", label: ".mori zip package", status: PLANNED, description: "Zip package bundling Markdown + assets.", disabledReason: ".mori zip package is a planned milestone (only JSON exists today)." },
   { id: "settings.repositories.crud", label: "Repository CRUD", status: "implemented", description: "Add, verify, label, and delete saved repository paths." },
   { id: "settings.themeSwitcher", label: "Theme switcher", status: PLANNED, description: "Visual theme switching.", disabledReason: "Theme tokens exist but the runtime switcher is a planned milestone." },
+  { id: "settings.privacy.policy", label: "Privacy policy display", status: "implemented", description: "Read-only status cards for Mori's privacy guarantees." },
+  // ────────────────────────── Surface-level rollups ──────────────────
+  { id: "rollup.aiTranscriptImport", label: "AI transcript import", status: "implemented", description: "Paste Claude / ChatGPT / Codex / Other AI transcripts." },
+  { id: "rollup.gitDiffImport", label: "Git diff import", status: "implemented", description: "Paste a git diff or capture against a saved repo via Tauri." },
+  { id: "rollup.manualNoteImport", label: "Manual note import", status: "implemented", description: "Paste arbitrary text as a verified source." },
+  { id: "rollup.urlImport", label: "URL import", status: "implemented", description: "Add a URL with an optional excerpt." },
+  { id: "rollup.repositoryMetadata", label: "Repository metadata", status: "implemented", description: "Saved repository paths used to scope Tauri Git diff capture.", runtime: "desktop" },
+  { id: "rollup.importReview", label: "Import Review", status: "implemented", description: "Accept / discard / edit imported candidates before applying." },
+  { id: "rollup.timeline", label: "Timeline", status: "implemented", description: "Lane / ruler / Inspector / mini-map Timeline surface." },
+  { id: "rollup.flowFocus", label: "Flow Focus", status: "partial", description: "Upstream / downstream trace view.", userFacingStatus: "Partial — manual relationship edits are still Planned." },
+  { id: "rollup.reviewWorkspace", label: "Review workspace", status: "partial", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions.", userFacingStatus: "Partial — write actions (status change / edit / promote) are Planned." },
+  { id: "rollup.reportsMarkdown", label: "Markdown reports", status: "implemented", description: "Copy or download report as Markdown." },
+  { id: "rollup.reportsPdf", label: "PDF reports", status: PLANNED, description: "Render report as PDF.", disabledReason: "PDF export is a planned milestone." },
+  { id: "rollup.reportsHtml", label: "HTML reports", status: PLANNED, description: "Render report as standalone HTML.", disabledReason: "HTML export is a planned milestone." },
+  { id: "rollup.projectMemoryCurrentSession", label: "Project Memory — current session", status: "implemented", description: "Aggregate the active session into a project memory snapshot." },
+  { id: "rollup.projectMemoryCrossSession", label: "Project Memory — cross-session", status: PLANNED, description: "Aggregate decisions / issues / evidence across multiple sessions.", disabledReason: "Cross-session aggregation depends on persistence completion (Planned)." },
+  { id: "rollup.sqlitePersistence", label: "SQLite persistence", status: "implemented", description: "Persistent local SQLite store for sessions, imports, and analysis.", runtime: "desktop" },
+  { id: "rollup.moriPackageExport", label: ".mori v0 package export", status: "implemented", description: "Serialise the session to a .mori v0 JSON package." },
+  { id: "rollup.moriPackageImport", label: ".mori v0 package import", status: PLANNED, description: "Open a saved .mori v0 package back into a session.", disabledReason: "Reading .mori v0 packages back is a planned milestone." },
+  { id: "rollup.themeSystem", label: "Theme system", status: "partial", description: "Token foundation lands first; the runtime switcher is Planned.", userFacingStatus: "Partial — formal + forest tokens declared; switcher Planned." },
+  // ────────────────────────── Connector capabilities ─────────────────
+  { id: "connector.claudeCodeHook", label: "Claude Code hook", status: PLANNED, description: "Local Claude Code hook script that writes JSONL events.", disabledReason: "Docs-template-only today; JSONL ingest UI is the next connector milestone." },
+  { id: "connector.codexCliWrapper", label: "Codex CLI wrapper", status: PLANNED, description: "Local Codex CLI wrapper that writes JSONL events.", disabledReason: "Docs-template-only today; JSONL ingest UI is the next connector milestone." },
+  { id: "connector.claudeDesktopImport", label: "Claude Desktop transcript import", status: PLANNED, description: "Manual transcript export → file import.", disabledReason: "Paste is implemented today via AI transcript import. File-based import is a planned milestone." },
+  { id: "connector.codexDesktopImport", label: "Codex Desktop transcript import", status: PLANNED, description: "Manual Codex transcript export → file import.", disabledReason: "Paste is implemented today via AI transcript import. File-based import is a planned milestone." },
+  { id: "connector.vscodeExtension", label: "VS Code extension", status: PLANNED, description: "Local VS Code extension emitting JSONL events.", disabledReason: "VS Code extension is a planned connector — Mori never silently reads editor state." },
+  { id: "connector.cursorExtension", label: "Cursor extension", status: PLANNED, description: "Local Cursor extension emitting JSONL events.", disabledReason: "Cursor extension is a planned connector — Mori never silently reads editor state." },
+  { id: "connector.terminalShellIntegration", label: "Terminal shell integration", status: PLANNED, description: "Local terminal hook emitting JSONL command events.", disabledReason: "Terminal shell integration is a planned connector — Mori never silently reads shell history." },
+  { id: "connector.browserExtension", label: "Browser extension", status: PLANNED, description: "Per-site browser extension that adds explicit URLs to the session.", disabledReason: "Browser extension is a planned connector — Mori never silently reads tabs." },
+  { id: "connector.githubPrImport", label: "GitHub PR import", status: PLANNED, description: "Manual PR description / diff / review paste.", disabledReason: "Paste is supported via the existing AI transcript + Git diff imports today; a dedicated GitHub PR connector is planned." },
+  { id: "connector.fileDocumentImport", label: "File / document import", status: PLANNED, description: "Open a local file (Markdown / PDF / DOCX) as a manual source.", disabledReason: "File / document import is a planned milestone — paste is supported today." },
 ];
 
 function buildRegistry(): Record<FeatureId, FeatureCapability> {
@@ -256,6 +332,34 @@ export function getFeatureControlProps(id: FeatureId): FeatureControlProps {
     statusLabel: feature.userFacingStatus ?? FEATURE_STATUS_LABEL[feature.status],
     tone: FEATURE_STATUS_TONE[feature.status],
     title: feature.actionEnabled ? undefined : feature.disabledReason ?? FEATURE_STATUS_LABEL[feature.status],
+    nextStep: feature.nextStep,
+  };
+}
+
+/**
+ * Runtime-aware variant. When `currentRuntime` doesn't satisfy the feature's
+ * `runtime` requirement, the props collapse to `unavailable` with a tooltip
+ * that explains the runtime gate. Browser-mode users can therefore see SQLite
+ * + Tauri Git diff rows without those rows pretending to be active.
+ */
+export function getFeatureControlPropsInRuntime(
+  id: FeatureId,
+  currentRuntime: "browser" | "desktop" | "unknown",
+): FeatureControlProps {
+  const feature = getFeature(id);
+  const base = getFeatureControlProps(id);
+  const required = feature.runtime ?? "any";
+  if (required === "any" || currentRuntime === "unknown" || required === currentRuntime) {
+    return base;
+  }
+  return {
+    enabled: false,
+    status: "unavailable",
+    statusLabel: FEATURE_STATUS_LABEL.unavailable,
+    tone: FEATURE_STATUS_TONE.unavailable,
+    title: required === "desktop"
+      ? "이 기능은 Tauri 데스크톱 앱에서만 활성화됩니다."
+      : "이 기능은 브라우저 prototype 모드에서만 활성화됩니다.",
     nextStep: feature.nextStep,
   };
 }

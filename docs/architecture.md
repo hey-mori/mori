@@ -4,6 +4,13 @@ This document describes Mori's intended engineering architecture and the current
 
 The full module-by-module map (boundaries, shared concepts, data flow,
 extension paths) lives in [Modular Architecture](modular-architecture.md).
+The product loop, feature-status policy, data pipeline contract, and theme
+system are documented in:
+
+- [Product Flow](product-flow.md)
+- [Feature Status](feature-status.md)
+- [Data Pipeline](data-pipeline.md)
+- [Theme System](theme-system.md)
 
 ## Current Foundation
 

@@ -1,9 +1,15 @@
-import { Archive, Calendar, FileText, Sparkles } from "lucide-react";
+import { Archive, Calendar, FileText, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriFeatureStatusBadge } from "../../components/ui/MoriFeatureStatusBadge";
+import { MoriStatCard } from "../../components/ui/MoriStatCard";
+import {
+  countFeaturesByStatus,
+  type FeatureId,
+} from "../../app/featureStatus";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { createMoriPackageFromSession, serializeMoriPackage } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
@@ -133,6 +139,8 @@ export function ReportsView() {
           <WorkContinuationCards view={view} onOpenTimeline={() => setCurrentView("timeline")} />
 
           <MoriPackageStrip view={view} />
+
+          <ReportsCapabilityStrip />
         </section>
 
         <ReportBuilderPanel view={view} resumePromptOverride={resumePromptText} />
@@ -285,6 +293,60 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
         </Button>
         <small>{status}</small>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Honesty strip rendered at the bottom of the Reports surface. Surfaces the
+ * implemented / planned export formats so the user never has to guess what
+ * the page can actually produce. Counts are sourced from the feature
+ * registry — drift is impossible.
+ */
+function ReportsCapabilityStrip() {
+  const counts = countFeaturesByStatus();
+  const exportFeatures: FeatureId[] = [
+    "reports.export.markdown",
+    "reports.export.pdf",
+    "reports.export.html",
+    "reports.export.moriPackage",
+    "rollup.moriPackageImport",
+  ];
+  return (
+    <section className="mori-card mori-card-subtle reports-capability-strip" aria-label="Report 기능 honesty">
+      <header>
+        <h3>
+          <ShieldCheck size={14} aria-hidden="true" /> Report 기능 honesty
+        </h3>
+        <p>현재 Reports 화면이 실제로 할 수 있는 것 / Planned로 남아 있는 것.</p>
+      </header>
+      <div className="reports-capability-grid">
+        <MoriStatCard
+          label="Implemented"
+          value={counts.implemented}
+          hint="앱 전체 기준"
+          tone="success"
+        />
+        <MoriStatCard
+          label="Partial"
+          value={counts.partial}
+          hint="앱 전체 기준"
+          tone="info"
+        />
+        <MoriStatCard
+          label="Planned"
+          value={counts.planned}
+          hint="앱 전체 기준"
+          tone="warning"
+        />
+      </div>
+      <ul className="reports-capability-feature-list">
+        {exportFeatures.map((feature) => (
+          <li key={feature}>
+            <MoriFeatureStatusBadge feature={feature} />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

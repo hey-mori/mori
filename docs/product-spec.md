@@ -12,6 +12,13 @@ prompts are preserved in
 images as planning material — they describe Mori's intended direction, not
 proof that any single screen is already implemented end to end.
 
+The canonical product loop (Capture → Normalize → Store → Review → Timeline
+→ Extract → Summarize → Report / Resume → Project Memory → Next Session)
+is documented in [Product Flow](product-flow.md). The typed data contract
+that backs the loop is in [Data Pipeline](data-pipeline.md). The honesty
+registry that controls which capabilities render as active vs. planned is
+in [Feature Status](feature-status.md).
+
 Product sentence:
 
 > Mori remembers how the work happened.

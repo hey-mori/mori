@@ -9,10 +9,13 @@ can map cleanly to a specific screen without overclaiming. Original design
 prompts are preserved in [Product Screen Prompts](product-screen-prompts.md).
 
 The engineering boundaries that back this roadmap are documented in
-[Modular Architecture](modular-architecture.md). All Planned items below are
-also rows in the feature-status registry at
-`src/app/featureStatus.ts`, so the codebase keeps an honest single source of
-truth for which capabilities exist.
+[Modular Architecture](modular-architecture.md), the product loop is in
+[Product Flow](product-flow.md), and the typed data flow is in
+[Data Pipeline](data-pipeline.md). All Planned items below are also rows
+in the feature-status registry at `src/app/featureStatus.ts`, so the
+codebase keeps an honest single source of truth for which capabilities
+exist. The policy for that registry lives in
+[Feature Status](feature-status.md).
 
 ## Phase 0: UI Prototype
 
