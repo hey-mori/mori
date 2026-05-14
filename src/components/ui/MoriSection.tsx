@@ -11,6 +11,12 @@ export type MoriSectionProps = {
   children: ReactNode;
   /** When true, drops the surrounding card chrome (subtle background only). */
   subtle?: boolean;
+  /**
+   * Optional extra class on the outer `<section>`. Adopters keep their
+   * legacy feature-specific class here so existing CSS continues to apply
+   * during the migration to the `--mori-*` semantic tokens.
+   */
+  className?: string;
 };
 
 /**
@@ -19,7 +25,10 @@ export type MoriSectionProps = {
  * "Privacy policy", "Recent decisions") without each surface inventing its
  * own `<section className="evidence-section">` markup.
  *
- * The token-driven styles live in `styles/theme.css` (.mori-section).
+ * The token-driven styles live in `styles/theme.css` (.mori-section). The
+ * outer `<section>` accepts a `className` so adopters can keep their legacy
+ * class side-by-side (e.g. `.evidence-section`, `.settings-card`, …) during
+ * a gradual migration.
  */
 export function MoriSection({
   title,
@@ -28,10 +37,14 @@ export function MoriSection({
   ariaLabel,
   children,
   subtle = false,
+  className = "",
 }: MoriSectionProps) {
+  const classes = ["mori-section", subtle ? "is-subtle" : "", className]
+    .filter(Boolean)
+    .join(" ");
   return (
     <section
-      className={`mori-section ${subtle ? "is-subtle" : ""}`.trim()}
+      className={classes}
       aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
     >
       {title || hint || actions ? (

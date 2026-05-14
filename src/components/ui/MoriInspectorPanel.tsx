@@ -11,6 +11,13 @@ export type MoriInspectorPanelProps = {
   children: ReactNode;
   /** Optional ARIA label for the landmark; defaults to the title text. */
   ariaLabel?: string;
+  /**
+   * Optional extra class on the outer `<aside>`. Adopters keep their legacy
+   * feature-specific class here (e.g. `.evidence-detail`, `.inspector`) so
+   * existing CSS continues to apply during the migration to the
+   * `--mori-*` semantic tokens.
+   */
+  className?: string;
 };
 
 /**
@@ -20,7 +27,8 @@ export type MoriInspectorPanelProps = {
  * hand-rolling the header / scroll / shadow rules.
  *
  * Sticky + scroll behaviour is provided by `.mori-inspector-panel` in
- * `styles/theme.css`.
+ * `styles/theme.css`. Pass `className` to keep a legacy feature class
+ * side-by-side during a gradual migration.
  */
 export function MoriInspectorPanel({
   title,
@@ -28,10 +36,12 @@ export function MoriInspectorPanel({
   headerExtras,
   children,
   ariaLabel,
+  className = "",
 }: MoriInspectorPanelProps) {
+  const classes = ["mori-inspector-panel", className].filter(Boolean).join(" ");
   return (
     <aside
-      className="mori-inspector-panel"
+      className={classes}
       aria-label={ariaLabel ?? (typeof title === "string" ? title : undefined)}
     >
       {title || subtitle || headerExtras ? (

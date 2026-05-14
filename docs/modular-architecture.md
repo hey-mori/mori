@@ -248,3 +248,32 @@ code:
 
 These additions remained backward-compatible: every previous import path
 still resolves, every prior test still passes (489 total, was 473).
+
+## Primitive adoption pass
+
+A third pass closed the last brief-aligned gap: `MoriSection` and
+`MoriInspectorPanel` were shipped without adopters in the previous pass.
+This pass:
+
+- **Added `className` passthrough** to both primitives so feature surfaces
+  can keep their legacy class on the outer element while picking up the
+  primitive's structural slots. The legacy CSS continues to control the
+  surface chrome during the gradual migration to `--mori-*` tokens.
+- **Adopted `MoriSection`** in `ReportsCapabilityStrip` (Reports surface):
+  the existing `mori-card mori-card-subtle` markup became `MoriSection
+  subtle className="reports-capability-strip"`. The header + body slots
+  now flow through the primitive while the feature-specific descendant CSS
+  (e.g. `.reports-capability-strip header h3`) still applies and wins on
+  specificity.
+- **Adopted `MoriSection`** in `SavedReportsCard` (Memory surface): the
+  hand-rolled `<section className="memory-reports">` markup became
+  `MoriSection className="memory-reports"`. The `.memory-reports` legacy
+  rules continue to set the outer padding / border / radius.
+- **Adoption count**: `MoriSection` is now used in two surfaces (the
+  brief's threshold). `MoriInspectorPanel` ships with `className`
+  passthrough but is **not** yet adopted in any inspector — the existing
+  `EventInspector` / `TimelineBundleInspector` / `ReviewDetailPanel` /
+  `SourceDetailPanel` have years of CSS calibration around their legacy
+  `.inspector` / `.evidence-detail` selectors, and a clean migration
+  requires a follow-up milestone that pairs the JSX swap with a CSS
+  rename. Deliberately deferred.

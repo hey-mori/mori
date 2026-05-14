@@ -5,6 +5,7 @@ import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriFeatureStatusBadge } from "../../components/ui/MoriFeatureStatusBadge";
+import { MoriSection } from "../../components/ui/MoriSection";
 import { MoriStatCard } from "../../components/ui/MoriStatCard";
 import {
   countFeaturesByStatus,
@@ -313,13 +314,17 @@ function ReportsCapabilityStrip() {
     "rollup.moriPackageImport",
   ];
   return (
-    <section className="mori-card mori-card-subtle reports-capability-strip" aria-label="Report 기능 honesty">
-      <header>
-        <h3>
+    <MoriSection
+      subtle
+      className="reports-capability-strip"
+      title={
+        <>
           <ShieldCheck size={14} aria-hidden="true" /> Report 기능 honesty
-        </h3>
-        <p>현재 Reports 화면이 실제로 할 수 있는 것 / Planned로 남아 있는 것.</p>
-      </header>
+        </>
+      }
+      hint="현재 Reports 화면이 실제로 할 수 있는 것 / Planned로 남아 있는 것."
+      ariaLabel="Report 기능 honesty"
+    >
       <div className="reports-capability-grid">
         <MoriStatCard
           label="Implemented"
@@ -347,7 +352,7 @@ function ReportsCapabilityStrip() {
           </li>
         ))}
       </ul>
-    </section>
+    </MoriSection>
   );
 }
 
