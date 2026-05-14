@@ -120,7 +120,8 @@ Pipeline notes:
   - `settings`: Settings / Privacy / Local AI
   - `import`: Import panel (shared across features)
   - `flow-focus`: Flow Focus components (shared with Timeline)
-- `lib`: pure logic such as timeline layout, relationship traversal, trust formatting, resume prompt generation
+- `lib`: pure logic such as timeline layout, relationship traversal, trust formatting, resume prompt generation, session status derivation
+  - `session/sessionStatus.ts`: centralized helper that derives consistent demo/draft/analysis/persistence status labels and metrics for UI consistency across pages
 - `styles`: tokens, themes, global CSS, Tailwind entry
 
 ### Page Responsibilities
