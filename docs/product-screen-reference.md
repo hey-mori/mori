@@ -259,16 +259,16 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ![Connector Setup reference](assets/screenshots/connector-setup-reference.png)
 
-- **Status:** Planned
+- **Status:** Planned · capture foundation Partial — a pure JSONL connector pipeline exists (`src/lib/connectors/`) plus Claude Code hook + Codex CLI wrapper *templates* and the connector event format docs. The full Connector Setup *screen* is still Planned; today the Settings → Connectors tab shows planned-connector cards with `Setup · Planned` / `Test · Planned` disabled buttons, and JSONL events flow in through the existing AI 대화 import tab.
 - **Product purpose:** Future opt-in connector setup and policy screen.
 - **Primary user job:** Choose and configure integrations only when the user explicitly wants them.
 - **Key UI elements:** Connector grid, selected connector detail, access policy, never-access list, setup checklist, disabled test buttons.
 - **Main actions:** Select connector, review policy, follow setup steps, test connection when implemented.
 - **Data shown:** Connector status, requirements, capture method, privacy notes, setup steps.
 - **Source/provenance expectations:** Connector evidence must be scoped to user-approved integration settings.
-- **Privacy expectations:** No connector should appear connected unless it really is; all access is opt-in.
-- **Persistence expectations:** Connector settings should persist only after implementation.
-- **Implementation notes:** Reference/planned. Do not imply current connector functionality.
+- **Privacy expectations:** No connector should appear connected unless it really is; all access is opt-in. The capture foundation enforces this — there is no background daemon, no automatic scan, no OAuth.
+- **Persistence expectations:** Connector settings should persist only after implementation. The connector capture pipeline does not introduce new persistence today; events flow into existing `BrowserDraftRepository.addSessionImport`.
+- **Implementation notes:** Foundation landed: typed schema, JSONL parser with malformed-line handling, redaction, normalizer that buckets events by `(connectorId, sessionId)` into existing source kinds, and 39 tests. UI tab for picking a `.jsonl` file directly + a Tauri ingest command remain Planned. See [`docs/connectors/connector-event-format.md`](./connectors/connector-event-format.md) for the event schema and [`connectors/`](../connectors/) for the setup templates.
 - **Prompt/spec source:** [product-screen-prompts.md#12-connector-setup](product-screen-prompts.md#12-connector-setup)
 
 <a id="edit-event-correction-panel"></a>

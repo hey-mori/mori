@@ -348,6 +348,43 @@ surfaces as an issue candidate. The provider never invents per-line
 explanations. Run Quick Pass with an Ollama provider for richer
 interpretation.
 
+## Connector capture (local, opt-in)
+
+Mori also supports structured event capture from external tools (Claude
+Code hooks, Codex CLI wrappers, git scripts, terminal wrappers). This is
+distinct from the manual paste imports above:
+
+- the user installs a small **template** script on their own machine
+  ([`connectors/claude-code/`](../connectors/claude-code/),
+  [`connectors/codex-cli/`](../connectors/codex-cli/))
+- the script writes **JSONL events** to a local file when the user runs
+  Claude Code / Codex / a wrapped command
+- when the user clicks Import, Mori parses the file through the pure
+  pipeline in [`src/lib/connectors/`](../src/lib/connectors/) and the
+  events flow through **Import Review** before reaching the session
+
+The format is documented in
+[`docs/connectors/connector-event-format.md`](./connectors/connector-event-format.md);
+setup guides live in
+[`docs/connectors/claude-code-hook.md`](./connectors/claude-code-hook.md)
+and
+[`docs/connectors/codex-cli-wrapper.md`](./connectors/codex-cli-wrapper.md).
+
+The connector pipeline is local-only:
+
+- no network calls, ever
+- no background daemon — events appear in the JSONL file only when the
+  external tool runs
+- no automatic browser / app / filesystem scanning
+- no credentials, no OAuth, no account auto-connect
+- best-effort redaction of obvious API keys / bearer tokens / `.env`
+  assignments before persistence
+
+Today the dedicated **Connector JSONL** import tab is Planned. Users can
+still paste connector JSONL contents into the existing AI 대화 tab while
+the pure parser + normalizer is wired into the UI in a follow-on
+milestone.
+
 ## Import Review (review-before-apply)
 
 AI Transcript and Git Diff imports do not commit to the session store on

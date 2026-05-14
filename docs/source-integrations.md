@@ -324,9 +324,49 @@ When adding a new source integration:
 7. [ ] Document integration in this file
 8. [ ] Update privacy boundaries in `docs/product-spec.md`
 
+## Connector capture path (NEW)
+
+Beyond manual paste, Mori supports a structured **local connector**
+capture path. External tools (Claude Code hooks, Codex CLI wrappers,
+git scripts) write JSONL `ConnectorEvent` lines to a local file; Mori
+imports the file when the user clicks Import.
+
+The connector pipeline reuses existing `SourceKind` values rather than
+introducing new registry entries:
+
+| Connector id | Source kind reused |
+|---|---|
+| `claudeCodeHook` | `claudeTranscript` |
+| `codexCliWrapper` | `codexTranscript` |
+| `terminal` | `terminal` |
+| `git` | `gitDiff` |
+| `manual` | `manualNote` |
+
+This keeps the connector path traceable through every existing
+helper (`getSourceDisplayStatus`, `getReportEvidenceSummary`, etc.) and
+avoids fake-promoting Planned registry entries to Implemented.
+
+Implementation details:
+
+- Pure pipeline: [`src/lib/connectors/`](../src/lib/connectors/)
+- Event format: [`docs/connectors/connector-event-format.md`](./connectors/connector-event-format.md)
+- Setup guides: [`docs/connectors/claude-code-hook.md`](./connectors/claude-code-hook.md)
+  and [`docs/connectors/codex-cli-wrapper.md`](./connectors/codex-cli-wrapper.md)
+- Templates: [`connectors/claude-code/`](../connectors/claude-code/),
+  [`connectors/codex-cli/`](../connectors/codex-cli/)
+
+What the connector path explicitly does not do:
+
+- No live ingest daemon
+- No automatic browser / app / file scanning
+- No OAuth / API-key / credential capture
+- No cloud sync
+- No silent execution outside the explicit hook / wrapper invocation
+
 ## See Also
 
 - [Imports Documentation](./imports.md) — Import panel UI and normalizer architecture
 - [Architecture Documentation](./architecture.md) — Source registry and traceability helpers
+- [Connector event format](./connectors/connector-event-format.md) — Local JSONL connector spec
 - [Product Spec](./product-spec.md) — Privacy principles and user control philosophy
 - [Domain Model](./domain-model.md) — SourceRef and TimelineEvent type definitions

@@ -173,6 +173,42 @@ provenance through the existing `SourceRef` traceability helpers in
 ChatGPT / Codex API or app integrations) remain explicitly planned, not
 fake-active.
 
+### Local connector capture foundation
+
+External tools (Claude Code hooks, Codex CLI wrappers, git scripts,
+terminal wrappers) feed Mori through a pure local pipeline. Nothing in
+this pipeline is a daemon, none of it touches the network, and every
+event passes through Import Review before reaching the session store:
+
+```text
+External tool (Claude Code hook | Codex CLI wrapper | git command | manual)
+  -> writes JSONL line(s) to ~/.mori/connectors/<connector>/<date>.jsonl
+  -> user opens Mori, clicks Import (manual paste today; file picker planned)
+  -> src/lib/connectors/parseConnectorJsonl(text)
+       -> validateConnectorEvent (schema + kind-specific clusters)
+  -> src/lib/connectors/redaction.redactText
+       (best-effort secret masking before persistence)
+  -> src/lib/connectors/normalizeConnectorEventBatch
+       (buckets by (connectorId, sessionId), maps each event to an existing
+        SourceKind, emits one SourceRef + N TimelineEvents per bucket)
+  -> Import Review draft (Accept / Discard per item)
+  -> useMoriSessionStore.addImport
+  -> Timeline / Review / Reports / Project Memory
+```
+
+Honest scope rules baked into this milestone:
+
+- The connector path reuses `claudeTranscript` / `codexTranscript` /
+  `terminal` / `gitDiff` / `manualNote` from the source registry. **No
+  new Implemented entries** were added to the registry — `terminal`,
+  `vscode`, `cursor`, `browserTab` etc. remain Planned.
+- The pipeline is pure TypeScript with 0 IO. A future Tauri command can
+  call `validateConnectorEventBatch` directly without changing the
+  helpers.
+- The UI surface today is "paste JSONL into the AI 대화 tab". A
+  dedicated **Connector JSONL** import tab is Planned and explicitly
+  documented as such in `docs/imports.md`.
+
 ### Settings workspace
 
 Settings is Mori's local-first trust surface. Every visible row comes
