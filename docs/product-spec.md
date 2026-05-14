@@ -4,6 +4,14 @@ Canonical product planning document for Mori.
 
 This file consolidates the provided `mori_final_product_spec.md` into the repository documentation. The original planning document is preserved below because it contains detailed product rationale, feature definitions, collection strategy, MVP scope, risks, and roadmap.
 
+Visual reference set (screen by screen, with Implemented / Partial / Planned /
+Reference-only tags) lives in
+[Product Screen Reference](product-screen-reference.md); the original design
+prompts are preserved in
+[Product Screen Prompts](product-screen-prompts.md). Treat those reference
+images as planning material — they describe Mori's intended direction, not
+proof that any single screen is already implemented end to end.
+
 Product sentence:
 
 > Mori remembers how the work happened.

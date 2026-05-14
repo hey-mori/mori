@@ -2,6 +2,12 @@
 
 This roadmap is a practical development sequence. Each phase should produce something usable without pretending later capabilities already exist.
 
+The intended product surface, screen by screen, is catalogued in the
+[Product Screen Reference](product-screen-reference.md) — every reference image
+is tagged Implemented / Partial / Planned / Reference only so the roadmap below
+can map cleanly to a specific screen without overclaiming. Original design
+prompts are preserved in [Product Screen Prompts](product-screen-prompts.md).
+
 ## Phase 0: UI Prototype
 
 Goal: establish the product experience and visual model.

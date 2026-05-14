@@ -18,9 +18,24 @@ Core visual traits:
 - visible local-first and privacy controls
 - evidence-oriented interaction model
 
+## Product Screen Reference Set
+
+The fuller screen reference system now lives in:
+
+- [Product Screen Reference](./product-screen-reference.md)
+- [Product Screen Prompts](./product-screen-prompts.md)
+
+Those screenshots are product planning references, not proof of implemented
+behavior. They define Mori's intended direction: white and soft-gray surfaces,
+purple accent, Linear/Notion/Figma/Apple-like clarity, explicit user-controlled
+import, no background surveillance, visible evidence/provenance, a lane-based
+Narrative Timeline, Flow Focus as an evidence-based trace view, review before
+apply for AI-generated interpretations, a resume/report output loop, and
+project memory that accumulates over time.
+
 ## Start Mori / Session Setup
 
-![Start Mori / Session Setup](./assets/screenshots/start-session.png)
+![Start Mori / Session Setup](./assets/screenshots/start-session-reference.png)
 
 The Start Mori screen defines the recording boundary before any work memory is created.
 
@@ -37,7 +52,7 @@ The right summary panel reinforces what will be recorded, where it will be store
 
 ## Timeline Main View
 
-![Timeline Main View](./assets/screenshots/timeline-main.png)
+![Timeline Main View](./assets/screenshots/timeline-main-reference.png)
 
 The Timeline Main View is Mori's primary work-memory screen.
 
@@ -86,7 +101,7 @@ Current implementation notes:
 
 ## Flow Focus / Trace View
 
-![Flow Focus / Trace View](./assets/screenshots/flow-focus.png)
+![Flow Focus / Trace View](./assets/screenshots/flow-focus-reference.png)
 
 Flow Focus is Mori's signature interaction. It reduces timeline complexity by highlighting only the work flow related to a selected event.
 
@@ -103,7 +118,7 @@ The trace panel should make the AI-generated structure inspectable. Users need t
 
 ## Review (Issues & Decisions)
 
-![Issues & Decisions](./assets/screenshots/issues-decisions.png)
+![Issues & Decisions](./assets/screenshots/review-issues-decisions-reference.png)
 
 Issues & Decisions (now consolidated in the Review page) turns the session into actionable product memory.
 
@@ -119,7 +134,7 @@ Issue Garden should separate open, in-progress, resolved, and watching items. De
 
 ## Reports (Resume & Report)
 
-![Resume & Report](./assets/screenshots/resume-report.png)
+![Resume & Report](./assets/screenshots/resume-report-reference.png)
 
 Resume & Report (now consolidated in the Reports page) helps users continue the work or communicate what happened.
 

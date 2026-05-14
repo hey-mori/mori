@@ -110,6 +110,8 @@ npm run build
 
 - [Product Spec](docs/product-spec.md)
 - [UX Reference](docs/ux-reference.md)
+- [Product Screen Reference](docs/product-screen-reference.md) — status, purpose, and implementation notes for every reference screen
+- [Product Screen Prompts](docs/product-screen-prompts.md) — original prompts behind the reference screenshots
 - [Timeline UX](docs/timeline-ux.md)
 - [Architecture](docs/architecture.md)
 - [Domain Model](docs/domain-model.md)
