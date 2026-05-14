@@ -55,12 +55,14 @@ The script truncates the captured payload to **2 KB** before writing.
    at the script you installed.
 4. Run Claude Code as usual. After each event, the hook script appends
    one JSON line to `<target>/YYYY-MM-DD.jsonl`.
-5. In Mori, open Evidence → Import. Today the import path lives behind
-   the existing **AI 대화** tab — paste the JSONL contents into the
-   transcript field. A dedicated "Connector JSONL" import path is
-   tracked under the [next step](#next-steps) section below.
-6. Walk through Import Review. Accept the events you want; discard the
-   rest. Mori never persists anything until you click **Apply**.
+5. In Mori, open Evidence → 소스 추가 → **Connector JSONL** tab. Paste
+   the contents of the JSONL file the hook produced and click
+   **Parse / Preview**. The preview card shows valid event count,
+   invalid lines with line numbers, connector ids, event kinds, and the
+   time range Mori detected.
+6. Click **Import to Review** to send the normalized events into Import
+   Review. Accept the events you want; discard the rest. Mori never
+   persists anything until you click **Apply** on the Review screen.
 
 ## Uninstall
 
@@ -100,15 +102,15 @@ to clean up.
 
 ## Next steps (planned)
 
-- A dedicated **Connector JSONL** import tab inside the Evidence Hub so
-  you can pick a `.jsonl` file directly instead of pasting through the
-  AI 대화 tab.
+- A native file picker in the **Connector JSONL** tab so users can
+  select a `.jsonl` file directly instead of opening and pasting it.
 - A Tauri-side ingest command that reads JSONL files from a watched
   inbox directory after the user clicks an explicit "Refresh" button
   (still no background polling).
 - A Mori-specific Claude Code hook plugin that ships richer event data
   (with the same `summary_only` default).
 
-These remain Planned — the milestone that landed today added the schema,
-parser, normaliser, redaction, and templates; the UI file picker is the
-next product surface.
+The **Connector JSONL** paste import path is implemented today — the
+schema, parser, normaliser, redaction, and Evidence Hub UI all ship.
+Live Claude sync, account integration, OAuth, and background polling
+remain explicitly out of scope.

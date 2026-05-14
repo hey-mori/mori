@@ -30,6 +30,7 @@ const AVAILABLE_HUB_ORDER: string[] = [
   "chatgptTranscript",
   "aiConversation",
   "gitDiff",
+  "connectorJsonl",
   "manualNote",
   "url",
 ];
@@ -83,7 +84,7 @@ export function getHubPlannedIntegrations(): SourceIntegration[] {
  * existing ImportPanel. This keeps the Hub UI declarative and avoids hard
  * coupling between layout and import internals.
  */
-export type HubImportKind = "note" | "url" | "ai" | "git";
+export type HubImportKind = "note" | "url" | "ai" | "git" | "connector";
 
 export function getHubImportKind(integrationId: string): HubImportKind | null {
   switch (integrationId) {
@@ -99,6 +100,8 @@ export function getHubImportKind(integrationId: string): HubImportKind | null {
     case "gitDiff":
     case "tauriGitDiff":
       return "git";
+    case "connectorJsonl":
+      return "connector";
     default:
       return null;
   }

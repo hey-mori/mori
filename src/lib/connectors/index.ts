@@ -35,6 +35,17 @@ export {
   ingestConnectorEventBatch,
   buildCandidatesFromEvents,
 } from "./localConnectorIngest";
+export {
+  buildConnectorJsonlPreview,
+  summariseParseOutcome,
+  type ConnectorJsonlPreview,
+  type ConnectorJsonlPreviewKind,
+  type ConnectorJsonlBucketPreview,
+  type ConnectorPreviewWarning,
+} from "./jsonlPreview";
+export {
+  mergeConnectorCandidatesForReview,
+} from "./mergeForReview";
 export { redactText, containsLikelySecret, type RedactionResult } from "./redaction";
 export {
   describeCaptureSurfaceStatus,

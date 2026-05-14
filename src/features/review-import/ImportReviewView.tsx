@@ -20,6 +20,7 @@ const ORIGIN_LABEL: Record<ReviewOrigin, string> = {
   "git-diff": "Git Diff",
   "manual-note": "Manual Note",
   url: "URL",
+  "connector-jsonl": "Connector JSONL",
   other: "Source",
 };
 

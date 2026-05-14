@@ -10,6 +10,14 @@ captures to Mori in a structured way.
 > JSONL files to a local path; Mori imports the file when the user clicks
 > Import.
 
+The user-facing path is **Evidence Hub → 소스 추가 → Connector JSONL
+tab**. The tab parses the pasted JSONL with `parseConnectorJsonl`, runs
+`buildConnectorJsonlPreview` for the visible preview snapshot, normalises
+valid events with `normalizeConnectorEventBatch`, merges multi-bucket
+output with `mergeConnectorCandidatesForReview`, and sends the result to
+Import Review with origin `connector-jsonl`. No connector event is
+applied to a session until the user confirms in Import Review.
+
 ## File format
 
 - UTF-8 text

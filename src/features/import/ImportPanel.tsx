@@ -1,4 +1,15 @@
-import { Bot, Download, FileText, FolderOpen, GitCommit, Globe, Plus, Trash2, X } from "lucide-react";
+import {
+  Bot,
+  Download,
+  FileText,
+  FolderOpen,
+  GitCommit,
+  Globe,
+  Layers,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -12,6 +23,12 @@ import {
   type AiTranscriptPlatform,
   type NormalizedImportCandidate,
 } from "../../lib/import";
+import {
+  buildConnectorJsonlPreview,
+  mergeConnectorCandidatesForReview,
+  normalizeConnectorEventBatch,
+  type ConnectorJsonlPreview,
+} from "../../lib/connectors";
 import { getRepositoryVerificationFreshness } from "../../lib/repositories";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
@@ -20,7 +37,7 @@ import { useMoriReviewStore } from "../../app/reviewStore";
 import type { ReviewOrigin } from "../../lib/review";
 import { isTauriRuntime, pickRepositoryDirectory, runGitDiff } from "../../lib/desktop";
 
-type ImportKind = "note" | "url" | "ai" | "git";
+type ImportKind = "note" | "url" | "ai" | "git" | "connector";
 
 type ImportStatus = { tone: "ok" | "error" | "info"; message: string } | null;
 
@@ -76,6 +93,9 @@ export function ImportPanel(props: ImportPanelProps = {}) {
   );
   const activeRepository = useMoriRepositoryStore(selectActiveRepository);
   const [selectedRepoId, setSelectedRepoId] = useState<string>(activeRepository?.id ?? "");
+
+  /** Live preview snapshot for the Connector JSONL tab; null until the user clicks Parse. */
+  const [connectorPreview, setConnectorPreview] = useState<ConnectorJsonlPreview | null>(null);
 
   const canImport = useMemo(() => Boolean(draft), [draft]);
   const desktopRuntime = useMemo(() => isTauriRuntime(), []);
@@ -327,6 +347,57 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     reset();
   }
 
+  function handlePreviewConnectorJsonl() {
+    if (!body.trim()) {
+      setStatus({ tone: "error", message: "Connector JSONL을 붙여넣은 뒤 Parse를 누르세요." });
+      setConnectorPreview(null);
+      return;
+    }
+    const preview = buildConnectorJsonlPreview(body);
+    setConnectorPreview(preview);
+    if (preview.kind === "empty") {
+      setStatus({ tone: "error", message: "유효한 라인이 없습니다." });
+    } else if (preview.kind === "errors-only") {
+      setStatus({
+        tone: "error",
+        message: `${preview.invalidLineCount}개 라인이 파싱에 실패했습니다. 라인 번호를 확인하세요.`,
+      });
+    } else {
+      setStatus({ tone: "ok", message: preview.headline });
+    }
+  }
+
+  function handleConnectorJsonlImportToReview() {
+    if (!draft) {
+      setStatus({ tone: "error", message: "세션이 없습니다. Start Session에서 새 세션을 시작하세요." });
+      return;
+    }
+    const preview = connectorPreview ?? buildConnectorJsonlPreview(body);
+    if (!preview.canImport || preview.events.length === 0) {
+      setStatus({
+        tone: "error",
+        message: "유효한 이벤트가 없습니다. Parse 후 오류 라인을 수정하거나 다른 파일을 가져오세요.",
+      });
+      return;
+    }
+    const candidates = normalizeConnectorEventBatch({
+      projectId: draft.project.id,
+      sessionId: draft.session.id,
+      events: preview.events,
+    });
+    const merged = mergeConnectorCandidatesForReview(candidates);
+    if (!merged) {
+      setStatus({ tone: "error", message: "정규화된 후보가 없습니다." });
+      return;
+    }
+    startReview(merged, "connector-jsonl");
+    setStatus({
+      tone: "info",
+      message: `'${merged.source.title}' 후보를 Import Review에서 확인하세요.`,
+    });
+    onClose?.();
+  }
+
   function handleRemove(importId: string) {
     removeImport(importId);
     setStatus({ tone: "info", message: "가져온 소스를 제거했습니다." });
@@ -351,6 +422,12 @@ export function ImportPanel(props: ImportPanelProps = {}) {
         <KindTab active={kind === "url"} icon={Globe} label="URL" onClick={() => setKind("url")} />
         <KindTab active={kind === "ai"} icon={Bot} label="AI 대화" onClick={() => setKind("ai")} />
         <KindTab active={kind === "git"} icon={GitCommit} label="Git diff" onClick={() => setKind("git")} />
+        <KindTab
+          active={kind === "connector"}
+          icon={Layers}
+          label="Connector JSONL"
+          onClick={() => setKind("connector")}
+        />
       </div>
       <div className="import-form">
         <label>
@@ -487,6 +564,9 @@ export function ImportPanel(props: ImportPanelProps = {}) {
             </label>
           </>
         ) : null}
+        {kind === "connector" ? (
+          <ConnectorJsonlPrivacyNote />
+        ) : null}
         <label className="import-body">
           {kind === "url"
             ? "발췌 / 메모 (선택)"
@@ -494,7 +574,9 @@ export function ImportPanel(props: ImportPanelProps = {}) {
               ? "대화 전문"
               : kind === "git"
                 ? "Unified Git diff 텍스트"
-                : "메모 본문"}
+                : kind === "connector"
+                  ? "Connector JSONL (한 줄에 한 이벤트)"
+                  : "메모 본문"}
           <textarea
             placeholder={
               kind === "ai"
@@ -503,18 +585,40 @@ export function ImportPanel(props: ImportPanelProps = {}) {
                   ? "관련 문장을 옮겨두면 검색과 분석에 도움이 됩니다."
                   : kind === "git"
                     ? "diff --git a/src/lib/foo.ts b/src/lib/foo.ts\n@@ -1,4 +1,5 @@\n ..."
-                    : "Mori는 work-flow reconstruction, not searchable memory."
+                    : kind === "connector"
+                      ? '{"id":"evt-1","connectorId":"claudeCodeHook","kind":"prompt_submitted",...}'
+                      : "Mori는 work-flow reconstruction, not searchable memory."
             }
-            rows={kind === "ai" || kind === "git" ? 8 : 4}
+            rows={kind === "ai" || kind === "git" || kind === "connector" ? 8 : 4}
             value={body}
-            onChange={(event) => setBody(event.target.value)}
+            onChange={(event) => {
+              setBody(event.target.value);
+              if (kind === "connector") {
+                // Clear stale preview as soon as the user edits — they must
+                // explicitly click Parse to refresh it. This prevents the UI
+                // from claiming a preview that doesn't match the current text.
+                if (connectorPreview) setConnectorPreview(null);
+              }
+            }}
           />
         </label>
+        {kind === "connector" ? (
+          <ConnectorJsonlPreviewCard preview={connectorPreview} />
+        ) : null}
       </div>
       <div className="import-actions">
-        <Button variant="primary" icon={Plus} onClick={handleAdd} disabled={!canImport}>
-          세션에 추가
-        </Button>
+        {kind === "connector" ? (
+          <ConnectorJsonlActions
+            preview={connectorPreview}
+            canImport={canImport}
+            onPreview={() => handlePreviewConnectorJsonl()}
+            onImport={() => handleConnectorJsonlImportToReview()}
+          />
+        ) : (
+          <Button variant="primary" icon={Plus} onClick={handleAdd} disabled={!canImport}>
+            세션에 추가
+          </Button>
+        )}
         {status ? <span className={`import-status tone-${status.tone}`}>{status.message}</span> : null}
       </div>
       {imports.length ? (
@@ -602,5 +706,149 @@ function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories")
       {stalePrefix}{branch} · {sha}{dirty}{age}
       {freshness.isStale ? " — Re-verify or fetch to refresh." : ""}
     </small>
+  );
+}
+
+function ConnectorJsonlPrivacyNote() {
+  return (
+    <div className="connector-jsonl-privacy" role="note">
+      <strong>Connector JSONL · 명시적 import 전용</strong>
+      <ul>
+        <li>붙여넣거나 선택한 JSONL 내용만 처리합니다.</li>
+        <li>Mori는 폴더를 자동으로 감시하지 않습니다.</li>
+        <li>Mori는 터미널 히스토리를 자동으로 읽지 않습니다.</li>
+        <li>Claude / Codex 계정과 자동 동기화하지 않습니다.</li>
+        <li>붙여넣은 텍스트는 Import Review를 거쳐야 세션에 들어옵니다.</li>
+      </ul>
+    </div>
+  );
+}
+
+function ConnectorJsonlPreviewCard({ preview }: { preview: ConnectorJsonlPreview | null }) {
+  if (!preview || preview.kind === "empty") return null;
+  const timeRange =
+    preview.earliestOccurredAt && preview.latestOccurredAt
+      ? `${new Date(preview.earliestOccurredAt).toLocaleString()} → ${new Date(
+          preview.latestOccurredAt,
+        ).toLocaleString()}`
+      : "—";
+  return (
+    <section
+      className={`connector-jsonl-preview tone-${preview.kind}`}
+      aria-label="Connector JSONL preview"
+    >
+      <header>
+        <strong>{preview.headline}</strong>
+        <span>{preview.totalLines} lines · {preview.skippedBlankLines} skipped</span>
+      </header>
+      <dl>
+        <div>
+          <dt>Valid events</dt>
+          <dd>{preview.validEventCount}</dd>
+        </div>
+        <div>
+          <dt>Invalid lines</dt>
+          <dd>{preview.invalidLineCount}</dd>
+        </div>
+        <div>
+          <dt>Connectors</dt>
+          <dd>{preview.connectorIds.length === 0 ? "—" : preview.connectorIds.join(", ")}</dd>
+        </div>
+        <div>
+          <dt>Event kinds</dt>
+          <dd>{preview.eventKinds.length === 0 ? "—" : preview.eventKinds.join(", ")}</dd>
+        </div>
+        <div>
+          <dt>Time range</dt>
+          <dd>{timeRange}</dd>
+        </div>
+        <div>
+          <dt>Project paths</dt>
+          <dd>{preview.projectPaths.length === 0 ? "—" : preview.projectPaths.join(", ")}</dd>
+        </div>
+      </dl>
+      {preview.buckets.length > 0 ? (
+        <ul className="connector-jsonl-bucket-list">
+          {preview.buckets.map((bucket) => (
+            <li key={`${bucket.connectorId}::${bucket.externalSessionId ?? "unscoped"}`}>
+              <strong>{bucket.label}</strong>
+              <span>{bucket.eventCount} events</span>
+              <small>
+                {new Date(bucket.startedAt).toLocaleTimeString()} → {new Date(bucket.endedAt).toLocaleTimeString()}
+              </small>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {preview.warnings.length > 0 ? (
+        <ul className="connector-jsonl-warning-list">
+          {preview.warnings.map((warning) => (
+            <li key={warning.code}>
+              <Badge tone="orange">{warning.code}</Badge>
+              <span>{warning.message}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {preview.errors.length > 0 ? (
+        <details className="connector-jsonl-error-list">
+          <summary>
+            {preview.errors.length} parse error{preview.errors.length === 1 ? "" : "s"} · click to expand
+          </summary>
+          <ul>
+            {preview.errors.slice(0, 25).map((error, index) => (
+              <li key={`${error.line ?? error.index ?? index}-${error.field ?? "raw"}-${index}`}>
+                <Badge tone="red">
+                  line {error.line ?? (error.index !== undefined ? `[${error.index}]` : "?")}
+                </Badge>
+                <code>{error.field ?? "(parse)"}</code>
+                <span>{error.message}</span>
+              </li>
+            ))}
+            {preview.errors.length > 25 ? (
+              <li>
+                <small>+ {preview.errors.length - 25} more — fix the listed lines and re-parse.</small>
+              </li>
+            ) : null}
+          </ul>
+        </details>
+      ) : null}
+    </section>
+  );
+}
+
+function ConnectorJsonlActions({
+  preview,
+  canImport,
+  onPreview,
+  onImport,
+}: {
+  preview: ConnectorJsonlPreview | null;
+  canImport: boolean;
+  onPreview: () => void;
+  onImport: () => void;
+}) {
+  const canSendToReview = canImport && Boolean(preview?.canImport);
+  return (
+    <>
+      <Button onClick={onPreview}>Parse / Preview</Button>
+      <Button
+        variant="primary"
+        icon={Plus}
+        onClick={onImport}
+        disabled={!canSendToReview}
+        title={
+          !canImport
+            ? "세션이 없습니다."
+            : !preview
+              ? "먼저 Parse / Preview를 실행하세요."
+              : preview.canImport
+                ? "유효한 이벤트를 Import Review로 전달합니다."
+                : "유효한 이벤트가 없습니다."
+        }
+      >
+        Import to Review
+      </Button>
+    </>
   );
 }

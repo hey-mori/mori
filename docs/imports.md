@@ -15,6 +15,7 @@ browser draft repository today and through SQLite when running in Tauri mode.
 | URL / page excerpt | `browser` | `webResearch` | verified | URL must parse; optional excerpt |
 | AI transcript | `claudeTranscript`, `chatgptTranscript`, `codexTranscript`, `aiConversation` | `aiConversation` | verified | Platform-aware paste; turn / code-block / tool-use detection |
 | Git diff | `gitDiff` | `fileCode` | verified | Pasted unified diff, or Tauri `git diff` capture |
+| Connector JSONL | `claudeTranscript`, `codexTranscript`, `terminal`, `gitDiff`, `manualNote` | per-event (mapped from connector kind) | observed → verified depending on connector | Paste the JSONL produced by the Claude Code hook, Codex CLI wrapper, terminal connector, or Git connector. Routes through Import Review. |
 
 All imports are stored as-is in localStorage today. In Tauri mode the active
 session can be saved to SQLite from Settings; that path covers every import
@@ -380,10 +381,20 @@ The connector pipeline is local-only:
 - best-effort redaction of obvious API keys / bearer tokens / `.env`
   assignments before persistence
 
-Today the dedicated **Connector JSONL** import tab is Planned. Users can
-still paste connector JSONL contents into the existing AI 대화 tab while
-the pure parser + normalizer is wired into the UI in a follow-on
-milestone.
+The dedicated **Connector JSONL** import tab is live in Evidence Hub
+today. The user pastes the JSONL produced by the Claude Code hook, the
+Codex CLI wrapper, a terminal connector, or a git connector script into
+the tab, clicks **Parse / Preview** to see the connector breakdown
+(valid event count, invalid lines with line numbers, connector ids,
+event kinds, time range, project paths, warnings for suspected secrets
+/ missing session ids / unknown connector ids), then clicks **Import to
+Review** to send the normalized events through the same Import Review
+flow that AI transcripts + Git diffs use. The preview snapshot is
+produced by `buildConnectorJsonlPreview` in
+[`src/lib/connectors/jsonlPreview.ts`](../src/lib/connectors/jsonlPreview.ts);
+the multi-bucket normalized output is merged into one Review draft via
+`mergeConnectorCandidatesForReview` in
+[`src/lib/connectors/mergeForReview.ts`](../src/lib/connectors/mergeForReview.ts).
 
 The full **capture surface matrix** — every paste / hook / CLI /
 desktop / web / IDE / browser / GitHub path that Mori does and does not

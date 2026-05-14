@@ -84,6 +84,28 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
     },
   },
 
+  connectorJsonl: {
+    id: "connectorJsonl",
+    label: "Connector JSONL",
+    description:
+      "Local Claude Code hook, Codex CLI wrapper, terminal, and Git connector event logs (paste or file).",
+    status: "implemented",
+    trustDefault: "observed",
+    rawDataPolicy: "summaryOnly",
+    captureMode: "explicitImport",
+    privacyNote:
+      "User pastes or selects the JSONL file produced by a local connector tool. No folder watching, no terminal scraping, no account sync.",
+    supportedInputTypes: ["application/x-ndjson", "application/jsonl", "text/plain"],
+    outputRecords: {
+      sources: true,
+      timelineEvents: true,
+      issues: false,
+      decisions: false,
+      relationships: false,
+      artifacts: false,
+    },
+  },
+
   url: {
     id: "url",
     label: "URL / Browser Page",

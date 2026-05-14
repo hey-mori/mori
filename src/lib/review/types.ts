@@ -82,7 +82,13 @@ export type ImportReviewDraft = {
   origin: ReviewOrigin;
 };
 
-export type ReviewOrigin = "ai-transcript" | "git-diff" | "manual-note" | "url" | "other";
+export type ReviewOrigin =
+  | "ai-transcript"
+  | "git-diff"
+  | "manual-note"
+  | "url"
+  | "connector-jsonl"
+  | "other";
 
 export type ReviewCounts = {
   pending: number;

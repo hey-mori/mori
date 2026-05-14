@@ -51,8 +51,9 @@ on import.
    mori-codex-wrapper.sh --git -- codex run "Upgrade outdated dependencies"
    ```
 
-4. After Codex exits, open Mori → Evidence → Import. Paste the JSONL
-   contents (today) or pick the file (planned, see below).
+4. After Codex exits, open Mori → Evidence → 소스 추가 → **Connector
+   JSONL** tab. Paste the JSONL contents (file picker is the next
+   step), click **Parse / Preview**, then **Import to Review**.
 5. Walk through Import Review. Apply only the events you want.
 
 ## Uninstall
@@ -88,7 +89,8 @@ on import.
 
 ## Next steps (planned)
 
-- A dedicated **Connector JSONL** import tab inside Evidence Hub.
+- A native file picker in the **Connector JSONL** tab so users can
+  select a `.jsonl` file directly instead of opening and pasting it.
 - An optional `--diff full` mode that captures the diff *content* (not
   just shortstat) into a `git_diff_captured.rawText` field. Disabled by
   default; it would require the user to flip `rawDataPolicy` to
@@ -96,6 +98,7 @@ on import.
 - A Tauri-side ingest command that reads JSONL files from the inbox on
   explicit "Refresh" clicks.
 
-These remain Planned — the milestone that landed today added the schema,
-parser, normaliser, redaction, and wrapper templates; the UI file picker
-is the next product surface.
+The **Connector JSONL** paste import path is implemented today — the
+schema, parser, normaliser, redaction, wrapper templates, and Evidence
+Hub UI all ship. Live Codex sync, desktop/web capture, and account
+integration remain explicitly out of scope.

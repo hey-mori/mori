@@ -198,16 +198,23 @@ this pipeline is a daemon, none of it touches the network, and every
 event passes through Import Review before reaching the session store:
 
 ```text
-External tool (Claude Code hook | Codex CLI wrapper | git command | manual)
+External tool (Claude Code hook | Codex CLI wrapper | git command | terminal | manual)
   -> writes JSONL line(s) to ~/.mori/connectors/<connector>/<date>.jsonl
-  -> user opens Mori, clicks Import (manual paste today; file picker planned)
+  -> user opens Mori, Evidence Hub -> Connector JSONL tab, pastes the JSONL
   -> src/lib/connectors/parseConnectorJsonl(text)
        -> validateConnectorEvent (schema + kind-specific clusters)
+  -> src/lib/connectors/jsonlPreview.buildConnectorJsonlPreview
+       (typed snapshot: valid count, invalid lines, connector ids, event
+        kinds, time range, project paths, warnings for secrets / missing
+        session ids / unknown connector ids)
   -> src/lib/connectors/redaction.redactText
        (best-effort secret masking before persistence)
   -> src/lib/connectors/normalizeConnectorEventBatch
        (buckets by (connectorId, sessionId), maps each event to an existing
         SourceKind, emits one SourceRef + N TimelineEvents per bucket)
+  -> src/lib/connectors/mergeForReview.mergeConnectorCandidatesForReview
+       (collapses multi-bucket output into one composite candidate so the
+        existing Import Review UI can host the whole batch in one draft)
   -> Import Review draft (Accept / Discard per item)
   -> useMoriSessionStore.addImport
   -> Timeline / Review / Reports / Project Memory
@@ -216,15 +223,17 @@ External tool (Claude Code hook | Codex CLI wrapper | git command | manual)
 Honest scope rules baked into this milestone:
 
 - The connector path reuses `claudeTranscript` / `codexTranscript` /
-  `terminal` / `gitDiff` / `manualNote` from the source registry. **No
-  new Implemented entries** were added to the registry — `terminal`,
-  `vscode`, `cursor`, `browserTab` etc. remain Planned.
+  `terminal` / `gitDiff` / `manualNote` from the source registry, plus
+  the new `connectorJsonl` integration row used only for the Evidence
+  Hub card. `vscode`, `cursor`, `browserTab`, `slack`, `notion`, `figma`,
+  `fileSystem` etc. remain Planned.
 - The pipeline is pure TypeScript with 0 IO. A future Tauri command can
   call `validateConnectorEventBatch` directly without changing the
   helpers.
-- The UI surface today is "paste JSONL into the AI 대화 tab". A
-  dedicated **Connector JSONL** import tab is Planned and explicitly
-  documented as such in `docs/imports.md`.
+- The UI surface today is a dedicated **Connector JSONL** tab in
+  Evidence Hub: paste textarea, Parse / Preview button, preview card
+  (counts, connectors, time range, warnings, line-tagged errors),
+  Import to Review button. A native file picker is the next step.
 
 #### Capture surface matrix
 
