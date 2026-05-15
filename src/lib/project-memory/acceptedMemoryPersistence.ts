@@ -101,7 +101,9 @@ export function buildAcceptedMemoriesFromReviewDraft(
   const actor = input.actor ?? "local-user";
   const idFactory = input.idFactory ?? defaultIdFactory(appliedAt);
   const existingByProposalId = new Map<string, StoredAcceptedProjectMemory>();
+  const existingByMemoryId = new Map<string, StoredAcceptedProjectMemory>();
   for (const memory of input.existingMemories ?? []) {
+    existingByMemoryId.set(memory.id, memory);
     for (const origin of memory.originProposalIds) {
       existingByProposalId.set(origin, memory);
     }
@@ -119,6 +121,78 @@ export function buildAcceptedMemoriesFromReviewDraft(
   for (const proposalId of reviewState.order) {
     const entry = reviewState.entries[proposalId];
     if (!entry) continue;
+
+    // Lifecycle proposals (`staleMemory` / `contradiction`) act *on*
+    // existing accepted memories — they transition the referenced
+    // memory's status rather than creating a new memory. Discarded /
+    // proposed lifecycle entries fall through to the normal switch
+    // (audit-only / skip), which is correct for them.
+    if (
+      isLifecycleProposalKind(entry.proposal.kind) &&
+      (entry.status === "accepted" ||
+        entry.status === "edited" ||
+        entry.status === "watching" ||
+        entry.status === "deferred")
+    ) {
+      if (entry.status === "accepted") acceptedCount += 1;
+      if (entry.status === "edited") editedCount += 1;
+      if (entry.status === "watching") watchingCount += 1;
+      if (entry.status === "deferred") deferredCount += 1;
+
+      if (entry.status === "accepted" || entry.status === "edited") {
+        // Commit the lifecycle transition on every referenced memory.
+        const nextStatus: StoredAcceptedProjectMemoryStatus =
+          entry.proposal.kind === "staleMemory" ? "stale" : "contradicted";
+        for (const targetId of entry.proposal.targetMemoryIds ?? []) {
+          const target = existingByMemoryId.get(targetId);
+          if (!target) continue; // cannot transition a memory we do not hold
+          if (target.status === nextStatus) continue; // already there — no-op
+          const action: StoredMemoryReviewAction = {
+            id: idFactory("action", `${proposalId}:lifecycle:${targetId}`),
+            projectId,
+            actionType: actionTypeForStatus(entry.status),
+            actor,
+            timestamp: appliedAt,
+            sourceProposalId: proposalId,
+            targetMemoryIds: [targetId],
+            before: snapshotMemory(target),
+            after: { ...snapshotMemory(target), status: nextStatus },
+            note: entry.note ?? undefined,
+            reversible: true,
+            schemaVersion: 1,
+            adapter: "browser-local-storage",
+          };
+          memoriesToSave.push({
+            ...target,
+            status: nextStatus,
+            updatedAt: appliedAt,
+            reviewActionIds: [...target.reviewActionIds, action.id],
+          });
+          reviewActionsToAppend.push(action);
+        }
+      } else {
+        // Keep-watching / defer a lifecycle proposal: record the
+        // review decision in the audit trail, but do not transition
+        // the referenced memory.
+        reviewActionsToAppend.push({
+          id: idFactory("action", `${proposalId}:status`),
+          projectId,
+          actionType: actionTypeForStatus(entry.status),
+          actor,
+          timestamp: appliedAt,
+          sourceProposalId: proposalId,
+          targetMemoryIds: [...(entry.proposal.targetMemoryIds ?? [])],
+          before: { proposalTitle: entry.proposal.title, proposalStatus: "proposed" },
+          after: undefined,
+          note: entry.note ?? undefined,
+          reversible: true,
+          schemaVersion: 1,
+          adapter: "browser-local-storage",
+        });
+        skippedEntries.push(entry);
+      }
+      continue;
+    }
 
     switch (entry.status) {
       case "accepted":
@@ -343,6 +417,15 @@ function actionTypeForStatus(
     default:
       return "accept";
   }
+}
+
+/**
+ * Lifecycle proposals act on existing accepted memories — accepting
+ * one transitions the referenced memory's status instead of creating
+ * a new memory record.
+ */
+function isLifecycleProposalKind(kind: MemoryProposal["kind"]): boolean {
+  return kind === "staleMemory" || kind === "contradiction";
 }
 
 function snapshotMemory(memory: StoredAcceptedProjectMemory): {

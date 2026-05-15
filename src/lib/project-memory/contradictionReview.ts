@@ -98,6 +98,8 @@ function buildProposal(members: StoredAcceptedProjectMemory[]): MemoryProposal {
     sourceSessionIds,
     relatedIssueIds,
     relatedDecisionIds,
+    // Accepting this proposal flags every conflicting decision contradicted.
+    targetMemoryIds: ordered.map((memory) => memory.id),
     proposedAction: "resolve",
     status: "proposed",
     // Deterministic: newest member update wins, so the proposal is

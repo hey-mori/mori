@@ -477,6 +477,8 @@ describe("buildProjectMemoryResumePrompt — accepted memory integration", () =>
     expect(isResumeGuidanceMemory(acceptedMemory({ status: "edited" }), "normal")).toBe(true);
     expect(isResumeGuidanceMemory(acceptedMemory({ status: "watching" }), "normal")).toBe(false);
     expect(isResumeGuidanceMemory(acceptedMemory({ status: "deferred" }), "normal")).toBe(false);
+    expect(isResumeGuidanceMemory(acceptedMemory({ status: "stale" }), "normal")).toBe(false);
+    expect(isResumeGuidanceMemory(acceptedMemory({ status: "contradicted" }), "normal")).toBe(false);
     expect(isResumeGuidanceMemory(acceptedMemory({ resumeEligible: false }), "normal")).toBe(false);
     expect(isResumeGuidanceMemory(acceptedMemory({ kind: "staleMemory" }), "normal")).toBe(false);
     expect(
@@ -491,6 +493,8 @@ describe("buildProjectMemoryResumePrompt — accepted memory integration", () =>
     expect(isMemoryFlaggedForReview(acceptedMemory({ kind: "staleMemory" }))).toBe(true);
     expect(isMemoryFlaggedForReview(acceptedMemory({ kind: "contradiction" }))).toBe(true);
     expect(isMemoryFlaggedForReview(acceptedMemory({ status: "watching" }))).toBe(true);
+    expect(isMemoryFlaggedForReview(acceptedMemory({ status: "stale" }))).toBe(true);
+    expect(isMemoryFlaggedForReview(acceptedMemory({ status: "contradicted" }))).toBe(true);
     expect(isMemoryFlaggedForReview(acceptedMemory())).toBe(false);
     expect(isMemoryFlaggedForReview(acceptedMemory({ status: "superseded" }))).toBe(false);
     expect(isMemoryFlaggedForReview(acceptedMemory({ status: "retired" }))).toBe(false);

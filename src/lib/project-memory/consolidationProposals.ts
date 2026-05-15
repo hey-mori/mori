@@ -69,6 +69,14 @@ export type MemoryProposal = {
   sourceSessionIds: string[];
   relatedIssueIds: string[];
   relatedDecisionIds: string[];
+  /**
+   * Accepted-memory ids this proposal acts *on* (rather than creates).
+   * Populated for lifecycle proposals — `staleMemory` cites the one
+   * memory it would flag stale, `contradiction` cites every
+   * conflicting memory. Absent / empty for proposals that promote new
+   * memory (`promotedDecision`, `recurringIssue`, …).
+   */
+  targetMemoryIds?: string[];
   proposedAction: MemoryProposalAction;
   status: MemoryProposalStatus;
   createdAt: string;

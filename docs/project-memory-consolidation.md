@@ -881,6 +881,14 @@ candidates alongside the view-model-derived proposals. The
 Consolidation Review Surface and `MemoryView` load accepted memories
 through the runtime-aware `AcceptedMemoryRepository`.
 
+Each `staleMemory` proposal carries `targetMemoryIds` — the accepted
+memory it would flag. **Accepting** the proposal transitions that
+memory's status to `stale` (a real `StoredAcceptedProjectMemoryStatus`
+value); the memory is never deleted and keeps its `originProposalIds`
+provenance. Keep-watching / defer records the review decision in the
+audit trail without transitioning the memory. The transition is an
+append-only audit row carrying a before/after status snapshot.
+
 ## Contradiction Review — landed
 
 `buildContradictionProposals`
@@ -905,6 +913,13 @@ always a user review action.
 `buildProjectMemoryConsolidationState(memory, { acceptedMemories })`
 merges contradiction proposals alongside Stale Memory Review
 proposals into the consolidation preview.
+
+Each `contradiction` proposal carries `targetMemoryIds` for every
+conflicting decision. **Accepting** the proposal transitions each of
+those memories to the `contradicted` status — none are deleted and
+the contradiction is never auto-resolved. Resume Prompt and Reports
+exclude `stale` / `contradicted` memories from current guidance;
+Project Memory still lists them honestly as non-current memory.
 
 ## Future detection signals
 

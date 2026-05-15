@@ -199,19 +199,31 @@ export type MoriDraftRepository = {
 };
 
 /**
- * Durable status of an accepted Project Memory record. `superseded`
- * and `retired` are reserved on the union — they appear when a
- * future review action transitions a record without deleting it.
+ * Durable status of an accepted Project Memory record — the explicit
+ * lifecycle of an accepted memory.
  *
  * `accepted` and `edited` carry guidance weight; `watching` and
  * `deferred` are durable but advisory (Resume Prompt and Reports
  * filter them out unless the user opts in).
+ *
+ * `stale` and `contradicted` are review outcomes: accepting a
+ * `staleMemory` proposal transitions the referenced memory to
+ * `stale`; accepting a `contradiction` proposal transitions every
+ * conflicting decision to `contradicted`. Both are excluded from
+ * current guidance in Resume Prompt / Reports but stay visible in
+ * Project Memory as honest non-current memory — they are not deleted.
+ *
+ * `superseded` and `retired` are reserved on the union — they appear
+ * when a future review action transitions a record without deleting
+ * it.
  */
 export type StoredAcceptedProjectMemoryStatus =
   | "accepted"
   | "edited"
   | "watching"
   | "deferred"
+  | "stale"
+  | "contradicted"
   | "superseded"
   | "retired";
 

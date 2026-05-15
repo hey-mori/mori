@@ -104,6 +104,10 @@ function describeStoredStatus(status: StoredAcceptedProjectMemory["status"]): st
       return "관찰";
     case "deferred":
       return "연기";
+    case "stale":
+      return "오래됨";
+    case "contradicted":
+      return "상충";
     case "superseded":
       return "대체됨";
     case "retired":
@@ -124,6 +128,10 @@ function statusTone(status: StoredAcceptedProjectMemory["status"]):
       return "purple";
     case "deferred":
       return "orange";
+    case "stale":
+      return "orange";
+    case "contradicted":
+      return "red";
     case "superseded":
     case "retired":
       return "gray";

@@ -226,7 +226,9 @@ Undo / revert still planned), Resume and Report Memory Integration
 planned), Stale Memory Review ✅ (`buildStaleMemoryProposals` —
 supersession / retirement, reviewer-note, and next-session time
 signals), Contradiction Review ✅ (`buildContradictionProposals` —
-same-title conflicting accepted decisions).
+same-title conflicting accepted decisions), Accepted Memory
+Lifecycle Status ✅ (`stale` / `contradicted` statuses; accepting a
+lifecycle proposal transitions the referenced memory).
 
 ### Phase 0 — Explicit import memory loop (Implemented)
 
@@ -281,6 +283,7 @@ Sub-phase status:
 | Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | Resume Prompt + Reports ✅ landed; `.mori v0` slice ✅ landed; review-on-import planned |
 | Stale Memory Review | Scan accepted memories for staleness signals; emit `staleMemory` proposals (`buildStaleMemoryProposals`) | ✅ landed |
 | Contradiction Review | Detect conflicting accepted decisions; emit `contradiction` proposals (`buildContradictionProposals`) | ✅ landed |
+| Accepted Memory Lifecycle Status | Explicit `stale` / `contradicted` statuses; accepting a lifecycle proposal transitions the referenced memory via `targetMemoryIds` | ✅ landed |
 | Queryable Memory | Local cited search over accepted memories with citations | research |
 
 ### Phase 3 — Optional local daemon / watched inbox (Planned, opt-in)

@@ -165,6 +165,8 @@ function buildProposal(
     sourceSessionIds: [...memory.sourceSessionIds],
     relatedIssueIds: [...memory.relatedIssueIds],
     relatedDecisionIds: [...memory.relatedDecisionIds],
+    // Accepting this proposal flags exactly this accepted memory stale.
+    targetMemoryIds: [memory.id],
     proposedAction,
     status: "proposed",
     createdAt: memory.updatedAt,

@@ -284,6 +284,15 @@ that is called out.
   `promotedDecision` memories share a normalised title but record
   different summaries. Conservative deterministic heuristic — no LLM,
   no semantic matching — medium-low confidence, proposals only.
+- Accepted memory lifecycle status: `StoredAcceptedProjectMemory`
+  carries explicit `stale` and `contradicted` lifecycle statuses.
+  Accepting a `staleMemory` / `contradiction` proposal transitions
+  the referenced memory (or memories) — via `targetMemoryIds` — to
+  that status instead of creating a detached record. Memories are
+  never deleted; the transition is an append-only audit row with a
+  before/after snapshot. Resume Prompt and Reports exclude stale /
+  contradicted memories from guidance; Project Memory still shows
+  them as non-current memory.
 - `SessionPersistenceService` routes between browser localStorage
   and the Tauri SQLite bridge. Desktop mode prefers SQLite as the
   source of truth for active session hydration; Load actions for

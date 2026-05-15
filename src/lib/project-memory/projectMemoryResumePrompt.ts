@@ -138,16 +138,18 @@ export function isResumeGuidanceMemory(
 /**
  * An accepted memory that must NOT be used as guidance but should be
  * surfaced under Limitations so the user knows it needs re-review:
- * `staleMemory` / `contradiction` kinds, or a record left in the
- * `watching` state. `superseded` / `retired` records are history and
- * excluded entirely.
+ * a record in the `stale` / `contradicted` / `watching` lifecycle
+ * state, or a `staleMemory` / `contradiction` kind. `superseded` /
+ * `retired` records are history and excluded entirely.
  */
 export function isMemoryFlaggedForReview(memory: StoredAcceptedProjectMemory): boolean {
   if (memory.status === "superseded" || memory.status === "retired") return false;
   return (
+    memory.status === "stale" ||
+    memory.status === "contradicted" ||
+    memory.status === "watching" ||
     memory.kind === "staleMemory" ||
-    memory.kind === "contradiction" ||
-    memory.status === "watching"
+    memory.kind === "contradiction"
   );
 }
 
