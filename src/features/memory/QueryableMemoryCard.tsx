@@ -8,7 +8,10 @@ import {
   searchProjectMemoryReferences,
 } from "../../lib/project-memory/queryableMemory";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
-import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../../lib/storage/storageTypes";
 
 /**
  * Queryable Memory card on the Project Memory page.
@@ -24,10 +27,12 @@ export function QueryableMemoryCard({
   memories,
   timelineEvents,
   evidenceSources,
+  reviewActions,
 }: {
   memories: StoredAcceptedProjectMemory[];
   timelineEvents: TimelineEvent[];
   evidenceSources: SourceRef[];
+  reviewActions: StoredMemoryReviewAction[];
 }) {
   const [query, setQuery] = useState("");
   const resultSet = useMemo(
@@ -35,12 +40,19 @@ export function QueryableMemoryCard({
     [memories, query],
   );
   const references = useMemo(
-    () => searchProjectMemoryReferences({ timelineEvents, evidenceSources }, { text: query }),
-    [timelineEvents, evidenceSources, query],
+    () =>
+      searchProjectMemoryReferences(
+        { timelineEvents, evidenceSources, reviewActions },
+        { text: query },
+      ),
+    [timelineEvents, evidenceSources, reviewActions, query],
   );
 
   const hasSearchableData =
-    memories.length > 0 || timelineEvents.length > 0 || evidenceSources.length > 0;
+    memories.length > 0 ||
+    timelineEvents.length > 0 ||
+    evidenceSources.length > 0 ||
+    reviewActions.length > 0;
   const trimmedQuery = query.trim();
 
   return (
@@ -127,8 +139,7 @@ export function QueryableMemoryCard({
                     <header>
                       <strong title={reference.title}>{reference.title}</strong>
                       <Badge tone="blue">
-                        {reference.resultKind === "timelineEvent" ? "Timeline" : "Evidence"} ·{" "}
-                        {reference.contextLabel}
+                        {referenceKindLabel(reference.resultKind)} · {reference.contextLabel}
                       </Badge>
                     </header>
                     <p className="memory-search-snippet">{reference.snippet}</p>
@@ -144,9 +155,15 @@ export function QueryableMemoryCard({
       <footer className="memory-search-footer">
         <small>
           <Badge tone="gray">local-only</Badge> {resultSet.dataBasis} 참조 검색은 활성 세션의
-          timeline / evidence를 대상으로 합니다. Review action 검색 확장은 예정되어 있습니다.
+          timeline / evidence와 검토 액션 노트를 대상으로 합니다.
         </small>
       </footer>
     </MoriSection>
   );
+}
+
+function referenceKindLabel(kind: "timelineEvent" | "evidenceSource" | "reviewAction"): string {
+  if (kind === "timelineEvent") return "Timeline";
+  if (kind === "evidenceSource") return "Evidence";
+  return "Review";
 }

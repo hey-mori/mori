@@ -209,7 +209,7 @@ notes kept for traceability, not new architecture labels.
 | Project Memory Consolidation | Turn reviewed sessions into durable project memory through review-before-apply. | partially landed — see Controlled Project Memory Consolidation below |
 | Resume and Report Outputs | Generate continuation prompts and shareable reports from accepted memory only. | live aggregation landed; accepted-memory integration designed |
 | Optional Local Automation | Reduce friction while preserving explicit consent. | not started — opt-in only when added |
-| Queryable Memory | Local cited search over accepted memory + evidence. | accepted-memory + timeline/evidence search ✅ landed (helper + Memory Search card); review-action search planned |
+| Queryable Memory | Local cited search over accepted memory + evidence. | ✅ landed — accepted-memory + timeline / evidence / review-action search (helper + Memory Search card) |
 | Team / Shared Memory | Explicit `.mori v0` export/import only; no default cloud sync. | partially landed (`.mori v0` export) |
 
 Sub-capabilities within Project Memory Consolidation (mirroring
@@ -284,7 +284,7 @@ Sub-phase status:
 | Stale Memory Review | Scan accepted memories for staleness signals; emit `staleMemory` proposals (`buildStaleMemoryProposals`) | ✅ landed |
 | Contradiction Review | Detect conflicting accepted decisions; emit `contradiction` proposals (`buildContradictionProposals`) | ✅ landed |
 | Accepted Memory Lifecycle Status | Explicit `stale` / `contradicted` statuses; accepting a lifecycle proposal transitions the referenced memory via `targetMemoryIds` | ✅ landed |
-| Queryable Memory | Local structured search over accepted memories + timeline/evidence references (`searchAcceptedMemories` / `searchProjectMemoryReferences` + Memory Search card); deterministic, evidence-ref cited, no embeddings | ✅ landed; review-action search planned |
+| Queryable Memory | Local structured search over accepted memories + timeline / evidence / review-action references (`searchAcceptedMemories` / `searchProjectMemoryReferences` + Memory Search card); deterministic, evidence-ref cited, no embeddings | ✅ landed |
 
 ### Phase 3 — Optional local daemon / watched inbox (Planned, opt-in)
 

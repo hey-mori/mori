@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { searchAcceptedMemories, searchProjectMemoryReferences } from "./queryableMemory";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
+import type { StoredMemoryReviewAction } from "../storage/storageTypes";
 
 function memory(
   id: string,
@@ -250,5 +251,67 @@ describe("searchProjectMemoryReferences", () => {
       { text: "nonexistent" },
     );
     expect(refs).toEqual([]);
+  });
+
+  it("matches review-action notes and skips note-less actions", () => {
+    const reviewActions: StoredMemoryReviewAction[] = [
+      {
+        id: "act-noted",
+        projectId: "p-1",
+        actionType: "accept",
+        actor: "local-user",
+        timestamp: "2026-05-12T10:00:00Z",
+        targetMemoryIds: ["mem-1"],
+        note: "Revisit the auth decision after the migration",
+        reversible: true,
+        schemaVersion: 1,
+        adapter: "browser-local-storage",
+      },
+      {
+        id: "act-bare",
+        projectId: "p-1",
+        actionType: "apply",
+        actor: "local-user",
+        timestamp: "2026-05-12T10:01:00Z",
+        targetMemoryIds: [],
+        reversible: false,
+        schemaVersion: 1,
+        adapter: "browser-local-storage",
+      },
+    ];
+    const refs = searchProjectMemoryReferences({ reviewActions }, { text: "auth" });
+    expect(refs).toHaveLength(1);
+    expect(refs[0]?.resultKind).toBe("reviewAction");
+    expect(refs[0]?.refId).toBe("act-noted");
+    expect(refs[0]?.matchedField).toBe("note");
+  });
+
+  it("orders timeline, evidence, then review-action references at the same tier", () => {
+    const refs = searchProjectMemoryReferences(
+      {
+        timelineEvents: [timelineEvent({ id: "ev", title: "x", summary: "redis touch" })],
+        evidenceSources: [evidenceSource({ id: "src", title: "y", detail: "redis detail" })],
+        reviewActions: [
+          {
+            id: "act",
+            projectId: "p-1",
+            actionType: "edit",
+            actor: "local-user",
+            timestamp: "2026-05-12T10:00:00Z",
+            targetMemoryIds: [],
+            note: "redis note",
+            reversible: true,
+            schemaVersion: 1,
+            adapter: "browser-local-storage",
+          },
+        ],
+      },
+      { text: "redis" },
+    );
+    expect(refs.map((r) => r.resultKind)).toEqual([
+      "timelineEvent",
+      "evidenceSource",
+      "reviewAction",
+    ]);
   });
 });

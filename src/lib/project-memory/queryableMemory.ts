@@ -25,8 +25,10 @@ import type {
   StoredAcceptedProjectMemoryReportEligibility,
   StoredAcceptedProjectMemorySensitivity,
   StoredAcceptedProjectMemoryStatus,
+  StoredMemoryReviewAction,
 } from "../storage/storageTypes";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
+import { describeMemoryAuditAction } from "./memoryAuditTrail";
 
 export type QueryableMemoryFilters = {
   kind?: StoredAcceptedProjectMemory["kind"];
@@ -261,22 +263,27 @@ function truncate(value: string): string {
  * (event title / summary, source title / detail) — never raw
  * transcripts or connector logs.
  */
-export type QueryableMemoryReferenceKind = "timelineEvent" | "evidenceSource";
+export type QueryableMemoryReferenceKind =
+  | "timelineEvent"
+  | "evidenceSource"
+  | "reviewAction";
 
 export type QueryableMemoryReference = {
   resultKind: QueryableMemoryReferenceKind;
   refId: string;
   title: string;
   snippet: string;
-  matchedField: "title" | "summary" | "detail";
+  matchedField: "title" | "summary" | "detail" | "note";
   matchReason: string;
-  /** Short context label — event type or source kind. */
+  /** Short context label — event type, source kind, or audit action. */
   contextLabel: string;
 };
 
 export type SearchProjectMemoryReferencesInput = {
   timelineEvents?: readonly TimelineEvent[];
   evidenceSources?: readonly SourceRef[];
+  /** Memory Audit Trail review actions — only their reviewer notes are searched. */
+  reviewActions?: readonly StoredMemoryReviewAction[];
 };
 
 /**
@@ -305,6 +312,14 @@ export function searchProjectMemoryReferences(
       references.push(sourceReference(source, "title", text));
     } else if (normalise(source.detail).includes(text)) {
       references.push(sourceReference(source, "detail", text));
+    }
+  }
+  for (const action of input.reviewActions ?? []) {
+    // Only the reviewer's own note is searched — never the before /
+    // after snapshots, which can carry memory titles / summaries.
+    const note = typeof action.note === "string" ? action.note : "";
+    if (note.length > 0 && normalise(note).includes(text)) {
+      references.push(reviewActionReference(action, note, text));
     }
   }
 
@@ -345,6 +360,28 @@ function sourceReference(
   };
 }
 
+function reviewActionReference(
+  action: StoredMemoryReviewAction,
+  note: string,
+  text: string,
+): QueryableMemoryReference {
+  return {
+    resultKind: "reviewAction",
+    refId: action.id,
+    title: "Review note",
+    snippet: excerptAround(note, text),
+    matchedField: "note",
+    matchReason: "Review note match",
+    contextLabel: describeMemoryAuditAction(action.actionType),
+  };
+}
+
+const REFERENCE_KIND_ORDER: Record<QueryableMemoryReferenceKind, number> = {
+  timelineEvent: 0,
+  evidenceSource: 1,
+  reviewAction: 2,
+};
+
 function compareReferences(
   a: QueryableMemoryReference,
   b: QueryableMemoryReference,
@@ -353,6 +390,8 @@ function compareReferences(
   const tierA = a.matchedField === "title" ? 0 : 1;
   const tierB = b.matchedField === "title" ? 0 : 1;
   if (tierA !== tierB) return tierA - tierB;
-  if (a.resultKind !== b.resultKind) return a.resultKind === "timelineEvent" ? -1 : 1;
+  if (a.resultKind !== b.resultKind) {
+    return REFERENCE_KIND_ORDER[a.resultKind] - REFERENCE_KIND_ORDER[b.resultKind];
+  }
   return a.title.localeCompare(b.title);
 }

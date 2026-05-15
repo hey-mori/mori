@@ -357,9 +357,10 @@ capability:
 - No embeddings, no vector store, no LLM — local and deterministic.
 
 `searchProjectMemoryReferences` extends the same search to the
-active session's **timeline events** (title / summary) and
-**evidence sources** (title / detail), returning typed
-`QueryableMemoryReference` hits — references are search-only (an
+active session's **timeline events** (title / summary), **evidence
+sources** (title / detail), and **Memory Audit Trail review actions**
+(reviewer `note` only — never the before/after snapshots), returning
+typed `QueryableMemoryReference` hits. References are search-only (an
 empty query returns none). Snippets come only from those curated
 fields; raw transcripts and connector logs are never searched.
 
@@ -367,8 +368,8 @@ The **Memory Search** card (`QueryableMemoryCard`) on the Project
 Memory page is the compact UI: a search input over the accepted
 memories loaded through `AcceptedMemoryRepository`, with per-result
 lifecycle status, evidence / session counts, honest empty states,
-and a secondary "Related references" section for timeline / evidence
-hits. Extending search to review actions is a planned follow-up.
+and a secondary "Related references" section for timeline, evidence,
+and review-action note hits.
 
 ## Where Project Memory sits in the Mori architecture
 

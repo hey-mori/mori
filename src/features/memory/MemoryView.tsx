@@ -404,6 +404,7 @@ export function MemoryView() {
             memories={acceptedMemories}
             timelineEvents={view.events}
             evidenceSources={view.sources}
+            reviewActions={reviewActions}
           />
 
           <MemoryAuditTrailCard
