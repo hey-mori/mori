@@ -9,6 +9,10 @@ import {
   type MemoryAuditActionFilter,
   type MemoryAuditActionType,
 } from "../../lib/project-memory/memoryAuditTrail";
+import {
+  describeAcceptedMemoryStorageSource,
+  type AcceptedMemoryStorageSource,
+} from "../../lib/project-memory/acceptedMemoryRepository";
 import type { StoredMemoryReviewAction } from "../../lib/storage/storageTypes";
 
 /**
@@ -23,8 +27,12 @@ import type { StoredMemoryReviewAction } from "../../lib/storage/storageTypes";
  */
 export function MemoryAuditTrailCard({
   actions,
+  storageSource,
+  storageFellBack,
 }: {
   actions: StoredMemoryReviewAction[];
+  storageSource: AcceptedMemoryStorageSource;
+  storageFellBack: boolean;
 }) {
   const [filter, setFilter] = useState<MemoryAuditActionFilter>("all");
   const viewModel = useMemo(
@@ -118,9 +126,14 @@ export function MemoryAuditTrailCard({
       <footer className="memory-audit-footer">
         <small>
           <Badge tone="gray">local-only</Badge>{" "}
+          <Badge tone={storageSource === "desktop-sqlite" ? "green" : "purple"}>
+            {describeAcceptedMemoryStorageSource(storageSource)}
+          </Badge>{" "}
+          {storageFellBack
+            ? "데스크톱 SQLite를 사용할 수 없어 localStorage로 대체했습니다. "
+            : ""}
           {viewModel.truncated ? "최근 기록만 표시됩니다. " : ""}
-          Undo / revert, SQLite audit storage, `.mori v0` auditTrail export는 별도 capability로
-          예정되어 있습니다.
+          Undo / revert와 `.mori v0` auditTrail export는 별도 capability로 예정되어 있습니다.
         </small>
       </footer>
     </MoriSection>

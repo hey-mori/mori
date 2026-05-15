@@ -15,6 +15,7 @@ import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { createMoriPackageFromSession, serializeMoriPackage } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import {
   selectHasRealAnalysis,
@@ -51,13 +52,21 @@ export function ReportsView() {
 
   // Accepted Project Memory records — written by the Consolidation
   // Review Surface. Reports surface eligible records as a dedicated
-  // section gated by the report's audience tier.
-  const reportRepository = useMemo(() => createBrowserDraftRepository(), []);
+  // section gated by the report's audience tier. Loaded through the
+  // runtime-aware repository so desktop mode reads from SQLite.
   const reportProjectId = view.project.id || "default";
   const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
   useEffect(() => {
-    setAcceptedMemories(reportRepository.listAcceptedProjectMemories(reportProjectId));
-  }, [reportRepository, reportProjectId]);
+    let cancelled = false;
+    void getAcceptedMemoryRepository()
+      .listAcceptedProjectMemories(reportProjectId)
+      .then((result) => {
+        if (!cancelled) setAcceptedMemories(result.data);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reportProjectId]);
 
   const status = useMemo(
     () =>

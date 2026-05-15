@@ -2,6 +2,10 @@ import { BookCheck, Clock4, Eye } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriSection } from "../../components/ui/MoriSection";
 import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
+import {
+  describeAcceptedMemoryStorageSource,
+  type AcceptedMemoryStorageSource,
+} from "../../lib/project-memory/acceptedMemoryRepository";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 
 /**
@@ -19,9 +23,13 @@ import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes
 export function AcceptedMemoriesCard({
   memories,
   reviewActionCount,
+  storageSource,
+  storageFellBack,
 }: {
   memories: StoredAcceptedProjectMemory[];
   reviewActionCount: number;
+  storageSource: AcceptedMemoryStorageSource;
+  storageFellBack: boolean;
 }) {
   const recent = memories.slice(0, 6);
   return (
@@ -73,8 +81,13 @@ export function AcceptedMemoriesCard({
       )}
       <footer className="memory-accepted-footer">
         <small>
-          감사 로그 {reviewActionCount}건 기록됨. SQLite Accepted Memory Storage / `.mori v0` export
-          / Resume and Report Memory Integration은 별도 capability로 예정되어 있습니다.
+          감사 로그 {reviewActionCount}건 기록됨 · 저장 위치:{" "}
+          <Badge tone={storageSource === "desktop-sqlite" ? "green" : "purple"}>
+            {describeAcceptedMemoryStorageSource(storageSource)}
+          </Badge>
+          {storageFellBack
+            ? " · 데스크톱 SQLite를 사용할 수 없어 localStorage로 안전하게 대체했습니다."
+            : ""}
         </small>
       </footer>
     </MoriSection>

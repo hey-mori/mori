@@ -36,6 +36,10 @@ import { buildProjectMemoryConsolidationState } from "../../lib/project-memory/p
 import { ConsolidationPreviewCard } from "./ConsolidationPreviewCard";
 import { AcceptedMemoriesCard } from "./AcceptedMemoriesCard";
 import { MemoryAuditTrailCard } from "./MemoryAuditTrailCard";
+import {
+  getAcceptedMemoryRepository,
+  type AcceptedMemoryStorageSource,
+} from "../../lib/project-memory/acceptedMemoryRepository";
 import { deriveSavedReportAvailability } from "../../lib/memory/projectMemoryContext";
 import {
   buildProjectMemoryViewModel,
@@ -112,10 +116,27 @@ export function MemoryView() {
   const projectId = view.project.id || "default";
   const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
   const [reviewActions, setReviewActions] = useState<StoredMemoryReviewAction[]>([]);
+  const [memoryStorageSource, setMemoryStorageSource] =
+    useState<AcceptedMemoryStorageSource>("browser-local-storage");
+  const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
   useEffect(() => {
-    setAcceptedMemories(repository.listAcceptedProjectMemories(projectId));
-    setReviewActions(repository.listMemoryReviewActions(projectId));
-  }, [repository, projectId]);
+    let cancelled = false;
+    const memoryRepository = getAcceptedMemoryRepository();
+    void Promise.all([
+      memoryRepository.listAcceptedProjectMemories(projectId),
+      memoryRepository.listMemoryReviewActions(projectId),
+    ]).then(([memoriesResult, actionsResult]) => {
+      if (cancelled) return;
+      setAcceptedMemories(memoriesResult.data);
+      setReviewActions(actionsResult.data);
+      const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
+      setMemoryStorageFellBack(fellBack);
+      setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   // ─── saved-session body loading ──────────────────────────────────────
   const [loadedSessions, setLoadedSessions] = useState<ProjectMemoryLoadedSession[]>([]);
@@ -374,9 +395,15 @@ export function MemoryView() {
           <AcceptedMemoriesCard
             memories={acceptedMemories}
             reviewActionCount={reviewActions.length}
+            storageSource={memoryStorageSource}
+            storageFellBack={memoryStorageFellBack}
           />
 
-          <MemoryAuditTrailCard actions={reviewActions} />
+          <MemoryAuditTrailCard
+            actions={reviewActions}
+            storageSource={memoryStorageSource}
+            storageFellBack={memoryStorageFellBack}
+          />
 
           <RecentSessionsList
             sessions={savedSessions}

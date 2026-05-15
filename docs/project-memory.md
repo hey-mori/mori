@@ -298,7 +298,7 @@ Capability status:
 | Accepted Memory Persistence (browser localStorage) | ✅ landed |
 | Memory Audit Trail (append-only review actions, browser localStorage) | ✅ landed (minimal) |
 | Memory Audit Trail UI (audit log surface on the Memory page) | ✅ landed |
-| SQLite Accepted Memory Storage (desktop tables + commands + bridge) | ✅ landed (desktop-mode routing is a follow-up) |
+| SQLite Accepted Memory Storage (desktop tables + commands + bridge + runtime routing) | ✅ landed |
 | Memory Audit Trail Undo / revert (`actionType: "revert"` rows) | designed; not implemented |
 | Stale Memory Review + Contradiction Review | designed; not implemented |
 | Resume Prompt inclusion policy hookup | ✅ landed |
@@ -327,10 +327,13 @@ Project Memory page makes that log visible:
   keeps a readable label, a missing `targetMemoryIds` counts as
   zero, and an unparseable timestamp groups under an "unknown date"
   bucket.
+- Review actions load through `AcceptedMemoryRepository`, so the
+  audit trail reads from SQLite in Tauri desktop mode and from
+  localStorage in browser mode (or after a SQLite fallback). The
+  card surfaces the active storage source.
 
-Undo / revert (a new `actionType: "revert"` row), SQLite-backed
-audit storage, and the `.mori v0` `auditTrail` export remain
-separate, still-planned capabilities.
+Undo / revert (a new `actionType: "revert"` row) and the `.mori v0`
+`auditTrail` export remain separate, still-planned capabilities.
 
 ## Where Project Memory sits in the Mori architecture
 

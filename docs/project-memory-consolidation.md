@@ -315,10 +315,14 @@ Phased so this milestone introduces no storage change.
   converts between `StoredAcceptedProjectMemory` /
   `StoredMemoryReviewAction` and the flat row shapes; records loaded
   from SQLite carry `adapter: "desktop-sqlite"`.
-- Routing the live Memory page / `SessionPersistenceService` to
-  prefer the SQLite store in desktop mode (read from SQLite when
-  available, fall back to browser localStorage) is a separate
-  follow-up.
+- **Desktop-mode routing — landed.** `AcceptedMemoryRepository`
+  (`src/lib/project-memory/acceptedMemoryRepository.ts`) routes the
+  Consolidation Review apply path, the Project Memory page, and the
+  Reports accepted-memory section: SQLite in Tauri mode, localStorage
+  in browser mode, with an honest localStorage fallback (and a
+  visible fallback notice) when a SQLite call fails. The
+  Consolidation Review apply banner and the Memory cards surface the
+  storage source so the UI never claims SQLite when it fell back.
 
 ### 8.4 Resume and Report Memory Integration — `.mori v0` export
 
@@ -406,7 +410,7 @@ same review pattern.
 | **Consolidation State** | Typed `ProjectMemoryConsolidationState` derived from `ProjectMemoryViewModel`; wired into `MemoryView`; honest preview card. | ✅ |
 | **Consolidation Review Surface** | Full-page surface, grouped proposal cards, evidence inspector, local-draft accept / edit / discard / keep-watching / defer / reset actions. No persistence — accepted memories are draft-scoped. | ✅ |
 | **Accepted Memory Persistence** | `StoredAcceptedProjectMemory` + `StoredMemoryReviewAction` repository methods; accepted / edited / watching / deferred memories survive reload via browser localStorage. | ✅ landed (browser) |
-| **SQLite Accepted Memory Storage** | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration, load/store commands, TS bridge. | ✅ landed (desktop-mode routing is a follow-up) |
+| **SQLite Accepted Memory Storage** | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration, load/store commands, TS bridge, runtime-aware repository routing. | ✅ landed |
 | **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports ✅ landed; `.mori v0` slice ✅ landed (review-on-import planned) |
 | **Stale Memory Review** | Detect pruned-source references and conflicting decisions; surface them as `staleMemory` / `contradiction` proposal kinds. | Planned |
 | **Queryable Memory over accepted memory** | Optional local memory query against accepted memories with citations. | Research |

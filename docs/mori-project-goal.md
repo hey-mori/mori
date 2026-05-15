@@ -264,9 +264,13 @@ that is called out.
   (`src-tauri/src/db/accepted_memory.rs`), four Tauri commands, and
   the TypeScript bridge (`src/lib/sqlite/acceptedMemoryRows.ts`)
   that converts between `StoredAcceptedProjectMemory` /
-  `StoredMemoryReviewAction` and the flat SQLite rows. Routing the
-  live Memory page to the SQLite store in desktop mode is a
-  follow-up.
+  `StoredMemoryReviewAction` and the flat SQLite rows.
+- Runtime-aware accepted memory routing: `AcceptedMemoryRepository`
+  (`src/lib/project-memory/acceptedMemoryRepository.ts`) routes the
+  Consolidation Review apply path, the Project Memory page, and the
+  Reports accepted-memory section — SQLite in Tauri desktop mode,
+  localStorage in browser mode, with an honest, visible localStorage
+  fallback when a SQLite call fails.
 - `SessionPersistenceService` routes between browser localStorage
   and the Tauri SQLite bridge. Desktop mode prefers SQLite as the
   source of truth for active session hydration; Load actions for
@@ -300,11 +304,6 @@ against the repository.
   it, but there is no UI to import a `.mori` package and re-review
   its accepted memories as proposals before they become durable. The
   `auditTrail` slice is also not carried yet.
-- **SQLite Accepted Memory Storage — desktop-mode routing.** The
-  SQLite tables, commands, and TypeScript bridge exist, but the live
-  Memory page and `SessionPersistenceService` still read and write
-  accepted memory through browser localStorage only. Routing desktop
-  mode to prefer the SQLite store is the remaining step.
 - **Undo / revert from the audit log.** The Memory Audit Trail UI
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and

@@ -157,8 +157,18 @@ the storage plan below is what the current adapter implements.
   (`src/lib/sqlite/acceptedMemoryRows.ts`) converts between
   `StoredAcceptedProjectMemory` / `StoredMemoryReviewAction` and the
   flat row shapes. Records loaded from SQLite carry
-  `adapter: "desktop-sqlite"`. Routing the live Memory page to prefer
-  the SQLite store in desktop mode is a separate follow-up.
+  `adapter: "desktop-sqlite"`.
+- **Runtime routing**: `AcceptedMemoryRepository`
+  (`src/lib/project-memory/acceptedMemoryRepository.ts`) is the
+  single runtime-aware entry point. In browser mode it uses
+  `BrowserDraftRepository` (localStorage); in Tauri desktop mode it
+  prefers the SQLite commands. Every operation reports the storage
+  `source` it actually used. If a SQLite call fails it falls back to
+  localStorage and reports `fellBack: true` with a reason — it never
+  silently claims SQLite succeeded. The Consolidation Review apply
+  path, the Project Memory page (Accepted Memories card + Memory
+  Audit Trail), and the Reports accepted-memory section all read and
+  write through this repository.
 - **`.mori v0` export**: the `MoriPackageV0` package now carries an
   optional, additive `consolidatedMemories[]` slice (no
   `formatVersion` bump — each record keeps its own `schemaVersion`).

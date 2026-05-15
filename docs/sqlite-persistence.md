@@ -50,6 +50,25 @@ shows the resolved path when running in the desktop runtime.
 | `002` | `V002__events_connector_identity.sql` | Add `events.connector_event_id` (TEXT, nullable) and `idx_events_connector_event_id` so cross-session connector duplicate detection survives SQLite round-trips. NULL on every non-connector import. |
 | `003` | `V003__consolidated_memories.sql` | Add `consolidated_memories` and `consolidated_memory_audit` tables for SQLite Accepted Memory Storage. Object / array fields are flattened to JSON `*_json` columns. No foreign key to `projects` / `sessions` — consolidated memory must survive session pruning. |
 
+## Accepted memory runtime routing
+
+`AcceptedMemoryRepository`
+(`src/lib/project-memory/acceptedMemoryRepository.ts`) routes accepted
+project memories and memory review actions between backends:
+
+- **Browser mode** — `BrowserDraftRepository` (localStorage).
+- **Tauri desktop mode** — the V003 tables via the
+  `save_accepted_project_memories`, `list_accepted_project_memories`,
+  `append_memory_review_action_rows`, and
+  `list_memory_review_action_rows` commands.
+
+If a SQLite call fails, the repository falls back to localStorage and
+reports `fellBack: true` with the failure reason; the Consolidation
+Review apply banner and the Memory cards show the storage source so the
+UI never claims SQLite when it fell back. The Consolidation Review apply
+path, the Project Memory page, and the Reports accepted-memory section
+all read and write through this repository.
+
 ## Tables in this milestone
 
 V001 brings up Mori's full normalized session schema:

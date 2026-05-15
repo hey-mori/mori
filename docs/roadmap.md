@@ -218,8 +218,8 @@ the design in
 Consolidation Proposal Preview ✅, Consolidation State ✅,
 Consolidation Review Surface ✅,
 Accepted Memory Persistence ✅ (browser localStorage), SQLite
-Accepted Memory Storage ✅ (desktop tables + commands + bridge;
-desktop-mode routing is a follow-up), Memory Audit Trail ✅
+Accepted Memory Storage ✅ (desktop tables + commands + bridge +
+runtime-aware repository routing), Memory Audit Trail ✅
 (append-only review actions + audit log UI on the Memory page;
 Undo / revert still planned), Resume and Report Memory Integration
 ✅ (Resume Prompt + Reports + `.mori v0` slice; review-on-import
@@ -274,7 +274,7 @@ Sub-phase status:
 | Accepted Memory Persistence (Browser) | `StoredAcceptedProjectMemory` + repository methods; accepted memories survive reload via browser localStorage | ✅ landed |
 | Memory Audit Trail (minimal) | `StoredMemoryReviewAction` append-only log; one row per accept / edit / watch / defer / discard / apply | ✅ landed |
 | Memory Audit Trail UI | `buildMemoryAuditTrailViewModel` + `MemoryAuditTrailCard`; sorted, date-grouped, filterable audit log on the Memory page | ✅ landed (Undo / revert still planned) |
-| SQLite Accepted Memory Storage | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration + commands, TS bridge | ✅ landed (desktop-mode routing is a follow-up) |
+| SQLite Accepted Memory Storage | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration + commands, TS bridge, runtime-aware repository routing | ✅ landed |
 | Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | Resume Prompt + Reports ✅ landed; `.mori v0` slice ✅ landed; review-on-import planned |
 | Stale Memory Review + Contradiction Review | Detect pruned-source references and conflicting decisions; emit them as `staleMemory` / `contradiction` proposal kinds | designed |
 | Queryable Memory | Local cited search over accepted memories with citations | research |

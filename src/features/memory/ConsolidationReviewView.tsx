@@ -29,6 +29,11 @@ import {
   buildAcceptedMemoriesFromReviewDraft,
   type AcceptedMemoryApplySummary,
 } from "../../lib/project-memory/acceptedMemoryPersistence";
+import {
+  describeAcceptedMemoryStorageSource,
+  getAcceptedMemoryRepository,
+  type AcceptedMemoryStorageSource,
+} from "../../lib/project-memory/acceptedMemoryRepository";
 import type {
   MemoryProposalKind,
   MemoryProposal,
@@ -146,11 +151,20 @@ export function ConsolidationReviewView() {
         kind: "saved";
         summary: AcceptedMemoryApplySummary;
         savedMemories: StoredAcceptedProjectMemory[];
+        source: AcceptedMemoryStorageSource;
+        fellBack: boolean;
+        fallbackReason?: string;
       }
     | { kind: "error"; message: string }
   >({ kind: "idle" });
 
   const projectId = viewModel.projectId || "default";
+  // Storage destination the apply pass will use, before it runs. The
+  // banner shows the actual source (with a fallback note) after apply.
+  const expectedStorageSource: AcceptedMemoryStorageSource = useMemo(
+    () => (getAcceptedMemoryRepository().isDesktop() ? "desktop-sqlite" : "browser-local-storage"),
+    [],
+  );
   const hasAcceptedOrEdited = useMemo(
     () => Object.values(reviewState.entries).some((entry) =>
       entry.status === "accepted" || entry.status === "edited" ||
@@ -159,22 +173,38 @@ export function ConsolidationReviewView() {
     [reviewState],
   );
 
-  function handleApply() {
+  async function handleApply() {
     if (applyState.kind === "saving") return;
     setApplyState({ kind: "saving" });
     try {
+      const memoryRepository = getAcceptedMemoryRepository();
+      const existing = await memoryRepository.listAcceptedProjectMemories(projectId);
       const result = buildAcceptedMemoriesFromReviewDraft({
         projectId,
         reviewState,
         appliedAt: new Date().toISOString(),
-        existingMemories: repository.listAcceptedProjectMemories(projectId),
+        existingMemories: existing.data,
         runId: reviewState.draftId,
       });
-      const saved = repository.saveAcceptedProjectMemories(result.memoriesToSave);
-      for (const action of result.reviewActionsToAppend) {
-        repository.appendMemoryReviewAction(action);
-      }
-      setApplyState({ kind: "saved", summary: result.summary, savedMemories: saved });
+      const savedResult = await memoryRepository.saveAcceptedProjectMemories(
+        projectId,
+        result.memoriesToSave,
+      );
+      const actionsResult = await memoryRepository.appendMemoryReviewActions(
+        projectId,
+        result.reviewActionsToAppend,
+      );
+      // The pass is honest about where it actually landed: if either
+      // write fell back to localStorage, the banner says so.
+      const fellBack = savedResult.fellBack || actionsResult.fellBack;
+      setApplyState({
+        kind: "saved",
+        summary: result.summary,
+        savedMemories: savedResult.data,
+        source: fellBack ? "browser-local-storage" : savedResult.source,
+        fellBack,
+        fallbackReason: savedResult.fallbackReason ?? actionsResult.fallbackReason,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setApplyState({ kind: "error", message });
@@ -208,6 +238,7 @@ export function ConsolidationReviewView() {
         counts={counts}
         canApply={hasAcceptedOrEdited}
         applyState={applyState}
+        expectedSource={expectedStorageSource}
         onApply={handleApply}
         onBackToMemory={() => setCurrentView("memory")}
       />
@@ -284,6 +315,7 @@ function ApplyBoundaryBanner({
   counts,
   canApply,
   applyState,
+  expectedSource,
   onApply,
   onBackToMemory,
 }: {
@@ -292,8 +324,16 @@ function ApplyBoundaryBanner({
   applyState:
     | { kind: "idle" }
     | { kind: "saving" }
-    | { kind: "saved"; summary: AcceptedMemoryApplySummary; savedMemories: StoredAcceptedProjectMemory[] }
+    | {
+        kind: "saved";
+        summary: AcceptedMemoryApplySummary;
+        savedMemories: StoredAcceptedProjectMemory[];
+        source: AcceptedMemoryStorageSource;
+        fellBack: boolean;
+        fallbackReason?: string;
+      }
     | { kind: "error"; message: string };
+  expectedSource: AcceptedMemoryStorageSource;
   onApply: () => void;
   onBackToMemory: () => void;
 }) {
@@ -302,12 +342,15 @@ function ApplyBoundaryBanner({
     <div className="consolidation-review-apply" role="status" aria-live="polite">
       <header>
         <strong>Apply accepted memories</strong>
-        <Badge tone="purple">Browser localStorage</Badge>
+        <Badge tone="purple">{describeAcceptedMemoryStorageSource(expectedSource)}</Badge>
       </header>
       <p>
-        수락 / 편집 / 관찰 / 연기 상태의 제안이 브라우저 localStorage에 영구 저장됩니다. 데스크톱
-        SQLite Accepted Memory Storage와 <code>.mori v0</code> export, Resume / Reports 통합은 별도
-        capability로 예정되어 있습니다. 폐기한 제안은 감사 로그에만 기록됩니다.
+        수락 / 편집 / 관찰 / 연기 상태의 제안이{" "}
+        {expectedSource === "desktop-sqlite"
+          ? "데스크톱 SQLite에 영구 저장됩니다"
+          : "브라우저 localStorage에 영구 저장됩니다"}
+        . 폐기한 제안은 감사 로그에만 기록됩니다. 모든 검토 액션은 로컬에만 저장됩니다 — 클라우드
+        동기화 / 외부 계정 접근 없음.
       </p>
       <dl className="consolidation-review-counts">
         <CountTile label="제안" value={counts.proposed} />
@@ -335,12 +378,20 @@ function ApplyBoundaryBanner({
       </footer>
       {applyState.kind === "saved" ? (
         <div className="consolidation-review-apply-result tone-ok">
-          <strong>{applyState.summary.savedMemoryCount}건의 메모리를 저장했습니다.</strong>
+          <strong>
+            {applyState.summary.savedMemoryCount}건의 메모리를{" "}
+            {describeAcceptedMemoryStorageSource(applyState.source)}에 저장했습니다.
+          </strong>
           <span>
-            감사 로그 {applyState.summary.reviewActionCount}건 기록됨. Project Memory의 Accepted Project
-            Memories 카드에서 확인할 수 있습니다. Resume Prompt / Reports 연동은 다음 capability에서
-            구현됩니다.
+            감사 로그 {applyState.summary.reviewActionCount}건 기록됨. Project Memory의 Accepted
+            Project Memories 카드와 Resume Prompt / Reports에서 확인할 수 있습니다.
           </span>
+          {applyState.fellBack ? (
+            <span className="consolidation-review-apply-fallback">
+              데스크톱 SQLite 저장에 실패해 브라우저 localStorage로 안전하게 대체했습니다
+              {applyState.fallbackReason ? `: ${applyState.fallbackReason}` : "."}
+            </span>
+          ) : null}
           <div className="consolidation-review-apply-actions">
             <Button onClick={onBackToMemory}>Memory로 돌아가기</Button>
           </div>
