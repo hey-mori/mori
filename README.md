@@ -89,10 +89,22 @@ npm run tauri:dev
 ## Validate
 
 ```bash
-npm run typecheck
-npm test
-npm run build
+npm run check:full     # typecheck + full test suite — run before every commit
+npm run check:release  # adds `npm run build` — run before push / milestone handoff
 ```
+
+Faster paths during iteration:
+
+```bash
+npm run check:quick    # typecheck + changed tests only
+npm run test:changed   # git-aware test run
+npm run test:watch     # interactive watch mode
+```
+
+The original commands (`npm run typecheck`, `npm test`, `npm run build`)
+still work and behave the same. See
+[docs/development-validation.md](docs/development-validation.md) for the
+full workflow and timing breakdown.
 
 ## Current Limitations
 
