@@ -55,11 +55,12 @@ consolidated memory can travel with an exported `.mori v0` package.
 - **Validation.** `validateMoriPackage` accepts an absent field and
   rejects a present non-array value.
 - **No auto-merge on import.** Carrying memory in a package does not
-  make it durable on the importing device. The import path (a future
-  capability) re-enters these records for review, preserving the
-  review-before-apply rule. Today the slice round-trips through
-  serialize / deserialize; the review-on-import surface is the next
-  step.
+  make it durable on the importing device. `buildImportedMemoryProposals`
+  (`src/lib/project-memory/importedMemoryReview.ts`) converts the
+  slice into reviewable proposals — deduplicated against the project's
+  existing accepted memories — that re-enter the Consolidation Review
+  flow. The pure helper has landed; wiring a `.mori` file import entry
+  point into the Review surface is the next step.
 - The `auditTrail` slice (accepted-memory `ReviewAction` rows) is not
   carried yet — a later addition alongside the import-review surface.
 

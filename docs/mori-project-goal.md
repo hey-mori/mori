@@ -293,6 +293,13 @@ that is called out.
   before/after snapshot. Resume Prompt and Reports exclude stale /
   contradicted memories from guidance; Project Memory still shows
   them as non-current memory.
+- `.mori` review-on-import helper: `buildImportedMemoryProposals`
+  (`src/lib/project-memory/importedMemoryReview.ts`) converts a
+  `.mori v0` package's `consolidatedMemories` into reviewable
+  proposals, deduplicated against the project's existing accepted
+  memories by `originProposalIds` overlap or shared normalised title.
+  Imported memory is never auto-merged — it re-enters the
+  Consolidation Review flow. (The import UI entry point is pending.)
 - `SessionPersistenceService` routes between browser localStorage
   and the Tauri SQLite bridge. Desktop mode prefers SQLite as the
   source of truth for active session hydration; Load actions for
@@ -321,11 +328,12 @@ against the repository.
   reliable bridge that captures live Claude Code / Codex CLI / Git
   activity into `~/.mori/connectors/` for a real workflow is not
   shipped. The user must still run the template scripts manually.
-- **`.mori` accepted-memory review-on-import.** The `.mori v0`
-  package now carries a `consolidatedMemories` slice and round-trips
-  it, but there is no UI to import a `.mori` package and re-review
-  its accepted memories as proposals before they become durable. The
-  `auditTrail` slice is also not carried yet.
+- **`.mori` accepted-memory import UI.** The `.mori v0` package
+  carries a `consolidatedMemories` slice and `buildImportedMemoryProposals`
+  converts it into deduplicated reviewable proposals, but there is no
+  UI entry point to pick / open a `.mori` package and route those
+  proposals into the Consolidation Review surface. The `auditTrail`
+  slice is also not carried yet.
 - **Undo / revert from the audit log.** The Memory Audit Trail UI
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and
