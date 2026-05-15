@@ -7026,6 +7026,30 @@ pre {
   margin-top: 2px;
 }
 
+.memory-summary-prompt-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 6px 0;
+  font-size: 11.5px;
+}
+
+.memory-summary-prompt-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #4b4470;
+}
+
+.memory-summary-prompt-controls select {
+  padding: 4px 8px;
+  font-size: 11.5px;
+  border: 1px solid #d9d0ff;
+  border-radius: 6px;
+  background: #fff;
+  color: #2c2549;
+}
+
 .memory-summary-prompt {
   margin: 0;
   padding: 10px 12px;

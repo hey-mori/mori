@@ -115,6 +115,66 @@ the user understands why the rollup may underreport.
 
 ---
 
+## Resume prompt
+
+The Memory page's right summary panel now renders a Project Memory
+based resume prompt via
+`buildProjectMemoryResumePrompt(input)` in
+`src/lib/project-memory/projectMemoryResumePrompt.ts`. The builder is
+a pure derivation over `ProjectMemoryViewModel` — same data the page
+already shows, packaged into a copy-pastable continuation prompt.
+
+Inputs:
+
+- `memory` — the `ProjectMemoryViewModel`.
+- `audience` — `"self"` / `"claude"` / `"codex"` / `"chatgpt"` /
+  `"handoff"`. Selects the preamble + closing language.
+- `privacyMode` — `"normal"` / `"summaryOnly"` / `"clientSafe"`.
+- `includeSections?` — subset of `summary` / `recentSessions` /
+  `decisions` / `issues` / `evidence` / `nextActions` /
+  `reimports` / `limitations`. Defaults to the full set.
+- `maxItems?` — per-section cap, default 5.
+
+Output:
+
+- `title` — short label.
+- `body` — final rendered prompt.
+- `sections[]` — structured per-section breakdown (heading + lines).
+- `dataBasisLabel` — what data was actually aggregated.
+- `warnings[]` — echoed from the view model so the UI can render
+  limitations alongside the prompt.
+
+Audience variants:
+
+| Audience | Tone / focus                                                                                              |
+| -------- | --------------------------------------------------------------------------------------------------------- |
+| `self`   | concise continuation note. "Quick continuation context. Pick one item."                                   |
+| `claude` | coding-agent preamble: read repository files first, confirm priorities, do not start unrelated milestones. |
+| `codex`  | CLI / implementation focus: run `check:full` before commit, `check:release` before push.                  |
+| `chatgpt`| planning / review focus: lay out reasoning + at least one alternative before suggesting code.             |
+| `handoff`| neutral team-update preamble; strips tool-specific commands.                                              |
+
+Privacy modes:
+
+| Mode          | Behaviour                                                                                                            |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `normal`      | Include source titles and session titles. Secret-like values still get redacted via `containsLikelySecret`.          |
+| `summaryOnly` | Drop decision detail and per-source titles; keep counts and section structure.                                       |
+| `clientSafe`  | Strip local paths, URLs, connector identity triplets; replace evidence source titles with a generic label; drop tool-specific instructions in the preamble. |
+
+What the prompt NEVER includes:
+
+- raw connector JSONL or transcript text,
+- `source.uri` (URLs / local paths),
+- session IDs in user-facing copy (only titles),
+- secret-shaped values (regardless of mode),
+- false claims of "all sessions checked" when `dataBasis` is partial /
+  metadata-only.
+
+The legacy `buildFollowUpPrompt(view, savedSessionCount, …)` helper
+remains exported for backward compatibility; existing tests still
+exercise it. The Memory page no longer calls it.
+
 ## Cross-session aggregation
 
 When `loadedSessions` contributes real bodies, the view-model builder

@@ -569,6 +569,25 @@ project.mori
 
 The package should distinguish raw evidence from normalized AI-derived records and should make retention/redaction decisions visible.
 
+## Project Memory resume prompt
+
+```
+ProjectMemoryViewModel ──► buildProjectMemoryResumePrompt(input) ──► ProjectMemoryResumePrompt
+                                  │ audience: self|claude|codex|chatgpt|handoff
+                                  │ privacyMode: normal|summaryOnly|clientSafe
+                                  │ includeSections / maxItems
+                                  ▼
+                          ProjectMemorySummaryPanel
+                          (audience + privacy <select>s; copy button)
+```
+
+Pure derivation. No LLM call, no IO. The same view-model that powers
+the Memory page cards drives the prompt. Sanitization reuses the
+`containsLikelySecret` helper from the connectors module so secret
+detection is consistent across surfaces. Reports has its own separate
+report builder (`src/lib/report/reportBuilder.ts`) — the resume prompt
+does not replace it.
+
 ## Project Memory aggregation
 
 Project Memory composes a cross-session view over already-persisted local

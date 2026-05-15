@@ -18,7 +18,6 @@ import type {
   StoredSessionSummary,
 } from "../../lib/storage/storageTypes";
 import {
-  buildFollowUpPrompt,
   deriveProjectMemoryStats,
   getDecisionTimeline,
   getProjectMemorySummary,
@@ -26,6 +25,11 @@ import {
   type DerivedSession,
   type ProjectMemoryDataScope,
 } from "../../lib/project-memory/projectMemory";
+import {
+  buildProjectMemoryResumePrompt,
+  type ProjectMemoryResumePromptAudience,
+  type ProjectMemoryResumePromptPrivacy,
+} from "../../lib/project-memory/projectMemoryResumePrompt";
 import { deriveSavedReportAvailability } from "../../lib/memory/projectMemoryContext";
 import {
   buildProjectMemoryViewModel,
@@ -250,16 +254,18 @@ export function MemoryView() {
       }),
     [view, primaryScope, savedSessions, packageDrafts.length, hasAnalysis],
   );
-  const followUpPrompt = useMemo(
+  const [resumeAudience, setResumeAudience] = useState<ProjectMemoryResumePromptAudience>("claude");
+  const [resumePrivacy, setResumePrivacy] = useState<ProjectMemoryResumePromptPrivacy>("normal");
+  const resumePrompt = useMemo(
     () =>
-      buildFollowUpPrompt({
-        view,
-        savedSessionCount: savedSessions.filter((entry) => !entry.isCurrent).length,
-        reportCount: packageDrafts.length,
-        hasAnalysis,
+      buildProjectMemoryResumePrompt({
+        memory: viewModel,
+        audience: resumeAudience,
+        privacyMode: resumePrivacy,
       }),
-    [view, savedSessions, packageDrafts.length, hasAnalysis],
+    [viewModel, resumeAudience, resumePrivacy],
   );
+  const followUpPrompt = resumePrompt.body;
 
   function handleOpenSession(entry: DerivedSession) {
     if (entry.isCurrent) {
@@ -346,6 +352,10 @@ export function MemoryView() {
         <ProjectMemorySummaryPanel
           summary={projectMemorySummary}
           followUpPrompt={followUpPrompt}
+          audience={resumeAudience}
+          privacyMode={resumePrivacy}
+          onAudienceChange={setResumeAudience}
+          onPrivacyModeChange={setResumePrivacy}
           onStartFollowUp={() => setCurrentView("start")}
         />
       </div>

@@ -9,6 +9,14 @@ import {
   issueStatusTone,
   type ProjectMemorySummary,
 } from "../../lib/project-memory/projectMemory";
+import {
+  PROJECT_MEMORY_RESUME_AUDIENCES,
+  PROJECT_MEMORY_RESUME_PRIVACY_MODES,
+  describeAudience,
+  describePrivacyMode,
+  type ProjectMemoryResumePromptAudience,
+  type ProjectMemoryResumePromptPrivacy,
+} from "../../lib/project-memory/projectMemoryResumePrompt";
 
 const PRIORITY_TONE: Record<string, "red" | "orange" | "blue"> = {
   high: "red",
@@ -19,10 +27,18 @@ const PRIORITY_TONE: Record<string, "red" | "orange" | "blue"> = {
 export function ProjectMemorySummaryPanel({
   summary,
   followUpPrompt,
+  audience,
+  privacyMode,
+  onAudienceChange,
+  onPrivacyModeChange,
   onStartFollowUp,
 }: {
   summary: ProjectMemorySummary;
   followUpPrompt: string;
+  audience: ProjectMemoryResumePromptAudience;
+  privacyMode: ProjectMemoryResumePromptPrivacy;
+  onAudienceChange: (audience: ProjectMemoryResumePromptAudience) => void;
+  onPrivacyModeChange: (privacy: ProjectMemoryResumePromptPrivacy) => void;
   onStartFollowUp: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -106,7 +122,39 @@ export function ProjectMemorySummaryPanel({
       </section>
 
       <section className="memory-summary-section">
-        <SectionHeader title="Follow-up prompt" hint="새 AI 세션에 붙여넣기" />
+        <SectionHeader title="Resume prompt" hint="Project Memory 기반 · 새 세션에 붙여넣기" />
+        <div className="memory-summary-prompt-controls">
+          <label>
+            <span>대상</span>
+            <select
+              value={audience}
+              onChange={(event) =>
+                onAudienceChange(event.target.value as ProjectMemoryResumePromptAudience)
+              }
+            >
+              {PROJECT_MEMORY_RESUME_AUDIENCES.map((value) => (
+                <option key={value} value={value}>
+                  {describeAudience(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>공개 범위</span>
+            <select
+              value={privacyMode}
+              onChange={(event) =>
+                onPrivacyModeChange(event.target.value as ProjectMemoryResumePromptPrivacy)
+              }
+            >
+              {PROJECT_MEMORY_RESUME_PRIVACY_MODES.map((value) => (
+                <option key={value} value={value}>
+                  {describePrivacyMode(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <pre className="memory-summary-prompt">{followUpPrompt}</pre>
         <div className="memory-summary-actions">
           <Button icon={copied ? Check : ClipboardCopy} onClick={handleCopy} variant="primary">

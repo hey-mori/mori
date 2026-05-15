@@ -198,6 +198,26 @@ that ran without saved-session history is downgraded to
 The summary can optionally ride along on `StoredSessionImport` so the
 Evidence Hub row keeps its re-import badge after reload.
 
+## Cross-session resume prompt (Implemented)
+
+The Memory page's resume / follow-up prompt is now built from
+`ProjectMemoryViewModel` rather than the legacy active-session-only
+helper. The prompt carries cross-session decisions, recurring issues,
+key evidence, pending next actions, recent sessions, re-import
+activity, and explicit data-basis limitations. Audience selectors
+(`self` / `claude` / `codex` / `chatgpt` / `handoff`) tailor the
+preamble + closing; privacy modes (`normal` / `summaryOnly` /
+`clientSafe`) sanitise local paths, URLs, connector identity triplets,
+and detailed decision text. The legacy `buildFollowUpPrompt` helper
+remains exported for backward compatibility.
+
+Out of scope this milestone:
+
+- Reports page is unchanged — it keeps its own `reportBuilder.ts`
+  surface.
+- No LLM-generated continuation prompt — output is purely derived
+  from local data.
+
 ## Browser session memory body persistence (Implemented)
 
 Browser-saved Mori sessions now persist a durable
