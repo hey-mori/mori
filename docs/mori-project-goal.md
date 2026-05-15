@@ -229,6 +229,11 @@ that is called out.
   memory" guidance section that outranks the live aggregation;
   stale / contradicted / watching records surface only under
   Limitations.
+- Reports accepted-memory integration: the `buildReportMarkdown`
+  builder exposes a toggleable `consolidatedMemory` section gated by
+  `isReportGuidanceMemory`, which combines the lifecycle gate with an
+  audience-tier check (a memory's `reportEligibility` rank must meet
+  the report type's personal / team / client tier).
 
 **Storage**
 
@@ -268,11 +273,10 @@ against the repository.
   reliable bridge that captures live Claude Code / Codex CLI / Git
   activity into `~/.mori/connectors/` for a real workflow is not
   shipped. The user must still run the template scripts manually.
-- **Resume and Report Memory Integration (Reports half).** The
-  Resume Prompt builder now consumes accepted memories as a reviewed
-  guidance section. The Reports builder still consumes live
-  `ProjectMemoryViewModel` only, and the `.mori v0` package does not
-  yet carry a `consolidatedMemories` slice.
+- **`.mori` package accepted-memory slice.** The Resume Prompt and
+  Reports builders both consume accepted memories now, but the
+  `.mori v0` package does not yet carry a `consolidatedMemories`
+  slice, so accepted memory cannot travel between devices.
 - **SQLite Accepted Memory Storage.** `consolidated_memories` and
   `consolidated_memory_audit` tables, the Rust migration, and the
   load / store command surface are designed but not implemented. No

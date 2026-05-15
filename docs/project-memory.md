@@ -205,9 +205,26 @@ honestly:
 The Memory page passes the project's persisted
 `StoredAcceptedProjectMemory[]` (from
 `BrowserDraftRepository.listAcceptedProjectMemories`) into the
-builder. The Reports builder does not yet consume accepted memory —
-that is the remaining half of the Resume and Report Memory
-Integration capability.
+builder.
+
+### Accepted memory in reports
+
+The Reports builder (`src/lib/report/reportBuilder.ts`) accepts the
+same `acceptedMemories` input. When the `consolidatedMemory` section
+is enabled it renders an **Accepted Project Memory** section gated by
+`isReportGuidanceMemory(memory, type)`: a record appears only when
+its status is `accepted` / `edited`, its kind is not `staleMemory` /
+`contradiction`, and its `reportEligibility` rank meets the report
+type's audience tier (`personal` → personal / work-log reports,
+`team` → team / dev-handoff reports, `clientSafe` → client-safe
+reports, `excluded` → never). Stale / contradicted / watching
+records are counted in a re-review note, never rendered as guidance.
+
+Today the Consolidation Review Surface writes every accepted memory
+with `reportEligibility: "personal"`, so accepted memory surfaces in
+the Personal Retrospective by default; team / client tiers stay
+empty until a sensitivity / eligibility picker lands in the review
+surface.
 
 ## Cross-session aggregation
 
@@ -284,7 +301,7 @@ Capability status:
 | Memory Audit Trail (`ReviewAction` rows + Undo Apply) | designed; not implemented |
 | Stale Memory Review + Contradiction Review | designed; not implemented |
 | Resume Prompt inclusion policy hookup | ✅ landed |
-| Reports inclusion policy hookup | designed; not implemented |
+| Reports inclusion policy hookup | ✅ landed |
 
 ## Where Project Memory sits in the Mori architecture
 

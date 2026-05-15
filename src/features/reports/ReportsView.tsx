@@ -15,6 +15,7 @@ import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { createMoriPackageFromSession, serializeMoriPackage } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -47,6 +48,16 @@ export function ReportsView() {
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
+
+  // Accepted Project Memory records — written by the Consolidation
+  // Review Surface. Reports surface eligible records as a dedicated
+  // section gated by the report's audience tier.
+  const reportRepository = useMemo(() => createBrowserDraftRepository(), []);
+  const reportProjectId = view.project.id || "default";
+  const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
+  useEffect(() => {
+    setAcceptedMemories(reportRepository.listAcceptedProjectMemories(reportProjectId));
+  }, [reportRepository, reportProjectId]);
 
   const status = useMemo(
     () =>
@@ -144,7 +155,11 @@ export function ReportsView() {
           <ReportsCapabilityStrip />
         </section>
 
-        <ReportBuilderPanel view={view} resumePromptOverride={resumePromptText} />
+        <ReportBuilderPanel
+          view={view}
+          resumePromptOverride={resumePromptText}
+          acceptedMemories={acceptedMemories}
+        />
       </div>
     </div>
   );

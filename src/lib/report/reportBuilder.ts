@@ -9,6 +9,8 @@ import type {
 } from "../../domain/types";
 import { eventTypeLabels } from "../../domain/constants";
 import { getReportEvidenceSummary } from "../sources/traceability";
+import { isMemoryFlaggedForReview } from "../project-memory/projectMemoryResumePrompt";
+import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 
 /**
  * Report builder = the right-side panel on the Reports page. It owns
@@ -26,6 +28,7 @@ export type ReportType =
 
 export type ReportSectionId =
   | "summary"
+  | "consolidatedMemory"
   | "timeline"
   | "decisions"
   | "issues"
@@ -68,7 +71,15 @@ export const REPORT_TYPE_DEFINITIONS: Array<{
     label: "Personal Retrospective",
     description: "내 작업을 되돌아보고 다음 세션 준비를 정리합니다.",
     audience: "본인 (내부 메모)",
-    defaultSections: ["summary", "timeline", "decisions", "issues", "evidence", "nextActions"],
+    defaultSections: [
+      "summary",
+      "consolidatedMemory",
+      "timeline",
+      "decisions",
+      "issues",
+      "evidence",
+      "nextActions",
+    ],
     defaultPrivacy: { clientSafe: false, excludeRawTranscripts: false, excludeSourceDetails: false },
   },
   {
@@ -111,6 +122,11 @@ export const SECTION_DEFINITIONS: Array<{
   description: string;
 }> = [
   { id: "summary", label: "Summary", description: "세션 한 줄 요약 + 카운트" },
+  {
+    id: "consolidatedMemory",
+    label: "Accepted Memory",
+    description: "검토·승인된 프로젝트 메모리 (audience 등급에 따라 노출)",
+  },
   { id: "timeline", label: "Timeline", description: "주요 이벤트 시간 순 정리" },
   { id: "decisions", label: "Decisions", description: "결정과 이유" },
   { id: "issues", label: "Issues", description: "Open / In-progress 이슈" },
@@ -126,6 +142,13 @@ export type ReportInput = {
   generatedAt?: string;
   /** Override the resume prompt text (e.g. when analysis.summary.resumePrompt is available). */
   resumePromptOverride?: string;
+  /**
+   * Accepted project memory records (reviewed, durable). When the
+   * `consolidatedMemory` section is enabled, records eligible for the
+   * report's audience tier render as a dedicated section. Optional —
+   * omitting it produces the live-session-only report, as before.
+   */
+  acceptedMemories?: readonly StoredAcceptedProjectMemory[];
 };
 
 export type ReportPayload = {
@@ -177,6 +200,30 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
     lines.push(view.summary.sessionSummary || "(세션 요약이 아직 생성되지 않았습니다.)");
     lines.push("");
     lines.push(`- 이벤트 ${view.events.length}건 · 이슈 ${view.issues.length}건 · 결정 ${view.decisions.length}건 · 다음 액션 ${view.nextActions.length}건`);
+    lines.push("");
+  }
+
+  if (sections.has("consolidatedMemory")) {
+    lines.push("## Accepted Project Memory");
+    lines.push("");
+    const accepted = input.acceptedMemories ?? [];
+    const guidance = accepted.filter((memory) => isReportGuidanceMemory(memory, type));
+    const flaggedCount = accepted.filter(isMemoryFlaggedForReview).length;
+    if (accepted.length === 0) {
+      lines.push("_검토된 프로젝트 메모리가 없습니다._");
+    } else if (guidance.length === 0) {
+      lines.push("_이 리포트 유형(audience)에 노출 가능한 검토된 메모리가 없습니다._");
+    } else {
+      for (const memory of sortAcceptedMemories(guidance)) {
+        lines.push(renderAcceptedMemory(memory, privacy));
+      }
+    }
+    if (flaggedCount > 0) {
+      lines.push("");
+      lines.push(
+        `_재검토 필요: stale / contradicted / watching 메모리 ${flaggedCount}건은 가이드에서 제외했습니다._`,
+      );
+    }
     lines.push("");
   }
 
@@ -328,6 +375,83 @@ function renderDecision(decision: Decision, privacy: ReportPrivacyOptions): stri
     ? `\n  - 영향: ${decision.impact.join(", ")}`
     : "";
   return `${head}${rationale}${rejected}${impact}`;
+}
+
+// ─── accepted-memory report inclusion policy ──────────────────────────
+
+/**
+ * Audience tier of each report type. A report may carry an accepted
+ * memory only when the memory's `reportEligibility` rank is at least
+ * the report's tier — so a `personal`-only memory never reaches a team
+ * or client-facing report.
+ */
+const REPORT_AUDIENCE_TIER: Record<ReportType, 1 | 2 | 3> = {
+  personalRetrospective: 1,
+  workLog: 1,
+  teamUpdate: 2,
+  devHandoff: 2,
+  clientSafe: 3,
+};
+
+const MEMORY_REPORT_ELIGIBILITY_RANK: Record<
+  StoredAcceptedProjectMemory["reportEligibility"],
+  0 | 1 | 2 | 3
+> = { excluded: 0, personal: 1, team: 2, clientSafe: 3 };
+
+const MEMORY_IMPORTANCE_WEIGHT: Record<"high" | "medium" | "low", number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+const MEMORY_KIND_LABEL: Record<StoredAcceptedProjectMemory["kind"], string> = {
+  promotedDecision: "결정",
+  recurringIssue: "반복 이슈",
+  keyEvidence: "근거",
+  unresolvedRisk: "리스크",
+  contradiction: "상충",
+  staleMemory: "오래된 메모리",
+  nextSessionRecommendation: "다음 세션",
+};
+
+/**
+ * Reports inclusion policy. An accepted memory appears as report
+ * guidance only when it is durable (`accepted` / `edited`), not a
+ * `staleMemory` / `contradiction` kind, and its `reportEligibility`
+ * rank meets the report type's audience tier. Pure predicate —
+ * exported so the UI and tests reuse the exact same rule.
+ */
+export function isReportGuidanceMemory(
+  memory: StoredAcceptedProjectMemory,
+  type: ReportType,
+): boolean {
+  if (memory.status !== "accepted" && memory.status !== "edited") return false;
+  if (memory.kind === "staleMemory" || memory.kind === "contradiction") return false;
+  const rank = MEMORY_REPORT_ELIGIBILITY_RANK[memory.reportEligibility];
+  if (rank === 0) return false;
+  return rank >= REPORT_AUDIENCE_TIER[type];
+}
+
+function sortAcceptedMemories(
+  memories: StoredAcceptedProjectMemory[],
+): StoredAcceptedProjectMemory[] {
+  return [...memories].sort(
+    (a, b) => MEMORY_IMPORTANCE_WEIGHT[a.importance] - MEMORY_IMPORTANCE_WEIGHT[b.importance],
+  );
+}
+
+function renderAcceptedMemory(
+  memory: StoredAcceptedProjectMemory,
+  privacy: ReportPrivacyOptions,
+): string {
+  const kindLabel = MEMORY_KIND_LABEL[memory.kind] ?? memory.kind;
+  const head = `- **${memory.title}** _(${kindLabel} · 중요도 ${memory.importance} · 신뢰도 ${memory.confidence.label})_`;
+  if (privacy.clientSafe) return head;
+  const summary = memory.summary ? `\n  - ${truncate(memory.summary, 240)}` : "";
+  const sessions = memory.sourceSessionIds.length
+    ? `\n  - 근거 세션 ${memory.sourceSessionIds.length}건`
+    : "";
+  return `${head}${summary}${sessions}`;
 }
 
 function renderIssue(issue: Issue, privacy: ReportPrivacyOptions): string {

@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildReportMarkdown,
   DEFAULT_SECTIONS,
+  isReportGuidanceMemory,
   REPORT_TYPE_DEFINITIONS,
   toggleSection,
   type ReportPrivacyOptions,
   type ReportSectionId,
 } from "./reportBuilder";
 import { moriMockSession } from "../../domain/mock-data";
+import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 
 function privacy(overrides: Partial<ReportPrivacyOptions> = {}): ReportPrivacyOptions {
   return { clientSafe: false, excludeRawTranscripts: false, excludeSourceDetails: false, ...overrides };
@@ -187,6 +189,7 @@ describe("REPORT_TYPE_DEFINITIONS", () => {
     expect(new Set(personal.defaultSections)).toEqual(
       new Set<ReportSectionId>([
         "summary",
+        "consolidatedMemory",
         "timeline",
         "decisions",
         "issues",
@@ -194,5 +197,168 @@ describe("REPORT_TYPE_DEFINITIONS", () => {
         "nextActions",
       ]),
     );
+  });
+});
+
+// ─── accepted-memory report integration ───────────────────────────────
+
+function acceptedMemory(
+  overrides: Partial<StoredAcceptedProjectMemory> = {},
+): StoredAcceptedProjectMemory {
+  return {
+    id: "mem-1",
+    projectId: "p-1",
+    kind: "promotedDecision",
+    title: "Keep Import Review as a non-bypassable gate",
+    summary: "Every captured event must pass through Import Review before a session.",
+    status: "accepted",
+    importance: "high",
+    confidence: { label: "high", score: 0.9 },
+    evidenceRefs: [{ kind: "session", sessionId: "s-cur", sessionTitle: "Current sprint" }],
+    sourceSessionIds: ["s-cur", "s-old"],
+    originProposalIds: ["prop-1"],
+    relatedIssueIds: [],
+    relatedDecisionIds: [],
+    proposedAction: "promote",
+    sensitivity: "normal",
+    resumeEligible: true,
+    reportEligibility: "personal",
+    createdAt: "2026-05-10T10:00:00Z",
+    updatedAt: "2026-05-12T10:00:00Z",
+    acceptedAt: "2026-05-12T10:00:00Z",
+    acceptedBy: "local-user",
+    reviewActionIds: ["act-1"],
+    schemaVersion: 1,
+    adapter: "browser-local-storage",
+    ...overrides,
+  };
+}
+
+const WITH_MEMORY = new Set<ReportSectionId>(["consolidatedMemory"]);
+
+describe("buildReportMarkdown — accepted memory section", () => {
+  it("renders an Accepted Project Memory section for an eligible record", () => {
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "personalRetrospective",
+      sections: WITH_MEMORY,
+      privacy: privacy(),
+      acceptedMemories: [acceptedMemory()],
+    });
+    expect(payload.markdown).toContain("## Accepted Project Memory");
+    expect(payload.markdown).toContain("Keep Import Review as a non-bypassable gate");
+    expect(payload.markdown).toContain("Every captured event must pass through Import Review");
+  });
+
+  it("shows a placeholder when no accepted memories are passed", () => {
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "personalRetrospective",
+      sections: WITH_MEMORY,
+      privacy: privacy(),
+    });
+    expect(payload.markdown).toContain("## Accepted Project Memory");
+    expect(payload.markdown).toContain("검토된 프로젝트 메모리가 없습니다");
+  });
+
+  it("omits the section entirely when consolidatedMemory is not selected", () => {
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "personalRetrospective",
+      sections: new Set<ReportSectionId>(["summary"]),
+      privacy: privacy(),
+      acceptedMemories: [acceptedMemory()],
+    });
+    expect(payload.markdown).not.toContain("## Accepted Project Memory");
+  });
+
+  it("excludes a personal-tier memory from a team-tier report", () => {
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "teamUpdate",
+      sections: WITH_MEMORY,
+      privacy: privacy(),
+      acceptedMemories: [acceptedMemory({ reportEligibility: "personal" })],
+    });
+    expect(payload.markdown).toContain("노출 가능한 검토된 메모리가 없습니다");
+    expect(payload.markdown).not.toContain("Keep Import Review as a non-bypassable gate");
+  });
+
+  it("includes a team-tier memory in a team-tier report", () => {
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "teamUpdate",
+      sections: WITH_MEMORY,
+      privacy: privacy(),
+      acceptedMemories: [acceptedMemory({ reportEligibility: "team" })],
+    });
+    expect(payload.markdown).toContain("Keep Import Review as a non-bypassable gate");
+  });
+
+  it("only admits clientSafe-tier memories into a client-safe report", () => {
+    const teamMemory = acceptedMemory({ id: "m-team", reportEligibility: "team" });
+    const clientMemory = acceptedMemory({
+      id: "m-client",
+      title: "Client-shareable decision",
+      reportEligibility: "clientSafe",
+    });
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "clientSafe",
+      sections: WITH_MEMORY,
+      privacy: privacy({ clientSafe: true }),
+      acceptedMemories: [teamMemory, clientMemory],
+    });
+    expect(payload.markdown).toContain("Client-shareable decision");
+    expect(payload.markdown).not.toContain("Keep Import Review as a non-bypassable gate");
+  });
+
+  it("drops the summary detail under client-safe privacy", () => {
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "clientSafe",
+      sections: WITH_MEMORY,
+      privacy: privacy({ clientSafe: true }),
+      acceptedMemories: [acceptedMemory({ reportEligibility: "clientSafe" })],
+    });
+    expect(payload.markdown).toContain("Keep Import Review as a non-bypassable gate");
+    expect(payload.markdown).not.toContain("Every captured event must pass through Import Review");
+  });
+
+  it("excludes stale / contradiction kinds and flags them for re-review", () => {
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "personalRetrospective",
+      sections: WITH_MEMORY,
+      privacy: privacy(),
+      acceptedMemories: [
+        acceptedMemory({ id: "m-stale", kind: "staleMemory" }),
+        acceptedMemory({ id: "m-conflict", kind: "contradiction" }),
+      ],
+    });
+    expect(payload.markdown).toContain("노출 가능한 검토된 메모리가 없습니다");
+    expect(payload.markdown).toMatch(/재검토 필요.*2건/);
+  });
+
+  it("excludes an explicitly excluded memory from every report", () => {
+    const payload = buildReportMarkdown({
+      view: moriMockSession,
+      type: "personalRetrospective",
+      sections: WITH_MEMORY,
+      privacy: privacy(),
+      acceptedMemories: [acceptedMemory({ reportEligibility: "excluded" })],
+    });
+    expect(payload.markdown).toContain("노출 가능한 검토된 메모리가 없습니다");
+  });
+
+  it("isReportGuidanceMemory enforces the audience-tier policy", () => {
+    expect(isReportGuidanceMemory(acceptedMemory({ reportEligibility: "personal" }), "personalRetrospective")).toBe(true);
+    expect(isReportGuidanceMemory(acceptedMemory({ reportEligibility: "personal" }), "teamUpdate")).toBe(false);
+    expect(isReportGuidanceMemory(acceptedMemory({ reportEligibility: "team" }), "teamUpdate")).toBe(true);
+    expect(isReportGuidanceMemory(acceptedMemory({ reportEligibility: "team" }), "clientSafe")).toBe(false);
+    expect(isReportGuidanceMemory(acceptedMemory({ reportEligibility: "clientSafe" }), "clientSafe")).toBe(true);
+    expect(isReportGuidanceMemory(acceptedMemory({ reportEligibility: "excluded" }), "personalRetrospective")).toBe(false);
+    expect(isReportGuidanceMemory(acceptedMemory({ status: "watching" }), "personalRetrospective")).toBe(false);
+    expect(isReportGuidanceMemory(acceptedMemory({ kind: "staleMemory" }), "personalRetrospective")).toBe(false);
   });
 });

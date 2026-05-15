@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Toggle } from "../../components/ui/Toggle";
 import type { MoriMockSession } from "../../domain/types";
+import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import {
   buildReportMarkdown,
   DEFAULT_SECTIONS,
@@ -34,9 +35,11 @@ const FORMAT_DEFS: Array<{
 export function ReportBuilderPanel({
   view,
   resumePromptOverride,
+  acceptedMemories,
 }: {
   view: MoriMockSession;
   resumePromptOverride?: string;
+  acceptedMemories?: readonly StoredAcceptedProjectMemory[];
 }) {
   const [type, setType] = useState<ReportType>("personalRetrospective");
   const typeDef = useMemo(
@@ -76,8 +79,9 @@ export function ReportBuilderPanel({
         sections,
         privacy,
         resumePromptOverride,
+        acceptedMemories,
       }),
-    [view, type, sections, privacy, resumePromptOverride],
+    [view, type, sections, privacy, resumePromptOverride, acceptedMemories],
   );
 
   async function handleCopyMarkdown() {

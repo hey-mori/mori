@@ -387,7 +387,7 @@ same review pattern.
 | **Consolidation Review Surface** | Full-page surface, grouped proposal cards, evidence inspector, local-draft accept / edit / discard / keep-watching / defer / reset actions. No persistence — accepted memories are draft-scoped. | ✅ |
 | **Accepted Memory Persistence** | `StoredAcceptedProjectMemory` + `StoredMemoryReviewAction` repository methods; accepted / edited / watching / deferred memories survive reload via browser localStorage. | ✅ landed (browser) |
 | **SQLite Accepted Memory Storage** | `consolidated_memories` table + Rust migration + load/store commands. | Planned |
-| **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports + `.mori v0` slice planned |
+| **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports ✅ landed; `.mori v0` slice planned |
 | **Stale Memory Review** | Detect pruned-source references and conflicting decisions; surface them as `staleMemory` / `contradiction` proposal kinds. | Planned |
 | **Queryable Memory over accepted memory** | Optional local memory query against accepted memories with citations. | Research |
 
@@ -793,8 +793,24 @@ A future refinement may dedupe a live aggregation row when an
 accepted memory already covers the same kind/title; today both can
 appear, with the accepted section clearly labelled as reviewed.
 
-The **Reports builder** does not yet consume `AcceptedProjectMemory`
-— that is the remaining half of this capability.
+### Reports hookup — landed
+
+The Reports builder
+[`reportBuilder.ts`](../src/lib/report/reportBuilder.ts) accepts the
+same optional `acceptedMemories` input and exposes a toggleable
+`consolidatedMemory` report section. Inclusion is gated by
+`isReportGuidanceMemory(memory, type)`, which combines the lifecycle
+gate (status `accepted` / `edited`, kind not `staleMemory` /
+`contradiction`) with an **audience-tier** check: each report type
+has a tier (personal / team / client) and a memory's
+`reportEligibility` rank must meet it. `excluded` memories never
+appear. Stale / contradicted / watching records are counted in a
+re-review note rather than rendered as guidance, reusing the shared
+`isMemoryFlaggedForReview` predicate.
+
+The remaining part of this capability is the `.mori v0` package
+slice — exporting / importing accepted memories so they travel
+between devices.
 
 ## Contradiction and Staleness signals
 
