@@ -207,8 +207,8 @@ export function MemoryView() {
   // local draft (Accepted Memory Persistence is a separate
   // capability that lands later).
   const consolidationState = useMemo(
-    () => buildProjectMemoryConsolidationState(viewModel),
-    [viewModel],
+    () => buildProjectMemoryConsolidationState(viewModel, { acceptedMemories }),
+    [viewModel, acceptedMemories],
   );
 
   // ─── legacy derivations (kept for the existing cards) ────────────────

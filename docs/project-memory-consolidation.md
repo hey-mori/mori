@@ -412,7 +412,8 @@ same review pattern.
 | **Accepted Memory Persistence** | `StoredAcceptedProjectMemory` + `StoredMemoryReviewAction` repository methods; accepted / edited / watching / deferred memories survive reload via browser localStorage. | ✅ landed (browser) |
 | **SQLite Accepted Memory Storage** | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration, load/store commands, TS bridge, runtime-aware repository routing. | ✅ landed |
 | **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports ✅ landed; `.mori v0` slice ✅ landed (review-on-import planned) |
-| **Stale Memory Review** | Detect pruned-source references and conflicting decisions; surface them as `staleMemory` / `contradiction` proposal kinds. | Planned |
+| **Stale Memory Review** | Scan accepted memories for staleness signals; emit `staleMemory` proposals (`buildStaleMemoryProposals`). | ✅ landed |
+| **Contradiction Review** | Detect conflicting accepted decisions; emit `contradiction` proposals. | Planned |
 | **Queryable Memory over accepted memory** | Optional local memory query against accepted memories with citations. | Research |
 
 Each capability is independent and reversible. Stopping at any
@@ -849,12 +850,45 @@ The remaining part of this capability is the `.mori v0` package
 slice — exporting / importing accepted memories so they travel
 between devices.
 
-## Contradiction and Staleness signals
+## Stale Memory Review — landed
 
-The Consolidation Proposal Preview helper does not yet emit
-`contradiction` or `staleMemory` kinds; the design specifies how
-they will be detected when Stale Memory Review and Contradiction
-Review ship:
+`buildStaleMemoryProposals`
+(`src/lib/project-memory/staleMemoryReview.ts`) is a pure helper that
+scans accepted project memories for staleness signals and emits
+`staleMemory` `MemoryProposal`s. It **never** marks a memory stale in
+durable storage — it produces review candidates only.
+
+Signals, strongest first (one proposal per memory, strongest signal
+wins):
+
+| Signal | Detection | Confidence | `proposedAction` |
+| ------ | --------- | ---------- | ---------------- |
+| Supersession / retirement | `status` is `superseded` or `retired` | high (0.9) | `markStale` |
+| Explicit reviewer note | `reviewNote` contains a stale / revisit keyword | medium (0.6) | `markStale` |
+| Time-only fallback | `kind === "nextSessionRecommendation"` and `updatedAt` is older than 30 days | low (0.3) | `keepWatching` |
+
+Time decay is **only** applied to next-session recommendations —
+there is no blanket time-based decay of decisions, evidence, or
+risks. Every proposal carries the accepted memory's own evidence
+refs, source session ids, and related ids; no connector logs or
+transcript text are copied (a short reviewer-note excerpt is the only
+free text).
+
+`buildProjectMemoryConsolidationState(memory, { acceptedMemories })`
+merges these proposals into the consolidation preview, so the Memory
+page preview card and the Consolidation Review Surface surface stale
+candidates alongside the view-model-derived proposals. The
+Consolidation Review Surface and `MemoryView` load accepted memories
+through the runtime-aware `AcceptedMemoryRepository`.
+
+## Contradiction and future staleness signals
+
+Contradiction Review is not implemented yet, and Stale Memory Review
+covers the three signals above — supersession / retirement, an
+explicit reviewer note, and the next-session time fallback. The table
+below specifies the **richer** detection signals still to come (the
+`contradiction` kind, plus deeper staleness signals beyond the three
+that landed):
 
 | Signal | Detection | Resulting proposal |
 | ------ | --------- | ------------------ |

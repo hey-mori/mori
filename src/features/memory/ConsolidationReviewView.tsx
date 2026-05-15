@@ -118,9 +118,26 @@ export function ConsolidationReviewView() {
     [view, mode, hasAnalysis, browserSessionSummaries, sqliteSessions, importsBySessionId, packageDrafts],
   );
 
+  const projectId = viewModel.projectId || "default";
+
+  // Accepted memories drive Stale Memory Review. Loaded through the
+  // runtime-aware repository so desktop mode reads from SQLite.
+  const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void getAcceptedMemoryRepository()
+      .listAcceptedProjectMemories(projectId)
+      .then((result) => {
+        if (!cancelled) setAcceptedMemories(result.data);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   const consolidationState = useMemo(
-    () => buildProjectMemoryConsolidationState(viewModel),
-    [viewModel],
+    () => buildProjectMemoryConsolidationState(viewModel, { acceptedMemories }),
+    [viewModel, acceptedMemories],
   );
   const proposals = consolidationState.preview?.proposals ?? [];
 
@@ -158,7 +175,6 @@ export function ConsolidationReviewView() {
     | { kind: "error"; message: string }
   >({ kind: "idle" });
 
-  const projectId = viewModel.projectId || "default";
   // Storage destination the apply pass will use, before it runs. The
   // banner shows the actual source (with a fallback note) after apply.
   const expectedStorageSource: AcceptedMemoryStorageSource = useMemo(

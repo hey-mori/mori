@@ -271,6 +271,13 @@ that is called out.
   Reports accepted-memory section — SQLite in Tauri desktop mode,
   localStorage in browser mode, with an honest, visible localStorage
   fallback when a SQLite call fails.
+- Stale Memory Review: `buildStaleMemoryProposals`
+  (`src/lib/project-memory/staleMemoryReview.ts`) scans accepted
+  memories and emits `staleMemory` proposals — supersession /
+  retirement (high confidence), an explicit stale / revisit reviewer
+  note (medium), or a next-session recommendation older than 30 days
+  (low). Proposals only — no durable write. Merged into the
+  consolidation preview via `buildProjectMemoryConsolidationState`.
 - `SessionPersistenceService` routes between browser localStorage
   and the Tauri SQLite bridge. Desktop mode prefers SQLite as the
   source of truth for active session hydration; Load actions for
@@ -308,11 +315,8 @@ against the repository.
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and
   not implemented.
-- **Stale Memory Review.** `staleMemory` is reserved on the proposal
-  kind union but the Consolidation Proposal Preview helper does not
-  emit it yet.
 - **Contradiction Review.** `contradiction` is reserved on the
-  proposal kind union but the helper does not emit it yet.
+  proposal kind union but no helper emits it yet.
 - **Queryable Memory.** No local natural-language query over
   accepted memory + evidence. Resume Prompt is the only synthesis
   surface today.

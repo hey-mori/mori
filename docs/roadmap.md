@@ -223,7 +223,9 @@ runtime-aware repository routing), Memory Audit Trail ✅
 (append-only review actions + audit log UI on the Memory page;
 Undo / revert still planned), Resume and Report Memory Integration
 ✅ (Resume Prompt + Reports + `.mori v0` slice; review-on-import
-planned), Stale Memory Review + Contradiction Review (designed).
+planned), Stale Memory Review ✅ (`buildStaleMemoryProposals` —
+supersession / retirement, reviewer-note, and next-session time
+signals), Contradiction Review (designed).
 
 ### Phase 0 — Explicit import memory loop (Implemented)
 
@@ -276,7 +278,8 @@ Sub-phase status:
 | Memory Audit Trail UI | `buildMemoryAuditTrailViewModel` + `MemoryAuditTrailCard`; sorted, date-grouped, filterable audit log on the Memory page | ✅ landed (Undo / revert still planned) |
 | SQLite Accepted Memory Storage | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration + commands, TS bridge, runtime-aware repository routing | ✅ landed |
 | Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | Resume Prompt + Reports ✅ landed; `.mori v0` slice ✅ landed; review-on-import planned |
-| Stale Memory Review + Contradiction Review | Detect pruned-source references and conflicting decisions; emit them as `staleMemory` / `contradiction` proposal kinds | designed |
+| Stale Memory Review | Scan accepted memories for staleness signals; emit `staleMemory` proposals (`buildStaleMemoryProposals`) | ✅ landed |
+| Contradiction Review | Detect conflicting accepted decisions; emit `contradiction` proposals | designed |
 | Queryable Memory | Local cited search over accepted memories with citations | research |
 
 ### Phase 3 — Optional local daemon / watched inbox (Planned, opt-in)

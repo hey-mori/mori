@@ -7,6 +7,7 @@ import {
   emptyProjectMemoryViewModel,
   type ProjectMemoryViewModel,
 } from "./projectMemoryModel";
+import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 
 function base(overrides: Partial<ProjectMemoryViewModel> = {}): ProjectMemoryViewModel {
   return {
@@ -295,7 +296,56 @@ describe("buildProjectMemoryConsolidationState", () => {
     // must lead.
     expect(state.topProposalKinds[0]).toBe("promotedDecision");
   });
+
+  it("merges Stale Memory Review proposals when accepted memories are supplied", () => {
+    const withoutStale = buildProjectMemoryConsolidationState(base());
+    const withStale = buildProjectMemoryConsolidationState(base(), {
+      acceptedMemories: [acceptedMemory({ id: "mem-ret", status: "retired" })],
+    });
+    expect(withStale.proposalCounts.staleMemory).toBe(1);
+    expect(withStale.proposalCount).toBe(withoutStale.proposalCount + 1);
+    expect(withStale.preview?.proposals.some((p) => p.kind === "staleMemory")).toBe(true);
+  });
+
+  it("emits no stale proposals when no accepted memory shows a signal", () => {
+    const state = buildProjectMemoryConsolidationState(base(), {
+      acceptedMemories: [acceptedMemory()],
+    });
+    expect(state.proposalCounts.staleMemory).toBe(0);
+  });
 });
+
+function acceptedMemory(
+  overrides: Partial<StoredAcceptedProjectMemory> = {},
+): StoredAcceptedProjectMemory {
+  return {
+    id: "mem-1",
+    projectId: "p-1",
+    kind: "promotedDecision",
+    title: "Accepted memory",
+    summary: "Summary",
+    status: "accepted",
+    importance: "medium",
+    confidence: { label: "medium" },
+    evidenceRefs: [],
+    sourceSessionIds: ["s-1"],
+    originProposalIds: ["prop-1"],
+    relatedIssueIds: [],
+    relatedDecisionIds: [],
+    proposedAction: "promote",
+    sensitivity: "normal",
+    resumeEligible: true,
+    reportEligibility: "personal",
+    createdAt: "2026-05-10T10:00:00Z",
+    updatedAt: "2026-05-12T10:00:00Z",
+    acceptedAt: "2026-05-12T10:00:00Z",
+    acceptedBy: "local-user",
+    reviewActionIds: [],
+    schemaVersion: 1,
+    adapter: "browser-local-storage",
+    ...overrides,
+  };
+}
 
 describe("describeProposalKind", () => {
   it("returns a stable human label for every supported kind", () => {
