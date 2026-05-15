@@ -238,9 +238,12 @@ The pure parser / validator / normalizer lives in
 
 - [`connectors/claude-code/sample-event.jsonl`](../../connectors/claude-code/sample-event.jsonl)
 - [`connectors/codex-cli/sample-event.jsonl`](../../connectors/codex-cli/sample-event.jsonl)
+- [`connectors/local-capture/sample-event.jsonl`](../../connectors/local-capture/sample-event.jsonl)
 
 ## Related docs
 
+- [Local connector capture bridge](./local-capture.md) — the explicit
+  `--transcript` / `--note` / `--git-repo` capture script.
 - [Capture surface matrix](./capture-surface-matrix.md) — every capture
   path with honest status.
 - [Desktop / web capture boundaries](./desktop-web-capture.md) — what
