@@ -2,9 +2,14 @@ import { CalendarClock, Lock, MapPin, ShieldCheck } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels } from "../../domain/constants";
-import type { MoriMockSession, SourceRef } from "../../domain/types";
+import type { MoriMockSession } from "../../domain/types";
 import { getEventEvidenceSources, getSourceDisplayStatus } from "../../lib/sources/traceability";
 import type { SourceIntegration } from "../../lib/sources/sourceRegistry";
+import {
+  describeConnectorSourceImportBadge,
+  getConnectorSourceImportBadgeTone,
+  type ConnectorSourceImportSummary,
+} from "../../lib/connectors";
 
 const STATUS_TONE: Record<string, "green" | "blue" | "gray" | "orange"> = {
   implemented: "green",
@@ -46,10 +51,13 @@ export function SourceDetailPanel({
   selection,
   view,
   integrationLookup,
+  importSummary,
 }: {
   selection: EvidenceDetailSelection;
   view: MoriMockSession;
   integrationLookup: Map<string, SourceIntegration>;
+  /** Optional re-import summary for the selected source (connector imports only). */
+  importSummary?: ConnectorSourceImportSummary;
 }) {
   if (selection.kind === "empty") {
     return (
@@ -79,7 +87,12 @@ export function SourceDetailPanel({
 
   if (selection.kind === "source") {
     return (
-      <SourceDetailView selection={selection} view={view} integrationLookup={integrationLookup} />
+      <SourceDetailView
+        selection={selection}
+        view={view}
+        integrationLookup={integrationLookup}
+        importSummary={importSummary}
+      />
     );
   }
 
@@ -90,10 +103,12 @@ function SourceDetailView({
   selection,
   view,
   integrationLookup,
+  importSummary,
 }: {
   selection: { kind: "source"; sourceId: string };
   view: MoriMockSession;
   integrationLookup: Map<string, SourceIntegration>;
+  importSummary?: ConnectorSourceImportSummary;
 }) {
   const source = view.sources.find((entry) => entry.id === selection.sourceId);
   if (!source) {
@@ -152,6 +167,41 @@ function SourceDetailView({
           ) : null}
         </dl>
       </section>
+
+      {importSummary && importSummary.status !== "unknown" ? (
+        <section className="evidence-detail-section">
+          <SectionHeader title="재import 상태" />
+          <div className="evidence-detail-reimport">
+            <Badge tone={getConnectorSourceImportBadgeTone(importSummary)}>
+              {describeConnectorSourceImportBadge(importSummary)}
+            </Badge>
+            <p className="evidence-detail-reimport-detail">{importSummary.detailMessage}</p>
+            <ul className="evidence-detail-reimport-counts">
+              <li>새 이벤트 <strong>{importSummary.newEventCount}</strong></li>
+              <li>현재 세션 중복 <strong>{importSummary.currentSessionDuplicateCount}</strong></li>
+              <li>저장 세션 중복 <strong>{importSummary.savedSessionDuplicateCount}</strong></li>
+              <li>파일 내부 중복 <strong>{importSummary.inBatchDuplicateCount}</strong></li>
+              <li>잘못된 라인 <strong>{importSummary.invalidLineCount}</strong></li>
+            </ul>
+            {importSummary.matchedSavedSessions.length > 0 ? (
+              <p className="evidence-detail-reimport-matched">
+                매칭된 저장 세션:{" "}
+                {importSummary.matchedSavedSessions
+                  .map((entry) => entry.title ?? entry.sessionId)
+                  .slice(0, 3)
+                  .join(", ")}
+                {importSummary.matchedSavedSessions.length > 3
+                  ? ` 외 ${importSummary.matchedSavedSessions.length - 3}건`
+                  : ""}
+              </p>
+            ) : null}
+            <p className="evidence-detail-reimport-privacy muted">
+              Mori 는 로컬에 저장된 Mori 세션만 기준으로 재import 를 판단합니다.
+              connectorEventId 가 없는 옛 import 는 소급 검사되지 않습니다.
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       <section className="evidence-detail-section">
         <SectionHeader

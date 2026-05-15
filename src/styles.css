@@ -3778,6 +3778,141 @@ pre {
   box-shadow: none;
 }
 
+/* Source-level connector import summary block (preview card + Evidence detail). */
+
+.connector-jsonl-source-summary {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fbfaff, #f6f5ff);
+  margin: 10px 0;
+}
+
+.connector-jsonl-source-summary.tone-new {
+  border-color: #c6e9d6;
+  background: linear-gradient(180deg, #f6fcf8, #ecf7f1);
+}
+
+.connector-jsonl-source-summary.tone-partialReimport {
+  border-color: #c8d8f7;
+  background: linear-gradient(180deg, #f7faff, #eef3fb);
+}
+
+.connector-jsonl-source-summary.tone-duplicateOnly {
+  border-color: #f3d7b1;
+  background: linear-gradient(180deg, #fff9f0, #fbf1de);
+}
+
+.connector-jsonl-source-summary.tone-historyUnavailable {
+  border-color: #dcdfe6;
+  background: linear-gradient(180deg, #fafbfc, #f3f4f7);
+}
+
+.connector-jsonl-source-summary.tone-invalidOnly {
+  border-color: #f3c2c2;
+  background: linear-gradient(180deg, #fff6f6, #fbebeb);
+}
+
+.connector-jsonl-source-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.connector-jsonl-source-summary-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.connector-jsonl-source-summary-counts li strong {
+  color: var(--text);
+  margin-left: 4px;
+}
+
+.connector-jsonl-source-summary-matched {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.connector-jsonl-source-summary-detail {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.connector-jsonl-source-summary-action small {
+  color: var(--muted);
+}
+
+.connector-jsonl-source-summary-action strong {
+  color: var(--text);
+}
+
+.connector-jsonl-source-summary-privacy {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+.review-meta-source-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f8f7ff;
+  border: 1px solid #e6e1ff;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.evidence-detail-reimport {
+  display: grid;
+  gap: 8px;
+}
+
+.evidence-detail-reimport-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.evidence-detail-reimport-counts li strong {
+  color: var(--text);
+  margin-left: 4px;
+}
+
+.evidence-detail-reimport-detail,
+.evidence-detail-reimport-matched,
+.evidence-detail-reimport-privacy {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.evidence-detail-reimport-privacy {
+  color: var(--muted-2);
+  font-size: 11px;
+}
+
 /* Apply banner shown on Evidence Hub after a review applies. */
 
 .review-applied-banner {

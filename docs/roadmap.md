@@ -184,6 +184,20 @@ Not included yet:
 - Acting as an autonomous coding agent
 - Automatically changing source files
 
+## Connector re-import awareness (Implemented)
+
+The Evidence Hub now closes the user-facing re-import loop. Every
+Connector JSONL preview derives a typed
+`ConnectorSourceImportSummary` (status: `new` / `partialReimport` /
+`duplicateOnly` / `historyUnavailable` / `invalidOnly`) that the
+preview card, the Import Review meta strip, and the imported-source
+row + detail panel all consume. Matched saved sessions are surfaced
+by name. The status precedence is honest — a fresh-looking preview
+that ran without saved-session history is downgraded to
+`historyUnavailable` rather than claiming "new across all sessions".
+The summary can optionally ride along on `StoredSessionImport` so the
+Evidence Hub row keeps its re-import badge after reload.
+
 ## Session Canvas (deferred, future visualisation)
 
 A Session Canvas / Workroom visualisation is a promising future view: a

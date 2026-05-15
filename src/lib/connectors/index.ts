@@ -63,6 +63,17 @@ export {
   type ConnectorImportOverlapSummary,
 } from "./connectorImportHistory";
 export {
+  buildConnectorSourceImportSummary,
+  describeConnectorSourceImportBadge,
+  emptyConnectorSourceImportSummary,
+  getConnectorSourceImportBadgeTone,
+  type ConnectorImportSummaryMatchedSession,
+  type ConnectorSourceImportDefaultAction,
+  type ConnectorSourceImportStatus,
+  type ConnectorSourceImportSummary,
+  type ConnectorSourceImportTimeRange,
+} from "./connectorImportSummary";
+export {
   mergeConnectorCandidatesForReview,
 } from "./mergeForReview";
 export {

@@ -229,6 +229,15 @@ External tool (Claude Code hook | Codex CLI wrapper | git command | terminal | m
         next import pass can detect duplicates. The identity persists
         through browser localStorage AND through SQLite via the
         events.connector_event_id column added in migration V002.)
+  -> src/lib/connectors/connectorImportSummary.buildConnectorSourceImportSummary
+       (derives the user-facing ConnectorSourceImportSummary
+        — status: new | partialReimport | duplicateOnly |
+        historyUnavailable | invalidOnly | unknown, default action,
+        matched saved sessions, counts. Surfaced on the preview card,
+        Import Review meta strip, and the Evidence Hub
+        ImportedSourceRow / SourceDetailPanel. Optionally persisted on
+        StoredSessionImport.importSummary so the row keeps its badge
+        across reload.)
   -> src/lib/connectors/mergeForReview.mergeConnectorCandidatesForReview
        (collapses multi-bucket output into one composite candidate so the
         existing Import Review UI can host the whole batch in one draft)

@@ -227,6 +227,7 @@ export function EvidenceView() {
                       source={source}
                       events={view.events}
                       selected={selected}
+                      importSummary={importEntry?.importSummary}
                       onSelect={() => setSelection({ kind: "source", sourceId: source.id })}
                       onRemove={
                         importEntry && !isDemoSession
@@ -280,6 +281,11 @@ export function EvidenceView() {
           selection={selection}
           view={view}
           integrationLookup={integrationLookup}
+          importSummary={
+            selection.kind === "source"
+              ? imports.find((entry) => entry.source.id === selection.sourceId)?.importSummary
+              : undefined
+          }
         />
       </div>
     </div>

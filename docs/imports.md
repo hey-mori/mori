@@ -501,6 +501,58 @@ the React boundary uses `loadConnectorImportHistorySavedSessions` in
 > model. It is intentionally deferred until the core import +
 > persistence flow is stable. No UI is shipped today.
 
+### Source-level re-import summary
+
+Building on the duplicate detection above, every Connector JSONL
+preview now also computes a single **source-level re-import summary**
+the UI surfaces in three places:
+
+- the Connector JSONL preview card (header block above the bucket list),
+- the Import Review meta strip (one status line plus the detail copy),
+- the Evidence Hub imported-source row + right-side detail panel
+  (badge + detail block).
+
+The summary lives in
+[`src/lib/connectors/connectorImportSummary.ts`](../src/lib/connectors/connectorImportSummary.ts)
+and is built by `buildConnectorSourceImportSummary(preview)` — pure,
+no IO, derived entirely from `ConnectorJsonlPreview`. Possible states:
+
+| Status | What it means | Default action |
+| ------ | ------------- | -------------- |
+| `new` | every event is fresh; saved-session history was checked | `importNewEvents` |
+| `partialReimport` | mix of new + duplicate | `importNewEvents` (skip duplicates) |
+| `duplicateOnly` | every valid event already exists locally | `reviewDuplicatesOptional` |
+| `historyUnavailable` | saved-session history could not be loaded — current session + in-batch only | `historyUnavailableReview` |
+| `invalidOnly` | no valid events parsed | `fixInvalidLines` |
+| `unknown` | empty preview, render nothing | `noNewEvents` |
+
+Status precedence is honest:
+**"new" is only reported when saved-session history was actually
+loaded.** If saved-session history is unavailable (browser fallback,
+test, or a session store that returned nothing), a fresh-looking
+preview is downgraded to `historyUnavailable` so the UI cannot
+accidentally claim "new across all sessions" without proof.
+
+The Evidence Hub badge and detail copy are Korean-first; the
+underlying `userMessage` / `detailMessage` fields are localised in the
+helper. Matched saved sessions are surfaced by `title ?? sessionId`
+(up to three names + a "외 N건" overflow tail) so the user knows
+*where* a duplicate already lives.
+
+The summary is **optionally persisted** alongside the import:
+`StoredSessionImport.importSummary?: ConnectorSourceImportSummary` is
+written when `addSessionImport(sessionId, candidate, { importSummary })`
+is called from the Import Review apply path. Legacy records without
+the field read back as `undefined` and the row simply omits the
+badge — no migration needed.
+
+> **Local-only and honest.** The summary is derived from local
+> persistence and connector identities. Mori does not check cloud
+> accounts, does not watch the inbox folder, and does not chase
+> remote sessions. Old imports without `connectorEventId` cannot be
+> deduplicated retroactively — the summary classifies them as
+> "identity unavailable", never as duplicates.
+
 The full **capture surface matrix** — every paste / hook / CLI /
 desktop / web / IDE / browser / GitHub path that Mori does and does not
 support today — lives in

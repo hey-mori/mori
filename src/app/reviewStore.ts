@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { NormalizedImportCandidate } from "../lib/import";
+import type { ConnectorSourceImportSummary } from "../lib/connectors";
 import {
   buildAcceptedCandidate,
   createImportReviewDraft,
@@ -46,6 +47,13 @@ export type ReviewDraftMeta = {
    * of pretending cross-session detection happened.
    */
   savedSessionHistoryAvailable?: boolean;
+  /**
+   * Source-level re-import summary derived from the preview. The Import
+   * Review meta strip renders this as a single status line ("Partial
+   * re-import · 3 new / 8 already imported") so the user understands
+   * what's about to be applied without re-deriving counts.
+   */
+  sourceImportSummary?: ConnectorSourceImportSummary;
 };
 
 export type ImportReviewState = {

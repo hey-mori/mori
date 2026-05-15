@@ -26,10 +26,14 @@ import {
 import {
   buildConnectorJsonlPreview,
   buildConnectorJsonlPreviewWithHistory,
+  buildConnectorSourceImportSummary,
+  describeConnectorSourceImportBadge,
+  getConnectorSourceImportBadgeTone,
   mergeConnectorCandidatesForReview,
   normalizeConnectorEventBatch,
   type ConnectorImportHistorySavedSession,
   type ConnectorJsonlPreview,
+  type ConnectorSourceImportSummary,
 } from "../../lib/connectors";
 import {
   ConnectorInboxUnavailableError,
@@ -551,6 +555,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       setStatus({ tone: "error", message: "정규화된 후보가 없습니다." });
       return;
     }
+    const sourceImportSummary = buildConnectorSourceImportSummary(preview);
     startReview(merged, "connector-jsonl", {
       newEventCount: preview.newEventCount,
       duplicateSkippedCount: connectorIncludeDuplicates ? 0 : preview.duplicateEventCount,
@@ -561,6 +566,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       savedSessionDuplicateCount: preview.savedSessionDuplicateCount,
       inBatchDuplicateCount: preview.inBatchDuplicateCount,
       savedSessionHistoryAvailable: preview.savedSessionHistoryAvailable,
+      sourceImportSummary,
     });
     const skipped = preview.duplicateEventCount;
     const skipMessage =
@@ -993,6 +999,97 @@ function ConnectorJsonlInbox({
   );
 }
 
+function ConnectorSourceImportSummaryBlock({
+  summary,
+}: {
+  summary: ConnectorSourceImportSummary;
+}) {
+  // The block lives at the top of the preview card so users see "what
+  // this import means for them" before they read counts and bucket lists.
+  // We render every status with its own copy + suggested action so the UI
+  // is never silent about a re-import.
+  if (summary.status === "unknown") return null;
+  const tone = getConnectorSourceImportBadgeTone(summary);
+  const heading = getConnectorSourceImportHeading(summary);
+  const actionLabel = getConnectorSourceImportActionLabel(summary);
+  return (
+    <section
+      className={`connector-jsonl-source-summary tone-${summary.status}`}
+      role="status"
+      aria-label="Connector source import summary"
+    >
+      <header className="connector-jsonl-source-summary-head">
+        <Badge tone={tone}>{describeConnectorSourceImportBadge(summary)}</Badge>
+        <strong>{heading}</strong>
+      </header>
+      <ul className="connector-jsonl-source-summary-counts">
+        <li>새 이벤트: <strong>{summary.newEventCount}</strong></li>
+        <li>현재 세션 중복: <strong>{summary.currentSessionDuplicateCount}</strong></li>
+        <li>저장 세션 중복: <strong>{summary.savedSessionDuplicateCount}</strong></li>
+        <li>파일 내부 중복: <strong>{summary.inBatchDuplicateCount}</strong></li>
+        <li>잘못된 라인: <strong>{summary.invalidLineCount}</strong></li>
+      </ul>
+      {summary.matchedSavedSessions.length > 0 ? (
+        <p className="connector-jsonl-source-summary-matched">
+          이미 가져온 저장 세션:{" "}
+          {summary.matchedSavedSessions
+            .map((entry) => entry.title ?? entry.sessionId)
+            .slice(0, 3)
+            .join(", ")}
+          {summary.matchedSavedSessions.length > 3
+            ? ` 외 ${summary.matchedSavedSessions.length - 3}건`
+            : ""}
+        </p>
+      ) : null}
+      <p className="connector-jsonl-source-summary-detail">{summary.detailMessage}</p>
+      <p className="connector-jsonl-source-summary-action">
+        <small>제안된 동작: <strong>{actionLabel}</strong></small>
+      </p>
+      <p className="connector-jsonl-source-summary-privacy" role="note">
+        Mori는 로컬에 저장된 Mori 세션만 참고합니다. 클라우드 계정도, 백그라운드 폴더 감시도 없습니다.
+        connectorEventId 가 없는 옛 import는 소급해서 중복으로 표시되지 않습니다.
+      </p>
+    </section>
+  );
+}
+
+function getConnectorSourceImportHeading(summary: ConnectorSourceImportSummary): string {
+  switch (summary.status) {
+    case "new":
+      return "새 import";
+    case "partialReimport":
+      return "부분 재import 감지됨";
+    case "duplicateOnly":
+      return "이미 가져온 항목";
+    case "historyUnavailable":
+      return "저장 세션 기록 사용 불가";
+    case "invalidOnly":
+      return "잘못된 라인만 발견됨";
+    case "unknown":
+    default:
+      return "요약 없음";
+  }
+}
+
+function getConnectorSourceImportActionLabel(summary: ConnectorSourceImportSummary): string {
+  switch (summary.defaultAction) {
+    case "importNewEvents":
+      return summary.duplicateEventCount > 0
+        ? `새 이벤트 ${summary.newEventCount}개만 Import Review로 전달 (중복 ${summary.duplicateEventCount}개 제외)`
+        : `새 이벤트 ${summary.newEventCount}개를 Import Review로 전달`;
+    case "reviewDuplicatesOptional":
+      return "Include duplicates 토글 후 다시 Import 또는 매칭된 저장 세션 확인";
+    case "noNewEvents":
+      return "추가로 가져올 이벤트가 없습니다";
+    case "fixInvalidLines":
+      return "잘못된 라인을 수정한 뒤 다시 시도하세요";
+    case "historyUnavailableReview":
+      return "Import Review에서 직접 확인 후 진행하세요";
+    default:
+      return "—";
+  }
+}
+
 function ConnectorJsonlPrivacyNote() {
   return (
     <div className="connector-jsonl-privacy" role="note">
@@ -1026,6 +1123,7 @@ function ConnectorJsonlPreviewCard({
       : "—";
   const hasDuplicates = preview.duplicateEventCount > 0;
   const allDuplicate = hasDuplicates && preview.newEventCount === 0;
+  const summary = buildConnectorSourceImportSummary(preview);
   return (
     <section
       className={`connector-jsonl-preview tone-${preview.kind}`}
@@ -1035,6 +1133,8 @@ function ConnectorJsonlPreviewCard({
         <strong>{preview.headline}</strong>
         <span>{preview.totalLines} lines · {preview.skippedBlankLines} skipped</span>
       </header>
+      <ConnectorSourceImportSummaryBlock summary={summary} />
+
       {hasDuplicates ? (
         <div className="connector-jsonl-duplicate-row" role="status">
           <span className="connector-jsonl-duplicate-counts">

@@ -182,6 +182,88 @@ describe("BrowserDraftRepository", () => {
     expect(repository.loadSessionAnalysis(draft.session.id)).toBeNull();
   });
 
+  it("persists an optional importSummary on a session import and reads it back", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    const draft = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Summary session",
+        projectName: "Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+    const note = normalizeManualNote({
+      projectId: draft.project.id,
+      sessionId: draft.session.id,
+      title: "Note",
+      note: "Hello",
+      capturedAt: "2026-05-12T13:05:00+09:00",
+    });
+    const stored = repository.addSessionImport(draft.session.id, note, {
+      importSummary: {
+        status: "partialReimport",
+        totalValidEvents: 5,
+        newEventCount: 2,
+        duplicateEventCount: 3,
+        currentSessionDuplicateCount: 1,
+        savedSessionDuplicateCount: 2,
+        inBatchDuplicateCount: 0,
+        invalidLineCount: 0,
+        matchedSavedSessions: [{ sessionId: "saved-a", title: "Saved A" }],
+        connectorIds: ["claudeCodeHook"],
+        eventKinds: [],
+        timeRange: { earliestOccurredAt: null, latestOccurredAt: null },
+        canImportNewEvents: true,
+        savedSessionHistoryAvailable: true,
+        defaultAction: "importNewEvents",
+        userMessage: "Partial re-import · 2 new / 3 already imported",
+        detailMessage: "detail",
+      },
+    });
+    expect(stored.importSummary?.status).toBe("partialReimport");
+
+    const reloaded = repository.listSessionImports(draft.session.id);
+    expect(reloaded[0]?.importSummary?.status).toBe("partialReimport");
+    expect(reloaded[0]?.importSummary?.matchedSavedSessions[0]?.title).toBe("Saved A");
+  });
+
+  it("loads old session imports without an importSummary field as undefined", () => {
+    const storage = new MemoryKeyValueStorage();
+    // Simulate a record persisted before this milestone — no importSummary key.
+    storage.setItem(
+      "mori.sessionImports.legacy",
+      JSON.stringify([
+        {
+          id: "src-legacy",
+          sessionId: "legacy",
+          source: {
+            id: "src-legacy",
+            sessionId: "legacy",
+            kind: "manualNote",
+            title: "Old note",
+            detail: "",
+            trustLevel: "verified",
+            redactionStatus: "notNeeded",
+            rawRetention: "retained",
+            capturedAt: "2026-05-01T00:00:00Z",
+            relatedEventIds: [],
+          },
+          events: [],
+          savedAt: "2026-05-01T00:00:00Z",
+          adapter: "browser-local-storage",
+        },
+      ]),
+    );
+    const repository = new BrowserDraftRepository(storage);
+    const reloaded = repository.listSessionImports("legacy");
+    expect(reloaded).toHaveLength(1);
+    expect(reloaded[0]?.importSummary).toBeUndefined();
+  });
+
   it("lists connector event identity snapshots across saved sessions", () => {
     const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
     const draftA = repository.saveCurrentSessionDraft(

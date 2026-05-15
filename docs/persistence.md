@@ -43,6 +43,7 @@ What is real:
 - Verification freshness is a pure derivation in [src/lib/repositories/verificationFreshness.ts](../src/lib/repositories/verificationFreshness.ts) (24-hour stale threshold, age labels, tones). It only describes stored metadata in Settings and the Git Diff dropdown — it never triggers work. See [Imports](imports.md) for the capture-triggered refresh flow.
 - `SessionPersistenceService` (`src/lib/storage/sessionPersistenceService.ts`) is the single place where runtime decisions live. In browser mode all session, import, and analysis reads/writes go through `BrowserDraftRepository`. In Tauri mode the service prefers the SQLite snapshot when hydrating the active session, exposes Load actions through `useMoriSessionStore.loadDesktopSession(sessionId)`, and lets the Settings panel route initialize/save/list/load through the Tauri SQLite command bridge.
 - **Connector event identities persist across the local persistence boundary.** TimelineEvents imported through the connector JSONL pipeline carry a `connectorEventId` (`<connectorId>::<externalSessionId|unscoped>::<eventId>`). Browser localStorage preserves the field as part of `mori.sessionImports.*`. Desktop SQLite added `events.connector_event_id` in migration V002 so the identity survives save / load. Old sessions imported before this milestone never carry the field — Mori treats them as "identity-unavailable" rather than as duplicates, so they keep loading cleanly. The cross-session duplicate index is `BrowserDraftRepository.listConnectorEventIdentitySnapshots` plus the `loadConnectorImportHistorySavedSessions` selector on the session store; it returns a lightweight `{ sessionId, title, savedAt, connectorEventIds }` shape rather than full payloads, so reading the history is cheap even with many saved sessions.
+- **Optional source-level import summary on each session import.** `StoredSessionImport.importSummary?: ConnectorSourceImportSummary` is written when the Import Review apply path passes through a connector JSONL preview. The payload is small (counts + matched-session references, no raw JSONL, no extra event data). Old records without the field load normally — every consumer treats it as `undefined`. This is the data the Evidence Hub `ImportedSourceRow` and `SourceDetailPanel` use to render a re-import status badge after Apply.
 - Mori can map a session into normalized SQLite row snapshots.
 - SQLite snapshots are validated for required rows, foreign-key shape, and JSON-array columns before desktop persistence.
 - A desktop SQLite repository boundary can call Tauri commands for initialization, snapshot persistence, session loading, and session listing.
@@ -73,6 +74,10 @@ Cross-session connector duplicate detection scope:
 - Detection is forward-only. Sessions imported before this milestone
   cannot be deduplicated retroactively; their events are classified as
   `identity-unavailable` and never produce false positives.
+- The source-level summary (`ConnectorSourceImportSummary`) downgrades
+  a fresh-looking preview to `historyUnavailable` whenever saved-session
+  history could not be loaded, so the UI never claims a clean "new"
+  status without proof.
 
 > Session Canvas (future). A planned visual session canvas could later
 > visualise active session work areas using the same TimelineEvent,

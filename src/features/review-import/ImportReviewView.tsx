@@ -6,6 +6,10 @@ import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { useMoriReviewStore, type ReviewDraftMeta } from "../../app/reviewStore";
 import {
+  describeConnectorSourceImportBadge,
+  getConnectorSourceImportBadgeTone,
+} from "../../lib/connectors";
+import {
   getReviewCounts,
   isReviewApplyable,
   type ImportReviewDraft,
@@ -50,8 +54,9 @@ export function ImportReviewView() {
 
   function handleApply() {
     setStatusBanner(null);
+    const summary = draftMeta?.sourceImportSummary;
     const outcome = apply((candidate) => {
-      const stored = addImport(candidate);
+      const stored = addImport(candidate, summary ? { importSummary: summary } : undefined);
       if (!stored) {
         return { ok: false, reason: "세션을 찾을 수 없어 적용하지 못했습니다." };
       }
@@ -253,9 +258,20 @@ function ReviewDraftMetaStrip({ meta }: { meta: ReviewDraftMeta }) {
   if (typeof meta.invalidLineCount === "number" && meta.invalidLineCount > 0) {
     cells.push({ tone: "gray", label: "Invalid lines", value: meta.invalidLineCount });
   }
-  if (cells.length === 0) return null;
+  const summary = meta.sourceImportSummary;
+  if (cells.length === 0 && !summary) return null;
   return (
     <section className="review-meta-strip" role="status" aria-label="Import meta">
+      {summary ? (
+        <span
+          className={`review-meta-source-status tone-${getConnectorSourceImportBadgeTone(summary)}`}
+        >
+          <Badge tone={getConnectorSourceImportBadgeTone(summary)}>
+            {describeConnectorSourceImportBadge(summary)}
+          </Badge>
+          <small>{summary.detailMessage}</small>
+        </span>
+      ) : null}
       {cells.map((cell) => (
         <span key={cell.label} className={`review-meta-cell tone-${cell.tone}`}>
           <strong>{cell.value}</strong>

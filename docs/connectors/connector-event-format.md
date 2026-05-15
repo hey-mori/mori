@@ -59,6 +59,15 @@ Old sessions imported before this milestone do not carry
 import-history helper reports them as `legacySavedSessionCount` and
 classifies their events as `identity-unavailable`, never as duplicates.
 
+A source-level summary —
+[`ConnectorSourceImportSummary`](../../src/lib/connectors/connectorImportSummary.ts)
+— is derived from the preview and surfaced in the Connector JSONL
+preview card, the Import Review meta strip, and the Evidence Hub
+imported-source row / detail panel. The status precedence is honest:
+a fresh-looking preview is **downgraded to `historyUnavailable`**
+whenever saved-session history could not actually be loaded, so the
+UI never claims "new across all sessions" without proof.
+
 The Rust implementation lives in
 [`src-tauri/src/connectors/inbox.rs`](../../src-tauri/src/connectors/inbox.rs);
 the TypeScript adapter lives in

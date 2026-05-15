@@ -1,5 +1,6 @@
 import type { MoriAnalysisResult, QuickPassAnalysisSettings } from "../analysis";
 import { DEFAULT_QUICK_PASS_SETTINGS, sanitizeQuickPassSettings } from "../analysis";
+import type { ConnectorSourceImportSummary } from "../connectors";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 import type { RepositorySettings } from "../repositories";
@@ -100,7 +101,11 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     }
   }
 
-  addSessionImport(sessionId: string, candidate: NormalizedImportCandidate): StoredSessionImport {
+  addSessionImport(
+    sessionId: string,
+    candidate: NormalizedImportCandidate,
+    options: { importSummary?: ConnectorSourceImportSummary } = {},
+  ): StoredSessionImport {
     const existing = this.listSessionImports(sessionId);
     const savedAt = new Date().toISOString();
     const stored: StoredSessionImport = {
@@ -110,6 +115,11 @@ export class BrowserDraftRepository implements MoriDraftRepository {
       events: candidate.events.map((event) => ({ ...event, sessionId })),
       savedAt,
       adapter: "browser-local-storage",
+      // Optional: only set when the caller actually computed a summary.
+      // Old records without it continue to read as `undefined`, so any
+      // reader that branches on `importSummary` keeps its existing
+      // backwards-compatible behaviour.
+      ...(options.importSummary ? { importSummary: options.importSummary } : {}),
     };
 
     const deduped = existing.filter((entry) => entry.id !== stored.id);

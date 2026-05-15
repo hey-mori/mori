@@ -26,7 +26,10 @@ import type {
   StoredSessionDraft,
   StoredSessionImport,
 } from "../lib/storage/storageTypes";
-import type { ConnectorImportHistorySavedSession } from "../lib/connectors";
+import type {
+  ConnectorImportHistorySavedSession,
+  ConnectorSourceImportSummary,
+} from "../lib/connectors";
 
 export type SessionMode = "demo" | "draft";
 
@@ -49,7 +52,10 @@ export type MoriSessionState = {
   source: SessionSource;
   hydrate: () => Promise<void>;
   setDraft: (draft: StoredSessionDraft) => void;
-  addImport: (candidate: NormalizedImportCandidate) => StoredSessionImport | null;
+  addImport: (
+    candidate: NormalizedImportCandidate,
+    options?: { importSummary?: ConnectorSourceImportSummary },
+  ) => StoredSessionImport | null;
   removeImport: (importId: string) => void;
   resetToDemo: () => void;
   runQuickPass: (provider?: MoriAnalysisProvider) => Promise<MoriAnalysisResult | null>;
@@ -204,12 +210,12 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       source: "browser-draft",
     });
   },
-  addImport: (candidate) => {
+  addImport: (candidate, options) => {
     const repository = getRepository();
     const draft = get().draft;
     if (!draft) return null;
 
-    const stored = repository.addSessionImport(draft.session.id, candidate);
+    const stored = repository.addSessionImport(draft.session.id, candidate, options);
     set({ imports: repository.listSessionImports(draft.session.id) });
     return stored;
   },
