@@ -1,31 +1,47 @@
 import { useMemo, useState } from "react";
-import { Eye, Layers, Search } from "lucide-react";
+import { Eye, Layers, Link2, Search } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriSection } from "../../components/ui/MoriSection";
 import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
-import { searchAcceptedMemories } from "../../lib/project-memory/queryableMemory";
+import {
+  searchAcceptedMemories,
+  searchProjectMemoryReferences,
+} from "../../lib/project-memory/queryableMemory";
+import type { SourceRef, TimelineEvent } from "../../domain/types";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 
 /**
  * Queryable Memory card on the Project Memory page.
  *
- * A compact local search surface over the project's accepted
- * memories, backed by the deterministic `searchAcceptedMemories`
- * helper. Local-only — no transcripts or connector logs are read or
- * shown. Non-current memory (`stale` / `contradicted` / `superseded`
- * / `retired` / `watching` / `deferred`) is searchable but clearly
- * marked so it never reads as current guidance.
+ * A compact local search surface. The primary results are the
+ * project's accepted memories (`searchAcceptedMemories`); a secondary
+ * "Related references" section searches the active session's timeline
+ * events and evidence sources (`searchProjectMemoryReferences`).
+ * Local-only and deterministic — no transcripts or connector logs are
+ * read or shown. Non-current memory stays searchable but is marked.
  */
 export function QueryableMemoryCard({
   memories,
+  timelineEvents,
+  evidenceSources,
 }: {
   memories: StoredAcceptedProjectMemory[];
+  timelineEvents: TimelineEvent[];
+  evidenceSources: SourceRef[];
 }) {
   const [query, setQuery] = useState("");
   const resultSet = useMemo(
     () => searchAcceptedMemories(memories, { text: query }),
     [memories, query],
   );
+  const references = useMemo(
+    () => searchProjectMemoryReferences({ timelineEvents, evidenceSources }, { text: query }),
+    [timelineEvents, evidenceSources, query],
+  );
+
+  const hasSearchableData =
+    memories.length > 0 || timelineEvents.length > 0 || evidenceSources.length > 0;
+  const trimmedQuery = query.trim();
 
   return (
     <MoriSection
@@ -38,8 +54,8 @@ export function QueryableMemoryCard({
       }
       hint={
         <span>
-          Accepted memory를 로컬에서 구조적으로 검색합니다. 제목 / 요약 / 근거 참조 기준이며
-          원본 대화나 connector 로그는 검색하지 않습니다.
+          Accepted memory를 로컬에서 구조적으로 검색합니다. 활성 세션의 timeline / evidence
+          참조도 함께 찾으며, 원본 대화나 connector 로그는 검색하지 않습니다.
         </span>
       }
       actions={
@@ -48,10 +64,10 @@ export function QueryableMemoryCard({
         </Badge>
       }
     >
-      {memories.length === 0 ? (
+      {!hasSearchableData ? (
         <p className="memory-search-empty">
-          아직 accepted memory가 없습니다. Consolidation Review에서 제안을 승인하면 여기에서
-          검색할 수 있습니다.
+          아직 검색할 accepted memory나 세션 데이터가 없습니다. Consolidation Review에서 제안을
+          승인하면 여기에서 검색할 수 있습니다.
         </p>
       ) : (
         <>
@@ -62,13 +78,17 @@ export function QueryableMemoryCard({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="제목 / 요약 / 근거에서 검색"
-              aria-label="Search accepted memory"
+              aria-label="Search project memory"
             />
           </label>
 
-          {resultSet.results.length === 0 ? (
+          {memories.length === 0 ? (
+            <p className="memory-search-empty">아직 저장된 accepted memory가 없습니다.</p>
+          ) : resultSet.results.length === 0 ? (
             <p className="memory-search-empty">
-              "{query.trim()}"에 해당하는 accepted memory가 없습니다.
+              {trimmedQuery
+                ? `"${trimmedQuery}"에 해당하는 accepted memory가 없습니다.`
+                : "검색어를 입력하면 accepted memory를 찾습니다."}
             </p>
           ) : (
             <ul className="memory-search-results">
@@ -95,13 +115,36 @@ export function QueryableMemoryCard({
               ))}
             </ul>
           )}
+
+          {references.length > 0 ? (
+            <div className="memory-search-references">
+              <h4>
+                <Link2 size={12} aria-hidden="true" /> 관련 참조 ({references.length})
+              </h4>
+              <ul>
+                {references.map((reference) => (
+                  <li key={`${reference.resultKind}:${reference.refId}`}>
+                    <header>
+                      <strong title={reference.title}>{reference.title}</strong>
+                      <Badge tone="blue">
+                        {reference.resultKind === "timelineEvent" ? "Timeline" : "Evidence"} ·{" "}
+                        {reference.contextLabel}
+                      </Badge>
+                    </header>
+                    <p className="memory-search-snippet">{reference.snippet}</p>
+                    <small>{reference.matchReason}</small>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </>
       )}
 
       <footer className="memory-search-footer">
         <small>
-          <Badge tone="gray">local-only</Badge> {resultSet.dataBasis} Timeline / Evidence 검색
-          확장은 별도 capability로 예정되어 있습니다.
+          <Badge tone="gray">local-only</Badge> {resultSet.dataBasis} 참조 검색은 활성 세션의
+          timeline / evidence를 대상으로 합니다. Review action 검색 확장은 예정되어 있습니다.
         </small>
       </footer>
     </MoriSection>

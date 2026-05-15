@@ -312,8 +312,10 @@ that is called out.
   (`stale` / `contradicted` / `superseded` / `retired` / `watching` /
   `deferred`) is searchable but flagged `isCurrent: false`. The
   **Memory Search** card (`QueryableMemoryCard`) on the Project
-  Memory page is the compact search surface. (Cross-source extension
-  to review actions / timeline / evidence pending.)
+  Memory page is the compact search surface, including a "Related
+  references" section that searches the active session's timeline
+  events and evidence sources via `searchProjectMemoryReferences`.
+  (Review-action search extension pending.)
 - `SessionPersistenceService` routes between browser localStorage
   and the Tauri SQLite bridge. Desktop mode prefers SQLite as the
   source of truth for active session hydration; Load actions for
@@ -351,10 +353,10 @@ against the repository.
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and
   not implemented.
-- **Queryable Memory — cross-source.** Structured local search over
-  accepted memories and its Project Memory card have landed;
-  extension to review actions, timeline events, and evidence sources
-  is still pending.
+- **Queryable Memory — review-action search.** Structured local
+  search over accepted memories, timeline events, and evidence
+  sources has landed; extending it to Memory Audit Trail review
+  actions is still pending.
 - **IDE / terminal / browser extension integrations.** Listed as
   Planned in `source-integrations.md`; no extension code exists.
 - **Optional watched inbox.** Refresh-only desktop inbox is shipped;

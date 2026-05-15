@@ -400,7 +400,11 @@ export function MemoryView() {
             storageFellBack={memoryStorageFellBack}
           />
 
-          <QueryableMemoryCard memories={acceptedMemories} />
+          <QueryableMemoryCard
+            memories={acceptedMemories}
+            timelineEvents={view.events}
+            evidenceSources={view.sources}
+          />
 
           <MemoryAuditTrailCard
             actions={reviewActions}

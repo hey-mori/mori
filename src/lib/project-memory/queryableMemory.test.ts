@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { searchAcceptedMemories } from "./queryableMemory";
+import { searchAcceptedMemories, searchProjectMemoryReferences } from "./queryableMemory";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import type { SourceRef, TimelineEvent } from "../../domain/types";
 
 function memory(
   id: string,
@@ -160,5 +161,94 @@ describe("searchAcceptedMemories", () => {
     const longSummary = "word ".repeat(120).trim();
     const result = searchAcceptedMemories([memory("a", { summary: longSummary })], { text: "word" });
     expect(result.results[0]?.snippet.length).toBeLessThanOrEqual(142);
+  });
+});
+
+function timelineEvent(overrides: Partial<TimelineEvent> = {}): TimelineEvent {
+  return {
+    id: "e-1",
+    sessionId: "s-1",
+    projectId: "p-1",
+    start: "2026-05-12T10:00:00Z",
+    type: "fileCode",
+    title: "Edit auth module",
+    summary: "Reworked the login flow.",
+    sourceRefs: [],
+    linkedIssueIds: [],
+    linkedDecisionIds: [],
+    relationshipIds: [],
+    trustLevel: "verified",
+    confidence: 0.9,
+    createdBy: "import",
+    userModified: false,
+    ...overrides,
+  };
+}
+
+function evidenceSource(overrides: Partial<SourceRef> = {}): SourceRef {
+  return {
+    id: "src-1",
+    sessionId: "s-1",
+    kind: "gitDiff",
+    title: "Auth refactor diff",
+    detail: "3 files changed in the auth package.",
+    trustLevel: "verified",
+    redactionStatus: "notNeeded",
+    rawRetention: "summaryOnly",
+    capturedAt: "2026-05-12T10:00:00Z",
+    relatedEventIds: [],
+    ...overrides,
+  };
+}
+
+describe("searchProjectMemoryReferences", () => {
+  it("returns nothing for an empty query — references are search-only", () => {
+    expect(
+      searchProjectMemoryReferences({ timelineEvents: [timelineEvent()] }, { text: "" }),
+    ).toEqual([]);
+  });
+
+  it("matches timeline event titles and summaries", () => {
+    const refs = searchProjectMemoryReferences(
+      {
+        timelineEvents: [
+          timelineEvent({ id: "title-hit", title: "Auth rework" }),
+          timelineEvent({ id: "summary-hit", title: "Misc", summary: "touched auth code" }),
+        ],
+      },
+      { text: "auth" },
+    );
+    expect(refs.map((r) => r.refId)).toEqual(["title-hit", "summary-hit"]);
+    expect(refs.every((r) => r.resultKind === "timelineEvent")).toBe(true);
+  });
+
+  it("matches evidence source titles and detail", () => {
+    const refs = searchProjectMemoryReferences(
+      { evidenceSources: [evidenceSource({ id: "src-d", title: "Diff", detail: "auth package" })] },
+      { text: "auth" },
+    );
+    expect(refs).toHaveLength(1);
+    expect(refs[0]?.resultKind).toBe("evidenceSource");
+    expect(refs[0]?.matchedField).toBe("detail");
+  });
+
+  it("ranks title matches ahead of summary/detail matches across kinds", () => {
+    const refs = searchProjectMemoryReferences(
+      {
+        timelineEvents: [timelineEvent({ id: "ev-summary", title: "x", summary: "redis" })],
+        evidenceSources: [evidenceSource({ id: "src-title", title: "Redis notes", detail: "y" })],
+      },
+      { text: "redis" },
+    );
+    expect(refs[0]?.refId).toBe("src-title");
+    expect(refs[0]?.matchedField).toBe("title");
+  });
+
+  it("returns an empty array when nothing matches", () => {
+    const refs = searchProjectMemoryReferences(
+      { timelineEvents: [timelineEvent()], evidenceSources: [evidenceSource()] },
+      { text: "nonexistent" },
+    );
+    expect(refs).toEqual([]);
   });
 });

@@ -7003,6 +7003,57 @@ pre {
   line-height: 1.55;
 }
 
+.memory-search-references {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line, #e6e3f1);
+}
+
+.memory-search-references h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6e668c;
+}
+
+.memory-search-references ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-search-references li {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line, #e6e3f1);
+  border-radius: 8px;
+  background: #fdfcff;
+}
+
+.memory-search-references li header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.memory-search-references li header strong {
+  font-size: 13px;
+  color: #2c2549;
+}
+
+.memory-search-references li small {
+  font-size: 11.5px;
+  color: #6e668c;
+}
+
 .memory-audit-footer small {
   font-size: 11.5px;
   color: #6e668c;

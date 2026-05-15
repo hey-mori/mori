@@ -26,6 +26,7 @@ import type {
   StoredAcceptedProjectMemorySensitivity,
   StoredAcceptedProjectMemoryStatus,
 } from "../storage/storageTypes";
+import type { SourceRef, TimelineEvent } from "../../domain/types";
 
 export type QueryableMemoryFilters = {
   kind?: StoredAcceptedProjectMemory["kind"];
@@ -248,4 +249,110 @@ function truncate(value: string): string {
   const collapsed = collapse(value);
   if (collapsed.length <= SNIPPET_LIMIT) return collapsed;
   return `${collapsed.slice(0, SNIPPET_LIMIT - 1).trimEnd()}…`;
+}
+
+// ─── cross-source references ──────────────────────────────────────────
+
+/**
+ * A search hit outside accepted memory — a timeline event or an
+ * evidence source from the active session. Lets Queryable Memory
+ * answer "did we touch X?" against the real work, not just the
+ * curated memory. Snippets are drawn from already-curated fields
+ * (event title / summary, source title / detail) — never raw
+ * transcripts or connector logs.
+ */
+export type QueryableMemoryReferenceKind = "timelineEvent" | "evidenceSource";
+
+export type QueryableMemoryReference = {
+  resultKind: QueryableMemoryReferenceKind;
+  refId: string;
+  title: string;
+  snippet: string;
+  matchedField: "title" | "summary" | "detail";
+  matchReason: string;
+  /** Short context label — event type or source kind. */
+  contextLabel: string;
+};
+
+export type SearchProjectMemoryReferencesInput = {
+  timelineEvents?: readonly TimelineEvent[];
+  evidenceSources?: readonly SourceRef[];
+};
+
+/**
+ * Search the active session's timeline events and evidence sources.
+ * Returns `[]` for an empty query — references are a search feature,
+ * not a browse-all surface (the Timeline / Evidence pages do that).
+ */
+export function searchProjectMemoryReferences(
+  input: SearchProjectMemoryReferencesInput,
+  query: QueryableMemoryQuery = {},
+): QueryableMemoryReference[] {
+  const text = normalise(query.text ?? "");
+  if (text.length === 0) return [];
+
+  const references: QueryableMemoryReference[] = [];
+
+  for (const event of input.timelineEvents ?? []) {
+    if (normalise(event.title).includes(text)) {
+      references.push(eventReference(event, "title"));
+    } else if (normalise(event.summary).includes(text)) {
+      references.push(eventReference(event, "summary"));
+    }
+  }
+  for (const source of input.evidenceSources ?? []) {
+    if (normalise(source.title).includes(text)) {
+      references.push(sourceReference(source, "title", text));
+    } else if (normalise(source.detail).includes(text)) {
+      references.push(sourceReference(source, "detail", text));
+    }
+  }
+
+  return references.sort(compareReferences);
+}
+
+function eventReference(
+  event: TimelineEvent,
+  matchedField: "title" | "summary",
+): QueryableMemoryReference {
+  return {
+    resultKind: "timelineEvent",
+    refId: event.id,
+    title: event.title,
+    snippet: truncate(event.summary || event.title),
+    matchedField,
+    matchReason: matchedField === "title" ? "Event title match" : "Event summary match",
+    contextLabel: event.type,
+  };
+}
+
+function sourceReference(
+  source: SourceRef,
+  matchedField: "title" | "detail",
+  text: string,
+): QueryableMemoryReference {
+  return {
+    resultKind: "evidenceSource",
+    refId: source.id,
+    title: source.title,
+    snippet:
+      matchedField === "detail"
+        ? excerptAround(source.detail, text)
+        : truncate(source.detail || source.title),
+    matchedField,
+    matchReason: matchedField === "title" ? "Source title match" : "Source detail match",
+    contextLabel: source.kind,
+  };
+}
+
+function compareReferences(
+  a: QueryableMemoryReference,
+  b: QueryableMemoryReference,
+): number {
+  // Title matches first, then a stable kind order, then title.
+  const tierA = a.matchedField === "title" ? 0 : 1;
+  const tierB = b.matchedField === "title" ? 0 : 1;
+  if (tierA !== tierB) return tierA - tierB;
+  if (a.resultKind !== b.resultKind) return a.resultKind === "timelineEvent" ? -1 : 1;
+  return a.title.localeCompare(b.title);
 }
