@@ -184,6 +184,92 @@ Not included yet:
 - Acting as an autonomous coding agent
 - Automatically changing source files
 
+## Memory Orchestrator Roadmap
+
+A cross-cutting view of Mori's memory layers, framed against the
+external always-on-memory reference analysed in
+[`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md).
+Each phase preserves the honesty contract documented in
+[`docs/memory-architecture.md`](memory-architecture.md): explicit
+ingestion, review-before-apply, provenance over prose, local-only.
+
+### Phase 0 — Explicit import memory loop (Implemented)
+
+The canonical paste → review → apply → timeline → evidence loop is
+in place for AI Transcript, Connector JSONL (paste + desktop inbox),
+Git Diff, Manual Note, and URL sources. A scripted walkthrough lives
+at [`docs/e2e-smoke-flow.md`](e2e-smoke-flow.md) and is guarded by a
+fixture test (`src/lib/connectors/connectorSampleFixture.test.ts`).
+
+### Phase 1 — Project Memory consolidation (Implemented)
+
+Cross-session aggregation produces key decisions, recurring issues,
+key evidence, unresolved risks, recommended next session, and the
+connector re-import rollup. The Memory page exposes a typed
+`dataBasis` flag so it can never misrepresent the reach of the
+aggregation. The Resume Prompt is built from this same view-model,
+audience- and privacy-aware, no LLM call.
+
+### Phase 2 — Controlled consolidation pass (Planned)
+
+A **user-triggered** consolidation pass over Project Memory. Goals:
+
+- Merge near-duplicate decisions across sessions (with the user
+  reviewing each proposed merge).
+- Promote recurring issues to project-level entities that survive
+  even after their source sessions are pruned.
+- Detect contradictions between decisions across sessions and
+  surface them as review candidates.
+- Track a richer memory lifecycle than "consolidated yes/no":
+  `proposed → reviewed → promoted → stale → retired`.
+- Persist consolidation results with citations back to the source
+  sessions (mirroring the reference's `consolidations` table, but
+  always reviewed before applying).
+
+Non-goals for this phase: any LLM-driven consolidation that lands
+without user review, any cross-account/cloud sync, any background
+trigger.
+
+### Phase 3 — Optional local daemon / watched inbox (Planned, opt-in)
+
+Optional, explicit opt-in only. A local watcher (Tauri-side service
+or an installable CLI) loads new files from `~/.mori/connectors/`
+into a "pending review" tray. The user still has to walk each item
+through Import Review before it reaches Project Memory.
+
+Hard constraints:
+- Opt-in via Settings, off by default.
+- Local-only; no network access; no account scanning.
+- Bound to the existing connector inbox path the user has already
+  consented to.
+- Review-before-apply preserved.
+
+### Phase 4 — Local natural-language memory query (Research)
+
+A small local query helper that answers "what did we decide about
+X?" by reading `ProjectMemoryViewModel` + saved-session bodies and
+returning a cited answer. Constraints:
+
+- Same data-basis honesty as the Resume Prompt.
+- Same privacy modes (`normal / summaryOnly / clientSafe`).
+- Citations into Mori sessions only (no embeddings, no vector
+  retrieval, no external endpoints).
+- Pure local pure code path first; LLM-assisted synthesis only as an
+  optional layer that runs against the user's chosen local LLM
+  (Ollama or compatible).
+
+Non-goals: external multimodal ingestion, scheduled background
+queries, cross-device sync.
+
+### Explicit non-goals for the Memory Orchestrator track
+
+- Always-on background capture by default.
+- Auto-merging memories without user review.
+- Cloud sync of memories or insights.
+- Reading external accounts or arbitrary files.
+- Pretending a live Claude / Codex sync exists.
+- A Vertex AI / Gemini / cloud-LLM hard dependency.
+
 ## Connector re-import awareness (Implemented)
 
 The Evidence Hub now closes the user-facing re-import loop. Every

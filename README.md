@@ -86,6 +86,17 @@ Requires Rust and platform-specific Tauri prerequisites.
 npm run tauri:dev
 ```
 
+## Architecture
+
+For the layer-by-layer map of Mori's memory model (capture → evidence
+→ review → timeline → project memory → query / output → storage),
+see [docs/memory-architecture.md](docs/memory-architecture.md). For
+the comparison against external always-on-memory designs and the
+phased Memory Orchestrator roadmap, see
+[docs/references/memory-orchestrator-reference.md](docs/references/memory-orchestrator-reference.md)
+and the **Memory Orchestrator Roadmap** section of
+[docs/roadmap.md](docs/roadmap.md).
+
 ## Try the end-to-end flow
 
 To see Mori's import → review → timeline → evidence → memory → resume

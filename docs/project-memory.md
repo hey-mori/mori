@@ -203,6 +203,16 @@ Metadata-only and failed sessions contribute nothing to aggregation;
 they only show up in the recent-sessions list with a `loadStatus`
 badge.
 
+## Where Project Memory sits in the Mori architecture
+
+Project Memory is Layer 5 (consolidation) in Mori's memory model.
+For the full map of capture → evidence → review → timeline → memory
+→ query / output → storage, see
+[`docs/memory-architecture.md`](memory-architecture.md). For the
+analysis of comparable always-on-memory designs and what Mori
+adopts, defers, or rejects, see
+[`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md).
+
 ## See it working
 
 Use the end-to-end walkthrough at

@@ -588,6 +588,17 @@ detection is consistent across surfaces. Reports has its own separate
 report builder (`src/lib/report/reportBuilder.ts`) — the resume prompt
 does not replace it.
 
+## See also
+
+For a layer-by-layer map of Mori's memory model — capture, evidence,
+review, timeline, project memory, query/output, storage — see
+[`docs/memory-architecture.md`](memory-architecture.md). For the
+analysis of external always-on-memory designs (Google ADK + Gemini)
+and what Mori adopts, defers, or rejects, see
+[`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md).
+The runnable end-to-end walkthrough lives at
+[`docs/e2e-smoke-flow.md`](e2e-smoke-flow.md).
+
 ## Project Memory aggregation
 
 Project Memory composes a cross-session view over already-persisted local
