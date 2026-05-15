@@ -203,7 +203,7 @@ Metadata-only and failed sessions contribute nothing to aggregation;
 they only show up in the recent-sessions list with a `loadStatus`
 badge.
 
-## Controlled consolidation (Phase 2, design + pure helper landed)
+## Controlled Project Memory Consolidation
 
 Project Memory today is **computed live** every render. There is no
 durable project-level memory record yet — pruning a saved session
@@ -215,25 +215,40 @@ project-level memories. It is reviewed before apply, evidence-linked,
 and reversible. It is **not** a background watcher, not an
 auto-merge, and not a cloud sync.
 
-The Phase 2 design is documented at
-[`docs/project-memory-consolidation.md`](project-memory-consolidation.md).
-A small pure helper
-(`buildProjectMemoryConsolidationPreview`) that derives
-proposal candidates from any `ProjectMemoryViewModel` ships in this
-milestone as a prototype — no persistence change, no UI change, no
-LLM call.
+The full design is documented at
+[`project-memory-consolidation.md`](project-memory-consolidation.md):
 
-Phased rollout (full list in `docs/roadmap.md`):
+- The ten-state **memory lifecycle** (proposed / accepted / edited
+  / merged / discarded / watching / stale / contradicted /
+  superseded / retired) controls which memories appear as current
+  guidance in Resume Prompt and Reports.
+- Promoted decisions carry **ADR-style fields** (context,
+  rationale, alternatives, trade-offs, consequences,
+  `supersededBy`, etc.) plus Mori-specific `confidence` (label +
+  rationale) and `reevaluationTriggers`.
+- The **Consolidation Review Surface** is the analogue of a pull
+  request review for memory: three-pane layout, per-proposal
+  accept / edit / discard / split / merge / mark-stale /
+  supersede / resolve / defer / keep-watching, batch-action
+  guardrails, undo / revert with a full audit trail.
+- **AcceptedProjectMemory** and **ReviewAction** are typed records
+  designed for browser localStorage and desktop SQLite persistence.
+- The Resume Prompt and Reports inclusion policy admits only
+  `accepted` (and not stale / contradicted / superseded / retired)
+  memories as current guidance.
 
-| Phase | Scope | Status |
-| ----- | ----- | ------ |
-| 2.0 | Design + pure proposal helper + tests | ✅ landed |
-| 2.1 | Typed `ProjectMemoryConsolidationState` + Memory page wiring + "Planned" preview card | ✅ landed |
-| 2.2 | Consolidation Review UI | after 2.1 |
-| 2.3 | Browser persistence for accepted memories | after 2.2 |
-| 2.4 | SQLite persistence | after 2.3 |
-| 2.5 | Resume Prompt + Reports integration | after 2.4 |
-| 2.6 | Stale / contradiction review | after 2.5 |
+Capability status:
+
+| Capability | Status |
+| ---------- | ------ |
+| Consolidation Proposal Preview helper (pure, no persistence) | ✅ landed |
+| Consolidation State layer (Memory page wiring, honest "Planned" card) | ✅ landed |
+| Consolidation Review Surface (full review UI) | designed; not implemented |
+| Accepted Memory Persistence (browser localStorage) | designed; not implemented |
+| Accepted Memory Persistence (desktop SQLite) | designed; not implemented |
+| Memory Audit Trail (`ReviewAction` rows + Undo Apply) | designed; not implemented |
+| Stale Memory Review + Contradiction Review | designed; not implemented |
+| Resume Prompt + Reports inclusion policy hookup | designed; not implemented |
 
 ## Where Project Memory sits in the Mori architecture
 

@@ -1,16 +1,28 @@
 # Controlled Project Memory Consolidation
 
-Phase 2 of the [Memory Orchestrator roadmap](roadmap.md#memory-orchestrator-roadmap).
-This file specifies the **design** of Mori's controlled
-project-memory consolidation system. Implementation lands in
-sub-phases; this milestone ships the design plus a small pure helper
-(`buildProjectMemoryConsolidationPreview`) so the rest of the work
-can be designed against real shapes.
+The **Project Memory Consolidation** capability on Mori's
+[roadmap](roadmap.md#memory-orchestrator-roadmap). This file
+specifies the **design** of Mori's controlled project-memory
+consolidation system. Implementation ships incrementally as discrete
+capabilities (Consolidation Proposal Preview, Consolidation State,
+Consolidation Review Surface, Accepted Memory Persistence, Memory
+Audit Trail, Stale Memory Review, Resume and Report Memory
+Integration). The Consolidation Proposal Preview helper and the
+Consolidation State layer have landed; the rest is design only.
 
-The companion reference analysis lives at
-[`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md).
-The full memory architecture map lives at
-[`docs/memory-architecture.md`](memory-architecture.md).
+Companion docs:
+
+- [`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md) —
+  external always-on memory agent for contrast.
+- [`docs/references/manus-research-synthesis.md`](references/manus-research-synthesis.md) —
+  reconciliation of broader external research (review-before-apply,
+  ADRs, lifecycle, audit trail, privacy posture).
+- [`docs/memory-architecture.md`](memory-architecture.md) —
+  Mori's full memory layer map.
+
+The product principle that drives every decision in this file:
+**AI may propose project memory, but only the user can make it
+durable.**
 
 ---
 
@@ -415,6 +427,319 @@ badge, "Review proposals (Planned)" disabled button, honesty copy
 under the button. **No memory is written.** **`canOpenReview` is
 hard-coded `false`** until the Consolidation Review Surface lands;
 flipping it requires both a real route and a working accept flow.
+
+## Memory Lifecycle
+
+Every consolidated memory progresses through an explicit state. The
+state controls whether the memory is eligible for Resume Prompt or
+Reports as **current** guidance, and which user action is required
+to move between states. A proposal cannot become `accepted` without
+a review action, and a `stale` / `contradicted` memory cannot
+appear as current guidance until the user explicitly resolves it.
+
+| Status | Meaning | User action that produced it | Prompt / report eligibility |
+| ------ | ------- | ---------------------------- | --------------------------- |
+| `proposed` | The Consolidation Proposal Preview emitted a candidate; nothing is durable yet. | (helper output) | Excluded. |
+| `accepted` | User approved the proposal as durable Project Memory. | Accept | Eligible if sensitivity allows and the state is `accepted`. |
+| `edited` | User changed proposal content (or an already-accepted memory) before / after accepting; before/after diff lives in the audit log. | Edit (then Accept) | Eligible if the resulting state is `accepted`. |
+| `merged` | Multiple proposals or accepted memories were combined into one record; absorbed source ids are recorded. | Merge | Eligible as one consolidated memory. |
+| `discarded` | User rejected the proposal. Optionally retained in a lightweight audit row; the proposal does not reappear unless new evidence materially changes it. | Discard | Excluded. |
+| `watching` | User accepted the proposal as a "keep watching" item — durable, but not yet treated as a strong claim. | Keep watching | Surfaces as advisory, not as guidance. |
+| `stale` | Previously useful memory may be outdated (newer evidence, time-bound validity expired, etc.). | Mark stale / detected by Stale Memory Review | Excluded by default; may appear under a "Limitations / unresolved memory" section with a label. |
+| `contradicted` | Evidence or another accepted memory conflicts with this claim. | Detected via Contradiction Review / user-marked | Excluded from definitive guidance; appears under unresolved limitations. |
+| `superseded` | A newer accepted memory replaces this one; `supersededBy` carries the link. | Supersede | Excluded from current guidance; visible in audit / history. |
+| `retired` | User intentionally removed the memory from active use; can be restored. | Retire | Excluded from prompts and normal reports. |
+
+Eligibility rule: **only `accepted` (and not `stale` / `contradicted` /
+`superseded` / `retired`) memories appear as current guidance in
+Resume Prompt or Reports.** Stale / contradicted memories may
+appear only under an explicitly-labelled limitations section.
+
+## ADR-style Decision Memory Fields
+
+Promoted decisions carry full
+[Architecture Decision Record](https://martinfowler.com/bliki/ArchitectureDecisionRecord.html)
+field discipline rather than a single summary line. The field set
+applies to any consolidated memory of kind `promotedDecision`:
+
+| Field | Purpose |
+| ----- | ------- |
+| `title` | Concise, searchable decision name. |
+| `decision` | The durable claim, written as a reviewed statement. Never "AI thinks…". |
+| `context` | Why this decision mattered. Cites session evidence / reports / diffs / transcripts. |
+| `rationale` | Why this option was chosen; separates fact from interpretation. |
+| `alternatives` | Options considered but not chosen. |
+| `tradeOffs` | Costs, benefits, constraints, risks. Prevents overconfident memory. |
+| `consequences` | Expected or observed downstream effects. Reviewable as they evolve. |
+| `evidenceLinks` | Typed `MemoryEvidenceRef[]` — session / event / source pointers. Evidence remains the source of truth. |
+| `relatedIssues` | Linked recurring issues, risks, or next actions. |
+| `status` | `proposed` / `accepted` / `edited` / `stale` / `contradicted` / `superseded` / `retired` (lifecycle above). |
+| `supersededBy` | Pointer to the newer accepted decision when applicable. Preserves history instead of silent mutation. |
+| `confidence` | Qualitative label (`high` / `medium` / `low`) + a `rationale` string. **Not** a numeric auto-apply trigger. |
+| `reevaluationTriggers` | Free-form notes ("if connector X disappears", "if a later decision changes this API", "if this project ends") that the Stale Memory Review uses to surface the decision for re-review later. |
+| `createdAt` / `updatedAt` | Explicit review/edit timestamps. `updatedAt` only bumps on user action, not on background re-runs. |
+
+The same field discipline extends naturally to other consolidated
+memory kinds (recurring issues, key evidence, unresolved risks) —
+they reuse the lifecycle fields and skip the decision-specific
+ones.
+
+## Consolidation Review Surface — UI spec
+
+The Consolidation Review Surface is the analogue of GitHub's pull
+request review and Google Docs' suggested-edits flow, scoped to
+project memory. It is **not** implemented yet — this section is the
+design contract the implementation will satisfy.
+
+### Layout
+
+Three panes:
+
+- **Left rail**: proposal grouping + filter (by kind, by data
+  basis, by source session, by confidence label). Carries a "Run
+  scope" summary at the top (which sessions are in scope, what
+  privacy mode this run used, evidence types included).
+- **Center list**: proposal cards, grouped by `MemoryProposalKind`
+  (Decisions / Recurring Issues / Key Evidence / Unresolved Risks
+  / Stale Memories / Contradictions / Next-session
+  Recommendations). Each card shows the proposed durable claim,
+  the affected existing memory (if any), the action buttons, the
+  qualitative confidence label, sensitivity badge, and last
+  evidence date.
+- **Right inspector**: evidence inspector for the selected
+  proposal. Shows evidence excerpts, source metadata, capture
+  type, timestamps, evidence id (never local paths in
+  `clientSafe`), related memories, before/after preview, and
+  reviewer notes.
+
+The top bar carries a "Apply N accepted proposals" button.
+Disabled until at least one proposal is `accepted`. A run banner
+declares "Consolidation uses only the evidence you selected. No
+memory is written until you apply."
+
+### Per-proposal action set
+
+| Action | Behaviour |
+| ------ | --------- |
+| Accept | Marks the proposal `accepted`; included in the next apply. |
+| Edit | Opens editable fields (title / decision / rationale / etc.); on save the proposal's state becomes `edited` and apply commits the edited form. |
+| Discard | Marks the proposal `discarded`; remains visible under a "Show discarded" toggle. |
+| Split | Breaks one proposal into multiple narrower proposals (e.g. one decision per scope). |
+| Merge | Combines selected proposals (or a proposal + an accepted memory) into one durable record. |
+| Mark stale | For proposals against existing memory: flag the existing accepted memory as `stale`. |
+| Supersede | Replace an existing accepted memory with the new proposal; preserves the old via `supersededBy`. |
+| Resolve | For `contradiction` proposals: record the user's resolution choice and update both contradicting memories. |
+| Defer | Park the proposal for the next run without changing memory. |
+| Keep watching | Accept as `watching` (durable but advisory, not guidance). |
+| Add reviewer note | Free-text annotation; lands on the proposal and on the resulting audit row. |
+
+### Batch actions — guardrails
+
+Batch actions are **only** allowed for safe scopes:
+
+- "Discard all low-confidence duplicate proposals" (constrained:
+  matching `confidence === "low"` AND dedupe-key match).
+- "Accept selected reviewed proposals" (constrained: only the
+  proposals the user explicitly selected).
+- No "Accept all" without an explicit confirmation step that
+  surfaces the count + sensitivity summary.
+
+Each batch action triggers a preview ("you are about to discard /
+accept N proposals") and an undo affordance (next section).
+
+### Empty / partial-data states
+
+- **No candidates**: "No consolidation candidates found from the
+  selected evidence. Import more evidence or broaden the run
+  scope."
+- **Partial data**: per-proposal badge ("Based on AI Transcript
+  imports only; Git Diff evidence was not included.") and a
+  run-level limitations summary.
+- **Privacy notice**: persistent banner explaining local-only
+  derivation, no cloud, no external accounts.
+
+### Undo / revert
+
+After the user clicks "Apply N accepted proposals":
+
+- A review summary appears: applied count, source titles,
+  sensitivity summary, audit log link.
+- **Undo apply** creates a *new* audit row that reverts the
+  changes; history is preserved (no silent deletion).
+- The full audit log is reachable from the Project Memory page
+  and is filterable by proposal kind, actor, and timestamp.
+
+### Confidence display
+
+Mori uses qualitative confidence labels (`high` / `medium` /
+`low`) with a `why` string. **Confidence is never an auto-apply
+trigger.** Apply requires a user action; confidence only helps the
+user prioritise their review.
+
+## Accepted Memory Persistence — data model
+
+When the Consolidation Review Surface lands and the user accepts
+proposals, the accepted memories persist as durable project-level
+records. The shape is fixed here so storage, audit, and Resume
+Prompt integration can be implemented against a stable contract.
+
+### `AcceptedProjectMemory`
+
+```ts
+type ConsolidatedMemoryStatus =
+  | "accepted"
+  | "watching"
+  | "stale"
+  | "contradicted"
+  | "superseded"
+  | "retired";
+
+type ConsolidatedMemorySensitivity =
+  | "normal"
+  | "private"
+  | "client-sensitive"
+  | "secret-risk"
+  | "redacted";
+
+type AcceptedProjectMemory = {
+  id: string;
+  projectId: string;
+  kind: MemoryProposalKind;           // promotedDecision | recurringIssue | …
+  title: string;
+  summary: string;
+  /** ADR-style fields when `kind === "promotedDecision"`. */
+  structured?: {
+    context?: string;
+    rationale?: string;
+    alternatives?: string[];
+    tradeOffs?: string[];
+    consequences?: string[];
+    reevaluationTriggers?: string[];
+  };
+  status: ConsolidatedMemoryStatus;
+  importance: "high" | "medium" | "low";
+  confidence: { label: "high" | "medium" | "low"; rationale: string };
+  evidenceRefs: MemoryEvidenceRef[];    // session | event | source pointers only
+  sourceSessionIds: string[];
+  originProposalIds: string[];
+  supersedes?: string;                  // AcceptedProjectMemory.id
+  supersededBy?: string;                // AcceptedProjectMemory.id
+  sensitivity: ConsolidatedMemorySensitivity;
+  resumeEligible: boolean;              // Resume Prompt inclusion
+  reportEligibility: "personal" | "team" | "client-safe" | "excluded";
+  version: number;                      // bumps on explicit edit
+  createdAt: string;
+  updatedAt: string;
+  acceptedAt: string;
+  acceptedBy?: string;                  // local user / device label, optional
+  reviewActionIds: string[];            // links into the audit trail
+  schemaVersion: 1;
+};
+```
+
+### `ReviewAction` (audit row)
+
+```ts
+type ReviewActionType =
+  | "accept" | "edit" | "discard" | "split" | "merge"
+  | "markStale" | "supersede" | "resolve" | "defer"
+  | "keepWatching" | "retire" | "revert" | "reviewerNote";
+
+type ReviewAction = {
+  id: string;
+  projectId: string;
+  actionType: ReviewActionType;
+  actor: "local-user";                  // single-user product today
+  timestamp: string;
+  /** Compact diff or structured before/after of the target. */
+  before?: unknown;
+  after?: unknown;
+  note?: string;
+  sourceProposalId?: string;
+  targetMemoryIds: string[];
+  runId?: string;                       // ConsolidationRun id
+  reversible: boolean;                  // does this support one-click undo
+  schemaVersion: 1;
+};
+```
+
+### What never gets stored in `AcceptedProjectMemory`
+
+- raw connector JSONL,
+- full raw transcripts beyond what the user explicitly retained,
+- file paths beyond what already exists on the underlying
+  `SourceRef`,
+- secret-shaped strings (the proposal helper screens for these;
+  the apply path screens again before write),
+- AI claims with no `evidenceRefs` entry.
+
+A consolidated memory is **a curated pointer + summary**, not a
+copy of the evidence.
+
+## Memory Audit Trail
+
+The `ReviewAction` records above form an append-only audit trail
+per project. Every state transition in the lifecycle produces one
+row. The trail is local-only and shipped as part of `.mori v0`
+export when the package format is extended for the consolidation
+capability.
+
+UI surfacing:
+
+- A "View audit log" link from the Memory page opens a filterable
+  table (action / actor / timestamp / target memory / proposal).
+- "Undo apply" creates a new `ReviewAction` with
+  `actionType: "revert"`, `reversible: true`, and a `before`/`after`
+  pair that captures the reverted state. Undo is itself reversible.
+- Discard rows are kept by default (lightweight payload); the user
+  can purge them via Settings → Memory cleanup.
+
+## Resume Prompt and Reports inclusion policy
+
+When consolidated memory persistence lands, the Resume Prompt
+builder and the Reports builder consume `AcceptedProjectMemory[]`
+under a conservative policy:
+
+| Output | Which memories | Citation style | Sensitive-detail handling |
+| ------ | -------------- | -------------- | -------------------------- |
+| Resume Prompt | `status === "accepted"` AND not stale / contradicted / superseded / retired AND `resumeEligible === true` AND sensitivity-compatible with the chosen privacy mode. | Inline evidence ids or compact source labels. | Exclude `client-sensitive` / `private` / `secret-risk` memories unless the audience + privacy mode explicitly allow. |
+| Handoff Report | `status === "accepted"` decisions + open risks + next actions + status. | Footnotes / evidence appendix. | Team-safe policy; private notes omitted. |
+| Team Update | High-level accepted progress, current blockers, agreed decisions. | Minimal evidence links. | Personal retrospective + client-confidential content omitted. |
+| Personal Retrospective | Accepted patterns, recurring issues, decision quality, process notes. | Evidence references optional. | Local + user-approved only. |
+| Client-safe Report | Only memories with `reportEligibility === "client-safe"`. | Sanitised references; no raw artefacts. | Strictly omit secrets, internal reasoning, personal data, unapproved evidence. |
+
+Stale / superseded decisions never appear as current guidance.
+They may appear under a clearly-labelled "Historical context" or
+"Superseded decisions" appendix when historically useful.
+Contradicted memories appear only under "Open contradictions /
+limitations" until the user resolves them.
+
+The Resume Prompt's existing
+[`projectMemoryResumePrompt.ts`](../src/lib/project-memory/projectMemoryResumePrompt.ts)
+builder already applies privacy filtering for the active view-model
+input. When accepted memories land, the builder adds a
+`consolidatedMemories` section that supersedes the live
+aggregation for any kind/title combination present in both.
+
+## Contradiction and Staleness signals
+
+The Consolidation Proposal Preview helper does not yet emit
+`contradiction` or `staleMemory` kinds; the design specifies how
+they will be detected when Stale Memory Review and Contradiction
+Review ship:
+
+| Signal | Detection | Resulting proposal |
+| ------ | --------- | ------------------ |
+| Newer evidence supersedes older evidence behind an accepted memory. | Source `capturedAt` timestamps + `connectorEventId` chains. | `staleMemory` proposal citing the original memory + the newer evidence. |
+| Two accepted decisions cover the same normalised title with different `decision` text. | Title-normalisation match across `AcceptedProjectMemory[]`. | `contradiction` proposal grouping the conflicting decisions. |
+| An issue was open in an older session and resolved in a newer session. | Status transition detected via the cross-session aggregator. | Either a `staleMemory` proposal (if the resolution is uncertain) or a direct resolution action (if confidence is high). |
+| `reevaluationTriggers` fired (e.g. "if connector X disappears"). | Run-time check against the current `ProjectMemoryViewModel`. | `staleMemory` proposal with the trigger named. |
+| Proposal is based on partial run data. | Run-level limitations carried on the proposal. | Existing proposal carries a "partial data" badge; no new kind. |
+
+In every case the Consolidation Review Surface presents the
+detection as a **review task**, not as an AI verdict. Phrasing
+defaults to "This may conflict with…" or "Newer evidence suggests
+this memory may be outdated."
 
 ## 13. Helper prototype API (Phase 2.0, this milestone)
 

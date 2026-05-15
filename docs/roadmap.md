@@ -188,10 +188,38 @@ Not included yet:
 
 A cross-cutting view of Mori's memory layers, framed against the
 external always-on-memory reference analysed in
-[`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md).
-Each phase preserves the honesty contract documented in
+[`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md)
+and reconciled with the broader Mori research synthesis at
+[`docs/references/manus-research-synthesis.md`](references/manus-research-synthesis.md).
+Each capability preserves the honesty contract documented in
 [`docs/memory-architecture.md`](memory-architecture.md): explicit
 ingestion, review-before-apply, provenance over prose, local-only.
+
+### Capability buckets
+
+Durable architecture should be described by capability, not by
+phase number. The buckets below are the stable structure; the
+phase-numbered sub-headings that follow are historical milestone
+notes kept for traceability, not new architecture labels.
+
+| Capability bucket | Goal | Status |
+| ----------------- | ---- | ------ |
+| Import and Evidence Foundation | Make explicit import reliable, auditable, evidence-linked. | ✅ landed |
+| Timeline and Review Experience | Make AI-derived reconstruction reviewable per item. | ✅ landed |
+| Project Memory Consolidation | Turn reviewed sessions into durable project memory through review-before-apply. | partially landed — see Controlled Project Memory Consolidation below |
+| Resume and Report Outputs | Generate continuation prompts and shareable reports from accepted memory only. | live aggregation landed; accepted-memory integration designed |
+| Optional Local Automation | Reduce friction while preserving explicit consent. | not started — opt-in only when added |
+| Queryable Memory | Local cited search over accepted memory + evidence. | research |
+| Team / Shared Memory | Explicit `.mori v0` export/import only; no default cloud sync. | partially landed (`.mori v0` export) |
+
+Sub-capabilities within Project Memory Consolidation (mirroring
+the design in
+[`docs/project-memory-consolidation.md`](project-memory-consolidation.md)):
+Consolidation Proposal Preview ✅, Consolidation State ✅,
+Consolidation Review Surface (designed), Accepted Memory
+Persistence (designed), Memory Audit Trail (designed), Stale Memory
+Review + Contradiction Review (designed), Resume and Report Memory
+Integration (designed).
 
 ### Phase 0 — Explicit import memory loop (Implemented)
 

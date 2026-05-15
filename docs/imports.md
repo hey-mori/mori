@@ -7,6 +7,33 @@ produces a `NormalizedImportCandidate` (one `SourceRef` + one or more
 `useMoriSessionStore.addImport`, which persists them per session through the
 browser draft repository today and through SQLite when running in Tauri mode.
 
+## Evidence is the source of truth
+
+The imported `SourceRef`s and `TimelineEvent`s are Mori's durable
+ground truth. Anything Mori derives from them — Quick Pass issues
+and decisions, Project Memory aggregations, consolidated memories,
+Resume Prompt sections — is a **reviewable proposal** layered on
+top of that evidence.
+
+This has two practical consequences:
+
+1. **Import Review and any future Consolidation Review are
+   review-before-apply gates.** Users accept, edit, discard,
+   correct, split, merge, defer, mark stale, or keep-watching the
+   proposal. Nothing lands in the timeline or in durable project
+   memory until an explicit user action.
+2. **Provenance is preserved end-to-end.** Every derived item
+   carries an evidence reference back to the original
+   `sourceEventIds` / `relatedSourceIds` / `connectorEventId`. The
+   Evidence Hub and the Consolidation Review Surface both surface
+   these citations.
+
+See [`memory-architecture.md`](memory-architecture.md) for the full
+layer model and
+[`project-memory-consolidation.md`](project-memory-consolidation.md)
+for how the same review pattern extends to consolidated project
+memory.
+
 ## Import support matrix
 
 | Kind | Source kind(s) | Event type | Trust | Notes |

@@ -123,6 +123,40 @@ Project Memory scope (read-only, single-session aggregation):
   `clearCurrentSessionDraft` runs. Records with an unknown schema
   version load as `null` rather than corrupting the aggregator.
 
+### Accepted Memory Persistence (designed; not implemented)
+
+When the Consolidation Review Surface lands, accepted proposals
+become durable `AcceptedProjectMemory` rows that survive session
+pruning. The design is fixed in
+[`project-memory-consolidation.md`](project-memory-consolidation.md);
+the storage plan below is what the implementation will satisfy.
+
+- **Browser localStorage key**:
+  `mori.consolidatedMemory.<projectId>.<memoryId>` for
+  `AcceptedProjectMemory` rows and
+  `mori.consolidatedMemoryAudit.<projectId>` for the
+  `ReviewAction[]` audit trail. Both records carry
+  `schemaVersion: 1`; unknown schema versions load as `null` to
+  protect callers.
+- **Desktop SQLite**: a `consolidated_memories` table plus a
+  `consolidated_memory_audit` table, written via a Rust migration.
+  Loader pattern mirrors the existing session loader (read from
+  SQLite when available, fall back to localStorage).
+- **`.mori v0` export** will gain a `consolidatedMemories[]` slice
+  + `auditTrail[]` slice with a schema bump. Imported packages
+  re-enter the project as `proposed` (re-reviewed before they
+  merge with the importing user's accepted memory).
+- **What never lands in `AcceptedProjectMemory`**: raw connector
+  JSONL, full transcripts beyond what the `SourceRef` already
+  retains, raw secret-shaped strings (screened twice — once at
+  proposal generation, once at apply), file paths beyond what's
+  already on the underlying `SourceRef`, AI claims without a
+  matching `evidenceRefs` entry.
+
+No code change in this milestone — the keys, table names, and
+field sets are documented here so the implementation can be done
+against a stable contract.
+
 Expected replacement path:
 
 1. Add Rust-native SQLite migration runner using `rusqlite`.

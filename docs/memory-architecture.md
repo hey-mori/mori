@@ -1,15 +1,23 @@
 # Mori Memory Architecture
 
-Mori is a local-first AI work-memory app that reconstructs work
-sessions from **explicit evidence** the user has imported. This file
-is the canonical map of Mori's memory layers: what each one does
-today, what its inputs and outputs are, what the privacy boundary
-looks like, and what's planned next.
+Mori is a **local-first AI work memory app for evidence-based
+session reconstruction and continuation**. The durable unit of
+value is not a memory snippet — it is a reviewed, source-linked
+understanding of *what happened*, *why it mattered*, *what evidence
+supports it*, *what was decided*, *what remains unresolved*, and
+*what should be carried into the next session*.
 
-For the comparison against external always-on-memory designs
-(e.g. Google ADK's Always-On Memory Agent), see
+This file is the canonical map of Mori's memory layers: what each
+one does today, what its inputs and outputs are, what the privacy
+boundary looks like, and what's planned next.
+
+For comparison against external always-on memory designs (Google
+ADK's Always-On Memory Agent) see
 [`docs/references/memory-orchestrator-reference.md`](references/memory-orchestrator-reference.md).
-For a runnable walkthrough of the full loop, see
+For the synthesised reconciliation of external research against
+Mori's actual implementation see
+[`docs/references/manus-research-synthesis.md`](references/manus-research-synthesis.md).
+For a runnable walkthrough of the full loop see
 [`docs/e2e-smoke-flow.md`](e2e-smoke-flow.md).
 
 ## Honesty contract
@@ -29,6 +37,46 @@ violate any of them it does not ship.
   involvement is optional and bounded to Quick Pass.
 - **Local-only.** No cloud sync, no OAuth, no external account
   reading.
+
+## Privacy and security principles
+
+Even though Mori runs entirely local, the privacy posture is
+explicit. The vocabulary borrows from
+[GDPR Article 5](https://gdpr-info.eu/art-5-gdpr/) (transparency,
+purpose limitation, data minimization, accuracy, storage
+limitation, integrity and confidentiality) and from the
+[OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
+(do not let secrets reach durable artefacts):
+
+- **No background capture by default.** No watcher, no daemon, no
+  scheduled job.
+- **No account scraping.** No OAuth, no cloud, no external account
+  reading.
+- **Raw transcript retention is explicit.** Every connector event
+  carries a `rawDataPolicy` (`summary_only` / `retained` /
+  `redacted` / `reference_only`); Mori does not silently keep raw
+  text past what the policy allows.
+- **Secret detection before apply.** `containsLikelySecret` runs
+  at import time; the Import Review banner surfaces matches.
+- **Evidence-linked claims.** Every derived item points to its
+  source spans (`sourceEventIds`, `relatedSourceIds`,
+  `connectorEventId`).
+- **Stale / contradictory memory needs review.** It does not
+  silently flow into Resume Prompt or Reports.
+- **Visible consent.** The Memory page surfaces a `dataBasis`
+  badge and a warnings strip so the user can see exactly what
+  reach Project Memory has.
+- **Client-safe outputs avoid sensitive source details.** Resume
+  Prompt's `clientSafe` mode strips local paths, URLs, connector
+  identity triplets, and secret-shaped strings.
+- **What never enters durable consolidated memory:** raw
+  credentials, API keys, passwords, private keys, OAuth tokens,
+  session cookies, unredacted PII not required for the project,
+  full raw transcripts without retention policy, confidential
+  client details not marked client-safe, AI claims with no
+  evidence link. The Consolidation Review Surface enforces this
+  before durable writes; see
+  [`project-memory-consolidation.md`](project-memory-consolidation.md).
 
 ---
 

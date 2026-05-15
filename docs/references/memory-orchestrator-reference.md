@@ -12,7 +12,10 @@ This file analyses the reference design, compares it against Mori,
 and decides what Mori adopts, defers, or rejects. It is **not** a
 re-implementation plan. The implementation plan lives in
 [`docs/memory-architecture.md`](../memory-architecture.md) and
-[`docs/roadmap.md`](../roadmap.md).
+[`docs/roadmap.md`](../roadmap.md). The broader external-research
+reconciliation (ADR, review-before-apply, lifecycle, audit trail,
+privacy posture) is in
+[`docs/references/manus-research-synthesis.md`](manus-research-synthesis.md).
 
 ---
 
