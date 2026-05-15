@@ -130,9 +130,14 @@ Inputs:
 - `audience` — `"self"` / `"claude"` / `"codex"` / `"chatgpt"` /
   `"handoff"`. Selects the preamble + closing language.
 - `privacyMode` — `"normal"` / `"summaryOnly"` / `"clientSafe"`.
-- `includeSections?` — subset of `summary` / `recentSessions` /
-  `decisions` / `issues` / `evidence` / `nextActions` /
-  `reimports` / `limitations`. Defaults to the full set.
+- `acceptedMemories?` — `StoredAcceptedProjectMemory[]`. When
+  present, eligible records render as a reviewed "Accepted project
+  memory" section (see "Accepted memory in the resume prompt"
+  below). Optional — omitting it produces the live-only prompt.
+- `includeSections?` — subset of `summary` / `consolidatedMemory` /
+  `recentSessions` / `decisions` / `issues` / `evidence` /
+  `nextActions` / `reimports` / `limitations`. Defaults to the full
+  set.
 - `maxItems?` — per-section cap, default 5.
 
 Output:
@@ -174,6 +179,35 @@ What the prompt NEVER includes:
 The legacy `buildFollowUpPrompt(view, savedSessionCount, …)` helper
 remains exported for backward compatibility; existing tests still
 exercise it. The Memory page no longer calls it.
+
+### Accepted memory in the resume prompt
+
+When `acceptedMemories` is supplied, the builder applies the
+`isResumeGuidanceMemory` inclusion policy and renders a dedicated
+**Accepted project memory (reviewed)** section directly after the
+summary — ahead of the live `decisions` / `issues` aggregation — so
+reviewed, durable memory outranks recomputed rows.
+
+A record is used as **current guidance** only when it is
+`resumeEligible`, its status is `accepted` or `edited`, its kind is
+not `staleMemory` / `contradiction`, and (in `clientSafe` mode) its
+sensitivity is `normal`. Records that fail the policy are handled
+honestly:
+
+- `staleMemory` / `contradiction` kinds and `watching`-status
+  records are **flagged for re-review** — counted in the Limitations
+  section, never shown as guidance (`isMemoryFlaggedForReview`).
+- `superseded` / `retired` records are history and excluded
+  entirely.
+- `deferred` records and sensitivity-incompatible records are
+  excluded from the prompt.
+
+The Memory page passes the project's persisted
+`StoredAcceptedProjectMemory[]` (from
+`BrowserDraftRepository.listAcceptedProjectMemories`) into the
+builder. The Reports builder does not yet consume accepted memory —
+that is the remaining half of the Resume and Report Memory
+Integration capability.
 
 ## Cross-session aggregation
 
@@ -249,7 +283,8 @@ Capability status:
 | SQLite Accepted Memory Storage (desktop) | designed; not implemented |
 | Memory Audit Trail (`ReviewAction` rows + Undo Apply) | designed; not implemented |
 | Stale Memory Review + Contradiction Review | designed; not implemented |
-| Resume Prompt + Reports inclusion policy hookup | designed; not implemented |
+| Resume Prompt inclusion policy hookup | ✅ landed |
+| Reports inclusion policy hookup | designed; not implemented |
 
 ## Where Project Memory sits in the Mori architecture
 

@@ -387,7 +387,7 @@ same review pattern.
 | **Consolidation Review Surface** | Full-page surface, grouped proposal cards, evidence inspector, local-draft accept / edit / discard / keep-watching / defer / reset actions. No persistence — accepted memories are draft-scoped. | ✅ |
 | **Accepted Memory Persistence** | `StoredAcceptedProjectMemory` + `StoredMemoryReviewAction` repository methods; accepted / edited / watching / deferred memories survive reload via browser localStorage. | ✅ landed (browser) |
 | **SQLite Accepted Memory Storage** | `consolidated_memories` table + Rust migration + load/store commands. | Planned |
-| **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Planned |
+| **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports + `.mori v0` slice planned |
 | **Stale Memory Review** | Detect pruned-source references and conflicting decisions; surface them as `staleMemory` / `contradiction` proposal kinds. | Planned |
 | **Queryable Memory over accepted memory** | Optional local memory query against accepted memories with citations. | Research |
 
@@ -769,12 +769,32 @@ They may appear under a clearly-labelled "Historical context" or
 Contradicted memories appear only under "Open contradictions /
 limitations" until the user resolves them.
 
-The Resume Prompt's existing
+### Resume Prompt hookup — landed
+
+The Resume Prompt builder
 [`projectMemoryResumePrompt.ts`](../src/lib/project-memory/projectMemoryResumePrompt.ts)
-builder already applies privacy filtering for the active view-model
-input. When accepted memories land, the builder adds a
-`consolidatedMemories` section that supersedes the live
-aggregation for any kind/title combination present in both.
+now accepts an optional `acceptedMemories` input. When supplied it
+renders an **Accepted project memory (reviewed)** section
+immediately after the summary — ahead of the live `decisions` /
+`issues` aggregation — so reviewed durable memory outranks
+recomputed rows.
+
+The inclusion policy is the exported pure predicate
+`isResumeGuidanceMemory(memory, privacyMode)`: a record is current
+guidance only when `resumeEligible` is true, its status is
+`accepted` / `edited`, its kind is not `staleMemory` /
+`contradiction`, and (in `clientSafe` mode) its sensitivity is
+`normal`. The companion predicate `isMemoryFlaggedForReview` marks
+`staleMemory` / `contradiction` kinds and `watching`-status records
+for re-review — they are counted under Limitations, never shown as
+guidance. `superseded` / `retired` records are excluded entirely.
+
+A future refinement may dedupe a live aggregation row when an
+accepted memory already covers the same kind/title; today both can
+appear, with the accepted section clearly labelled as reviewed.
+
+The **Reports builder** does not yet consume `AcceptedProjectMemory`
+— that is the remaining half of this capability.
 
 ## Contradiction and Staleness signals
 

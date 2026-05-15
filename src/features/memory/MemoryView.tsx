@@ -290,8 +290,9 @@ export function MemoryView() {
         memory: viewModel,
         audience: resumeAudience,
         privacyMode: resumePrivacy,
+        acceptedMemories,
       }),
-    [viewModel, resumeAudience, resumePrivacy],
+    [viewModel, resumeAudience, resumePrivacy, acceptedMemories],
   );
   const followUpPrompt = resumePrompt.body;
 

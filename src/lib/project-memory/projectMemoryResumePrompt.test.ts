@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   buildProjectMemoryResumePrompt,
+  isMemoryFlaggedForReview,
+  isResumeGuidanceMemory,
   type ProjectMemoryResumePromptInput,
 } from "./projectMemoryResumePrompt";
 import { emptyProjectMemoryViewModel } from "./projectMemoryModel";
 import type { ProjectMemoryViewModel } from "./projectMemoryModel";
+import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 
 function baseViewModel(overrides: Partial<ProjectMemoryViewModel> = {}): ProjectMemoryViewModel {
   return {
@@ -172,6 +175,7 @@ function build(input: Partial<ProjectMemoryResumePromptInput> & { audience: Proj
     includeSections: input.includeSections,
     maxItems: input.maxItems,
     privacyMode: input.privacyMode,
+    acceptedMemories: input.acceptedMemories,
   });
 }
 
@@ -350,5 +354,145 @@ describe("buildProjectMemoryResumePrompt — section inclusion", () => {
     const result = build({ audience: "self", memory, maxItems: 3 });
     const decisions = result.sections.find((section) => section.key === "decisions");
     expect(decisions?.lines.length).toBe(3);
+  });
+});
+
+// ─── accepted-memory integration ──────────────────────────────────────
+
+function acceptedMemory(
+  overrides: Partial<StoredAcceptedProjectMemory> = {},
+): StoredAcceptedProjectMemory {
+  return {
+    id: "mem-1",
+    projectId: "p-1",
+    kind: "promotedDecision",
+    title: "Keep Import Review as a non-bypassable gate",
+    summary: "Every captured event must pass through Import Review before it reaches a session.",
+    status: "accepted",
+    importance: "high",
+    confidence: { label: "high", score: 0.9 },
+    evidenceRefs: [{ kind: "session", sessionId: "s-cur", sessionTitle: "Current sprint" }],
+    sourceSessionIds: ["s-cur", "s-old"],
+    originProposalIds: ["prop-1"],
+    relatedIssueIds: [],
+    relatedDecisionIds: [],
+    proposedAction: "promote",
+    sensitivity: "normal",
+    resumeEligible: true,
+    reportEligibility: "personal",
+    createdAt: "2026-05-10T10:00:00Z",
+    updatedAt: "2026-05-12T10:00:00Z",
+    acceptedAt: "2026-05-12T10:00:00Z",
+    acceptedBy: "local-user",
+    reviewActionIds: ["act-1"],
+    schemaVersion: 1,
+    adapter: "browser-local-storage",
+    ...overrides,
+  };
+}
+
+describe("buildProjectMemoryResumePrompt — accepted memory integration", () => {
+  it("omits the consolidated-memory section when no accepted memories are passed", () => {
+    const result = build({ audience: "claude" });
+    expect(result.sections.map((section) => section.key)).not.toContain("consolidatedMemory");
+  });
+
+  it("surfaces an accepted memory as reviewed guidance above the live aggregation", () => {
+    const result = build({ audience: "claude", acceptedMemories: [acceptedMemory()] });
+    const section = result.sections.find((s) => s.key === "consolidatedMemory");
+    expect(section).toBeDefined();
+    expect(section?.heading).toMatch(/Accepted project memory/i);
+    expect(result.body).toContain("Keep Import Review as a non-bypassable gate");
+    expect(result.body).toContain("Accepted project memory: 1 used as guidance (of 1 reviewed)");
+    // The consolidated section is placed before the live key-decisions section.
+    const keys = result.sections.map((s) => s.key);
+    expect(keys.indexOf("consolidatedMemory")).toBeLessThan(keys.indexOf("decisions"));
+  });
+
+  it("excludes watching-status memories from guidance and flags them under limitations", () => {
+    const result = build({
+      audience: "self",
+      acceptedMemories: [acceptedMemory({ id: "mem-w", status: "watching" })],
+    });
+    const section = result.sections.find((s) => s.key === "consolidatedMemory");
+    expect(section?.lines.join("\n")).toContain("no accepted project memory");
+    const limitations = result.sections.find((s) => s.key === "limitations");
+    expect(limitations?.lines.join("\n")).toMatch(/1 accepted memory flagged for re-review/);
+  });
+
+  it("excludes staleMemory / contradiction kinds from guidance but flags them", () => {
+    const result = build({
+      audience: "self",
+      acceptedMemories: [
+        acceptedMemory({ id: "mem-stale", kind: "staleMemory" }),
+        acceptedMemory({ id: "mem-conflict", kind: "contradiction" }),
+      ],
+    });
+    const section = result.sections.find((s) => s.key === "consolidatedMemory");
+    expect(section?.lines.join("\n")).toContain("no accepted project memory");
+    const limitations = result.sections.find((s) => s.key === "limitations");
+    expect(limitations?.lines.join("\n")).toMatch(/2 accepted memories flagged for re-review/);
+  });
+
+  it("excludes superseded / retired memories entirely — not guidance, not flagged", () => {
+    const result = build({
+      audience: "self",
+      acceptedMemories: [
+        acceptedMemory({ id: "mem-sup", status: "superseded" }),
+        acceptedMemory({ id: "mem-ret", status: "retired" }),
+      ],
+    });
+    const limitations = result.sections.find((s) => s.key === "limitations");
+    expect(limitations?.lines.join("\n")).not.toMatch(/flagged for re-review/);
+  });
+
+  it("drops non-normal sensitivity memories in clientSafe mode", () => {
+    const sensitive = acceptedMemory({ id: "mem-priv", sensitivity: "sensitive" });
+    const normalResult = build({ audience: "handoff", acceptedMemories: [sensitive] });
+    expect(normalResult.body).toContain("Keep Import Review as a non-bypassable gate");
+
+    const clientSafe = build({
+      audience: "handoff",
+      privacyMode: "clientSafe",
+      acceptedMemories: [sensitive],
+    });
+    const section = clientSafe.sections.find((s) => s.key === "consolidatedMemory");
+    expect(section?.lines.join("\n")).toContain("no accepted project memory");
+  });
+
+  it("drops the per-memory summary detail in summaryOnly mode", () => {
+    const result = build({
+      audience: "self",
+      privacyMode: "summaryOnly",
+      acceptedMemories: [acceptedMemory()],
+    });
+    const section = result.sections.find((s) => s.key === "consolidatedMemory");
+    const text = section?.lines.join("\n") ?? "";
+    expect(text).toContain("Keep Import Review as a non-bypassable gate");
+    expect(text).not.toContain("Every captured event must pass through Import Review");
+  });
+
+  it("isResumeGuidanceMemory enforces the inclusion policy", () => {
+    expect(isResumeGuidanceMemory(acceptedMemory(), "normal")).toBe(true);
+    expect(isResumeGuidanceMemory(acceptedMemory({ status: "edited" }), "normal")).toBe(true);
+    expect(isResumeGuidanceMemory(acceptedMemory({ status: "watching" }), "normal")).toBe(false);
+    expect(isResumeGuidanceMemory(acceptedMemory({ status: "deferred" }), "normal")).toBe(false);
+    expect(isResumeGuidanceMemory(acceptedMemory({ resumeEligible: false }), "normal")).toBe(false);
+    expect(isResumeGuidanceMemory(acceptedMemory({ kind: "staleMemory" }), "normal")).toBe(false);
+    expect(
+      isResumeGuidanceMemory(acceptedMemory({ sensitivity: "sensitive" }), "clientSafe"),
+    ).toBe(false);
+    expect(
+      isResumeGuidanceMemory(acceptedMemory({ sensitivity: "sensitive" }), "normal"),
+    ).toBe(true);
+  });
+
+  it("isMemoryFlaggedForReview marks unresolved memory but skips history", () => {
+    expect(isMemoryFlaggedForReview(acceptedMemory({ kind: "staleMemory" }))).toBe(true);
+    expect(isMemoryFlaggedForReview(acceptedMemory({ kind: "contradiction" }))).toBe(true);
+    expect(isMemoryFlaggedForReview(acceptedMemory({ status: "watching" }))).toBe(true);
+    expect(isMemoryFlaggedForReview(acceptedMemory())).toBe(false);
+    expect(isMemoryFlaggedForReview(acceptedMemory({ status: "superseded" }))).toBe(false);
+    expect(isMemoryFlaggedForReview(acceptedMemory({ status: "retired" }))).toBe(false);
   });
 });

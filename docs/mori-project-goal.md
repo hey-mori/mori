@@ -221,6 +221,14 @@ that is called out.
   / `appendMemoryReviewAction` / `listMemoryReviewActions`).
 - Accepted Memories card on the Memory page reading from the
   persisted store.
+- Resume Prompt accepted-memory integration: the
+  `buildProjectMemoryResumePrompt` builder consumes accepted
+  memories under the `isResumeGuidanceMemory` inclusion policy.
+  Eligible records (`accepted` / `edited`, `resumeEligible`,
+  sensitivity-compatible) surface as a reviewed "Accepted project
+  memory" guidance section that outranks the live aggregation;
+  stale / contradicted / watching records surface only under
+  Limitations.
 
 **Storage**
 
@@ -260,11 +268,11 @@ against the repository.
   reliable bridge that captures live Claude Code / Codex CLI / Git
   activity into `~/.mori/connectors/` for a real workflow is not
   shipped. The user must still run the template scripts manually.
-- **Resume and Report Memory Integration.** The Resume Prompt and
-  Reports builders consume live `ProjectMemoryViewModel` only.
-  Accepted memories do not yet outrank live aggregation rows, and
-  the `.mori v0` package does not yet carry a `consolidatedMemories`
-  slice.
+- **Resume and Report Memory Integration (Reports half).** The
+  Resume Prompt builder now consumes accepted memories as a reviewed
+  guidance section. The Reports builder still consumes live
+  `ProjectMemoryViewModel` only, and the `.mori v0` package does not
+  yet carry a `consolidatedMemories` slice.
 - **SQLite Accepted Memory Storage.** `consolidated_memories` and
   `consolidated_memory_audit` tables, the Rust migration, and the
   load / store command surface are designed but not implemented. No

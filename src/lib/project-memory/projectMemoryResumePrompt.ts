@@ -24,6 +24,7 @@
  *     same prompt can be shared in a status update.
  */
 import { containsLikelySecret } from "../connectors";
+import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 import type {
   ProjectMemoryDataBasis,
   ProjectMemoryKeyDecision,
@@ -47,6 +48,7 @@ export type ProjectMemoryResumePromptPrivacy = "normal" | "summaryOnly" | "clien
 
 export type ProjectMemoryResumePromptSectionKey =
   | "summary"
+  | "consolidatedMemory"
   | "recentSessions"
   | "decisions"
   | "issues"
@@ -58,6 +60,13 @@ export type ProjectMemoryResumePromptSectionKey =
 export type ProjectMemoryResumePromptInput = {
   memory: ProjectMemoryViewModel;
   audience: ProjectMemoryResumePromptAudience;
+  /**
+   * Accepted project memory records (reviewed, durable). When present,
+   * eligible records are surfaced as a dedicated guidance section that
+   * outranks the live aggregation. Optional — when omitted the prompt
+   * is built from the live view-model only, exactly as before.
+   */
+  acceptedMemories?: readonly StoredAcceptedProjectMemory[];
   /** Which sections to include. Defaults to the full set the model can emit. */
   includeSections?: ProjectMemoryResumePromptSectionKey[];
   /** Per-section item cap (decisions, issues, evidence, etc.). Default 5. */
@@ -86,6 +95,7 @@ export type ProjectMemoryResumePrompt = {
 
 const DEFAULT_SECTIONS: ProjectMemoryResumePromptSectionKey[] = [
   "summary",
+  "consolidatedMemory",
   "recentSessions",
   "decisions",
   "issues",
@@ -96,6 +106,66 @@ const DEFAULT_SECTIONS: ProjectMemoryResumePromptSectionKey[] = [
 ];
 
 const DEFAULT_MAX_ITEMS = 5;
+
+// ─── accepted-memory inclusion policy ─────────────────────────────────
+
+/**
+ * Resume Prompt inclusion policy. An accepted project memory is used as
+ * *current guidance* only when it is durable, reviewed, not flagged for
+ * re-review, and sensitivity-compatible with the chosen privacy mode:
+ *
+ *   - `resumeEligible` must be true (set when the record was accepted).
+ *   - status must be `accepted` or `edited` — `watching` / `deferred`
+ *     are advisory, `superseded` / `retired` are history.
+ *   - `staleMemory` / `contradiction` kinds are never guidance; they
+ *     are unresolved review tasks.
+ *   - in `clientSafe` mode, only `normal`-sensitivity records pass.
+ *
+ * Pure predicate — exported so the Reports builder and tests can reuse
+ * the exact same rule.
+ */
+export function isResumeGuidanceMemory(
+  memory: StoredAcceptedProjectMemory,
+  privacyMode: ProjectMemoryResumePromptPrivacy,
+): boolean {
+  if (!memory.resumeEligible) return false;
+  if (memory.status !== "accepted" && memory.status !== "edited") return false;
+  if (memory.kind === "staleMemory" || memory.kind === "contradiction") return false;
+  if (privacyMode === "clientSafe" && memory.sensitivity !== "normal") return false;
+  return true;
+}
+
+/**
+ * An accepted memory that must NOT be used as guidance but should be
+ * surfaced under Limitations so the user knows it needs re-review:
+ * `staleMemory` / `contradiction` kinds, or a record left in the
+ * `watching` state. `superseded` / `retired` records are history and
+ * excluded entirely.
+ */
+export function isMemoryFlaggedForReview(memory: StoredAcceptedProjectMemory): boolean {
+  if (memory.status === "superseded" || memory.status === "retired") return false;
+  return (
+    memory.kind === "staleMemory" ||
+    memory.kind === "contradiction" ||
+    memory.status === "watching"
+  );
+}
+
+const MEMORY_IMPORTANCE_RANK: Record<"high" | "medium" | "low", number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+const MEMORY_KIND_LABEL: Record<StoredAcceptedProjectMemory["kind"], string> = {
+  promotedDecision: "decision",
+  recurringIssue: "recurring issue",
+  keyEvidence: "evidence",
+  unresolvedRisk: "risk",
+  contradiction: "contradiction",
+  staleMemory: "stale memory",
+  nextSessionRecommendation: "next session",
+};
 
 // ─── public entry point ───────────────────────────────────────────────
 
@@ -113,8 +183,19 @@ export function buildProjectMemoryResumePrompt(
   const sectionSet = new Set(includeSections);
   const sections: ProjectMemoryResumePromptSection[] = [];
 
+  const acceptedMemories = input.acceptedMemories ?? [];
+  const guidanceMemories = acceptedMemories.filter((entry) =>
+    isResumeGuidanceMemory(entry, privacyMode),
+  );
+  const flaggedMemoryCount = acceptedMemories.filter(isMemoryFlaggedForReview).length;
+
   if (sectionSet.has("summary")) {
-    sections.push(buildSummarySection(memory, privacyMode));
+    sections.push(
+      buildSummarySection(memory, privacyMode, acceptedMemories.length, guidanceMemories.length),
+    );
+  }
+  if (sectionSet.has("consolidatedMemory") && acceptedMemories.length > 0) {
+    sections.push(buildConsolidatedMemorySection(guidanceMemories, maxItems, privacyMode));
   }
   if (sectionSet.has("decisions")) {
     sections.push(buildDecisionsSection(memory, maxItems, privacyMode));
@@ -136,7 +217,9 @@ export function buildProjectMemoryResumePrompt(
     if (reimportSection) sections.push(reimportSection);
   }
   if (sectionSet.has("limitations")) {
-    sections.push(buildLimitationsSection(memory.dataBasis, memory.warnings));
+    sections.push(
+      buildLimitationsSection(memory.dataBasis, memory.warnings, flaggedMemoryCount),
+    );
   }
 
   const title = buildPromptTitle(memory, audience);
@@ -265,6 +348,8 @@ function describeBasisForPreamble(basis: ProjectMemoryDataBasis): string {
 function buildSummarySection(
   memory: ProjectMemoryViewModel,
   privacy: ProjectMemoryResumePromptPrivacy,
+  acceptedMemoryCount: number,
+  guidanceMemoryCount: number,
 ): ProjectMemoryResumePromptSection {
   const stats = memory.summaryStats;
   const lines: string[] = [
@@ -273,6 +358,11 @@ function buildSummarySection(
     `- Decisions: ${stats.decisionCount} · Open issues: ${stats.openIssueCount}/${stats.issueCount}`,
     `- Next actions: ${stats.nextActionCount} · Re-imports observed: ${stats.reimportCount}`,
   ];
+  if (acceptedMemoryCount > 0) {
+    lines.push(
+      `- Accepted project memory: ${guidanceMemoryCount} used as guidance (of ${acceptedMemoryCount} reviewed)`,
+    );
+  }
   if (memory.latestImportantDecision) {
     const decision = memory.latestImportantDecision;
     const decisionLabel = privacy === "clientSafe"
@@ -284,6 +374,66 @@ function buildSummarySection(
     lines.push(`- Recommended next session: ${memory.recommendedNextSession}`);
   }
   return { key: "summary", heading: "Current state", lines };
+}
+
+function buildConsolidatedMemorySection(
+  guidanceMemories: readonly StoredAcceptedProjectMemory[],
+  maxItems: number,
+  privacy: ProjectMemoryResumePromptPrivacy,
+): ProjectMemoryResumePromptSection {
+  const lines: string[] = [];
+  if (guidanceMemories.length === 0) {
+    lines.push("- (no accepted project memory is currently eligible as guidance)");
+  } else {
+    const ranked = [...guidanceMemories].sort(compareAcceptedMemory);
+    for (const entry of ranked.slice(0, maxItems)) {
+      lines.push(formatAcceptedMemoryLine(entry, privacy));
+    }
+    const remaining = ranked.length - Math.min(ranked.length, maxItems);
+    if (remaining > 0) {
+      lines.push(`- (+${remaining} more accepted ${remaining === 1 ? "memory" : "memories"})`);
+    }
+  }
+  return {
+    key: "consolidatedMemory",
+    heading: "Accepted project memory (reviewed)",
+    lines,
+  };
+}
+
+function compareAcceptedMemory(
+  a: StoredAcceptedProjectMemory,
+  b: StoredAcceptedProjectMemory,
+): number {
+  const importance = MEMORY_IMPORTANCE_RANK[a.importance] - MEMORY_IMPORTANCE_RANK[b.importance];
+  if (importance !== 0) return importance;
+  return MEMORY_IMPORTANCE_RANK[a.confidence.label] - MEMORY_IMPORTANCE_RANK[b.confidence.label];
+}
+
+function formatAcceptedMemoryLine(
+  memory: StoredAcceptedProjectMemory,
+  privacy: ProjectMemoryResumePromptPrivacy,
+): string {
+  const importance = memory.importance.toUpperCase();
+  const kindLabel = MEMORY_KIND_LABEL[memory.kind] ?? memory.kind;
+  const title = privacy === "clientSafe"
+    ? sanitizeForClientSafe(memory.title)
+    : sanitizeForNormal(memory.title);
+  // privacy mode controls the summary detail, mirroring decisions:
+  //   - normal: keep summary (secret redaction only)
+  //   - summaryOnly: drop summary for a compact prompt
+  //   - clientSafe: keep summary but scrub paths / URLs / connector refs
+  let detail = "";
+  if (privacy === "normal" && memory.summary) {
+    detail = ` — ${truncate(sanitizeForNormal(memory.summary), 160)}`;
+  } else if (privacy === "clientSafe" && memory.summary) {
+    detail = ` — ${truncate(sanitizeForClientSafe(memory.summary), 160)}`;
+  }
+  const sessionCount = memory.sourceSessionIds.length;
+  const provenance = sessionCount > 0
+    ? ` · ${sessionCount} ${sessionCount === 1 ? "session" : "sessions"}`
+    : "";
+  return `- [${importance} · ${kindLabel}] ${title}${detail}${provenance} · confidence ${memory.confidence.label}`;
 }
 
 function buildDecisionsSection(
@@ -462,11 +612,17 @@ function buildReimportsSection(
 function buildLimitationsSection(
   basis: ProjectMemoryDataBasis,
   warnings: ProjectMemoryWarning[],
+  flaggedMemoryCount: number,
 ): ProjectMemoryResumePromptSection {
   const lines: string[] = [`- Data basis: ${describeBasisForPreamble(basis)}`];
   for (const warning of warnings) {
     const line = describeWarning(warning);
     if (line) lines.push(`- ${line}`);
+  }
+  if (flaggedMemoryCount > 0) {
+    lines.push(
+      `- ${flaggedMemoryCount} accepted ${flaggedMemoryCount === 1 ? "memory" : "memories"} flagged for re-review (stale / contradicted / watching) — not used as guidance.`,
+    );
   }
   lines.push("- Mori reads only locally saved sessions. No cloud sync, no background watching, no external account access.");
   return { key: "limitations", heading: "Limitations", lines };
