@@ -338,6 +338,31 @@ Project Memory page makes that log visible:
 Undo / revert (a new `actionType: "revert"` row) and the `.mori v0`
 `auditTrail` export remain separate, still-planned capabilities.
 
+### Queryable Memory
+
+`searchAcceptedMemories` (`src/lib/project-memory/queryableMemory.ts`)
+is a pure, deterministic structured search over the project's
+accepted memories — the foundation of the Queryable Memory
+capability:
+
+- Text matches against the memory title, summary, evidence-ref ids /
+  session titles, and source session ids, ranked title-first.
+- Filters by `kind` / `status` / `sensitivity` / `resumeEligible` /
+  `reportEligibility`.
+- Results carry an evidence count, source-session count, a curated
+  snippet (never raw transcripts or connector logs), and an
+  `isCurrent` flag — `stale` / `contradicted` / `superseded` /
+  `retired` / `watching` / `deferred` memory stays searchable but is
+  marked non-current.
+- No embeddings, no vector store, no LLM — local and deterministic.
+
+The **Memory Search** card (`QueryableMemoryCard`) on the Project
+Memory page is the compact UI: a search input over the accepted
+memories loaded through `AcceptedMemoryRepository`, with per-result
+lifecycle status, evidence / session counts, and honest empty
+states. Extending search to review actions, timeline events, and
+evidence sources is a planned follow-up.
+
 ## Where Project Memory sits in the Mori architecture
 
 Project Memory is Layer 5 (consolidation) in Mori's memory model.

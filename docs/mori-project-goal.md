@@ -303,15 +303,17 @@ that is called out.
   from a .mori package" paste panel — imported memory is never
   auto-merged; it enters the review list and only becomes durable
   through the normal accept / apply path.
-- Queryable Memory search helper: `searchAcceptedMemories`
+- Queryable Memory: `searchAcceptedMemories`
   (`src/lib/project-memory/queryableMemory.ts`) runs deterministic
   local structured search over accepted memories — text matching on
   title / summary / evidence refs / source session ids, plus
   kind / status / sensitivity / eligibility filters. Title-ranked,
   evidence-ref cited, no embeddings or LLM. Non-current memory
   (`stale` / `contradicted` / `superseded` / `retired` / `watching` /
-  `deferred`) is searchable but flagged `isCurrent: false`. (Search
-  UI and cross-source extension pending.)
+  `deferred`) is searchable but flagged `isCurrent: false`. The
+  **Memory Search** card (`QueryableMemoryCard`) on the Project
+  Memory page is the compact search surface. (Cross-source extension
+  to review actions / timeline / evidence pending.)
 - `SessionPersistenceService` routes between browser localStorage
   and the Tauri SQLite bridge. Desktop mode prefers SQLite as the
   source of truth for active session hydration; Load actions for
@@ -349,10 +351,10 @@ against the repository.
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and
   not implemented.
-- **Queryable Memory — UI + cross-source.** Structured local search
-  over accepted memories has landed (`searchAcceptedMemories`); a
-  Project Memory search surface and extension to review actions /
-  timeline / evidence are still pending.
+- **Queryable Memory — cross-source.** Structured local search over
+  accepted memories and its Project Memory card have landed;
+  extension to review actions, timeline events, and evidence sources
+  is still pending.
 - **IDE / terminal / browser extension integrations.** Listed as
   Planned in `source-integrations.md`; no extension code exists.
 - **Optional watched inbox.** Refresh-only desktop inbox is shipped;

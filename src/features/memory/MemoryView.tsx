@@ -36,6 +36,7 @@ import { buildProjectMemoryConsolidationState } from "../../lib/project-memory/p
 import { ConsolidationPreviewCard } from "./ConsolidationPreviewCard";
 import { AcceptedMemoriesCard } from "./AcceptedMemoriesCard";
 import { MemoryAuditTrailCard } from "./MemoryAuditTrailCard";
+import { QueryableMemoryCard } from "./QueryableMemoryCard";
 import {
   getAcceptedMemoryRepository,
   type AcceptedMemoryStorageSource,
@@ -398,6 +399,8 @@ export function MemoryView() {
             storageSource={memoryStorageSource}
             storageFellBack={memoryStorageFellBack}
           />
+
+          <QueryableMemoryCard memories={acceptedMemories} />
 
           <MemoryAuditTrailCard
             actions={reviewActions}
