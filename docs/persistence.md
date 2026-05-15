@@ -151,10 +151,13 @@ the storage plan below is what the current adapter implements.
   Rust migration. Loader pattern will mirror the existing session
   loader (read from SQLite when available, fall back to
   localStorage).
-- **`.mori v0` export** (still planned): a `consolidatedMemories[]`
-  slice + `auditTrail[]` slice with a schema bump. Imported
-  packages re-enter the project as `proposed` (re-reviewed before
-  they merge with the importing user's accepted memory).
+- **`.mori v0` export**: the `MoriPackageV0` package now carries an
+  optional, additive `consolidatedMemories[]` slice (no
+  `formatVersion` bump — each record keeps its own `schemaVersion`).
+  The `auditTrail[]` slice is not carried yet. Importing a package
+  with accepted memory re-enters those records as `proposed`
+  (re-reviewed before they merge) — that review-on-import surface is
+  still planned.
 - **What never lands in `StoredAcceptedProjectMemory`**: raw
   connector JSONL, full transcripts beyond what the underlying
   `SourceRef` already retains, raw secret-shaped strings (screened

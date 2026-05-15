@@ -30,6 +30,12 @@ export function validateMoriPackage(value: unknown): MoriPackageValidationResult
   if (!isObject(pkg.privacy)) issues.push({ path: "privacy", message: "Privacy settings are required" });
   if (!isObject(pkg.theme)) issues.push({ path: "theme", message: "Theme settings are required" });
 
+  // `consolidatedMemories` is optional and additive — absent is valid
+  // (older packages). When present it must be an array.
+  if (pkg.consolidatedMemories !== undefined && !Array.isArray(pkg.consolidatedMemories)) {
+    issues.push({ path: "consolidatedMemories", message: "Must be an array when present" });
+  }
+
   if (Array.isArray(pkg.sessions) && isObject(pkg.manifest) && pkg.manifest.primarySessionId) {
     const hasPrimarySession = pkg.sessions.some((session) => isObject(session) && session.id === pkg.manifest?.primarySessionId);
     if (!hasPrimarySession) {

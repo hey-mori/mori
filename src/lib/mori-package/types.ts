@@ -11,6 +11,7 @@ import type {
   Summary,
   TimelineEvent,
 } from "../../domain/types";
+import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 
 export type MoriPackageFormatVersion = "0.1.0";
 
@@ -53,6 +54,18 @@ export type MoriPackageV0 = {
   summaries: Summary[];
   privacy: MoriPackagePrivacyV0;
   theme: MoriPackageThemeV0;
+  /**
+   * Accepted (reviewed, durable) project memory carried with the
+   * package so it can travel between devices. Optional and additive:
+   * packages exported before this field existed deserialize with it
+   * absent and are treated as an empty list — no format-version bump
+   * is required for an absent-safe additive field.
+   *
+   * Importing a package never auto-merges these records into durable
+   * memory; the import path re-enters them for review, preserving the
+   * review-before-apply rule.
+   */
+  consolidatedMemories?: StoredAcceptedProjectMemory[];
 };
 
 export type MoriPackageValidationIssue = {

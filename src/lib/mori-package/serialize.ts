@@ -1,9 +1,22 @@
 import type { MoriMockSession } from "../../domain/types";
+import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 import { createDefaultPrivacy, createDefaultTheme, createManifestFromSession } from "./manifest";
 import type { MoriPackageV0 } from "./types";
 import { validateMoriPackage } from "./validation";
 
-export function createMoriPackageFromSession(data: MoriMockSession): MoriPackageV0 {
+export type CreateMoriPackageOptions = {
+  /**
+   * Accepted project memory to carry with the package. Defaults to an
+   * empty list so a package can always be exported, with or without
+   * consolidated memory.
+   */
+  consolidatedMemories?: readonly StoredAcceptedProjectMemory[];
+};
+
+export function createMoriPackageFromSession(
+  data: MoriMockSession,
+  options: CreateMoriPackageOptions = {},
+): MoriPackageV0 {
   return {
     manifest: createManifestFromSession(data),
     projects: [data.project],
@@ -18,6 +31,9 @@ export function createMoriPackageFromSession(data: MoriMockSession): MoriPackage
     summaries: [data.summary],
     privacy: createDefaultPrivacy(data.session.recordingMode),
     theme: createDefaultTheme(),
+    consolidatedMemories: options.consolidatedMemories
+      ? [...options.consolidatedMemories]
+      : [],
   };
 }
 

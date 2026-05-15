@@ -8,7 +8,17 @@ export type {
   MoriPackageValidationResult,
 } from "./types";
 export { createDefaultPrivacy, createDefaultTheme, createManifestFromSession, createPackageId } from "./manifest";
-export { createMoriPackageFromSession, exportMoriPackageAsJson, serializeEventsJsonl, serializeMoriPackage } from "./serialize";
-export { deserializeMoriPackage, importMoriPackageFromJson } from "./deserialize";
+export {
+  createMoriPackageFromSession,
+  exportMoriPackageAsJson,
+  serializeEventsJsonl,
+  serializeMoriPackage,
+  type CreateMoriPackageOptions,
+} from "./serialize";
+export {
+  deserializeMoriPackage,
+  getPackageConsolidatedMemories,
+  importMoriPackageFromJson,
+} from "./deserialize";
 export { validateMoriPackage } from "./validation";
 export { sampleMoriPackageV0 } from "./samplePackage";

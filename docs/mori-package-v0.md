@@ -14,6 +14,8 @@ Implemented now:
 - Tauri desktop command for saving serialized `.mori v0 JSON`
 - Tauri desktop command for opening JSON package contents from a path
 
+- `getPackageConsolidatedMemories`
+
 Current JSON shape:
 
 ```text
@@ -31,7 +33,35 @@ MoriPackageV0
   summaries
   privacy
   theme
+  consolidatedMemories?   (accepted project memory; optional, additive)
 ```
+
+## Accepted project memory slice
+
+`consolidatedMemories` carries the project's accepted (reviewed,
+durable) project memory — `StoredAcceptedProjectMemory[]` — so
+consolidated memory can travel with an exported `.mori v0` package.
+
+- **Optional and additive.** The field is absent on packages
+  exported before it existed. `deserializeMoriPackage` leaves it
+  `undefined`; `getPackageConsolidatedMemories(pkg)` normalises both
+  the absent and present cases to a list. No `formatVersion` bump is
+  needed for an absent-safe additive field — each record carries its
+  own `schemaVersion`.
+- **Populated explicitly.** `createMoriPackageFromSession(session,
+  { consolidatedMemories })` writes the slice; the Reports page
+  `.mori v0` export reads the project's accepted memories from the
+  repository and passes them in. With no option it defaults to `[]`.
+- **Validation.** `validateMoriPackage` accepts an absent field and
+  rejects a present non-array value.
+- **No auto-merge on import.** Carrying memory in a package does not
+  make it durable on the importing device. The import path (a future
+  capability) re-enters these records for review, preserving the
+  review-before-apply rule. Today the slice round-trips through
+  serialize / deserialize; the review-on-import surface is the next
+  step.
+- The `auditTrail` slice (accepted-memory `ReviewAction` rows) is not
+  carried yet — a later addition alongside the import-review surface.
 
 Future zip-like mapping:
 

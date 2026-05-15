@@ -310,11 +310,19 @@ Phased so this milestone introduces no storage change.
 
 ### 8.4 Resume and Report Memory Integration — `.mori v0` export
 
-- Add a `consolidatedMemories[]` slice to `MoriPackageV0`.
-- Schema version bump (the package format already has one).
+- An optional `consolidatedMemories[]` slice on `MoriPackageV0`
+  carries accepted memory with the package. **Landed** — the field
+  is additive and absent-safe, so no `formatVersion` bump was needed
+  (each record already carries its own `schemaVersion`). See
+  [`mori-package-v0.md`](mori-package-v0.md).
+- The Reports page `.mori v0` export populates the slice from the
+  project's accepted memories.
 - Import path: a future "import .mori package" UI brings consolidated
   memories into the current project's tray as **proposed** again
-  (re-reviewed before merging — same review-before-apply rule).
+  (re-reviewed before merging — same review-before-apply rule). The
+  package round-trips the slice today; the review-on-import surface
+  is the next step.
+- The `auditTrail[]` slice is not carried yet — a later addition.
 
 ### 8.5 What never gets stored
 
@@ -387,7 +395,7 @@ same review pattern.
 | **Consolidation Review Surface** | Full-page surface, grouped proposal cards, evidence inspector, local-draft accept / edit / discard / keep-watching / defer / reset actions. No persistence — accepted memories are draft-scoped. | ✅ |
 | **Accepted Memory Persistence** | `StoredAcceptedProjectMemory` + `StoredMemoryReviewAction` repository methods; accepted / edited / watching / deferred memories survive reload via browser localStorage. | ✅ landed (browser) |
 | **SQLite Accepted Memory Storage** | `consolidated_memories` table + Rust migration + load/store commands. | Planned |
-| **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports ✅ landed; `.mori v0` slice planned |
+| **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports ✅ landed; `.mori v0` slice ✅ landed (review-on-import planned) |
 | **Stale Memory Review** | Detect pruned-source references and conflicting decisions; surface them as `staleMemory` / `contradiction` proposal kinds. | Planned |
 | **Queryable Memory over accepted memory** | Optional local memory query against accepted memories with citations. | Research |
 

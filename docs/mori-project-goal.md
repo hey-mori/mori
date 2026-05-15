@@ -234,6 +234,12 @@ that is called out.
   `isReportGuidanceMemory`, which combines the lifecycle gate with an
   audience-tier check (a memory's `reportEligibility` rank must meet
   the report type's personal / team / client tier).
+- `.mori v0` accepted-memory slice: `MoriPackageV0` carries an
+  optional, additive `consolidatedMemories` field. The Reports
+  `.mori v0` export populates it from the project's accepted
+  memories; it round-trips through serialize / deserialize and
+  validation. Packages exported before the field existed load it as
+  empty (`getPackageConsolidatedMemories`).
 
 **Storage**
 
@@ -273,10 +279,11 @@ against the repository.
   reliable bridge that captures live Claude Code / Codex CLI / Git
   activity into `~/.mori/connectors/` for a real workflow is not
   shipped. The user must still run the template scripts manually.
-- **`.mori` package accepted-memory slice.** The Resume Prompt and
-  Reports builders both consume accepted memories now, but the
-  `.mori v0` package does not yet carry a `consolidatedMemories`
-  slice, so accepted memory cannot travel between devices.
+- **`.mori` accepted-memory review-on-import.** The `.mori v0`
+  package now carries a `consolidatedMemories` slice and round-trips
+  it, but there is no UI to import a `.mori` package and re-review
+  its accepted memories as proposals before they become durable. The
+  `auditTrail` slice is also not carried yet.
 - **SQLite Accepted Memory Storage.** `consolidated_memories` and
   `consolidated_memory_audit` tables, the Rust migration, and the
   load / store command surface are designed but not implemented. No
