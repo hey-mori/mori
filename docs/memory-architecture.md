@@ -253,7 +253,7 @@ The Consolidation State layer
 wraps it in a `ProjectMemoryConsolidationState` that the Memory page
 consumes alongside its view-model. The Memory page renders a
 "Planned" preview card — counts visible, button disabled — so the
-user can see what the Consolidation Review Surface will eventually
+user can launch the Consolidation Review Surface to inspect and act on each proposal locally (no durable memory is written yet). The same data drives what the Surface will eventually
 surface without anything being written. The Review Surface,
 Accepted Memory Persistence, SQLite Accepted Memory Storage, Resume
 and Reports Memory Integration, and the Stale and Contradiction

@@ -216,10 +216,10 @@ Sub-capabilities within Project Memory Consolidation (mirroring
 the design in
 [`docs/project-memory-consolidation.md`](project-memory-consolidation.md)):
 Consolidation Proposal Preview ✅, Consolidation State ✅,
-Consolidation Review Surface (designed), Accepted Memory
-Persistence (designed), Memory Audit Trail (designed), Stale Memory
-Review + Contradiction Review (designed), Resume and Report Memory
-Integration (designed).
+Consolidation Review Surface ✅ (local-draft only),
+Accepted Memory Persistence (designed), Memory Audit Trail
+(designed), Stale Memory Review + Contradiction Review (designed),
+Resume and Report Memory Integration (designed).
 
 ### Phase 0 — Explicit import memory loop (Implemented)
 
@@ -266,7 +266,7 @@ Sub-phase status:
 | --------- | ----- | ------ |
 | 2.0 | Design doc + pure proposal helper (`buildProjectMemoryConsolidationPreview`) + tests | ✅ landed |
 | 2.1 | Typed `ProjectMemoryConsolidationState` derived in the Memory page; "Planned" preview card; no review surface yet | ✅ landed |
-| 2.2 | Consolidation Review UI (accept / edit / discard / keep watching per proposal) | after 2.1 |
+| 2.2 | Consolidation Review Surface (full-page review with local-draft accept / edit / discard / keep-watching / defer per proposal) | ✅ landed |
 | 2.3 | Browser persistence: `StoredConsolidatedMemory` + repository methods | after 2.2 |
 | 2.4 | SQLite persistence: `consolidated_memories` table + Rust migration | after 2.3 |
 | 2.5 | Resume Prompt + Reports integration; `.mori v0` carries the slice | after 2.4 |

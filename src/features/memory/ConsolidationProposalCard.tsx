@@ -1,0 +1,230 @@
+import { ArchiveX, Check, Clock, Eye, Pencil, RotateCcw } from "lucide-react";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import type { MemoryProposal } from "../../lib/project-memory/consolidationProposals";
+import {
+  effectiveSummary,
+  effectiveTitle,
+  type ConsolidationReviewEntry,
+  type ConsolidationReviewStatus,
+} from "../../lib/project-memory/consolidationReviewState";
+
+/**
+ * One proposal card in the Consolidation Review Surface.
+ *
+ * Renders the proposal's current effective title / summary, the
+ * rationale, confidence + importance + action chips, and the per-
+ * proposal review actions (Accept / Discard / Keep watching / Defer
+ * / Reset). Edit is wired via `onEdit` which the parent surface
+ * handles in an inline editor.
+ *
+ * No raw connector content or transcript text ever flows through
+ * here — the proposal's `summary` is already a curated string from
+ * the helper.
+ */
+export function ConsolidationProposalCard({
+  entry,
+  isSelected,
+  onSelect,
+  onAccept,
+  onDiscard,
+  onKeepWatching,
+  onDefer,
+  onReset,
+  onEdit,
+}: {
+  entry: ConsolidationReviewEntry;
+  isSelected: boolean;
+  onSelect: () => void;
+  onAccept: () => void;
+  onDiscard: () => void;
+  onKeepWatching: () => void;
+  onDefer: () => void;
+  onReset: () => void;
+  onEdit: () => void;
+}) {
+  const title = effectiveTitle(entry);
+  const summary = effectiveSummary(entry);
+  const status = entry.status;
+  return (
+    <article
+      className={`consolidation-card status-${status} ${isSelected ? "is-selected" : ""}`}
+      aria-current={isSelected ? "true" : undefined}
+    >
+      <button type="button" className="consolidation-card-body" onClick={onSelect}>
+        <header>
+          <strong title={title}>{title}</strong>
+          <ConsolidationStatusBadge status={status} />
+        </header>
+        <p className="consolidation-card-summary">{summary}</p>
+        {entry.proposal.rationale ? (
+          <small className="consolidation-card-rationale">{entry.proposal.rationale}</small>
+        ) : null}
+        <dl className="consolidation-card-meta">
+          <span>
+            <dt>중요도</dt>
+            <dd>
+              <ImportanceBadge importance={entry.proposal.importance} />
+            </dd>
+          </span>
+          <span>
+            <dt>신뢰도</dt>
+            <dd>{describeConfidence(entry.proposal.confidence)}</dd>
+          </span>
+          <span>
+            <dt>제안 액션</dt>
+            <dd>{describeProposedAction(entry.proposal.proposedAction)}</dd>
+          </span>
+          <span>
+            <dt>출처</dt>
+            <dd>{entry.proposal.sourceSessionIds.length}개 세션 · {entry.proposal.evidenceRefs.length}개 참조</dd>
+          </span>
+        </dl>
+        {entry.edits.title !== null || entry.edits.summary !== null ? (
+          <small className="consolidation-card-edited">사용자 편집 적용됨</small>
+        ) : null}
+        {entry.note ? <small className="consolidation-card-note">메모: {entry.note}</small> : null}
+      </button>
+      <footer className="consolidation-card-actions">
+        <Button
+          icon={Check}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAccept();
+          }}
+          variant={status === "accepted" ? "primary" : undefined}
+          title="이 제안을 수락합니다 — 검토 드래프트 내에서만 유지됩니다."
+        >
+          수락
+        </Button>
+        <Button
+          icon={Pencil}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit();
+          }}
+          title="제목과 요약을 인라인으로 수정합니다."
+        >
+          편집
+        </Button>
+        <Button
+          icon={Eye}
+          onClick={(event) => {
+            event.stopPropagation();
+            onKeepWatching();
+          }}
+          title="중요하지만 지금은 확정하지 않습니다 — 다음 검토 때 다시 확인합니다."
+        >
+          관찰
+        </Button>
+        <Button
+          icon={Clock}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDefer();
+          }}
+          title="다음 검토까지 미룹니다."
+        >
+          연기
+        </Button>
+        <Button
+          icon={ArchiveX}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDiscard();
+          }}
+          title="이 제안을 폐기합니다 — 동일한 증거 변경이 없으면 다시 제안되지 않습니다."
+        >
+          폐기
+        </Button>
+        {status !== "proposed" ? (
+          <Button
+            icon={RotateCcw}
+            onClick={(event) => {
+              event.stopPropagation();
+              onReset();
+            }}
+            title="현재 검토 결정을 초기화합니다."
+          >
+            되돌리기
+          </Button>
+        ) : null}
+      </footer>
+    </article>
+  );
+}
+
+function ConsolidationStatusBadge({ status }: { status: ConsolidationReviewStatus }) {
+  const tone = statusTone(status);
+  return <Badge tone={tone}>{describeReviewStatus(status)}</Badge>;
+}
+
+function statusTone(status: ConsolidationReviewStatus): "green" | "blue" | "orange" | "red" | "gray" | "purple" {
+  switch (status) {
+    case "accepted":
+      return "green";
+    case "edited":
+      return "blue";
+    case "watching":
+      return "purple";
+    case "deferred":
+      return "orange";
+    case "discarded":
+      return "red";
+    case "proposed":
+    default:
+      return "gray";
+  }
+}
+
+export function describeReviewStatus(status: ConsolidationReviewStatus): string {
+  switch (status) {
+    case "proposed":
+      return "검토 대기";
+    case "accepted":
+      return "수락 (드래프트)";
+    case "edited":
+      return "편집 (드래프트)";
+    case "watching":
+      return "관찰";
+    case "deferred":
+      return "연기";
+    case "discarded":
+      return "폐기";
+    default:
+      return status;
+  }
+}
+
+function ImportanceBadge({ importance }: { importance: MemoryProposal["importance"] }) {
+  const tone =
+    importance === "high" ? "red" : importance === "medium" ? "orange" : "blue";
+  const label =
+    importance === "high" ? "high" : importance === "medium" ? "medium" : "low";
+  return <Badge tone={tone}>{label}</Badge>;
+}
+
+function describeConfidence(confidence: number): string {
+  if (confidence >= 0.75) return `High (${Math.round(confidence * 100)}%)`;
+  if (confidence >= 0.5) return `Medium (${Math.round(confidence * 100)}%)`;
+  return `Low (${Math.round(confidence * 100)}%)`;
+}
+
+function describeProposedAction(action: MemoryProposal["proposedAction"]): string {
+  switch (action) {
+    case "promote":
+      return "Promote";
+    case "merge":
+      return "Merge";
+    case "markStale":
+      return "Mark stale";
+    case "keepWatching":
+      return "Keep watching";
+    case "resolve":
+      return "Resolve";
+    case "scheduleNextSession":
+      return "Schedule next session";
+    default:
+      return action;
+  }
+}

@@ -13,17 +13,21 @@ import {
  *
  * Reads the typed `ProjectMemoryConsolidationState` and renders a
  * compact, honest summary of what the Consolidation Review Surface
- * would propose. The button is labelled "Planned" and disabled
- * because the Review Surface does not exist yet. No persistence
- * happens here; no memory is written.
+ * proposes. When proposals exist the "Review proposals" button
+ * opens the review surface; durable Accepted Memory Persistence is
+ * still planned, so the review actions inside that surface remain
+ * local-draft only.
  */
 export function ConsolidationPreviewCard({
   state,
+  onOpenReview,
 }: {
   state: ProjectMemoryConsolidationState;
+  onOpenReview?: () => void;
 }) {
   const dataBasisTone = getProjectMemoryDataBasisTone(state.dataBasis);
   const headline = headlineFor(state);
+  const reviewable = state.proposalCount > 0;
 
   return (
     <MoriSection
@@ -69,10 +73,16 @@ export function ConsolidationPreviewCard({
       <footer className="memory-consolidation-actions">
         <Button
           icon={Layers}
-          disabled
-          title="Consolidation Review Surface is planned — no memory is written until proposals are reviewed and accepted."
+          variant={reviewable ? "primary" : undefined}
+          disabled={!reviewable || !onOpenReview}
+          onClick={reviewable && onOpenReview ? onOpenReview : undefined}
+          title={
+            reviewable
+              ? "Consolidation Review를 엽니다. Accepted Memory Persistence는 아직 미구현 — 모든 검토 액션은 드래프트로 유지됩니다."
+              : "검토할 제안이 없습니다."
+          }
         >
-          Review proposals (Planned)
+          {reviewable ? "Review proposals" : "Review proposals (none yet)"}
         </Button>
         <small>{state.nextStepLabel}</small>
       </footer>

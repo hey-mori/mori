@@ -205,8 +205,8 @@ land in durable storage.
    ▸ Decisions to promote      (N proposals)
    ▸ Recurring issues          (N proposals)
    ▸ Risks                     (N proposals)
-   ▸ Contradictions            (N proposals)   ← optional, Phase 2.6
-   ▸ Stale memories            (N proposals)   ← optional, Phase 2.6
+   ▸ Contradictions            (N proposals)   ← optional, lands with Stale Memory Review
+   ▸ Stale memories            (N proposals)   ← optional, lands with Stale Memory Review
    ▸ Suggested next sessions   (1 proposal)
    ─────────────────────────────────────────────────
          │
@@ -215,7 +215,7 @@ land in durable storage.
    "Apply N accepted memories"
          │
          ▼
-   Durable storage write (Phase 2.3 = browser, Phase 2.4 = SQLite)
+   Durable storage write (Accepted Memory Persistence: browser → SQLite)
          │
          ▼
    Project Memory page re-renders with consolidated memories
@@ -262,11 +262,11 @@ Phased so this milestone introduces no storage change.
 
 ### 8.1 Now (this milestone)
 
-- `ConsolidationRun` is **ephemeral**. The Phase 2.0 helper returns
+- `ConsolidationRun` is **ephemeral**. The Consolidation Proposal Preview helper returns
   it in-memory; nothing is persisted.
 - No localStorage / SQLite / `.mori` change required.
 
-### 8.2 Phase 2.3 — Browser persistence
+### 8.2 Accepted Memory Persistence — Browser
 
 - New key prefix: `mori.consolidatedMemory.<projectId>.<memoryId>`.
 - New `StoredConsolidatedMemory` record:
@@ -299,7 +299,7 @@ Phased so this milestone introduces no storage change.
 - Old records (none today) load normally because the field doesn't
   exist yet.
 
-### 8.3 Phase 2.4 — SQLite persistence
+### 8.3 SQLite Accepted Memory Storage
 
 - New table `consolidated_memories` with columns mirroring the
   browser shape + a `project_id` foreign key.
@@ -308,7 +308,7 @@ Phased so this milestone introduces no storage change.
   from SQLite when available; falls back to browser localStorage
   otherwise.
 
-### 8.4 Phase 2.5 — `.mori v0` export
+### 8.4 Resume and Report Memory Integration — `.mori v0` export
 
 - Add a `consolidatedMemories[]` slice to `MoriPackageV0`.
 - Schema version bump (the package format already has one).
@@ -333,8 +333,8 @@ copy.
 | ------ | ----- | ------------------- |
 | **Quick Pass** | Extracts issues / decisions / next-actions / summary from one session's events. Persists `StoredSessionAnalysis` + `StoredSessionMemoryBody`. | Unchanged. Quick Pass output is *input* to consolidation; consolidation never bypasses it. |
 | **Project Memory aggregation** | Live cross-session computation; rebuilt every render. | Unchanged. The consolidation pass reads the same `ProjectMemoryViewModel` it would render. |
-| **Resume Prompt** | Built from `ProjectMemoryViewModel`. | Will gain a new `consolidatedMemories` section (Phase 2.5) that supersedes raw key-decision / recurring-issue rows when an accepted consolidated memory exists. Live aggregation still shows below for non-promoted rows. |
-| **Reports** | Built from session view + analysis. | Will optionally include accepted consolidated memories as a project-level "Long-term memory" appendix (Phase 2.5). |
+| **Resume Prompt** | Built from `ProjectMemoryViewModel`. | Will gain a new `consolidatedMemories` section (Resume and Report Memory Integration) that supersedes raw key-decision / recurring-issue rows when an accepted consolidated memory exists. Live aggregation still shows below for non-promoted rows. |
+| **Reports** | Built from session view + analysis. | Will optionally include accepted consolidated memories as a project-level "Long-term memory" appendix (Resume and Report Memory Integration). |
 | **Import Review** | Reviews captured events before they reach the timeline. | Unchanged. The Consolidation Review surface borrows the same review pattern but operates one tier higher. |
 | **Evidence Hub** | Shows captured sources + provenance. | Unchanged. `evidenceRefs.kind === "source"` proposals deep-link back to the existing source detail panel. |
 
@@ -351,15 +351,15 @@ The mental model: **Quick Pass extracts → Project Memory aggregates
 | `dataBasis === "unavailable"` | Empty proposals + a single warning explaining demo / unreachable storage. |
 | Saved session has no memory body and no analysis | Skip silently; no fabricated decisions. |
 | Two proposals derive from the same underlying entity | Dedupe by normalised title + kind + sorted sourceSessionIds. |
-| Conflicting decisions across sessions | Emit a single `contradiction` proposal that cites both decisions (Phase 2.6). |
-| Stored consolidated memory references a now-pruned session | Phase 2.6: surface as a `staleMemory` proposal asking the user to retire or refresh. |
+| Conflicting decisions across sessions | Emit a single `contradiction` proposal that cites both decisions (Stale Memory Review). |
+| Stored consolidated memory references a now-pruned session | Stale Memory Review: surface as a `staleMemory` proposal asking the user to retire or refresh. |
 | User edits a proposal title | `MemoryProposal.status` flips to `edited`; `updatedAt` is bumped; the edit lands at accept time. |
-| User runs consolidation twice in a row | The second run dedupes against accepted memories (Phase 2.3 onwards). |
+| User runs consolidation twice in a row | The second run dedupes against accepted memories (Accepted Memory Persistence onwards). |
 | Helper called with `null`/empty view-model | Return an empty `ConsolidationRun` with `dataBasis: "unavailable"` and a `storage-unavailable` warning. |
 
 ## 11. Non-goals
 
-These are explicit non-goals for Phase 2 — listed so they cannot
+These are explicit non-goals for the Project Memory Consolidation capability — listed so they cannot
 silently creep in.
 
 - No background watcher.
@@ -378,22 +378,23 @@ runs on the user's chosen local endpoint, processes a single
 proposal at a time on demand, and the result is still gated by the
 same review pattern.
 
-## 12. Implementation phases
+## 12. Implementation capabilities
 
-| Phase | Scope | Status |
-| ----- | ----- | ------ |
-| **2.0** | Design doc + pure proposal helper (`buildProjectMemoryConsolidationPreview`) + tests. No persistence, no UI. | ✅ |
-| **2.1** | Typed `ProjectMemoryConsolidationState` derived from `ProjectMemoryViewModel`; wired into `MemoryView`; honest "Planned" preview card (no review surface yet). | ✅ |
-| **2.2** | Consolidation Review UI: full-page surface, proposal cards, evidence panel, accept / edit / discard / keep-watching actions. No persistence yet — accepted memories are session-scoped. | After 2.1 |
-| **2.3** | Browser persistence: `StoredConsolidatedMemory` + repository methods. Accepted memories survive reload. | After 2.2 |
-| **2.4** | SQLite persistence: `consolidated_memories` table + Rust migration + load/store commands. | After 2.3 |
-| **2.5** | Resume Prompt + Reports integration: promoted memories outrank live aggregation rows. `.mori v0` carries the slice. | After 2.4 |
-| **2.6** | Stale / contradiction review: detect pruned-source references and conflicting decisions; surface them as their own proposal kinds. | After 2.5 |
-| **2.7** | Optional local memory query against accepted memories with citations (Phase 4 entry on the higher-level roadmap). | Research |
+| Capability | Scope | Status |
+| ---------- | ----- | ------ |
+| **Consolidation Proposal Preview** | Pure proposal helper (`buildProjectMemoryConsolidationPreview`) + tests. No persistence, no UI. | ✅ |
+| **Consolidation State** | Typed `ProjectMemoryConsolidationState` derived from `ProjectMemoryViewModel`; wired into `MemoryView`; honest preview card. | ✅ |
+| **Consolidation Review Surface** | Full-page surface, grouped proposal cards, evidence inspector, local-draft accept / edit / discard / keep-watching / defer / reset actions. No persistence — accepted memories are draft-scoped. | ✅ |
+| **Accepted Memory Persistence** | `StoredConsolidatedMemory` + repository methods; accepted memories survive reload. | Planned |
+| **SQLite Accepted Memory Storage** | `consolidated_memories` table + Rust migration + load/store commands. | Planned |
+| **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Planned |
+| **Stale Memory Review** | Detect pruned-source references and conflicting decisions; surface them as `staleMemory` / `contradiction` proposal kinds. | Planned |
+| **Queryable Memory over accepted memory** | Optional local memory query against accepted memories with citations. | Research |
 
-Each sub-phase is independent and reversible. Stopping at any phase
-leaves Mori in a working state — Phase 2.0 alone is useful for the
-maintainer to see what consolidation would surface today.
+Each capability is independent and reversible. Stopping at any
+capability leaves Mori in a working state — the Consolidation
+Proposal Preview alone is useful for the maintainer to see what
+consolidation would surface today.
 
 ### Consolidation State Wiring (landed)
 
@@ -423,10 +424,57 @@ function buildProjectMemoryConsolidationState(
 The Memory page consumes this state via a `useMemo` next to the
 existing `viewModel` derivation. A `ConsolidationPreviewCard`
 component renders it: top-3 proposal kinds + counts, `dataBasis`
-badge, "Review proposals (Planned)" disabled button, honesty copy
-under the button. **No memory is written.** **`canOpenReview` is
-hard-coded `false`** until the Consolidation Review Surface lands;
-flipping it requires both a real route and a working accept flow.
+badge, and a "Review proposals" button. **No durable memory is
+written.** **`canOpenReview` stays `false`** in the typed state
+until Accepted Memory Persistence ships and we have a real apply
+path; today the Review Surface is reached via the preview card's
+button directly.
+
+### Consolidation Review Surface (landed)
+
+`src/features/memory/ConsolidationReviewView.tsx` is the
+full-page review surface, reachable via the
+`currentView === "consolidation"` route. Shape:
+
+- **Layout**: two-pane — proposal list on the left (grouped by
+  kind), evidence inspector pinned on the right (collapses below on
+  narrow viewports).
+- **Grouping**: `Decisions to promote / Recurring issues / Key
+  evidence / Unresolved risks / Next session recommendations`. The
+  `contradiction` and `staleMemory` kinds are reserved on the union
+  but not yet emitted by the helper — they appear when the Stale
+  Memory Review capability lands.
+- **Per-proposal actions**: Accept / Edit (inline modal) / Discard /
+  Keep watching / Defer / Reset. Each action runs through the pure
+  helper at `src/lib/project-memory/consolidationReviewState.ts`,
+  which produces a new immutable draft on every transition.
+- **Evidence inspector**: typed `MemoryEvidenceRef[]` rendered as
+  session / event / source references. No raw connector content or
+  transcript text. Deep links into the source detail panel are
+  reserved for a future capability and rendered as ids/titles
+  today.
+- **Apply boundary**: the footer carries a disabled `Apply accepted
+  memories (N)` button with a banner that reads "Accepted Memory
+  Persistence is not implemented yet. Review actions are local to
+  this draft." Counts per status are displayed alongside.
+- **State scope**: the review draft lives in component state. It
+  re-initialises when the underlying proposal set changes (via
+  `proposalSignature`). Nothing is written to localStorage, SQLite,
+  or `.mori v0` packages.
+
+The pure draft state helper exposes:
+
+```ts
+initializeConsolidationReviewState(proposals) → ConsolidationReviewState
+acceptProposal / discardProposal / keepWatchingProposal /
+  deferProposal / resetProposal / editProposal / setReviewerNote
+countConsolidationReviewStatuses / getReviewEntry /
+  effectiveTitle / effectiveSummary
+```
+
+All transitions are immutable and unknown-proposal-ids are no-ops
+that return the same state reference (the UI can dispatch without
+guarding).
 
 ## Memory Lifecycle
 
@@ -741,7 +789,7 @@ detection as a **review task**, not as an AI verdict. Phrasing
 defaults to "This may conflict with…" or "Newer evidence suggests
 this memory may be outdated."
 
-## 13. Helper prototype API (Phase 2.0, this milestone)
+## 13. Helper prototype API — Consolidation Proposal Preview
 
 Live in [`src/lib/project-memory/consolidationProposals.ts`](../src/lib/project-memory/consolidationProposals.ts).
 

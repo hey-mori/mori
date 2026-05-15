@@ -9,6 +9,7 @@ import { ReviewView } from "../features/review/ReviewView";
 import { EvidenceView } from "../features/evidence/EvidenceView";
 import { ReportsView } from "../features/reports/ReportsView";
 import { MemoryView } from "../features/memory/MemoryView";
+import { ConsolidationReviewView } from "../features/memory/ConsolidationReviewView";
 import { SettingsView } from "../features/settings/SettingsView";
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
       {currentView === "review" ? <ReviewView /> : null}
       {currentView === "reports" ? <ReportsView /> : null}
       {currentView === "memory" ? <MemoryView /> : null}
+      {currentView === "consolidation" ? <ConsolidationReviewView /> : null}
       {currentView === "settings" ? <SettingsView /> : null}
     </AppShell>
   );

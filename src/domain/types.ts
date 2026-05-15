@@ -1,6 +1,15 @@
 import type { LucideIcon } from "lucide-react";
 
-export type ViewKey = "start" | "timeline" | "flow" | "evidence" | "review" | "reports" | "memory" | "settings";
+export type ViewKey =
+  | "start"
+  | "timeline"
+  | "flow"
+  | "evidence"
+  | "review"
+  | "reports"
+  | "memory"
+  | "consolidation"
+  | "settings";
 
 export type TrustLevel = "verified" | "observed" | "inferred";
 export type RecordingMode = "summary" | "full" | "ephemeral";

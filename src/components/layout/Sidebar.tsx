@@ -36,7 +36,10 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
       <nav className="nav">
         {navItems.map((item, index) => {
           const Icon = item.icon;
-          const active = item.key === currentView || (currentView === "flow" && item.key === "timeline");
+          const active =
+            item.key === currentView ||
+            (currentView === "flow" && item.key === "timeline") ||
+            (currentView === "consolidation" && item.key === "memory");
           return (
             <button
               className={`nav-item ${active ? "active" : ""}`}

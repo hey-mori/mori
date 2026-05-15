@@ -243,7 +243,7 @@ Capability status:
 | ---------- | ------ |
 | Consolidation Proposal Preview helper (pure, no persistence) | ✅ landed |
 | Consolidation State layer (Memory page wiring, honest "Planned" card) | ✅ landed |
-| Consolidation Review Surface (full review UI) | designed; not implemented |
+| Consolidation Review Surface (full review UI, local-draft) | ✅ landed |
 | Accepted Memory Persistence (browser localStorage) | designed; not implemented |
 | Accepted Memory Persistence (desktop SQLite) | designed; not implemented |
 | Memory Audit Trail (`ReviewAction` rows + Undo Apply) | designed; not implemented |
