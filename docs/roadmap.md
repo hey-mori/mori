@@ -223,7 +223,7 @@ runtime-aware repository routing), Memory Audit Trail ✅
 (append-only review actions + audit log UI on the Memory page;
 Undo / revert still planned), Resume and Report Memory Integration
 ✅ (Resume Prompt + Reports + `.mori v0` slice + review-on-import
-helper; import UI planned), Stale Memory Review ✅ (`buildStaleMemoryProposals` —
+paste panel), Stale Memory Review ✅ (`buildStaleMemoryProposals` —
 supersession / retirement, reviewer-note, and next-session time
 signals), Contradiction Review ✅ (`buildContradictionProposals` —
 same-title conflicting accepted decisions), Accepted Memory
@@ -280,7 +280,7 @@ Sub-phase status:
 | Memory Audit Trail (minimal) | `StoredMemoryReviewAction` append-only log; one row per accept / edit / watch / defer / discard / apply | ✅ landed |
 | Memory Audit Trail UI | `buildMemoryAuditTrailViewModel` + `MemoryAuditTrailCard`; sorted, date-grouped, filterable audit log with per-row status transitions | ✅ landed (Undo / revert still planned) |
 | SQLite Accepted Memory Storage | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration + commands, TS bridge, runtime-aware repository routing | ✅ landed |
-| Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | Resume Prompt + Reports ✅ landed; `.mori v0` slice ✅ landed; review-on-import helper ✅ landed (import UI planned) |
+| Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | Resume Prompt + Reports ✅ landed; `.mori v0` slice ✅ landed; review-on-import ✅ landed (paste panel) |
 | Stale Memory Review | Scan accepted memories for staleness signals; emit `staleMemory` proposals (`buildStaleMemoryProposals`) | ✅ landed |
 | Contradiction Review | Detect conflicting accepted decisions; emit `contradiction` proposals (`buildContradictionProposals`) | ✅ landed |
 | Accepted Memory Lifecycle Status | Explicit `stale` / `contradicted` statuses; accepting a lifecycle proposal transitions the referenced memory via `targetMemoryIds` | ✅ landed |

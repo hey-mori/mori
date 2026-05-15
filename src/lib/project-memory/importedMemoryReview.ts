@@ -23,6 +23,7 @@
  */
 import type { MemoryEvidenceRef, MemoryProposal } from "./consolidationProposals";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import { deserializeMoriPackage, getPackageConsolidatedMemories } from "../mori-package";
 
 export type ImportedMemorySkipReason = "duplicate-origin" | "duplicate-title";
 
@@ -85,6 +86,53 @@ export function buildImportedMemoryProposals(
   }
 
   return { proposals, skipped };
+}
+
+/**
+ * Parse a raw `.mori v0` package JSON string and build imported-memory
+ * proposals from its `consolidatedMemories` slice. Combines
+ * `deserializeMoriPackage` (which validates the package) with
+ * `buildImportedMemoryProposals`. Pure — never throws; a malformed
+ * package is reported as `{ ok: false }`.
+ */
+export type ParseImportedMemoryResult =
+  | {
+      ok: true;
+      packageId: string;
+      /** Total accepted memories carried by the package. */
+      memoryCount: number;
+      proposals: MemoryProposal[];
+      skipped: ImportedMemorySkip[];
+    }
+  | { ok: false; error: string };
+
+export function parseImportedMemoryProposals(
+  packageJson: string,
+  existingMemories: readonly StoredAcceptedProjectMemory[],
+): ParseImportedMemoryResult {
+  const trimmed = packageJson.trim();
+  if (trimmed.length === 0) {
+    return { ok: false, error: "Paste a .mori v0 package to import." };
+  }
+  let pkg;
+  try {
+    pkg = deserializeMoriPackage(trimmed);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+  const packageMemories = getPackageConsolidatedMemories(pkg);
+  const { proposals, skipped } = buildImportedMemoryProposals({
+    packageMemories,
+    existingMemories,
+    packageId: pkg.manifest.packageId,
+  });
+  return {
+    ok: true,
+    packageId: pkg.manifest.packageId,
+    memoryCount: packageMemories.length,
+    proposals,
+    skipped,
+  };
 }
 
 // ─── proposal construction ────────────────────────────────────────────

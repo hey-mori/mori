@@ -58,9 +58,11 @@ consolidated memory can travel with an exported `.mori v0` package.
   make it durable on the importing device. `buildImportedMemoryProposals`
   (`src/lib/project-memory/importedMemoryReview.ts`) converts the
   slice into reviewable proposals — deduplicated against the project's
-  existing accepted memories — that re-enter the Consolidation Review
-  flow. The pure helper has landed; wiring a `.mori` file import entry
-  point into the Review surface is the next step.
+  existing accepted memories — and `parseImportedMemoryProposals`
+  wraps it for a raw package-JSON string. The Consolidation Review
+  Surface has an **Import accepted memory from a .mori package** paste
+  panel: imported memory enters the review list as proposals and only
+  becomes durable through the normal accept / apply path.
 - The `auditTrail` slice (accepted-memory `ReviewAction` rows) is not
   carried yet — a later addition alongside the import-review surface.
 

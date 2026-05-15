@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildImportedMemoryProposals } from "./importedMemoryReview";
+import {
+  buildImportedMemoryProposals,
+  parseImportedMemoryProposals,
+} from "./importedMemoryReview";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import { createMoriPackageFromSession, serializeMoriPackage } from "../mori-package";
+import { moriMockSession } from "../../domain/mock-data";
 
 function memory(
   id: string,
@@ -133,5 +138,58 @@ describe("buildImportedMemoryProposals", () => {
       existingMemories: [memory("local")],
     });
     expect(result).toEqual({ proposals: [], skipped: [] });
+  });
+});
+
+function packageJson(memories: StoredAcceptedProjectMemory[]): string {
+  return serializeMoriPackage(
+    createMoriPackageFromSession(moriMockSession, { consolidatedMemories: memories }),
+  );
+}
+
+describe("parseImportedMemoryProposals", () => {
+  it("parses a .mori v0 package and builds proposals from its memories", () => {
+    const result = parseImportedMemoryProposals(packageJson([memory("a"), memory("b")]), []);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.memoryCount).toBe(2);
+    expect(result.proposals).toHaveLength(2);
+    expect(result.packageId).toBeTruthy();
+  });
+
+  it("reports an empty paste as an error", () => {
+    const result = parseImportedMemoryProposals("   ", []);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toMatch(/Paste a \.mori/);
+  });
+
+  it("reports malformed JSON as an error without throwing", () => {
+    const result = parseImportedMemoryProposals("{ not valid json", []);
+    expect(result.ok).toBe(false);
+  });
+
+  it("reports a structurally invalid package as an error", () => {
+    const result = parseImportedMemoryProposals(JSON.stringify({ manifest: {} }), []);
+    expect(result.ok).toBe(false);
+  });
+
+  it("deduplicates imported memories against existing accepted memories", () => {
+    const result = parseImportedMemoryProposals(
+      packageJson([memory("a", { title: "Shared decision" })]),
+      [memory("local", { title: "Shared decision" })],
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.proposals).toHaveLength(0);
+    expect(result.skipped).toHaveLength(1);
+  });
+
+  it("returns ok with zero proposals for a package carrying no accepted memory", () => {
+    const result = parseImportedMemoryProposals(packageJson([]), []);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.memoryCount).toBe(0);
+    expect(result.proposals).toEqual([]);
   });
 });

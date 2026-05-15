@@ -34,6 +34,7 @@ import {
   getAcceptedMemoryRepository,
   type AcceptedMemoryStorageSource,
 } from "../../lib/project-memory/acceptedMemoryRepository";
+import { parseImportedMemoryProposals } from "../../lib/project-memory/importedMemoryReview";
 import type {
   MemoryProposalKind,
   MemoryProposal,
@@ -74,6 +75,11 @@ const KIND_HINT: Record<MemoryProposalKind, string> = {
   staleMemory: "오래된 메모리를 검토합니다.",
   nextSessionRecommendation: "다음 세션에서 다룰 작업을 제안합니다.",
 };
+
+type ImportPackageMessage =
+  | { kind: "idle" }
+  | { kind: "ok"; packageId: string; added: number; skipped: number; memoryCount: number }
+  | { kind: "error"; message: string };
 
 export function ConsolidationReviewView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
@@ -139,7 +145,42 @@ export function ConsolidationReviewView() {
     () => buildProjectMemoryConsolidationState(viewModel, { acceptedMemories }),
     [viewModel, acceptedMemories],
   );
-  const proposals = consolidationState.preview?.proposals ?? [];
+
+  // Proposals derived from an explicitly imported `.mori` package.
+  // They are reviewed through the same surface as derived proposals —
+  // imported memory is never auto-merged.
+  const [importedProposals, setImportedProposals] = useState<MemoryProposal[]>([]);
+  const proposals = useMemo(
+    () => [...(consolidationState.preview?.proposals ?? []), ...importedProposals],
+    [consolidationState, importedProposals],
+  );
+
+  // `.mori` package import — explicit paste, never auto-merged.
+  const [packageText, setPackageText] = useState("");
+  const [importMessage, setImportMessage] = useState<ImportPackageMessage>({ kind: "idle" });
+
+  function handleImportPackage() {
+    const result = parseImportedMemoryProposals(packageText, acceptedMemories);
+    if (!result.ok) {
+      setImportedProposals([]);
+      setImportMessage({ kind: "error", message: result.error });
+      return;
+    }
+    setImportedProposals(result.proposals);
+    setImportMessage({
+      kind: "ok",
+      packageId: result.packageId,
+      added: result.proposals.length,
+      skipped: result.skipped.length,
+      memoryCount: result.memoryCount,
+    });
+  }
+
+  function handleClearImport() {
+    setPackageText("");
+    setImportedProposals([]);
+    setImportMessage({ kind: "idle" });
+  }
 
   // Local-only review draft. Re-initialises when the proposal set changes
   // (e.g. user imports a new session in another tab).
@@ -259,6 +300,14 @@ export function ConsolidationReviewView() {
         onBackToMemory={() => setCurrentView("memory")}
       />
 
+      <ImportPackagePanel
+        text={packageText}
+        message={importMessage}
+        onTextChange={setPackageText}
+        onLoad={handleImportPackage}
+        onClear={handleClearImport}
+      />
+
       <div className="consolidation-review-layout">
         <section className="consolidation-review-list" aria-label="Proposal groups">
           {KIND_ORDER.map((kind) => {
@@ -326,6 +375,60 @@ export function ConsolidationReviewView() {
 }
 
 // ─── pieces ─────────────────────────────────────────────────────────
+
+function ImportPackagePanel({
+  text,
+  message,
+  onTextChange,
+  onLoad,
+  onClear,
+}: {
+  text: string;
+  message: ImportPackageMessage;
+  onTextChange: (value: string) => void;
+  onLoad: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <details className="consolidation-review-import">
+      <summary>
+        <strong>Import accepted memory from a .mori package</strong>
+        <span>붙여넣은 .mori v0 패키지의 accepted memory를 검토 제안으로 추가합니다.</span>
+      </summary>
+      <p className="consolidation-review-import-note">
+        가져온 memory는 자동 병합되지 않습니다. 아래 검토 목록에 제안으로 추가되며, 수락해야만
+        이 프로젝트의 memory가 됩니다. 이미 보유한 항목(originProposalIds / 제목 일치)은
+        건너뜁니다.
+      </p>
+      <textarea
+        className="consolidation-review-import-textarea"
+        value={text}
+        onChange={(event) => onTextChange(event.target.value)}
+        placeholder="여기에 .mori v0 패키지 JSON을 붙여넣으세요"
+        rows={5}
+        aria-label=".mori package JSON"
+      />
+      <div className="consolidation-review-import-actions">
+        <Button variant="primary" onClick={onLoad} disabled={text.trim().length === 0}>
+          패키지 불러오기
+        </Button>
+        <Button onClick={onClear}>지우기</Button>
+      </div>
+      {message.kind === "ok" ? (
+        <p className="consolidation-review-import-result tone-ok">
+          {message.packageId} · accepted memory {message.memoryCount}건 중 제안 {message.added}건
+          추가
+          {message.skipped > 0 ? ` · 중복 ${message.skipped}건 건너뜀` : ""}.
+        </p>
+      ) : null}
+      {message.kind === "error" ? (
+        <p className="consolidation-review-import-result tone-error">
+          패키지를 불러오지 못했습니다: {message.message}
+        </p>
+      ) : null}
+    </details>
+  );
+}
 
 function ApplyBoundaryBanner({
   counts,
