@@ -48,6 +48,7 @@ shows the resolved path when running in the desktop runtime.
 | ------- | -------- | ------- |
 | `001` | `V001__initial_schema.sql` | Full normalized session schema: projects, sessions, sources, events, issues, decisions, relationships, artifacts, next_actions, summaries, and the `events_fts` / `sources_fts` virtual tables. |
 | `002` | `V002__events_connector_identity.sql` | Add `events.connector_event_id` (TEXT, nullable) and `idx_events_connector_event_id` so cross-session connector duplicate detection survives SQLite round-trips. NULL on every non-connector import. |
+| `003` | `V003__consolidated_memories.sql` | Add `consolidated_memories` and `consolidated_memory_audit` tables for SQLite Accepted Memory Storage. Object / array fields are flattened to JSON `*_json` columns. No foreign key to `projects` / `sessions` — consolidated memory must survive session pruning. |
 
 ## Tables in this milestone
 

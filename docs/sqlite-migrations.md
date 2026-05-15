@@ -50,10 +50,13 @@ App startup
 ```text
 src-tauri/migrations/V001__initial_schema.sql
 src-tauri/migrations/V002__events_connector_identity.sql
-src-tauri/src/migrations.rs
+src-tauri/migrations/V003__consolidated_memories.sql
+src-tauri/src/db/migrations.rs
+src-tauri/src/db/accepted_memory.rs
 src-tauri/src/sqlite.rs
 src/lib/sqlite/schema.ts
 src/lib/sqlite/records.ts
+src/lib/sqlite/acceptedMemoryRows.ts
 src/lib/sqlite/repositoryContracts.ts
 src/lib/sqlite/snapshotValidation.ts
 src/lib/sqlite/desktopSqliteRepository.ts
@@ -65,6 +68,7 @@ src/lib/sqlite/desktopSqliteRepository.ts
 | ------- | ---- | ----- |
 | `001` | `initial_schema` | Full normalized session schema + FTS5 virtual tables. |
 | `002` | `events_connector_identity` | Add `events.connector_event_id` (TEXT, nullable) + index. Persists connector duplicate-detection identities across save/load so cross-session detection survives SQLite round-trips. |
+| `003` | `consolidated_memories` | Add `consolidated_memories` and `consolidated_memory_audit` tables for SQLite Accepted Memory Storage. Object / array fields flattened to JSON `*_json` columns; no foreign key so consolidated memory survives session pruning. |
 
 The TypeScript catalog mirrors the migration metadata so frontend/backend contracts and tests can validate ordering, file naming, and checksums before Rust SQLite is wired.
 
@@ -77,9 +81,15 @@ The Tauri shell now registers SQLite command names so the frontend has a stable 
 - `persist_session_snapshot`
 - `load_sqlite_session_snapshot`
 - `list_sqlite_sessions`
+- `save_accepted_project_memories`
+- `list_accepted_project_memories`
+- `append_memory_review_action_rows`
+- `list_memory_review_action_rows`
 
-Only migration status is informational today. The persistence commands intentionally return clear not-implemented errors until the `rusqlite` runner and repository are added. The frontend already builds and validates `SqlitePersistenceSnapshot` payloads before sending them to this boundary.
-
-## Current Limitation
-
-The migration runner is not implemented yet because the current environment does not provide `cargo`. The next Rust-enabled milestone should add `rusqlite`, implement the runner, replace the command errors with real database operations, and run `cargo check` plus Rust tests.
+The `rusqlite` runner and repository are implemented: migrations apply
+with checksum validation, session snapshots persist and load, and the
+accepted-memory commands above read and write the
+`consolidated_memories` / `consolidated_memory_audit` tables. The
+frontend builds and validates payloads before sending them to this
+boundary and converts accepted-memory records via
+`src/lib/sqlite/acceptedMemoryRows.ts`.

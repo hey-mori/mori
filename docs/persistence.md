@@ -146,11 +146,19 @@ the storage plan below is what the current adapter implements.
   `BrowserDraftRepository` implements all six against the existing
   `KeyValueStorage` abstraction so test repositories can use
   `MemoryKeyValueStorage` directly.
-- **Desktop SQLite** (still planned): a `consolidated_memories`
-  table plus a `consolidated_memory_audit` table, written via a
-  Rust migration. Loader pattern will mirror the existing session
-  loader (read from SQLite when available, fall back to
-  localStorage).
+- **Desktop SQLite**: migration `V003__consolidated_memories.sql`
+  adds the `consolidated_memories` and `consolidated_memory_audit`
+  tables. Object / array fields are flattened to JSON `*_json`
+  columns; the Rust layer (`src-tauri/src/db/accepted_memory.rs`)
+  treats those columns as opaque text. Four Tauri commands —
+  `save_accepted_project_memories`, `list_accepted_project_memories`,
+  `append_memory_review_action_rows`, `list_memory_review_action_rows`
+  — back the store; the TypeScript bridge
+  (`src/lib/sqlite/acceptedMemoryRows.ts`) converts between
+  `StoredAcceptedProjectMemory` / `StoredMemoryReviewAction` and the
+  flat row shapes. Records loaded from SQLite carry
+  `adapter: "desktop-sqlite"`. Routing the live Memory page to prefer
+  the SQLite store in desktop mode is a separate follow-up.
 - **`.mori v0` export**: the `MoriPackageV0` package now carries an
   optional, additive `consolidatedMemories[]` slice (no
   `formatVersion` bump — each record keeps its own `schemaVersion`).

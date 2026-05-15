@@ -254,9 +254,19 @@ that is called out.
   Quick Pass settings, `.mori v0` package drafts, and accepted
   consolidated memory + audit rows.
 - Desktop SQLite via `rusqlite` with migrations `V001` (initial
-  schema) and `V002` (connector identity column on `events`). Real
-  save / load of projects, sessions, sources, events, issues,
-  decisions, relationships, artifacts, next actions, and summaries.
+  schema), `V002` (connector identity column on `events`), and
+  `V003` (`consolidated_memories` + `consolidated_memory_audit`
+  tables). Real save / load of projects, sessions, sources, events,
+  issues, decisions, relationships, artifacts, next actions, and
+  summaries.
+- SQLite Accepted Memory Storage: the `consolidated_memories` and
+  `consolidated_memory_audit` tables, the Rust persistence layer
+  (`src-tauri/src/db/accepted_memory.rs`), four Tauri commands, and
+  the TypeScript bridge (`src/lib/sqlite/acceptedMemoryRows.ts`)
+  that converts between `StoredAcceptedProjectMemory` /
+  `StoredMemoryReviewAction` and the flat SQLite rows. Routing the
+  live Memory page to the SQLite store in desktop mode is a
+  follow-up.
 - `SessionPersistenceService` routes between browser localStorage
   and the Tauri SQLite bridge. Desktop mode prefers SQLite as the
   source of truth for active session hydration; Load actions for
@@ -290,11 +300,11 @@ against the repository.
   it, but there is no UI to import a `.mori` package and re-review
   its accepted memories as proposals before they become durable. The
   `auditTrail` slice is also not carried yet.
-- **SQLite Accepted Memory Storage.** `consolidated_memories` and
-  `consolidated_memory_audit` tables, the Rust migration, and the
-  load / store command surface are designed but not implemented. No
-  rows exist in `src-tauri/migrations/` or
-  `src-tauri/src/db/` for accepted memory today.
+- **SQLite Accepted Memory Storage — desktop-mode routing.** The
+  SQLite tables, commands, and TypeScript bridge exist, but the live
+  Memory page and `SessionPersistenceService` still read and write
+  accepted memory through browser localStorage only. Routing desktop
+  mode to prefer the SQLite store is the remaining step.
 - **Undo / revert from the audit log.** The Memory Audit Trail UI
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and

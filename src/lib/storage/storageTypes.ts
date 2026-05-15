@@ -227,6 +227,13 @@ export type StoredAcceptedProjectMemoryReportEligibility =
   | "excluded";
 
 /**
+ * Storage adapter a durable memory / audit record came from. Browser
+ * localStorage is the default; desktop SQLite records carry
+ * `desktop-sqlite` so a consumer can tell the two apart after a load.
+ */
+export type StoredMemoryAdapter = "browser-local-storage" | "desktop-sqlite";
+
+/**
  * Mirror of `MemoryEvidenceRef` from
  * `src/lib/project-memory/consolidationProposals.ts`. Inlined here
  * so this type module has no upward dependency on the project-memory
@@ -307,8 +314,8 @@ export type StoredAcceptedProjectMemory = {
   /** Audit log ids that touched this memory (apply / edit / retire / …). */
   reviewActionIds: string[];
   schemaVersion: 1;
-  /** Discriminates the localStorage adapter. */
-  adapter: "browser-local-storage";
+  /** Storage adapter the record came from. */
+  adapter: StoredMemoryAdapter;
 };
 
 /**
@@ -343,7 +350,7 @@ export type StoredMemoryReviewAction = {
   /** Does this action support one-click undo (reserved for future). */
   reversible: boolean;
   schemaVersion: 1;
-  adapter: "browser-local-storage";
+  adapter: StoredMemoryAdapter;
 };
 
 export type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key"> & {

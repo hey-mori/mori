@@ -299,14 +299,26 @@ Phased so this milestone introduces no storage change.
 - Old records (none today) load normally because the field doesn't
   exist yet.
 
-### 8.3 SQLite Accepted Memory Storage
+### 8.3 SQLite Accepted Memory Storage — landed
 
-- New table `consolidated_memories` with columns mirroring the
-  browser shape + a `project_id` foreign key.
-- Migration `V00X__consolidated_memories.sql` + Rust command surface.
-- Loader pattern: `listConsolidatedMemoriesByProject` returns rows
-  from SQLite when available; falls back to browser localStorage
-  otherwise.
+- Migration `V003__consolidated_memories.sql` adds the
+  `consolidated_memories` and `consolidated_memory_audit` tables.
+  Object / array fields are flattened to JSON `*_json` columns. The
+  tables intentionally carry **no foreign key** to `projects` /
+  `sessions` — a consolidated memory must survive pruning of the
+  sessions it was derived from.
+- The Rust layer (`src-tauri/src/db/accepted_memory.rs`) exposes
+  `save_accepted_memories` / `list_accepted_memories` /
+  `append_memory_review_actions` / `list_memory_review_actions`,
+  surfaced as four Tauri commands.
+- The TypeScript bridge (`src/lib/sqlite/acceptedMemoryRows.ts`)
+  converts between `StoredAcceptedProjectMemory` /
+  `StoredMemoryReviewAction` and the flat row shapes; records loaded
+  from SQLite carry `adapter: "desktop-sqlite"`.
+- Routing the live Memory page / `SessionPersistenceService` to
+  prefer the SQLite store in desktop mode (read from SQLite when
+  available, fall back to browser localStorage) is a separate
+  follow-up.
 
 ### 8.4 Resume and Report Memory Integration — `.mori v0` export
 
@@ -394,7 +406,7 @@ same review pattern.
 | **Consolidation State** | Typed `ProjectMemoryConsolidationState` derived from `ProjectMemoryViewModel`; wired into `MemoryView`; honest preview card. | ✅ |
 | **Consolidation Review Surface** | Full-page surface, grouped proposal cards, evidence inspector, local-draft accept / edit / discard / keep-watching / defer / reset actions. No persistence — accepted memories are draft-scoped. | ✅ |
 | **Accepted Memory Persistence** | `StoredAcceptedProjectMemory` + `StoredMemoryReviewAction` repository methods; accepted / edited / watching / deferred memories survive reload via browser localStorage. | ✅ landed (browser) |
-| **SQLite Accepted Memory Storage** | `consolidated_memories` table + Rust migration + load/store commands. | Planned |
+| **SQLite Accepted Memory Storage** | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration, load/store commands, TS bridge. | ✅ landed (desktop-mode routing is a follow-up) |
 | **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports ✅ landed; `.mori v0` slice ✅ landed (review-on-import planned) |
 | **Stale Memory Review** | Detect pruned-source references and conflicting decisions; surface them as `staleMemory` / `contradiction` proposal kinds. | Planned |
 | **Queryable Memory over accepted memory** | Optional local memory query against accepted memories with citations. | Research |

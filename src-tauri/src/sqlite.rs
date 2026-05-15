@@ -4,8 +4,11 @@ use rusqlite::Connection;
 use serde::Serialize;
 
 use crate::db::{
-    apply_migrations, applied_migrations, database_path, list_sessions, load_session_snapshot,
-    open_database, save_session_snapshot, DatabaseStatus, MIGRATIONS, MIGRATION_TABLE_NAME,
+    append_memory_review_actions, apply_migrations, applied_migrations, database_path,
+    list_accepted_memories, list_memory_review_actions, list_sessions, load_session_snapshot,
+    open_database, save_accepted_memories, save_session_snapshot, AcceptedMemoryRow,
+    AcceptedMemoryWriteResult, DatabaseStatus, MemoryReviewActionRow, MemoryReviewActionWriteResult,
+    MIGRATIONS, MIGRATION_TABLE_NAME,
 };
 use crate::db::records::{SessionListEntry, SessionSnapshot, SnapshotPersistResult};
 
@@ -132,6 +135,50 @@ pub fn list_sqlite_sessions(
         Ok(SqliteSessionListOutput {
             sessions: list_sessions(conn)?,
         })
+    })
+}
+
+#[tauri::command]
+pub fn save_accepted_project_memories(
+    state: tauri::State<'_, SqliteState>,
+    memories: Vec<AcceptedMemoryRow>,
+) -> Result<AcceptedMemoryWriteResult, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        save_accepted_memories(conn, &memories)
+    })
+}
+
+#[tauri::command]
+pub fn list_accepted_project_memories(
+    state: tauri::State<'_, SqliteState>,
+    project_id: String,
+) -> Result<Vec<AcceptedMemoryRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_accepted_memories(conn, &project_id)
+    })
+}
+
+#[tauri::command]
+pub fn append_memory_review_action_rows(
+    state: tauri::State<'_, SqliteState>,
+    actions: Vec<MemoryReviewActionRow>,
+) -> Result<MemoryReviewActionWriteResult, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        append_memory_review_actions(conn, &actions)
+    })
+}
+
+#[tauri::command]
+pub fn list_memory_review_action_rows(
+    state: tauri::State<'_, SqliteState>,
+    project_id: String,
+) -> Result<Vec<MemoryReviewActionRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_memory_review_actions(conn, &project_id)
     })
 }
 

@@ -12,6 +12,18 @@ export {
 export type { SqliteMigration } from "./schema";
 export { createDesktopSqliteRepository, DesktopSqliteRepository } from "./desktopSqliteRepository";
 export { createSqlitePersistenceSnapshot } from "./records";
+export {
+  fromSqliteAcceptedMemoryRow,
+  fromSqliteMemoryReviewActionRow,
+  toSqliteAcceptedMemoryRow,
+  toSqliteMemoryReviewActionRow,
+} from "./acceptedMemoryRows";
+export type {
+  SqliteAcceptedMemoryRow,
+  SqliteAcceptedMemoryWriteResult,
+  SqliteMemoryReviewActionRow,
+  SqliteMemoryReviewActionWriteResult,
+} from "./acceptedMemoryRows";
 export { reconstructMoriSession } from "./reconstruct";
 export { validateSqlitePersistenceSnapshot } from "./snapshotValidation";
 export type {

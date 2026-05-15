@@ -15,6 +15,12 @@ import type {
   PersistSqliteSnapshotInput,
 } from "../sqlite/repositoryContracts";
 import type { SqlitePersistenceSnapshot } from "../sqlite/records";
+import type {
+  SqliteAcceptedMemoryRow,
+  SqliteAcceptedMemoryWriteResult,
+  SqliteMemoryReviewActionRow,
+  SqliteMemoryReviewActionWriteResult,
+} from "../sqlite/acceptedMemoryRows";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
 import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./repositoryCommands";
@@ -30,6 +36,10 @@ export type TauriCommandName =
   | "persist_session_snapshot"
   | "load_sqlite_session_snapshot"
   | "list_sqlite_sessions"
+  | "save_accepted_project_memories"
+  | "list_accepted_project_memories"
+  | "append_memory_review_action_rows"
+  | "list_memory_review_action_rows"
   | "create_session"
   | "import_ai_conversation"
   | "import_git_diff"
@@ -79,6 +89,22 @@ export type TauriCommandMap = {
   persist_session_snapshot: { input: PersistSqliteSnapshotInput; output: PersistSessionSnapshotOutput };
   load_sqlite_session_snapshot: { input: { sessionId: string }; output: SqlitePersistenceSnapshot };
   list_sqlite_sessions: { input: undefined; output: ListSessionsOutput };
+  save_accepted_project_memories: {
+    input: { memories: SqliteAcceptedMemoryRow[] };
+    output: SqliteAcceptedMemoryWriteResult;
+  };
+  list_accepted_project_memories: {
+    input: { projectId: string };
+    output: SqliteAcceptedMemoryRow[];
+  };
+  append_memory_review_action_rows: {
+    input: { actions: SqliteMemoryReviewActionRow[] };
+    output: SqliteMemoryReviewActionWriteResult;
+  };
+  list_memory_review_action_rows: {
+    input: { projectId: string };
+    output: SqliteMemoryReviewActionRow[];
+  };
   create_session: { input: CreateSessionInput; output: Session };
   import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
   import_git_diff: { input: ImportSourceInput; output: SourceRef };
@@ -157,6 +183,22 @@ export const tauriCommands = {
   },
   listSqliteSessions(): Promise<ListSessionsOutput> {
     return invokeTauriCommand("list_sqlite_sessions", undefined);
+  },
+  saveAcceptedProjectMemories(
+    memories: SqliteAcceptedMemoryRow[],
+  ): Promise<SqliteAcceptedMemoryWriteResult> {
+    return invokeTauriCommand("save_accepted_project_memories", { memories });
+  },
+  listAcceptedProjectMemories(projectId: string): Promise<SqliteAcceptedMemoryRow[]> {
+    return invokeTauriCommand("list_accepted_project_memories", { projectId });
+  },
+  appendMemoryReviewActionRows(
+    actions: SqliteMemoryReviewActionRow[],
+  ): Promise<SqliteMemoryReviewActionWriteResult> {
+    return invokeTauriCommand("append_memory_review_action_rows", { actions });
+  },
+  listMemoryReviewActionRows(projectId: string): Promise<SqliteMemoryReviewActionRow[]> {
+    return invokeTauriCommand("list_memory_review_action_rows", { projectId });
   },
   createSession(input: CreateSessionInput): Promise<Session> {
     return invokeTauriCommand("create_session", input);

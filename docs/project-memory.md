@@ -298,7 +298,7 @@ Capability status:
 | Accepted Memory Persistence (browser localStorage) | ✅ landed |
 | Memory Audit Trail (append-only review actions, browser localStorage) | ✅ landed (minimal) |
 | Memory Audit Trail UI (audit log surface on the Memory page) | ✅ landed |
-| SQLite Accepted Memory Storage (desktop) | designed; not implemented |
+| SQLite Accepted Memory Storage (desktop tables + commands + bridge) | ✅ landed (desktop-mode routing is a follow-up) |
 | Memory Audit Trail Undo / revert (`actionType: "revert"` rows) | designed; not implemented |
 | Stale Memory Review + Contradiction Review | designed; not implemented |
 | Resume Prompt inclusion policy hookup | ✅ landed |
