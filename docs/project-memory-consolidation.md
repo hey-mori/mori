@@ -383,10 +383,11 @@ Each sub-phase is independent and reversible. Stopping at any phase
 leaves Mori in a working state — Phase 2.0 alone is useful for the
 maintainer to see what consolidation would surface today.
 
-### Phase 2.1 state layer (landed)
+### Consolidation State Wiring (landed)
 
-`src/lib/project-memory/projectMemoryConsolidationModel.ts` is the
-typed state layer on top of the Phase 2.0 helper:
+`src/lib/project-memory/projectMemoryConsolidationState.ts` is the
+typed state layer on top of the Consolidation Proposal Preview
+helper:
 
 ```ts
 type ProjectMemoryConsolidationStatus =
@@ -397,7 +398,7 @@ type ProjectMemoryConsolidationStatus =
 
 type ProjectMemoryConsolidationState = {
   status; preview; proposalCount; proposalCounts;
-  topProposalKinds; canRunReview;        // false in 2.1 (UI not yet routed)
+  topProposalKinds; canOpenReview;       // false until Review Surface exists
   dataBasis; warnings; emptyReason;
   nextStepLabel; generatedAt;
 };
@@ -411,9 +412,9 @@ The Memory page consumes this state via a `useMemo` next to the
 existing `viewModel` derivation. A `ConsolidationPreviewCard`
 component renders it: top-3 proposal kinds + counts, `dataBasis`
 badge, "Review proposals (Planned)" disabled button, honesty copy
-under the button. **No memory is written.** **`canRunReview` is
-hard-coded `false` in Phase 2.1** — Phase 2.2 will flip it on when
-the Consolidation Review surface lands.
+under the button. **No memory is written.** **`canOpenReview` is
+hard-coded `false`** until the Consolidation Review Surface lands;
+flipping it requires both a real route and a working accept flow.
 
 ## 13. Helper prototype API (Phase 2.0, this milestone)
 

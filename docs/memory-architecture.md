@@ -197,18 +197,20 @@ memories. It is review-before-apply, evidence-linked, reversible,
 and never automatic. The design lives at
 [`docs/project-memory-consolidation.md`](project-memory-consolidation.md).
 
-The Phase 2.0 helper
+The Consolidation Proposal Preview helper
 ([`src/lib/project-memory/consolidationProposals.ts`](../src/lib/project-memory/consolidationProposals.ts))
 produces typed `MemoryProposal[]` from any `ProjectMemoryViewModel`.
-The Phase 2.1 state layer
-([`src/lib/project-memory/projectMemoryConsolidationModel.ts`](../src/lib/project-memory/projectMemoryConsolidationModel.ts))
+The Consolidation State layer
+([`src/lib/project-memory/projectMemoryConsolidationState.ts`](../src/lib/project-memory/projectMemoryConsolidationState.ts))
 wraps it in a `ProjectMemoryConsolidationState` that the Memory page
 consumes alongside its view-model. The Memory page renders a
 "Planned" preview card — counts visible, button disabled — so the
-user can see what Phase 2.2 will surface without anything being
-written. Persistence, the full Review UI, Resume-Prompt integration,
-and stale/contradiction handling land in Phases 2.2 through 2.6 on
-the [roadmap](roadmap.md).
+user can see what the Consolidation Review Surface will eventually
+surface without anything being written. The Review Surface,
+Accepted Memory Persistence, SQLite Accepted Memory Storage, Resume
+and Reports Memory Integration, and the Stale and Contradiction
+Review capability are tracked separately on the
+[roadmap](roadmap.md).
 
 ## Layer 5 — Project Memory / Consolidation
 

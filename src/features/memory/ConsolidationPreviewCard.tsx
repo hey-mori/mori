@@ -6,15 +6,16 @@ import { getProjectMemoryDataBasisTone } from "../../lib/project-memory/projectM
 import {
   describeProposalKind,
   type ProjectMemoryConsolidationState,
-} from "../../lib/project-memory/projectMemoryConsolidationModel";
+} from "../../lib/project-memory/projectMemoryConsolidationState";
 
 /**
- * Phase 2.1 preview card. Reads the typed
- * `ProjectMemoryConsolidationState` and renders a compact, honest
- * summary of what a future Consolidation Review surface would
- * propose. The button is labelled "Planned" and disabled because the
- * Review UI does not yet exist (Phase 2.2). No persistence happens
- * here; no memory is written.
+ * Consolidation Preview Card.
+ *
+ * Reads the typed `ProjectMemoryConsolidationState` and renders a
+ * compact, honest summary of what the Consolidation Review Surface
+ * would propose. The button is labelled "Planned" and disabled
+ * because the Review Surface does not exist yet. No persistence
+ * happens here; no memory is written.
  */
 export function ConsolidationPreviewCard({
   state,
@@ -66,7 +67,11 @@ export function ConsolidationPreviewCard({
       ) : null}
 
       <footer className="memory-consolidation-actions">
-        <Button icon={Layers} disabled title="Consolidation Review UI is planned (Phase 2.2).">
+        <Button
+          icon={Layers}
+          disabled
+          title="Consolidation Review Surface is planned — no memory is written until proposals are reviewed and accepted."
+        >
           Review proposals (Planned)
         </Button>
         <small>{state.nextStepLabel}</small>

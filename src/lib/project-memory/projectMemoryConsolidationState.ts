@@ -1,7 +1,8 @@
 /**
- * Project Memory consolidation — state layer (Phase 2.1).
+ * Project Memory Consolidation State.
  *
- * Phase 2.0 added a pure proposal helper that derives a typed
+ * The Consolidation Proposal Preview helper
+ * (`buildProjectMemoryConsolidationPreview`) derives a typed
  * `ProjectMemoryConsolidationPreview` from any `ProjectMemoryViewModel`.
  * This module is the thin **state layer** on top of that helper. Its
  * job is to give the Memory page a single, typed value it can read to
@@ -14,19 +15,20 @@
  *   - What warnings should be surfaced alongside the consolidation
  *     affordance?
  *
- * The Phase 2.2 Consolidation Review UI will consume the same shape
- * — the goal here is to land the *contract* now so the UI work in
- * Phase 2.2 doesn't have to reverse-engineer it. Persistence,
- * accept/edit/discard, and Review navigation are all deferred to
- * later sub-phases.
+ * The Consolidation Review Surface will consume the same shape — the
+ * goal here is to land the *contract* now so the UI layer does not
+ * have to reverse-engineer it. Accepted Memory Persistence,
+ * accept/edit/discard handlers, and Review navigation are all
+ * separate capabilities that land later.
  *
  * Boundaries:
  *   - Pure derivation. No IO, no LLM, no clock side-effects.
  *   - No persistence. Caller decides what to do with the state.
  *   - No raw source content. The state surfaces counts, kinds, and
  *     warnings — never raw event text.
- *   - `canRunReview` is `false` today because the Review UI does not
- *     yet exist. Phase 2.2 will flip this when the route lands.
+ *   - `canOpenReview` is `false` today because the Consolidation
+ *     Review Surface does not exist yet. It flips when the route
+ *     lands.
  */
 import {
   buildProjectMemoryConsolidationPreview,
@@ -58,11 +60,11 @@ export type ProjectMemoryConsolidationState = {
   /** Up to three kinds, most-numerous first; ties broken by stable kind order. */
   topProposalKinds: MemoryProposalKind[];
   /**
-   * Whether the Review surface can be opened right now. **False** in
-   * Phase 2.1 — the Review UI doesn't exist yet. Phase 2.2 will flip
-   * this when the route lands.
+   * Whether the Consolidation Review Surface can be opened right now.
+   * **False** today — the Review surface does not exist yet. Flips to
+   * `true` when the route lands.
    */
-  canRunReview: boolean;
+  canOpenReview: boolean;
   /** Echo of the underlying view-model's data basis. */
   dataBasis: ProjectMemoryDataBasis;
   /** Warnings sourced from the preview (which already echoes the view-model). */
@@ -84,8 +86,8 @@ export type ProjectMemoryConsolidationState = {
  * the view-model's own time-bearing fields where possible; otherwise
  * an epoch fallback is used so this function stays deterministic).
  *
- * Phase 2.1 deliberately does **not** open a review session, persist
- * proposals, or call out to an LLM. The state is metadata-only.
+ * The state is metadata-only — it does **not** open a review session,
+ * persist proposals, or call out to an LLM.
  */
 export function buildProjectMemoryConsolidationState(
   memory: ProjectMemoryViewModel,
@@ -97,7 +99,7 @@ export function buildProjectMemoryConsolidationState(
       proposalCount: 0,
       proposalCounts: zeroProposalCounts(),
       topProposalKinds: [],
-      canRunReview: false,
+      canOpenReview: false,
       dataBasis: memory.dataBasis,
       warnings: memory.warnings,
       emptyReason: describeUnavailableReason(memory.warnings),
@@ -118,7 +120,7 @@ export function buildProjectMemoryConsolidationState(
       proposalCounts: preview.proposalCounts,
       topProposalKinds: [],
       // Empty state still locks the review surface; nothing to review.
-      canRunReview: false,
+      canOpenReview: false,
       dataBasis: preview.dataBasis,
       warnings: preview.warnings,
       emptyReason: describeEmptyReason(memory),
@@ -134,15 +136,15 @@ export function buildProjectMemoryConsolidationState(
     proposalCount,
     proposalCounts: preview.proposalCounts,
     topProposalKinds,
-    // Hard-coded false in Phase 2.1 — the Review UI does not exist yet.
-    // Phase 2.2 will return `true` when the route lands.
-    canRunReview: false,
+    // Hard-coded false today — the Consolidation Review Surface does
+    // not exist yet. Flips to `true` when the route lands.
+    canOpenReview: false,
     dataBasis: preview.dataBasis,
     warnings: preview.warnings,
     emptyReason: null,
     nextStepLabel: partial
-      ? "Consolidation Review UI is planned. Reach is narrow today — load more saved sessions or run Quick Pass for richer proposals."
-      : "Consolidation Review UI is planned. No memory is written until you approve proposals.",
+      ? "Consolidation Review Surface is planned. Reach is narrow today — load more saved sessions or run Quick Pass for richer proposals."
+      : "Consolidation Review Surface is planned. No memory is written until you approve proposals.",
     generatedAt: deriveGeneratedAt(memory),
   };
 }

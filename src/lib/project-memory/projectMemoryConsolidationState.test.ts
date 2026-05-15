@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildProjectMemoryConsolidationState,
   describeProposalKind,
-} from "./projectMemoryConsolidationModel";
+} from "./projectMemoryConsolidationState";
 import {
   emptyProjectMemoryViewModel,
   type ProjectMemoryViewModel,
@@ -171,7 +171,7 @@ describe("buildProjectMemoryConsolidationState", () => {
     expect(state.proposalCount).toBeGreaterThan(0);
     expect(state.preview).not.toBeNull();
     expect(state.emptyReason).toBeNull();
-    expect(state.nextStepLabel).toMatch(/Review UI is planned/i);
+    expect(state.nextStepLabel).toMatch(/Review Surface is planned/i);
   });
 
   it("returns empty state when basis is rich but no proposals derive", () => {
@@ -186,7 +186,7 @@ describe("buildProjectMemoryConsolidationState", () => {
     const state = buildProjectMemoryConsolidationState(memory);
     expect(state.status).toBe("empty");
     expect(state.proposalCount).toBe(0);
-    expect(state.canRunReview).toBe(false);
+    expect(state.canOpenReview).toBe(false);
     expect(state.emptyReason).toMatch(/No decisions or issues recorded yet/i);
   });
 
@@ -194,7 +194,7 @@ describe("buildProjectMemoryConsolidationState", () => {
     const state = buildProjectMemoryConsolidationState(emptyProjectMemoryViewModel());
     expect(state.status).toBe("unavailable");
     expect(state.preview).toBeNull();
-    expect(state.canRunReview).toBe(false);
+    expect(state.canOpenReview).toBe(false);
     expect(state.emptyReason).toBeTruthy();
     expect(state.proposalCount).toBe(0);
   });
@@ -208,7 +208,7 @@ describe("buildProjectMemoryConsolidationState", () => {
       }),
     );
     expect(state.status).toBe("partial");
-    expect(state.canRunReview).toBe(false);
+    expect(state.canOpenReview).toBe(false);
     expect(state.nextStepLabel).toMatch(/Reach is narrow today/i);
   });
 
@@ -241,15 +241,15 @@ describe("buildProjectMemoryConsolidationState", () => {
     expect(state.proposalCounts.nextSessionRecommendation).toBe(1);
   });
 
-  it("canRunReview is always false in Phase 2.1 (Review UI not yet implemented)", () => {
+  it("canOpenReview stays false until the Consolidation Review Surface exists", () => {
     const ready = buildProjectMemoryConsolidationState(base());
     const empty = buildProjectMemoryConsolidationState(
       base({ keyDecisions: [], recurringIssues: [], keyEvidence: [], unresolvedRisks: [], recommendedNextSession: "" }),
     );
     const unavailable = buildProjectMemoryConsolidationState(emptyProjectMemoryViewModel());
-    expect(ready.canRunReview).toBe(false);
-    expect(empty.canRunReview).toBe(false);
-    expect(unavailable.canRunReview).toBe(false);
+    expect(ready.canOpenReview).toBe(false);
+    expect(empty.canOpenReview).toBe(false);
+    expect(unavailable.canOpenReview).toBe(false);
   });
 
   it("never copies raw source content into the state object", () => {
