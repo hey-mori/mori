@@ -186,7 +186,7 @@ fn replace_events(
         .map_err(|error| error.to_string())?;
     let mut stmt = tx
         .prepare(
-            "INSERT INTO events (id, session_id, project_id, start_at, end_at, type, title, summary, source_refs_json, linked_issue_ids_json, linked_decision_ids_json, relationship_ids_json, artifact_ids_json, trust_level, confidence, created_by, user_modified)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+            "INSERT INTO events (id, session_id, project_id, start_at, end_at, type, title, summary, source_refs_json, linked_issue_ids_json, linked_decision_ids_json, relationship_ids_json, artifact_ids_json, trust_level, confidence, created_by, user_modified, connector_event_id)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
         )
         .map_err(|error| error.to_string())?;
     for row in rows {
@@ -208,6 +208,7 @@ fn replace_events(
             row.confidence,
             row.created_by,
             row.user_modified,
+            row.connector_event_id,
         ])
         .map_err(|error| error.to_string())?;
     }
@@ -484,7 +485,7 @@ fn load_sources(conn: &Connection, session_id: &str) -> Result<Vec<SourceRow>, S
 fn load_events(conn: &Connection, session_id: &str) -> Result<Vec<EventRow>, String> {
     let mut stmt = conn
         .prepare(
-            "SELECT id, session_id, project_id, start_at, end_at, type, title, summary, source_refs_json, linked_issue_ids_json, linked_decision_ids_json, relationship_ids_json, artifact_ids_json, trust_level, confidence, created_by, user_modified FROM events WHERE session_id = ?1 ORDER BY start_at",
+            "SELECT id, session_id, project_id, start_at, end_at, type, title, summary, source_refs_json, linked_issue_ids_json, linked_decision_ids_json, relationship_ids_json, artifact_ids_json, trust_level, confidence, created_by, user_modified, connector_event_id FROM events WHERE session_id = ?1 ORDER BY start_at",
         )
         .map_err(|error| error.to_string())?;
     let rows = stmt
@@ -507,6 +508,7 @@ fn load_events(conn: &Connection, session_id: &str) -> Result<Vec<EventRow>, Str
                 confidence: row.get(14)?,
                 created_by: row.get(15)?,
                 user_modified: row.get(16)?,
+                connector_event_id: row.get(17)?,
             })
         })
         .map_err(|error| error.to_string())?;
@@ -753,6 +755,7 @@ mod tests {
                 confidence: 0.95,
                 created_by: "import".into(),
                 user_modified: 0,
+                connector_event_id: None,
             }],
             issues: Vec::new(),
             decisions: Vec::new(),
@@ -801,6 +804,23 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM events", [], |row| row.get(0))
             .expect("count events");
         assert_eq!(summary_count, 1);
+    }
+
+    #[test]
+    fn preserves_connector_event_id_round_trip() {
+        let mut conn = open_in_memory().expect("open db");
+        apply_migrations(&mut conn).expect("apply migrations");
+
+        let mut snapshot = fixture_snapshot();
+        snapshot.events[0].connector_event_id =
+            Some("claudeCodeHook::claude-2026-05-14::evt-001".into());
+        save_session_snapshot(&mut conn, &snapshot).expect("save with identity");
+
+        let loaded = load_session_snapshot(&conn, "sess-1").expect("load identity row");
+        assert_eq!(
+            loaded.events[0].connector_event_id.as_deref(),
+            Some("claudeCodeHook::claude-2026-05-14::evt-001"),
+        );
     }
 
     #[test]

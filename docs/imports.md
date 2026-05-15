@@ -427,12 +427,22 @@ instead of a Refresh button, and the paste flow stays fully available.
 
 The Connector JSONL preview compares every parsed event's
 `(connectorId, externalSessionId, event.id)` identity against the
-identities already stamped on this session's TimelineEvents. Events with
-a matching identity are tagged as **Already imported** and skipped by
-default when the user clicks Import to Review. The preview card surfaces:
+identities already stamped on:
 
-- `New · N` and `Already imported · N` badges so the user can see the
-  split before clicking anything.
+1. the **current active session** (events already applied during this
+   draft),
+2. every **saved session** Mori can read from local persistence
+   (`BrowserDraftRepository.listConnectorEventIdentitySnapshots`), and
+3. **the incoming JSONL batch itself** so a file that lists the same
+   event twice still highlights the repeat.
+
+Events with a matching identity are tagged with the appropriate class
+and skipped by default when the user clicks Import to Review. The
+preview card surfaces:
+
+- `New · N`, `Already in current session · N`, `Already in saved
+  sessions · N`, `Repeated in this file · N`, and `Invalid lines · N`
+  badges so the user can see the split before clicking anything.
 - An **Include duplicates** toggle (off by default). When the user opts
   in, duplicate events ride through Import Review again — useful for
   re-running Quick Pass over the same batch, at the cost of repeated
@@ -440,19 +450,56 @@ default when the user clicks Import to Review. The preview card surfaces:
 - An `all_duplicate` warning + a disabled Import to Review button when
   every event is a duplicate, with an explicit message ("모든 이벤트가
   이미 가져온 항목입니다").
+- A `saved_session_duplicate` warning naming up to three saved sessions
+  the file overlaps with, so the user understands which prior session
+  already has these events.
+- A `saved_session_history_unavailable` warning when no saved-session
+  history could be loaded for the current runtime, so the UI never
+  pretends cross-session detection ran.
 
 Identity preservation is **forward-only** — events imported before this
-milestone don't carry `connectorEventId` and are treated as unknown
-rather than as duplicates. The Import Review header now also surfaces a
-`New events / Skipped duplicates / Included duplicates / Invalid lines`
-meta strip so the user can confirm what's about to be applied before
-hitting Apply. Detection is **local + session-scoped**; cross-session
-duplicate detection follows whenever cross-session persistence lands.
+milestone don't carry `connectorEventId` and are treated as
+"identity-unavailable" rather than as duplicates. Saved sessions that
+contain only such legacy events are reported as `legacySavedSessionCount`
+on the import-history index but never produce false positives.
+
+`connectorEventId` is persisted through every storage path:
+
+- browser localStorage (per-session `mori.sessionImports.*`) preserves
+  the field as-is, so reload + reopen + paste-again still detects the
+  duplicate.
+- desktop SQLite added the `events.connector_event_id` column in
+  migration **V002** (`V002__events_connector_identity.sql`), so a
+  session saved through the SQLite path and reloaded later keeps its
+  identities and cross-session detection survives a restart.
+
+The Import Review header surfaces a meta strip that splits duplicates
+by source: `New events / Already in current session / Already in saved
+sessions / Repeated in this file / Included duplicates / Invalid lines`.
 
 Helpers live in
-[`src/lib/connectors/connectorEventIdentity.ts`](../src/lib/connectors/connectorEventIdentity.ts);
-the preview overlay is `buildConnectorJsonlPreviewWithSession` in
+[`src/lib/connectors/connectorEventIdentity.ts`](../src/lib/connectors/connectorEventIdentity.ts)
+and
+[`src/lib/connectors/connectorImportHistory.ts`](../src/lib/connectors/connectorImportHistory.ts);
+the cross-session preview helper is
+`buildConnectorJsonlPreviewWithHistory` in
 [`src/lib/connectors/jsonlPreview.ts`](../src/lib/connectors/jsonlPreview.ts).
+The browser-side cross-session adapter is
+`BrowserDraftRepository.listConnectorEventIdentitySnapshots` in
+[`src/lib/storage/localStorageAdapter.ts`](../src/lib/storage/localStorageAdapter.ts);
+the React boundary uses `loadConnectorImportHistorySavedSessions` in
+[`src/app/sessionStore.ts`](../src/app/sessionStore.ts).
+
+> **Local-only.** Cross-session duplicate detection only walks the
+> sessions Mori has already persisted on this machine. It does not
+> contact any remote service, does not watch any folder in the
+> background, and does not include sessions stored on other devices.
+
+> **Session Canvas (future).** A planned visual session canvas may later
+> visualise active session work areas using the same
+> `TimelineEvent` / `Source` / `Review` / connector-import-history data
+> model. It is intentionally deferred until the core import +
+> persistence flow is stable. No UI is shipped today.
 
 The full **capture surface matrix** — every paste / hook / CLI /
 desktop / web / IDE / browser / GitHub path that Mori does and does not

@@ -38,13 +38,30 @@ export {
 export {
   buildConnectorJsonlPreview,
   buildConnectorJsonlPreviewWithSession,
+  buildConnectorJsonlPreviewWithHistory,
   applyDuplicateOverlay,
+  applyHistoryOverlay,
   summariseParseOutcome,
   type ConnectorJsonlPreview,
   type ConnectorJsonlPreviewKind,
   type ConnectorJsonlBucketPreview,
   type ConnectorPreviewWarning,
 } from "./jsonlPreview";
+export {
+  buildConnectorImportHistory,
+  classifyConnectorImportBatch,
+  collectConnectorEventIdsFromSession,
+  collectConnectorEventIdsFromSessions,
+  pickDuplicateEventsFromClassification,
+  pickNewEventsFromClassification,
+  summarizeConnectorImportOverlap,
+  type ConnectorImportClassifiedEvent,
+  type ConnectorImportEventClassification,
+  type ConnectorImportHistory,
+  type ConnectorImportHistoryInput,
+  type ConnectorImportHistorySavedSession,
+  type ConnectorImportOverlapSummary,
+} from "./connectorImportHistory";
 export {
   mergeConnectorCandidatesForReview,
 } from "./mergeForReview";

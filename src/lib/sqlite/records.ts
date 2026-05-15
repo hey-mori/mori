@@ -68,6 +68,13 @@ export type EventRow = {
   confidence: number;
   created_by: string;
   user_modified: 0 | 1;
+  /**
+   * Stable connector identity (`<connectorId>::<sessionId|unscoped>::<eventId>`)
+   * for events imported through the connector JSONL pipeline. NULL on every
+   * other import kind. Persisted to SQLite via V002 so cross-session
+   * duplicate detection survives reload.
+   */
+  connector_event_id: string | null;
 };
 
 export type IssueRow = {
@@ -240,6 +247,7 @@ function eventToRow(event: TimelineEvent): EventRow {
     confidence: event.confidence,
     created_by: event.createdBy,
     user_modified: event.userModified ? 1 : 0,
+    connector_event_id: event.connectorEventId ?? null,
   };
 }
 

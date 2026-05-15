@@ -18,12 +18,20 @@ pub struct MigrationManifestEntry {
 
 pub const MIGRATION_TABLE_NAME: &str = "_mori_migrations";
 
-pub const MIGRATIONS: &[MigrationManifestEntry] = &[MigrationManifestEntry {
-    version: "001",
-    filename: "V001__initial_schema.sql",
-    name: "initial_schema",
-    sql: include_str!("../../migrations/V001__initial_schema.sql"),
-}];
+pub const MIGRATIONS: &[MigrationManifestEntry] = &[
+    MigrationManifestEntry {
+        version: "001",
+        filename: "V001__initial_schema.sql",
+        name: "initial_schema",
+        sql: include_str!("../../migrations/V001__initial_schema.sql"),
+    },
+    MigrationManifestEntry {
+        version: "002",
+        filename: "V002__events_connector_identity.sql",
+        name: "events_connector_identity",
+        sql: include_str!("../../migrations/V002__events_connector_identity.sql"),
+    },
+];
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -189,13 +197,15 @@ mod tests {
     fn applies_initial_migration_on_empty_database() {
         let mut conn = open_in_memory().expect("open in-memory db");
         let outcome = apply_migrations(&mut conn).expect("apply migrations");
-        assert_eq!(outcome.applied, vec!["001".to_string()]);
+        assert_eq!(outcome.applied, vec!["001".to_string(), "002".to_string()]);
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 1);
+        assert_eq!(applied.len(), 2);
         assert_eq!(applied[0].version, "001");
+        assert_eq!(applied[1].version, "002");
         assert!(!applied[0].checksum.is_empty());
+        assert!(!applied[1].checksum.is_empty());
     }
 
     #[test]
@@ -204,7 +214,7 @@ mod tests {
         apply_migrations(&mut conn).expect("first run");
         let outcome = apply_migrations(&mut conn).expect("second run");
         assert!(outcome.applied.is_empty());
-        assert_eq!(outcome.already_applied, vec!["001".to_string()]);
+        assert_eq!(outcome.already_applied, vec!["001".to_string(), "002".to_string()]);
     }
 
     #[test]

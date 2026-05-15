@@ -184,6 +184,32 @@ Not included yet:
 - Acting as an autonomous coding agent
 - Automatically changing source files
 
+## Session Canvas (deferred, future visualisation)
+
+A Session Canvas / Workroom visualisation is a promising future view: a
+zoomable canvas that lays out the active session's `TimelineEvent`s,
+`SourceRef`s, `Review` drafts, and connector-import-history overlay as
+spatial work areas (Claude / Codex / Terminal / Browser / Files /
+Communication / Git lanes), so the user can scan what's happening at a
+glance.
+
+This is **intentionally deferred** until the core import + persistence
+flow is stable. The current priority is the data underneath: reliable
+connector imports, durable persistence, cross-session import history,
+clean Project Memory aggregation, accurate source/evidence tracking,
+and safe local-first behaviour. When Session Canvas eventually lands it
+should:
+
+- read the exact same `TimelineEvent` / `SourceRef` / `Review` /
+  `connectorEventId` data the rest of Mori already uses,
+- never invent new auto-capture surfaces (paste / hook / inbox stays
+  the only entry path),
+- stay local-only, with no background watchers, no live sync, and no
+  cloud component.
+
+No UI is shipped today. The canvas concept is a planning artifact, not
+a feature.
+
 ## Phase 7: Freelancer Mode
 
 Goal: turn selected sessions into client-safe work reports.

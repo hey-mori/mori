@@ -20,7 +20,13 @@ import {
   getSessionPersistenceService,
   type SessionPersistenceService,
 } from "../lib/storage/sessionPersistenceService";
-import type { MoriDraftRepository, StoredSessionDraft, StoredSessionImport } from "../lib/storage/storageTypes";
+import type {
+  ConnectorEventIdentitySnapshot,
+  MoriDraftRepository,
+  StoredSessionDraft,
+  StoredSessionImport,
+} from "../lib/storage/storageTypes";
+import type { ConnectorImportHistorySavedSession } from "../lib/connectors";
 
 export type SessionMode = "demo" | "draft";
 
@@ -440,6 +446,36 @@ export function selectSessionSource(state: MoriSessionState): SessionSource {
 
 export function selectHasRealAnalysis(state: MoriSessionState): boolean {
   return Boolean(state.draft && state.analysis);
+}
+
+/**
+ * Cross-session connector history collected from the local persistence
+ * layer. In browser mode this walks every saved session in localStorage
+ * and returns its connector identities. In desktop mode it also includes
+ * the SQLite session metadata if available. Callers (ImportPanel) feed
+ * the result into `buildConnectorJsonlPreviewWithHistory` so duplicate
+ * detection survives across sessions.
+ */
+export function loadConnectorImportHistorySavedSessions(options: {
+  excludeSessionId?: string | null;
+} = {}): ConnectorImportHistorySavedSession[] {
+  const repository = getRepository();
+  const snapshots = repository.listConnectorEventIdentitySnapshots(options);
+  return snapshots.map((snapshot) => savedSessionFromSnapshot(snapshot));
+}
+
+function savedSessionFromSnapshot(
+  snapshot: ConnectorEventIdentitySnapshot,
+): ConnectorImportHistorySavedSession {
+  return {
+    sessionId: snapshot.sessionId,
+    title: snapshot.title,
+    savedAt: snapshot.savedAt,
+    // The history input shape expects events keyed on `connectorEventId`.
+    // Materialise minimal placeholder events so the helper can read them
+    // without us paying the full TimelineEvent reload cost.
+    events: snapshot.connectorEventIds.map((connectorEventId) => ({ connectorEventId })),
+  };
 }
 
 function mergeAnalysisIntoView(view: SessionViewModel, analysis: MoriAnalysisResult): SessionViewModel {

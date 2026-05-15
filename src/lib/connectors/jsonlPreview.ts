@@ -25,11 +25,18 @@ import type {
 } from "./types";
 import { parseConnectorJsonl } from "./validation";
 import { redactText } from "./redaction";
+import type { ConnectorEventIdentity } from "./connectorEventIdentity";
 import {
-  collectImportedConnectorEventIds,
-  partitionConnectorEventsByIdentity,
-  type ConnectorEventIdentity,
-} from "./connectorEventIdentity";
+  buildConnectorImportHistory,
+  classifyConnectorImportBatch,
+  pickDuplicateEventsFromClassification,
+  pickNewEventsFromClassification,
+  summarizeConnectorImportOverlap,
+  type ConnectorImportHistory,
+  type ConnectorImportHistoryInput,
+  type ConnectorImportHistorySavedSession,
+  type ConnectorImportOverlapSummary,
+} from "./connectorImportHistory";
 import type { TimelineEvent } from "../../domain/types";
 
 export type ConnectorJsonlPreviewKind = "empty" | "errors-only" | "valid" | "mixed";
@@ -98,6 +105,34 @@ export type ConnectorJsonlPreview = {
   duplicateEvents: ConnectorEvent[];
   /** Identities (encoded as `connectorId::session::id`) of the duplicates. */
   duplicateIdentities: ConnectorEventIdentity[];
+  /**
+   * Cross-session overlap counts populated by
+   * `buildConnectorJsonlPreviewWithHistory`. The plain preview reports
+   * zero everywhere so callers can read the fields unconditionally.
+   *
+   * `currentSessionDuplicateCount` mirrors the old `duplicateEventCount`
+   * but only counts active-session matches. `savedSessionDuplicateCount`
+   * picks up the cross-session hits. `inBatchDuplicateCount` covers
+   * repeats inside the incoming JSONL itself. `identityUnavailableCount`
+   * counts events with no usable identity (kept at zero today; reserved
+   * for future parser changes).
+   */
+  currentSessionDuplicateCount: number;
+  savedSessionDuplicateCount: number;
+  inBatchDuplicateCount: number;
+  identityUnavailableCount: number;
+  /**
+   * Whether the preview had access to saved-session history. False in
+   * the legacy session-only path and the no-input path. The UI uses this
+   * to render "Saved-session history unavailable" instead of pretending
+   * detection ran.
+   */
+  savedSessionHistoryAvailable: boolean;
+  /**
+   * Saved-session metadata for the rows that matched. Each entry is the
+   * exact `ConnectorImportHistorySavedSession` the caller passed in.
+   */
+  matchedSavedSessions: ConnectorImportHistorySavedSession[];
 };
 
 export type ConnectorPreviewWarning = {
@@ -107,7 +142,9 @@ export type ConnectorPreviewWarning = {
     | "unknown_connector_id"
     | "all_invalid"
     | "all_duplicate"
-    | "partial_duplicate";
+    | "partial_duplicate"
+    | "saved_session_duplicate"
+    | "saved_session_history_unavailable";
   message: string;
   affectedLines?: number[];
 };
@@ -174,6 +211,12 @@ function emptyPreview(): ConnectorJsonlPreview {
     newEvents: [],
     duplicateEvents: [],
     duplicateIdentities: [],
+    currentSessionDuplicateCount: 0,
+    savedSessionDuplicateCount: 0,
+    inBatchDuplicateCount: 0,
+    identityUnavailableCount: 0,
+    savedSessionHistoryAvailable: false,
+    matchedSavedSessions: [],
   };
 }
 
@@ -298,6 +341,12 @@ function summarisePreview(outcome: ConnectorParseOutcome): ConnectorJsonlPreview
     newEvents: events,
     duplicateEvents: [],
     duplicateIdentities: [],
+    currentSessionDuplicateCount: 0,
+    savedSessionDuplicateCount: 0,
+    inBatchDuplicateCount: 0,
+    identityUnavailableCount: 0,
+    savedSessionHistoryAvailable: false,
+    matchedSavedSessions: [],
   };
 }
 
@@ -405,69 +454,117 @@ function buildHeadline(args: {
 // ─── duplicate-aware preview ────────────────────────────────────────────────
 
 /**
- * Same shape as `buildConnectorJsonlPreview`, plus duplicate detection
- * against the active session's already-applied TimelineEvents.
- *
- * Events whose `connectorEventId` is already present in the session are
- * classified as duplicates. The preview's `events` field still carries the
- * full validated set so callers that opt into "Include duplicates" can use
- * it; the `newEvents` / `duplicateEvents` partitions are what the default
- * skip-duplicates path reads from.
- *
- * Edge cases:
- *   - When there is no session (e.g. demo) the importedIds set is empty
- *     and every valid event ends up in `newEvents`.
- *   - When everything is a duplicate, `canImport` is flipped to `false`
- *     and an `all_duplicate` warning is emitted. The UI surfaces this
- *     state by disabling Import to Review with a clear message.
- *   - When the batch is a partial duplicate, `canImport` stays true (the
- *     new events ARE importable) and a `partial_duplicate` warning is
- *     emitted so the UI can show the skip count.
+ * Session-only duplicate-aware preview. Kept for callers that don't have
+ * (or don't want) saved-session history. Internally this routes through
+ * the cross-session helper with an empty saved-session list.
  */
 export function buildConnectorJsonlPreviewWithSession(
   text: string,
   session: { events: TimelineEvent[] } | null | undefined,
 ): ConnectorJsonlPreview {
-  const base = buildConnectorJsonlPreview(text);
-  return applyDuplicateOverlay(base, session);
+  return buildConnectorJsonlPreviewWithHistory(text, {
+    activeSession: session ?? null,
+    savedSessions: [],
+  });
 }
 
 /**
- * Pure version of the overlay so callers that already have a parsed
- * outcome (tests, future Tauri ingest) can re-use it without re-parsing.
+ * Cross-session duplicate-aware preview. Detects duplicates against:
+ *
+ *   1. the active session's already-applied TimelineEvents,
+ *   2. every saved session in `input.savedSessions`,
+ *   3. repeats inside the incoming JSONL batch itself.
+ *
+ * The preview's `events` field still carries the full validated set so
+ * callers that opt into "Include duplicates" can use it; the `newEvents`
+ * / `duplicateEvents` partitions are what the default skip-duplicates
+ * path reads from.
  */
-export function applyDuplicateOverlay(
+export function buildConnectorJsonlPreviewWithHistory(
+  text: string,
+  input: ConnectorImportHistoryInput,
+): ConnectorJsonlPreview {
+  const base = buildConnectorJsonlPreview(text);
+  return applyHistoryOverlay(base, input);
+}
+
+/**
+ * Pure version of the cross-session overlay. Tests and future Tauri
+ * ingest paths can reuse it without re-parsing.
+ */
+export function applyHistoryOverlay(
   preview: ConnectorJsonlPreview,
-  session: { events: TimelineEvent[] } | null | undefined,
+  input: ConnectorImportHistoryInput,
 ): ConnectorJsonlPreview {
   if (preview.kind === "empty" || preview.kind === "errors-only") {
     return preview;
   }
-  const importedIds = session
-    ? collectImportedConnectorEventIds(session)
-    : new Set<ConnectorEventIdentity>();
-  const { newEvents, duplicateEvents, duplicateIdentities } =
-    partitionConnectorEventsByIdentity(preview.events, importedIds);
 
-  const warnings = [...preview.warnings];
-  if (duplicateEvents.length > 0 && newEvents.length === 0) {
+  const history = buildConnectorImportHistory(input);
+  const classified = classifyConnectorImportBatch(preview.events, history);
+  const summary = summarizeConnectorImportOverlap(preview.events, history);
+  const newEvents = pickNewEventsFromClassification(classified);
+  const duplicateEvents = pickDuplicateEventsFromClassification(classified);
+
+  const duplicateIdentities = uniqueOrdered(
+    classified
+      .filter(
+        (row) =>
+          row.classification === "duplicate-current-session" ||
+          row.classification === "duplicate-saved-session" ||
+          row.classification === "duplicate-in-batch",
+      )
+      .map((row) => row.identity),
+  );
+
+  const savedSessionHistoryAvailable = (input.savedSessions?.length ?? 0) > 0;
+
+  const warnings: ConnectorPreviewWarning[] = [...preview.warnings];
+  const totalDuplicates = summary.duplicateTotal;
+  if (totalDuplicates > 0 && newEvents.length === 0) {
     warnings.push({
       code: "all_duplicate",
       message:
-        `모든 ${duplicateEvents.length}개 이벤트가 이미 가져온 connector 이벤트와 동일합니다. 같은 JSONL을 한 번 더 import하셨거나 successor 파일이 동일 세션을 반복하는지 확인하세요.`,
+        `모든 ${totalDuplicates}개 이벤트가 이미 가져온 connector 이벤트와 동일합니다. 같은 JSONL을 한 번 더 import하셨거나 successor 파일이 동일 세션을 반복하는지 확인하세요.`,
     });
-  } else if (duplicateEvents.length > 0) {
+  } else if (totalDuplicates > 0) {
     warnings.push({
       code: "partial_duplicate",
       message:
-        `${duplicateEvents.length}개 이벤트는 이미 가져왔습니다. 기본적으로 새 이벤트 ${newEvents.length}개만 Import Review로 전달됩니다.`,
+        `${totalDuplicates}개 이벤트는 이미 가져왔습니다. 기본적으로 새 이벤트 ${newEvents.length}개만 Import Review로 전달됩니다.`,
+    });
+  }
+  if (summary.savedSessionDuplicates > 0) {
+    const sessionLabel = summary.matchedSavedSessions
+      .map((entry) => entry.title ?? entry.sessionId)
+      .slice(0, 3)
+      .join(", ");
+    warnings.push({
+      code: "saved_session_duplicate",
+      message:
+        `${summary.savedSessionDuplicates}개 이벤트는 다른 저장 세션에서 이미 가져왔습니다${sessionLabel ? ` (${sessionLabel})` : ""}. 동일 connector 파일을 다시 import 중일 수 있습니다.`,
+    });
+  }
+  if (!savedSessionHistoryAvailable && input.savedSessions !== undefined) {
+    // Caller passed an explicit empty saved-session array — most likely
+    // browser mode without history support. Surface honesty rather than
+    // pretending cross-session detection happened.
+    warnings.push({
+      code: "saved_session_history_unavailable",
+      message:
+        "저장 세션 기록을 이 모드에서는 사용할 수 없어, 현재 세션과 이 파일 내부 중복만 검사했습니다.",
     });
   }
 
   const canImport = newEvents.length > 0;
-  const headline = duplicateEvents.length > 0
+  const headline = totalDuplicates > 0
     ? canImport
-      ? `${newEvents.length}개 새 이벤트 / ${duplicateEvents.length}개 중복 (기본 스킵).`
+      ? buildDuplicateHeadline({
+          newCount: newEvents.length,
+          currentSessionDuplicates: summary.currentSessionDuplicates,
+          savedSessionDuplicates: summary.savedSessionDuplicates,
+          inBatchDuplicates: summary.inBatchDuplicates,
+        })
       : `모든 이벤트가 이미 가져온 항목입니다. Import Review는 비활성화됩니다.`
     : preview.headline;
 
@@ -477,10 +574,55 @@ export function applyDuplicateOverlay(
     canImport,
     headline,
     newEventCount: newEvents.length,
-    duplicateEventCount: duplicateEvents.length,
+    duplicateEventCount: totalDuplicates,
     newEvents,
     duplicateEvents,
     duplicateIdentities,
+    currentSessionDuplicateCount: summary.currentSessionDuplicates,
+    savedSessionDuplicateCount: summary.savedSessionDuplicates,
+    inBatchDuplicateCount: summary.inBatchDuplicates,
+    identityUnavailableCount: summary.identityUnavailable,
+    savedSessionHistoryAvailable,
+    matchedSavedSessions: summary.matchedSavedSessions,
   };
 }
+
+/**
+ * @deprecated Prefer `applyHistoryOverlay`. Kept so older callers that
+ * imported the session-only overlay continue to compile until they migrate.
+ */
+export function applyDuplicateOverlay(
+  preview: ConnectorJsonlPreview,
+  session: { events: TimelineEvent[] } | null | undefined,
+): ConnectorJsonlPreview {
+  return applyHistoryOverlay(preview, {
+    activeSession: session ?? null,
+    // Pass `undefined` (not `[]`) so the overlay doesn't emit a
+    // saved-session-unavailable warning for callers that never opted
+    // into cross-session history.
+    savedSessions: undefined,
+  });
+}
+
+function buildDuplicateHeadline(args: {
+  newCount: number;
+  currentSessionDuplicates: number;
+  savedSessionDuplicates: number;
+  inBatchDuplicates: number;
+}): string {
+  const dupParts: string[] = [];
+  if (args.currentSessionDuplicates > 0) dupParts.push(`현재 세션 ${args.currentSessionDuplicates}`);
+  if (args.savedSessionDuplicates > 0) dupParts.push(`저장 세션 ${args.savedSessionDuplicates}`);
+  if (args.inBatchDuplicates > 0) dupParts.push(`파일 내부 ${args.inBatchDuplicates}`);
+  const dupLabel = dupParts.length ? dupParts.join(" / ") : `${args.currentSessionDuplicates + args.savedSessionDuplicates + args.inBatchDuplicates}`;
+  return `${args.newCount}개 새 이벤트 / 중복 ${dupLabel} (기본 스킵).`;
+}
+
+// Re-exported so callers can keep importing from this module if they prefer.
+export type {
+  ConnectorImportHistory,
+  ConnectorImportHistoryInput,
+  ConnectorImportHistorySavedSession,
+  ConnectorImportOverlapSummary,
+};
 

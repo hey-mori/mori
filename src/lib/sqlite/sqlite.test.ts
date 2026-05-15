@@ -20,27 +20,33 @@ describe("SQLite persistence foundation", () => {
   it("defines an initial migration covering all normalized Mori tables", () => {
     const sql = getSqliteSchemaSql();
 
-    expect(sqliteMigrations).toHaveLength(1);
+    expect(sqliteMigrations).toHaveLength(2);
     expect(validateMigrationCatalog()).toEqual([]);
     expect(migrationMentionsRequiredTables(sql)).toBe(true);
     expect(sql).toContain(`CREATE TABLE IF NOT EXISTS ${migrationTableName}`);
     expect(sql).toContain("CREATE VIRTUAL TABLE IF NOT EXISTS events_fts USING fts5");
     expect(sql).toContain("CREATE VIRTUAL TABLE IF NOT EXISTS sources_fts USING fts5");
     expect(requiredSqliteTables).toContain("relationships");
+    expect(sql).toContain("connector_event_id");
   });
 
   it("uses Flyway-style filenames without depending on Flyway", () => {
     expect(sqliteMigrations[0]?.filename).toBe("V001__initial_schema.sql");
+    expect(sqliteMigrations[1]?.filename).toBe("V002__events_connector_identity.sql");
     expect(isValidMigrationFilename(sqliteMigrations[0]?.filename ?? "")).toBe(true);
-    expect(sortMigrations([...sqliteMigrations].reverse()).map((migration) => migration.version)).toEqual(["001"]);
+    expect(isValidMigrationFilename(sqliteMigrations[1]?.filename ?? "")).toBe(true);
+    expect(sortMigrations([...sqliteMigrations].reverse()).map((migration) => migration.version)).toEqual([
+      "001",
+      "002",
+    ]);
   });
 
   it("computes stable migration checksums", () => {
-    const migration = sqliteMigrations[0];
-
-    expect(migration?.checksum).toMatch(/^fnv1a32:[a-f0-9]{8}$/);
-    expect(migration?.checksum).toBe(checksumMigrationSql(migration?.sql ?? ""));
-    expect(checksumMigrationSql(`${migration?.sql ?? ""}\n-- changed`)).not.toBe(migration?.checksum);
+    for (const migration of sqliteMigrations) {
+      expect(migration.checksum).toMatch(/^fnv1a32:[a-f0-9]{8}$/);
+      expect(migration.checksum).toBe(checksumMigrationSql(migration.sql));
+      expect(checksumMigrationSql(`${migration.sql}\n-- changed`)).not.toBe(migration.checksum);
+    }
   });
 
   it("maps a Mori session into SQLite row snapshots", () => {

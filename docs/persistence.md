@@ -42,6 +42,7 @@ What is real:
 - Per-repository verification metadata (`status`, `gitRoot`, `currentBranch`, `headCommit`, `shortHeadCommit`, `isDirty`, `verifiedAt`, `error`) is captured by the explicit `verify_repository_path` Tauri command and persisted alongside the repository entry via `setRepositoryVerification`. Verification only runs when the user clicks Verify or explicitly runs Git diff capture against a saved repo — never on app start, hydrate, focus, or navigation. `setRepositoryVerification(settings, id, null)` is the supported "forget what we learned" path.
 - Verification freshness is a pure derivation in [src/lib/repositories/verificationFreshness.ts](../src/lib/repositories/verificationFreshness.ts) (24-hour stale threshold, age labels, tones). It only describes stored metadata in Settings and the Git Diff dropdown — it never triggers work. See [Imports](imports.md) for the capture-triggered refresh flow.
 - `SessionPersistenceService` (`src/lib/storage/sessionPersistenceService.ts`) is the single place where runtime decisions live. In browser mode all session, import, and analysis reads/writes go through `BrowserDraftRepository`. In Tauri mode the service prefers the SQLite snapshot when hydrating the active session, exposes Load actions through `useMoriSessionStore.loadDesktopSession(sessionId)`, and lets the Settings panel route initialize/save/list/load through the Tauri SQLite command bridge.
+- **Connector event identities persist across the local persistence boundary.** TimelineEvents imported through the connector JSONL pipeline carry a `connectorEventId` (`<connectorId>::<externalSessionId|unscoped>::<eventId>`). Browser localStorage preserves the field as part of `mori.sessionImports.*`. Desktop SQLite added `events.connector_event_id` in migration V002 so the identity survives save / load. Old sessions imported before this milestone never carry the field — Mori treats them as "identity-unavailable" rather than as duplicates, so they keep loading cleanly. The cross-session duplicate index is `BrowserDraftRepository.listConnectorEventIdentitySnapshots` plus the `loadConnectorImportHistorySavedSessions` selector on the session store; it returns a lightweight `{ sessionId, title, savedAt, connectorEventIds }` shape rather than full payloads, so reading the history is cheap even with many saved sessions.
 - Mori can map a session into normalized SQLite row snapshots.
 - SQLite snapshots are validated for required rows, foreign-key shape, and JSON-array columns before desktop persistence.
 - A desktop SQLite repository boundary can call Tauri commands for initialization, snapshot persistence, session loading, and session listing.
@@ -54,6 +55,30 @@ What is temporary:
 - Tauri commands work only in the desktop runtime. In browser mode they throw clear desktop-required errors.
 - Native file picker path selection is still planned.
 - SQLite Tauri commands are registered, but database initialization and row writes still return explicit not-implemented errors until `rusqlite` is added.
+
+Cross-session connector duplicate detection scope:
+
+- Detection runs entirely on the local machine. It walks the saved
+  sessions Mori has persisted (localStorage drafts, plus SQLite-loaded
+  sessions when running in Tauri mode) and indexes their
+  `connectorEventId` values.
+- Detection covers three classes: **current-session duplicates**,
+  **saved-session duplicates**, and **repeats inside the incoming
+  batch**. The Connector JSONL preview renders each class as its own
+  badge so the split is honest.
+- Detection never makes a network call, never watches a folder, never
+  scans the filesystem outside the explicit inbox path, and never opens
+  saved sessions on its own — only the identity index is loaded, not
+  the full saved-session payload.
+- Detection is forward-only. Sessions imported before this milestone
+  cannot be deduplicated retroactively; their events are classified as
+  `identity-unavailable` and never produce false positives.
+
+> Session Canvas (future). A planned visual session canvas could later
+> visualise active session work areas using the same TimelineEvent,
+> Source, Review, and connector import history data. It is intentionally
+> deferred until the core import + persistence flow is stable. No UI is
+> shipped today.
 
 Project Memory scope (read-only, single-session aggregation):
 

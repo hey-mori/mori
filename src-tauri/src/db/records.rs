@@ -126,6 +126,12 @@ pub struct EventRow {
     pub confidence: f64,
     pub created_by: String,
     pub user_modified: i64,
+    /// Stable connector identity (`<connectorId>::<sessionId|unscoped>::<eventId>`)
+    /// for events imported through the connector JSONL pipeline. NULL on
+    /// every other import kind. Serialised as an optional field so old
+    /// snapshots without it deserialize unchanged.
+    #[serde(default)]
+    pub connector_event_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

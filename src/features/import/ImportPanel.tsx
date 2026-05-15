@@ -25,9 +25,10 @@ import {
 } from "../../lib/import";
 import {
   buildConnectorJsonlPreview,
-  buildConnectorJsonlPreviewWithSession,
+  buildConnectorJsonlPreviewWithHistory,
   mergeConnectorCandidatesForReview,
   normalizeConnectorEventBatch,
+  type ConnectorImportHistorySavedSession,
   type ConnectorJsonlPreview,
 } from "../../lib/connectors";
 import {
@@ -42,7 +43,11 @@ import {
   type ConnectorInboxListing,
 } from "../../lib/desktop/connectorInbox";
 import { getRepositoryVerificationFreshness } from "../../lib/repositories";
-import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
+import {
+  loadConnectorImportHistorySavedSessions,
+  selectSessionView,
+  useMoriSessionStore,
+} from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { selectActiveRepository, useMoriRepositoryStore } from "../../app/repositoryStore";
 import { useMoriReviewStore } from "../../app/reviewStore";
@@ -172,6 +177,20 @@ export function ImportPanel(props: ImportPanelProps = {}) {
         </div>
       </div>
     );
+  }
+
+  function loadSavedSessionHistoryForActive(
+    activeSessionId: string | null,
+  ): ConnectorImportHistorySavedSession[] {
+    // Cross-session duplicate detection walks every saved session in the
+    // local persistence layer. Browser mode pulls from localStorage drafts;
+    // desktop mode will additionally route through SQLite once the SQLite
+    // store exposes a listing helper (today the browser repository is the
+    // authoritative cross-session index, since active SQLite saves are also
+    // mirrored back into localStorage via `loadDesktopSession`).
+    return loadConnectorImportHistorySavedSessions({
+      excludeSessionId: activeSessionId,
+    });
   }
 
   function reset() {
@@ -379,7 +398,10 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       setConnectorPreview(null);
       return;
     }
-    const preview = buildConnectorJsonlPreviewWithSession(body, sessionView);
+    const preview = buildConnectorJsonlPreviewWithHistory(body, {
+      activeSession: sessionView,
+      savedSessions: loadSavedSessionHistoryForActive(draft?.session.id ?? null),
+    });
     setConnectorPreview(preview);
     if (preview.kind === "empty") {
       setStatus({ tone: "error", message: "유효한 라인이 없습니다." });
@@ -451,9 +473,13 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       setConnectorInboxSelectedPath(result.path);
       // Run Parse / Preview automatically — the user just made an explicit
       // file selection, so refreshing the preview is exactly what they want.
-      // The session-aware preview also lights up duplicate detection so the
-      // user sees "Already imported · N" without a second click.
-      const preview = buildConnectorJsonlPreviewWithSession(result.text, sessionView);
+      // The history-aware preview lights up cross-session duplicate
+      // detection so the user sees "Already imported · N" (both current and
+      // saved sessions) without a second click.
+      const preview = buildConnectorJsonlPreviewWithHistory(result.text, {
+        activeSession: sessionView,
+        savedSessions: loadSavedSessionHistoryForActive(draft?.session.id ?? null),
+      });
       setConnectorPreview(preview);
       if (preview.kind === "errors-only") {
         setConnectorInboxStatus({
@@ -491,7 +517,12 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       setStatus({ tone: "error", message: "세션이 없습니다. Start Session에서 새 세션을 시작하세요." });
       return;
     }
-    const preview = connectorPreview ?? buildConnectorJsonlPreviewWithSession(body, sessionView);
+    const preview =
+      connectorPreview ??
+      buildConnectorJsonlPreviewWithHistory(body, {
+        activeSession: sessionView,
+        savedSessions: loadSavedSessionHistoryForActive(draft?.session.id ?? null),
+      });
     if (preview.kind === "empty" || preview.kind === "errors-only") {
       setStatus({
         tone: "error",
@@ -526,6 +557,10 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       duplicateIncludedCount: connectorIncludeDuplicates ? preview.duplicateEventCount : 0,
       invalidLineCount: preview.invalidLineCount,
       includeDuplicates: connectorIncludeDuplicates,
+      currentSessionDuplicateCount: preview.currentSessionDuplicateCount,
+      savedSessionDuplicateCount: preview.savedSessionDuplicateCount,
+      inBatchDuplicateCount: preview.inBatchDuplicateCount,
+      savedSessionHistoryAvailable: preview.savedSessionHistoryAvailable,
     });
     const skipped = preview.duplicateEventCount;
     const skipMessage =
@@ -1004,7 +1039,18 @@ function ConnectorJsonlPreviewCard({
         <div className="connector-jsonl-duplicate-row" role="status">
           <span className="connector-jsonl-duplicate-counts">
             <Badge tone="green">New · {preview.newEventCount}</Badge>
-            <Badge tone="orange">Already imported · {preview.duplicateEventCount}</Badge>
+            {preview.currentSessionDuplicateCount > 0 ? (
+              <Badge tone="orange">Already in current session · {preview.currentSessionDuplicateCount}</Badge>
+            ) : null}
+            {preview.savedSessionDuplicateCount > 0 ? (
+              <Badge tone="orange">Already in saved sessions · {preview.savedSessionDuplicateCount}</Badge>
+            ) : null}
+            {preview.inBatchDuplicateCount > 0 ? (
+              <Badge tone="orange">Repeated in this file · {preview.inBatchDuplicateCount}</Badge>
+            ) : null}
+            {preview.invalidLineCount > 0 ? (
+              <Badge tone="red">Invalid lines · {preview.invalidLineCount}</Badge>
+            ) : null}
           </span>
           <label className="connector-jsonl-duplicate-toggle">
             <input
@@ -1023,6 +1069,23 @@ function ConnectorJsonlPreviewCard({
             </span>
           </label>
         </div>
+      ) : null}
+      {!preview.savedSessionHistoryAvailable && preview.kind !== "errors-only" ? (
+        <p className="connector-jsonl-history-note" role="note">
+          저장 세션 기록을 이 모드에서는 사용할 수 없어, 현재 세션 + 이 파일 내부 중복만 검사했습니다.
+        </p>
+      ) : null}
+      {preview.matchedSavedSessions.length > 0 ? (
+        <p className="connector-jsonl-history-note" role="note">
+          이미 가져온 저장 세션:{' '}
+          {preview.matchedSavedSessions
+            .map((entry) => entry.title ?? entry.sessionId)
+            .slice(0, 3)
+            .join(", ")}
+          {preview.matchedSavedSessions.length > 3
+            ? ` 외 ${preview.matchedSavedSessions.length - 3}건`
+            : ""}
+        </p>
       ) : null}
       <dl>
         <div>

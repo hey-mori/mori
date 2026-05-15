@@ -182,6 +182,114 @@ describe("BrowserDraftRepository", () => {
     expect(repository.loadSessionAnalysis(draft.session.id)).toBeNull();
   });
 
+  it("lists connector event identity snapshots across saved sessions", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    const draftA = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Session A",
+        projectName: "Project A",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+    repository.addSessionImport(draftA.session.id, {
+      source: {
+        id: "src-a",
+        sessionId: draftA.session.id,
+        kind: "claudeTranscript",
+        title: "Saved Claude",
+        detail: "",
+        trustLevel: "verified",
+        redactionStatus: "notNeeded",
+        rawRetention: "summaryOnly",
+        capturedAt: "2026-05-12T13:00:00Z",
+        relatedEventIds: ["evt-a-1"],
+      },
+      events: [
+        {
+          id: "evt-a-1",
+          sessionId: draftA.session.id,
+          projectId: draftA.project.id,
+          start: "2026-05-12T13:00:00Z",
+          type: "aiConversation",
+          title: "Saved Claude",
+          summary: "",
+          sourceRefs: ["src-a"],
+          linkedIssueIds: [],
+          linkedDecisionIds: [],
+          relationshipIds: [],
+          trustLevel: "verified",
+          confidence: 0.9,
+          createdBy: "import",
+          userModified: false,
+          connectorEventId: "claudeCodeHook::sess-a::evt-a-1",
+        },
+      ],
+    });
+
+    const draftB = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Session B",
+        projectName: "Project B",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-13T13:00:00+09:00",
+      }),
+    );
+    repository.addSessionImport(draftB.session.id, {
+      source: {
+        id: "src-b",
+        sessionId: draftB.session.id,
+        kind: "manualNote",
+        title: "Manual note",
+        detail: "",
+        trustLevel: "verified",
+        redactionStatus: "notNeeded",
+        rawRetention: "retained",
+        capturedAt: "2026-05-13T13:00:00Z",
+        relatedEventIds: ["evt-b-1"],
+      },
+      events: [
+        {
+          id: "evt-b-1",
+          sessionId: draftB.session.id,
+          projectId: draftB.project.id,
+          start: "2026-05-13T13:00:00Z",
+          type: "documentNote",
+          title: "Note",
+          summary: "",
+          sourceRefs: ["src-b"],
+          linkedIssueIds: [],
+          linkedDecisionIds: [],
+          relationshipIds: [],
+          trustLevel: "verified",
+          confidence: 1,
+          createdBy: "import",
+          userModified: false,
+        },
+      ],
+    });
+
+    const all = repository.listConnectorEventIdentitySnapshots();
+    expect(all).toHaveLength(2);
+    const aSnapshot = all.find((entry) => entry.sessionId === draftA.session.id);
+    expect(aSnapshot?.connectorEventIds).toEqual(["claudeCodeHook::sess-a::evt-a-1"]);
+    const bSnapshot = all.find((entry) => entry.sessionId === draftB.session.id);
+    expect(bSnapshot?.connectorEventIds).toEqual([]);
+
+    const filtered = repository.listConnectorEventIdentitySnapshots({
+      excludeSessionId: draftA.session.id,
+    });
+    expect(filtered.map((entry) => entry.sessionId)).toEqual([draftB.session.id]);
+  });
+
   it("persists, hydrates, and sanitizes repository settings", () => {
     const storage = new MemoryKeyValueStorage();
     const repository = new BrowserDraftRepository(storage);

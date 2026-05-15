@@ -36,6 +36,29 @@ the same Claude / Codex session). Duplicates are skipped by default;
 the preview card surfaces a `Include duplicates` toggle so the user can
 opt in to re-importing the same batch when needed.
 
+The identity is preserved across **every** local persistence path:
+
+- browser localStorage (per-session `mori.sessionImports.*`) keeps the
+  field intact across reloads.
+- desktop SQLite added the `events.connector_event_id` column in
+  migration **V002**, so saved-session round-trips through the Rust
+  bridge no longer strip the identity. See
+  [`docs/sqlite-persistence.md`](../sqlite-persistence.md) and
+  [`docs/sqlite-migrations.md`](../sqlite-migrations.md) for the
+  migration ledger.
+
+Duplicate detection therefore covers **current session + saved sessions
++ repeats inside the incoming file**. The cross-session helper is
+`buildConnectorJsonlPreviewWithHistory` in
+[`src/lib/connectors/jsonlPreview.ts`](../../src/lib/connectors/jsonlPreview.ts);
+the import-history index lives in
+[`src/lib/connectors/connectorImportHistory.ts`](../../src/lib/connectors/connectorImportHistory.ts).
+
+Old sessions imported before this milestone do not carry
+`connectorEventId`. They cannot be deduplicated retroactively — the
+import-history helper reports them as `legacySavedSessionCount` and
+classifies their events as `identity-unavailable`, never as duplicates.
+
 The Rust implementation lives in
 [`src-tauri/src/connectors/inbox.rs`](../../src-tauri/src/connectors/inbox.rs);
 the TypeScript adapter lives in

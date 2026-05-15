@@ -49,6 +49,7 @@ App startup
 
 ```text
 src-tauri/migrations/V001__initial_schema.sql
+src-tauri/migrations/V002__events_connector_identity.sql
 src-tauri/src/migrations.rs
 src-tauri/src/sqlite.rs
 src/lib/sqlite/schema.ts
@@ -57,6 +58,13 @@ src/lib/sqlite/repositoryContracts.ts
 src/lib/sqlite/snapshotValidation.ts
 src/lib/sqlite/desktopSqliteRepository.ts
 ```
+
+## Migration ledger
+
+| Version | Name | Notes |
+| ------- | ---- | ----- |
+| `001` | `initial_schema` | Full normalized session schema + FTS5 virtual tables. |
+| `002` | `events_connector_identity` | Add `events.connector_event_id` (TEXT, nullable) + index. Persists connector duplicate-detection identities across save/load so cross-session detection survives SQLite round-trips. |
 
 The TypeScript catalog mirrors the migration metadata so frontend/backend contracts and tests can validate ordering, file naming, and checksums before Rust SQLite is wired.
 

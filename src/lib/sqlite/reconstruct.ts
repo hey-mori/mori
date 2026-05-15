@@ -100,6 +100,7 @@ function reconstructEvent(row: SqlitePersistenceSnapshot["events"][number]): Tim
     confidence: row.confidence,
     createdBy: row.created_by as TimelineEvent["createdBy"],
     userModified: row.user_modified === 1,
+    connectorEventId: row.connector_event_id ?? undefined,
   };
 }
 

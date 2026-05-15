@@ -39,6 +39,11 @@ CREATE VIRTUAL TABLE IF NOT EXISTS events_fts USING fts5(event_id UNINDEXED, tit
 CREATE VIRTUAL TABLE IF NOT EXISTS sources_fts USING fts5(source_id UNINDEXED, title, detail, content='', tokenize='unicode61');
 `;
 
+const eventsConnectorIdentitySql = String.raw`
+ALTER TABLE events ADD COLUMN connector_event_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_events_connector_event_id ON events(connector_event_id);
+`;
+
 export const sqliteMigrations: SqliteMigration[] = [
   {
     version: "001",
@@ -46,6 +51,13 @@ export const sqliteMigrations: SqliteMigration[] = [
     name: "initial_schema",
     sql: initialSchemaSql,
     checksum: checksumMigrationSql(initialSchemaSql),
+  },
+  {
+    version: "002",
+    filename: "V002__events_connector_identity.sql",
+    name: "events_connector_identity",
+    sql: eventsConnectorIdentitySql,
+    checksum: checksumMigrationSql(eventsConnectorIdentitySql),
   },
 ];
 

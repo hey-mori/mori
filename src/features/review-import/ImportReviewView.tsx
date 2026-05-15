@@ -216,7 +216,35 @@ function ReviewDraftMetaStrip({ meta }: { meta: ReviewDraftMeta }) {
   if (typeof meta.newEventCount === "number") {
     cells.push({ tone: "green", label: "New events", value: meta.newEventCount });
   }
-  if (typeof meta.duplicateSkippedCount === "number" && meta.duplicateSkippedCount > 0) {
+  if (typeof meta.currentSessionDuplicateCount === "number" && meta.currentSessionDuplicateCount > 0) {
+    cells.push({
+      tone: "orange",
+      label: "Already in current session",
+      value: meta.currentSessionDuplicateCount,
+    });
+  }
+  if (typeof meta.savedSessionDuplicateCount === "number" && meta.savedSessionDuplicateCount > 0) {
+    cells.push({
+      tone: "orange",
+      label: "Already in saved sessions",
+      value: meta.savedSessionDuplicateCount,
+    });
+  }
+  if (typeof meta.inBatchDuplicateCount === "number" && meta.inBatchDuplicateCount > 0) {
+    cells.push({
+      tone: "orange",
+      label: "Repeated in this file",
+      value: meta.inBatchDuplicateCount,
+    });
+  }
+  // Fallback to the legacy aggregated skip count when the cross-session
+  // split was not provided (other import kinds, or older import paths).
+  const splitProvided =
+    (meta.currentSessionDuplicateCount ?? 0) +
+      (meta.savedSessionDuplicateCount ?? 0) +
+      (meta.inBatchDuplicateCount ?? 0) >
+    0;
+  if (!splitProvided && typeof meta.duplicateSkippedCount === "number" && meta.duplicateSkippedCount > 0) {
     cells.push({ tone: "orange", label: "Skipped duplicates", value: meta.duplicateSkippedCount });
   }
   if (typeof meta.duplicateIncludedCount === "number" && meta.duplicateIncludedCount > 0) {
@@ -237,6 +265,11 @@ function ReviewDraftMetaStrip({ meta }: { meta: ReviewDraftMeta }) {
       {meta.includeDuplicates ? (
         <span className="review-meta-note">
           Include duplicates 가 활성화되어 있어, 이미 가져온 connector 이벤트도 Apply 시 Timeline에 추가됩니다.
+        </span>
+      ) : null}
+      {meta.savedSessionHistoryAvailable === false ? (
+        <span className="review-meta-note">
+          저장 세션 기록을 이 모드에서는 사용할 수 없어, 현재 세션 + 이 파일 내부 중복만 검사했습니다.
         </span>
       ) : null}
     </section>

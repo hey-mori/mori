@@ -5,6 +5,7 @@ import type { MoriPackageV0 } from "../mori-package";
 import type { RepositorySettings } from "../repositories";
 import { DEFAULT_REPOSITORY_SETTINGS, sanitizeRepositorySettings } from "../repositories";
 import type {
+  ConnectorEventIdentitySnapshot,
   KeyValueStorage,
   MoriDraftRepository,
   StoredMoriPackageDraft,
@@ -178,6 +179,32 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     const raw = this.read<unknown>(REPOSITORY_SETTINGS_KEY);
     if (!raw) return { ...DEFAULT_REPOSITORY_SETTINGS };
     return sanitizeRepositorySettings(raw);
+  }
+
+  listConnectorEventIdentitySnapshots(
+    options: { excludeSessionId?: string | null } = {},
+  ): ConnectorEventIdentitySnapshot[] {
+    const excluded = options.excludeSessionId ?? null;
+    const snapshots: ConnectorEventIdentitySnapshot[] = [];
+    const sessions = this.listStoredSessions();
+
+    for (const summary of sessions) {
+      if (excluded && summary.sessionId === excluded) continue;
+      const imports = this.listSessionImports(summary.sessionId);
+      const identities: string[] = [];
+      for (const entry of imports) {
+        for (const event of entry.events) {
+          if (event.connectorEventId) identities.push(event.connectorEventId);
+        }
+      }
+      snapshots.push({
+        sessionId: summary.sessionId,
+        title: summary.title,
+        savedAt: summary.savedAt,
+        connectorEventIds: identities,
+      });
+    }
+    return snapshots;
   }
 
   private write(key: string, value: unknown): void {

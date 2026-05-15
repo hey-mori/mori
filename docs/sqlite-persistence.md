@@ -42,6 +42,13 @@ Default path: `<home>/Mori/Records/mori.sqlite`.
 The directory is created on first open. The current Settings → SQLite panel
 shows the resolved path when running in the desktop runtime.
 
+## Migrations
+
+| Version | Filename | Purpose |
+| ------- | -------- | ------- |
+| `001` | `V001__initial_schema.sql` | Full normalized session schema: projects, sessions, sources, events, issues, decisions, relationships, artifacts, next_actions, summaries, and the `events_fts` / `sources_fts` virtual tables. |
+| `002` | `V002__events_connector_identity.sql` | Add `events.connector_event_id` (TEXT, nullable) and `idx_events_connector_event_id` so cross-session connector duplicate detection survives SQLite round-trips. NULL on every non-connector import. |
+
 ## Tables in this milestone
 
 V001 brings up Mori's full normalized session schema:

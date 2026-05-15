@@ -32,6 +32,20 @@ export type ReviewDraftMeta = {
   duplicateIncludedCount?: number;
   invalidLineCount?: number;
   includeDuplicates?: boolean;
+  /**
+   * Split of the duplicate count across detection sources so the Import
+   * Review meta strip can show "Saved-session N" alongside the legacy
+   * "Skipped duplicates" cell. Filled by the cross-session preview path.
+   */
+  currentSessionDuplicateCount?: number;
+  savedSessionDuplicateCount?: number;
+  inBatchDuplicateCount?: number;
+  /**
+   * False when the preview ran without saved-session history (browser
+   * fallback). The meta strip uses this to render an honesty note instead
+   * of pretending cross-session detection happened.
+   */
+  savedSessionHistoryAvailable?: boolean;
 };
 
 export type ImportReviewState = {

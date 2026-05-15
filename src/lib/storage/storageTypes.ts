@@ -36,6 +36,20 @@ export type StoredSessionImport = {
   adapter: "browser-local-storage";
 };
 
+/**
+ * Lightweight per-session record used by cross-session connector duplicate
+ * detection. Only the identity-bearing fields are loaded — we never
+ * resurface full TimelineEvent payloads here, so reading the history is
+ * cheap even with many saved sessions.
+ */
+export type ConnectorEventIdentitySnapshot = {
+  sessionId: string;
+  title?: string;
+  savedAt?: string;
+  /** Identities (`connectorId::session::id`) the saved session has imported. */
+  connectorEventIds: string[];
+};
+
 export type StoredSessionAnalysis = {
   sessionId: string;
   result: MoriAnalysisResult;
@@ -62,6 +76,17 @@ export type MoriDraftRepository = {
   loadQuickPassSettings: () => QuickPassAnalysisSettings;
   saveRepositorySettings: (settings: RepositorySettings) => RepositorySettings;
   loadRepositorySettings: () => RepositorySettings;
+  /**
+   * Walk every locally-persisted session draft and return the set of
+   * connector identities each one has already imported. Sessions without
+   * any connector-imported events return an empty `connectorEventIds`
+   * array — callers can filter them out when surfacing "Saved-session
+   * history" counts. Pass `excludeSessionId` to skip the active session
+   * so cross-session detection doesn't double-count its own imports.
+   */
+  listConnectorEventIdentitySnapshots: (options?: {
+    excludeSessionId?: string | null;
+  }) => ConnectorEventIdentitySnapshot[];
 };
 
 export type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key"> & {
