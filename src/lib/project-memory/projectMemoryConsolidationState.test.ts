@@ -313,6 +313,17 @@ describe("buildProjectMemoryConsolidationState", () => {
     });
     expect(state.proposalCounts.staleMemory).toBe(0);
   });
+
+  it("merges Contradiction Review proposals when accepted decisions conflict", () => {
+    const state = buildProjectMemoryConsolidationState(base(), {
+      acceptedMemories: [
+        acceptedMemory({ id: "a", title: "Storage backend", summary: "Use SQLite." }),
+        acceptedMemory({ id: "b", title: "Storage backend", summary: "Use IndexedDB." }),
+      ],
+    });
+    expect(state.proposalCounts.contradiction).toBe(1);
+    expect(state.preview?.proposals.some((p) => p.kind === "contradiction")).toBe(true);
+  });
 });
 
 function acceptedMemory(

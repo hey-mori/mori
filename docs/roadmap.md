@@ -225,7 +225,8 @@ Undo / revert still planned), Resume and Report Memory Integration
 ✅ (Resume Prompt + Reports + `.mori v0` slice; review-on-import
 planned), Stale Memory Review ✅ (`buildStaleMemoryProposals` —
 supersession / retirement, reviewer-note, and next-session time
-signals), Contradiction Review (designed).
+signals), Contradiction Review ✅ (`buildContradictionProposals` —
+same-title conflicting accepted decisions).
 
 ### Phase 0 — Explicit import memory loop (Implemented)
 
@@ -279,7 +280,7 @@ Sub-phase status:
 | SQLite Accepted Memory Storage | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration + commands, TS bridge, runtime-aware repository routing | ✅ landed |
 | Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | Resume Prompt + Reports ✅ landed; `.mori v0` slice ✅ landed; review-on-import planned |
 | Stale Memory Review | Scan accepted memories for staleness signals; emit `staleMemory` proposals (`buildStaleMemoryProposals`) | ✅ landed |
-| Contradiction Review | Detect conflicting accepted decisions; emit `contradiction` proposals | designed |
+| Contradiction Review | Detect conflicting accepted decisions; emit `contradiction` proposals (`buildContradictionProposals`) | ✅ landed |
 | Queryable Memory | Local cited search over accepted memories with citations | research |
 
 ### Phase 3 — Optional local daemon / watched inbox (Planned, opt-in)

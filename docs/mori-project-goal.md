@@ -278,6 +278,12 @@ that is called out.
   note (medium), or a next-session recommendation older than 30 days
   (low). Proposals only — no durable write. Merged into the
   consolidation preview via `buildProjectMemoryConsolidationState`.
+- Contradiction Review: `buildContradictionProposals`
+  (`src/lib/project-memory/contradictionReview.ts`) emits
+  `contradiction` proposals when two or more current-guidance
+  `promotedDecision` memories share a normalised title but record
+  different summaries. Conservative deterministic heuristic — no LLM,
+  no semantic matching — medium-low confidence, proposals only.
 - `SessionPersistenceService` routes between browser localStorage
   and the Tauri SQLite bridge. Desktop mode prefers SQLite as the
   source of truth for active session hydration; Load actions for
@@ -315,8 +321,6 @@ against the repository.
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and
   not implemented.
-- **Contradiction Review.** `contradiction` is reserved on the
-  proposal kind union but no helper emits it yet.
 - **Queryable Memory.** No local natural-language query over
   accepted memory + evidence. Resume Prompt is the only synthesis
   surface today.

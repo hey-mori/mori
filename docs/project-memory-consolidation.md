@@ -413,7 +413,7 @@ same review pattern.
 | **SQLite Accepted Memory Storage** | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration, load/store commands, TS bridge, runtime-aware repository routing. | ✅ landed |
 | **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Resume Prompt ✅ landed; Reports ✅ landed; `.mori v0` slice ✅ landed (review-on-import planned) |
 | **Stale Memory Review** | Scan accepted memories for staleness signals; emit `staleMemory` proposals (`buildStaleMemoryProposals`). | ✅ landed |
-| **Contradiction Review** | Detect conflicting accepted decisions; emit `contradiction` proposals. | Planned |
+| **Contradiction Review** | Detect conflicting accepted decisions; emit `contradiction` proposals (`buildContradictionProposals`). | ✅ landed |
 | **Queryable Memory over accepted memory** | Optional local memory query against accepted memories with citations. | Research |
 
 Each capability is independent and reversible. Stopping at any
@@ -881,14 +881,36 @@ candidates alongside the view-model-derived proposals. The
 Consolidation Review Surface and `MemoryView` load accepted memories
 through the runtime-aware `AcceptedMemoryRepository`.
 
-## Contradiction and future staleness signals
+## Contradiction Review — landed
 
-Contradiction Review is not implemented yet, and Stale Memory Review
-covers the three signals above — supersession / retirement, an
-explicit reviewer note, and the next-session time fallback. The table
-below specifies the **richer** detection signals still to come (the
-`contradiction` kind, plus deeper staleness signals beyond the three
-that landed):
+`buildContradictionProposals`
+(`src/lib/project-memory/contradictionReview.ts`) is a pure helper
+that emits `contradiction` proposals. It uses a single conservative
+deterministic signal — no LLM, no semantic / vector matching:
+
+> Two or more **current-guidance** `promotedDecision` memories
+> (`status` `accepted` or `edited`) that share a normalised title but
+> record different normalised summaries.
+
+Superseded / retired decisions are excluded — a decision paired with
+its replacement is the lifecycle working, not a conflict. Recurring
+issues, evidence, and risks are out of scope: a shared title there
+means *recurring*, not *contradictory*. Each proposal cites every
+member's evidence refs / session ids, shows both sides via
+short curated-summary excerpts, carries `proposedAction: "resolve"`,
+and a deliberately medium-low confidence (0.55) — the rationale says
+the decisions "may conflict", never that they do. Resolution is
+always a user review action.
+
+`buildProjectMemoryConsolidationState(memory, { acceptedMemories })`
+merges contradiction proposals alongside Stale Memory Review
+proposals into the consolidation preview.
+
+## Future detection signals
+
+The signals below are **richer** detections still to come — the
+existing helpers cover supersession / retirement, reviewer notes,
+the next-session time fallback, and same-title decision conflicts:
 
 | Signal | Detection | Resulting proposal |
 | ------ | --------- | ------------------ |

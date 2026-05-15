@@ -37,6 +37,7 @@ import {
   type ProjectMemoryConsolidationPreview,
 } from "./consolidationProposals";
 import { buildStaleMemoryProposals } from "./staleMemoryReview";
+import { buildContradictionProposals } from "./contradictionReview";
 import type {
   ProjectMemoryDataBasis,
   ProjectMemoryViewModel,
@@ -84,8 +85,9 @@ export type ProjectMemoryConsolidationState = {
 
 export type ProjectMemoryConsolidationStateOptions = {
   /**
-   * Accepted project memories. When provided, Stale Memory Review
-   * scans them and merges `staleMemory` proposals into the preview.
+   * Accepted project memories. When provided, Stale Memory Review and
+   * Contradiction Review scan them and merge `staleMemory` /
+   * `contradiction` proposals into the preview.
    */
   acceptedMemories?: readonly StoredAcceptedProjectMemory[];
   /** Reference time for the time-only stale signal. */
@@ -100,9 +102,10 @@ export type ProjectMemoryConsolidationStateOptions = {
  * an epoch fallback is used so this function stays deterministic).
  *
  * When `options.acceptedMemories` is supplied, Stale Memory Review
- * proposals are merged into the preview so the Memory page and
- * Consolidation Review Surface surface stale candidates alongside the
- * view-model-derived proposals.
+ * and Contradiction Review proposals are merged into the preview so
+ * the Memory page and Consolidation Review Surface surface stale and
+ * contradiction candidates alongside the view-model-derived
+ * proposals.
  *
  * The state is metadata-only — it does **not** open a review session,
  * persist proposals, or call out to an LLM.
@@ -128,10 +131,14 @@ export function buildProjectMemoryConsolidationState(
   }
 
   const basePreview = buildProjectMemoryConsolidationPreview(memory);
-  const staleProposals = options.acceptedMemories
-    ? buildStaleMemoryProposals(options.acceptedMemories, { now: options.now })
-    : [];
-  const preview = mergeStaleProposals(basePreview, staleProposals);
+  const extraProposals: MemoryProposal[] = [];
+  if (options.acceptedMemories) {
+    extraProposals.push(
+      ...buildStaleMemoryProposals(options.acceptedMemories, { now: options.now }),
+      ...buildContradictionProposals(options.acceptedMemories),
+    );
+  }
+  const preview = mergeExtraProposals(basePreview, extraProposals);
   const proposalCount = preview.proposals.length;
   const topProposalKinds = pickTopKinds(preview.proposalCounts, 3);
 
@@ -175,23 +182,25 @@ export function buildProjectMemoryConsolidationState(
 // ─── helpers ──────────────────────────────────────────────────────────
 
 /**
- * Append Stale Memory Review proposals to a view-model-derived
- * preview. `staleMemory` proposals are keyed on accepted-memory ids,
- * a namespace the view-model helper never emits into, so there is no
- * collision — they are appended and the `staleMemory` count is set.
+ * Append accepted-memory-derived proposals (Stale Memory Review +
+ * Contradiction Review) to a view-model-derived preview. These
+ * proposal ids are namespaced on accepted-memory ids, a namespace the
+ * view-model helper never emits into, so there is no collision — they
+ * are appended and the per-kind counts are updated.
  */
-function mergeStaleProposals(
+function mergeExtraProposals(
   preview: ProjectMemoryConsolidationPreview,
-  staleProposals: MemoryProposal[],
+  extraProposals: MemoryProposal[],
 ): ProjectMemoryConsolidationPreview {
-  if (staleProposals.length === 0) return preview;
+  if (extraProposals.length === 0) return preview;
+  const proposalCounts = { ...preview.proposalCounts };
+  for (const proposal of extraProposals) {
+    proposalCounts[proposal.kind] += 1;
+  }
   return {
     ...preview,
-    proposals: [...preview.proposals, ...staleProposals],
-    proposalCounts: {
-      ...preview.proposalCounts,
-      staleMemory: preview.proposalCounts.staleMemory + staleProposals.length,
-    },
+    proposals: [...preview.proposals, ...extraProposals],
+    proposalCounts,
   };
 }
 
