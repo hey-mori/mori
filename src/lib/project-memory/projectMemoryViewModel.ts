@@ -43,6 +43,7 @@ import {
   type ProjectMemoryDataBasis,
   type ProjectMemoryKeyDecision,
   type ProjectMemoryKeyEvidence,
+  type ProjectMemoryLoadedSession,
   type ProjectMemoryMatchedSession,
   type ProjectMemoryMoriPackage,
   type ProjectMemoryRecurringIssue,
@@ -56,7 +57,14 @@ import {
   type ProjectMemoryViewModel,
   type ProjectMemoryWarning,
 } from "./projectMemoryModel";
-import { getKeyEvidence } from "./projectMemory";
+import {
+  aggregateCounters,
+  aggregateKeyDecisions,
+  aggregateKeyEvidence,
+  aggregateRecurringIssues,
+  aggregateUnresolvedRisks,
+  pickRecommendedNextSession,
+} from "./crossSessionAggregation";
 
 export type BuildProjectMemoryViewModelInput = {
   /** Always present — the live session. */
@@ -79,6 +87,16 @@ export type BuildProjectMemoryViewModelInput = {
   moriPackages?: StoredMoriPackageDraft[];
   /** Set to `false` when no storage backend is reachable in this runtime. */
   storageAvailable?: boolean;
+  /**
+   * Saved-session bodies the caller has already loaded (via
+   * `loadProjectMemorySessions`). When non-empty, the builder
+   * aggregates `keyDecisions`/`recurringIssues`/`keyEvidence`/
+   * `unresolvedRisks` from across these sessions instead of falling
+   * back to active-session-only derivation. Sessions with
+   * `loadStatus !== "loaded"` are counted for warnings but contribute
+   * nothing to aggregation.
+   */
+  loadedSessions?: ProjectMemoryLoadedSession[];
 };
 
 export function buildProjectMemoryViewModel(
@@ -93,6 +111,7 @@ export function buildProjectMemoryViewModel(
     importsBySessionId = {},
     moriPackages = [],
     storageAvailable = true,
+    loadedSessions = [],
   } = input;
 
   if (!storageAvailable) {
@@ -104,7 +123,11 @@ export function buildProjectMemoryViewModel(
     return {
       ...empty,
       latestImportantDecision: pickLatestImportantDecision(view),
-      recommendedNextSession: pickRecommendedNextSessionTopic(view, []),
+      recommendedNextSession: pickRecommendedNextSession({
+        recurring: [],
+        risks: [],
+        loaded: [activeSessionToImpliedLoadedRow(view, "draft")],
+      }),
     };
   }
 
@@ -114,6 +137,7 @@ export function buildProjectMemoryViewModel(
     savedBrowserSessions,
     savedSqliteSessions,
     importsBySessionId,
+    loadedSessions,
   });
 
   const reimportSummary = buildReimportSummary({
@@ -126,12 +150,36 @@ export function buildProjectMemoryViewModel(
   const savedReports = buildSavedReports(moriPackages);
   const moriPackageRows = buildMoriPackageRows(moriPackages);
 
+  // Cross-session aggregation. The helpers operate on
+  // `loadedSessions` directly; when the caller hands in no loaded
+  // bodies (or the only loaded body is the active session), aggregation
+  // collapses to the active session naturally.
+  const aggregationInput = loadedSessions.length > 0
+    ? loadedSessions
+    : [activeSessionToImpliedLoadedRow(view, mode)];
+
+  const keyDecisions = aggregateKeyDecisions(aggregationInput);
+  const recurringIssues = aggregateRecurringIssues(aggregationInput);
+  const keyEvidence = aggregateKeyEvidence(aggregationInput);
+  const unresolvedRisks = aggregateUnresolvedRisks(aggregationInput);
+  const latestImportantDecision = pickLatestImportantDecision(view);
+  const recommendedNextSession = pickRecommendedNextSession({
+    recurring: recurringIssues,
+    risks: unresolvedRisks,
+    loaded: aggregationInput,
+  });
+
+  const loadStatusBreakdown = summarizeLoadStatus(loadedSessions);
+  const crossSessionCounters = aggregateCounters(aggregationInput);
+
   const summaryStats = buildSummaryStats({
     view,
     recentSessions,
     moriPackageCount: moriPackages.length,
     reimportSummary,
     hasAnalysis,
+    crossSessionCounters,
+    crossSessionActive: loadStatusBreakdown.loadedSavedCount > 0,
   });
 
   const dataBasis = resolveDataBasis({
@@ -139,14 +187,10 @@ export function buildProjectMemoryViewModel(
     savedBrowserCount: savedBrowserSessions.length,
     savedSqliteCount: savedSqliteSessions.length,
     importSummariesAvailable: reimportSummary.importSummariesAvailable,
+    loadedSavedCount: loadStatusBreakdown.loadedSavedCount,
+    metadataOnlySavedCount: loadStatusBreakdown.metadataOnlySavedCount,
+    failedSavedCount: loadStatusBreakdown.failedSavedCount,
   });
-
-  const keyDecisions = buildKeyDecisions(view);
-  const recurringIssues = buildRecurringIssues(view);
-  const keyEvidence = buildKeyEvidence(view);
-  const unresolvedRisks = buildUnresolvedRisks(view);
-  const latestImportantDecision = pickLatestImportantDecision(view);
-  const recommendedNextSession = pickRecommendedNextSessionTopic(view, unresolvedRisks);
 
   const warnings = buildWarnings({
     mode,
@@ -154,6 +198,7 @@ export function buildProjectMemoryViewModel(
     savedSqliteCount: savedSqliteSessions.length,
     importSummariesAvailable: reimportSummary.importSummariesAvailable,
     importsWithoutSummary: countImportsWithoutSummary(importsBySessionId),
+    loadStatusBreakdown,
   });
 
   return {
@@ -187,11 +232,18 @@ function buildRecentSessions(args: {
   savedBrowserSessions: StoredSessionSummary[];
   savedSqliteSessions: SqliteSessionListEntry[];
   importsBySessionId: Record<string, StoredSessionImport[]>;
+  loadedSessions: ProjectMemoryLoadedSession[];
 }): ProjectMemorySessionSummary[] {
-  const { view, mode, savedBrowserSessions, savedSqliteSessions, importsBySessionId } = args;
+  const { view, mode, savedBrowserSessions, savedSqliteSessions, importsBySessionId, loadedSessions } = args;
   const seen = new Set<string>();
   const rows: ProjectMemorySessionSummary[] = [];
 
+  // Index loaded sessions by id so we can lift real body counts where
+  // available (instead of falling back to metadata).
+  const loadedById = new Map<string, ProjectMemoryLoadedSession>();
+  for (const session of loadedSessions) loadedById.set(session.sessionId, session);
+
+  const activeLoaded = loadedById.get(view.session.id);
   rows.push({
     sessionId: view.session.id,
     title: view.session.title,
@@ -210,6 +262,7 @@ function buildRecentSessions(args: {
     status: view.session.status,
     source: mode === "demo" ? "demo" : "current",
     dataSourceLabel: mode === "demo" ? "Demo · live" : "Current · live",
+    loadStatus: activeLoaded?.loadStatus ?? "loaded",
     isCurrent: true,
   });
   seen.add(view.session.id);
@@ -224,6 +277,8 @@ function buildRecentSessions(args: {
   for (const entry of sortedSqlite) {
     if (seen.has(entry.sessionId)) continue;
     seen.add(entry.sessionId);
+    const loaded = loadedById.get(entry.sessionId);
+    const status = loaded?.loadStatus ?? "metadataOnly";
     rows.push({
       sessionId: entry.sessionId,
       title: entry.title,
@@ -232,16 +287,22 @@ function buildRecentSessions(args: {
       startedAt: entry.startedAt,
       savedAt: entry.endedAt,
       durationLabel: deriveDurationLabel(entry.startedAt, entry.endedAt),
-      eventCount: entry.eventCount,
-      evidenceCount: entry.sourceCount,
-      issueCount: null,
-      decisionCount: null,
-      nextActionCount: null,
-      sourceCount: entry.sourceCount,
+      eventCount: status === "loaded" && loaded ? loaded.events.length : entry.eventCount,
+      evidenceCount: status === "loaded" && loaded ? loaded.sources.length : entry.sourceCount,
+      issueCount: status === "loaded" && loaded ? loaded.issues.length : null,
+      decisionCount: status === "loaded" && loaded ? loaded.decisions.length : null,
+      nextActionCount: status === "loaded" && loaded ? loaded.nextActions.length : null,
+      sourceCount: status === "loaded" && loaded ? loaded.sources.length : entry.sourceCount,
       reimportCount: 0,
       status: entry.status,
       source: "sqlite-saved",
-      dataSourceLabel: "Desktop SQLite · metadata only",
+      dataSourceLabel:
+        status === "loaded"
+          ? "Desktop SQLite · 본문 로드됨"
+          : status === "failed"
+            ? `Desktop SQLite · 로드 실패 (${loaded?.failureReason ?? "unknown"})`
+            : "Desktop SQLite · metadata only",
+      loadStatus: status,
       isCurrent: false,
     });
   }
@@ -250,6 +311,8 @@ function buildRecentSessions(args: {
     if (seen.has(summary.sessionId)) continue;
     seen.add(summary.sessionId);
     const imports = importsBySessionId[summary.sessionId];
+    const loaded = loadedById.get(summary.sessionId);
+    const status = loaded?.loadStatus ?? "metadataOnly";
     rows.push({
       sessionId: summary.sessionId,
       title: summary.title,
@@ -258,16 +321,33 @@ function buildRecentSessions(args: {
       startedAt: null,
       savedAt: summary.savedAt,
       durationLabel: null,
-      eventCount: countImportedEvents(imports),
-      evidenceCount: imports ? imports.length : null,
-      issueCount: null,
-      decisionCount: null,
-      nextActionCount: null,
-      sourceCount: imports ? imports.length : null,
+      eventCount:
+        status === "loaded" && loaded
+          ? loaded.events.length
+          : countImportedEvents(imports),
+      evidenceCount:
+        status === "loaded" && loaded
+          ? loaded.sources.length
+          : imports
+            ? imports.length
+            : null,
+      issueCount: status === "loaded" && loaded ? loaded.issues.length : null,
+      decisionCount: status === "loaded" && loaded ? loaded.decisions.length : null,
+      nextActionCount: status === "loaded" && loaded ? loaded.nextActions.length : null,
+      sourceCount:
+        status === "loaded" && loaded
+          ? loaded.sources.length
+          : imports
+            ? imports.length
+            : null,
       reimportCount: countSessionImportSummaries(imports),
       status: summary.status,
       source: "browser-draft",
-      dataSourceLabel: "Browser draft · metadata + imports",
+      dataSourceLabel:
+        status === "loaded"
+          ? "Browser draft · 본문 로드됨"
+          : "Browser draft · metadata + imports",
+      loadStatus: status,
       isCurrent: false,
     });
   }
@@ -488,21 +568,20 @@ function buildSummaryStats(args: {
   moriPackageCount: number;
   reimportSummary: ProjectMemoryReimportSummary;
   hasAnalysis: boolean;
+  crossSessionCounters: ReturnType<typeof aggregateCounters>;
+  crossSessionActive: boolean;
 }): ProjectMemorySummaryStats {
-  const { view, recentSessions, moriPackageCount, reimportSummary } = args;
+  const { view, recentSessions, moriPackageCount, reimportSummary, crossSessionCounters, crossSessionActive } = args;
   const openIssueCount = view.issues.filter((issue) => issue.status !== "resolved").length;
-  // Reports are derived from the stored `.mori` packages; Quick-Pass-derived
-  // markdown is not yet persisted, so reportCount stays aligned with
-  // packageCount until a future milestone splits them.
   return {
     sessionCount: recentSessions.length,
-    activeSessionCount: 1,
-    timelineEventCount: view.events.length,
-    evidenceSourceCount: view.sources.length,
-    issueCount: view.issues.length,
-    openIssueCount,
-    decisionCount: view.decisions.length,
-    nextActionCount: view.nextActions.length,
+    activeSessionCount: crossSessionActive ? Math.max(1, crossSessionCounters.decisionCount > 0 ? 1 : 1) : 1,
+    timelineEventCount: crossSessionActive ? crossSessionCounters.timelineEventCount : view.events.length,
+    evidenceSourceCount: crossSessionActive ? crossSessionCounters.evidenceSourceCount : view.sources.length,
+    issueCount: crossSessionActive ? crossSessionCounters.issueCount : view.issues.length,
+    openIssueCount: crossSessionActive ? crossSessionCounters.openIssueCount : openIssueCount,
+    decisionCount: crossSessionActive ? crossSessionCounters.decisionCount : view.decisions.length,
+    nextActionCount: crossSessionActive ? crossSessionCounters.nextActionCount : view.nextActions.length,
     reportCount: moriPackageCount,
     packageCount: moriPackageCount,
     reimportCount: reimportSummary.totalReimports,
@@ -514,13 +593,23 @@ function resolveDataBasis(args: {
   savedBrowserCount: number;
   savedSqliteCount: number;
   importSummariesAvailable: boolean;
+  loadedSavedCount: number;
+  metadataOnlySavedCount: number;
+  failedSavedCount: number;
 }): ProjectMemoryDataBasis {
   if (args.mode === "demo") return "unavailable";
   if (args.savedBrowserCount === 0 && args.savedSqliteCount === 0) {
     return "activeSessionOnly";
   }
-  // Browser sessions carry imports + import summaries. SQLite-only sessions
-  // are listed but cannot contribute import rollups today.
+  // Loaded saved-session bodies trump everything — the page IS aggregating
+  // across sessions for real.
+  if (args.loadedSavedCount > 0) {
+    if (args.metadataOnlySavedCount + args.failedSavedCount > 0) {
+      return "partialSavedSessionLoad";
+    }
+    return "activePlusSavedSessions";
+  }
+  // No saved bodies, but maybe browser import summaries are available.
   if (args.savedBrowserCount > 0 && args.importSummariesAvailable) {
     return "activePlusSavedSessions";
   }
@@ -535,6 +624,8 @@ function describeDataBasisKorean(basis: ProjectMemoryDataBasis): string {
       return "현재 + 저장 세션 집계";
     case "savedSessionMetadataOnly":
       return "저장 세션은 메타데이터만";
+    case "partialSavedSessionLoad":
+      return "저장 세션 일부만 본문 로드";
     case "unavailable":
       return "데모 / 메모리 없음";
     default:
@@ -542,85 +633,68 @@ function describeDataBasisKorean(basis: ProjectMemoryDataBasis): string {
   }
 }
 
-// ─── decisions / issues / evidence (active session only today) ─────────
-
-function buildKeyDecisions(view: MoriMockSession): ProjectMemoryKeyDecision[] {
-  return [...view.decisions]
-    .sort((a, b) => priorityRank(b.importance) - priorityRank(a.importance) ||
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5)
-    .map((decision) => ({
-      decisionId: decision.id,
-      sessionId: view.session.id,
-      title: decision.title,
-      detail: decision.decision,
-      importance: decision.importance,
-      confirmed: decision.confirmed,
-      createdAt: decision.createdAt,
-    }));
+/**
+ * Summary of load outcomes across the input list. Used by the warning
+ * builder and the data-basis resolver — kept in one place so the two
+ * never disagree about how many sessions actually loaded.
+ */
+function summarizeLoadStatus(loaded: ProjectMemoryLoadedSession[]): {
+  loadedSavedCount: number;
+  metadataOnlySavedCount: number;
+  failedSavedCount: number;
+  failureReasons: string[];
+} {
+  let loadedSaved = 0;
+  let metadataSaved = 0;
+  let failedSaved = 0;
+  const reasons: string[] = [];
+  for (const session of loaded) {
+    if (session.isActive) continue;
+    if (session.loadStatus === "loaded") loadedSaved += 1;
+    else if (session.loadStatus === "metadataOnly") metadataSaved += 1;
+    else if (session.loadStatus === "failed") {
+      failedSaved += 1;
+      if (session.failureReason && !reasons.includes(session.failureReason)) {
+        reasons.push(session.failureReason);
+      }
+    }
+  }
+  return {
+    loadedSavedCount: loadedSaved,
+    metadataOnlySavedCount: metadataSaved,
+    failedSavedCount: failedSaved,
+    failureReasons: reasons,
+  };
 }
 
-function priorityRank(priority: "high" | "medium" | "low"): number {
-  if (priority === "high") return 3;
-  if (priority === "medium") return 2;
-  return 1;
-}
-
-function buildRecurringIssues(view: MoriMockSession): ProjectMemoryRecurringIssue[] {
-  return view.issues
-    .map<ProjectMemoryRecurringIssue>((issue) => {
-      const signalScore =
-        issue.sourceEventIds.length * 2 +
-        issue.relatedDecisionIds.length * 3 +
-        (issue.status === "open" ? 1 : 0);
-      return {
-        issueId: issue.id,
-        sessionId: view.session.id,
-        title: issue.title,
-        signalScore,
-        status: issue.status,
-        priority: issue.priority,
-        // Honest: cross-session aggregation is not implemented today, so this
-        // is always false until the caller supplies loaded saved-session
-        // bodies in a future milestone.
-        crossSession: false,
-      };
-    })
-    .filter((row) => row.signalScore > 0 || row.priority === "high")
-    .sort((a, b) => b.signalScore - a.signalScore)
-    .slice(0, 5);
-}
-
-function buildKeyEvidence(view: MoriMockSession): ProjectMemoryKeyEvidence[] {
-  // Reuse the existing pure helper so we don't duplicate ranking logic.
-  return getKeyEvidence(view, 6).map((row) => ({
-    source: row.source,
-    relatedEventCount: row.relatedEventCount,
-    relatedIssueCount: row.relatedIssueCount,
-    relatedDecisionCount: row.relatedDecisionCount,
-  }));
-}
-
-function buildUnresolvedRisks(view: MoriMockSession): ProjectMemoryUnresolvedRisk[] {
-  return view.issues
-    .filter((issue) => issue.status === "open")
-    .filter(
-      (issue) =>
-        issue.priority === "high" || (issue.trustLevel === "inferred" && issue.confidence < 0.6),
-    )
-    .slice(0, 4)
-    .map<ProjectMemoryUnresolvedRisk>((issue) => ({
-      issueId: issue.id,
-      title: issue.title,
-      priority: issue.priority,
-      status: issue.status,
-      trustLevel: issue.trustLevel,
-      confidence: issue.confidence,
-      reason:
-        issue.priority === "high"
-          ? "High priority"
-          : `Low confidence · ${Math.round(issue.confidence * 100)}%`,
-    }));
+/**
+ * When no loadedSessions are supplied the aggregator still needs *some*
+ * row to walk so active-session decisions / issues / evidence appear.
+ * We synthesise a transient loaded row from the active view.
+ */
+function activeSessionToImpliedLoadedRow(
+  view: MoriMockSession,
+  mode: "demo" | "draft",
+): ProjectMemoryLoadedSession {
+  return {
+    sessionId: view.session.id,
+    title: view.session.title,
+    projectId: view.project.id,
+    projectName: view.project.name,
+    startedAt: view.session.startedAt,
+    endedAt: view.session.endedAt || null,
+    savedAt: null,
+    source: "active",
+    loadStatus: mode === "demo" ? "loaded" : "loaded",
+    isActive: true,
+    events: view.events,
+    sources: view.sources,
+    issues: view.issues,
+    decisions: view.decisions,
+    nextActions: view.nextActions,
+    imports: [],
+    analysis: null,
+  };
 }
 
 function pickLatestImportantDecision(view: MoriMockSession) {
@@ -628,20 +702,6 @@ function pickLatestImportantDecision(view: MoriMockSession) {
     .filter((decision) => decision.importance === "high")
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   return high[0] ?? view.decisions[0] ?? null;
-}
-
-function pickRecommendedNextSessionTopic(
-  view: MoriMockSession,
-  risks: ProjectMemoryUnresolvedRisk[],
-): string {
-  if (risks.length > 0) {
-    return `Open risk 해소: ${risks[0].title}`;
-  }
-  const inProgress = view.issues.find((issue) => issue.status === "inProgress");
-  if (inProgress) return `진행 중 이슈 마무리: ${inProgress.title}`;
-  const next = view.nextActions[0];
-  if (next) return `다음 액션 추진: ${next.title}`;
-  return "현재 세션 메모리를 검토하고 다음 작업 범위를 결정";
 }
 
 // ─── warnings ──────────────────────────────────────────────────────────
@@ -652,35 +712,63 @@ function buildWarnings(args: {
   savedSqliteCount: number;
   importSummariesAvailable: boolean;
   importsWithoutSummary: number;
+  loadStatusBreakdown: {
+    loadedSavedCount: number;
+    metadataOnlySavedCount: number;
+    failedSavedCount: number;
+    failureReasons: string[];
+  };
 }): ProjectMemoryWarning[] {
   const warnings: ProjectMemoryWarning[] = [];
   if (args.mode === "demo") {
     warnings.push({ kind: "demo-mode" });
     return warnings;
   }
-  if (args.savedBrowserCount + args.savedSqliteCount > 0) {
+  const totalSaved = args.savedBrowserCount + args.savedSqliteCount;
+  const { loadedSavedCount, metadataOnlySavedCount, failedSavedCount, failureReasons } =
+    args.loadStatusBreakdown;
+
+  // Honest summary of what loaded. We branch so the user never sees
+  // both "not loaded" and "partial load" at the same time.
+  if (loadedSavedCount === 0 && totalSaved > 0) {
+    warnings.push({ kind: "saved-session-bodies-not-loaded", sessionCount: totalSaved });
+  } else if (
+    loadedSavedCount > 0 &&
+    metadataOnlySavedCount + failedSavedCount > 0
+  ) {
     warnings.push({
-      kind: "saved-session-bodies-not-loaded",
-      sessionCount: args.savedBrowserCount + args.savedSqliteCount,
+      kind: "saved-session-bodies-partial-load",
+      loadedCount: loadedSavedCount,
+      metadataOnlyCount: metadataOnlySavedCount,
+      failedCount: failedSavedCount,
     });
   }
-  if (args.savedSqliteCount > 0 && args.savedBrowserCount === 0) {
+
+  if (failedSavedCount > 0) {
+    warnings.push({
+      kind: "saved-session-load-failed",
+      sessionCount: failedSavedCount,
+      reasons: failureReasons,
+    });
+  }
+
+  // SQLite-only world without loaded bodies needs the legacy
+  // "summaries unavailable" hint; loaded SQLite bodies obviate it.
+  if (
+    args.savedSqliteCount > 0 &&
+    args.savedBrowserCount === 0 &&
+    loadedSavedCount === 0
+  ) {
     warnings.push({ kind: "import-summaries-unavailable", reason: "sqlite-only" });
   }
-  if (
-    !args.importSummariesAvailable &&
-    args.savedBrowserCount === 0 &&
-    args.savedSqliteCount === 0
-  ) {
-    // No saved sessions at all — neither warning above fires; nothing else
-    // is needed.
-  }
+
   if (args.importsWithoutSummary > 0) {
     warnings.push({
       kind: "old-imports-without-identity",
       importCount: args.importsWithoutSummary,
     });
   }
+
   return warnings;
 }
 

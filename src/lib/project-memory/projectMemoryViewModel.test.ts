@@ -348,6 +348,211 @@ describe("buildProjectMemoryViewModel", () => {
     });
     expect(vm.recommendedNextSession.length).toBeGreaterThan(0);
   });
+
+  describe("loadedSessions input", () => {
+    function loadedSavedSession(id: string, status: "loaded" | "metadataOnly" | "failed" = "loaded") {
+      // Re-key sources / events / decisions / issues so saved-session
+      // entries don't collide with the active-session payload during
+      // de-duplication.
+      const reKey = <T extends { id: string }>(item: T): T => ({ ...item, id: `${id}::${item.id}` });
+      return {
+        sessionId: id,
+        title: `Saved ${id}`,
+        projectId: moriMockSession.project.id,
+        projectName: moriMockSession.project.name,
+        startedAt: "2026-04-01T10:00:00Z",
+        endedAt: "2026-04-01T11:00:00Z",
+        savedAt: "2026-04-01T11:00:00Z",
+        source: "browserLocalStorage" as const,
+        loadStatus: status,
+        isActive: false,
+        events: status === "loaded" ? moriMockSession.events.slice(0, 1).map(reKey) : [],
+        sources: status === "loaded" ? moriMockSession.sources.slice(0, 1).map(reKey) : [],
+        issues: status === "loaded" ? moriMockSession.issues.slice(0, 1).map(reKey) : [],
+        decisions: status === "loaded" ? moriMockSession.decisions.slice(0, 1).map(reKey) : [],
+        nextActions: status === "loaded" ? moriMockSession.nextActions.slice(0, 1).map(reKey) : [],
+        imports: [],
+        analysis: null,
+        failureReason: status === "failed" ? "loader rejected" : undefined,
+      };
+    }
+
+    function activeLoadedSession() {
+      return {
+        sessionId: moriMockSession.session.id,
+        title: moriMockSession.session.title,
+        projectId: moriMockSession.project.id,
+        projectName: moriMockSession.project.name,
+        startedAt: moriMockSession.session.startedAt,
+        endedAt: moriMockSession.session.endedAt,
+        savedAt: null,
+        source: "active" as const,
+        loadStatus: "loaded" as const,
+        isActive: true,
+        events: moriMockSession.events,
+        sources: moriMockSession.sources,
+        issues: moriMockSession.issues,
+        decisions: moriMockSession.decisions,
+        nextActions: moriMockSession.nextActions,
+        imports: [],
+        analysis: null,
+      };
+    }
+
+    it("upgrades dataBasis to activePlusSavedSessions when all saved bodies loaded", () => {
+      const vm = buildProjectMemoryViewModel({
+        view: moriMockSession,
+        mode: "draft",
+        hasAnalysis: false,
+        savedBrowserSessions: [browserSession("s-1")],
+        loadedSessions: [activeLoadedSession(), loadedSavedSession("s-1", "loaded")],
+      });
+      expect(vm.dataBasis).toBe("activePlusSavedSessions");
+      expect(vm.warnings.some((w) => w.kind === "saved-session-bodies-partial-load")).toBe(false);
+      expect(vm.warnings.some((w) => w.kind === "saved-session-bodies-not-loaded")).toBe(false);
+    });
+
+    it("uses partialSavedSessionLoad when some bodies failed", () => {
+      const vm = buildProjectMemoryViewModel({
+        view: moriMockSession,
+        mode: "draft",
+        hasAnalysis: false,
+        savedBrowserSessions: [browserSession("s-1"), browserSession("s-2")],
+        loadedSessions: [
+          activeLoadedSession(),
+          loadedSavedSession("s-1", "loaded"),
+          loadedSavedSession("s-2", "failed"),
+        ],
+      });
+      expect(vm.dataBasis).toBe("partialSavedSessionLoad");
+      const partial = vm.warnings.find((w) => w.kind === "saved-session-bodies-partial-load");
+      expect(partial).toBeDefined();
+      const failed = vm.warnings.find((w) => w.kind === "saved-session-load-failed");
+      expect(failed).toBeDefined();
+    });
+
+    it("uses partialSavedSessionLoad when some bodies are metadata-only", () => {
+      const vm = buildProjectMemoryViewModel({
+        view: moriMockSession,
+        mode: "draft",
+        hasAnalysis: false,
+        savedSqliteSessions: [sqliteSession("sq-1"), sqliteSession("sq-2")],
+        loadedSessions: [
+          activeLoadedSession(),
+          {
+            ...loadedSavedSession("sq-1", "loaded"),
+            source: "desktopSQLite" as const,
+          },
+          {
+            ...loadedSavedSession("sq-2", "metadataOnly"),
+            source: "desktopSQLite" as const,
+          },
+        ],
+      });
+      expect(vm.dataBasis).toBe("partialSavedSessionLoad");
+    });
+
+    it("aggregates decisions and issues across loaded sessions", () => {
+      const vm = buildProjectMemoryViewModel({
+        view: moriMockSession,
+        mode: "draft",
+        hasAnalysis: false,
+        savedBrowserSessions: [browserSession("s-1")],
+        loadedSessions: [activeLoadedSession(), loadedSavedSession("s-1", "loaded")],
+      });
+      // Saved-session decisions should bubble up into keyDecisions.
+      const savedDecision = vm.keyDecisions.find((row) => row.sessionId === "s-1");
+      expect(savedDecision).toBeDefined();
+      // Saved-session evidence should appear in keyEvidence with attribution.
+      const savedEvidence = vm.keyEvidence.find((row) => row.sessionId === "s-1");
+      expect(savedEvidence).toBeDefined();
+    });
+
+    it("metadata-only sessions never contribute decisions/issues", () => {
+      const vm = buildProjectMemoryViewModel({
+        view: moriMockSession,
+        mode: "draft",
+        hasAnalysis: false,
+        savedBrowserSessions: [browserSession("s-1")],
+        loadedSessions: [
+          activeLoadedSession(),
+          loadedSavedSession("s-1", "metadataOnly"),
+        ],
+      });
+      const fromSaved = vm.keyDecisions.find((row) => row.sessionId === "s-1");
+      expect(fromSaved).toBeUndefined();
+    });
+
+    it("does not double-count the active session when it also appears as saved", () => {
+      const vm = buildProjectMemoryViewModel({
+        view: moriMockSession,
+        mode: "draft",
+        hasAnalysis: false,
+        savedBrowserSessions: [browserSession(moriMockSession.session.id)],
+        loadedSessions: [activeLoadedSession()],
+      });
+      // Stats use de-duplicated counters; timelineEventCount should equal
+      // the live view's count (not 2× of it).
+      expect(vm.summaryStats.timelineEventCount).toBe(moriMockSession.events.length);
+    });
+
+    it("recommended next session uses cross-session signal when recurring issues exist", () => {
+      const recurringTitle = "Repeated configuration drift";
+      const active = {
+        ...activeLoadedSession(),
+        issues: [
+          ...moriMockSession.issues,
+          {
+            id: "i-active",
+            sessionId: moriMockSession.session.id,
+            projectId: moriMockSession.project.id,
+            title: recurringTitle,
+            description: "",
+            priority: "medium" as const,
+            status: "open" as const,
+            sourceEventIds: [],
+            relatedDecisionIds: [],
+            relatedFileIds: [],
+            suggestedNextAction: "",
+            trustLevel: "observed" as const,
+            confidence: 0.7,
+            createdAt: "2026-05-01T10:00:00Z",
+            updatedAt: "2026-05-01T10:00:00Z",
+          },
+        ],
+      };
+      const saved = {
+        ...loadedSavedSession("s-old", "loaded"),
+        issues: [
+          {
+            id: "i-saved",
+            sessionId: "s-old",
+            projectId: moriMockSession.project.id,
+            title: recurringTitle,
+            description: "",
+            priority: "medium" as const,
+            status: "open" as const,
+            sourceEventIds: [],
+            relatedDecisionIds: [],
+            relatedFileIds: [],
+            suggestedNextAction: "",
+            trustLevel: "observed" as const,
+            confidence: 0.7,
+            createdAt: "2026-04-01T10:00:00Z",
+            updatedAt: "2026-04-01T10:00:00Z",
+          },
+        ],
+      };
+      const vm = buildProjectMemoryViewModel({
+        view: moriMockSession,
+        mode: "draft",
+        hasAnalysis: false,
+        savedBrowserSessions: [browserSession("s-old")],
+        loadedSessions: [active, saved],
+      });
+      expect(vm.recommendedNextSession).toMatch(/반복 이슈 해소/);
+    });
+  });
 });
 
 describe("project memory model helpers", () => {

@@ -2,6 +2,7 @@ import { Archive, ChevronRight, HardDrive, Layers, Play } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type { DerivedSession } from "../../lib/project-memory/projectMemory";
+import type { ProjectMemoryLoadedSessionStatus } from "../../lib/project-memory/projectMemoryModel";
 
 const SCOPE_TONE: Record<string, "green" | "purple" | "blue" | "gray"> = {
   "current-session": "green",
@@ -10,12 +11,27 @@ const SCOPE_TONE: Record<string, "green" | "purple" | "blue" | "gray"> = {
   demo: "gray",
 };
 
+const LOAD_TONE: Record<ProjectMemoryLoadedSessionStatus, "green" | "orange" | "red"> = {
+  loaded: "green",
+  metadataOnly: "orange",
+  failed: "red",
+};
+
+const LOAD_LABEL: Record<ProjectMemoryLoadedSessionStatus, string> = {
+  loaded: "본문 로드됨",
+  metadataOnly: "메타데이터만",
+  failed: "로드 실패",
+};
+
 export function RecentSessionsList({
   sessions,
+  loadStatusBySessionId,
   onOpenSession,
   onStartNewSession,
 }: {
   sessions: DerivedSession[];
+  /** Optional per-session load outcome keyed by sessionId. */
+  loadStatusBySessionId?: Record<string, ProjectMemoryLoadedSessionStatus>;
   /** Called for sessions we can actually open (current or SQLite). Browser drafts pass through but the action is informational. */
   onOpenSession?: (entry: DerivedSession) => void;
   onStartNewSession: () => void;
@@ -61,6 +77,11 @@ export function RecentSessionsList({
                 </div>
                 <div className="memory-session-meta">
                   <Badge tone={SCOPE_TONE[entry.scope] ?? "gray"}>{entry.scopeLabel}</Badge>
+                  {loadStatusBySessionId?.[entry.sessionId] && entry.scope !== "current-session" ? (
+                    <Badge tone={LOAD_TONE[loadStatusBySessionId[entry.sessionId]]}>
+                      {LOAD_LABEL[loadStatusBySessionId[entry.sessionId]]}
+                    </Badge>
+                  ) : null}
                   {entry.eventCount !== null ? <span>{entry.eventCount} events</span> : null}
                   {entry.sourceCount !== null ? <span>{entry.sourceCount} sources</span> : null}
                 </div>

@@ -6396,6 +6396,15 @@ pre {
   content: " ";
 }
 
+.memory-recurring-sessions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 /* Project Memory warnings strip */
 
 .memory-warnings {

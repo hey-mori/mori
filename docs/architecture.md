@@ -592,11 +592,19 @@ Honesty rules baked into the architecture:
 
 - `dataBasis` is computed from the *real* inputs (not a config), so the
   page badge cannot lie about reach.
-- Saved-session bodies are never assumed loaded. Decisions / issues /
-  evidence stay scoped to the active session until a future milestone
-  ships saved-session payload loading.
+- Saved-session bodies are loaded through
+  `loadProjectMemorySessions` (non-mutating; SQLite via
+  `SessionPersistenceService.loadSessionFromDesktop`, browser drafts via
+  the repository). Cross-session decisions / issues / evidence aggregate
+  only from sessions whose `loadStatus === "loaded"`. Metadata-only and
+  failed sessions never produce decision / issue / evidence rows.
 - `StoredSessionImport.importSummary` is the only cross-session
   contributor to the re-import rollup. Old imports without it never
   appear in the rollup.
-- SQLite-saved sessions are listed as metadata only — their import
-  summaries are not persisted in SQLite today.
+- Loaded SQLite-saved sessions contribute decisions / issues /
+  next-actions in addition to events / sources. Loaded browser-saved
+  sessions contribute events / sources / analysis but not runtime
+  issues / decisions (those are not persisted in localStorage today).
+- The body loader caps reads at `DEFAULT_SAVED_SESSION_CAP = 20` and
+  parallelises SQLite IPC calls with `Promise.allSettled` so a slow
+  session can't block the page.

@@ -54,11 +54,42 @@ allowed to claim:
 | Value                          | Meaning                                                                                                  |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `activeSessionOnly`            | No saved sessions are visible. The page shows only the current session.                                  |
-| `activePlusSavedSessions`      | At least one browser-saved session contributed real import summaries to the rollup.                      |
-| `savedSessionMetadataOnly`     | Saved sessions exist (SQLite-only, or browser without summaries) but only metadata is shown.             |
+| `activePlusSavedSessions`      | Every saved session contributed a real body to the cross-session aggregation, or a browser-saved session contributed real import summaries to the rollup. |
+| `savedSessionMetadataOnly`     | Saved sessions exist but no body could be loaded (SQLite without desktop runtime, or browser without summaries). |
+| `partialSavedSessionLoad`      | Some saved-session bodies loaded, some collapsed to `metadataOnly` or `failed`. |
 | `unavailable`                  | Demo mode, or storage is not reachable. The page shows only the active mock view + storage-unavailable warning. |
 
 The page renders the data-basis label in the header as a Mori badge.
+
+## Saved-session body loading
+
+Project Memory uses `loadProjectMemorySessions` to fetch saved-session
+bodies safely:
+
+- **Active session** — always included, never mutated.
+- **Desktop SQLite** — `SessionPersistenceService.loadSessionFromDesktop`
+  reconstructs the full `MoriMockSession` (project + session + events +
+  sources + issues + decisions + nextActions). Calls run in parallel via
+  `Promise.allSettled`; one failure does not block the page.
+- **Browser localStorage** — `BrowserDraftRepository.listSessionImports`
+  yields the per-session events/sources via the persisted imports, and
+  `loadSessionAnalysis` lifts the analysis result if any. Browser drafts
+  do NOT persist runtime issues / decisions / next-actions today — those
+  fields stay empty for browser-loaded sessions.
+- **Cap** — `DEFAULT_SAVED_SESSION_CAP = 20`. SQLite-saved sessions take
+  precedence over browser ones because their payloads are richer.
+
+Each loaded entry carries a `loadStatus`:
+
+| `loadStatus`     | What it means                                                              |
+| ---------------- | -------------------------------------------------------------------------- |
+| `loaded`         | Body was fetched; the aggregator may use its decisions / issues / sources. |
+| `metadataOnly`   | Body could not be loaded; only the metadata row appears in recent sessions.|
+| `failed`         | Loader rejected; `failureReason` is surfaced as a warning.                 |
+
+The loader never throws past the caller and never mutates the active
+session — the previous `loadDesktopSession` path that swapped the active
+draft is NOT used here.
 
 ---
 
@@ -81,6 +112,34 @@ contribute **nothing** to the rollup. They are surfaced as a warning so
 the user understands why the rollup may underreport.
 
 ---
+
+## Cross-session aggregation
+
+When `loadedSessions` contributes real bodies, the view-model builder
+delegates to `crossSessionAggregation.ts`:
+
+- **Key decisions** — collected from every loaded session, ranked by
+  importance, with the active session winning ties so live work surfaces
+  first. Each row carries `sessionId` + `sessionTitle` + `sessionIsActive`.
+- **Recurring issues** — grouped by normalized issue title (lowercase,
+  trimmed, trailing punctuation stripped). When a normalized title
+  appears in more than one loaded session the row is flagged
+  `crossSession: true` with `affectedSessions[]` and `affectedSessionCount`.
+- **Key evidence** — sources deduplicated by `source.id` across loaded
+  sessions, ranked by linked event count with active-session ties broken
+  in favour of the live session.
+- **Unresolved risks** — open issues at high priority OR low-confidence
+  inferred issues across loaded sessions, ranked by priority then active
+  first.
+- **Counters** — `aggregateCounters` de-duplicates timeline events and
+  sources by id so an active session that's also persisted is never
+  double-counted.
+- **Recommended next session** — prefers cross-session recurring issues,
+  falls back to in-progress / next-action / generic prompt.
+
+Metadata-only and failed sessions contribute nothing to aggregation;
+they only show up in the recent-sessions list with a `loadStatus`
+badge.
 
 ## What Project Memory is NOT
 
@@ -111,8 +170,10 @@ any of these:
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Demo mode                              | Shows mock memory, surfaces "Demo 모드" warning, suppresses re-import rollup.                                |
 | No saved sessions at all               | `dataBasis = activeSessionOnly`. Hero stats reflect the active session only.                                |
-| Saved sessions exist but no `importSummary` | `dataBasis = savedSessionMetadataOnly`. A warning explains old imports don't contribute to re-import rollup. |
-| SQLite-only saved sessions             | Sessions show in the recent list with `Desktop SQLite · metadata only`. Import summaries unavailable note.   |
+| Saved sessions exist but no body loaded | `dataBasis = savedSessionMetadataOnly`. The `saved-session-bodies-not-loaded` warning lists the count.       |
+| Saved bodies partially loaded          | `dataBasis = partialSavedSessionLoad`. `saved-session-bodies-partial-load` warning carries loaded / metadata / failed counts. |
+| Some saved bodies failed to load       | `saved-session-load-failed` warning is emitted with the first one or two failure reasons. |
+| SQLite-only saved sessions in browser  | Sessions show in the recent list with `Desktop SQLite · metadata only`. Bodies are not loadable in browser. |
 | Storage unreachable                    | Empty view model + storage-unavailable warning.                                                              |
 
 ---
@@ -138,13 +199,21 @@ any of these:
 
 ## Limitations and future work
 
-- **Cross-session decision / issue / next-action aggregation** —
-  requires loading saved-session bodies. Not implemented; a `warning` of
-  kind `saved-session-bodies-not-loaded` documents the gap.
+- **Cross-session decision / issue / next-action aggregation in browser
+  mode** — browser-saved drafts persist only `project` + `session` +
+  imports + optional analysis; runtime issues / decisions / next-actions
+  live in active session memory and are never written to localStorage.
+  As a result browser-loaded sessions contribute events + sources but
+  no decisions or issues today. Desktop SQLite sessions DO contribute
+  decisions / issues / next-actions when the desktop runtime is
+  available.
 - **SQLite import summary persistence** — `importSummary` lives in
   browser localStorage today; SQLite-saved sessions therefore cannot
   contribute to the re-import rollup. A `warning` of kind
   `import-summaries-unavailable / reason: sqlite-only` documents the gap.
+- **Body-loading cap** — `DEFAULT_SAVED_SESSION_CAP = 20`. Older saved
+  sessions beyond the cap are not loaded; they still appear in the
+  recent list as `metadataOnly`. Raise the cap deliberately if needed.
 - **Cross-device project memory** — explicit `.mori v0` package export
   and import is the supported path. There is no background sync.
 - **Session Canvas / Workroom** — deferred. The current Memory page is

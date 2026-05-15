@@ -32,7 +32,15 @@ import type {
   ConnectorSourceImportStatus,
   ConnectorSourceImportSummary,
 } from "../connectors";
-import type { Decision, Issue, SourceRef } from "../../domain/types";
+import type {
+  Decision,
+  Issue,
+  NextAction,
+  SourceRef,
+  TimelineEvent,
+} from "../../domain/types";
+import type { MoriAnalysisResult } from "../analysis";
+import type { StoredSessionImport } from "../storage/storageTypes";
 
 /**
  * What the aggregation actually reaches. The Memory page renders an
@@ -43,6 +51,7 @@ export type ProjectMemoryDataBasis =
   | "activeSessionOnly"
   | "activePlusSavedSessions"
   | "savedSessionMetadataOnly"
+  | "partialSavedSessionLoad"
   | "unavailable";
 
 /** Origin of a session row in the recent-sessions list. */
@@ -83,6 +92,13 @@ export type ProjectMemorySessionSummary = {
   source: ProjectMemorySessionSource;
   /** Human label: "Current · live" / "Desktop SQLite · metadata only" / etc. */
   dataSourceLabel: string;
+  /**
+   * Outcome of the body-loader for this row. `"loaded"` means the
+   * aggregator received a real payload; `"metadataOnly"` means only the
+   * row counts are real; `"failed"` means the loader could not read
+   * this session and the row is best-effort metadata.
+   */
+  loadStatus: ProjectMemoryLoadedSessionStatus;
   isCurrent: boolean;
 };
 
@@ -115,10 +131,19 @@ export type ProjectMemorySummaryStats = {
   reimportCount: number;
 };
 
-/** Active-session decision lifted to project memory. */
+/** Session-attribution stub used everywhere a row originated from. */
+export type ProjectMemorySessionRef = {
+  sessionId: string;
+  sessionTitle: string;
+  isActive: boolean;
+};
+
+/** Active or saved-session decision lifted to project memory. */
 export type ProjectMemoryKeyDecision = {
   decisionId: string;
   sessionId: string;
+  sessionTitle: string;
+  sessionIsActive: boolean;
   title: string;
   detail: string;
   importance: "high" | "medium" | "low";
@@ -127,24 +152,34 @@ export type ProjectMemoryKeyDecision = {
 };
 
 /**
- * "Recurring issue" cross-session aggregation is still scoped to the
- * active session — saved-session payloads are not loaded today. The
- * `crossSession` flag stays `false` until the caller supplies loaded
- * saved sessions, so the UI can render a planned-state hint.
+ * Recurring issue across loaded sessions. When `crossSession` is `true`
+ * the issue appeared in more than one loaded session and `affectedSessions`
+ * carries every contributing session. Single-session issues keep
+ * `crossSession: false` with one entry in `affectedSessions` — the UI
+ * uses the same row shape either way.
  */
 export type ProjectMemoryRecurringIssue = {
   issueId: string;
   sessionId: string;
+  sessionTitle: string;
+  sessionIsActive: boolean;
   title: string;
+  description: string;
   signalScore: number;
+  /** Number of distinct sessions this issue appeared in. */
+  affectedSessionCount: number;
+  affectedSessions: ProjectMemorySessionRef[];
   status: Issue["status"];
   priority: Issue["priority"];
   crossSession: boolean;
 };
 
-/** A `SourceRef` lifted to project memory with relationship counters. */
+/** A `SourceRef` lifted to project memory with session attribution + counters. */
 export type ProjectMemoryKeyEvidence = {
   source: SourceRef;
+  sessionId: string;
+  sessionTitle: string;
+  sessionIsActive: boolean;
   relatedEventCount: number;
   relatedIssueCount: number;
   relatedDecisionCount: number;
@@ -228,6 +263,9 @@ export type ProjectMemoryUnresolvedRisk = {
   trustLevel: Issue["trustLevel"];
   confidence: number;
   reason: string;
+  sessionId: string;
+  sessionTitle: string;
+  sessionIsActive: boolean;
 };
 
 /**
@@ -237,8 +275,12 @@ export type ProjectMemoryUnresolvedRisk = {
  */
 export type ProjectMemoryWarning =
   | { kind: "saved-session-bodies-not-loaded"; sessionCount: number }
+  | { kind: "saved-session-bodies-partial-load"; loadedCount: number; metadataOnlyCount: number; failedCount: number }
+  | { kind: "saved-session-load-failed"; sessionCount: number; reasons: string[] }
+  | { kind: "saved-session-body-loading-unavailable"; runtime: "sqlite" | "browser" }
   | { kind: "import-summaries-unavailable"; reason: "sqlite-only" | "demo" | "no-storage" }
   | { kind: "old-imports-without-identity"; importCount: number }
+  | { kind: "old-sessions-without-analysis"; sessionCount: number }
   | { kind: "demo-mode" }
   | { kind: "storage-unavailable" };
 
@@ -342,6 +384,8 @@ export function describeProjectMemoryDataBasis(basis: ProjectMemoryDataBasis): s
       return "Active + saved sessions";
     case "savedSessionMetadataOnly":
       return "Metadata only";
+    case "partialSavedSessionLoad":
+      return "Partial saved-session load";
     case "unavailable":
       return "Demo / unavailable";
     default:
@@ -357,6 +401,8 @@ export function getProjectMemoryDataBasisTone(
     case "activePlusSavedSessions":
       return "green";
     case "activeSessionOnly":
+      return "blue";
+    case "partialSavedSessionLoad":
       return "blue";
     case "savedSessionMetadataOnly":
       return "orange";
@@ -388,6 +434,65 @@ export function getReimportStatusTone(
     default:
       return "gray";
   }
+}
+
+/**
+ * Source of a loaded saved-session body. The Memory loader returns one
+ * `ProjectMemoryLoadedSession` per real session reachable from the
+ * current runtime; the field is exposed so the UI can label rows
+ * accurately and so warnings can pinpoint which runtime needs work.
+ */
+export type ProjectMemoryLoadedSessionSource =
+  | "active"
+  | "browserLocalStorage"
+  | "desktopSQLite";
+
+/** Outcome of a load attempt. */
+export type ProjectMemoryLoadedSessionStatus = "loaded" | "metadataOnly" | "failed";
+
+/**
+ * A saved Mori session body that Project Memory aggregates over. Only
+ * the fields actually needed by the aggregator live on the shape — raw
+ * connector JSONL, redacted payloads, and unstructured artifacts are
+ * intentionally excluded so loading stays cheap.
+ *
+ * Fields are present per `loadStatus`:
+ *   - `loaded`        → `events`, `sources`, `issues`, `decisions`,
+ *                       `nextActions`, `imports`, `analysis?` populated.
+ *   - `metadataOnly`  → metadata only; arrays default to `[]`.
+ *   - `failed`        → metadata only; `failureReason` carries the
+ *                       error string. The loader never throws past the
+ *                       caller — one failed session must not break the
+ *                       page.
+ */
+export type ProjectMemoryLoadedSession = {
+  sessionId: string;
+  title: string;
+  projectId: string | null;
+  projectName: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  savedAt: string | null;
+  source: ProjectMemoryLoadedSessionSource;
+  loadStatus: ProjectMemoryLoadedSessionStatus;
+  /** Error string when `loadStatus === "failed"`. */
+  failureReason?: string;
+  /** True when this session is the current/active live session. */
+  isActive: boolean;
+  /** Loaded payload — present when `loadStatus === "loaded"`. */
+  events: TimelineEvent[];
+  sources: SourceRef[];
+  issues: Issue[];
+  decisions: Decision[];
+  nextActions: NextAction[];
+  imports: StoredSessionImport[];
+  analysis: MoriAnalysisResult | null;
+};
+
+export function isLoadedProjectMemorySession(
+  session: ProjectMemoryLoadedSession,
+): boolean {
+  return session.loadStatus === "loaded";
 }
 
 /** Map a stored import summary to a re-import-card item. */

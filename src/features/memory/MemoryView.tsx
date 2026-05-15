@@ -11,6 +11,7 @@ import {
 import { useMoriSqliteStore } from "../../app/sqliteStore";
 import { useMoriAppStore } from "../../app/store";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import { getSessionPersistenceService } from "../../lib/storage/sessionPersistenceService";
 import type {
   StoredMoriPackageDraft,
   StoredSessionImport,
@@ -20,9 +21,7 @@ import {
   buildFollowUpPrompt,
   deriveProjectMemoryStats,
   getDecisionTimeline,
-  getKeyEvidence,
   getProjectMemorySummary,
-  getRecurringIssues,
   scopeLabelFor,
   type DerivedSession,
   type ProjectMemoryDataScope,
@@ -33,8 +32,11 @@ import {
 } from "../../lib/project-memory/projectMemoryViewModel";
 import {
   getProjectMemoryDataBasisTone,
+  type ProjectMemoryLoadedSession,
+  type ProjectMemoryLoadedSessionStatus,
   type ProjectMemoryWarning,
 } from "../../lib/project-memory/projectMemoryModel";
+import { loadProjectMemorySessions } from "../../lib/project-memory/loadProjectMemorySessions";
 import { ProjectMemoryHero } from "./ProjectMemoryHero";
 import { RecentSessionsList } from "./RecentSessionsList";
 import { DecisionTimelineCard } from "./DecisionTimelineCard";
@@ -93,6 +95,41 @@ export function MemoryView() {
     setPackageDrafts(repository.listMoriPackageDrafts());
   }, [repository, view.session.id]);
 
+  // ─── saved-session body loading ──────────────────────────────────────
+  const [loadedSessions, setLoadedSessions] = useState<ProjectMemoryLoadedSession[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const persistenceService = getSessionPersistenceService();
+    const desktopLoader = persistenceService.isDesktop()
+      ? {
+          isDesktop: () => persistenceService.isDesktop(),
+          loadSessionFromDesktop: (sessionId: string) =>
+            persistenceService.loadSessionFromDesktop(sessionId),
+        }
+      : null;
+    void loadProjectMemorySessions({
+      activeSession: view,
+      activeIsLive: mode !== "demo",
+      repository,
+      savedBrowserSessions: browserSessionSummaries,
+      savedSqliteSessions: sqliteSessions,
+      desktopLoader,
+    }).then((result) => {
+      if (!cancelled) setLoadedSessions(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [view, mode, repository, browserSessionSummaries, sqliteSessions]);
+
+  const loadStatusBySessionId = useMemo<Record<string, ProjectMemoryLoadedSessionStatus>>(() => {
+    const map: Record<string, ProjectMemoryLoadedSessionStatus> = {};
+    for (const session of loadedSessions) {
+      map[session.sessionId] = session.loadStatus;
+    }
+    return map;
+  }, [loadedSessions]);
+
   // ─── view-model (new, multi-session aware) ───────────────────────────
   const viewModel = useMemo(
     () =>
@@ -104,9 +141,19 @@ export function MemoryView() {
         savedSqliteSessions: sqliteSessions,
         importsBySessionId,
         moriPackages: packageDrafts,
+        loadedSessions,
         storageAvailable: true,
       }),
-    [view, mode, hasAnalysis, browserSessionSummaries, sqliteSessions, importsBySessionId, packageDrafts],
+    [
+      view,
+      mode,
+      hasAnalysis,
+      browserSessionSummaries,
+      sqliteSessions,
+      importsBySessionId,
+      packageDrafts,
+      loadedSessions,
+    ],
   );
 
   // ─── legacy derivations (kept for the existing cards) ────────────────
@@ -192,8 +239,6 @@ export function MemoryView() {
   );
 
   const decisionTimeline = useMemo(() => getDecisionTimeline(view), [view]);
-  const recurringIssues = useMemo(() => getRecurringIssues(view, primaryScope), [view, primaryScope]);
-  const keyEvidence = useMemo(() => getKeyEvidence(view, 6), [view]);
   const projectMemorySummary = useMemo(
     () =>
       getProjectMemorySummary({
@@ -275,14 +320,10 @@ export function MemoryView() {
           <DecisionTimelineCard timeline={decisionTimeline} />
 
           <div className="memory-grid-two">
-            <KeyEvidenceCard rows={keyEvidence} />
+            <KeyEvidenceCard rows={viewModel.keyEvidence} />
             <RecurringIssuesCard
-              rows={recurringIssues}
-              scopeNote={
-                primaryScope === "demo"
-                  ? "데모 세션 기준 신호 점수입니다."
-                  : "현재 세션의 이슈 신호를 표시합니다. 다중 세션 빈도 집계는 다음 마일스톤입니다."
-              }
+              rows={viewModel.recurringIssues}
+              scopeNote={recurringIssuesScopeNote(viewModel.dataBasis, viewModel.recurringIssues.some((row) => row.crossSession))}
             />
           </div>
 
@@ -290,6 +331,7 @@ export function MemoryView() {
 
           <RecentSessionsList
             sessions={savedSessions}
+            loadStatusBySessionId={loadStatusBySessionId}
             onOpenSession={handleOpenSession}
             onStartNewSession={() => setCurrentView("start")}
           />
@@ -377,6 +419,17 @@ function describeWarning(warning: ProjectMemoryWarning): string {
   switch (warning.kind) {
     case "saved-session-bodies-not-loaded":
       return `저장된 ${warning.sessionCount}건의 세션은 메타데이터만 표시됩니다. 결정/이슈/근거는 세션을 열어 확인하세요.`;
+    case "saved-session-bodies-partial-load":
+      return `저장 세션 ${warning.loadedCount}건의 본문을 로드했고, ${warning.metadataOnlyCount}건은 메타데이터만, ${warning.failedCount}건은 로드에 실패했습니다.`;
+    case "saved-session-load-failed":
+      return `저장 세션 ${warning.sessionCount}건의 본문 로드에 실패했습니다.${
+        warning.reasons.length > 0 ? ` 원인: ${warning.reasons.slice(0, 2).join(", ")}` : ""
+      }`;
+    case "saved-session-body-loading-unavailable":
+      if (warning.runtime === "sqlite") {
+        return "Desktop SQLite 본문 로딩이 이 모드에서는 지원되지 않습니다.";
+      }
+      return "브라우저 저장 세션 본문을 읽을 수 없습니다.";
     case "import-summaries-unavailable":
       if (warning.reason === "sqlite-only") {
         return "Desktop SQLite 세션은 connector import 요약을 아직 제공하지 않습니다. 다음 마일스톤에서 보강됩니다.";
@@ -387,6 +440,8 @@ function describeWarning(warning: ProjectMemoryWarning): string {
       return "Connector import 요약을 사용할 수 있는 저장소가 없습니다.";
     case "old-imports-without-identity":
       return `${warning.importCount}건의 이전 import는 connectorEventId가 없어 재import 집계에서 제외됩니다.`;
+    case "old-sessions-without-analysis":
+      return `${warning.sessionCount}건의 저장 세션에는 분석 결과가 저장되어 있지 않아 결정/이슈가 제한적으로 표시됩니다.`;
     case "demo-mode":
       return "Demo 모드: 실제 저장 세션은 집계되지 않습니다. 실 세션을 시작하면 누적 메모리가 표시됩니다.";
     case "storage-unavailable":
@@ -394,4 +449,20 @@ function describeWarning(warning: ProjectMemoryWarning): string {
     default:
       return "";
   }
+}
+
+function recurringIssuesScopeNote(
+  basis: import("../../lib/project-memory/projectMemoryModel").ProjectMemoryDataBasis,
+  hasCrossSession: boolean,
+): string {
+  if (hasCrossSession) {
+    return "여러 세션에서 반복되는 이슈를 묶어 보여줍니다. 영향받는 세션 수가 많을수록 우선순위가 높아집니다.";
+  }
+  if (basis === "activeSessionOnly" || basis === "unavailable") {
+    return "현재 세션의 이슈 신호를 표시합니다. 다른 세션이 로드되면 반복 이슈를 자동으로 묶어 보여줍니다.";
+  }
+  if (basis === "savedSessionMetadataOnly") {
+    return "저장 세션 본문이 로드되지 않아 반복 이슈는 현재 세션 기준으로만 표시됩니다.";
+  }
+  return "저장 세션 본문을 로드해 이슈를 집계했습니다. 동일 제목 기준으로 묶입니다.";
 }

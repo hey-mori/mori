@@ -101,13 +101,16 @@ Project Memory scope (read-only, single-session aggregation):
 - `BrowserDraftRepository.listMoriPackageDrafts()` enumerates every saved
   `.mori v0` package. Project Memory uses this to render the cross-package
   Saved Reports rollup alongside the per-session import history.
-- Project Memory now aggregates across saved sessions via the view-model
-  in `src/lib/project-memory/projectMemoryViewModel.ts`. The aggregation
-  is metadata-only for SQLite-saved sessions (no decisions / issues /
-  import summaries are loaded) and full-summary for browser-draft
-  sessions whose imports persisted a `ConnectorSourceImportSummary`.
-  Cross-session decision and issue aggregation requires loading saved
-  session bodies and is documented as the next milestone.
+- Project Memory aggregates across saved sessions via the view-model
+  in `src/lib/project-memory/projectMemoryViewModel.ts`. Saved-session
+  bodies are loaded via `loadProjectMemorySessions` in
+  `src/lib/project-memory/loadProjectMemorySessions.ts` — desktop SQLite
+  sessions go through `SessionPersistenceService.loadSessionFromDesktop`
+  (non-mutating, parallelized via `Promise.allSettled`), browser drafts
+  go through `BrowserDraftRepository.listSessionImports` +
+  `loadSessionAnalysis`. The loader caps total saved-session reads at
+  `DEFAULT_SAVED_SESSION_CAP = 20` and never throws past the caller —
+  failed sessions surface as `loadStatus: "failed"` with a reason.
 
 Expected replacement path:
 

@@ -198,6 +198,34 @@ that ran without saved-session history is downgraded to
 The summary can optionally ride along on `StoredSessionImport` so the
 Evidence Hub row keeps its re-import badge after reload.
 
+## Project Memory saved-session body loading (Implemented)
+
+Project Memory now safely loads saved Mori session bodies so the cross-
+session view aggregates real content, not just metadata:
+
+- A pure loader (`src/lib/project-memory/loadProjectMemorySessions.ts`)
+  pulls bodies from desktop SQLite (non-mutating, parallelized) and
+  browser localStorage (imports + analysis).
+- Cross-session helpers
+  (`src/lib/project-memory/crossSessionAggregation.ts`) derive key
+  decisions, recurring issues, key evidence, and unresolved risks
+  across all loaded bodies. Recurring issues are detected by normalized
+  title and marked `crossSession: true` when they appear in multiple
+  sessions.
+- The Memory page renders a `partialSavedSessionLoad` data-basis state
+  and per-session `loadStatus` badges so partial / failed loads are
+  surfaced honestly.
+- Body loading is capped at 20 recent saved sessions. The cap is
+  documented; raising it is a deliberate change.
+
+Out of scope this milestone (documented as planned):
+
+- Persisting runtime issues / decisions / next-actions for browser-saved
+  sessions (today only desktop SQLite contributes those fields after a
+  load).
+- Persisting `importSummary` into SQLite.
+- Background watchers / cloud sync (deferred / not planned).
+
 ## Project Memory multi-session aggregation (Implemented)
 
 Project Memory now aggregates across saved Mori sessions where local
