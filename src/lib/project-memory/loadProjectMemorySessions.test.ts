@@ -29,6 +29,9 @@ function stubRepository(overrides: Partial<MoriDraftRepository> = {}): MoriDraft
     saveSessionAnalysis: vi.fn() as unknown as MoriDraftRepository["saveSessionAnalysis"],
     loadSessionAnalysis: () => null,
     clearSessionAnalysis: vi.fn(),
+    saveSessionMemoryBody: vi.fn() as unknown as MoriDraftRepository["saveSessionMemoryBody"],
+    loadSessionMemoryBody: () => null,
+    clearSessionMemoryBody: vi.fn(),
     saveQuickPassSettings: vi.fn() as unknown as MoriDraftRepository["saveQuickPassSettings"],
     loadQuickPassSettings: () => ({} as any),
     saveRepositorySettings: vi.fn() as unknown as MoriDraftRepository["saveRepositorySettings"],
@@ -144,6 +147,143 @@ describe("loadProjectMemorySessions", () => {
     const emptyRow = result.find((row) => row.sessionId === "s-new");
     // Browser session with no imports / analysis collapses to metadataOnly.
     expect(emptyRow?.loadStatus).toBe("metadataOnly");
+  });
+
+  it("surfaces browser memory body issues/decisions/next-actions when present", async () => {
+    const summaries = [browserSummary("s-mem")];
+    const repository = stubRepository({
+      listSessionImports: () => [],
+      loadSessionAnalysis: () => null as unknown as StoredSessionAnalysis | null,
+      loadSessionMemoryBody: (sid: string) =>
+        sid === "s-mem"
+          ? {
+              sessionId: "s-mem",
+              savedAt: "2026-05-15T10:00:00Z",
+              adapter: "browser-local-storage" as const,
+              schemaVersion: 1 as const,
+              issues: [
+                {
+                  id: "i1",
+                  sessionId: "s-mem",
+                  projectId: "p1",
+                  title: "Recurring auth issue",
+                  description: "",
+                  status: "open" as const,
+                  priority: "medium" as const,
+                  sourceEventIds: [],
+                  relatedDecisionIds: [],
+                  relatedFileIds: [],
+                  suggestedNextAction: "",
+                  trustLevel: "observed" as const,
+                  confidence: 0.8,
+                  createdAt: "2026-05-15T10:00:00Z",
+                  updatedAt: "2026-05-15T10:00:00Z",
+                },
+              ],
+              decisions: [
+                {
+                  id: "d1",
+                  sessionId: "s-mem",
+                  projectId: "p1",
+                  title: "Adopt SQLite",
+                  decision: "rusqlite",
+                  rationale: "",
+                  rejectedOptions: [],
+                  impact: [],
+                  importance: "high" as const,
+                  confirmed: true,
+                  createdAt: "2026-05-15T11:00:00Z",
+                  sourceEventIds: [],
+                  relatedIssueIds: [],
+                  relatedSourceIds: [],
+                  trustLevel: "verified" as const,
+                },
+              ],
+              nextActions: [],
+            }
+          : null,
+    });
+    const result = await loadProjectMemorySessions({
+      activeSession: moriMockSession,
+      activeIsLive: true,
+      repository,
+      savedBrowserSessions: summaries,
+    });
+    const row = result.find((r) => r.sessionId === "s-mem");
+    expect(row?.loadStatus).toBe("loaded");
+    expect(row?.issues.map((i) => i.title)).toContain("Recurring auth issue");
+    expect(row?.decisions.map((d) => d.title)).toContain("Adopt SQLite");
+  });
+
+  it("falls back to analysis when memory body is missing", async () => {
+    const summaries = [browserSummary("s-legacy")];
+    const fakeAnalysis = {
+      result: {
+        runId: "run-1",
+        generatedAt: "2026-05-12T11:00:00Z",
+        providerLabel: "test",
+        notes: [],
+        issues: [
+          {
+            id: "i-legacy",
+            sessionId: "s-legacy",
+            projectId: "p1",
+            title: "Legacy issue from analysis",
+            description: "",
+            status: "open" as const,
+            priority: "high" as const,
+            sourceEventIds: [],
+            relatedDecisionIds: [],
+            relatedFileIds: [],
+            suggestedNextAction: "",
+            trustLevel: "observed" as const,
+            confidence: 0.8,
+            createdAt: "2026-05-12T11:00:00Z",
+            updatedAt: "2026-05-12T11:00:00Z",
+          },
+        ],
+        decisions: [],
+        nextActions: [],
+        relationships: [],
+        summary: { sessionSummary: "", resumePrompt: "", reportMarkdown: "", nextActionIds: [] },
+      },
+      sessionId: "s-legacy",
+      savedAt: "2026-05-12T11:00:00Z",
+      adapter: "browser-local-storage" as const,
+    };
+    const repository = stubRepository({
+      listSessionImports: () => [],
+      loadSessionAnalysis: (_sid: string) => fakeAnalysis as unknown as StoredSessionAnalysis,
+      loadSessionMemoryBody: () => null,
+    });
+    const result = await loadProjectMemorySessions({
+      activeSession: moriMockSession,
+      activeIsLive: true,
+      repository,
+      savedBrowserSessions: summaries,
+    });
+    const row = result.find((r) => r.sessionId === "s-legacy");
+    expect(row?.issues[0].title).toBe("Legacy issue from analysis");
+  });
+
+  it("does not fake issues/decisions when neither memory body nor analysis exists", async () => {
+    const summaries = [browserSummary("s-bare")];
+    const repository = stubRepository({
+      listSessionImports: () => [fakeImport("imp-bare", "s-bare")],
+      loadSessionAnalysis: () => null,
+      loadSessionMemoryBody: () => null,
+    });
+    const result = await loadProjectMemorySessions({
+      activeSession: moriMockSession,
+      activeIsLive: true,
+      repository,
+      savedBrowserSessions: summaries,
+    });
+    const row = result.find((r) => r.sessionId === "s-bare");
+    expect(row?.loadStatus).toBe("loaded");
+    expect(row?.issues).toEqual([]);
+    expect(row?.decisions).toEqual([]);
+    expect(row?.nextActions).toEqual([]);
   });
 
   it("loads SQLite sessions via the desktop loader and parallelizes failures safely", async () => {

@@ -13,6 +13,7 @@ import type {
   StoredSessionAnalysis,
   StoredSessionDraft,
   StoredSessionImport,
+  StoredSessionMemoryBody,
   StoredSessionSummary,
 } from "./storageTypes";
 
@@ -21,8 +22,11 @@ const SESSION_PREFIX = "mori.sessionDraft.";
 const PACKAGE_PREFIX = "mori.packageDraft.";
 const IMPORTS_PREFIX = "mori.sessionImports.";
 const ANALYSIS_PREFIX = "mori.sessionAnalysis.";
+const MEMORY_PREFIX = "mori.sessionMemory.";
 const QUICK_PASS_SETTINGS_KEY = "mori.quickPassSettings";
 const REPOSITORY_SETTINGS_KEY = "mori.repositorySettings";
+
+const MEMORY_BODY_SCHEMA_VERSION = 1 as const;
 
 export class BrowserDraftRepository implements MoriDraftRepository {
   constructor(private readonly storage: KeyValueStorage = window.localStorage) {}
@@ -96,6 +100,7 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     this.storage.removeItem(`${SESSION_PREFIX}${sessionId}`);
     this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);
     this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
+    this.storage.removeItem(`${MEMORY_PREFIX}${sessionId}`);
     const current = this.loadCurrentSessionDraft();
     if (current?.session.id === sessionId) {
       this.storage.removeItem(CURRENT_SESSION_KEY);
@@ -109,6 +114,7 @@ export class BrowserDraftRepository implements MoriDraftRepository {
       this.storage.removeItem(`${SESSION_PREFIX}${current.session.id}`);
       this.storage.removeItem(`${IMPORTS_PREFIX}${current.session.id}`);
       this.storage.removeItem(`${ANALYSIS_PREFIX}${current.session.id}`);
+      this.storage.removeItem(`${MEMORY_PREFIX}${current.session.id}`);
     }
   }
 
@@ -176,6 +182,47 @@ export class BrowserDraftRepository implements MoriDraftRepository {
 
   clearSessionAnalysis(sessionId: string): void {
     this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
+  }
+
+  saveSessionMemoryBody(
+    sessionId: string,
+    body: Omit<StoredSessionMemoryBody, "sessionId" | "savedAt" | "adapter" | "schemaVersion">,
+  ): StoredSessionMemoryBody {
+    const stored: StoredSessionMemoryBody = {
+      sessionId,
+      savedAt: new Date().toISOString(),
+      adapter: "browser-local-storage",
+      schemaVersion: MEMORY_BODY_SCHEMA_VERSION,
+      issues: body.issues,
+      decisions: body.decisions,
+      nextActions: body.nextActions,
+      ...(body.summarySnapshot ? { summarySnapshot: body.summarySnapshot } : {}),
+    };
+    this.write(`${MEMORY_PREFIX}${sessionId}`, stored);
+    return stored;
+  }
+
+  loadSessionMemoryBody(sessionId: string): StoredSessionMemoryBody | null {
+    const raw = this.read<StoredSessionMemoryBody>(`${MEMORY_PREFIX}${sessionId}`);
+    if (!raw) return null;
+    // Defensive: refuse to surface an unknown schema version. Callers
+    // see `null` and fall back to metadata/analysis paths instead of
+    // consuming a record they cannot interpret.
+    if (raw.schemaVersion !== MEMORY_BODY_SCHEMA_VERSION) return null;
+    // Validate the minimal shape so a hand-edited storage value cannot
+    // crash the loader.
+    if (
+      !Array.isArray(raw.issues) ||
+      !Array.isArray(raw.decisions) ||
+      !Array.isArray(raw.nextActions)
+    ) {
+      return null;
+    }
+    return raw;
+  }
+
+  clearSessionMemoryBody(sessionId: string): void {
+    this.storage.removeItem(`${MEMORY_PREFIX}${sessionId}`);
   }
 
   saveQuickPassSettings(settings: QuickPassAnalysisSettings): QuickPassAnalysisSettings {

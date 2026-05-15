@@ -198,6 +198,25 @@ that ran without saved-session history is downgraded to
 The summary can optionally ride along on `StoredSessionImport` so the
 Evidence Hub row keeps its re-import badge after reload.
 
+## Browser session memory body persistence (Implemented)
+
+Browser-saved Mori sessions now persist a durable
+`StoredSessionMemoryBody` snapshot (issues / decisions / next-actions /
+optional summary snapshot) at
+`mori.sessionMemory.<sessionId>`. The body is written after Quick Pass
+succeeds and via a one-shot forward migration during hydrate (any
+saved analysis without a body gets one). Project Memory's browser
+loader reads the body first and falls back to the analysis result for
+legacy records — so browser-saved sessions now contribute decisions /
+issues / next-actions / risks / recommendations to cross-session
+aggregation, on par with desktop SQLite sessions.
+
+Out of scope this milestone (still planned):
+
+- SQLite-side `importSummary` mirror for the re-import rollup.
+- Cross-device project memory (still explicit `.mori v0` import).
+- Loading saved sessions that pre-date connector identity stamping.
+
 ## Project Memory saved-session body loading (Implemented)
 
 Project Memory now safely loads saved Mori session bodies so the cross-

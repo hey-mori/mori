@@ -104,13 +104,24 @@ Project Memory scope (read-only, single-session aggregation):
 - Project Memory aggregates across saved sessions via the view-model
   in `src/lib/project-memory/projectMemoryViewModel.ts`. Saved-session
   bodies are loaded via `loadProjectMemorySessions` in
-  `src/lib/project-memory/loadProjectMemorySessions.ts` — desktop SQLite
-  sessions go through `SessionPersistenceService.loadSessionFromDesktop`
-  (non-mutating, parallelized via `Promise.allSettled`), browser drafts
-  go through `BrowserDraftRepository.listSessionImports` +
-  `loadSessionAnalysis`. The loader caps total saved-session reads at
+  `src/lib/project-memory/loadProjectMemorySessions.ts`:
+    - **Desktop SQLite** sessions go through
+      `SessionPersistenceService.loadSessionFromDesktop` (non-mutating,
+      parallelized via `Promise.allSettled`).
+    - **Browser localStorage** sessions go through
+      `BrowserDraftRepository.listSessionImports` (events + sources) +
+      `loadSessionMemoryBody` (durable issues / decisions /
+      next-actions snapshot, schema-versioned) + `loadSessionAnalysis`
+      (legacy fallback for sessions saved before memory bodies landed).
+  The loader caps total saved-session reads at
   `DEFAULT_SAVED_SESSION_CAP = 20` and never throws past the caller —
   failed sessions surface as `loadStatus: "failed"` with a reason.
+- `StoredSessionMemoryBody` is the durable browser record for issues /
+  decisions / next-actions / optional summary snapshot. It is keyed at
+  `mori.sessionMemory.<sessionId>`, carries `schemaVersion: 1`, and is
+  cleared alongside the session draft when `clearStoredSession` or
+  `clearCurrentSessionDraft` runs. Records with an unknown schema
+  version load as `null` rather than corrupting the aggregator.
 
 Expected replacement path:
 

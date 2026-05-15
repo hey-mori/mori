@@ -122,6 +122,13 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     const localAnalysisRecord = localDraft ? repository.loadSessionAnalysis(localDraft.session.id) : null;
 
     if (!service.isDesktop()) {
+      // Forward-migration: if this session already has an analysis on
+      // disk but no memory body yet, write the body now so Project
+      // Memory can aggregate it on the next reload. This is a one-
+      // time op per saved session — subsequent hydrates are cheap.
+      if (localDraft && localAnalysisRecord && !repository.loadSessionMemoryBody(localDraft.session.id)) {
+        persistMemoryBodyFromAnalysis(repository, localDraft.session.id, localAnalysisRecord.result);
+      }
       const source: SessionSource = localDraft ? "browser-draft" : "demo";
       set({
         initialized: true,
@@ -283,6 +290,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     try {
       const result = await primary.analyze(analysisInput);
       repository.saveSessionAnalysis(draft.session.id, result);
+      persistMemoryBodyFromAnalysis(repository, draft.session.id, result);
       set({
         analysis: result,
         analysisStatus: "succeeded",
@@ -310,6 +318,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
             ],
           };
           repository.saveSessionAnalysis(draft.session.id, annotated);
+          persistMemoryBodyFromAnalysis(repository, draft.session.id, annotated);
           set({
             analysis: annotated,
             analysisStatus: "succeeded",
@@ -468,6 +477,34 @@ export function loadConnectorImportHistorySavedSessions(options: {
   const repository = getRepository();
   const snapshots = repository.listConnectorEventIdentitySnapshots(options);
   return snapshots.map((snapshot) => savedSessionFromSnapshot(snapshot));
+}
+
+/**
+ * Snapshot the active session view's *memory body* (issues, decisions,
+ * next-actions, summary snapshot) to durable storage so saved sessions
+ * can contribute to Project Memory aggregation later. The view is
+ * derived from analysis when analysis is present; this helper accepts
+ * the analysis result directly so callers don't have to re-derive the
+ * view first.
+ *
+ * Intentionally minimal — events / sources are NOT written here.
+ * They already live in `StoredSessionImport[]` for the session.
+ */
+export function persistMemoryBodyFromAnalysis(
+  repository: MoriDraftRepository,
+  sessionId: string,
+  analysis: MoriAnalysisResult,
+): void {
+  repository.saveSessionMemoryBody(sessionId, {
+    issues: analysis.issues,
+    decisions: analysis.decisions,
+    nextActions: analysis.nextActions,
+    summarySnapshot: {
+      sessionSummary: analysis.summary.sessionSummary,
+      resumePrompt: analysis.summary.resumePrompt,
+      generatedAt: analysis.generatedAt,
+    },
+  });
 }
 
 function savedSessionFromSnapshot(

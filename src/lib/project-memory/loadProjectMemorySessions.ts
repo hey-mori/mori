@@ -268,14 +268,27 @@ function loadBrowserSessionBody(
 ): ProjectMemoryLoadedSession {
   const imports = repository.listSessionImports(summary.sessionId);
   const analysis = repository.loadSessionAnalysis(summary.sessionId);
-  // Browser drafts store metadata (`StoredSessionDraft.session/project`)
-  // and per-session imports. They do NOT persist runtime issues /
-  // decisions / next-actions today — those only live in active session
-  // memory. So a loaded browser session contributes events + sources
-  // (via imports) + analysis (if any), and the aggregator should not
-  // pretend it has issues/decisions.
+  const memoryBody = repository.loadSessionMemoryBody(summary.sessionId);
+
+  // Browser drafts persist three things per session:
+  //   - `StoredSessionImport[]` → events + sources
+  //   - `StoredSessionAnalysis`  → the full MoriAnalysisResult
+  //   - `StoredSessionMemoryBody` → durable issues/decisions/next-actions
+  //                                  snapshot (this milestone)
+  //
+  // The memory body is the canonical source for issues/decisions/
+  // next-actions when present. We fall back to the analysis result when
+  // the body is missing (e.g. an old saved session that has analysis but
+  // never went through the forward-migration). When BOTH are missing,
+  // the row is honestly metadata-only.
   const events = flattenImportEvents(imports);
   const sources = imports.map((entry) => entry.source);
+  const issues = memoryBody?.issues ?? analysis?.result.issues ?? [];
+  const decisions = memoryBody?.decisions ?? analysis?.result.decisions ?? [];
+  const nextActions = memoryBody?.nextActions ?? analysis?.result.nextActions ?? [];
+  const hasBodyOrAnalysis = Boolean(memoryBody || analysis);
+  const loadStatus = imports.length > 0 || hasBodyOrAnalysis ? "loaded" : "metadataOnly";
+
   return {
     sessionId: summary.sessionId,
     title: summary.title,
@@ -285,13 +298,13 @@ function loadBrowserSessionBody(
     endedAt: null,
     savedAt: summary.savedAt,
     source: "browserLocalStorage",
-    loadStatus: imports.length > 0 || analysis ? "loaded" : "metadataOnly",
+    loadStatus,
     isActive: false,
     events,
     sources,
-    issues: [],
-    decisions: [],
-    nextActions: [],
+    issues,
+    decisions,
+    nextActions,
     imports,
     analysis: analysis?.result ?? null,
   };

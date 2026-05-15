@@ -1,4 +1,12 @@
-import type { Project, Session, SourceRef, TimelineEvent } from "../../domain/types";
+import type {
+  Decision,
+  Issue,
+  NextAction,
+  Project,
+  Session,
+  SourceRef,
+  TimelineEvent,
+} from "../../domain/types";
 import type { MoriAnalysisResult, QuickPassAnalysisSettings } from "../analysis";
 import type { ConnectorSourceImportSummary } from "../connectors";
 import type { NormalizedImportCandidate } from "../import";
@@ -66,6 +74,41 @@ export type StoredSessionAnalysis = {
   adapter: "browser-local-storage";
 };
 
+/**
+ * Durable browser snapshot of a session's *memory body* — the parts of
+ * the session view that Project Memory aggregates across saved
+ * sessions: issues, decisions, next-actions, plus a tiny summary
+ * snapshot. The shape is intentionally compact:
+ *
+ *   - Events and sources are NOT duplicated here; they already live in
+ *     `StoredSessionImport[]` for the session and would double the
+ *     storage cost for no aggregation benefit.
+ *   - Raw connector JSONL is NOT stored here — only the normalized
+ *     domain types Quick Pass / Review surfaces produced.
+ *   - Optional summary snapshot lets the follow-up prompt builder
+ *     keep working after a session is closed, without forcing callers
+ *     to also load `StoredSessionAnalysis`.
+ *
+ * `schemaVersion` is a forward-compat hook. The loader rejects unknown
+ * majors so a future schema bump doesn't silently corrupt aggregation.
+ */
+export type StoredSessionMemoryBody = {
+  sessionId: string;
+  savedAt: string;
+  adapter: "browser-local-storage";
+  /** Bumped when the on-disk shape changes incompatibly. Loader rejects unknown majors. */
+  schemaVersion: 1;
+  issues: Issue[];
+  decisions: Decision[];
+  nextActions: NextAction[];
+  /** Tiny session-summary slice (optional — old records have it undefined). */
+  summarySnapshot?: {
+    sessionSummary: string;
+    resumePrompt: string;
+    generatedAt: string;
+  };
+};
+
 export type MoriDraftRepository = {
   saveCurrentSessionDraft: (draft: Omit<StoredSessionDraft, "savedAt" | "adapter">) => StoredSessionDraft;
   loadCurrentSessionDraft: () => StoredSessionDraft | null;
@@ -92,6 +135,26 @@ export type MoriDraftRepository = {
   saveSessionAnalysis: (sessionId: string, result: MoriAnalysisResult) => StoredSessionAnalysis;
   loadSessionAnalysis: (sessionId: string) => StoredSessionAnalysis | null;
   clearSessionAnalysis: (sessionId: string) => void;
+  /**
+   * Persist a session's durable memory body (issues / decisions /
+   * next-actions / optional summary snapshot). Designed to be called
+   * from sessionStore at every point where these fields can change:
+   *   - after Quick Pass analysis succeeds,
+   *   - on hydrate if a saved analysis exists but no body is on disk
+   *     (forward migration for pre-milestone records),
+   *   - on demand from any future Review-edit surface.
+   *
+   * The shape is compact — no events, no sources, no raw connector
+   * JSONL. Reading old records (without `schemaVersion === 1`)
+   * returns `null` so callers cannot accidentally consume an unknown
+   * shape.
+   */
+  saveSessionMemoryBody: (
+    sessionId: string,
+    body: Omit<StoredSessionMemoryBody, "sessionId" | "savedAt" | "adapter" | "schemaVersion">,
+  ) => StoredSessionMemoryBody;
+  loadSessionMemoryBody: (sessionId: string) => StoredSessionMemoryBody | null;
+  clearSessionMemoryBody: (sessionId: string) => void;
   saveQuickPassSettings: (settings: QuickPassAnalysisSettings) => QuickPassAnalysisSettings;
   loadQuickPassSettings: () => QuickPassAnalysisSettings;
   saveRepositorySettings: (settings: RepositorySettings) => RepositorySettings;

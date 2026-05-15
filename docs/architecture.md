@@ -602,9 +602,12 @@ Honesty rules baked into the architecture:
   contributor to the re-import rollup. Old imports without it never
   appear in the rollup.
 - Loaded SQLite-saved sessions contribute decisions / issues /
-  next-actions in addition to events / sources. Loaded browser-saved
-  sessions contribute events / sources / analysis but not runtime
-  issues / decisions (those are not persisted in localStorage today).
+  next-actions in addition to events / sources. Browser-saved sessions
+  also contribute these fields when a `StoredSessionMemoryBody` is on
+  disk (written after Quick Pass or via the one-shot
+  forward-migration in `hydrate`). Browser sessions with neither a
+  memory body nor an analysis stay metadata-only for issues /
+  decisions / next-actions.
 - The body loader caps reads at `DEFAULT_SAVED_SESSION_CAP = 20` and
   parallelises SQLite IPC calls with `Promise.allSettled` so a slow
   session can't block the page.

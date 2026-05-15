@@ -148,6 +148,125 @@ describe("BrowserDraftRepository", () => {
     expect(repository.loadSessionAnalysis("sess-bad")).toBeNull();
   });
 
+  it("persists, loads, and clears session memory bodies", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    const stored = repository.saveSessionMemoryBody("sess-mem", {
+      issues: [
+        {
+          id: "i1",
+          sessionId: "sess-mem",
+          projectId: "p1",
+          title: "Open risk",
+          description: "",
+          status: "open",
+          priority: "high",
+          sourceEventIds: [],
+          relatedDecisionIds: [],
+          relatedFileIds: [],
+          suggestedNextAction: "",
+          trustLevel: "observed",
+          confidence: 0.8,
+          createdAt: "2026-05-15T10:00:00Z",
+          updatedAt: "2026-05-15T10:00:00Z",
+        },
+      ],
+      decisions: [
+        {
+          id: "d1",
+          sessionId: "sess-mem",
+          projectId: "p1",
+          title: "Use SQLite",
+          decision: "Adopt rusqlite.",
+          rationale: "",
+          rejectedOptions: [],
+          impact: [],
+          importance: "high",
+          confirmed: true,
+          createdAt: "2026-05-15T11:00:00Z",
+          sourceEventIds: [],
+          relatedIssueIds: [],
+          relatedSourceIds: [],
+          trustLevel: "verified",
+        },
+      ],
+      nextActions: [],
+      summarySnapshot: {
+        sessionSummary: "ok",
+        resumePrompt: "Continue.",
+        generatedAt: "2026-05-15T12:00:00Z",
+      },
+    });
+    expect(stored.adapter).toBe("browser-local-storage");
+    expect(stored.schemaVersion).toBe(1);
+
+    const loaded = repository.loadSessionMemoryBody("sess-mem");
+    expect(loaded?.issues[0].title).toBe("Open risk");
+    expect(loaded?.decisions[0].title).toBe("Use SQLite");
+    expect(loaded?.summarySnapshot?.resumePrompt).toBe("Continue.");
+
+    repository.clearSessionMemoryBody("sess-mem");
+    expect(repository.loadSessionMemoryBody("sess-mem")).toBeNull();
+  });
+
+  it("returns null for memory body records with an unknown schema version", () => {
+    const storage = new MemoryKeyValueStorage();
+    storage.setItem(
+      "mori.sessionMemory.sess-future",
+      JSON.stringify({
+        sessionId: "sess-future",
+        savedAt: "2026-06-01T00:00:00Z",
+        adapter: "browser-local-storage",
+        schemaVersion: 99,
+        issues: [],
+        decisions: [],
+        nextActions: [],
+      }),
+    );
+    const repository = new BrowserDraftRepository(storage);
+    expect(repository.loadSessionMemoryBody("sess-future")).toBeNull();
+  });
+
+  it("returns null when a memory body record is missing required arrays", () => {
+    const storage = new MemoryKeyValueStorage();
+    storage.setItem(
+      "mori.sessionMemory.sess-broken",
+      JSON.stringify({
+        sessionId: "sess-broken",
+        savedAt: "2026-06-01T00:00:00Z",
+        adapter: "browser-local-storage",
+        schemaVersion: 1,
+        issues: "oops",
+      }),
+    );
+    const repository = new BrowserDraftRepository(storage);
+    expect(repository.loadSessionMemoryBody("sess-broken")).toBeNull();
+  });
+
+  it("clearStoredSession also removes the memory body", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "T",
+        projectName: "P",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-15T13:00:00Z",
+      }),
+    );
+    const sessionId = repository.loadCurrentSessionDraft()!.session.id;
+    repository.saveSessionMemoryBody(sessionId, {
+      issues: [],
+      decisions: [],
+      nextActions: [],
+    });
+    expect(repository.loadSessionMemoryBody(sessionId)).not.toBeNull();
+    repository.clearStoredSession(sessionId);
+    expect(repository.loadSessionMemoryBody(sessionId)).toBeNull();
+  });
+
   it("clears the active session draft including its imports", () => {
     const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
     const draft = repository.saveCurrentSessionDraft(

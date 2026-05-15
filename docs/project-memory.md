@@ -72,10 +72,12 @@ bodies safely:
   sources + issues + decisions + nextActions). Calls run in parallel via
   `Promise.allSettled`; one failure does not block the page.
 - **Browser localStorage** — `BrowserDraftRepository.listSessionImports`
-  yields the per-session events/sources via the persisted imports, and
-  `loadSessionAnalysis` lifts the analysis result if any. Browser drafts
-  do NOT persist runtime issues / decisions / next-actions today — those
-  fields stay empty for browser-loaded sessions.
+  yields the per-session events/sources via the persisted imports.
+  `loadSessionMemoryBody` lifts the durable issues / decisions /
+  next-actions snapshot (`StoredSessionMemoryBody`); when missing the
+  loader falls back to `loadSessionAnalysis`. Sessions that never ran
+  Quick Pass and have no memory body load as `metadataOnly` for those
+  fields rather than fabricating empty rows.
 - **Cap** — `DEFAULT_SAVED_SESSION_CAP = 20`. SQLite-saved sessions take
   precedence over browser ones because their payloads are richer.
 
@@ -200,13 +202,15 @@ any of these:
 ## Limitations and future work
 
 - **Cross-session decision / issue / next-action aggregation in browser
-  mode** — browser-saved drafts persist only `project` + `session` +
-  imports + optional analysis; runtime issues / decisions / next-actions
-  live in active session memory and are never written to localStorage.
-  As a result browser-loaded sessions contribute events + sources but
-  no decisions or issues today. Desktop SQLite sessions DO contribute
-  decisions / issues / next-actions when the desktop runtime is
-  available.
+  mode** — browser-saved drafts now persist a durable
+  `StoredSessionMemoryBody` snapshot (issues / decisions / next-actions
+  / optional summary snapshot) so browser-saved sessions can contribute
+  these fields to Project Memory. The body is written:
+    - whenever Quick Pass / analysis succeeds,
+    - during `hydrate` as a one-time forward migration when a saved
+      analysis exists but no body has been written yet.
+  Sessions that never ran Quick Pass remain memory-body-less and load
+  as `metadataOnly` for those fields — no fake rows are produced.
 - **SQLite import summary persistence** — `importSummary` lives in
   browser localStorage today; SQLite-saved sessions therefore cannot
   contribute to the re-import rollup. A `warning` of kind
