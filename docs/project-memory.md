@@ -319,10 +319,13 @@ Project Memory page makes that log visible:
 - `MemoryAuditTrailCard` renders the grouped log next to the
   Accepted Project Memories card, with filter chips, a local-only
   badge, and an empty state.
-- The view-model exposes only the action type, timestamp,
-  affected-memory count, optional reviewer note, and reversible
-  flag. The `before` / `after` snapshots are never rendered, so no
-  raw evidence content or local paths reach the audit surface.
+- The view-model exposes the action type, timestamp,
+  affected-memory count, source proposal id, optional reviewer note,
+  reversible flag, and a derived `statusChange` (the memory status
+  transition, e.g. `accepted → stale`). Only the `status` string is
+  read from the `before` / `after` snapshots — their `title` /
+  `summary` fields are never rendered, so no raw evidence content or
+  local paths reach the audit surface.
 - Legacy / missing fields are tolerated: an unknown action type
   keeps a readable label, a missing `targetMemoryIds` counts as
   zero, and an unparseable timestamp groups under an "unknown date"

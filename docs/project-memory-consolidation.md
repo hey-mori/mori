@@ -770,10 +770,12 @@ UI surfacing — landed:
   the log via the pure `buildMemoryAuditTrailViewModel` helper
   (`src/lib/project-memory/memoryAuditTrail.ts`): actions sorted
   newest-first, grouped by UTC date, with an action-type filter.
-- Each row shows the action type, time, affected-memory count, and
-  an optional reviewer note. The `before` / `after` snapshots are
-  intentionally **not** rendered, so the audit surface never exposes
-  raw evidence content or local paths.
+- Each row shows the action type, time, affected-memory count, an
+  optional reviewer note, and the memory **status transition** it
+  produced (e.g. `accepted → stale`), derived from the audit row's
+  before/after snapshots. Only the `status` string is read from those
+  snapshots — their `title` / `summary` fields are never rendered, so
+  the audit surface never exposes raw evidence content or local paths.
 - The helper tolerates legacy / missing fields (unknown action type,
   missing `targetMemoryIds`, unparseable timestamp).
 

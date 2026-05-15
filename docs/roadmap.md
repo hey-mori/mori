@@ -278,7 +278,7 @@ Sub-phase status:
 | Consolidation Review Surface | Full-page review with local-draft accept / edit / discard / keep-watching / defer per proposal | ✅ landed |
 | Accepted Memory Persistence (Browser) | `StoredAcceptedProjectMemory` + repository methods; accepted memories survive reload via browser localStorage | ✅ landed |
 | Memory Audit Trail (minimal) | `StoredMemoryReviewAction` append-only log; one row per accept / edit / watch / defer / discard / apply | ✅ landed |
-| Memory Audit Trail UI | `buildMemoryAuditTrailViewModel` + `MemoryAuditTrailCard`; sorted, date-grouped, filterable audit log on the Memory page | ✅ landed (Undo / revert still planned) |
+| Memory Audit Trail UI | `buildMemoryAuditTrailViewModel` + `MemoryAuditTrailCard`; sorted, date-grouped, filterable audit log with per-row status transitions | ✅ landed (Undo / revert still planned) |
 | SQLite Accepted Memory Storage | `consolidated_memories` + `consolidated_memory_audit` tables, Rust migration + commands, TS bridge, runtime-aware repository routing | ✅ landed |
 | Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | Resume Prompt + Reports ✅ landed; `.mori v0` slice ✅ landed; review-on-import planned |
 | Stale Memory Review | Scan accepted memories for staleness signals; emit `staleMemory` proposals (`buildStaleMemoryProposals`) | ✅ landed |

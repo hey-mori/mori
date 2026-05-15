@@ -134,4 +134,50 @@ describe("buildMemoryAuditTrailViewModel", () => {
     expect(describeMemoryAuditAction("watch")).toBe("Kept watching");
     expect(describeMemoryAuditAction("")).toBe("Unknown action");
   });
+
+  it("derives a status transition from before/after snapshots", () => {
+    const vm = buildMemoryAuditTrailViewModel([
+      action({
+        id: "lifecycle",
+        before: { title: "Decision", status: "accepted", summary: "..." },
+        after: { title: "Decision", status: "stale", summary: "..." },
+      }),
+    ]);
+    const entry = vm.groups[0]?.entries[0];
+    expect(entry?.statusChange).toEqual({ from: "accepted", to: "stale" });
+  });
+
+  it("reports a new-memory transition as from=null", () => {
+    const vm = buildMemoryAuditTrailViewModel([
+      action({
+        id: "new",
+        before: { proposalTitle: "Decision", proposalStatus: "proposed" },
+        after: { title: "Decision", status: "accepted", summary: "..." },
+      }),
+    ]);
+    expect(vm.groups[0]?.entries[0]?.statusChange).toEqual({ from: null, to: "accepted" });
+  });
+
+  it("has no statusChange when neither snapshot carries a status", () => {
+    const vm = buildMemoryAuditTrailViewModel([
+      action({ id: "discard", actionType: "discard", before: { proposalTitle: "x" } }),
+    ]);
+    expect(vm.groups[0]?.entries[0]?.statusChange).toBeNull();
+  });
+
+  it("surfaces the source proposal id and never the raw snapshot fields", () => {
+    const vm = buildMemoryAuditTrailViewModel([
+      action({
+        id: "row",
+        sourceProposalId: "proposal::staleMemory::mem-1",
+        before: { title: "Secret /Users/me decision", status: "accepted", summary: "raw" },
+        after: { title: "Secret", status: "stale", summary: "raw" },
+      }),
+    ]);
+    const entry = vm.groups[0]?.entries[0];
+    expect(entry?.sourceProposalId).toBe("proposal::staleMemory::mem-1");
+    const serialized = JSON.stringify(entry);
+    expect(serialized).not.toContain("/Users/me");
+    expect(serialized).not.toContain("raw");
+  });
 });

@@ -38,6 +38,18 @@ export const MEMORY_AUDIT_ACTION_TYPES: readonly MemoryAuditActionType[] = [
 
 export type MemoryAuditActionFilter = MemoryAuditActionType | "all";
 
+/**
+ * A status transition captured by an audit row's before/after
+ * snapshot. `from` is null when the action created a new memory (no
+ * prior status); `to` is null when the action wrote no memory (e.g.
+ * a discard). Only the `status` string is read from the snapshots —
+ * never raw evidence content.
+ */
+export type MemoryAuditStatusChange = {
+  from: string | null;
+  to: string | null;
+};
+
 export type MemoryAuditTrailEntry = {
   id: string;
   actionType: MemoryAuditActionType;
@@ -49,6 +61,13 @@ export type MemoryAuditTrailEntry = {
   timeLabel: string;
   /** Number of accepted-memory records the action touched. */
   targetMemoryCount: number;
+  /** Originating proposal id, when the action came from a proposal. */
+  sourceProposalId: string | null;
+  /**
+   * Memory status transition derived from the before/after snapshot,
+   * when the snapshots carry a `status`. Null when neither side does.
+   */
+  statusChange: MemoryAuditStatusChange | null;
   /** Reviewer note, when present. */
   note: string | null;
   /** Whether the action advertises one-click undo (reserved). */
@@ -155,6 +174,11 @@ function toEntry(action: StoredMemoryReviewAction): MemoryAuditTrailEntry {
     timestamp: action.timestamp ?? "",
     timeLabel,
     targetMemoryCount,
+    sourceProposalId:
+      typeof action.sourceProposalId === "string" && action.sourceProposalId.length > 0
+        ? action.sourceProposalId
+        : null,
+    statusChange: deriveStatusChange(action.before, action.after),
     note,
     reversible: action.reversible === true,
   };
@@ -172,6 +196,24 @@ function groupByDate(entries: MemoryAuditTrailEntry[]): MemoryAuditTrailGroup[] 
     current.entries.push(entry);
   }
   return groups;
+}
+
+/**
+ * Derive a status transition from an audit row's before/after
+ * snapshots. Reads only the `status` string field — the snapshots may
+ * also carry `title` / `summary`, which the audit trail never renders.
+ */
+function deriveStatusChange(before: unknown, after: unknown): MemoryAuditStatusChange | null {
+  const from = readStatus(before);
+  const to = readStatus(after);
+  if (from === null && to === null) return null;
+  return { from, to };
+}
+
+function readStatus(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const status = (value as { status?: unknown }).status;
+  return typeof status === "string" && status.length > 0 ? status : null;
 }
 
 function parseTimestamp(iso: string): {

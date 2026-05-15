@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Clock4, History, StickyNote } from "lucide-react";
+import { ArrowRight, Clock4, History, StickyNote } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriSection } from "../../components/ui/MoriSection";
 import {
@@ -108,6 +108,12 @@ export function MemoryAuditTrailCard({
                             {entry.targetMemoryCount}개 memory
                           </span>
                         </header>
+                        {entry.statusChange ? (
+                          <p className="memory-audit-status">
+                            <ArrowRight size={11} aria-hidden="true" />{" "}
+                            {entry.statusChange.from ?? "new"} → {entry.statusChange.to ?? "(none)"}
+                          </p>
+                        ) : null}
                         {entry.note ? (
                           <p className="memory-audit-note">
                             <StickyNote size={11} aria-hidden="true" /> {entry.note}
