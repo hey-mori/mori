@@ -370,8 +370,8 @@ same review pattern.
 
 | Phase | Scope | Status |
 | ----- | ----- | ------ |
-| **2.0** | Design doc + pure proposal helper (`buildProjectMemoryConsolidationPreview`) + tests. No persistence, no UI. | ✅ This milestone |
-| **2.1** | Wire helper output into a typed `ConsolidationRun` record; expose to the Memory page model layer (still no UI). | Next |
+| **2.0** | Design doc + pure proposal helper (`buildProjectMemoryConsolidationPreview`) + tests. No persistence, no UI. | ✅ |
+| **2.1** | Typed `ProjectMemoryConsolidationState` derived from `ProjectMemoryViewModel`; wired into `MemoryView`; honest "Planned" preview card (no review surface yet). | ✅ |
 | **2.2** | Consolidation Review UI: full-page surface, proposal cards, evidence panel, accept / edit / discard / keep-watching actions. No persistence yet — accepted memories are session-scoped. | After 2.1 |
 | **2.3** | Browser persistence: `StoredConsolidatedMemory` + repository methods. Accepted memories survive reload. | After 2.2 |
 | **2.4** | SQLite persistence: `consolidated_memories` table + Rust migration + load/store commands. | After 2.3 |
@@ -382,6 +382,38 @@ same review pattern.
 Each sub-phase is independent and reversible. Stopping at any phase
 leaves Mori in a working state — Phase 2.0 alone is useful for the
 maintainer to see what consolidation would surface today.
+
+### Phase 2.1 state layer (landed)
+
+`src/lib/project-memory/projectMemoryConsolidationModel.ts` is the
+typed state layer on top of the Phase 2.0 helper:
+
+```ts
+type ProjectMemoryConsolidationStatus =
+  | "ready"        // proposals exist; basis is rich
+  | "empty"        // basis is fine but no proposals derive
+  | "partial"      // basis is narrow (active-only / metadata-only / partial-load)
+  | "unavailable"; // demo / no storage / unreachable
+
+type ProjectMemoryConsolidationState = {
+  status; preview; proposalCount; proposalCounts;
+  topProposalKinds; canRunReview;        // false in 2.1 (UI not yet routed)
+  dataBasis; warnings; emptyReason;
+  nextStepLabel; generatedAt;
+};
+
+function buildProjectMemoryConsolidationState(
+  memory: ProjectMemoryViewModel,
+): ProjectMemoryConsolidationState;
+```
+
+The Memory page consumes this state via a `useMemo` next to the
+existing `viewModel` derivation. A `ConsolidationPreviewCard`
+component renders it: top-3 proposal kinds + counts, `dataBasis`
+badge, "Review proposals (Planned)" disabled button, honesty copy
+under the button. **No memory is written.** **`canRunReview` is
+hard-coded `false` in Phase 2.1** — Phase 2.2 will flip it on when
+the Consolidation Review surface lands.
 
 ## 13. Helper prototype API (Phase 2.0, this milestone)
 

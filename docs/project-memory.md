@@ -228,7 +228,7 @@ Phased rollout (full list in `docs/roadmap.md`):
 | Phase | Scope | Status |
 | ----- | ----- | ------ |
 | 2.0 | Design + pure proposal helper + tests | ✅ landed |
-| 2.1 | Wire helper output into a typed run record | next |
+| 2.1 | Typed `ProjectMemoryConsolidationState` + Memory page wiring + "Planned" preview card | ✅ landed |
 | 2.2 | Consolidation Review UI | after 2.1 |
 | 2.3 | Browser persistence for accepted memories | after 2.2 |
 | 2.4 | SQLite persistence | after 2.3 |

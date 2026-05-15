@@ -199,11 +199,16 @@ and never automatic. The design lives at
 
 The Phase 2.0 helper
 ([`src/lib/project-memory/consolidationProposals.ts`](../src/lib/project-memory/consolidationProposals.ts))
-produces typed `MemoryProposal[]` from any `ProjectMemoryViewModel`
-without writing anything — purely so the rest of the work can be
-designed against real shapes. Persistence, UI, Resume-Prompt
-integration, and stale/contradiction handling land in Phases 2.1
-through 2.6 on the [roadmap](roadmap.md).
+produces typed `MemoryProposal[]` from any `ProjectMemoryViewModel`.
+The Phase 2.1 state layer
+([`src/lib/project-memory/projectMemoryConsolidationModel.ts`](../src/lib/project-memory/projectMemoryConsolidationModel.ts))
+wraps it in a `ProjectMemoryConsolidationState` that the Memory page
+consumes alongside its view-model. The Memory page renders a
+"Planned" preview card — counts visible, button disabled — so the
+user can see what Phase 2.2 will surface without anything being
+written. Persistence, the full Review UI, Resume-Prompt integration,
+and stale/contradiction handling land in Phases 2.2 through 2.6 on
+the [roadmap](roadmap.md).
 
 ## Layer 5 — Project Memory / Consolidation
 

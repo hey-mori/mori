@@ -30,6 +30,8 @@ import {
   type ProjectMemoryResumePromptAudience,
   type ProjectMemoryResumePromptPrivacy,
 } from "../../lib/project-memory/projectMemoryResumePrompt";
+import { buildProjectMemoryConsolidationState } from "../../lib/project-memory/projectMemoryConsolidationModel";
+import { ConsolidationPreviewCard } from "./ConsolidationPreviewCard";
 import { deriveSavedReportAvailability } from "../../lib/memory/projectMemoryContext";
 import {
   buildProjectMemoryViewModel,
@@ -158,6 +160,15 @@ export function MemoryView() {
       packageDrafts,
       loadedSessions,
     ],
+  );
+
+  // Phase 2.1 — derive the consolidation state alongside the
+  // view-model. Pure derivation; nothing is persisted. The
+  // ConsolidationPreviewCard surfaces it without opening a review
+  // session (Phase 2.2 will add that route).
+  const consolidationState = useMemo(
+    () => buildProjectMemoryConsolidationState(viewModel),
+    [viewModel],
   );
 
   // ─── legacy derivations (kept for the existing cards) ────────────────
@@ -334,6 +345,8 @@ export function MemoryView() {
           </div>
 
           <ReimportHistoryCard summary={viewModel.reimportSummary} />
+
+          <ConsolidationPreviewCard state={consolidationState} />
 
           <RecentSessionsList
             sessions={savedSessions}

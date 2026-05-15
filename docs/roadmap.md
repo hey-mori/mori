@@ -237,7 +237,7 @@ Sub-phase status:
 | Sub-phase | Scope | Status |
 | --------- | ----- | ------ |
 | 2.0 | Design doc + pure proposal helper (`buildProjectMemoryConsolidationPreview`) + tests | ✅ landed |
-| 2.1 | Wire helper output into a typed `ConsolidationRun` record exposed to the Memory page model layer | next |
+| 2.1 | Typed `ProjectMemoryConsolidationState` derived in the Memory page; "Planned" preview card; no review surface yet | ✅ landed |
 | 2.2 | Consolidation Review UI (accept / edit / discard / keep watching per proposal) | after 2.1 |
 | 2.3 | Browser persistence: `StoredConsolidatedMemory` + repository methods | after 2.2 |
 | 2.4 | SQLite persistence: `consolidated_memories` table + Rust migration | after 2.3 |
