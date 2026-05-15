@@ -210,7 +210,7 @@ connector re-import rollup. The Memory page exposes a typed
 aggregation. The Resume Prompt is built from this same view-model,
 audience- and privacy-aware, no LLM call.
 
-### Phase 2 — Controlled consolidation pass (Planned)
+### Phase 2 — Controlled consolidation pass (Design + Phase 2.0 prototype landed)
 
 A **user-triggered** consolidation pass over Project Memory. Goals:
 
@@ -229,6 +229,21 @@ A **user-triggered** consolidation pass over Project Memory. Goals:
 Non-goals for this phase: any LLM-driven consolidation that lands
 without user review, any cross-account/cloud sync, any background
 trigger.
+
+Design and sub-phase plan live at
+[`docs/project-memory-consolidation.md`](project-memory-consolidation.md).
+Sub-phase status:
+
+| Sub-phase | Scope | Status |
+| --------- | ----- | ------ |
+| 2.0 | Design doc + pure proposal helper (`buildProjectMemoryConsolidationPreview`) + tests | ✅ landed |
+| 2.1 | Wire helper output into a typed `ConsolidationRun` record exposed to the Memory page model layer | next |
+| 2.2 | Consolidation Review UI (accept / edit / discard / keep watching per proposal) | after 2.1 |
+| 2.3 | Browser persistence: `StoredConsolidatedMemory` + repository methods | after 2.2 |
+| 2.4 | SQLite persistence: `consolidated_memories` table + Rust migration | after 2.3 |
+| 2.5 | Resume Prompt + Reports integration; `.mori v0` carries the slice | after 2.4 |
+| 2.6 | Stale-memory + contradiction review | after 2.5 |
+| 2.7 | Optional local memory query against accepted memories with citations | research |
 
 ### Phase 3 — Optional local daemon / watched inbox (Planned, opt-in)
 

@@ -203,6 +203,38 @@ Metadata-only and failed sessions contribute nothing to aggregation;
 they only show up in the recent-sessions list with a `loadStatus`
 badge.
 
+## Controlled consolidation (Phase 2, design + pure helper landed)
+
+Project Memory today is **computed live** every render. There is no
+durable project-level memory record yet — pruning a saved session
+erases the aggregations that session contributed.
+
+**Controlled Project Memory Consolidation** is the user-triggered
+layer that promotes selected live aggregations into durable
+project-level memories. It is reviewed before apply, evidence-linked,
+and reversible. It is **not** a background watcher, not an
+auto-merge, and not a cloud sync.
+
+The Phase 2 design is documented at
+[`docs/project-memory-consolidation.md`](project-memory-consolidation.md).
+A small pure helper
+(`buildProjectMemoryConsolidationPreview`) that derives
+proposal candidates from any `ProjectMemoryViewModel` ships in this
+milestone as a prototype — no persistence change, no UI change, no
+LLM call.
+
+Phased rollout (full list in `docs/roadmap.md`):
+
+| Phase | Scope | Status |
+| ----- | ----- | ------ |
+| 2.0 | Design + pure proposal helper + tests | ✅ landed |
+| 2.1 | Wire helper output into a typed run record | next |
+| 2.2 | Consolidation Review UI | after 2.1 |
+| 2.3 | Browser persistence for accepted memories | after 2.2 |
+| 2.4 | SQLite persistence | after 2.3 |
+| 2.5 | Resume Prompt + Reports integration | after 2.4 |
+| 2.6 | Stale / contradiction review | after 2.5 |
+
 ## Where Project Memory sits in the Mori architecture
 
 Project Memory is Layer 5 (consolidation) in Mori's memory model.

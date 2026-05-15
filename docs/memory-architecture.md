@@ -188,6 +188,23 @@ Evidence Hub.
 
 **Next tasks:** none from this milestone.
 
+## Controlled consolidation (Phase 2)
+
+Project Memory today is computed live from active + saved sessions
+every render. **Controlled consolidation** is the user-triggered
+layer that promotes selected aggregations into durable project-level
+memories. It is review-before-apply, evidence-linked, reversible,
+and never automatic. The design lives at
+[`docs/project-memory-consolidation.md`](project-memory-consolidation.md).
+
+The Phase 2.0 helper
+([`src/lib/project-memory/consolidationProposals.ts`](../src/lib/project-memory/consolidationProposals.ts))
+produces typed `MemoryProposal[]` from any `ProjectMemoryViewModel`
+without writing anything — purely so the rest of the work can be
+designed against real shapes. Persistence, UI, Resume-Prompt
+integration, and stale/contradiction handling land in Phases 2.1
+through 2.6 on the [roadmap](roadmap.md).
+
 ## Layer 5 — Project Memory / Consolidation
 
 Where memory accumulates across the active session and saved
