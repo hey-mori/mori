@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCheck, ListChecks, Trash2 } from "lucide-react";
+import { ArrowLeft, BookText, BrainCircuit, CheckCheck, FileText, ListChecks, PlayCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -37,12 +37,21 @@ export function ImportReviewView() {
   const apply = useMoriReviewStore((state) => state.apply);
   const cancel = useMoriReviewStore((state) => state.cancel);
   const addImport = useMoriSessionStore((state) => state.addImport);
+  const hasAnalysis = useMoriSessionStore((state) => Boolean(state.analysis));
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
+  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
-  const [statusBanner, setStatusBanner] = useState<{
-    tone: "ok" | "error" | "info";
-    message: string;
-  } | null>(null);
+  const [statusBanner, setStatusBanner] = useState<
+    | { tone: "error" | "info"; message: string }
+    | {
+        tone: "ok";
+        appliedCount: number;
+        sourceTitle: string;
+        skippedDuplicates: number;
+        hasAnalysis: boolean;
+      }
+    | null
+  >(null);
 
   if (!draft) {
     // EvidenceView guards this, but keep a sane fallback for safety.
@@ -53,8 +62,10 @@ export function ImportReviewView() {
   const applyable = isReviewApplyable(draft);
 
   function handleApply() {
+    if (!draft) return;
     setStatusBanner(null);
     const summary = draftMeta?.sourceImportSummary;
+    const sourceTitle = draft.source.title;
     const outcome = apply((candidate) => {
       const stored = addImport(candidate, summary ? { importSummary: summary } : undefined);
       if (!stored) {
@@ -70,7 +81,10 @@ export function ImportReviewView() {
     }
     setStatusBanner({
       tone: "ok",
-      message: `${outcome.appliedCount}개의 이벤트를 세션에 적용했습니다.`,
+      appliedCount: outcome.appliedCount,
+      sourceTitle,
+      skippedDuplicates: draftMeta?.duplicateSkippedCount ?? 0,
+      hasAnalysis,
     });
   }
 
@@ -96,7 +110,45 @@ export function ImportReviewView() {
       {draftMeta ? <ReviewDraftMetaStrip meta={draftMeta} /> : null}
 
       {statusBanner ? (
-        <div className={`review-status tone-${statusBanner.tone}`}>{statusBanner.message}</div>
+        statusBanner.tone === "ok" ? (
+          <div className="review-status tone-ok review-status-rich" role="status" aria-live="polite">
+            <header>
+              <strong>{statusBanner.appliedCount}개 이벤트를 세션에 적용했습니다.</strong>
+              <span>
+                출처: <em>{statusBanner.sourceTitle}</em>
+                {statusBanner.skippedDuplicates > 0
+                  ? ` · 중복 ${statusBanner.skippedDuplicates}개는 자동으로 건너뜀`
+                  : ""}
+              </span>
+            </header>
+            <div className="review-status-actions">
+              <Button
+                icon={PlayCircle}
+                variant="primary"
+                onClick={() => setCurrentView("timeline")}
+              >
+                Timeline 열기
+              </Button>
+              <Button icon={FileText} onClick={() => setCurrentView("evidence")}>
+                Evidence Hub 열기
+              </Button>
+              <Button icon={BrainCircuit} onClick={() => setCurrentView("memory")}>
+                Project Memory 열기
+              </Button>
+              {!statusBanner.hasAnalysis ? (
+                <Button icon={BookText} onClick={() => setCurrentView("reports")}>
+                  Quick Pass 실행 (Reports)
+                </Button>
+              ) : null}
+            </div>
+            <small>
+              Decisions / Issues / Next actions는 Quick Pass 분석 후에 누적 메모리에 반영됩니다.
+              모든 처리는 로컬에서만 이뤄집니다.
+            </small>
+          </div>
+        ) : (
+          <div className={`review-status tone-${statusBanner.tone}`}>{statusBanner.message}</div>
+        )
       ) : null}
 
       <div className="review-layout">

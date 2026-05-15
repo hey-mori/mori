@@ -203,6 +203,16 @@ Metadata-only and failed sessions contribute nothing to aggregation;
 they only show up in the recent-sessions list with a `loadStatus`
 badge.
 
+## See it working
+
+Use the end-to-end walkthrough at
+[docs/e2e-smoke-flow.md](e2e-smoke-flow.md) — paste the sample
+Connector JSONL at
+[docs/fixtures/connector-sample-mori-session.jsonl](fixtures/connector-sample-mori-session.jsonl),
+apply it, optionally run Quick Pass, then open Project Memory. The
+walkthrough also covers re-importing the same JSONL to verify
+cross-session duplicate detection.
+
 ## What Project Memory is NOT
 
 This list is part of the page's honesty contract. Surfaces must not claim

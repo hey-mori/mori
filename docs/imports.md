@@ -635,6 +635,15 @@ Notes:
 - The rollup is local-only; no external account is contacted, no
   background folder is watched.
 
+## Smoke walkthrough
+
+To exercise the Connector JSONL path end-to-end with a realistic
+synthetic fixture (parse → preview → re-import summary → Import Review
+→ Apply → Timeline → Evidence Hub → Project Memory → Resume prompt →
+re-import duplicate detection), follow
+[docs/e2e-smoke-flow.md](e2e-smoke-flow.md). The fixture lives at
+[docs/fixtures/connector-sample-mori-session.jsonl](fixtures/connector-sample-mori-session.jsonl).
+
 ## Where imports live
 
 - Pure normalizers: [src/lib/import/](../src/lib/import/)

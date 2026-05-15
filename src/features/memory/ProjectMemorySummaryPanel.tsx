@@ -164,6 +164,10 @@ export function ProjectMemorySummaryPanel({
             세션 시작
           </Button>
         </div>
+        <small className="memory-summary-prompt-note">
+          이 프롬프트는 로컬에 저장된 Mori 세션에서만 생성됩니다. 클라우드 동기화, 외부 계정 / 파일 접근,
+          백그라운드 캡처는 포함되지 않습니다. 대상 / 공개 범위 설정은 표시되는 프롬프트에만 영향을 줍니다.
+        </small>
       </section>
     </aside>
   );

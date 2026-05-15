@@ -86,6 +86,16 @@ Requires Rust and platform-specific Tauri prerequisites.
 npm run tauri:dev
 ```
 
+## Try the end-to-end flow
+
+To see Mori's import → review → timeline → evidence → memory → resume
+prompt loop with a realistic sample input, follow
+[docs/e2e-smoke-flow.md](docs/e2e-smoke-flow.md) using the fixture at
+[docs/fixtures/connector-sample-mori-session.jsonl](docs/fixtures/connector-sample-mori-session.jsonl).
+
+The walkthrough is local-only — no cloud sync, no background watching,
+no external accounts.
+
 ## Validate
 
 ```bash

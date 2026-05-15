@@ -198,6 +198,33 @@ that ran without saved-session history is downgraded to
 The summary can optionally ride along on `StoredSessionImport` so the
 Evidence Hub row keeps its re-import badge after reload.
 
+## End-to-end smoke flow (Implemented)
+
+A documented, scripted walkthrough at
+[`docs/e2e-smoke-flow.md`](e2e-smoke-flow.md) drives Mori through the
+full import / review / timeline / evidence / memory / resume-prompt
+loop using the canonical synthetic fixture at
+[`docs/fixtures/connector-sample-mori-session.jsonl`](fixtures/connector-sample-mori-session.jsonl).
+A vitest suite at
+`src/lib/connectors/connectorSampleFixture.test.ts` guards the fixture
+so the docs and product stay aligned — parse, preview, normalize, and
+duplicate-detection paths all run against the same file.
+
+Import Review now shows a richer post-Apply banner: applied count,
+source title, skipped-duplicate count, and four next-step buttons
+(Timeline / Evidence Hub / Project Memory / Quick Pass-in-Reports if
+no analysis exists). The Memory page's Resume prompt section carries
+an explicit honesty note about local-only generation.
+
+Out of scope this milestone (still planned):
+
+- No new capture mechanisms — paste / desktop inbox stays the entry
+  surface.
+- No live Claude / Codex sync.
+- No Playwright / screenshot tests.
+- No "Load sample" UI button — the doc-driven paste path was preferred
+  to avoid the risk of looking like a real connector.
+
 ## Cross-session resume prompt (Implemented)
 
 The Memory page's resume / follow-up prompt is now built from
