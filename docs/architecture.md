@@ -568,3 +568,35 @@ project.mori
 ```
 
 The package should distinguish raw evidence from normalized AI-derived records and should make retention/redaction decisions visible.
+
+## Project Memory aggregation
+
+Project Memory composes a cross-session view over already-persisted local
+data (active session, browser-saved drafts, SQLite-saved metadata, stored
+connector import summaries, `.mori v0` packages).
+
+Pipeline:
+
+```
+useMoriSessionStore (active) ─┐
+useMoriSqliteStore           ─┤
+BrowserDraftRepository       ─┼─►  buildProjectMemoryViewModel  ──►  ProjectMemoryViewModel
+StoredSessionImport.importSummary ┘                                        │
+                                                                           ▼
+                                                                 MemoryView.tsx (page)
+                                                                 ReimportHistoryCard
+                                                                 ProjectMemorySummaryPanel
+```
+
+Honesty rules baked into the architecture:
+
+- `dataBasis` is computed from the *real* inputs (not a config), so the
+  page badge cannot lie about reach.
+- Saved-session bodies are never assumed loaded. Decisions / issues /
+  evidence stay scoped to the active session until a future milestone
+  ships saved-session payload loading.
+- `StoredSessionImport.importSummary` is the only cross-session
+  contributor to the re-import rollup. Old imports without it never
+  appear in the rollup.
+- SQLite-saved sessions are listed as metadata only — their import
+  summaries are not persisted in SQLite today.

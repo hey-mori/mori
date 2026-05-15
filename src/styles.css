@@ -6396,6 +6396,174 @@ pre {
   content: " ";
 }
 
+/* Project Memory warnings strip */
+
+.memory-warnings {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 14px;
+  list-style: none;
+  border: 1px dashed #e5dffb;
+  border-radius: 10px;
+  background: #fbfaff;
+  color: #5b4ec0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.memory-warnings li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* Re-import history card */
+
+.memory-reimport {
+  display: grid;
+  gap: 12px;
+}
+
+.memory-reimport-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.memory-reimport-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.memory-reimport-count {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #e6e3f1);
+  border-radius: 8px;
+  background: var(--panel, #ffffff);
+}
+
+.memory-reimport-count.tone-green {
+  border-color: #cbe6cc;
+  background: #f4fbf4;
+}
+
+.memory-reimport-count.tone-blue {
+  border-color: #cfdcf3;
+  background: #f5f9ff;
+}
+
+.memory-reimport-count.tone-orange {
+  border-color: #f1d8b8;
+  background: #fff8ee;
+}
+
+.memory-reimport-count.tone-red {
+  border-color: #f0c8c5;
+  background: #fff4f3;
+}
+
+.memory-reimport-count.tone-gray {
+  border-color: #e4e2eb;
+  background: #f6f5fa;
+}
+
+.memory-reimport-count dt {
+  font-size: 11px;
+  font-weight: 500;
+  color: #5d5577;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.memory-reimport-count dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c2549;
+}
+
+.memory-reimport-matched,
+.memory-reimport-items {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #ece9f5);
+  border-radius: 8px;
+  background: #fdfcff;
+}
+
+.memory-reimport-matched header,
+.memory-reimport-items header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b4470;
+}
+
+.memory-reimport-matched ul,
+.memory-reimport-items ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-reimport-matched li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #2b2547;
+}
+
+.memory-reimport-matched li small {
+  color: #6e668c;
+}
+
+.memory-reimport-items li {
+  display: grid;
+  gap: 4px;
+  padding: 6px 0;
+  border-top: 1px solid #ecebf3;
+}
+
+.memory-reimport-items li:first-child {
+  border-top: 0;
+}
+
+.memory-reimport-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.memory-reimport-item-head strong {
+  font-size: 13px;
+  color: #2c2549;
+}
+
+.memory-reimport-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #5d5577;
+}
+
+.memory-reimport-honesty {
+  color: #b56c1e;
+}
+
 /* Decision timeline card */
 
 .memory-decisions,

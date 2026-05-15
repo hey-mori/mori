@@ -198,6 +198,35 @@ that ran without saved-session history is downgraded to
 The summary can optionally ride along on `StoredSessionImport` so the
 Evidence Hub row keeps its re-import badge after reload.
 
+## Project Memory multi-session aggregation (Implemented)
+
+Project Memory now aggregates across saved Mori sessions where local
+data is available. The Memory page reads:
+
+- the active session view,
+- browser-draft saved-session metadata and persisted connector imports,
+- desktop SQLite saved-session metadata,
+- stored `.mori v0` packages,
+
+and composes a typed `ProjectMemoryViewModel` (see
+[docs/project-memory.md](project-memory.md)). The page renders a
+data-basis badge (active-only / active + saved / metadata-only /
+unavailable) so users can see what's actually accumulated.
+
+A dedicated "이번 프로젝트 재import" card rolls connector
+`ConnectorSourceImportSummary` records up across saved sessions —
+counting `new` / `partialReimport` / `duplicateOnly` /
+`historyUnavailable` / `invalidOnly` separately and surfacing matched
+saved sessions.
+
+Out of scope this milestone (documented as planned):
+
+- Loading saved-session bodies to aggregate decisions / issues /
+  next-actions across sessions.
+- Persisting `importSummary` into SQLite so desktop-saved sessions can
+  also contribute to the re-import rollup.
+- Visual Session Canvas / Workroom (still deferred — see below).
+
 ## Session Canvas (deferred, future visualisation)
 
 A Session Canvas / Workroom visualisation is a promising future view: a

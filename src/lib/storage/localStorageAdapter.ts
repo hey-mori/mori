@@ -81,6 +81,17 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     return this.read<StoredMoriPackageDraft>(`${PACKAGE_PREFIX}${packageId}`);
   }
 
+  listMoriPackageDrafts(): StoredMoriPackageDraft[] {
+    const packages: StoredMoriPackageDraft[] = [];
+    for (let index = 0; index < this.storage.length; index += 1) {
+      const key = this.storage.key(index);
+      if (!key?.startsWith(PACKAGE_PREFIX)) continue;
+      const entry = this.read<StoredMoriPackageDraft>(key);
+      if (entry) packages.push(entry);
+    }
+    return packages.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+  }
+
   clearStoredSession(sessionId: string): void {
     this.storage.removeItem(`${SESSION_PREFIX}${sessionId}`);
     this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);

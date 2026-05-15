@@ -97,12 +97,17 @@ Project Memory scope (read-only, single-session aggregation):
   `eventCount`, `sourceCount`) but their payloads are not loaded into
   the page.
 - Saved `.mori` package listing today is limited to
-  `loadMoriPackageDraft(sessionId)` for the active session. A future
-  `listMoriPackageDrafts()` API on `BrowserDraftRepository` is required
-  before the Saved Reports section can show the full package library.
-- Cross-session aggregation (multi-session decisions, recurring issues,
-  long-term trends, saved Markdown reports) is **Planned** and called
-  out in the UI's scope note + summary caveat.
+  `loadMoriPackageDraft(sessionId)` for the active session.
+- `BrowserDraftRepository.listMoriPackageDrafts()` enumerates every saved
+  `.mori v0` package. Project Memory uses this to render the cross-package
+  Saved Reports rollup alongside the per-session import history.
+- Project Memory now aggregates across saved sessions via the view-model
+  in `src/lib/project-memory/projectMemoryViewModel.ts`. The aggregation
+  is metadata-only for SQLite-saved sessions (no decisions / issues /
+  import summaries are loaded) and full-summary for browser-draft
+  sessions whose imports persisted a `ConnectorSourceImportSummary`.
+  Cross-session decision and issue aggregation requires loading saved
+  session bodies and is documented as the next milestone.
 
 Expected replacement path:
 

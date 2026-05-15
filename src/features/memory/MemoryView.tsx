@@ -11,7 +11,11 @@ import {
 import { useMoriSqliteStore } from "../../app/sqliteStore";
 import { useMoriAppStore } from "../../app/store";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import type { StoredMoriPackageDraft } from "../../lib/storage/storageTypes";
+import type {
+  StoredMoriPackageDraft,
+  StoredSessionImport,
+  StoredSessionSummary,
+} from "../../lib/storage/storageTypes";
 import {
   buildFollowUpPrompt,
   deriveProjectMemoryStats,
@@ -24,6 +28,13 @@ import {
   type ProjectMemoryDataScope,
 } from "../../lib/project-memory/projectMemory";
 import { deriveSavedReportAvailability } from "../../lib/memory/projectMemoryContext";
+import {
+  buildProjectMemoryViewModel,
+} from "../../lib/project-memory/projectMemoryViewModel";
+import {
+  getProjectMemoryDataBasisTone,
+  type ProjectMemoryWarning,
+} from "../../lib/project-memory/projectMemoryModel";
 import { ProjectMemoryHero } from "./ProjectMemoryHero";
 import { RecentSessionsList } from "./RecentSessionsList";
 import { DecisionTimelineCard } from "./DecisionTimelineCard";
@@ -31,6 +42,7 @@ import { RecurringIssuesCard } from "./RecurringIssuesCard";
 import { KeyEvidenceCard } from "./KeyEvidenceCard";
 import { SavedReportsCard } from "./SavedReportsCard";
 import { ProjectMemorySummaryPanel } from "./ProjectMemorySummaryPanel";
+import { ReimportHistoryCard } from "./ReimportHistoryCard";
 
 export function MemoryView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
@@ -56,19 +68,48 @@ export function MemoryView() {
   }, [sqliteAvailable, sqliteKind, sqliteRefresh]);
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
-  const [packageDrafts, setPackageDrafts] = useState<StoredMoriPackageDraft[]>([]);
 
-  // Browser draft does not expose `listMoriPackageDrafts` today; we
-  // opportunistically reload the package linked to the current session id so
-  // the user sees at least their last export. Cross-package listing requires
-  // a small extension to BrowserDraftRepository and is documented as planned.
+  // Cross-session data the new view-model consumes. We re-enumerate every
+  // time the active session id changes so that newly-applied imports show
+  // up in the rollup without forcing a full page reload.
+  const browserSessionSummaries = useMemo<StoredSessionSummary[]>(
+    () => repository.listStoredSessions(),
+    [repository, view.session.id],
+  );
+  const importsBySessionId = useMemo<Record<string, StoredSessionImport[]>>(() => {
+    const map: Record<string, StoredSessionImport[]> = {};
+    for (const summary of browserSessionSummaries) {
+      map[summary.sessionId] = repository.listSessionImports(summary.sessionId);
+    }
+    // Active session imports (may not have been saved as a stored session
+    // draft yet) — read separately so the rollup includes today's work.
+    if (!map[view.session.id]) {
+      map[view.session.id] = repository.listSessionImports(view.session.id);
+    }
+    return map;
+  }, [repository, browserSessionSummaries, view.session.id]);
+  const [packageDrafts, setPackageDrafts] = useState<StoredMoriPackageDraft[]>([]);
   useEffect(() => {
-    const draft = repository.loadMoriPackageDraft(view.session.id);
-    setPackageDrafts(draft ? [draft] : []);
+    setPackageDrafts(repository.listMoriPackageDrafts());
   }, [repository, view.session.id]);
 
-  const browserSessionSummaries = useMemo(() => repository.listStoredSessions(), [repository]);
+  // ─── view-model (new, multi-session aware) ───────────────────────────
+  const viewModel = useMemo(
+    () =>
+      buildProjectMemoryViewModel({
+        view,
+        mode,
+        hasAnalysis,
+        savedBrowserSessions: browserSessionSummaries,
+        savedSqliteSessions: sqliteSessions,
+        importsBySessionId,
+        moriPackages: packageDrafts,
+        storageAvailable: true,
+      }),
+    [view, mode, hasAnalysis, browserSessionSummaries, sqliteSessions, importsBySessionId, packageDrafts],
+  );
 
+  // ─── legacy derivations (kept for the existing cards) ────────────────
   const primaryScope: ProjectMemoryDataScope = useMemo(() => {
     if (mode === "demo") return "demo";
     if (sqliteAvailable && sqliteKind === "ok") return "sqlite-saved";
@@ -79,7 +120,6 @@ export function MemoryView() {
     const entries: DerivedSession[] = [];
     const seen = new Set<string>();
 
-    // Current session always shown first.
     entries.push({
       sessionId: view.session.id,
       projectId: view.project.id,
@@ -140,8 +180,6 @@ export function MemoryView() {
     () =>
       deriveProjectMemoryStats({
         view,
-        // Stats counter consumes saved-only entries (the current session is
-        // already in `view`), so we drop it from the input.
         savedSessions: savedSessions.filter((entry) => !entry.isCurrent),
         reportCount: packageDrafts.length,
       }),
@@ -188,24 +226,24 @@ export function MemoryView() {
         if (ok) setCurrentView("timeline");
       });
     }
-    // Browser-draft entries: the storage layer does not expose load-by-id today,
-    // so we route the user to Start Session as a fallback rather than fake-open.
     if (entry.scope === "browser-draft") {
       setCurrentView("start");
     }
   }
 
   const scopeLabel = scopeLabelFor(primaryScope);
+  const dataBasisTone = getProjectMemoryDataBasisTone(viewModel.dataBasis);
 
   return (
     <div className="page memory-workspace">
       <PageHeader
         title="Project Memory"
-        subtitle="Mori가 누적한 결정 / 이슈 / 근거 / 리포트를 한곳에 모아 다음 세션 컨텍스트로 이어줍니다."
+        subtitle="Mori가 누적한 결정 / 이슈 / 근거 / 리포트 / 재import 기록을 한곳에 모아 다음 세션 컨텍스트로 이어줍니다."
         right={
           <div className="memory-page-actions">
             <Badge tone={mode === "demo" ? "gray" : "green"}>{mode === "demo" ? "데모 세션" : "실제 세션"}</Badge>
             <Badge tone="purple">{scopeLabel}</Badge>
+            <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>
           </div>
         }
       />
@@ -224,6 +262,8 @@ export function MemoryView() {
             reportAvailable={packageDrafts.length > 0 || hasAnalysis}
             savedReportAvailability={savedReportAvailability}
           />
+
+          <ProjectMemoryWarningsStrip warnings={viewModel.warnings} />
 
           <DataScopeNote
             mode={mode}
@@ -245,6 +285,8 @@ export function MemoryView() {
               }
             />
           </div>
+
+          <ReimportHistoryCard summary={viewModel.reimportSummary} />
 
           <RecentSessionsList
             sessions={savedSessions}
@@ -305,4 +347,51 @@ function DataScopeNote({
       ))}
     </div>
   );
+}
+
+function ProjectMemoryWarningsStrip({ warnings }: { warnings: ProjectMemoryWarning[] }) {
+  if (warnings.length === 0) return null;
+  return (
+    <ul className="memory-warnings" role="status" aria-label="Project memory data scope notes">
+      {warnings.map((warning) => (
+        <li key={describeWarningKey(warning)}>{describeWarning(warning)}</li>
+      ))}
+    </ul>
+  );
+}
+
+function describeWarningKey(warning: ProjectMemoryWarning): string {
+  if (warning.kind === "saved-session-bodies-not-loaded") {
+    return `saved-bodies-${warning.sessionCount}`;
+  }
+  if (warning.kind === "import-summaries-unavailable") {
+    return `summaries-unavailable-${warning.reason}`;
+  }
+  if (warning.kind === "old-imports-without-identity") {
+    return `legacy-imports-${warning.importCount}`;
+  }
+  return warning.kind;
+}
+
+function describeWarning(warning: ProjectMemoryWarning): string {
+  switch (warning.kind) {
+    case "saved-session-bodies-not-loaded":
+      return `저장된 ${warning.sessionCount}건의 세션은 메타데이터만 표시됩니다. 결정/이슈/근거는 세션을 열어 확인하세요.`;
+    case "import-summaries-unavailable":
+      if (warning.reason === "sqlite-only") {
+        return "Desktop SQLite 세션은 connector import 요약을 아직 제공하지 않습니다. 다음 마일스톤에서 보강됩니다.";
+      }
+      if (warning.reason === "demo") {
+        return "Demo 세션은 import 요약을 집계하지 않습니다.";
+      }
+      return "Connector import 요약을 사용할 수 있는 저장소가 없습니다.";
+    case "old-imports-without-identity":
+      return `${warning.importCount}건의 이전 import는 connectorEventId가 없어 재import 집계에서 제외됩니다.`;
+    case "demo-mode":
+      return "Demo 모드: 실제 저장 세션은 집계되지 않습니다. 실 세션을 시작하면 누적 메모리가 표시됩니다.";
+    case "storage-unavailable":
+      return "로컬 저장소에 접근할 수 없습니다. 브라우저 storage 권한을 확인하세요.";
+    default:
+      return "";
+  }
 }

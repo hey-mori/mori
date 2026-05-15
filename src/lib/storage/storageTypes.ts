@@ -73,6 +73,13 @@ export type MoriDraftRepository = {
   listStoredSessions: () => StoredSessionSummary[];
   saveMoriPackageDraft: (pkg: MoriPackageV0) => StoredMoriPackageDraft;
   loadMoriPackageDraft: (packageId: string) => StoredMoriPackageDraft | null;
+  /**
+   * List every `.mori v0` package draft currently persisted in this
+   * adapter. Used by Project Memory to show the cross-session saved-
+   * reports rollup. Returns an empty array when the adapter has no
+   * packages or when the underlying storage cannot enumerate keys.
+   */
+  listMoriPackageDrafts: () => StoredMoriPackageDraft[];
   clearStoredSession: (sessionId: string) => void;
   addSessionImport: (
     sessionId: string,

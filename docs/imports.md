@@ -617,6 +617,24 @@ Planned connector cards never open an import flow — they are kept in the Hub
 only so the user can inspect what each connector will and will not access
 once it lands.
 
+### Project Memory rollup
+
+Each persisted `StoredSessionImport.importSummary` feeds the project-
+level re-import card on the Memory page. The Memory page enumerates every
+saved browser session, walks its imports, and aggregates the summary
+counts plus the matched-saved-session list. See
+[docs/project-memory.md](project-memory.md) for the full view-model
+contract and the data-basis flag the page renders.
+
+Notes:
+
+- Old imports without `importSummary` never contribute to the rollup —
+  the rollup is forward-only.
+- SQLite-saved sessions don't expose imports today; their re-import
+  rollup is empty by design and surfaced as a warning.
+- The rollup is local-only; no external account is contacted, no
+  background folder is watched.
+
 ## Where imports live
 
 - Pure normalizers: [src/lib/import/](../src/lib/import/)
