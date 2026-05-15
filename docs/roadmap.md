@@ -217,10 +217,12 @@ the design in
 [`docs/project-memory-consolidation.md`](project-memory-consolidation.md)):
 Consolidation Proposal Preview ✅, Consolidation State ✅,
 Consolidation Review Surface ✅,
-Accepted Memory Persistence ✅ (browser localStorage — SQLite +
-`.mori v0` export still planned), Memory Audit Trail ✅ (minimal
-append-only review actions), Stale Memory Review + Contradiction
-Review (designed), Resume and Report Memory Integration (designed).
+Accepted Memory Persistence ✅ (browser localStorage — SQLite
+Accepted Memory Storage still planned), Memory Audit Trail ✅
+(append-only review actions + audit log UI on the Memory page;
+Undo / revert still planned), Resume and Report Memory Integration
+✅ (Resume Prompt + Reports + `.mori v0` slice; review-on-import
+planned), Stale Memory Review + Contradiction Review (designed).
 
 ### Phase 0 — Explicit import memory loop (Implemented)
 
@@ -270,8 +272,9 @@ Sub-phase status:
 | Consolidation Review Surface | Full-page review with local-draft accept / edit / discard / keep-watching / defer per proposal | ✅ landed |
 | Accepted Memory Persistence (Browser) | `StoredAcceptedProjectMemory` + repository methods; accepted memories survive reload via browser localStorage | ✅ landed |
 | Memory Audit Trail (minimal) | `StoredMemoryReviewAction` append-only log; one row per accept / edit / watch / defer / discard / apply | ✅ landed |
+| Memory Audit Trail UI | `buildMemoryAuditTrailViewModel` + `MemoryAuditTrailCard`; sorted, date-grouped, filterable audit log on the Memory page | ✅ landed (Undo / revert still planned) |
 | SQLite Accepted Memory Storage | `consolidated_memories` + `consolidated_memory_audit` tables + Rust migration | designed |
-| Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | designed |
+| Resume and Report Memory Integration | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice | Resume Prompt + Reports ✅ landed; `.mori v0` slice ✅ landed; review-on-import planned |
 | Stale Memory Review + Contradiction Review | Detect pruned-source references and conflicting decisions; emit them as `staleMemory` / `contradiction` proposal kinds | designed |
 | Queryable Memory | Local cited search over accepted memories with citations | research |
 

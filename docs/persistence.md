@@ -164,9 +164,17 @@ the storage plan below is what the current adapter implements.
   at the proposal helper, screened again at apply), file paths
   beyond what's already on the underlying `SourceRef`, AI claims
   with no `evidenceRefs` entry.
-- **Audit log retention**: append-only. The current milestone keeps
-  every action row (small payload); a future Memory Audit Trail UI
-  may add a "Purge discarded actions" affordance.
+- **Audit log retention**: append-only. Every action row is kept
+  (small payload); a "Purge discarded actions" affordance is future
+  work.
+- **Memory Audit Trail UI**: the Project Memory page renders the
+  `StoredMemoryReviewAction` log through the pure
+  `buildMemoryAuditTrailViewModel` helper — sorted, date-grouped,
+  action-type filtered. It reads the existing localStorage records
+  only; no new storage backend. The surface never renders the
+  `before` / `after` snapshots, so no raw evidence content leaves
+  storage. Undo / revert, SQLite-backed audit storage, and the
+  `.mori v0` `auditTrail` export remain planned.
 
 No code change in this milestone — the keys, table names, and
 field sets are documented here so the implementation can be done

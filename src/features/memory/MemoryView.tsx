@@ -14,6 +14,7 @@ import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdap
 import { getSessionPersistenceService } from "../../lib/storage/sessionPersistenceService";
 import type {
   StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
   StoredMoriPackageDraft,
   StoredSessionImport,
   StoredSessionSummary,
@@ -34,6 +35,7 @@ import {
 import { buildProjectMemoryConsolidationState } from "../../lib/project-memory/projectMemoryConsolidationState";
 import { ConsolidationPreviewCard } from "./ConsolidationPreviewCard";
 import { AcceptedMemoriesCard } from "./AcceptedMemoriesCard";
+import { MemoryAuditTrailCard } from "./MemoryAuditTrailCard";
 import { deriveSavedReportAvailability } from "../../lib/memory/projectMemoryContext";
 import {
   buildProjectMemoryViewModel,
@@ -109,10 +111,10 @@ export function MemoryView() {
   // surface (the route change re-renders this view).
   const projectId = view.project.id || "default";
   const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
-  const [reviewActionCount, setReviewActionCount] = useState(0);
+  const [reviewActions, setReviewActions] = useState<StoredMemoryReviewAction[]>([]);
   useEffect(() => {
     setAcceptedMemories(repository.listAcceptedProjectMemories(projectId));
-    setReviewActionCount(repository.listMemoryReviewActions(projectId).length);
+    setReviewActions(repository.listMemoryReviewActions(projectId));
   }, [repository, projectId]);
 
   // ─── saved-session body loading ──────────────────────────────────────
@@ -371,8 +373,10 @@ export function MemoryView() {
 
           <AcceptedMemoriesCard
             memories={acceptedMemories}
-            reviewActionCount={reviewActionCount}
+            reviewActionCount={reviewActions.length}
           />
+
+          <MemoryAuditTrailCard actions={reviewActions} />
 
           <RecentSessionsList
             sessions={savedSessions}

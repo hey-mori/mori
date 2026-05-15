@@ -240,6 +240,12 @@ that is called out.
   memories; it round-trips through serialize / deserialize and
   validation. Packages exported before the field existed load it as
   empty (`getPackageConsolidatedMemories`).
+- Memory Audit Trail UI: the Project Memory page renders the
+  append-only `StoredMemoryReviewAction` log via the pure
+  `buildMemoryAuditTrailViewModel` helper and `MemoryAuditTrailCard`
+  — sorted newest-first, grouped by UTC date, filterable by action
+  type. The surface never renders the `before` / `after` snapshots,
+  so no raw evidence content is exposed.
 
 **Storage**
 
@@ -289,15 +295,10 @@ against the repository.
   load / store command surface are designed but not implemented. No
   rows exist in `src-tauri/migrations/` or
   `src-tauri/src/db/` for accepted memory today.
-- **`.mori` Package Accepted Memory Export / Import.** Designed; not
-  implemented.
-- **Memory Audit Trail UI.** Append-only review actions are
-  persisted in localStorage today, but there is no filterable audit
-  log surface. A minimal "Memory로 돌아가기" success banner is the
-  only post-Apply feedback.
-- **Undo / revert from the audit log.** Designed (a new
-  `ReviewAction` row with `actionType: "revert"`) but not
-  implemented.
+- **Undo / revert from the audit log.** The Memory Audit Trail UI
+  surfaces the review-action log, but Undo Apply (a new
+  `ReviewAction` row with `actionType: "revert"`) is designed and
+  not implemented.
 - **Stale Memory Review.** `staleMemory` is reserved on the proposal
   kind union but the Consolidation Proposal Preview helper does not
   emit it yet.

@@ -747,15 +747,28 @@ row. The trail is local-only and shipped as part of `.mori v0`
 export when the package format is extended for the consolidation
 capability.
 
-UI surfacing:
+UI surfacing — landed:
 
-- A "View audit log" link from the Memory page opens a filterable
-  table (action / actor / timestamp / target memory / proposal).
+- The **Memory Audit Trail** card on the Project Memory page renders
+  the log via the pure `buildMemoryAuditTrailViewModel` helper
+  (`src/lib/project-memory/memoryAuditTrail.ts`): actions sorted
+  newest-first, grouped by UTC date, with an action-type filter.
+- Each row shows the action type, time, affected-memory count, and
+  an optional reviewer note. The `before` / `after` snapshots are
+  intentionally **not** rendered, so the audit surface never exposes
+  raw evidence content or local paths.
+- The helper tolerates legacy / missing fields (unknown action type,
+  missing `targetMemoryIds`, unparseable timestamp).
+
+UI surfacing — still planned:
+
 - "Undo apply" creates a new `ReviewAction` with
   `actionType: "revert"`, `reversible: true`, and a `before`/`after`
   pair that captures the reverted state. Undo is itself reversible.
 - Discard rows are kept by default (lightweight payload); the user
   can purge them via Settings → Memory cleanup.
+- SQLite-backed audit storage and the `.mori v0` `auditTrail`
+  export.
 
 ## Resume Prompt and Reports inclusion policy
 

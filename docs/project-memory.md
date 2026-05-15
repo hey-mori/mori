@@ -297,11 +297,40 @@ Capability status:
 | Consolidation Review Surface (full review UI, local-draft) | ✅ landed |
 | Accepted Memory Persistence (browser localStorage) | ✅ landed |
 | Memory Audit Trail (append-only review actions, browser localStorage) | ✅ landed (minimal) |
+| Memory Audit Trail UI (audit log surface on the Memory page) | ✅ landed |
 | SQLite Accepted Memory Storage (desktop) | designed; not implemented |
-| Memory Audit Trail (`ReviewAction` rows + Undo Apply) | designed; not implemented |
+| Memory Audit Trail Undo / revert (`actionType: "revert"` rows) | designed; not implemented |
 | Stale Memory Review + Contradiction Review | designed; not implemented |
 | Resume Prompt inclusion policy hookup | ✅ landed |
 | Reports inclusion policy hookup | ✅ landed |
+
+### Memory Audit Trail UI
+
+Every accept / edit / discard / keep-watching / defer / apply action
+from the Consolidation Review apply pass writes an append-only
+`StoredMemoryReviewAction`. The **Memory Audit Trail** card on the
+Project Memory page makes that log visible:
+
+- `buildMemoryAuditTrailViewModel`
+  (`src/lib/project-memory/memoryAuditTrail.ts`) is a pure helper —
+  it sorts actions newest-first, groups them by UTC date, formats
+  action labels, counts affected memories, and supports an
+  action-type filter.
+- `MemoryAuditTrailCard` renders the grouped log next to the
+  Accepted Project Memories card, with filter chips, a local-only
+  badge, and an empty state.
+- The view-model exposes only the action type, timestamp,
+  affected-memory count, optional reviewer note, and reversible
+  flag. The `before` / `after` snapshots are never rendered, so no
+  raw evidence content or local paths reach the audit surface.
+- Legacy / missing fields are tolerated: an unknown action type
+  keeps a readable label, a missing `targetMemoryIds` counts as
+  zero, and an unparseable timestamp groups under an "unknown date"
+  bucket.
+
+Undo / revert (a new `actionType: "revert"` row), SQLite-backed
+audit storage, and the `.mori v0` `auditTrail` export remain
+separate, still-planned capabilities.
 
 ## Where Project Memory sits in the Mori architecture
 
