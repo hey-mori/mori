@@ -385,7 +385,7 @@ same review pattern.
 | **Consolidation Proposal Preview** | Pure proposal helper (`buildProjectMemoryConsolidationPreview`) + tests. No persistence, no UI. | ✅ |
 | **Consolidation State** | Typed `ProjectMemoryConsolidationState` derived from `ProjectMemoryViewModel`; wired into `MemoryView`; honest preview card. | ✅ |
 | **Consolidation Review Surface** | Full-page surface, grouped proposal cards, evidence inspector, local-draft accept / edit / discard / keep-watching / defer / reset actions. No persistence — accepted memories are draft-scoped. | ✅ |
-| **Accepted Memory Persistence** | `StoredConsolidatedMemory` + repository methods; accepted memories survive reload. | Planned |
+| **Accepted Memory Persistence** | `StoredAcceptedProjectMemory` + `StoredMemoryReviewAction` repository methods; accepted / edited / watching / deferred memories survive reload via browser localStorage. | ✅ landed (browser) |
 | **SQLite Accepted Memory Storage** | `consolidated_memories` table + Rust migration + load/store commands. | Planned |
 | **Resume and Report Memory Integration** | Promoted memories outrank live aggregation rows; `.mori v0` carries the slice. | Planned |
 | **Stale Memory Review** | Detect pruned-source references and conflicting decisions; surface them as `staleMemory` / `contradiction` proposal kinds. | Planned |
@@ -453,14 +453,21 @@ full-page review surface, reachable via the
   transcript text. Deep links into the source detail panel are
   reserved for a future capability and rendered as ids/titles
   today.
-- **Apply boundary**: the footer carries a disabled `Apply accepted
-  memories (N)` button with a banner that reads "Accepted Memory
-  Persistence is not implemented yet. Review actions are local to
-  this draft." Counts per status are displayed alongside.
+- **Apply boundary**: the footer carries an `Apply accepted
+  memories (N)` button that is enabled whenever the draft has at
+  least one `accepted` / `edited` / `watching` / `deferred` entry.
+  On click the surface calls
+  `buildAcceptedMemoriesFromReviewDraft` and writes the result via
+  `BrowserDraftRepository.saveAcceptedProjectMemories` +
+  `appendMemoryReviewAction`. A success banner shows the saved
+  count + audit-log count, with a "Memory로 돌아가기" link. SQLite
+  Accepted Memory Storage and `.mori v0` export are separate
+  capabilities that lay on top of the same shape later.
 - **State scope**: the review draft lives in component state. It
   re-initialises when the underlying proposal set changes (via
-  `proposalSignature`). Nothing is written to localStorage, SQLite,
-  or `.mori v0` packages.
+  `proposalSignature`). The Apply pass is the only path that
+  writes to durable storage; cancelling the navigation discards the
+  draft.
 
 The pure draft state helper exposes:
 

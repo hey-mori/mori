@@ -9,6 +9,8 @@ import type {
   ConnectorEventIdentitySnapshot,
   KeyValueStorage,
   MoriDraftRepository,
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
   StoredMoriPackageDraft,
   StoredSessionAnalysis,
   StoredSessionDraft,
@@ -23,10 +25,14 @@ const PACKAGE_PREFIX = "mori.packageDraft.";
 const IMPORTS_PREFIX = "mori.sessionImports.";
 const ANALYSIS_PREFIX = "mori.sessionAnalysis.";
 const MEMORY_PREFIX = "mori.sessionMemory.";
+const ACCEPTED_MEMORY_PREFIX = "mori.consolidatedMemory.";
+const REVIEW_ACTION_PREFIX = "mori.consolidatedMemoryAudit.";
 const QUICK_PASS_SETTINGS_KEY = "mori.quickPassSettings";
 const REPOSITORY_SETTINGS_KEY = "mori.repositorySettings";
 
 const MEMORY_BODY_SCHEMA_VERSION = 1 as const;
+const ACCEPTED_MEMORY_SCHEMA_VERSION = 1 as const;
+const REVIEW_ACTION_SCHEMA_VERSION = 1 as const;
 
 export class BrowserDraftRepository implements MoriDraftRepository {
   constructor(private readonly storage: KeyValueStorage = window.localStorage) {}
@@ -223,6 +229,80 @@ export class BrowserDraftRepository implements MoriDraftRepository {
 
   clearSessionMemoryBody(sessionId: string): void {
     this.storage.removeItem(`${MEMORY_PREFIX}${sessionId}`);
+  }
+
+  // ─── Accepted Memory Persistence ─────────────────────────────────────
+
+  saveAcceptedProjectMemory(memory: StoredAcceptedProjectMemory): StoredAcceptedProjectMemory {
+    const normalized: StoredAcceptedProjectMemory = {
+      ...memory,
+      schemaVersion: ACCEPTED_MEMORY_SCHEMA_VERSION,
+      adapter: "browser-local-storage",
+    };
+    const key = `${ACCEPTED_MEMORY_PREFIX}${normalized.projectId}.${normalized.id}`;
+    this.write(key, normalized);
+    return normalized;
+  }
+
+  saveAcceptedProjectMemories(memories: StoredAcceptedProjectMemory[]): StoredAcceptedProjectMemory[] {
+    return memories.map((memory) => this.saveAcceptedProjectMemory(memory));
+  }
+
+  listAcceptedProjectMemories(projectId: string): StoredAcceptedProjectMemory[] {
+    const out: StoredAcceptedProjectMemory[] = [];
+    const prefix = `${ACCEPTED_MEMORY_PREFIX}${projectId}.`;
+    for (let index = 0; index < this.storage.length; index += 1) {
+      const key = this.storage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      const record = this.read<StoredAcceptedProjectMemory>(key);
+      if (!record) continue;
+      if (record.schemaVersion !== ACCEPTED_MEMORY_SCHEMA_VERSION) continue;
+      if (record.projectId !== projectId) continue;
+      out.push(record);
+    }
+    return out.sort((a, b) => new Date(b.acceptedAt).getTime() - new Date(a.acceptedAt).getTime());
+  }
+
+  getAcceptedProjectMemory(memoryId: string): StoredAcceptedProjectMemory | null {
+    // Without a projectId we have to scan; accepted memory ids are
+    // intentionally globally unique so this is safe even at scale.
+    for (let index = 0; index < this.storage.length; index += 1) {
+      const key = this.storage.key(index);
+      if (!key?.startsWith(ACCEPTED_MEMORY_PREFIX)) continue;
+      if (!key.endsWith(`.${memoryId}`)) continue;
+      const record = this.read<StoredAcceptedProjectMemory>(key);
+      if (!record) continue;
+      if (record.schemaVersion !== ACCEPTED_MEMORY_SCHEMA_VERSION) continue;
+      if (record.id !== memoryId) continue;
+      return record;
+    }
+    return null;
+  }
+
+  appendMemoryReviewAction(action: StoredMemoryReviewAction): StoredMemoryReviewAction {
+    const normalized: StoredMemoryReviewAction = {
+      ...action,
+      schemaVersion: REVIEW_ACTION_SCHEMA_VERSION,
+      adapter: "browser-local-storage",
+    };
+    const key = `${REVIEW_ACTION_PREFIX}${normalized.projectId}.${normalized.id}`;
+    this.write(key, normalized);
+    return normalized;
+  }
+
+  listMemoryReviewActions(projectId: string): StoredMemoryReviewAction[] {
+    const out: StoredMemoryReviewAction[] = [];
+    const prefix = `${REVIEW_ACTION_PREFIX}${projectId}.`;
+    for (let index = 0; index < this.storage.length; index += 1) {
+      const key = this.storage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      const record = this.read<StoredMemoryReviewAction>(key);
+      if (!record) continue;
+      if (record.schemaVersion !== REVIEW_ACTION_SCHEMA_VERSION) continue;
+      if (record.projectId !== projectId) continue;
+      out.push(record);
+    }
+    return out.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
   saveQuickPassSettings(settings: QuickPassAnalysisSettings): QuickPassAnalysisSettings {

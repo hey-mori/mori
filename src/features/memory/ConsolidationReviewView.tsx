@@ -14,6 +14,7 @@ import { useMoriSqliteStore } from "../../app/sqliteStore";
 import { useMoriAppStore } from "../../app/store";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import type {
+  StoredAcceptedProjectMemory,
   StoredMoriPackageDraft,
   StoredSessionImport,
   StoredSessionSummary,
@@ -24,6 +25,10 @@ import {
   buildProjectMemoryConsolidationState,
   describeProposalKind,
 } from "../../lib/project-memory/projectMemoryConsolidationState";
+import {
+  buildAcceptedMemoriesFromReviewDraft,
+  type AcceptedMemoryApplySummary,
+} from "../../lib/project-memory/acceptedMemoryPersistence";
 import type {
   MemoryProposalKind,
   MemoryProposal,
@@ -132,6 +137,50 @@ export function ConsolidationReviewView() {
   const [selectedId, setSelectedId] = useState<string | null>(() => proposals[0]?.id ?? null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Apply-pass state. Lives entirely in component memory; on success
+  // the surface shows a banner with counts + a link back to Memory.
+  const [applyState, setApplyState] = useState<
+    | { kind: "idle" }
+    | { kind: "saving" }
+    | {
+        kind: "saved";
+        summary: AcceptedMemoryApplySummary;
+        savedMemories: StoredAcceptedProjectMemory[];
+      }
+    | { kind: "error"; message: string }
+  >({ kind: "idle" });
+
+  const projectId = viewModel.projectId || "default";
+  const hasAcceptedOrEdited = useMemo(
+    () => Object.values(reviewState.entries).some((entry) =>
+      entry.status === "accepted" || entry.status === "edited" ||
+      entry.status === "watching" || entry.status === "deferred",
+    ),
+    [reviewState],
+  );
+
+  function handleApply() {
+    if (applyState.kind === "saving") return;
+    setApplyState({ kind: "saving" });
+    try {
+      const result = buildAcceptedMemoriesFromReviewDraft({
+        projectId,
+        reviewState,
+        appliedAt: new Date().toISOString(),
+        existingMemories: repository.listAcceptedProjectMemories(projectId),
+        runId: reviewState.draftId,
+      });
+      const saved = repository.saveAcceptedProjectMemories(result.memoriesToSave);
+      for (const action of result.reviewActionsToAppend) {
+        repository.appendMemoryReviewAction(action);
+      }
+      setApplyState({ kind: "saved", summary: result.summary, savedMemories: saved });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setApplyState({ kind: "error", message });
+    }
+  }
+
   const grouped = useMemo(() => groupByKind(proposals, reviewState), [proposals, reviewState]);
   const counts = useMemo(() => countConsolidationReviewStatuses(reviewState), [reviewState]);
   const selectedEntry: ConsolidationReviewEntry | null =
@@ -155,7 +204,13 @@ export function ConsolidationReviewView() {
         }
       />
 
-      <ApplyBoundaryBanner counts={counts} />
+      <ApplyBoundaryBanner
+        counts={counts}
+        canApply={hasAcceptedOrEdited}
+        applyState={applyState}
+        onApply={handleApply}
+        onBackToMemory={() => setCurrentView("memory")}
+      />
 
       <div className="consolidation-review-layout">
         <section className="consolidation-review-list" aria-label="Proposal groups">
@@ -227,24 +282,32 @@ export function ConsolidationReviewView() {
 
 function ApplyBoundaryBanner({
   counts,
+  canApply,
+  applyState,
+  onApply,
+  onBackToMemory,
 }: {
   counts: ReturnType<typeof countConsolidationReviewStatuses>;
+  canApply: boolean;
+  applyState:
+    | { kind: "idle" }
+    | { kind: "saving" }
+    | { kind: "saved"; summary: AcceptedMemoryApplySummary; savedMemories: StoredAcceptedProjectMemory[] }
+    | { kind: "error"; message: string };
+  onApply: () => void;
+  onBackToMemory: () => void;
 }) {
+  const applyCount = counts.accepted + counts.edited + counts.watching + counts.deferred;
   return (
-    <div className="consolidation-review-apply" role="status">
+    <div className="consolidation-review-apply" role="status" aria-live="polite">
       <header>
         <strong>Apply accepted memories</strong>
-        <Badge tone="gray">아직 영구 저장 미구현</Badge>
+        <Badge tone="purple">Browser localStorage</Badge>
       </header>
       <p>
-        Accepted Memory Persistence가 아직 구현되지 않아 모든 검토 액션은 이 화면 안에서만 유지됩니다.
-        영구 저장(브라우저 localStorage / desktop SQLite / .mori v0 export)은 별도 capability로
-        예정되어 있습니다. 자세한 설계는
-        {" "}
-        <a href="../../docs/project-memory-consolidation.md" rel="noreferrer">
-          project-memory-consolidation.md
-        </a>
-        의 Accepted Memory Persistence 절을 참고하세요.
+        수락 / 편집 / 관찰 / 연기 상태의 제안이 브라우저 localStorage에 영구 저장됩니다. 데스크톱
+        SQLite Accepted Memory Storage와 <code>.mori v0</code> export, Resume / Reports 통합은 별도
+        capability로 예정되어 있습니다. 폐기한 제안은 감사 로그에만 기록됩니다.
       </p>
       <dl className="consolidation-review-counts">
         <CountTile label="제안" value={counts.proposed} />
@@ -255,11 +318,40 @@ function ApplyBoundaryBanner({
         <CountTile label="폐기" value={counts.discarded} tone="red" />
       </dl>
       <footer>
-        <Button disabled title="Accepted Memory Persistence가 구현되면 활성화됩니다.">
-          Apply accepted memories ({counts.accepted})
+        <Button
+          variant="primary"
+          disabled={!canApply || applyState.kind === "saving"}
+          onClick={onApply}
+        >
+          {applyState.kind === "saving"
+            ? "저장 중…"
+            : `Apply accepted memories (${applyCount})`}
         </Button>
-        <small>버튼은 의도적으로 비활성화되어 있습니다 — 영구 저장이 도착하면 활성화됩니다.</small>
+        <small>
+          {canApply
+            ? "모든 검토 액션은 로컬에서만 저장됩니다. 클라우드 동기화 / 외부 계정 접근 없음."
+            : "수락 / 편집 / 관찰 / 연기한 제안이 하나도 없으면 비활성화됩니다."}
+        </small>
       </footer>
+      {applyState.kind === "saved" ? (
+        <div className="consolidation-review-apply-result tone-ok">
+          <strong>{applyState.summary.savedMemoryCount}건의 메모리를 저장했습니다.</strong>
+          <span>
+            감사 로그 {applyState.summary.reviewActionCount}건 기록됨. Project Memory의 Accepted Project
+            Memories 카드에서 확인할 수 있습니다. Resume Prompt / Reports 연동은 다음 capability에서
+            구현됩니다.
+          </span>
+          <div className="consolidation-review-apply-actions">
+            <Button onClick={onBackToMemory}>Memory로 돌아가기</Button>
+          </div>
+        </div>
+      ) : null}
+      {applyState.kind === "error" ? (
+        <div className="consolidation-review-apply-result tone-error">
+          <strong>저장에 실패했습니다.</strong>
+          <span>{applyState.message}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

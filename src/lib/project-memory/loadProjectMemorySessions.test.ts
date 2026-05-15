@@ -37,6 +37,12 @@ function stubRepository(overrides: Partial<MoriDraftRepository> = {}): MoriDraft
     saveRepositorySettings: vi.fn() as unknown as MoriDraftRepository["saveRepositorySettings"],
     loadRepositorySettings: () => ({} as any),
     listConnectorEventIdentitySnapshots: () => [],
+    saveAcceptedProjectMemory: vi.fn() as unknown as MoriDraftRepository["saveAcceptedProjectMemory"],
+    saveAcceptedProjectMemories: vi.fn() as unknown as MoriDraftRepository["saveAcceptedProjectMemories"],
+    listAcceptedProjectMemories: () => [],
+    getAcceptedProjectMemory: () => null,
+    appendMemoryReviewAction: vi.fn() as unknown as MoriDraftRepository["appendMemoryReviewAction"],
+    listMemoryReviewActions: () => [],
     ...overrides,
   };
   return base;

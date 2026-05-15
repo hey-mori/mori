@@ -13,6 +13,7 @@ import { useMoriAppStore } from "../../app/store";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { getSessionPersistenceService } from "../../lib/storage/sessionPersistenceService";
 import type {
+  StoredAcceptedProjectMemory,
   StoredMoriPackageDraft,
   StoredSessionImport,
   StoredSessionSummary,
@@ -32,6 +33,7 @@ import {
 } from "../../lib/project-memory/projectMemoryResumePrompt";
 import { buildProjectMemoryConsolidationState } from "../../lib/project-memory/projectMemoryConsolidationState";
 import { ConsolidationPreviewCard } from "./ConsolidationPreviewCard";
+import { AcceptedMemoriesCard } from "./AcceptedMemoriesCard";
 import { deriveSavedReportAvailability } from "../../lib/memory/projectMemoryContext";
 import {
   buildProjectMemoryViewModel,
@@ -100,6 +102,18 @@ export function MemoryView() {
   useEffect(() => {
     setPackageDrafts(repository.listMoriPackageDrafts());
   }, [repository, view.session.id]);
+
+  // Accepted Project Memory records — written by the Consolidation
+  // Review Surface when the user clicks Apply. Re-read on view
+  // mount and whenever the user navigates back from the review
+  // surface (the route change re-renders this view).
+  const projectId = view.project.id || "default";
+  const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
+  const [reviewActionCount, setReviewActionCount] = useState(0);
+  useEffect(() => {
+    setAcceptedMemories(repository.listAcceptedProjectMemories(projectId));
+    setReviewActionCount(repository.listMemoryReviewActions(projectId).length);
+  }, [repository, projectId]);
 
   // ─── saved-session body loading ──────────────────────────────────────
   const [loadedSessions, setLoadedSessions] = useState<ProjectMemoryLoadedSession[]>([]);
@@ -352,6 +366,11 @@ export function MemoryView() {
           <ConsolidationPreviewCard
             state={consolidationState}
             onOpenReview={() => setCurrentView("consolidation")}
+          />
+
+          <AcceptedMemoriesCard
+            memories={acceptedMemories}
+            reviewActionCount={reviewActionCount}
           />
 
           <RecentSessionsList

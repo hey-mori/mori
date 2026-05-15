@@ -170,6 +170,180 @@ export type MoriDraftRepository = {
   listConnectorEventIdentitySnapshots: (options?: {
     excludeSessionId?: string | null;
   }) => ConnectorEventIdentitySnapshot[];
+
+  // ─── Accepted Memory Persistence ──────────────────────────────────
+  /**
+   * Persist a single accepted Project Memory record. Returns the
+   * stored shape (with timestamps the adapter assigned). Replaces an
+   * existing record with the same id.
+   */
+  saveAcceptedProjectMemory: (memory: StoredAcceptedProjectMemory) => StoredAcceptedProjectMemory;
+  /**
+   * Bulk-save during an apply pass. Returns the stored records in
+   * input order. Caller decides id generation; the adapter does not
+   * dedupe across calls.
+   */
+  saveAcceptedProjectMemories: (memories: StoredAcceptedProjectMemory[]) => StoredAcceptedProjectMemory[];
+  /** Read every accepted memory for a project, most-recent first. */
+  listAcceptedProjectMemories: (projectId: string) => StoredAcceptedProjectMemory[];
+  /** Lookup by id; returns `null` when missing or schema-mismatched. */
+  getAcceptedProjectMemory: (memoryId: string) => StoredAcceptedProjectMemory | null;
+  /**
+   * Append a review action to the project-scoped audit log. The log
+   * is append-only — there is no delete. Callers may record a
+   * `retire` action instead of physically removing rows.
+   */
+  appendMemoryReviewAction: (action: StoredMemoryReviewAction) => StoredMemoryReviewAction;
+  /** Read every review action for a project, most-recent first. */
+  listMemoryReviewActions: (projectId: string) => StoredMemoryReviewAction[];
+};
+
+/**
+ * Durable status of an accepted Project Memory record. `superseded`
+ * and `retired` are reserved on the union — they appear when a
+ * future review action transitions a record without deleting it.
+ *
+ * `accepted` and `edited` carry guidance weight; `watching` and
+ * `deferred` are durable but advisory (Resume Prompt and Reports
+ * filter them out unless the user opts in).
+ */
+export type StoredAcceptedProjectMemoryStatus =
+  | "accepted"
+  | "edited"
+  | "watching"
+  | "deferred"
+  | "superseded"
+  | "retired";
+
+export type StoredAcceptedProjectMemorySensitivity =
+  | "normal"
+  | "sensitive"
+  | "clientSafeExcluded";
+
+export type StoredAcceptedProjectMemoryReportEligibility =
+  | "personal"
+  | "team"
+  | "clientSafe"
+  | "excluded";
+
+/**
+ * Mirror of `MemoryEvidenceRef` from
+ * `src/lib/project-memory/consolidationProposals.ts`. Inlined here
+ * so this type module has no upward dependency on the project-memory
+ * module — the storage layer must stay stable across refactors.
+ */
+export type StoredMemoryEvidenceRef =
+  | { kind: "session"; sessionId: string; sessionTitle?: string }
+  | { kind: "event"; sessionId: string; eventId: string }
+  | { kind: "source"; sessionId: string; sourceId: string };
+
+/**
+ * Confidence label carried on every accepted record. We persist the
+ * qualitative label plus the numeric score the helper produced; the
+ * rationale string is optional today (Resume Prompt's qualitative
+ * labels arrive later).
+ */
+export type StoredAcceptedProjectMemoryConfidence = {
+  label: "high" | "medium" | "low";
+  score?: number;
+  rationale?: string;
+};
+
+/**
+ * Durable accepted Project Memory record. Designed for browser
+ * localStorage today (keyed at
+ * `mori.consolidatedMemory.<projectId>.<memoryId>`); the same shape
+ * will land in desktop SQLite when the SQLite Accepted Memory
+ * Storage capability ships.
+ *
+ * What this record never carries: raw connector JSONL, full
+ * transcript text, file paths beyond what the underlying `SourceRef`
+ * already retained, secret-shaped strings.
+ */
+export type StoredAcceptedProjectMemory = {
+  id: string;
+  projectId: string;
+  kind:
+    | "promotedDecision"
+    | "recurringIssue"
+    | "keyEvidence"
+    | "unresolvedRisk"
+    | "contradiction"
+    | "staleMemory"
+    | "nextSessionRecommendation";
+  title: string;
+  summary: string;
+  status: StoredAcceptedProjectMemoryStatus;
+  importance: "high" | "medium" | "low";
+  confidence: StoredAcceptedProjectMemoryConfidence;
+  evidenceRefs: StoredMemoryEvidenceRef[];
+  sourceSessionIds: string[];
+  /** Proposal id(s) that produced this record. */
+  originProposalIds: string[];
+  relatedIssueIds: string[];
+  relatedDecisionIds: string[];
+  /** Action the user accepted (`promote`, `keepWatching`, etc.). */
+  proposedAction:
+    | "promote"
+    | "merge"
+    | "markStale"
+    | "keepWatching"
+    | "resolve"
+    | "scheduleNextSession";
+  /** Free-text reviewer note from the review surface. */
+  reviewNote?: string;
+  sensitivity: StoredAcceptedProjectMemorySensitivity;
+  /** Whether Resume Prompt may include this record as guidance. */
+  resumeEligible: boolean;
+  reportEligibility: StoredAcceptedProjectMemoryReportEligibility;
+  createdAt: string;
+  updatedAt: string;
+  /** When the user clicked Apply. */
+  acceptedAt: string;
+  /** Single-user product today. Reserved for future actor handling. */
+  acceptedBy: "local-user";
+  /** Pointer to a newer record when this one was superseded. */
+  supersededBy?: string;
+  /** Audit log ids that touched this memory (apply / edit / retire / …). */
+  reviewActionIds: string[];
+  schemaVersion: 1;
+  /** Discriminates the localStorage adapter. */
+  adapter: "browser-local-storage";
+};
+
+/**
+ * Append-only audit row recorded against the Consolidation Review
+ * Surface and any later edit action. The current milestone writes
+ * one row per accept / edit / discard / watch / defer / apply
+ * during a single Apply pass; future capabilities (Memory Audit
+ * Trail UI, supersession, retirement) extend the same shape.
+ */
+export type StoredMemoryReviewAction = {
+  id: string;
+  projectId: string;
+  actionType:
+    | "accept"
+    | "edit"
+    | "discard"
+    | "watch"
+    | "defer"
+    | "apply"
+    | "reset";
+  /** Single-user product today. */
+  actor: "local-user";
+  timestamp: string;
+  /** Proposal that produced the action, when applicable. */
+  sourceProposalId?: string;
+  /** Accepted-memory ids affected by the action. */
+  targetMemoryIds: string[];
+  /** Compact before/after snapshot. Free-form structure today. */
+  before?: unknown;
+  after?: unknown;
+  note?: string;
+  /** Does this action support one-click undo (reserved for future). */
+  reversible: boolean;
+  schemaVersion: 1;
+  adapter: "browser-local-storage";
 };
 
 export type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key"> & {

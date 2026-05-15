@@ -123,35 +123,47 @@ Project Memory scope (read-only, single-session aggregation):
   `clearCurrentSessionDraft` runs. Records with an unknown schema
   version load as `null` rather than corrupting the aggregator.
 
-### Accepted Memory Persistence (designed; not implemented)
+### Accepted Memory Persistence — Browser (landed)
 
-When the Consolidation Review Surface lands, accepted proposals
-become durable `AcceptedProjectMemory` rows that survive session
-pruning. The design is fixed in
+Accepted Project Memory consolidation proposals land in browser
+localStorage when the user clicks Apply on the Consolidation
+Review Surface. The data model is fixed in
 [`project-memory-consolidation.md`](project-memory-consolidation.md);
-the storage plan below is what the implementation will satisfy.
+the storage plan below is what the current adapter implements.
 
-- **Browser localStorage key**:
+- **Browser localStorage keys**:
   `mori.consolidatedMemory.<projectId>.<memoryId>` for
-  `AcceptedProjectMemory` rows and
-  `mori.consolidatedMemoryAudit.<projectId>` for the
-  `ReviewAction[]` audit trail. Both records carry
-  `schemaVersion: 1`; unknown schema versions load as `null` to
-  protect callers.
-- **Desktop SQLite**: a `consolidated_memories` table plus a
-  `consolidated_memory_audit` table, written via a Rust migration.
-  Loader pattern mirrors the existing session loader (read from
-  SQLite when available, fall back to localStorage).
-- **`.mori v0` export** will gain a `consolidatedMemories[]` slice
-  + `auditTrail[]` slice with a schema bump. Imported packages
-  re-enter the project as `proposed` (re-reviewed before they
-  merge with the importing user's accepted memory).
-- **What never lands in `AcceptedProjectMemory`**: raw connector
-  JSONL, full transcripts beyond what the `SourceRef` already
-  retains, raw secret-shaped strings (screened twice — once at
-  proposal generation, once at apply), file paths beyond what's
-  already on the underlying `SourceRef`, AI claims without a
-  matching `evidenceRefs` entry.
+  `StoredAcceptedProjectMemory` rows and
+  `mori.consolidatedMemoryAudit.<projectId>.<actionId>` for the
+  append-only `StoredMemoryReviewAction` audit trail. Both records
+  carry `schemaVersion: 1`; unknown schema versions load as `null`
+  / are filtered out of list responses to protect callers.
+- **Repository surface**: `MoriDraftRepository` gains
+  `saveAcceptedProjectMemory` / `saveAcceptedProjectMemories` /
+  `listAcceptedProjectMemories(projectId)` /
+  `getAcceptedProjectMemory(memoryId)` /
+  `appendMemoryReviewAction` / `listMemoryReviewActions(projectId)`.
+  `BrowserDraftRepository` implements all six against the existing
+  `KeyValueStorage` abstraction so test repositories can use
+  `MemoryKeyValueStorage` directly.
+- **Desktop SQLite** (still planned): a `consolidated_memories`
+  table plus a `consolidated_memory_audit` table, written via a
+  Rust migration. Loader pattern will mirror the existing session
+  loader (read from SQLite when available, fall back to
+  localStorage).
+- **`.mori v0` export** (still planned): a `consolidatedMemories[]`
+  slice + `auditTrail[]` slice with a schema bump. Imported
+  packages re-enter the project as `proposed` (re-reviewed before
+  they merge with the importing user's accepted memory).
+- **What never lands in `StoredAcceptedProjectMemory`**: raw
+  connector JSONL, full transcripts beyond what the underlying
+  `SourceRef` already retains, raw secret-shaped strings (screened
+  at the proposal helper, screened again at apply), file paths
+  beyond what's already on the underlying `SourceRef`, AI claims
+  with no `evidenceRefs` entry.
+- **Audit log retention**: append-only. The current milestone keeps
+  every action row (small payload); a future Memory Audit Trail UI
+  may add a "Purge discarded actions" affordance.
 
 No code change in this milestone — the keys, table names, and
 field sets are documented here so the implementation can be done
