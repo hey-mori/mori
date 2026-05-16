@@ -51,12 +51,14 @@ App startup
 src-tauri/migrations/V001__initial_schema.sql
 src-tauri/migrations/V002__events_connector_identity.sql
 src-tauri/migrations/V003__consolidated_memories.sql
+src-tauri/migrations/V004__session_imports.sql
 src-tauri/src/db/migrations.rs
 src-tauri/src/db/accepted_memory.rs
 src-tauri/src/sqlite.rs
 src/lib/sqlite/schema.ts
 src/lib/sqlite/records.ts
 src/lib/sqlite/acceptedMemoryRows.ts
+src/lib/sqlite/sessionImportRows.ts
 src/lib/sqlite/repositoryContracts.ts
 src/lib/sqlite/snapshotValidation.ts
 src/lib/sqlite/desktopSqliteRepository.ts
@@ -69,10 +71,11 @@ src/lib/sqlite/desktopSqliteRepository.ts
 | `001` | `initial_schema` | Full normalized session schema + FTS5 virtual tables. |
 | `002` | `events_connector_identity` | Add `events.connector_event_id` (TEXT, nullable) + index. Persists connector duplicate-detection identities across save/load so cross-session detection survives SQLite round-trips. |
 | `003` | `consolidated_memories` | Add `consolidated_memories` and `consolidated_memory_audit` tables for SQLite Accepted Memory Storage. Object / array fields flattened to JSON `*_json` columns; no foreign key so consolidated memory survives session pruning. |
+| `004` | `session_imports` | Add the `session_imports` table mirroring the browser `StoredSessionImport` record — one row per applied import with `source_json`, `events_json`, `saved_at`, and a nullable `import_summary_json`. Lets desktop SQLite-saved sessions carry their connector re-import summary. Row converters live in `src/lib/sqlite/sessionImportRows.ts`. |
 
 The TypeScript catalog mirrors the migration metadata so frontend/backend contracts and tests can validate ordering, file naming, and checksums before Rust SQLite is wired.
 
-`requiredSqliteTables` enumerates every table a fully migrated database must contain, and `migrationMentionsRequiredTables` asserts the schema catalog covers them all. The list includes the V003 accepted-memory tables (`consolidated_memories` / `consolidated_memory_audit`) — durable storage the Memory Audit Trail, the reviewed revert flow, and the `.mori v0` `auditTrail` slice depend on — so a catalog missing them fails the completeness check.
+`requiredSqliteTables` enumerates every table a fully migrated database must contain, and `migrationMentionsRequiredTables` asserts the schema catalog covers them all. The list includes the V003 accepted-memory tables (`consolidated_memories` / `consolidated_memory_audit`) — durable storage the Memory Audit Trail, the reviewed revert flow, and the `.mori v0` `auditTrail` slice depend on — and the V004 `session_imports` table, so a catalog missing any of them fails the completeness check.
 
 ## Current Command Boundary
 

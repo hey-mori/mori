@@ -20,7 +20,7 @@ describe("SQLite persistence foundation", () => {
   it("defines an initial migration covering all normalized Mori tables", () => {
     const sql = getSqliteSchemaSql();
 
-    expect(sqliteMigrations).toHaveLength(3);
+    expect(sqliteMigrations).toHaveLength(4);
     expect(validateMigrationCatalog()).toEqual([]);
     expect(migrationMentionsRequiredTables(sql)).toBe(true);
     expect(sql).toContain(`CREATE TABLE IF NOT EXISTS ${migrationTableName}`);
@@ -42,17 +42,29 @@ describe("SQLite persistence foundation", () => {
     expect(migrationMentionsRequiredTables(sqlMissingAudit)).toBe(false);
   });
 
+  it("requires the V004 session_imports table in the schema catalog", () => {
+    expect(requiredSqliteTables).toContain("session_imports");
+    expect(getSqliteSchemaSql()).toContain("CREATE TABLE IF NOT EXISTS session_imports");
+    const sqlMissingImports = getSqliteSchemaSql().replace(
+      /session_imports/g,
+      "renamed_imports",
+    );
+    expect(migrationMentionsRequiredTables(sqlMissingImports)).toBe(false);
+  });
+
   it("uses Flyway-style filenames without depending on Flyway", () => {
     expect(sqliteMigrations[0]?.filename).toBe("V001__initial_schema.sql");
     expect(sqliteMigrations[1]?.filename).toBe("V002__events_connector_identity.sql");
     expect(sqliteMigrations[2]?.filename).toBe("V003__consolidated_memories.sql");
-    expect(isValidMigrationFilename(sqliteMigrations[0]?.filename ?? "")).toBe(true);
-    expect(isValidMigrationFilename(sqliteMigrations[1]?.filename ?? "")).toBe(true);
-    expect(isValidMigrationFilename(sqliteMigrations[2]?.filename ?? "")).toBe(true);
+    expect(sqliteMigrations[3]?.filename).toBe("V004__session_imports.sql");
+    for (const migration of sqliteMigrations) {
+      expect(isValidMigrationFilename(migration.filename)).toBe(true);
+    }
     expect(sortMigrations([...sqliteMigrations].reverse()).map((migration) => migration.version)).toEqual([
       "001",
       "002",
       "003",
+      "004",
     ]);
   });
 

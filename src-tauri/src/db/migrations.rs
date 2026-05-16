@@ -37,6 +37,12 @@ pub const MIGRATIONS: &[MigrationManifestEntry] = &[
         name: "consolidated_memories",
         sql: include_str!("../../migrations/V003__consolidated_memories.sql"),
     },
+    MigrationManifestEntry {
+        version: "004",
+        filename: "V004__session_imports.sql",
+        name: "session_imports",
+        sql: include_str!("../../migrations/V004__session_imports.sql"),
+    },
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -205,18 +211,24 @@ mod tests {
         let outcome = apply_migrations(&mut conn).expect("apply migrations");
         assert_eq!(
             outcome.applied,
-            vec!["001".to_string(), "002".to_string(), "003".to_string()]
+            vec![
+                "001".to_string(),
+                "002".to_string(),
+                "003".to_string(),
+                "004".to_string()
+            ]
         );
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 3);
+        assert_eq!(applied.len(), 4);
         assert_eq!(applied[0].version, "001");
         assert_eq!(applied[1].version, "002");
         assert_eq!(applied[2].version, "003");
-        assert!(!applied[0].checksum.is_empty());
-        assert!(!applied[1].checksum.is_empty());
-        assert!(!applied[2].checksum.is_empty());
+        assert_eq!(applied[3].version, "004");
+        for record in &applied {
+            assert!(!record.checksum.is_empty());
+        }
     }
 
     #[test]
@@ -227,7 +239,12 @@ mod tests {
         assert!(outcome.applied.is_empty());
         assert_eq!(
             outcome.already_applied,
-            vec!["001".to_string(), "002".to_string(), "003".to_string()]
+            vec![
+                "001".to_string(),
+                "002".to_string(),
+                "003".to_string(),
+                "004".to_string()
+            ]
         );
     }
 

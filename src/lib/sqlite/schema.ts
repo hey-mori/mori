@@ -52,6 +52,11 @@ CREATE INDEX IF NOT EXISTS idx_consolidated_memory_audit_project_id ON consolida
 CREATE INDEX IF NOT EXISTS idx_consolidated_memory_audit_timestamp ON consolidated_memory_audit(timestamp);
 `;
 
+const sessionImportsSql = String.raw`
+CREATE TABLE IF NOT EXISTS session_imports (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, source_json TEXT NOT NULL, events_json TEXT NOT NULL, saved_at TEXT NOT NULL, import_summary_json TEXT);
+CREATE INDEX IF NOT EXISTS idx_session_imports_session_id ON session_imports(session_id);
+`;
+
 export const sqliteMigrations: SqliteMigration[] = [
   {
     version: "001",
@@ -74,6 +79,13 @@ export const sqliteMigrations: SqliteMigration[] = [
     sql: consolidatedMemoriesSql,
     checksum: checksumMigrationSql(consolidatedMemoriesSql),
   },
+  {
+    version: "004",
+    filename: "V004__session_imports.sql",
+    name: "session_imports",
+    sql: sessionImportsSql,
+    checksum: checksumMigrationSql(sessionImportsSql),
+  },
 ];
 
 /**
@@ -82,8 +94,9 @@ export const sqliteMigrations: SqliteMigration[] = [
  * complete. Includes the V003 accepted-memory tables
  * (`consolidated_memories` / `consolidated_memory_audit`) — durable
  * storage the Memory Audit Trail, the revert flow, and the `.mori v0`
- * `auditTrail` slice all depend on, so a DB missing them is not
- * actually complete.
+ * `auditTrail` slice all depend on — and the V004 `session_imports`
+ * table that lets desktop sessions carry their connector re-import
+ * summary.
  */
 export const requiredSqliteTables = [
   "projects",
@@ -100,6 +113,7 @@ export const requiredSqliteTables = [
   "sources_fts",
   "consolidated_memories",
   "consolidated_memory_audit",
+  "session_imports",
 ] as const;
 
 export const migrationTableName = "_mori_migrations";
