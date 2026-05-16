@@ -139,6 +139,10 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
     setFrameWidth((current) => (current === width ? current : width));
   }, []);
 
+  // Hooks must run unconditionally — keep this above the empty-variant
+  // early return so the hook order never changes between renders.
+  const { signals: companionSignals } = useCompanionSignals();
+
   if (model.emptyVariant) {
     return (
       <>
@@ -162,7 +166,6 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   // Narrow widths swap the horizontally-scrolling swimlane canvas for a flat
   // vertical chronological list — readable without a wide frame.
   const useChronoList = inspectorNarrow && mode === "timeline";
-  const { signals: companionSignals } = useCompanionSignals();
 
   return (
     <>
