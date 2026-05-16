@@ -23,7 +23,10 @@ import type {
 import { formatTime, formatTimeRange } from "../../lib/formatting/time";
 import { describeTrustLevel } from "../../lib/relationships/relationshipDisplay";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
-import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
+import {
+  getTimelineInspectorReviewLinks,
+  type ReviewSelection,
+} from "../../lib/review-workspace/reviewWorkspace";
 import {
   buildInspectorViewModel,
   type TimelineRenderModel,
@@ -217,6 +220,9 @@ function SourcesList({ sources }: { sources: SourceRef[] }) {
   );
 }
 
+/** How many linked items to list per group before collapsing to "+N개 더". */
+const LINKED_ITEMS_VISIBLE = 4;
+
 function LinkedRows({
   issues,
   decisions,
@@ -230,71 +236,46 @@ function LinkedRows({
   nextActions: NextAction[];
   onOpenReviewItem?: (selection: ReviewSelection) => void;
 }) {
-  const rows: Array<{
-    label: string;
-    tone: string;
-    titles: string[];
-    focus: ReviewSelection | null;
-  }> = [
-    {
-      label: "이슈",
-      tone: "red",
-      titles: issues.map((issue) => issue.title),
-      focus: issues[0] ? { kind: "issue", issueId: issues[0].id } : null,
-    },
-    {
-      label: "결정",
-      tone: "green",
-      titles: decisions.map((decision) => decision.title),
-      focus: decisions[0] ? { kind: "decision", decisionId: decisions[0].id } : null,
-    },
-    {
-      label: "파일",
-      tone: "blue",
-      titles: artifacts.map((artifact) => artifact.title),
-      focus: null,
-    },
-    {
-      label: "다음 액션",
-      tone: "purple",
-      titles: nextActions.map((action) => action.title),
-      focus: nextActions[0]
-        ? { kind: "nextAction", nextActionId: nextActions[0].id }
-        : null,
-    },
-  ];
+  // Each linked record carries its own Review target — a click deep-links to
+  // that exact issue / decision / next action, not just the first of a group.
+  // Artifacts have no Review home, so they render as plain context.
+  const groups = getTimelineInspectorReviewLinks({ issues, decisions, nextActions, artifacts });
   return (
     <ul className="inspector-linked-rows">
-      {rows.map((row) => {
-        const body = (
-          <>
-            <Badge tone={row.tone}>{row.label}</Badge>
-            <span className="inspector-linked-count">{row.titles.length}</span>
-            {row.titles.length > 0 ? (
-              <span className="inspector-linked-first" title={row.titles.join(" · ")}>
-                {row.titles[0]}
-                {row.titles.length > 1 ? ` · +${row.titles.length - 1}` : ""}
-              </span>
-            ) : (
-              <span className="inspector-linked-empty">없음</span>
-            )}
-          </>
-        );
-        const linkable =
-          row.focus !== null && row.titles.length > 0 && Boolean(onOpenReviewItem);
+      {groups.map((group) => {
+        const visible = group.items.slice(0, LINKED_ITEMS_VISIBLE);
+        const overflow = group.items.length - visible.length;
         return (
-          <li key={row.label}>
-            {linkable ? (
-              <button
-                type="button"
-                className="inspector-linked-row is-linkable"
-                onClick={() => onOpenReviewItem?.(row.focus as ReviewSelection)}
-                title="Review에서 이 항목 열기"
-              >
-                {body}
-              </button>
+          <li key={group.kind} className="inspector-linked-group">
+            <div className="inspector-linked-group-head">
+              <Badge tone={group.tone}>{group.label}</Badge>
+              <span className="inspector-linked-count">{group.items.length}</span>
+            </div>
+            {group.items.length === 0 ? (
+              <span className="inspector-linked-empty">없음</span>
             ) : (
-              <div className="inspector-linked-row">{body}</div>
+              <div className="inspector-linked-items">
+                {visible.map((item) =>
+                  item.selection && onOpenReviewItem ? (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="inspector-linked-item is-linkable"
+                      onClick={() => onOpenReviewItem(item.selection as ReviewSelection)}
+                      title="Review에서 이 항목 열기"
+                    >
+                      {item.title}
+                    </button>
+                  ) : (
+                    <span key={item.id} className="inspector-linked-item" title={item.title}>
+                      {item.title}
+                    </span>
+                  ),
+                )}
+                {overflow > 0 ? (
+                  <span className="inspector-linked-more">+{overflow}개 더</span>
+                ) : null}
+              </div>
             )}
           </li>
         );

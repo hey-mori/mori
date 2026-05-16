@@ -239,6 +239,79 @@ export function reviewSelectionTab(selection: ReviewSelection): ReviewSelectionT
   return "issues";
 }
 
+/** A single linked record in the Timeline inspector, with its Review home. */
+export type InspectorReviewLink = {
+  id: string;
+  title: string;
+  /** The Review selection that opens this record, or null when it has none. */
+  selection: ReviewSelection | null;
+};
+
+/** One linked-item group in the Timeline inspector ("이슈", "결정", …). */
+export type InspectorReviewLinkGroup = {
+  kind: "issue" | "decision" | "nextAction" | "artifact";
+  label: string;
+  tone: string;
+  items: InspectorReviewLink[];
+};
+
+/**
+ * Build the Timeline event inspector's "linked items" groups with a
+ * per-item Review target. Issues / decisions / next actions each resolve to
+ * a specific `ReviewSelection`, so a click can deep-link to that exact
+ * record. Artifacts have no Review home, so their `selection` is null — the
+ * inspector shows them as context, never as a fake link.
+ */
+export function getTimelineInspectorReviewLinks(args: {
+  issues: ReadonlyArray<{ id: string; title: string }>;
+  decisions: ReadonlyArray<{ id: string; title: string }>;
+  nextActions: ReadonlyArray<{ id: string; title: string }>;
+  artifacts: ReadonlyArray<{ id: string; title: string }>;
+}): InspectorReviewLinkGroup[] {
+  return [
+    {
+      kind: "issue",
+      label: "이슈",
+      tone: "red",
+      items: args.issues.map((issue) => ({
+        id: issue.id,
+        title: issue.title,
+        selection: { kind: "issue", issueId: issue.id },
+      })),
+    },
+    {
+      kind: "decision",
+      label: "결정",
+      tone: "green",
+      items: args.decisions.map((decision) => ({
+        id: decision.id,
+        title: decision.title,
+        selection: { kind: "decision", decisionId: decision.id },
+      })),
+    },
+    {
+      kind: "nextAction",
+      label: "다음 액션",
+      tone: "purple",
+      items: args.nextActions.map((action) => ({
+        id: action.id,
+        title: action.title,
+        selection: { kind: "nextAction", nextActionId: action.id },
+      })),
+    },
+    {
+      kind: "artifact",
+      label: "파일",
+      tone: "blue",
+      items: args.artifacts.map((artifact) => ({
+        id: artifact.id,
+        title: artifact.title,
+        selection: null,
+      })),
+    },
+  ];
+}
+
 /**
  * Choose a default selection so the right-side detail panel is never empty
  * when content exists. Priority order matches user expectation:

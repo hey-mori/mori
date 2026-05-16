@@ -12,6 +12,7 @@ import {
   countIssueStatuses,
   findEvents,
   getReviewSummary,
+  getTimelineInspectorReviewLinks,
   getUnresolvedItems,
   groupIssuesByStatus,
   ISSUE_STATUS_ORDER,
@@ -298,3 +299,43 @@ const _typecheck: Priority = "high" as Priority;
 const _trustCheck: TrustLevel = "verified" as TrustLevel;
 void _typecheck;
 void _trustCheck;
+
+describe("getTimelineInspectorReviewLinks", () => {
+  const links = getTimelineInspectorReviewLinks({
+    issues: [{ id: "i1", title: "이슈 하나" }, { id: "i2", title: "이슈 둘" }],
+    decisions: [{ id: "d1", title: "결정 하나" }],
+    nextActions: [{ id: "n1", title: "액션 하나" }],
+    artifacts: [{ id: "a1", title: "파일 하나" }],
+  });
+
+  it("returns one group per linked-item kind in inspector order", () => {
+    expect(links.map((group) => group.kind)).toEqual([
+      "issue",
+      "decision",
+      "nextAction",
+      "artifact",
+    ]);
+  });
+
+  it("gives each issue / decision / next action a per-item Review selection", () => {
+    const issueGroup = links.find((group) => group.kind === "issue")!;
+    expect(issueGroup.items.map((item) => item.selection)).toEqual([
+      { kind: "issue", issueId: "i1" },
+      { kind: "issue", issueId: "i2" },
+    ]);
+    expect(links.find((g) => g.kind === "decision")!.items[0].selection).toEqual({
+      kind: "decision",
+      decisionId: "d1",
+    });
+    expect(links.find((g) => g.kind === "nextAction")!.items[0].selection).toEqual({
+      kind: "nextAction",
+      nextActionId: "n1",
+    });
+  });
+
+  it("leaves artifacts without a Review selection — they have no Review home", () => {
+    const artifactGroup = links.find((group) => group.kind === "artifact")!;
+    expect(artifactGroup.items[0].selection).toBeNull();
+    expect(artifactGroup.items[0].title).toBe("파일 하나");
+  });
+});

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ArrowRight, Compass, ShieldCheck } from "lucide-react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Button } from "../../components/ui/Button";
@@ -9,124 +9,88 @@ import {
   companionSignalReviewSelection,
   describeCompanionBasis,
   describeCompanionSeverity,
-  summarizeCompanionSignals,
+  groupCompanionSignalsByAction,
   type CompanionSignal,
-  type CompanionSignalSeverity,
-  type CompanionSignalSummary,
+  type CompanionSignalGroup,
 } from "../../lib/companion/companionSignals";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import { useCompanionSignals } from "./useCompanionSignals";
-
-const SEVERITY_ORDER: CompanionSignalSeverity[] = [
-  "risk",
-  "review",
-  "suggestion",
-  "info",
-];
-
-type SeverityFilter = CompanionSignalSeverity | "all";
 
 /**
  * Companion Inbox — the Companion Layer's dedicated surface.
  *
  * The calm `CompanionCard` / `CompanionStrip` show a capped few signals
- * inline on work surfaces; this page is the full, filterable feed. Every
- * signal is derived from data the user already imported and reviewed —
- * the inbox never watches anything and never writes memory.
+ * inline on work surfaces; this page is the full feed, organised by what
+ * the user would *do* with each signal — review, risk, resume, report,
+ * suggestion, reference — not by raw severity. Severity stays on each row
+ * as a badge. Every signal is derived from data the user already imported
+ * and reviewed; the inbox never watches anything and never writes memory.
  */
 export function CompanionInboxView() {
   const { feed, isDemo } = useCompanionSignals();
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
-  const [filter, setFilter] = useState<SeverityFilter>("all");
 
-  const summary = useMemo(() => summarizeCompanionSignals(feed), [feed]);
-  const visible = useMemo(
-    () => (filter === "all" ? feed : feed.filter((signal) => signal.severity === filter)),
-    [feed, filter],
-  );
+  const groups = useMemo(() => groupCompanionSignalsByAction(feed), [feed]);
 
   return (
     <div className="page companion-inbox">
       <PageHeader
         title="Mori 노트"
-        subtitle="이번 작업에서 살펴볼 신호를 한곳에서 검토합니다. 모두 사용자가 가져온 자료에서 도출되며, Mori가 메모리를 자동으로 쓰지 않습니다."
+        subtitle="이번 작업에서 살펴볼 신호를 할 일 중심으로 정리했습니다. 모두 사용자가 가져온 자료에서 도출되며, Mori가 메모리를 자동으로 쓰지 않습니다."
       />
       <div className="companion-inbox-grid">
         <section className="companion-inbox-main" aria-label="Companion signals">
-          <div
-            className="companion-inbox-filters"
-            role="group"
-            aria-label="심각도 필터"
-          >
-            <FilterChip
-              label="전체"
-              count={summary.total}
-              active={filter === "all"}
-              onClick={() => setFilter("all")}
-            />
-            {SEVERITY_ORDER.map((severity) => (
-              <FilterChip
-                key={severity}
-                label={describeCompanionSeverity(severity)}
-                count={summary[severity]}
-                tone={severity}
-                active={filter === severity}
-                onClick={() => setFilter(severity)}
-              />
-            ))}
-          </div>
-
-          {visible.length === 0 ? (
+          {groups.length === 0 ? (
             <p className="companion-inbox-empty">
-              {feed.length === 0
-                ? "지금은 살펴볼 신호가 없습니다. 새 자료를 가져오거나 Quick Pass를 실행하면 Mori가 다시 짚어 드립니다."
-                : "선택한 심각도에 해당하는 신호가 없습니다."}
+              지금은 살펴볼 신호가 없습니다. 새 자료를 가져오거나 Quick Pass를
+              실행하면 Mori가 다시 짚어 드립니다.
             </p>
           ) : (
-            <ul className="companion-inbox-list">
-              {visible.map((signal) => (
-                <CompanionSignalRow
-                  key={signal.id}
-                  signal={signal}
-                  onNavigate={setCurrentView}
-                  onOpenReviewItem={openReviewItem}
-                />
-              ))}
-            </ul>
+            groups.map((group) => (
+              <CompanionInboxSection
+                key={group.category}
+                group={group}
+                onNavigate={setCurrentView}
+                onOpenReviewItem={openReviewItem}
+              />
+            ))
           )}
         </section>
 
-        <CompanionInboxRail summary={summary} isDemo={isDemo} />
+        <CompanionInboxRail groups={groups} total={feed.length} isDemo={isDemo} />
       </div>
     </div>
   );
 }
 
-function FilterChip({
-  label,
-  count,
-  tone,
-  active,
-  onClick,
+function CompanionInboxSection({
+  group,
+  onNavigate,
+  onOpenReviewItem,
 }: {
-  label: string;
-  count: number;
-  tone?: CompanionSignalSeverity;
-  active: boolean;
-  onClick: () => void;
+  group: CompanionSignalGroup;
+  onNavigate: (view: ViewKey) => void;
+  onOpenReviewItem: (selection: ReviewSelection) => void;
 }) {
   return (
-    <button
-      type="button"
-      className={`companion-inbox-filter ${active ? "is-active" : ""}`}
-      aria-pressed={active}
-      disabled={count === 0 && !active}
-      data-mori-tone={tone ? companionSeverityTone(tone) : undefined}
-      onClick={onClick}
-    >
-      {label} <span className="companion-inbox-filter-count">{count}</span>
-    </button>
+    <section className="companion-inbox-section" aria-label={group.label}>
+      <header className="companion-inbox-section-head">
+        <h2>{group.label}</h2>
+        <span className="companion-inbox-section-count">{group.signals.length}</span>
+        <p>{group.hint}</p>
+      </header>
+      <ul className="companion-inbox-list">
+        {group.signals.map((signal) => (
+          <CompanionSignalRow
+            key={signal.id}
+            signal={signal}
+            onNavigate={onNavigate}
+            onOpenReviewItem={onOpenReviewItem}
+          />
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -139,8 +103,9 @@ function CompanionSignalRow({
   onNavigate: (view: ViewKey) => void;
   onOpenReviewItem: (selection: ReviewSelection) => void;
 }) {
-  // When the signal is about a specific Review item, the action opens
-  // that exact item; otherwise it navigates to the signal's surface.
+  // When the signal is about a specific Review item, the action opens that
+  // exact item; otherwise it navigates to the signal's surface. Either way
+  // the action only navigates — it never applies or writes anything.
   const reviewSelection = companionSignalReviewSelection(signal);
   const action = reviewSelection
     ? () => onOpenReviewItem(reviewSelection)
@@ -171,10 +136,12 @@ function CompanionSignalRow({
 }
 
 function CompanionInboxRail({
-  summary,
+  groups,
+  total,
   isDemo,
 }: {
-  summary: CompanionSignalSummary;
+  groups: CompanionSignalGroup[];
+  total: number;
   isDemo: boolean;
 }) {
   return (
@@ -186,17 +153,23 @@ function CompanionInboxRail({
           </span>
           <h3>Companion 요약</h3>
         </header>
-        <dl className="companion-inbox-rail-counts">
-          {SEVERITY_ORDER.map((severity) => (
-            <div key={severity} data-mori-tone={companionSeverityTone(severity)}>
-              <dt>{describeCompanionSeverity(severity)}</dt>
-              <dd>{summary[severity]}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="companion-inbox-rail-total">
-          살펴볼 신호 <strong>{summary.total}</strong>건
-        </p>
+        {groups.length === 0 ? (
+          <p className="companion-inbox-rail-total">살펴볼 신호가 없습니다.</p>
+        ) : (
+          <>
+            <dl className="companion-inbox-rail-counts">
+              {groups.map((group) => (
+                <div key={group.category}>
+                  <dt>{group.label}</dt>
+                  <dd>{group.signals.length}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="companion-inbox-rail-total">
+              살펴볼 신호 <strong>{total}</strong>건
+            </p>
+          </>
+        )}
       </section>
 
       <section className="companion-inbox-rail-note">

@@ -6,6 +6,9 @@ import {
   companionSeverityRank,
   companionSeverityTone,
   companionSignalReviewSelection,
+  COMPANION_ACTION_CATEGORY_ORDER,
+  getCompanionSignalActionCategory,
+  groupCompanionSignalsByAction,
   MAX_COMPANION_SIGNALS,
   summarizeCompanionSignals,
   type CompanionSignalInput,
@@ -336,5 +339,83 @@ describe("summarizeCompanionSignals", () => {
       suggestion: 0,
       info: 0,
     });
+  });
+});
+
+describe("getCompanionSignalActionCategory", () => {
+  it("routes review-oriented signal types to the review category", () => {
+    const feed = buildCompanionSignalFeed(
+      input({
+        decisions: [decision({ id: "d1", confirmed: false })],
+        issues: [issue({ id: "i1", status: "open" })],
+        attentionMemoryCount: 2,
+      }),
+    );
+    for (const type of ["needs_review", "unresolved_issue", "stale_memory"]) {
+      const signal = feed.find((entry) => entry.type === type)!;
+      expect(signal).toBeDefined();
+      expect(getCompanionSignalActionCategory(signal)).toBe("review");
+    }
+  });
+
+  it("routes weak evidence to risk and continuation signals to resume / report", () => {
+    const feed = buildCompanionSignalFeed(
+      input({
+        issues: [issue({ id: "i1", status: "open", trustLevel: "inferred", confidence: 0.3 })],
+        events: [timelineEvent("e1")],
+        hasAnalysis: true,
+      }),
+    );
+    expect(
+      getCompanionSignalActionCategory(feed.find((s) => s.type === "weak_evidence")!),
+    ).toBe("risk");
+    expect(
+      getCompanionSignalActionCategory(feed.find((s) => s.type === "ready_to_resume")!),
+    ).toBe("resume");
+    expect(
+      getCompanionSignalActionCategory(feed.find((s) => s.type === "ready_to_report")!),
+    ).toBe("report");
+  });
+});
+
+describe("groupCompanionSignalsByAction", () => {
+  const busyFeed = buildCompanionSignalFeed(
+    input({
+      issues: [
+        issue({ id: "i-weak", status: "open", trustLevel: "inferred", confidence: 0.3 }),
+        issue({ id: "i-open", status: "open" }),
+      ],
+      decisions: [
+        decision({ id: "d-draft", confirmed: false }),
+        decision({ id: "d-big", importance: "high" }),
+      ],
+      nextActions: [nextAction("n1")],
+      events: [timelineEvent("e1")],
+      hasAnalysis: true,
+    }),
+  );
+
+  it("drops empty categories and keeps the most-actionable order", () => {
+    const groups = groupCompanionSignalsByAction(busyFeed);
+    expect(groups.length).toBeGreaterThan(0);
+    for (const group of groups) {
+      expect(group.signals.length).toBeGreaterThan(0);
+    }
+    const order = groups.map((group) => group.category);
+    const expectedOrder = COMPANION_ACTION_CATEGORY_ORDER.filter((category) =>
+      order.includes(category),
+    );
+    expect(order).toEqual(expectedOrder);
+  });
+
+  it("places every signal in exactly one group", () => {
+    const groups = groupCompanionSignalsByAction(busyFeed);
+    const grouped = groups.flatMap((group) => group.signals);
+    expect(grouped.length).toBe(busyFeed.length);
+    expect(new Set(grouped.map((s) => s.id)).size).toBe(busyFeed.length);
+  });
+
+  it("returns no groups for an empty feed", () => {
+    expect(groupCompanionSignalsByAction([])).toEqual([]);
   });
 });
