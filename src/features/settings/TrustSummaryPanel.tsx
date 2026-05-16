@@ -2,6 +2,7 @@ import { ArrowRight, Lock, ShieldCheck } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import {
+  getPrivacyGuarantees,
   getRecommendedSetupStep,
   type RecommendedSetupStep,
   type RuntimeMode,
@@ -28,13 +29,9 @@ const ACCESS_ACTIVE = [
   "현재 세션의 Quick Pass 결과",
 ];
 
-const ACCESS_NEVER = [
-  "백그라운드 / 자동 화면 캡처",
-  "브라우저 탭, 다른 앱의 창",
-  "사용자가 추가하지 않은 디스크 / 폴더",
-  "OAuth / 자동 계정 연결 (Claude · ChatGPT · Codex)",
-  "Mori 외부 호스트로의 자동 전송",
-];
+// The "never does" list is the shared privacy-guarantee source — see
+// `getPrivacyGuarantees` and the Privacy & Data Control surface.
+const ACCESS_NEVER = getPrivacyGuarantees();
 
 export function TrustSummaryPanel({
   mode,

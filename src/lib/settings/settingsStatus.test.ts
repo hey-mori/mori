@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   getPlannedConnectorRows,
+  getPrivacyGuarantees,
   getPrivacyPolicy,
   getProviderRows,
   getRecommendedSetupStep,
   getStorageStatusRows,
+  groupPrivacyPolicyByState,
   summarizeRepositories,
 } from "./settingsStatus";
 import { DEFAULT_QUICK_PASS_SETTINGS, type QuickPassAnalysisSettings } from "../analysis";
@@ -55,6 +57,36 @@ describe("getPrivacyPolicy", () => {
     expect(ids).toContain("no-browser-scan");
     expect(ids).toContain("no-fs-scan");
     expect(ids).toContain("no-oauth");
+  });
+});
+
+describe("groupPrivacyPolicyByState", () => {
+  it("partitions every policy row into its state group", () => {
+    const groups = groupPrivacyPolicyByState();
+    const total =
+      groups.enforced.length + groups.default.length + groups.planned.length;
+    expect(total).toBe(getPrivacyPolicy().length);
+    expect(groups.enforced.every((row) => row.state === "enforced")).toBe(true);
+    expect(groups.default.every((row) => row.state === "default")).toBe(true);
+    expect(groups.planned.every((row) => row.state === "planned")).toBe(true);
+  });
+
+  it("keeps the four architecture guarantees in the enforced group", () => {
+    const enforced = groupPrivacyPolicyByState().enforced.map((row) => row.id);
+    expect(enforced).toContain("no-background-capture");
+    expect(enforced).toContain("no-oauth");
+  });
+});
+
+describe("getPrivacyGuarantees", () => {
+  it("lists the hard non-goals as non-empty Korean lines", () => {
+    const guarantees = getPrivacyGuarantees();
+    expect(guarantees.length).toBeGreaterThan(0);
+    const hangul = /[가-힣]/;
+    for (const line of guarantees) {
+      expect(line.length).toBeGreaterThan(0);
+      expect(hangul.test(line)).toBe(true);
+    }
   });
 });
 

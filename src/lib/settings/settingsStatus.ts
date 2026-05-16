@@ -167,6 +167,46 @@ export function getPrivacyPolicy(): PrivacyPolicyRow[] {
   ];
 }
 
+/** Privacy policy rows grouped by state, for the Privacy & Data Control surface. */
+export type GroupedPrivacyPolicy = {
+  enforced: PrivacyPolicyRow[];
+  default: PrivacyPolicyRow[];
+  planned: PrivacyPolicyRow[];
+};
+
+/**
+ * Group privacy policy rows by state so the surface can separate
+ * architecture-guaranteed behaviour from default-on settings and
+ * not-yet-built controls.
+ */
+export function groupPrivacyPolicyByState(
+  rows: PrivacyPolicyRow[] = getPrivacyPolicy(),
+): GroupedPrivacyPolicy {
+  return {
+    enforced: rows.filter((row) => row.state === "enforced"),
+    default: rows.filter((row) => row.state === "default"),
+    planned: rows.filter((row) => row.state === "planned"),
+  };
+}
+
+/**
+ * The hard "what Mori never does" guarantees — the explicit non-goals
+ * from `docs/mori-project-goal.md` §6 / §14. These are never user
+ * settings; they are properties of the app's design. One source of
+ * truth for the Privacy surface and the Trust summary rail.
+ */
+export function getPrivacyGuarantees(): string[] {
+  return [
+    "백그라운드 / 자동 화면 캡처",
+    "브라우저 탭, 다른 앱의 창 읽기",
+    "사용자가 추가하지 않은 디스크 / 폴더 스캔",
+    "OAuth / 자동 계정 연결 (Claude · ChatGPT · Codex)",
+    "키로깅 · 클립보드 가로채기 · 상시 데몬",
+    "Mori 외부 호스트로의 자동 전송 · 클라우드 동기화",
+    "검토 없는 메모리 자동 작성",
+  ];
+}
+
 export type StorageStatusKind = "browser-draft" | "desktop-sqlite";
 
 export type StorageStatusRow = {

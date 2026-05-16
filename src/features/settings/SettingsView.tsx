@@ -28,6 +28,7 @@ import type { RuntimeMode, RecommendedSetupStep } from "../../lib/settings/setti
 import { getProductRuntimeLabel } from "../../lib/product-state/productState";
 import { LocalAiCard } from "./LocalAiCard";
 import { PrivacyDefaultsCard } from "./PrivacyDefaultsCard";
+import { PrivacyGuaranteesCard } from "./PrivacyGuaranteesCard";
 import { StorageCard } from "./StorageCard";
 import { RepositoriesCard } from "./RepositoriesCard";
 import { PlannedConnectorsCard } from "./PlannedConnectorsCard";
@@ -177,7 +178,12 @@ export function SettingsView() {
               onUpdateSettings={(patch) => updateAnalysisSettings(patch)}
             />
           ) : null}
-          {activeTab === "privacy" ? <PrivacyDefaultsCard /> : null}
+          {activeTab === "privacy" ? (
+            <>
+              <PrivacyDefaultsCard />
+              <PrivacyGuaranteesCard />
+            </>
+          ) : null}
           {activeTab === "storage" ? (
             <StorageCard
               mode={mode}
