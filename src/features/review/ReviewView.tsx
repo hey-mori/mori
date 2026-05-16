@@ -12,7 +12,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { issueStatusLabels } from "../../domain/constants";
+import { issueStatusLabels, priorityLabels } from "../../domain/constants";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -341,9 +341,9 @@ function AnalysisStrip({
           </span>
         </div>
         <div className="review-analysis-counts">
-          <Badge tone="purple">{summary.issueCount} issues</Badge>
-          <Badge tone="green">{summary.decisionCount} decisions</Badge>
-          <Badge tone="blue">{summary.nextActionCount} next actions</Badge>
+          <Badge tone="purple">이슈 {summary.issueCount}</Badge>
+          <Badge tone="green">결정 {summary.decisionCount}</Badge>
+          <Badge tone="blue">다음 액션 {summary.nextActionCount}</Badge>
           <Badge tone="gray">{dataBasis}</Badge>
           {analysisGeneratedAt ? (
             <span className="review-analysis-time">
@@ -626,7 +626,7 @@ function UnresolvedTab({
                   <Badge tone={issueStatusTone(issue.status)}>{reasonLabel}</Badge>
                   <strong>{issue.title}</strong>
                   <span>{issue.description}</span>
-                  <Badge tone={priorityTone(issue.priority)}>{issue.priority}</Badge>
+                  <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
                 </button>
               </li>
             );
@@ -640,7 +640,7 @@ function UnresolvedTab({
                   <Badge tone="orange">{reasonLabel}</Badge>
                   <strong>{decision.title}</strong>
                   <span>{decision.decision}</span>
-                  <Badge tone={priorityTone(decision.importance)}>{decision.importance}</Badge>
+                  <Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge>
                 </button>
               </li>
             );
@@ -653,7 +653,7 @@ function UnresolvedTab({
                 <Badge tone="purple">{reasonLabel}</Badge>
                 <strong>{action.title}</strong>
                 <span>다음 액션 후보</span>
-                <Badge tone={priorityTone(action.priority)}>{action.priority}</Badge>
+                <Badge tone={priorityTone(action.priority)}>{priorityLabels[action.priority]}</Badge>
               </button>
             </li>
           );
@@ -708,7 +708,7 @@ function SuggestionsTab({
         {suggestions.map((issue) => (
           <li key={issue.id}>
             <header>
-              <Badge tone={priorityTone(issue.priority)}>{issue.priority}</Badge>
+              <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
               <strong>{issue.title}</strong>
             </header>
             <p>

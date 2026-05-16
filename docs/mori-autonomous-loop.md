@@ -308,6 +308,11 @@ Shipped:
    cards, decision rows, detail panel, related events); the
    duplicate `trustTone` in `reviewWorkspace` is removed, and the
    detail-panel trust badge carries a hover description.
+8a. ✅ Review / Reports label consistency — the Unresolved and
+    Suggestions tabs rendered raw priority enums (`high` / `medium`)
+    while Issue Garden showed `priorityLabels`; all now use the
+    shared labels, and the Reports / Review analysis-strip count
+    badges read Korean units instead of "sources / events / …".
 
 Open (highest value first):
 

@@ -251,11 +251,11 @@ function AnalysisStrip({
           </span>
         </div>
         <div className="reports-analysis-counts">
-          <Badge tone="purple">{evidenceCounts.sources} sources</Badge>
-          <Badge tone="blue">{evidenceCounts.events} events</Badge>
-          <Badge tone="red">{evidenceCounts.issues} issues</Badge>
-          <Badge tone="green">{evidenceCounts.decisions} decisions</Badge>
-          <Badge tone="orange">{evidenceCounts.nextActions} next actions</Badge>
+          <Badge tone="purple">출처 {evidenceCounts.sources}</Badge>
+          <Badge tone="blue">이벤트 {evidenceCounts.events}</Badge>
+          <Badge tone="red">이슈 {evidenceCounts.issues}</Badge>
+          <Badge tone="green">결정 {evidenceCounts.decisions}</Badge>
+          <Badge tone="orange">다음 액션 {evidenceCounts.nextActions}</Badge>
           <Badge tone="gray">{dataBasis}</Badge>
         </div>
       </div>
