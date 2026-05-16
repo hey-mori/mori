@@ -1,9 +1,11 @@
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { priorityLabels } from "../../domain/constants";
 import type { Decision, Issue, NextAction } from "../../domain/types";
 import {
   countIssuePriorities,
+  priorityTone,
   type ReviewSummary,
 } from "../../lib/review-workspace/reviewWorkspace";
 
@@ -125,7 +127,9 @@ export function ReviewSummaryPanel({
           <ul className="review-summary-actions">
             {nextActions.slice(0, 3).map((action) => (
               <li key={action.id}>
-                <Badge tone="purple">{action.priority}</Badge>
+                <Badge tone={priorityTone(action.priority)}>
+                  {priorityLabels[action.priority]}
+                </Badge>
                 <span title={action.title}>{action.title}</span>
               </li>
             ))}
