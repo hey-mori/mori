@@ -6,40 +6,25 @@ import type { MoriMockSession } from "../../domain/types";
 import { getEventEvidenceSources, getSourceDisplayStatus } from "../../lib/sources/traceability";
 import type { SourceIntegration } from "../../lib/sources/sourceRegistry";
 import {
+  getCaptureMethodLabel,
+  getIntegrationStatusLabel,
+  getRawDataPolicyLabel,
+} from "../../lib/evidence/provenance";
+import { getTrustDisplay } from "../../lib/evidence/trust";
+import {
   describeConnectorSourceImportBadge,
   getConnectorSourceImportBadgeTone,
   type ConnectorSourceImportSummary,
 } from "../../lib/connectors";
 
+// Tone stays a local map until the panel's badges migrate to
+// MoriStatusBadge; the label maps now come from `provenance.ts`.
 const STATUS_TONE: Record<string, "green" | "blue" | "gray" | "orange"> = {
   implemented: "green",
   partial: "blue",
   planned: "gray",
   mockOnly: "orange",
   unavailable: "gray",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  implemented: "Available",
-  partial: "Partial",
-  planned: "Planned",
-  mockOnly: "Demo only",
-  unavailable: "Unavailable",
-};
-
-const CAPTURE_LABELS: Record<string, string> = {
-  manual: "Manual input",
-  explicitImport: "Explicit import",
-  desktopCommand: "Desktop command",
-  plannedConnector: "Planned connector",
-  mock: "Demo data",
-};
-
-const RAW_LABELS: Record<string, string> = {
-  retained: "Full data retained",
-  summaryOnly: "Summary only",
-  redacted: "Redacted",
-  notCaptured: "Not captured",
 };
 
 export type EvidenceDetailSelection =
@@ -64,7 +49,7 @@ export function SourceDetailPanel({
       <aside className="evidence-detail" aria-label="Source detail">
         <header className="evidence-detail-header">
           <Badge tone="gray">선택된 항목 없음</Badge>
-          <h3>Evidence detail</h3>
+          <h3>근거 상세</h3>
           <p>왼쪽에서 소스 카드를 선택하면 출처, 신뢰도, 원본 보존 정책이 여기 표시됩니다.</p>
         </header>
         <section className="evidence-detail-section">
@@ -142,26 +127,26 @@ function SourceDetailView({
         <SectionHeader title="출처 및 캡처" />
         <dl className="evidence-detail-grid">
           <div>
-            <dt>Integration</dt>
+            <dt>통합</dt>
             <dd>{display.integrationLabel}</dd>
           </div>
           <div>
-            <dt>Capture method</dt>
+            <dt>캡처 방식</dt>
             <dd>{display.captureMethod}</dd>
           </div>
           <div>
-            <dt>Raw data policy</dt>
+            <dt>원본 데이터 정책</dt>
             <dd>{display.rawDataLabel}</dd>
           </div>
           <div>
             <dt>
-              <CalendarClock size={11} /> Imported
+              <CalendarClock size={11} /> 가져온 시각
             </dt>
             <dd>{formatTime(source.capturedAt)}</dd>
           </div>
           {source.uri ? (
             <div>
-              <dt>URI / origin</dt>
+              <dt>URI / 출처</dt>
               <dd className="evidence-detail-uri">{source.uri}</dd>
             </div>
           ) : null}
@@ -206,7 +191,7 @@ function SourceDetailView({
       <section className="evidence-detail-section">
         <SectionHeader
           title="연결된 타임라인 이벤트"
-          hint={`${relatedEvents.length} event${relatedEvents.length === 1 ? "" : "s"}`}
+          hint={`${relatedEvents.length}개 이벤트`}
         />
         {relatedEvents.length === 0 ? (
           <p className="evidence-detail-empty">아직 연결된 이벤트가 없습니다.</p>
@@ -270,7 +255,9 @@ function IntegrationDetailView({
     <aside className="evidence-detail" aria-label="Integration detail">
       <header className="evidence-detail-header">
         <div className="evidence-detail-badges">
-          <Badge tone={STATUS_TONE[integration.status]}>{STATUS_LABEL[integration.status]}</Badge>
+          <Badge tone={STATUS_TONE[integration.status]}>
+            {getIntegrationStatusLabel(integration.status)}
+          </Badge>
           <Badge tone="purple">{integration.id}</Badge>
         </div>
         <h3>{integration.label}</h3>
@@ -281,20 +268,22 @@ function IntegrationDetailView({
         <SectionHeader title="현재 상태" />
         <dl className="evidence-detail-grid">
           <div>
-            <dt>Status</dt>
-            <dd>{STATUS_LABEL[integration.status]}</dd>
+            <dt>상태</dt>
+            <dd>{getIntegrationStatusLabel(integration.status)}</dd>
           </div>
           <div>
-            <dt>Capture method</dt>
-            <dd>{CAPTURE_LABELS[integration.captureMode] ?? integration.captureMode}</dd>
+            <dt>캡처 방식</dt>
+            <dd>{getCaptureMethodLabel(integration.captureMode)}</dd>
           </div>
           <div>
-            <dt>Raw data policy</dt>
-            <dd>{RAW_LABELS[integration.rawDataPolicy] ?? integration.rawDataPolicy}</dd>
+            <dt>원본 데이터 정책</dt>
+            <dd>{getRawDataPolicyLabel(integration.rawDataPolicy)}</dd>
           </div>
           <div>
-            <dt>Trust default</dt>
-            <dd className={`trust-${integration.trustDefault}`}>{integration.trustDefault}</dd>
+            <dt>기본 신뢰도</dt>
+            <dd className={`trust-${integration.trustDefault}`}>
+              {getTrustDisplay(integration.trustDefault).label}
+            </dd>
           </div>
         </dl>
       </section>
