@@ -367,7 +367,7 @@ function QuickPassControl({
   const providerKindLabel =
     settings.provider === "ollama"
       ? `Ollama · ${settings.ollamaModel} (${settings.ollamaEndpoint})`
-      : "Deterministic local heuristic (no network)";
+      : "결정론적 로컬 휴리스틱 (네트워크 없음)";
 
   return (
     <div className={`analysis-panel status-${status}`}>
@@ -381,7 +381,7 @@ function QuickPassControl({
         </div>
         <div className="analysis-panel-actions">
           <Button variant="primary" icon={Sparkles} onClick={onRun} disabled={!canRun}>
-            {status === "running" ? "분석 중..." : "Run Quick Pass"}
+            {status === "running" ? "분석 중..." : "Quick Pass 실행"}
           </Button>
           {hasAnalysis ? (
             <Button icon={RotateCcw} onClick={onClear}>
@@ -397,8 +397,8 @@ function QuickPassControl({
           value={settings.provider}
           onChange={onProviderChange}
           options={[
-            { id: "deterministic", label: "Deterministic" },
-            { id: "ollama", label: "Ollama (local LLM)" },
+            { id: "deterministic", label: "결정론적" },
+            { id: "ollama", label: "Ollama (로컬 LLM)" },
           ]}
         />
         <small>{providerKindLabel}</small>
