@@ -161,16 +161,16 @@ only — no phase numbers.
   in `source-integrations.md` (explicit emit, no background watch).
 - SQLite `importSummary` mirror (foundation) — V004 `session_imports`
   migration (Rust + TS catalog), pure `sessionImportRows` converters,
-  the Rust `session_imports` repository, and the
-  `persist_session_imports` / `list_session_import_rows` Tauri
-  commands.
+  the Rust `session_imports` repository, the `persist_session_imports`
+  / `list_session_import_rows` Tauri commands, and the runtime-aware
+  `SessionImportRepository` (browser / desktop routing with honest
+  fallback).
 
 **Open priority (highest first):**
 
-1. SQLite `importSummary` mirror — TS repository routing: a
-   runtime-aware session-import repository so desktop sessions read /
-   write `session_imports` and contribute to the connector re-import
-   rollup.
+1. SQLite `importSummary` mirror — wire `SessionImportRepository`
+   into the connector re-import rollup so desktop-saved sessions
+   contribute their `importSummary` / connector identities.
 2. Native file picker for `.mori v0` save / open.
 3. Local Connector Capture — a tested end-to-end bridge for real
    Claude / Codex / Git work into `~/.mori/connectors/`.
@@ -189,46 +189,44 @@ backlog with it.
 
 The next slice should be:
 
-**SQLite `importSummary` mirror — runtime-aware session-import
-repository**
+**SQLite `importSummary` mirror — desktop connector identity snapshots**
 
 Goal:
-Add a runtime-aware `SessionImportRepository` so session imports route
-to desktop SQLite (`session_imports` via the new Tauri commands) or to
-browser localStorage, mirroring `AcceptedMemoryRepository`. The Rust
-table + commands exist; this slice is the TS routing layer with an
-honest fallback. Wiring it into the re-import rollup is the slice
-after.
+Make desktop-saved sessions contribute to the connector re-import
+rollup. Today `listConnectorEventIdentitySnapshots`
+(`localStorageAdapter`) builds the cross-session identity snapshots
+only from browser localStorage session imports; on desktop the rollup
+sees no saved-session history and the Memory page shows an honesty
+warning. This slice sources the snapshots from `session_imports` too.
 
 Scope — do:
-- Add `SessionImportRepository`
-  (`src/lib/storage/sessionImportRepository.ts` or a sibling) that
-  exposes `saveSessionImports` / `listSessionImports`, routes by
-  `isTauriRuntime()`, and converts rows via `sessionImportRows.ts`.
-- On desktop call `persistSessionImports` / `listSessionImportRows`;
-  on browser use `localStorageAdapter`. Surface an honest `fellBack`
-  flag when a desktop call fails (mirror `AcceptedMemoryRepository`).
-- Pure / well-tested: a fake command surface proves the desktop path,
-  a fake storage proves the browser path.
+- Add a runtime-aware way to read connector identity snapshots: on
+  desktop, build `ConnectorEventIdentitySnapshot[]` from the
+  `session_imports` table (via `SessionImportRepository` /
+  `list_session_import_rows`); on browser keep the localStorage path.
+- Keep it a thin, well-tested helper (pure snapshot assembly +
+  runtime routing); do not rewrite the connector preview pipeline.
+- Preserve the honest `savedSessionHistoryAvailable` flag — only
+  claim cross-session detection ran when the snapshot source was
+  actually available.
 
 Scope — do not:
-- Change the re-import rollup or cross-session detection yet — that is
-  the next slice.
-- Auto-backfill or migrate existing browser session imports.
+- Change the connector duplicate-detection algorithm itself.
+- Backfill or migrate existing browser session imports to SQLite.
 
 Suggested files:
-- `src/lib/storage/sessionImportRepository.ts` (new) + test
-- `src/lib/desktop/tauriCommands.ts` (already wired — reuse)
-- `docs/sqlite-persistence.md`
+- `src/lib/storage/sessionImportRepository.ts` (extend)
+- the connector preview / cross-session detection call site
+- `src/lib/connectors/*` + tests
+- `docs/sqlite-persistence.md`, `docs/source-integrations.md`
 
 Tests:
-- the browser path round-trips a `StoredSessionImport`
-- the desktop path calls the command surface and maps rows back
-- a desktop failure falls back to browser storage with `fellBack`
+- desktop session imports produce connector identity snapshots
+- the rollup reports history available on desktop once wired
 
-After this slice ships, set the next slice to wiring the repository
-into the connector re-import rollup so desktop sessions contribute,
-and continue.
+After this slice ships the SQLite `importSummary` mirror is complete —
+move it to **Completed**, reconcile the goal document's Current Gaps,
+and set the next slice to the new top backlog item.
 
 ## 9. Stop Conditions
 

@@ -70,6 +70,23 @@ UI never claims SQLite when it fell back. The Consolidation Review apply
 path, the Project Memory page, and the Reports accepted-memory section
 all read and write through this repository.
 
+## Session import runtime routing
+
+`SessionImportRepository`
+(`src/lib/storage/sessionImportRepository.ts`) routes session imports
+(`StoredSessionImport`) the same way:
+
+- **Browser mode** — `BrowserDraftRepository.putSessionImports` /
+  `listSessionImports` (localStorage).
+- **Tauri desktop mode** — the V004 `session_imports` table via the
+  `persist_session_imports` / `list_session_import_rows` commands,
+  converted through `src/lib/sqlite/sessionImportRows.ts`.
+
+Like the accepted-memory repository it prefers SQLite on desktop and
+falls back to localStorage with `fellBack: true` on failure. Wiring
+this repository into the connector re-import rollup — so desktop-saved
+sessions contribute their `importSummary` — is a follow-up slice.
+
 ## Tables in this milestone
 
 V001 brings up Mori's full normalized session schema:

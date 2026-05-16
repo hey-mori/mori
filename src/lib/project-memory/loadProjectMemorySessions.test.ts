@@ -24,6 +24,7 @@ function stubRepository(overrides: Partial<MoriDraftRepository> = {}): MoriDraft
     clearStoredSession: vi.fn(),
     addSessionImport: vi.fn() as unknown as MoriDraftRepository["addSessionImport"],
     listSessionImports: () => [],
+    putSessionImports: vi.fn() as unknown as MoriDraftRepository["putSessionImports"],
     removeSessionImport: vi.fn(),
     clearSessionImports: vi.fn(),
     saveSessionAnalysis: vi.fn() as unknown as MoriDraftRepository["saveSessionAnalysis"],

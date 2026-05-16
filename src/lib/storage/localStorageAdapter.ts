@@ -157,6 +157,20 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     return raw.sort((a, b) => new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime());
   }
 
+  putSessionImports(
+    sessionId: string,
+    imports: StoredSessionImport[],
+  ): StoredSessionImport[] {
+    const existing = this.listSessionImports(sessionId);
+    const incomingIds = new Set(imports.map((entry) => entry.id));
+    const merged = existing.filter((entry) => !incomingIds.has(entry.id));
+    for (const entry of imports) {
+      merged.push({ ...entry, sessionId, adapter: "browser-local-storage" });
+    }
+    this.write(`${IMPORTS_PREFIX}${sessionId}`, merged);
+    return this.listSessionImports(sessionId);
+  }
+
   removeSessionImport(sessionId: string, importId: string): void {
     const existing = this.listSessionImports(sessionId);
     const next = existing.filter((entry) => entry.id !== importId);

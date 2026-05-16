@@ -130,6 +130,17 @@ export type MoriDraftRepository = {
     options?: { importSummary?: ConnectorSourceImportSummary },
   ) => StoredSessionImport;
   listSessionImports: (sessionId: string) => StoredSessionImport[];
+  /**
+   * Upsert pre-built `StoredSessionImport` records faithfully (by id),
+   * preserving their `savedAt` and `importSummary`. Unlike
+   * `addSessionImport`, which derives a fresh record from a candidate,
+   * this is the round-trip write used by the runtime-aware
+   * `SessionImportRepository` to mirror desktop SQLite rows.
+   */
+  putSessionImports: (
+    sessionId: string,
+    imports: StoredSessionImport[],
+  ) => StoredSessionImport[];
   removeSessionImport: (sessionId: string, importId: string) => void;
   clearSessionImports: (sessionId: string) => void;
   saveSessionAnalysis: (sessionId: string, result: MoriAnalysisResult) => StoredSessionAnalysis;
