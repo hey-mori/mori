@@ -21,6 +21,10 @@ import type {
   SqliteMemoryReviewActionRow,
   SqliteMemoryReviewActionWriteResult,
 } from "../sqlite/acceptedMemoryRows";
+import type {
+  SqliteSessionImportRow,
+  SqliteSessionImportWriteResult,
+} from "../sqlite/sessionImportRows";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
 import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./repositoryCommands";
@@ -40,6 +44,8 @@ export type TauriCommandName =
   | "list_accepted_project_memories"
   | "append_memory_review_action_rows"
   | "list_memory_review_action_rows"
+  | "persist_session_imports"
+  | "list_session_import_rows"
   | "create_session"
   | "import_ai_conversation"
   | "import_git_diff"
@@ -104,6 +110,14 @@ export type TauriCommandMap = {
   list_memory_review_action_rows: {
     input: { projectId: string };
     output: SqliteMemoryReviewActionRow[];
+  };
+  persist_session_imports: {
+    input: { imports: SqliteSessionImportRow[] };
+    output: SqliteSessionImportWriteResult;
+  };
+  list_session_import_rows: {
+    input: { sessionId: string };
+    output: SqliteSessionImportRow[];
   };
   create_session: { input: CreateSessionInput; output: Session };
   import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
@@ -199,6 +213,14 @@ export const tauriCommands = {
   },
   listMemoryReviewActionRows(projectId: string): Promise<SqliteMemoryReviewActionRow[]> {
     return invokeTauriCommand("list_memory_review_action_rows", { projectId });
+  },
+  persistSessionImports(
+    imports: SqliteSessionImportRow[],
+  ): Promise<SqliteSessionImportWriteResult> {
+    return invokeTauriCommand("persist_session_imports", { imports });
+  },
+  listSessionImportRows(sessionId: string): Promise<SqliteSessionImportRow[]> {
+    return invokeTauriCommand("list_session_import_rows", { sessionId });
   },
   createSession(input: CreateSessionInput): Promise<Session> {
     return invokeTauriCommand("create_session", input);

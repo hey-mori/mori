@@ -90,11 +90,18 @@ The Tauri shell now registers SQLite command names so the frontend has a stable 
 - `list_accepted_project_memories`
 - `append_memory_review_action_rows`
 - `list_memory_review_action_rows`
+- `persist_session_imports`
+- `list_session_import_rows`
 
 The `rusqlite` runner and repository are implemented: migrations apply
 with checksum validation, session snapshots persist and load, and the
 accepted-memory commands above read and write the
 `consolidated_memories` / `consolidated_memory_audit` tables. The
-frontend builds and validates payloads before sending them to this
-boundary and converts accepted-memory records via
-`src/lib/sqlite/acceptedMemoryRows.ts`.
+`persist_session_imports` / `list_session_import_rows` commands back
+the V004 `session_imports` table (Rust module
+`src-tauri/src/db/session_imports.rs`); the TS repository routing that
+makes desktop sessions contribute to the connector re-import rollup is
+a follow-up slice. The frontend builds and validates payloads before
+sending them to this boundary and converts records via
+`src/lib/sqlite/acceptedMemoryRows.ts` and
+`src/lib/sqlite/sessionImportRows.ts`.

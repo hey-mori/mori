@@ -160,14 +160,17 @@ only — no phase numbers.
 - IDE / Terminal integration planning — explicit-capture design doc
   in `source-integrations.md` (explicit emit, no background watch).
 - SQLite `importSummary` mirror (foundation) — V004 `session_imports`
-  migration (Rust + TS catalog) and pure `sessionImportRows`
-  converters.
+  migration (Rust + TS catalog), pure `sessionImportRows` converters,
+  the Rust `session_imports` repository, and the
+  `persist_session_imports` / `list_session_import_rows` Tauri
+  commands.
 
 **Open priority (highest first):**
 
-1. SQLite `importSummary` mirror — wire the Tauri `session_imports`
-   command + the desktop repository path so SQLite-saved sessions
-   contribute to the connector re-import rollup.
+1. SQLite `importSummary` mirror — TS repository routing: a
+   runtime-aware session-import repository so desktop sessions read /
+   write `session_imports` and contribute to the connector re-import
+   rollup.
 2. Native file picker for `.mori v0` save / open.
 3. Local Connector Capture — a tested end-to-end bridge for real
    Claude / Codex / Git work into `~/.mori/connectors/`.
@@ -186,49 +189,46 @@ backlog with it.
 
 The next slice should be:
 
-**SQLite `importSummary` mirror — Rust `session_imports` repository +
-Tauri commands**
+**SQLite `importSummary` mirror — runtime-aware session-import
+repository**
 
 Goal:
-Wire the Rust side of the V004 `session_imports` table — a repository
-module plus persist / list Tauri commands — mirroring how
-`db/accepted_memory.rs` backs the V003 tables. This makes the table
-reachable from the desktop boundary; the TS repository routing + the
-re-import rollup wiring is the slice after.
+Add a runtime-aware `SessionImportRepository` so session imports route
+to desktop SQLite (`session_imports` via the new Tauri commands) or to
+browser localStorage, mirroring `AcceptedMemoryRepository`. The Rust
+table + commands exist; this slice is the TS routing layer with an
+honest fallback. Wiring it into the re-import rollup is the slice
+after.
 
 Scope — do:
-- Add a `db/session_imports.rs` Rust module: a `SessionImportRow`
-  struct and `save_session_imports` / `list_session_imports`
-  functions, with `#[cfg(test)]` round-trip coverage against an
-  in-memory DB (mirror `db/accepted_memory.rs`).
-- Register `persist_session_imports` / `list_session_imports` Tauri
-  commands in `src-tauri/src/sqlite.rs` and `main.rs`.
-- Add the matching command names + row type to
-  `src/lib/desktop/tauriCommands.ts` so the frontend has a typed
-  boundary (no repository routing yet).
-- Keep it additive — no change to existing tables or commands.
+- Add `SessionImportRepository`
+  (`src/lib/storage/sessionImportRepository.ts` or a sibling) that
+  exposes `saveSessionImports` / `listSessionImports`, routes by
+  `isTauriRuntime()`, and converts rows via `sessionImportRows.ts`.
+- On desktop call `persistSessionImports` / `listSessionImportRows`;
+  on browser use `localStorageAdapter`. Surface an honest `fellBack`
+  flag when a desktop call fails (mirror `AcceptedMemoryRepository`).
+- Pure / well-tested: a fake command surface proves the desktop path,
+  a fake storage proves the browser path.
 
 Scope — do not:
-- Change `localStorageAdapter` or `AcceptedMemoryRepository`-style
-  routing yet — that is the next slice.
-- Auto-migrate or backfill existing browser session imports.
+- Change the re-import rollup or cross-session detection yet — that is
+  the next slice.
+- Auto-backfill or migrate existing browser session imports.
 
 Suggested files:
-- `src-tauri/src/db/session_imports.rs` (new), `db/mod.rs`
-- `src-tauri/src/sqlite.rs`, `src-tauri/src/main.rs`
-- `src/lib/desktop/tauriCommands.ts`
-- `docs/sqlite-migrations.md`, `docs/sqlite-persistence.md`
+- `src/lib/storage/sessionImportRepository.ts` (new) + test
+- `src/lib/desktop/tauriCommands.ts` (already wired — reuse)
+- `docs/sqlite-persistence.md`
 
 Tests:
-- Rust: a session-import row (with and without import summary)
-  round-trips through `save` / `list` on an in-memory DB
-- Rust: `list_session_imports` is empty for an unknown session
+- the browser path round-trips a `StoredSessionImport`
+- the desktop path calls the command surface and maps rows back
+- a desktop failure falls back to browser storage with `fellBack`
 
-Validation note: this slice touches `src-tauri/` — run `cargo check`
-and `cargo test` in addition to `npm run check:full` / `npm run build`.
-
-After this slice ships, set the next slice to the TS repository
-routing + the re-import rollup wiring, and continue.
+After this slice ships, set the next slice to wiring the repository
+into the connector re-import rollup so desktop sessions contribute,
+and continue.
 
 ## 9. Stop Conditions
 

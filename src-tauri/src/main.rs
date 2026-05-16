@@ -26,6 +26,8 @@ fn main() {
             sqlite::list_accepted_project_memories,
             sqlite::append_memory_review_action_rows,
             sqlite::list_memory_review_action_rows,
+            sqlite::persist_session_imports,
+            sqlite::list_session_import_rows,
             git::diff::run_git_diff,
             git::verify::verify_repository_path,
             repositories::picker::pick_repository_directory,

@@ -28,7 +28,10 @@ export {
   fromSqliteSessionImportRow,
   toSqliteSessionImportRow,
 } from "./sessionImportRows";
-export type { SqliteSessionImportRow } from "./sessionImportRows";
+export type {
+  SqliteSessionImportRow,
+  SqliteSessionImportWriteResult,
+} from "./sessionImportRows";
 export { reconstructMoriSession } from "./reconstruct";
 export { validateSqlitePersistenceSnapshot } from "./snapshotValidation";
 export type {

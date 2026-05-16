@@ -26,6 +26,9 @@ export type SqliteSessionImportRow = {
   import_summary_json: string | null;
 };
 
+/** Mirror of the Rust `SessionImportWriteResult`. */
+export type SqliteSessionImportWriteResult = { importsWritten: number };
+
 export function toSqliteSessionImportRow(
   sessionImport: StoredSessionImport,
 ): SqliteSessionImportRow {
