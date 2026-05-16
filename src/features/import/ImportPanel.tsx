@@ -28,6 +28,7 @@ import {
   buildConnectorJsonlPreviewWithHistory,
   buildConnectorSourceImportSummary,
   describeConnectorSourceImportBadge,
+  describeConnectorWarningCode,
   getConnectorSourceImportBadgeTone,
   mergeConnectorCandidatesForReview,
   normalizeConnectorEventBatch,
@@ -1230,7 +1231,7 @@ function ConnectorJsonlPreviewCard({
         <ul className="connector-jsonl-warning-list">
           {preview.warnings.map((warning) => (
             <li key={warning.code}>
-              <Badge tone="orange">{warning.code}</Badge>
+              <Badge tone="orange">{describeConnectorWarningCode(warning.code)}</Badge>
               <span>{warning.message}</span>
             </li>
           ))}

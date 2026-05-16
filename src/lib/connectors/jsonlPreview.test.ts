@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildConnectorJsonlPreview } from "./jsonlPreview";
+import {
+  buildConnectorJsonlPreview,
+  describeConnectorWarningCode,
+  type ConnectorPreviewWarningCode,
+} from "./jsonlPreview";
 
 const VALID_CLAUDE_EVENT = JSON.stringify({
   id: "claude-001",
@@ -154,5 +158,36 @@ describe("buildConnectorJsonlPreview", () => {
   it("marks canImport false when validEventCount is zero", () => {
     const preview = buildConnectorJsonlPreview("not json");
     expect(preview.canImport).toBe(false);
+  });
+});
+
+describe("describeConnectorWarningCode", () => {
+  const ALL_CODES: ConnectorPreviewWarningCode[] = [
+    "redacted",
+    "missing_session_id",
+    "unknown_connector_id",
+    "all_invalid",
+    "all_duplicate",
+    "partial_duplicate",
+    "saved_session_duplicate",
+    "saved_session_history_unavailable",
+  ];
+
+  it("gives every warning code a non-empty Korean label", () => {
+    const hangul = /[가-힣]/;
+    for (const code of ALL_CODES) {
+      const label = describeConnectorWarningCode(code);
+      expect(label.length).toBeGreaterThan(0);
+      expect(hangul.test(label)).toBe(true);
+      expect(label).not.toBe(code);
+    }
+  });
+
+  it("maps a few codes to their expected labels", () => {
+    expect(describeConnectorWarningCode("redacted")).toBe("민감정보 감지");
+    expect(describeConnectorWarningCode("all_duplicate")).toBe("전부 중복");
+    expect(describeConnectorWarningCode("unknown_connector_id")).toBe(
+      "알 수 없는 커넥터",
+    );
   });
 });

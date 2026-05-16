@@ -135,19 +135,50 @@ export type ConnectorJsonlPreview = {
   matchedSavedSessions: ConnectorImportHistorySavedSession[];
 };
 
+export type ConnectorPreviewWarningCode =
+  | "redacted"
+  | "missing_session_id"
+  | "unknown_connector_id"
+  | "all_invalid"
+  | "all_duplicate"
+  | "partial_duplicate"
+  | "saved_session_duplicate"
+  | "saved_session_history_unavailable";
+
 export type ConnectorPreviewWarning = {
-  code:
-    | "redacted"
-    | "missing_session_id"
-    | "unknown_connector_id"
-    | "all_invalid"
-    | "all_duplicate"
-    | "partial_duplicate"
-    | "saved_session_duplicate"
-    | "saved_session_history_unavailable";
+  code: ConnectorPreviewWarningCode;
   message: string;
   affectedLines?: number[];
 };
+
+/**
+ * Short Korean label for a connector preview warning code — the badge
+ * copy beside the full `message`. Keeps the raw enum out of the UI.
+ */
+export function describeConnectorWarningCode(
+  code: ConnectorPreviewWarningCode,
+): string {
+  switch (code) {
+    case "redacted":
+      return "민감정보 감지";
+    case "missing_session_id":
+      return "세션 ID 없음";
+    case "unknown_connector_id":
+      return "알 수 없는 커넥터";
+    case "all_invalid":
+      return "전부 파싱 실패";
+    case "all_duplicate":
+      return "전부 중복";
+    case "partial_duplicate":
+      return "일부 중복";
+    case "saved_session_duplicate":
+      return "저장 세션 중복";
+    case "saved_session_history_unavailable":
+      return "이력 확인 불가";
+    default:
+      return code;
+  }
+}
 
 /**
  * Set of `connectorId` values the foundation explicitly recognises. Anything

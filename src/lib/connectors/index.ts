@@ -42,10 +42,12 @@ export {
   applyDuplicateOverlay,
   applyHistoryOverlay,
   summariseParseOutcome,
+  describeConnectorWarningCode,
   type ConnectorJsonlPreview,
   type ConnectorJsonlPreviewKind,
   type ConnectorJsonlBucketPreview,
   type ConnectorPreviewWarning,
+  type ConnectorPreviewWarningCode,
 } from "./jsonlPreview";
 export {
   buildConnectorImportHistory,
