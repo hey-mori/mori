@@ -2,6 +2,7 @@ import { CheckCircle2, Circle, Flag } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { priorityLabels } from "../../domain/constants";
 import type { DecisionTimelinePoint } from "../../lib/project-memory/projectMemory";
+import { formatDateTime } from "../../lib/formatting/time";
 
 const TONE: Record<string, "red" | "orange" | "blue"> = {
   high: "red",
@@ -47,12 +48,7 @@ export function DecisionTimelineCard({ timeline }: { timeline: DecisionTimelineP
 
 function formatShort(iso: string): string {
   try {
-    return new Date(iso).toLocaleString([], {
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatDateTime(iso);
   } catch {
     return iso;
   }

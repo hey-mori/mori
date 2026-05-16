@@ -3,6 +3,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriSection } from "../../components/ui/MoriSection";
 import type { StoredMoriPackageDraft } from "../../lib/storage/storageTypes";
+import { formatDateTime } from "../../lib/formatting/time";
 
 export function SavedReportsCard({
   packages,
@@ -63,13 +64,7 @@ export function SavedReportsCard({
 
 function formatShort(iso: string): string {
   try {
-    return new Date(iso).toLocaleString([], {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatDateTime(iso);
   } catch {
     return iso;
   }

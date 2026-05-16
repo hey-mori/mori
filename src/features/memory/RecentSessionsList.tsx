@@ -3,6 +3,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type { DerivedSession } from "../../lib/project-memory/projectMemory";
 import type { ProjectMemoryLoadedSessionStatus } from "../../lib/project-memory/projectMemoryModel";
+import { formatDate } from "../../lib/formatting/time";
 
 const SCOPE_TONE: Record<string, "green" | "purple" | "blue" | "gray"> = {
   "current-session": "green",
@@ -97,7 +98,7 @@ export function RecentSessionsList({
 
 function formatShort(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString();
+    return formatDate(iso);
   } catch {
     return iso;
   }

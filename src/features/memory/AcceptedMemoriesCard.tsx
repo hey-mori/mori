@@ -1,6 +1,7 @@
 import { BookCheck, Clock4, Eye } from "lucide-react";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriSection } from "../../components/ui/MoriSection";
+import { formatDateTime } from "../../lib/formatting/time";
 import {
   describeProposalKind,
   proposalKindTone,
@@ -172,13 +173,7 @@ function MemoryLifecycleStrip({
 
 function formatShort(iso: string): string {
   try {
-    return new Date(iso).toLocaleString([], {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatDateTime(iso);
   } catch {
     return iso;
   }
