@@ -6340,10 +6340,12 @@ pre {
   margin-top: 5px;
 }
 
-.companion-signal.sev-risk .companion-signal-dot { background: var(--red); }
-.companion-signal.sev-review .companion-signal-dot { background: #d8923f; }
-.companion-signal.sev-suggestion .companion-signal-dot { background: var(--blue); }
-.companion-signal.sev-info .companion-signal-dot { background: var(--muted-2); }
+/* Dot tone keyed off the shared product-state vocabulary (data-mori-tone)
+   set from `companionSeverityTone`: danger / warning / info / neutral. */
+.companion-signal[data-mori-tone="danger"] .companion-signal-dot { background: var(--red); }
+.companion-signal[data-mori-tone="warning"] .companion-signal-dot { background: #d8923f; }
+.companion-signal[data-mori-tone="info"] .companion-signal-dot { background: var(--blue); }
+.companion-signal[data-mori-tone="neutral"] .companion-signal-dot { background: var(--muted-2); }
 
 .companion-signal-body {
   min-width: 0;
@@ -6429,10 +6431,10 @@ pre {
   flex-shrink: 0;
 }
 
-.companion-strip.sev-risk .companion-strip-dot { background: var(--red); }
-.companion-strip.sev-review .companion-strip-dot { background: #d8923f; }
-.companion-strip.sev-suggestion .companion-strip-dot { background: var(--blue); }
-.companion-strip.sev-info .companion-strip-dot { background: var(--muted-2); }
+.companion-strip[data-mori-tone="danger"] .companion-strip-dot { background: var(--red); }
+.companion-strip[data-mori-tone="warning"] .companion-strip-dot { background: #d8923f; }
+.companion-strip[data-mori-tone="info"] .companion-strip-dot { background: var(--blue); }
+.companion-strip[data-mori-tone="neutral"] .companion-strip-dot { background: var(--muted-2); }
 
 .companion-strip-title {
   flex: 1;

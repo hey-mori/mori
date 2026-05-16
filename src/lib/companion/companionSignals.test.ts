@@ -3,8 +3,10 @@ import type { Decision, Issue, NextAction, TimelineEvent } from "../../domain/ty
 import {
   buildCompanionSignals,
   companionSeverityRank,
+  companionSeverityTone,
   MAX_COMPANION_SIGNALS,
   type CompanionSignalInput,
+  type CompanionSignalSeverity,
 } from "./companionSignals";
 
 function issue(over: Partial<Issue>): Issue {
@@ -223,6 +225,21 @@ describe("buildCompanionSignals — raw-data safety", () => {
     for (const signal of signals) {
       expect(signal.title).not.toContain(secret);
       expect(signal.message).not.toContain(secret);
+    }
+  });
+});
+
+describe("companionSeverityTone", () => {
+  it("derives each severity tone from the shared product-state vocabulary", () => {
+    expect(companionSeverityTone("risk")).toBe("danger");
+    expect(companionSeverityTone("review")).toBe("warning");
+    expect(companionSeverityTone("suggestion")).toBe("info");
+    expect(companionSeverityTone("info")).toBe("neutral");
+  });
+
+  it("never tones a review-or-risk signal as the available success state", () => {
+    for (const severity of ["risk", "review"] as CompanionSignalSeverity[]) {
+      expect(companionSeverityTone(severity)).not.toBe("success");
     }
   });
 });
