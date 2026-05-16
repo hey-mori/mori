@@ -141,18 +141,19 @@ only — no phase numbers.
 - Queryable Memory — Project Memory search UI (`QueryableMemoryCard`).
 - Queryable Memory — extension to timeline events, evidence sources,
   and review-action notes (`searchProjectMemoryReferences`).
+- Local Connector Capture polish — real `mori-local-capture` output
+  verified to round-trip; clean-repo git snapshot coverage added.
 
 **Open priority (highest first):**
 
-1. Local Connector Capture polish with real generated output
-2. Evidence / Import Review polish for real captured data
-3. `.mori` native file-open affordance if safe
-4. `.mori` auditTrail package slice
-5. Memory Audit Trail reviewed revert flow
-6. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
+1. Evidence / Import Review polish for real captured data
+2. `.mori` native file-open affordance if safe
+3. `.mori` auditTrail package slice
+4. Memory Audit Trail reviewed revert flow
+5. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
    mirror)
-7. CLI wrapper for Claude/Codex workflows, explicit/local only
-8. IDE / Terminal integration planning, no hidden monitoring
+6. CLI wrapper for Claude/Codex workflows, explicit/local only
+7. IDE / Terminal integration planning, no hidden monitoring
 
 When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
@@ -162,58 +163,39 @@ backlog with it.
 
 The next slice should be:
 
-**Local Connector Capture polish with real generated output**
+**Evidence / Import Review polish for real captured data**
 
 Goal:
-Make the `connectors/local-capture` bridge's real generated output
-verifiably correct end-to-end, and keep its fixtures and docs in sync
-with what the script actually emits.
+Make the Import Review and Evidence Hub surfaces hold up against the
+real connector JSONL that `mori-local-capture` and the connector
+templates emit — honest counts, honest provenance, honest
+empty/partial states — without redesigning the surfaces.
 
-Scope — do:
-- Verify the `mori-local-capture` script output for each input mode
-  (`--transcript`, `--note`, `--git-repo`) parses cleanly and yields
-  valid Import Review candidates through the existing connector
-  pipeline.
-- Keep the committed sample fixture
-  (`connectors/local-capture/sample-event.jsonl`) matching the
-  shape the script emits today.
-- Tighten the connector docs so they describe the real flow.
+Scope — audit first, then pick the smallest real improvement:
+- Inspect `src/features/review-import/` and `src/features/evidence/`
+  against the connector pipeline output.
+- Prefer one concrete, testable correctness or honesty fix over
+  broad cosmetic change.
+- If no concrete defect is found, narrow the slice to a pure helper
+  or test-coverage gap rather than manufacturing busywork.
 
 Scope — do not:
-- Add watchers, daemons, or polling.
-- Add wrappers unless explicit and local-only.
-- Do any account / app / database scraping.
-- Bypass Preview or Import Review — generated JSONL must continue
-  through both.
+- Redesign Import Review or the Evidence Hub.
+- Add new capture surfaces.
+- Touch review-before-apply semantics.
 
-Suggested files:
-- `connectors/local-capture/mori-local-capture.py`
-- `connectors/local-capture/sample-event.jsonl`
-- `connectors/local-capture/README.md`
-- `docs/connectors/local-capture.md`
-- `src/lib/connectors/connectorLocalCaptureFixture.test.ts`
+Suggested files (audit before editing):
+- `src/features/review-import/`
+- `src/features/evidence/`
+- `src/lib/connectors/`
+- `src/lib/import/`
 
 Tests:
-- sample fixture parses with no validation errors
-- each input mode (`transcript`, `note`, `git-repo`) produces a
-  normalized Import Review candidate
-- connector identities (`connectorEventId`) are present and stable
-- no secret-shaped values or raw local paths leak into the output
-
-Commit message:
-
-```
-feat: polish Local Connector Capture output
-
-- Verify mori-local-capture output round-trips through Preview and Import Review
-- Keep the local-capture sample fixture aligned with real script output
-- Strengthen connector pipeline tests for transcript, note, and git inputs
-- Preserve explicit, user-triggered, local-only capture boundaries
-- Document the verified local capture flow
-```
+- cover the concrete behavior changed by the slice
+- prefer pure-helper tests over brittle component tests
 
 After this slice ships, set the next slice to the new top item of the
-open backlog (Evidence / Import Review polish) and continue.
+open backlog (`.mori` native file-open affordance) and continue.
 
 ## 9. Stop Conditions
 

@@ -91,6 +91,11 @@ What the Git event contains: `branch`, `headCommit`, `shortHeadCommit`,
 `isDirty`, total `additions` / `deletions`, and a `files[]` list of
 **relative** paths with change types and per-file add/delete counts.
 
+A **clean repository** (no uncommitted changes) still produces a
+`git_diff_captured` event — `isDirty: false`, an empty `files[]`, and
+zero `additions` / `deletions`. It parses and normalizes through the
+connector pipeline exactly like a dirty-repo snapshot.
+
 What it deliberately does **not** contain:
 
 - No full diff (`git diff` content is never captured).
