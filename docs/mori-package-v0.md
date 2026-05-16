@@ -21,6 +21,7 @@ Implemented now:
 - `getPackageConsolidatedMemories`
 - `getPackageAuditTrail`
 - `buildMoriPackageFileLayout`
+- `parseMoriPackageFileLayout`
 
 Current JSON shape:
 
@@ -102,10 +103,13 @@ Zip-like file layout:
 
 `buildMoriPackageFileLayout(pkg)` turns a `MoriPackageV0` into the
 documented one-file-per-slice layout as an in-memory
-`Record<MoriPackageFileName, string>` — the dependency-free half of
-zip packaging. The actual archiving step needs an archiving
-dependency and is a separate decision; the layout builder lets that
-land without reshaping the data.
+`Record<MoriPackageFileName, string>`, and `parseMoriPackageFileLayout`
+reassembles a validated `MoriPackageV0` from that map — the
+dependency-free, both-ways half of zip packaging. The actual
+archiving step needs an archiving dependency and is a separate
+decision; the layout builder / parser let that land without reshaping
+the data. `parseMoriPackageFileLayout` throws on a missing file or an
+invalid package, mirroring `deserializeMoriPackage`.
 
 ```text
 project.mori

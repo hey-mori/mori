@@ -24,6 +24,7 @@ export {
 export { validateMoriPackage } from "./validation";
 export {
   buildMoriPackageFileLayout,
+  parseMoriPackageFileLayout,
   MORI_PACKAGE_FILE_NAMES,
 } from "./fileLayout";
 export type {

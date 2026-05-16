@@ -176,12 +176,15 @@ only — no phase numbers.
   (dependency-free; the zip archiving step is a separate decision).
 - `.mori v0` import validation hardening — `validateMoriPackage` now
   checks each slice's per-record identity fields with precise paths.
+- `.mori` zip-like layout round-trip — `parseMoriPackageFileLayout`
+  reassembles a validated `MoriPackageV0` from the one-file-per-slice
+  map, the inverse of `buildMoriPackageFileLayout` (dependency-free).
 
 **Open priority (highest first):**
 
-1. `.mori` zip-like layout — `parseMoriPackageFileLayout`, the inverse
-   of `buildMoriPackageFileLayout`, so the one-file-per-slice layout
-   round-trips back to a validated `MoriPackageV0` (dependency-free).
+1. Connector template fixture coverage — guard the `claude-code` and
+   `codex-cli` connector sample JSONL with pipeline round-trip tests,
+   mirroring the local-capture fixture test.
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -194,7 +197,8 @@ Deferred — revisit when a concrete need appears:
 - IDE / Terminal integration runtime code — the explicit-capture
   design is documented; building an editor extension waits for a
   concrete first integration target.
-- `.mori` zip archiving step — the file-layout builder is shipped;
+- `.mori` zip archiving step — the file-layout builder + parser are
+  shipped (`buildMoriPackageFileLayout` / `parseMoriPackageFileLayout`);
   the actual zip archive needs an archiving dependency, which is a
   product/security decision the loop must not make unilaterally.
   Revisit when the dependency is explicitly approved.
@@ -209,43 +213,41 @@ backlog with it.
 
 The next slice should be:
 
-**`.mori` zip-like layout — `parseMoriPackageFileLayout` (inverse)**
+**Connector template fixture coverage — claude-code / codex-cli**
 
 Goal:
-`buildMoriPackageFileLayout` turns a `MoriPackageV0` into the
-documented one-file-per-slice map. This slice ships the inverse —
-reassembling a validated `MoriPackageV0` from that map — so the
-zip-like layout round-trips both ways and the future zip archiving
-step has both halves ready (still dependency-free).
+`connectors/claude-code/sample-event.jsonl` and
+`connectors/codex-cli/sample-event.jsonl` ship as the canonical
+output of those connector templates, but no test verifies they still
+round-trip through the connector pipeline. The `local-capture` sample
+has such a fixture test; this slice gives the other two templates the
+same guard, so a template / pipeline drift is caught.
 
 Scope — do:
-- Add a pure `parseMoriPackageFileLayout(layout)` that reads the
-  documented files (JSON slices + `events.jsonl`), assembles a
-  `MoriPackageV0`, and runs it through `validateMoriPackage` — throw
-  on an invalid result, mirroring `deserializeMoriPackage`.
-- Parse `events.jsonl` line-by-line (the inverse of
-  `serializeEventsJsonl`); tolerate a trailing newline.
-- Reconstruct the optional `consolidatedMemories` / `auditTrail`
-  slices from their files; keep them absent-safe.
+- Add a fixture test (one file, or extend an existing one) that
+  imports each connector template's `sample-event.jsonl` via
+  `?raw`, and asserts it parses with no errors, previews as valid,
+  and normalizes through `normalizeConnectorEventBatch`.
+- Assert the documented connector ids / event kinds / source kinds
+  for each template, mirroring `connectorLocalCaptureFixture.test.ts`.
 
 Scope — do not:
-- Add a zip / archiving dependency — still the in-memory map only.
-- Change the `.mori v0` format or the flat-JSON serialize path.
+- Change the connector pipeline or the template scripts.
+- Add brittle assertions on copy that is expected to evolve.
 
 Suggested files:
-- `src/lib/mori-package/fileLayout.ts`
-- `src/lib/mori-package/index.ts`
-- `src/lib/mori-package/mori-package.test.ts`
-- `docs/mori-package-v0.md`
+- `src/lib/connectors/connectorTemplateFixture.test.ts` (new), or
+  extend `connectorLocalCaptureFixture.test.ts`
+- `docs/connectors/*` only if a doc claim turns out stale
 
 Tests:
-- a package round-trips: `buildMoriPackageFileLayout` →
-  `parseMoriPackageFileLayout` yields an equivalent `MoriPackageV0`
-- `events.jsonl` with a trailing newline parses
-- a layout missing a required file is rejected
+- the `claude-code` sample JSONL parses, previews, and normalizes
+- the `codex-cli` sample JSONL parses, previews, and normalizes
 
-After this slice ships, set the next slice to the new top backlog
-item, reconciling with the goal document's Current Gaps.
+After this slice ships, reconcile section 7 with the goal document's
+Current Gaps. Note: the remaining backlog (`.mori` zip archive, team
+memory) is deferred pending an explicit dependency / scope decision —
+surface that to the user rather than guessing.
 
 ## 9. Stop Conditions
 

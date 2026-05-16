@@ -7,6 +7,7 @@ import {
   getPackageAuditTrail,
   getPackageConsolidatedMemories,
   MORI_PACKAGE_FILE_NAMES,
+  parseMoriPackageFileLayout,
   serializeEventsJsonl,
   serializeMoriPackage,
   validateMoriPackage,
@@ -278,5 +279,37 @@ describe(".mori package v0 — zip-like file layout", () => {
     const layout = buildMoriPackageFileLayout(pkg);
     expect(JSON.parse(layout["consolidated_memories.json"])[0].id).toBe("mem-x");
     expect(JSON.parse(layout["audit_trail.json"])[0].id).toBe("act-x");
+  });
+
+  it("round-trips a package through build / parse file layout", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession, {
+      consolidatedMemories: [acceptedMemory({ id: "mem-x" })],
+      auditTrail: [reviewAction({ id: "act-x" })],
+    });
+    const restored = parseMoriPackageFileLayout(buildMoriPackageFileLayout(pkg));
+
+    expect(restored.manifest.packageId).toBe(pkg.manifest.packageId);
+    expect(restored.events.length).toBe(pkg.events.length);
+    expect(getPackageConsolidatedMemories(restored)[0]?.id).toBe("mem-x");
+    expect(getPackageAuditTrail(restored)[0]?.id).toBe("act-x");
+    expect(validateMoriPackage(restored).valid).toBe(true);
+  });
+
+  it("tolerates a trailing newline on events.jsonl", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const layout = buildMoriPackageFileLayout(pkg);
+    const restored = parseMoriPackageFileLayout({
+      ...layout,
+      "events.jsonl": `${layout["events.jsonl"]}\n`,
+    });
+    expect(restored.events.length).toBe(pkg.events.length);
+  });
+
+  it("rejects a layout missing a required file", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const layout = buildMoriPackageFileLayout(pkg);
+    const broken = { ...layout };
+    delete (broken as Record<string, string>)["manifest.json"];
+    expect(() => parseMoriPackageFileLayout(broken)).toThrow(/missing file/i);
   });
 });

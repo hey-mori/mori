@@ -19,6 +19,7 @@ import {
 } from "./deserialize";
 import { serializeEventsJsonl } from "./serialize";
 import type { MoriPackageV0 } from "./types";
+import { validateMoriPackage } from "./validation";
 
 /** Stable list of every file the zip-like layout contains, in order. */
 export const MORI_PACKAGE_FILE_NAMES = [
@@ -73,6 +74,79 @@ export function buildMoriPackageFileLayout(
   };
 }
 
+/**
+ * Reassemble a `MoriPackageV0` from a zip-like file layout — the
+ * inverse of `buildMoriPackageFileLayout`. Pure. The result is run
+ * through `validateMoriPackage`; an invalid layout throws, mirroring
+ * `deserializeMoriPackage`. A missing required file also throws.
+ */
+export function parseMoriPackageFileLayout(
+  layout: Record<string, string>,
+): MoriPackageV0 {
+  for (const name of MORI_PACKAGE_FILE_NAMES) {
+    if (typeof layout[name] !== "string") {
+      throw new Error(`Invalid Mori package layout: missing file "${name}"`);
+    }
+  }
+
+  const pkg: MoriPackageV0 = {
+    manifest: parseJsonFile(layout, "manifest.json"),
+    projects: parseJsonFile(layout, "projects.json"),
+    sessions: parseJsonFile(layout, "sessions.json"),
+    events: parseEventsJsonl(layout["events.jsonl"]),
+    issues: parseJsonFile(layout, "issues.json"),
+    decisions: parseJsonFile(layout, "decisions.json"),
+    relationships: parseJsonFile(layout, "relationships.json"),
+    sources: parseJsonFile(layout, "sources.json"),
+    nextActions: parseJsonFile(layout, "next_actions.json"),
+    artifacts: parseJsonFile(layout, "artifacts.json"),
+    summaries: parseJsonFile(layout, "summaries.json"),
+    privacy: parseJsonFile(layout, "privacy.json"),
+    theme: parseJsonFile(layout, "theme.json"),
+    consolidatedMemories: parseJsonFile(layout, "consolidated_memories.json"),
+    auditTrail: parseJsonFile(layout, "audit_trail.json"),
+  };
+
+  const validation = validateMoriPackage(pkg);
+  if (!validation.valid) {
+    const messages = validation.issues
+      .map((issue) => `${issue.path}: ${issue.message}`)
+      .join("; ");
+    throw new Error(`Invalid Mori package layout: ${messages}`);
+  }
+  return pkg;
+}
+
 function json(value: unknown): string {
   return JSON.stringify(value, null, 2);
+}
+
+function parseJsonFile<T>(layout: Record<string, string>, name: string): T {
+  try {
+    return JSON.parse(layout[name]) as T;
+  } catch (error) {
+    throw new Error(
+      `Invalid Mori package layout: "${name}" is not valid JSON (${
+        error instanceof Error ? error.message : "parse error"
+      })`,
+    );
+  }
+}
+
+/** Inverse of `serializeEventsJsonl` — tolerant of a trailing newline. */
+function parseEventsJsonl(jsonl: string): MoriPackageV0["events"] {
+  return jsonl
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line, index) => {
+      try {
+        return JSON.parse(line) as MoriPackageV0["events"][number];
+      } catch (error) {
+        throw new Error(
+          `Invalid Mori package layout: events.jsonl line ${index + 1} is not valid JSON (${
+            error instanceof Error ? error.message : "parse error"
+          })`,
+        );
+      }
+    });
 }
