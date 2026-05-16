@@ -359,7 +359,9 @@ against the repository.
   activity into `~/.mori/connectors/` for a real workflow is not
   shipped. The user must still run the template scripts manually.
 - **IDE / terminal / browser extension integrations.** Listed as
-  Planned in `source-integrations.md`; no extension code exists.
+  Planned in `source-integrations.md`; the explicit-capture design is
+  now documented there ("IDE / Terminal integration plan"), but no
+  extension code exists yet.
 - **Optional watched inbox.** Refresh-only desktop inbox is shipped;
   an opt-in background watcher that loads new files into a "pending
   review" tray is not implemented.

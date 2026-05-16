@@ -404,6 +404,77 @@ UI surfaces (Settings, Evidence Hub) should read status copy from the
 matrix rather than re-deriving it, so "no fake active connector buttons"
 is enforced by data, not by code review.
 
+## IDE / Terminal integration plan (explicit capture)
+
+IDE and terminal integration is **planned**, not built. This section is
+the design the future build slices must follow. It exists so the work
+starts from an explicit, local-first model rather than drifting toward a
+watcher.
+
+### The model: explicit emit, never background watch
+
+Every IDE / terminal integration is an **explicit-emit connector**, not
+a monitor. The integration only ever produces a `ConnectorEvent` when
+the user takes a deliberate action:
+
+- runs a command (`mori-local-capture.py --transcript -`, a future
+  `mori capture` subcommand);
+- presses a keybinding the user themselves bound;
+- clicks an explicit "Send to Mori" / "Capture session" action in an
+  editor extension.
+
+There is **no file-system watcher, no editor-buffer poller, no shell-history
+scraper, no daemon**. Mori never observes the editor, the terminal, or the
+process list in the background. If a planned entry above (#11 File System
+Watcher, #12 Editor Activity) is ever built, it is built as an
+explicit-emit action — the user triggers each capture — and the older
+"watcher" framing in those entries is superseded by this section.
+
+### Reuse the connector JSONL pipeline
+
+An IDE / terminal integration is a **thin emitter**, not a new pipeline.
+It writes connector JSONL into the existing `~/.mori/connectors/<family>/`
+inbox in the shape documented by
+[`connector-event-format.md`](./connectors/connector-event-format.md) —
+exactly what `mori-local-capture.py` already produces. The user then
+reviews it through the existing path: Evidence Hub → **Connector JSONL**
+→ Preview → **Import to Review** → Import Review. No integration ever
+imports directly into a session, and no integration bypasses Import
+Review.
+
+This keeps every integration traceable through the existing connector
+helpers and the [capture surface matrix](./connectors/capture-surface-matrix.md),
+and avoids inventing registry entries that have no real capture logic.
+
+### Capture shapes
+
+| Integration | Explicit trigger | Connector event kind | Reused source kind |
+|---|---|---|---|
+| Terminal session | User pipes a session into local capture or runs a capture command | `transcript_imported` / `session_finished` | `terminal` / `aiConversation` |
+| Editor "capture session" | User clicks the extension's capture action | `session_finished` (note-shaped) | `editor` |
+| Editor file-change digest | User explicitly ends a capture and the extension emits a summarised digest | `git_diff_captured` (metadata only) | `editor` |
+
+All shapes follow the existing privacy rules: `rawDataPolicy:
+summary_only` by default, no raw buffer / scrollback text, no absolute
+paths beyond what a `SourceRef` already retains.
+
+### Hard non-goals (restated so the doc cannot be misread)
+
+An IDE / terminal integration must never:
+
+- watch the filesystem, poll editor buffers, or scrape shell history;
+- run a daemon, a scheduled job, or any always-on background process;
+- read terminal scrollback or any process the user did not explicitly
+  hand to Mori;
+- capture keystrokes, screenshots, or the clipboard;
+- import captured events without Import Review.
+
+The first build slice should be the smallest explicit emitter that
+reuses `mori-local-capture.py` — e.g. a documented editor task that
+pipes the current selection or a saved transcript into
+`--transcript -`. An editor extension is only worth building once the
+explicit-emit contract above is proven through that path.
+
 ## See Also
 
 - [Imports Documentation](./imports.md) — Import panel UI and normalizer architecture

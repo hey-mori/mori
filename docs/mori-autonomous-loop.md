@@ -157,21 +157,23 @@ only — no phase numbers.
 - CLI wrapper for Claude/Codex workflows — `mori-local-capture.py
   --transcript -` reads a piped CLI session from stdin (explicit,
   local-only, no subprocess wrapping or background watching).
+- IDE / Terminal integration planning — explicit-capture design doc
+  in `source-integrations.md` (explicit emit, no background watch).
 
 **Open priority (highest first):**
 
-1. IDE / Terminal integration planning, no hidden monitoring
+1. SQLite-side `importSummary` mirror — desktop SQLite-saved sessions
+   cannot contribute to the connector re-import rollup; the Memory
+   page surfaces this honestly as a warning today.
+2. Native file picker for `.mori v0` save / open.
+3. Local Connector Capture — a tested end-to-end bridge for real
+   Claude / Codex / Git work into `~/.mori/connectors/`.
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
   the `review` lib, and the connector pipeline are mature and
   well-tested with no concrete defect. Revisit when real captured
   data exposes a specific honesty / correctness gap.
-- SQLite-side `importSummary` mirror — audited; `StoredSessionImport`
-  is browser-only by type (`adapter: "browser-local-storage"`), and
-  the SQLite path is a session-snapshot model with no session-imports
-  concept. Mirroring it is a new capability, not a cleanup. Revisit
-  only if desktop needs per-import re-import summaries.
 
 When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
@@ -181,43 +183,51 @@ backlog with it.
 
 The next slice should be:
 
-**IDE / Terminal integration planning — explicit-capture design doc**
+**SQLite `importSummary` mirror — V004 migration + row mappers**
 
 Goal:
-Write the planning section for IDE / terminal integration so the next
-build slices have a concrete, non-goal-safe design to follow. This is
-a documentation slice — no runtime code — but a real production slice:
-it commits the design that keeps future integration explicit and
-local-first.
+Lay the SQLite foundation for desktop sessions to carry their
+connector re-import summary. Today only browser-saved sessions carry
+`StoredSessionImport.importSummary`; this slice adds the SQLite table
+and the pure TS row converters so a later slice can wire the Tauri
+command.
 
 Scope — do:
-- Add an "IDE / Terminal integration" planning section to
-  `docs/source-integrations.md` (or the closest existing planning
-  doc).
-- Specify the explicit-capture model: the user triggers a capture
-  (a command, a keybinding, an editor action) — Mori never watches
-  the editor, terminal, or process list in the background.
-- Reuse the existing connector JSONL pipeline and the
-  `~/.mori/connectors/` inbox — the integration emits the same event
-  shape `mori-local-capture.py` already produces.
-- Restate the hard non-goals inline (no scrollback scraping, no
-  keylogging, no daemon) so the doc cannot be misread.
+- Add a `V004__session_imports.sql` migration to
+  `src-tauri/migrations/` creating a `session_imports` table — id,
+  session_id, source identity, saved_at, and a JSON
+  `import_summary_json` column (flatten the object, opaque to Rust).
+- Mirror the migration in the TS catalog (`schema.ts`) with a
+  matching checksum, and add `session_imports` to
+  `requiredSqliteTables`.
+- Add pure `toSqliteSessionImportRow` / `fromSqliteSessionImportRow`
+  converters in `src/lib/sqlite/` with round-trip tests.
+- Keep it additive — the migration only creates a new table; nothing
+  existing is rewritten.
 
 Scope — do not:
-- Write integration runtime code in this slice.
-- Design anything that needs a background watcher, account access, or
-  a hidden capture path.
+- Wire the Tauri command or change `localStorageAdapter` yet — the
+  command + UI is the next slice.
+- Drop or rewrite any existing table.
 
 Suggested files:
-- `docs/source-integrations.md`
-- `docs/mori-project-goal.md` (only if the canonical state changes)
+- `src-tauri/migrations/V004__session_imports.sql`
+- `src/lib/sqlite/schema.ts`
+- `src/lib/sqlite/sessionImportRows.ts` (new)
+- `src/lib/sqlite/sqlite.test.ts` / a new test file
+- `docs/sqlite-migrations.md`, `docs/sqlite-persistence.md`
 
 Tests:
-- none — documentation slice; validation is `check:full` + `build`
-  staying green.
+- a `StoredSessionImport` (with and without `importSummary`)
+  round-trips through the row converters
+- the migration catalog validates and `migrationMentionsRequiredTables`
+  covers `session_imports`
 
-After this slice ships, reconcile section 7 with the goal document's
-Current Gaps and set the next slice to the new top backlog item.
+Validation note: this slice touches `src-tauri/` — run `cargo check`
+and `cargo test` in addition to `npm run check:full` / `npm run build`.
+
+After this slice ships, set the next slice to wiring the Tauri
+`session_imports` command + the desktop repository path, and continue.
 
 ## 9. Stop Conditions
 
