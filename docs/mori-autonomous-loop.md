@@ -353,11 +353,17 @@ a demo/overview. Highest value first.
   width for scanning; wired through the previously-dead
   `inspectorCollapsed` store state. Collapse applies to Timeline
   mode only (Flow Focus keeps its Trace panel).
-- Inspector responsibility — auto-collapse / overlay-drawer at
-  constrained widths still pending; remaining card metadata could
-  move further into the inspector.
-- Responsive Timeline — laptop/tablet behaviour, inspector
-  drawer/overlay, a chronological list fallback at narrow widths.
+- ✅ Narrow-width inspector auto-hide — at ≤1180px the side
+  inspector auto-hides (`shouldHideInspector`) instead of stacking
+  awkwardly under a horizontally-scrolling canvas; the toolbar
+  toggle is disabled with an explanatory tooltip. Verified at
+  1024 / 768 — no page-level overflow, canvas scrolls horizontally
+  as designed.
+- Responsive Timeline — an overlay/drawer inspector for narrow
+  widths and a chronological list fallback are still open;
+  auto-hide is the current minimum-viable behaviour.
+- Inspector responsibility — remaining card metadata could move
+  further into the inspector.
 - ✅ Day-scale stress fixture — `buildTimelineStressEvents` is a
   deterministic 36-event working-day fixture (every lane, morning
   bursts, same-time clusters, short + 45/90-minute ranged events,

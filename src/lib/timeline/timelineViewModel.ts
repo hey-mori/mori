@@ -200,6 +200,29 @@ export function buildTimelineRenderModel(
 }
 
 /**
+ * Viewport width at or below which the Timeline side inspector is hidden so
+ * the canvas keeps the full content width. Matches the `content-grid`
+ * single-column CSS breakpoint — below it the inspector would otherwise
+ * stack awkwardly under a horizontally-scrolling canvas.
+ */
+export const TIMELINE_INSPECTOR_NARROW_MAX_PX = 1180;
+
+/**
+ * Whether the Timeline side inspector should be hidden. Hidden when the user
+ * explicitly collapsed it, or when the viewport is too narrow to carry a
+ * side column. Flow Focus keeps its Trace panel regardless.
+ */
+export function shouldHideInspector(args: {
+  mode: TimelineMode;
+  inspectorCollapsed: boolean;
+  viewportWidth: number;
+}): boolean {
+  if (args.mode !== "timeline") return false;
+  if (args.inspectorCollapsed) return true;
+  return args.viewportWidth <= TIMELINE_INSPECTOR_NARROW_MAX_PX;
+}
+
+/**
  * Density-aware bundle tuning. Denser modes use smaller cards, so a lane can
  * carry more individual events before the overflow-merge kicks in, and a
  * tighter cluster window keeps a "burst" meaningfully tight.

@@ -9,6 +9,8 @@ import {
   filterEvents,
   getActiveLanes,
   getFocusedRelationships,
+  shouldHideInspector,
+  TIMELINE_INSPECTOR_NARROW_MAX_PX,
 } from "./timelineViewModel";
 
 function withEvents(events: TimelineEvent[], relationships: Relationship[] = []): MoriMockSession {
@@ -285,5 +287,47 @@ describe("densityBundleTuning", () => {
     expect(densityBundleTuning("dense").timeWindowMinutes).toBeLessThan(
       densityBundleTuning("comfortable").timeWindowMinutes,
     );
+  });
+});
+
+describe("shouldHideInspector", () => {
+  it("hides the inspector on a narrow viewport even when not collapsed", () => {
+    expect(
+      shouldHideInspector({
+        mode: "timeline",
+        inspectorCollapsed: false,
+        viewportWidth: TIMELINE_INSPECTOR_NARROW_MAX_PX,
+      }),
+    ).toBe(true);
+  });
+
+  it("shows the inspector on a wide viewport when not collapsed", () => {
+    expect(
+      shouldHideInspector({
+        mode: "timeline",
+        inspectorCollapsed: false,
+        viewportWidth: 1440,
+      }),
+    ).toBe(false);
+  });
+
+  it("hides the inspector when the user collapsed it, at any width", () => {
+    expect(
+      shouldHideInspector({
+        mode: "timeline",
+        inspectorCollapsed: true,
+        viewportWidth: 1920,
+      }),
+    ).toBe(true);
+  });
+
+  it("never hides the Flow Focus trace panel", () => {
+    expect(
+      shouldHideInspector({
+        mode: "flow",
+        inspectorCollapsed: true,
+        viewportWidth: 600,
+      }),
+    ).toBe(false);
   });
 });

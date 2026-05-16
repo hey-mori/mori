@@ -28,6 +28,8 @@ export type TimelineToolbarProps = {
   totalLaneCount: number;
   inspectorCollapsed: boolean;
   onToggleInspector: () => void;
+  /** Narrow viewports auto-hide the inspector, so the toggle is disabled. */
+  inspectorToggleDisabled: boolean;
 };
 
 /**
@@ -53,6 +55,7 @@ export function TimelineToolbar({
   totalLaneCount,
   inspectorCollapsed,
   onToggleInspector,
+  inspectorToggleDisabled,
 }: TimelineToolbarProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterPopRef = useRef<HTMLDivElement | null>(null);
@@ -196,13 +199,16 @@ export function TimelineToolbar({
         </div>
         <button
           type="button"
-          className={`toolbar-toggle ${inspectorCollapsed ? "" : "is-active"}`}
+          className={`toolbar-toggle ${!inspectorCollapsed && !inspectorToggleDisabled ? "is-active" : ""}`}
           onClick={onToggleInspector}
-          aria-pressed={!inspectorCollapsed}
+          disabled={inspectorToggleDisabled}
+          aria-pressed={!inspectorCollapsed && !inspectorToggleDisabled}
           title={
-            inspectorCollapsed
-              ? "인스펙터 패널 열기 — 선택한 이벤트의 근거·신뢰도·연결 항목 표시"
-              : "인스펙터 패널 접기 — 타임라인이 전체 폭을 사용"
+            inspectorToggleDisabled
+              ? "좁은 화면에서는 인스펙터가 자동으로 접힙니다 — 창을 넓히면 다시 표시됩니다."
+              : inspectorCollapsed
+                ? "인스펙터 패널 열기 — 선택한 이벤트의 근거·신뢰도·연결 항목 표시"
+                : "인스펙터 패널 접기 — 타임라인이 전체 폭을 사용"
           }
         >
           <PanelRight size={14} aria-hidden="true" />

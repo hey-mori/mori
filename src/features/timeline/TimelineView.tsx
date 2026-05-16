@@ -8,7 +8,12 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
-import { buildTimelineRenderModel, getActiveLanes } from "../../lib/timeline/timelineViewModel";
+import {
+  buildTimelineRenderModel,
+  getActiveLanes,
+  shouldHideInspector,
+  TIMELINE_INSPECTOR_NARROW_MAX_PX,
+} from "../../lib/timeline/timelineViewModel";
 import { EventInspector } from "./EventInspector";
 import { TimelineBundleInspector } from "./TimelineBundleInspector";
 import { TimelineCanvas, LANE_LABEL_WIDTH, DEFAULT_FRAME_WIDTH } from "./TimelineCanvas";
@@ -57,6 +62,18 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
 
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
+
+  // Track the viewport width so the inspector can auto-hide on narrow
+  // screens, where a side column would otherwise crush the canvas.
+  const [viewportWidth, setViewportWidth] = useState<number>(() =>
+    typeof window === "undefined" ? 1440 : window.innerWidth,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const model = useMemo(
     () =>
@@ -122,9 +139,10 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   }
 
   const selectedItem = renderModel.selectedItem ?? model.selectedItem;
-  // The inspector collapse only applies to Timeline mode — Flow Focus keeps
-  // its Trace panel, and the toggle is not shown in Flow mode.
-  const inspectorHidden = inspectorCollapsed && mode === "timeline";
+  // The inspector hides when the user collapses it or when the viewport is
+  // too narrow for a side column. Flow Focus keeps its Trace panel.
+  const inspectorNarrow = viewportWidth <= TIMELINE_INSPECTOR_NARROW_MAX_PX;
+  const inspectorHidden = shouldHideInspector({ mode, inspectorCollapsed, viewportWidth });
 
   return (
     <>
@@ -155,6 +173,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
               totalLaneCount={totalLaneCount}
               inspectorCollapsed={inspectorCollapsed}
               onToggleInspector={() => setInspectorCollapsed(!inspectorCollapsed)}
+              inspectorToggleDisabled={inspectorNarrow}
             />
           )}
           <TimelineCanvas
