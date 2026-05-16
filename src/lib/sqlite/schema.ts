@@ -76,6 +76,15 @@ export const sqliteMigrations: SqliteMigration[] = [
   },
 ];
 
+/**
+ * Every table a fully migrated Mori database must contain. Used by
+ * `migrationMentionsRequiredTables` to verify the schema catalog is
+ * complete. Includes the V003 accepted-memory tables
+ * (`consolidated_memories` / `consolidated_memory_audit`) — durable
+ * storage the Memory Audit Trail, the revert flow, and the `.mori v0`
+ * `auditTrail` slice all depend on, so a DB missing them is not
+ * actually complete.
+ */
 export const requiredSqliteTables = [
   "projects",
   "sessions",
@@ -89,6 +98,8 @@ export const requiredSqliteTables = [
   "summaries",
   "events_fts",
   "sources_fts",
+  "consolidated_memories",
+  "consolidated_memory_audit",
 ] as const;
 
 export const migrationTableName = "_mori_migrations";

@@ -72,6 +72,8 @@ src/lib/sqlite/desktopSqliteRepository.ts
 
 The TypeScript catalog mirrors the migration metadata so frontend/backend contracts and tests can validate ordering, file naming, and checksums before Rust SQLite is wired.
 
+`requiredSqliteTables` enumerates every table a fully migrated database must contain, and `migrationMentionsRequiredTables` asserts the schema catalog covers them all. The list includes the V003 accepted-memory tables (`consolidated_memories` / `consolidated_memory_audit`) — durable storage the Memory Audit Trail, the reviewed revert flow, and the `.mori v0` `auditTrail` slice depend on — so a catalog missing them fails the completeness check.
+
 ## Current Command Boundary
 
 The Tauri shell now registers SQLite command names so the frontend has a stable desktop boundary:

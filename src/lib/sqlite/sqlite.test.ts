@@ -30,6 +30,18 @@ describe("SQLite persistence foundation", () => {
     expect(sql).toContain("connector_event_id");
   });
 
+  it("requires the V003 accepted-memory tables in the schema catalog", () => {
+    expect(requiredSqliteTables).toContain("consolidated_memories");
+    expect(requiredSqliteTables).toContain("consolidated_memory_audit");
+    // The completeness check must fail if a required table is missing
+    // from the migration catalog — guards against a half-applied schema.
+    const sqlMissingAudit = getSqliteSchemaSql().replace(
+      /consolidated_memory_audit/g,
+      "renamed_audit",
+    );
+    expect(migrationMentionsRequiredTables(sqlMissingAudit)).toBe(false);
+  });
+
   it("uses Flyway-style filenames without depending on Flyway", () => {
     expect(sqliteMigrations[0]?.filename).toBe("V001__initial_schema.sql");
     expect(sqliteMigrations[1]?.filename).toBe("V002__events_connector_identity.sql");

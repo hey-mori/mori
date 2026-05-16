@@ -151,19 +151,25 @@ only — no phase numbers.
 - Memory Audit Trail reviewed revert flow — eligibility planner,
   proposal builder, apply helper, per-entry view-model eligibility,
   and the confirm-gated Revert affordance in the audit card.
+- SQLite / `.mori` parity cleanup — schema-completeness check now
+  covers the V003 accepted-memory tables (`consolidated_memories` /
+  `consolidated_memory_audit`) in `requiredSqliteTables`.
 
 **Open priority (highest first):**
 
-1. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
-   mirror)
-2. CLI wrapper for Claude/Codex workflows, explicit/local only
-3. IDE / Terminal integration planning, no hidden monitoring
+1. CLI wrapper for Claude/Codex workflows, explicit/local only
+2. IDE / Terminal integration planning, no hidden monitoring
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
   the `review` lib, and the connector pipeline are mature and
   well-tested with no concrete defect. Revisit when real captured
   data exposes a specific honesty / correctness gap.
+- SQLite-side `importSummary` mirror — audited; `StoredSessionImport`
+  is browser-only by type (`adapter: "browser-local-storage"`), and
+  the SQLite path is a session-snapshot model with no session-imports
+  concept. Mirroring it is a new capability, not a cleanup. Revisit
+  only if desktop needs per-import re-import summaries.
 
 When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
@@ -173,41 +179,42 @@ backlog with it.
 
 The next slice should be:
 
-**SQLite / `.mori` parity cleanup — close one concrete gap**
+**CLI wrapper for Claude/Codex workflows — stdin transcript capture**
 
 Goal:
-The desktop SQLite path and the browser / `.mori v0` path should
-persist and round-trip the same data. Audit the SQLite-backed
-storage against the browser adapter and the `.mori v0` package, then
-close the single highest-value concrete parity gap as a small slice.
+Let a user pipe a Claude / Codex CLI session into Mori's local
+capture explicitly — `claude ... | mori-local-capture --transcript -`
+— so a real terminal workflow can be captured without a hidden
+watcher. The smallest useful slice is stdin support on the existing
+`connectors/local-capture/mori-local-capture.py`.
 
 Scope — do:
-- Audit SQLite row mappers (`src/lib/sqlite/*`) and the Tauri
-  commands against `localStorageAdapter` and the `.mori v0` package
-  slices — accepted memory, review actions, import summaries.
-- Pick one concrete gap (a field dropped on the SQLite round-trip, a
-  slice with no SQLite mirror, a mapper that loses data) and close it
-  with mapper + test coverage.
-- Keep the change additive and non-destructive — no schema migration
-  that drops or rewrites existing rows.
+- Teach `mori-local-capture.py` `--transcript` to accept `-` and read
+  the transcript from stdin (already supports a file path).
+- Keep the connector id explicit and overridable (e.g. a
+  `--connector` flag defaulting to `desktopTranscriptImport`).
+- Emit the same connector JSONL shape the pipeline already accepts;
+  it must round-trip through parse → preview → normalize.
+- The capture stays explicit and local-only — the user runs the
+  pipe; nothing monitors in the background.
 
 Scope — do not:
-- Rewrite the SQLite schema broadly or add a destructive migration.
-- Add a parity gap that needs a new Tauri command surface if a
-  smaller mapper-only fix exists.
+- Spawn or wrap a subprocess silently, or add any background watcher.
+- Read terminal scrollback, history, or any process the user did not
+  explicitly pipe in.
 
 Suggested files:
-- `src/lib/sqlite/*` (row mappers / schema)
-- `src/lib/sqlite/*.test.ts`
-- `src/lib/desktop/tauriCommands.ts` (only if a command is missing)
-- `docs/mori-package-v0.md` or the relevant storage doc
+- `connectors/local-capture/mori-local-capture.py`
+- `connectors/local-capture/README` / `docs/connectors/local-capture.md`
+- `src/lib/connectors/connectorLocalCaptureFixture.test.ts`
+  (a fixture proving the stdin-shaped output round-trips)
 
 Tests:
-- the chosen field / slice round-trips through the SQLite mappers
-- a row written before the field existed still loads
+- a stdin-captured transcript JSONL parses, previews, and normalizes
+  through the connector pipeline
 
 After this slice ships, set the next slice to the new top backlog
-item (CLI wrapper for Claude/Codex workflows), and continue.
+item (IDE / Terminal integration planning), and continue.
 
 ## 9. Stop Conditions
 
