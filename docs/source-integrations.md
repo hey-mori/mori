@@ -175,13 +175,21 @@ These integrations are **not yet implemented**. They appear in planning document
 
 ### 10. Terminal History (`terminal`)
 
-- **Status**: Planned
-- **Capture Mode**: Planned connector (opt-in after explicit setup)
-- **Trust Level**: Observed (captured by Mori with permission)
-- **Raw Data Policy**: Redacted (commands with secrets masked)
-- **Privacy Note**: User must explicitly enable terminal integration in Settings and grant shell history access. Secrets (API keys, passwords) will be redacted before storage.
+- **Status**: Planned (registry connector) · explicit-capture shell
+  helper available
+- **Capture Mode**: Explicit `mori-capture` command (template)
+- **Trust Level**: Observed
+- **Raw Data Policy**: Summary only (metadata-only captures)
+- **Privacy Note**: Capture happens only when the user explicitly runs
+  `mori-capture …`. The earlier "parse `~/.bash_history`" framing is
+  **superseded** by the explicit-capture model — Mori never reads
+  shell history, scrollback, or any command the user did not pass to
+  `mori-capture` itself.
 
-**Future Usage**: After user opts in, Mori would parse `~/.bash_history` or equivalent and import recent commands related to work session.
+**Available now**: `connectors/terminal-helper/` — a `mori-capture`
+shell function the user sources from their rc file. It wraps
+`mori-local-capture.py` (`git` / `commit` / `note` / `transcript`) and
+writes to `~/.mori/connectors/`, reviewed through Import Review.
 
 ### 11. File System Watcher (`fileSystem`)
 
@@ -481,13 +489,18 @@ An IDE / terminal integration must never:
 - capture keystrokes, screenshots, or the clipboard;
 - import captured events without Import Review.
 
-The first build artifact is shipped: `connectors/vscode-task/` — a VS
-Code task template the user adds to their own `.vscode/tasks.json`,
-running `mori-local-capture.py` (`--git-repo` / `--git-commit` /
-`--note`) on an explicit **Run Task** action. It is the smallest
-explicit emitter that reuses the local-capture bridge, with no
-extension and no watcher. An editor extension is only worth building
-once this explicit-emit contract is proven in real use.
+The first build artifacts are shipped, both reusing the local-capture
+bridge with no extension and no watcher:
+
+- `connectors/vscode-task/` — a VS Code task template the user adds to
+  their own `.vscode/tasks.json`, capturing on an explicit **Run
+  Task** action.
+- `connectors/terminal-helper/` — a `mori-capture` shell function the
+  user sources from their rc file, capturing on an explicit
+  `mori-capture …` command.
+
+A real editor / browser extension is only worth building once this
+explicit-emit contract is proven in real use.
 
 ## See Also
 

@@ -185,18 +185,16 @@ only — no phase numbers.
 - IDE integration — first artifact: `connectors/vscode-task/`, a VS
   Code task template that runs `mori-local-capture.py` on an explicit
   Run Task action (no extension, no watcher).
+- Terminal integration — first artifact: `connectors/terminal-helper/`,
+  a `mori-capture` shell function wrapping `mori-local-capture.py`
+  (git / commit / note / transcript) on an explicit command.
 
 **Open priority (highest first):**
 
-1. Terminal integration — first artifact: a shell-function template
-   (`connectors/terminal-helper/`) wrapping `mori-local-capture.py`
-   for quick explicit terminal capture, the terminal counterpart of
-   the VS Code task template.
-
-Then the dependency-free, in-scope backlog is converged: the items
-below are **deferred** pending an explicit product / dependency /
-scope decision. The loop should not invent a slice to avoid this —
-surface the decision instead (see section 9 stop conditions).
+The dependency-free, in-scope backlog is converged: the items below
+are **deferred** pending an explicit product / dependency / scope
+decision. The loop should not invent a slice to avoid this — surface
+the decision instead (see section 9 stop conditions).
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -223,47 +221,38 @@ backlog with it.
 
 ## 8. Current Next Slice
 
-The next slice should be:
+**The dependency-free, in-scope backlog is converged.** The product
+loop — capture → preview → Import Review → Timeline / Evidence Hub →
+Project Memory → Consolidation Review → Accepted Memory → Resume
+Prompt / Reports — is built, tested (925 TS + 43 Rust), and
+documented end to end. Explicit-capture first artifacts ship for the
+connector path (`mori-local-capture.py`), Claude Code / Codex CLI
+hooks, the VS Code task template, and the terminal `mori-capture`
+helper.
 
-**Terminal integration — `mori-capture` shell-function template**
+Every remaining backlog item hits a section 9 stop condition — the
+next slice is a **product decision**, not a code change:
 
-Goal:
-The VS Code task template is shipped; this is its terminal
-counterpart. A shell-function template gives a terminal user a short
-explicit command to capture work into Mori, reusing the local-capture
-bridge — no watcher, no shell-history scraping.
+- **`.mori` zip archive step** — needs an archiving dependency
+  (e.g. `fflate`); the dependency-free layout builder + parser are
+  shipped, so the slice is ready the moment the dependency is
+  approved.
+- **A real editor / browser extension** — the explicit-capture task
+  and shell-helper artifacts are shipped; the plan gates an actual
+  extension on the explicit-emit contract being proven in real use.
+- **Team / shared memory** — a large surface with no concrete
+  near-term requirement; not sliceable without a specification.
 
-Scope — do:
-- Add `connectors/terminal-helper/` with a `mori-capture.sh` defining
-  a shell function (bash / zsh) the user sources from their rc file.
-  The function wraps `mori-local-capture.py` — e.g.
-  `mori-capture git` → `--git-repo .`, `mori-capture commit` →
-  `--git-commit HEAD`, `mori-capture note "<text>"` → `--note`.
-- Add a `README.md`: setup, the explicit-capture / non-goal
-  boundaries (no history scraping, no watcher), and the event mapping
-  table.
-- Update `docs/source-integrations.md` — the Terminal History entry
-  and the IDE / Terminal plan section reference the shipped template.
+The loop should surface this to the user and choose one:
 
-Scope — do not:
-- Read `~/.bash_history`, scrollback, or any command the user did not
-  explicitly pass to `mori-capture`.
-- Add an alias that runs on every prompt or any background hook.
+1. Approve a specific archiving dependency → `.mori` zip archive.
+2. Confirm the explicit-capture artifacts are proven enough to build
+   a VS Code extension → the extension becomes sliceable.
+3. Specify a concrete team / shared-memory requirement.
 
-Suggested files:
-- `connectors/terminal-helper/mori-capture.sh` (new)
-- `connectors/terminal-helper/README.md` (new)
-- `docs/source-integrations.md`
-
-Tests:
-- none — template + docs; validation is `check:full` + `build`
-  staying green (the capture outputs are already fixture-tested).
-
-After this slice ships, both the IDE and terminal explicit-capture
-first artifacts exist. The remaining backlog (`.mori` zip archive,
-team memory, an actual editor extension) is deferred pending an
-explicit dependency / scope / proven-in-use decision — surface that
-to the user per section 9 rather than inventing a slice.
+Until one of those decisions is made there is no honest
+dependency-free production slice left. Per section 9, this is a
+legitimate stop point — not a clean boundary skipped for convenience.
 
 ## 9. Stop Conditions
 

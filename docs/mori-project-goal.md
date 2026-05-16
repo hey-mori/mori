@@ -369,9 +369,10 @@ against the repository.
   explicit, no watcher) is template-only, not a turnkey integration.
 - **IDE / terminal / browser extension integrations.** The
   explicit-capture design is documented in `source-integrations.md`
-  and the first IDE artifact ships — `connectors/vscode-task/`, a VS
-  Code task template running `mori-local-capture.py` on an explicit
-  Run Task. A real editor / browser extension does not exist yet.
+  and the first artifacts ship — `connectors/vscode-task/` (a VS Code
+  Run Task template) and `connectors/terminal-helper/` (a
+  `mori-capture` shell function), both wrapping `mori-local-capture.py`.
+  A real editor / browser extension does not exist yet.
 - **Optional watched inbox.** Refresh-only desktop inbox is shipped;
   an opt-in background watcher that loads new files into a "pending
   review" tray is not implemented.
