@@ -174,12 +174,14 @@ only — no phase numbers.
 - `.mori` zip-like file layout — `buildMoriPackageFileLayout` turns a
   `MoriPackageV0` into the documented one-file-per-slice map
   (dependency-free; the zip archiving step is a separate decision).
+- `.mori v0` import validation hardening — `validateMoriPackage` now
+  checks each slice's per-record identity fields with precise paths.
 
 **Open priority (highest first):**
 
-1. `.mori v0` import validation hardening — make `validateMoriPackage`
-   check each slice's record shape, not just array-ness, so an
-   externally-supplied package is trustworthy before import.
+1. `.mori` zip-like layout — `parseMoriPackageFileLayout`, the inverse
+   of `buildMoriPackageFileLayout`, so the one-file-per-slice layout
+   round-trips back to a validated `MoriPackageV0` (dependency-free).
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -207,43 +209,40 @@ backlog with it.
 
 The next slice should be:
 
-**`.mori v0` import validation hardening — per-record shape checks**
+**`.mori` zip-like layout — `parseMoriPackageFileLayout` (inverse)**
 
 Goal:
-`validateMoriPackage` today checks manifest fields, that each slice is
-an array, and that privacy / theme are objects — but not the shape of
-the records inside. An externally-supplied `.mori` package can carry
-malformed records that only fail later. This slice hardens validation
-to check each slice's record identity fields, so import can be
-trusted.
+`buildMoriPackageFileLayout` turns a `MoriPackageV0` into the
+documented one-file-per-slice map. This slice ships the inverse —
+reassembling a validated `MoriPackageV0` from that map — so the
+zip-like layout round-trips both ways and the future zip archiving
+step has both halves ready (still dependency-free).
 
 Scope — do:
-- Extend `validateMoriPackage` to check, per slice, that every record
-  is an object carrying its required identity fields — e.g. each
-  `projects[i]` / `sessions[i]` / `events[i]` / `issues[i]` /
-  `decisions[i]` has a non-empty string `id`; `events[i]` also has a
-  `type`. Report a precise path (`events[3].id`).
-- Keep it structural and deterministic — no schema library, no
-  network, no new dependency.
-- Keep absent-safe slices absent-safe; only validate records that are
-  present.
+- Add a pure `parseMoriPackageFileLayout(layout)` that reads the
+  documented files (JSON slices + `events.jsonl`), assembles a
+  `MoriPackageV0`, and runs it through `validateMoriPackage` — throw
+  on an invalid result, mirroring `deserializeMoriPackage`.
+- Parse `events.jsonl` line-by-line (the inverse of
+  `serializeEventsJsonl`); tolerate a trailing newline.
+- Reconstruct the optional `consolidatedMemories` / `auditTrail`
+  slices from their files; keep them absent-safe.
 
 Scope — do not:
-- Add a JSON-schema dependency or change the `.mori v0` format.
-- Reject the optional `consolidatedMemories` / `auditTrail` slices
-  beyond their existing array-or-absent rule (each record carries its
-  own `schemaVersion`).
+- Add a zip / archiving dependency — still the in-memory map only.
+- Change the `.mori v0` format or the flat-JSON serialize path.
 
 Suggested files:
-- `src/lib/mori-package/validation.ts`
+- `src/lib/mori-package/fileLayout.ts`
+- `src/lib/mori-package/index.ts`
 - `src/lib/mori-package/mori-package.test.ts`
 - `docs/mori-package-v0.md`
 
 Tests:
-- a package with a record missing its `id` is rejected with a precise
-  path
-- a valid package still validates clean
-- the optional slices stay absent-safe
+- a package round-trips: `buildMoriPackageFileLayout` →
+  `parseMoriPackageFileLayout` yields an equivalent `MoriPackageV0`
+- `events.jsonl` with a trailing newline parses
+- a layout missing a required file is rejected
 
 After this slice ships, set the next slice to the new top backlog
 item, reconciling with the goal document's Current Gaps.

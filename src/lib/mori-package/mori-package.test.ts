@@ -193,6 +193,52 @@ describe(".mori package v0 — audit trail slice", () => {
   });
 });
 
+describe(".mori package v0 — per-record validation", () => {
+  it("rejects a record missing its id with a precise path", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const broken = {
+      ...pkg,
+      events: pkg.events.map((event, index) =>
+        index === 0 ? { ...event, id: "" } : event,
+      ),
+    };
+    const result = validateMoriPackage(broken);
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((issue) => issue.path === "events[0].id")).toBe(true);
+  });
+
+  it("rejects an event missing its type", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const broken = {
+      ...pkg,
+      events: pkg.events.map((event, index) => {
+        if (index !== 0) return event;
+        const { type: _type, ...rest } = event;
+        return rest;
+      }),
+    };
+    const result = validateMoriPackage(broken);
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((issue) => issue.path === "events[0].type")).toBe(true);
+  });
+
+  it("rejects a non-object record in a slice", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const broken = { ...pkg, projects: [null as unknown as (typeof pkg.projects)[number]] };
+    const result = validateMoriPackage(broken);
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((issue) => issue.path === "projects[0]")).toBe(true);
+  });
+
+  it("still validates a well-formed package clean", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession, {
+      consolidatedMemories: [acceptedMemory()],
+      auditTrail: [reviewAction()],
+    });
+    expect(validateMoriPackage(pkg)).toEqual({ valid: true, issues: [] });
+  });
+});
+
 describe(".mori package v0 — zip-like file layout", () => {
   it("emits every documented file and each value parses", () => {
     const pkg = createMoriPackageFromSession(moriMockSession);

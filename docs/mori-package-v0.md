@@ -136,7 +136,11 @@ Limitations:
   `buildMoriPackageFileLayout` produces the file map; the zip archive
   step (and its dependency) is not yet shipped.
 - Raw source file folders are represented as metadata, not bundled files.
-- Validation is structural and minimal. Full schema validation should be added before external import is trusted.
+- `validateMoriPackage` checks the manifest, that each slice is an
+  array of objects carrying their identity fields (`id`, and `type`
+  for events), and the privacy / theme blocks. It is deterministic
+  and dependency-free; deeper field-level schema validation can still
+  be layered on before fully trusting arbitrary external packages.
 - The desktop export uses a native Save As dialog
   (`save_mori_package_json_as`) and the Consolidation Review import
   panel uses a native Open dialog (`pick_mori_package_file`) on

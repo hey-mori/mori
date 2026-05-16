@@ -16,16 +16,19 @@ export function validateMoriPackage(value: unknown): MoriPackageValidationResult
     if (!pkg.manifest.packageId) issues.push({ path: "manifest.packageId", message: "Package id is required" });
   }
 
-  requireArray(pkg.projects, "projects", issues);
-  requireArray(pkg.sessions, "sessions", issues);
-  requireArray(pkg.events, "events", issues);
-  requireArray(pkg.issues, "issues", issues);
-  requireArray(pkg.decisions, "decisions", issues);
-  requireArray(pkg.relationships, "relationships", issues);
-  requireArray(pkg.sources, "sources", issues);
-  requireArray(pkg.nextActions, "nextActions", issues);
-  requireArray(pkg.artifacts, "artifacts", issues);
-  requireArray(pkg.summaries, "summaries", issues);
+  // Each slice must be an array of records carrying their identity
+  // fields — so an externally-supplied package is trustworthy before
+  // import, not just structurally array-shaped.
+  requireRecordArray(pkg.projects, "projects", issues, ["id"]);
+  requireRecordArray(pkg.sessions, "sessions", issues, ["id"]);
+  requireRecordArray(pkg.events, "events", issues, ["id", "type"]);
+  requireRecordArray(pkg.issues, "issues", issues, ["id"]);
+  requireRecordArray(pkg.decisions, "decisions", issues, ["id"]);
+  requireRecordArray(pkg.relationships, "relationships", issues, ["id"]);
+  requireRecordArray(pkg.sources, "sources", issues, ["id"]);
+  requireRecordArray(pkg.nextActions, "nextActions", issues, ["id"]);
+  requireRecordArray(pkg.artifacts, "artifacts", issues, ["id"]);
+  requireRecordArray(pkg.summaries, "summaries", issues, ["id"]);
 
   if (!isObject(pkg.privacy)) issues.push({ path: "privacy", message: "Privacy settings are required" });
   if (!isObject(pkg.theme)) issues.push({ path: "theme", message: "Theme settings are required" });
@@ -52,10 +55,37 @@ export function validateMoriPackage(value: unknown): MoriPackageValidationResult
   return { valid: issues.length === 0, issues };
 }
 
-function requireArray(value: unknown, path: string, issues: MoriPackageValidationIssue[]) {
+/**
+ * Require an array whose every element is an object carrying each of
+ * `requiredStringFields` as a non-empty string. Reports a precise path
+ * (`events[3].id`) so a malformed external package is rejected with an
+ * actionable message rather than failing silently later.
+ */
+function requireRecordArray(
+  value: unknown,
+  path: string,
+  issues: MoriPackageValidationIssue[],
+  requiredStringFields: string[],
+) {
   if (!Array.isArray(value)) {
     issues.push({ path, message: "Must be an array" });
+    return;
   }
+  value.forEach((record, index) => {
+    if (!isObject(record)) {
+      issues.push({ path: `${path}[${index}]`, message: "Must be an object" });
+      return;
+    }
+    for (const field of requiredStringFields) {
+      const fieldValue = record[field];
+      if (typeof fieldValue !== "string" || fieldValue.length === 0) {
+        issues.push({
+          path: `${path}[${index}].${field}`,
+          message: "Must be a non-empty string",
+        });
+      }
+    }
+  });
 }
 
 function isObject(value: unknown): value is Record<string, any> {
