@@ -37,10 +37,10 @@ type SettingsTab = "localAi" | "privacy" | "storage" | "repositories" | "connect
 
 const TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "로컬 AI", icon: Bot },
-  { id: "privacy", label: "Privacy", icon: Lock },
-  { id: "storage", label: "Storage", icon: HardDrive },
-  { id: "repositories", label: "Repositories", icon: ShieldCheck },
-  { id: "connectors", label: "Connectors", icon: Layers },
+  { id: "privacy", label: "개인정보", icon: Lock },
+  { id: "storage", label: "저장소", icon: HardDrive },
+  { id: "repositories", label: "리포지토리", icon: ShieldCheck },
+  { id: "connectors", label: "커넥터", icon: Layers },
 ];
 
 export function SettingsView() {

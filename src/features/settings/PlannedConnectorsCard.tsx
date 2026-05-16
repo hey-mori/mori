@@ -17,6 +17,11 @@ import { MoriFeatureStatusBadge } from "../../components/ui/MoriFeatureStatusBad
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import type { FeatureId } from "../../app/featureStatus";
 import { getPlannedConnectorRows } from "../../lib/settings/settingsStatus";
+import {
+  getCaptureMethodLabel,
+  getRawDataPolicyLabel,
+} from "../../lib/evidence/provenance";
+import { getTrustDisplay } from "../../lib/evidence/trust";
 
 const ICONS: Record<string, LucideIcon> = {
   terminal: Terminal,
@@ -58,13 +63,13 @@ export function PlannedConnectorsCard() {
     <section className="settings-card" aria-label="Planned connectors">
       <header className="settings-card-head">
         <div>
-          <h3>Planned Connectors</h3>
+          <h3>예정된 커넥터</h3>
           <p>
             아래 커넥터는 모두 <strong>Planned</strong> 상태입니다. 활성화되어 있지 않으며, 사용자가 직접 setup하기
             전까지 Mori는 해당 데이터에 접근하지 않습니다.
           </p>
         </div>
-        <Badge tone="gray">{rows.length} planned</Badge>
+        <Badge tone="gray">{rows.length}개 계획됨</Badge>
       </header>
       <ul className="settings-connector-grid">
         {rows.map(({ integration, willAccess, willNotAccess }) => {
@@ -89,16 +94,16 @@ export function PlannedConnectorsCard() {
                 </header>
                 <dl>
                   <div>
-                    <dt>Capture method</dt>
-                    <dd>{integration.captureMode}</dd>
+                    <dt>캡처 방식</dt>
+                    <dd>{getCaptureMethodLabel(integration.captureMode)}</dd>
                   </div>
                   <div>
-                    <dt>Raw data</dt>
-                    <dd>{integration.rawDataPolicy}</dd>
+                    <dt>원본 데이터</dt>
+                    <dd>{getRawDataPolicyLabel(integration.rawDataPolicy)}</dd>
                   </div>
                   <div>
-                    <dt>Trust default</dt>
-                    <dd>{integration.trustDefault}</dd>
+                    <dt>기본 신뢰도</dt>
+                    <dd>{getTrustDisplay(integration.trustDefault).label}</dd>
                   </div>
                 </dl>
                 <section>
