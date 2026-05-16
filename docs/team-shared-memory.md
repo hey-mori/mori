@@ -111,8 +111,8 @@ The client-safe filter is implemented as `buildClientSafeMoriPackage`
 (`src/lib/mori-package/clientSafe.ts`) — a pure `MoriPackageV0` →
 `MoriPackageV0` transform that composes with `zipMoriPackage`. It
 marks the manifest `clientSafeExport: true`; `getPackageIsClientSafe`
-reads the marker. Wiring it into a "client-safe export" UI affordance
-is a follow-up slice.
+reads the marker. The Reports `.mori` package strip exposes it as a
+"client-safe export" action.
 
 ## 6. Conflict and duplicate review model
 
@@ -143,7 +143,56 @@ yet modelled, and is reserved for a later slice:
   rationale; a future slice may also carry the source `auditTrail`
   rows as read-only history.
 
-## 7. Later-implementation backlog
+## 7. Handoff workflow
+
+A handoff is the end-to-end flow two people follow to share memory.
+It is entirely explicit; Mori produces and consumes the file but does
+not move it.
+
+### Author — export
+
+1. Open the **Reports** page. The `.mori` package strip offers two
+   export actions.
+2. Choose the audience:
+   - **`.mori 패키지 내보내기`** (normal export) — the full package:
+     every accepted memory and the whole audit trail. For your own
+     devices or fully trusted teammates.
+   - **`클라이언트 공유용 .mori 내보내기`** (client-safe export) — runs
+     `buildClientSafeMoriPackage`: only `clientSafe`, non-sensitive
+     memory, audit rows for surviving memory, manifest flagged
+     `clientSafeExport`. For a non-teammate. The strip reports how
+     many memories were kept vs dropped — confirm that before you
+     send the file.
+3. The file is written: on desktop via a native Save As dialog (a
+   `.mori` zip; client-safe gets a `-client-safe.mori` suffix); in the
+   browser as a download.
+4. **Transfer is out of Mori's scope.** Hand the file over however
+   you already share files — email, a shared drive, a repo. Mori
+   never uploads it.
+
+### Reviewer — import
+
+1. Open **Project Memory → Consolidation Review**. The **Import
+   accepted memory from a .mori package** panel takes a pasted
+   package or a picked `.mori` file (native Open dialog on desktop,
+   `File` picker in the browser).
+2. The package's accepted memory becomes **review proposals** — it is
+   never merged automatically. Memory the project already holds is
+   skipped (origin / title dedup) and the skips are reported.
+3. Review each proposal: accept, edit, or discard. Only accepted
+   proposals become the Reviewer's durable accepted memory, through
+   the normal apply path with its audit row.
+
+### What does not happen
+
+- No auto-merge — imported memory is always proposals first.
+- No sync — there is no live channel; a second handoff is a second
+  file.
+- The Reviewer's accepted memory is theirs alone. It does not flow
+  back to the Author unless the Reviewer themselves exports a new
+  `.mori` package.
+
+## 8. Later-implementation backlog
 
 In dependency order; each is a separate future slice, none implies
 sync:
@@ -154,15 +203,15 @@ sync:
 2. Client-safe export UI — **shipped** as the Reports `.mori` package
    strip's "클라이언트 공유용 .mori 내보내기" action, which runs the
    filter before `zipMoriPackage` and reports kept / dropped counts.
-3. `.mori` handoff workflow doc — the explicit export → transfer →
-   import walkthrough (Track C.2).
+3. `.mori` handoff workflow — **shipped** as §7 above (the explicit
+   Author export → transfer → Reviewer import walkthrough).
 4. Divergence review — a `contradiction`-style proposal when an
    imported memory conflicts with an existing one.
 5. Imported `auditTrail` as read-only provenance on accepted memory.
 6. Named-actor provenance — populate `acceptedBy` / `actor` with a
    local, user-set identity (still no accounts, still local-first).
 
-## 8. Hard non-goals (restated)
+## 9. Hard non-goals (restated)
 
 Team / shared memory must never introduce:
 

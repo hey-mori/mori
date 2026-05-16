@@ -206,6 +206,8 @@ only — no phase numbers.
 - Client-safe export UI — the Reports `.mori` package strip's
   "client-safe export" action runs the filter before `zipMoriPackage`
   and reports kept / dropped memory counts.
+- `.mori` handoff workflow — `team-shared-memory.md` §7: the explicit
+  Author export → transfer → Reviewer import walkthrough.
 
 **Open priority (highest first):**
 
@@ -213,11 +215,12 @@ All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
 Team/shared memory spec · continued loop) are approved; sequence them
 into small slices in this order:
 
-1. `.mori` handoff workflow doc — the explicit export → transfer →
-   import walkthrough (Track C.2).
-2. Local Connector Capture polish for real captured data.
-3. Project Memory UX polish for real captured data.
-4. Queryable Memory extensions if a clear safe slice remains.
+1. Real capture walkthrough — an end-to-end guide capturing real
+   Claude / Codex transcript + Git work through the shipped
+   `mori-local-capture` / `mori-capture` / VS Code-task artifacts
+   into the full Mori loop (Track B.3).
+2. Project Memory UX polish for real captured data.
+3. Queryable Memory extensions if a clear safe slice remains.
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -241,42 +244,41 @@ backlog with it.
 
 The next slice should be:
 
-**`.mori` handoff workflow doc (Track C.2)**
+**Real capture walkthrough (Track B.3)**
 
 Goal:
-Track C now has the spec (`team-shared-memory.md`), the client-safe
-filter, and the client-safe export UI. This slice writes the concrete
-**handoff walkthrough** — the explicit export → transfer → import
-steps both the Author and the Reviewer follow — so a real team uses
-the primitive correctly.
+The capture artifacts ship — `mori-local-capture.py` (transcript /
+stdin / note / git), the `mori-capture` shell helper, the VS Code
+task template — but no single doc walks a user through capturing
+*their own* real Claude / Codex / Git work end to end. `e2e-smoke-flow.md`
+covers the demo fixture; this slice documents the real workflow.
 
 Scope — do:
-- Add a "Handoff workflow" section to `docs/team-shared-memory.md`
-  (or a focused sibling doc if it reads better): the Author's steps
-  (choose normal vs client-safe export, where the file lands,
-  transfer is out of Mori's scope), and the Reviewer's steps (import
-  via the Consolidation Review panel, every memory enters review,
-  accept / edit / discard, dedup is automatic).
-- Note honestly what does *not* happen: no auto-merge, no sync, the
-  Reviewer's accepted memory is theirs alone until they re-export.
-- Cross-reference the `.mori` package, client-safe filter, and
-  review-on-import docs precisely.
+- Add a real-capture walkthrough doc (a focused page under `docs/`,
+  or a section in `docs/connectors/local-capture.md` if it fits):
+  a concrete scenario — capture a Claude transcript + a Git snapshot
+  of a real session, via the shipped artifacts — then load the
+  connector JSONL, walk it through Import Review, into the Timeline /
+  Evidence Hub, Project Memory, Consolidation Review, and out as a
+  `.mori` package.
+- Use the real artifact commands verbatim; keep every privacy
+  boundary explicit (summary-only, no raw content, review-before-apply).
+- Cross-link the connector, package, and consolidation docs precisely.
 
 Scope — do not:
 - Add code — this is a documentation slice.
-- Introduce any transfer mechanism inside Mori.
+- Restate the demo smoke flow; this is the *real-data* path.
 
 Suggested files:
-- `docs/team-shared-memory.md`
+- `docs/connectors/local-capture.md` or a new `docs/real-capture-walkthrough.md`
 - `docs/mori-project-goal.md` — only if canonical state changes.
 
 Tests:
 - none — documentation slice; `check:full` + `build` stay green.
 
-After this slice ships, Track C's near-term scope is complete; set
-the next slice to the open backlog's top item (Local Connector
-Capture polish for real captured data) or reconcile with the goal
-document's Current Gaps.
+After this slice ships, set the next slice from the open backlog
+(Project Memory UX polish), reconciling with the goal document's
+Current Gaps.
 
 ## 9. Stop Conditions
 
