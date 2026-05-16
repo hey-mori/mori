@@ -17,6 +17,10 @@ import {
 import { EventInspector } from "./EventInspector";
 import { TimelineBundleInspector } from "./TimelineBundleInspector";
 import { TimelineCanvas, LANE_LABEL_WIDTH, DEFAULT_FRAME_WIDTH } from "./TimelineCanvas";
+import {
+  FULL_MINIMAP_VIEWPORT,
+  type MinimapViewport,
+} from "../../lib/timeline/minimapViewport";
 import { TimelineChronoList } from "./TimelineChronoList";
 import { TimelineEmptyState } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
@@ -65,6 +69,9 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
 
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
+  const [minimapViewport, setMinimapViewport] = useState<MinimapViewport>(
+    FULL_MINIMAP_VIEWPORT,
+  );
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.
@@ -199,6 +206,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
                 relationships={view.relationships}
                 density={density}
                 onFrameWidth={handleFrameWidth}
+                onViewportChange={setMinimapViewport}
                 onSelect={setSelectedEventId}
                 onHover={setHoveredEventId}
               />
@@ -209,6 +217,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
                   ticks={model.ticks}
                   selectedItemId={selectedItem?.id ?? null}
                   focusedSet={model.focusedSet}
+                  viewport={minimapViewport}
                 />
               ) : null}
             </>

@@ -4,6 +4,10 @@ import { focusStateClassName, getEventFocusState } from "../../lib/timeline/focu
 import { timestampToXPercent, type TimelineRange } from "../../lib/timeline/layout";
 import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import type { AxisTick } from "../../lib/timeline/timeScale";
+import {
+  FULL_MINIMAP_VIEWPORT,
+  type MinimapViewport,
+} from "../../lib/timeline/minimapViewport";
 
 export function TimelineMiniMap({
   items,
@@ -11,12 +15,15 @@ export function TimelineMiniMap({
   ticks,
   selectedItemId,
   focusedSet,
+  viewport = FULL_MINIMAP_VIEWPORT,
 }: {
   items: TimelineDisplayItem[];
   range: TimelineRange;
   ticks: AxisTick[];
   selectedItemId: string | null;
   focusedSet: Set<string>;
+  /** Visible horizontal slice of the canvas, drawn as the viewport rect. */
+  viewport?: MinimapViewport;
 }) {
   const placed = useMemo(() => {
     return items.map((item) => {
@@ -41,7 +48,14 @@ export function TimelineMiniMap({
         ))}
       </div>
       <div className="mini-track">
-        <span className="mini-map-viewport" aria-hidden="true" />
+        <span
+          className="mini-map-viewport"
+          aria-hidden="true"
+          style={{
+            left: `${viewport.leftPercent}%`,
+            width: `${viewport.widthPercent}%`,
+          }}
+        />
         {placed.map(({ item, xPercent, laneIndex }) => {
           const state = getEventFocusState({
             itemId: item.id,

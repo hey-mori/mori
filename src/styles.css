@@ -1319,12 +1319,16 @@ kbd {
   background: linear-gradient(180deg, #fbfcff, #f6f8fc);
 }
 
+/* Viewport rectangle — left / width are set inline from the canvas
+   scroll geometry (see computeMinimapViewport). */
 .mini-map-viewport {
   position: absolute;
-  inset: 7px 24% 7px 32%;
+  top: 7px;
+  bottom: 7px;
   border: 1px solid rgba(98, 70, 245, 0.36);
   border-radius: 7px;
   background: rgba(98, 70, 245, 0.08);
+  transition: left 0.08s linear, width 0.08s linear;
 }
 
 .mini-dot {

@@ -1,9 +1,13 @@
 import { Search } from "lucide-react";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { eventTypeIcons, eventTypeLabels } from "../../domain/constants";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
+import {
+  computeMinimapViewport,
+  type MinimapViewport,
+} from "../../lib/timeline/minimapViewport";
 import { TimelineAxis } from "./TimelineAxis";
 import { TimelineLane } from "./TimelineLane";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
@@ -15,6 +19,11 @@ export type TimelineCanvasProps = {
   density: TimelineDensity;
   /** Optional callback so the parent can resize-driven recompute layout. */
   onFrameWidth?: (width: number) => void;
+  /**
+   * Optional callback reporting which horizontal slice of the timeline is
+   * currently visible, so the minimap can draw a real viewport rectangle.
+   */
+  onViewportChange?: (viewport: MinimapViewport) => void;
   onSelect: (itemId: string) => void;
   onHover: (itemId: string | null) => void;
 };
@@ -42,11 +51,26 @@ export function TimelineCanvas({
   relationships,
   density,
   onFrameWidth,
+  onViewportChange,
   onSelect,
   onHover,
 }: TimelineCanvasProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
+
+  // Report the visible horizontal slice of the timeline so the minimap can
+  // draw a real viewport rectangle instead of a static decoration.
+  const emitViewport = useCallback(() => {
+    const element = scrollerRef.current;
+    if (!element || !onViewportChange) return;
+    onViewportChange(
+      computeMinimapViewport(
+        element.scrollLeft,
+        element.clientWidth,
+        element.scrollWidth,
+      ),
+    );
+  }, [onViewportChange]);
 
   useLayoutEffect(() => {
     const element = scrollerRef.current;
@@ -57,12 +81,24 @@ export function TimelineCanvas({
       const next = Math.min(MAX_FRAME_WIDTH, Math.max(MIN_FRAME_WIDTH, width));
       setFrameWidth(next);
       onFrameWidth?.(next);
+      emitViewport();
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(element);
-    return () => observer.disconnect();
-  }, [onFrameWidth]);
+    element.addEventListener("scroll", emitViewport, { passive: true });
+    return () => {
+      observer.disconnect();
+      element.removeEventListener("scroll", emitViewport);
+    };
+  }, [onFrameWidth, emitViewport]);
+
+  // The rendered frame width changes with filters / density / lane
+  // visibility; recompute the viewport when it does so the rectangle
+  // stays honest after the scrollable width shifts.
+  useLayoutEffect(() => {
+    emitViewport();
+  }, [emitViewport, model.layout.frameWidth, model.visibleEvents.length, density]);
 
   // Trust the parent's model; only fall back to local frame width when the
   // model was built with the default width.
