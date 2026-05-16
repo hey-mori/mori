@@ -68,7 +68,7 @@ export function RepositoriesCard({
       setPathInput(path);
       if (!labelInput.trim()) setLabelInput(deriveLabelFromPath(path));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Folder picker failed.");
+      setError(err instanceof Error ? err.message : "폴더 선택에 실패했습니다.");
     } finally {
       setPicking(false);
     }
@@ -90,18 +90,18 @@ export function RepositoriesCard({
     <section className="settings-card" aria-label="Repositories">
       <header className="settings-card-head">
         <div>
-          <h3>Repositories</h3>
+          <h3>리포지토리</h3>
           <p>
             Mori는 사용자가 명시적으로 추가한 리포지토리 경로만 기억합니다. 디스크를 자동으로 스캔하지 않으며,
-            저장된 경로는 Git diff 가져오기 또는 Verify 버튼을 직접 누를 때만 읽습니다.
+            저장된 경로는 Git diff 가져오기 또는 검증 버튼을 직접 누를 때만 읽습니다.
           </p>
         </div>
         <div className="settings-repo-summary">
-          <Badge tone="purple">{summary.total} repos</Badge>
-          {summary.verified > 0 ? <Badge tone="green">{summary.verified} verified</Badge> : null}
-          {summary.stale > 0 ? <Badge tone="orange">{summary.stale} stale</Badge> : null}
-          {summary.failed > 0 ? <Badge tone="red">{summary.failed} failed</Badge> : null}
-          {summary.unverified > 0 ? <Badge tone="gray">{summary.unverified} unverified</Badge> : null}
+          <Badge tone="purple">{summary.total}개</Badge>
+          {summary.verified > 0 ? <Badge tone="green">검증됨 {summary.verified}</Badge> : null}
+          {summary.stale > 0 ? <Badge tone="orange">오래됨 {summary.stale}</Badge> : null}
+          {summary.failed > 0 ? <Badge tone="red">실패 {summary.failed}</Badge> : null}
+          {summary.unverified > 0 ? <Badge tone="gray">미검증 {summary.unverified}</Badge> : null}
         </div>
       </header>
 
@@ -127,7 +127,11 @@ export function RepositoriesCard({
             icon={FolderOpen}
             onClick={handlePick}
             disabled={!desktopRuntime || picking}
-            title={desktopRuntime ? "Open native folder picker" : "Native picker requires the Tauri app"}
+            title={
+              desktopRuntime
+                ? "네이티브 폴더 선택 창 열기"
+                : "네이티브 선택 창은 Tauri 앱에서만 사용할 수 있습니다."
+            }
           >
             {picking ? "선택 중..." : "폴더 선택"}
           </Button>
@@ -163,31 +167,31 @@ export function RepositoriesCard({
                     disabled={!desktopRuntime || isVerifying}
                     title={
                       desktopRuntime
-                        ? "Run git rev-parse / branch / status against this path"
-                        : "Verification requires the Tauri desktop app"
+                        ? "이 경로에 git rev-parse / branch / status를 실행합니다."
+                        : "검증은 Tauri 데스크톱 앱에서만 가능합니다."
                     }
                   >
                     {isVerifying
                       ? "검증 중..."
                       : repo.verification && repo.verification.status === "verified"
                         ? getRepositoryVerificationFreshness(repo.verification).isStale
-                          ? "Re-verify"
-                          : "Verify"
-                        : "Verify"}
+                          ? "다시 검증"
+                          : "검증"
+                        : "검증"}
                   </Button>
                   {repo.verification && repo.verification.status !== "unverified" ? (
                     <Button
                       icon={RotateCcw}
                       onClick={() => onClearVerification(repo.id)}
-                      title="Clear verification metadata"
-                      aria-label="Clear verification"
+                      title="검증 메타데이터 지우기"
+                      aria-label="검증 기록 지우기"
                     />
                   ) : null}
                   <Button
                     icon={Star}
                     onClick={() => onSelect(repo.id)}
                     disabled={isSelected}
-                    title="Set as default for Git diff capture"
+                    title="Git diff 캡처의 기본값으로 설정"
                   >
                     {isSelected ? "기본" : "기본으로"}
                   </Button>
@@ -201,9 +205,9 @@ export function RepositoriesCard({
 
       <SectionHeader title="Mori가 리포지토리에 대해 보장하는 것" />
       <ul className="settings-repo-pledges">
-        <li>앱 시작 / 화면 전환 / hydrate / SQLite 초기화 시점에 Verify를 실행하지 않습니다.</li>
+        <li>앱 시작 / 화면 전환 / hydrate / SQLite 초기화 시점에 검증을 실행하지 않습니다.</li>
         <li>저장된 경로 외에는 어떤 디렉터리도 읽지 않습니다.</li>
-        <li>Git diff 캡처와 verify 외에는 디스크에 접근하지 않습니다.</li>
+        <li>Git diff 캡처와 검증 외에는 디스크에 접근하지 않습니다.</li>
       </ul>
     </section>
   );
@@ -218,12 +222,12 @@ function RepoVerificationBadge({
 }) {
   if (isVerifying) return <Badge tone="purple">검증 중</Badge>;
   if (!verification || verification.status === "unverified") {
-    return <Badge tone="gray">Unverified</Badge>;
+    return <Badge tone="gray">미검증</Badge>;
   }
   if (verification.status === "failed") {
     return (
       <span className="settings-repo-verify">
-        <Badge tone="red">Verify failed</Badge>
+        <Badge tone="red">검증 실패</Badge>
         {verification.error ? <small>{verification.error}</small> : null}
       </span>
     );
@@ -234,10 +238,10 @@ function RepoVerificationBadge({
   return (
     <span className="settings-repo-verify">
       <Badge tone={freshness.isStale ? "orange" : "green"}>
-        {freshness.isStale ? "Stale · " : "Verified · "}
+        {freshness.isStale ? "오래됨 · " : "검증됨 · "}
         {branch} · {sha}
       </Badge>
-      {verification.isDirty ? <Badge tone="orange">dirty</Badge> : null}
+      {verification.isDirty ? <Badge tone="orange">변경 있음</Badge> : null}
       {freshness.ageLabel ? <small className="settings-repo-muted">{freshness.ageLabel}</small> : null}
     </span>
   );
@@ -258,7 +262,7 @@ function RepoLabelEditor({ currentLabel, onSave }: { currentLabel: string; onSav
         if (next && next !== currentLabel) onSave(next);
         else setDraft(currentLabel);
       }}
-      aria-label="Repository label"
+      aria-label="리포지토리 라벨"
     />
   );
 }
