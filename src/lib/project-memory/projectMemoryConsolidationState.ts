@@ -26,9 +26,6 @@
  *   - No persistence. Caller decides what to do with the state.
  *   - No raw source content. The state surfaces counts, kinds, and
  *     warnings — never raw event text.
- *   - `canOpenReview` is `false` today because the Consolidation
- *     Review Surface does not exist yet. It flips when the route
- *     lands.
  */
 import {
   buildProjectMemoryConsolidationPreview,
@@ -64,12 +61,6 @@ export type ProjectMemoryConsolidationState = {
   proposalCounts: Record<MemoryProposalKind, number>;
   /** Up to three kinds, most-numerous first; ties broken by stable kind order. */
   topProposalKinds: MemoryProposalKind[];
-  /**
-   * Whether the Consolidation Review Surface can be opened right now.
-   * **False** today — the Review surface does not exist yet. Flips to
-   * `true` when the route lands.
-   */
-  canOpenReview: boolean;
   /** Echo of the underlying view-model's data basis. */
   dataBasis: ProjectMemoryDataBasis;
   /** Warnings sourced from the preview (which already echoes the view-model). */
@@ -122,11 +113,10 @@ export function buildProjectMemoryConsolidationState(
       proposalCount: 0,
       proposalCounts: zeroProposalCounts(),
       topProposalKinds: [],
-      canOpenReview: false,
       dataBasis: memory.dataBasis,
       warnings: memory.warnings,
       emptyReason: describeUnavailableReason(memory.warnings),
-      nextStepLabel: "Start a real session to begin building Project Memory.",
+      nextStepLabel: "실제 세션을 시작하면 Project Memory가 쌓이기 시작합니다.",
       generatedAt: deriveGeneratedAt(memory),
     };
   }
@@ -150,12 +140,10 @@ export function buildProjectMemoryConsolidationState(
       proposalCount: 0,
       proposalCounts: preview.proposalCounts,
       topProposalKinds: [],
-      // Empty state still locks the review surface; nothing to review.
-      canOpenReview: false,
       dataBasis: preview.dataBasis,
       warnings: preview.warnings,
       emptyReason: describeEmptyReason(memory),
-      nextStepLabel: "Run Quick Pass or import more sessions to surface proposals.",
+      nextStepLabel: "Quick Pass를 실행하거나 세션을 더 가져오면 제안이 나타납니다.",
       generatedAt: deriveGeneratedAt(memory),
     };
   }
@@ -167,15 +155,12 @@ export function buildProjectMemoryConsolidationState(
     proposalCount,
     proposalCounts: preview.proposalCounts,
     topProposalKinds,
-    // Hard-coded false today — the Consolidation Review Surface does
-    // not exist yet. Flips to `true` when the route lands.
-    canOpenReview: false,
     dataBasis: preview.dataBasis,
     warnings: preview.warnings,
     emptyReason: null,
     nextStepLabel: partial
-      ? "Consolidation Review Surface is planned. Reach is narrow today — load more saved sessions or run Quick Pass for richer proposals."
-      : "Consolidation Review Surface is planned. No memory is written until you approve proposals.",
+      ? "현재 집계 범위가 좁습니다 — 저장 세션을 더 불러오거나 Quick Pass를 실행하면 제안이 풍부해집니다."
+      : "‘제안 검토’에서 각 제안을 검토할 수 있습니다. 승인하기 전까지는 어떤 메모리도 저장되지 않습니다.",
     generatedAt: deriveGeneratedAt(memory),
   };
 }
@@ -239,22 +224,22 @@ function isPartialBasis(basis: ProjectMemoryDataBasis): boolean {
 
 function describeUnavailableReason(warnings: ProjectMemoryWarning[]): string {
   if (warnings.some((w) => w.kind === "demo-mode")) {
-    return "Demo session — consolidation is disabled until a real session starts.";
+    return "데모 세션입니다 — 실제 세션을 시작하기 전까지 consolidation은 비활성화됩니다.";
   }
   if (warnings.some((w) => w.kind === "storage-unavailable")) {
-    return "Local storage is unreachable — consolidation cannot read project memory.";
+    return "로컬 저장소에 접근할 수 없어 consolidation이 Project Memory를 읽지 못합니다.";
   }
-  return "Project memory is unavailable in this runtime.";
+  return "현재 런타임에서는 Project Memory를 사용할 수 없습니다.";
 }
 
 function describeEmptyReason(memory: ProjectMemoryViewModel): string {
   if (memory.summaryStats.decisionCount === 0 && memory.summaryStats.issueCount === 0) {
-    return "No decisions or issues recorded yet. Run Quick Pass on an imported session to surface proposals.";
+    return "아직 기록된 결정이나 이슈가 없습니다. 가져온 세션에 Quick Pass를 실행하면 제안이 나타납니다.";
   }
   if (memory.recentSessions.every((session) => session.isCurrent)) {
-    return "Only the active session is visible. Save more sessions for cross-session proposals.";
+    return "현재 세션만 보입니다. 세션을 더 저장하면 세션 간 제안이 생성됩니다.";
   }
-  return "No proposals were derived from the current view-model.";
+  return "현재 view-model에서 도출된 제안이 없습니다.";
 }
 
 /**

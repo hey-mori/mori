@@ -453,8 +453,7 @@ type ProjectMemoryConsolidationStatus =
 
 type ProjectMemoryConsolidationState = {
   status; preview; proposalCount; proposalCounts;
-  topProposalKinds; canOpenReview;       // false until Review Surface exists
-  dataBasis; warnings; emptyReason;
+  topProposalKinds; dataBasis; warnings; emptyReason;
   nextStepLabel; generatedAt;
 };
 
@@ -466,11 +465,9 @@ function buildProjectMemoryConsolidationState(
 The Memory page consumes this state via a `useMemo` next to the
 existing `viewModel` derivation. A `ConsolidationPreviewCard`
 component renders it: top-3 proposal kinds + counts, `dataBasis`
-badge, and a "Review proposals" button. **No durable memory is
-written.** **`canOpenReview` stays `false`** in the typed state
-until Accepted Memory Persistence ships and we have a real apply
-path; today the Review Surface is reached via the preview card's
-button directly.
+badge, and a "제안 검토" button that opens the Consolidation Review
+Surface. **No durable memory is written until the user approves
+proposals there.**
 
 ### Consolidation Review Surface (landed)
 

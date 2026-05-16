@@ -174,7 +174,7 @@ describe("buildProjectMemoryConsolidationState", () => {
     expect(state.proposalCount).toBeGreaterThan(0);
     expect(state.preview).not.toBeNull();
     expect(state.emptyReason).toBeNull();
-    expect(state.nextStepLabel).toMatch(/Review Surface is planned/i);
+    expect(state.nextStepLabel).toMatch(/승인하기 전까지/);
   });
 
   it("returns empty state when basis is rich but no proposals derive", () => {
@@ -189,15 +189,13 @@ describe("buildProjectMemoryConsolidationState", () => {
     const state = buildProjectMemoryConsolidationState(memory);
     expect(state.status).toBe("empty");
     expect(state.proposalCount).toBe(0);
-    expect(state.canOpenReview).toBe(false);
-    expect(state.emptyReason).toMatch(/No decisions or issues recorded yet/i);
+    expect(state.emptyReason).toMatch(/아직 기록된 결정이나 이슈가 없습니다/);
   });
 
   it("returns unavailable state for demo / no-storage view models", () => {
     const state = buildProjectMemoryConsolidationState(emptyProjectMemoryViewModel());
     expect(state.status).toBe("unavailable");
     expect(state.preview).toBeNull();
-    expect(state.canOpenReview).toBe(false);
     expect(state.emptyReason).toBeTruthy();
     expect(state.proposalCount).toBe(0);
   });
@@ -211,8 +209,7 @@ describe("buildProjectMemoryConsolidationState", () => {
       }),
     );
     expect(state.status).toBe("partial");
-    expect(state.canOpenReview).toBe(false);
-    expect(state.nextStepLabel).toMatch(/Reach is narrow today/i);
+    expect(state.nextStepLabel).toMatch(/집계 범위가 좁습니다/);
   });
 
   it("returns partial state for activeSessionOnly basis", () => {
@@ -242,17 +239,6 @@ describe("buildProjectMemoryConsolidationState", () => {
     expect(state.proposalCounts.keyEvidence).toBe(1);
     expect(state.proposalCounts.unresolvedRisk).toBe(1);
     expect(state.proposalCounts.nextSessionRecommendation).toBe(1);
-  });
-
-  it("canOpenReview stays false until the Consolidation Review Surface exists", () => {
-    const ready = buildProjectMemoryConsolidationState(base());
-    const empty = buildProjectMemoryConsolidationState(
-      base({ keyDecisions: [], recurringIssues: [], keyEvidence: [], unresolvedRisks: [], recommendedNextSession: "" }),
-    );
-    const unavailable = buildProjectMemoryConsolidationState(emptyProjectMemoryViewModel());
-    expect(ready.canOpenReview).toBe(false);
-    expect(empty.canOpenReview).toBe(false);
-    expect(unavailable.canOpenReview).toBe(false);
   });
 
   it("never copies raw source content into the state object", () => {
