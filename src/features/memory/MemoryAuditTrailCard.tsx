@@ -80,8 +80,8 @@ export function MemoryAuditTrailCard({
     >
       {viewModel.isEmpty ? (
         <p className="memory-audit-empty">
-          No memory review actions yet. Apply accepted memories from Consolidation Review to
-          create an audit trail.
+          아직 기록된 memory 검토 액션이 없습니다. Consolidation Review에서 제안을 적용하면 감사
+          로그가 여기 쌓입니다.
         </p>
       ) : (
         <>

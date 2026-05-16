@@ -563,7 +563,7 @@ function ApplyBoundaryBanner({
   return (
     <div className="consolidation-review-apply" role="status" aria-live="polite">
       <header>
-        <strong>Apply accepted memories</strong>
+        <strong>메모리 적용</strong>
         <Badge tone="purple">{describeAcceptedMemoryStorageSource(expectedSource)}</Badge>
       </header>
       <p>
@@ -590,7 +590,7 @@ function ApplyBoundaryBanner({
         >
           {applyState.kind === "saving"
             ? "저장 중…"
-            : `Apply accepted memories (${applyCount})`}
+            : `메모리 적용 (${applyCount})`}
         </Button>
         <small>
           {canApply
