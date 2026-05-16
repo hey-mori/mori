@@ -11,7 +11,8 @@ pub use accepted_memory::{
     MemoryReviewActionWriteResult,
 };
 pub use session_imports::{
-    list_session_imports, save_session_imports, SessionImportRow, SessionImportWriteResult,
+    list_all_session_imports, list_session_imports, save_session_imports, SessionImportRow,
+    SessionImportWriteResult,
 };
 pub use connection::{database_path, open_database};
 pub use migrations::{apply_migrations, applied_migrations, MIGRATIONS, MIGRATION_TABLE_NAME};

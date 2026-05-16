@@ -82,6 +82,37 @@ pub fn list_session_imports(
     Ok(out)
 }
 
+/// List every session import across all sessions, newest save first.
+///
+/// Used to build cross-session connector identity snapshots so the
+/// re-import rollup can see desktop-saved sessions, the same way the
+/// browser adapter walks every localStorage session.
+pub fn list_all_session_imports(conn: &Connection) -> Result<Vec<SessionImportRow>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, session_id, source_json, events_json, saved_at, import_summary_json \
+             FROM session_imports ORDER BY saved_at DESC, id ASC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(SessionImportRow {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                source_json: row.get(2)?,
+                events_json: row.get(3)?,
+                saved_at: row.get(4)?,
+                import_summary_json: row.get(5)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(|error| error.to_string())?);
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,5 +181,26 @@ mod tests {
         let mut conn = open_in_memory().expect("open");
         apply_migrations(&mut conn).expect("migrate");
         assert!(list_session_imports(&conn, "missing").expect("list").is_empty());
+    }
+
+    #[test]
+    fn lists_every_session_import_across_sessions() {
+        let mut conn = open_in_memory().expect("open");
+        apply_migrations(&mut conn).expect("migrate");
+
+        save_session_imports(
+            &mut conn,
+            &[
+                import("imp-a", "s-1", "2026-05-10T08:00:00Z"),
+                import("imp-b", "s-2", "2026-05-14T12:00:00Z"),
+            ],
+        )
+        .expect("save");
+
+        let all = list_all_session_imports(&conn).expect("list all");
+        assert_eq!(all.len(), 2);
+        // Newest save first, regardless of session.
+        assert_eq!(all[0].id, "imp-b");
+        assert_eq!(all[1].id, "imp-a");
     }
 }

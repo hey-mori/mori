@@ -46,6 +46,7 @@ export type TauriCommandName =
   | "list_memory_review_action_rows"
   | "persist_session_imports"
   | "list_session_import_rows"
+  | "list_all_session_import_rows"
   | "create_session"
   | "import_ai_conversation"
   | "import_git_diff"
@@ -117,6 +118,10 @@ export type TauriCommandMap = {
   };
   list_session_import_rows: {
     input: { sessionId: string };
+    output: SqliteSessionImportRow[];
+  };
+  list_all_session_import_rows: {
+    input: undefined;
     output: SqliteSessionImportRow[];
   };
   create_session: { input: CreateSessionInput; output: Session };
@@ -221,6 +226,9 @@ export const tauriCommands = {
   },
   listSessionImportRows(sessionId: string): Promise<SqliteSessionImportRow[]> {
     return invokeTauriCommand("list_session_import_rows", { sessionId });
+  },
+  listAllSessionImportRows(): Promise<SqliteSessionImportRow[]> {
+    return invokeTauriCommand("list_all_session_import_rows", undefined);
   },
   createSession(input: CreateSessionInput): Promise<Session> {
     return invokeTauriCommand("create_session", input);

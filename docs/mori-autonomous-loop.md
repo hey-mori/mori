@@ -162,15 +162,18 @@ only — no phase numbers.
 - SQLite `importSummary` mirror (foundation) — V004 `session_imports`
   migration (Rust + TS catalog), pure `sessionImportRows` converters,
   the Rust `session_imports` repository, the `persist_session_imports`
-  / `list_session_import_rows` Tauri commands, and the runtime-aware
-  `SessionImportRepository` (browser / desktop routing with honest
-  fallback).
+  / `list_session_import_rows` / `list_all_session_import_rows` Tauri
+  commands, the runtime-aware `SessionImportRepository`, and
+  `listConnectorEventIdentitySnapshots` (desktop snapshots built from
+  the `session_imports` table).
 
 **Open priority (highest first):**
 
-1. SQLite `importSummary` mirror — wire `SessionImportRepository`
-   into the connector re-import rollup so desktop-saved sessions
-   contribute their `importSummary` / connector identities.
+1. SQLite `importSummary` mirror — final wiring: have the connector
+   preview's saved-session history loader
+   (`loadConnectorImportHistorySavedSessions`) consult
+   `SessionImportRepository` on desktop so the re-import rollup sees
+   SQLite-saved sessions.
 2. Native file picker for `.mori v0` save / open.
 3. Local Connector Capture — a tested end-to-end bridge for real
    Claude / Codex / Git work into `~/.mori/connectors/`.
@@ -189,44 +192,46 @@ backlog with it.
 
 The next slice should be:
 
-**SQLite `importSummary` mirror — desktop connector identity snapshots**
+**SQLite `importSummary` mirror — connector preview history wiring**
 
 Goal:
-Make desktop-saved sessions contribute to the connector re-import
-rollup. Today `listConnectorEventIdentitySnapshots`
-(`localStorageAdapter`) builds the cross-session identity snapshots
-only from browser localStorage session imports; on desktop the rollup
-sees no saved-session history and the Memory page shows an honesty
-warning. This slice sources the snapshots from `session_imports` too.
+Have the connector preview consult `SessionImportRepository` on
+desktop so SQLite-saved sessions feed the re-import rollup. The
+desktop snapshot capability exists
+(`SessionImportRepository.listConnectorEventIdentitySnapshots`); this
+slice connects it to `loadConnectorImportHistorySavedSessions` /
+`ImportPanel` so the rollup actually sees desktop history.
 
 Scope — do:
-- Add a runtime-aware way to read connector identity snapshots: on
-  desktop, build `ConnectorEventIdentitySnapshot[]` from the
-  `session_imports` table (via `SessionImportRepository` /
-  `list_session_import_rows`); on browser keep the localStorage path.
-- Keep it a thin, well-tested helper (pure snapshot assembly +
-  runtime routing); do not rewrite the connector preview pipeline.
-- Preserve the honest `savedSessionHistoryAvailable` flag — only
-  claim cross-session detection ran when the snapshot source was
-  actually available.
+- Add an async `loadConnectorImportHistorySavedSessions` path (or a
+  sibling async loader) that, on desktop, reads snapshots via
+  `SessionImportRepository.listConnectorEventIdentitySnapshots` and,
+  on browser, keeps the existing synchronous localStorage path.
+- Make the `ImportPanel` connector-preview paths await the history
+  before building the preview, so `savedSessionHistoryAvailable` is
+  honest on desktop.
+- Keep the change scoped to the history-loading seam — do not rewrite
+  the connector preview / duplicate-detection algorithm.
 
 Scope — do not:
-- Change the connector duplicate-detection algorithm itself.
+- Change the duplicate-detection algorithm or the preview shape.
 - Backfill or migrate existing browser session imports to SQLite.
 
 Suggested files:
-- `src/lib/storage/sessionImportRepository.ts` (extend)
-- the connector preview / cross-session detection call site
-- `src/lib/connectors/*` + tests
+- `src/app/sessionStore.ts` (`loadConnectorImportHistorySavedSessions`)
+- `src/features/import/ImportPanel.tsx`
+- tests for the async history loader
 - `docs/sqlite-persistence.md`, `docs/source-integrations.md`
 
 Tests:
-- desktop session imports produce connector identity snapshots
-- the rollup reports history available on desktop once wired
+- the desktop history loader returns snapshots from
+  `SessionImportRepository`
+- the browser path is unchanged
 
 After this slice ships the SQLite `importSummary` mirror is complete —
 move it to **Completed**, reconcile the goal document's Current Gaps,
-and set the next slice to the new top backlog item.
+and set the next slice to the new top backlog item (Native file picker
+for `.mori v0` save / open).
 
 ## 9. Stop Conditions
 

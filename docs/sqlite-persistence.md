@@ -83,9 +83,15 @@ all read and write through this repository.
   converted through `src/lib/sqlite/sessionImportRows.ts`.
 
 Like the accepted-memory repository it prefers SQLite on desktop and
-falls back to localStorage with `fellBack: true` on failure. Wiring
-this repository into the connector re-import rollup — so desktop-saved
-sessions contribute their `importSummary` — is a follow-up slice.
+falls back to localStorage with `fellBack: true` on failure.
+
+`SessionImportRepository.listConnectorEventIdentitySnapshots` builds
+the cross-session connector identity snapshots used by the re-import
+rollup: on desktop from the `session_imports` table (via the
+`list_all_session_import_rows` command and the pure
+`buildConnectorEventIdentitySnapshots` helper), on browser from
+localStorage. Wiring the connector preview's saved-session history
+loader to consult this repository on desktop is a follow-up slice.
 
 ## Tables in this milestone
 

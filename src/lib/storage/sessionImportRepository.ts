@@ -23,7 +23,11 @@ import {
   toSqliteSessionImportRow,
 } from "../sqlite/sessionImportRows";
 import { createBrowserDraftRepository } from "./localStorageAdapter";
-import type { MoriDraftRepository, StoredSessionImport } from "./storageTypes";
+import type {
+  ConnectorEventIdentitySnapshot,
+  MoriDraftRepository,
+  StoredSessionImport,
+} from "./storageTypes";
 
 export type SessionImportRuntime = "browser" | "desktop";
 
@@ -46,7 +50,45 @@ export type SessionImportResult<T> = {
 export type SessionImportDesktopCommands = {
   persistSessionImports: typeof tauriCommands.persistSessionImports;
   listSessionImportRows: typeof tauriCommands.listSessionImportRows;
+  listAllSessionImportRows: typeof tauriCommands.listAllSessionImportRows;
 };
+
+/**
+ * Build cross-session connector identity snapshots from a flat list of
+ * session imports. Pure: groups imports by session, collects every
+ * `connectorEventId` the imported events carry, and uses the latest
+ * `savedAt` per session. `excludeSessionId` drops the active session so
+ * it does not match itself. Mirrors the browser adapter's
+ * `listConnectorEventIdentitySnapshots`, which lets the desktop path
+ * reuse the same shape.
+ */
+export function buildConnectorEventIdentitySnapshots(
+  imports: readonly StoredSessionImport[],
+  options: { excludeSessionId?: string | null } = {},
+): ConnectorEventIdentitySnapshot[] {
+  const excluded = options.excludeSessionId ?? null;
+  const bySession = new Map<
+    string,
+    { connectorEventIds: string[]; savedAt: string }
+  >();
+  for (const entry of imports) {
+    if (excluded && entry.sessionId === excluded) continue;
+    const bucket = bySession.get(entry.sessionId) ?? {
+      connectorEventIds: [],
+      savedAt: entry.savedAt,
+    };
+    for (const event of entry.events) {
+      if (event.connectorEventId) bucket.connectorEventIds.push(event.connectorEventId);
+    }
+    if (entry.savedAt > bucket.savedAt) bucket.savedAt = entry.savedAt;
+    bySession.set(entry.sessionId, bucket);
+  }
+  return Array.from(bySession.entries()).map(([sessionId, bucket]) => ({
+    sessionId,
+    savedAt: bucket.savedAt,
+    connectorEventIds: bucket.connectorEventIds,
+  }));
+}
 
 export type SessionImportRepositoryOptions = {
   /** Defaults to `desktop` inside Tauri, `browser` otherwise. */
@@ -69,6 +111,7 @@ export class SessionImportRepository {
     this.commands = options.commands ?? {
       persistSessionImports: tauriCommands.persistSessionImports,
       listSessionImportRows: tauriCommands.listSessionImportRows,
+      listAllSessionImportRows: tauriCommands.listAllSessionImportRows,
     };
   }
 
@@ -115,6 +158,36 @@ export class SessionImportRepository {
       };
     } catch (error) {
       return fallbackResult(this.repository().listSessionImports(sessionId), error);
+    }
+  }
+
+  /**
+   * Cross-session connector identity snapshots for the re-import
+   * rollup. On desktop these are built from the `session_imports`
+   * table so SQLite-saved sessions contribute their connector
+   * identities; on browser they come from localStorage.
+   */
+  async listConnectorEventIdentitySnapshots(
+    options: { excludeSessionId?: string | null } = {},
+  ): Promise<SessionImportResult<ConnectorEventIdentitySnapshot[]>> {
+    if (!this.isDesktop()) {
+      return browserResult(
+        this.repository().listConnectorEventIdentitySnapshots(options),
+      );
+    }
+    try {
+      const rows = await this.commands.listAllSessionImportRows();
+      const imports = rows.map(fromSqliteSessionImportRow);
+      return {
+        data: buildConnectorEventIdentitySnapshots(imports, options),
+        source: "desktop-sqlite",
+        fellBack: false,
+      };
+    } catch (error) {
+      return fallbackResult(
+        this.repository().listConnectorEventIdentitySnapshots(options),
+        error,
+      );
     }
   }
 }

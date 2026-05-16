@@ -92,6 +92,7 @@ The Tauri shell now registers SQLite command names so the frontend has a stable 
 - `list_memory_review_action_rows`
 - `persist_session_imports`
 - `list_session_import_rows`
+- `list_all_session_import_rows`
 
 The `rusqlite` runner and repository are implemented: migrations apply
 with checksum validation, session snapshots persist and load, and the
