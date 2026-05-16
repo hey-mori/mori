@@ -46,8 +46,9 @@ export function PlannedConnectorsCard() {
         <div>
           <h3>예정된 커넥터</h3>
           <p>
-            아래 커넥터는 모두 <strong>Planned</strong> 상태입니다. 활성화되어 있지 않으며, 사용자가 직접 setup하기
-            전까지 Mori는 해당 데이터에 접근하지 않습니다.
+            아래 커넥터는 <strong>자동 캡처가 아직 활성화되지 않았습니다</strong>. 사용자가 직접 설정하기
+            전까지 Mori는 해당 데이터에 접근하지 않습니다. 일부는 가져오기(import) 경로가 먼저
+            제공될 수 있으며, 커넥터별 정확한 상태는 각 카드의 배지에 표시됩니다.
           </p>
         </div>
         <Badge tone="gray">{rows.length}개 계획됨</Badge>
