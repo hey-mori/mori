@@ -3,6 +3,7 @@ import {
   Compass,
   FileText,
   FolderClock,
+  FolderKanban,
   PanelRightOpen,
   Play,
   Settings,
@@ -21,6 +22,7 @@ import { getFeatureControlProps } from "../../app/featureStatus";
 
 const navItems: Array<{ key: ViewKey; label: string; badge?: string; icon: typeof Play }> = [
   { key: "start", label: "Start Session", icon: Play },
+  { key: "workspace", label: "Workspace", icon: FolderKanban },
   { key: "timeline", label: "Timeline", icon: SlidersHorizontal },
   { key: "evidence", label: "Evidence", icon: FileText },
   { key: "review", label: "Review", icon: ListChecks },

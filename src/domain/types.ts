@@ -10,6 +10,7 @@ export type ViewKey =
   | "memory"
   | "consolidation"
   | "companion"
+  | "workspace"
   | "profile"
   | "login"
   | "settings";
