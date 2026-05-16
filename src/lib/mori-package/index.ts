@@ -17,6 +17,7 @@ export {
 } from "./serialize";
 export {
   deserializeMoriPackage,
+  getPackageAuditTrail,
   getPackageConsolidatedMemories,
   importMoriPackageFromJson,
 } from "./deserialize";

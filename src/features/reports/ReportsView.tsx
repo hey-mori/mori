@@ -270,10 +270,13 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
   async function handleExport() {
     setBusy(true);
     try {
-      const consolidatedMemories = repository.listAcceptedProjectMemories(
-        view.project.id || "default",
-      );
-      const pkg = createMoriPackageFromSession(view, { consolidatedMemories });
+      const projectId = view.project.id || "default";
+      const consolidatedMemories = repository.listAcceptedProjectMemories(projectId);
+      const auditTrail = repository.listMemoryReviewActions(projectId);
+      const pkg = createMoriPackageFromSession(view, {
+        consolidatedMemories,
+        auditTrail,
+      });
       const serialized = serializeMoriPackage(pkg);
       repository.saveMoriPackageDraft(pkg);
       const filename = `${pkg.manifest.packageId}.mori.json`;

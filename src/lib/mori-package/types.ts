@@ -11,7 +11,10 @@ import type {
   Summary,
   TimelineEvent,
 } from "../../domain/types";
-import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../storage/storageTypes";
 
 export type MoriPackageFormatVersion = "0.1.0";
 
@@ -66,6 +69,18 @@ export type MoriPackageV0 = {
    * review-before-apply rule.
    */
   consolidatedMemories?: StoredAcceptedProjectMemory[];
+  /**
+   * Memory Audit Trail review actions (`accept` / `edit` / `apply`
+   * etc.) that produced the package's accepted memory. Optional and
+   * additive in the same way as `consolidatedMemories`: packages
+   * exported before this field existed deserialize with it absent and
+   * are treated as an empty list — no format-version bump is required.
+   *
+   * These rows are history, not writes. Importing a package never
+   * replays them; they travel so an exported package preserves the
+   * review history behind its accepted memory.
+   */
+  auditTrail?: StoredMemoryReviewAction[];
 };
 
 export type MoriPackageValidationIssue = {

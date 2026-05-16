@@ -240,6 +240,13 @@ that is called out.
   memories; it round-trips through serialize / deserialize and
   validation. Packages exported before the field existed load it as
   empty (`getPackageConsolidatedMemories`).
+- `.mori v0` audit-trail slice: `MoriPackageV0` also carries an
+  optional, additive `auditTrail` field. The Reports `.mori v0`
+  export populates it from the project's `StoredMemoryReviewAction`
+  log; it round-trips through serialize / deserialize and validation.
+  Packages exported before the field existed load it as empty
+  (`getPackageAuditTrail`). These rows are review history — importing
+  a package never replays them.
 - Memory Audit Trail UI: the Project Memory page renders the
   append-only `StoredMemoryReviewAction` log via the pure
   `buildMemoryAuditTrailViewModel` helper and `MemoryAuditTrailCard`
@@ -345,10 +352,6 @@ against the repository.
   reliable bridge that captures live Claude Code / Codex CLI / Git
   activity into `~/.mori/connectors/` for a real workflow is not
   shipped. The user must still run the template scripts manually.
-- **`.mori v0` `auditTrail` slice.** The `.mori v0` package carries
-  accepted memory (`consolidatedMemories`) but not the Memory Audit
-  Trail review actions, so an exported package loses the review
-  history that produced its memory.
 - **Undo / revert from the audit log.** The Memory Audit Trail UI
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and

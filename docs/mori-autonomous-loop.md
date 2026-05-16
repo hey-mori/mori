@@ -145,15 +145,17 @@ only — no phase numbers.
   verified to round-trip; clean-repo git snapshot coverage added.
 - `.mori` native file-open affordance — file picker on the
   Consolidation Review import panel (browser `File` API, no Tauri).
+- `.mori` auditTrail package slice — optional additive
+  `auditTrail?: StoredMemoryReviewAction[]` on `MoriPackageV0`,
+  populated on export with `getPackageAuditTrail` read helper.
 
 **Open priority (highest first):**
 
-1. `.mori` auditTrail package slice
-2. Memory Audit Trail reviewed revert flow
-3. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
+1. Memory Audit Trail reviewed revert flow
+2. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
    mirror)
-4. CLI wrapper for Claude/Codex workflows, explicit/local only
-5. IDE / Terminal integration planning, no hidden monitoring
+3. CLI wrapper for Claude/Codex workflows, explicit/local only
+4. IDE / Terminal integration planning, no hidden monitoring
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -169,45 +171,46 @@ backlog with it.
 
 The next slice should be:
 
-**`.mori` auditTrail package slice**
+**Memory Audit Trail reviewed revert flow — revert eligibility helper**
 
 Goal:
-Carry the Memory Audit Trail review actions in the `.mori v0`
-package, so an exported package preserves not just accepted memory
-but the review history that produced it.
+A pure helper that decides whether a Memory Audit Trail action can be
+reverted and describes the restore it would perform — without
+applying anything. This is the foundation of the reviewed revert
+flow; the actual review/apply path is a later slice.
 
 Scope — do:
-- Add an optional, additive `auditTrail?: StoredMemoryReviewAction[]`
-  field to `MoriPackageV0` (mirrors the `consolidatedMemories`
-  slice — absent-safe, no `formatVersion` bump).
-- Populate it on `.mori v0` export from the project's review actions.
-- Validate it as an optional array; round-trip it through
-  serialize / deserialize.
-- Add a `getPackageAuditTrail` read helper.
+- Add `src/lib/project-memory/memoryReviewRevert.ts` with a pure
+  `planMemoryReviewRevert(action, acceptedMemories)` returning a
+  `MemoryReviewRevertPlan` — eligibility, a reason when ineligible,
+  and the target memory id + status to restore from the action's
+  `before` snapshot.
+- Eligible only when the action carries a usable `before` snapshot
+  with a `status`, the target memory still exists, and the action
+  type is status-changing (`accept` / `edit` / `apply` / `watch` /
+  `defer` / `reset`).
+- Read only the `status` string from the snapshot — never raw
+  evidence, titles, or summaries.
+- No IO, no mutation, no apply — revert is itself review-before-apply.
 
 Scope — do not:
-- Add a destructive or version-breaking migration.
-- Auto-apply imported audit rows — they are history, not writes.
-- Expose `before` / `after` snapshot raw content beyond what the
-  records already carry.
+- Apply the revert or write any memory in this slice.
+- Auto-revert imported `.mori` audit rows — they are history.
+- Surface `before` / `after` raw content beyond the `status` string.
 
 Suggested files:
-- `src/lib/mori-package/types.ts`
-- `src/lib/mori-package/serialize.ts`
-- `src/lib/mori-package/deserialize.ts`
-- `src/lib/mori-package/validation.ts`
-- `src/lib/mori-package/index.ts`
-- `src/lib/mori-package/mori-package.test.ts`
-- `docs/mori-package-v0.md`
+- `src/lib/project-memory/memoryReviewRevert.ts`
+- `src/lib/project-memory/memoryReviewRevert.test.ts`
+- `docs/project-memory-consolidation.md`
 
 Tests:
-- default `auditTrail` is an empty array
-- round-trips review actions through serialize / deserialize
-- a package exported before the field existed loads as empty
-- a non-array `auditTrail` is rejected by validation
+- an eligible plan is produced from a valid `before` snapshot
+- ineligible when the action has no `before` snapshot
+- ineligible when the target memory no longer exists
+- ineligible for an unsupported action type (e.g. `discard`)
 
-After this slice ships, set the next slice to the new top item of the
-open backlog (Memory Audit Trail reviewed revert flow) and continue.
+After this slice ships, set the next slice to the apply path of the
+reviewed revert flow, then continue with the open backlog.
 
 ## 9. Stop Conditions
 

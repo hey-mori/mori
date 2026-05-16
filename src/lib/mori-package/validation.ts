@@ -36,6 +36,12 @@ export function validateMoriPackage(value: unknown): MoriPackageValidationResult
     issues.push({ path: "consolidatedMemories", message: "Must be an array when present" });
   }
 
+  // `auditTrail` is optional and additive in the same way — absent is
+  // valid (older packages). When present it must be an array.
+  if (pkg.auditTrail !== undefined && !Array.isArray(pkg.auditTrail)) {
+    issues.push({ path: "auditTrail", message: "Must be an array when present" });
+  }
+
   if (Array.isArray(pkg.sessions) && isObject(pkg.manifest) && pkg.manifest.primarySessionId) {
     const hasPrimarySession = pkg.sessions.some((session) => isObject(session) && session.id === pkg.manifest?.primarySessionId);
     if (!hasPrimarySession) {

@@ -15,6 +15,7 @@ Implemented now:
 - Tauri desktop command for opening JSON package contents from a path
 
 - `getPackageConsolidatedMemories`
+- `getPackageAuditTrail`
 
 Current JSON shape:
 
@@ -34,6 +35,7 @@ MoriPackageV0
   privacy
   theme
   consolidatedMemories?   (accepted project memory; optional, additive)
+  auditTrail?             (memory review actions; optional, additive)
 ```
 
 ## Accepted project memory slice
@@ -65,8 +67,31 @@ consolidated memory can travel with an exported `.mori v0` package.
   no Tauri command): imported memory enters the review list as
   proposals and only becomes durable through the normal accept /
   apply path.
-- The `auditTrail` slice (accepted-memory `ReviewAction` rows) is not
-  carried yet — a later addition alongside the import-review surface.
+## Memory Audit Trail slice
+
+`auditTrail` carries the project's Memory Audit Trail review actions
+— `StoredMemoryReviewAction[]` — so an exported `.mori v0` package
+preserves not just accepted memory but the review history that
+produced it.
+
+- **Optional and additive.** Mirrors `consolidatedMemories` exactly.
+  The field is absent on packages exported before it existed.
+  `deserializeMoriPackage` leaves it `undefined`;
+  `getPackageAuditTrail(pkg)` normalises both the absent and present
+  cases to a list. No `formatVersion` bump is needed — each record
+  carries its own `schemaVersion`.
+- **Populated explicitly.** `createMoriPackageFromSession(session,
+  { auditTrail })` writes the slice; the Reports page `.mori v0`
+  export reads the project's review actions from the repository
+  (`listMemoryReviewActions`) and passes them in. With no option it
+  defaults to `[]`.
+- **Validation.** `validateMoriPackage` accepts an absent field and
+  rejects a present non-array value.
+- **History, not writes.** These rows are review history. Importing a
+  package never replays them — they travel so an exported package
+  preserves the review history behind its accepted memory. `before`
+  / `after` snapshots are carried only as the records already hold
+  them; no extra raw content is exposed.
 
 Future zip-like mapping:
 
@@ -85,6 +110,8 @@ project.mori
   summaries/
   privacy.json
   theme.json
+  consolidated_memories.json
+  audit_trail.json
 ```
 
 Limitations:

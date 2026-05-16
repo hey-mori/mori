@@ -3,12 +3,16 @@ import { moriMockSession } from "../../domain/mock-data";
 import {
   createMoriPackageFromSession,
   deserializeMoriPackage,
+  getPackageAuditTrail,
   getPackageConsolidatedMemories,
   serializeEventsJsonl,
   serializeMoriPackage,
   validateMoriPackage,
 } from "./index";
-import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../storage/storageTypes";
 
 function acceptedMemory(
   overrides: Partial<StoredAcceptedProjectMemory> = {},
@@ -36,6 +40,25 @@ function acceptedMemory(
     acceptedAt: "2026-05-12T10:00:00Z",
     acceptedBy: "local-user",
     reviewActionIds: ["act-1"],
+    schemaVersion: 1,
+    adapter: "browser-local-storage",
+    ...overrides,
+  };
+}
+
+function reviewAction(
+  overrides: Partial<StoredMemoryReviewAction> = {},
+): StoredMemoryReviewAction {
+  return {
+    id: "act-1",
+    projectId: "p-1",
+    actionType: "accept",
+    actor: "local-user",
+    timestamp: "2026-05-12T10:00:00Z",
+    sourceProposalId: "prop-1",
+    targetMemoryIds: ["mem-1"],
+    note: "Accepted from consolidation review.",
+    reversible: false,
     schemaVersion: 1,
     adapter: "browser-local-storage",
     ...overrides,
@@ -122,5 +145,48 @@ describe(".mori package v0 — accepted memory slice", () => {
     // A structurally invalid package must throw rather than silently ship.
     const invalid = { ...pkg, consolidatedMemories: 42 as unknown as [] };
     expect(() => serializeMoriPackage(invalid)).toThrow(/Invalid Mori package/);
+  });
+});
+
+describe(".mori package v0 — audit trail slice", () => {
+  it("defaults auditTrail to an empty array", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    expect(pkg.auditTrail).toEqual([]);
+    expect(validateMoriPackage(pkg).valid).toBe(true);
+  });
+
+  it("carries review actions and round-trips them through JSON", () => {
+    const actions = [
+      reviewAction({ id: "act-a", actionType: "accept" }),
+      reviewAction({ id: "act-b", actionType: "apply", targetMemoryIds: ["mem-b"] }),
+    ];
+    const pkg = createMoriPackageFromSession(moriMockSession, {
+      auditTrail: actions,
+    });
+    expect(pkg.auditTrail).toHaveLength(2);
+
+    const restored = deserializeMoriPackage(serializeMoriPackage(pkg));
+    expect(getPackageAuditTrail(restored)).toHaveLength(2);
+    expect(getPackageAuditTrail(restored)[0]?.id).toBe("act-a");
+    expect(getPackageAuditTrail(restored)[1]?.actionType).toBe("apply");
+  });
+
+  it("treats a package exported before the field existed as empty", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const legacy = { ...pkg };
+    delete (legacy as { auditTrail?: unknown }).auditTrail;
+
+    const restored = deserializeMoriPackage(JSON.stringify(legacy));
+    expect(restored.auditTrail).toBeUndefined();
+    expect(getPackageAuditTrail(restored)).toEqual([]);
+    expect(validateMoriPackage(legacy).valid).toBe(true);
+  });
+
+  it("rejects a non-array auditTrail value", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const broken = { ...pkg, auditTrail: "not-an-array" };
+    const result = validateMoriPackage(broken);
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((issue) => issue.path === "auditTrail")).toBe(true);
   });
 });

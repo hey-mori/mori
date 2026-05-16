@@ -1,5 +1,8 @@
 import type { MoriMockSession } from "../../domain/types";
-import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../storage/storageTypes";
 import { createDefaultPrivacy, createDefaultTheme, createManifestFromSession } from "./manifest";
 import type { MoriPackageV0 } from "./types";
 import { validateMoriPackage } from "./validation";
@@ -11,6 +14,12 @@ export type CreateMoriPackageOptions = {
    * consolidated memory.
    */
   consolidatedMemories?: readonly StoredAcceptedProjectMemory[];
+  /**
+   * Memory Audit Trail review actions to carry with the package.
+   * Defaults to an empty list so a package can always be exported,
+   * with or without review history.
+   */
+  auditTrail?: readonly StoredMemoryReviewAction[];
 };
 
 export function createMoriPackageFromSession(
@@ -34,6 +43,7 @@ export function createMoriPackageFromSession(
     consolidatedMemories: options.consolidatedMemories
       ? [...options.consolidatedMemories]
       : [],
+    auditTrail: options.auditTrail ? [...options.auditTrail] : [],
   };
 }
 

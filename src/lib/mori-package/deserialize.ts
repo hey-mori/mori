@@ -1,4 +1,7 @@
-import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../storage/storageTypes";
 import type { MoriPackageV0 } from "./types";
 import { validateMoriPackage } from "./validation";
 
@@ -33,4 +36,16 @@ export function getPackageConsolidatedMemories(
   pkg: MoriPackageV0,
 ): StoredAcceptedProjectMemory[] {
   return pkg.consolidatedMemories ?? [];
+}
+
+/**
+ * Normalised read of a package's Memory Audit Trail review actions.
+ * Packages exported before the `auditTrail` field existed return an
+ * empty list rather than `undefined`, so callers never branch on the
+ * field's presence.
+ */
+export function getPackageAuditTrail(
+  pkg: MoriPackageV0,
+): StoredMemoryReviewAction[] {
+  return pkg.auditTrail ?? [];
 }
