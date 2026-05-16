@@ -54,7 +54,7 @@ export function ImportedSourceRow({
         <div className="imported-source-meta">
           <Badge tone="purple">{display.integrationLabel}</Badge>
           <Badge tone={display.trustTone}>{display.trustLabel}</Badge>
-          <Badge tone={rawTone(display.rawDataLabel)}>{display.rawDataLabel}</Badge>
+          <Badge tone={display.rawDataTone}>{display.rawDataLabel}</Badge>
           {summaryBadge ? <Badge tone={summaryBadge.tone}>{summaryBadge.label}</Badge> : null}
           <span className="imported-source-events">
             {relatedEventCount} event{relatedEventCount === 1 ? "" : "s"}
@@ -67,12 +67,4 @@ export function ImportedSourceRow({
       ) : null}
     </article>
   );
-}
-
-function rawTone(label: string): string {
-  if (label === "Full data retained") return "blue";
-  if (label === "Summary only") return "orange";
-  if (label === "Redacted") return "purple";
-  if (label === "Not captured") return "gray";
-  return "gray";
 }

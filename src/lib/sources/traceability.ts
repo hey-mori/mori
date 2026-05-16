@@ -46,6 +46,7 @@ export type SourceDisplayStatus = {
   trustLabel: string;
   trustTone: "green" | "blue" | "purple";
   rawDataLabel: string;
+  rawDataTone: "blue" | "orange" | "purple" | "gray";
   privacyNote: string;
 };
 

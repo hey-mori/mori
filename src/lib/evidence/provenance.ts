@@ -35,8 +35,10 @@ export type ProvenanceDisplay = {
   /** Trust display fields. */
   trustLabel: string;
   trustTone: TrustTone;
-  /** Raw data policy label (e.g. "Summary only"). */
+  /** Raw data policy label (e.g. "요약만 보관"). */
   rawDataLabel: string;
+  /** Badge tone for the raw-data policy chip, derived from the policy enum. */
+  rawDataTone: RawDataTone;
   /** Verbatim privacy note from the integration row. */
   privacyNote: string;
 };
@@ -55,6 +57,25 @@ const RAW_DATA_LABEL: Record<RawDataPolicy, string> = {
   redacted: "민감정보 제거됨",
   notCaptured: "원본 미보관",
 };
+
+/** Badge tone for a raw-data policy chip. */
+export type RawDataTone = "blue" | "orange" | "purple" | "gray";
+
+/**
+ * Badge tone per raw-data policy. Kept separate from the label so a surface
+ * colours the policy chip from the policy enum directly — never by
+ * string-matching the (translatable) label.
+ */
+const RAW_DATA_TONE: Record<RawDataPolicy, RawDataTone> = {
+  retained: "blue",
+  summaryOnly: "orange",
+  redacted: "purple",
+  notCaptured: "gray",
+};
+
+export function getRawDataPolicyTone(policy: RawDataPolicy): RawDataTone {
+  return RAW_DATA_TONE[policy] ?? "gray";
+}
 
 export function getSourceDisplayName(source: SourceRef): string {
   const integration = getIntegration(source.kind);
@@ -91,6 +112,7 @@ export function getProvenanceDisplay(source: SourceRef): ProvenanceDisplay {
     trustLabel: trust.label,
     trustTone: trust.tone,
     rawDataLabel: integration ? RAW_DATA_LABEL[integration.rawDataPolicy] ?? integration.rawDataPolicy : "Unknown",
+    rawDataTone: integration ? getRawDataPolicyTone(integration.rawDataPolicy) : "gray",
     privacyNote: integration?.privacyNote ?? "개인정보 정책 정보가 없습니다.",
   };
 }

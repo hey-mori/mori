@@ -10,6 +10,7 @@ import {
   getIssueEvidenceSources,
   getProvenanceDisplay,
   getProvenanceSummary,
+  getRawDataPolicyTone,
   getSessionEvidenceSummary,
   getSourceDisplayName,
   getTrustDisplay,
@@ -104,5 +105,32 @@ describe("source-links helpers", () => {
     const summary = getSessionEvidenceSummary(moriMockSession);
     expect(summary.sourceCount).toBe(moriMockSession.sources.length);
     expect(summary.dataBasis.length).toBeGreaterThan(0);
+  });
+});
+
+describe("raw-data policy tone", () => {
+  it("gives each raw-data policy a distinct, meaningful badge tone", () => {
+    expect(getRawDataPolicyTone("retained")).toBe("blue");
+    expect(getRawDataPolicyTone("summaryOnly")).toBe("orange");
+    expect(getRawDataPolicyTone("redacted")).toBe("purple");
+    expect(getRawDataPolicyTone("notCaptured")).toBe("gray");
+  });
+
+  it("does not collapse retained / summary / redacted policies to one tone", () => {
+    // Regression guard: the raw-data badge tone must come from the policy
+    // enum, not from string-matching the (Korean) label.
+    const tones = new Set([
+      getRawDataPolicyTone("retained"),
+      getRawDataPolicyTone("summaryOnly"),
+      getRawDataPolicyTone("redacted"),
+    ]);
+    expect(tones.size).toBe(3);
+  });
+
+  it("carries the policy tone on every provenance display row", () => {
+    for (const source of moriMockSession.sources) {
+      const display = getProvenanceDisplay(source);
+      expect(["blue", "orange", "purple", "gray"]).toContain(display.rawDataTone);
+    }
   });
 });

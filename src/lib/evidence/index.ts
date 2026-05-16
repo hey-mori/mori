@@ -24,11 +24,13 @@ export {
   getSourceDisplayName,
   getCaptureMethodLabel,
   getRawDataPolicyLabel,
+  getRawDataPolicyTone,
   getIntegrationStatusLabel,
   getProvenanceDisplay,
   getProvenanceSummary,
   type ProvenanceDisplay,
   type ProvenanceSummary,
+  type RawDataTone,
 } from "./provenance";
 
 export {
