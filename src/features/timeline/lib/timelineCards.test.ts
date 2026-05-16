@@ -132,10 +132,10 @@ describe("buildTimelineBundleViewModel", () => {
     expect(decIndex).toBeGreaterThan(aiIndex);
   });
 
-  it("emits footer parts for src / dec / issues", () => {
+  it("keeps per-category evidence counts off the card view model", () => {
+    // The bundle card footer carries only the Korean type-mix line;
+    // per-category source / decision / issue counts live in the inspector.
     const vm = buildTimelineBundleViewModel(bundle);
-    expect(vm.metaParts).toContain("2 src");
-    expect(vm.metaParts).toContain("1 dec");
-    expect(vm.metaParts).toContain("1 issue");
+    expect(vm).not.toHaveProperty("metaParts");
   });
 });

@@ -69,10 +69,10 @@ export type TimelineBundleViewModel = {
   /** "13:02 – 14:18" — bundles always carry a range. */
   timeLabel: string;
   title: string;
-  /** "AI 대화 5 · 결정 2" — top two event-type counts. */
+  /** "AI 대화 5 · 결정 2" — top two event-type counts; the bundle card's
+   *  one calm footer signal. Per-category evidence counts live in the
+   *  bundle inspector, not on the card. */
   typeMixLabel: string;
-  /** Footer "2 src · 1 dec · 3 issues" parts. */
-  metaParts: string[];
   /** ARIA + tooltip text. */
   ariaLabel: string;
   buttonTitle: string;
@@ -134,13 +134,6 @@ export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): Tim
     .map(([type, count]) => `${eventTypeLabels[type]} ${count}`)
     .join(" · ");
 
-  const metaParts: string[] = [];
-  if (bundle.sourceCount > 0) metaParts.push(`${bundle.sourceCount} src`);
-  if (bundle.decisionCount > 0) metaParts.push(`${bundle.decisionCount} dec`);
-  if (bundle.issueCount > 0) {
-    metaParts.push(`${bundle.issueCount} issue${bundle.issueCount === 1 ? "" : "s"}`);
-  }
-
   const timeLabel = formatTimeRange(bundle.start, bundle.end);
   const buttonTitle = `${bundle.title} · 이벤트 ${bundle.count}개`;
 
@@ -151,7 +144,6 @@ export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): Tim
     timeLabel,
     title: bundle.title,
     typeMixLabel,
-    metaParts,
     ariaLabel: buttonTitle,
     buttonTitle,
     bundle,

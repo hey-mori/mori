@@ -55,10 +55,9 @@ export function TimelineBundleCard({
         <span className="timeline-bundle-count">{bundle.count}개 이벤트</span>
       </header>
       <strong className="timeline-bundle-title">{vm.title}</strong>
-      {showFooter ? (
+      {showFooter && vm.typeMixLabel ? (
         <footer className="timeline-bundle-footer">
-          {vm.typeMixLabel ? <span>{vm.typeMixLabel}</span> : null}
-          {vm.metaParts.length ? <span>{vm.metaParts.join(" · ")}</span> : null}
+          <span>{vm.typeMixLabel}</span>
         </footer>
       ) : null}
     </button>
