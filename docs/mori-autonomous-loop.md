@@ -289,11 +289,14 @@ Shipped:
    session) with honest tone dots; the browser build reads "Browser
    localStorage", not "SQLite · unavailable".
 
+6. ✅ Reports export feedback — the `.mori` package strip now tracks
+   an honest export phase (idle / running / success / error /
+   cancelled) with a toned, ARIA-live feedback line, a running
+   spinner, and per-action busy labels; `writeMoriZipPackage`
+   returns a structured result instead of a bare string.
+
 Open (highest value first):
 
-6. Reports workflow — confirm export success / error / loading
-   feedback on the `.mori` and client-safe export actions; the two
-   export paths currently look identical and give no result state.
 7. Project Memory — accepted-memory lifecycle badges
    (stale / contradicted / superseded / retired) and audit-trail
    discoverability.

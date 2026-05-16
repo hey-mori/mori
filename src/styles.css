@@ -6034,18 +6034,71 @@ pre {
   line-height: 1.55;
 }
 
-.mori-package-strip > div:last-child {
+.mori-package-strip-intro {
+  min-width: 0;
+}
+
+.mori-package-strip-actions {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.mori-package-strip small {
+.mori-package-strip-buttons {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.mori-package-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-2, #f6f5fb);
   color: var(--muted);
   font-size: 11px;
-  max-width: 260px;
-  text-align: right;
+  line-height: 1.4;
+  max-width: 320px;
+  text-align: left;
+}
+
+.mori-package-feedback.tone-info {
+  border-color: #c7d6f5;
+  background: #f1f5fd;
+  color: #2f5fb0;
+}
+
+.mori-package-feedback.tone-ok {
+  border-color: #bfe3cb;
+  background: #f0f8f2;
+  color: #2c7a45;
+}
+
+.mori-package-feedback.tone-error {
+  border-color: #e7c2c2;
+  background: #fdf2f2;
+  color: #b23b3b;
+}
+
+.mori-package-feedback-spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #c7d6f5;
+  border-top-color: #2f5fb0;
+  animation: mori-package-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes mori-package-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Report builder panel */

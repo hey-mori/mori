@@ -22,6 +22,15 @@ import {
 } from "../../lib/mori-package";
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
+import {
+  exportPhaseRole,
+  exportPhaseTone,
+  exportRunningLabel,
+  phaseForWriteResult,
+  type MoriExportKind,
+  type MoriExportPhase,
+  type MoriExportWriteResult,
+} from "../../lib/report/exportStatus";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
@@ -273,7 +282,7 @@ function AnalysisStrip({
 async function writeMoriZipPackage(
   zipBytes: Uint8Array,
   filename: string,
-): Promise<string> {
+): Promise<MoriExportWriteResult> {
   if (isTauriRuntime()) {
     try {
       const saved = await tauriCommands.saveMoriPackageZipAs({
@@ -281,10 +290,13 @@ async function writeMoriZipPackage(
         suggestedFilename: filename,
       });
       return saved.cancelled
-        ? "Export cancelled. Browser draft 저장됨."
-        : `Saved desktop .mori package: ${saved.path}`;
+        ? { status: "cancelled", message: "내보내기를 취소했습니다. Browser draft는 저장되었습니다." }
+        : { status: "saved", message: `데스크톱 .mori 패키지를 저장했습니다 — ${saved.path}` };
     } catch (error) {
-      return `Desktop save failed: ${error instanceof Error ? error.message : "unknown error"}`;
+      return {
+        status: "error",
+        message: `데스크톱 저장 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+      };
     }
   }
   if (typeof window !== "undefined") {
@@ -298,18 +310,28 @@ async function writeMoriZipPackage(
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
-    return `Downloaded ${filename} (.mori zip package). Browser draft 저장됨.`;
+    return {
+      status: "saved",
+      message: `${filename} (.mori zip)을 다운로드했습니다. Browser draft는 저장되었습니다.`,
+    };
   }
-  return "Export unavailable in this environment.";
+  return { status: "error", message: "이 환경에서는 내보내기를 사용할 수 없습니다." };
 }
 
 function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView> }) {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
-  const [status, setStatus] = useState<string>(".mori v0 패키지 내보내기 준비됨");
-  const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<MoriExportPhase>("idle");
+  const [activeKind, setActiveKind] = useState<MoriExportKind | null>(null);
+  const [message, setMessage] = useState<string>(
+    ".mori v0 패키지를 내보낼 준비가 되었습니다.",
+  );
+  const busy = phase === "running";
 
   async function runExport(clientSafe: boolean) {
-    setBusy(true);
+    const kind: MoriExportKind = clientSafe ? "clientSafe" : "full";
+    setPhase("running");
+    setActiveKind(kind);
+    setMessage(exportRunningLabel(kind));
     try {
       const projectId = view.project.id || "default";
       const consolidatedMemories = repository.listAcceptedProjectMemories(projectId);
@@ -332,23 +354,29 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
         ? `${pkg.manifest.packageId}-client-safe.mori`
         : `${pkg.manifest.packageId}.mori`;
       const written = await writeMoriZipPackage(zipBytes, filename);
-      if (clientSafe) {
+      const settled = phaseForWriteResult(written);
+      if (settled === "success" && clientSafe) {
         const total = getPackageConsolidatedMemories(fullPkg).length;
         const kept = getPackageConsolidatedMemories(pkg).length;
-        setStatus(
-          `${written} · 클라이언트 공유용: memory ${kept}건 포함 / ${total - kept}건 제외.`,
+        setMessage(
+          `${written.message} · 클라이언트 공유용: memory ${kept}건 포함 / ${total - kept}건 제외.`,
         );
       } else {
-        setStatus(written);
+        setMessage(written.message);
       }
-    } finally {
-      setBusy(false);
+      setPhase(settled);
+    } catch (error) {
+      setPhase("error");
+      setMessage(
+        `내보내기 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+      );
     }
   }
 
+  const tone = exportPhaseTone(phase);
   return (
     <section className="mori-package-strip" aria-label=".mori package export">
-      <div>
+      <div className="mori-package-strip-intro">
         <h3>
           <Archive size={14} aria-hidden="true" /> .mori v0 패키지
         </h3>
@@ -357,14 +385,25 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
           공유용은 client-safe memory만 포함합니다.
         </p>
       </div>
-      <div>
-        <Button icon={FileText} onClick={() => runExport(false)} disabled={busy}>
-          {busy ? "내보내는 중..." : ".mori 패키지 내보내기"}
-        </Button>
-        <Button icon={FileText} onClick={() => runExport(true)} disabled={busy}>
-          {busy ? "내보내는 중..." : "클라이언트 공유용 .mori 내보내기"}
-        </Button>
-        <small>{status}</small>
+      <div className="mori-package-strip-actions">
+        <div className="mori-package-strip-buttons">
+          <Button icon={FileText} onClick={() => runExport(false)} disabled={busy}>
+            {busy && activeKind === "full" ? "내보내는 중..." : ".mori 패키지 내보내기"}
+          </Button>
+          <Button icon={FileText} onClick={() => runExport(true)} disabled={busy}>
+            {busy && activeKind === "clientSafe"
+              ? "내보내는 중..."
+              : "클라이언트 공유용 .mori 내보내기"}
+          </Button>
+        </div>
+        <p
+          className={`mori-package-feedback tone-${tone}`}
+          role={exportPhaseRole(phase)}
+          aria-live={phase === "error" ? "assertive" : "polite"}
+        >
+          {phase === "running" ? <span className="mori-package-feedback-spinner" aria-hidden="true" /> : null}
+          <span>{message}</span>
+        </p>
       </div>
     </section>
   );
