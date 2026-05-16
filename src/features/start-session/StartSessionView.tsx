@@ -9,6 +9,12 @@ import { sourceOptions } from "../../domain/mock-data";
 import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
 import {
+  describeRetentionFootprint,
+  describeSessionStorageTarget,
+  type SessionStorageTarget,
+} from "../../lib/session/sessionStorageTarget";
+import { isTauriRuntime } from "../../lib/desktop";
+import {
   applySourceSelection,
   initialSelectedSourceIds,
   toggleSourceSelection,
@@ -63,6 +69,10 @@ export function StartSessionView() {
     ENGINE_OPTIONS.find((engine) => engine.provider === engineProvider) ??
     ENGINE_OPTIONS[0];
   const repository = useMemo(() => createBrowserDraftRepository(), []);
+  const storageTarget = useMemo<SessionStorageTarget>(
+    () => describeSessionStorageTarget({ isDesktop: isTauriRuntime() }),
+    [],
+  );
   const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
   const resetSessionToDemo = useMoriSessionStore((state) => state.resetToDemo);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
@@ -87,7 +97,7 @@ export function StartSessionView() {
       recordingMode,
       llmProvider: selectedEngine.provider,
       llmModel: selectedEngine.model,
-      storageLocation: "~/Mori/Records",
+      storageLocation: storageTarget.location,
     });
     const stored = repository.saveCurrentSessionDraft(draft);
     setSavedDraft(stored);
@@ -194,6 +204,7 @@ export function StartSessionView() {
           selectedSources={selectedSources}
           recordingMode={recordingMode}
           engine={selectedEngine}
+          storageTarget={storageTarget}
         />
       </div>
     </div>
@@ -340,6 +351,7 @@ function SessionSummary({
   selectedSources,
   recordingMode,
   engine,
+  storageTarget,
 }: {
   savedDraft: StoredSessionDraft | null;
   sessionTitle: string;
@@ -347,6 +359,7 @@ function SessionSummary({
   selectedSources: SourceOption[];
   recordingMode: RecordingMode;
   engine: EngineOption;
+  storageTarget: SessionStorageTarget;
 }) {
   return (
     <aside className="summary-panel">
@@ -369,12 +382,12 @@ function SessionSummary({
         value={engine.model ? `${engine.label} (${engine.model})` : engine.label}
         accent
       />
-      <SummaryRow label="저장 위치" value="~/Mori/Records" />
-      <SummaryRow label="예상 저장 공간" value="하루 약 50MB ~ 200MB" />
+      <SummaryRow label="저장 위치" value={storageTarget.label} />
+      <SummaryRow label="원본 보관" value={describeRetentionFootprint(recordingMode)} />
       <SummaryRow label="민감 앱" value="기본 차단" />
       <div className="draft-status-panel">
         <strong>{savedDraft ? "세션 드래프트 저장됨" : "세션 드래프트가 아직 저장되지 않음"}</strong>
-        <span>저장소: 브라우저 localStorage</span>
+        <span>저장소: {storageTarget.detail}</span>
         <span>패키지 버전: .mori v0.1.0 JSON 지원</span>
         {savedDraft ? (
           <>
