@@ -471,7 +471,7 @@ function ImportPackagePanel({
   return (
     <details className="consolidation-review-import">
       <summary>
-        <strong>Import accepted memory from a .mori package</strong>
+        <strong>.mori 패키지에서 accepted memory 가져오기</strong>
         <span>붙여넣거나 파일로 선택한 .mori v0 패키지의 accepted memory를 검토 제안으로 추가합니다.</span>
       </summary>
       <p className="consolidation-review-import-note">
