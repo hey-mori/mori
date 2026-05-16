@@ -339,9 +339,15 @@ a demo/overview. Highest value first.
   bundles size to the cluster's real span. (Demo events are mostly
   instantaneous, so the variation is most visible on bundles — the
   day-scale stress fixture below will exercise ranged events.)
-- Burst clustering polish — bundles cover ≥3-event clusters, but
-  there is no explicit "+N more" overflow affordance and no
-  same-source rapid-event grouping.
+- ✅ Burst overflow clarity — the bundle card count reads Korean
+  (`N개 이벤트`) and the bundle inspector — the surface a burst
+  expands into — is fully Korean and reviewable: it lists every
+  clustered member event, the Korean `describeBundleKind` /
+  `describeBundleReason` labels (raw enums no longer reach the
+  UI), type mix, and represented evidence.
+- Same-source rapid-event grouping — clusters bundle by lane +
+  time window only; rapid events from the same connector source
+  are not yet grouped distinctly.
 - Inspector responsibility — move remaining card metadata into the
   inspector; make inspector width responsive / collapsible.
 - Responsive Timeline — laptop/tablet behaviour, inspector

@@ -80,3 +80,44 @@ export function isTimelineBundle(item: TimelineDisplayItem): item is TimelineDis
 export function isTimelineDisplayEvent(item: TimelineDisplayItem): item is TimelineDisplayEvent {
   return item.kind === "event";
 }
+
+/**
+ * Korean label for a bundle kind. The raw `TimelineBundleKind` enum must
+ * never reach the UI — the bundle inspector reads this instead.
+ */
+export function describeBundleKind(kind: TimelineBundleKind): string {
+  switch (kind) {
+    case "sequence":
+      return "연속 작업 흐름";
+    case "decisionBurst":
+      return "결정 정리 흐름";
+    case "issueBurst":
+      return "이슈 생성 흐름";
+    case "researchBurst":
+      return "조사 흐름";
+    case "codeBurst":
+      return "코드 변경 묶음";
+    case "evidenceBurst":
+      return "근거 수집 흐름";
+    case "workflowBurst":
+      return "워크플로 묶음";
+    default:
+      return "작업 묶음";
+  }
+}
+
+/** Korean label for why a cluster of events was bundled. */
+export function describeBundleReason(code: TimelineBundleReasonCode): string {
+  switch (code) {
+    case "laneDensity":
+      return "레인 밀도";
+    case "timeWindow":
+      return "근접 작업 모멘트";
+    case "microSequence":
+      return "마이크로 시퀀스";
+    case "preserveSingleRow":
+      return "단일 행 유지";
+    default:
+      return "작업 묶음";
+  }
+}

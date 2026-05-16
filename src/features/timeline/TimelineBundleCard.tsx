@@ -52,7 +52,7 @@ export function TimelineBundleCard({
           <Layers3 size={11} aria-hidden="true" />
           {vm.timeLabel}
         </span>
-        <span className="timeline-bundle-count">{bundle.count} events</span>
+        <span className="timeline-bundle-count">{bundle.count}개 이벤트</span>
       </header>
       <strong className="timeline-bundle-title">{vm.title}</strong>
       {showFooter ? (

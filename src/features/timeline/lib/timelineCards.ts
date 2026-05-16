@@ -138,7 +138,7 @@ export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): Tim
   }
 
   const timeLabel = formatTimeRange(bundle.start, bundle.end);
-  const buttonTitle = `${bundle.title} · ${bundle.count} events`;
+  const buttonTitle = `${bundle.title} · 이벤트 ${bundle.count}개`;
 
   return {
     kind: "bundle",

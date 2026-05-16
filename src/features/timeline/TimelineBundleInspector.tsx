@@ -5,7 +5,11 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels, eventTypeTone } from "../../domain/constants";
 import type { MoriMockSession } from "../../domain/types";
 import { formatTimeRange } from "../../lib/formatting/time";
-import type { TimelineDisplayBundle } from "../../lib/timeline/displayItems";
+import {
+  describeBundleKind,
+  describeBundleReason,
+  type TimelineDisplayBundle,
+} from "../../lib/timeline/displayItems";
 import { describeTrustLevel } from "../../lib/relationships/relationshipDisplay";
 
 export function TimelineBundleInspector({
@@ -31,7 +35,7 @@ export function TimelineBundleInspector({
         <div className="inspector-badges">
           <Badge tone={eventTypeTone[bundle.laneType]}>{eventTypeLabels[bundle.laneType]}</Badge>
           <Badge tone={trust.tone}>{trust.label}</Badge>
-          <Badge tone="gray">{bundle.bundleKind}</Badge>
+          <Badge tone="gray">{describeBundleKind(bundle.bundleKind)}</Badge>
         </div>
         <h3 className="inspector-title">{bundle.title}</h3>
         <p className="inspector-time">{formatTimeRange(bundle.start, bundle.end)}</p>
@@ -39,24 +43,24 @@ export function TimelineBundleInspector({
 
       <section className="inspector-section">
         <div className="inspector-summary-card">
-          <span>Workflow bundle</span>
+          <span>워크플로 묶음</span>
           <p>{bundle.summary}</p>
         </div>
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Why bundled" hint={`${bundle.count} events`} />
+        <SectionHeader title="묶인 이유" hint={`이벤트 ${bundle.count}개`} />
         <div className="inspector-trust-card">
-          <strong>{bundleReasonLabel(bundle.reason.code)}</strong>
+          <strong>{describeBundleReason(bundle.reason.code)}</strong>
           <span>{bundle.reason.message}</span>
           <small>
-            {bundle.sourceCount} sources · {bundle.decisionCount} decisions · {bundle.issueCount} issues
+            출처 {bundle.sourceCount} · 결정 {bundle.decisionCount} · 이슈 {bundle.issueCount}
           </small>
         </div>
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Type mix" />
+        <SectionHeader title="유형 구성" />
         <div className="inspector-mix-row">
           {Object.entries(bundle.eventTypeCounts).map(([type, count]) => (
             <Badge key={type} tone={eventTypeTone[type as keyof typeof eventTypeTone]}>
@@ -67,7 +71,7 @@ export function TimelineBundleInspector({
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Included events" />
+        <SectionHeader title="포함된 이벤트" hint={`${includedEvents.length}건`} />
         <ul className="inspector-source-list">
           {includedEvents.map((event) => (
             <li key={event.id}>
@@ -84,44 +88,37 @@ export function TimelineBundleInspector({
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Represented evidence" />
+        <SectionHeader title="대표 근거" />
         <ul className="inspector-linked-rows">
           <li>
-            <Badge tone="cyan">Sources</Badge>
+            <Badge tone="cyan">출처</Badge>
             <span className="inspector-linked-count">{sources.length}</span>
-            <span className="inspector-linked-first">{sources[0]?.title ?? "None"}</span>
+            <span className="inspector-linked-first">{sources[0]?.title ?? "없음"}</span>
           </li>
           <li>
-            <Badge tone="green">Decisions</Badge>
+            <Badge tone="green">결정</Badge>
             <span className="inspector-linked-count">{decisions.length}</span>
-            <span className="inspector-linked-first">{decisions[0]?.title ?? "None"}</span>
+            <span className="inspector-linked-first">{decisions[0]?.title ?? "없음"}</span>
           </li>
           <li>
-            <Badge tone="red">Issues</Badge>
+            <Badge tone="red">이슈</Badge>
             <span className="inspector-linked-count">{issues.length}</span>
-            <span className="inspector-linked-first">{issues[0]?.title ?? "None"}</span>
+            <span className="inspector-linked-first">{issues[0]?.title ?? "없음"}</span>
           </li>
         </ul>
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Actions" />
+        <SectionHeader title="액션" />
         <div className="inspector-actions-row">
           <Button variant="primary" icon={ArrowRightLeft} onClick={onTrace}>
-            Open Flow Focus
+            Flow Focus 열기
           </Button>
-          <Button icon={ClipboardList} disabled title="Inline expansion is planned">
-            Expand inline (planned)
+          <Button icon={ClipboardList} disabled title="인라인 펼치기는 예정된 기능입니다.">
+            인라인 펼치기 (예정)
           </Button>
         </div>
       </section>
     </aside>
   );
-}
-
-function bundleReasonLabel(code: TimelineDisplayBundle["reason"]["code"]): string {
-  if (code === "laneDensity") return "Lane density";
-  if (code === "timeWindow") return "Nearby work moment";
-  if (code === "microSequence") return "Micro-sequence";
-  return "Single-row preservation";
 }
