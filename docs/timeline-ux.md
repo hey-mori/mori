@@ -113,14 +113,24 @@ Behavior:
 
 - The Timeline toolbar is a single row with `Day / Week / Session`,
   zoom controls, an `Active lanes only` toggle, a `Filter` button that
-  opens the category popover, and a `Comfortable / Compact` density
-  toggle.
+  opens the category popover, and a `넓게 / 보통 / 조밀` density toggle.
+- The time-range and density toggles both render through the shared
+  `SegmentedControl` component (`src/components/ui/SegmentedControl.tsx`)
+  rather than hand-rolled `<div className="segmented">` markup, so the
+  Timeline toolbar and the Evidence Quick Pass provider switch stay one
+  consistent control.
+- Density stays a **three-tier** choice (`comfortable` / `compact` /
+  `dense`) on purpose: each tier is a genuinely distinct card geometry
+  tuned for a different scan distance, so it is a discrete segmented
+  choice, not a continuous slider that would imply fake granularity.
 - The popover is the **only** place where the eight event-type filters
   render. Lane labels carry the primary categorical structure; the popover
   is a focused control, not a permanent legend.
 - `Day / Week / Zoom in / Zoom out` ship disabled today with explanatory
-  tooltips from `timelineControls.ts`. The toolbar carries a single dashed
-  honesty line confirming that Session is the only working scope.
+  tooltips from `timelineControls.ts`. The disabled time-range segments
+  stay visible (not hidden) so the control honestly shows what is planned.
+  The toolbar carries a single dashed honesty line confirming that
+  Session is the only working scope.
 - Active filters are visible on the toolbar via a `Filter · N` count
   badge. The popover's `Clear` button resets them.
 

@@ -580,6 +580,16 @@ Open (highest value first):
     fresh session reads "Live" and the clock counts up.
 24. Component architecture cleanup — repeated card / badge / panel
     markup should converge on shared components to stop drift.
+    - ✅ Shared `SegmentedControl` — the three hand-rolled
+      `<div className="segmented">` clusters (Timeline time-range,
+      Timeline density, Evidence Quick Pass provider) now render through
+      one typed `src/components/ui/SegmentedControl.tsx`. Disabled
+      segments stay visible so a planned range honestly shows what it is;
+      density stays a three-tier discrete choice (no fake slider
+      granularity over three real card geometries). Backed by the
+      existing `.segmented` stylesheet rules — adoption changed no pixels.
+    - Open — `MoriCard` / panel / toolbar markup convergence continues
+      surface-by-surface; no reckless one-pass rewrite.
 25. Real-session walkthrough fixture — a checked-in fixture that
     drives one real capture → import → timeline → memory pass for
     manual QA.

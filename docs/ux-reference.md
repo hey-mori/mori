@@ -7,7 +7,8 @@ spacing) are declared in `src/styles/tokens.css` and given semantic role
 names in `src/styles/theme.css`. UI primitives that adopt these tokens
 live in `src/components/ui/` (`MoriCard`, `MoriStatusBadge`,
 `MoriTrustBadge`, `MoriFeatureStatusBadge`, `MoriPlannedAction`,
-`MoriScrollArea`, `MoriStatCard`, `MoriToolbar`, `MoriEmptyState`). New
+`MoriScrollArea`, `MoriStatCard`, `MoriToolbar`, `MoriEmptyState`,
+`SegmentedControl`). New
 surfaces should consume the semantic `--mori-*` variables rather than the
 raw token values so a future theme switcher (Planned, registry id
 `settings.themeSwitcher`) can remap one layer.

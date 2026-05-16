@@ -2,6 +2,7 @@ import { Plus, RotateCcw, Settings as SettingsIcon, Shield, Sparkles } from "luc
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import {
@@ -390,24 +391,16 @@ function QuickPassControl({
         </div>
       </div>
       <div className="analysis-panel-provider">
-        <div className="segmented" role="radiogroup" aria-label="Quick Pass provider">
-          <button
-            type="button"
-            aria-pressed={settings.provider === "deterministic"}
-            className={settings.provider === "deterministic" ? "active" : ""}
-            onClick={() => onProviderChange("deterministic")}
-          >
-            Deterministic
-          </button>
-          <button
-            type="button"
-            aria-pressed={settings.provider === "ollama"}
-            className={settings.provider === "ollama" ? "active" : ""}
-            onClick={() => onProviderChange("ollama")}
-          >
-            Ollama (local LLM)
-          </button>
-        </div>
+        <SegmentedControl<QuickPassProviderKind>
+          ariaLabel="Quick Pass provider"
+          role="radiogroup"
+          value={settings.provider}
+          onChange={onProviderChange}
+          options={[
+            { id: "deterministic", label: "Deterministic" },
+            { id: "ollama", label: "Ollama (local LLM)" },
+          ]}
+        />
         <small>{providerKindLabel}</small>
         {settings.provider === "ollama" ? (
           <label className="analysis-panel-fallback">

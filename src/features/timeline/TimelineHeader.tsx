@@ -1,20 +1,24 @@
 import { Calendar, Filter, Layers, PanelRight, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import type { SegmentedControlOption } from "../../components/ui/SegmentedControl";
 import { eventTypeLabels, eventTypeTone, laneOrder } from "../../domain/constants";
 import type { EventType } from "../../domain/types";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
-import {
-  TIMELINE_CONTROLS,
-  getPlannedHint,
-  isImplemented,
-} from "../../lib/timeline/timelineControls";
+import { TIMELINE_CONTROLS, getPlannedHint } from "../../lib/timeline/timelineControls";
 
 /** Density tiers, ordered loosest → densest, for the segmented control. */
-const DENSITY_OPTIONS: Array<{ id: TimelineDensity; label: string; title: string }> = [
+const DENSITY_OPTIONS: SegmentedControlOption<TimelineDensity>[] = [
   { id: "comfortable", label: "넓게", title: "넓은 카드 — 제목 + 메타데이터까지 표시" },
   { id: "compact", label: "보통", title: "낮은 카드 — 제목 위주, 메타데이터는 인스펙터로" },
   { id: "dense", label: "조밀", title: "최소 카드 — 아이콘 + 시각 + 제목, 하루치 스캔용" },
 ];
+
+/**
+ * Time-range segments. Only `session` is implemented today; `day` / `week`
+ * render as disabled segments so the control honestly shows what is planned.
+ */
+type TimelineRangeId = "day" | "week" | "session";
 
 export type TimelineToolbarProps = {
   density: TimelineDensity;
@@ -80,22 +84,24 @@ export function TimelineToolbar({
   return (
     <div className="timeline-toolbar" role="toolbar" aria-label="Timeline controls">
       <div className="timeline-toolbar-left">
-        <div className="segmented" role="group" aria-label="Time range">
-          <button type="button" disabled title={dayHint}>
-            <Calendar size={13} aria-hidden="true" /> 일
-          </button>
-          <button type="button" disabled title={weekHint}>
-            주
-          </button>
-          <button
-            type="button"
-            className="active"
-            aria-pressed={isImplemented("rangeSession")}
-            title="단일 세션 보기 (현재)"
-          >
-            세션
-          </button>
-        </div>
+        <SegmentedControl<TimelineRangeId>
+          ariaLabel="Time range"
+          value="session"
+          options={[
+            {
+              id: "day",
+              label: (
+                <>
+                  <Calendar size={13} aria-hidden="true" /> 일
+                </>
+              ),
+              disabled: true,
+              title: dayHint,
+            },
+            { id: "week", label: "주", disabled: true, title: weekHint },
+            { id: "session", label: "세션", title: "단일 세션 보기 (현재)" },
+          ]}
+        />
         <div className="zoom-group" role="group" aria-label="Zoom">
           <button type="button" disabled title={zoomOutHint} aria-label="Zoom out">
             <ZoomOut size={14} />
@@ -183,20 +189,12 @@ export function TimelineToolbar({
             </div>
           ) : null}
         </div>
-        <div className="segmented" role="group" aria-label="Timeline density">
-          {DENSITY_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className={density === option.id ? "active" : ""}
-              aria-pressed={density === option.id}
-              onClick={() => onSetDensity(option.id)}
-              title={option.title}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl<TimelineDensity>
+          ariaLabel="Timeline density"
+          value={density}
+          onChange={onSetDensity}
+          options={DENSITY_OPTIONS}
+        />
         <button
           type="button"
           className={`toolbar-toggle ${!inspectorCollapsed && !inspectorToggleDisabled ? "is-active" : ""}`}
