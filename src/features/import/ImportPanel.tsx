@@ -933,7 +933,7 @@ function ConnectorJsonlInbox({
     return (
       <div className="connector-jsonl-inbox is-browser" role="region" aria-label="Connector inbox">
         <header>
-          <strong>Connector inbox</strong>
+          <strong>커넥터 Inbox</strong>
           <Badge tone="gray">데스크톱 전용</Badge>
         </header>
         <p>
@@ -947,13 +947,13 @@ function ConnectorJsonlInbox({
   return (
     <div className="connector-jsonl-inbox" role="region" aria-label="Connector inbox">
       <header>
-        <strong>Connector inbox</strong>
+        <strong>커넥터 Inbox</strong>
         <span>
           Mori는 <code>~/.mori/connectors/</code> 아래의 파일만 읽습니다. 폴더를 자동으로
-          감시하지 않으며, Refresh를 누를 때만 목록을 다시 가져옵니다.
+          감시하지 않으며, 새로고침을 누를 때만 목록을 다시 가져옵니다.
         </span>
         <Button onClick={onRefresh} disabled={busy}>
-          {busy ? "Refreshing..." : "Refresh inbox"}
+          {busy ? "새로고침 중..." : "Inbox 새로고침"}
         </Button>
       </header>
       {status ? (
