@@ -69,18 +69,18 @@ export function TimelineToolbar({
       <div className="timeline-toolbar-left">
         <div className="segmented" role="group" aria-label="Time range">
           <button type="button" disabled title={dayHint}>
-            <Calendar size={13} aria-hidden="true" /> Day
+            <Calendar size={13} aria-hidden="true" /> 일
           </button>
           <button type="button" disabled title={weekHint}>
-            Week
+            주
           </button>
           <button
             type="button"
             className="active"
             aria-pressed={isImplemented("rangeSession")}
-            title="Single session view (current)"
+            title="단일 세션 보기 (현재)"
           >
-            Session
+            세션
           </button>
         </div>
         <div className="zoom-group" role="group" aria-label="Zoom">
@@ -99,14 +99,14 @@ export function TimelineToolbar({
           onClick={onToggleActiveLanesOnly}
           title={
             activeLanesOnly
-              ? `Showing ${visibleLaneCount} active lanes (toggle to show all ${totalLaneCount})`
-              : `Showing all ${totalLaneCount} lanes (toggle to hide empty)`
+              ? `활성 레인 ${visibleLaneCount}개 표시 중 (전체 ${totalLaneCount}개 보기로 전환)`
+              : `전체 레인 ${totalLaneCount}개 표시 중 (빈 레인 숨기기로 전환)`
           }
         >
           <Layers size={14} aria-hidden="true" />
           {activeLanesOnly
-            ? `Active lanes · ${visibleLaneCount}/${totalLaneCount}`
-            : `All lanes · ${totalLaneCount}`}
+            ? `활성 레인 · ${visibleLaneCount}/${totalLaneCount}`
+            : `전체 레인 · ${totalLaneCount}`}
         </button>
         <div className="filter-pop-wrap" ref={filterPopRef}>
           <button
@@ -115,22 +115,22 @@ export function TimelineToolbar({
             onClick={() => setFilterOpen((open) => !open)}
             aria-expanded={filterOpen}
             aria-controls="timeline-filter-popover"
-            title="Filter timeline categories"
+            title="타임라인 카테고리 필터"
           >
             <Filter size={14} aria-hidden="true" />
             {activeFilters.length
-              ? `Filter · ${activeFilters.length}`
-              : "Filter"}
+              ? `필터 · ${activeFilters.length}`
+              : "필터"}
           </button>
           {filterOpen ? (
             <div
               className="filter-popover"
               id="timeline-filter-popover"
               role="dialog"
-              aria-label="Category filter"
+              aria-label="카테고리 필터"
             >
               <header>
-                <span>Category filter</span>
+                <span>카테고리 필터</span>
                 <button
                   type="button"
                   className="filter-popover-clear"
@@ -140,7 +140,7 @@ export function TimelineToolbar({
                   }}
                   disabled={activeFilters.length === 0}
                 >
-                  Clear
+                  지우기
                 </button>
               </header>
               <ul>
@@ -163,8 +163,8 @@ export function TimelineToolbar({
               </ul>
               <footer>
                 <small>
-                  Lane labels are the primary category structure. Use filters
-                  to focus on one or more types without changing the canvas.
+                  레인 라벨이 기본 카테고리 구조입니다. 필터를 사용하면 캔버스를
+                  바꾸지 않고 하나 이상의 유형에 집중할 수 있습니다.
                 </small>
               </footer>
             </div>
@@ -173,9 +173,9 @@ export function TimelineToolbar({
         <Button
           icon={Grid2X2}
           onClick={onToggleDensity}
-          title={`Switch to ${density === "comfortable" ? "compact" : "comfortable"} density`}
+          title={`${density === "comfortable" ? "좁은" : "넓은"} 밀도로 전환`}
         >
-          {density === "comfortable" ? "Comfortable" : "Compact"}
+          {density === "comfortable" ? "넓게" : "좁게"}
         </Button>
       </div>
       <ToolbarPlannedLabel />
@@ -194,8 +194,8 @@ function ToolbarPlannedLabel() {
   return (
     <p className="timeline-toolbar-honesty">
       <span className="dot" aria-hidden="true" />
-      Day / Week / Zoom are <strong>Planned</strong> — Session view is the
-      single source of truth for now.
+      일 / 주 / 줌 보기는 <strong>Planned</strong> 상태입니다 — 지금은 세션
+      보기가 단일 기준입니다.
       <span className="screen-reader-only">
         {plannedHints.map((control) => `${control.label}: ${control.plannedHint}`).join(" ")}
       </span>
