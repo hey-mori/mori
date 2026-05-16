@@ -416,6 +416,7 @@ text into a signal.
   (`src/lib/companion/companionSignals.ts`) is a pure helper that
   derives a prioritised, capped set of evidence-based signals from
   the active session (demo-mode notice, real-session import gap,
+  import-ready when sources exist but Quick Pass has not run,
   weak-evidence inferred issues, decisions needing review, open
   issues, next actions, important decisions, ready-to-report,
   ready-to-resume). Each signal carries severity, an honest `basis`

@@ -30,6 +30,7 @@ import type {
 export type CompanionSignalType =
   | "demo_mode_notice"
   | "real_session_gap"
+  | "import_ready"
   | "weak_evidence"
   | "needs_review"
   | "unresolved_issue"
@@ -136,6 +137,24 @@ export function buildCompanionSignals(input: CompanionSignalInput): CompanionSig
       evidenceRefs: [],
       basis: "state",
       actionLabel: "Evidence 열기",
+      destination: "evidence",
+      audience: "real",
+    });
+  } else if (!input.hasAnalysis) {
+    // Imports exist but Quick Pass has not run — without this the companion
+    // is silent at exactly the point the user needs the next step.
+    signals.push({
+      id: "companion-import-ready",
+      type: "import_ready",
+      severity: "suggestion",
+      title: "Quick Pass를 실행할 준비가 되었어요",
+      message:
+        "가져온 소스가 있습니다. Quick Pass를 실행하면 이슈 · 결정 · 다음 액션으로 정리됩니다.",
+      sourceSurface: "evidence",
+      linkedItemIds: [],
+      evidenceRefs: [],
+      basis: "state",
+      actionLabel: "Quick Pass 실행",
       destination: "evidence",
       audience: "real",
     });

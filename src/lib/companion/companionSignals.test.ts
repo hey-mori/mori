@@ -71,6 +71,22 @@ describe("buildCompanionSignals — session-state signals", () => {
     const signals = buildCompanionSignals(input({ importCount: 2 }));
     expect(signals.some((signal) => signal.type === "real_session_gap")).toBe(false);
   });
+
+  it("offers import_ready when sources are imported but Quick Pass has not run", () => {
+    const signals = buildCompanionSignals(
+      input({ importCount: 2, hasAnalysis: false }),
+    );
+    const ready = signals.find((signal) => signal.type === "import_ready");
+    expect(ready).toBeDefined();
+    expect(ready?.destination).toBe("evidence");
+  });
+
+  it("drops import_ready once Quick Pass analysis exists", () => {
+    const signals = buildCompanionSignals(
+      input({ importCount: 2, hasAnalysis: true }),
+    );
+    expect(signals.some((signal) => signal.type === "import_ready")).toBe(false);
+  });
 });
 
 describe("buildCompanionSignals — evidence-based signals", () => {
@@ -158,7 +174,11 @@ describe("buildCompanionSignals — prioritisation and limits", () => {
   });
 
   it("returns no signals when a real session has nothing to surface", () => {
-    expect(buildCompanionSignals(input({ importCount: 4 }))).toEqual([]);
+    // Sources imported and Quick Pass already run, but no events / issues /
+    // decisions / next actions — genuinely nothing for Mori to flag.
+    expect(
+      buildCompanionSignals(input({ importCount: 4, hasAnalysis: true })),
+    ).toEqual([]);
   });
 });
 
