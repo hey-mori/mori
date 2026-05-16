@@ -14,8 +14,13 @@ import {
   getPlannedCaptureSurfaces,
 } from "../../lib/connectors/captureSurfaces";
 import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
+import type { SourceOption } from "../../domain/types";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
+
+const availableSources = sourceOptions.filter((source) => source.status === "available");
+const plannedSources = sourceOptions.filter((source) => source.status === "planned");
+const selectedSourceCount = sourceOptions.filter((source) => source.selected).length;
 
 export function StartSessionView() {
   const [sessionTitle, setSessionTitle] = useState("Mori 앱 기획");
@@ -65,21 +70,33 @@ export function StartSessionView() {
           </SetupBlock>
           <SetupBlock number="2" title="기록할 앱 / 소스 선택" note="선택한 앱과 소스의 활동만 기록합니다. Mori는 전체 컴퓨터를 감시하지 않습니다.">
             <CaptureSurfaceHonestyStrip />
-            <div className="source-grid">
-              {sourceOptions.map((source) => {
-                const Icon = source.icon;
-                return (
-                  <button className={`source-card ${source.selected ? "selected" : ""} ${source.enabled ? "" : "disabled"}`} key={source.id} type="button">
-                    <Icon size={28} />
-                    <div>
-                      <strong>{source.name}</strong>
-                      <span><i />{source.detail}</span>
-                    </div>
-                    {source.selected ? <Check size={17} /> : <span className="checkbox" />}
-                  </button>
-                );
-              })}
+            <div className="source-group">
+              <p className="source-group-label">
+                지금 가져올 수 있는 소스
+                <span className="source-group-count">{availableSources.length}</span>
+              </p>
+              <div className="source-grid">
+                {availableSources.map((source) => (
+                  <SourceCard key={source.id} source={source} />
+                ))}
+              </div>
             </div>
+            {plannedSources.length > 0 ? (
+              <div className="source-group">
+                <p className="source-group-label">
+                  예정된 통합
+                  <span className="pill tone-gray">Planned</span>
+                </p>
+                <p className="source-group-hint">
+                  아래 통합은 아직 제공되지 않습니다. 이번 세션에서 캡처되지 않으며, Mori는 이 앱들을 자동으로 읽지 않습니다.
+                </p>
+                <div className="source-grid">
+                  {plannedSources.map((source) => (
+                    <SourceCard key={source.id} source={source} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="privacy-note">
               <ShieldCheck size={16} />
               Summary Mode에서는 원본을 오래 보관하지 않고 요약/이슈/결정/타임라인 중심으로 저장합니다.
@@ -140,6 +157,31 @@ function CaptureSurfaceHonestyStrip() {
   );
 }
 
+function SourceCard({ source }: { source: SourceOption }) {
+  const Icon = source.icon;
+  const planned = source.status === "planned";
+  return (
+    <button
+      className={`source-card ${source.selected ? "selected" : ""} ${planned ? "disabled" : ""}`}
+      type="button"
+      disabled={planned}
+    >
+      <Icon size={28} />
+      <div>
+        <strong>{source.name}</strong>
+        <span><i />{source.detail}</span>
+      </div>
+      {planned ? (
+        <span className="pill tone-gray">Planned</span>
+      ) : source.selected ? (
+        <Check size={17} />
+      ) : (
+        <span className="checkbox" />
+      )}
+    </button>
+  );
+}
+
 function SetupBlock({ number, title, note, children }: { number: string; title: string; note?: string; children: ReactNode }) {
   return (
     <section className="setup-block">
@@ -188,10 +230,11 @@ function SessionSummary({ savedDraft, sessionTitle, projectName }: { savedDraft:
       <SummaryRow label="세션 이름" value={sessionTitle || "Untitled Mori Session"} />
       <SummaryRow label="프로젝트" value={projectName || "Untitled Project"} />
       <hr />
-      <SummaryRow label="기록할 소스" value="9개 선택됨" />
+      <SummaryRow label="기록할 소스" value={`${selectedSourceCount}개 선택됨`} />
       <ul className="summary-source-list">
-        {sourceOptions.filter((source) => source.selected).slice(0, 8).map((source) => <li key={source.id}>{source.name}</li>)}
-        <li>외 1개</li>
+        {sourceOptions
+          .filter((source) => source.selected)
+          .map((source) => <li key={source.id}>{source.name}</li>)}
       </ul>
       <hr />
       <SummaryRow label="기록 모드" value="Summary Mode" accent />

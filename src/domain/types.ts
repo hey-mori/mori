@@ -193,6 +193,13 @@ export type SourceOption = {
   kind: SourceKind;
   enabled: boolean;
   selected: boolean;
+  /**
+   * Whether this capture source is an explicit import that works
+   * today (`available`) or a not-yet-built integration (`planned`).
+   * The Start Session picker only lets `available` sources be
+   * selected — it never implies Mori captures a planned surface.
+   */
+  status: "available" | "planned";
   icon: LucideIcon;
 };
 
