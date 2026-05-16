@@ -457,6 +457,39 @@ text into a signal.
   4. resume-companion improvements;
   5. preferences for signal quietness.
 
+### Account / Profile / Settings expansion (planned)
+
+Eight concept references for a planned account/profile/settings area
+are saved under
+`docs/assets/screenshots/account-profile-settings/` and indexed in
+[`docs/account-profile-settings-references.md`](account-profile-settings-references.md)
+(screen-map, Welcome / local-first sign-in, Local Profile Setup,
+Account & Profile, Privacy & Data Control, Security & Device Sessions,
+Notification Center / Companion Inbox, Workspace & Projects). These
+are design references only — not final copy, not committed screens.
+
+Roadmap passes (each a future session; the reference doc carries the
+full per-pass scope / risk / behavior breakdown):
+1. Notification Center / Companion Inbox — the Companion Layer's
+   dedicated surface, built on the existing `companionSignals` /
+   `CompanionCard` / `CompanionStrip` foundation. Highest value —
+   the code foundation already exists.
+2. Privacy & Data Control — promote the Settings privacy tab into a
+   fuller surface.
+3. Account & Profile page shell — reads a local profile; account /
+   plan rendered as a planned state.
+4. Local Profile / Account IA planning — routing, the local-profile
+   data model, and the auth-is-not-data-access boundary.
+5. Login / local-first entry, Workspace & Projects, Security &
+   Device Sessions, Settings nav restructure — later.
+
+Hard constraint: Local Profile is the default identity; a Mori
+Account is always optional; authentication never implies external
+data access; capture stays explicit and reviewed.
+
+**Next recommended implementation pass:** Notification Center /
+Companion Inbox (roadmap pass 1).
+
 Open (highest value first):
 
 9. Timeline density + event inspector — long event lists have no
