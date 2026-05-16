@@ -18,26 +18,26 @@ export function FlowFocusHeader({
           <Eye size={18} /> Flow Focus
         </h2>
         <p>
-          Selected, related, and unrelated events are styled in three explicit tiers so you can read the path
-          without losing surrounding context.
+          선택한 이벤트, 관련 이벤트, 무관한 이벤트를 세 단계로 구분해 표시하므로 주변 맥락을 잃지 않고
+          흐름을 따라갈 수 있습니다.
         </p>
       </div>
       <div className="flow-legend">
-        <span><i className="flow-dot focus-selected" /> Selected</span>
-        <span><i className="flow-dot focus-related" /> Related flow</span>
-        <span><i className="flow-dot focus-context" /> Unrelated context</span>
+        <span><i className="flow-dot focus-selected" /> 선택됨</span>
+        <span><i className="flow-dot focus-related" /> 관련 흐름</span>
+        <span><i className="flow-dot focus-context" /> 무관한 맥락</span>
       </div>
       <div className="flow-actions">
         {hasFocus ? (
-          <Badge tone="purple">Trace active</Badge>
+          <Badge tone="purple">추적 활성</Badge>
         ) : (
-          <Badge tone="gray">No focus pinned</Badge>
+          <Badge tone="gray">고정된 포커스 없음</Badge>
         )}
         {hasFocus && onClearFocus ? (
-          <Button onClick={onClearFocus}>Clear focus</Button>
+          <Button onClick={onClearFocus}>포커스 해제</Button>
         ) : null}
         <Button icon={Link} onClick={onShowTimeline}>
-          Back to timeline
+          타임라인으로 돌아가기
         </Button>
       </div>
     </div>

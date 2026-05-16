@@ -27,19 +27,19 @@ export function FocusPathSummary({
       <p>{selectedEvent.summary}</p>
       <div className="focus-path-counts">
         <span>
-          <strong>{causeCount}</strong> upstream
+          원인 <strong>{causeCount}</strong>건
         </span>
         <span aria-hidden="true">→</span>
         <span>
-          <strong>Selected event</strong>
+          <strong>선택한 이벤트</strong>
         </span>
         <span aria-hidden="true">→</span>
         <span>
-          <strong>{resultCount}</strong> downstream
+          결과 <strong>{resultCount}</strong>건
         </span>
         {onClearFocus ? (
           <button type="button" className="focus-clear" onClick={onClearFocus}>
-            Clear focus
+            포커스 해제
           </button>
         ) : null}
       </div>

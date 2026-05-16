@@ -347,7 +347,12 @@ Open (highest value first):
       linked-item labels, action buttons, and the inspector-scoped
       `timelineControls` entries are now Korean, matching the
       `ReviewDetailPanel` sibling.
-    - Open: Flow Focus `TracePanel` is still fully English.
+    - ✅ Flow Focus surface — `FlowFocusHeader`, `FocusPathSummary`,
+      and `TracePanel` are now Korean (mode name "Flow Focus" and
+      app-wide relationship/trust labels deliberately kept).
+    - Open: a broader sweep of remaining English-only surfaces
+      (some `timelineControls` toolbar hints, evidence sub-panels)
+      still needs a pass.
 23. ✅ Sidebar session timer honesty — a just-started session was
     labeled "Saved" with a frozen `00:00:00` clock because
     `createSessionDraft` seeds `endedAt` with the creation
