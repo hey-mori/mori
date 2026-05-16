@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { Decision, Issue, NextAction, TimelineEvent } from "../../domain/types";
 import {
   buildCompanionSignals,
+  buildCompanionSignalFeed,
   companionSeverityRank,
   companionSeverityTone,
   MAX_COMPANION_SIGNALS,
+  summarizeCompanionSignals,
   type CompanionSignalInput,
   type CompanionSignalSeverity,
 } from "./companionSignals";
@@ -241,5 +243,65 @@ describe("companionSeverityTone", () => {
     for (const severity of ["risk", "review"] as CompanionSignalSeverity[]) {
       expect(companionSeverityTone(severity)).not.toBe("success");
     }
+  });
+});
+
+describe("buildCompanionSignalFeed", () => {
+  it("returns the full sorted feed, never fewer than the capped card set", () => {
+    const feedInput = input({
+      sessionMode: "demo",
+      issues: [
+        issue({ id: "i1", status: "open", trustLevel: "inferred", confidence: 0.4 }),
+        issue({ id: "i2", status: "open", trustLevel: "verified", confidence: 0.9 }),
+      ],
+      decisions: [decision({ id: "d1", confirmed: false, importance: "high" })],
+      nextActions: [nextAction("n1"), nextAction("n2")],
+    });
+    const feed = buildCompanionSignalFeed(feedInput);
+    const capped = buildCompanionSignals(feedInput);
+    expect(feed.length).toBeGreaterThanOrEqual(capped.length);
+    expect(capped.length).toBeLessThanOrEqual(MAX_COMPANION_SIGNALS);
+  });
+
+  it("keeps the feed sorted most-urgent-first", () => {
+    const feed = buildCompanionSignalFeed(
+      input({
+        sessionMode: "draft",
+        importCount: 0,
+        issues: [issue({ id: "i1", status: "open", trustLevel: "verified", confidence: 0.9 })],
+      }),
+    );
+    for (let i = 1; i < feed.length; i += 1) {
+      expect(
+        companionSeverityRank(feed[i - 1].severity),
+      ).toBeLessThanOrEqual(companionSeverityRank(feed[i].severity));
+    }
+  });
+});
+
+describe("summarizeCompanionSignals", () => {
+  it("counts a signal feed by severity tier", () => {
+    const feed = buildCompanionSignalFeed(
+      input({
+        sessionMode: "draft",
+        importCount: 0,
+        issues: [issue({ id: "i1", status: "open", trustLevel: "verified", confidence: 0.9 })],
+      }),
+    );
+    const summary = summarizeCompanionSignals(feed);
+    expect(summary.total).toBe(feed.length);
+    expect(summary.risk + summary.review + summary.suggestion + summary.info).toBe(
+      feed.length,
+    );
+  });
+
+  it("returns an all-zero summary for an empty feed", () => {
+    expect(summarizeCompanionSignals([])).toEqual({
+      total: 0,
+      risk: 0,
+      review: 0,
+      suggestion: 0,
+      info: 0,
+    });
   });
 });

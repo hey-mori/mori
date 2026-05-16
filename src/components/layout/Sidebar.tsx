@@ -1,5 +1,6 @@
 import {
   ChevronLeft,
+  Compass,
   FileText,
   FolderClock,
   PanelRightOpen,
@@ -23,6 +24,7 @@ const navItems: Array<{ key: ViewKey; label: string; badge?: string; icon: typeo
   { key: "review", label: "Review", icon: ListChecks },
   { key: "reports", label: "Reports", icon: PanelRightOpen },
   { key: "memory", label: "Memory", icon: FolderClock },
+  { key: "companion", label: "Companion", icon: Compass },
   { key: "settings", label: "Settings", icon: Settings },
 ];
 

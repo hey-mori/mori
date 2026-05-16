@@ -6493,6 +6493,224 @@ pre {
   flex-shrink: 0;
 }
 
+/* Companion card — see-all affordance */
+
+.companion-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.companion-card-seeall {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--purple);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.companion-card-seeall:hover {
+  text-decoration: underline;
+}
+
+/* Companion Inbox — the Companion Layer's dedicated surface */
+
+.companion-inbox-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 18px;
+  align-items: start;
+}
+
+.companion-inbox-main {
+  display: grid;
+  gap: 12px;
+}
+
+.companion-inbox-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.companion-inbox-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.companion-inbox-filter:hover:not(:disabled) {
+  border-color: #c9bdf5;
+}
+
+.companion-inbox-filter.is-active {
+  color: var(--purple);
+  border-color: #c9bdf5;
+  background: var(--purple-50);
+}
+
+.companion-inbox-filter:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.companion-inbox-filter-count {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.companion-inbox-filter.is-active .companion-inbox-filter-count {
+  color: var(--purple);
+}
+
+.companion-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.companion-inbox-row {
+  align-items: center;
+}
+
+.companion-inbox-row-severity {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.companion-inbox-empty {
+  margin: 0;
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  background: #f7f6fb;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.companion-inbox-rail {
+  display: grid;
+  gap: 12px;
+  position: sticky;
+  top: 16px;
+}
+
+.companion-inbox-rail-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #d9d0ff;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fbfaff, #fff);
+}
+
+.companion-inbox-rail-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.companion-inbox-rail-card header h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.companion-inbox-rail-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+
+.companion-inbox-rail-counts div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.companion-inbox-rail-counts dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.companion-inbox-rail-counts dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.companion-inbox-rail-counts div[data-mori-tone="danger"] dd { color: var(--red); }
+.companion-inbox-rail-counts div[data-mori-tone="warning"] dd { color: #b46100; }
+
+.companion-inbox-rail-total {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.companion-inbox-rail-note {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--purple-50);
+  color: #4734bb;
+}
+
+.companion-inbox-rail-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.companion-inbox-rail-note p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.companion-inbox-rail-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+@media (max-width: 1100px) {
+  .companion-inbox-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .companion-inbox-rail {
+    position: static;
+  }
+}
+
 /* Report builder panel */
 
 .report-builder-panel {

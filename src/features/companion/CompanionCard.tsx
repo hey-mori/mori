@@ -1,11 +1,11 @@
-import { Compass } from "lucide-react";
+import { ArrowRight, Compass } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type { ViewKey } from "../../domain/types";
 import {
   companionSeverityTone,
+  describeCompanionBasis,
   type CompanionSignal,
-  type CompanionSignalBasis,
 } from "../../lib/companion/companionSignals";
 
 /**
@@ -56,7 +56,7 @@ export function CompanionCard({
                 <div className="companion-signal-head">
                   <strong>{signal.title}</strong>
                   <span className={`companion-signal-basis basis-${signal.basis}`}>
-                    {basisLabel(signal.basis)}
+                    {describeCompanionBasis(signal.basis)}
                   </span>
                 </div>
                 <p>{signal.message}</p>
@@ -71,6 +71,16 @@ export function CompanionCard({
         </ul>
       )}
 
+      <div className="companion-card-actions">
+        <button
+          type="button"
+          className="companion-card-seeall"
+          onClick={() => onNavigate("companion")}
+        >
+          Companion 노트 전체 보기 <ArrowRight size={12} aria-hidden="true" />
+        </button>
+      </div>
+
       <footer className="companion-card-foot">
         {isDemo
           ? "데모 데이터 기준입니다 — Mori는 사용자가 가져온 자료만 사용하며 백그라운드로 감시하지 않습니다."
@@ -78,20 +88,4 @@ export function CompanionCard({
       </footer>
     </section>
   );
-}
-
-/** Calm Korean label for what a signal is grounded in. */
-function basisLabel(basis: CompanionSignalBasis): string {
-  switch (basis) {
-    case "verified":
-      return "확인된 데이터";
-    case "inferred":
-      return "추론 기반 · 확인 필요";
-    case "mixed":
-      return "검토 필요";
-    case "state":
-      return "세션 상태";
-    default:
-      return basis;
-  }
 }

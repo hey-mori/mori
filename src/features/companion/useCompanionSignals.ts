@@ -6,7 +6,8 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import {
-  buildCompanionSignals,
+  buildCompanionSignalFeed,
+  MAX_COMPANION_SIGNALS,
   type CompanionSignal,
 } from "../../lib/companion/companionSignals";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
@@ -23,8 +24,12 @@ import { summarizeMemoryLifecycle } from "../../lib/project-memory/memoryLifecyc
  * It also loads accepted project memory through the runtime-aware
  * repository so the signal set can flag memory that has gone stale or
  * contradicted — read-only, no writes.
+ *
+ * Returns both the full `feed` (every signal, for the Companion inbox)
+ * and the capped `signals` set (top few, for the calm card / strip).
  */
 export function useCompanionSignals(): {
+  feed: CompanionSignal[];
   signals: CompanionSignal[];
   isDemo: boolean;
 } {
@@ -57,9 +62,9 @@ export function useCompanionSignals(): {
     };
   }, [projectId]);
 
-  const signals = useMemo(
+  const feed = useMemo(
     () =>
-      buildCompanionSignals({
+      buildCompanionSignalFeed({
         sessionMode: mode,
         events: view.events,
         issues: view.issues,
@@ -72,5 +77,10 @@ export function useCompanionSignals(): {
     [mode, view, hasAnalysis, imports.length, attentionMemoryCount],
   );
 
-  return { signals, isDemo: mode === "demo" };
+  const signals = useMemo(
+    () => feed.slice(0, MAX_COMPANION_SIGNALS),
+    [feed],
+  );
+
+  return { feed, signals, isDemo: mode === "demo" };
 }

@@ -9,6 +9,7 @@ export type ViewKey =
   | "reports"
   | "memory"
   | "consolidation"
+  | "companion"
   | "settings";
 
 export type TrustLevel = "verified" | "observed" | "inferred";

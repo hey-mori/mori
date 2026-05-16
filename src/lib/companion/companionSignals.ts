@@ -114,6 +114,40 @@ export function companionSeverityRank(severity: CompanionSignalSeverity): number
   return SEVERITY_RANK[severity];
 }
 
+/** Calm Korean label for a companion-signal severity tier. */
+export function describeCompanionSeverity(
+  severity: CompanionSignalSeverity,
+): string {
+  switch (severity) {
+    case "risk":
+      return "주의";
+    case "review":
+      return "검토 필요";
+    case "suggestion":
+      return "제안";
+    case "info":
+      return "정보";
+    default:
+      return severity;
+  }
+}
+
+/** Calm Korean label for what a signal is grounded in. */
+export function describeCompanionBasis(basis: CompanionSignalBasis): string {
+  switch (basis) {
+    case "verified":
+      return "확인된 데이터";
+    case "inferred":
+      return "추론 기반 · 확인 필요";
+    case "mixed":
+      return "검토 필요";
+    case "state":
+      return "세션 상태";
+    default:
+      return basis;
+  }
+}
+
 /**
  * Semantic tone for a companion-signal severity, drawn from the shared
  * product-state companion vocabulary so the Companion surfaces use the
@@ -126,10 +160,11 @@ export function companionSeverityTone(
 }
 
 /**
- * Derive the prioritised, capped companion signal set for the active session.
- * Pure: no I/O, no writes, no clock dependence beyond the caller's data.
+ * Collect every applicable companion signal for the active session,
+ * unsorted and uncapped. Pure: no I/O, no writes, no clock dependence
+ * beyond the caller's data.
  */
-export function buildCompanionSignals(input: CompanionSignalInput): CompanionSignal[] {
+function collectCompanionSignals(input: CompanionSignalInput): CompanionSignal[] {
   const signals: CompanionSignal[] = [];
   const isDemo = input.sessionMode === "demo";
 
@@ -342,24 +377,73 @@ export function buildCompanionSignals(input: CompanionSignalInput): CompanionSig
     });
   }
 
-  return prioritiseCompanionSignals(signals);
+  return signals;
 }
 
 /**
- * Sort signals most-actionable-first and cap the visible set. Order:
- * severity (risk → info), then more linked items first, then stable by type.
+ * Sort signals most-actionable-first. Order: severity (risk → info),
+ * then more linked items first, then stable by type. No cap — callers
+ * that need the calm card slice with `prioritiseCompanionSignals`.
+ */
+export function sortCompanionSignals(signals: CompanionSignal[]): CompanionSignal[] {
+  return [...signals].sort((left, right) => {
+    const bySeverity =
+      companionSeverityRank(left.severity) - companionSeverityRank(right.severity);
+    if (bySeverity !== 0) return bySeverity;
+    const byLinked = right.linkedItemIds.length - left.linkedItemIds.length;
+    if (byLinked !== 0) return byLinked;
+    return left.type.localeCompare(right.type);
+  });
+}
+
+/**
+ * Sort signals most-actionable-first and cap the visible set so a card
+ * stays calm, not noisy.
  */
 export function prioritiseCompanionSignals(signals: CompanionSignal[]): CompanionSignal[] {
-  return [...signals]
-    .sort((left, right) => {
-      const bySeverity =
-        companionSeverityRank(left.severity) - companionSeverityRank(right.severity);
-      if (bySeverity !== 0) return bySeverity;
-      const byLinked = right.linkedItemIds.length - left.linkedItemIds.length;
-      if (byLinked !== 0) return byLinked;
-      return left.type.localeCompare(right.type);
-    })
-    .slice(0, MAX_COMPANION_SIGNALS);
+  return sortCompanionSignals(signals).slice(0, MAX_COMPANION_SIGNALS);
+}
+
+/**
+ * Derive the prioritised, capped companion signal set for the active
+ * session — the calm card / strip surfaces show this.
+ */
+export function buildCompanionSignals(input: CompanionSignalInput): CompanionSignal[] {
+  return prioritiseCompanionSignals(collectCompanionSignals(input));
+}
+
+/**
+ * Derive the full, sorted companion signal feed — every applicable
+ * signal, uncapped. The Companion inbox surface shows this.
+ */
+export function buildCompanionSignalFeed(input: CompanionSignalInput): CompanionSignal[] {
+  return sortCompanionSignals(collectCompanionSignals(input));
+}
+
+/** Severity breakdown of a companion signal set, for the inbox summary. */
+export type CompanionSignalSummary = {
+  total: number;
+  risk: number;
+  review: number;
+  suggestion: number;
+  info: number;
+};
+
+/** Count a companion signal set by severity tier. */
+export function summarizeCompanionSignals(
+  signals: CompanionSignal[],
+): CompanionSignalSummary {
+  const summary: CompanionSignalSummary = {
+    total: signals.length,
+    risk: 0,
+    review: 0,
+    suggestion: 0,
+    info: 0,
+  };
+  for (const signal of signals) {
+    summary[signal.severity] += 1;
+  }
+  return summary;
 }
 
 function uniqueIds(ids: string[]): string[] {

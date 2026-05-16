@@ -10,6 +10,7 @@ import { EvidenceView } from "../features/evidence/EvidenceView";
 import { ReportsView } from "../features/reports/ReportsView";
 import { MemoryView } from "../features/memory/MemoryView";
 import { ConsolidationReviewView } from "../features/memory/ConsolidationReviewView";
+import { CompanionInboxView } from "../features/companion/CompanionInboxView";
 import { SettingsView } from "../features/settings/SettingsView";
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
       {currentView === "reports" ? <ReportsView /> : null}
       {currentView === "memory" ? <MemoryView /> : null}
       {currentView === "consolidation" ? <ConsolidationReviewView /> : null}
+      {currentView === "companion" ? <CompanionInboxView /> : null}
       {currentView === "settings" ? <SettingsView /> : null}
     </AppShell>
   );
