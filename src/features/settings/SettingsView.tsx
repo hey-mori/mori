@@ -1,10 +1,8 @@
 import {
-  Activity,
   Bot,
   HardDrive,
   Layers,
   Lock,
-  Plug,
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -237,6 +235,8 @@ export function SettingsView() {
   );
 }
 
+type RuntimeStatTone = "ok" | "info" | "idle" | "warn" | "error";
+
 function StatusStrip({
   mode,
   sqliteKind,
@@ -256,32 +256,56 @@ function StatusStrip({
   hasAnalysis: boolean;
   importsCount: number;
 }) {
-  const sqliteTone =
+  // Honest storage language: the browser prototype's store *is*
+  // localStorage — it is not a broken SQLite, so it never reads "error".
+  const storage: { value: string; tone: RuntimeStatTone } =
     mode === "tauri-desktop"
       ? sqliteKind === "ok"
-        ? "green"
+        ? { value: `Desktop SQLite · ${sqliteSessionCount} saved`, tone: "ok" }
         : sqliteKind === "error"
-          ? "red"
-          : "purple"
-      : "gray";
+          ? { value: "Desktop SQLite · error", tone: "error" }
+          : sqliteKind === "checking"
+            ? { value: "Desktop SQLite · checking…", tone: "idle" }
+            : { value: "Desktop SQLite · unavailable", tone: "warn" }
+      : { value: "Browser localStorage", tone: "info" };
   return (
-    <div className="settings-status-strip" role="region" aria-label="Settings status">
+    <div className="settings-runtime-summary" role="region" aria-label="Mori runtime status">
+      <RuntimeStat
+        label="Runtime"
+        value={mode === "tauri-desktop" ? "Tauri desktop" : "Browser prototype"}
+        tone="info"
+      />
+      <RuntimeStat label="Storage" value={storage.value} tone={storage.tone} />
+      <RuntimeStat
+        label="AI provider"
+        value={`${providerLabel}${hasAnalysis ? " · analysis run" : ""}`}
+        tone={hasAnalysis ? "ok" : "idle"}
+      />
+      <RuntimeStat
+        label="This session"
+        value={`${importsCount} imports · ${sourceCount} sources · ${repositoryCount} repos`}
+        tone={importsCount > 0 || sourceCount > 0 ? "info" : "idle"}
+      />
+    </div>
+  );
+}
+
+function RuntimeStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: RuntimeStatTone;
+}) {
+  return (
+    <div className={`runtime-stat tone-${tone}`}>
+      <span className="runtime-stat-dot" aria-hidden="true" />
       <div>
-        <Activity size={12} aria-hidden="true" />
-        <span>Mori runtime</span>
+        <span className="runtime-stat-label">{label}</span>
+        <strong className="runtime-stat-value">{value}</strong>
       </div>
-      <Badge tone="purple">{mode === "tauri-desktop" ? "Tauri desktop" : "Browser prototype"}</Badge>
-      <Badge tone={sqliteTone}>
-        SQLite · {mode === "tauri-desktop" ? sqliteKind : "unavailable"}
-        {mode === "tauri-desktop" && sqliteKind === "ok" ? ` · ${sqliteSessionCount} saved` : ""}
-      </Badge>
-      <Badge tone={hasAnalysis ? "green" : "gray"}>
-        <Plug size={10} aria-hidden="true" /> {providerLabel}
-        {hasAnalysis ? " · analysis run" : ""}
-      </Badge>
-      <Badge tone={importsCount > 0 ? "blue" : "gray"}>{importsCount} imports</Badge>
-      <Badge tone={sourceCount > 0 ? "blue" : "gray"}>{sourceCount} sources</Badge>
-      <Badge tone={repositoryCount > 0 ? "purple" : "gray"}>{repositoryCount} repos</Badge>
     </div>
   );
 }

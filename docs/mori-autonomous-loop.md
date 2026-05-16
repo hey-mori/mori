@@ -267,7 +267,11 @@ adding new capabilities. "Done" means a surface looks coherent, its
 states are honest, primary buttons work or explain why not, and real
 data can flow through it.
 
-**Product maturity backlog** (highest value first):
+**Product maturity backlog** (highest value first). Capability-named,
+concrete, and split small. When a slice ships, tick it and pick the
+next; do not compress this list — it is the audit surface.
+
+Shipped:
 
 1. ✅ Responsive layout floor removed; app fits 1024 / 768 with no
    page-level horizontal scroll.
@@ -279,23 +283,66 @@ data can flow through it.
    available explicit imports from planned integrations; planned
    surfaces are marked, unselected, and not checkable, so a session
    never implies Mori captures an app it cannot.
-5. Settings policy/status hierarchy — the runtime strip, provider
-   cards, and trust panel are dense; group them so local-first /
-   planned / unavailable policy reads at a glance.
+5. ✅ Settings runtime status hierarchy — the debug-style badge row
+   is now a labeled `settings-runtime-summary` grid of four
+   `RuntimeStat` cells (Runtime / Storage / AI provider / This
+   session) with honest tone dots; the browser build reads "Browser
+   localStorage", not "SQLite · unavailable".
+
+Open (highest value first):
+
 6. Reports workflow — confirm export success / error / loading
-   feedback on the `.mori` and client-safe export actions.
+   feedback on the `.mori` and client-safe export actions; the two
+   export paths currently look identical and give no result state.
 7. Project Memory — accepted-memory lifecycle badges
    (stale / contradicted / superseded / retired) and audit-trail
    discoverability.
-8. Review board density — uneven card / list density, inferred vs
-   verified clarity.
+8. Review board density — uneven card / list density; inferred vs
+   verified clarity; inspector panel needs a consistent header.
+9. Timeline density + event inspector — long event lists have no
+   grouping; selecting an event needs a coherent detail panel.
+10. Evidence local-capture hierarchy — the working local-capture
+    bridge card competes visually with planned integrations; promote
+    the surface that actually works.
+11. Empty / loading / error / success state sweep — audit every
+    primary view for all four states; several only handle empty.
+12. Shared status badge system — tone usage (green / blue / purple /
+    gray / amber / red) is inconsistent across views; needs one
+    documented scale.
+13. Settings provider cards — planned / unavailable AI providers
+    still look like selectable options; mark them clearly.
+14. Settings trust panel — the privacy / trust text block is dense;
+    restructure into scannable local-first rules.
+15. Connectors panel noise — the planned-connector list is honest
+    but visually heavy; calm it without hiding the honesty.
+16. Demo vs real consistency — every view should show the demo /
+    live badge and behave honestly on switch; audit views that
+    ignore session mode.
+17. Browser-prototype vs desktop-SQLite honesty sweep — wherever
+    persistence is surfaced, copy must not imply SQLite in the
+    browser build.
+18. Consolidation Review proposal clarity — proposal list, accept /
+    revert affordances, and the client-safe marker need grouping.
+19. Import Review duplicate / conflict state — duplicate and
+    conflicting imports need a distinct, explained visual state.
+20. Queryable Memory discoverability — the search card is buried;
+    surface it and clarify which corpus it searches.
+21. Scroll / sticky-header consistency — page headers, panel
+    headers, and action bars scroll inconsistently across views.
+22. Korean / English copy consistency — mixed-language labels appear
+    within a single surface; pick a rule and apply it.
+23. Sidebar session timer honesty — the `00:00:00` clock must
+    reflect real vs demo session state, not always run.
+24. Component architecture cleanup — repeated card / badge / panel
+    markup should converge on shared components to stop drift.
+25. Real-session walkthrough fixture — a checked-in fixture that
+    drives one real capture → import → timeline → memory pass for
+    manual QA.
 
 The core capture flow is verified working: Start Session creates a
 real session, Evidence actions enable, and an import-less Timeline
 shows a designed empty state. Demo vs real state is honest (a "데모
 세션" / "Live session" badge and a Show demo / real toggle).
-
-When a slice ships, tick it here and pick the next.
 
 ## 9. Stop Conditions
 

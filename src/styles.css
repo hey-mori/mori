@@ -8204,32 +8204,61 @@ pre {
   gap: 8px;
 }
 
-.settings-status-strip {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 14px;
+/* Runtime summary — grouped, labelled stat cells instead of a flat
+   row of debug-looking chips. */
+.settings-runtime-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
   margin: 0 0 14px;
+}
+
+.runtime-stat {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: white;
   box-shadow: var(--shadow-soft);
 }
 
-.settings-status-strip > div {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.runtime-stat > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
 }
 
-.settings-status-strip > div svg {
-  color: var(--purple);
+.runtime-stat-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+
+.runtime-stat.tone-ok .runtime-stat-dot { background: var(--green); }
+.runtime-stat.tone-info .runtime-stat-dot { background: var(--blue); }
+.runtime-stat.tone-warn .runtime-stat-dot { background: #d8923f; }
+.runtime-stat.tone-error .runtime-stat-dot { background: var(--red); }
+.runtime-stat.tone-idle .runtime-stat-dot { background: var(--muted-2); }
+
+.runtime-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-2);
+}
+
+.runtime-stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+  overflow-wrap: anywhere;
 }
 
 .settings-tabs {
