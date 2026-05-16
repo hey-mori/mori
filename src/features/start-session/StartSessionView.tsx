@@ -1,4 +1,4 @@
-import { Bot, Check, Cloud, Database, FileCode2, Info, Lock, Play, Plus, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Bot, Check, Cloud, Database, FileCode2, Info, Lock, Play, ShieldCheck, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -102,14 +102,13 @@ export function StartSessionView() {
 
   return (
     <div className="page">
-      <PageHeader title="Start Session" subtitle="Configure recording scope and begin new work memory session" right={<Button icon={X} />} />
+      <PageHeader title="Start Session" subtitle="기록 범위를 설정하고 새 작업 메모리 세션을 시작합니다." />
       <div className="setup-grid">
         <div className="setup-stack">
           <SetupBlock number="1" title="세션 정보">
             <div className="form-row">
               <label>세션 이름<input value={sessionTitle} onChange={(event) => setSessionTitle(event.target.value)} /></label>
               <label>프로젝트<input value={projectName} onChange={(event) => setProjectName(event.target.value)} /></label>
-              <Button icon={Plus}>새 프로젝트</Button>
             </div>
           </SetupBlock>
           <SetupBlock number="2" title="기록할 앱 / 소스 선택" note="선택한 앱과 소스의 활동만 기록합니다. Mori는 전체 컴퓨터를 감시하지 않습니다.">
@@ -185,9 +184,7 @@ export function StartSessionView() {
             <Button variant="primary" icon={Play} onClick={handleStartSession}>Mori 세션 시작</Button>
             {savedDraft ? (
               <Button icon={Sparkles} onClick={handleResetToDemo}>데모로 되돌리기</Button>
-            ) : (
-              <Button>취소</Button>
-            )}
+            ) : null}
           </div>
         </div>
         <SessionSummary
@@ -215,12 +212,12 @@ function CaptureSurfaceHonestyStrip() {
     <div className="capture-surface-strip" role="note">
       <Info size={14} aria-hidden="true" />
       <div>
-        <strong>{implementedCount} capture surface{implementedCount === 1 ? "" : "s"} live today</strong>
+        <strong>현재 사용 가능한 캡처 경로 {implementedCount}개</strong>
         <span> · </span>
         <span>
-          {plannedCount} Planned (Claude Code hook, Codex CLI wrapper,
-          terminal, IDE, and browser surfaces are docs-template-only or
-          planned — Mori never silently scrapes them).
+          {plannedCount}개 Planned — Claude Code hook, Codex CLI wrapper,
+          터미널 / IDE / 브라우저 경로는 문서·템플릿 단계이거나 예정 상태이며,
+          Mori는 이들을 임의로 수집하지 않습니다.
         </span>
       </div>
     </div>
@@ -376,13 +373,13 @@ function SessionSummary({
       <SummaryRow label="예상 저장 공간" value="하루 약 50MB ~ 200MB" />
       <SummaryRow label="민감 앱" value="기본 차단" />
       <div className="draft-status-panel">
-        <strong>{savedDraft ? "Session draft saved" : "Session draft not saved yet"}</strong>
-        <span>Storage adapter: browser localStorage</span>
-        <span>Package version: .mori v0.1.0 JSON-ready</span>
+        <strong>{savedDraft ? "세션 드래프트 저장됨" : "세션 드래프트가 아직 저장되지 않음"}</strong>
+        <span>저장소: 브라우저 localStorage</span>
+        <span>패키지 버전: .mori v0.1.0 JSON 지원</span>
         {savedDraft ? (
           <>
-            <span>Current session: {savedDraft.session.id}</span>
-            <span>Saved at: {new Date(savedDraft.savedAt).toLocaleString()}</span>
+            <span>현재 세션: {savedDraft.session.id}</span>
+            <span>저장 시각: {new Date(savedDraft.savedAt).toLocaleString()}</span>
           </>
         ) : null}
       </div>
