@@ -435,6 +435,12 @@ text into a signal.
   also renders on the Project Memory surface via a shared
   `useCompanionSignals` hook, so Reports and Memory build signals
   the same way without duplicating the wiring.
+- ✅ Companion memory-health signal — `useCompanionSignals` now
+  loads accepted project memory through the runtime-aware
+  repository and feeds an `attentionMemoryCount` (stale +
+  contradicted lifecycle group) into `buildCompanionSignals`,
+  which raises a `stale_memory` review signal pointing at Project
+  Memory. Read-only — the companion never writes memory.
 - ✅ Companion strip on the Timeline — `CompanionStrip`, a compact
   one-line affordance, surfaces the single highest-priority signal
   plus a "+N" count above the Timeline toolbar; clicking it routes

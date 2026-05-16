@@ -35,6 +35,7 @@ export type CompanionSignalType =
   | "needs_review"
   | "unresolved_issue"
   | "important_decision"
+  | "stale_memory"
   | "suggested_next_action"
   | "ready_to_report"
   | "ready_to_resume";
@@ -79,6 +80,12 @@ export type CompanionSignalInput = {
   hasAnalysis: boolean;
   /** Number of explicitly imported sources in the active session. */
   importCount: number;
+  /**
+   * Count of accepted project memories in the lifecycle "attention" group
+   * (stale / contradicted) — memory that has been superseded by newer work
+   * and is worth a review. Optional; omit when memory has not been loaded.
+   */
+  attentionMemoryCount?: number;
 };
 
 /** Inferred issues below this confidence are flagged as weak evidence. */
@@ -259,6 +266,26 @@ export function buildCompanionSignals(input: CompanionSignalInput): CompanionSig
       actionLabel: "결정 보기",
       destination: "review",
       audience: "real",
+    });
+  }
+
+  // ── Accepted memory that has gone stale or contradicted ────────────────
+  const attentionMemoryCount = input.attentionMemoryCount ?? 0;
+  if (attentionMemoryCount > 0) {
+    signals.push({
+      id: "companion-stale-memory",
+      type: "stale_memory",
+      severity: "review",
+      title: `확인이 필요한 메모리가 ${attentionMemoryCount}개 있어요`,
+      message:
+        "오래되었거나 상충하는 accepted memory입니다. Project Memory에서 검토해 최신 상태로 정리하세요.",
+      sourceSurface: "memory",
+      linkedItemIds: [],
+      evidenceRefs: [],
+      basis: "mixed",
+      actionLabel: "메모리 검토",
+      destination: "memory",
+      audience: "both",
     });
   }
 

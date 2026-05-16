@@ -128,6 +128,27 @@ describe("buildCompanionSignals — evidence-based signals", () => {
     expect(review?.linkedItemIds).toContain("d-draft");
   });
 
+  it("flags accepted memory that has gone stale or contradicted", () => {
+    const signals = buildCompanionSignals(input({ attentionMemoryCount: 3 }));
+    const stale = signals.find((signal) => signal.type === "stale_memory");
+    expect(stale).toBeDefined();
+    expect(stale?.severity).toBe("review");
+    expect(stale?.destination).toBe("memory");
+  });
+
+  it("raises no memory-health signal when no memory needs attention", () => {
+    expect(
+      buildCompanionSignals(input({ attentionMemoryCount: 0 })).some(
+        (signal) => signal.type === "stale_memory",
+      ),
+    ).toBe(false);
+    expect(
+      buildCompanionSignals(input({})).some(
+        (signal) => signal.type === "stale_memory",
+      ),
+    ).toBe(false);
+  });
+
   it("detects ready-to-report once events and analysis exist", () => {
     const signals = buildCompanionSignals(
       input({ events: [timelineEvent("e1")], hasAnalysis: true }),
