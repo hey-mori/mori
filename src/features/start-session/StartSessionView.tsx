@@ -19,7 +19,7 @@ import {
   getPlannedCaptureSurfaces,
 } from "../../lib/connectors/captureSurfaces";
 import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
-import type { RecordingMode, SourceOption } from "../../domain/types";
+import type { LlmProvider, RecordingMode, SourceOption } from "../../domain/types";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
@@ -32,6 +32,24 @@ const RECORDING_MODES: { mode: RecordingMode; points: string[] }[] = [
   { mode: "ephemeral", points: ["리포트만 저장", "원본 데이터 자동 삭제", "민감 프로젝트에 적합"] },
 ];
 
+type EngineOption = {
+  provider: LlmProvider;
+  label: string;
+  detail: string;
+  model: string;
+  icon: LucideIcon;
+  /** Cloud API needs an explicit API key, configured in Settings — not
+   *  selectable from this local-first setup screen. */
+  available: boolean;
+};
+
+const ENGINE_OPTIONS: EngineOption[] = [
+  { provider: "ollama", label: "Ollama", detail: "llama3.1:8b", model: "llama3.1:8b", icon: Bot, available: true },
+  { provider: "lmStudio", label: "LM Studio", detail: "local-model (8B)", model: "local-model", icon: Database, available: true },
+  { provider: "openAiCompatible", label: "OpenAI Compatible", detail: "http://localhost:1234", model: "local-model", icon: FileCode2, available: true },
+  { provider: "cloudApi", label: "Cloud API", detail: "API 키 필요 · 설정에서 구성", model: "", icon: Cloud, available: false },
+];
+
 export function StartSessionView() {
   const [sessionTitle, setSessionTitle] = useState("Mori 앱 기획");
   const [projectName, setProjectName] = useState("Mori Product");
@@ -40,6 +58,10 @@ export function StartSessionView() {
     initialSelectedSourceIds(sourceOptions),
   );
   const [recordingMode, setRecordingMode] = useState<RecordingMode>("summary");
+  const [engineProvider, setEngineProvider] = useState<LlmProvider>("ollama");
+  const selectedEngine =
+    ENGINE_OPTIONS.find((engine) => engine.provider === engineProvider) ??
+    ENGINE_OPTIONS[0];
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
   const resetSessionToDemo = useMoriSessionStore((state) => state.resetToDemo);
@@ -63,8 +85,8 @@ export function StartSessionView() {
       projectName,
       selectedSources: applySourceSelection(sourceOptions, selectedSourceIds),
       recordingMode,
-      llmProvider: "ollama",
-      llmModel: "llama3.1:8b",
+      llmProvider: selectedEngine.provider,
+      llmModel: selectedEngine.model,
       storageLocation: "~/Mori/Records",
     });
     const stored = repository.saveCurrentSessionDraft(draft);
@@ -149,10 +171,14 @@ export function StartSessionView() {
           </SetupBlock>
           <SetupBlock number="4" title="로컬 AI 엔진 선택" note="요약 및 분석을 수행할 로컬/상용 엔진을 선택합니다. Cloud API는 명시적으로 켜야 합니다.">
             <div className="engine-grid">
-              <EngineCard title="Ollama" detail="llama3.1:8b" active icon={Bot} />
-              <EngineCard title="LM Studio" detail="local-model (8B)" icon={Database} />
-              <EngineCard title="OpenAI Compatible" detail="http://localhost:1234" icon={FileCode2} />
-              <EngineCard title="Cloud API" detail="API key required" icon={Cloud} muted />
+              {ENGINE_OPTIONS.map((engine) => (
+                <EngineCard
+                  key={engine.provider}
+                  engine={engine}
+                  selected={engineProvider === engine.provider}
+                  onSelect={() => setEngineProvider(engine.provider)}
+                />
+              ))}
             </div>
           </SetupBlock>
           <div className="setup-actions">
@@ -170,6 +196,7 @@ export function StartSessionView() {
           projectName={projectName}
           selectedSources={selectedSources}
           recordingMode={recordingMode}
+          engine={selectedEngine}
         />
       </div>
     </div>
@@ -278,15 +305,33 @@ function ModeCard({
   );
 }
 
-function EngineCard({ title, detail, icon: Icon, active, muted }: { title: string; detail: string; icon: LucideIcon; active?: boolean; muted?: boolean }) {
+function EngineCard({
+  engine,
+  selected,
+  onSelect,
+}: {
+  engine: EngineOption;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const Icon = engine.icon;
+  const muted = !engine.available;
   return (
-    <button className={`engine-card ${active ? "selected" : ""} ${muted ? "muted-card" : ""}`} type="button">
+    <button
+      className={`engine-card ${selected ? "selected" : ""} ${muted ? "muted-card" : ""}`}
+      type="button"
+      disabled={muted}
+      aria-pressed={muted ? undefined : selected}
+      onClick={muted ? undefined : onSelect}
+    >
       <Icon size={26} />
       <div>
-        <strong>{title}</strong>
-        <small>{detail}</small>
+        <strong>{engine.label}</strong>
+        <small>{engine.detail}</small>
       </div>
-      <Badge tone={muted ? "gray" : "green"}>{muted ? "비활성" : active ? "실행 중" : "연결됨"}</Badge>
+      <Badge tone={muted ? "gray" : "green"}>
+        {muted ? "비활성" : selected ? "선택됨" : "사용 가능"}
+      </Badge>
     </button>
   );
 }
@@ -297,12 +342,14 @@ function SessionSummary({
   projectName,
   selectedSources,
   recordingMode,
+  engine,
 }: {
   savedDraft: StoredSessionDraft | null;
   sessionTitle: string;
   projectName: string;
   selectedSources: SourceOption[];
   recordingMode: RecordingMode;
+  engine: EngineOption;
 }) {
   return (
     <aside className="summary-panel">
@@ -320,7 +367,11 @@ function SessionSummary({
       </ul>
       <hr />
       <SummaryRow label="기록 모드" value={recordingModeLabels[recordingMode]} accent />
-      <SummaryRow label="AI 엔진" value="Ollama (llama3.1:8b)" accent />
+      <SummaryRow
+        label="AI 엔진"
+        value={engine.model ? `${engine.label} (${engine.model})` : engine.label}
+        accent
+      />
       <SummaryRow label="저장 위치" value="~/Mori/Records" />
       <SummaryRow label="예상 저장 공간" value="하루 약 50MB ~ 200MB" />
       <SummaryRow label="민감 앱" value="기본 차단" />
