@@ -35,6 +35,7 @@ import {
   type AcceptedMemoryStorageSource,
 } from "../../lib/project-memory/acceptedMemoryRepository";
 import { parseImportedMemoryProposals } from "../../lib/project-memory/importedMemoryReview";
+import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import type {
   MemoryProposalKind,
   MemoryProposal,
@@ -200,6 +201,27 @@ export function ConsolidationReviewView() {
       });
   }
 
+  function handlePickNativePackageFile() {
+    // Desktop: a native Open dialog picks one `.mori` file, which is
+    // read through `open_mori_package_json` and routed into the same
+    // review path. A cancelled dialog leaves the panel untouched.
+    void tauriCommands
+      .pickMoriPackageFile()
+      .then(async (picked) => {
+        if (picked.cancelled || !picked.path) return;
+        const text = await tauriCommands.openMoriPackageJson(picked.path);
+        setPackageText(text);
+        runImport(text);
+      })
+      .catch((error: unknown) => {
+        setImportedProposals([]);
+        setImportMessage({
+          kind: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }
+
   function handleClearImport() {
     setPackageText("");
     setImportedProposals([]);
@@ -330,6 +352,7 @@ export function ConsolidationReviewView() {
         onTextChange={setPackageText}
         onLoad={handleImportPackage}
         onPickFile={handleImportPackageFile}
+        onPickNativeFile={handlePickNativePackageFile}
         onClear={handleClearImport}
       />
 
@@ -407,6 +430,7 @@ function ImportPackagePanel({
   onTextChange,
   onLoad,
   onPickFile,
+  onPickNativeFile,
   onClear,
 }: {
   text: string;
@@ -414,8 +438,12 @@ function ImportPackagePanel({
   onTextChange: (value: string) => void;
   onLoad: () => void;
   onPickFile: (file: File) => void;
+  onPickNativeFile: () => void;
   onClear: () => void;
 }) {
+  // Desktop opens a native file dialog; the browser uses the `File`
+  // input. Both route the picked package through the same review path.
+  const desktop = isTauriRuntime();
   return (
     <details className="consolidation-review-import">
       <summary>
@@ -439,20 +467,24 @@ function ImportPackagePanel({
         <Button variant="primary" onClick={onLoad} disabled={text.trim().length === 0}>
           패키지 불러오기
         </Button>
-        <label className="consolidation-review-import-file">
-          <input
-            type="file"
-            accept=".mori,.json,application/json"
-            aria-label=".mori package file"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onPickFile(file);
-              // Reset so picking the same file again re-triggers onChange.
-              event.target.value = "";
-            }}
-          />
-          <span>파일 선택</span>
-        </label>
+        {desktop ? (
+          <Button onClick={onPickNativeFile}>파일 선택</Button>
+        ) : (
+          <label className="consolidation-review-import-file">
+            <input
+              type="file"
+              accept=".mori,.json,application/json"
+              aria-label=".mori package file"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onPickFile(file);
+                // Reset so picking the same file again re-triggers onChange.
+                event.target.value = "";
+              }}
+            />
+            <span>파일 선택</span>
+          </label>
+        )}
         <Button onClick={onClear}>지우기</Button>
       </div>
       {message.kind === "ok" ? (

@@ -35,6 +35,7 @@ export type TauriCommandName =
   | "save_mori_package_json"
   | "save_mori_package_json_as"
   | "open_mori_package_json"
+  | "pick_mori_package_file"
   | "list_recent_mori_packages"
   | "get_sqlite_migration_status"
   | "initialize_sqlite_database"
@@ -82,6 +83,12 @@ export type SavedMoriPackageDialog = {
   cancelled: boolean;
 };
 
+export type PickedMoriPackageFile = {
+  /** Absolute path chosen, or `null` when the user cancelled. */
+  path: string | null;
+  cancelled: boolean;
+};
+
 export type RecentMoriPackage = {
   path: string;
   filename: string;
@@ -102,6 +109,7 @@ export type TauriCommandMap = {
     output: SavedMoriPackageDialog;
   };
   open_mori_package_json: { input: { path: string }; output: string };
+  pick_mori_package_file: { input: undefined; output: PickedMoriPackageFile };
   list_recent_mori_packages: { input: undefined; output: RecentMoriPackage[] };
   get_sqlite_migration_status: { input: undefined; output: DatabaseStatus };
   initialize_sqlite_database: { input: undefined; output: DatabaseStatus };
@@ -201,6 +209,9 @@ export const tauriCommands = {
   },
   openMoriPackageJson(path: string): Promise<string> {
     return invokeTauriCommand("open_mori_package_json", { path });
+  },
+  pickMoriPackageFile(): Promise<PickedMoriPackageFile> {
+    return invokeTauriCommand("pick_mori_package_file", undefined);
   },
   listRecentMoriPackages(): Promise<RecentMoriPackage[]> {
     return invokeTauriCommand("list_recent_mori_packages", undefined);

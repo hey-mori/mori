@@ -17,6 +17,7 @@ fn main() {
             package::save_mori_package_json,
             package::save_mori_package_json_as,
             package::open_mori_package_json,
+            package::pick_mori_package_file,
             package::list_recent_mori_packages,
             sqlite::get_sqlite_migration_status,
             sqlite::initialize_sqlite_database,

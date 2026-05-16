@@ -15,6 +15,8 @@ Implemented now:
 - Tauri desktop command for saving via a native Save As dialog
   (`save_mori_package_json_as`)
 - Tauri desktop command for opening JSON package contents from a path
+- Tauri desktop command for picking a `.mori` file via a native Open
+  dialog (`pick_mori_package_file`)
 
 - `getPackageConsolidatedMemories`
 - `getPackageAuditTrail`
@@ -65,10 +67,10 @@ consolidated memory can travel with an exported `.mori v0` package.
   existing accepted memories — and `parseImportedMemoryProposals`
   wraps it for a raw package-JSON string. The Consolidation Review
   Surface has an **Import accepted memory from a .mori package** panel
-  — paste the package JSON or pick a `.mori` file (browser `File` API,
-  no Tauri command): imported memory enters the review list as
-  proposals and only becomes durable through the normal accept /
-  apply path.
+  — paste the package JSON or pick a `.mori` file (a native Open
+  dialog on desktop via `pick_mori_package_file`, the browser `File`
+  API otherwise): imported memory enters the review list as proposals
+  and only becomes durable through the normal accept / apply path.
 ## Memory Audit Trail slice
 
 `auditTrail` carries the project's Memory Audit Trail review actions
@@ -122,5 +124,6 @@ Limitations:
 - Raw source file folders are represented as metadata, not bundled files.
 - Validation is structural and minimal. Full schema validation should be added before external import is trusted.
 - The desktop export uses a native Save As dialog
-  (`save_mori_package_json_as`); a native Open picker for import is
-  not wired up yet (import still takes a path or pasted JSON).
+  (`save_mori_package_json_as`) and the Consolidation Review import
+  panel uses a native Open dialog (`pick_mori_package_file`) on
+  desktop; the browser keeps the blob download / `File`-pick paths.

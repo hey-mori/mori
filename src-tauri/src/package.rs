@@ -104,6 +104,46 @@ pub fn open_mori_package_json(path: String) -> Result<String, String> {
     Ok(contents)
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickedMoriPackageFile {
+    /// Absolute path the user chose, or `None` when the dialog was cancelled.
+    pub path: Option<String>,
+    pub cancelled: bool,
+}
+
+/// Open a native file picker so the user can choose a `.mori v0`
+/// package to import. Returns `cancelled: true` when the dialog is
+/// dismissed so the frontend can tell "user said no" from an error.
+/// This only opens a single picker — the file is read separately via
+/// `open_mori_package_json`, and imported memory still enters review.
+#[tauri::command]
+pub fn pick_mori_package_file(app: AppHandle) -> Result<PickedMoriPackageFile, String> {
+    let mut builder = app.dialog().file();
+    if let Ok(dir) = default_storage_dir() {
+        if dir.is_dir() {
+            builder = builder.set_directory(dir);
+        }
+    }
+
+    let (tx, rx) = mpsc::channel();
+    builder.pick_file(move |selection| {
+        let _ = tx.send(selection.map(|file_path| file_path.to_string()));
+    });
+
+    match rx.recv_timeout(Duration::from_secs(600)) {
+        Ok(Some(path)) => Ok(PickedMoriPackageFile {
+            path: Some(path),
+            cancelled: false,
+        }),
+        Ok(None) => Ok(PickedMoriPackageFile {
+            path: None,
+            cancelled: true,
+        }),
+        Err(_) => Err("Open dialog timed out without a response.".to_string()),
+    }
+}
+
 #[tauri::command]
 pub fn list_recent_mori_packages() -> Result<Vec<RecentMoriPackage>, String> {
     let storage_dir = default_storage_dir()?;

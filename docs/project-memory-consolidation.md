@@ -344,7 +344,8 @@ Phased so this milestone introduces no storage change.
   `buildImportedMemoryProposals` for a raw package-JSON string. The
   Consolidation Review Surface carries an **Import accepted memory
   from a .mori package** panel: the user pastes a `.mori v0` package
-  or picks a `.mori` file (browser `File` API — no Tauri command), its
+  or picks a `.mori` file (a native Open dialog on desktop via
+  `pick_mori_package_file`, the browser `File` API otherwise), its
   imported-memory proposals merge into the review list, and accepting
   one runs the normal apply path. Skipped duplicates and parse errors
   are reported honestly.

@@ -165,16 +165,16 @@ only — no phase numbers.
   `SessionImportRepository`, and `loadConnectorImportHistorySavedSessionsAsync`
   wired into the `ImportPanel` connector preview so desktop sessions
   feed the re-import rollup.
-- Native file picker for `.mori v0` export — `save_mori_package_json_as`
-  opens a native Save As dialog; the Reports export uses it on
-  desktop and handles a cancelled dialog cleanly.
+- Native file picker for `.mori v0` — `save_mori_package_json_as`
+  (Save As) and `pick_mori_package_file` (Open) native dialogs, wired
+  into the Reports export and the Consolidation Review import panel.
 
 **Open priority (highest first):**
 
-1. Native Open picker for `.mori v0` import — a native Open dialog so
-   the user can pick a `.mori` file to import without typing a path.
-2. Local Connector Capture — a tested end-to-end bridge for real
+1. Local Connector Capture — a tested end-to-end bridge for real
    Claude / Codex / Git work into `~/.mori/connectors/`.
+2. `.mori` zip-like packaging — move `.mori v0` from a flat JSON file
+   toward the documented zip-like layout.
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -190,48 +190,43 @@ backlog with it.
 
 The next slice should be:
 
-**Native Open picker for `.mori v0` import**
+**Local Connector Capture — `--git-commit` capture input**
 
 Goal:
-The Consolidation Review import panel imports a `.mori v0` package by
-pasted JSON or a browser `File` pick. On desktop a native Open dialog
-is the better path. This slice adds one and wires it into the import
-panel, reusing the existing `open_mori_package_json` reader.
+`mori-local-capture.py` captures a working-tree snapshot
+(`--git-repo`). A real "I just committed" workflow wants the metadata
+of a *specific commit*. This slice adds a `--git-commit <ref>` input
+that captures one commit's safe metadata, so a post-commit capture is
+a single explicit command.
 
 Scope — do:
-- Add a Tauri command that opens a native Open dialog for a `.mori` /
-  `.mori.json` file and returns the chosen path (or a cancelled
-  flag), mirroring `pick_repository_directory` /
-  `save_mori_package_json_as`.
-- Wire it into the Consolidation Review import panel: on desktop the
-  pick affordance uses the native dialog, reads the file via
-  `open_mori_package_json`, then routes the JSON through the existing
-  `runImport` path; a cancelled dialog aborts cleanly.
-- Keep the browser `File`-API pick and the paste path unchanged.
-- Type the new command in `src/lib/desktop/tauriCommands.ts`.
+- Add `--git-commit <ref>` to `mori-local-capture.py` (used with
+  `--git-repo`, or defaulting the repo to `.`): capture the resolved
+  SHA, short SHA, the commit subject line, author date, changed file
+  paths, and the additions/deletions diffstat for that commit.
+- No diff content, no file contents, no patch text — metadata only,
+  exactly like `--git-repo`. Reuse the existing `git_diff_captured`
+  event shape / `gitCommand` connector id.
+- Document the input in the local-capture guide + README.
 
 Scope — do not:
-- Change the `.mori v0` package format, the importer, or the review
-  proposal flow.
-- Auto-import — imported memory still enters review as proposals.
+- Wrap or spawn `git` beyond the explicit `git show` / `git
+  diff-tree` reads of the commit the user named.
+- Add a watcher, a hook, or any implicit capture.
 
 Suggested files:
-- `src-tauri/src/package.rs` (or a `picker` sibling)
-- `src-tauri/src/main.rs`
-- `src/lib/desktop/tauriCommands.ts`
-- `src/features/memory/ConsolidationReviewView.tsx`
-- `docs/mori-package-v0.md`, `docs/project-memory-consolidation.md`
+- `connectors/local-capture/mori-local-capture.py`
+- `connectors/local-capture/README.md`,
+  `docs/connectors/local-capture.md`
+- `src/lib/connectors/connectorLocalCaptureFixture.test.ts`
+  (a fixture proving the commit-capture output round-trips)
 
 Tests:
-- Rust: any path / extension helper the command adds (mirror the
-  `package::tests` pattern)
-- frontend: the paste + browser-file import paths still work
+- a `--git-commit`-shaped `git_diff_captured` event parses, previews,
+  and normalizes through the connector pipeline
 
-Validation note: this slice touches `src-tauri/` — run `cargo check`
-and `cargo test` in addition to `npm run check:full` / `npm run build`.
-
-After this slice ships, set the next slice to the new top backlog
-item (Local Connector Capture end-to-end bridge), and continue.
+After this slice ships, set the next slice to the `.mori` zip-like
+packaging backlog item, and continue.
 
 ## 9. Stop Conditions
 
