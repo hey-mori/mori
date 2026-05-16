@@ -259,33 +259,42 @@ When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
 backlog with it.
 
-## 8. Current Next Slice
+## 8. Current Next Slice — Product Maturity Loop
 
-**The four approved roadmap tracks have had their concrete,
-well-defined slices shipped** (see section 7). The product loop —
-capture → preview → Import Review → Timeline / Evidence Hub → Project
-Memory → Consolidation Review → Accepted Memory → Resume Prompt /
-Reports → `.mori` handoff — is built, tested (942 TS + 45 Rust), and
-documented end to end.
+The loop is in a **Product Maturity** mode: auditing the running app
+surface-by-surface and hardening it into a coherent product, not
+adding new capabilities. "Done" means a surface looks coherent, its
+states are honest, primary buttons work or explain why not, and real
+data can flow through it.
 
-The next slice is **not** auto-selectable: the remaining backlog
-items are conditional polish, and per the decision standard the loop
-must not manufacture a vague "polish" slice with no identified
-defect. A genuine next slice needs one of:
+**Product maturity backlog** (highest value first):
 
-1. **A concrete defect** observed against real captured data — then
-   "Project Memory UX polish" becomes a real, sliceable fix.
-2. **A clear, safe Queryable Memory extension** — a specific search
-   capability with a real use case.
-3. **A new product direction** — e.g. proven-in-use feedback that
-   unblocks a real editor extension, or a new track.
+1. ✅ Responsive layout floor removed; app fits 1024 / 768 with no
+   page-level horizontal scroll.
+2. ✅ Sidebar profile + status pills no longer wrap mid-phrase.
+3. ✅ Evidence source state clarity — disabled cards show an inline
+   reason; active-session cards get a full-width primary CTA; card
+   titles clamp to two aligned lines.
+4. Settings policy/status hierarchy — the runtime strip, provider
+   cards, and trust panel are dense; group them so local-first /
+   planned / unavailable policy reads at a glance.
+5. Start Session source selection — the source cards are bulky;
+   separate explicit-import sources from planned integrations and
+   tighten the card rhythm.
+6. Reports workflow — confirm export success / error / loading
+   feedback on the `.mori` and client-safe export actions.
+7. Project Memory — accepted-memory lifecycle badges
+   (stale / contradicted / superseded / retired) and audit-trail
+   discoverability.
+8. Review board density — uneven card / list density, inferred vs
+   verified clarity.
 
-Until one of those exists, there is no honest dependency-free
-production slice left. Per section 9 this is a legitimate stop point
-— surface it; do not invent filler.
+The core capture flow is verified working: Start Session creates a
+real session, Evidence actions enable, and an import-less Timeline
+shows a designed empty state. Demo vs real state is honest (a "데모
+세션" / "Live session" badge and a Show demo / real toggle).
 
-When the next concrete item is identified, replace this section with
-its slice spec and resume.
+When a slice ships, tick it here and pick the next.
 
 ## 9. Stop Conditions
 
