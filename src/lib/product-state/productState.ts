@@ -17,10 +17,12 @@ import type { FeatureStatus } from "../../app/featureStatus";
 import type { IntegrationStatus } from "../sources/sourceRegistry";
 import {
   PRODUCT_AVAILABILITY_LABELS,
+  PRODUCT_COMPANION_STATE_LABELS,
   PRODUCT_DATA_LABELS,
   PRODUCT_MEMORY_STATUS_LABELS,
   PRODUCT_RUNTIME_LABELS,
   type ProductAvailabilityState,
+  type ProductCompanionState,
   type ProductDataState,
   type ProductMemoryStatusState,
   type ProductRuntimeState,
@@ -30,6 +32,7 @@ import {
 
 export type {
   ProductAvailabilityState,
+  ProductCompanionState,
   ProductDataState,
   ProductMemoryStatusState,
   ProductRuntimeState,
@@ -38,6 +41,7 @@ export type {
 } from "./productStateLabels";
 export {
   PRODUCT_AVAILABILITY_LABELS,
+  PRODUCT_COMPANION_STATE_LABELS,
   PRODUCT_DATA_LABELS,
   PRODUCT_MEMORY_STATUS_LABELS,
   PRODUCT_RUNTIME_LABELS,
@@ -115,6 +119,26 @@ export function getProductMemoryStatusTone(
   state: ProductMemoryStatusState,
 ): ProductStateTone {
   return PRODUCT_MEMORY_STATUS_LABELS[state].tone;
+}
+
+// ─────────────────────────────── Companion ──────────────────────────────
+
+export function getProductCompanionStateDisplay(
+  state: ProductCompanionState,
+): ProductStateDisplay {
+  return PRODUCT_COMPANION_STATE_LABELS[state];
+}
+
+export function getProductCompanionStateLabel(
+  state: ProductCompanionState,
+): string {
+  return PRODUCT_COMPANION_STATE_LABELS[state].label;
+}
+
+export function getProductCompanionStateTone(
+  state: ProductCompanionState,
+): ProductStateTone {
+  return PRODUCT_COMPANION_STATE_LABELS[state].tone;
 }
 
 // ───────────────────────────────── Mappers ──────────────────────────────

@@ -26,6 +26,10 @@ import type {
   TimelineEvent,
   ViewKey,
 } from "../../domain/types";
+import {
+  getProductCompanionStateTone,
+  type ProductStateTone,
+} from "../product-state/productState";
 
 export type CompanionSignalType =
   | "demo_mode_notice"
@@ -40,7 +44,11 @@ export type CompanionSignalType =
   | "ready_to_report"
   | "ready_to_resume";
 
-/** Ordered most → least urgent. */
+/**
+ * Ordered most → least urgent. These four tiers are a subset of the shared
+ * `ProductCompanionState` vocabulary — `companionSeverityTone` derives the
+ * badge / dot tone from the product-state model rather than a local map.
+ */
 export type CompanionSignalSeverity = "risk" | "review" | "suggestion" | "info";
 
 /** What the signal is grounded in — surfaced so the user can judge it. */
@@ -104,6 +112,17 @@ const SEVERITY_RANK: Record<CompanionSignalSeverity, number> = {
 /** Numeric rank for a severity — lower is more urgent. */
 export function companionSeverityRank(severity: CompanionSignalSeverity): number {
   return SEVERITY_RANK[severity];
+}
+
+/**
+ * Semantic tone for a companion-signal severity, drawn from the shared
+ * product-state companion vocabulary so the Companion surfaces use the
+ * same tone scale as `MoriStatusBadge` and the `data-mori-tone` tokens.
+ */
+export function companionSeverityTone(
+  severity: CompanionSignalSeverity,
+): ProductStateTone {
+  return getProductCompanionStateTone(severity);
 }
 
 /**

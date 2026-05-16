@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   PRODUCT_AVAILABILITY_LABELS,
+  PRODUCT_COMPANION_STATE_LABELS,
   PRODUCT_DATA_LABELS,
   PRODUCT_MEMORY_STATUS_LABELS,
   PRODUCT_RUNTIME_LABELS,
   getProductAvailabilityDisplay,
   getProductAvailabilityLabel,
   getProductAvailabilityTone,
+  getProductCompanionStateDisplay,
+  getProductCompanionStateLabel,
+  getProductCompanionStateTone,
   getProductDataDisplay,
   getProductDataLabel,
   getProductMemoryStatusDisplay,
@@ -17,6 +21,7 @@ import {
   productAvailabilityFromFeatureStatus,
   productAvailabilityFromIntegrationStatus,
   type ProductAvailabilityState,
+  type ProductCompanionState,
   type ProductMemoryStatusState,
 } from "./productState";
 import type { FeatureStatus } from "../../app/featureStatus";
@@ -203,5 +208,62 @@ describe("productAvailabilityFromIntegrationStatus", () => {
         productAvailabilityFromIntegrationStatus("planned"),
       ),
     ).not.toBe("success");
+  });
+});
+
+describe("companion state label derivation", () => {
+  it("derives Korean labels for every companion state", () => {
+    expect(getProductCompanionStateLabel("info")).toBe("정보");
+    expect(getProductCompanionStateLabel("suggestion")).toBe("제안");
+    expect(getProductCompanionStateLabel("review")).toBe("검토 필요");
+    expect(getProductCompanionStateLabel("risk")).toBe("주의");
+    expect(getProductCompanionStateLabel("needsReview")).toBe("검토 대기");
+    expect(getProductCompanionStateLabel("readyToReport")).toBe("보고 준비");
+    expect(getProductCompanionStateLabel("readyToResume")).toBe("이어가기 준비");
+  });
+
+  it("every companion state carries a Korean label and description", () => {
+    for (const state of Object.keys(
+      PRODUCT_COMPANION_STATE_LABELS,
+    ) as ProductCompanionState[]) {
+      expect(HANGUL.test(getProductCompanionStateLabel(state))).toBe(true);
+      expect(
+        HANGUL.test(getProductCompanionStateDisplay(state).description),
+      ).toBe(true);
+    }
+  });
+});
+
+describe("companion state tone derivation", () => {
+  it("maps risk to danger and readyToReport to success", () => {
+    expect(getProductCompanionStateTone("risk")).toBe("danger");
+    expect(getProductCompanionStateTone("readyToReport")).toBe("success");
+  });
+
+  it("never maps a review-required state to the available (success) tone", () => {
+    for (const state of [
+      "review",
+      "needsReview",
+      "risk",
+    ] as ProductCompanionState[]) {
+      expect(getProductCompanionStateTone(state)).not.toBe("success");
+    }
+  });
+
+  it("keeps the calm informational tiers off the success tone", () => {
+    expect(getProductCompanionStateTone("info")).toBe("neutral");
+    expect(getProductCompanionStateTone("suggestion")).toBe("info");
+  });
+});
+
+describe("memory lifecycle vs trust provenance separation", () => {
+  it("keeps the accepted lifecycle distinct from verified trust", () => {
+    // Both are positive, but they answer different questions — a saved
+    // memory's lifecycle state vs. how an item's evidence is grounded.
+    expect(getProductMemoryStatusLabel("accepted")).not.toBe(
+      getProductDataLabel("verified"),
+    );
+    expect(getProductMemoryStatusLabel("accepted")).toBe("수락");
+    expect(getProductDataLabel("verified")).toBe("Verified");
   });
 });

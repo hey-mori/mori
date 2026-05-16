@@ -8,12 +8,13 @@
  * `MoriStatusBadge`, `settingsStatus.ts`, `evidence/provenance.ts`,
  * `LocalAiCard.tsx`, `IntegrationCard.tsx`). The vocabularies drifted.
  *
- * This file is the single data source for four product-state families:
+ * This file is the single data source for five product-state families:
  *
  *   - Availability — can the user use this capability today?
  *   - Runtime / storage — where does the data actually live right now?
  *   - Data / provenance — how did this data reach Mori, and how durable is it?
  *   - Memory lifecycle — what state is a durable accepted memory in?
+ *   - Companion — why is Mori surfacing a signal or prompt?
  *
  * `productState.ts` adds the typed derivations on top of these tables;
  * components and pure helpers should import from there.
@@ -88,6 +89,23 @@ export type ProductDataState =
   | "userProvided"
   | "summaryOnly"
   | "fullTextRetained";
+
+/**
+ * Why the Companion layer is surfacing a signal or prompt. `info` /
+ * `suggestion` / `review` / `risk` are the severity tiers a companion
+ * signal carries (mirroring `CompanionSignalSeverity`); `needsReview` /
+ * `readyToReport` / `readyToResume` are the named outcome states a signal
+ * can describe. A companion signal is always a reviewable suggestion —
+ * never an automatic action — so none of these imply Mori acted on its own.
+ */
+export type ProductCompanionState =
+  | "info"
+  | "suggestion"
+  | "review"
+  | "risk"
+  | "needsReview"
+  | "readyToReport"
+  | "readyToResume";
 
 export type ProductStateDisplay = {
   /** Display label following the rendering surface's language convention. */
@@ -280,5 +298,55 @@ export const PRODUCT_MEMORY_STATUS_LABELS: Record<
     label: "은퇴",
     description: "더 이상 지침으로 쓰이지 않고 보관된 항목입니다.",
     tone: "neutral",
+  },
+};
+
+/**
+ * Companion — Korean copy. Tones keep the existing Companion dot scale: a
+ * `risk` signal is the most urgent (danger), `review` / `needsReview` ask
+ * for a review pass (warning), `suggestion` is a gentle nudge (info),
+ * `info` is the calmest tier (neutral). `readyToReport` / `readyToResume`
+ * are positive continuation states (success / info) — they describe that a
+ * step is *available*, never that Mori has taken it.
+ */
+export const PRODUCT_COMPANION_STATE_LABELS: Record<
+  ProductCompanionState,
+  ProductStateDisplay
+> = {
+  info: {
+    label: "정보",
+    description: "지금 알아두면 좋은 정보입니다.",
+    tone: "neutral",
+  },
+  suggestion: {
+    label: "제안",
+    description: "해보면 좋은 다음 단계 제안입니다.",
+    tone: "info",
+    hint: "제안일 뿐 — Mori가 자동으로 실행하지 않습니다.",
+  },
+  review: {
+    label: "검토 필요",
+    description: "다음 작업 전에 검토해 두면 좋은 항목입니다.",
+    tone: "warning",
+  },
+  risk: {
+    label: "주의",
+    description: "근거가 약하거나 놓치면 위험할 수 있어 우선 확인이 필요합니다.",
+    tone: "danger",
+  },
+  needsReview: {
+    label: "검토 대기",
+    description: "확정하기 전에 사용자의 검토가 필요한 항목입니다.",
+    tone: "warning",
+  },
+  readyToReport: {
+    label: "보고 준비",
+    description: "보고서로 정리할 준비가 된 상태입니다.",
+    tone: "success",
+  },
+  readyToResume: {
+    label: "이어가기 준비",
+    description: "다음 세션으로 이어갈 수 있는 상태입니다.",
+    tone: "info",
   },
 };

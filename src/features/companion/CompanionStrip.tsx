@@ -1,6 +1,9 @@
 import { ChevronRight, Compass } from "lucide-react";
 import type { ViewKey } from "../../domain/types";
-import type { CompanionSignal } from "../../lib/companion/companionSignals";
+import {
+  companionSeverityTone,
+  type CompanionSignal,
+} from "../../lib/companion/companionSignals";
 
 /**
  * Compact Companion affordance for canvas surfaces.
@@ -27,7 +30,8 @@ export function CompanionStrip({
   return (
     <button
       type="button"
-      className={`companion-strip sev-${top.severity}`}
+      className="companion-strip"
+      data-mori-tone={companionSeverityTone(top.severity)}
       onClick={() => onNavigate(destination)}
       title="Mori 노트 — 살펴볼 항목으로 이동"
     >

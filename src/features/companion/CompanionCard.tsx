@@ -2,9 +2,10 @@ import { Compass } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type { ViewKey } from "../../domain/types";
-import type {
-  CompanionSignal,
-  CompanionSignalBasis,
+import {
+  companionSeverityTone,
+  type CompanionSignal,
+  type CompanionSignalBasis,
 } from "../../lib/companion/companionSignals";
 
 /**
@@ -45,7 +46,11 @@ export function CompanionCard({
       ) : (
         <ul className="companion-signal-list">
           {signals.map((signal) => (
-            <li key={signal.id} className={`companion-signal sev-${signal.severity}`}>
+            <li
+              key={signal.id}
+              className="companion-signal"
+              data-mori-tone={companionSeverityTone(signal.severity)}
+            >
               <span className="companion-signal-dot" aria-hidden="true" />
               <div className="companion-signal-body">
                 <div className="companion-signal-head">
