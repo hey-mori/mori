@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
 import {
+  buildMoriPackageFileLayout,
   createMoriPackageFromSession,
   deserializeMoriPackage,
   getPackageAuditTrail,
   getPackageConsolidatedMemories,
+  MORI_PACKAGE_FILE_NAMES,
   serializeEventsJsonl,
   serializeMoriPackage,
   validateMoriPackage,
@@ -188,5 +190,47 @@ describe(".mori package v0 — audit trail slice", () => {
     const result = validateMoriPackage(broken);
     expect(result.valid).toBe(false);
     expect(result.issues.some((issue) => issue.path === "auditTrail")).toBe(true);
+  });
+});
+
+describe(".mori package v0 — zip-like file layout", () => {
+  it("emits every documented file and each value parses", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const layout = buildMoriPackageFileLayout(pkg);
+
+    expect(Object.keys(layout).sort()).toEqual([...MORI_PACKAGE_FILE_NAMES].sort());
+    for (const name of MORI_PACKAGE_FILE_NAMES) {
+      if (name.endsWith(".jsonl")) continue;
+      expect(() => JSON.parse(layout[name])).not.toThrow();
+    }
+    expect(JSON.parse(layout["manifest.json"]).formatVersion).toBe("0.1.0");
+  });
+
+  it("round-trips events.jsonl through serializeEventsJsonl", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const layout = buildMoriPackageFileLayout(pkg);
+    expect(layout["events.jsonl"]).toBe(serializeEventsJsonl(pkg));
+    expect(layout["events.jsonl"].split("\n").length).toBe(pkg.events.length);
+  });
+
+  it("normalises the optional slices to an empty array when absent", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const legacy = { ...pkg };
+    delete (legacy as { consolidatedMemories?: unknown }).consolidatedMemories;
+    delete (legacy as { auditTrail?: unknown }).auditTrail;
+
+    const layout = buildMoriPackageFileLayout(legacy as typeof pkg);
+    expect(JSON.parse(layout["consolidated_memories.json"])).toEqual([]);
+    expect(JSON.parse(layout["audit_trail.json"])).toEqual([]);
+  });
+
+  it("carries the optional slices when the package holds them", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession, {
+      consolidatedMemories: [acceptedMemory({ id: "mem-x" })],
+      auditTrail: [reviewAction({ id: "act-x" })],
+    });
+    const layout = buildMoriPackageFileLayout(pkg);
+    expect(JSON.parse(layout["consolidated_memories.json"])[0].id).toBe("mem-x");
+    expect(JSON.parse(layout["audit_trail.json"])[0].id).toBe("act-x");
   });
 });

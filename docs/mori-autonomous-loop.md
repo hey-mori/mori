@@ -171,11 +171,15 @@ only — no phase numbers.
 - Local Connector Capture bridge — `mori-local-capture.py` covers
   transcript (file + stdin), note, git working-tree, and `--git-commit`
   inputs, all verified through the connector-pipeline fixture test.
+- `.mori` zip-like file layout — `buildMoriPackageFileLayout` turns a
+  `MoriPackageV0` into the documented one-file-per-slice map
+  (dependency-free; the zip archiving step is a separate decision).
 
 **Open priority (highest first):**
 
-1. `.mori` zip-like packaging — move `.mori v0` from a flat JSON file
-   toward the documented zip-like layout.
+1. `.mori v0` import validation hardening — make `validateMoriPackage`
+   check each slice's record shape, not just array-ness, so an
+   externally-supplied package is trustworthy before import.
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -188,6 +192,12 @@ Deferred — revisit when a concrete need appears:
 - IDE / Terminal integration runtime code — the explicit-capture
   design is documented; building an editor extension waits for a
   concrete first integration target.
+- `.mori` zip archiving step — the file-layout builder is shipped;
+  the actual zip archive needs an archiving dependency, which is a
+  product/security decision the loop must not make unilaterally.
+  Revisit when the dependency is explicitly approved.
+- Team / shared memory beyond the `.mori v0` package round trip — a
+  large surface with no concrete near-term requirement.
 
 When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
@@ -197,48 +207,46 @@ backlog with it.
 
 The next slice should be:
 
-**`.mori` zip-like packaging — dependency-free file-layout builder**
+**`.mori v0` import validation hardening — per-record shape checks**
 
 Goal:
-`.mori v0` is one flat JSON object today. The documented future shape
-is a zip-like layout (`manifest.json`, `projects.json`,
-`events.jsonl`, …). The actual zip compression needs an archiving
-dependency — a decision the loop must not make unilaterally — so this
-slice ships the dependency-free half: a pure builder that turns a
-`MoriPackageV0` into the documented multi-file layout as an in-memory
-map.
+`validateMoriPackage` today checks manifest fields, that each slice is
+an array, and that privacy / theme are objects — but not the shape of
+the records inside. An externally-supplied `.mori` package can carry
+malformed records that only fail later. This slice hardens validation
+to check each slice's record identity fields, so import can be
+trusted.
 
 Scope — do:
-- Add a pure `buildMoriPackageFileLayout(pkg)` that returns a
-  `Record<string, string>` keyed by the documented file names
-  (`manifest.json`, `projects.json`, `sessions.json`,
-  `events.jsonl`, `issues.json`, …, `consolidated_memories.json`,
-  `audit_trail.json`), each value the serialised content.
-- Reuse `serializeEventsJsonl` for `events.jsonl`; JSON-stringify the
-  rest. Keep absent-safe slices absent-safe.
-- Add a round-trip-shaped test: every documented file is present and
-  parses; the layout is exhaustive over `MoriPackageV0`.
+- Extend `validateMoriPackage` to check, per slice, that every record
+  is an object carrying its required identity fields — e.g. each
+  `projects[i]` / `sessions[i]` / `events[i]` / `issues[i]` /
+  `decisions[i]` has a non-empty string `id`; `events[i]` also has a
+  `type`. Report a precise path (`events[3].id`).
+- Keep it structural and deterministic — no schema library, no
+  network, no new dependency.
+- Keep absent-safe slices absent-safe; only validate records that are
+  present.
 
 Scope — do not:
-- Add a zip / archiving dependency — flag that as a separate decision.
-- Change the in-memory `.mori v0` JSON format or the existing
-  serialize / deserialize / validate path.
+- Add a JSON-schema dependency or change the `.mori v0` format.
+- Reject the optional `consolidatedMemories` / `auditTrail` slices
+  beyond their existing array-or-absent rule (each record carries its
+  own `schemaVersion`).
 
 Suggested files:
-- `src/lib/mori-package/fileLayout.ts` (new)
-- `src/lib/mori-package/index.ts`
+- `src/lib/mori-package/validation.ts`
 - `src/lib/mori-package/mori-package.test.ts`
 - `docs/mori-package-v0.md`
 
 Tests:
-- the layout contains every documented file and each value parses
-- `events.jsonl` round-trips through `serializeEventsJsonl`
-- optional slices (`consolidatedMemories` / `auditTrail`) are handled
-  absent-safe
+- a package with a record missing its `id` is rejected with a precise
+  path
+- a valid package still validates clean
+- the optional slices stay absent-safe
 
-After this slice ships, the remaining zip work is the archiving
-dependency decision — record it in the backlog and continue with the
-next concrete item.
+After this slice ships, set the next slice to the new top backlog
+item, reconciling with the goal document's Current Gaps.
 
 ## 9. Stop Conditions
 

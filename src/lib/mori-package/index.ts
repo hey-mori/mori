@@ -22,4 +22,12 @@ export {
   importMoriPackageFromJson,
 } from "./deserialize";
 export { validateMoriPackage } from "./validation";
+export {
+  buildMoriPackageFileLayout,
+  MORI_PACKAGE_FILE_NAMES,
+} from "./fileLayout";
+export type {
+  MoriPackageFileLayout,
+  MoriPackageFileName,
+} from "./fileLayout";
 export { sampleMoriPackageV0 } from "./samplePackage";

@@ -20,6 +20,7 @@ Implemented now:
 
 - `getPackageConsolidatedMemories`
 - `getPackageAuditTrail`
+- `buildMoriPackageFileLayout`
 
 Current JSON shape:
 
@@ -97,7 +98,14 @@ produced it.
   / `after` snapshots are carried only as the records already hold
   them; no extra raw content is exposed.
 
-Future zip-like mapping:
+Zip-like file layout:
+
+`buildMoriPackageFileLayout(pkg)` turns a `MoriPackageV0` into the
+documented one-file-per-slice layout as an in-memory
+`Record<MoriPackageFileName, string>` — the dependency-free half of
+zip packaging. The actual archiving step needs an archiving
+dependency and is a separate decision; the layout builder lets that
+land without reshaping the data.
 
 ```text
 project.mori
@@ -108,19 +116,25 @@ project.mori
   issues.json
   decisions.json
   relationships.json
+  sources.json
   next_actions.json
   artifacts.json
-  sources/
-  summaries/
+  summaries.json
   privacy.json
   theme.json
   consolidated_memories.json
   audit_trail.json
 ```
 
+`events.jsonl` reuses `serializeEventsJsonl`; the optional
+`consolidated_memories.json` / `audit_trail.json` are always present,
+normalised to `[]` when the package predates those slices.
+
 Limitations:
 
 - The exported file is currently `.mori.json`, not a real zip package.
+  `buildMoriPackageFileLayout` produces the file map; the zip archive
+  step (and its dependency) is not yet shipped.
 - Raw source file folders are represented as metadata, not bundled files.
 - Validation is structural and minimal. Full schema validation should be added before external import is trusted.
 - The desktop export uses a native Save As dialog
