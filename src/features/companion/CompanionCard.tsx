@@ -4,9 +4,11 @@ import { Button } from "../../components/ui/Button";
 import type { ViewKey } from "../../domain/types";
 import {
   companionSeverityTone,
+  companionSignalReviewSelection,
   describeCompanionBasis,
   type CompanionSignal,
 } from "../../lib/companion/companionSignals";
+import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 
 /**
  * Mori 노트 — the Companion Layer card.
@@ -20,10 +22,13 @@ export function CompanionCard({
   signals,
   isDemo,
   onNavigate,
+  onOpenReviewItem,
 }: {
   signals: CompanionSignal[];
   isDemo: boolean;
   onNavigate: (view: ViewKey) => void;
+  /** Deep-link a signal straight to the Review item it is about. */
+  onOpenReviewItem: (selection: ReviewSelection) => void;
 }) {
   return (
     <section className="companion-card" aria-label="Mori 노트">
@@ -45,29 +50,38 @@ export function CompanionCard({
         </p>
       ) : (
         <ul className="companion-signal-list">
-          {signals.map((signal) => (
-            <li
-              key={signal.id}
-              className="companion-signal"
-              data-mori-tone={companionSeverityTone(signal.severity)}
-            >
-              <span className="companion-signal-dot" aria-hidden="true" />
-              <div className="companion-signal-body">
-                <div className="companion-signal-head">
-                  <strong>{signal.title}</strong>
-                  <span className={`companion-signal-basis basis-${signal.basis}`}>
-                    {describeCompanionBasis(signal.basis)}
-                  </span>
+          {signals.map((signal) => {
+            // A signal about a specific issue / decision / next action
+            // deep-links straight to that item; otherwise it navigates to
+            // the signal's surface.
+            const reviewSelection = companionSignalReviewSelection(signal);
+            const action = reviewSelection
+              ? () => onOpenReviewItem(reviewSelection)
+              : signal.destination
+                ? () => onNavigate(signal.destination as ViewKey)
+                : null;
+            return (
+              <li
+                key={signal.id}
+                className="companion-signal"
+                data-mori-tone={companionSeverityTone(signal.severity)}
+              >
+                <span className="companion-signal-dot" aria-hidden="true" />
+                <div className="companion-signal-body">
+                  <div className="companion-signal-head">
+                    <strong>{signal.title}</strong>
+                    <span className={`companion-signal-basis basis-${signal.basis}`}>
+                      {describeCompanionBasis(signal.basis)}
+                    </span>
+                  </div>
+                  <p>{signal.message}</p>
                 </div>
-                <p>{signal.message}</p>
-              </div>
-              {signal.destination ? (
-                <Button onClick={() => onNavigate(signal.destination as ViewKey)}>
-                  {signal.actionLabel}
-                </Button>
-              ) : null}
-            </li>
-          ))}
+                {action ? (
+                  <Button onClick={action}>{signal.actionLabel}</Button>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
 

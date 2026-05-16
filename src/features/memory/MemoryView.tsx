@@ -66,6 +66,7 @@ import { useCompanionSignals } from "../companion/useCompanionSignals";
 
 export function MemoryView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -395,6 +396,7 @@ export function MemoryView() {
             signals={companionSignals}
             isDemo={companionIsDemo}
             onNavigate={setCurrentView}
+            onOpenReviewItem={openReviewItem}
           />
 
           <ProjectMemoryWarningsStrip warnings={viewModel.warnings} />

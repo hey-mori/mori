@@ -52,6 +52,7 @@ import { ReportBuilderPanel } from "./ReportBuilderPanel";
 
 export function ReportsView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const sessionState = useMoriSessionStore((state) => state);
@@ -161,6 +162,7 @@ export function ReportsView() {
             signals={companionSignals}
             isDemo={mode === "demo"}
             onNavigate={setCurrentView}
+            onOpenReviewItem={openReviewItem}
           />
 
           <SessionSummaryStrip
