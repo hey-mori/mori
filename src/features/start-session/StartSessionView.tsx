@@ -8,6 +8,11 @@ import { Button } from "../../components/ui/Button";
 import { sourceOptions } from "../../domain/mock-data";
 import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
+import {
+  applySourceSelection,
+  initialSelectedSourceIds,
+  toggleSourceSelection,
+} from "../../lib/session/sourceSelection";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import {
   getImplementedCaptureSurfaces,
@@ -20,12 +25,14 @@ import { useMoriAppStore } from "../../app/store";
 
 const availableSources = sourceOptions.filter((source) => source.status === "available");
 const plannedSources = sourceOptions.filter((source) => source.status === "planned");
-const selectedSourceCount = sourceOptions.filter((source) => source.selected).length;
 
 export function StartSessionView() {
   const [sessionTitle, setSessionTitle] = useState("Mori 앱 기획");
   const [projectName, setProjectName] = useState("Mori Product");
   const [savedDraft, setSavedDraft] = useState<StoredSessionDraft | null>(null);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(() =>
+    initialSelectedSourceIds(sourceOptions),
+  );
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
   const resetSessionToDemo = useMoriSessionStore((state) => state.resetToDemo);
@@ -35,11 +42,19 @@ export function StartSessionView() {
     setSavedDraft(repository.loadCurrentSessionDraft());
   }, [repository]);
 
+  const selectedSources = useMemo(
+    () =>
+      applySourceSelection(sourceOptions, selectedSourceIds).filter(
+        (source) => source.selected,
+      ),
+    [selectedSourceIds],
+  );
+
   function handleStartSession() {
     const draft = createSessionDraft({
       sessionTitle,
       projectName,
-      selectedSources: sourceOptions,
+      selectedSources: applySourceSelection(sourceOptions, selectedSourceIds),
       recordingMode: "summary",
       llmProvider: "ollama",
       llmModel: "llama3.1:8b",
@@ -77,7 +92,16 @@ export function StartSessionView() {
               </p>
               <div className="source-grid">
                 {availableSources.map((source) => (
-                  <SourceCard key={source.id} source={source} />
+                  <SourceCard
+                    key={source.id}
+                    source={source}
+                    selected={selectedSourceIds.has(source.id)}
+                    onToggle={() =>
+                      setSelectedSourceIds((current) =>
+                        toggleSourceSelection(current, source),
+                      )
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -92,7 +116,7 @@ export function StartSessionView() {
                 </p>
                 <div className="source-grid">
                   {plannedSources.map((source) => (
-                    <SourceCard key={source.id} source={source} />
+                    <SourceCard key={source.id} source={source} selected={false} />
                   ))}
                 </div>
               </div>
@@ -127,7 +151,12 @@ export function StartSessionView() {
             )}
           </div>
         </div>
-        <SessionSummary savedDraft={savedDraft} sessionTitle={sessionTitle} projectName={projectName} />
+        <SessionSummary
+          savedDraft={savedDraft}
+          sessionTitle={sessionTitle}
+          projectName={projectName}
+          selectedSources={selectedSources}
+        />
       </div>
     </div>
   );
@@ -157,14 +186,24 @@ function CaptureSurfaceHonestyStrip() {
   );
 }
 
-function SourceCard({ source }: { source: SourceOption }) {
+function SourceCard({
+  source,
+  selected,
+  onToggle,
+}: {
+  source: SourceOption;
+  selected: boolean;
+  onToggle?: () => void;
+}) {
   const Icon = source.icon;
   const planned = source.status === "planned";
   return (
     <button
-      className={`source-card ${source.selected ? "selected" : ""} ${planned ? "disabled" : ""}`}
+      className={`source-card ${selected ? "selected" : ""} ${planned ? "disabled" : ""}`}
       type="button"
       disabled={planned}
+      aria-pressed={planned ? undefined : selected}
+      onClick={planned ? undefined : onToggle}
     >
       <Icon size={28} />
       <div>
@@ -173,7 +212,7 @@ function SourceCard({ source }: { source: SourceOption }) {
       </div>
       {planned ? (
         <span className="pill tone-gray">Planned</span>
-      ) : source.selected ? (
+      ) : selected ? (
         <Check size={17} />
       ) : (
         <span className="checkbox" />
@@ -223,18 +262,30 @@ function EngineCard({ title, detail, icon: Icon, active, muted }: { title: strin
   );
 }
 
-function SessionSummary({ savedDraft, sessionTitle, projectName }: { savedDraft: StoredSessionDraft | null; sessionTitle: string; projectName: string }) {
+function SessionSummary({
+  savedDraft,
+  sessionTitle,
+  projectName,
+  selectedSources,
+}: {
+  savedDraft: StoredSessionDraft | null;
+  sessionTitle: string;
+  projectName: string;
+  selectedSources: SourceOption[];
+}) {
   return (
     <aside className="summary-panel">
       <h2>세션 요약</h2>
       <SummaryRow label="세션 이름" value={sessionTitle || "Untitled Mori Session"} />
       <SummaryRow label="프로젝트" value={projectName || "Untitled Project"} />
       <hr />
-      <SummaryRow label="기록할 소스" value={`${selectedSourceCount}개 선택됨`} />
+      <SummaryRow label="기록할 소스" value={`${selectedSources.length}개 선택됨`} />
       <ul className="summary-source-list">
-        {sourceOptions
-          .filter((source) => source.selected)
-          .map((source) => <li key={source.id}>{source.name}</li>)}
+        {selectedSources.length === 0 ? (
+          <li className="summary-source-empty">선택된 소스가 없습니다</li>
+        ) : (
+          selectedSources.map((source) => <li key={source.id}>{source.name}</li>)
+        )}
       </ul>
       <hr />
       <SummaryRow label="기록 모드" value="Summary Mode" accent />

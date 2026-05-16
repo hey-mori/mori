@@ -2670,6 +2670,11 @@ hr {
   list-style: none;
 }
 
+.summary-source-empty {
+  color: #8b85a3;
+  font-style: italic;
+}
+
 .local-first-note {
   display: grid;
   gap: 8px;
