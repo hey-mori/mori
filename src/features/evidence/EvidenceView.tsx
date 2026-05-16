@@ -138,7 +138,7 @@ export function EvidenceView() {
                 <h2>사용 가능한 소스</h2>
                 <p>지금 바로 가져올 수 있는 소스 유형입니다. 모두 사용자가 직접 입력하거나 붙여넣는 방식이며, Mori가 자동으로 수집하지 않습니다.</p>
               </div>
-              <Badge tone="green">{availableIntegrations.length} integrations</Badge>
+              <Badge tone="green">{availableIntegrations.length}개 통합</Badge>
             </header>
             <div className="evidence-card-grid">
               {availableIntegrations.map((integration) => {
@@ -169,7 +169,7 @@ export function EvidenceView() {
                 <h2>계획된 커넥터</h2>
                 <p>아직 활성화되지 않은 통합입니다. 모두 명시적인 사용자 설정이 도착할 때만 작동합니다.</p>
               </div>
-              <Badge tone="gray">{plannedIntegrations.length} planned</Badge>
+              <Badge tone="gray">{plannedIntegrations.length}개 계획됨</Badge>
             </header>
             <div className="evidence-card-grid evidence-card-grid-dense">
               {plannedIntegrations.map((integration) => {
@@ -208,7 +208,7 @@ export function EvidenceView() {
                 <p>이 세션에 등록된 출처입니다. 각 항목을 클릭하면 오른쪽 패널에서 자세한 정보를 확인할 수 있습니다.</p>
               </div>
               <Badge tone={importedSources.length ? "purple" : "gray"}>
-                {importedSources.length} source{importedSources.length === 1 ? "" : "s"}
+                {importedSources.length}개 출처
               </Badge>
             </header>
             {importedSources.length === 0 ? (
@@ -429,20 +429,20 @@ function QuickPassControl({
                   : "gray"
           }
         >
-          {status}
+          {describeAnalysisStatus(status)}
         </Badge>
         <span>
           {status === "succeeded"
             ? `${providerLabel ?? "deterministic"} · ${describeProviderName(providerName)} · 신뢰도 ${Math.round((confidence ?? 0) * 100)}%`
             : status === "failed"
-              ? error ?? "Quick Pass failed"
+              ? error ?? "Quick Pass 실행에 실패했습니다."
               : status === "running"
-                ? `Running ${providerLabel ?? "Quick Pass"}...`
+                ? `${providerLabel ?? "Quick Pass"} 실행 중...`
                 : hasAnalysis
                   ? `이전 결과: ${providerLabel ?? "deterministic"} · ${describeProviderName(providerName)}`
                   : "아직 실행하지 않음"}
         </span>
-        {fallbackUsed ? <Badge tone="orange">fallback</Badge> : null}
+        {fallbackUsed ? <Badge tone="orange">폴백 사용됨</Badge> : null}
       </div>
       {hasAnalysis ? (
         <>
@@ -475,7 +475,15 @@ function QuickPassControl({
 }
 
 function describeProviderName(name: string | null): string {
-  if (name === "ollama-quick-pass-v1") return "real local LLM";
-  if (name === "deterministic-heuristic-v1") return "heuristic (no LLM)";
-  return "unknown provider";
+  if (name === "ollama-quick-pass-v1") return "실제 로컬 LLM";
+  if (name === "deterministic-heuristic-v1") return "휴리스틱 (LLM 미사용)";
+  return "알 수 없는 제공자";
+}
+
+/** Korean label for the raw Quick Pass analysis status enum. */
+function describeAnalysisStatus(status: string): string {
+  if (status === "succeeded") return "완료";
+  if (status === "failed") return "실패";
+  if (status === "running") return "실행 중";
+  return "대기 중";
 }
