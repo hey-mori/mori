@@ -25,22 +25,11 @@ import {
   getProductAvailabilityDisplay,
   productAvailabilityFromIntegrationStatus,
 } from "../../lib/product-state/productState";
-import { getTrustTone } from "../../lib/evidence/trust";
-
-const CAPTURE_LABELS: Record<string, string> = {
-  manual: "Manual input",
-  explicitImport: "Explicit import",
-  desktopCommand: "Desktop command",
-  plannedConnector: "Planned connector",
-  mock: "Demo data",
-};
-
-const RAW_LABELS: Record<string, string> = {
-  retained: "Full data retained",
-  summaryOnly: "Summary only",
-  redacted: "Redacted",
-  notCaptured: "Not captured",
-};
+import { getTrustDisplay, getTrustTone } from "../../lib/evidence/trust";
+import {
+  getCaptureMethodLabel,
+  getRawDataPolicyLabel,
+} from "../../lib/evidence/provenance";
 
 const INTEGRATION_ICON: Record<string, LucideIcon> = {
   manualNote: FileText,
@@ -118,16 +107,18 @@ export function IntegrationCard({
         </div>
         <dl className="integration-card-meta">
           <div>
-            <dt>Capture</dt>
-            <dd>{CAPTURE_LABELS[integration.captureMode] ?? integration.captureMode}</dd>
+            <dt>캡처 방식</dt>
+            <dd>{getCaptureMethodLabel(integration.captureMode)}</dd>
           </div>
           <div>
-            <dt>Raw data</dt>
-            <dd>{RAW_LABELS[integration.rawDataPolicy] ?? integration.rawDataPolicy}</dd>
+            <dt>원본 데이터</dt>
+            <dd>{getRawDataPolicyLabel(integration.rawDataPolicy)}</dd>
           </div>
           <div>
-            <dt>Trust</dt>
-            <dd className={`trust-${integration.trustDefault}`}>{integration.trustDefault}</dd>
+            <dt>신뢰 수준</dt>
+            <dd className={`trust-${integration.trustDefault}`}>
+              {getTrustDisplay(integration.trustDefault).label}
+            </dd>
           </div>
         </dl>
         <p className="integration-card-privacy">
