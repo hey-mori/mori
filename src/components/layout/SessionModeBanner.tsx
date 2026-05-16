@@ -31,8 +31,8 @@ export function SessionModeBanner() {
       <div className="session-mode-banner tone-demo" role="status">
         <span>
           <Badge tone="purple">Demo</Badge>
-          <strong>Mori demo memory</strong>
-          <span>Reference data only — start a session to capture local sources.</span>
+          <strong>Mori 데모 메모리</strong>
+          <span>참고용 데이터입니다 — 세션을 시작하면 로컬 소스를 캡처합니다.</span>
         </span>
       </div>
     );
@@ -49,10 +49,10 @@ export function SessionModeBanner() {
         <Badge tone="green">Live session</Badge>
         <Badge tone={sourceBadge.tone}>{sourceBadge.label}</Badge>
         <span>
-          {imports.length} imported source{imports.length === 1 ? "" : "s"} · {sourceBadge.detail}
+          가져온 소스 {imports.length}개 · {sourceBadge.detail}
         </span>
       </span>
-      <Button icon={Sparkles} onClick={resetToDemo} title="Switch back to the demo session memory">
+      <Button icon={Sparkles} onClick={resetToDemo} title="데모 세션 메모리로 돌아가기">
         Show demo
       </Button>
     </div>

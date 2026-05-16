@@ -109,7 +109,7 @@ function SidebarSessionCard() {
         disabled={!endSessionFeature.enabled || timing.state === "demo"}
         title={
           timing.state === "demo"
-            ? "Demo sessions do not need to be ended."
+            ? "데모 세션은 종료할 필요가 없습니다."
             : endSessionFeature.title
         }
       >
