@@ -39,9 +39,9 @@ export function ResumePromptCard({
       return <Badge tone="purple">{origin.providerLabel}</Badge>;
     }
     if (origin.kind === "demo") {
-      return <Badge tone="gray">Demo mock</Badge>;
+      return <Badge tone="gray">데모 데이터</Badge>;
     }
-    return <Badge tone="orange">Fallback (no Quick Pass)</Badge>;
+    return <Badge tone="orange">폴백 (Quick Pass 미실행)</Badge>;
   })();
 
   return (

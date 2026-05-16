@@ -228,7 +228,7 @@ export function ReportBuilderPanel({
       </section>
 
       <section className="report-builder-section">
-        <SectionHeader title="Preview / Export" hint={`${payload.counts.events}E · ${payload.counts.issues}I · ${payload.counts.decisions}D`} />
+        <SectionHeader title="5. 미리보기 / 내보내기" hint={`이벤트 ${payload.counts.events} · 이슈 ${payload.counts.issues} · 결정 ${payload.counts.decisions}`} />
         <div className="report-builder-actions">
           <Button
             variant="primary"
@@ -260,7 +260,7 @@ export function ReportBuilderPanel({
           </pre>
         ) : null}
         <p className="report-data-basis">
-          <Badge tone="gray">Data basis</Badge> {payload.dataBasis}
+          <Badge tone="gray">데이터 기준</Badge> {payload.dataBasis}
         </p>
       </section>
     </aside>
