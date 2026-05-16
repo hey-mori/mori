@@ -21,7 +21,11 @@
  * Date and time labels are derived in UTC so the output is
  * deterministic and testable regardless of the host timezone.
  */
-import type { StoredMemoryReviewAction } from "../storage/storageTypes";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../storage/storageTypes";
+import { planMemoryReviewRevert } from "./memoryReviewRevert";
 
 export type MemoryAuditActionType = StoredMemoryReviewAction["actionType"];
 
@@ -51,6 +55,18 @@ export type MemoryAuditStatusChange = {
   to: string | null;
 };
 
+/**
+ * Whether the action behind an audit entry can be reverted. Present
+ * only when `buildMemoryAuditTrailViewModel` was given the project's
+ * accepted memories; `null` otherwise (the view-model has no basis to
+ * judge revert eligibility without them).
+ */
+export type MemoryAuditEntryRevert = {
+  eligible: boolean;
+  /** Reason the revert cannot proceed; null when eligible. */
+  ineligibleReason: string | null;
+};
+
 export type MemoryAuditTrailEntry = {
   id: string;
   actionType: MemoryAuditActionType;
@@ -73,6 +89,11 @@ export type MemoryAuditTrailEntry = {
   note: string | null;
   /** Whether the action advertises one-click undo (reserved). */
   reversible: boolean;
+  /**
+   * Revert eligibility for this action. `null` when the view-model
+   * was built without the project's accepted memories.
+   */
+  revert: MemoryAuditEntryRevert | null;
 };
 
 export type MemoryAuditTrailGroup = {
@@ -102,6 +123,12 @@ export type BuildMemoryAuditTrailOptions = {
   filter?: MemoryAuditActionFilter;
   /** Max entries to render after filtering. Defaults to 60. */
   maxEntries?: number;
+  /**
+   * The project's accepted memories. When supplied, every entry
+   * carries a `revert` summary computed via `planMemoryReviewRevert`.
+   * Absent-safe: omitted leaves each entry's `revert` as `null`.
+   */
+  acceptedMemories?: readonly StoredAcceptedProjectMemory[];
 };
 
 const DEFAULT_MAX_ENTRIES = 60;
@@ -146,7 +173,10 @@ export function buildMemoryAuditTrailViewModel(
     : sorted.filter((action) => action.actionType === filter);
 
   const capped = filtered.slice(0, Math.max(0, maxEntries));
-  const groups = groupByDate(capped.map(toEntry));
+  const acceptedMemories = options.acceptedMemories ?? null;
+  const groups = groupByDate(
+    capped.map((action) => toEntry(action, acceptedMemories)),
+  );
 
   return {
     totalCount: actions.length,
@@ -161,7 +191,10 @@ export function buildMemoryAuditTrailViewModel(
 
 // ─── internals ────────────────────────────────────────────────────────
 
-function toEntry(action: StoredMemoryReviewAction): MemoryAuditTrailEntry {
+function toEntry(
+  action: StoredMemoryReviewAction,
+  acceptedMemories: readonly StoredAcceptedProjectMemory[] | null,
+): MemoryAuditTrailEntry {
   const { dateKey: _dateKey, timeLabel } = parseTimestamp(action.timestamp);
   const note = typeof action.note === "string" && action.note.trim().length > 0
     ? action.note.trim()
@@ -169,6 +202,11 @@ function toEntry(action: StoredMemoryReviewAction): MemoryAuditTrailEntry {
   const targetMemoryCount = Array.isArray(action.targetMemoryIds)
     ? action.targetMemoryIds.length
     : 0;
+  let revert: MemoryAuditEntryRevert | null = null;
+  if (acceptedMemories) {
+    const plan = planMemoryReviewRevert(action, acceptedMemories);
+    revert = { eligible: plan.eligible, ineligibleReason: plan.ineligibleReason };
+  }
   return {
     id: action.id,
     actionType: action.actionType,
@@ -183,6 +221,7 @@ function toEntry(action: StoredMemoryReviewAction): MemoryAuditTrailEntry {
     statusChange: deriveStatusChange(action.before, action.after),
     note,
     reversible: action.reversible === true,
+    revert,
   };
 }
 

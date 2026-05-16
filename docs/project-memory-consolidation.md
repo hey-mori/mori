@@ -821,6 +821,11 @@ Reviewed revert flow — eligibility planner landed:
   snapshot. It is pure — it never touches storage and never mutates
   its inputs; a caller persists the result through the repository. It
   refuses a memory id mismatch.
+- `buildMemoryAuditTrailViewModel` takes an optional `acceptedMemories`
+  list; when supplied, every audit entry carries a `revert` summary
+  (`{ eligible, ineligibleReason }`) computed via
+  `planMemoryReviewRevert`. Omitting the list leaves each entry's
+  `revert` as `null`, so the audit view-model stays absent-safe.
 
 UI surfacing — still planned:
 

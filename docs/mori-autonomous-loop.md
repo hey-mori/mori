@@ -154,11 +154,13 @@ only — no phase numbers.
   (`buildMemoryRevertProposal` → `MemoryRevertProposal`, pure).
 - Memory Audit Trail reviewed revert flow — apply helper
   (`applyMemoryRevertProposal`, pure; `revert` audit `actionType`).
+- Memory Audit Trail reviewed revert flow — per-entry revert
+  eligibility in `buildMemoryAuditTrailViewModel`.
 
 **Open priority (highest first):**
 
-1. Memory Audit Trail reviewed revert flow — wire the revert proposal
-   + apply helper into the Memory Audit Trail UI surface
+1. Memory Audit Trail reviewed revert flow — render the revert action
+   in the Memory Audit Trail card and persist acceptance
 2. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
    mirror)
 3. CLI wrapper for Claude/Codex workflows, explicit/local only
@@ -178,44 +180,47 @@ backlog with it.
 
 The next slice should be:
 
-**Memory Audit Trail reviewed revert flow — per-entry revert eligibility
-in the audit view-model**
+**Memory Audit Trail reviewed revert flow — revert affordance in the
+Memory Audit Trail card**
 
 Goal:
-Surface, per audit-trail entry, whether that action can be reverted —
-so the UI slice that follows only has to render a button and call the
-already-built helpers. The planner, proposal builder, and apply
-helper exist; this slice carries their verdict into
-`MemoryAuditTrailViewModel`.
+Let a reviewer trigger and confirm a revert from the Memory Audit
+Trail card. All the logic exists — the planner, proposal builder,
+apply helper, and per-entry eligibility; this slice is the UI + the
+single repository write.
 
 Scope — do:
-- Extend `buildMemoryAuditTrailViewModel` to optionally accept the
-  project's accepted memories and, when supplied, attach a per-entry
-  `revert` summary — `{ eligible, ineligibleReason }` — computed via
-  `planMemoryReviewRevert`. Keep the option absent-safe: with no
-  memories passed, entries carry no revert summary and behaviour is
-  unchanged.
-- Keep the helper pure: no IO, no mutation, deterministic.
+- Pass the project's accepted memories into
+  `buildMemoryAuditTrailViewModel` so entries carry their `revert`
+  summary, and render a **Revert** affordance on revertible entries
+  (disabled, with the reason, when ineligible).
+- On a confirm-gated click: `planMemoryReviewRevert` →
+  `buildMemoryRevertProposal` → `applyMemoryRevertProposal`, then
+  persist the updated memory + the `revert` audit action through the
+  repository, and refresh the card.
+- Keep the confirmation explicit — a revert is a review action, never
+  a one-click silent write.
 
 Scope — do not:
-- Add the revert button or apply wiring — that is the next slice.
-- Persist anything or change the audit card's rendering yet.
+- Add brittle screenshot / full-component snapshot tests.
+- Auto-revert or batch-revert; one reviewed action at a time.
 - Replay imported `.mori` audit rows.
 
 Suggested files:
-- `src/lib/project-memory/memoryAuditTrail.ts`
-- `src/lib/project-memory/memoryAuditTrail.test.ts`
+- `src/features/memory/MemoryAuditTrailCard.tsx`
+- `src/features/memory/MemoryView.tsx`
+- `src/lib/project-memory/*` (a thin pure orchestration helper if it
+  keeps the component lean)
 - `docs/project-memory-consolidation.md`
 
 Tests:
-- with accepted memories supplied, an eligible action's entry is
-  marked revertible
-- an ineligible action's entry carries the reason
-- with no memories supplied, entries carry no revert summary
+- a pure orchestration helper (plan → proposal → apply) returns the
+  memory write + audit row for an eligible entry
+- the helper refuses an ineligible entry
 
-After this slice ships, set the next slice to rendering the revert
-action in the Memory Audit Trail card and wiring acceptance through
-the repository, then continue with the open backlog.
+After this slice ships, the reviewed revert flow is complete — move
+it to **Completed**, set the next slice to the new top backlog item
+(SQLite / `.mori` parity cleanup), and continue.
 
 ## 9. Stop Conditions
 

@@ -3,7 +3,10 @@ import {
   buildMemoryAuditTrailViewModel,
   describeMemoryAuditAction,
 } from "./memoryAuditTrail";
-import type { StoredMemoryReviewAction } from "../storage/storageTypes";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../storage/storageTypes";
 
 function action(overrides: Partial<StoredMemoryReviewAction> = {}): StoredMemoryReviewAction {
   return {
@@ -14,6 +17,38 @@ function action(overrides: Partial<StoredMemoryReviewAction> = {}): StoredMemory
     timestamp: "2026-05-14T09:00:00Z",
     targetMemoryIds: ["mem-1"],
     reversible: true,
+    schemaVersion: 1,
+    adapter: "browser-local-storage",
+    ...overrides,
+  };
+}
+
+function acceptedMemory(
+  overrides: Partial<StoredAcceptedProjectMemory> = {},
+): StoredAcceptedProjectMemory {
+  return {
+    id: "mem-1",
+    projectId: "p-1",
+    kind: "promotedDecision",
+    title: "Keep Import Review as a non-bypassable gate",
+    summary: "Every captured event passes through Import Review.",
+    status: "accepted",
+    importance: "high",
+    confidence: { label: "high", score: 0.9 },
+    evidenceRefs: [{ kind: "session", sessionId: "s-cur" }],
+    sourceSessionIds: ["s-cur"],
+    originProposalIds: ["prop-1"],
+    relatedIssueIds: [],
+    relatedDecisionIds: [],
+    proposedAction: "promote",
+    sensitivity: "normal",
+    resumeEligible: true,
+    reportEligibility: "personal",
+    createdAt: "2026-05-10T10:00:00Z",
+    updatedAt: "2026-05-12T10:00:00Z",
+    acceptedAt: "2026-05-12T10:00:00Z",
+    acceptedBy: "local-user",
+    reviewActionIds: ["act-1"],
     schemaVersion: 1,
     adapter: "browser-local-storage",
     ...overrides,
@@ -179,5 +214,30 @@ describe("buildMemoryAuditTrailViewModel", () => {
     const serialized = JSON.stringify(entry);
     expect(serialized).not.toContain("/Users/me");
     expect(serialized).not.toContain("raw");
+  });
+
+  it("leaves entries without a revert summary when no memories are supplied", () => {
+    const vm = buildMemoryAuditTrailViewModel([action()]);
+    expect(vm.groups[0]?.entries[0]?.revert).toBeNull();
+  });
+
+  it("marks an eligible action revertible when accepted memories are supplied", () => {
+    const vm = buildMemoryAuditTrailViewModel(
+      [action({ before: { status: "watching" }, after: { status: "accepted" } })],
+      { acceptedMemories: [acceptedMemory()] },
+    );
+    const revert = vm.groups[0]?.entries[0]?.revert;
+    expect(revert?.eligible).toBe(true);
+    expect(revert?.ineligibleReason).toBeNull();
+  });
+
+  it("carries the ineligibility reason for a non-revertible action", () => {
+    const vm = buildMemoryAuditTrailViewModel(
+      [action({ actionType: "discard", before: { status: "watching" } })],
+      { acceptedMemories: [acceptedMemory()] },
+    );
+    const revert = vm.groups[0]?.entries[0]?.revert;
+    expect(revert?.eligible).toBe(false);
+    expect(revert?.ineligibleReason).toMatch(/cannot be reverted/i);
   });
 });
