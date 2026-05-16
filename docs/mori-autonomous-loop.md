@@ -275,12 +275,13 @@ data can flow through it.
 3. ✅ Evidence source state clarity — disabled cards show an inline
    reason; active-session cards get a full-width primary CTA; card
    titles clamp to two aligned lines.
-4. Settings policy/status hierarchy — the runtime strip, provider
+4. ✅ Start Session capture honesty — the source picker separates
+   available explicit imports from planned integrations; planned
+   surfaces are marked, unselected, and not checkable, so a session
+   never implies Mori captures an app it cannot.
+5. Settings policy/status hierarchy — the runtime strip, provider
    cards, and trust panel are dense; group them so local-first /
    planned / unavailable policy reads at a glance.
-5. Start Session source selection — the source cards are bulky;
-   separate explicit-import sources from planned integrations and
-   tighten the card rhythm.
 6. Reports workflow — confirm export success / error / loading
    feedback on the `.mori` and client-safe export actions.
 7. Project Memory — accepted-memory lifecycle badges
