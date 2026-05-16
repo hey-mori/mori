@@ -295,11 +295,15 @@ Shipped:
    spinner, and per-action busy labels; `writeMoriZipPackage`
    returns a structured result instead of a bare string.
 
+7. ✅ Project Memory lifecycle health — the eight accepted-memory
+   statuses now collapse into four lifecycle groups (current /
+   advisory / attention / archived) via a tested
+   `memoryLifecycle` helper; the Accepted Project Memories card
+   shows a lifecycle health strip, orders the preview so guidance
+   memory leads, and visually recedes archived rows.
+
 Open (highest value first):
 
-7. Project Memory — accepted-memory lifecycle badges
-   (stale / contradicted / superseded / retired) and audit-trail
-   discoverability.
 8. Review board density — uneven card / list density; inferred vs
    verified clarity; inspector panel needs a consistent header.
 9. Timeline density + event inspector — long event lists have no

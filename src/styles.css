@@ -6981,6 +6981,44 @@ pre {
   line-height: 1.55;
 }
 
+.memory-lifecycle-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+}
+
+.memory-lifecycle-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--line, #e6e3f1);
+  border-radius: 8px;
+  background: #fdfcff;
+  font-size: 11.5px;
+  color: #4b4470;
+}
+
+.memory-lifecycle-cell.lifecycle-attention {
+  border-color: #ecd3b6;
+  background: #fdf6ec;
+}
+
+.memory-lifecycle-cell.lifecycle-archived {
+  color: #8b85a3;
+}
+
+/* Archived memory stays visible but visually recedes — Mori never
+   deletes silently, but retired records should not read as current. */
+.memory-accepted-list li.lifecycle-archived {
+  background: #faf9fc;
+  opacity: 0.72;
+}
+
+.memory-accepted-list li.lifecycle-attention {
+  border-color: #ecd3b6;
+}
+
 .memory-audit {
   display: grid;
   gap: 8px;

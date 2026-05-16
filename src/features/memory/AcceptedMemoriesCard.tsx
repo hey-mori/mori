@@ -6,6 +6,14 @@ import {
   describeAcceptedMemoryStorageSource,
   type AcceptedMemoryStorageSource,
 } from "../../lib/project-memory/acceptedMemoryRepository";
+import {
+  classifyMemoryLifecycle,
+  describeMemoryLifecycleGroup,
+  memoryLifecycleGroupTone,
+  memoryLifecycleSortWeight,
+  summarizeMemoryLifecycle,
+  type MemoryLifecycleGroup,
+} from "../../lib/project-memory/memoryLifecycle";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 
 /**
@@ -31,7 +39,13 @@ export function AcceptedMemoriesCard({
   storageSource: AcceptedMemoryStorageSource;
   storageFellBack: boolean;
 }) {
-  const recent = memories.slice(0, 6);
+  // Show current memory first and archived memory last so a bounded
+  // preview never buries guidance-bearing records under retired ones.
+  const ordered = [...memories].sort(
+    (a, b) => memoryLifecycleSortWeight(a.status) - memoryLifecycleSortWeight(b.status),
+  );
+  const recent = ordered.slice(0, 6);
+  const lifecycle = summarizeMemoryLifecycle(memories.map((memory) => memory.status));
   return (
     <MoriSection
       className="memory-accepted"
@@ -55,9 +69,18 @@ export function AcceptedMemoriesCard({
           승인하면 여기 누적됩니다.
         </p>
       ) : (
-        <ul className="memory-accepted-list">
-          {recent.map((memory) => (
-            <li key={memory.id}>
+        <>
+          <MemoryLifecycleStrip
+            current={lifecycle.current}
+            advisory={lifecycle.advisory}
+            attention={lifecycle.attention}
+            archived={lifecycle.archived}
+          />
+          <ul className="memory-accepted-list">
+          {recent.map((memory) => {
+            const group = classifyMemoryLifecycle(memory.status);
+            return (
+            <li key={memory.id} className={`lifecycle-${group}`}>
               <header>
                 <strong title={memory.title}>{memory.title}</strong>
                 <span className="memory-accepted-meta">
@@ -76,8 +99,10 @@ export function AcceptedMemoriesCard({
                 <Badge tone="gray">local-only</Badge>
               </small>
             </li>
-          ))}
-        </ul>
+            );
+          })}
+          </ul>
+        </>
       )}
       <footer className="memory-accepted-footer">
         <small>
@@ -91,6 +116,40 @@ export function AcceptedMemoriesCard({
         </small>
       </footer>
     </MoriSection>
+  );
+}
+
+/**
+ * Lifecycle health strip above the accepted-memory list: how much of
+ * the project's memory still carries guidance weight vs. needs review
+ * vs. is archived. Reads the same lifecycle grouping the list rows use.
+ */
+function MemoryLifecycleStrip({
+  current,
+  advisory,
+  attention,
+  archived,
+}: {
+  current: number;
+  advisory: number;
+  attention: number;
+  archived: number;
+}) {
+  const cells: { group: MemoryLifecycleGroup; count: number }[] = [
+    { group: "current", count: current },
+    { group: "attention", count: attention },
+    { group: "advisory", count: advisory },
+    { group: "archived", count: archived },
+  ];
+  return (
+    <div className="memory-lifecycle-strip" role="group" aria-label="Accepted memory lifecycle health">
+      {cells.map((cell) => (
+        <div key={cell.group} className={`memory-lifecycle-cell lifecycle-${cell.group}`}>
+          <Badge tone={memoryLifecycleGroupTone(cell.group)}>{cell.count}</Badge>
+          <span>{describeMemoryLifecycleGroup(cell.group)}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
