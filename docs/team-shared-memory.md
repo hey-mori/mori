@@ -151,8 +151,9 @@ sync:
 1. Client-safe package filter — **shipped** as
    `buildClientSafeMoriPackage` (pure `MoriPackageV0` →
    `MoriPackageV0` transform + a `clientSafeExport` manifest flag).
-2. Client-safe export UI — a "client-safe export" affordance on the
-   Reports page that runs the filter before `zipMoriPackage`.
+2. Client-safe export UI — **shipped** as the Reports `.mori` package
+   strip's "클라이언트 공유용 .mori 내보내기" action, which runs the
+   filter before `zipMoriPackage` and reports kept / dropped counts.
 3. `.mori` handoff workflow doc — the explicit export → transfer →
    import walkthrough (Track C.2).
 4. Divergence review — a `contradiction`-style proposal when an

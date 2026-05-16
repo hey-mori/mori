@@ -357,7 +357,10 @@ that is called out.
   `save_mori_package_zip_as` Save As dialog or a browser zip blob);
   the Consolidation Review import panel reads it back, routing picked
   bytes by the `PK` zip magic, with validation and review-on-import.
-- Reports page with Markdown report builder and `.mori` package export.
+- Reports page with Markdown report builder and `.mori` package
+  export — a normal export and a client-safe export
+  (`buildClientSafeMoriPackage`, only `clientSafe` / non-sensitive
+  memory) for handing a package to a non-teammate.
 - End-to-end smoke flow documented and guarded by a fixture test
   (`src/lib/connectors/connectorSampleFixture.test.ts`).
 

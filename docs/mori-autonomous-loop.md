@@ -203,6 +203,9 @@ only — no phase numbers.
 - Client-safe `.mori` package filter — `buildClientSafeMoriPackage`
   (pure transform: only `clientSafe` / non-sensitive memory,
   surviving-memory audit rows, `clientSafeExport` manifest flag).
+- Client-safe export UI — the Reports `.mori` package strip's
+  "client-safe export" action runs the filter before `zipMoriPackage`
+  and reports kept / dropped memory counts.
 
 **Open priority (highest first):**
 
@@ -210,14 +213,11 @@ All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
 Team/shared memory spec · continued loop) are approved; sequence them
 into small slices in this order:
 
-1. Client-safe export UI — a "client-safe export" affordance on the
-   Reports page that runs `buildClientSafeMoriPackage` before
-   `zipMoriPackage`.
-2. `.mori` handoff workflow doc — the explicit export → transfer →
+1. `.mori` handoff workflow doc — the explicit export → transfer →
    import walkthrough (Track C.2).
-3. Local Connector Capture polish for real captured data.
-4. Project Memory UX polish for real captured data.
-5. Queryable Memory extensions if a clear safe slice remains.
+2. Local Connector Capture polish for real captured data.
+3. Project Memory UX polish for real captured data.
+4. Queryable Memory extensions if a clear safe slice remains.
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -241,39 +241,42 @@ backlog with it.
 
 The next slice should be:
 
-**Client-safe export UI — Reports page affordance**
+**`.mori` handoff workflow doc (Track C.2)**
 
 Goal:
-`buildClientSafeMoriPackage` exists but nothing calls it. This slice
-adds a "client-safe export" affordance to the Reports `.mori` package
-strip so an Author can produce a filtered package for a non-teammate.
+Track C now has the spec (`team-shared-memory.md`), the client-safe
+filter, and the client-safe export UI. This slice writes the concrete
+**handoff walkthrough** — the explicit export → transfer → import
+steps both the Author and the Reviewer follow — so a real team uses
+the primitive correctly.
 
 Scope — do:
-- In `ReportsView` `MoriPackageStrip`, add a second export action —
-  "Export client-safe .mori" — alongside the existing export. It
-  builds the package, runs `buildClientSafeMoriPackage`, then
-  `zipMoriPackage`, and writes / downloads it like the normal export.
-- The client-safe file name should be distinguishable (e.g. a
-  `-client-safe` suffix on the package id).
-- Surface honestly how many memories the filter kept vs dropped, so
-  the user sees what a recipient will and will not get.
-- Reuse the existing zip save command and browser blob path.
+- Add a "Handoff workflow" section to `docs/team-shared-memory.md`
+  (or a focused sibling doc if it reads better): the Author's steps
+  (choose normal vs client-safe export, where the file lands,
+  transfer is out of Mori's scope), and the Reviewer's steps (import
+  via the Consolidation Review panel, every memory enters review,
+  accept / edit / discard, dedup is automatic).
+- Note honestly what does *not* happen: no auto-merge, no sync, the
+  Reviewer's accepted memory is theirs alone until they re-export.
+- Cross-reference the `.mori` package, client-safe filter, and
+  review-on-import docs precisely.
 
 Scope — do not:
-- Change the filter logic, the canonical layout, or the zip codec.
-- Auto-select client-safe as the default export.
+- Add code — this is a documentation slice.
+- Introduce any transfer mechanism inside Mori.
 
 Suggested files:
-- `src/features/reports/ReportsView.tsx`
-- `docs/mori-package-v0.md`, `docs/team-shared-memory.md`
+- `docs/team-shared-memory.md`
+- `docs/mori-project-goal.md` — only if canonical state changes.
 
 Tests:
-- a pure helper, if one is extracted, covering the kept/dropped count
-  surfaced in the UI copy; otherwise rely on the
-  `buildClientSafeMoriPackage` tests + `check:full` / `build` green.
+- none — documentation slice; `check:full` + `build` stay green.
 
-After this slice ships, set the next slice to Track C.2 — the `.mori`
-handoff workflow doc / walkthrough.
+After this slice ships, Track C's near-term scope is complete; set
+the next slice to the open backlog's top item (Local Connector
+Capture polish for real captured data) or reconcile with the goal
+document's Current Gaps.
 
 ## 9. Stop Conditions
 

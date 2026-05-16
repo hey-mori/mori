@@ -13,11 +13,14 @@ import {
 } from "../../app/featureStatus";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import {
+  buildClientSafeMoriPackage,
   createMoriPackageFromSession,
+  getPackageConsolidatedMemories,
   MORI_PACKAGE_ZIP_MIME,
   serializeMoriPackage,
   zipMoriPackage,
 } from "../../lib/mori-package";
+import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
@@ -267,58 +270,76 @@ function AnalysisStrip({
   );
 }
 
+async function writeMoriZipPackage(
+  zipBytes: Uint8Array,
+  filename: string,
+): Promise<string> {
+  if (isTauriRuntime()) {
+    try {
+      const saved = await tauriCommands.saveMoriPackageZipAs({
+        packageBytes: Array.from(zipBytes),
+        suggestedFilename: filename,
+      });
+      return saved.cancelled
+        ? "Export cancelled. Browser draft 저장됨."
+        : `Saved desktop .mori package: ${saved.path}`;
+    } catch (error) {
+      return `Desktop save failed: ${error instanceof Error ? error.message : "unknown error"}`;
+    }
+  }
+  if (typeof window !== "undefined") {
+    // Copy into a fresh ArrayBuffer-backed view for the Blob ctor.
+    const blob = new Blob([new Uint8Array(zipBytes)], { type: MORI_PACKAGE_ZIP_MIME });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    return `Downloaded ${filename} (.mori zip package). Browser draft 저장됨.`;
+  }
+  return "Export unavailable in this environment.";
+}
+
 function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView> }) {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
-  const [status, setStatus] = useState<string>(".mori v0 JSON 미리보기 / 내보내기 준비됨");
+  const [status, setStatus] = useState<string>(".mori v0 패키지 내보내기 준비됨");
   const [busy, setBusy] = useState(false);
 
-  async function handleExport() {
+  async function runExport(clientSafe: boolean) {
     setBusy(true);
     try {
       const projectId = view.project.id || "default";
       const consolidatedMemories = repository.listAcceptedProjectMemories(projectId);
       const auditTrail = repository.listMemoryReviewActions(projectId);
-      const pkg = createMoriPackageFromSession(view, {
+      const fullPkg = createMoriPackageFromSession(view, {
         consolidatedMemories,
         auditTrail,
       });
+      // The full package is the canonical draft; a client-safe export
+      // is a filtered, derived artifact.
+      repository.saveMoriPackageDraft(fullPkg);
+      const pkg: MoriPackageV0 = clientSafe
+        ? buildClientSafeMoriPackage(fullPkg)
+        : fullPkg;
       // `serializeMoriPackage` validates and fails closed; the zip is
       // built from the same validated package via the canonical layout.
       serializeMoriPackage(pkg);
-      repository.saveMoriPackageDraft(pkg);
       const zipBytes = zipMoriPackage(pkg);
-      const filename = `${pkg.manifest.packageId}.mori`;
-      if (isTauriRuntime()) {
-        try {
-          const saved = await tauriCommands.saveMoriPackageZipAs({
-            packageBytes: Array.from(zipBytes),
-            suggestedFilename: filename,
-          });
-          if (saved.cancelled) {
-            setStatus("Export cancelled. Browser draft 저장됨.");
-          } else {
-            setStatus(`Saved desktop .mori package: ${saved.path}`);
-          }
-          return;
-        } catch (error) {
-          setStatus(`Desktop save failed: ${error instanceof Error ? error.message : "unknown error"}`);
-          return;
-        }
-      }
-      if (typeof window !== "undefined") {
-        // Copy into a fresh ArrayBuffer-backed view for the Blob ctor.
-        const blob = new Blob([new Uint8Array(zipBytes)], {
-          type: MORI_PACKAGE_ZIP_MIME,
-        });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.download = filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        URL.revokeObjectURL(url);
-        setStatus(`Downloaded ${filename} (.mori zip package). Browser draft 저장됨.`);
+      const filename = clientSafe
+        ? `${pkg.manifest.packageId}-client-safe.mori`
+        : `${pkg.manifest.packageId}.mori`;
+      const written = await writeMoriZipPackage(zipBytes, filename);
+      if (clientSafe) {
+        const total = getPackageConsolidatedMemories(fullPkg).length;
+        const kept = getPackageConsolidatedMemories(pkg).length;
+        setStatus(
+          `${written} · 클라이언트 공유용: memory ${kept}건 포함 / ${total - kept}건 제외.`,
+        );
+      } else {
+        setStatus(written);
       }
     } finally {
       setBusy(false);
@@ -331,11 +352,17 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
         <h3>
           <Archive size={14} aria-hidden="true" /> .mori v0 패키지
         </h3>
-        <p>리포트 외에도 세션 전체를 직렬화한 .mori 파일을 내보낼 수 있습니다.</p>
+        <p>
+          리포트 외에도 세션 전체를 직렬화한 .mori 파일을 내보낼 수 있습니다. 클라이언트
+          공유용은 client-safe memory만 포함합니다.
+        </p>
       </div>
       <div>
-        <Button icon={FileText} onClick={handleExport} disabled={busy}>
-          {busy ? "내보내는 중..." : ".mori v0 JSON 내보내기"}
+        <Button icon={FileText} onClick={() => runExport(false)} disabled={busy}>
+          {busy ? "내보내는 중..." : ".mori 패키지 내보내기"}
+        </Button>
+        <Button icon={FileText} onClick={() => runExport(true)} disabled={busy}>
+          {busy ? "내보내는 중..." : "클라이언트 공유용 .mori 내보내기"}
         </Button>
         <small>{status}</small>
       </div>

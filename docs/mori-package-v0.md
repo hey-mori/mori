@@ -174,8 +174,13 @@ whose `reportEligibility` is `clientSafe` and whose `sensitivity` is
 marks the manifest `clientSafeExport: true`. The marker is optional
 and additive — absent on a normal package, no `formatVersion` bump —
 and `getPackageIsClientSafe(pkg)` reads it. The input package is never
-mutated. Wiring this into a "client-safe export" UI affordance is a
-follow-up slice.
+mutated.
+
+The Reports `.mori` package strip exposes this as a second export
+action — **클라이언트 공유용 .mori 내보내기** — alongside the normal
+export. It runs `buildClientSafeMoriPackage`, writes a
+`-client-safe.mori` file, and reports how many memories the filter
+kept vs dropped so the Author sees what a recipient will receive.
 
 Limitations:
 
