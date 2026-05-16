@@ -5,6 +5,7 @@ import {
   buildCompanionSignalFeed,
   companionSeverityRank,
   companionSeverityTone,
+  companionSignalReviewSelection,
   MAX_COMPANION_SIGNALS,
   summarizeCompanionSignals,
   type CompanionSignalInput,
@@ -276,6 +277,38 @@ describe("buildCompanionSignalFeed", () => {
         companionSeverityRank(feed[i - 1].severity),
       ).toBeLessThanOrEqual(companionSeverityRank(feed[i].severity));
     }
+  });
+});
+
+describe("companionSignalReviewSelection", () => {
+  it("maps a weak-evidence signal to its first linked issue", () => {
+    const signals = buildCompanionSignalFeed(
+      input({
+        issues: [issue({ id: "i-weak", status: "open", trustLevel: "inferred", confidence: 0.3 })],
+      }),
+    );
+    const weak = signals.find((signal) => signal.type === "weak_evidence")!;
+    expect(companionSignalReviewSelection(weak)).toEqual({
+      kind: "issue",
+      issueId: "i-weak",
+    });
+  });
+
+  it("maps a needs-review signal to its first linked decision", () => {
+    const signals = buildCompanionSignalFeed(
+      input({ decisions: [decision({ id: "d-draft", confirmed: false })] }),
+    );
+    const review = signals.find((signal) => signal.type === "needs_review")!;
+    expect(companionSignalReviewSelection(review)).toEqual({
+      kind: "decision",
+      decisionId: "d-draft",
+    });
+  });
+
+  it("returns null for a state signal with no linked Review item", () => {
+    const signals = buildCompanionSignalFeed(input({ sessionMode: "demo" }));
+    const demo = signals.find((signal) => signal.type === "demo_mode_notice")!;
+    expect(companionSignalReviewSelection(demo)).toBeNull();
   });
 });
 

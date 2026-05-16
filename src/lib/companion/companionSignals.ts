@@ -30,6 +30,7 @@ import {
   getProductCompanionStateTone,
   type ProductStateTone,
 } from "../product-state/productState";
+import type { ReviewSelection } from "../review-workspace/reviewWorkspace";
 
 export type CompanionSignalType =
   | "demo_mode_notice"
@@ -420,6 +421,103 @@ export function buildCompanionSignalFeed(input: CompanionSignalInput): Companion
   return sortCompanionSignals(collectCompanionSignals(input));
 }
 
+/**
+ * Action-oriented category — the primary thing the user would *do* with a
+ * signal. The Companion inbox organises by this rather than by severity, so
+ * the page reads as "what to do next", not "how loud is it". Severity stays
+ * on each signal as metadata, not as the page's information architecture.
+ */
+export type CompanionActionCategory =
+  | "review"
+  | "risk"
+  | "resume"
+  | "report"
+  | "suggestion"
+  | "reference";
+
+const SIGNAL_ACTION_CATEGORY: Record<CompanionSignalType, CompanionActionCategory> = {
+  needs_review: "review",
+  unresolved_issue: "review",
+  stale_memory: "review",
+  weak_evidence: "risk",
+  ready_to_resume: "resume",
+  ready_to_report: "report",
+  suggested_next_action: "suggestion",
+  import_ready: "suggestion",
+  real_session_gap: "suggestion",
+  important_decision: "reference",
+  demo_mode_notice: "reference",
+};
+
+/** The primary action category a signal belongs to. */
+export function getCompanionSignalActionCategory(
+  signal: CompanionSignal,
+): CompanionActionCategory {
+  return SIGNAL_ACTION_CATEGORY[signal.type];
+}
+
+/** Inbox section order — most actionable first. */
+export const COMPANION_ACTION_CATEGORY_ORDER: CompanionActionCategory[] = [
+  "review",
+  "risk",
+  "resume",
+  "report",
+  "suggestion",
+  "reference",
+];
+
+/** Calm Korean label + one-line intent for an action category. */
+export function describeCompanionActionCategory(
+  category: CompanionActionCategory,
+): { label: string; hint: string } {
+  switch (category) {
+    case "review":
+      return { label: "검토 필요", hint: "확정하거나 정리할 항목이에요." };
+    case "risk":
+      return { label: "위험 · 불확실성", hint: "근거가 약해 확인이 필요해요." };
+    case "resume":
+      return { label: "다시 시작 가능", hint: "다음 작업으로 이어갈 수 있어요." };
+    case "report":
+      return { label: "보고서 준비", hint: "정리해 공유할 수 있어요." };
+    case "suggestion":
+      return { label: "제안", hint: "다음 단계로 권하는 작업이에요." };
+    case "reference":
+      return { label: "참고", hint: "지금 행동은 필요 없는 정보예요." };
+    default:
+      return { label: category, hint: "" };
+  }
+}
+
+/** One action-oriented section of the Companion inbox. */
+export type CompanionSignalGroup = {
+  category: CompanionActionCategory;
+  label: string;
+  hint: string;
+  signals: CompanionSignal[];
+};
+
+/**
+ * Group a signal set into action-oriented sections, sorted within each
+ * group and ordered most-actionable-first. Empty categories are dropped so
+ * the inbox only shows sections that have something to act on.
+ */
+export function groupCompanionSignalsByAction(
+  signals: CompanionSignal[],
+): CompanionSignalGroup[] {
+  const groups: CompanionSignalGroup[] = [];
+  for (const category of COMPANION_ACTION_CATEGORY_ORDER) {
+    const inCategory = sortCompanionSignals(
+      signals.filter(
+        (signal) => getCompanionSignalActionCategory(signal) === category,
+      ),
+    );
+    if (inCategory.length === 0) continue;
+    const { label, hint } = describeCompanionActionCategory(category);
+    groups.push({ category, label, hint, signals: inCategory });
+  }
+  return groups;
+}
+
 /** Severity breakdown of a companion signal set, for the inbox summary. */
 export type CompanionSignalSummary = {
   total: number;
@@ -428,6 +526,31 @@ export type CompanionSignalSummary = {
   suggestion: number;
   info: number;
 };
+
+/**
+ * If a signal points at a specific Review item, the selection that
+ * opens it; otherwise null. Lets the Companion inbox deep-link a signal
+ * to the exact issue / decision / next action it is about, instead of
+ * only the Review surface.
+ */
+export function companionSignalReviewSelection(
+  signal: CompanionSignal,
+): ReviewSelection | null {
+  const id = signal.linkedItemIds[0];
+  if (!id) return null;
+  switch (signal.type) {
+    case "weak_evidence":
+    case "unresolved_issue":
+      return { kind: "issue", issueId: id };
+    case "needs_review":
+    case "important_decision":
+      return { kind: "decision", decisionId: id };
+    case "suggested_next_action":
+      return { kind: "nextAction", nextActionId: id };
+    default:
+      return null;
+  }
+}
 
 /** Count a companion signal set by severity tier. */
 export function summarizeCompanionSignals(

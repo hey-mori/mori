@@ -6,6 +6,7 @@ import { useMoriAppStore } from "../../app/store";
 import type { ViewKey } from "../../domain/types";
 import {
   companionSeverityTone,
+  companionSignalReviewSelection,
   describeCompanionBasis,
   describeCompanionSeverity,
   summarizeCompanionSignals,
@@ -13,6 +14,7 @@ import {
   type CompanionSignalSeverity,
   type CompanionSignalSummary,
 } from "../../lib/companion/companionSignals";
+import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import { useCompanionSignals } from "./useCompanionSignals";
 
 const SEVERITY_ORDER: CompanionSignalSeverity[] = [
@@ -35,6 +37,7 @@ type SeverityFilter = CompanionSignalSeverity | "all";
 export function CompanionInboxView() {
   const { feed, isDemo } = useCompanionSignals();
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const [filter, setFilter] = useState<SeverityFilter>("all");
 
   const summary = useMemo(() => summarizeCompanionSignals(feed), [feed]);
@@ -87,6 +90,7 @@ export function CompanionInboxView() {
                   key={signal.id}
                   signal={signal}
                   onNavigate={setCurrentView}
+                  onOpenReviewItem={openReviewItem}
                 />
               ))}
             </ul>
@@ -129,10 +133,20 @@ function FilterChip({
 function CompanionSignalRow({
   signal,
   onNavigate,
+  onOpenReviewItem,
 }: {
   signal: CompanionSignal;
   onNavigate: (view: ViewKey) => void;
+  onOpenReviewItem: (selection: ReviewSelection) => void;
 }) {
+  // When the signal is about a specific Review item, the action opens
+  // that exact item; otherwise it navigates to the signal's surface.
+  const reviewSelection = companionSignalReviewSelection(signal);
+  const action = reviewSelection
+    ? () => onOpenReviewItem(reviewSelection)
+    : signal.destination
+      ? () => onNavigate(signal.destination as ViewKey)
+      : null;
   return (
     <li
       className="companion-signal companion-inbox-row"
@@ -151,11 +165,7 @@ function CompanionSignalRow({
         </div>
         <p>{signal.message}</p>
       </div>
-      {signal.destination ? (
-        <Button onClick={() => onNavigate(signal.destination as ViewKey)}>
-          {signal.actionLabel}
-        </Button>
-      ) : null}
+      {action ? <Button onClick={action}>{signal.actionLabel}</Button> : null}
     </li>
   );
 }

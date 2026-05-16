@@ -10,10 +10,9 @@ import {
  *
  * The Timeline is a swimlane canvas with no card column, so the full "Mori
  * 노트" card does not fit. This one-line strip surfaces only the single
- * highest-priority signal plus a "+N" count, and on click routes to that
- * signal's surface (or Reports, where the full card lives). Calm and
- * serious — no avatar, no chat. Renders nothing when there is nothing worth
- * surfacing.
+ * highest-priority signal plus a "+N" count, and on click opens the
+ * Companion inbox — the full signal feed. Calm and serious — no avatar,
+ * no chat. Renders nothing when there is nothing worth surfacing.
  */
 export function CompanionStrip({
   signals,
@@ -25,15 +24,14 @@ export function CompanionStrip({
   if (signals.length === 0) return null;
   const top = signals[0]!;
   const more = signals.length - 1;
-  const destination: ViewKey = top.destination ?? "reports";
 
   return (
     <button
       type="button"
       className="companion-strip"
       data-mori-tone={companionSeverityTone(top.severity)}
-      onClick={() => onNavigate(destination)}
-      title="Mori 노트 — 살펴볼 항목으로 이동"
+      onClick={() => onNavigate("companion")}
+      title="Mori 노트 — 전체 신호 보기"
     >
       <span className="companion-strip-mark" aria-hidden="true">
         <Compass size={14} />
