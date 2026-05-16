@@ -22,8 +22,8 @@ import {
 } from "../../lib/mori-package";
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
-import { buildCompanionSignals } from "../../lib/companion/companionSignals";
 import { CompanionCard } from "../companion/CompanionCard";
+import { useCompanionSignals } from "../companion/useCompanionSignals";
 import {
   exportPhaseRole,
   exportPhaseTone,
@@ -115,19 +115,7 @@ export function ReportsView() {
 
   const duration = useMemo(() => formatDuration(view.session.startedAt, view.session.endedAt), [view.session.startedAt, view.session.endedAt]);
 
-  const companionSignals = useMemo(
-    () =>
-      buildCompanionSignals({
-        sessionMode: mode,
-        events: view.events,
-        issues: view.issues,
-        decisions: view.decisions,
-        nextActions: view.nextActions,
-        hasAnalysis,
-        importCount: imports.length,
-      }),
-    [mode, view, hasAnalysis, imports.length],
-  );
+  const { signals: companionSignals } = useCompanionSignals();
 
   return (
     <div className="page reports-page">

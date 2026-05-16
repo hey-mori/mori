@@ -430,8 +430,12 @@ text into a signal.
   notification center or review queue, a session-end companion
   summary, resume-companion improvements, signal-quietness
   preferences. A chatbot / avatar is explicitly out of scope.
+- ✅ Companion card on Project Memory — the "Mori 노트" card now
+  also renders on the Project Memory surface via a shared
+  `useCompanionSignals` hook, so Reports and Memory build signals
+  the same way without duplicating the wiring.
 - Companion-layer maturity backlog (highest value first):
-  1. surface the companion card on Timeline / Project Memory too;
+  1. surface the companion card on the Timeline surface too;
   2. a small in-app review queue or notification center;
   3. a session-end companion summary;
   4. resume-companion improvements;

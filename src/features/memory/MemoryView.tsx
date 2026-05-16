@@ -61,6 +61,8 @@ import { KeyEvidenceCard } from "./KeyEvidenceCard";
 import { SavedReportsCard } from "./SavedReportsCard";
 import { ProjectMemorySummaryPanel } from "./ProjectMemorySummaryPanel";
 import { ReimportHistoryCard } from "./ReimportHistoryCard";
+import { CompanionCard } from "../companion/CompanionCard";
+import { useCompanionSignals } from "../companion/useCompanionSignals";
 
 export function MemoryView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
@@ -70,6 +72,7 @@ export function MemoryView() {
   const mode = useMoriSessionStore(selectSessionMode);
   const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
   const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
+  const { signals: companionSignals, isDemo: companionIsDemo } = useCompanionSignals();
   const sqliteSessions = useMoriSqliteStore((state) => state.sessions);
   const sqliteKind = useMoriSqliteStore((state) => state.kind);
   const sqliteRefresh = useMoriSqliteStore((state) => state.refresh);
@@ -386,6 +389,12 @@ export function MemoryView() {
             onOpenLatestReport={() => setCurrentView("reports")}
             reportAvailable={packageDrafts.length > 0 || hasAnalysis}
             savedReportAvailability={savedReportAvailability}
+          />
+
+          <CompanionCard
+            signals={companionSignals}
+            isDemo={companionIsDemo}
+            onNavigate={setCurrentView}
           />
 
           <ProjectMemoryWarningsStrip warnings={viewModel.warnings} />
