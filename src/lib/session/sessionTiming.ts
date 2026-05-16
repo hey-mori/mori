@@ -99,10 +99,21 @@ export function deriveSessionTiming(input: DeriveSessionTimingInput): SessionTim
 
   const startMs = parseIso(draftSession.startedAt);
   const storedEndMs = parseIso(draftSession.endedAt);
+  // `createSessionDraft` seeds `endedAt` with the creation timestamp as a
+  // placeholder, so a freshly-started session has `endedAt === startedAt`.
+  // That is not a genuine end — without this guard the session card would
+  // label a just-started session "Saved" and freeze the clock at 00:00:00.
+  // A real end is a stored timestamp that is strictly after the start and
+  // not in the future.
+  const hasGenuineEnd =
+    storedEndMs !== null &&
+    startMs !== null &&
+    storedEndMs > startMs &&
+    storedEndMs <= now;
   const isLive =
     input.analysisStatus !== "running" &&
     draftSession.status === "recording" &&
-    (storedEndMs === null || storedEndMs > now);
+    !hasGenuineEnd;
   const isAnalyzing = input.analysisStatus === "running" || draftSession.status === "analyzing";
 
   const effectiveEndMs = isLive ? now : storedEndMs ?? now;

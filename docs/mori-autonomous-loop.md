@@ -343,8 +343,12 @@ Open (highest value first):
     headers, and action bars scroll inconsistently across views.
 22. Korean / English copy consistency — mixed-language labels appear
     within a single surface; pick a rule and apply it.
-23. Sidebar session timer honesty — the `00:00:00` clock must
-    reflect real vs demo session state, not always run.
+23. ✅ Sidebar session timer honesty — a just-started session was
+    labeled "Saved" with a frozen `00:00:00` clock because
+    `createSessionDraft` seeds `endedAt` with the creation
+    timestamp; `deriveSessionTiming` now treats an `endedAt` that
+    is not strictly after `startedAt` as no genuine end, so a
+    fresh session reads "Live" and the clock counts up.
 24. Component architecture cleanup — repeated card / badge / panel
     markup should converge on shared components to stop drift.
 25. Real-session walkthrough fixture — a checked-in fixture that

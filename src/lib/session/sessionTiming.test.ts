@@ -94,6 +94,25 @@ describe("deriveSessionTiming", () => {
     expect(snap.longLabel).toBe("Live · 04:32:19");
   });
 
+  it("treats a just-started session (endedAt === startedAt placeholder) as live", () => {
+    // `createSessionDraft` seeds `endedAt` with the creation timestamp.
+    const draft = buildSession({
+      startedAt: "2026-05-14T13:00:00Z",
+      endedAt: "2026-05-14T13:00:00Z",
+      status: "recording",
+    });
+    const snap = deriveSessionTiming({
+      draft: { session: draft },
+      demoSession: demo,
+      analysisStatus: "idle",
+      now: new Date("2026-05-14T13:25:30Z").getTime(),
+    });
+    expect(snap.state).toBe("active");
+    expect(snap.stateLabel).toBe("Live");
+    expect(snap.isLive).toBe(true);
+    expect(snap.durationLabel).toBe("00:25:30");
+  });
+
   it("treats a stored endedAt in the future as a still-live session", () => {
     const draft = buildSession({
       startedAt: "2026-05-14T13:00:00Z",
