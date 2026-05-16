@@ -25,6 +25,7 @@ describe("getAllCaptureSurfaces", () => {
         "tauriGitDiff",
         "repositoryMetadata",
         "quickPass",
+        "localCaptureBridge",
         "claudeCodeHook",
         "claudeDesktopExport",
         "claudeWebExport",
@@ -85,6 +86,17 @@ describe("matrix consistency invariants", () => {
         expect(["summaryOnly", "notCaptured", "referenceOnly"]).toContain(row.rawDataPolicy);
       }
     }
+  });
+
+  it("lists the shipped local-capture bridge as a real capture surface", () => {
+    const row = getAllCaptureSurfaces().find((entry) => entry.id === "localCaptureBridge");
+    expect(row).toBeDefined();
+    // The bridge is a shipped template the user runs explicitly — it
+    // produces connector JSONL that can enter Import Review.
+    expect(row?.status).toBe("docsTemplateOnly");
+    expect(row?.captureMode).toBe("localCliWrapper");
+    expect(row?.canEnterImportReview).toBe(true);
+    expect(row?.rawDataPolicy).toBe("summaryOnly");
   });
 });
 

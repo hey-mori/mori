@@ -21,6 +21,7 @@ export type CaptureSurfaceId =
   | "tauriGitDiff"
   | "repositoryMetadata"
   | "quickPass"
+  | "localCaptureBridge"
   | "claudeCodeHook"
   | "claudeDesktopExport"
   | "claudeWebExport"
@@ -181,7 +182,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriCanAccess: ["붙여넣은 대화 텍스트", "추출한 턴 수 / 코드블록 수 / 토큰 추정"],
     whatMoriNeverAccesses: ["Anthropic / OpenAI 계정", "API 키", "브라우저 / 데스크톱 앱 창"],
     setupRequirement: "설정 불필요.",
-    nextStep: "UI에 \"Connector JSONL\" 탭을 추가하면 hook/wrapper 결과도 같은 흐름으로 합류.",
+    nextStep: "추가 작업 없음 — Evidence Hub의 Connector JSONL Import 탭이 hook/wrapper 결과도 같은 흐름으로 합류시킴.",
     relatedIntegrationIds: ["claudeTranscript", "chatgptTranscript", "codexTranscript", "aiConversation"],
   },
   {
@@ -264,6 +265,41 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     nextStep: "LM Studio / OpenAI-compatible local endpoint 지원 추가.",
     relatedIntegrationIds: ["quickPass"],
   },
+  // ---- Local capture bridge ----
+  {
+    id: "localCaptureBridge",
+    label: "Local capture CLI bridge (mori-local-capture)",
+    toolFamily: "terminal",
+    surface: "localCommand",
+    status: "docsTemplateOnly",
+    captureMode: "localCliWrapper",
+    userActionRequired:
+      "사용자가 mori-local-capture.py를 직접 실행 (--transcript / --note / --git-repo / --git-commit), 또는 mori-capture 셸 함수 / VS Code 태스크로 호출.",
+    canCreateSource: true,
+    canCreateEvents: true,
+    canEnterImportReview: true,
+    rawDataPolicy: "summaryOnly",
+    trustDefault: "observed",
+    privacyBoundary:
+      "사용자가 명시적으로 지정한 transcript 파일 / 노트 / git 저장소만 읽어 summary-only 이벤트를 ~/.mori/connectors/에 기록합니다. watcher 없음.",
+    whatMoriCanAccess: [
+      "사용자가 지정한 transcript 파일 / stdin의 summary",
+      "사용자가 입력한 노트",
+      "사용자가 지정한 repo의 git 메타데이터 (branch / SHA / 변경 파일 / diffstat)",
+    ],
+    whatMoriNeverAccesses: [
+      "raw transcript 본문",
+      "git diff / 파일 내용",
+      "셸 히스토리 자동 스캔",
+      "백그라운드 watcher / 데몬",
+      "계정 / API 키",
+    ],
+    setupRequirement:
+      "connectors/local-capture/ 의 mori-local-capture.py 실행 (Python 3.8+). 선택적으로 connectors/terminal-helper/ 셸 함수 또는 connectors/vscode-task/ 태스크 템플릿.",
+    nextStep:
+      "캡처 결과는 Evidence Hub의 Connector JSONL import로 검토됩니다; 더 깊은 IDE 통합은 별도 Track.",
+    relatedIntegrationIds: ["aiConversation", "gitDiff", "manualNote"],
+  },
   // ---- Claude family ----
   {
     id: "claudeCodeHook",
@@ -282,7 +318,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriCanAccess: ["사용자가 등록한 hook 이벤트의 summary", "tool 호출 메타데이터", "session start/finish 시각"],
     whatMoriNeverAccesses: ["Claude 계정", "Anthropic API 키", "다른 앱 / 브라우저", "raw transcript 본문 (기본은 summary_only)"],
     setupRequirement: "connectors/claude-code/ 템플릿을 사용자가 PATH에 설치.",
-    nextStep: "Evidence Hub에 \"Connector JSONL\" 탭을 추가해 파일 선택 → Import Review 자동 진입.",
+    nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 hook 설치를 돕는 in-app 가이드.",
     relatedIntegrationIds: ["claudeTranscript"],
   },
   {
@@ -343,7 +379,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriCanAccess: ["session_started / command_finished 메타데이터", "(옵션) git diff --shortstat 한 줄"],
     whatMoriNeverAccesses: ["Codex 계정", "API 키", "환경 변수", "git diff 본문", "stdout/stderr 전체"],
     setupRequirement: "connectors/codex-cli/ 템플릿을 PATH에 설치.",
-    nextStep: "Evidence Hub에 \"Connector JSONL\" 탭을 추가해 wrapper의 JSONL을 직접 import.",
+    nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 wrapper 설치를 돕는 in-app 가이드.",
     relatedIntegrationIds: ["codexTranscript"],
   },
   {
@@ -403,7 +439,8 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     privacyBoundary: "구현 시 파일 단위 이벤트만 캡처. 키 입력은 캡처하지 않음.",
     whatMoriCanAccess: ["(구현 시) 사용자가 열어둔 워크스페이스의 파일 open / save / test run 이벤트 메타데이터"],
     whatMoriNeverAccesses: ["키 입력", "터미널 출력 전체", "VS Code 계정"],
-    setupRequirement: "확장 미구현.",
+    setupRequirement:
+      "확장 미구현. 명시적 캡처는 connectors/vscode-task/ 태스크 템플릿(localCaptureBridge 호출)으로 오늘 가능.",
     nextStep: "extension manifest 설계 + 권한 모델 정의.",
     relatedIntegrationIds: ["vscode", "editor"],
   },
@@ -443,7 +480,8 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     privacyBoundary: "구현 시 명령 / exit code / 작업 디렉터리만 기록. stdout/stderr 본문은 기록하지 않음.",
     whatMoriCanAccess: ["(구현 시) 사용자가 hook으로 등록한 명령의 메타데이터"],
     whatMoriNeverAccesses: ["bash_history 자동 스캔", "환경 변수 dump", "다른 셸 세션"],
-    setupRequirement: "shell hook 미구현. Codex CLI wrapper와 별도 작업.",
+    setupRequirement:
+      "shell hook 미구현. 명시적 캡처는 connectors/terminal-helper/ 의 mori-capture 셸 함수(localCaptureBridge 호출)로 오늘 가능.",
     nextStep: "zsh / bash / fish preexec/precmd 후크 템플릿 정의.",
     relatedIntegrationIds: ["terminal"],
   },

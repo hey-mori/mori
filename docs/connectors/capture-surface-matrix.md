@@ -50,6 +50,7 @@ so the UI can derive labels and badges from a single source of truth.
 | Tauri Git diff capture | git | localCommand | Implemented | Yes |
 | Repository metadata (Verify) | git | localCommand | Implemented | n/a (no SourceRef) |
 | Quick Pass analysis | analysis | analysis | Implemented | n/a |
+| Local capture CLI bridge (mori-local-capture) | terminal | localCommand | **Docs-template-only** | Yes (via parser) |
 | Claude Code hook (local JSONL) | claude | cli | **Docs-template-only** | Yes (via parser) |
 | Claude Desktop export | claude | desktop | Planned | No |
 | Claude Web export | claude | web | Planned | No |
@@ -111,9 +112,14 @@ Specifically:
 - **Codex Desktop / Web / GitHub** — same posture. No GitHub OAuth, no
   cloud session capture. User must paste or import a file the user
   obtained themselves.
+- **Local capture CLI bridge** — `connectors/local-capture/mori-local-capture.py`,
+  run explicitly by the user (transcript / note / git / commit). The
+  shipped explicit-capture path; the VS Code task template and the
+  `mori-capture` shell helper are launchers for it.
 - **VS Code / Cursor / browser / terminal** — explicit extensions /
-  shell hooks that the user installs after reading their manifests.
-  Mori will not auto-discover.
+  shell hooks remain Planned; the explicit-capture path today is the
+  local capture bridge (via the `vscode-task` / `terminal-helper`
+  templates). Mori will not auto-discover.
 - **GitHub PR / commit import** — see
   [`github-pr-import.md`](./github-pr-import.md).
 - **File / document import** — explicit Tauri file picker. No

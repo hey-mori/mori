@@ -211,6 +211,9 @@ only — no phase numbers.
 - Real capture walkthrough — `docs/real-capture-walkthrough.md`: an
   end-to-end guide capturing real Claude / Codex / Git work through
   the shipped capture artifacts into the full Mori loop (Track B.3).
+- Capture-surface matrix honesty — `captureSurfaces.ts` now lists the
+  `localCaptureBridge` surface and the VS Code / terminal rows point
+  at the shipped explicit-capture templates; stale `nextStep`s fixed.
 
 **Open priority (highest first):**
 
@@ -218,11 +221,11 @@ All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
 Team/shared memory spec · continued loop) are approved; sequence them
 into small slices in this order:
 
-1. Capture-surface matrix honesty — the matrix (`captureSurfaces.ts`)
-   has no row for the shipped local-capture bridge and still calls
-   the VS Code / terminal surfaces `planned`; reconcile it with the
-   shipped `vscode-task` / `terminal-helper` artifacts.
-2. Project Memory UX polish for real captured data.
+1. Surface the client-safe marker on `.mori` import — when an
+   imported package has `clientSafeExport: true`, the import result
+   and the Consolidation Review import panel say so honestly.
+2. Project Memory UX polish for real captured data (open — needs a
+   concrete defect or improvement to slice).
 3. Queryable Memory extensions if a clear safe slice remains.
 
 Deferred — revisit when a concrete need appears:
@@ -247,44 +250,42 @@ backlog with it.
 
 The next slice should be:
 
-**Capture-surface matrix honesty — reconcile with shipped artifacts**
+**Surface the client-safe marker on `.mori` import**
 
 Goal:
-`captureSurfaces.ts` is Mori's honesty source of truth for every
-capture surface, and UI status copy derives from it. It has drifted:
-there is **no row** for the shipped local-capture bridge
-(`mori-local-capture.py`), and `vscodeExtension` /
-`terminalShellIntegration` are still `planned` even though the
-`vscode-task` and `terminal-helper` template artifacts shipped.
+`buildClientSafeMoriPackage` marks a package `clientSafeExport: true`
+and `getPackageIsClientSafe` reads it, but the import side never
+surfaces it. `team-shared-memory.md` §4–5 says an importer should be
+able to see a package was filtered. This slice closes that loop.
 
 Scope — do:
-- Add a capture-surface row for the local-capture CLI bridge — an
-  `implemented` explicit `localCliWrapper` surface that produces
-  connector JSONL and can enter Import Review.
-- Reconcile the VS Code / terminal rows with reality: the shipped
-  artifacts are `docsTemplateOnly` template surfaces (like
-  `claudeCodeHook` / `codexCliWrapper`), not bare `planned` — adjust
-  status / `nextStep` / setup copy to match, or add distinct rows for
-  the task / shell templates if that is cleaner than restating.
-- Keep every claim true today; the matrix tests reject fake-active
-  rows (no planned surface with `canEnterImportReview: true`).
+- Carry an `isClientSafe` boolean on the `ok` branch of
+  `ParseImportedMemoryResult`, set from `getPackageIsClientSafe` in
+  `parseImportedMemoryProposals` / `parseImportedMemoryProposalsFromZip`.
+- In the Consolidation Review import panel, when an imported package
+  is client-safe, show an honest note (e.g. "이 패키지는 client-safe
+  export입니다 — 일부 memory가 제외되었을 수 있습니다").
+- Keep it a small, honest UI note — no behaviour change to the
+  review flow itself.
 
 Scope — do not:
-- Invent a surface that does not exist.
-- Change the connector pipeline or the capture scripts.
+- Change the import / review / dedup logic.
+- Treat a client-safe package differently on accept — it still flows
+  through the normal review path.
 
 Suggested files:
-- `src/lib/connectors/captureSurfaces.ts`
-- `src/lib/connectors/captureSurfaces.test.ts`
-- `docs/connectors/capture-surface-matrix.md` if it restates rows.
+- `src/lib/project-memory/importedMemoryReview.ts` + its test
+- `src/features/memory/ConsolidationReviewView.tsx`
+- `docs/team-shared-memory.md`, `docs/project-memory-consolidation.md`
 
 Tests:
-- the new / adjusted rows satisfy the existing matrix invariants
-- the local-capture row reports `implemented` + `canEnterImportReview`
+- a client-safe package's import result carries `isClientSafe: true`
+- a normal package's result carries `isClientSafe: false`
 
-After this slice ships, set the next slice from the open backlog
-(Project Memory UX polish), reconciling with the goal document's
-Current Gaps.
+After this slice ships, Tracks A / B / C have their concrete slices
+done; reconcile section 7 with the goal document's Current Gaps and
+take the next genuinely concrete item (or surface that the remaining
+backlog needs a concrete defect / decision).
 
 ## 9. Stop Conditions
 
