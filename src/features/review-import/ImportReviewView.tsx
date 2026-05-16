@@ -97,7 +97,7 @@ export function ImportReviewView() {
         <div className="review-header-title">
           <h1>Import Review</h1>
           <p>
-            가져온 자료에서 Mori가 추출한 항목을 확인하고 Apply 전에 Accept / Discard를 결정하세요.
+            가져온 자료에서 Mori가 추출한 항목을 확인하고 적용 전에 수락 / 폐기를 결정하세요.
             적용 전까지 세션 메모리에는 추가되지 않습니다.
           </p>
         </div>
@@ -158,7 +158,7 @@ export function ImportReviewView() {
           <header className="review-events-head">
             <div>
               <h2>추출된 Timeline 이벤트</h2>
-              <p>각 항목은 Apply 시점에 세션 타임라인에 추가됩니다. Discard한 항목은 제외됩니다.</p>
+              <p>각 항목은 적용 시점에 세션 타임라인에 추가됩니다. 폐기한 항목은 제외됩니다.</p>
             </div>
             <div className="review-events-actions">
               <Button
@@ -166,14 +166,14 @@ export function ImportReviewView() {
                 onClick={() => setAllStatus("accepted")}
                 disabled={draft.events.length === 0 || draft.events.every((item) => item.status === "accepted")}
               >
-                전부 Accept
+                전부 수락
               </Button>
               <Button
                 icon={Trash2}
                 onClick={() => setAllStatus("discarded")}
                 disabled={draft.events.length === 0 || draft.events.every((item) => item.status === "discarded")}
               >
-                전부 Discard
+                전부 폐기
               </Button>
             </div>
           </header>
@@ -242,17 +242,17 @@ function ReviewFooter({
           title={
             applyable
               ? `${counts.accepted}개의 이벤트를 세션에 적용`
-              : "최소 1개 이상의 이벤트를 Accept해야 적용할 수 있습니다."
+              : "최소 1개 이상의 이벤트를 수락해야 적용할 수 있습니다."
           }
         >
-          Apply to Timeline ({counts.accepted})
+          Timeline에 적용 ({counts.accepted})
         </Button>
       </div>
       {!applyable ? (
         <p className="review-footer-hint">
           {draft.origin === "ai-transcript"
-            ? "AI Transcript는 1개의 요약 이벤트를 생성합니다. Accept를 누른 뒤 Apply 하세요."
-            : "Apply 하려면 적어도 1개의 추출 이벤트를 Accept하세요."}
+            ? "AI Transcript는 1개의 요약 이벤트를 생성합니다. 수락을 누른 뒤 적용하세요."
+            : "적용하려면 적어도 1개의 추출 이벤트를 수락하세요."}
         </p>
       ) : null}
     </footer>
@@ -263,7 +263,7 @@ function EmptyEventList() {
   return (
     <div className="review-events-empty">
       <h3>추출된 이벤트가 없습니다</h3>
-      <p>이 가져오기에서는 Timeline 이벤트 후보가 생성되지 않았습니다. Cancel을 눌러 Evidence Hub로 돌아가거나 다른 소스를 가져오세요.</p>
+      <p>이 가져오기에서는 Timeline 이벤트 후보가 생성되지 않았습니다. ‘Evidence로 돌아가기’를 눌러 Evidence Hub로 돌아가거나 다른 소스를 가져오세요.</p>
     </div>
   );
 }

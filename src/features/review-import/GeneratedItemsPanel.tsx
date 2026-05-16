@@ -23,7 +23,7 @@ export function GeneratedItemsPanel({ draft }: { draft: ImportReviewDraft }) {
     <aside className="review-generated" aria-label="Generated items">
       <header className="review-generated-head">
         <h3>생성된 항목</h3>
-        <p>이슈 · 결정 · 다음 액션은 Apply 후 Quick Pass에서 만들어집니다.</p>
+        <p>이슈 · 결정 · 다음 액션은 적용 후 Quick Pass에서 만들어집니다.</p>
       </header>
 
       <section className="review-generated-section">
@@ -45,8 +45,8 @@ export function GeneratedItemsPanel({ draft }: { draft: ImportReviewDraft }) {
         <footer className="review-generated-footer">
           <Sparkles size={14} aria-hidden="true" />
           <p>
-            현재 가져오기 단계에서는 이벤트 후보만 추출됩니다. Apply 후 Evidence Hub에서
-            <strong> Run Quick Pass</strong>를 실행하면 이 세션 전체에 대한 이슈/결정/다음 액션 후보를
+            현재 가져오기 단계에서는 이벤트 후보만 추출됩니다. 적용 후 Evidence Hub에서
+            <strong> Quick Pass 실행</strong>을 누르면 이 세션 전체에 대한 이슈/결정/다음 액션 후보를
             생성할 수 있습니다.
           </p>
         </footer>
