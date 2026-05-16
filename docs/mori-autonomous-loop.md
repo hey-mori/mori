@@ -214,19 +214,32 @@ only — no phase numbers.
 - Capture-surface matrix honesty — `captureSurfaces.ts` now lists the
   `localCaptureBridge` surface and the VS Code / terminal rows point
   at the shipped explicit-capture templates; stale `nextStep`s fixed.
+- Client-safe marker surfaced on import — `ParseImportedMemoryResult`
+  carries `isClientSafe`; the Consolidation Review import panel notes
+  a client-safe package so the Reviewer knows the handoff is partial.
 
 **Open priority (highest first):**
 
-All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
-Team/shared memory spec · continued loop) are approved; sequence them
-into small slices in this order:
+The four approved roadmap tracks have had their concrete, well-defined
+slices shipped:
 
-1. Surface the client-safe marker on `.mori` import — when an
-   imported package has `clientSafeExport: true`, the import result
-   and the Consolidation Review import panel say so honestly.
-2. Project Memory UX polish for real captured data (open — needs a
-   concrete defect or improvement to slice).
-3. Queryable Memory extensions if a clear safe slice remains.
+- **Track A (Real `.mori` zip)** — complete: zip helper, export, import.
+- **Track B (IDE/terminal capture)** — complete: `vscode-task` and
+  `terminal-helper` templates, real-capture walkthrough,
+  capture-surface matrix honesty. A real editor extension is
+  deliberately gated on the explicit-capture contract being proven
+  in use (deferred).
+- **Track C (Team/shared memory)** — complete: spec, client-safe
+  filter, client-safe export UI, handoff workflow, import marker.
+- **Track D (continued loop)** — ongoing.
+
+Remaining named items are **conditional** — each needs a concrete
+defect or a clear safe slice before it can be honestly defined; the
+loop must not manufacture vague polish to avoid this:
+
+1. Project Memory UX polish — open; needs a concrete defect /
+   improvement observed against real captured data.
+2. Queryable Memory extensions — open; needs a clear, safe slice.
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -248,44 +261,31 @@ backlog with it.
 
 ## 8. Current Next Slice
 
-The next slice should be:
+**The four approved roadmap tracks have had their concrete,
+well-defined slices shipped** (see section 7). The product loop —
+capture → preview → Import Review → Timeline / Evidence Hub → Project
+Memory → Consolidation Review → Accepted Memory → Resume Prompt /
+Reports → `.mori` handoff — is built, tested (942 TS + 45 Rust), and
+documented end to end.
 
-**Surface the client-safe marker on `.mori` import**
+The next slice is **not** auto-selectable: the remaining backlog
+items are conditional polish, and per the decision standard the loop
+must not manufacture a vague "polish" slice with no identified
+defect. A genuine next slice needs one of:
 
-Goal:
-`buildClientSafeMoriPackage` marks a package `clientSafeExport: true`
-and `getPackageIsClientSafe` reads it, but the import side never
-surfaces it. `team-shared-memory.md` §4–5 says an importer should be
-able to see a package was filtered. This slice closes that loop.
+1. **A concrete defect** observed against real captured data — then
+   "Project Memory UX polish" becomes a real, sliceable fix.
+2. **A clear, safe Queryable Memory extension** — a specific search
+   capability with a real use case.
+3. **A new product direction** — e.g. proven-in-use feedback that
+   unblocks a real editor extension, or a new track.
 
-Scope — do:
-- Carry an `isClientSafe` boolean on the `ok` branch of
-  `ParseImportedMemoryResult`, set from `getPackageIsClientSafe` in
-  `parseImportedMemoryProposals` / `parseImportedMemoryProposalsFromZip`.
-- In the Consolidation Review import panel, when an imported package
-  is client-safe, show an honest note (e.g. "이 패키지는 client-safe
-  export입니다 — 일부 memory가 제외되었을 수 있습니다").
-- Keep it a small, honest UI note — no behaviour change to the
-  review flow itself.
+Until one of those exists, there is no honest dependency-free
+production slice left. Per section 9 this is a legitimate stop point
+— surface it; do not invent filler.
 
-Scope — do not:
-- Change the import / review / dedup logic.
-- Treat a client-safe package differently on accept — it still flows
-  through the normal review path.
-
-Suggested files:
-- `src/lib/project-memory/importedMemoryReview.ts` + its test
-- `src/features/memory/ConsolidationReviewView.tsx`
-- `docs/team-shared-memory.md`, `docs/project-memory-consolidation.md`
-
-Tests:
-- a client-safe package's import result carries `isClientSafe: true`
-- a normal package's result carries `isClientSafe: false`
-
-After this slice ships, Tracks A / B / C have their concrete slices
-done; reconcile section 7 with the goal document's Current Gaps and
-take the next genuinely concrete item (or surface that the remaining
-backlog needs a concrete defect / decision).
+When the next concrete item is identified, replace this section with
+its slice spec and resume.
 
 ## 9. Stop Conditions
 

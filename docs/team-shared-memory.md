@@ -178,7 +178,9 @@ not move it.
    `File` picker in the browser).
 2. The package's accepted memory becomes **review proposals** — it is
    never merged automatically. Memory the project already holds is
-   skipped (origin / title dedup) and the skips are reported.
+   skipped (origin / title dedup) and the skips are reported. If the
+   package was a **client-safe export**, the panel says so — the
+   Reviewer knows the handoff may be partial.
 3. Review each proposal: accept, edit, or discard. Only accepted
    proposals become the Reviewer's durable accepted memory, through
    the normal apply path with its audit row.

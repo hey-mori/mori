@@ -83,7 +83,14 @@ const KIND_HINT: Record<MemoryProposalKind, string> = {
 
 type ImportPackageMessage =
   | { kind: "idle" }
-  | { kind: "ok"; packageId: string; added: number; skipped: number; memoryCount: number }
+  | {
+      kind: "ok";
+      packageId: string;
+      added: number;
+      skipped: number;
+      memoryCount: number;
+      isClientSafe: boolean;
+    }
   | { kind: "error"; message: string };
 
 export function ConsolidationReviewView() {
@@ -178,6 +185,7 @@ export function ConsolidationReviewView() {
       added: result.proposals.length,
       skipped: result.skipped.length,
       memoryCount: result.memoryCount,
+      isClientSafe: result.isClientSafe,
     });
   }
 
@@ -508,6 +516,12 @@ function ImportPackagePanel({
           {message.packageId} · accepted memory {message.memoryCount}건 중 제안 {message.added}건
           추가
           {message.skipped > 0 ? ` · 중복 ${message.skipped}건 건너뜀` : ""}.
+        </p>
+      ) : null}
+      {message.kind === "ok" && message.isClientSafe ? (
+        <p className="consolidation-review-import-note">
+          이 패키지는 client-safe export입니다 — 내보낸 쪽에서 client-safe가 아닌 memory는
+          제외되었을 수 있으므로 완전한 handoff가 아닐 수 있습니다.
         </p>
       ) : null}
       {message.kind === "error" ? (

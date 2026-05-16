@@ -27,6 +27,7 @@ import type { MoriPackageV0 } from "../mori-package";
 import {
   deserializeMoriPackage,
   getPackageConsolidatedMemories,
+  getPackageIsClientSafe,
   unzipMoriPackage,
 } from "../mori-package";
 
@@ -108,6 +109,12 @@ export type ParseImportedMemoryResult =
       memoryCount: number;
       proposals: MemoryProposal[];
       skipped: ImportedMemorySkip[];
+      /**
+       * True when the package was produced by the client-safe export
+       * filter — some memory may have been excluded before export, so
+       * the importer should not treat it as a complete handoff.
+       */
+      isClientSafe: boolean;
     }
   | { ok: false; error: string };
 
@@ -168,6 +175,7 @@ function proposalsFromImportedPackage(
     memoryCount: packageMemories.length,
     proposals,
     skipped,
+    isClientSafe: getPackageIsClientSafe(pkg),
   };
 }
 

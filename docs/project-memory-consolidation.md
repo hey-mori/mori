@@ -351,7 +351,10 @@ Phased so this milestone introduces no storage change.
   zip magic — a real zip is unzipped and validated, anything else is
   read as JSON. Imported-memory proposals merge into the review list,
   and accepting one runs the normal apply path. Skipped duplicates and
-  parse errors are reported honestly.
+  parse errors are reported honestly. When the package was produced
+  by the client-safe export filter (`clientSafeExport` manifest flag),
+  the import result carries `isClientSafe` and the panel notes that
+  some memory may have been excluded — the handoff may be partial.
 - The `auditTrail[]` slice is not carried yet — a later addition.
 
 ### 8.5 What never gets stored

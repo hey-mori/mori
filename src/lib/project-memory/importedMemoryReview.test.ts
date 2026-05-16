@@ -6,6 +6,7 @@ import {
 } from "./importedMemoryReview";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 import {
+  buildClientSafeMoriPackage,
   createMoriPackageFromSession,
   serializeMoriPackage,
   zipMoriPackage,
@@ -197,6 +198,23 @@ describe("parseImportedMemoryProposals", () => {
     expect(result.memoryCount).toBe(0);
     expect(result.proposals).toEqual([]);
   });
+
+  it("reports a normal package as not client-safe", () => {
+    const result = parseImportedMemoryProposals(packageJson([memory("a")]), []);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.isClientSafe).toBe(false);
+  });
+
+  it("reports a client-safe package as client-safe", () => {
+    const safe = buildClientSafeMoriPackage(
+      createMoriPackageFromSession(moriMockSession, { consolidatedMemories: [] }),
+    );
+    const result = parseImportedMemoryProposals(serializeMoriPackage(safe), []);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.isClientSafe).toBe(true);
+  });
 });
 
 function packageZip(memories: StoredAcceptedProjectMemory[]): Uint8Array {
@@ -242,5 +260,15 @@ describe("parseImportedMemoryProposalsFromZip", () => {
     if (!result.ok) return;
     expect(result.proposals).toHaveLength(0);
     expect(result.skipped).toHaveLength(1);
+  });
+
+  it("reports a client-safe zip package as client-safe", () => {
+    const safe = buildClientSafeMoriPackage(
+      createMoriPackageFromSession(moriMockSession, { consolidatedMemories: [] }),
+    );
+    const result = parseImportedMemoryProposalsFromZip(zipMoriPackage(safe), []);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.isClientSafe).toBe(true);
   });
 });
