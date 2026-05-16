@@ -1,9 +1,9 @@
-import type { FeatureCapability, FeatureId, FeatureStatus } from "../../app/featureStatus";
+import type { FeatureId, FeatureStatus } from "../../app/featureStatus";
+import { FEATURE_STATUS_LABEL, getFeature } from "../../app/featureStatus";
 import {
-  FEATURE_STATUS_LABEL,
-  FEATURE_STATUS_TONE,
-  getFeature,
-} from "../../app/featureStatus";
+  getProductAvailabilityTone,
+  productAvailabilityFromFeatureStatus,
+} from "../../lib/product-state/productState";
 
 export type MoriFeatureStatusBadgeProps = {
   /** Either a `FeatureId` (looked up in the registry) or a `FeatureStatus`. */
@@ -15,17 +15,13 @@ export type MoriFeatureStatusBadgeProps = {
   withTooltip?: boolean;
 };
 
-const TONE_TO_DATA: Record<FeatureCapability["status"], string> = {
-  implemented: "success",
-  partial: "info",
-  planned: "warning",
-  unavailable: "neutral",
-};
-
 /**
  * Status chip that surfaces a feature's `implemented / partial / planned /
  * unavailable` status using the canonical registry copy. Backed by the
  * `.mori-feature-status-chip` CSS rules in `styles/theme.css`.
+ *
+ * The tone is derived through the shared product-state model rather than a
+ * badge-local map, matching `MoriStatusBadge`.
  */
 export function MoriFeatureStatusBadge({
   feature,
@@ -50,7 +46,9 @@ export function MoriFeatureStatusBadge({
     resolvedStatus = "planned";
     resolvedLabel = label ?? FEATURE_STATUS_LABEL.planned;
   }
-  const tone = TONE_TO_DATA[resolvedStatus];
+  const tone = getProductAvailabilityTone(
+    productAvailabilityFromFeatureStatus(resolvedStatus),
+  );
   return (
     <span
       className="mori-feature-status-chip"
@@ -62,5 +60,3 @@ export function MoriFeatureStatusBadge({
     </span>
   );
 }
-
-export { FEATURE_STATUS_TONE };

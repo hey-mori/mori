@@ -25,6 +25,7 @@ import {
   getProductAvailabilityDisplay,
   productAvailabilityFromIntegrationStatus,
 } from "../../lib/product-state/productState";
+import { getTrustTone } from "../../lib/evidence/trust";
 
 const CAPTURE_LABELS: Record<string, string> = {
   manual: "Manual input",
@@ -39,12 +40,6 @@ const RAW_LABELS: Record<string, string> = {
   summaryOnly: "Summary only",
   redacted: "Redacted",
   notCaptured: "Not captured",
-};
-
-const TRUST_TONE: Record<string, "green" | "blue" | "purple"> = {
-  verified: "green",
-  observed: "blue",
-  inferred: "purple",
 };
 
 const INTEGRATION_ICON: Record<string, LucideIcon> = {
@@ -93,7 +88,7 @@ export function IntegrationCard({
   const isPartial = integration.status === "partial";
   const actionLabel = getHubCardActionLabel(integration);
   const canTakeAction = Boolean(importKind) && !isPlanned && Boolean(onPrimary) && !primaryDisabled;
-  const trustTone = TRUST_TONE[integration.trustDefault] ?? "purple";
+  const trustTone = getTrustTone(integration.trustDefault);
   const availability = getProductAvailabilityDisplay(
     productAvailabilityFromIntegrationStatus(integration.status),
   );

@@ -1,7 +1,6 @@
 import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../analysis";
 import {
   getIntegrationsByStatus,
-  type IntegrationStatus,
   type SourceIntegration,
 } from "../sources/sourceRegistry";
 
@@ -378,12 +377,4 @@ export function getRecommendedSetupStep({
     };
   }
   return { id: "all-good", label: "설정이 모두 완료되었습니다. 다음 세션을 시작하세요." };
-}
-
-export function statusLabelForIntegrationStatus(status: IntegrationStatus): string {
-  if (status === "implemented") return "Available";
-  if (status === "partial") return "Partial";
-  if (status === "planned") return "Planned";
-  if (status === "mockOnly") return "Demo only";
-  return "Unavailable";
 }

@@ -266,4 +266,19 @@ describe("memory lifecycle vs trust provenance separation", () => {
     expect(getProductMemoryStatusLabel("accepted")).toBe("수락");
     expect(getProductDataLabel("verified")).toBe("Verified");
   });
+
+  it("keeps companion suggestion state distinct from trust provenance", () => {
+    // A companion signal explains *why Mori is surfacing something*; trust
+    // explains *how grounded an item is*. They never share a label.
+    const companionLabels = Object.values(PRODUCT_COMPANION_STATE_LABELS).map(
+      (display) => display.label,
+    );
+    for (const trust of ["verified", "observed", "inferred"] as const) {
+      expect(companionLabels).not.toContain(getProductDataLabel(trust));
+    }
+    // A review-needed companion state must not borrow the verified tone.
+    expect(getProductCompanionStateTone("review")).not.toBe(
+      getProductDataDisplay("verified").tone,
+    );
+  });
 });

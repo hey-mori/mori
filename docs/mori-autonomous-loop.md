@@ -501,10 +501,25 @@ Open (highest value first):
       the shared model. Memory lifecycle, trust / provenance, and
       companion suggestion state stay distinct families — a companion
       signal is always a reviewable suggestion, never an automatic act.
-    - Open — the broader `Badge` → `MoriStatusBadge` migration across
-      the remaining surfaces is still planned, and the trust / status
-      display-helper consolidation plus removal of the last duplicate
-      tone maps is the next pass.
+    - ✅ Trust / status helper consolidation — `MoriFeatureStatusBadge`
+      derives its tone from the shared model instead of a badge-local
+      `TONE_TO_DATA` map; `IntegrationCard` reuses `getTrustTone` rather
+      than a local `TRUST_TONE` map; the unused, duplicated
+      `statusLabelForIntegrationStatus` (overlapping
+      `getIntegrationStatusLabel`) was removed; and the Evidence
+      `SourceDetailPanel` / Import-review `SourceSummaryCard` status and
+      trust badges moved onto `MoriStatusBadge` / `MoriTrustBadge`,
+      dropping their local `STATUS_TONE` maps. Trust / provenance,
+      memory lifecycle, companion suggestion, and feature availability
+      stay distinct families — no concepts were merged.
+    - Open — the broader `Badge` → `MoriStatusBadge` migration is
+      intentionally partial and should continue surface-by-surface, not
+      as one reckless rewrite. Remaining trust-badge sites
+      (`KeyEvidenceCard`, `ReviewDetailPanel`, `ImportedSourceRow`) and
+      the Timeline card trust map (`timelineCards.ts`) are deliberately
+      left for their own focused passes; the legacy `FEATURE_STATUS_TONE`
+      scale used by `productFlow.ts` is left untouched until its
+      consumers can move together.
 13. Settings provider cards — planned / unavailable AI providers
     still look like selectable options; mark them clearly.
 14. Settings trust panel — the privacy / trust text block is dense;

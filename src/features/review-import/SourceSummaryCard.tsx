@@ -1,16 +1,14 @@
 import { CalendarClock, FileText, Lock } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
+import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
+import { MoriTrustBadge } from "../../components/ui/MoriTrustBadge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import type { SourceRef } from "../../domain/types";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
-
-const STATUS_TONE: Record<string, "green" | "blue" | "gray" | "orange"> = {
-  implemented: "green",
-  partial: "blue",
-  planned: "gray",
-  mockOnly: "orange",
-  unavailable: "gray",
-};
+import {
+  getProductAvailabilityTone,
+  productAvailabilityFromIntegrationStatus,
+} from "../../lib/product-state/productState";
 
 export function SourceSummaryCard({ source }: { source: SourceRef }) {
   const display = getSourceDisplayStatus(source);
@@ -29,8 +27,14 @@ export function SourceSummaryCard({ source }: { source: SourceRef }) {
 
       <div className="review-source-card-badges">
         <Badge tone="purple">{display.integrationLabel}</Badge>
-        <Badge tone={display.trustTone}>{display.trustLabel}</Badge>
-        <Badge tone={STATUS_TONE[display.status] ?? "gray"}>{display.statusLabel}</Badge>
+        <MoriTrustBadge level={source.trustLevel} />
+        <MoriStatusBadge
+          tone={getProductAvailabilityTone(
+            productAvailabilityFromIntegrationStatus(display.status),
+          )}
+        >
+          {display.statusLabel}
+        </MoriStatusBadge>
       </div>
 
       <SectionHeader title="가져오기 정보" />

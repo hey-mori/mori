@@ -1,5 +1,7 @@
 import { CalendarClock, Lock, MapPin, ShieldCheck } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
+import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
+import { MoriTrustBadge } from "../../components/ui/MoriTrustBadge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels } from "../../domain/constants";
 import type { MoriMockSession } from "../../domain/types";
@@ -12,20 +14,14 @@ import {
 } from "../../lib/evidence/provenance";
 import { getTrustDisplay } from "../../lib/evidence/trust";
 import {
+  getProductAvailabilityTone,
+  productAvailabilityFromIntegrationStatus,
+} from "../../lib/product-state/productState";
+import {
   describeConnectorSourceImportBadge,
   getConnectorSourceImportBadgeTone,
   type ConnectorSourceImportSummary,
 } from "../../lib/connectors";
-
-// Tone stays a local map until the panel's badges migrate to
-// MoriStatusBadge; the label maps now come from `provenance.ts`.
-const STATUS_TONE: Record<string, "green" | "blue" | "gray" | "orange"> = {
-  implemented: "green",
-  partial: "blue",
-  planned: "gray",
-  mockOnly: "orange",
-  unavailable: "gray",
-};
 
 export type EvidenceDetailSelection =
   | { kind: "source"; sourceId: string }
@@ -115,8 +111,14 @@ function SourceDetailView({
     <aside className="evidence-detail" aria-label="Source detail">
       <header className="evidence-detail-header">
         <div className="evidence-detail-badges">
-          <Badge tone={display.trustTone}>{display.trustLabel}</Badge>
-          <Badge tone={STATUS_TONE[display.status]}>{display.statusLabel}</Badge>
+          <MoriTrustBadge level={source.trustLevel} />
+          <MoriStatusBadge
+            tone={getProductAvailabilityTone(
+              productAvailabilityFromIntegrationStatus(display.status),
+            )}
+          >
+            {display.statusLabel}
+          </MoriStatusBadge>
           <Badge tone="purple">{display.integrationLabel}</Badge>
         </div>
         <h3>{source.title}</h3>
@@ -255,9 +257,13 @@ function IntegrationDetailView({
     <aside className="evidence-detail" aria-label="Integration detail">
       <header className="evidence-detail-header">
         <div className="evidence-detail-badges">
-          <Badge tone={STATUS_TONE[integration.status]}>
+          <MoriStatusBadge
+            tone={getProductAvailabilityTone(
+              productAvailabilityFromIntegrationStatus(integration.status),
+            )}
+          >
             {getIntegrationStatusLabel(integration.status)}
-          </Badge>
+          </MoriStatusBadge>
           <Badge tone="purple">{integration.id}</Badge>
         </div>
         <h3>{integration.label}</h3>

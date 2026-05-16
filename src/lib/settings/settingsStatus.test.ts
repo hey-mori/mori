@@ -5,7 +5,6 @@ import {
   getProviderRows,
   getRecommendedSetupStep,
   getStorageStatusRows,
-  statusLabelForIntegrationStatus,
   summarizeRepositories,
 } from "./settingsStatus";
 import { DEFAULT_QUICK_PASS_SETTINGS, type QuickPassAnalysisSettings } from "../analysis";
@@ -229,15 +228,5 @@ describe("getRecommendedSetupStep", () => {
         providerKind: "ollama",
       }).id,
     ).toBe("all-good");
-  });
-});
-
-describe("statusLabelForIntegrationStatus", () => {
-  it("maps each status to its display label", () => {
-    expect(statusLabelForIntegrationStatus("implemented")).toBe("Available");
-    expect(statusLabelForIntegrationStatus("partial")).toBe("Partial");
-    expect(statusLabelForIntegrationStatus("planned")).toBe("Planned");
-    expect(statusLabelForIntegrationStatus("mockOnly")).toBe("Demo only");
-    expect(statusLabelForIntegrationStatus("unavailable")).toBe("Unavailable");
   });
 });
