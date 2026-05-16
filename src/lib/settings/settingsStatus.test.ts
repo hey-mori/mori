@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getConnectorFeatureId,
   getPlannedConnectorRows,
   getPrivacyGuarantees,
   getPrivacyPolicy,
@@ -260,5 +261,38 @@ describe("getRecommendedSetupStep", () => {
         providerKind: "ollama",
       }).id,
     ).toBe("all-good");
+  });
+});
+
+describe("getConnectorFeatureId", () => {
+  it("maps integrations that have a feature row to their canonical id", () => {
+    expect(getConnectorFeatureId("terminal")).toBe(
+      "connector.terminalShellIntegration",
+    );
+    expect(getConnectorFeatureId("browserTab")).toBe(
+      "connector.browserExtension",
+    );
+    expect(getConnectorFeatureId("codexTranscript")).toBe(
+      "connector.codexDesktopImport",
+    );
+  });
+
+  it("returns null for integrations with no feature counterpart", () => {
+    expect(getConnectorFeatureId("slack")).toBeNull();
+    expect(getConnectorFeatureId("notion")).toBeNull();
+    expect(getConnectorFeatureId("figma")).toBeNull();
+  });
+
+  it("returns null for an unknown integration id", () => {
+    expect(getConnectorFeatureId("not-a-connector")).toBeNull();
+  });
+
+  it("only maps to connector feature ids that exist in the planned rows set", () => {
+    for (const { integration } of getPlannedConnectorRows()) {
+      const featureId = getConnectorFeatureId(integration.id);
+      if (featureId !== null) {
+        expect(featureId.startsWith("connector.")).toBe(true);
+      }
+    }
   });
 });

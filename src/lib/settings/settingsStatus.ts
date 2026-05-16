@@ -1,3 +1,4 @@
+import type { FeatureId } from "../../app/featureStatus";
 import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../analysis";
 import {
   getIntegrationsByStatus,
@@ -310,6 +311,28 @@ export function getPlannedConnectorRows(): ConnectorRow[] {
       "Mori 외부 호스트로의 자동 전송",
     ],
   }));
+}
+
+/**
+ * Bridge from a legacy `sourceRegistry` integration id to the canonical
+ * `featureStatus.ts` feature id. Integrations that have a real feature
+ * row resolve their Planned-action copy from the registry; ones that do
+ * not yet have a counterpart (slack / notion / figma / docs) return
+ * `null` so the caller falls back to a generic Planned action rather
+ * than fabricating a registry row.
+ */
+const CONNECTOR_FEATURE_ID: Record<string, FeatureId> = {
+  terminal: "connector.terminalShellIntegration",
+  fileSystem: "connector.fileDocumentImport",
+  editor: "connector.vscodeExtension",
+  vscode: "connector.vscodeExtension",
+  cursor: "connector.cursorExtension",
+  browserTab: "connector.browserExtension",
+  codexTranscript: "connector.codexDesktopImport",
+};
+
+export function getConnectorFeatureId(integrationId: string): FeatureId | null {
+  return CONNECTOR_FEATURE_ID[integrationId] ?? null;
 }
 
 function derivePlannedAccess(integration: SourceIntegration): string[] {
