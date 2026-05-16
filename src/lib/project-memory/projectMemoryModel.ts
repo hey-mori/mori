@@ -376,20 +376,24 @@ export function emptyProjectMemoryViewModel(args: {
   };
 }
 
+/**
+ * Korean label for the `dataBasis` flag — the single source of truth for
+ * the data-basis badge copy across the Project Memory surfaces.
+ */
 export function describeProjectMemoryDataBasis(basis: ProjectMemoryDataBasis): string {
   switch (basis) {
     case "activeSessionOnly":
-      return "Active session only";
+      return "현재 세션만 집계";
     case "activePlusSavedSessions":
-      return "Active + saved sessions";
+      return "현재 + 저장 세션 집계";
     case "savedSessionMetadataOnly":
-      return "Metadata only";
+      return "저장 세션은 메타데이터만";
     case "partialSavedSessionLoad":
-      return "Partial saved-session load";
+      return "저장 세션 일부만 본문 로드";
     case "unavailable":
-      return "Demo / unavailable";
+      return "데모 / 메모리 없음";
     default:
-      return "Active session only";
+      return "현재 세션만 집계";
   }
 }
 

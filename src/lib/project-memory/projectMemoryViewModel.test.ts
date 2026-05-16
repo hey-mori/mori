@@ -562,11 +562,18 @@ describe("project memory model helpers", () => {
     expect(empty.warnings).toEqual([{ kind: "storage-unavailable" }]);
   });
 
-  it("describes every data basis with a stable label", () => {
-    expect(describeProjectMemoryDataBasis("activeSessionOnly")).toMatch(/active session/i);
-    expect(describeProjectMemoryDataBasis("activePlusSavedSessions")).toMatch(/saved/i);
-    expect(describeProjectMemoryDataBasis("savedSessionMetadataOnly")).toMatch(/metadata/i);
-    expect(describeProjectMemoryDataBasis("unavailable")).toMatch(/demo|unavailable/i);
+  it("describes every data basis with a stable Korean label", () => {
+    expect(describeProjectMemoryDataBasis("activeSessionOnly")).toBe("현재 세션만 집계");
+    expect(describeProjectMemoryDataBasis("activePlusSavedSessions")).toBe(
+      "현재 + 저장 세션 집계",
+    );
+    expect(describeProjectMemoryDataBasis("savedSessionMetadataOnly")).toBe(
+      "저장 세션은 메타데이터만",
+    );
+    expect(describeProjectMemoryDataBasis("partialSavedSessionLoad")).toBe(
+      "저장 세션 일부만 본문 로드",
+    );
+    expect(describeProjectMemoryDataBasis("unavailable")).toBe("데모 / 메모리 없음");
   });
 
   it("maps data basis tones to the existing badge palette", () => {

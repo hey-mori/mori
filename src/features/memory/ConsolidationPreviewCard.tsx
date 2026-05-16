@@ -2,7 +2,10 @@ import { BrainCircuit, Layers } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriSection } from "../../components/ui/MoriSection";
-import { getProjectMemoryDataBasisTone } from "../../lib/project-memory/projectMemoryModel";
+import {
+  describeProjectMemoryDataBasis,
+  getProjectMemoryDataBasisTone,
+} from "../../lib/project-memory/projectMemoryModel";
 import {
   describeProposalKind,
   type ProjectMemoryConsolidationState,
@@ -13,10 +16,9 @@ import {
  *
  * Reads the typed `ProjectMemoryConsolidationState` and renders a
  * compact, honest summary of what the Consolidation Review Surface
- * proposes. When proposals exist the "Review proposals" button
- * opens the review surface; durable Accepted Memory Persistence is
- * still planned, so the review actions inside that surface remain
- * local-draft only.
+ * proposes. When proposals exist the "제안 검토" button opens the
+ * Consolidation Review surface, where the user accepts / edits /
+ * discards each proposal before any memory is persisted.
  */
 export function ConsolidationPreviewCard({
   state,
@@ -40,8 +42,9 @@ export function ConsolidationPreviewCard({
       }
       hint={
         <span>
-          누적된 Project Memory에서 승격할 항목을 미리 보여줍니다. 검토(Review) UI는 다음 단계(Phase
-          2.2)에서 도착합니다. 사용자가 승인하기 전까지는 어떤 메모리도 저장되지 않습니다.
+          누적된 Project Memory에서 승격할 항목을 미리 보여줍니다. ‘제안 검토’를 누르면 Consolidation
+          Review에서 각 제안을 검토할 수 있으며, 사용자가 승인하기 전까지는 어떤 메모리도 저장되지
+          않습니다.
         </span>
       }
     >
@@ -50,7 +53,7 @@ export function ConsolidationPreviewCard({
           <strong>{headline}</strong>
           {state.emptyReason ? <span className="memory-consolidation-empty">{state.emptyReason}</span> : null}
         </div>
-        <Badge tone={dataBasisTone}>{state.dataBasis}</Badge>
+        <Badge tone={dataBasisTone}>{describeProjectMemoryDataBasis(state.dataBasis)}</Badge>
       </header>
 
       {state.proposalCount > 0 ? (
@@ -82,7 +85,7 @@ export function ConsolidationPreviewCard({
               : "검토할 제안이 없습니다."
           }
         >
-          {reviewable ? "Review proposals" : "Review proposals (none yet)"}
+          {reviewable ? "제안 검토" : "검토할 제안 없음"}
         </Button>
         <small>{state.nextStepLabel}</small>
       </footer>
@@ -93,14 +96,14 @@ export function ConsolidationPreviewCard({
 function headlineFor(state: ProjectMemoryConsolidationState): string {
   switch (state.status) {
     case "ready":
-      return `${state.proposalCount} proposals ready for review`;
+      return `검토 대기 중인 제안 ${state.proposalCount}건`;
     case "partial":
-      return `${state.proposalCount} proposals from partial data`;
+      return `부분 데이터 기반 제안 ${state.proposalCount}건`;
     case "empty":
-      return "No proposals yet";
+      return "아직 제안이 없습니다";
     case "unavailable":
     default:
-      return "Consolidation unavailable";
+      return "Consolidation을 사용할 수 없습니다";
   }
 }
 

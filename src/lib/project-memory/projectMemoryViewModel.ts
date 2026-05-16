@@ -38,6 +38,7 @@ import type {
   StoredSessionSummary,
 } from "../storage/storageTypes";
 import {
+  describeProjectMemoryDataBasis,
   emptyProjectMemoryViewModel,
   mapStoredImportToReimportItem,
   type ProjectMemoryDataBasis,
@@ -206,7 +207,7 @@ export function buildProjectMemoryViewModel(
     projectName: view.project.name,
     projectDescription: view.project.description,
     dataBasis,
-    dataBasisLabel: describeDataBasisKorean(dataBasis),
+    dataBasisLabel: describeProjectMemoryDataBasis(dataBasis),
     summaryStats,
     recentSessions,
     keyDecisions,
@@ -614,23 +615,6 @@ function resolveDataBasis(args: {
     return "activePlusSavedSessions";
   }
   return "savedSessionMetadataOnly";
-}
-
-function describeDataBasisKorean(basis: ProjectMemoryDataBasis): string {
-  switch (basis) {
-    case "activeSessionOnly":
-      return "현재 세션만 집계";
-    case "activePlusSavedSessions":
-      return "현재 + 저장 세션 집계";
-    case "savedSessionMetadataOnly":
-      return "저장 세션은 메타데이터만";
-    case "partialSavedSessionLoad":
-      return "저장 세션 일부만 본문 로드";
-    case "unavailable":
-      return "데모 / 메모리 없음";
-    default:
-      return "현재 세션만 집계";
-  }
 }
 
 /**
