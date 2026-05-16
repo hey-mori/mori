@@ -1,6 +1,7 @@
 import { ArchiveX, Check, Clock, Eye, Pencil, RotateCcw } from "lucide-react";
-import { Badge } from "../../components/ui/Badge";
+import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { Button } from "../../components/ui/Button";
+import type { ProductStateTone } from "../../lib/product-state/productState";
 import type { MemoryProposal } from "../../lib/project-memory/consolidationProposals";
 import {
   effectiveSummary,
@@ -155,25 +156,35 @@ export function ConsolidationProposalCard({
 }
 
 function ConsolidationStatusBadge({ status }: { status: ConsolidationReviewStatus }) {
-  const tone = statusTone(status);
-  return <Badge tone={tone}>{describeReviewStatus(status)}</Badge>;
+  return (
+    <MoriStatusBadge tone={reviewStatusTone(status)}>
+      {describeReviewStatus(status)}
+    </MoriStatusBadge>
+  );
 }
 
-function statusTone(status: ConsolidationReviewStatus): "green" | "blue" | "orange" | "red" | "gray" | "purple" {
+/**
+ * Tone for a draft review decision, drawn from the shared product-state
+ * vocabulary. These are in-draft decisions the user is still reviewing,
+ * so each keeps a distinct tone: accept is settled (success), discard is
+ * the most severe (danger), and `proposed` is the not-yet-touched
+ * neutral baseline.
+ */
+function reviewStatusTone(status: ConsolidationReviewStatus): ProductStateTone {
   switch (status) {
     case "accepted":
-      return "green";
+      return "success";
     case "edited":
-      return "blue";
+      return "info";
     case "watching":
-      return "purple";
+      return "accent";
     case "deferred":
-      return "orange";
+      return "warning";
     case "discarded":
-      return "red";
+      return "danger";
     case "proposed":
     default:
-      return "gray";
+      return "neutral";
   }
 }
 
@@ -197,11 +208,9 @@ export function describeReviewStatus(status: ConsolidationReviewStatus): string 
 }
 
 function ImportanceBadge({ importance }: { importance: MemoryProposal["importance"] }) {
-  const tone =
-    importance === "high" ? "red" : importance === "medium" ? "orange" : "blue";
-  const label =
-    importance === "high" ? "high" : importance === "medium" ? "medium" : "low";
-  return <Badge tone={tone}>{label}</Badge>;
+  const tone: ProductStateTone =
+    importance === "high" ? "danger" : importance === "medium" ? "warning" : "info";
+  return <MoriStatusBadge tone={tone}>{importance}</MoriStatusBadge>;
 }
 
 function describeConfidence(confidence: number): string {

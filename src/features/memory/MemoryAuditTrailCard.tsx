@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Clock4, History, StickyNote, Undo2 } from "lucide-react";
-import { Badge } from "../../components/ui/Badge";
+import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriSection } from "../../components/ui/MoriSection";
+import type { ProductStateTone } from "../../lib/product-state/productState";
 import {
   buildMemoryAuditTrailViewModel,
   describeMemoryAuditAction,
@@ -72,9 +73,9 @@ export function MemoryAuditTrailCard({
         </span>
       }
       actions={
-        <Badge tone={viewModel.totalCount > 0 ? "green" : "gray"}>
+        <MoriStatusBadge tone={viewModel.totalCount > 0 ? "success" : "neutral"}>
           {viewModel.totalCount}건
-        </Badge>
+        </MoriStatusBadge>
       }
     >
       {viewModel.isEmpty ? (
@@ -113,7 +114,9 @@ export function MemoryAuditTrailCard({
                     {group.entries.map((entry) => (
                       <li key={entry.id} className="memory-audit-entry">
                         <header>
-                          <Badge tone={actionTone(entry.actionType)}>{entry.actionLabel}</Badge>
+                          <MoriStatusBadge tone={actionTone(entry.actionType)}>
+                            {entry.actionLabel}
+                          </MoriStatusBadge>
                           <span className="memory-audit-meta">
                             <Clock4 size={11} aria-hidden="true" /> {entry.timeLabel} UTC
                             {" · "}
@@ -148,10 +151,10 @@ export function MemoryAuditTrailCard({
 
       <footer className="memory-audit-footer">
         <small>
-          <Badge tone="gray">local-only</Badge>{" "}
-          <Badge tone={storageSource === "desktop-sqlite" ? "green" : "purple"}>
+          <MoriStatusBadge tone="neutral">로컬 전용</MoriStatusBadge>{" "}
+          <MoriStatusBadge tone={storageSource === "desktop-sqlite" ? "success" : "info"}>
             {describeAcceptedMemoryStorageSource(storageSource)}
-          </Badge>{" "}
+          </MoriStatusBadge>{" "}
           {storageFellBack
             ? "데스크톱 SQLite를 사용할 수 없어 localStorage로 대체했습니다. "
             : ""}
@@ -265,25 +268,27 @@ function RevertControl({
   );
 }
 
-function actionTone(actionType: MemoryAuditActionType):
-  | "green" | "blue" | "orange" | "red" | "gray" | "purple" {
+/**
+ * Tone for a memory audit action, drawn from the shared product-state
+ * vocabulary so the audit trail uses the same scale as the rest of the
+ * Memory surface.
+ */
+function actionTone(actionType: MemoryAuditActionType): ProductStateTone {
   switch (actionType) {
     case "apply":
-      return "green";
     case "accept":
-      return "green";
+      return "success";
     case "edit":
-      return "blue";
+      return "info";
     case "watch":
-      return "purple";
+      return "accent";
     case "defer":
-      return "orange";
-    case "discard":
-      return "red";
     case "revert":
-      return "orange";
+      return "warning";
+    case "discard":
+      return "danger";
     case "reset":
     default:
-      return "gray";
+      return "neutral";
   }
 }
