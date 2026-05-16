@@ -197,6 +197,9 @@ only — no phase numbers.
 - `.mori` zip import wiring — the Consolidation Review import panel
   reads a real `.mori` zip; picked bytes route by the `PK` zip magic
   (`parseImportedMemoryProposalsFromZip`), JSON / paste still works.
+- Team / shared memory specification — `docs/team-shared-memory.md`:
+  the explicit `.mori` handoff sharing primitive, roles, privacy
+  boundaries, client-safe export rules, conflict / duplicate model.
 
 **Open priority (highest first):**
 
@@ -204,10 +207,11 @@ All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
 Team/shared memory spec · continued loop) are approved; sequence them
 into small slices in this order:
 
-1. Team / shared memory specification doc — roles, privacy
-   boundaries, client-safe exports, conflict handling (Track C.1).
-2. `.mori` handoff workflow + client-safe package / export rules
-   (Track C.2/C.3).
+1. Client-safe `.mori` package filter — a pure `MoriPackageV0` →
+   `MoriPackageV0` transform per the spec's client-safe rules, plus a
+   manifest flag (Track C.3).
+2. `.mori` handoff workflow doc — the explicit export → transfer →
+   import walkthrough (Track C.2).
 3. Local Connector Capture polish for real captured data.
 4. Project Memory UX polish for real captured data.
 5. Queryable Memory extensions if a clear safe slice remains.
@@ -234,48 +238,47 @@ backlog with it.
 
 The next slice should be:
 
-**Team / shared memory specification doc (Track C.1)**
+**Client-safe `.mori` package filter (Track C.3)**
 
 Goal:
-Mori's only sharing primitive today is the explicit `.mori` package
-round trip. Track C starts with a **specification**, not sync code:
-define how Mori could support team / shared memory without breaking
-local-first and privacy principles, so later slices have a committed
-design to follow.
+`docs/team-shared-memory.md` §5 defines a client-safe `.mori` package
+— one an Author can hand to a non-teammate. This slice implements the
+filter as a pure transform, so a later slice / UI can offer a
+"client-safe export".
 
 Scope — do:
-- Add `docs/team-shared-memory.md` — a specification doc covering:
-  roles (author / reviewer / recipient — single-user today, named
-  for future); privacy boundaries and the `sensitivity` /
-  `reportEligibility` tiers that already exist on accepted memory;
-  client-safe export rules (what a `clientSafe` package excludes);
-  the conflict / duplicate review model when two `.mori` packages
-  carry overlapping memory; and a later-implementation backlog.
-- Anchor every part in what already exists — `.mori` packages,
-  `StoredAcceptedProjectMemory` fields, `buildImportedMemoryProposals`
-  dedup, review-on-import — so the spec is implementation-grounded,
-  not aspirational.
-- Restate the hard non-goals inline: no cloud sync, no account
-  system, no permissions backend, no remote collaboration service,
-  no shared writes without review, no hidden upload.
+- Add a pure `buildClientSafeMoriPackage(pkg): MoriPackageV0` in
+  `src/lib/mori-package/` that returns a filtered copy:
+  - `consolidatedMemories` keeps only memories whose
+    `reportEligibility` is `clientSafe` AND whose `sensitivity` is
+    `normal` (drops `sensitive` / `clientSafeExcluded`);
+  - `auditTrail` keeps only rows whose `targetMemoryIds` are all
+    still present in the filtered memory set;
+  - a manifest marker records that the package is a client-safe
+    export (an additive, absent-safe field — no `formatVersion`
+    bump, mirroring `consolidatedMemories`).
+- Never mutate the input package; never widen what a slice exposes.
+- Export the helper and add a `getPackageIsClientSafe` read helper.
 
 Scope — do not:
-- Write any sync / account / backend code.
-- Change the `.mori` format or the import flow in this slice.
+- Wire it into the Reports export UI yet — that is a follow-up.
+- Change the canonical layout, zip codec, or validation rules beyond
+  the additive manifest marker.
 
 Suggested files:
-- `docs/team-shared-memory.md` (new)
-- `docs/mori-project-goal.md` — only if the canonical state changes
-  (a new doc reference is fine to add)
-- `docs/source-integrations.md` — cross-link only if natural.
+- `src/lib/mori-package/clientSafe.ts` (new)
+- `src/lib/mori-package/types.ts`, `validation.ts`, `index.ts`
+- `src/lib/mori-package/mori-package.test.ts`
+- `docs/mori-package-v0.md`, `docs/team-shared-memory.md`
 
 Tests:
-- none — specification doc; validation is `check:full` + `build`
-  staying green.
+- a client-safe package drops non-`clientSafe` / `sensitive` memories
+- its `auditTrail` keeps only rows for surviving memories
+- the manifest marker round-trips; absent on a normal package
+- the input package is not mutated
 
-After this slice ships, set the next slice to Track C.2/C.3 — the
-`.mori` handoff workflow and client-safe package / export rules,
-turning the spec's client-safe section into a concrete export rule.
+After this slice ships, set the next slice to Track C.2 — the `.mori`
+handoff workflow doc / walkthrough.
 
 ## 9. Stop Conditions
 

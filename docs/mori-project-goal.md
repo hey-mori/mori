@@ -385,9 +385,11 @@ against the repository.
 - **Optional watched inbox.** Refresh-only desktop inbox is shipped;
   an opt-in background watcher that loads new files into a "pending
   review" tray is not implemented.
-- **Team / shared memory.** No surface beyond the explicit `.mori`
-  package round trip — no roles, client-safe-export rules, or
-  conflict model yet.
+- **Team / shared memory.** The design is specified in
+  `docs/team-shared-memory.md` (roles, privacy boundaries,
+  client-safe export rules, conflict / duplicate review model). No
+  code beyond the explicit `.mori` package round trip yet — the
+  client-safe filter and handoff workflow are later slices.
 
 ## 6. Product Principles
 
