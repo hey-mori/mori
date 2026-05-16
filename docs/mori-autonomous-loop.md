@@ -494,8 +494,12 @@ Open (highest value first):
       the raw `succeeded/failed/running/idle` enum, provider-name
       copy is Korean, and the section count badges read "개 통합 /
       개 계획됨 / 개 출처".
-    - Open: remaining English-only surfaces can be swept when a
-      concrete one is spotted.
+    - ✅ Import Review — the draft meta strip's seven duplicate /
+      validity count labels and the footer counts + cancel button
+      are now Korean.
+    - Open: the Connector JSONL preview in `ImportPanel` still has
+      English meta labels ("Already in current session", "Invalid
+      lines"); other English-only surfaces can be swept as spotted.
 23. ✅ Sidebar session timer honesty — a just-started session was
     labeled "Saved" with a frozen `00:00:00` clock because
     `createSessionDraft` seeds `endedAt` with the creation

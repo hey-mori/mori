@@ -228,12 +228,12 @@ function ReviewFooter({
       <div className="review-footer-counts">
         <ListChecks size={14} aria-hidden="true" />
         <span>
-          <strong>{counts.accepted}</strong> accepted · <strong>{counts.discarded}</strong> discarded ·
-          <strong> {counts.pending}</strong> pending
+          수락 <strong>{counts.accepted}</strong> · 폐기 <strong>{counts.discarded}</strong> ·
+          대기 <strong>{counts.pending}</strong>
         </span>
       </div>
       <div className="review-footer-actions">
-        <Button onClick={onCancel}>Cancel</Button>
+        <Button onClick={onCancel}>취소</Button>
         <Button
           variant="primary"
           icon={CheckCheck}
@@ -271,26 +271,26 @@ function EmptyEventList() {
 function ReviewDraftMetaStrip({ meta }: { meta: ReviewDraftMeta }) {
   const cells: Array<{ tone: "green" | "orange" | "blue" | "gray"; label: string; value: number }> = [];
   if (typeof meta.newEventCount === "number") {
-    cells.push({ tone: "green", label: "New events", value: meta.newEventCount });
+    cells.push({ tone: "green", label: "새 이벤트", value: meta.newEventCount });
   }
   if (typeof meta.currentSessionDuplicateCount === "number" && meta.currentSessionDuplicateCount > 0) {
     cells.push({
       tone: "orange",
-      label: "Already in current session",
+      label: "현재 세션에 이미 있음",
       value: meta.currentSessionDuplicateCount,
     });
   }
   if (typeof meta.savedSessionDuplicateCount === "number" && meta.savedSessionDuplicateCount > 0) {
     cells.push({
       tone: "orange",
-      label: "Already in saved sessions",
+      label: "저장 세션에 이미 있음",
       value: meta.savedSessionDuplicateCount,
     });
   }
   if (typeof meta.inBatchDuplicateCount === "number" && meta.inBatchDuplicateCount > 0) {
     cells.push({
       tone: "orange",
-      label: "Repeated in this file",
+      label: "이 파일에서 반복됨",
       value: meta.inBatchDuplicateCount,
     });
   }
@@ -302,13 +302,13 @@ function ReviewDraftMetaStrip({ meta }: { meta: ReviewDraftMeta }) {
       (meta.inBatchDuplicateCount ?? 0) >
     0;
   if (!splitProvided && typeof meta.duplicateSkippedCount === "number" && meta.duplicateSkippedCount > 0) {
-    cells.push({ tone: "orange", label: "Skipped duplicates", value: meta.duplicateSkippedCount });
+    cells.push({ tone: "orange", label: "건너뛴 중복", value: meta.duplicateSkippedCount });
   }
   if (typeof meta.duplicateIncludedCount === "number" && meta.duplicateIncludedCount > 0) {
-    cells.push({ tone: "blue", label: "Included duplicates", value: meta.duplicateIncludedCount });
+    cells.push({ tone: "blue", label: "포함된 중복", value: meta.duplicateIncludedCount });
   }
   if (typeof meta.invalidLineCount === "number" && meta.invalidLineCount > 0) {
-    cells.push({ tone: "gray", label: "Invalid lines", value: meta.invalidLineCount });
+    cells.push({ tone: "gray", label: "잘못된 줄", value: meta.invalidLineCount });
   }
   const summary = meta.sourceImportSummary;
   if (cells.length === 0 && !summary) return null;
