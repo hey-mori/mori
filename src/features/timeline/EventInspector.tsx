@@ -67,7 +67,7 @@ export function EventInspector({
           {selectedEvent.trustLevel === "inferred" ? (
             <Badge tone={confidenceTone(inspector.confidencePct)}>{inspector.confidencePct}%</Badge>
           ) : null}
-          {selectedEvent.userModified ? <Badge tone="orange">User-modified</Badge> : null}
+          {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
         </div>
         <h3 className="inspector-title">{selectedEvent.title}</h3>
         <p className="inspector-time">{formatTimeRange(selectedEvent.start, selectedEvent.end)}</p>
@@ -75,22 +75,22 @@ export function EventInspector({
 
       <section className="inspector-section">
         <div className="inspector-summary-card">
-          <span>Summary</span>
+          <span>요약</span>
           <p>{selectedEvent.summary}</p>
         </div>
       </section>
 
       <section className="inspector-section">
         <SectionHeader
-          title="Evidence / trust"
-          hint={`${inspector.sources.length} source${inspector.sources.length === 1 ? "" : "s"}`}
+          title="근거 / 신뢰도"
+          hint={`${inspector.sources.length}개 출처`}
         />
         <div className="inspector-trust-card">
           <strong>{trust.label}</strong>
           <span>{trustCopy(selectedEvent.trustLevel)}</span>
           <small>
-            Created by {selectedEvent.createdBy}
-            {selectedEvent.userModified ? " · user modified" : ""}
+            작성 주체: {selectedEvent.createdBy}
+            {selectedEvent.userModified ? " · 사용자 수정함" : ""}
           </small>
         </div>
         <SourcesList sources={inspector.sources} />
@@ -98,8 +98,8 @@ export function EventInspector({
 
       <section className="inspector-section">
         <SectionHeader
-          title="Linked items"
-          hint={inspector.hiddenRelationshipCount > 0 ? `+${inspector.hiddenRelationshipCount} hidden` : undefined}
+          title="연결된 항목"
+          hint={inspector.hiddenRelationshipCount > 0 ? `+${inspector.hiddenRelationshipCount}개 숨김` : undefined}
         />
         <LinkedRows
           issues={inspector.issues}
@@ -109,17 +109,16 @@ export function EventInspector({
         />
         {inspector.hiddenRelationshipCount > 0 ? (
           <p className="inspector-hidden-note">
-            {inspector.hiddenRelationshipCount} related event
-            {inspector.hiddenRelationshipCount === 1 ? "" : "s"} are outside the
-            current focus. Open <strong>Flow trace</strong> to see the wider
-            graph.
+            연결된 이벤트 {inspector.hiddenRelationshipCount}건이 현재 포커스
+            범위 밖에 있습니다. <strong>흐름 추적</strong>을 열면 전체
+            관계 그래프를 볼 수 있습니다.
           </p>
         ) : null}
       </section>
 
       {inspector.decisions.length > 0 ? (
         <section className="inspector-section">
-          <SectionHeader title="Impact" />
+          <SectionHeader title="영향" />
           <ul className="inspector-impact-list">
             {inspector.decisions
               .flatMap((decision) => decision.impact)
@@ -132,19 +131,19 @@ export function EventInspector({
       ) : null}
 
       <section className="inspector-section">
-        <SectionHeader title="Actions" hint="Implemented" />
+        <SectionHeader title="액션" hint="구현됨" />
         <div className="inspector-actions-row">
           <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
-            Flow trace
+            흐름 추적
           </Button>
           <Button icon={ClipboardCopy} onClick={handleCopy}>
-            Copy summary
+            요약 복사
           </Button>
         </div>
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Planned actions" hint="Planned" />
+        <SectionHeader title="예정된 액션" hint="Planned" />
         <div className="inspector-actions-row inspector-actions-planned">
           <MoriPlannedAction
             feature="timeline.inspector.editEvent"
@@ -175,9 +174,9 @@ export function EventInspector({
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="Memo / correction" hint="Planned" />
+        <SectionHeader title="메모 / 수정" hint="Planned" />
         <textarea
-          placeholder={getPlannedHint("memoSave") ?? "Corrections and notes will save in a future milestone."}
+          placeholder={getPlannedHint("memoSave") ?? "수정과 메모 저장은 다음 마일스톤에서 제공됩니다."}
           disabled
           className="inspector-memo"
         />
@@ -225,10 +224,10 @@ function LinkedRows({
   nextActions: NextAction[];
 }) {
   const rows: Array<{ label: string; tone: string; items: string[] }> = [
-    { label: "Issues", tone: "red", items: issues.map((issue) => issue.title) },
-    { label: "Decisions", tone: "green", items: decisions.map((decision) => decision.title) },
-    { label: "Files", tone: "blue", items: artifacts.map((artifact) => artifact.title) },
-    { label: "Next actions", tone: "purple", items: nextActions.map((action) => action.title) },
+    { label: "이슈", tone: "red", items: issues.map((issue) => issue.title) },
+    { label: "결정", tone: "green", items: decisions.map((decision) => decision.title) },
+    { label: "파일", tone: "blue", items: artifacts.map((artifact) => artifact.title) },
+    { label: "다음 액션", tone: "purple", items: nextActions.map((action) => action.title) },
   ];
   return (
     <ul className="inspector-linked-rows">
@@ -258,9 +257,9 @@ function confidenceTone(pct: number): string {
 }
 
 function trustCopy(trustLevel: TimelineEvent["trustLevel"]): string {
-  if (trustLevel === "verified") return "This event is backed by captured source evidence.";
-  if (trustLevel === "observed") return "This event is derived from observed work context.";
-  return "This event was inferred by analysis and should remain correctable.";
+  if (trustLevel === "verified") return "캡처된 원본 근거로 뒷받침되는 이벤트입니다.";
+  if (trustLevel === "observed") return "관찰된 작업 맥락에서 도출된 이벤트입니다.";
+  return "분석이 추론한 이벤트로, 사용자가 언제든 수정할 수 있습니다.";
 }
 
 export { formatTime };

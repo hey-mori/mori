@@ -343,6 +343,11 @@ Open (highest value first):
     headers, and action bars scroll inconsistently across views.
 22. Korean / English copy consistency — mixed-language labels appear
     within a single surface; pick a rule and apply it.
+    - ✅ Timeline `EventInspector` — section headers, trust copy,
+      linked-item labels, action buttons, and the inspector-scoped
+      `timelineControls` entries are now Korean, matching the
+      `ReviewDetailPanel` sibling.
+    - Open: Flow Focus `TracePanel` is still fully English.
 23. ✅ Sidebar session timer honesty — a just-started session was
     labeled "Saved" with a frozen `00:00:00` clock because
     `createSessionDraft` seeds `endedAt` with the creation
