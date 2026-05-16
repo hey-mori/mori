@@ -5,6 +5,7 @@ import { useMoriAppStore } from "../../app/store";
 import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { moriMockSession } from "../../domain/mock-data";
 import { deriveSessionTiming } from "../../lib/session/sessionTiming";
+import { formatDate, formatDateTime, formatTime } from "../../lib/formatting/time";
 
 /**
  * Sticky top bar above the Timeline.
@@ -84,17 +85,11 @@ export function TopSessionBar() {
 
 function formatDateLine(startIso: string | null, endIso: string | null): string {
   if (!startIso) return "—";
-  const start = new Date(startIso);
-  const end = endIso ? new Date(endIso) : null;
-  const sameDay = end ? start.toDateString() === end.toDateString() : false;
-  if (!end) {
-    return `${start.toLocaleDateString()} ${formatHm(start)}`;
-  }
+  if (!endIso) return `${formatDate(startIso)} ${formatTime(startIso)}`;
+  // Same-day comparison in the app's Asia/Seoul convention: comparing the
+  // rendered date strings keeps it consistent with what the user sees.
+  const sameDay = formatDate(startIso) === formatDate(endIso);
   return sameDay
-    ? `${start.toLocaleDateString()} ${formatHm(start)} – ${formatHm(end)}`
-    : `${start.toLocaleString()} → ${end.toLocaleString()}`;
-}
-
-function formatHm(date: Date): string {
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    ? `${formatDate(startIso)} ${formatTime(startIso)} – ${formatTime(endIso)}`
+    : `${formatDateTime(startIso)} → ${formatDateTime(endIso)}`;
 }

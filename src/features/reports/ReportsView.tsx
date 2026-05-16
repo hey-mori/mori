@@ -43,7 +43,7 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
-import { formatDate } from "../../lib/formatting/time";
+import { formatDate, formatDateTime } from "../../lib/formatting/time";
 import { deriveSessionStatus } from "../../lib/session/sessionStatus";
 import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import { ResumePromptCard, type ResumePromptOrigin } from "./ResumePromptCard";
@@ -256,7 +256,7 @@ function AnalysisStrip({
                   ? `Quick Pass 실패: ${error ?? "알 수 없는 오류"}`
                   : hasAnalysis
                     ? `${providerCopy} · ${providerKind}${
-                        generatedAt ? ` · ${new Date(generatedAt).toLocaleString()}` : ""
+                        generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""
                       }`
                     : importsCount === 0
                       ? "아직 가져온 소스가 없습니다. Evidence Hub에서 자료를 추가하세요."

@@ -14,6 +14,7 @@ import {
   type SessionStorageTarget,
 } from "../../lib/session/sessionStorageTarget";
 import { isTauriRuntime } from "../../lib/desktop";
+import { formatDateTime } from "../../lib/formatting/time";
 import {
   applySourceSelection,
   initialSelectedSourceIds,
@@ -392,7 +393,7 @@ function SessionSummary({
         {savedDraft ? (
           <>
             <span>현재 세션: {savedDraft.session.id}</span>
-            <span>저장 시각: {new Date(savedDraft.savedAt).toLocaleString()}</span>
+            <span>저장 시각: {formatDateTime(savedDraft.savedAt)}</span>
           </>
         ) : null}
       </div>

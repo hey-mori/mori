@@ -17,6 +17,7 @@ import {
   type RepositoryVerificationMetadata,
 } from "../../lib/repositories";
 import { summarizeRepositories } from "../../lib/settings/settingsStatus";
+import { formatDateTime } from "../../lib/formatting/time";
 
 export function RepositoriesCard({
   repositories,
@@ -156,7 +157,7 @@ export function RepositoriesCard({
                   <small title={repo.path}>{repo.path}</small>
                   <RepoVerificationBadge verification={repo.verification} isVerifying={isVerifying} />
                   {repo.lastUsedAt ? (
-                    <small className="settings-repo-muted">마지막 사용: {new Date(repo.lastUsedAt).toLocaleString()}</small>
+                    <small className="settings-repo-muted">마지막 사용: {formatDateTime(repo.lastUsedAt)}</small>
                   ) : null}
                 </div>
                 <RepoLabelEditor currentLabel={repo.label} onSave={(label) => onRename(repo.id, label)} />
