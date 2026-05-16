@@ -19,8 +19,8 @@ export function TimelineEmptyState({
     return (
       <EmptyState
         icon={Sparkles}
-        title="Demo session has no events"
-        description="Switch to a real session from Start Session or import a source from Evidence."
+        title="데모 세션에는 이벤트가 없습니다"
+        description="Start Session에서 실제 세션을 시작하거나 Evidence에서 소스를 가져오세요."
       />
     );
   }
@@ -28,11 +28,11 @@ export function TimelineEmptyState({
     return (
       <EmptyState
         icon={ListPlus}
-        title="This session has no imports yet"
-        description="Mori only shows verified evidence you explicitly import — manual notes, URLs, AI conversations, and Git diffs all land here."
+        title="이 세션에는 아직 가져온 자료가 없습니다"
+        description="Mori는 사용자가 명시적으로 가져온 검증된 근거만 표시합니다 — 메모, URL, AI 대화, Git diff가 모두 여기에 모입니다."
         actions={
           <Button variant="primary" icon={ListPlus} onClick={onOpenSources}>
-            Open Evidence
+            Evidence 열기
           </Button>
         }
       />
@@ -41,15 +41,19 @@ export function TimelineEmptyState({
   return (
     <EmptyState
       icon={Sparkles}
-      title="Imports captured. Run Quick Pass to populate the timeline."
-      description="Quick Pass turns imported sources into events, issues, decisions, and a resume prompt. It runs locally and is fully explicit."
+      title="소스를 가져왔습니다. Quick Pass를 실행하면 타임라인이 채워집니다."
+      description="Quick Pass는 가져온 소스를 이벤트 · 이슈 · 결정 · Resume 프롬프트로 변환합니다. 로컬에서 실행되며 전적으로 명시적입니다."
       actions={
         <Button
           variant="primary"
           icon={Sparkles}
           onClick={onRunQuickPass}
           disabled={!canRunQuickPass}
-          title={canRunQuickPass ? "Run Quick Pass against the active session" : "Quick Pass is already running"}
+          title={
+            canRunQuickPass
+              ? "활성 세션에 Quick Pass 실행"
+              : "Quick Pass가 이미 실행 중입니다."
+          }
         >
           Run Quick Pass
         </Button>

@@ -346,6 +346,10 @@ a demo/overview. Highest value first.
   bundles size to the cluster's real span. (Demo events are mostly
   instantaneous, so the variation is most visible on bundles — the
   day-scale stress fixture below will exercise ranged events.)
+- ✅ Timeline empty states Korean — all three `TimelineEmptyState`
+  variants (demo-empty / draft-no-imports / draft-needs-quick-pass)
+  were fully English on an otherwise Korean surface; they are now
+  Korean, including the first surface a real session shows.
 - ✅ Burst overflow clarity — the bundle card count reads Korean
   (`N개 이벤트`) and the bundle inspector — the surface a burst
   expands into — is fully Korean and reviewable: it lists every
