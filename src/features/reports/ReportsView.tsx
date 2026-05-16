@@ -22,6 +22,8 @@ import {
 } from "../../lib/mori-package";
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
+import { buildCompanionSignals } from "../../lib/companion/companionSignals";
+import { CompanionCard } from "../companion/CompanionCard";
 import {
   exportPhaseRole,
   exportPhaseTone,
@@ -113,6 +115,20 @@ export function ReportsView() {
 
   const duration = useMemo(() => formatDuration(view.session.startedAt, view.session.endedAt), [view.session.startedAt, view.session.endedAt]);
 
+  const companionSignals = useMemo(
+    () =>
+      buildCompanionSignals({
+        sessionMode: mode,
+        events: view.events,
+        issues: view.issues,
+        decisions: view.decisions,
+        nextActions: view.nextActions,
+        hasAnalysis,
+        importCount: imports.length,
+      }),
+    [mode, view, hasAnalysis, imports.length],
+  );
+
   return (
     <div className="page reports-page">
       <PageHeader
@@ -153,6 +169,12 @@ export function ReportsView() {
 
       <div className="reports-layout">
         <section className="reports-main">
+          <CompanionCard
+            signals={companionSignals}
+            isDemo={mode === "demo"}
+            onNavigate={setCurrentView}
+          />
+
           <SessionSummaryStrip
             dataBasis={evidenceSummary.dataBasis}
             dataBasisTone={status.dataBasisTone}

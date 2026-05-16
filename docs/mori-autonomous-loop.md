@@ -403,6 +403,40 @@ a demo/overview. Highest value first.
   vs comfortable frame height, duration-aware width, and that no
   raw summary leaks into the card view model.
 
+### Companion Layer (focused sub-pass)
+
+Making Mori feel like a quiet, serious, local work partner — not a
+dashboard, not a chatbot, not a character. The Companion Layer is a
+local, evidence-based assistance layer derived from data the user
+has already imported and reviewed. It never watches the user, never
+writes memory automatically, and never reads raw source/transcript
+text into a signal.
+
+- ✅ Companion Signals — `buildCompanionSignals`
+  (`src/lib/companion/companionSignals.ts`) is a pure helper that
+  derives a prioritised, capped set of evidence-based signals from
+  the active session (demo-mode notice, real-session import gap,
+  weak-evidence inferred issues, decisions needing review, open
+  issues, next actions, important decisions, ready-to-report,
+  ready-to-resume). Each signal carries severity, an honest `basis`
+  (verified / inferred / mixed / state), linked item ids, evidence
+  refs, an action label, and a destination.
+- ✅ Companion card — `CompanionCard` ("Mori 노트") renders the top
+  signals on the Reports surface: calm, serious, severity-dotted,
+  with a basis chip and an action button per signal, an honest
+  empty state, and a footer reminding the user Mori only uses
+  explicitly-imported data.
+- Planned (not built): OS / system notifications, an in-app
+  notification center or review queue, a session-end companion
+  summary, resume-companion improvements, signal-quietness
+  preferences. A chatbot / avatar is explicitly out of scope.
+- Companion-layer maturity backlog (highest value first):
+  1. surface the companion card on Timeline / Project Memory too;
+  2. a small in-app review queue or notification center;
+  3. a session-end companion summary;
+  4. resume-companion improvements;
+  5. preferences for signal quietness.
+
 Open (highest value first):
 
 9. Timeline density + event inspector — long event lists have no

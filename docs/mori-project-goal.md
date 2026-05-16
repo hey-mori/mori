@@ -364,6 +364,25 @@ that is called out.
 - End-to-end smoke flow documented and guarded by a fixture test
   (`src/lib/connectors/connectorSampleFixture.test.ts`).
 
+**Companion Layer**
+
+- Companion Signals (`src/lib/companion/companionSignals.ts`) — a
+  local, evidence-based assistance layer. `buildCompanionSignals`
+  is a pure helper that derives a prioritised, capped set of
+  signals from the active session (demo-mode notice, real-session
+  import gap, weak-evidence inferred issues, decisions needing
+  review, open issues, next actions, important decisions,
+  ready-to-report, ready-to-resume). Each signal carries a
+  severity, an honest `basis` (verified / inferred / mixed /
+  state), linked item ids, evidence refs, and a destination. The
+  `CompanionCard` ("Mori 노트") surfaces the top signals on the
+  Reports page. The Companion Layer never watches the user, never
+  writes memory automatically, and never copies raw source /
+  transcript text into a signal — it only re-surfaces data the
+  user has already imported and reviewed. OS-level notifications
+  and an in-app notification center are planned, not implemented;
+  a chatbot / avatar is a non-goal.
+
 If something in this list does not match repo reality, treat the
 mismatch as a documentation bug and update this section rather than
 silently relying on memory.

@@ -6258,6 +6258,136 @@ pre {
   }
 }
 
+/* Mori Companion card — calm, serious, evidence-based signal panel. */
+.companion-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #d9d0ff;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fbfaff, #fff);
+  box-shadow: var(--shadow-soft);
+}
+
+.companion-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.companion-card-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--purple-50);
+  color: var(--purple);
+  flex-shrink: 0;
+}
+
+.companion-card-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.companion-card-titles h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.companion-card-titles p {
+  margin: 1px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.companion-empty {
+  margin: 0;
+  padding: 11px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  background: #f7f6fb;
+  border-radius: 8px;
+}
+
+.companion-signal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.companion-signal {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: white;
+}
+
+.companion-signal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+}
+
+.companion-signal.sev-risk .companion-signal-dot { background: var(--red); }
+.companion-signal.sev-review .companion-signal-dot { background: #d8923f; }
+.companion-signal.sev-suggestion .companion-signal-dot { background: var(--blue); }
+.companion-signal.sev-info .companion-signal-dot { background: var(--muted-2); }
+
+.companion-signal-body {
+  min-width: 0;
+}
+
+.companion-signal-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.companion-signal-head strong {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.companion-signal-basis {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--gray-50);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.companion-signal-basis.basis-inferred { background: var(--orange-50); color: #b46100; }
+.companion-signal-basis.basis-verified { background: var(--green-50); color: var(--green); }
+
+.companion-signal-body p {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.companion-card-foot {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 /* Report builder panel */
 
 .report-builder-panel {
