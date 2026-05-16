@@ -300,9 +300,10 @@ that is called out.
   proposals, deduplicated against the project's existing accepted
   memories by `originProposalIds` overlap or shared normalised title.
   The Consolidation Review Surface carries an "Import accepted memory
-  from a .mori package" paste panel — imported memory is never
-  auto-merged; it enters the review list and only becomes durable
-  through the normal accept / apply path.
+  from a .mori package" panel — paste the package JSON or pick a
+  `.mori` file (browser `File` API, no Tauri command). Imported
+  memory is never auto-merged; it enters the review list and only
+  becomes durable through the normal accept / apply path.
 - Queryable Memory: `searchAcceptedMemories`
   (`src/lib/project-memory/queryableMemory.ts`) runs deterministic
   local structured search over accepted memories — text matching on
@@ -344,11 +345,10 @@ against the repository.
   reliable bridge that captures live Claude Code / Codex CLI / Git
   activity into `~/.mori/connectors/` for a real workflow is not
   shipped. The user must still run the template scripts manually.
-- **`.mori` package native file open.** The Consolidation Review
-  Surface imports a `.mori` package by paste; a native file-open
-  affordance (the Tauri `open_mori_package_json` command exists) is
-  not wired into the import panel yet. The `.mori v0` `auditTrail`
-  slice is also not carried yet.
+- **`.mori v0` `auditTrail` slice.** The `.mori v0` package carries
+  accepted memory (`consolidatedMemories`) but not the Memory Audit
+  Trail review actions, so an exported package loses the review
+  history that produced its memory.
 - **Undo / revert from the audit log.** The Memory Audit Trail UI
   surfaces the review-action log, but Undo Apply (a new
   `ReviewAction` row with `actionType: "revert"`) is designed and

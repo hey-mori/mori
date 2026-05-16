@@ -6610,8 +6610,38 @@ pre {
 
 .consolidation-review-import-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-top: 8px;
+}
+
+.consolidation-review-import-file {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.consolidation-review-import-file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.consolidation-review-import-file span {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: #4b4470;
+  background: #fdfcff;
+  border: 1px solid var(--line, #e6e3f1);
+  border-radius: 8px;
+}
+
+.consolidation-review-import-file:focus-within span {
+  border-color: var(--accent, #6d4aff);
 }
 
 .consolidation-review-import-result {

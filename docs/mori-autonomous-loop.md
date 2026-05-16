@@ -143,17 +143,23 @@ only — no phase numbers.
   and review-action notes (`searchProjectMemoryReferences`).
 - Local Connector Capture polish — real `mori-local-capture` output
   verified to round-trip; clean-repo git snapshot coverage added.
+- `.mori` native file-open affordance — file picker on the
+  Consolidation Review import panel (browser `File` API, no Tauri).
 
 **Open priority (highest first):**
 
-1. Evidence / Import Review polish for real captured data
-2. `.mori` native file-open affordance if safe
-3. `.mori` auditTrail package slice
-4. Memory Audit Trail reviewed revert flow
-5. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
+1. `.mori` auditTrail package slice
+2. Memory Audit Trail reviewed revert flow
+3. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
    mirror)
-6. CLI wrapper for Claude/Codex workflows, explicit/local only
-7. IDE / Terminal integration planning, no hidden monitoring
+4. CLI wrapper for Claude/Codex workflows, explicit/local only
+5. IDE / Terminal integration planning, no hidden monitoring
+
+Deferred — revisit when a concrete need appears:
+- Evidence / Import Review polish — audited; the Import Review view,
+  the `review` lib, and the connector pipeline are mature and
+  well-tested with no concrete defect. Revisit when real captured
+  data exposes a specific honesty / correctness gap.
 
 When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
@@ -163,39 +169,45 @@ backlog with it.
 
 The next slice should be:
 
-**Evidence / Import Review polish for real captured data**
+**`.mori` auditTrail package slice**
 
 Goal:
-Make the Import Review and Evidence Hub surfaces hold up against the
-real connector JSONL that `mori-local-capture` and the connector
-templates emit — honest counts, honest provenance, honest
-empty/partial states — without redesigning the surfaces.
+Carry the Memory Audit Trail review actions in the `.mori v0`
+package, so an exported package preserves not just accepted memory
+but the review history that produced it.
 
-Scope — audit first, then pick the smallest real improvement:
-- Inspect `src/features/review-import/` and `src/features/evidence/`
-  against the connector pipeline output.
-- Prefer one concrete, testable correctness or honesty fix over
-  broad cosmetic change.
-- If no concrete defect is found, narrow the slice to a pure helper
-  or test-coverage gap rather than manufacturing busywork.
+Scope — do:
+- Add an optional, additive `auditTrail?: StoredMemoryReviewAction[]`
+  field to `MoriPackageV0` (mirrors the `consolidatedMemories`
+  slice — absent-safe, no `formatVersion` bump).
+- Populate it on `.mori v0` export from the project's review actions.
+- Validate it as an optional array; round-trip it through
+  serialize / deserialize.
+- Add a `getPackageAuditTrail` read helper.
 
 Scope — do not:
-- Redesign Import Review or the Evidence Hub.
-- Add new capture surfaces.
-- Touch review-before-apply semantics.
+- Add a destructive or version-breaking migration.
+- Auto-apply imported audit rows — they are history, not writes.
+- Expose `before` / `after` snapshot raw content beyond what the
+  records already carry.
 
-Suggested files (audit before editing):
-- `src/features/review-import/`
-- `src/features/evidence/`
-- `src/lib/connectors/`
-- `src/lib/import/`
+Suggested files:
+- `src/lib/mori-package/types.ts`
+- `src/lib/mori-package/serialize.ts`
+- `src/lib/mori-package/deserialize.ts`
+- `src/lib/mori-package/validation.ts`
+- `src/lib/mori-package/index.ts`
+- `src/lib/mori-package/mori-package.test.ts`
+- `docs/mori-package-v0.md`
 
 Tests:
-- cover the concrete behavior changed by the slice
-- prefer pure-helper tests over brittle component tests
+- default `auditTrail` is an empty array
+- round-trips review actions through serialize / deserialize
+- a package exported before the field existed loads as empty
+- a non-array `auditTrail` is rejected by validation
 
 After this slice ships, set the next slice to the new top item of the
-open backlog (`.mori` native file-open affordance) and continue.
+open backlog (Memory Audit Trail reviewed revert flow) and continue.
 
 ## 9. Stop Conditions
 

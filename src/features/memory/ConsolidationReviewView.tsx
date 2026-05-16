@@ -155,12 +155,13 @@ export function ConsolidationReviewView() {
     [consolidationState, importedProposals],
   );
 
-  // `.mori` package import — explicit paste, never auto-merged.
+  // `.mori` package import — explicit paste or explicit file pick,
+  // never auto-merged.
   const [packageText, setPackageText] = useState("");
   const [importMessage, setImportMessage] = useState<ImportPackageMessage>({ kind: "idle" });
 
-  function handleImportPackage() {
-    const result = parseImportedMemoryProposals(packageText, acceptedMemories);
+  function runImport(text: string) {
+    const result = parseImportedMemoryProposals(text, acceptedMemories);
     if (!result.ok) {
       setImportedProposals([]);
       setImportMessage({ kind: "error", message: result.error });
@@ -174,6 +175,29 @@ export function ConsolidationReviewView() {
       skipped: result.skipped.length,
       memoryCount: result.memoryCount,
     });
+  }
+
+  function handleImportPackage() {
+    runImport(packageText);
+  }
+
+  function handleImportPackageFile(file: File) {
+    // Reads only the file the user explicitly picked — no directory
+    // scan, no watcher. `File.text()` works in browser and the Tauri
+    // webview alike, so no Tauri command is needed.
+    file
+      .text()
+      .then((text) => {
+        setPackageText(text);
+        runImport(text);
+      })
+      .catch((error: unknown) => {
+        setImportedProposals([]);
+        setImportMessage({
+          kind: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      });
   }
 
   function handleClearImport() {
@@ -305,6 +329,7 @@ export function ConsolidationReviewView() {
         message={importMessage}
         onTextChange={setPackageText}
         onLoad={handleImportPackage}
+        onPickFile={handleImportPackageFile}
         onClear={handleClearImport}
       />
 
@@ -381,19 +406,21 @@ function ImportPackagePanel({
   message,
   onTextChange,
   onLoad,
+  onPickFile,
   onClear,
 }: {
   text: string;
   message: ImportPackageMessage;
   onTextChange: (value: string) => void;
   onLoad: () => void;
+  onPickFile: (file: File) => void;
   onClear: () => void;
 }) {
   return (
     <details className="consolidation-review-import">
       <summary>
         <strong>Import accepted memory from a .mori package</strong>
-        <span>붙여넣은 .mori v0 패키지의 accepted memory를 검토 제안으로 추가합니다.</span>
+        <span>붙여넣거나 파일로 선택한 .mori v0 패키지의 accepted memory를 검토 제안으로 추가합니다.</span>
       </summary>
       <p className="consolidation-review-import-note">
         가져온 memory는 자동 병합되지 않습니다. 아래 검토 목록에 제안으로 추가되며, 수락해야만
@@ -404,7 +431,7 @@ function ImportPackagePanel({
         className="consolidation-review-import-textarea"
         value={text}
         onChange={(event) => onTextChange(event.target.value)}
-        placeholder="여기에 .mori v0 패키지 JSON을 붙여넣으세요"
+        placeholder="여기에 .mori v0 패키지 JSON을 붙여넣거나 아래에서 파일을 선택하세요"
         rows={5}
         aria-label=".mori package JSON"
       />
@@ -412,6 +439,20 @@ function ImportPackagePanel({
         <Button variant="primary" onClick={onLoad} disabled={text.trim().length === 0}>
           패키지 불러오기
         </Button>
+        <label className="consolidation-review-import-file">
+          <input
+            type="file"
+            accept=".mori,.json,application/json"
+            aria-label=".mori package file"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onPickFile(file);
+              // Reset so picking the same file again re-triggers onChange.
+              event.target.value = "";
+            }}
+          />
+          <span>파일 선택</span>
+        </label>
         <Button onClick={onClear}>지우기</Button>
       </div>
       {message.kind === "ok" ? (

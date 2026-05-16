@@ -60,9 +60,11 @@ consolidated memory can travel with an exported `.mori v0` package.
   slice into reviewable proposals — deduplicated against the project's
   existing accepted memories — and `parseImportedMemoryProposals`
   wraps it for a raw package-JSON string. The Consolidation Review
-  Surface has an **Import accepted memory from a .mori package** paste
-  panel: imported memory enters the review list as proposals and only
-  becomes durable through the normal accept / apply path.
+  Surface has an **Import accepted memory from a .mori package** panel
+  — paste the package JSON or pick a `.mori` file (browser `File` API,
+  no Tauri command): imported memory enters the review list as
+  proposals and only becomes durable through the normal accept /
+  apply path.
 - The `auditTrail` slice (accepted-memory `ReviewAction` rows) is not
   carried yet — a later addition alongside the import-review surface.
 
