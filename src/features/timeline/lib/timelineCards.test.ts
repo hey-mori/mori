@@ -115,6 +115,7 @@ describe("buildTimelineBundleViewModel", () => {
       laneType: "aiConversation",
     },
     anchorEventId: "e2",
+    sameConnectorSource: null,
   };
 
   it("produces a time range string", () => {

@@ -217,7 +217,27 @@ function createBundle(
       laneType: first.type,
     },
     anchorEventId: cluster[Math.floor(cluster.length / 2)]?.id ?? first.id,
+    sameConnectorSource: deriveBundleConnectorSource(cluster),
   };
+}
+
+/**
+ * The connector id shared by every member event, or `null`. A cluster is a
+ * "same-source rapid group" when every member carries a `connectorEventId`
+ * (`<connectorId>::<session>::<eventId>`) with the same connector prefix —
+ * i.e. the burst came from one connector import, not mixed sources.
+ */
+export function deriveBundleConnectorSource(events: TimelineEvent[]): string | null {
+  if (events.length === 0) return null;
+  const connectors = new Set<string>();
+  for (const event of events) {
+    const connectorEventId = event.connectorEventId;
+    if (!connectorEventId) return null;
+    const connectorId = connectorEventId.split("::")[0];
+    if (!connectorId) return null;
+    connectors.add(connectorId);
+  }
+  return connectors.size === 1 ? [...connectors][0]! : null;
 }
 
 function buildBundleTitle(

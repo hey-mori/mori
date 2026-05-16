@@ -69,6 +69,12 @@ export type TimelineDisplayBundle = {
   representedDecisionIds: string[];
   reason: TimelineBundleReason;
   anchorEventId: string;
+  /**
+   * Connector id shared by every member event, when the whole cluster was
+   * imported rapidly from one connector source (`connectorEventId` prefix).
+   * `null` when members come from mixed sources or lack connector identity.
+   */
+  sameConnectorSource: string | null;
 };
 
 export type TimelineDisplayItem = TimelineDisplayEvent | TimelineDisplayBundle;

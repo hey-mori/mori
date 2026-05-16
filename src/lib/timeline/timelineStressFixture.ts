@@ -44,18 +44,21 @@ type EventSpec = {
   sources?: number;
   issues?: number;
   decisions?: number;
+  /** Connector id — when set, the event carries a `connectorEventId`. */
+  connector?: string;
 };
 
 // 36 events across a 09:00–18:00 working day.
 const SPECS: EventSpec[] = [
   // AI conversation — a tight morning burst (6 events in 11 minutes) that
-  // must collapse to a bundle, plus two long ranged sessions and two singles.
-  { type: "aiConversation", start: [9, 30], title: "Claude: 제품 방향 정리", trust: "verified", sources: 1 },
-  { type: "aiConversation", start: [9, 32], title: "Claude: 경쟁 제품 비교 질문", trust: "observed" },
-  { type: "aiConversation", start: [9, 34], title: "Claude: 메모리 모델 토론", trust: "observed" },
-  { type: "aiConversation", start: [9, 37], title: "Claude: 캡처 전략 검토", trust: "inferred" },
-  { type: "aiConversation", start: [9, 39], title: "Claude: 리뷰 게이트 토론", trust: "inferred" },
-  { type: "aiConversation", start: [9, 41], title: "Claude: 정리 요청", trust: "observed" },
+  // must collapse to a bundle. Every burst event is imported from the same
+  // `claude-code` connector, so the bundle is a same-source rapid group.
+  { type: "aiConversation", start: [9, 30], title: "Claude: 제품 방향 정리", trust: "verified", sources: 1, connector: "claude-code" },
+  { type: "aiConversation", start: [9, 32], title: "Claude: 경쟁 제품 비교 질문", trust: "observed", connector: "claude-code" },
+  { type: "aiConversation", start: [9, 34], title: "Claude: 메모리 모델 토론", trust: "observed", connector: "claude-code" },
+  { type: "aiConversation", start: [9, 37], title: "Claude: 캡처 전략 검토", trust: "inferred", connector: "claude-code" },
+  { type: "aiConversation", start: [9, 39], title: "Claude: 리뷰 게이트 토론", trust: "inferred", connector: "claude-code" },
+  { type: "aiConversation", start: [9, 41], title: "Claude: 정리 요청", trust: "observed", connector: "claude-code" },
   { type: "aiConversation", start: [10, 0], end: [10, 45], title: "Codex: 타임라인 레이아웃 페어링", trust: "verified", sources: 2 },
   { type: "aiConversation", start: [11, 30], title: "Claude: 인스펙터 카피 점검", trust: "observed", sources: 1 },
   { type: "aiConversation", start: [14, 0], end: [15, 30], title: "Codex: 밀도 모드 구현 세션", trust: "verified", sources: 2 },
@@ -110,6 +113,7 @@ export function buildTimelineStressEvents(): TimelineEvent[] {
       projectId: PROJECT_ID,
       start: at(spec.start[0], spec.start[1]),
       ...(spec.end ? { end: at(spec.end[0], spec.end[1]) } : {}),
+      ...(spec.connector ? { connectorEventId: `${spec.connector}::stress::${id}` } : {}),
       type: spec.type,
       title: spec.title,
       summary: `${spec.title} — 작업 흐름 재구성용 stress 이벤트.`,

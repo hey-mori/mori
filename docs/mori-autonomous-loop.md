@@ -356,9 +356,12 @@ a demo/overview. Highest value first.
   clustered member event, the Korean `describeBundleKind` /
   `describeBundleReason` labels (raw enums no longer reach the
   UI), type mix, and represented evidence.
-- Same-source rapid-event grouping — clusters bundle by lane +
-  time window only; rapid events from the same connector source
-  are not yet grouped distinctly.
+- ✅ Same-source rapid grouping — a bundle now carries
+  `sameConnectorSource`: when every clustered member shares one
+  connector id (`connectorEventId` prefix), the bundle is flagged
+  as a same-source rapid group and the bundle inspector says so.
+  `deriveBundleConnectorSource` is the tested pure helper; the
+  stress fixture's connector-imported morning burst exercises it.
 - ✅ Inspector collapse — a toolbar toggle (`인스펙터`) collapses the
   right inspector so the Timeline canvas reclaims the full content
   width for scanning; wired through the previously-dead

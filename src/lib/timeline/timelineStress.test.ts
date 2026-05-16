@@ -67,6 +67,18 @@ describe("timeline stress fixture", () => {
     expect(bundles.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("flags the connector-imported morning burst as a same-source bundle", () => {
+    const model = stressModel("comfortable");
+    const aiLane = model.lanes.find((lane) => lane.type === "aiConversation");
+    const sameSourceBundle = aiLane!.items.find(
+      (item) => item.kind === "bundle" && item.sameConnectorSource !== null,
+    );
+    expect(sameSourceBundle).toBeDefined();
+    expect(
+      sameSourceBundle?.kind === "bundle" ? sameSourceBundle.sameConnectorSource : null,
+    ).toBe("claude-code");
+  });
+
   it("dense density produces a shorter frame than comfortable at day scale", () => {
     expect(stressModel("dense").layout.frameHeight).toBeLessThan(
       stressModel("comfortable").layout.frameHeight,

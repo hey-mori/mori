@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
-import { createTimelineBundles, createTimelineDisplayItems } from "./bundleEvents";
+import type { TimelineEvent } from "../../domain/types";
+import {
+  createTimelineBundles,
+  createTimelineDisplayItems,
+  deriveBundleConnectorSource,
+} from "./bundleEvents";
 import { isTimelineBundle } from "./displayItems";
 
 describe("timeline workflow bundles", () => {
@@ -77,5 +82,36 @@ describe("timeline workflow bundles", () => {
     expect(researchBundle.eventTypeCounts.webResearch).toBe(4);
     expect(researchBundle.reason.message).not.toContain("+");
     expect(researchBundle.summary).toContain("research burst");
+  });
+});
+
+describe("deriveBundleConnectorSource", () => {
+  function ev(id: string, connectorEventId?: string): TimelineEvent {
+    return { id, connectorEventId } as unknown as TimelineEvent;
+  }
+
+  it("returns the shared connector id when every event has the same source", () => {
+    expect(
+      deriveBundleConnectorSource([
+        ev("a", "claude-code::sess1::a"),
+        ev("b", "claude-code::sess1::b"),
+        ev("c", "claude-code::sess2::c"),
+      ]),
+    ).toBe("claude-code");
+  });
+
+  it("returns null when connector sources are mixed", () => {
+    expect(
+      deriveBundleConnectorSource([
+        ev("a", "claude-code::s::a"),
+        ev("b", "codex-cli::s::b"),
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null when any event lacks a connector id", () => {
+    expect(
+      deriveBundleConnectorSource([ev("a", "claude-code::s::a"), ev("b")]),
+    ).toBeNull();
   });
 });

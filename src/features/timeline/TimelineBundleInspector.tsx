@@ -53,6 +53,13 @@ export function TimelineBundleInspector({
         <div className="inspector-trust-card">
           <strong>{describeBundleReason(bundle.reason.code)}</strong>
           <span>{bundle.reason.message}</span>
+          {bundle.sameConnectorSource ? (
+            <span>
+              이 묶음의 이벤트는 모두 같은 커넥터 소스(
+              <code>{bundle.sameConnectorSource}</code>)에서 연속으로
+              가져온 동일 소스 작업 흐름입니다.
+            </span>
+          ) : null}
           <small>
             출처 {bundle.sourceCount} · 결정 {bundle.decisionCount} · 이슈 {bundle.issueCount}
           </small>
