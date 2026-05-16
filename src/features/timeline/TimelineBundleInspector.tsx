@@ -1,6 +1,7 @@
 import { ArrowRightLeft, ClipboardList } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels, eventTypeTone } from "../../domain/constants";
 import type { MoriMockSession } from "../../domain/types";
@@ -121,9 +122,11 @@ export function TimelineBundleInspector({
           <Button variant="primary" icon={ArrowRightLeft} onClick={onTrace}>
             Flow Focus 열기
           </Button>
-          <Button icon={ClipboardList} disabled title="인라인 펼치기는 예정된 기능입니다.">
-            인라인 펼치기 (예정)
-          </Button>
+          <MoriPlannedAction
+            icon={ClipboardList}
+            label="인라인 펼치기"
+            title="인라인 펼치기는 예정된 기능입니다."
+          />
         </div>
       </section>
     </aside>

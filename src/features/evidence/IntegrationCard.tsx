@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
+import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import {
   getHubCardActionLabel,
@@ -132,9 +133,11 @@ export function IntegrationCard({
             <p className="integration-card-footer-note">
               다음 마일스톤에 제공됩니다. 지금은 가져올 수 없습니다.
             </p>
-            <Button disabled icon={ChevronRight}>
-              Planned
-            </Button>
+            <MoriPlannedAction
+              icon={ChevronRight}
+              label="Planned"
+              title="다음 마일스톤에 제공됩니다. 지금은 가져올 수 없습니다."
+            />
           </>
         ) : canTakeAction ? (
           <Button

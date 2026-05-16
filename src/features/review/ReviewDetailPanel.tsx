@@ -1,6 +1,6 @@
 import { CalendarClock, Layers, Link2, ShieldCheck, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { Button } from "../../components/ui/Button";
+import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import {
   eventTypeLabels,
@@ -146,15 +146,18 @@ function IssueDetail({
       <section className="review-detail-section">
         <SectionHeader title="액션" />
         <div className="review-detail-actions">
-          <Button disabled title="이슈 상태 변경은 다음 마일스톤에서 활성화됩니다.">
-            상태 변경
-          </Button>
-          <Button disabled title="이슈 편집은 다음 마일스톤에서 활성화됩니다.">
-            편집
-          </Button>
-          <Button disabled title="이슈를 다음 액션으로 승격하는 기능은 다음 마일스톤입니다.">
-            액션으로 승격
-          </Button>
+          <MoriPlannedAction
+            label="상태 변경"
+            title="이슈 상태 변경은 다음 마일스톤에서 활성화됩니다."
+          />
+          <MoriPlannedAction
+            label="편집"
+            title="이슈 편집은 다음 마일스톤에서 활성화됩니다."
+          />
+          <MoriPlannedAction
+            label="액션으로 승격"
+            title="이슈를 다음 액션으로 승격하는 기능은 다음 마일스톤입니다."
+          />
         </div>
       </section>
     </aside>
@@ -250,12 +253,14 @@ function DecisionDetail({
       <section className="review-detail-section">
         <SectionHeader title="액션" />
         <div className="review-detail-actions">
-          <Button disabled title="결정 확정 토글은 다음 마일스톤에서 활성화됩니다.">
-            확정 / 반려
-          </Button>
-          <Button disabled title="결정 편집은 다음 마일스톤에서 활성화됩니다.">
-            편집
-          </Button>
+          <MoriPlannedAction
+            label="확정 / 반려"
+            title="결정 확정 토글은 다음 마일스톤에서 활성화됩니다."
+          />
+          <MoriPlannedAction
+            label="편집"
+            title="결정 편집은 다음 마일스톤에서 활성화됩니다."
+          />
         </div>
       </section>
     </aside>
@@ -320,12 +325,14 @@ function NextActionDetail({
       <section className="review-detail-section">
         <SectionHeader title="액션" />
         <div className="review-detail-actions">
-          <Button disabled title="다음 액션 완료 처리는 다음 마일스톤에서 활성화됩니다.">
-            완료 처리
-          </Button>
-          <Button disabled title="다음 액션 편집은 다음 마일스톤에서 활성화됩니다.">
-            편집
-          </Button>
+          <MoriPlannedAction
+            label="완료 처리"
+            title="다음 액션 완료 처리는 다음 마일스톤에서 활성화됩니다."
+          />
+          <MoriPlannedAction
+            label="편집"
+            title="다음 액션 편집은 다음 마일스톤에서 활성화됩니다."
+          />
         </div>
       </section>
     </aside>
