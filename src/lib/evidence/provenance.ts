@@ -16,6 +16,10 @@ import {
   type CaptureMode,
   type RawDataPolicy,
 } from "../sources/sourceRegistry";
+import {
+  getProductAvailabilityDisplay,
+  productAvailabilityFromIntegrationStatus,
+} from "../product-state/productState";
 import { getTrustDisplay, type TrustTone } from "./trust";
 
 export type ProvenanceDisplay = {
@@ -35,14 +39,6 @@ export type ProvenanceDisplay = {
   rawDataLabel: string;
   /** Verbatim privacy note from the integration row. */
   privacyNote: string;
-};
-
-const STATUS_LABEL: Record<IntegrationStatus, string> = {
-  implemented: "Available",
-  partial: "Partial",
-  planned: "Planned",
-  mockOnly: "Demo only",
-  unavailable: "Unavailable",
 };
 
 const CAPTURE_METHOD_LABEL: Record<CaptureMode, string> = {
@@ -74,7 +70,9 @@ export function getRawDataPolicyLabel(policy: RawDataPolicy): string {
 }
 
 export function getIntegrationStatusLabel(status: IntegrationStatus): string {
-  return STATUS_LABEL[status] ?? status;
+  return getProductAvailabilityDisplay(
+    productAvailabilityFromIntegrationStatus(status),
+  ).label;
 }
 
 /**
@@ -88,7 +86,7 @@ export function getProvenanceDisplay(source: SourceRef): ProvenanceDisplay {
     integration: integration?.id ?? null,
     integrationLabel: integration?.label ?? source.kind,
     status: integration?.status ?? "unavailable",
-    statusLabel: integration ? STATUS_LABEL[integration.status] : "Unknown",
+    statusLabel: integration ? getIntegrationStatusLabel(integration.status) : "Unknown",
     captureMethod: integration ? CAPTURE_METHOD_LABEL[integration.captureMode] ?? integration.captureMode : "Unknown",
     trustLabel: trust.label,
     trustTone: trust.tone,

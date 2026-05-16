@@ -25,6 +25,7 @@ import { useMoriAppStore } from "../../app/store";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
 import type { ViewKey } from "../../domain/types";
 import type { RuntimeMode, RecommendedSetupStep } from "../../lib/settings/settingsStatus";
+import { getProductRuntimeLabel } from "../../lib/product-state/productState";
 import { LocalAiCard } from "./LocalAiCard";
 import { PrivacyDefaultsCard } from "./PrivacyDefaultsCard";
 import { StorageCard } from "./StorageCard";
@@ -258,16 +259,18 @@ function StatusStrip({
 }) {
   // Honest storage language: the browser prototype's store *is*
   // localStorage — it is not a broken SQLite, so it never reads "error".
+  // Runtime / storage names come from the shared product-state model.
+  const sqliteLabel = getProductRuntimeLabel("desktopSQLite");
   const storage: { value: string; tone: RuntimeStatTone } =
     mode === "tauri-desktop"
       ? sqliteKind === "ok"
-        ? { value: `Desktop SQLite · ${sqliteSessionCount} saved`, tone: "ok" }
+        ? { value: `${sqliteLabel} · ${sqliteSessionCount}개 저장됨`, tone: "ok" }
         : sqliteKind === "error"
-          ? { value: "Desktop SQLite · error", tone: "error" }
+          ? { value: `${sqliteLabel} · 오류`, tone: "error" }
           : sqliteKind === "checking"
-            ? { value: "Desktop SQLite · checking…", tone: "idle" }
-            : { value: "Desktop SQLite · unavailable", tone: "warn" }
-      : { value: "Browser localStorage", tone: "info" };
+            ? { value: `${sqliteLabel} · 확인 중…`, tone: "idle" }
+            : { value: `${sqliteLabel} · 사용 불가`, tone: "warn" }
+      : { value: getProductRuntimeLabel("browserLocalStorage"), tone: "info" };
   return (
     <div className="settings-runtime-summary" role="region" aria-label="Mori runtime status">
       <RuntimeStat

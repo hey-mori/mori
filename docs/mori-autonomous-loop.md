@@ -469,6 +469,30 @@ Open (highest value first):
 12. Shared status badge system — tone usage (green / blue / purple /
     gray / amber / red) is inconsistent across views; needs one
     documented scale.
+    - ✅ Shared product-state model — `src/lib/product-state/` defines
+      one typed vocabulary for the app's core product states:
+      availability (`available` / `partial` / `planned` /
+      `unavailable` / `requiresSetup` / `demoOnly` / `browserOnly` /
+      `desktopOnly`), runtime / storage (`browserLocalStorage` /
+      `desktopSQLite` / `fallbackActive` / `localOnly`), and
+      data / provenance (`imported` / `clientSafe` / `inferred` /
+      `verified` / `observed` / `userProvided` / `summaryOnly` /
+      `fullTextRetained`). Each state maps to a label, a Korean
+      description, and one semantic tone shared with `MoriStatusBadge`
+      and the `data-mori-tone` theme tokens. `productAvailabilityFrom*`
+      mappers bridge the older `FeatureStatus` / `IntegrationStatus`
+      taxonomies; `MoriStatusBadge` now derives its tone from the model
+      instead of a badge-local map.
+    - ✅ Settings + Evidence adoption — the Settings provider cards and
+      the runtime / storage strip, and the Evidence integration cards
+      plus `evidence/provenance.ts` status labels, now derive labels
+      and tones from the shared model. Planned / unavailable surfaces
+      keep their honest, not-connected boundaries.
+    - Open — the broader `Badge` → `MoriStatusBadge` migration across
+      the remaining surfaces is still planned. Next passes: move the
+      accepted-memory lifecycle labels / tones into the shared model
+      and adopt it in Memory / Companion; consolidate the trust / status
+      display helpers and remove the duplicate status tone maps.
 13. Settings provider cards — planned / unavailable AI providers
     still look like selectable options; mark them clearly.
 14. Settings trust panel — the privacy / trust text block is dense;

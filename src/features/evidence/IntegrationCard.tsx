@@ -14,16 +14,17 @@ import {
   Terminal,
   type LucideIcon,
 } from "lucide-react";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import {
   getHubCardActionLabel,
   type HubImportKind,
 } from "../../lib/sources/integrationGroups";
-import type {
-  IntegrationStatus,
-  SourceIntegration,
-} from "../../lib/sources/sourceRegistry";
+import type { SourceIntegration } from "../../lib/sources/sourceRegistry";
+import {
+  getProductAvailabilityDisplay,
+  productAvailabilityFromIntegrationStatus,
+} from "../../lib/product-state/productState";
 
 const CAPTURE_LABELS: Record<string, string> = {
   manual: "Manual input",
@@ -44,22 +45,6 @@ const TRUST_TONE: Record<string, "green" | "blue" | "purple"> = {
   verified: "green",
   observed: "blue",
   inferred: "purple",
-};
-
-const STATUS_TONE: Record<IntegrationStatus, "green" | "blue" | "gray" | "orange"> = {
-  implemented: "green",
-  partial: "blue",
-  planned: "gray",
-  mockOnly: "orange",
-  unavailable: "gray",
-};
-
-const STATUS_LABEL: Record<IntegrationStatus, string> = {
-  implemented: "Available",
-  partial: "Partial",
-  planned: "Planned",
-  mockOnly: "Demo only",
-  unavailable: "Unavailable",
 };
 
 const INTEGRATION_ICON: Record<string, LucideIcon> = {
@@ -109,6 +94,9 @@ export function IntegrationCard({
   const actionLabel = getHubCardActionLabel(integration);
   const canTakeAction = Boolean(importKind) && !isPlanned && Boolean(onPrimary) && !primaryDisabled;
   const trustTone = TRUST_TONE[integration.trustDefault] ?? "purple";
+  const availability = getProductAvailabilityDisplay(
+    productAvailabilityFromIntegrationStatus(integration.status),
+  );
 
   return (
     <article
@@ -131,7 +119,7 @@ export function IntegrationCard({
             <strong>{integration.label}</strong>
             <span>{integration.description}</span>
           </div>
-          <Badge tone={STATUS_TONE[integration.status]}>{STATUS_LABEL[integration.status]}</Badge>
+          <MoriStatusBadge tone={availability.tone}>{availability.label}</MoriStatusBadge>
         </div>
         <dl className="integration-card-meta">
           <div>

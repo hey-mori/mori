@@ -2,11 +2,16 @@ import { Bot, Cloud, Code2, Database, Plug, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { Toggle } from "../../components/ui/Toggle";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { probeOllamaConnection } from "../../lib/analysis";
 import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib/analysis";
-import { getProviderRows, type ProviderRow } from "../../lib/settings/settingsStatus";
+import { getProviderRows } from "../../lib/settings/settingsStatus";
+import {
+  getProductAvailabilityDisplay,
+  productAvailabilityFromFeatureStatus,
+} from "../../lib/product-state/productState";
 
 const ICONS: Record<string, typeof Bot> = {
   deterministic: Sparkles,
@@ -14,13 +19,6 @@ const ICONS: Record<string, typeof Bot> = {
   lmStudio: Database,
   openAiCompatible: Code2,
   cloudApi: Cloud,
-};
-
-const STATUS_TONE: Record<ProviderRow["status"], "green" | "blue" | "gray" | "orange"> = {
-  implemented: "green",
-  partial: "blue",
-  planned: "gray",
-  unavailable: "orange",
 };
 
 type ProbeState =
@@ -71,6 +69,9 @@ export function LocalAiCard({
           const Icon = ICONS[row.id] ?? Bot;
           const canSelect = row.status === "implemented";
           const isCurrent = row.selected;
+          const availability = getProductAvailabilityDisplay(
+            productAvailabilityFromFeatureStatus(row.status),
+          );
           return (
             <article
               key={row.id}
@@ -85,15 +86,9 @@ export function LocalAiCard({
                   <strong>{row.label}</strong>
                   <span>{row.description}</span>
                 </div>
-                <Badge tone={STATUS_TONE[row.status]}>
-                  {row.status === "implemented"
-                    ? "Available"
-                    : row.status === "partial"
-                      ? "Partial"
-                      : row.status === "planned"
-                        ? "Planned"
-                        : "Unavailable"}
-                </Badge>
+                <MoriStatusBadge tone={availability.tone}>
+                  {availability.label}
+                </MoriStatusBadge>
               </header>
               <dl>
                 <div>
