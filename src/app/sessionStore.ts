@@ -30,6 +30,8 @@ import type {
   ConnectorImportHistorySavedSession,
   ConnectorSourceImportSummary,
 } from "../lib/connectors";
+import { isTauriRuntime } from "../lib/desktop";
+import { getSessionImportRepository } from "../lib/storage/sessionImportRepository";
 
 export type SessionMode = "demo" | "draft";
 
@@ -477,6 +479,26 @@ export function loadConnectorImportHistorySavedSessions(options: {
   const repository = getRepository();
   const snapshots = repository.listConnectorEventIdentitySnapshots(options);
   return snapshots.map((snapshot) => savedSessionFromSnapshot(snapshot));
+}
+
+/**
+ * Desktop-aware connector import history. In Tauri mode it reads
+ * cross-session connector identities from the SQLite `session_imports`
+ * table via `SessionImportRepository`, so SQLite-saved sessions
+ * contribute to the re-import rollup; in browser mode it resolves the
+ * synchronous localStorage result. The connector preview awaits this
+ * before building a history-aware preview.
+ */
+export async function loadConnectorImportHistorySavedSessionsAsync(options: {
+  excludeSessionId?: string | null;
+} = {}): Promise<ConnectorImportHistorySavedSession[]> {
+  if (!isTauriRuntime()) {
+    return loadConnectorImportHistorySavedSessions(options);
+  }
+  const result = await getSessionImportRepository().listConnectorEventIdentitySnapshots(
+    options,
+  );
+  return result.data.map((snapshot) => savedSessionFromSnapshot(snapshot));
 }
 
 /**

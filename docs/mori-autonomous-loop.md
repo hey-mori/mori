@@ -159,23 +159,17 @@ only — no phase numbers.
   local-only, no subprocess wrapping or background watching).
 - IDE / Terminal integration planning — explicit-capture design doc
   in `source-integrations.md` (explicit emit, no background watch).
-- SQLite `importSummary` mirror (foundation) — V004 `session_imports`
-  migration (Rust + TS catalog), pure `sessionImportRows` converters,
-  the Rust `session_imports` repository, the `persist_session_imports`
-  / `list_session_import_rows` / `list_all_session_import_rows` Tauri
-  commands, the runtime-aware `SessionImportRepository`, and
-  `listConnectorEventIdentitySnapshots` (desktop snapshots built from
-  the `session_imports` table).
+- SQLite `importSummary` mirror — complete: V004 `session_imports`
+  migration, `sessionImportRows` converters, the Rust repository, the
+  `persist` / `list` / `list_all` Tauri commands, the runtime-aware
+  `SessionImportRepository`, and `loadConnectorImportHistorySavedSessionsAsync`
+  wired into the `ImportPanel` connector preview so desktop sessions
+  feed the re-import rollup.
 
 **Open priority (highest first):**
 
-1. SQLite `importSummary` mirror — final wiring: have the connector
-   preview's saved-session history loader
-   (`loadConnectorImportHistorySavedSessions`) consult
-   `SessionImportRepository` on desktop so the re-import rollup sees
-   SQLite-saved sessions.
-2. Native file picker for `.mori v0` save / open.
-3. Local Connector Capture — a tested end-to-end bridge for real
+1. Native file picker for `.mori v0` save / open.
+2. Local Connector Capture — a tested end-to-end bridge for real
    Claude / Codex / Git work into `~/.mori/connectors/`.
 
 Deferred — revisit when a concrete need appears:
@@ -192,46 +186,47 @@ backlog with it.
 
 The next slice should be:
 
-**SQLite `importSummary` mirror — connector preview history wiring**
+**Native file picker for `.mori v0` export — Save As dialog**
 
 Goal:
-Have the connector preview consult `SessionImportRepository` on
-desktop so SQLite-saved sessions feed the re-import rollup. The
-desktop snapshot capability exists
-(`SessionImportRepository.listConnectorEventIdentitySnapshots`); this
-slice connects it to `loadConnectorImportHistorySavedSessions` /
-`ImportPanel` so the rollup actually sees desktop history.
+Today the Reports `.mori v0` export saves to Mori's default storage
+directory (`save_mori_package_json`). This slice adds a native Save As
+picker on desktop so the user chooses where the `.mori` file lands.
+The `tauri_plugin_dialog` is already initialised and
+`pick_repository_directory` is the existing precedent.
 
 Scope — do:
-- Add an async `loadConnectorImportHistorySavedSessions` path (or a
-  sibling async loader) that, on desktop, reads snapshots via
-  `SessionImportRepository.listConnectorEventIdentitySnapshots` and,
-  on browser, keeps the existing synchronous localStorage path.
-- Make the `ImportPanel` connector-preview paths await the history
-  before building the preview, so `savedSessionHistoryAvailable` is
-  honest on desktop.
-- Keep the change scoped to the history-loading seam — do not rewrite
-  the connector preview / duplicate-detection algorithm.
+- Add a Tauri command that opens a native Save dialog for a `.mori` /
+  `.mori.json` file and returns the chosen path (or a cancelled
+  flag), mirroring `repositories::picker::pick_repository_directory`.
+- Wire it into the Reports `.mori v0` export: on desktop, pick a path
+  then write through `save_mori_package_json` (or a path-taking
+  variant); a cancelled dialog aborts cleanly with no error.
+- Keep the browser path unchanged (blob download fallback).
+- Type the new command in `src/lib/desktop/tauriCommands.ts`.
 
 Scope — do not:
-- Change the duplicate-detection algorithm or the preview shape.
-- Backfill or migrate existing browser session imports to SQLite.
+- Change the `.mori v0` package format or the serializer.
+- Add the Open / import picker in this slice — Save As first; the
+  Open picker is a follow-up.
 
 Suggested files:
-- `src/app/sessionStore.ts` (`loadConnectorImportHistorySavedSessions`)
-- `src/features/import/ImportPanel.tsx`
-- tests for the async history loader
-- `docs/sqlite-persistence.md`, `docs/source-integrations.md`
+- `src-tauri/src/package.rs` (or a `picker` sibling)
+- `src-tauri/src/main.rs`
+- `src/lib/desktop/tauriCommands.ts`
+- `src/features/reports/ReportsView.tsx`
+- `docs/mori-package-v0.md`
 
 Tests:
-- the desktop history loader returns snapshots from
-  `SessionImportRepository`
-- the browser path is unchanged
+- Rust: the dialog command path-validation / extension rules
+  (mirror the `package::tests` extension test)
+- frontend: the export still works in the browser fallback path
 
-After this slice ships the SQLite `importSummary` mirror is complete —
-move it to **Completed**, reconcile the goal document's Current Gaps,
-and set the next slice to the new top backlog item (Native file picker
-for `.mori v0` save / open).
+Validation note: this slice touches `src-tauri/` — run `cargo check`
+and `cargo test` in addition to `npm run check:full` / `npm run build`.
+
+After this slice ships, set the next slice to the `.mori v0` Open /
+import native picker, then continue with the open backlog.
 
 ## 9. Stop Conditions
 

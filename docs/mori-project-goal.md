@@ -267,11 +267,11 @@ that is called out.
   Quick Pass settings, `.mori v0` package drafts, and accepted
   consolidated memory + audit rows.
 - Desktop SQLite via `rusqlite` with migrations `V001` (initial
-  schema), `V002` (connector identity column on `events`), and
-  `V003` (`consolidated_memories` + `consolidated_memory_audit`
-  tables). Real save / load of projects, sessions, sources, events,
-  issues, decisions, relationships, artifacts, next actions, and
-  summaries.
+  schema), `V002` (connector identity column on `events`), `V003`
+  (`consolidated_memories` + `consolidated_memory_audit` tables), and
+  `V004` (`session_imports` table). Real save / load of projects,
+  sessions, sources, events, issues, decisions, relationships,
+  artifacts, next actions, and summaries.
 - SQLite Accepted Memory Storage: the `consolidated_memories` and
   `consolidated_memory_audit` tables, the Rust persistence layer
   (`src-tauri/src/db/accepted_memory.rs`), four Tauri commands, and
@@ -284,6 +284,13 @@ that is called out.
   Reports accepted-memory section — SQLite in Tauri desktop mode,
   localStorage in browser mode, with an honest, visible localStorage
   fallback when a SQLite call fails.
+- SQLite session-import mirror: the `V004 session_imports` table, the
+  Rust repository + `persist` / `list` / `list_all` Tauri commands,
+  the `sessionImportRows` converters, and the runtime-aware
+  `SessionImportRepository`. `loadConnectorImportHistorySavedSessionsAsync`
+  feeds the connector preview, so desktop SQLite-saved sessions
+  contribute to the connector re-import rollup like browser-saved
+  sessions do.
 - Stale Memory Review: `buildStaleMemoryProposals`
   (`src/lib/project-memory/staleMemoryReview.ts`) scans accepted
   memories and emits `staleMemory` proposals — supersession /
@@ -367,9 +374,6 @@ against the repository.
   review" tray is not implemented.
 - **Team / shared memory.** No surface beyond the explicit `.mori v0`
   package round trip.
-- **SQLite-side `importSummary` mirror.** Browser-saved sessions
-  contribute to the re-import rollup; desktop SQLite-saved sessions
-  cannot, and the Memory page surfaces this honestly as a warning.
 - **Native file picker for `.mori v0`.** Save uses Mori's default
   storage directory; an Open / Save As picker for `.mori v0`
   files is not wired up.

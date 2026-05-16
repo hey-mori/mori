@@ -48,7 +48,7 @@ import {
 } from "../../lib/desktop/connectorInbox";
 import { getRepositoryVerificationFreshness } from "../../lib/repositories";
 import {
-  loadConnectorImportHistorySavedSessions,
+  loadConnectorImportHistorySavedSessionsAsync,
   selectSessionView,
   useMoriSessionStore,
 } from "../../app/sessionStore";
@@ -185,14 +185,14 @@ export function ImportPanel(props: ImportPanelProps = {}) {
 
   function loadSavedSessionHistoryForActive(
     activeSessionId: string | null,
-  ): ConnectorImportHistorySavedSession[] {
+  ): Promise<ConnectorImportHistorySavedSession[]> {
     // Cross-session duplicate detection walks every saved session in the
     // local persistence layer. Browser mode pulls from localStorage drafts;
-    // desktop mode will additionally route through SQLite once the SQLite
-    // store exposes a listing helper (today the browser repository is the
-    // authoritative cross-session index, since active SQLite saves are also
-    // mirrored back into localStorage via `loadDesktopSession`).
-    return loadConnectorImportHistorySavedSessions({
+    // desktop mode additionally routes through the SQLite `session_imports`
+    // table via `SessionImportRepository`, so SQLite-saved sessions
+    // contribute to the rollup. The async loader resolves the right source
+    // for the runtime.
+    return loadConnectorImportHistorySavedSessionsAsync({
       excludeSessionId: activeSessionId,
     });
   }
@@ -396,7 +396,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     reset();
   }
 
-  function handlePreviewConnectorJsonl() {
+  async function handlePreviewConnectorJsonl() {
     if (!body.trim()) {
       setStatus({ tone: "error", message: "Connector JSONL을 붙여넣은 뒤 Parse를 누르세요." });
       setConnectorPreview(null);
@@ -404,7 +404,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     }
     const preview = buildConnectorJsonlPreviewWithHistory(body, {
       activeSession: sessionView,
-      savedSessions: loadSavedSessionHistoryForActive(draft?.session.id ?? null),
+      savedSessions: await loadSavedSessionHistoryForActive(draft?.session.id ?? null),
     });
     setConnectorPreview(preview);
     if (preview.kind === "empty") {
@@ -482,7 +482,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       // saved sessions) without a second click.
       const preview = buildConnectorJsonlPreviewWithHistory(result.text, {
         activeSession: sessionView,
-        savedSessions: loadSavedSessionHistoryForActive(draft?.session.id ?? null),
+        savedSessions: await loadSavedSessionHistoryForActive(draft?.session.id ?? null),
       });
       setConnectorPreview(preview);
       if (preview.kind === "errors-only") {
@@ -516,7 +516,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     }
   }
 
-  function handleConnectorJsonlImportToReview() {
+  async function handleConnectorJsonlImportToReview() {
     if (!draft) {
       setStatus({ tone: "error", message: "세션이 없습니다. Start Session에서 새 세션을 시작하세요." });
       return;
@@ -525,7 +525,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       connectorPreview ??
       buildConnectorJsonlPreviewWithHistory(body, {
         activeSession: sessionView,
-        savedSessions: loadSavedSessionHistoryForActive(draft?.session.id ?? null),
+        savedSessions: await loadSavedSessionHistoryForActive(draft?.session.id ?? null),
       });
     if (preview.kind === "empty" || preview.kind === "errors-only") {
       setStatus({
