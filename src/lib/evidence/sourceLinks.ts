@@ -179,13 +179,13 @@ export function getSessionEvidenceSummary(sessionView: MoriMockSession): Session
   const trustBreakdown = trustMixFromSources(sources);
   const hasAnalysis = issues.length > 0 || decisions.length > 0;
 
-  let dataBasis = "No data";
+  let dataBasis = "데이터 없음";
   if (sources.length === 0 && events.length === 0) {
-    dataBasis = "No data";
+    dataBasis = "데이터 없음";
   } else if (hasAnalysis) {
-    dataBasis = "Imported sources + Quick Pass analysis";
+    dataBasis = "가져온 소스 + Quick Pass 분석";
   } else if (sources.length > 0) {
-    dataBasis = "Imported sources only (no analysis yet)";
+    dataBasis = "가져온 소스만 (분석 전)";
   }
 
   return {

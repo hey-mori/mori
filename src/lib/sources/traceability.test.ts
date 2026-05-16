@@ -457,7 +457,7 @@ describe("traceability", () => {
       expect(summary.issueCount).toBe(1);
       expect(summary.decisionCount).toBe(1);
       expect(summary.hasAnalysis).toBe(true);
-      expect(summary.dataBasis).toBe("Imported sources + Quick Pass analysis");
+      expect(summary.dataBasis).toBe("가져온 소스 + Quick Pass 분석");
       expect(summary.integrationBreakdown["Manual Note"]).toBe(1);
       expect(summary.integrationBreakdown["Git Diff (Paste)"]).toBe(1);
       expect(summary.trustBreakdown.verified).toBe(2);
@@ -514,7 +514,7 @@ describe("traceability", () => {
 
       expect(summary.sourceCount).toBe(1);
       expect(summary.hasAnalysis).toBe(false);
-      expect(summary.dataBasis).toBe("Imported sources only (no analysis yet)");
+      expect(summary.dataBasis).toBe("가져온 소스만 (분석 전)");
     });
 
     it("returns evidence summary for empty session", () => {
@@ -556,7 +556,7 @@ describe("traceability", () => {
       expect(summary.sourceCount).toBe(0);
       expect(summary.eventCount).toBe(0);
       expect(summary.hasAnalysis).toBe(false);
-      expect(summary.dataBasis).toBe("No data");
+      expect(summary.dataBasis).toBe("데이터 없음");
     });
   });
 });

@@ -313,6 +313,10 @@ Shipped:
     while Issue Garden showed `priorityLabels`; all now use the
     shared labels, and the Reports / Review analysis-strip count
     badges read Korean units instead of "sources / events / …".
+8b. ✅ Evidence data-basis copy — `getSessionEvidenceSummary` no
+    longer emits the English `dataBasis` descriptor ("No data" /
+    "Imported sources + Quick Pass analysis"); it is Korean, and
+    the three exact-string tests were updated to match.
 
 Open (highest value first):
 
