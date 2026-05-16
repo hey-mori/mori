@@ -43,6 +43,7 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
+import { formatDate } from "../../lib/formatting/time";
 import { deriveSessionStatus } from "../../lib/session/sessionStatus";
 import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import { ResumePromptCard, type ResumePromptOrigin } from "./ResumePromptCard";
@@ -126,9 +127,9 @@ export function ReportsView() {
         right={
           <div className="reports-page-actions">
             <Badge tone={isDemo ? "gray" : "green"}>{isDemo ? "데모 세션" : "실제 세션"}</Badge>
-            <Button icon={Calendar} disabled title="세션 날짜 범위 변경은 다음 마일스톤입니다.">
-              {new Date(view.session.startedAt).toLocaleDateString()}
-            </Button>
+            <Badge tone="gray" title="이 리포트는 활성 세션을 기준으로 합니다.">
+              <Calendar size={12} aria-hidden="true" /> {formatDate(view.session.startedAt)}
+            </Badge>
           </div>
         }
       />
