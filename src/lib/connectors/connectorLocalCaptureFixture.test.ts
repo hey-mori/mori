@@ -22,6 +22,12 @@
  * false`, empty `git.files`, zero additions / deletions — which the
  * dedicated block below guards so a real clean-repo capture is verified
  * to round-trip through the connector pipeline too.
+ *
+ * `mori-local-capture.py --transcript -` reads a piped CLI session from
+ * stdin (`claude ... | mori-local-capture --transcript -`). Its event
+ * shape matches a file transcript except `sourceTitle` is `Transcript:
+ * stdin` and `occurredAt` equals `receivedAt` (stdin has no mtime). The
+ * final block guards that a stdin capture round-trips too.
  */
 import { describe, expect, it } from "vitest";
 import localCaptureSample from "../../../connectors/local-capture/sample-event.jsonl?raw";
@@ -60,6 +66,30 @@ const CLEAN_REPO_GIT_JSONL = JSON.stringify({
     rawDataPolicy: "summary_only",
     redacted: false,
     note: "Local capture CLI. Git metadata only — no diff content, no file contents, no absolute repository path.",
+  },
+  provenance: { toolName: "mori-local-capture.py", toolVersion: "0.1.0" },
+});
+
+/**
+ * The exact line `mori-local-capture.py --transcript -` emits for a
+ * piped CLI session: a `transcript_imported` event whose `sourceTitle`
+ * is `Transcript: stdin` and whose `occurredAt` equals `receivedAt`.
+ */
+const STDIN_TRANSCRIPT_JSONL = JSON.stringify({
+  id: "local-20260516T093000Z-transcript",
+  connectorId: "desktopTranscriptImport",
+  kind: "transcript_imported",
+  occurredAt: "2026-05-16T09:30:00Z",
+  receivedAt: "2026-05-16T09:30:00Z",
+  sessionId: "local-20260516T093000Z",
+  sourceTitle: "Transcript: stdin",
+  summary:
+    "Imported transcript stdin (3 lines). First line: User: hello claude",
+  privacy: {
+    captureMethod: "local_cli_wrapper",
+    rawDataPolicy: "summary_only",
+    redacted: false,
+    note: "Local capture CLI. Transcript piped from stdin by the user; full text is not stored — summary metadata only.",
   },
   provenance: { toolName: "mori-local-capture.py", toolVersion: "0.1.0" },
 });
@@ -170,6 +200,44 @@ describe("local-capture clean-repo git snapshot", () => {
     const timelineEvents = candidates.flatMap((candidate) => candidate.events);
     expect(timelineEvents).toHaveLength(1);
     expect(timelineEvents[0]?.type).toBe("fileCode");
+    expect(timelineEvents[0]?.connectorEventId).toBeTruthy();
+  });
+});
+
+describe("local-capture stdin transcript capture", () => {
+  it("parses a stdin transcript event with no validation errors", () => {
+    const outcome = parseConnectorJsonl(STDIN_TRANSCRIPT_JSONL);
+    expect(outcome.errors).toEqual([]);
+    expect(outcome.events).toHaveLength(1);
+    const event = outcome.events[0];
+    expect(event?.kind).toBe("transcript_imported");
+    // stdin has no mtime, so the capture time is the receive time.
+    expect(event?.occurredAt).toBe(event?.receivedAt);
+    // The script never stores the piped transcript text itself.
+    expect(event?.rawText).toBeUndefined();
+    expect(event?.privacy.rawDataPolicy).toBe("summary_only");
+  });
+
+  it("previews a stdin transcript as one valid event", () => {
+    const preview = buildConnectorJsonlPreview(STDIN_TRANSCRIPT_JSONL);
+    expect(preview.kind).toBe("valid");
+    expect(preview.validEventCount).toBe(1);
+    expect(preview.invalidLineCount).toBe(0);
+  });
+
+  it("normalizes a stdin transcript into one aiConversation candidate", () => {
+    const outcome = parseConnectorJsonl(STDIN_TRANSCRIPT_JSONL);
+    const candidates = normalizeConnectorEventBatch({
+      projectId: "p-local-capture",
+      sessionId: "local-capture-session",
+      events: outcome.events,
+    });
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.source.kind).toBe("aiConversation");
+
+    const timelineEvents = candidates.flatMap((candidate) => candidate.events);
+    expect(timelineEvents).toHaveLength(1);
+    expect(timelineEvents[0]?.type).toBe("aiConversation");
     expect(timelineEvents[0]?.connectorEventId).toBeTruthy();
   });
 });

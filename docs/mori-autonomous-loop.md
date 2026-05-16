@@ -154,11 +154,13 @@ only — no phase numbers.
 - SQLite / `.mori` parity cleanup — schema-completeness check now
   covers the V003 accepted-memory tables (`consolidated_memories` /
   `consolidated_memory_audit`) in `requiredSqliteTables`.
+- CLI wrapper for Claude/Codex workflows — `mori-local-capture.py
+  --transcript -` reads a piped CLI session from stdin (explicit,
+  local-only, no subprocess wrapping or background watching).
 
 **Open priority (highest first):**
 
-1. CLI wrapper for Claude/Codex workflows, explicit/local only
-2. IDE / Terminal integration planning, no hidden monitoring
+1. IDE / Terminal integration planning, no hidden monitoring
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -179,42 +181,43 @@ backlog with it.
 
 The next slice should be:
 
-**CLI wrapper for Claude/Codex workflows — stdin transcript capture**
+**IDE / Terminal integration planning — explicit-capture design doc**
 
 Goal:
-Let a user pipe a Claude / Codex CLI session into Mori's local
-capture explicitly — `claude ... | mori-local-capture --transcript -`
-— so a real terminal workflow can be captured without a hidden
-watcher. The smallest useful slice is stdin support on the existing
-`connectors/local-capture/mori-local-capture.py`.
+Write the planning section for IDE / terminal integration so the next
+build slices have a concrete, non-goal-safe design to follow. This is
+a documentation slice — no runtime code — but a real production slice:
+it commits the design that keeps future integration explicit and
+local-first.
 
 Scope — do:
-- Teach `mori-local-capture.py` `--transcript` to accept `-` and read
-  the transcript from stdin (already supports a file path).
-- Keep the connector id explicit and overridable (e.g. a
-  `--connector` flag defaulting to `desktopTranscriptImport`).
-- Emit the same connector JSONL shape the pipeline already accepts;
-  it must round-trip through parse → preview → normalize.
-- The capture stays explicit and local-only — the user runs the
-  pipe; nothing monitors in the background.
+- Add an "IDE / Terminal integration" planning section to
+  `docs/source-integrations.md` (or the closest existing planning
+  doc).
+- Specify the explicit-capture model: the user triggers a capture
+  (a command, a keybinding, an editor action) — Mori never watches
+  the editor, terminal, or process list in the background.
+- Reuse the existing connector JSONL pipeline and the
+  `~/.mori/connectors/` inbox — the integration emits the same event
+  shape `mori-local-capture.py` already produces.
+- Restate the hard non-goals inline (no scrollback scraping, no
+  keylogging, no daemon) so the doc cannot be misread.
 
 Scope — do not:
-- Spawn or wrap a subprocess silently, or add any background watcher.
-- Read terminal scrollback, history, or any process the user did not
-  explicitly pipe in.
+- Write integration runtime code in this slice.
+- Design anything that needs a background watcher, account access, or
+  a hidden capture path.
 
 Suggested files:
-- `connectors/local-capture/mori-local-capture.py`
-- `connectors/local-capture/README` / `docs/connectors/local-capture.md`
-- `src/lib/connectors/connectorLocalCaptureFixture.test.ts`
-  (a fixture proving the stdin-shaped output round-trips)
+- `docs/source-integrations.md`
+- `docs/mori-project-goal.md` (only if the canonical state changes)
 
 Tests:
-- a stdin-captured transcript JSONL parses, previews, and normalizes
-  through the connector pipeline
+- none — documentation slice; validation is `check:full` + `build`
+  staying green.
 
-After this slice ships, set the next slice to the new top backlog
-item (IDE / Terminal integration planning), and continue.
+After this slice ships, reconcile section 7 with the goal document's
+Current Gaps and set the next slice to the new top backlog item.
 
 ## 9. Stop Conditions
 

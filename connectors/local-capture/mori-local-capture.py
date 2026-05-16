@@ -4,8 +4,11 @@
 Turns explicit local inputs into Mori Connector JSONL events:
 
   --transcript <path>   Read a transcript text file the user explicitly
-                        provides. Records a summary only; the full text is
-                        never stored in the event.
+                        provides, or `-` to read from stdin so a piped
+                        Claude / Codex CLI session can be captured:
+                        `claude ... | mori-local-capture --transcript -`.
+                        Records a summary only; the full text is never
+                        stored in the event.
   --note <text>         Record a manual note the user types on the command
                         line.
   --git-repo <path>     Capture *safe* Git snapshot metadata for a repo the
@@ -101,34 +104,50 @@ def base_event(event_id: str, connector_id: str, kind: str, session_id: str,
 # --transcript
 # --------------------------------------------------------------------------
 
-def capture_transcript(path: str, session_id: str, received_at: str) -> dict:
-    p = Path(os.path.expanduser(path))
-    if not p.is_file():
-        raise CaptureError(f"--transcript: not a file: {path}")
+def capture_transcript(path: str, session_id: str, received_at: str,
+                       connector_id: str) -> dict:
+    # `-` reads the transcript from stdin so a piped CLI session can be
+    # captured. Any other value is an explicit file path.
+    if path == "-":
+        text = sys.stdin.read()
+        if not text.strip():
+            raise CaptureError("--transcript: stdin was empty")
+        name = "stdin"
+        occurred_at = received_at
+    else:
+        p = Path(os.path.expanduser(path))
+        if not p.is_file():
+            raise CaptureError(f"--transcript: not a file: {path}")
+        text = p.read_text(encoding="utf-8", errors="replace")
+        name = p.name
+        occurred_at = iso_from_timestamp(p.stat().st_mtime)
 
-    text = p.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
     non_empty = [line.strip() for line in lines if line.strip()]
     first = non_empty[0] if non_empty else ""
 
-    summary = f"Imported transcript {p.name} ({len(lines)} lines)."
+    summary = f"Imported transcript {name} ({len(lines)} lines)."
     if first:
         summary += f" First line: {truncate(first, TRANSCRIPT_FIRST_LINE_LIMIT)}"
 
-    occurred_at = iso_from_timestamp(p.stat().st_mtime)
     event = base_event(
         event_id=f"{session_id}-transcript",
-        connector_id="desktopTranscriptImport",
+        connector_id=connector_id,
         kind="transcript_imported",
         session_id=session_id,
         occurred_at=occurred_at,
         received_at=received_at,
     )
-    event["sourceTitle"] = f"Transcript: {p.name}"
+    source_note = (
+        "Transcript piped from stdin by the user"
+        if path == "-"
+        else "Transcript file read explicitly by the user"
+    )
+    event["sourceTitle"] = f"Transcript: {name}"
     event["summary"] = summary
     event["privacy"] = privacy(
-        "Local capture CLI. Transcript file read explicitly by the user; "
-        "full text is not stored — summary metadata only."
+        f"Local capture CLI. {source_note}; full text is not stored — "
+        "summary metadata only."
     )
     event["provenance"] = provenance()
     return event
@@ -311,7 +330,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--transcript", metavar="PATH",
-                        help="read an explicitly provided transcript text file")
+                        help="read an explicitly provided transcript text file, "
+                             "or `-` to read from stdin")
+    parser.add_argument("--connector", metavar="ID", default="desktopTranscriptImport",
+                        help="connector id for the transcript event "
+                             "(default: desktopTranscriptImport)")
     parser.add_argument("--note", metavar="TEXT",
                         help="record a manual note")
     parser.add_argument("--git-repo", metavar="PATH", dest="git_repo",
@@ -343,7 +366,8 @@ def main(argv: list) -> int:
 
     if args.transcript:
         try:
-            events.append(capture_transcript(args.transcript, session_id, received_at))
+            events.append(capture_transcript(
+                args.transcript, session_id, received_at, args.connector))
         except CaptureError as exc:
             errors.append(str(exc))
 

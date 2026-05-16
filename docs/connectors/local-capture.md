@@ -59,6 +59,20 @@ Claude or Codex conversation the user saved or exported themselves.
 - Emitted as `connectorId: desktopTranscriptImport`, `kind:
   transcript_imported` → `aiConversation` timeline event.
 
+Pass `-` instead of a path to read the transcript from **stdin**, so a
+live Claude / Codex CLI session can be captured by piping it explicitly:
+
+```sh
+claude -p "review this module" | mori-local-capture.py --transcript -
+```
+
+This is the explicit, local CLI capture path — the user runs the pipe;
+nothing watches a terminal or process in the background. A stdin capture
+uses `Transcript: stdin` as the source title and the capture time as
+`occurredAt` (stdin has no modification time); empty stdin is rejected.
+The `--connector <id>` flag overrides the connector id (default
+`desktopTranscriptImport`).
+
 ### `--note <text>`
 
 Records a manual note the user types on the command line.
@@ -168,8 +182,9 @@ this bridge intentionally does **not**:
 - capture full diffs, file contents, or full transcript text;
 - send anything over the network;
 - import anything automatically — Import Review is always explicit;
-- wrap the `claude` / `codex` CLIs (a dedicated CLI wrapper is a separate,
-  later milestone).
+- spawn, wrap, or silently observe the `claude` / `codex` CLIs. The
+  `--transcript -` stdin path captures only what the user explicitly
+  pipes in; it never starts a subprocess or reads terminal scrollback.
 
 ## Code and test references
 

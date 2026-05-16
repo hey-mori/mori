@@ -17,7 +17,7 @@ event per input to a local connector inbox file
 
 | Flag | What it captures |
 |---|---|
-| `--transcript <path>` | Reads a transcript text file you explicitly point at. Records a one-line summary + line count. The full transcript text is **not** stored in the event. |
+| `--transcript <path>` | Reads a transcript text file you explicitly point at, or `-` to read from stdin (pipe a Claude / Codex CLI session in). Records a one-line summary + line count. The full transcript text is **not** stored in the event. |
 | `--note <text>` | Records a manual note you type on the command line. |
 | `--git-repo <path>` | Captures **safe Git metadata only** for a repo you explicitly point at: branch, HEAD SHA, dirty state, changed file paths, and an additions/deletions diff stat. |
 
@@ -89,6 +89,9 @@ user sees it.
 ```bash
 # Capture a transcript file you exported / saved yourself
 python3 mori-local-capture.py --transcript ~/notes/claude-session.txt
+
+# Capture a live CLI session by piping it in explicitly (stdin)
+claude -p "review this module" | python3 mori-local-capture.py --transcript -
 
 # Record a manual note
 python3 mori-local-capture.py --note "Decided to keep the import review gate"
