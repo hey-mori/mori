@@ -117,6 +117,7 @@ export function AccountProfileView() {
             </p>
             <div className="account-identity-actions">
               <Button onClick={() => setCurrentView("login")}>로그인 옵션 살펴보기</Button>
+              <Button onClick={() => setCurrentView("security")}>보안 및 기기 세션</Button>
             </div>
           </section>
         </section>

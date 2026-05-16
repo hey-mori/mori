@@ -15,6 +15,7 @@ import { CompanionInboxView } from "../features/companion/CompanionInboxView";
 import { WorkspaceView } from "../features/workspace/WorkspaceView";
 import { AccountProfileView } from "../features/account/AccountProfileView";
 import { LoginView } from "../features/account/LoginView";
+import { SecurityView } from "../features/account/SecurityView";
 import { SettingsView } from "../features/settings/SettingsView";
 
 export default function App() {
@@ -52,6 +53,7 @@ export default function App() {
       {currentView === "workspace" ? <WorkspaceView /> : null}
       {currentView === "profile" ? <AccountProfileView /> : null}
       {currentView === "login" ? <LoginView /> : null}
+      {currentView === "security" ? <SecurityView /> : null}
       {currentView === "settings" ? <SettingsView /> : null}
     </AppShell>
   );

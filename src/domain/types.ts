@@ -13,6 +13,7 @@ export type ViewKey =
   | "workspace"
   | "profile"
   | "login"
+  | "security"
   | "settings";
 
 export type TrustLevel = "verified" | "observed" | "inferred";
