@@ -282,11 +282,15 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
       const filename = `${pkg.manifest.packageId}.mori.json`;
       if (isTauriRuntime()) {
         try {
-          const saved = await tauriCommands.saveMoriPackageJson({
+          const saved = await tauriCommands.saveMoriPackageJsonAs({
             serializedPackage: serialized,
             suggestedFilename: filename,
           });
-          setStatus(`Saved desktop package: ${saved.path}`);
+          if (saved.cancelled) {
+            setStatus("Export cancelled. Browser draft 저장됨.");
+          } else {
+            setStatus(`Saved desktop package: ${saved.path}`);
+          }
           return;
         } catch (error) {
           setStatus(`Desktop save failed: ${error instanceof Error ? error.message : "unknown error"}`);

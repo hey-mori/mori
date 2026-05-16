@@ -374,9 +374,10 @@ against the repository.
   review" tray is not implemented.
 - **Team / shared memory.** No surface beyond the explicit `.mori v0`
   package round trip.
-- **Native file picker for `.mori v0`.** Save uses Mori's default
-  storage directory; an Open / Save As picker for `.mori v0`
-  files is not wired up.
+- **Native Open picker for `.mori v0`.** Desktop export uses a native
+  Save As dialog (`save_mori_package_json_as`); a native Open picker
+  for import is not wired up yet (import still takes a path or pasted
+  JSON).
 - **`.mori` zip-like packaging.** Today exports are JSON, not zipped.
 
 ## 6. Product Principles

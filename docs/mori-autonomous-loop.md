@@ -165,10 +165,14 @@ only — no phase numbers.
   `SessionImportRepository`, and `loadConnectorImportHistorySavedSessionsAsync`
   wired into the `ImportPanel` connector preview so desktop sessions
   feed the re-import rollup.
+- Native file picker for `.mori v0` export — `save_mori_package_json_as`
+  opens a native Save As dialog; the Reports export uses it on
+  desktop and handles a cancelled dialog cleanly.
 
 **Open priority (highest first):**
 
-1. Native file picker for `.mori v0` save / open.
+1. Native Open picker for `.mori v0` import — a native Open dialog so
+   the user can pick a `.mori` file to import without typing a path.
 2. Local Connector Capture — a tested end-to-end bridge for real
    Claude / Codex / Git work into `~/.mori/connectors/`.
 
@@ -186,47 +190,48 @@ backlog with it.
 
 The next slice should be:
 
-**Native file picker for `.mori v0` export — Save As dialog**
+**Native Open picker for `.mori v0` import**
 
 Goal:
-Today the Reports `.mori v0` export saves to Mori's default storage
-directory (`save_mori_package_json`). This slice adds a native Save As
-picker on desktop so the user chooses where the `.mori` file lands.
-The `tauri_plugin_dialog` is already initialised and
-`pick_repository_directory` is the existing precedent.
+The Consolidation Review import panel imports a `.mori v0` package by
+pasted JSON or a browser `File` pick. On desktop a native Open dialog
+is the better path. This slice adds one and wires it into the import
+panel, reusing the existing `open_mori_package_json` reader.
 
 Scope — do:
-- Add a Tauri command that opens a native Save dialog for a `.mori` /
+- Add a Tauri command that opens a native Open dialog for a `.mori` /
   `.mori.json` file and returns the chosen path (or a cancelled
-  flag), mirroring `repositories::picker::pick_repository_directory`.
-- Wire it into the Reports `.mori v0` export: on desktop, pick a path
-  then write through `save_mori_package_json` (or a path-taking
-  variant); a cancelled dialog aborts cleanly with no error.
-- Keep the browser path unchanged (blob download fallback).
+  flag), mirroring `pick_repository_directory` /
+  `save_mori_package_json_as`.
+- Wire it into the Consolidation Review import panel: on desktop the
+  pick affordance uses the native dialog, reads the file via
+  `open_mori_package_json`, then routes the JSON through the existing
+  `runImport` path; a cancelled dialog aborts cleanly.
+- Keep the browser `File`-API pick and the paste path unchanged.
 - Type the new command in `src/lib/desktop/tauriCommands.ts`.
 
 Scope — do not:
-- Change the `.mori v0` package format or the serializer.
-- Add the Open / import picker in this slice — Save As first; the
-  Open picker is a follow-up.
+- Change the `.mori v0` package format, the importer, or the review
+  proposal flow.
+- Auto-import — imported memory still enters review as proposals.
 
 Suggested files:
 - `src-tauri/src/package.rs` (or a `picker` sibling)
 - `src-tauri/src/main.rs`
 - `src/lib/desktop/tauriCommands.ts`
-- `src/features/reports/ReportsView.tsx`
-- `docs/mori-package-v0.md`
+- `src/features/memory/ConsolidationReviewView.tsx`
+- `docs/mori-package-v0.md`, `docs/project-memory-consolidation.md`
 
 Tests:
-- Rust: the dialog command path-validation / extension rules
-  (mirror the `package::tests` extension test)
-- frontend: the export still works in the browser fallback path
+- Rust: any path / extension helper the command adds (mirror the
+  `package::tests` pattern)
+- frontend: the paste + browser-file import paths still work
 
 Validation note: this slice touches `src-tauri/` — run `cargo check`
 and `cargo test` in addition to `npm run check:full` / `npm run build`.
 
-After this slice ships, set the next slice to the `.mori v0` Open /
-import native picker, then continue with the open backlog.
+After this slice ships, set the next slice to the new top backlog
+item (Local Connector Capture end-to-end bridge), and continue.
 
 ## 9. Stop Conditions
 

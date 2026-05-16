@@ -15,6 +15,7 @@ fn main() {
             commands::get_app_info,
             commands::get_storage_location,
             package::save_mori_package_json,
+            package::save_mori_package_json_as,
             package::open_mori_package_json,
             package::list_recent_mori_packages,
             sqlite::get_sqlite_migration_status,
