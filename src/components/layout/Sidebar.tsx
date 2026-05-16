@@ -16,8 +16,12 @@ import type { ViewKey } from "../../domain/types";
 import { moriMockSession } from "../../domain/mock-data";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriProfileStore } from "../../app/profileStore";
+import { useMoriAppStore } from "../../app/store";
 import { getProfileInitials } from "../../lib/profile/localProfile";
-import { deriveSessionTiming } from "../../lib/session/sessionTiming";
+import {
+  describeSessionCardAction,
+  deriveSessionTiming,
+} from "../../lib/session/sessionTiming";
 import { getFeatureControlProps } from "../../app/featureStatus";
 
 const navItems: Array<{ key: ViewKey; label: string; badge?: string; icon: typeof Play }> = [
@@ -71,6 +75,7 @@ function SidebarSessionCard() {
   const draft = useMoriSessionStore((state) => state.draft);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
   const endSession = useMoriSessionStore((state) => state.endSession);
+  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   const initialTiming = deriveSessionTiming({
     draft,
@@ -103,9 +108,7 @@ function SidebarSessionCard() {
     ? `시작 ${timing.startTimeLabel}`
     : "시작 기록 없음";
   const endSessionFeature = getFeatureControlProps("appShell.endSession");
-  const isEnded = timing.state === "ended";
-  const canEnd =
-    endSessionFeature.enabled && timing.state !== "demo" && !isEnded;
+  const action = describeSessionCardAction(timing.state);
 
   return (
     <div className="session-card" role="region" aria-label="Current session">
@@ -115,21 +118,26 @@ function SidebarSessionCard() {
       <time className={timing.isLive ? "is-live" : ""} aria-live={timing.isLive ? "polite" : "off"}>
         {timing.durationLabel}
       </time>
-      <Button
-        disabled={!canEnd}
-        onClick={canEnd ? endSession : undefined}
-        title={
-          timing.state === "demo"
-            ? "데모 세션은 종료할 필요가 없습니다."
-            : isEnded
-              ? "이미 종료된 세션입니다."
-              : !endSessionFeature.enabled
-                ? endSessionFeature.title
-                : "활성 세션을 종료하고 완료 상태로 표시합니다."
-        }
-      >
-        세션 종료
-      </Button>
+      {action.kind === "endSession" ? (
+        <Button
+          disabled={!endSessionFeature.enabled}
+          onClick={endSessionFeature.enabled ? endSession : undefined}
+          title={
+            endSessionFeature.enabled
+              ? "활성 세션을 종료하고 완료 상태로 표시합니다."
+              : endSessionFeature.title
+          }
+        >
+          {action.label}
+        </Button>
+      ) : (
+        <Button
+          onClick={() => setCurrentView("reports")}
+          title="이 세션의 리포트를 엽니다."
+        >
+          {action.label}
+        </Button>
+      )}
     </div>
   );
 }

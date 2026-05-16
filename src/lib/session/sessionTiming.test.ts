@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeSessionCardAction,
   deriveSessionTiming,
   formatDuration,
   formatLongDuration,
@@ -175,5 +176,25 @@ describe("deriveSessionTiming", () => {
     });
     expect(snap.durationSeconds).toBe(0);
     expect(snap.durationLabel).toBe("00:00:00");
+  });
+});
+
+describe("describeSessionCardAction", () => {
+  it("offers End Session for an ongoing session", () => {
+    for (const state of ["active", "analyzing", "draft"] as const) {
+      expect(describeSessionCardAction(state)).toEqual({
+        kind: "endSession",
+        label: "세션 종료",
+      });
+    }
+  });
+
+  it("offers View Report for a finished or demo session", () => {
+    for (const state of ["ended", "demo"] as const) {
+      expect(describeSessionCardAction(state)).toEqual({
+        kind: "viewReport",
+        label: "리포트 보기",
+      });
+    }
   });
 });

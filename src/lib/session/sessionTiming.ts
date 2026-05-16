@@ -166,6 +166,26 @@ export function deriveSessionTiming(input: DeriveSessionTimingInput): SessionTim
   };
 }
 
+/**
+ * The primary action the sidebar session card should offer for a given
+ * lifecycle state. An ongoing session can be ended; a finished or demo
+ * session has nothing to end, so the card points the user at the report
+ * instead — keeping the card a live entry point rather than a dead end.
+ */
+export type SessionCardAction = {
+  kind: "endSession" | "viewReport";
+  label: string;
+};
+
+export function describeSessionCardAction(
+  state: SessionLifecycleState,
+): SessionCardAction {
+  if (state === "active" || state === "analyzing" || state === "draft") {
+    return { kind: "endSession", label: "세션 종료" };
+  }
+  return { kind: "viewReport", label: "리포트 보기" };
+}
+
 function parseIso(value: string | null | undefined): number | null {
   if (!value) return null;
   const parsed = new Date(value).getTime();
