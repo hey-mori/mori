@@ -53,23 +53,15 @@ export type TimelineLayout = {
   rowHeight: number;
 };
 
-// Event cards and bundle cards share the same height per density mode so the
-// lane row height stays constant regardless of which items the lane carries.
-// Width differs: bundles are slightly wider so they can carry their longer
-// titles + count + type-mix line without truncating.
-const DENSITY_EVENT_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
-  comfortable: { width: 184, height: 68 },
-  compact: { width: 158, height: 54 },
-  // Dense / overview tier — icon + time + one truncated title row only, no
-  // footer. Tuned so a ~1100px content area fits ~7-8 cards per lane row,
-  // which is what day-scale (30-100+ event) scanning needs.
-  dense: { width: 132, height: 38 },
-};
-
-const DENSITY_BUNDLE_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
-  comfortable: { width: 216, height: 68 },
-  compact: { width: 184, height: 54 },
-  dense: { width: 156, height: 38 },
+// Event cards and bundle cards share one height per density mode, so the lane
+// row height stays constant regardless of which items the lane carries. Card
+// *width* is no longer fixed — it is duration-aware (`DENSITY_WIDTH_BOUNDS` +
+// `computeItemWidth`). The dense tier (38px) fits icon + time + one truncated
+// title row with no footer, tuned for day-scale (30-100+ event) scanning.
+const DENSITY_CARD_HEIGHT: Record<TimelineDensity, number> = {
+  comfortable: 68,
+  compact: 54,
+  dense: 38,
 };
 
 // Duration-aware card width. A card's width is the pixel span of its
@@ -98,7 +90,7 @@ export function computeTimelineLayout(
   options: TimelineLayoutOptions,
 ): TimelineLayout {
   const density: TimelineDensity = options.density ?? "comfortable";
-  const { height: cardHeight } = DENSITY_EVENT_DIMENSIONS[density];
+  const cardHeight = DENSITY_CARD_HEIGHT[density];
   // `cardWidth` is now the minimum (cardlet) width; actual widths vary by
   // event duration. Kept on the layout result as the content-area floor.
   const cardWidth = DENSITY_WIDTH_BOUNDS[density].eventMin;
@@ -132,7 +124,7 @@ export function computeTimelineLayout(
     const laneItems = grouped.get(type) ?? [];
     const laneTop = cursorY;
     const laneHeight = laneItems.length > 0
-      ? LANE_VERTICAL_PADDING * 2 + getLaneHeight(laneItems, density)
+      ? LANE_VERTICAL_PADDING * 2 + DENSITY_CARD_HEIGHT[density]
       : 18;
     const y = laneTop + LANE_VERTICAL_PADDING;
     const laneLayouts = layoutLaneItems(
@@ -199,9 +191,7 @@ function layoutLaneItems(
 ): LaidOutTimelineItem[] {
   const maxRight = contentLeftPx + contentWidthPx;
   const placements = items.map((item) => {
-    const height =
-      (item.kind === "bundle" ? DENSITY_BUNDLE_DIMENSIONS[density] : DENSITY_EVENT_DIMENSIONS[density])
-        .height;
+    const height = DENSITY_CARD_HEIGHT[density];
     const width = computeItemWidth(item, range, contentWidthPx, density);
     const idealX = computeItemLeft(item.start, range, contentLeftPx, contentWidthPx, width);
 
@@ -249,14 +239,6 @@ function layoutLaneItems(
     anchorRight: { x: x + width, y: y + height / 2 },
     anchorCenter: { x: x + width / 2, y: y + height / 2 },
   }));
-}
-
-function getLaneHeight(items: TimelineDisplayItem[], density: TimelineDensity): number {
-  return Math.max(
-    ...items.map((item) =>
-      item.kind === "bundle" ? DENSITY_BUNDLE_DIMENSIONS[density].height : DENSITY_EVENT_DIMENSIONS[density].height,
-    ),
-  );
 }
 
 /**

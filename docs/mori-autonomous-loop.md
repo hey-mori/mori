@@ -362,6 +362,10 @@ a demo/overview. Highest value first.
   as a same-source rapid group and the bundle inspector says so.
   `deriveBundleConnectorSource` is the tested pure helper; the
   stress fixture's connector-imported morning burst exercises it.
+- ✅ Layout module cleanup — the duration-aware-width change left
+  dead per-density `width` fields on two redundant dimension
+  records; collapsed to a single `DENSITY_CARD_HEIGHT` map (card
+  width has one source of truth, `DENSITY_WIDTH_BOUNDS`).
 - ✅ Inspector collapse — a toolbar toggle (`인스펙터`) collapses the
   right inspector so the Timeline canvas reclaims the full content
   width for scanning; wired through the previously-dead
