@@ -37,11 +37,14 @@ export function TimelineEventCard({
   const vm = buildTimelineEventCardViewModel(event);
   const Icon = eventTypeIcons[event.type];
   const TrustIcon = TRUST_ICONS[event.trustLevel];
-  const compact = density === "compact";
+  // Progressive disclosure: only the comfortable tier carries footer meta on
+  // the card. Compact and dense move that detail into the inspector.
+  const densityClass = densityClassName(density);
+  const showFooter = density === "comfortable";
 
   return (
     <button
-      className={`event-card card-${vm.tone} trust-${vm.trust.tone} ${focusStateClassName(focusState)} ${compact ? "is-compact" : ""}`}
+      className={`event-card card-${vm.tone} trust-${vm.trust.tone} ${focusStateClassName(focusState)} ${densityClass}`}
       onClick={() => onSelect(event.id)}
       onMouseEnter={() => onHover(event.id)}
       onMouseLeave={() => onHover(null)}
@@ -73,11 +76,18 @@ export function TimelineEventCard({
         </span>
       </header>
       <strong className="event-card-title">{vm.title}</strong>
-      {!compact && vm.metaParts.length > 0 ? (
+      {showFooter && vm.metaParts.length > 0 ? (
         <footer className="event-card-footer">
           <span className="event-card-meta">{vm.metaParts.join(" · ")}</span>
         </footer>
       ) : null}
     </button>
   );
+}
+
+/** Map a density mode to the card's modifier class (comfortable = none). */
+export function densityClassName(density: TimelineDensity): string {
+  if (density === "dense") return "is-dense";
+  if (density === "compact") return "is-compact";
+  return "";
 }

@@ -126,16 +126,19 @@ export function buildTimelineRenderModel(
     searchQuery: input.searchQuery,
   });
 
-  // 4. Display items — bundles preserved as before.
+  // 4. Display items — bundles preserved as before. Bundle aggressiveness is
+  // density-aware: a denser mode uses smaller cards, so a lane can show more
+  // individual events before clustering, and a tighter cluster window.
+  const bundleTuning = densityBundleTuning(input.density);
   const visibleDisplayItems = createTimelineDisplayItems(
     visibleEvents,
     input.view.relationships,
     {
-      timeWindowMinutes: input.density === "comfortable" ? 12 : 10,
+      timeWindowMinutes: bundleTuning.timeWindowMinutes,
       minEventsForBundle: 3,
       preserveSelectedEventId: input.selectedEventId,
       preserveImportantEventIds: deriveImportantEventIds(visibleEvents, input.view.decisions),
-      maxVisibleItemsPerLane: input.density === "comfortable" ? 4 : 5,
+      maxVisibleItemsPerLane: bundleTuning.maxVisibleItemsPerLane,
       laneDensity: input.density,
       decisions: input.view.decisions,
     },
@@ -194,6 +197,27 @@ export function buildTimelineRenderModel(
     mode: input.mode,
     density: input.density,
   };
+}
+
+/**
+ * Density-aware bundle tuning. Denser modes use smaller cards, so a lane can
+ * carry more individual events before the overflow-merge kicks in, and a
+ * tighter cluster window keeps a "burst" meaningfully tight.
+ */
+export function densityBundleTuning(density: TimelineDensity): {
+  timeWindowMinutes: number;
+  maxVisibleItemsPerLane: number;
+} {
+  switch (density) {
+    case "comfortable":
+      return { timeWindowMinutes: 12, maxVisibleItemsPerLane: 4 };
+    case "compact":
+      return { timeWindowMinutes: 10, maxVisibleItemsPerLane: 5 };
+    case "dense":
+      return { timeWindowMinutes: 8, maxVisibleItemsPerLane: 8 };
+    default:
+      return { timeWindowMinutes: 10, maxVisibleItemsPerLane: 5 };
+  }
 }
 
 function chooseEmptyVariant(args: {

@@ -5,6 +5,7 @@ import {
   buildInspectorViewModel,
   buildTimelineRenderModel,
   countHiddenRelationships,
+  densityBundleTuning,
   filterEvents,
   getActiveLanes,
   getFocusedRelationships,
@@ -262,6 +263,27 @@ describe("buildInspectorViewModel", () => {
     expect(inspector.confidencePct).toBe(Math.round(target.confidence * 100));
     expect(inspector.sources.map((source) => source.id).sort()).toEqual(
       target.sourceRefs.slice().sort(),
+    );
+  });
+});
+
+describe("densityBundleTuning", () => {
+  it("lets denser modes show more individual events before clustering", () => {
+    const comfortable = densityBundleTuning("comfortable");
+    const compact = densityBundleTuning("compact");
+    const dense = densityBundleTuning("dense");
+
+    expect(compact.maxVisibleItemsPerLane).toBeGreaterThan(
+      comfortable.maxVisibleItemsPerLane,
+    );
+    expect(dense.maxVisibleItemsPerLane).toBeGreaterThan(
+      compact.maxVisibleItemsPerLane,
+    );
+  });
+
+  it("tightens the cluster window as density increases", () => {
+    expect(densityBundleTuning("dense").timeWindowMinutes).toBeLessThan(
+      densityBundleTuning("comfortable").timeWindowMinutes,
     );
   });
 });

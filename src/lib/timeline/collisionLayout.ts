@@ -2,7 +2,7 @@ import type { EventType } from "../../domain/types";
 import type { TimelineDisplayItem } from "./displayItems";
 import { timestampToXPercent, type TimelineRange } from "./layout";
 
-export type TimelineDensity = "comfortable" | "compact";
+export type TimelineDensity = "comfortable" | "compact" | "dense";
 
 export type TimelineLayoutOptions = {
   frameWidth: number;
@@ -60,11 +60,16 @@ export type TimelineLayout = {
 const DENSITY_EVENT_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
   comfortable: { width: 184, height: 68 },
   compact: { width: 158, height: 54 },
+  // Dense / overview tier — icon + time + one truncated title row only, no
+  // footer. Tuned so a ~1100px content area fits ~7-8 cards per lane row,
+  // which is what day-scale (30-100+ event) scanning needs.
+  dense: { width: 132, height: 38 },
 };
 
 const DENSITY_BUNDLE_DIMENSIONS: Record<TimelineDensity, { width: number; height: number }> = {
   comfortable: { width: 216, height: 68 },
   compact: { width: 184, height: 54 },
+  dense: { width: 156, height: 38 },
 };
 
 const DEFAULT_LANE_OFFSET = 38;

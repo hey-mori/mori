@@ -3,6 +3,7 @@ import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/co
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { TimelineDisplayBundle } from "../../lib/timeline/displayItems";
 import { buildTimelineBundleViewModel } from "./lib/timelineCards";
+import { densityClassName } from "./TimelineEventCard";
 
 /**
  * Bundle card.
@@ -27,11 +28,11 @@ export function TimelineBundleCard({
   onHover: (itemId: string | null) => void;
 }) {
   const vm = buildTimelineBundleViewModel(bundle);
-  const compact = density === "compact";
+  const showFooter = density === "comfortable";
 
   return (
     <button
-      className={`timeline-bundle-card card-${vm.tone} ${focusStateClassName(focusState)} ${compact ? "is-compact" : ""}`}
+      className={`timeline-bundle-card card-${vm.tone} ${focusStateClassName(focusState)} ${densityClassName(density)}`}
       onClick={() => onSelect(bundle.id)}
       onMouseEnter={() => onHover(bundle.id)}
       onMouseLeave={() => onHover(null)}
@@ -54,7 +55,7 @@ export function TimelineBundleCard({
         <span className="timeline-bundle-count">{bundle.count} events</span>
       </header>
       <strong className="timeline-bundle-title">{vm.title}</strong>
-      {!compact ? (
+      {showFooter ? (
         <footer className="timeline-bundle-footer">
           {vm.typeMixLabel ? <span>{vm.typeMixLabel}</span> : null}
           {vm.metaParts.length ? <span>{vm.metaParts.join(" · ")}</span> : null}

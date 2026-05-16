@@ -48,7 +48,12 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   setTimelineDensity: (timelineDensity) => set({ timelineDensity }),
   toggleTimelineDensity: () =>
     set((state) => ({
-      timelineDensity: state.timelineDensity === "comfortable" ? "compact" : "comfortable",
+      timelineDensity:
+        state.timelineDensity === "comfortable"
+          ? "compact"
+          : state.timelineDensity === "compact"
+            ? "dense"
+            : "comfortable",
     })),
   toggleActiveLanesOnly: () =>
     set((state) => ({ activeLanesOnly: !state.activeLanesOnly })),

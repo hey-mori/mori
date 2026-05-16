@@ -898,6 +898,26 @@ kbd {
   font-size: 12px;
 }
 
+/* Dense / overview tier — a single header row + title row, no footer slot.
+   Tuned to stay legible at the 38px card height used for day-scale scans. */
+.event-card.is-dense {
+  grid-template-rows: 12px 1fr;
+  row-gap: 2px;
+  padding: 4px 8px;
+  border-radius: 7px;
+}
+
+.event-card.is-dense .event-card-title {
+  font-size: 11.5px;
+  line-height: 1.25;
+  min-height: 0;
+}
+
+.event-card.is-dense .event-card-time {
+  font-size: 10px;
+  gap: 4px;
+}
+
 .event-card-summary {
   margin: 0;
   color: var(--muted);
@@ -945,6 +965,24 @@ kbd {
   grid-template-rows: 12px 1fr 0;
   row-gap: 3px;
   padding: 7px 10px 8px;
+}
+
+.timeline-bundle-card.is-dense {
+  grid-template-rows: 12px 1fr;
+  row-gap: 2px;
+  padding: 4px 8px;
+  border-radius: 7px;
+}
+
+.timeline-bundle-card.is-dense .timeline-bundle-title {
+  font-size: 11.5px;
+  line-height: 1.25;
+  min-height: 0;
+}
+
+.timeline-bundle-card.is-dense .event-card-time {
+  font-size: 10px;
+  gap: 4px;
 }
 
 .timeline-bundle-card:hover {

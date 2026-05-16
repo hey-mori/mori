@@ -318,6 +318,32 @@ Shipped:
     "Imported sources + Quick Pass analysis"); it is Korean, and
     the three exact-string tests were updated to match.
 
+### Timeline Maturity Loop (focused sub-pass)
+
+Making the Timeline a real day-scale work-reconstruction surface, not
+a demo/overview. Highest value first.
+
+- ✅ Real density tiers — a third `dense` tier joins
+  `comfortable` / `compact`. Dense uses 132×38 cards (icon + time +
+  one truncated title row, no footer), tighter lane heights, a
+  tighter bundle window, and a higher `maxVisibleItemsPerLane` so a
+  lane shows more individual events before clustering. The toolbar
+  density control is now a 3-way segmented control (넓게 / 보통 /
+  조밀); `densityBundleTuning` centralises the per-tier bundling
+  params.
+- Duration-aware card width — a 5-minute event still renders the
+  same fixed-width card as a 45-minute one; short events should use
+  a pill/cardlet, medium a compact card, long a wider card.
+- Burst clustering polish — bundles cover ≥3-event clusters, but
+  there is no explicit "+N more" overflow affordance and no
+  same-source rapid-event grouping.
+- Inspector responsibility — move remaining card metadata into the
+  inspector; make inspector width responsive / collapsible.
+- Responsive Timeline — laptop/tablet behaviour, inspector
+  drawer/overlay, a chronological list fallback at narrow widths.
+- Day-scale stress fixture — a 30+ event overlapping-burst fixture
+  driving the layout / clustering / density tests.
+
 Open (highest value first):
 
 9. Timeline density + event inspector — long event lists have no

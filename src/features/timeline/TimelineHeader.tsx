@@ -1,6 +1,5 @@
-import { Calendar, Filter, Grid2X2, Layers, ZoomIn, ZoomOut } from "lucide-react";
+import { Calendar, Filter, Layers, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "../../components/ui/Button";
 import { eventTypeLabels, eventTypeTone, laneOrder } from "../../domain/constants";
 import type { EventType } from "../../domain/types";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
@@ -10,9 +9,16 @@ import {
   isImplemented,
 } from "../../lib/timeline/timelineControls";
 
+/** Density tiers, ordered loosest → densest, for the segmented control. */
+const DENSITY_OPTIONS: Array<{ id: TimelineDensity; label: string; title: string }> = [
+  { id: "comfortable", label: "넓게", title: "넓은 카드 — 제목 + 메타데이터까지 표시" },
+  { id: "compact", label: "보통", title: "낮은 카드 — 제목 위주, 메타데이터는 인스펙터로" },
+  { id: "dense", label: "조밀", title: "최소 카드 — 아이콘 + 시각 + 제목, 하루치 스캔용" },
+];
+
 export type TimelineToolbarProps = {
   density: TimelineDensity;
-  onToggleDensity: () => void;
+  onSetDensity: (density: TimelineDensity) => void;
   activeFilters: EventType[];
   onToggleFilter: (eventType: EventType) => void;
   onClearFilters: () => void;
@@ -35,7 +41,7 @@ export type TimelineToolbarProps = {
  */
 export function TimelineToolbar({
   density,
-  onToggleDensity,
+  onSetDensity,
   activeFilters,
   onToggleFilter,
   onClearFilters,
@@ -170,13 +176,20 @@ export function TimelineToolbar({
             </div>
           ) : null}
         </div>
-        <Button
-          icon={Grid2X2}
-          onClick={onToggleDensity}
-          title={`${density === "comfortable" ? "좁은" : "넓은"} 밀도로 전환`}
-        >
-          {density === "comfortable" ? "넓게" : "좁게"}
-        </Button>
+        <div className="segmented" role="group" aria-label="Timeline density">
+          {DENSITY_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={density === option.id ? "active" : ""}
+              aria-pressed={density === option.id}
+              onClick={() => onSetDensity(option.id)}
+              title={option.title}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
       <ToolbarPlannedLabel />
     </div>

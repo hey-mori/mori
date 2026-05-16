@@ -67,6 +67,25 @@ describe("computeTimelineLayout", () => {
     expect(compact.frameHeight).toBeLessThan(comfortable.frameHeight);
   });
 
+  it("dense density is the most compact tier — shorter cards and frame than compact", () => {
+    const compact = computeTimelineLayout(displayItems, range, {
+      frameWidth: 1240,
+      density: "compact",
+      laneOrder,
+    });
+    const dense = computeTimelineLayout(displayItems, range, {
+      frameWidth: 1240,
+      density: "dense",
+      laneOrder,
+    });
+
+    expect(dense.cardHeight).toBeLessThan(compact.cardHeight);
+    expect(dense.cardWidth).toBeLessThan(compact.cardWidth);
+    expect(dense.frameHeight).toBeLessThan(compact.frameHeight);
+    // Dense cards stay wide enough to remain readable, not hairline slivers.
+    expect(dense.cardWidth).toBeGreaterThanOrEqual(120);
+  });
+
   it("places cards inside the content area to the right of the lane label column", () => {
     const layout = computeTimelineLayout(displayItems, range, {
       frameWidth: 1240,

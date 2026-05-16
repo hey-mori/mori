@@ -51,7 +51,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const toggleFilter = useMoriAppStore((state) => state.toggleFilter);
   const clearFilters = useMoriAppStore((state) => state.clearFilters);
-  const toggleDensity = useMoriAppStore((state) => state.toggleTimelineDensity);
+  const setTimelineDensity = useMoriAppStore((state) => state.setTimelineDensity);
   const toggleActiveLanesOnly = useMoriAppStore((state) => state.toggleActiveLanesOnly);
 
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
@@ -136,7 +136,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           ) : (
             <TimelineToolbar
               density={density}
-              onToggleDensity={toggleDensity}
+              onSetDensity={setTimelineDensity}
               activeFilters={activeFilters}
               onToggleFilter={toggleFilter}
               onClearFilters={clearFilters}

@@ -14,7 +14,7 @@ export type CreateTimelineBundlesOptions = {
   preserveSelectedEventId?: string | null;
   preserveImportantEventIds?: string[];
   maxVisibleItemsPerLane?: number;
-  laneDensity?: "comfortable" | "compact";
+  laneDensity?: "comfortable" | "compact" | "dense";
   decisions?: Decision[];
 };
 
