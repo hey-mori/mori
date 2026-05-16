@@ -40,22 +40,22 @@ export function SourceSummaryCard({ source }: { source: SourceRef }) {
       <SectionHeader title="가져오기 정보" />
       <dl className="review-source-card-grid">
         <div>
-          <dt>Capture method</dt>
+          <dt>캡처 방식</dt>
           <dd>{display.captureMethod}</dd>
         </div>
         <div>
-          <dt>Raw retention</dt>
+          <dt>원본 보관 정책</dt>
           <dd>{display.rawDataLabel}</dd>
         </div>
         <div>
           <dt>
-            <CalendarClock size={11} aria-hidden="true" /> Imported
+            <CalendarClock size={11} aria-hidden="true" /> 가져온 시각
           </dt>
           <dd>{formatTime(source.capturedAt)}</dd>
         </div>
         {source.uri ? (
           <div>
-            <dt>Origin / URI</dt>
+            <dt>출처 / URI</dt>
             <dd className="review-source-card-uri">{source.uri}</dd>
           </div>
         ) : null}

@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { eventTypeLabels } from "../../domain/constants";
 import type { TimelineEvent } from "../../domain/types";
 import { formatTime } from "../../lib/formatting/time";
+import { getTrustDisplay } from "../../lib/evidence/trust";
 import type { ReviewEventEdits, ReviewEventItem } from "../../lib/review";
 
 const STATUS_TONE: Record<ReviewEventItem["status"], "green" | "red" | "gray"> = {
@@ -14,9 +15,9 @@ const STATUS_TONE: Record<ReviewEventItem["status"], "green" | "red" | "gray"> =
 };
 
 const STATUS_LABEL: Record<ReviewEventItem["status"], string> = {
-  accepted: "Accepted",
-  discarded: "Discarded",
-  pending: "Pending",
+  accepted: "수락됨",
+  discarded: "폐기됨",
+  pending: "검토 대기",
 };
 
 export function ExtractedEventCard({
@@ -49,7 +50,7 @@ export function ExtractedEventCard({
         <div className="review-event-card-badges">
           <Badge tone="purple">{eventTypeLabels[merged.type] ?? merged.type}</Badge>
           <Badge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</Badge>
-          {item.edits ? <Badge tone="orange">Edited</Badge> : null}
+          {item.edits ? <Badge tone="orange">수정됨</Badge> : null}
         </div>
       </header>
 
@@ -57,19 +58,21 @@ export function ExtractedEventCard({
 
       <dl className="review-event-card-meta">
         <div>
-          <dt>Trust</dt>
-          <dd className={`trust-${merged.trustLevel}`}>{merged.trustLevel}</dd>
+          <dt>신뢰 수준</dt>
+          <dd className={`trust-${merged.trustLevel}`}>
+            {getTrustDisplay(merged.trustLevel).label}
+          </dd>
         </div>
         <div>
-          <dt>Confidence</dt>
+          <dt>확신도</dt>
           <dd>{confidencePct}%</dd>
         </div>
         <div>
-          <dt>Source link</dt>
-          <dd>{merged.sourceRefs.length} ref</dd>
+          <dt>출처 연결</dt>
+          <dd>{merged.sourceRefs.length}개</dd>
         </div>
         <div>
-          <dt>Created by</dt>
+          <dt>작성 주체</dt>
           <dd>{merged.createdBy}</dd>
         </div>
       </dl>
@@ -91,24 +94,24 @@ export function ExtractedEventCard({
           icon={Check}
           onClick={onAccept}
           disabled={isAccepted}
-          title={isAccepted ? "이미 Accept된 항목입니다." : "이 이벤트를 Apply 시점에 세션에 추가"}
+          title={isAccepted ? "이미 수락한 항목입니다." : "적용 시점에 이 이벤트를 세션에 추가합니다."}
         >
-          Accept
+          수락
         </Button>
         <Button
           icon={Trash2}
           onClick={onDiscard}
           disabled={isDiscarded}
-          title={isDiscarded ? "이미 Discard된 항목입니다." : "이 이벤트는 적용에서 제외"}
+          title={isDiscarded ? "이미 폐기한 항목입니다." : "이 이벤트를 적용에서 제외합니다."}
         >
-          Discard
+          폐기
         </Button>
         <Button
           icon={Edit3}
           onClick={() => setEditing((value) => !value)}
           title="제목 / 요약 / 유형 수정"
         >
-          Edit
+          편집
         </Button>
       </footer>
     </article>
