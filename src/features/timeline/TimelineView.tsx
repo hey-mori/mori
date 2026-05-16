@@ -17,6 +17,7 @@ import {
 import { EventInspector } from "./EventInspector";
 import { TimelineBundleInspector } from "./TimelineBundleInspector";
 import { TimelineCanvas, LANE_LABEL_WIDTH, DEFAULT_FRAME_WIDTH } from "./TimelineCanvas";
+import { TimelineChronoList } from "./TimelineChronoList";
 import { TimelineEmptyState } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
@@ -143,6 +144,9 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   // too narrow for a side column. Flow Focus keeps its Trace panel.
   const inspectorNarrow = viewportWidth <= TIMELINE_INSPECTOR_NARROW_MAX_PX;
   const inspectorHidden = shouldHideInspector({ mode, inspectorCollapsed, viewportWidth });
+  // Narrow widths swap the horizontally-scrolling swimlane canvas for a flat
+  // vertical chronological list — readable without a wide frame.
+  const useChronoList = inspectorNarrow && mode === "timeline";
 
   return (
     <>
@@ -176,23 +180,33 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
               inspectorToggleDisabled={inspectorNarrow}
             />
           )}
-          <TimelineCanvas
-            model={renderModel}
-            relationships={view.relationships}
-            density={density}
-            onFrameWidth={handleFrameWidth}
-            onSelect={setSelectedEventId}
-            onHover={setHoveredEventId}
-          />
-          {mode === "timeline" ? (
-            <TimelineMiniMap
-              items={model.visibleDisplayItems}
-              range={model.range}
-              ticks={model.ticks}
+          {useChronoList ? (
+            <TimelineChronoList
+              model={renderModel}
               selectedItemId={selectedItem?.id ?? null}
-              focusedSet={model.focusedSet}
+              onSelect={setSelectedEventId}
             />
-          ) : null}
+          ) : (
+            <>
+              <TimelineCanvas
+                model={renderModel}
+                relationships={view.relationships}
+                density={density}
+                onFrameWidth={handleFrameWidth}
+                onSelect={setSelectedEventId}
+                onHover={setHoveredEventId}
+              />
+              {mode === "timeline" ? (
+                <TimelineMiniMap
+                  items={model.visibleDisplayItems}
+                  range={model.range}
+                  ticks={model.ticks}
+                  selectedItemId={selectedItem?.id ?? null}
+                  focusedSet={model.focusedSet}
+                />
+              ) : null}
+            </>
+          )}
         </section>
         {inspectorHidden ? null : selectedItem && selectedItem.kind === "bundle" ? (
           <TimelineBundleInspector

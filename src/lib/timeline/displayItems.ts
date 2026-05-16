@@ -82,6 +82,19 @@ export function isTimelineDisplayEvent(item: TimelineDisplayItem): item is Timel
 }
 
 /**
+ * Sort display items purely by start time. The swimlane layout groups items
+ * by lane; the narrow-width chronological list needs a single flat timeline,
+ * so this is the shared, tested ordering helper for that view.
+ */
+export function sortDisplayItemsChronologically(
+  items: readonly TimelineDisplayItem[],
+): TimelineDisplayItem[] {
+  return [...items].sort(
+    (left, right) => new Date(left.start).getTime() - new Date(right.start).getTime(),
+  );
+}
+
+/**
  * Korean label for a bundle kind. The raw `TimelineBundleKind` enum must
  * never reach the UI — the bundle inspector reads this instead.
  */

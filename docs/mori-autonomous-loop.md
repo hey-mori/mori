@@ -366,9 +366,17 @@ a demo/overview. Highest value first.
   toggle is disabled with an explanatory tooltip. Verified at
   1024 / 768 — no page-level overflow, canvas scrolls horizontally
   as designed.
+- ✅ Narrow-width chronological list — at ≤1180px the Timeline
+  swaps the horizontally-scrolling swimlane canvas for
+  `TimelineChronoList`, a flat vertical list of every event /
+  bundle ordered by start time (time · type icon · title · trust
+  · one calm meta signal). Row selection drives the same
+  `selectedEventId`, so widening the window restores the swimlane
+  with the selection intact. Verified at 768 — readable, no page
+  overflow.
 - Responsive Timeline — an overlay/drawer inspector for narrow
-  widths and a chronological list fallback are still open;
-  auto-hide is the current minimum-viable behaviour.
+  widths is still open; the chronological list now covers the
+  narrow-width canvas fallback.
 - Inspector responsibility — remaining card metadata could move
   further into the inspector.
 - ✅ Day-scale stress fixture — `buildTimelineStressEvents` is a
