@@ -159,11 +159,26 @@ button {
 
 .profile {
   display: grid;
-  grid-template-columns: 42px 1fr auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   margin-top: 22px;
   padding: 14px 4px;
+}
+
+/* Name + mode label — stack them and keep each on one elided line so a
+   narrow sidebar never wraps "Kim Mori" or "Local Mode" mid-phrase. */
+.profile > div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.profile strong,
+.profile small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .avatar {
