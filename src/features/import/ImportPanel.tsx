@@ -48,6 +48,7 @@ import {
   type ConnectorInboxListing,
 } from "../../lib/desktop/connectorInbox";
 import { getRepositoryVerificationFreshness } from "../../lib/repositories";
+import { formatDateTime, formatTime } from "../../lib/formatting/time";
 import {
   loadConnectorImportHistorySavedSessionsAsync,
   selectSessionView,
@@ -845,7 +846,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
                   {entry.source.kind}
                 </Badge>
                 <strong>{entry.source.title}</strong>
-                <small>{new Date(entry.savedAt).toLocaleString()}</small>
+                <small>{formatDateTime(entry.savedAt)}</small>
                 <Button icon={Trash2} onClick={() => handleRemove(entry.id)} aria-label="가져온 소스 제거" />
               </li>
             ))}
@@ -1118,9 +1119,9 @@ function ConnectorJsonlPreviewCard({
   if (!preview || preview.kind === "empty") return null;
   const timeRange =
     preview.earliestOccurredAt && preview.latestOccurredAt
-      ? `${new Date(preview.earliestOccurredAt).toLocaleString()} → ${new Date(
+      ? `${formatDateTime(preview.earliestOccurredAt)} → ${formatDateTime(
           preview.latestOccurredAt,
-        ).toLocaleString()}`
+        )}`
       : "—";
   const hasDuplicates = preview.duplicateEventCount > 0;
   const allDuplicate = hasDuplicates && preview.newEventCount === 0;
@@ -1221,7 +1222,7 @@ function ConnectorJsonlPreviewCard({
               <strong>{bucket.label}</strong>
               <span>이벤트 {bucket.eventCount}개</span>
               <small>
-                {new Date(bucket.startedAt).toLocaleTimeString()} → {new Date(bucket.endedAt).toLocaleTimeString()}
+                {formatTime(bucket.startedAt)} → {formatTime(bucket.endedAt)}
               </small>
             </li>
           ))}

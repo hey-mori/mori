@@ -13,6 +13,7 @@ import {
   getRawDataPolicyLabel,
 } from "../../lib/evidence/provenance";
 import { getTrustDisplay } from "../../lib/evidence/trust";
+import { formatDateTime } from "../../lib/formatting/time";
 import {
   getProductAvailabilityTone,
   productAvailabilityFromIntegrationStatus,
@@ -402,7 +403,7 @@ function describeInaccessible(integration: SourceIntegration): string[] {
 
 function formatTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleString();
+    return formatDateTime(iso);
   } catch {
     return iso;
   }

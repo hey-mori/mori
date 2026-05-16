@@ -5,6 +5,7 @@ import { MoriTrustBadge } from "../../components/ui/MoriTrustBadge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import type { SourceRef } from "../../domain/types";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
+import { formatDateTime } from "../../lib/formatting/time";
 import {
   getProductAvailabilityTone,
   productAvailabilityFromIntegrationStatus,
@@ -72,7 +73,7 @@ export function SourceSummaryCard({ source }: { source: SourceRef }) {
 
 function formatTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleString();
+    return formatDateTime(iso);
   } catch {
     return iso;
   }

@@ -41,6 +41,7 @@ import { ReviewDetailPanel } from "./ReviewDetailPanel";
 import { ReviewSummaryPanel } from "./ReviewSummaryPanel";
 import { CompanionStrip } from "../companion/CompanionStrip";
 import { useCompanionSignals } from "../companion/useCompanionSignals";
+import { formatDateTime } from "../../lib/formatting/time";
 
 type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";
 
@@ -365,7 +366,7 @@ function AnalysisStrip({
           <Badge tone="gray">{dataBasis}</Badge>
           {analysisGeneratedAt ? (
             <span className="review-analysis-time">
-              {new Date(analysisGeneratedAt).toLocaleString()}
+              {formatDateTime(analysisGeneratedAt)}
             </span>
           ) : null}
         </div>
