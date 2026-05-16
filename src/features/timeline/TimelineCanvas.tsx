@@ -1,11 +1,21 @@
 import { Search } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { eventTypeIcons, eventTypeLabels } from "../../domain/constants";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import {
   computeMinimapViewport,
+  minimapClickToScrollLeft,
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
 import { TimelineAxis } from "./TimelineAxis";
@@ -28,6 +38,12 @@ export type TimelineCanvasProps = {
   onHover: (itemId: string | null) => void;
 };
 
+/** Imperative handle so the minimap can pan the canvas. */
+export type TimelineCanvasHandle = {
+  /** Scroll so the given 0–1 fraction of the timeline span is centred. */
+  scrollToFraction: (fraction: number) => void;
+};
+
 const MIN_FRAME_WIDTH = 1100;
 const MAX_FRAME_WIDTH = 1640;
 const DEFAULT_FRAME_WIDTH = 1240;
@@ -46,15 +62,11 @@ const LANE_LABEL_WIDTH = 138;
  *   layout; lane labels render in front of them on the left edge with a
  *   solid background.
  */
-export function TimelineCanvas({
-  model,
-  relationships,
-  density,
-  onFrameWidth,
-  onViewportChange,
-  onSelect,
-  onHover,
-}: TimelineCanvasProps) {
+export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasProps>(
+  function TimelineCanvas(
+    { model, relationships, density, onFrameWidth, onViewportChange, onSelect, onHover },
+    ref,
+  ) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
 
@@ -71,6 +83,23 @@ export function TimelineCanvas({
       ),
     );
   }, [onViewportChange]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToFraction(fraction: number) {
+        const element = scrollerRef.current;
+        if (!element) return;
+        element.scrollLeft = minimapClickToScrollLeft(
+          fraction,
+          element.clientWidth,
+          element.scrollWidth,
+        );
+        emitViewport();
+      },
+    }),
+    [emitViewport],
+  );
 
   useLayoutEffect(() => {
     const element = scrollerRef.current;
@@ -181,6 +210,6 @@ export function TimelineCanvas({
       </div>
     </div>
   );
-}
+});
 
 export { LANE_LABEL_WIDTH, MIN_FRAME_WIDTH, MAX_FRAME_WIDTH, DEFAULT_FRAME_WIDTH };

@@ -1319,6 +1319,10 @@ kbd {
   background: linear-gradient(180deg, #fbfcff, #f6f8fc);
 }
 
+.mini-track.is-seekable {
+  cursor: pointer;
+}
+
 /* Viewport rectangle — left / width are set inline from the canvas
    scroll geometry (see computeMinimapViewport). */
 .mini-map-viewport {

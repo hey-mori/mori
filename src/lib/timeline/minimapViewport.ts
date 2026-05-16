@@ -55,3 +55,28 @@ export function computeMinimapViewport(
   const leftPercent = Math.max(0, Math.min(maxLeft, rawLeft));
   return { leftPercent, widthPercent };
 }
+
+/**
+ * Scroll position for a minimap click. `fraction` (0–1) is where along
+ * the minimap track the user clicked; the result centres the visible
+ * viewport on that point, clamped to the real scrollable range.
+ *
+ * Returns 0 when the content fits — there is nowhere to scroll.
+ */
+export function minimapClickToScrollLeft(
+  fraction: number,
+  clientWidth: number,
+  scrollWidth: number,
+): number {
+  if (
+    !Number.isFinite(fraction) ||
+    !Number.isFinite(clientWidth) ||
+    !Number.isFinite(scrollWidth) ||
+    scrollWidth <= clientWidth
+  ) {
+    return 0;
+  }
+  const clampedFraction = Math.max(0, Math.min(1, fraction));
+  const centred = clampedFraction * scrollWidth - clientWidth / 2;
+  return Math.max(0, Math.min(scrollWidth - clientWidth, centred));
+}

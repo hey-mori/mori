@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeMinimapViewport,
   FULL_MINIMAP_VIEWPORT,
+  minimapClickToScrollLeft,
 } from "./minimapViewport";
 
 describe("computeMinimapViewport", () => {
@@ -40,5 +41,37 @@ describe("computeMinimapViewport", () => {
 
   it("treats a negative scroll position as the start", () => {
     expect(computeMinimapViewport(-40, 1000, 2000).leftPercent).toBe(0);
+  });
+});
+
+describe("minimapClickToScrollLeft", () => {
+  it("returns 0 when the content fits", () => {
+    expect(minimapClickToScrollLeft(0.5, 1200, 1200)).toBe(0);
+    expect(minimapClickToScrollLeft(0.5, 1400, 1200)).toBe(0);
+  });
+
+  it("centres the viewport on the clicked point", () => {
+    // click at 50% of a 2000px span, 1000px visible → centre 1000, left 500.
+    expect(minimapClickToScrollLeft(0.5, 1000, 2000)).toBe(500);
+  });
+
+  it("clamps to the start when the click is near the left edge", () => {
+    expect(minimapClickToScrollLeft(0, 1000, 2000)).toBe(0);
+    expect(minimapClickToScrollLeft(0.1, 1000, 2000)).toBe(0);
+  });
+
+  it("clamps to the end when the click is near the right edge", () => {
+    expect(minimapClickToScrollLeft(1, 1000, 2000)).toBe(1000);
+    expect(minimapClickToScrollLeft(0.95, 1000, 2000)).toBe(1000);
+  });
+
+  it("clamps an out-of-range fraction", () => {
+    expect(minimapClickToScrollLeft(-1, 1000, 2000)).toBe(0);
+    expect(minimapClickToScrollLeft(2, 1000, 2000)).toBe(1000);
+  });
+
+  it("returns 0 for degenerate geometry", () => {
+    expect(minimapClickToScrollLeft(0.5, 0, 0)).toBe(0);
+    expect(minimapClickToScrollLeft(Number.NaN, 1000, 2000)).toBe(0);
   });
 });

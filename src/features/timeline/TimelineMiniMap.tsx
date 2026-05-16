@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type MouseEvent } from "react";
 import { eventTypeTone, laneOrder } from "../../domain/constants";
 import { focusStateClassName, getEventFocusState } from "../../lib/timeline/focusState";
 import { timestampToXPercent, type TimelineRange } from "../../lib/timeline/layout";
@@ -16,6 +16,7 @@ export function TimelineMiniMap({
   selectedItemId,
   focusedSet,
   viewport = FULL_MINIMAP_VIEWPORT,
+  onSeek,
 }: {
   items: TimelineDisplayItem[];
   range: TimelineRange;
@@ -24,7 +25,15 @@ export function TimelineMiniMap({
   focusedSet: Set<string>;
   /** Visible horizontal slice of the canvas, drawn as the viewport rect. */
   viewport?: MinimapViewport;
+  /** Pan the canvas — receives the 0–1 fraction of the clicked point. */
+  onSeek?: (fraction: number) => void;
 }) {
+  function handleTrackClick(event: MouseEvent<HTMLDivElement>) {
+    if (!onSeek) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    onSeek((event.clientX - rect.left) / rect.width);
+  }
   const placed = useMemo(() => {
     return items.map((item) => {
       const xPercent = timestampToXPercent(item.start, range);
@@ -47,7 +56,11 @@ export function TimelineMiniMap({
           </span>
         ))}
       </div>
-      <div className="mini-track">
+      <div
+        className={`mini-track${onSeek ? " is-seekable" : ""}`}
+        onClick={handleTrackClick}
+        title={onSeek ? "클릭하면 해당 위치로 타임라인을 이동합니다." : undefined}
+      >
         <span
           className="mini-map-viewport"
           aria-hidden="true"

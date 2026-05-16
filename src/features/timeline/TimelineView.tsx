@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { TopSessionBar } from "../../components/layout/TopSessionBar";
 import {
@@ -16,7 +16,12 @@ import {
 } from "../../lib/timeline/timelineViewModel";
 import { EventInspector } from "./EventInspector";
 import { TimelineBundleInspector } from "./TimelineBundleInspector";
-import { TimelineCanvas, LANE_LABEL_WIDTH, DEFAULT_FRAME_WIDTH } from "./TimelineCanvas";
+import {
+  TimelineCanvas,
+  LANE_LABEL_WIDTH,
+  DEFAULT_FRAME_WIDTH,
+  type TimelineCanvasHandle,
+} from "./TimelineCanvas";
 import {
   FULL_MINIMAP_VIEWPORT,
   type MinimapViewport,
@@ -72,6 +77,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const [minimapViewport, setMinimapViewport] = useState<MinimapViewport>(
     FULL_MINIMAP_VIEWPORT,
   );
+  const canvasRef = useRef<TimelineCanvasHandle>(null);
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.
@@ -202,6 +208,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           ) : (
             <>
               <TimelineCanvas
+                ref={canvasRef}
                 model={renderModel}
                 relationships={view.relationships}
                 density={density}
@@ -218,6 +225,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
                   selectedItemId={selectedItem?.id ?? null}
                   focusedSet={model.focusedSet}
                   viewport={minimapViewport}
+                  onSeek={(fraction) => canvasRef.current?.scrollToFraction(fraction)}
                 />
               ) : null}
             </>
