@@ -771,8 +771,9 @@ copy of the evidence.
 The `ReviewAction` records above form an append-only audit trail
 per project. Every state transition in the lifecycle produces one
 row. The trail is local-only and shipped as part of `.mori v0`
-export when the package format is extended for the consolidation
-capability.
+export via the package's optional, additive `auditTrail` slice
+(`getPackageAuditTrail`) — imported audit rows are history and are
+never replayed.
 
 UI surfacing — landed:
 
@@ -788,6 +789,22 @@ UI surfacing — landed:
   the audit surface never exposes raw evidence content or local paths.
 - The helper tolerates legacy / missing fields (unknown action type,
   missing `targetMemoryIds`, unparseable timestamp).
+
+Reviewed revert flow — eligibility planner landed:
+
+- `planMemoryReviewRevert(action, acceptedMemories)`
+  (`src/lib/project-memory/memoryReviewRevert.ts`) is a pure helper
+  that decides whether an audit action can be reverted and describes
+  the restore it would perform. It returns a `MemoryReviewRevertPlan`
+  — eligibility, a reason when ineligible, and the target memory id +
+  status to restore from the action's `before` snapshot.
+- An action is revertible only when its type is status-changing
+  (`accept` / `edit` / `apply` / `watch` / `defer` / `reset`), its
+  `before` snapshot carries a recognised `status`, it targets exactly
+  one memory, and that memory still exists. Only the `status` string
+  is read from the snapshot — no raw evidence content.
+- The planner never writes memory: a revert is itself
+  review-before-apply, and the apply path is a later slice.
 
 UI surfacing — still planned:
 
