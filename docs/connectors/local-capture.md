@@ -225,6 +225,8 @@ this bridge intentionally does **not**:
 
 ## Related docs
 
+- [Real capture walkthrough](../real-capture-walkthrough.md) — capture
+  real Claude / Codex / Git work through the full Mori loop
 - [Connector event format](./connector-event-format.md)
 - [Capture surface matrix](./capture-surface-matrix.md)
 - [Imports](../imports.md)

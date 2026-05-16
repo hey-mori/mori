@@ -208,6 +208,9 @@ only — no phase numbers.
   and reports kept / dropped memory counts.
 - `.mori` handoff workflow — `team-shared-memory.md` §7: the explicit
   Author export → transfer → Reviewer import walkthrough.
+- Real capture walkthrough — `docs/real-capture-walkthrough.md`: an
+  end-to-end guide capturing real Claude / Codex / Git work through
+  the shipped capture artifacts into the full Mori loop (Track B.3).
 
 **Open priority (highest first):**
 
@@ -215,10 +218,10 @@ All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
 Team/shared memory spec · continued loop) are approved; sequence them
 into small slices in this order:
 
-1. Real capture walkthrough — an end-to-end guide capturing real
-   Claude / Codex transcript + Git work through the shipped
-   `mori-local-capture` / `mori-capture` / VS Code-task artifacts
-   into the full Mori loop (Track B.3).
+1. Capture-surface matrix honesty — the matrix (`captureSurfaces.ts`)
+   has no row for the shipped local-capture bridge and still calls
+   the VS Code / terminal surfaces `planned`; reconcile it with the
+   shipped `vscode-task` / `terminal-helper` artifacts.
 2. Project Memory UX polish for real captured data.
 3. Queryable Memory extensions if a clear safe slice remains.
 
@@ -244,37 +247,40 @@ backlog with it.
 
 The next slice should be:
 
-**Real capture walkthrough (Track B.3)**
+**Capture-surface matrix honesty — reconcile with shipped artifacts**
 
 Goal:
-The capture artifacts ship — `mori-local-capture.py` (transcript /
-stdin / note / git), the `mori-capture` shell helper, the VS Code
-task template — but no single doc walks a user through capturing
-*their own* real Claude / Codex / Git work end to end. `e2e-smoke-flow.md`
-covers the demo fixture; this slice documents the real workflow.
+`captureSurfaces.ts` is Mori's honesty source of truth for every
+capture surface, and UI status copy derives from it. It has drifted:
+there is **no row** for the shipped local-capture bridge
+(`mori-local-capture.py`), and `vscodeExtension` /
+`terminalShellIntegration` are still `planned` even though the
+`vscode-task` and `terminal-helper` template artifacts shipped.
 
 Scope — do:
-- Add a real-capture walkthrough doc (a focused page under `docs/`,
-  or a section in `docs/connectors/local-capture.md` if it fits):
-  a concrete scenario — capture a Claude transcript + a Git snapshot
-  of a real session, via the shipped artifacts — then load the
-  connector JSONL, walk it through Import Review, into the Timeline /
-  Evidence Hub, Project Memory, Consolidation Review, and out as a
-  `.mori` package.
-- Use the real artifact commands verbatim; keep every privacy
-  boundary explicit (summary-only, no raw content, review-before-apply).
-- Cross-link the connector, package, and consolidation docs precisely.
+- Add a capture-surface row for the local-capture CLI bridge — an
+  `implemented` explicit `localCliWrapper` surface that produces
+  connector JSONL and can enter Import Review.
+- Reconcile the VS Code / terminal rows with reality: the shipped
+  artifacts are `docsTemplateOnly` template surfaces (like
+  `claudeCodeHook` / `codexCliWrapper`), not bare `planned` — adjust
+  status / `nextStep` / setup copy to match, or add distinct rows for
+  the task / shell templates if that is cleaner than restating.
+- Keep every claim true today; the matrix tests reject fake-active
+  rows (no planned surface with `canEnterImportReview: true`).
 
 Scope — do not:
-- Add code — this is a documentation slice.
-- Restate the demo smoke flow; this is the *real-data* path.
+- Invent a surface that does not exist.
+- Change the connector pipeline or the capture scripts.
 
 Suggested files:
-- `docs/connectors/local-capture.md` or a new `docs/real-capture-walkthrough.md`
-- `docs/mori-project-goal.md` — only if canonical state changes.
+- `src/lib/connectors/captureSurfaces.ts`
+- `src/lib/connectors/captureSurfaces.test.ts`
+- `docs/connectors/capture-surface-matrix.md` if it restates rows.
 
 Tests:
-- none — documentation slice; `check:full` + `build` stay green.
+- the new / adjusted rows satisfy the existing matrix invariants
+- the local-capture row reports `implemented` + `canEnterImportReview`
 
 After this slice ships, set the next slice from the open backlog
 (Project Memory UX polish), reconciling with the goal document's
