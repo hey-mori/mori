@@ -150,6 +150,14 @@ pub fn open_mori_package_json(path: String) -> Result<String, String> {
     Ok(contents)
 }
 
+/// Read a `.mori` package file as raw bytes. Used for real `.mori` zip
+/// packages, which are binary — `open_mori_package_json` only handles
+/// the text JSON form. The frontend decodes / unzips and validates.
+#[tauri::command]
+pub fn read_mori_package_file(path: String) -> Result<Vec<u8>, String> {
+    fs::read(path).map_err(|error| error.to_string())
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PickedMoriPackageFile {

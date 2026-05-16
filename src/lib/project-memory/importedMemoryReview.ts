@@ -23,7 +23,12 @@
  */
 import type { MemoryEvidenceRef, MemoryProposal } from "./consolidationProposals";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
-import { deserializeMoriPackage, getPackageConsolidatedMemories } from "../mori-package";
+import type { MoriPackageV0 } from "../mori-package";
+import {
+  deserializeMoriPackage,
+  getPackageConsolidatedMemories,
+  unzipMoriPackage,
+} from "../mori-package";
 
 export type ImportedMemorySkipReason = "duplicate-origin" | "duplicate-title";
 
@@ -120,6 +125,37 @@ export function parseImportedMemoryProposals(
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
+  return proposalsFromImportedPackage(pkg, existingMemories);
+}
+
+/**
+ * Build imported-memory proposals from a real `.mori` **zip** package's
+ * bytes. The zip counterpart of `parseImportedMemoryProposals`:
+ * `unzipMoriPackage` validates the archive and the package, then the
+ * `consolidatedMemories` slice becomes review proposals. Pure — never
+ * throws; a corrupt zip or invalid package is reported as
+ * `{ ok: false }`. Imported memory still enters review, never merges.
+ */
+export function parseImportedMemoryProposalsFromZip(
+  bytes: Uint8Array,
+  existingMemories: readonly StoredAcceptedProjectMemory[],
+): ParseImportedMemoryResult {
+  if (bytes.length === 0) {
+    return { ok: false, error: "Pick a .mori package file to import." };
+  }
+  let pkg;
+  try {
+    pkg = unzipMoriPackage(bytes);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+  return proposalsFromImportedPackage(pkg, existingMemories);
+}
+
+function proposalsFromImportedPackage(
+  pkg: MoriPackageV0,
+  existingMemories: readonly StoredAcceptedProjectMemory[],
+): ParseImportedMemoryResult {
   const packageMemories = getPackageConsolidatedMemories(pkg);
   const { proposals, skipped } = buildImportedMemoryProposals({
     packageMemories,

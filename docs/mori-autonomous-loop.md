@@ -194,6 +194,9 @@ only — no phase numbers.
 - `.mori` zip export wiring — the Reports export writes a real
   `.mori` zip (desktop `save_mori_package_zip_as` Save As dialog;
   browser zip blob download).
+- `.mori` zip import wiring — the Consolidation Review import panel
+  reads a real `.mori` zip; picked bytes route by the `PK` zip magic
+  (`parseImportedMemoryProposalsFromZip`), JSON / paste still works.
 
 **Open priority (highest first):**
 
@@ -201,18 +204,19 @@ All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
 Team/shared memory spec · continued loop) are approved; sequence them
 into small slices in this order:
 
-1. `.mori` zip import wiring — the Consolidation Review import panel
-   and desktop open path read a real `.mori` zip package (keep the
-   JSON / paste path as a fallback).
-2. Evidence / Import Review polish for real local-capture output.
-3. Team / shared memory specification doc — roles, privacy
-   boundaries, client-safe exports, conflict handling.
-4. `.mori` handoff workflow + client-safe package / export rules.
-5. Local Connector Capture polish for real captured data.
-6. Project Memory UX polish for real captured data.
-7. Queryable Memory extensions if a clear safe slice remains.
+1. Team / shared memory specification doc — roles, privacy
+   boundaries, client-safe exports, conflict handling (Track C.1).
+2. `.mori` handoff workflow + client-safe package / export rules
+   (Track C.2/C.3).
+3. Local Connector Capture polish for real captured data.
+4. Project Memory UX polish for real captured data.
+5. Queryable Memory extensions if a clear safe slice remains.
 
 Deferred — revisit when a concrete need appears:
+- Evidence / Import Review polish — audited; the Import Review view,
+  the `review` lib, and the connector pipeline are mature and
+  well-tested. Revisit when real captured data exposes a specific
+  honesty / correctness defect.
 - Optional watched-inbox tray — borders on the no-background-watcher
   non-goal; the refresh-only desktop inbox already covers the safe
   case. Revisit only with a concrete, explicitly-triggered design.
@@ -230,50 +234,48 @@ backlog with it.
 
 The next slice should be:
 
-**`.mori` zip import wiring — read a real zip package**
+**Team / shared memory specification doc (Track C.1)**
 
 Goal:
-The Reports export now writes a real `.mori` zip; the import side
-still only reads JSON / pasted text. This slice makes the
-Consolidation Review import panel and the desktop open path accept a
-real `.mori` zip, routed through `unzipMoriPackage` so validation and
-review-on-import still apply.
+Mori's only sharing primitive today is the explicit `.mori` package
+round trip. Track C starts with a **specification**, not sync code:
+define how Mori could support team / shared memory without breaking
+local-first and privacy principles, so later slices have a committed
+design to follow.
 
 Scope — do:
-- Add a Tauri command that reads a picked `.mori` file as raw bytes
-  (the existing `open_mori_package_json` reads text — a zip needs
-  bytes), or extend the picker flow to return bytes.
-- In the Consolidation Review import panel: when the picked file is a
-  zip (`.mori`), decode it with `unzipMoriPackage` and feed the
-  resulting package's `consolidatedMemories` into the existing
-  review-proposal path; keep JSON / pasted-text import working.
-- The browser `File` pick should detect a zip (magic bytes `PK`) and
-  route through `unzipMoriPackage`.
-- Imported memory still enters review — no auto-merge.
+- Add `docs/team-shared-memory.md` — a specification doc covering:
+  roles (author / reviewer / recipient — single-user today, named
+  for future); privacy boundaries and the `sensitivity` /
+  `reportEligibility` tiers that already exist on accepted memory;
+  client-safe export rules (what a `clientSafe` package excludes);
+  the conflict / duplicate review model when two `.mori` packages
+  carry overlapping memory; and a later-implementation backlog.
+- Anchor every part in what already exists — `.mori` packages,
+  `StoredAcceptedProjectMemory` fields, `buildImportedMemoryProposals`
+  dedup, review-on-import — so the spec is implementation-grounded,
+  not aspirational.
+- Restate the hard non-goals inline: no cloud sync, no account
+  system, no permissions backend, no remote collaboration service,
+  no shared writes without review, no hidden upload.
 
 Scope — do not:
-- Change the canonical layout, the importer's review flow, or the
-  in-memory `MoriPackageV0`.
-- Add any dependency beyond the approved `fflate`.
+- Write any sync / account / backend code.
+- Change the `.mori` format or the import flow in this slice.
 
 Suggested files:
-- `src-tauri/src/package.rs`, `src-tauri/src/main.rs`
-- `src/lib/desktop/tauriCommands.ts`
-- `src/features/memory/ConsolidationReviewView.tsx`
-- `src/lib/project-memory/importedMemoryReview.ts` (if a zip-aware
-  entry point helps)
-- `docs/mori-package-v0.md`, `docs/project-memory-consolidation.md`
+- `docs/team-shared-memory.md` (new)
+- `docs/mori-project-goal.md` — only if the canonical state changes
+  (a new doc reference is fine to add)
+- `docs/source-integrations.md` — cross-link only if natural.
 
 Tests:
-- a zipped package imports its accepted memory as review proposals
-- a corrupt / non-zip file is rejected honestly
-- the JSON / paste import path still works
+- none — specification doc; validation is `check:full` + `build`
+  staying green.
 
-Validation note: touches `src-tauri/` — run `cargo check` / `cargo
-test` too.
-
-After this slice ships, set the next slice to Evidence / Import
-Review polish for real local-capture output.
+After this slice ships, set the next slice to Track C.2/C.3 — the
+`.mori` handoff workflow and client-safe package / export rules,
+turning the spec's client-safe section into a concrete export rule.
 
 ## 9. Stop Conditions
 

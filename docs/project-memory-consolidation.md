@@ -341,14 +341,17 @@ Phased so this milestone introduces no storage change.
   overlap or by a shared normalised title within the same kind, and
   records the source package id on each proposal's rationale.
   `parseImportedMemoryProposals` wraps `deserializeMoriPackage` +
-  `buildImportedMemoryProposals` for a raw package-JSON string. The
-  Consolidation Review Surface carries an **Import accepted memory
-  from a .mori package** panel: the user pastes a `.mori v0` package
-  or picks a `.mori` file (a native Open dialog on desktop via
-  `pick_mori_package_file`, the browser `File` API otherwise), its
-  imported-memory proposals merge into the review list, and accepting
-  one runs the normal apply path. Skipped duplicates and parse errors
-  are reported honestly.
+  `buildImportedMemoryProposals` for a raw package-JSON string, and
+  `parseImportedMemoryProposalsFromZip` does the same for a real
+  `.mori` zip via `unzipMoriPackage`. The Consolidation Review
+  Surface carries an **Import accepted memory from a .mori package**
+  panel: the user pastes a `.mori v0` package or picks a `.mori` file
+  (a native Open dialog on desktop via `pick_mori_package_file`, the
+  browser `File` API otherwise). Picked bytes are routed by the `PK`
+  zip magic — a real zip is unzipped and validated, anything else is
+  read as JSON. Imported-memory proposals merge into the review list,
+  and accepting one runs the normal apply path. Skipped duplicates and
+  parse errors are reported honestly.
 - The `auditTrail[]` slice is not carried yet — a later addition.
 
 ### 8.5 What never gets stored

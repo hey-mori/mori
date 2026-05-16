@@ -2,9 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildImportedMemoryProposals,
   parseImportedMemoryProposals,
+  parseImportedMemoryProposalsFromZip,
 } from "./importedMemoryReview";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
-import { createMoriPackageFromSession, serializeMoriPackage } from "../mori-package";
+import {
+  createMoriPackageFromSession,
+  serializeMoriPackage,
+  zipMoriPackage,
+} from "../mori-package";
 import { moriMockSession } from "../../domain/mock-data";
 
 function memory(
@@ -191,5 +196,51 @@ describe("parseImportedMemoryProposals", () => {
     if (!result.ok) return;
     expect(result.memoryCount).toBe(0);
     expect(result.proposals).toEqual([]);
+  });
+});
+
+function packageZip(memories: StoredAcceptedProjectMemory[]): Uint8Array {
+  return zipMoriPackage(
+    createMoriPackageFromSession(moriMockSession, { consolidatedMemories: memories }),
+  );
+}
+
+describe("parseImportedMemoryProposalsFromZip", () => {
+  it("unzips a real .mori package and builds proposals from its memories", () => {
+    const result = parseImportedMemoryProposalsFromZip(
+      packageZip([memory("a"), memory("b")]),
+      [],
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.memoryCount).toBe(2);
+    expect(result.proposals).toHaveLength(2);
+    expect(result.packageId).toBeTruthy();
+  });
+
+  it("reports empty bytes as an error", () => {
+    const result = parseImportedMemoryProposalsFromZip(new Uint8Array(), []);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toMatch(/Pick a \.mori/);
+  });
+
+  it("reports non-zip bytes as an error without throwing", () => {
+    const result = parseImportedMemoryProposalsFromZip(
+      new Uint8Array([1, 2, 3, 4]),
+      [],
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("deduplicates zip-imported memories against existing accepted memories", () => {
+    const result = parseImportedMemoryProposalsFromZip(
+      packageZip([memory("a", { title: "Shared decision" })]),
+      [memory("local", { title: "Shared decision" })],
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.proposals).toHaveLength(0);
+    expect(result.skipped).toHaveLength(1);
   });
 });

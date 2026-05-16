@@ -322,9 +322,12 @@ that is called out.
   The Consolidation Review Surface carries an "Import accepted memory
   from a .mori package" panel — paste the package JSON or pick a
   `.mori` file (a native Open dialog on desktop via
-  `pick_mori_package_file`, the browser `File` API otherwise).
-  Imported memory is never auto-merged; it enters the review list and
-  only becomes durable through the normal accept / apply path.
+  `pick_mori_package_file`, the browser `File` API otherwise). Picked
+  bytes are routed by the `PK` zip magic: a real `.mori` zip is
+  unzipped + validated (`parseImportedMemoryProposalsFromZip`),
+  anything else is read as JSON. Imported memory is never
+  auto-merged; it enters the review list and only becomes durable
+  through the normal accept / apply path.
 - Queryable Memory: `searchAcceptedMemories`
   (`src/lib/project-memory/queryableMemory.ts`) runs deterministic
   local structured search over accepted memories — text matching on
@@ -350,9 +353,10 @@ that is called out.
   save / open commands.
 - Real `.mori` zip package — `fflate`-backed `zipMoriPackage` /
   `unzipMoriPackage` archive the canonical one-file-per-slice layout
-  into a real `.mori` zip; the Reports export writes it via the
-  desktop `save_mori_package_zip_as` Save As dialog or a browser zip
-  blob download.
+  into a real `.mori` zip. The Reports export writes it (desktop
+  `save_mori_package_zip_as` Save As dialog or a browser zip blob);
+  the Consolidation Review import panel reads it back, routing picked
+  bytes by the `PK` zip magic, with validation and review-on-import.
 - Reports page with Markdown report builder and `.mori` package export.
 - End-to-end smoke flow documented and guarded by a fixture test
   (`src/lib/connectors/connectorSampleFixture.test.ts`).
@@ -382,10 +386,8 @@ against the repository.
   an opt-in background watcher that loads new files into a "pending
   review" tray is not implemented.
 - **Team / shared memory.** No surface beyond the explicit `.mori`
-  package round trip.
-- **`.mori` zip import.** The Reports export writes a real `.mori`
-  zip; the import panel still reads JSON / pasted text, so a zip is
-  not yet re-importable through the UI (next slice).
+  package round trip — no roles, client-safe-export rules, or
+  conflict model yet.
 
 ## 6. Product Principles
 

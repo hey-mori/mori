@@ -34,7 +34,11 @@ import {
   getAcceptedMemoryRepository,
   type AcceptedMemoryStorageSource,
 } from "../../lib/project-memory/acceptedMemoryRepository";
-import { parseImportedMemoryProposals } from "../../lib/project-memory/importedMemoryReview";
+import {
+  parseImportedMemoryProposals,
+  parseImportedMemoryProposalsFromZip,
+  type ParseImportedMemoryResult,
+} from "../../lib/project-memory/importedMemoryReview";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import type {
   MemoryProposalKind,
@@ -161,8 +165,7 @@ export function ConsolidationReviewView() {
   const [packageText, setPackageText] = useState("");
   const [importMessage, setImportMessage] = useState<ImportPackageMessage>({ kind: "idle" });
 
-  function runImport(text: string) {
-    const result = parseImportedMemoryProposals(text, acceptedMemories);
+  function applyImportResult(result: ParseImportedMemoryResult) {
     if (!result.ok) {
       setImportedProposals([]);
       setImportMessage({ kind: "error", message: result.error });
@@ -178,48 +181,61 @@ export function ConsolidationReviewView() {
     });
   }
 
+  function runImport(text: string) {
+    applyImportResult(parseImportedMemoryProposals(text, acceptedMemories));
+  }
+
+  // A real `.mori` zip starts with the `PK` local-file-header magic.
+  function isZipPackage(bytes: Uint8Array): boolean {
+    return bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b;
+  }
+
+  // Route picked package bytes: a real `.mori` zip is unzipped and
+  // validated; anything else is decoded as JSON / pasted package text.
+  function runImportBytes(bytes: Uint8Array) {
+    if (isZipPackage(bytes)) {
+      applyImportResult(parseImportedMemoryProposalsFromZip(bytes, acceptedMemories));
+      return;
+    }
+    const text = new TextDecoder().decode(bytes);
+    setPackageText(text);
+    runImport(text);
+  }
+
+  function reportImportError(error: unknown) {
+    setImportedProposals([]);
+    setImportMessage({
+      kind: "error",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   function handleImportPackage() {
     runImport(packageText);
   }
 
   function handleImportPackageFile(file: File) {
     // Reads only the file the user explicitly picked — no directory
-    // scan, no watcher. `File.text()` works in browser and the Tauri
-    // webview alike, so no Tauri command is needed.
+    // scan, no watcher. Bytes are read so a real `.mori` zip and a
+    // plain JSON package both route through the same review path.
     file
-      .text()
-      .then((text) => {
-        setPackageText(text);
-        runImport(text);
-      })
-      .catch((error: unknown) => {
-        setImportedProposals([]);
-        setImportMessage({
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      });
+      .arrayBuffer()
+      .then((buffer) => runImportBytes(new Uint8Array(buffer)))
+      .catch(reportImportError);
   }
 
   function handlePickNativePackageFile() {
-    // Desktop: a native Open dialog picks one `.mori` file, which is
-    // read through `open_mori_package_json` and routed into the same
-    // review path. A cancelled dialog leaves the panel untouched.
+    // Desktop: a native Open dialog picks one `.mori` file, read as raw
+    // bytes so a zip or a JSON package both work. A cancelled dialog
+    // leaves the panel untouched.
     void tauriCommands
       .pickMoriPackageFile()
       .then(async (picked) => {
         if (picked.cancelled || !picked.path) return;
-        const text = await tauriCommands.openMoriPackageJson(picked.path);
-        setPackageText(text);
-        runImport(text);
+        const bytes = await tauriCommands.readMoriPackageFile(picked.path);
+        runImportBytes(Uint8Array.from(bytes));
       })
-      .catch((error: unknown) => {
-        setImportedProposals([]);
-        setImportMessage({
-          kind: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      });
+      .catch(reportImportError);
   }
 
   function handleClearImport() {

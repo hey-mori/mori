@@ -17,6 +17,8 @@ Implemented now:
 - Tauri desktop command for saving a real `.mori` zip package via a
   native Save As dialog (`save_mori_package_zip_as`)
 - Tauri desktop command for opening JSON package contents from a path
+- Tauri desktop command for reading a `.mori` file as raw bytes
+  (`read_mori_package_file`, for real zip packages)
 - Tauri desktop command for picking a `.mori` file via a native Open
   dialog (`pick_mori_package_file`)
 
@@ -150,15 +152,21 @@ file.
 The Reports `.mori` export writes a real zip package: `zipMoriPackage`
 produces the archive, the desktop `save_mori_package_zip_as` command
 writes it to a user-chosen `.mori` file via the native Save As
-dialog, and the browser downloads the zip blob. Wiring the import
-panel to read a zip package is the follow-up slice.
+dialog, and the browser downloads the zip blob.
+
+The Consolidation Review import panel reads a real zip package too.
+Picked file bytes are inspected for the `PK` zip magic: a zip routes
+through `parseImportedMemoryProposalsFromZip` (`unzipMoriPackage` +
+validation); anything else is decoded as JSON / pasted package text.
+Desktop reads the bytes via `read_mori_package_file`; the browser
+uses `File.arrayBuffer()`. Imported memory still enters review — no
+auto-merge.
 
 Limitations:
 
-- The Reports `.mori` export writes a real zip package. The import
-  panel still reads JSON / pasted package text — wiring zip import is
-  the next slice — so a zip exported now is not yet re-importable
-  through the UI until that lands.
+- The `.mori` package is a real zip on both export and import. The
+  in-memory `MoriPackageV0` is still passed around as a typed JSON
+  object; zip is the on-disk / transport container only.
 - Raw source file folders are represented as metadata, not bundled files.
 - `validateMoriPackage` checks the manifest, that each slice is an
   array of objects carrying their identity fields (`id`, and `type`
