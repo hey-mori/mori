@@ -59,20 +59,22 @@ export type SourceIntegration = {
 
 /**
  * Mori Source Integration Registry
- * 
+ *
  * Catalogs all current and planned source integrations with their status,
- * trust levels, privacy policies, and capabilities.
+ * trust levels, privacy policies, and capabilities. `description` and
+ * `privacyNote` are user-facing Korean copy; `label` keeps the connector's
+ * product name.
  */
 export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   manualNote: {
     id: "manualNote",
     label: "Manual Note",
-    description: "Free-form text notes directly entered by the user",
+    description: "사용자가 직접 입력하는 자유 형식 텍스트 메모",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "retained",
     captureMode: "manual",
-    privacyNote: "User controls all content. No automatic capture or redaction.",
+    privacyNote: "사용자가 모든 내용을 직접 관리합니다. 자동 캡처나 자동 편집은 없습니다.",
     supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,
@@ -88,13 +90,13 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
     id: "connectorJsonl",
     label: "Connector JSONL",
     description:
-      "Local Claude Code hook, Codex CLI wrapper, terminal, and Git connector event logs (paste or file).",
+      "로컬 Claude Code hook · Codex CLI wrapper · 터미널 · Git 커넥터가 남긴 이벤트 로그 (붙여넣기 또는 파일)",
     status: "implemented",
     trustDefault: "observed",
     rawDataPolicy: "summaryOnly",
     captureMode: "explicitImport",
     privacyNote:
-      "User pastes or selects the JSONL file produced by a local connector tool. No folder watching, no terminal scraping, no account sync.",
+      "로컬 커넥터 도구가 만든 JSONL 파일을 사용자가 직접 붙여넣거나 선택합니다. 폴더 감시, 터미널 스크래핑, 계정 동기화는 없습니다.",
     supportedInputTypes: ["application/x-ndjson", "application/jsonl", "text/plain"],
     outputRecords: {
       sources: true,
@@ -109,12 +111,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   url: {
     id: "url",
     label: "URL / Browser Page",
-    description: "Web page URLs with optional text excerpts",
+    description: "웹 페이지 URL과 선택적 텍스트 발췌",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "retained",
     captureMode: "manual",
-    privacyNote: "User explicitly pastes URLs and excerpts. No automatic tab scanning.",
+    privacyNote: "사용자가 URL과 발췌를 직접 붙여넣습니다. 탭을 자동으로 스캔하지 않습니다.",
     supportedInputTypes: ["text/uri-list", "text/plain"],
     outputRecords: {
       sources: true,
@@ -129,12 +131,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   aiConversation: {
     id: "aiConversation",
     label: "AI Conversation (Other)",
-    description: "Generic AI conversation transcripts from other AI assistants",
+    description: "다른 AI 어시스턴트의 일반 대화 기록",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
     captureMode: "manual",
-    privacyNote: "User explicitly pastes conversation text from any AI assistant. No automatic capture.",
+    privacyNote: "사용자가 어떤 AI 어시스턴트의 대화 텍스트든 직접 붙여넣습니다. 자동 캡처는 없습니다.",
     supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,
@@ -149,12 +151,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   gitDiff: {
     id: "gitDiff",
     label: "Git Diff (Paste)",
-    description: "Pasted unified git diff output",
+    description: "붙여넣은 unified git diff 출력",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "retained",
     captureMode: "manual",
-    privacyNote: "User explicitly pastes git diff output. No filesystem scanning.",
+    privacyNote: "사용자가 git diff 출력을 직접 붙여넣습니다. 파일시스템 스캔은 없습니다.",
     supportedInputTypes: ["text/x-diff", "text/plain"],
     outputRecords: {
       sources: true,
@@ -169,12 +171,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   tauriGitDiff: {
     id: "tauriGitDiff",
     label: "Git Diff (Desktop Command)",
-    description: "Git diff captured via Tauri desktop command against saved repository",
+    description: "저장된 리포지토리에 대해 Tauri 데스크톱 명령으로 캡처한 git diff",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "retained",
     captureMode: "desktopCommand",
-    privacyNote: "Runs 'git diff' against explicitly saved repository paths only. No automatic scanning.",
+    privacyNote: "명시적으로 저장한 리포지토리 경로에 대해서만 'git diff'를 실행합니다. 자동 스캔은 없습니다.",
     supportedInputTypes: ["text/x-diff"],
     outputRecords: {
       sources: true,
@@ -189,12 +191,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   repository: {
     id: "repository",
     label: "Repository Settings",
-    description: "Saved repository paths for explicit Git diff capture",
+    description: "명시적 Git diff 캡처를 위해 저장한 리포지토리 경로",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "notCaptured",
     captureMode: "desktopCommand",
-    privacyNote: "Only remembers user-added repository paths. Never scans disk automatically.",
+    privacyNote: "사용자가 추가한 리포지토리 경로만 기억합니다. 디스크를 자동으로 스캔하지 않습니다.",
     supportedInputTypes: [],
     outputRecords: {
       sources: false,
@@ -209,12 +211,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   quickPass: {
     id: "quickPass",
     label: "Quick Pass Analysis",
-    description: "Local analysis that extracts issues, decisions, and relationships from imported sources",
+    description: "가져온 소스에서 이슈 · 결정 · 관계를 추출하는 로컬 분석",
     status: "implemented",
     trustDefault: "inferred",
     rawDataPolicy: "summaryOnly",
     captureMode: "manual",
-    privacyNote: "Runs on-demand analysis of imported sources. Uses local heuristics or local LLM (Ollama).",
+    privacyNote: "가져온 소스를 요청 시점에만 분석합니다. 로컬 휴리스틱 또는 로컬 LLM(Ollama)을 사용합니다.",
     supportedInputTypes: [],
     outputRecords: {
       sources: false,
@@ -229,12 +231,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   terminal: {
     id: "terminal",
     label: "Terminal Commands",
-    description: "Terminal command history and output summaries",
+    description: "터미널 명령 기록과 출력 요약",
     status: "planned",
     trustDefault: "observed",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: explicit opt-in terminal connector. Will require user approval per command.",
+    privacyNote: "예정: 명시적으로 켜는 터미널 커넥터입니다. 명령마다 사용자 승인을 요구합니다.",
     supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,
@@ -249,12 +251,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   fileSystem: {
     id: "fileSystem",
     label: "File System Changes",
-    description: "Local file creation, modification, and deletion events",
+    description: "로컬 파일 생성 · 수정 · 삭제 이벤트",
     status: "planned",
     trustDefault: "observed",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: explicit project folder monitoring. Will require user approval and privacy boundaries.",
+    privacyNote: "예정: 명시적인 프로젝트 폴더 모니터링입니다. 사용자 승인과 개인정보 경계를 요구합니다.",
     supportedInputTypes: [],
     outputRecords: {
       sources: true,
@@ -269,12 +271,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   editor: {
     id: "editor",
     label: "Code Editor Activity",
-    description: "Generic code editor file opens, edits, and navigation",
+    description: "일반 코드 에디터의 파일 열기 · 편집 · 이동",
     status: "planned",
     trustDefault: "observed",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: editor-agnostic connector. Will capture file-level events only, not keystrokes.",
+    privacyNote: "예정: 에디터에 종속되지 않는 커넥터입니다. 키 입력이 아닌 파일 단위 이벤트만 캡처합니다.",
     supportedInputTypes: [],
     outputRecords: {
       sources: true,
@@ -289,12 +291,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   vscode: {
     id: "vscode",
     label: "VS Code",
-    description: "VS Code specific file activity and extension events",
+    description: "VS Code 고유의 파일 활동과 확장 이벤트",
     status: "planned",
     trustDefault: "observed",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: VS Code extension. Will respect VS Code privacy settings.",
+    privacyNote: "예정: VS Code 확장입니다. VS Code의 개인정보 설정을 따릅니다.",
     supportedInputTypes: [],
     outputRecords: {
       sources: true,
@@ -309,12 +311,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   cursor: {
     id: "cursor",
     label: "Cursor Editor",
-    description: "Cursor editor AI conversation and file activity",
+    description: "Cursor 에디터의 AI 대화와 파일 활동",
     status: "planned",
     trustDefault: "observed",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: Cursor extension. Will capture AI interactions with user approval.",
+    privacyNote: "예정: Cursor 확장입니다. 사용자 승인하에 AI 상호작용을 캡처합니다.",
     supportedInputTypes: [],
     outputRecords: {
       sources: true,
@@ -329,12 +331,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   browserTab: {
     id: "browserTab",
     label: "Browser Tabs",
-    description: "Active browser tab titles and navigation events",
+    description: "활성 브라우저 탭 제목과 이동 이벤트",
     status: "planned",
     trustDefault: "observed",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: browser extension. Will require explicit site approval. No content capture.",
+    privacyNote: "예정: 브라우저 확장입니다. 사이트별 명시적 승인을 요구하며, 콘텐츠는 캡처하지 않습니다.",
     supportedInputTypes: [],
     outputRecords: {
       sources: true,
@@ -349,12 +351,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   claudeTranscript: {
     id: "claudeTranscript",
     label: "Claude Transcript",
-    description: "Claude AI conversation transcripts via manual paste",
+    description: "수동 붙여넣기로 가져오는 Claude AI 대화 기록",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
     captureMode: "manual",
-    privacyNote: "User explicitly pastes Claude conversation text. Direct Claude API connector is planned for future.",
+    privacyNote: "사용자가 Claude 대화 텍스트를 직접 붙여넣습니다. Claude API 직접 연결은 향후 예정되어 있습니다.",
     supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,
@@ -369,12 +371,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   codexTranscript: {
     id: "codexTranscript",
     label: "Codex Transcript",
-    description: "GitHub Copilot / Codex interaction transcripts",
+    description: "GitHub Copilot / Codex 상호작용 기록",
     status: "planned",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
     captureMode: "explicitImport",
-    privacyNote: "Future: explicit Codex transcript import. User controls which sessions to import.",
+    privacyNote: "예정: 명시적인 Codex 기록 가져오기입니다. 사용자가 가져올 세션을 직접 고릅니다.",
     supportedInputTypes: ["application/json", "text/plain"],
     outputRecords: {
       sources: true,
@@ -389,12 +391,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   chatgptTranscript: {
     id: "chatgptTranscript",
     label: "ChatGPT Transcript",
-    description: "ChatGPT conversation transcripts via manual paste or export",
+    description: "수동 붙여넣기 또는 내보내기로 가져오는 ChatGPT 대화 기록",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
     captureMode: "manual",
-    privacyNote: "User explicitly pastes ChatGPT conversation text. Direct ChatGPT API connector is planned for future.",
+    privacyNote: "사용자가 ChatGPT 대화 텍스트를 직접 붙여넣습니다. ChatGPT API 직접 연결은 향후 예정되어 있습니다.",
     supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,
@@ -409,12 +411,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   docs: {
     id: "docs",
     label: "Documentation Sites",
-    description: "Technical documentation and reference page visits",
+    description: "기술 문서와 레퍼런스 페이지 방문 기록",
     status: "planned",
     trustDefault: "observed",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: browser extension for docs sites. Will capture page titles only, not content.",
+    privacyNote: "예정: 문서 사이트용 브라우저 확장입니다. 콘텐츠가 아닌 페이지 제목만 캡처합니다.",
     supportedInputTypes: [],
     outputRecords: {
       sources: true,
@@ -429,12 +431,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   slack: {
     id: "slack",
     label: "Slack Messages",
-    description: "Slack conversation imports from specific channels",
+    description: "특정 채널에서 가져오는 Slack 대화",
     status: "planned",
     trustDefault: "verified",
     rawDataPolicy: "redacted",
     captureMode: "plannedConnector",
-    privacyNote: "Future: Slack connector with explicit channel approval. Will redact sensitive content.",
+    privacyNote: "예정: 채널별 명시적 승인을 받는 Slack 커넥터입니다. 민감한 콘텐츠는 편집해 제거합니다.",
     supportedInputTypes: ["application/json"],
     outputRecords: {
       sources: true,
@@ -449,12 +451,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   figma: {
     id: "figma",
     label: "Figma",
-    description: "Figma file access and comment imports",
+    description: "Figma 파일 접근과 코멘트 가져오기",
     status: "planned",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: Figma plugin with explicit file approval. Will capture metadata and comments only.",
+    privacyNote: "예정: 파일별 명시적 승인을 받는 Figma 플러그인입니다. 메타데이터와 코멘트만 캡처합니다.",
     supportedInputTypes: ["application/json"],
     outputRecords: {
       sources: true,
@@ -469,12 +471,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   notion: {
     id: "notion",
     label: "Notion",
-    description: "Notion page edits and comment imports",
+    description: "Notion 페이지 편집과 코멘트 가져오기",
     status: "planned",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
     captureMode: "plannedConnector",
-    privacyNote: "Future: Notion integration with explicit page approval. Will respect Notion privacy settings.",
+    privacyNote: "예정: 페이지별 명시적 승인을 받는 Notion 연동입니다. Notion의 개인정보 설정을 따릅니다.",
     supportedInputTypes: ["application/json", "text/markdown"],
     outputRecords: {
       sources: true,
@@ -521,15 +523,15 @@ export function getPlannedIntegrations(): SourceIntegration[] {
 export function isIntegrationAvailable(id: string, isTauri: boolean): boolean {
   const integration = getIntegration(id);
   if (!integration) return false;
-  
+
   if (integration.status === "unavailable" || integration.status === "mockOnly") {
     return false;
   }
-  
+
   // Desktop-only integrations require Tauri
   if (integration.captureMode === "desktopCommand" && !isTauri) {
     return false;
   }
-  
+
   return integration.status === "implemented" || integration.status === "partial";
 }
