@@ -2,6 +2,7 @@ import { Bot, Cloud, Code2, Database, Plug, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { Toggle } from "../../components/ui/Toggle";
 import { SectionHeader } from "../../components/ui/SectionHeader";
@@ -118,9 +119,10 @@ export function LocalAiCard({
                     {isCurrent ? "선택됨" : "선택하기"}
                   </Button>
                 ) : (
-                  <Button disabled title="다음 마일스톤에서 활성화됩니다.">
-                    Planned
-                  </Button>
+                  <MoriPlannedAction
+                    label="Planned"
+                    title="다음 마일스톤에서 활성화됩니다."
+                  />
                 )}
                 {row.canTest ? (
                   <Button

@@ -1,6 +1,6 @@
 import { Bell, Link, MessageSquare, Plus, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { Button } from "../../components/ui/Button";
+import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import type { MoriMockSession, TimelineEvent } from "../../domain/types";
 import { buildFocusGraph } from "../../lib/relationships/focusGraph";
@@ -73,11 +73,31 @@ export function TracePanel({
       <section className="panel-section">
         <SectionHeader title="액션" hint="자리표시자입니다. 흐름 편집은 다음 마일스톤에서 제공됩니다." />
         <div className="trace-actions">
-          <Button icon={Link} disabled title="관계 편집은 아직 구현되지 않았습니다.">링크 편집</Button>
-          <Button icon={Plus} disabled title="관계 추가는 아직 구현되지 않았습니다.">링크 추가</Button>
-          <Button icon={MessageSquare} disabled title="메모 기능은 예정되어 있습니다.">메모 추가</Button>
-          <Button icon={Bell} disabled title="수동 이슈 생성은 예정되어 있습니다.">이슈 생성</Button>
-          <Button icon={Sparkles} disabled title="Flow Focus에서의 재분석은 예정되어 있습니다.">재분석</Button>
+          <MoriPlannedAction
+            icon={Link}
+            label="링크 편집"
+            title="관계 편집은 아직 구현되지 않았습니다."
+          />
+          <MoriPlannedAction
+            icon={Plus}
+            label="링크 추가"
+            title="관계 추가는 아직 구현되지 않았습니다."
+          />
+          <MoriPlannedAction
+            icon={MessageSquare}
+            label="메모 추가"
+            title="메모 기능은 예정되어 있습니다."
+          />
+          <MoriPlannedAction
+            icon={Bell}
+            label="이슈 생성"
+            title="수동 이슈 생성은 예정되어 있습니다."
+          />
+          <MoriPlannedAction
+            icon={Sparkles}
+            label="재분석"
+            title="Flow Focus에서의 재분석은 예정되어 있습니다."
+          />
         </div>
       </section>
     </aside>
