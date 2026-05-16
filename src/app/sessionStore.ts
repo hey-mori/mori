@@ -54,6 +54,12 @@ export type MoriSessionState = {
   source: SessionSource;
   hydrate: () => Promise<void>;
   setDraft: (draft: StoredSessionDraft) => void;
+  /**
+   * Finalise the active draft session: mark it `complete`, stamp a real
+   * `endedAt`, and persist. A no-op in demo mode or when the session is
+   * already complete.
+   */
+  endSession: () => void;
   addImport: (
     candidate: NormalizedImportCandidate,
     options?: { importSummary?: ConnectorSourceImportSummary },
@@ -218,6 +224,20 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       initialized: true,
       source: "browser-draft",
     });
+  },
+  endSession: () => {
+    const draft = get().draft;
+    if (!draft || draft.session.status === "complete") return;
+    const repository = getRepository();
+    const stored = repository.saveCurrentSessionDraft({
+      project: draft.project,
+      session: {
+        ...draft.session,
+        status: "complete",
+        endedAt: new Date().toISOString(),
+      },
+    });
+    set({ draft: stored });
   },
   addImport: (candidate, options) => {
     const repository = getRepository();

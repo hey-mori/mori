@@ -21,6 +21,7 @@ const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionStat
   source: "demo",
   hydrate: async () => {},
   setDraft: () => {},
+  endSession: () => {},
   addImport: () => null,
   removeImport: () => {},
   resetToDemo: () => {},

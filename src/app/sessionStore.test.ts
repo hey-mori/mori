@@ -271,3 +271,77 @@ describe("useMoriSessionStore desktop persistence", () => {
     expect(useMoriSessionStore.getState().source).toBe("demo");
   });
 });
+
+describe("useMoriSessionStore endSession", () => {
+  let repository: BrowserDraftRepository;
+
+  beforeEach(() => {
+    repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  function seedRecordingDraft() {
+    const built = createSessionDraft({
+      sessionTitle: "End session test",
+      projectName: "ES Project",
+      selectedSources: [],
+      recordingMode: "summary",
+      llmProvider: "ollama",
+      llmModel: "llama3.1:8b",
+      storageLocation: "browser:localStorage",
+      now: fixedNow,
+    });
+    useMoriSessionStore.getState().setDraft({
+      ...built,
+      savedAt: fixedNow,
+      adapter: "browser-local-storage" as const,
+    });
+  }
+
+  it("marks a recording session complete with a real end timestamp", () => {
+    seedRecordingDraft();
+    expect(useMoriSessionStore.getState().draft?.session.status).toBe("recording");
+
+    useMoriSessionStore.getState().endSession();
+
+    const session = useMoriSessionStore.getState().draft?.session;
+    expect(session?.status).toBe("complete");
+    expect(session?.endedAt).toBeTruthy();
+    expect(new Date(session!.endedAt).getTime()).toBeGreaterThan(
+      new Date(fixedNow).getTime(),
+    );
+  });
+
+  it("persists the completed session to the repository", () => {
+    seedRecordingDraft();
+    useMoriSessionStore.getState().endSession();
+
+    expect(repository.loadCurrentSessionDraft()?.session.status).toBe("complete");
+  });
+
+  it("is a no-op in demo mode with no draft", () => {
+    expect(useMoriSessionStore.getState().draft).toBeNull();
+    useMoriSessionStore.getState().endSession();
+    expect(useMoriSessionStore.getState().draft).toBeNull();
+  });
+
+  it("is idempotent — a second call leaves the end timestamp unchanged", () => {
+    seedRecordingDraft();
+    useMoriSessionStore.getState().endSession();
+    const firstEnd = useMoriSessionStore.getState().draft?.session.endedAt;
+
+    useMoriSessionStore.getState().endSession();
+
+    expect(useMoriSessionStore.getState().draft?.session.endedAt).toBe(firstEnd);
+  });
+});

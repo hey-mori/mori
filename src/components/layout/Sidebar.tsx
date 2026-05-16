@@ -70,6 +70,7 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
 function SidebarSessionCard() {
   const draft = useMoriSessionStore((state) => state.draft);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
+  const endSession = useMoriSessionStore((state) => state.endSession);
 
   const initialTiming = deriveSessionTiming({
     draft,
@@ -102,6 +103,9 @@ function SidebarSessionCard() {
     ? `시작 ${timing.startTimeLabel}`
     : "시작 기록 없음";
   const endSessionFeature = getFeatureControlProps("appShell.endSession");
+  const isEnded = timing.state === "ended";
+  const canEnd =
+    endSessionFeature.enabled && timing.state !== "demo" && !isEnded;
 
   return (
     <div className="session-card" role="region" aria-label="Current session">
@@ -112,11 +116,16 @@ function SidebarSessionCard() {
         {timing.durationLabel}
       </time>
       <Button
-        disabled={!endSessionFeature.enabled || timing.state === "demo"}
+        disabled={!canEnd}
+        onClick={canEnd ? endSession : undefined}
         title={
           timing.state === "demo"
             ? "데모 세션은 종료할 필요가 없습니다."
-            : endSessionFeature.title
+            : isEnded
+              ? "이미 종료된 세션입니다."
+              : !endSessionFeature.enabled
+                ? endSessionFeature.title
+                : "활성 세션을 종료하고 완료 상태로 표시합니다."
         }
       >
         세션 종료

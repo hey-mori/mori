@@ -18,6 +18,7 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     source: "demo",
     hydrate: async () => undefined,
     setDraft: () => undefined,
+    endSession: () => undefined,
     addImport: () => null,
     removeImport: () => undefined,
     resetToDemo: () => undefined,

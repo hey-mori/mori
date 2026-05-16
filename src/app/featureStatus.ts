@@ -206,7 +206,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "timeline.inspector.addNote", label: "Add note", status: PLANNED, description: "Attach a note to the event.", disabledReason: "Inspector notes depend on the correction milestone." },
   { id: "timeline.inspector.memoSave", label: "Save event memo", status: PLANNED, description: "Persist memo corrections.", disabledReason: "Saving corrections is a planned persistence milestone." },
   // ─────────────────────────── App shell ─────────────────────────
-  { id: "appShell.endSession", label: "End session", status: PLANNED, description: "Finalise the session, write report, mark ended.", disabledReason: "Session end + final report writeback is a planned persistence milestone." },
+  { id: "appShell.endSession", label: "End session", status: "implemented", description: "Finalise the active session and mark it ended; report export stays an explicit step on the Reports surface." },
   { id: "appShell.sidebarCollapse", label: "Collapse sidebar", status: PLANNED, description: "Hide the sidebar to widen the workspace.", disabledReason: "Sidebar collapse is part of the responsive shell milestone." },
   // ─────────────────────────── Evidence ──────────────────────────
   { id: "evidence.addSource.manualNote", label: "Manual note import", status: "implemented", description: "Paste arbitrary text as a verified source." },
