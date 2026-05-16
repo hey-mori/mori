@@ -150,11 +150,13 @@ only — no phase numbers.
   populated on export with `getPackageAuditTrail` read helper.
 - Memory Audit Trail reviewed revert flow — revert eligibility
   planner (`planMemoryReviewRevert`, pure, read-only).
+- Memory Audit Trail reviewed revert flow — proposal builder
+  (`buildMemoryRevertProposal` → `MemoryRevertProposal`, pure).
 
 **Open priority (highest first):**
 
-1. Memory Audit Trail reviewed revert flow — apply path (turn an
-   eligible revert plan into a reviewable proposal + audit row)
+1. Memory Audit Trail reviewed revert flow — wire the revert proposal
+   into the Consolidation Review surface and apply path
 2. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
    mirror)
 3. CLI wrapper for Claude/Codex workflows, explicit/local only
@@ -174,45 +176,47 @@ backlog with it.
 
 The next slice should be:
 
-**Memory Audit Trail reviewed revert flow — proposal builder**
+**Memory Audit Trail reviewed revert flow — apply helper**
 
 Goal:
-Turn an eligible `MemoryReviewRevertPlan` into a reviewable proposal
-so a revert re-enters the normal review-before-apply path instead of
-writing memory directly. The eligibility planner
-(`planMemoryReviewRevert`) already exists; this slice converts an
-eligible plan into a proposal the Consolidation Review surface can
-accept.
+Turn an accepted `MemoryRevertProposal` into the concrete memory
+write plus its audit row, as a pure helper — so the UI wiring slice
+that follows only has to call it. The planner and proposal builder
+already exist; this slice produces the apply result without touching
+storage or UI.
 
 Scope — do:
-- Add a pure `buildMemoryRevertProposal(plan, action, memory)`
-  helper (in `memoryReviewRevert.ts` or a sibling module) that
-  returns a `MemoryProposal` describing the status restore — never
-  writes memory.
-- Reuse the existing lifecycle-proposal shape (as used by
-  `staleMemory` / `contradiction` proposals) with `targetMemoryIds`
-  pointing at the reverted memory.
-- Refuse to build a proposal from an ineligible plan (throw or return
-  null) — the planner's eligibility gate is authoritative.
+- Add `revert` to the `StoredMemoryReviewAction["actionType"]` union
+  (additive; `schemaVersion` stays 1 — the field already tolerates
+  unknown legacy action types in the audit-trail view-model).
+- Add a pure `applyMemoryRevertProposal(proposal, memory, { appliedAt })`
+  helper returning the updated `StoredAcceptedProjectMemory` (status
+  set to `restoreStatus`, `updatedAt` bumped) and a new `revert`
+  `StoredMemoryReviewAction` with a `before` / `after` status
+  snapshot — mirroring the lifecycle apply in
+  `acceptedMemoryPersistence.ts`.
+- Refuse (throw) when the proposal's `targetMemoryId` does not match
+  the supplied memory.
 
 Scope — do not:
-- Apply the revert or write memory directly.
-- Add a `revert` audit `actionType` until the apply path needs it.
-- Auto-revert imported `.mori` audit rows.
+- Write storage or add UI in this slice — the helper is pure.
+- Auto-apply: the proposal still passes through review acceptance.
+- Replay imported `.mori` audit rows.
 
 Suggested files:
+- `src/lib/storage/storageTypes.ts`
 - `src/lib/project-memory/memoryReviewRevert.ts`
 - `src/lib/project-memory/memoryReviewRevert.test.ts`
 - `docs/project-memory-consolidation.md`
 
 Tests:
-- an eligible plan yields a proposal targeting the reverted memory
-- the proposal carries the restore status from the `before` snapshot
-- building from an ineligible plan is refused
+- the applied memory carries the restore status and a bumped `updatedAt`
+- the audit action is `revert` with a before/after status snapshot
+- a memory id mismatch is refused
 
 After this slice ships, set the next slice to wiring the revert
-proposal into the Consolidation Review surface, then continue with
-the open backlog.
+proposal + apply helper into the Consolidation Review / Memory Audit
+Trail surface, then continue with the open backlog.
 
 ## 9. Stop Conditions
 

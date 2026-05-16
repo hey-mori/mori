@@ -3,7 +3,10 @@ import type {
   StoredAcceptedProjectMemory,
   StoredMemoryReviewAction,
 } from "../storage/storageTypes";
-import { planMemoryReviewRevert } from "./memoryReviewRevert";
+import {
+  buildMemoryRevertProposal,
+  planMemoryReviewRevert,
+} from "./memoryReviewRevert";
 
 function acceptedMemory(
   overrides: Partial<StoredAcceptedProjectMemory> = {},
@@ -120,5 +123,41 @@ describe("planMemoryReviewRevert", () => {
     );
     expect(plan.eligible).toBe(false);
     expect(plan.ineligibleReason).toMatch(/multiple memories/i);
+  });
+});
+
+describe("buildMemoryRevertProposal", () => {
+  it("yields a proposal targeting the reverted memory", () => {
+    const action = reviewAction();
+    const memory = acceptedMemory();
+    const plan = planMemoryReviewRevert(action, [memory]);
+    const proposal = buildMemoryRevertProposal(plan, action, memory);
+
+    expect(proposal.targetMemoryId).toBe("mem-1");
+    expect(proposal.sourceActionId).toBe("act-1");
+    expect(proposal.id).toBe("proposal::memoryRevert::act-1");
+    expect(proposal.status).toBe("proposed");
+  });
+
+  it("carries the restore status from the before snapshot", () => {
+    const action = reviewAction();
+    const memory = acceptedMemory();
+    const plan = planMemoryReviewRevert(action, [memory]);
+    const proposal = buildMemoryRevertProposal(plan, action, memory);
+
+    expect(proposal.restoreStatus).toBe("watching");
+    expect(proposal.currentStatus).toBe("accepted");
+    expect(proposal.title).toContain("watching");
+  });
+
+  it("refuses to build from an ineligible plan", () => {
+    const action = reviewAction({ before: undefined });
+    const memory = acceptedMemory();
+    const plan = planMemoryReviewRevert(action, [memory]);
+
+    expect(plan.eligible).toBe(false);
+    expect(() => buildMemoryRevertProposal(plan, action, memory)).toThrow(
+      /ineligible plan/i,
+    );
   });
 });

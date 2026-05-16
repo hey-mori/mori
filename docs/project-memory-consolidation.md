@@ -805,6 +805,14 @@ Reviewed revert flow — eligibility planner landed:
   is read from the snapshot — no raw evidence content.
 - The planner never writes memory: a revert is itself
   review-before-apply, and the apply path is a later slice.
+- `buildMemoryRevertProposal(plan, action, memory)` converts an
+  eligible plan into a `MemoryRevertProposal` — a dedicated reviewable
+  proposal carrying the source action id, target memory id, current
+  status, and the status to restore. It is a dedicated type, not a
+  `MemoryProposal`: reverts originate from the audit trail rather than
+  the consolidation preview, so they stay out of the preview's count
+  / rank / dedupe machinery. The builder is pure and refuses (throws)
+  an ineligible plan — the planner's gate is authoritative.
 
 UI surfacing — still planned:
 

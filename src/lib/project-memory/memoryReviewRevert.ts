@@ -125,6 +125,74 @@ export function planMemoryReviewRevert(
   };
 }
 
+/**
+ * A reviewable revert proposal. Built from an eligible
+ * `MemoryReviewRevertPlan`, it describes a status restore that must be
+ * accepted through the normal review path before any memory is
+ * written. It is deliberately a dedicated type — reverts originate
+ * from the audit trail, not the consolidation preview, so they do not
+ * belong in the `MemoryProposal` union that the preview machinery
+ * (counts, ranking, dedupe) is coupled to.
+ */
+export type MemoryRevertProposal = {
+  /** Stable id for review tracking. */
+  id: string;
+  /** Audit action this revert would undo. */
+  sourceActionId: string;
+  /** Accepted memory the revert restores. */
+  targetMemoryId: string;
+  /** The memory's current status. */
+  currentStatus: StoredAcceptedProjectMemoryStatus;
+  /** Status to restore from the action's `before` snapshot. */
+  restoreStatus: StoredAcceptedProjectMemoryStatus;
+  title: string;
+  summary: string;
+  rationale: string;
+  /** Always `proposed` — a freshly built proposal is never pre-applied. */
+  status: "proposed";
+};
+
+/**
+ * Convert an eligible revert plan into a reviewable proposal. Pure:
+ * never writes memory and never mutates its inputs. Throws when the
+ * plan is ineligible — the planner's eligibility gate is authoritative,
+ * so a caller must check `plan.eligible` first.
+ */
+export function buildMemoryRevertProposal(
+  plan: MemoryReviewRevertPlan,
+  action: StoredMemoryReviewAction,
+  memory: StoredAcceptedProjectMemory,
+): MemoryRevertProposal {
+  if (
+    !plan.eligible ||
+    plan.targetMemoryId === null ||
+    plan.restoreStatus === null ||
+    plan.currentStatus === null
+  ) {
+    throw new Error(
+      `Cannot build a revert proposal from an ineligible plan: ${plan.ineligibleReason ?? "unknown reason"}`,
+    );
+  }
+
+  return {
+    id: `proposal::memoryRevert::${action.id}`,
+    sourceActionId: action.id,
+    targetMemoryId: plan.targetMemoryId,
+    currentStatus: plan.currentStatus,
+    restoreStatus: plan.restoreStatus,
+    title: `Revert "${memory.title}" to ${plan.restoreStatus}`,
+    summary:
+      `Restore this memory from "${plan.currentStatus}" back to ` +
+      `"${plan.restoreStatus}", the status it held before the ` +
+      `"${action.actionType}" review action.`,
+    rationale:
+      `Undoes the "${action.actionType}" review action recorded at ` +
+      `${action.timestamp || "an unknown time"}. The revert is itself ` +
+      `reviewed: accepting this proposal applies the status restore.`,
+    status: "proposed",
+  };
+}
+
 // ─── internals ────────────────────────────────────────────────────────
 
 function isRevertibleActionType(
