@@ -91,12 +91,22 @@ describe("memoryLifecycleSortWeight", () => {
 });
 
 describe("describeMemoryLifecycleGroup / memoryLifecycleGroupTone", () => {
-  it("gives every group a label and a tone", () => {
+  it("gives every group a label and a shared product-state tone", () => {
     for (const group of ["current", "advisory", "attention", "archived"] as const) {
       expect(describeMemoryLifecycleGroup(group).length).toBeGreaterThan(0);
-      expect(["green", "blue", "orange", "gray"]).toContain(
+      expect(["success", "info", "warning", "neutral"]).toContain(
         memoryLifecycleGroupTone(group),
       );
+    }
+  });
+
+  it("maps current to success and never to a not-current tone", () => {
+    expect(memoryLifecycleGroupTone("current")).toBe("success");
+    expect(memoryLifecycleGroupTone("advisory")).toBe("info");
+    expect(memoryLifecycleGroupTone("attention")).toBe("warning");
+    expect(memoryLifecycleGroupTone("archived")).toBe("neutral");
+    for (const group of ["advisory", "attention", "archived"] as const) {
+      expect(memoryLifecycleGroupTone(group)).not.toBe("success");
     }
   });
 });

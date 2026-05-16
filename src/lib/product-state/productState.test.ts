@@ -2,17 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
   PRODUCT_AVAILABILITY_LABELS,
   PRODUCT_DATA_LABELS,
+  PRODUCT_MEMORY_STATUS_LABELS,
   PRODUCT_RUNTIME_LABELS,
   getProductAvailabilityDisplay,
   getProductAvailabilityLabel,
   getProductAvailabilityTone,
   getProductDataDisplay,
   getProductDataLabel,
+  getProductMemoryStatusDisplay,
+  getProductMemoryStatusLabel,
+  getProductMemoryStatusTone,
   getProductRuntimeDisplay,
   getProductRuntimeLabel,
   productAvailabilityFromFeatureStatus,
   productAvailabilityFromIntegrationStatus,
   type ProductAvailabilityState,
+  type ProductMemoryStatusState,
 } from "./productState";
 import type { FeatureStatus } from "../../app/featureStatus";
 import type { IntegrationStatus } from "../sources/sourceRegistry";
@@ -102,6 +107,55 @@ describe("data / provenance label derivation", () => {
   it("every data state carries a Korean description", () => {
     for (const display of Object.values(PRODUCT_DATA_LABELS)) {
       expect(HANGUL.test(display.description)).toBe(true);
+    }
+  });
+});
+
+describe("memory lifecycle label derivation", () => {
+  it("derives Korean labels for every accepted-memory status", () => {
+    expect(getProductMemoryStatusLabel("accepted")).toBe("수락");
+    expect(getProductMemoryStatusLabel("edited")).toBe("편집");
+    expect(getProductMemoryStatusLabel("watching")).toBe("관찰");
+    expect(getProductMemoryStatusLabel("deferred")).toBe("연기");
+    expect(getProductMemoryStatusLabel("stale")).toBe("오래됨");
+    expect(getProductMemoryStatusLabel("contradicted")).toBe("상충");
+    expect(getProductMemoryStatusLabel("superseded")).toBe("대체됨");
+    expect(getProductMemoryStatusLabel("retired")).toBe("은퇴");
+  });
+
+  it("maps current statuses to success and archived statuses to neutral", () => {
+    expect(getProductMemoryStatusTone("accepted")).toBe("success");
+    expect(getProductMemoryStatusTone("edited")).toBe("success");
+    expect(getProductMemoryStatusTone("superseded")).toBe("neutral");
+    expect(getProductMemoryStatusTone("retired")).toBe("neutral");
+  });
+
+  it("escalates a contradiction above a stale memory", () => {
+    expect(getProductMemoryStatusTone("stale")).toBe("warning");
+    expect(getProductMemoryStatusTone("contradicted")).toBe("danger");
+  });
+
+  it("never maps a not-current status to the success tone", () => {
+    for (const state of [
+      "watching",
+      "deferred",
+      "stale",
+      "contradicted",
+      "superseded",
+      "retired",
+    ] as ProductMemoryStatusState[]) {
+      expect(getProductMemoryStatusTone(state)).not.toBe("success");
+    }
+  });
+
+  it("every memory status carries a Korean description", () => {
+    for (const state of Object.keys(
+      PRODUCT_MEMORY_STATUS_LABELS,
+    ) as ProductMemoryStatusState[]) {
+      expect(HANGUL.test(getProductMemoryStatusDisplay(state).description)).toBe(
+        true,
+      );
+      expect(HANGUL.test(getProductMemoryStatusLabel(state))).toBe(true);
     }
   });
 });

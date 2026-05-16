@@ -17,6 +17,7 @@
  */
 
 import type { StoredAcceptedProjectMemoryStatus } from "../storage/storageTypes";
+import type { ProductStateTone } from "../product-state/productState";
 
 export type MemoryLifecycleGroup = "current" | "advisory" | "attention" | "archived";
 
@@ -83,21 +84,25 @@ export function describeMemoryLifecycleGroup(group: MemoryLifecycleGroup): strin
   }
 }
 
-/** Shared status tone for a lifecycle group (matches the Badge scale). */
+/**
+ * Lifecycle-group tone, drawn from the shared product-state tone
+ * vocabulary (`ProductStateTone`) so the Memory surface uses the same
+ * scale as `MoriStatusBadge` and the `data-mori-tone` theme tokens.
+ */
 export function memoryLifecycleGroupTone(
   group: MemoryLifecycleGroup,
-): "green" | "blue" | "orange" | "gray" {
+): ProductStateTone {
   switch (group) {
     case "current":
-      return "green";
+      return "success";
     case "advisory":
-      return "blue";
+      return "info";
     case "attention":
-      return "orange";
+      return "warning";
     case "archived":
-      return "gray";
+      return "neutral";
     default:
-      return "gray";
+      return "neutral";
   }
 }
 

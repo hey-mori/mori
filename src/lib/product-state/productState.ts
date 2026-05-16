@@ -18,9 +18,11 @@ import type { IntegrationStatus } from "../sources/sourceRegistry";
 import {
   PRODUCT_AVAILABILITY_LABELS,
   PRODUCT_DATA_LABELS,
+  PRODUCT_MEMORY_STATUS_LABELS,
   PRODUCT_RUNTIME_LABELS,
   type ProductAvailabilityState,
   type ProductDataState,
+  type ProductMemoryStatusState,
   type ProductRuntimeState,
   type ProductStateDisplay,
   type ProductStateTone,
@@ -29,6 +31,7 @@ import {
 export type {
   ProductAvailabilityState,
   ProductDataState,
+  ProductMemoryStatusState,
   ProductRuntimeState,
   ProductStateDisplay,
   ProductStateTone,
@@ -36,6 +39,7 @@ export type {
 export {
   PRODUCT_AVAILABILITY_LABELS,
   PRODUCT_DATA_LABELS,
+  PRODUCT_MEMORY_STATUS_LABELS,
   PRODUCT_RUNTIME_LABELS,
 } from "./productStateLabels";
 
@@ -91,6 +95,26 @@ export function getProductDataLabel(state: ProductDataState): string {
 
 export function getProductDataTone(state: ProductDataState): ProductStateTone {
   return PRODUCT_DATA_LABELS[state].tone;
+}
+
+// ──────────────────────────── Memory lifecycle ──────────────────────────
+
+export function getProductMemoryStatusDisplay(
+  state: ProductMemoryStatusState,
+): ProductStateDisplay {
+  return PRODUCT_MEMORY_STATUS_LABELS[state];
+}
+
+export function getProductMemoryStatusLabel(
+  state: ProductMemoryStatusState,
+): string {
+  return PRODUCT_MEMORY_STATUS_LABELS[state].label;
+}
+
+export function getProductMemoryStatusTone(
+  state: ProductMemoryStatusState,
+): ProductStateTone {
+  return PRODUCT_MEMORY_STATUS_LABELS[state].tone;
 }
 
 // ───────────────────────────────── Mappers ──────────────────────────────

@@ -1,11 +1,18 @@
 import { BookCheck, Clock4, Eye } from "lucide-react";
-import { Badge } from "../../components/ui/Badge";
+import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriSection } from "../../components/ui/MoriSection";
-import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
+import {
+  describeProposalKind,
+  proposalKindTone,
+} from "../../lib/project-memory/projectMemoryConsolidationState";
 import {
   describeAcceptedMemoryStorageSource,
   type AcceptedMemoryStorageSource,
 } from "../../lib/project-memory/acceptedMemoryRepository";
+import {
+  getProductMemoryStatusLabel,
+  getProductMemoryStatusTone,
+} from "../../lib/product-state/productState";
 import {
   classifyMemoryLifecycle,
   describeMemoryLifecycleGroup,
@@ -23,10 +30,10 @@ import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes
  * content is rendered here — each row surfaces title, status,
  * acceptedAt, and evidence count only.
  *
- * When Resume and Report Memory Integration ships, the accepted
- * records below will outrank the live cross-session aggregation in
- * Resume Prompt and Reports. Today the card is a read-only display
- * surface.
+ * Status, kind, and lifecycle tones all come from the shared
+ * product-state model (`getProductMemoryStatusTone`,
+ * `proposalKindTone`, `memoryLifecycleGroupTone`) so this card uses
+ * the same tone scale as `MoriStatusBadge` everywhere else.
  */
 export function AcceptedMemoriesCard({
   memories,
@@ -61,7 +68,11 @@ export function AcceptedMemoriesCard({
           별도 capability에서 구현됩니다.
         </span>
       }
-      actions={<Badge tone={memories.length > 0 ? "green" : "gray"}>{memories.length}건</Badge>}
+      actions={
+        <MoriStatusBadge tone={memories.length > 0 ? "success" : "neutral"}>
+          {memories.length}건
+        </MoriStatusBadge>
+      }
     >
       {memories.length === 0 ? (
         <p className="memory-accepted-empty">
@@ -84,8 +95,12 @@ export function AcceptedMemoriesCard({
               <header>
                 <strong title={memory.title}>{memory.title}</strong>
                 <span className="memory-accepted-meta">
-                  <Badge tone={kindTone(memory.kind)}>{describeProposalKind(memory.kind)}</Badge>
-                  <Badge tone={statusTone(memory.status)}>{describeStoredStatus(memory.status)}</Badge>
+                  <MoriStatusBadge tone={proposalKindTone(memory.kind)}>
+                    {describeProposalKind(memory.kind)}
+                  </MoriStatusBadge>
+                  <MoriStatusBadge tone={getProductMemoryStatusTone(memory.status)}>
+                    {getProductMemoryStatusLabel(memory.status)}
+                  </MoriStatusBadge>
                 </span>
               </header>
               {memory.summary ? <p className="memory-accepted-summary">{memory.summary}</p> : null}
@@ -96,7 +111,7 @@ export function AcceptedMemoriesCard({
                 {" "}
                 {memory.sourceSessionIds.length}개 session
                 {" · "}
-                <Badge tone="gray">local-only</Badge>
+                <MoriStatusBadge tone="neutral">로컬 전용</MoriStatusBadge>
               </small>
             </li>
             );
@@ -107,9 +122,9 @@ export function AcceptedMemoriesCard({
       <footer className="memory-accepted-footer">
         <small>
           감사 로그 {reviewActionCount}건 기록됨 · 저장 위치:{" "}
-          <Badge tone={storageSource === "desktop-sqlite" ? "green" : "purple"}>
+          <MoriStatusBadge tone={storageSource === "desktop-sqlite" ? "success" : "info"}>
             {describeAcceptedMemoryStorageSource(storageSource)}
-          </Badge>
+          </MoriStatusBadge>
           {storageFellBack
             ? " · 데스크톱 SQLite를 사용할 수 없어 localStorage로 안전하게 대체했습니다."
             : ""}
@@ -145,80 +160,14 @@ function MemoryLifecycleStrip({
     <div className="memory-lifecycle-strip" role="group" aria-label="Accepted memory lifecycle health">
       {cells.map((cell) => (
         <div key={cell.group} className={`memory-lifecycle-cell lifecycle-${cell.group}`}>
-          <Badge tone={memoryLifecycleGroupTone(cell.group)}>{cell.count}</Badge>
+          <MoriStatusBadge tone={memoryLifecycleGroupTone(cell.group)}>
+            {cell.count}
+          </MoriStatusBadge>
           <span>{describeMemoryLifecycleGroup(cell.group)}</span>
         </div>
       ))}
     </div>
   );
-}
-
-function describeStoredStatus(status: StoredAcceptedProjectMemory["status"]): string {
-  switch (status) {
-    case "accepted":
-      return "수락";
-    case "edited":
-      return "편집";
-    case "watching":
-      return "관찰";
-    case "deferred":
-      return "연기";
-    case "stale":
-      return "오래됨";
-    case "contradicted":
-      return "상충";
-    case "superseded":
-      return "대체됨";
-    case "retired":
-      return "은퇴";
-    default:
-      return status;
-  }
-}
-
-function statusTone(status: StoredAcceptedProjectMemory["status"]):
-  | "green" | "blue" | "orange" | "red" | "gray" | "purple" {
-  switch (status) {
-    case "accepted":
-      return "green";
-    case "edited":
-      return "blue";
-    case "watching":
-      return "purple";
-    case "deferred":
-      return "orange";
-    case "stale":
-      return "orange";
-    case "contradicted":
-      return "red";
-    case "superseded":
-    case "retired":
-      return "gray";
-    default:
-      return "gray";
-  }
-}
-
-function kindTone(kind: StoredAcceptedProjectMemory["kind"]):
-  | "green" | "blue" | "orange" | "red" | "gray" | "purple" {
-  switch (kind) {
-    case "promotedDecision":
-      return "green";
-    case "recurringIssue":
-      return "orange";
-    case "keyEvidence":
-      return "purple";
-    case "unresolvedRisk":
-      return "red";
-    case "nextSessionRecommendation":
-      return "blue";
-    case "contradiction":
-      return "red";
-    case "staleMemory":
-      return "gray";
-    default:
-      return "gray";
-  }
 }
 
 function formatShort(iso: string): string {

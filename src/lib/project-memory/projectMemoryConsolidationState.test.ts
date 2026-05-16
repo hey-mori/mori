@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildProjectMemoryConsolidationState,
   describeProposalKind,
+  proposalKindTone,
 } from "./projectMemoryConsolidationState";
+import type { MemoryProposalKind } from "./consolidationProposals";
 import {
   emptyProjectMemoryViewModel,
   type ProjectMemoryViewModel,
@@ -367,5 +369,44 @@ describe("describeProposalKind", () => {
     expect(describeProposalKind("contradiction")).toBe("Contradictions");
     expect(describeProposalKind("staleMemory")).toBe("Stale memories");
     expect(describeProposalKind("nextSessionRecommendation")).toBe("Next session");
+  });
+});
+
+describe("proposalKindTone", () => {
+  const ALL_KINDS: MemoryProposalKind[] = [
+    "promotedDecision",
+    "recurringIssue",
+    "keyEvidence",
+    "unresolvedRisk",
+    "contradiction",
+    "staleMemory",
+    "nextSessionRecommendation",
+  ];
+
+  it("draws every kind tone from the shared product-state vocabulary", () => {
+    const vocabulary = [
+      "success",
+      "info",
+      "warning",
+      "danger",
+      "accent",
+      "neutral",
+      "verified",
+      "observed",
+      "inferred",
+    ];
+    for (const kind of ALL_KINDS) {
+      expect(vocabulary).toContain(proposalKindTone(kind));
+    }
+  });
+
+  it("maps risk and contradiction to the most severe danger tone", () => {
+    expect(proposalKindTone("unresolvedRisk")).toBe("danger");
+    expect(proposalKindTone("contradiction")).toBe("danger");
+  });
+
+  it("maps a decision to success and a stale memory to neutral", () => {
+    expect(proposalKindTone("promotedDecision")).toBe("success");
+    expect(proposalKindTone("staleMemory")).toBe("neutral");
   });
 });

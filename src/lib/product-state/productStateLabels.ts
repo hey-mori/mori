@@ -8,11 +8,12 @@
  * `MoriStatusBadge`, `settingsStatus.ts`, `evidence/provenance.ts`,
  * `LocalAiCard.tsx`, `IntegrationCard.tsx`). The vocabularies drifted.
  *
- * This file is the single data source for three product-state families:
+ * This file is the single data source for four product-state families:
  *
  *   - Availability — can the user use this capability today?
  *   - Runtime / storage — where does the data actually live right now?
  *   - Data / provenance — how did this data reach Mori, and how durable is it?
+ *   - Memory lifecycle — what state is a durable accepted memory in?
  *
  * `productState.ts` adds the typed derivations on top of these tables;
  * components and pure helpers should import from there.
@@ -60,6 +61,22 @@ export type ProductRuntimeState =
   | "desktopSQLite"
   | "fallbackActive"
   | "localOnly";
+
+/**
+ * Lifecycle status of a durable accepted Project Memory record. Mirrors
+ * `StoredAcceptedProjectMemoryStatus` in `storage/storageTypes.ts` — kept
+ * as its own type here so the product-state model has no upward dependency
+ * on the storage layer.
+ */
+export type ProductMemoryStatusState =
+  | "accepted"
+  | "edited"
+  | "watching"
+  | "deferred"
+  | "stale"
+  | "contradicted"
+  | "superseded"
+  | "retired";
 
 /** How a piece of data reached Mori and how durably it is retained. */
 export type ProductDataState =
@@ -209,5 +226,59 @@ export const PRODUCT_DATA_LABELS: Record<ProductDataState, ProductStateDisplay> 
     label: "원본 전체 보관",
     description: "원본 텍스트가 그대로 로컬에 보관됩니다.",
     tone: "info",
+  },
+};
+
+/**
+ * Memory lifecycle — Korean copy. The tone follows the four lifecycle
+ * groups (`memoryLifecycle.ts`): `accepted` / `edited` are current
+ * guidance (success), `watching` / `deferred` are advisory (info),
+ * `stale` / `contradicted` need attention (warning / danger — a
+ * contradiction is the more severe of the two), and `superseded` /
+ * `retired` are archived without deletion (neutral).
+ */
+export const PRODUCT_MEMORY_STATUS_LABELS: Record<
+  ProductMemoryStatusState,
+  ProductStateDisplay
+> = {
+  accepted: {
+    label: "수락",
+    description: "검토 후 승인되어 현재 지침으로 쓰이는 메모리입니다.",
+    tone: "success",
+  },
+  edited: {
+    label: "편집",
+    description: "사용자가 내용을 수정한 뒤 승인한 메모리입니다.",
+    tone: "success",
+  },
+  watching: {
+    label: "관찰",
+    description: "중요하지만 아직 확정하지 않고 지켜보는 메모리입니다.",
+    tone: "info",
+  },
+  deferred: {
+    label: "연기",
+    description: "다음 검토까지 판단을 미룬 메모리입니다.",
+    tone: "info",
+  },
+  stale: {
+    label: "오래됨",
+    description: "근거가 오래되어 다시 검토가 필요한 메모리입니다.",
+    tone: "warning",
+  },
+  contradicted: {
+    label: "상충",
+    description: "다른 메모리와 충돌해 확인이 필요한 메모리입니다.",
+    tone: "danger",
+  },
+  superseded: {
+    label: "대체됨",
+    description: "더 새로운 메모리로 대체되어 보관된 항목입니다.",
+    tone: "neutral",
+  },
+  retired: {
+    label: "은퇴",
+    description: "더 이상 지침으로 쓰이지 않고 보관된 항목입니다.",
+    tone: "neutral",
   },
 };

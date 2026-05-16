@@ -44,6 +44,7 @@ import type {
   ProjectMemoryWarning,
 } from "./projectMemoryModel";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import type { ProductStateTone } from "../product-state/productState";
 
 // ─── public types ─────────────────────────────────────────────────────
 
@@ -306,5 +307,34 @@ export function describeProposalKind(kind: MemoryProposalKind): string {
       return "Next session";
     default:
       return kind;
+  }
+}
+
+/**
+ * Semantic tone for a `MemoryProposalKind`, drawn from the shared
+ * product-state tone vocabulary so a kind chip uses the same scale as
+ * `MoriStatusBadge`. A decision is a settled outcome (success), a
+ * recurring issue wants attention (warning), key evidence is a
+ * provenance anchor (accent), an unresolved risk / contradiction is
+ * the most severe (danger), a next-session recommendation is
+ * forward-looking (info), and a stale memory is receding (neutral).
+ */
+export function proposalKindTone(kind: MemoryProposalKind): ProductStateTone {
+  switch (kind) {
+    case "promotedDecision":
+      return "success";
+    case "recurringIssue":
+      return "warning";
+    case "keyEvidence":
+      return "accent";
+    case "unresolvedRisk":
+    case "contradiction":
+      return "danger";
+    case "nextSessionRecommendation":
+      return "info";
+    case "staleMemory":
+      return "neutral";
+    default:
+      return "neutral";
   }
 }
