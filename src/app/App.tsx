@@ -13,6 +13,7 @@ import { MemoryView } from "../features/memory/MemoryView";
 import { ConsolidationReviewView } from "../features/memory/ConsolidationReviewView";
 import { CompanionInboxView } from "../features/companion/CompanionInboxView";
 import { AccountProfileView } from "../features/account/AccountProfileView";
+import { LoginView } from "../features/account/LoginView";
 import { SettingsView } from "../features/settings/SettingsView";
 
 export default function App() {
@@ -48,6 +49,7 @@ export default function App() {
       {currentView === "consolidation" ? <ConsolidationReviewView /> : null}
       {currentView === "companion" ? <CompanionInboxView /> : null}
       {currentView === "profile" ? <AccountProfileView /> : null}
+      {currentView === "login" ? <LoginView /> : null}
       {currentView === "settings" ? <SettingsView /> : null}
     </AppShell>
   );

@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { useMoriProfileStore } from "../../app/profileStore";
+import { useMoriAppStore } from "../../app/store";
 import {
   getProfileInitials,
   normalizeDisplayName,
@@ -28,6 +29,7 @@ const LINKED_ACCOUNTS = [
 export function AccountProfileView() {
   const profile = useMoriProfileStore((state) => state.profile);
   const setDisplayName = useMoriProfileStore((state) => state.setDisplayName);
+  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const [draftName, setDraftName] = useState(profile.displayName);
 
   const trimmed = normalizeDisplayName(draftName);
@@ -113,6 +115,9 @@ export function AccountProfileView() {
                 외부 앱의 데이터 접근은 로그인과 별개이며, 커넥터별로 따로 명시적으로 승인합니다.
               </span>
             </p>
+            <div className="account-identity-actions">
+              <Button onClick={() => setCurrentView("login")}>로그인 옵션 살펴보기</Button>
+            </div>
           </section>
         </section>
 

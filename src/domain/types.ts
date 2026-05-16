@@ -11,6 +11,7 @@ export type ViewKey =
   | "consolidation"
   | "companion"
   | "profile"
+  | "login"
   | "settings";
 
 export type TrustLevel = "verified" | "observed" | "inferred";
