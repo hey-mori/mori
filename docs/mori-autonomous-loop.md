@@ -346,8 +346,13 @@ a demo/overview. Highest value first.
   inspector; make inspector width responsive / collapsible.
 - Responsive Timeline — laptop/tablet behaviour, inspector
   drawer/overlay, a chronological list fallback at narrow widths.
-- Day-scale stress fixture — a 30+ event overlapping-burst fixture
-  driving the layout / clustering / density tests.
+- ✅ Day-scale stress fixture — `buildTimelineStressEvents` is a
+  deterministic 36-event working-day fixture (every lane, morning
+  bursts, same-time clusters, short + 45/90-minute ranged events,
+  mixed trust). `timelineStress.test.ts` uses it to guard
+  single-row lanes under bursts, burst → bundle clustering, dense
+  vs comfortable frame height, duration-aware width, and that no
+  raw summary leaks into the card view model.
 
 Open (highest value first):
 
