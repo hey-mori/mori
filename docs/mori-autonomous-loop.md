@@ -188,32 +188,37 @@ only — no phase numbers.
 - Terminal integration — first artifact: `connectors/terminal-helper/`,
   a `mori-capture` shell function wrapping `mori-local-capture.py`
   (git / commit / note / transcript) on an explicit command.
+- Real `.mori` zip package — `fflate` dependency added;
+  `zipMoriPackage` / `unzipMoriPackage` archive the canonical file
+  layout into a real `.mori` zip and validate it back.
 
 **Open priority (highest first):**
 
-The dependency-free, in-scope backlog is converged: the items below
-are **deferred** pending an explicit product / dependency / scope
-decision. The loop should not invent a slice to avoid this — surface
-the decision instead (see section 9 stop conditions).
+All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
+Team/shared memory spec · continued loop) are approved; sequence them
+into small slices in this order:
+
+1. `.mori` zip export wiring — Reports `.mori` export writes a real
+   zip package (keep the JSON path as a fallback).
+2. `.mori` zip import wiring — the Consolidation Review import panel
+   and desktop open path read a real zip package.
+3. Evidence / Import Review polish for real local-capture output.
+4. Team / shared memory specification doc — roles, privacy
+   boundaries, client-safe exports, conflict handling.
+5. `.mori` handoff workflow + client-safe package / export rules.
+6. Local Connector Capture polish for real captured data.
+7. Project Memory UX polish for real captured data.
+8. Queryable Memory extensions if a clear safe slice remains.
 
 Deferred — revisit when a concrete need appears:
-- Evidence / Import Review polish — audited; the Import Review view,
-  the `review` lib, and the connector pipeline are mature and
-  well-tested with no concrete defect. Revisit when real captured
-  data exposes a specific honesty / correctness gap.
 - Optional watched-inbox tray — borders on the no-background-watcher
   non-goal; the refresh-only desktop inbox already covers the safe
   case. Revisit only with a concrete, explicitly-triggered design.
-- IDE / Terminal integration runtime code — the explicit-capture
-  design is documented; building an editor extension waits for a
-  concrete first integration target.
-- `.mori` zip archiving step — the file-layout builder + parser are
-  shipped (`buildMoriPackageFileLayout` / `parseMoriPackageFileLayout`);
-  the actual zip archive needs an archiving dependency, which is a
-  product/security decision the loop must not make unilaterally.
-  Revisit when the dependency is explicitly approved.
-- Team / shared memory beyond the `.mori v0` package round trip — a
-  large surface with no concrete near-term requirement.
+- A real editor / browser extension — the explicit-capture task and
+  shell-helper artifacts ship; an extension waits for that contract
+  being proven in real use.
+- Cloud sync / remote collaboration backend for shared memory — a
+  hard non-goal; team memory ships as spec + `.mori` handoff only.
 
 When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
@@ -221,38 +226,47 @@ backlog with it.
 
 ## 8. Current Next Slice
 
-**The dependency-free, in-scope backlog is converged.** The product
-loop — capture → preview → Import Review → Timeline / Evidence Hub →
-Project Memory → Consolidation Review → Accepted Memory → Resume
-Prompt / Reports — is built, tested (925 TS + 43 Rust), and
-documented end to end. Explicit-capture first artifacts ship for the
-connector path (`mori-local-capture.py`), Claude Code / Codex CLI
-hooks, the VS Code task template, and the terminal `mori-capture`
-helper.
+The next slice should be:
 
-Every remaining backlog item hits a section 9 stop condition — the
-next slice is a **product decision**, not a code change:
+**`.mori` zip export wiring — Reports export writes a real zip package**
 
-- **`.mori` zip archive step** — needs an archiving dependency
-  (e.g. `fflate`); the dependency-free layout builder + parser are
-  shipped, so the slice is ready the moment the dependency is
-  approved.
-- **A real editor / browser extension** — the explicit-capture task
-  and shell-helper artifacts are shipped; the plan gates an actual
-  extension on the explicit-emit contract being proven in real use.
-- **Team / shared memory** — a large surface with no concrete
-  near-term requirement; not sliceable without a specification.
+Goal:
+`zipMoriPackage` / `unzipMoriPackage` exist; the Reports `.mori`
+export still writes flat JSON. This slice makes the desktop and
+browser export produce a real `.mori` zip file, with the JSON path
+kept as an honest fallback.
 
-The loop should surface this to the user and choose one:
+Scope — do:
+- Add a Tauri command (or extend the existing save command) that
+  writes the zip `Uint8Array` to disk via the native Save As dialog —
+  a `.mori` file, not `.mori.json`.
+- In `ReportsView` `MoriPackageStrip.handleExport`: on desktop write
+  the zip; in the browser download the zip blob
+  (`MORI_PACKAGE_ZIP_MIME`).
+- Keep the existing flat-JSON save as a labelled fallback only if it
+  still adds value; otherwise the zip is the export.
+- Validation runs through `zipMoriPackage` → the canonical layout.
 
-1. Approve a specific archiving dependency → `.mori` zip archive.
-2. Confirm the explicit-capture artifacts are proven enough to build
-   a VS Code extension → the extension becomes sliceable.
-3. Specify a concrete team / shared-memory requirement.
+Scope — do not:
+- Change the canonical file layout or the in-memory `MoriPackageV0`.
+- Drop validation or review-on-import.
+- Add any dependency beyond the approved `fflate`.
 
-Until one of those decisions is made there is no honest
-dependency-free production slice left. Per section 9, this is a
-legitimate stop point — not a clean boundary skipped for convenience.
+Suggested files:
+- `src-tauri/src/package.rs`, `src-tauri/src/main.rs`
+- `src/lib/desktop/tauriCommands.ts`
+- `src/features/reports/ReportsView.tsx`
+- `docs/mori-package-v0.md`
+
+Tests:
+- Rust: the zip-bytes save command path / extension handling
+- frontend: the export still produces a valid package (zip round-trip)
+
+Validation note: touches `src-tauri/` — run `cargo check` / `cargo
+test` too.
+
+After this slice ships, set the next slice to `.mori` zip import
+wiring (Consolidation Review import panel + desktop open path).
 
 ## 9. Stop Conditions
 

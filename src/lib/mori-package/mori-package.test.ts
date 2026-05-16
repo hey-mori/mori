@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
+import { unzipSync, zipSync } from "fflate";
 import {
   buildMoriPackageFileLayout,
   createMoriPackageFromSession,
@@ -10,7 +11,9 @@ import {
   parseMoriPackageFileLayout,
   serializeEventsJsonl,
   serializeMoriPackage,
+  unzipMoriPackage,
   validateMoriPackage,
+  zipMoriPackage,
 } from "./index";
 import type {
   StoredAcceptedProjectMemory,
@@ -311,5 +314,47 @@ describe(".mori package v0 — zip-like file layout", () => {
     const broken = { ...layout };
     delete (broken as Record<string, string>)["manifest.json"];
     expect(() => parseMoriPackageFileLayout(broken)).toThrow(/missing file/i);
+  });
+});
+
+describe(".mori package v0 — real zip package", () => {
+  it("round-trips a package through zip / unzip", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession, {
+      consolidatedMemories: [acceptedMemory({ id: "mem-x" })],
+      auditTrail: [reviewAction({ id: "act-x" })],
+    });
+    const bytes = zipMoriPackage(pkg);
+    expect(bytes).toBeInstanceOf(Uint8Array);
+    expect(bytes.length).toBeGreaterThan(0);
+
+    const restored = unzipMoriPackage(bytes);
+    expect(restored.manifest.packageId).toBe(pkg.manifest.packageId);
+    expect(restored.events.length).toBe(pkg.events.length);
+    expect(getPackageConsolidatedMemories(restored)[0]?.id).toBe("mem-x");
+    expect(getPackageAuditTrail(restored)[0]?.id).toBe("act-x");
+    expect(validateMoriPackage(restored).valid).toBe(true);
+  });
+
+  it("archives the canonical one-file-per-slice layout", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const unzipped = unzipSync(zipMoriPackage(pkg));
+    expect(Object.keys(unzipped).sort()).toEqual([...MORI_PACKAGE_FILE_NAMES].sort());
+  });
+
+  it("rejects bytes that are not a zip archive", () => {
+    expect(() => unzipMoriPackage(new Uint8Array([1, 2, 3, 4]))).toThrow(
+      /Invalid Mori zip package/i,
+    );
+  });
+
+  it("rejects a zip missing a required package file", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const layout = buildMoriPackageFileLayout(pkg);
+    const entries: Record<string, Uint8Array> = {};
+    for (const [name, content] of Object.entries(layout)) {
+      if (name === "manifest.json") continue;
+      entries[name] = new TextEncoder().encode(content);
+    }
+    expect(() => unzipMoriPackage(zipSync(entries))).toThrow(/missing file/i);
   });
 });

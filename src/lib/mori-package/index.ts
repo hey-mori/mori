@@ -27,6 +27,11 @@ export {
   parseMoriPackageFileLayout,
   MORI_PACKAGE_FILE_NAMES,
 } from "./fileLayout";
+export {
+  zipMoriPackage,
+  unzipMoriPackage,
+  MORI_PACKAGE_ZIP_MIME,
+} from "./zip";
 export type {
   MoriPackageFileLayout,
   MoriPackageFileName,

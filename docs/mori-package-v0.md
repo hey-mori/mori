@@ -22,6 +22,7 @@ Implemented now:
 - `getPackageAuditTrail`
 - `buildMoriPackageFileLayout`
 - `parseMoriPackageFileLayout`
+- `zipMoriPackage` / `unzipMoriPackage`
 
 Current JSON shape:
 
@@ -104,12 +105,10 @@ Zip-like file layout:
 `buildMoriPackageFileLayout(pkg)` turns a `MoriPackageV0` into the
 documented one-file-per-slice layout as an in-memory
 `Record<MoriPackageFileName, string>`, and `parseMoriPackageFileLayout`
-reassembles a validated `MoriPackageV0` from that map — the
-dependency-free, both-ways half of zip packaging. The actual
-archiving step needs an archiving dependency and is a separate
-decision; the layout builder / parser let that land without reshaping
-the data. `parseMoriPackageFileLayout` throws on a missing file or an
-invalid package, mirroring `deserializeMoriPackage`.
+reassembles a validated `MoriPackageV0` from that map. This file
+layout is the **canonical internal package layout**.
+`parseMoriPackageFileLayout` throws on a missing file or an invalid
+package, mirroring `deserializeMoriPackage`.
 
 ```text
 project.mori
@@ -133,6 +132,19 @@ project.mori
 `events.jsonl` reuses `serializeEventsJsonl`; the optional
 `consolidated_memories.json` / `audit_trail.json` are always present,
 normalised to `[]` when the package predates those slices.
+
+## Real zip package
+
+`zipMoriPackage(pkg)` archives the canonical file layout into a real
+`.mori` zip container (a `Uint8Array`); `unzipMoriPackage(bytes)`
+reads it back. Zip is a **packaging layer**, not the source of truth —
+it wraps `buildMoriPackageFileLayout` / `parseMoriPackageFileLayout`,
+so `unzipMoriPackage` runs the same validation and per-record checks
+as any other import. The zip codec is `fflate` — a small,
+dependency-free, pure-JS library: no native code, no network.
+`unzipMoriPackage` throws on a corrupt archive or a missing required
+file. Wiring the Reports export and the import panel to read / write
+zip packages are the follow-up slices.
 
 Limitations:
 
