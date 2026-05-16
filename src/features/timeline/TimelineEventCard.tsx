@@ -76,9 +76,9 @@ export function TimelineEventCard({
         </span>
       </header>
       <strong className="event-card-title">{vm.title}</strong>
-      {showFooter && vm.metaParts.length > 0 ? (
+      {showFooter && vm.primaryMeta ? (
         <footer className="event-card-footer">
-          <span className="event-card-meta">{vm.metaParts.join(" · ")}</span>
+          <span className="event-card-meta">{vm.primaryMeta}</span>
         </footer>
       ) : null}
     </button>

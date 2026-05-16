@@ -96,9 +96,9 @@ describe("timeline stress fixture", () => {
     for (const event of stressEvents) {
       const vm = buildTimelineEventCardViewModel(event);
       expect(vm).not.toHaveProperty("summary");
-      // Footer meta is short tokens ("2 src", "1 dec"), never prose.
-      for (const part of vm.metaParts) {
-        expect(part.length).toBeLessThanOrEqual(12);
+      // The footer carries one short calm signal ("근거 2"), never prose.
+      if (vm.primaryMeta !== null) {
+        expect(vm.primaryMeta.length).toBeLessThanOrEqual(12);
       }
     }
   });

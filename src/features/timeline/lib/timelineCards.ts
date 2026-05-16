@@ -48,8 +48,12 @@ export type TimelineEventCardViewModel = {
   title: string;
   /** Trust glyph (icon + label + tone + tooltip). */
   trust: TimelineCardTrustGlyph;
-  /** Footer meta strings ("2 src", "3 issues", "1 dec"). Empty when nothing to show. */
-  metaParts: string[];
+  /**
+   * One calm footer signal for the card — evidence count if the event has
+   * sources, otherwise a combined linked-item count, otherwise null. Full
+   * per-category counts live in the inspector, never on the card.
+   */
+  primaryMeta: string | null;
   /** ARIA label for the rendered button. */
   ariaLabel: string;
   /** HTML `title` attribute (short summary). */
@@ -89,16 +93,16 @@ export function buildTimelineEventCardViewModel(event: TimelineEvent): TimelineE
 
   const trust = buildTrustGlyph(event.trustLevel, event.confidence);
 
-  const metaParts: string[] = [];
-  if (event.sourceRefs.length > 0) {
-    metaParts.push(`${event.sourceRefs.length} src`);
-  }
-  if (event.linkedIssueIds.length > 0) {
-    metaParts.push(`${event.linkedIssueIds.length} issue${event.linkedIssueIds.length === 1 ? "" : "s"}`);
-  }
-  if (event.linkedDecisionIds.length > 0) {
-    metaParts.push(`${event.linkedDecisionIds.length} dec`);
-  }
+  // One calm footer signal — the card is for scanning, not for reading every
+  // count. Evidence leads (evidence-first); linked items are the fallback.
+  const evidenceCount = event.sourceRefs.length;
+  const linkCount = event.linkedIssueIds.length + event.linkedDecisionIds.length;
+  const primaryMeta =
+    evidenceCount > 0
+      ? `근거 ${evidenceCount}`
+      : linkCount > 0
+        ? `연결 ${linkCount}`
+        : null;
 
   const ariaLabel = `${laneLabel} · ${event.title} · ${trust.label}`;
   const buttonTitle = `${laneLabel} · ${event.title}`;
@@ -112,7 +116,7 @@ export function buildTimelineEventCardViewModel(event: TimelineEvent): TimelineE
     hasTimeRange: hasRange,
     title: event.title,
     trust,
-    metaParts,
+    primaryMeta,
     ariaLabel,
     buttonTitle,
     event,

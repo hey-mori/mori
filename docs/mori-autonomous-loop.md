@@ -331,6 +331,12 @@ a demo/overview. Highest value first.
   density control is now a 3-way segmented control (넓게 / 보통 /
   조밀); `densityBundleTuning` centralises the per-tier bundling
   params.
+- ✅ Progressive card content — the comfortable event card footer
+  used to print three competing English meta tokens ("2 src ·
+  3 issues · 1 dec"). It now shows one calm Korean signal
+  (`primaryMeta` — evidence count, or a combined link count when
+  there are no sources); the full per-category counts stay in the
+  inspector.
 - ✅ Duration-aware card width — card width is now the pixel span
   of the item's `[start, end]` on the time scale, clamped to a
   per-density readable range (`computeItemWidth` +

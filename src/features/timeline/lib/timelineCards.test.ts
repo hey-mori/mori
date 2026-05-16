@@ -37,7 +37,7 @@ describe("buildTimelineEventCardViewModel", () => {
     expect(vm.timeLabel).not.toMatch(/-/);
   });
 
-  it("emits footer meta only when counts are non-zero", () => {
+  it("emits no footer meta when the event has no sources or links", () => {
     const empty = {
       ...event,
       sourceRefs: [],
@@ -45,10 +45,10 @@ describe("buildTimelineEventCardViewModel", () => {
       linkedDecisionIds: [],
     };
     const vm = buildTimelineEventCardViewModel(empty);
-    expect(vm.metaParts).toEqual([]);
+    expect(vm.primaryMeta).toBeNull();
   });
 
-  it("includes 'X src', 'N issue(s)', 'M dec' in the footer when present", () => {
+  it("shows a single evidence count when the event has sources", () => {
     const populated = {
       ...event,
       sourceRefs: ["s1", "s2"],
@@ -56,15 +56,19 @@ describe("buildTimelineEventCardViewModel", () => {
       linkedDecisionIds: ["d1", "d2"],
     };
     const vm = buildTimelineEventCardViewModel(populated);
-    expect(vm.metaParts).toContain("2 src");
-    expect(vm.metaParts).toContain("1 issue");
-    expect(vm.metaParts).toContain("2 dec");
+    // Evidence leads; the card never shows three competing counts.
+    expect(vm.primaryMeta).toBe("근거 2");
   });
 
-  it("pluralises issues", () => {
-    const populated = { ...event, linkedIssueIds: ["a", "b", "c"] };
+  it("falls back to a combined link count when there are no sources", () => {
+    const populated = {
+      ...event,
+      sourceRefs: [],
+      linkedIssueIds: ["i1", "i2"],
+      linkedDecisionIds: ["d1"],
+    };
     const vm = buildTimelineEventCardViewModel(populated);
-    expect(vm.metaParts).toContain("3 issues");
+    expect(vm.primaryMeta).toBe("연결 3");
   });
 });
 
