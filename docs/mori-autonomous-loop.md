@@ -497,9 +497,12 @@ Open (highest value first):
     - ✅ Import Review — the draft meta strip's seven duplicate /
       validity count labels and the footer counts + cancel button
       are now Korean.
-    - Open: the Connector JSONL preview in `ImportPanel` still has
-      English meta labels ("Already in current session", "Invalid
-      lines"); other English-only surfaces can be swept as spotted.
+    - ✅ Connector JSONL preview — the `ImportPanel` preview card's
+      duplicate badges, "include duplicates" label, the
+      valid-events / invalid-lines / connectors / event-kinds /
+      time-range / project-paths definition list, and the bucket
+      event counts are now Korean.
+    - Open: other English-only surfaces can be swept as spotted.
 23. ✅ Sidebar session timer honesty — a just-started session was
     labeled "Saved" with a frozen `00:00:00` clock because
     `createSessionDraft` seeds `endedAt` with the creation

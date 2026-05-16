@@ -1131,25 +1131,25 @@ function ConnectorJsonlPreviewCard({
     >
       <header>
         <strong>{preview.headline}</strong>
-        <span>{preview.totalLines} lines · {preview.skippedBlankLines} skipped</span>
+        <span>{preview.totalLines}줄 · {preview.skippedBlankLines}줄 건너뜀</span>
       </header>
       <ConnectorSourceImportSummaryBlock summary={summary} />
 
       {hasDuplicates ? (
         <div className="connector-jsonl-duplicate-row" role="status">
           <span className="connector-jsonl-duplicate-counts">
-            <Badge tone="green">New · {preview.newEventCount}</Badge>
+            <Badge tone="green">새 이벤트 · {preview.newEventCount}</Badge>
             {preview.currentSessionDuplicateCount > 0 ? (
-              <Badge tone="orange">Already in current session · {preview.currentSessionDuplicateCount}</Badge>
+              <Badge tone="orange">현재 세션에 이미 있음 · {preview.currentSessionDuplicateCount}</Badge>
             ) : null}
             {preview.savedSessionDuplicateCount > 0 ? (
-              <Badge tone="orange">Already in saved sessions · {preview.savedSessionDuplicateCount}</Badge>
+              <Badge tone="orange">저장 세션에 이미 있음 · {preview.savedSessionDuplicateCount}</Badge>
             ) : null}
             {preview.inBatchDuplicateCount > 0 ? (
-              <Badge tone="orange">Repeated in this file · {preview.inBatchDuplicateCount}</Badge>
+              <Badge tone="orange">이 파일에서 반복됨 · {preview.inBatchDuplicateCount}</Badge>
             ) : null}
             {preview.invalidLineCount > 0 ? (
-              <Badge tone="red">Invalid lines · {preview.invalidLineCount}</Badge>
+              <Badge tone="red">잘못된 줄 · {preview.invalidLineCount}</Badge>
             ) : null}
           </span>
           <label className="connector-jsonl-duplicate-toggle">
@@ -1160,7 +1160,7 @@ function ConnectorJsonlPreviewCard({
               disabled={allDuplicate && preview.duplicateEventCount === 0}
             />
             <span>
-              Include duplicates
+              중복 포함
               <small>
                 {includeDuplicates
                   ? "중복 이벤트도 Import Review에 포함됩니다. Timeline에 같은 카드가 반복될 수 있습니다."
@@ -1189,27 +1189,27 @@ function ConnectorJsonlPreviewCard({
       ) : null}
       <dl>
         <div>
-          <dt>Valid events</dt>
+          <dt>유효 이벤트</dt>
           <dd>{preview.validEventCount}</dd>
         </div>
         <div>
-          <dt>Invalid lines</dt>
+          <dt>잘못된 줄</dt>
           <dd>{preview.invalidLineCount}</dd>
         </div>
         <div>
-          <dt>Connectors</dt>
+          <dt>커넥터</dt>
           <dd>{preview.connectorIds.length === 0 ? "—" : preview.connectorIds.join(", ")}</dd>
         </div>
         <div>
-          <dt>Event kinds</dt>
+          <dt>이벤트 종류</dt>
           <dd>{preview.eventKinds.length === 0 ? "—" : preview.eventKinds.join(", ")}</dd>
         </div>
         <div>
-          <dt>Time range</dt>
+          <dt>시간 범위</dt>
           <dd>{timeRange}</dd>
         </div>
         <div>
-          <dt>Project paths</dt>
+          <dt>프로젝트 경로</dt>
           <dd>{preview.projectPaths.length === 0 ? "—" : preview.projectPaths.join(", ")}</dd>
         </div>
       </dl>
@@ -1218,7 +1218,7 @@ function ConnectorJsonlPreviewCard({
           {preview.buckets.map((bucket) => (
             <li key={`${bucket.connectorId}::${bucket.externalSessionId ?? "unscoped"}`}>
               <strong>{bucket.label}</strong>
-              <span>{bucket.eventCount} events</span>
+              <span>이벤트 {bucket.eventCount}개</span>
               <small>
                 {new Date(bucket.startedAt).toLocaleTimeString()} → {new Date(bucket.endedAt).toLocaleTimeString()}
               </small>
