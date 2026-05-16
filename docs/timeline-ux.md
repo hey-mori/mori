@@ -15,8 +15,10 @@ src/features/timeline/
   TimelineHeader.tsx      - compact one-row Timeline toolbar, filter popover,
                             planned-control honesty strip.
   TimelineCanvas.tsx      - scroll frame, sticky axis, sticky lane labels,
-                            relationship layer, lane rows.
-  TimelineAxis.tsx        - axis ticks generated from time scale helpers.
+                            relationship layer, lane rows, time gridlines.
+  TimelineAxis.tsx        - axis tick labels generated from time scale helpers.
+  TimelineGridLines.tsx   - faint vertical line under each axis tick so
+                            event cards read against a real time position.
   TimelineLane.tsx        - one lane row with a sticky-left label and a
                             list of display items.
   TimelineEventCard.tsx   - single event card UI: time, title, trust glyph,
@@ -101,6 +103,11 @@ Behavior:
   session-search input.
 - The time ruler pins to the top of the scrolling canvas so the time scale
   is always readable.
+- Faint vertical gridlines drop from each ruler tick through the lane area
+  (`TimelineGridLines`), so an event card can be read against a real time
+  position instead of floating free. They are derived from the same ticks
+  as the ruler — no extra data — and sit behind the cards and relationship
+  lines so they ground the canvas without competing with it.
 - Lane labels pin to the left edge of the scrolling canvas. Long horizontal
   sessions keep their category structure visible.
 - The right inspector stays in view at desktop widths so the user can keep

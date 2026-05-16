@@ -19,6 +19,7 @@ import {
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
 import { TimelineAxis } from "./TimelineAxis";
+import { TimelineGridLines } from "./TimelineGridLines";
 import { TimelineLane } from "./TimelineLane";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
 import type { Relationship } from "../../domain/types";
@@ -150,8 +151,8 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
         <div className="timeline-empty-inset">
           <EmptyState
             icon={Search}
-            title="No events match your current filters"
-            description="Adjust the filters in the toolbar, or import a source from Evidence Hub to populate this timeline."
+            title="현재 필터에 맞는 이벤트가 없습니다"
+            description="툴바에서 필터를 조정하거나 Evidence Hub에서 소스를 가져오면 타임라인이 채워집니다."
           />
         </div>
       </div>
@@ -207,6 +208,13 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
             );
           })}
         </div>
+        <TimelineGridLines
+          ticks={ticks}
+          contentLeftPx={layout.contentLeftPx}
+          contentWidthPx={layout.contentWidthPx}
+          topPx={layout.laneOffsetPx}
+          heightPx={Math.max(layout.frameHeight - layout.laneOffsetPx, 0)}
+        />
       </div>
     </div>
   );

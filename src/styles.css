@@ -852,6 +852,24 @@ kbd {
   border-bottom: 0;
 }
 
+/* Vertical time gridlines — one faint line dropped from each axis tick so
+   event cards read against a real time position. Sits above the lane
+   tint but behind the relationship layer and the event cards. */
+.timeline-gridlines {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.timeline-gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(99, 110, 130, 0.1);
+}
+
 .lane-label {
   position: absolute;
   top: 0;
