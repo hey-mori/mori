@@ -32,6 +32,10 @@ export {
   unzipMoriPackage,
   MORI_PACKAGE_ZIP_MIME,
 } from "./zip";
+export {
+  buildClientSafeMoriPackage,
+  getPackageIsClientSafe,
+} from "./clientSafe";
 export type {
   MoriPackageFileLayout,
   MoriPackageFileName,

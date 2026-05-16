@@ -200,6 +200,9 @@ only — no phase numbers.
 - Team / shared memory specification — `docs/team-shared-memory.md`:
   the explicit `.mori` handoff sharing primitive, roles, privacy
   boundaries, client-safe export rules, conflict / duplicate model.
+- Client-safe `.mori` package filter — `buildClientSafeMoriPackage`
+  (pure transform: only `clientSafe` / non-sensitive memory,
+  surviving-memory audit rows, `clientSafeExport` manifest flag).
 
 **Open priority (highest first):**
 
@@ -207,9 +210,9 @@ All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
 Team/shared memory spec · continued loop) are approved; sequence them
 into small slices in this order:
 
-1. Client-safe `.mori` package filter — a pure `MoriPackageV0` →
-   `MoriPackageV0` transform per the spec's client-safe rules, plus a
-   manifest flag (Track C.3).
+1. Client-safe export UI — a "client-safe export" affordance on the
+   Reports page that runs `buildClientSafeMoriPackage` before
+   `zipMoriPackage`.
 2. `.mori` handoff workflow doc — the explicit export → transfer →
    import walkthrough (Track C.2).
 3. Local Connector Capture polish for real captured data.
@@ -238,44 +241,36 @@ backlog with it.
 
 The next slice should be:
 
-**Client-safe `.mori` package filter (Track C.3)**
+**Client-safe export UI — Reports page affordance**
 
 Goal:
-`docs/team-shared-memory.md` §5 defines a client-safe `.mori` package
-— one an Author can hand to a non-teammate. This slice implements the
-filter as a pure transform, so a later slice / UI can offer a
-"client-safe export".
+`buildClientSafeMoriPackage` exists but nothing calls it. This slice
+adds a "client-safe export" affordance to the Reports `.mori` package
+strip so an Author can produce a filtered package for a non-teammate.
 
 Scope — do:
-- Add a pure `buildClientSafeMoriPackage(pkg): MoriPackageV0` in
-  `src/lib/mori-package/` that returns a filtered copy:
-  - `consolidatedMemories` keeps only memories whose
-    `reportEligibility` is `clientSafe` AND whose `sensitivity` is
-    `normal` (drops `sensitive` / `clientSafeExcluded`);
-  - `auditTrail` keeps only rows whose `targetMemoryIds` are all
-    still present in the filtered memory set;
-  - a manifest marker records that the package is a client-safe
-    export (an additive, absent-safe field — no `formatVersion`
-    bump, mirroring `consolidatedMemories`).
-- Never mutate the input package; never widen what a slice exposes.
-- Export the helper and add a `getPackageIsClientSafe` read helper.
+- In `ReportsView` `MoriPackageStrip`, add a second export action —
+  "Export client-safe .mori" — alongside the existing export. It
+  builds the package, runs `buildClientSafeMoriPackage`, then
+  `zipMoriPackage`, and writes / downloads it like the normal export.
+- The client-safe file name should be distinguishable (e.g. a
+  `-client-safe` suffix on the package id).
+- Surface honestly how many memories the filter kept vs dropped, so
+  the user sees what a recipient will and will not get.
+- Reuse the existing zip save command and browser blob path.
 
 Scope — do not:
-- Wire it into the Reports export UI yet — that is a follow-up.
-- Change the canonical layout, zip codec, or validation rules beyond
-  the additive manifest marker.
+- Change the filter logic, the canonical layout, or the zip codec.
+- Auto-select client-safe as the default export.
 
 Suggested files:
-- `src/lib/mori-package/clientSafe.ts` (new)
-- `src/lib/mori-package/types.ts`, `validation.ts`, `index.ts`
-- `src/lib/mori-package/mori-package.test.ts`
+- `src/features/reports/ReportsView.tsx`
 - `docs/mori-package-v0.md`, `docs/team-shared-memory.md`
 
 Tests:
-- a client-safe package drops non-`clientSafe` / `sensitive` memories
-- its `auditTrail` keeps only rows for surviving memories
-- the manifest marker round-trips; absent on a normal package
-- the input package is not mutated
+- a pure helper, if one is extracted, covering the kept/dropped count
+  surfaced in the UI copy; otherwise rely on the
+  `buildClientSafeMoriPackage` tests + `check:full` / `build` green.
 
 After this slice ships, set the next slice to Track C.2 — the `.mori`
 handoff workflow doc / walkthrough.

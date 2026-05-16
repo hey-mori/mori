@@ -107,9 +107,12 @@ A client-safe package:
 - records on its manifest that it is a client-safe export, so an
   importer can see the package was filtered.
 
-The client-safe filter is a pure function over a `MoriPackageV0` →
-`MoriPackageV0`; it composes with `zipMoriPackage`. Implementing it is
-Track C.2/C.3, not this slice.
+The client-safe filter is implemented as `buildClientSafeMoriPackage`
+(`src/lib/mori-package/clientSafe.ts`) — a pure `MoriPackageV0` →
+`MoriPackageV0` transform that composes with `zipMoriPackage`. It
+marks the manifest `clientSafeExport: true`; `getPackageIsClientSafe`
+reads the marker. Wiring it into a "client-safe export" UI affordance
+is a follow-up slice.
 
 ## 6. Conflict and duplicate review model
 
@@ -145,14 +148,17 @@ yet modelled, and is reserved for a later slice:
 In dependency order; each is a separate future slice, none implies
 sync:
 
-1. Client-safe package filter — pure `MoriPackageV0` → `MoriPackageV0`
-   transform + a manifest flag (Track C.3).
-2. `.mori` handoff workflow doc / UX — the explicit export → transfer
-   → import walkthrough (Track C.2).
-3. Divergence review — a `contradiction`-style proposal when an
+1. Client-safe package filter — **shipped** as
+   `buildClientSafeMoriPackage` (pure `MoriPackageV0` →
+   `MoriPackageV0` transform + a `clientSafeExport` manifest flag).
+2. Client-safe export UI — a "client-safe export" affordance on the
+   Reports page that runs the filter before `zipMoriPackage`.
+3. `.mori` handoff workflow doc — the explicit export → transfer →
+   import walkthrough (Track C.2).
+4. Divergence review — a `contradiction`-style proposal when an
    imported memory conflicts with an existing one.
-4. Imported `auditTrail` as read-only provenance on accepted memory.
-5. Named-actor provenance — populate `acceptedBy` / `actor` with a
+5. Imported `auditTrail` as read-only provenance on accepted memory.
+6. Named-actor provenance — populate `acceptedBy` / `actor` with a
    local, user-set identity (still no accounts, still local-first).
 
 ## 8. Hard non-goals (restated)

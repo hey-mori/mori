@@ -28,6 +28,14 @@ export type MoriPackageManifestV0 = {
   sessionIds: string[];
   primarySessionId?: string;
   recordingMode: RecordingMode;
+  /**
+   * Set to `true` when the package was produced by the client-safe
+   * export filter (`buildClientSafeMoriPackage`) — it carries only
+   * `clientSafe`, non-sensitive accepted memory. Optional and additive:
+   * absent on every normal package, so no `formatVersion` bump is
+   * required. An importer can surface that the package was filtered.
+   */
+  clientSafeExport?: boolean;
 };
 
 export type MoriPackagePrivacyV0 = {

@@ -27,6 +27,7 @@ Implemented now:
 - `buildMoriPackageFileLayout`
 - `parseMoriPackageFileLayout`
 - `zipMoriPackage` / `unzipMoriPackage`
+- `buildClientSafeMoriPackage` / `getPackageIsClientSafe`
 
 Current JSON shape:
 
@@ -161,6 +162,20 @@ validation); anything else is decoded as JSON / pasted package text.
 Desktop reads the bytes via `read_mori_package_file`; the browser
 uses `File.arrayBuffer()`. Imported memory still enters review — no
 auto-merge.
+
+## Client-safe export filter
+
+`buildClientSafeMoriPackage(pkg)` is a pure `MoriPackageV0` →
+`MoriPackageV0` transform that produces a **client-safe** copy of a
+package — one an Author can hand to a non-teammate (see
+`docs/team-shared-memory.md` §5). It keeps only `consolidatedMemories`
+whose `reportEligibility` is `clientSafe` and whose `sensitivity` is
+`normal`, keeps `auditTrail` rows only for surviving memories, and
+marks the manifest `clientSafeExport: true`. The marker is optional
+and additive — absent on a normal package, no `formatVersion` bump —
+and `getPackageIsClientSafe(pkg)` reads it. The input package is never
+mutated. Wiring this into a "client-safe export" UI affordance is a
+follow-up slice.
 
 Limitations:
 

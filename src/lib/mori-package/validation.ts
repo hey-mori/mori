@@ -14,6 +14,14 @@ export function validateMoriPackage(value: unknown): MoriPackageValidationResult
     if (pkg.manifest.appName !== "Mori") issues.push({ path: "manifest.appName", message: "Must be Mori" });
     if (pkg.manifest.formatVersion !== "0.1.0") issues.push({ path: "manifest.formatVersion", message: "Unsupported package version" });
     if (!pkg.manifest.packageId) issues.push({ path: "manifest.packageId", message: "Package id is required" });
+    // `clientSafeExport` is optional and additive — absent on a normal
+    // package; when present it must be a boolean.
+    if (
+      pkg.manifest.clientSafeExport !== undefined &&
+      typeof pkg.manifest.clientSafeExport !== "boolean"
+    ) {
+      issues.push({ path: "manifest.clientSafeExport", message: "Must be a boolean when present" });
+    }
   }
 
   // Each slice must be an array of records carrying their identity

@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
 import { unzipSync, zipSync } from "fflate";
 import {
+  buildClientSafeMoriPackage,
   buildMoriPackageFileLayout,
   createMoriPackageFromSession,
   deserializeMoriPackage,
   getPackageAuditTrail,
   getPackageConsolidatedMemories,
+  getPackageIsClientSafe,
   MORI_PACKAGE_FILE_NAMES,
   parseMoriPackageFileLayout,
   serializeEventsJsonl,
@@ -356,5 +358,78 @@ describe(".mori package v0 — real zip package", () => {
       entries[name] = new TextEncoder().encode(content);
     }
     expect(() => unzipMoriPackage(zipSync(entries))).toThrow(/missing file/i);
+  });
+});
+
+describe(".mori package v0 — client-safe export filter", () => {
+  it("keeps only clientSafe, non-sensitive memories", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession, {
+      consolidatedMemories: [
+        acceptedMemory({ id: "keep", reportEligibility: "clientSafe", sensitivity: "normal" }),
+        acceptedMemory({ id: "drop-team", reportEligibility: "team", sensitivity: "normal" }),
+        acceptedMemory({
+          id: "drop-sensitive",
+          reportEligibility: "clientSafe",
+          sensitivity: "sensitive",
+        }),
+      ],
+    });
+    const safe = buildClientSafeMoriPackage(pkg);
+    expect(getPackageConsolidatedMemories(safe).map((memory) => memory.id)).toEqual([
+      "keep",
+    ]);
+  });
+
+  it("keeps audit rows only for surviving memories", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession, {
+      consolidatedMemories: [
+        acceptedMemory({ id: "keep", reportEligibility: "clientSafe", sensitivity: "normal" }),
+        acceptedMemory({ id: "drop", reportEligibility: "team", sensitivity: "normal" }),
+      ],
+      auditTrail: [
+        reviewAction({ id: "act-keep", targetMemoryIds: ["keep"] }),
+        reviewAction({ id: "act-drop", targetMemoryIds: ["drop"] }),
+      ],
+    });
+    const safe = buildClientSafeMoriPackage(pkg);
+    expect(getPackageAuditTrail(safe).map((row) => row.id)).toEqual(["act-keep"]);
+  });
+
+  it("marks the manifest client-safe and round-trips the marker", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    expect(getPackageIsClientSafe(pkg)).toBe(false);
+
+    const safe = buildClientSafeMoriPackage(pkg);
+    expect(getPackageIsClientSafe(safe)).toBe(true);
+    expect(validateMoriPackage(safe).valid).toBe(true);
+
+    const restored = deserializeMoriPackage(serializeMoriPackage(safe));
+    expect(getPackageIsClientSafe(restored)).toBe(true);
+  });
+
+  it("does not mutate the input package", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession, {
+      consolidatedMemories: [
+        acceptedMemory({ id: "drop", reportEligibility: "team", sensitivity: "normal" }),
+      ],
+    });
+    buildClientSafeMoriPackage(pkg);
+    expect(getPackageConsolidatedMemories(pkg).map((memory) => memory.id)).toEqual([
+      "drop",
+    ]);
+    expect(pkg.manifest.clientSafeExport).toBeUndefined();
+  });
+
+  it("rejects a non-boolean clientSafeExport marker", () => {
+    const pkg = createMoriPackageFromSession(moriMockSession);
+    const broken = {
+      ...pkg,
+      manifest: { ...pkg.manifest, clientSafeExport: "yes" as unknown as boolean },
+    };
+    const result = validateMoriPackage(broken);
+    expect(result.valid).toBe(false);
+    expect(result.issues.some((issue) => issue.path === "manifest.clientSafeExport")).toBe(
+      true,
+    );
   });
 });
