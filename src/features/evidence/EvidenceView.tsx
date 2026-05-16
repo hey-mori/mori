@@ -153,7 +153,7 @@ export function EvidenceView() {
                     importKind={importKindForCard}
                     onPrimary={() => handleIntegrationPrimary(integration.id)}
                     primaryDisabled={isDemoSession}
-                    primaryDisabledReason="데모 세션에서는 소스를 추가할 수 없습니다. Start Session에서 실제 세션을 시작하세요."
+                    primaryDisabledReason="데모 세션 — Start Session에서 실제 세션을 시작하면 사용할 수 있습니다."
                     onInspect={() =>
                       setSelection({ kind: "integration", integrationId: integration.id })
                     }

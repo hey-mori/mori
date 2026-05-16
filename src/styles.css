@@ -3403,9 +3403,10 @@ pre {
   color: var(--text);
   font-size: 11px;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Capture / raw-data / trust are policy facts — wrap them rather
+     than ellipsis-clipping "Summary only" into "Summary o…". */
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .integration-card-meta dd.trust-verified { color: var(--green); }
@@ -3430,7 +3431,31 @@ pre {
 
 .integration-card-footer {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+/* Inline reason shown when the card action is disabled — so an
+   "Available" card never reads as a dead button with no explanation. */
+.integration-card-footer-note {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.integration-card-footer-note::before {
+  content: "";
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  transform: translateY(-1px);
 }
 
 /* Imported source list */

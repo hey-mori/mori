@@ -154,25 +154,43 @@ export function IntegrationCard({
       </button>
       <footer className="integration-card-footer">
         {isPlanned ? (
-          <Button disabled title="이 커넥터는 다음 마일스톤에서 활성화됩니다.">
-            Planned
-          </Button>
-        ) : (
+          <>
+            <p className="integration-card-footer-note">
+              다음 마일스톤에 제공됩니다. 지금은 가져올 수 없습니다.
+            </p>
+            <Button disabled icon={ChevronRight}>
+              Planned
+            </Button>
+          </>
+        ) : canTakeAction ? (
           <Button
-            variant={canTakeAction ? "primary" : "secondary"}
-            disabled={!canTakeAction}
+            variant="primary"
             onClick={onPrimary}
             icon={ChevronRight}
-            title={
-              canTakeAction
-                ? actionLabel
-                : primaryDisabled
+            title={actionLabel}
+          >
+            {actionLabel}
+          </Button>
+        ) : (
+          <>
+            <p className="integration-card-footer-note">
+              {primaryDisabled
+                ? primaryDisabledReason ?? "이 세션에서는 추가할 수 없습니다."
+                : "가져오기 패널의 다른 탭에서 처리됩니다."}
+            </p>
+            <Button
+              variant="secondary"
+              disabled
+              icon={ChevronRight}
+              title={
+                primaryDisabled
                   ? primaryDisabledReason ?? "이 세션에서는 추가할 수 없습니다."
                   : "이 항목은 가져오기 패널의 다른 탭에서 처리됩니다."
-            }
-          >
-            {isPartial ? "Partial · 사용 가능" : actionLabel}
-          </Button>
+              }
+            >
+              {isPartial ? "Partial · 사용 가능" : actionLabel}
+            </Button>
+          </>
         )}
       </footer>
     </article>
