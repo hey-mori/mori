@@ -39,7 +39,6 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  min-width: 1080px;
 }
 
 button,
@@ -2160,7 +2159,7 @@ textarea {
 
 .setup-grid {
   display: grid;
-  grid-template-columns: minmax(760px, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 22px;
   align-items: start;
 }
@@ -2250,7 +2249,7 @@ input,
 
 .source-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
 
@@ -2340,7 +2339,7 @@ input,
 }
 
 .mode-grid {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .mode-card {
@@ -2374,7 +2373,7 @@ input,
 }
 
 .engine-grid {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .engine-card {
@@ -3094,10 +3093,6 @@ pre {
 }
 
 @media (max-width: 1180px) {
-  body {
-    min-width: 1040px;
-  }
-
   .app-shell {
     grid-template-columns: 206px minmax(0, 1fr);
   }
@@ -3110,7 +3105,7 @@ pre {
   .content-grid,
   .report-layout,
   .setup-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .inspector,
@@ -3128,6 +3123,13 @@ pre {
 
   .topbar-search {
     width: 220px;
+  }
+}
+
+@media (max-width: 900px) {
+  .form-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
   }
 }
 
