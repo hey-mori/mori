@@ -14,6 +14,8 @@ import { Button } from "../ui/Button";
 import type { ViewKey } from "../../domain/types";
 import { moriMockSession } from "../../domain/mock-data";
 import { useMoriSessionStore } from "../../app/sessionStore";
+import { useMoriProfileStore } from "../../app/profileStore";
+import { getProfileInitials } from "../../lib/profile/localProfile";
 import { deriveSessionTiming } from "../../lib/session/sessionTiming";
 import { getFeatureControlProps } from "../../app/featureStatus";
 
@@ -57,7 +59,7 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
         })}
       </nav>
       <SidebarSessionCard />
-      <SidebarProfile />
+      <SidebarProfile currentView={currentView} onNavigate={onNavigate} />
       <SidebarCollapseButton />
     </aside>
   );
@@ -121,16 +123,28 @@ function SidebarSessionCard() {
   );
 }
 
-function SidebarProfile() {
+function SidebarProfile({
+  currentView,
+  onNavigate,
+}: {
+  currentView: ViewKey;
+  onNavigate: (view: ViewKey) => void;
+}) {
+  const profile = useMoriProfileStore((state) => state.profile);
   return (
-    <div className="profile">
-      <div className="avatar">KM</div>
+    <button
+      type="button"
+      className={`profile ${currentView === "profile" ? "active" : ""}`}
+      onClick={() => onNavigate("profile")}
+      aria-label="계정 및 프로필 열기"
+    >
+      <div className="avatar">{getProfileInitials(profile.displayName)}</div>
       <div>
-        <strong>Kim Mori</strong>
+        <strong>{profile.displayName}</strong>
         <small>Local Mode</small>
       </div>
       <span className="status-dot" />
-    </div>
+    </button>
   );
 }
 

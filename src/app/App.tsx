@@ -3,6 +3,7 @@ import { AppShell } from "../components/layout/AppShell";
 import { useMoriAppStore } from "./store";
 import { useMoriSessionStore } from "./sessionStore";
 import { useMoriRepositoryStore } from "./repositoryStore";
+import { useMoriProfileStore } from "./profileStore";
 import { StartSessionView } from "../features/start-session/StartSessionView";
 import { TimelineView } from "../features/timeline/TimelineView";
 import { ReviewView } from "../features/review/ReviewView";
@@ -11,6 +12,7 @@ import { ReportsView } from "../features/reports/ReportsView";
 import { MemoryView } from "../features/memory/MemoryView";
 import { ConsolidationReviewView } from "../features/memory/ConsolidationReviewView";
 import { CompanionInboxView } from "../features/companion/CompanionInboxView";
+import { AccountProfileView } from "../features/account/AccountProfileView";
 import { SettingsView } from "../features/settings/SettingsView";
 
 export default function App() {
@@ -19,6 +21,8 @@ export default function App() {
   const initialized = useMoriSessionStore((state) => state.initialized);
   const hydrateRepositories = useMoriRepositoryStore((state) => state.hydrate);
   const repositoriesInitialized = useMoriRepositoryStore((state) => state.initialized);
+  const hydrateProfile = useMoriProfileStore((state) => state.hydrate);
+  const profileInitialized = useMoriProfileStore((state) => state.initialized);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -27,6 +31,10 @@ export default function App() {
   useEffect(() => {
     if (!repositoriesInitialized) hydrateRepositories();
   }, [repositoriesInitialized, hydrateRepositories]);
+
+  useEffect(() => {
+    if (!profileInitialized) hydrateProfile();
+  }, [profileInitialized, hydrateProfile]);
 
   return (
     <AppShell>
@@ -39,6 +47,7 @@ export default function App() {
       {currentView === "memory" ? <MemoryView /> : null}
       {currentView === "consolidation" ? <ConsolidationReviewView /> : null}
       {currentView === "companion" ? <CompanionInboxView /> : null}
+      {currentView === "profile" ? <AccountProfileView /> : null}
       {currentView === "settings" ? <SettingsView /> : null}
     </AppShell>
   );
