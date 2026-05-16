@@ -446,6 +446,11 @@ text into a signal.
   plus a "+N" count above the Timeline toolbar; clicking it routes
   to that signal's surface. Suited to the canvas layout, which has
   no card column.
+- ✅ Companion guidance on Review + Evidence — `CompanionStrip`
+  also sits at the top of the Review and Evidence surfaces, so
+  "what needs attention" (decisions to review, weak evidence,
+  unresolved issues, import-ready) is visible on every core work
+  surface, not only Reports / Project Memory.
 - Companion-layer maturity backlog (highest value first):
   1. a small in-app review queue or notification center;
   3. a session-end companion summary;

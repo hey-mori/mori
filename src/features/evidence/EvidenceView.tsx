@@ -30,6 +30,8 @@ import {
   SourceDetailPanel,
   type EvidenceDetailSelection,
 } from "./SourceDetailPanel";
+import { CompanionStrip } from "../companion/CompanionStrip";
+import { useCompanionSignals } from "../companion/useCompanionSignals";
 
 export function EvidenceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
@@ -53,6 +55,8 @@ export function EvidenceView() {
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
+
+  const { signals: companionSignals } = useCompanionSignals();
 
   const reviewDraft = useMoriReviewStore((state) => state.draft);
   const lastApplied = useMoriReviewStore((state) => state.lastApplied);
@@ -119,6 +123,8 @@ export function EvidenceView() {
         }
       />
       <SessionModeBanner />
+
+      <CompanionStrip signals={companionSignals} onNavigate={setCurrentView} />
 
       {lastApplied ? (
         <div className="review-applied-banner" role="status">

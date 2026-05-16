@@ -38,6 +38,8 @@ import { ReviewDecisionRow } from "./ReviewDecisionRow";
 import { ReviewNextActionRow } from "./ReviewNextActionRow";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
 import { ReviewSummaryPanel } from "./ReviewSummaryPanel";
+import { CompanionStrip } from "../companion/CompanionStrip";
+import { useCompanionSignals } from "../companion/useCompanionSignals";
 
 type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";
 
@@ -67,6 +69,8 @@ export function ReviewView() {
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
+
+  const { signals: companionSignals } = useCompanionSignals();
 
   const [activeTab, setActiveTab] = useState<ReviewTab>("issues");
   const [selection, setSelection] = useState<ReviewSelection | null>(null);
@@ -151,6 +155,8 @@ export function ReviewView() {
         }
       />
       <SessionModeBanner />
+
+      <CompanionStrip signals={companionSignals} onNavigate={setCurrentView} />
 
       <AnalysisStrip
         mode={mode}
