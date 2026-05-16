@@ -461,6 +461,13 @@ kbd {
   grid-template-columns: minmax(640px, 1fr) 360px;
 }
 
+/* Inspector collapsed — the Timeline canvas reclaims the full width for
+   scanning. Two class selectors beat the single-class media-query rules
+   below, so this wins at every width without !important. */
+.content-grid.inspector-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 @media (min-width: 1440px) {
   .content-grid {
     grid-template-columns: minmax(740px, 1fr) 344px;

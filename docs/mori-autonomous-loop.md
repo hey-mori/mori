@@ -348,8 +348,14 @@ a demo/overview. Highest value first.
 - Same-source rapid-event grouping — clusters bundle by lane +
   time window only; rapid events from the same connector source
   are not yet grouped distinctly.
-- Inspector responsibility — move remaining card metadata into the
-  inspector; make inspector width responsive / collapsible.
+- ✅ Inspector collapse — a toolbar toggle (`인스펙터`) collapses the
+  right inspector so the Timeline canvas reclaims the full content
+  width for scanning; wired through the previously-dead
+  `inspectorCollapsed` store state. Collapse applies to Timeline
+  mode only (Flow Focus keeps its Trace panel).
+- Inspector responsibility — auto-collapse / overlay-drawer at
+  constrained widths still pending; remaining card metadata could
+  move further into the inspector.
 - Responsive Timeline — laptop/tablet behaviour, inspector
   drawer/overlay, a chronological list fallback at narrow widths.
 - ✅ Day-scale stress fixture — `buildTimelineStressEvents` is a

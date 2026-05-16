@@ -1,4 +1,4 @@
-import { Calendar, Filter, Layers, ZoomIn, ZoomOut } from "lucide-react";
+import { Calendar, Filter, Layers, PanelRight, ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { eventTypeLabels, eventTypeTone, laneOrder } from "../../domain/constants";
 import type { EventType } from "../../domain/types";
@@ -26,6 +26,8 @@ export type TimelineToolbarProps = {
   onToggleActiveLanesOnly: () => void;
   visibleLaneCount: number;
   totalLaneCount: number;
+  inspectorCollapsed: boolean;
+  onToggleInspector: () => void;
 };
 
 /**
@@ -49,6 +51,8 @@ export function TimelineToolbar({
   onToggleActiveLanesOnly,
   visibleLaneCount,
   totalLaneCount,
+  inspectorCollapsed,
+  onToggleInspector,
 }: TimelineToolbarProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterPopRef = useRef<HTMLDivElement | null>(null);
@@ -190,6 +194,20 @@ export function TimelineToolbar({
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className={`toolbar-toggle ${inspectorCollapsed ? "" : "is-active"}`}
+          onClick={onToggleInspector}
+          aria-pressed={!inspectorCollapsed}
+          title={
+            inspectorCollapsed
+              ? "인스펙터 패널 열기 — 선택한 이벤트의 근거·신뢰도·연결 항목 표시"
+              : "인스펙터 패널 접기 — 타임라인이 전체 폭을 사용"
+          }
+        >
+          <PanelRight size={14} aria-hidden="true" />
+          인스펙터
+        </button>
       </div>
       <ToolbarPlannedLabel />
     </div>

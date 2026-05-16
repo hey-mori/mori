@@ -53,6 +53,8 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const clearFilters = useMoriAppStore((state) => state.clearFilters);
   const setTimelineDensity = useMoriAppStore((state) => state.setTimelineDensity);
   const toggleActiveLanesOnly = useMoriAppStore((state) => state.toggleActiveLanesOnly);
+  const inspectorCollapsed = useMoriAppStore((state) => state.inspectorCollapsed);
+  const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
 
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
 
@@ -120,12 +122,19 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   }
 
   const selectedItem = renderModel.selectedItem ?? model.selectedItem;
+  // The inspector collapse only applies to Timeline mode — Flow Focus keeps
+  // its Trace panel, and the toggle is not shown in Flow mode.
+  const inspectorHidden = inspectorCollapsed && mode === "timeline";
 
   return (
     <>
       <TopSessionBar />
       <SessionModeBanner />
-      <div className={`content-grid ${mode === "flow" ? "flow-grid" : ""}`}>
+      <div
+        className={`content-grid ${mode === "flow" ? "flow-grid" : ""} ${
+          inspectorHidden ? "inspector-collapsed" : ""
+        }`}
+      >
         <section className="timeline-main">
           {mode === "flow" ? (
             <FlowFocusHeader
@@ -144,6 +153,8 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
               onToggleActiveLanesOnly={toggleActiveLanesOnly}
               visibleLaneCount={activeLaneCount}
               totalLaneCount={totalLaneCount}
+              inspectorCollapsed={inspectorCollapsed}
+              onToggleInspector={() => setInspectorCollapsed(!inspectorCollapsed)}
             />
           )}
           <TimelineCanvas
@@ -164,7 +175,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             />
           ) : null}
         </section>
-        {selectedItem && selectedItem.kind === "bundle" ? (
+        {inspectorHidden ? null : selectedItem && selectedItem.kind === "bundle" ? (
           <TimelineBundleInspector
             bundle={selectedItem}
             session={view}
