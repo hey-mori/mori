@@ -503,6 +503,12 @@ Open (highest value first):
       valid-events / invalid-lines / connectors / event-kinds /
       time-range / project-paths definition list, and the bucket
       event counts are now Korean.
+    - ✅ Connector inbox + provenance labels — the `ConnectorJsonlInbox`
+      heading and refresh control, and the `provenance` capture-method
+      and raw-data-policy labels surfaced on every evidence source row
+      ("원본 전체 보관", "수동 입력", …) are Korean. The
+      Implemented/Partial/Planned/Unavailable status vocabulary is
+      deliberately kept English as the canonical status terms.
     - Open: other English-only surfaces can be swept as spotted.
 23. ✅ Sidebar session timer honesty — a just-started session was
     labeled "Saved" with a frozen `00:00:00` clock because

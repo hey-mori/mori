@@ -46,18 +46,18 @@ const STATUS_LABEL: Record<IntegrationStatus, string> = {
 };
 
 const CAPTURE_METHOD_LABEL: Record<CaptureMode, string> = {
-  manual: "Manual input",
-  explicitImport: "Explicit import",
-  desktopCommand: "Desktop command",
-  plannedConnector: "Planned connector",
-  mock: "Demo data",
+  manual: "수동 입력",
+  explicitImport: "명시적 가져오기",
+  desktopCommand: "데스크톱 명령",
+  plannedConnector: "예정된 커넥터",
+  mock: "데모 데이터",
 };
 
 const RAW_DATA_LABEL: Record<RawDataPolicy, string> = {
-  retained: "Full data retained",
-  summaryOnly: "Summary only",
-  redacted: "Redacted",
-  notCaptured: "Not captured",
+  retained: "원본 전체 보관",
+  summaryOnly: "요약만 보관",
+  redacted: "민감정보 제거됨",
+  notCaptured: "원본 미보관",
 };
 
 export function getSourceDisplayName(source: SourceRef): string {
@@ -93,7 +93,7 @@ export function getProvenanceDisplay(source: SourceRef): ProvenanceDisplay {
     trustLabel: trust.label,
     trustTone: trust.tone,
     rawDataLabel: integration ? RAW_DATA_LABEL[integration.rawDataPolicy] ?? integration.rawDataPolicy : "Unknown",
-    privacyNote: integration?.privacyNote ?? "No privacy information available.",
+    privacyNote: integration?.privacyNote ?? "개인정보 정책 정보가 없습니다.",
   };
 }
 

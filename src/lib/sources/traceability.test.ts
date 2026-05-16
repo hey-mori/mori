@@ -32,10 +32,10 @@ describe("traceability", () => {
       expect(status.integrationLabel).toBe("Manual Note");
       expect(status.status).toBe("implemented");
       expect(status.statusLabel).toBe("Available");
-      expect(status.captureMethod).toBe("Manual input");
+      expect(status.captureMethod).toBe("수동 입력");
       expect(status.trustLabel).toBe("Verified");
       expect(status.trustTone).toBe("green");
-      expect(status.rawDataLabel).toBe("Full data retained");
+      expect(status.rawDataLabel).toBe("원본 전체 보관");
       expect(status.privacyNote).toBeTruthy();
     });
 
@@ -57,7 +57,7 @@ describe("traceability", () => {
 
       expect(status.integration).toBe("aiConversation");
       expect(status.integrationLabel).toBe("AI Conversation (Other)");
-      expect(status.rawDataLabel).toBe("Summary only");
+      expect(status.rawDataLabel).toBe("요약만 보관");
     });
 
     it("returns display status for git diff source", () => {
@@ -78,7 +78,7 @@ describe("traceability", () => {
 
       expect(status.integration).toBe("gitDiff");
       expect(status.status).toBe("implemented");
-      expect(status.captureMethod).toBe("Manual input");
+      expect(status.captureMethod).toBe("수동 입력");
     });
   });
 
@@ -110,19 +110,19 @@ describe("traceability", () => {
 
   describe("getSourceRawDataLabel", () => {
     it("returns correct label for retained", () => {
-      expect(getSourceRawDataLabel("retained")).toBe("Full data retained");
+      expect(getSourceRawDataLabel("retained")).toBe("원본 전체 보관");
     });
 
     it("returns correct label for summaryOnly", () => {
-      expect(getSourceRawDataLabel("summaryOnly")).toBe("Summary only");
+      expect(getSourceRawDataLabel("summaryOnly")).toBe("요약만 보관");
     });
 
     it("returns correct label for redacted", () => {
-      expect(getSourceRawDataLabel("redacted")).toBe("Redacted");
+      expect(getSourceRawDataLabel("redacted")).toBe("민감정보 제거됨");
     });
 
     it("returns correct label for notCaptured", () => {
-      expect(getSourceRawDataLabel("notCaptured")).toBe("Not captured");
+      expect(getSourceRawDataLabel("notCaptured")).toBe("원본 미보관");
     });
 
     it("returns unknown policy as-is", () => {
