@@ -714,6 +714,29 @@ kbd {
   white-space: nowrap;
 }
 
+/* Inline detail disclosed when a chronological-list row is selected —
+   the narrow-width stand-in for the side inspector. */
+.timeline-chrono-detail {
+  margin: 4px 0 2px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #f7f6fb;
+}
+
+.timeline-chrono-detail p {
+  margin: 0 0 5px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.timeline-chrono-detail small {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .time-axis {
   position: sticky;
   top: 0;

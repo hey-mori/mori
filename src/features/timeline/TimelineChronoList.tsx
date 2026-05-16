@@ -1,10 +1,12 @@
 import { Layers3 } from "lucide-react";
 import { eventTypeIcons, eventTypeLabels } from "../../domain/constants";
+import type { TimelineEvent } from "../../domain/types";
 import { sortDisplayItemsChronologically } from "../../lib/timeline/displayItems";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 import {
   buildTimelineBundleViewModel,
   buildTimelineEventCardViewModel,
+  buildTrustGlyph,
 } from "./lib/timelineCards";
 
 /**
@@ -56,6 +58,16 @@ export function TimelineChronoList({
                 </span>
                 <span className="timeline-chrono-meta">{item.count}개 이벤트</span>
               </button>
+              {selected ? (
+                <div className="timeline-chrono-detail" role="region">
+                  <p>{item.summary}</p>
+                  <small>
+                    포함된 이벤트:{" "}
+                    {item.members.slice(0, 5).map((member) => member.title).join(", ")}
+                    {item.members.length > 5 ? ` 외 ${item.members.length - 5}건` : ""}
+                  </small>
+                </div>
+              ) : null}
             </li>
           );
         }
@@ -84,9 +96,31 @@ export function TimelineChronoList({
                 <span className="timeline-chrono-meta">{vm.primaryMeta}</span>
               ) : null}
             </button>
+            {selected ? (
+              <div className="timeline-chrono-detail" role="region">
+                <p>{item.event.summary}</p>
+                <small>{eventDetailMeta(item.event)}</small>
+              </div>
+            ) : null}
           </li>
         );
       })}
     </ol>
   );
+}
+
+/**
+ * One calm detail line for a selected chronological-list row. At narrow
+ * widths there is no side inspector, so the selected row discloses its
+ * trust + linked-item counts inline — progressive disclosure on selection.
+ */
+function eventDetailMeta(event: TimelineEvent): string {
+  const parts = [buildTrustGlyph(event.trustLevel, event.confidence).label];
+  if (event.trustLevel === "inferred") {
+    parts.push(`신뢰도 ${Math.round(event.confidence * 100)}%`);
+  }
+  if (event.sourceRefs.length > 0) parts.push(`근거 ${event.sourceRefs.length}`);
+  if (event.linkedIssueIds.length > 0) parts.push(`이슈 ${event.linkedIssueIds.length}`);
+  if (event.linkedDecisionIds.length > 0) parts.push(`결정 ${event.linkedDecisionIds.length}`);
+  return parts.join(" · ");
 }

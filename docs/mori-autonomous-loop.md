@@ -378,9 +378,14 @@ a demo/overview. Highest value first.
   `selectedEventId`, so widening the window restores the swimlane
   with the selection intact. Verified at 768 — readable, no page
   overflow.
-- Responsive Timeline — an overlay/drawer inspector for narrow
-  widths is still open; the chronological list now covers the
-  narrow-width canvas fallback.
+- ✅ Narrow-width inline detail — a selected chronological-list
+  row now discloses its detail inline (event: summary + trust +
+  confidence + linked-item counts; bundle: summary + member
+  titles), so the Timeline stays a reconstruction surface on
+  narrow screens where there is no side inspector.
+- Responsive Timeline — the chronological list with inline detail
+  now covers narrow widths; a dedicated overlay/drawer inspector
+  is no longer required for the minimum-viable experience.
 - Inspector responsibility — remaining card metadata could move
   further into the inspector.
 - ✅ Day-scale stress fixture — `buildTimelineStressEvents` is a
