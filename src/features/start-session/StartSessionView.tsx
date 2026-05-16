@@ -19,12 +19,18 @@ import {
   getPlannedCaptureSurfaces,
 } from "../../lib/connectors/captureSurfaces";
 import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
-import type { SourceOption } from "../../domain/types";
+import type { RecordingMode, SourceOption } from "../../domain/types";
 import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
 const availableSources = sourceOptions.filter((source) => source.status === "available");
 const plannedSources = sourceOptions.filter((source) => source.status === "planned");
+
+const RECORDING_MODES: { mode: RecordingMode; points: string[] }[] = [
+  { mode: "summary", points: ["AI 대화 요약", "주요 결정 / 이슈 / 산출물 중심", "저장 공간 절약"] },
+  { mode: "full", points: ["전체 대화 및 원본 보관", "감사/상세 추적에 적합", "더 많은 저장 공간 사용"] },
+  { mode: "ephemeral", points: ["리포트만 저장", "원본 데이터 자동 삭제", "민감 프로젝트에 적합"] },
+];
 
 export function StartSessionView() {
   const [sessionTitle, setSessionTitle] = useState("Mori 앱 기획");
@@ -33,6 +39,7 @@ export function StartSessionView() {
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(() =>
     initialSelectedSourceIds(sourceOptions),
   );
+  const [recordingMode, setRecordingMode] = useState<RecordingMode>("summary");
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
   const resetSessionToDemo = useMoriSessionStore((state) => state.resetToDemo);
@@ -55,7 +62,7 @@ export function StartSessionView() {
       sessionTitle,
       projectName,
       selectedSources: applySourceSelection(sourceOptions, selectedSourceIds),
-      recordingMode: "summary",
+      recordingMode,
       llmProvider: "ollama",
       llmModel: "llama3.1:8b",
       storageLocation: "~/Mori/Records",
@@ -129,9 +136,15 @@ export function StartSessionView() {
           </SetupBlock>
           <SetupBlock number="3" title="기록 모드 선택">
             <div className="mode-grid">
-              <ModeCard title={recordingModeLabels.summary} selected points={["AI 대화 요약", "주요 결정 / 이슈 / 산출물 중심", "저장 공간 절약"]} />
-              <ModeCard title={recordingModeLabels.full} points={["전체 대화 및 원본 보관", "감사/상세 추적에 적합", "더 많은 저장 공간 사용"]} />
-              <ModeCard title={recordingModeLabels.ephemeral} points={["리포트만 저장", "원본 데이터 자동 삭제", "민감 프로젝트에 적합"]} />
+              {RECORDING_MODES.map(({ mode, points }) => (
+                <ModeCard
+                  key={mode}
+                  mode={mode}
+                  points={points}
+                  selected={recordingMode === mode}
+                  onSelect={() => setRecordingMode(mode)}
+                />
+              ))}
             </div>
           </SetupBlock>
           <SetupBlock number="4" title="로컬 AI 엔진 선택" note="요약 및 분석을 수행할 로컬/상용 엔진을 선택합니다. Cloud API는 명시적으로 켜야 합니다.">
@@ -156,6 +169,7 @@ export function StartSessionView() {
           sessionTitle={sessionTitle}
           projectName={projectName}
           selectedSources={selectedSources}
+          recordingMode={recordingMode}
         />
       </div>
     </div>
@@ -236,12 +250,27 @@ function SetupBlock({ number, title, note, children }: { number: string; title: 
   );
 }
 
-function ModeCard({ title, points, selected = false }: { title: string; points: string[]; selected?: boolean }) {
+function ModeCard({
+  mode,
+  points,
+  selected,
+  onSelect,
+}: {
+  mode: RecordingMode;
+  points: string[];
+  selected: boolean;
+  onSelect: () => void;
+}) {
   return (
-    <button className={`mode-card ${selected ? "selected" : ""}`} type="button">
+    <button
+      className={`mode-card ${selected ? "selected" : ""}`}
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+    >
       <span className="radio" />
-      <strong>{title}</strong>
-      <small>{selected ? "기본 추천 모드입니다." : "프로젝트 성격에 따라 선택하세요."}</small>
+      <strong>{recordingModeLabels[mode]}</strong>
+      <small>{selected ? "선택된 기록 모드입니다." : "프로젝트 성격에 따라 선택하세요."}</small>
       <ul>
         {points.map((point) => <li key={point}>{point}</li>)}
       </ul>
@@ -267,11 +296,13 @@ function SessionSummary({
   sessionTitle,
   projectName,
   selectedSources,
+  recordingMode,
 }: {
   savedDraft: StoredSessionDraft | null;
   sessionTitle: string;
   projectName: string;
   selectedSources: SourceOption[];
+  recordingMode: RecordingMode;
 }) {
   return (
     <aside className="summary-panel">
@@ -288,7 +319,7 @@ function SessionSummary({
         )}
       </ul>
       <hr />
-      <SummaryRow label="기록 모드" value="Summary Mode" accent />
+      <SummaryRow label="기록 모드" value={recordingModeLabels[recordingMode]} accent />
       <SummaryRow label="AI 엔진" value="Ollama (llama3.1:8b)" accent />
       <SummaryRow label="저장 위치" value="~/Mori/Records" />
       <SummaryRow label="예상 저장 공간" value="하루 약 50MB ~ 200MB" />
