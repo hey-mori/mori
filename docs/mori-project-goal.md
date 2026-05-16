@@ -367,10 +367,11 @@ against the repository.
   is the intended model. A Claude Code hook or Codex CLI wrapper that
   emits connector JSONL as a side effect of normal use (still
   explicit, no watcher) is template-only, not a turnkey integration.
-- **IDE / terminal / browser extension integrations.** Listed as
-  Planned in `source-integrations.md`; the explicit-capture design is
-  now documented there ("IDE / Terminal integration plan"), but no
-  extension code exists yet.
+- **IDE / terminal / browser extension integrations.** The
+  explicit-capture design is documented in `source-integrations.md`
+  and the first IDE artifact ships — `connectors/vscode-task/`, a VS
+  Code task template running `mori-local-capture.py` on an explicit
+  Run Task. A real editor / browser extension does not exist yet.
 - **Optional watched inbox.** Refresh-only desktop inbox is shipped;
   an opt-in background watcher that loads new files into a "pending
   review" tray is not implemented.

@@ -1,0 +1,51 @@
+{
+  "// Mori VS Code task template": "Copy these task / input entries into your project's .vscode/tasks.json. Adjust the mori-local-capture.py path. Run a task explicitly with: Terminal > Run Task...",
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Mori: capture Git snapshot",
+      "detail": "Capture safe Git metadata for this workspace into ~/.mori/connectors/.",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${env:HOME}/Dev/Projects/mori/connectors/local-capture/mori-local-capture.py",
+        "--git-repo",
+        "${workspaceFolder}"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Mori: capture last commit",
+      "detail": "Capture safe metadata for the most recent commit into ~/.mori/connectors/.",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${env:HOME}/Dev/Projects/mori/connectors/local-capture/mori-local-capture.py",
+        "--git-repo",
+        "${workspaceFolder}",
+        "--git-commit",
+        "HEAD"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Mori: capture a note",
+      "detail": "Record a manual note into ~/.mori/connectors/. You type the note when the task runs.",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${env:HOME}/Dev/Projects/mori/connectors/local-capture/mori-local-capture.py",
+        "--note",
+        "${input:moriNote}"
+      ],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "moriNote",
+      "type": "promptString",
+      "description": "Mori note to capture"
+    }
+  ]
+}

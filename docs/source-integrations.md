@@ -205,13 +205,25 @@ These integrations are **not yet implemented**. They appear in planning document
 
 ### 13. VS Code Integration (`vscode`)
 
-- **Status**: Planned
-- **Capture Mode**: Planned connector
+- **Status**: Planned (registry connector) · explicit-capture task
+  template available
+- **Capture Mode**: Explicit task run (template) → planned connector
 - **Trust Level**: Observed
 - **Raw Data Policy**: Summary only
-- **Privacy Note**: Requires extension installation and explicit opt-in.
+- **Privacy Note**: The first artifact is a VS Code **task template**
+  (`connectors/vscode-task/`) the user adds to their own
+  `.vscode/tasks.json`. It captures only when the user explicitly runs
+  a task — no extension, no watcher. A full extension still requires
+  explicit install + opt-in.
 
-**Future Usage**: VS Code extension sends workspace events (file opens, test runs, debug sessions) to Mori.
+**Available now**: `connectors/vscode-task/` — `Mori:` tasks that run
+`mori-local-capture.py` (`--git-repo`, `--git-commit`, `--note`) and
+write to `~/.mori/connectors/`, reviewed through Import Review like any
+connector JSONL.
+
+**Future Usage**: a VS Code extension would offer an explicit "send to
+Mori" action emitting the same connector JSONL — built only once the
+task-template explicit-capture contract is proven in real use.
 
 ### 14. Cursor Integration (`cursor`)
 
@@ -469,11 +481,13 @@ An IDE / terminal integration must never:
 - capture keystrokes, screenshots, or the clipboard;
 - import captured events without Import Review.
 
-The first build slice should be the smallest explicit emitter that
-reuses `mori-local-capture.py` — e.g. a documented editor task that
-pipes the current selection or a saved transcript into
-`--transcript -`. An editor extension is only worth building once the
-explicit-emit contract above is proven through that path.
+The first build artifact is shipped: `connectors/vscode-task/` — a VS
+Code task template the user adds to their own `.vscode/tasks.json`,
+running `mori-local-capture.py` (`--git-repo` / `--git-commit` /
+`--note`) on an explicit **Run Task** action. It is the smallest
+explicit emitter that reuses the local-capture bridge, with no
+extension and no watcher. An editor extension is only worth building
+once this explicit-emit contract is proven in real use.
 
 ## See Also
 
