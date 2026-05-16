@@ -15,6 +15,10 @@ Turns explicit local inputs into Mori Connector JSONL events:
                         user explicitly points at: branch, HEAD SHA, dirty
                         state, changed file paths, and an additions/deletions
                         diff stat. No diff content, no file contents.
+  --git-commit <ref>    Capture *safe* metadata for one named commit: SHA,
+                        subject line, author date, changed file paths, and
+                        an additions/deletions diff stat. Uses --git-repo as
+                        the repo, or the current directory. No patch text.
 
 The script appends JSONL events to a local connector inbox file (default
 ~/.mori/connectors/local-capture/<date>.jsonl). It does NOT import anything
@@ -314,6 +318,122 @@ def capture_git(path: str, session_id: str, occurred_at: str, received_at: str) 
 
 
 # --------------------------------------------------------------------------
+# --git-commit
+# --------------------------------------------------------------------------
+
+def parse_name_status(text: str) -> dict:
+    """Map `git show --name-status` output to {path: changeType}."""
+    changes = {}
+    for raw in text.splitlines():
+        if not raw.strip():
+            continue
+        parts = raw.split("\t")
+        if len(parts) < 2:
+            continue
+        code = parts[0]
+        # Rename / copy lines carry the new path last.
+        path = parts[-1]
+        changes[path] = classify_change(code)
+    return changes
+
+
+def capture_git_commit(path: str, ref: str, session_id: str,
+                       received_at: str) -> dict:
+    repo = os.path.abspath(os.path.expanduser(path))
+    if not os.path.isdir(repo):
+        raise CaptureError(f"--git-commit: not a directory: {path}")
+
+    inside = run_git(repo, ["rev-parse", "--is-inside-work-tree"])
+    if inside.returncode != 0 or inside.stdout.strip() != "true":
+        raise CaptureError(f"--git-commit: not a Git work tree: {path}")
+
+    toplevel = run_git(repo, ["rev-parse", "--show-toplevel"]).stdout.strip()
+    repo_name = os.path.basename(toplevel) or "repository"
+
+    resolved = run_git(repo, ["rev-parse", "--verify", f"{ref}^{{commit}}"])
+    if resolved.returncode != 0:
+        raise CaptureError(f"--git-commit: unknown commit: {ref}")
+    commit = resolved.stdout.strip()
+    short_commit = commit[:7]
+
+    # Commit header — subject and author date only; no body, no author name.
+    header = run_git(repo, ["show", "-s", "--format=%s%n%aI", commit])
+    header_lines = header.stdout.splitlines()
+    subject = header_lines[0].strip() if header_lines else ""
+    author_date = header_lines[1].strip() if len(header_lines) > 1 else ""
+    occurred_at = author_date or received_at
+
+    name_status = run_git(repo, ["show", "--name-status", "--format=", commit])
+    changes = parse_name_status(name_status.stdout)
+
+    additions = 0
+    deletions = 0
+    numstat = {}
+    ns = run_git(repo, ["show", "--numstat", "--format=", commit])
+    for line in ns.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        add_raw, del_raw, file_path = parts
+        add = int(add_raw) if add_raw.isdigit() else 0
+        dele = int(del_raw) if del_raw.isdigit() else 0
+        numstat[file_path] = (add, dele)
+        additions += add
+        deletions += dele
+
+    files = []
+    for file_path, change_type in changes.items():
+        entry = {"path": file_path, "changeType": change_type}
+        counts = numstat.get(file_path)
+        if counts is not None:
+            entry["additions"], entry["deletions"] = counts
+        files.append(entry)
+
+    truncated_files = False
+    if len(files) > MAX_GIT_FILES:
+        files = files[:MAX_GIT_FILES]
+        truncated_files = True
+
+    git_meta = {
+        "headCommit": commit,
+        "shortHeadCommit": short_commit,
+        # A commit is a fixed snapshot — never "dirty".
+        "isDirty": False,
+        "additions": additions,
+        "deletions": deletions,
+        "files": files,
+    }
+
+    file_label = f"{len(files)} file{'s' if len(files) != 1 else ''} changed"
+    if truncated_files:
+        file_label += f" (first {MAX_GIT_FILES} listed)"
+    summary = (
+        f"Git commit {short_commit} · {file_label} "
+        f"(+{additions} / -{deletions})"
+    )
+    if subject:
+        summary += f" · {truncate(subject, TRANSCRIPT_FIRST_LINE_LIMIT)}"
+
+    event = base_event(
+        event_id=f"{session_id}-git-commit",
+        connector_id="gitCommand",
+        kind="git_diff_captured",
+        session_id=session_id,
+        occurred_at=occurred_at,
+        received_at=received_at,
+    )
+    event["sourceTitle"] = f"Git commit: {repo_name} {short_commit}"
+    event["summary"] = summary
+    event["git"] = git_meta
+    event["privacy"] = privacy(
+        "Local capture CLI. Git commit metadata only — no patch text, no "
+        "file contents, no absolute repository path."
+    )
+    event["provenance"] = provenance()
+    return event
+
+
+# --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
 
@@ -339,6 +459,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="record a manual note")
     parser.add_argument("--git-repo", metavar="PATH", dest="git_repo",
                         help="capture safe Git snapshot metadata for a repo")
+    parser.add_argument("--git-commit", metavar="REF", dest="git_commit",
+                        help="capture safe metadata for one named commit "
+                             "(uses --git-repo, or the current directory)")
     parser.add_argument("--out", metavar="DIR", default=DEFAULT_OUT_DIR,
                         help=f"output directory (default {DEFAULT_OUT_DIR})")
     parser.add_argument("--session", metavar="ID",
@@ -351,10 +474,10 @@ def main(argv: list) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if not (args.transcript or args.note or args.git_repo):
+    if not (args.transcript or args.note or args.git_repo or args.git_commit):
         parser.print_help(sys.stderr)
         print("\nmori-local-capture: provide at least one of "
-              "--transcript / --note / --git-repo", file=sys.stderr)
+              "--transcript / --note / --git-repo / --git-commit", file=sys.stderr)
         return 64
 
     session_id = args.session or f"local-{compact_now()}"
@@ -380,6 +503,13 @@ def main(argv: list) -> int:
     if args.git_repo:
         try:
             events.append(capture_git(args.git_repo, session_id, occurred_at, received_at))
+        except CaptureError as exc:
+            errors.append(str(exc))
+
+    if args.git_commit:
+        try:
+            events.append(capture_git_commit(
+                args.git_repo or ".", args.git_commit, session_id, received_at))
         except CaptureError as exc:
             errors.append(str(exc))
 

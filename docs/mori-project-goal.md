@@ -361,11 +361,12 @@ silently relying on memory.
 These capabilities are designed but not yet implemented. Verified
 against the repository.
 
-- **Local Connector Capture from real Claude / Codex / Git work.**
-  Connector JSONL templates exist under `connectors/`, but a tested,
-  reliable bridge that captures live Claude Code / Codex CLI / Git
-  activity into `~/.mori/connectors/` for a real workflow is not
-  shipped. The user must still run the template scripts manually.
+- **Hook / wrapper auto-emit connectors.** The explicit local-capture
+  bridge (`mori-local-capture.py` — transcript / stdin / note /
+  git-repo / git-commit) is shipped and tested; running it explicitly
+  is the intended model. A Claude Code hook or Codex CLI wrapper that
+  emits connector JSONL as a side effect of normal use (still
+  explicit, no watcher) is template-only, not a turnkey integration.
 - **IDE / terminal / browser extension integrations.** Listed as
   Planned in `source-integrations.md`; the explicit-capture design is
   now documented there ("IDE / Terminal integration plan"), but no

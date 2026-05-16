@@ -20,8 +20,9 @@ event per input to a local connector inbox file
 | `--transcript <path>` | Reads a transcript text file you explicitly point at, or `-` to read from stdin (pipe a Claude / Codex CLI session in). Records a one-line summary + line count. The full transcript text is **not** stored in the event. |
 | `--note <text>` | Records a manual note you type on the command line. |
 | `--git-repo <path>` | Captures **safe Git metadata only** for a repo you explicitly point at: branch, HEAD SHA, dirty state, changed file paths, and an additions/deletions diff stat. |
+| `--git-commit <ref>` | Captures **safe metadata for one named commit**: SHA, subject line, author date, changed file paths, and an additions/deletions diff stat. Uses `--git-repo`, or the current directory. No patch text. |
 
-You can pass any combination of the three in a single run. Each run uses a
+You can pass any combination of the inputs in a single run. Each run uses a
 fresh `local-<timestamp>` session id unless you override it with
 `--session`.
 
@@ -99,11 +100,14 @@ python3 mori-local-capture.py --note "Decided to keep the import review gate"
 # Capture safe Git snapshot metadata for the current repo
 python3 mori-local-capture.py --git-repo .
 
-# All three in one run (they share one session id)
+# Capture metadata for a specific commit you just made
+python3 mori-local-capture.py --git-commit HEAD
+
+# Several inputs in one run (they share one session id)
 python3 mori-local-capture.py \
   --transcript ~/notes/claude-session.txt \
   --note "Wrapped the timeline refactor" \
-  --git-repo ~/work/mori
+  --git-commit HEAD
 
 # Override the output directory or session id
 python3 mori-local-capture.py --note "..." --out ~/captures --session my-session-id

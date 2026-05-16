@@ -120,6 +120,33 @@ What it deliberately does **not** contain:
 Emitted as `connectorId: gitCommand`, `kind: git_diff_captured` → a
 `fileCode` timeline event under a `gitDiff` source.
 
+### `--git-commit <ref>`
+
+Captures **safe metadata for one named commit** — the natural "I just
+committed, record what changed" capture. It uses `--git-repo` as the
+repo, or the current directory. The bridge runs read-only `git`
+commands with explicit arguments:
+
+- `git -C <repo> rev-parse --verify <ref>^{commit}` — resolve and
+  verify the commit; refuse an unknown ref.
+- `git -C <repo> show -s --format=%s%n%aI <commit>` — the commit
+  **subject line** and author date only (no body, no author name).
+- `git -C <repo> show --name-status --format= <commit>` — changed
+  file paths + change types.
+- `git -C <repo> show --numstat --format= <commit>` — per-file
+  additions / deletions.
+
+The Git event reuses the `git_diff_captured` shape: `headCommit` /
+`shortHeadCommit` hold the captured commit, `isDirty` is always
+`false` (a commit is a fixed snapshot), and `files[]` carries the
+commit's relative paths with change types and add/delete counts. No
+patch text, no file contents, no absolute path — the same boundaries
+as `--git-repo`. The commit subject appears only in the
+human-readable `summary` / `sourceTitle`.
+
+Emitted as `connectorId: gitCommand`, `kind: git_diff_captured` → a
+`fileCode` timeline event under a `gitDiff` source.
+
 ## Event-kind mapping reference
 
 | Input | `connectorId` | `kind` | Source kind | TimelineEvent type | Trust |
@@ -127,6 +154,7 @@ Emitted as `connectorId: gitCommand`, `kind: git_diff_captured` → a
 | `--transcript` | `desktopTranscriptImport` | `transcript_imported` | `aiConversation` | `aiConversation` | `observed` |
 | `--note` | `manual` | `session_finished` | `manualNote` | `documentNote` | `observed` |
 | `--git-repo` | `gitCommand` | `git_diff_captured` | `gitDiff` | `fileCode` | `observed` |
+| `--git-commit` | `gitCommand` | `git_diff_captured` | `gitDiff` | `fileCode` | `observed` |
 
 Every event carries `privacy.captureMethod: local_cli_wrapper` and
 `privacy.rawDataPolicy: summary_only`. On import, Mori re-runs its

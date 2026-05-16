@@ -168,12 +168,13 @@ only — no phase numbers.
 - Native file picker for `.mori v0` — `save_mori_package_json_as`
   (Save As) and `pick_mori_package_file` (Open) native dialogs, wired
   into the Reports export and the Consolidation Review import panel.
+- Local Connector Capture bridge — `mori-local-capture.py` covers
+  transcript (file + stdin), note, git working-tree, and `--git-commit`
+  inputs, all verified through the connector-pipeline fixture test.
 
 **Open priority (highest first):**
 
-1. Local Connector Capture — a tested end-to-end bridge for real
-   Claude / Codex / Git work into `~/.mori/connectors/`.
-2. `.mori` zip-like packaging — move `.mori v0` from a flat JSON file
+1. `.mori` zip-like packaging — move `.mori v0` from a flat JSON file
    toward the documented zip-like layout.
 
 Deferred — revisit when a concrete need appears:
@@ -181,6 +182,12 @@ Deferred — revisit when a concrete need appears:
   the `review` lib, and the connector pipeline are mature and
   well-tested with no concrete defect. Revisit when real captured
   data exposes a specific honesty / correctness gap.
+- Optional watched-inbox tray — borders on the no-background-watcher
+  non-goal; the refresh-only desktop inbox already covers the safe
+  case. Revisit only with a concrete, explicitly-triggered design.
+- IDE / Terminal integration runtime code — the explicit-capture
+  design is documented; building an editor extension waits for a
+  concrete first integration target.
 
 When an item ships, move it to **Completed** and renumber the open
 list. When the goal document's Current Gaps change, reconcile this
@@ -190,43 +197,48 @@ backlog with it.
 
 The next slice should be:
 
-**Local Connector Capture — `--git-commit` capture input**
+**`.mori` zip-like packaging — dependency-free file-layout builder**
 
 Goal:
-`mori-local-capture.py` captures a working-tree snapshot
-(`--git-repo`). A real "I just committed" workflow wants the metadata
-of a *specific commit*. This slice adds a `--git-commit <ref>` input
-that captures one commit's safe metadata, so a post-commit capture is
-a single explicit command.
+`.mori v0` is one flat JSON object today. The documented future shape
+is a zip-like layout (`manifest.json`, `projects.json`,
+`events.jsonl`, …). The actual zip compression needs an archiving
+dependency — a decision the loop must not make unilaterally — so this
+slice ships the dependency-free half: a pure builder that turns a
+`MoriPackageV0` into the documented multi-file layout as an in-memory
+map.
 
 Scope — do:
-- Add `--git-commit <ref>` to `mori-local-capture.py` (used with
-  `--git-repo`, or defaulting the repo to `.`): capture the resolved
-  SHA, short SHA, the commit subject line, author date, changed file
-  paths, and the additions/deletions diffstat for that commit.
-- No diff content, no file contents, no patch text — metadata only,
-  exactly like `--git-repo`. Reuse the existing `git_diff_captured`
-  event shape / `gitCommand` connector id.
-- Document the input in the local-capture guide + README.
+- Add a pure `buildMoriPackageFileLayout(pkg)` that returns a
+  `Record<string, string>` keyed by the documented file names
+  (`manifest.json`, `projects.json`, `sessions.json`,
+  `events.jsonl`, `issues.json`, …, `consolidated_memories.json`,
+  `audit_trail.json`), each value the serialised content.
+- Reuse `serializeEventsJsonl` for `events.jsonl`; JSON-stringify the
+  rest. Keep absent-safe slices absent-safe.
+- Add a round-trip-shaped test: every documented file is present and
+  parses; the layout is exhaustive over `MoriPackageV0`.
 
 Scope — do not:
-- Wrap or spawn `git` beyond the explicit `git show` / `git
-  diff-tree` reads of the commit the user named.
-- Add a watcher, a hook, or any implicit capture.
+- Add a zip / archiving dependency — flag that as a separate decision.
+- Change the in-memory `.mori v0` JSON format or the existing
+  serialize / deserialize / validate path.
 
 Suggested files:
-- `connectors/local-capture/mori-local-capture.py`
-- `connectors/local-capture/README.md`,
-  `docs/connectors/local-capture.md`
-- `src/lib/connectors/connectorLocalCaptureFixture.test.ts`
-  (a fixture proving the commit-capture output round-trips)
+- `src/lib/mori-package/fileLayout.ts` (new)
+- `src/lib/mori-package/index.ts`
+- `src/lib/mori-package/mori-package.test.ts`
+- `docs/mori-package-v0.md`
 
 Tests:
-- a `--git-commit`-shaped `git_diff_captured` event parses, previews,
-  and normalizes through the connector pipeline
+- the layout contains every documented file and each value parses
+- `events.jsonl` round-trips through `serializeEventsJsonl`
+- optional slices (`consolidatedMemories` / `auditTrail`) are handled
+  absent-safe
 
-After this slice ships, set the next slice to the `.mori` zip-like
-packaging backlog item, and continue.
+After this slice ships, the remaining zip work is the archiving
+dependency decision — record it in the backlog and continue with the
+next concrete item.
 
 ## 9. Stop Conditions
 

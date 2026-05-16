@@ -71,6 +71,42 @@ const CLEAN_REPO_GIT_JSONL = JSON.stringify({
 });
 
 /**
+ * The exact line `mori-local-capture.py --git-commit <ref>` emits: a
+ * `git_diff_captured` event for one named commit — `isDirty: false`,
+ * the commit SHA in `headCommit`, and the commit's changed files.
+ * No `branch` (a commit is not a branch tip). Ids / SHA are synthetic.
+ */
+const COMMIT_GIT_JSONL = JSON.stringify({
+  id: "local-20260516T101500Z-git-commit",
+  connectorId: "gitCommand",
+  kind: "git_diff_captured",
+  occurredAt: "2026-05-16T10:14:56+09:00",
+  receivedAt: "2026-05-16T10:15:00Z",
+  sessionId: "local-20260516T101500Z",
+  sourceTitle: "Git commit: sample-repo 1a2b3c4",
+  summary:
+    "Git commit 1a2b3c4 · 2 files changed (+12 / -3) · feat: add a thing",
+  git: {
+    headCommit: "1a2b3c4d5e6f00000000000000000000000000aa",
+    shortHeadCommit: "1a2b3c4",
+    isDirty: false,
+    additions: 12,
+    deletions: 3,
+    files: [
+      { path: "src/a.ts", changeType: "modified", additions: 9, deletions: 3 },
+      { path: "src/b.ts", changeType: "added", additions: 3, deletions: 0 },
+    ],
+  },
+  privacy: {
+    captureMethod: "local_cli_wrapper",
+    rawDataPolicy: "summary_only",
+    redacted: false,
+    note: "Local capture CLI. Git commit metadata only — no patch text, no file contents, no absolute repository path.",
+  },
+  provenance: { toolName: "mori-local-capture.py", toolVersion: "0.1.0" },
+});
+
+/**
  * The exact line `mori-local-capture.py --transcript -` emits for a
  * piped CLI session: a `transcript_imported` event whose `sourceTitle`
  * is `Transcript: stdin` and whose `occurredAt` equals `receivedAt`.
@@ -189,6 +225,44 @@ describe("local-capture clean-repo git snapshot", () => {
 
   it("normalizes a clean-repo git event into one gitDiff fileCode candidate", () => {
     const outcome = parseConnectorJsonl(CLEAN_REPO_GIT_JSONL);
+    const candidates = normalizeConnectorEventBatch({
+      projectId: "p-local-capture",
+      sessionId: "local-capture-session",
+      events: outcome.events,
+    });
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]?.source.kind).toBe("gitDiff");
+
+    const timelineEvents = candidates.flatMap((candidate) => candidate.events);
+    expect(timelineEvents).toHaveLength(1);
+    expect(timelineEvents[0]?.type).toBe("fileCode");
+    expect(timelineEvents[0]?.connectorEventId).toBeTruthy();
+  });
+});
+
+describe("local-capture git commit snapshot", () => {
+  it("parses a --git-commit event with no validation errors", () => {
+    const outcome = parseConnectorJsonl(COMMIT_GIT_JSONL);
+    expect(outcome.errors).toEqual([]);
+    expect(outcome.events).toHaveLength(1);
+    const event = outcome.events[0];
+    expect(event?.kind).toBe("git_diff_captured");
+    expect(event?.git?.isDirty).toBe(false);
+    expect(event?.git?.shortHeadCommit).toBe("1a2b3c4");
+    expect(event?.git?.files?.length).toBe(2);
+    // A commit capture carries no absolute repo path.
+    expect(event?.git?.repoPath).toBeUndefined();
+  });
+
+  it("previews a --git-commit snapshot as one valid event", () => {
+    const preview = buildConnectorJsonlPreview(COMMIT_GIT_JSONL);
+    expect(preview.kind).toBe("valid");
+    expect(preview.validEventCount).toBe(1);
+    expect(preview.invalidLineCount).toBe(0);
+  });
+
+  it("normalizes a --git-commit event into one gitDiff fileCode candidate", () => {
+    const outcome = parseConnectorJsonl(COMMIT_GIT_JSONL);
     const candidates = normalizeConnectorEventBatch({
       projectId: "p-local-capture",
       sessionId: "local-capture-session",
