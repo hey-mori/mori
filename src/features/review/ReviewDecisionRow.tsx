@@ -3,7 +3,8 @@ import { priorityLabels } from "../../domain/constants";
 import type { Decision, SourceRef, TimelineEvent } from "../../domain/types";
 import { formatTime } from "../../lib/formatting/time";
 import { getDecisionEvidenceSources } from "../../lib/sources/traceability";
-import { priorityTone, trustTone } from "../../lib/review-workspace/reviewWorkspace";
+import { getTrustDisplay } from "../../lib/evidence/trust";
+import { priorityTone } from "../../lib/review-workspace/reviewWorkspace";
 
 export function ReviewDecisionRow({
   decision,
@@ -19,6 +20,7 @@ export function ReviewDecisionRow({
   onSelect: () => void;
 }) {
   const evidence = getDecisionEvidenceSources(decision, events, sources);
+  const trust = getTrustDisplay(decision.trustLevel);
 
   return (
     <tr
@@ -41,8 +43,8 @@ export function ReviewDecisionRow({
         </span>
       </td>
       <td>
-        <Badge tone={decision.confirmed ? "green" : trustTone(decision.trustLevel)}>
-          {decision.confirmed ? "Confirmed" : decision.trustLevel}
+        <Badge tone={decision.confirmed ? "green" : trust.tone}>
+          {decision.confirmed ? "확정됨" : trust.label}
         </Badge>
       </td>
     </tr>

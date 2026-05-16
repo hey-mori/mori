@@ -4,7 +4,8 @@ import { priorityLabels } from "../../domain/constants";
 import type { Issue, SourceRef, TimelineEvent } from "../../domain/types";
 import { formatDate } from "../../lib/formatting/time";
 import { getIssueEvidenceSources } from "../../lib/sources/traceability";
-import { priorityTone, trustTone } from "../../lib/review-workspace/reviewWorkspace";
+import { getTrustDisplay } from "../../lib/evidence/trust";
+import { priorityTone } from "../../lib/review-workspace/reviewWorkspace";
 
 export function ReviewIssueCard({
   issue,
@@ -21,6 +22,7 @@ export function ReviewIssueCard({
 }) {
   const evidence = getIssueEvidenceSources(issue, events, sources);
   const confidencePct = Math.round(issue.confidence * 100);
+  const trust = getTrustDisplay(issue.trustLevel);
   const isInferred = issue.trustLevel === "inferred";
 
   return (
@@ -42,8 +44,8 @@ export function ReviewIssueCard({
             <Link2 size={11} aria-hidden="true" /> {evidence.eventCount}E · {evidence.sourceCount}S
             {issue.relatedDecisionIds.length ? ` · ${issue.relatedDecisionIds.length}D` : ""}
           </span>
-          <Badge tone={trustTone(issue.trustLevel)}>
-            {isInferred ? `${issue.trustLevel} ${confidencePct}%` : issue.trustLevel}
+          <Badge tone={trust.tone}>
+            {isInferred ? `${trust.label} ${confidencePct}%` : trust.label}
           </Badge>
         </footer>
       </button>

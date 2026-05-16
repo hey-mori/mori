@@ -302,10 +302,15 @@ Shipped:
    shows a lifecycle health strip, orders the preview so guidance
    memory leads, and visually recedes archived rows.
 
+8. ✅ Review trust clarity — the Review surface stopped rendering
+   raw `TrustLevel` enum strings ("inferred" / "verified") and now
+   reads the canonical `getTrustDisplay` labels everywhere (issue
+   cards, decision rows, detail panel, related events); the
+   duplicate `trustTone` in `reviewWorkspace` is removed, and the
+   detail-panel trust badge carries a hover description.
+
 Open (highest value first):
 
-8. Review board density — uneven card / list density; inferred vs
-   verified clarity; inspector panel needs a consistent header.
 9. Timeline density + event inspector — long event lists have no
    grouping; selecting an event needs a coherent detail panel.
 10. Evidence local-capture hierarchy — the working local-capture

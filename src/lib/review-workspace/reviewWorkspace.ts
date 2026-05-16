@@ -5,7 +5,6 @@ import type {
   NextAction,
   Priority,
   TimelineEvent,
-  TrustLevel,
 } from "../../domain/types";
 
 /**
@@ -251,16 +250,6 @@ export function pickDefaultReviewSelection({
   if (decisions[0]) return { kind: "decision", decisionId: decisions[0].id };
   if (nextActions[0]) return { kind: "nextAction", nextActionId: nextActions[0].id };
   return { kind: "none" };
-}
-
-/**
- * Translate a `TrustLevel` into a tone for badges. Kept here so the
- * mapping is reusable between issue / decision rows and the detail panel.
- */
-export function trustTone(level: TrustLevel): "green" | "blue" | "purple" {
-  if (level === "verified") return "green";
-  if (level === "observed") return "blue";
-  return "purple";
 }
 
 export function priorityTone(priority: Priority): "red" | "orange" | "blue" {

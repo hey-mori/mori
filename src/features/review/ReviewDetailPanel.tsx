@@ -18,9 +18,9 @@ import {
   findEvents,
   issueStatusTone,
   priorityTone,
-  trustTone,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
+import { getTrustDisplay, getTrustLabel } from "../../lib/evidence/trust";
 
 export function ReviewDetailPanel({
   selection,
@@ -94,6 +94,7 @@ function IssueDetail({
     issue.relatedDecisionIds.includes(decision.id),
   );
   const confidencePct = Math.round(issue.confidence * 100);
+  const issueTrust = getTrustDisplay(issue.trustLevel);
 
   return (
     <aside className="review-detail" aria-label="Issue detail">
@@ -101,7 +102,7 @@ function IssueDetail({
         <div className="review-detail-badges">
           <Badge tone={issueStatusTone(issue.status)}>{issueStatusLabels[issue.status]}</Badge>
           <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
-          <Badge tone={trustTone(issue.trustLevel)}>{issue.trustLevel}</Badge>
+          <Badge tone={issueTrust.tone} title={issueTrust.description}>{issueTrust.label}</Badge>
           {issue.trustLevel === "inferred" ? (
             <Badge tone={confidenceTone(confidencePct)}>{confidencePct}%</Badge>
           ) : null}
@@ -174,16 +175,19 @@ function DecisionDetail({
   const relatedIssues = view.issues.filter((issue) =>
     decision.relatedIssueIds.includes(issue.id),
   );
+  const decisionTrust = getTrustDisplay(decision.trustLevel);
 
   return (
     <aside className="review-detail" aria-label="Decision detail">
       <header className="review-detail-header">
         <div className="review-detail-badges">
           <Badge tone={decision.confirmed ? "green" : "orange"}>
-            {decision.confirmed ? "Confirmed" : "Pending"}
+            {decision.confirmed ? "확정됨" : "미확정"}
           </Badge>
           <Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge>
-          <Badge tone={trustTone(decision.trustLevel)}>{decision.trustLevel}</Badge>
+          <Badge tone={decisionTrust.tone} title={decisionTrust.description}>
+            {decisionTrust.label}
+          </Badge>
         </div>
         <h3>{decision.title}</h3>
         <p className="review-detail-detail">{decision.decision}</p>
@@ -379,7 +383,7 @@ function RelatedEventList({
             {event.title}
           </button>
           <small>
-            <ShieldCheck size={10} aria-hidden="true" /> {event.trustLevel}
+            <ShieldCheck size={10} aria-hidden="true" /> {getTrustLabel(event.trustLevel)}
           </small>
         </li>
       ))}
