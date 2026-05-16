@@ -191,6 +191,9 @@ only — no phase numbers.
 - Real `.mori` zip package — `fflate` dependency added;
   `zipMoriPackage` / `unzipMoriPackage` archive the canonical file
   layout into a real `.mori` zip and validate it back.
+- `.mori` zip export wiring — the Reports export writes a real
+  `.mori` zip (desktop `save_mori_package_zip_as` Save As dialog;
+  browser zip blob download).
 
 **Open priority (highest first):**
 
@@ -198,17 +201,16 @@ All four roadmap tracks (Real `.mori` zip · IDE/terminal capture ·
 Team/shared memory spec · continued loop) are approved; sequence them
 into small slices in this order:
 
-1. `.mori` zip export wiring — Reports `.mori` export writes a real
-   zip package (keep the JSON path as a fallback).
-2. `.mori` zip import wiring — the Consolidation Review import panel
-   and desktop open path read a real zip package.
-3. Evidence / Import Review polish for real local-capture output.
-4. Team / shared memory specification doc — roles, privacy
+1. `.mori` zip import wiring — the Consolidation Review import panel
+   and desktop open path read a real `.mori` zip package (keep the
+   JSON / paste path as a fallback).
+2. Evidence / Import Review polish for real local-capture output.
+3. Team / shared memory specification doc — roles, privacy
    boundaries, client-safe exports, conflict handling.
-5. `.mori` handoff workflow + client-safe package / export rules.
-6. Local Connector Capture polish for real captured data.
-7. Project Memory UX polish for real captured data.
-8. Queryable Memory extensions if a clear safe slice remains.
+4. `.mori` handoff workflow + client-safe package / export rules.
+5. Local Connector Capture polish for real captured data.
+6. Project Memory UX polish for real captured data.
+7. Queryable Memory extensions if a clear safe slice remains.
 
 Deferred — revisit when a concrete need appears:
 - Optional watched-inbox tray — borders on the no-background-watcher
@@ -228,45 +230,50 @@ backlog with it.
 
 The next slice should be:
 
-**`.mori` zip export wiring — Reports export writes a real zip package**
+**`.mori` zip import wiring — read a real zip package**
 
 Goal:
-`zipMoriPackage` / `unzipMoriPackage` exist; the Reports `.mori`
-export still writes flat JSON. This slice makes the desktop and
-browser export produce a real `.mori` zip file, with the JSON path
-kept as an honest fallback.
+The Reports export now writes a real `.mori` zip; the import side
+still only reads JSON / pasted text. This slice makes the
+Consolidation Review import panel and the desktop open path accept a
+real `.mori` zip, routed through `unzipMoriPackage` so validation and
+review-on-import still apply.
 
 Scope — do:
-- Add a Tauri command (or extend the existing save command) that
-  writes the zip `Uint8Array` to disk via the native Save As dialog —
-  a `.mori` file, not `.mori.json`.
-- In `ReportsView` `MoriPackageStrip.handleExport`: on desktop write
-  the zip; in the browser download the zip blob
-  (`MORI_PACKAGE_ZIP_MIME`).
-- Keep the existing flat-JSON save as a labelled fallback only if it
-  still adds value; otherwise the zip is the export.
-- Validation runs through `zipMoriPackage` → the canonical layout.
+- Add a Tauri command that reads a picked `.mori` file as raw bytes
+  (the existing `open_mori_package_json` reads text — a zip needs
+  bytes), or extend the picker flow to return bytes.
+- In the Consolidation Review import panel: when the picked file is a
+  zip (`.mori`), decode it with `unzipMoriPackage` and feed the
+  resulting package's `consolidatedMemories` into the existing
+  review-proposal path; keep JSON / pasted-text import working.
+- The browser `File` pick should detect a zip (magic bytes `PK`) and
+  route through `unzipMoriPackage`.
+- Imported memory still enters review — no auto-merge.
 
 Scope — do not:
-- Change the canonical file layout or the in-memory `MoriPackageV0`.
-- Drop validation or review-on-import.
+- Change the canonical layout, the importer's review flow, or the
+  in-memory `MoriPackageV0`.
 - Add any dependency beyond the approved `fflate`.
 
 Suggested files:
 - `src-tauri/src/package.rs`, `src-tauri/src/main.rs`
 - `src/lib/desktop/tauriCommands.ts`
-- `src/features/reports/ReportsView.tsx`
-- `docs/mori-package-v0.md`
+- `src/features/memory/ConsolidationReviewView.tsx`
+- `src/lib/project-memory/importedMemoryReview.ts` (if a zip-aware
+  entry point helps)
+- `docs/mori-package-v0.md`, `docs/project-memory-consolidation.md`
 
 Tests:
-- Rust: the zip-bytes save command path / extension handling
-- frontend: the export still produces a valid package (zip round-trip)
+- a zipped package imports its accepted memory as review proposals
+- a corrupt / non-zip file is rejected honestly
+- the JSON / paste import path still works
 
 Validation note: touches `src-tauri/` — run `cargo check` / `cargo
 test` too.
 
-After this slice ships, set the next slice to `.mori` zip import
-wiring (Consolidation Review import panel + desktop open path).
+After this slice ships, set the next slice to Evidence / Import
+Review polish for real local-capture output.
 
 ## 9. Stop Conditions
 

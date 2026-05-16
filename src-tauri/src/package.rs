@@ -96,6 +96,52 @@ pub fn save_mori_package_json_as(
     }
 }
 
+/// Save a real `.mori` zip package through a native Save As dialog.
+/// `package_bytes` is the zip archive produced by `zipMoriPackage` on
+/// the frontend. Returns `cancelled: true` when the user dismisses the
+/// dialog. Writes a `.mori` file (not `.mori.json`).
+#[tauri::command]
+pub fn save_mori_package_zip_as(
+    app: AppHandle,
+    package_bytes: Vec<u8>,
+    suggested_filename: Option<String>,
+) -> Result<SavedMoriPackageDialog, String> {
+    if package_bytes.is_empty() {
+        return Err("Empty .mori package — nothing to save.".to_string());
+    }
+
+    let filename = resolve_zip_package_filename(suggested_filename);
+    let mut builder = app.dialog().file().set_file_name(&filename);
+    if let Ok(dir) = default_storage_dir() {
+        let _ = fs::create_dir_all(&dir);
+        if dir.is_dir() {
+            builder = builder.set_directory(dir);
+        }
+    }
+
+    let (tx, rx) = mpsc::channel();
+    builder.save_file(move |selection| {
+        let _ = tx.send(selection.map(|file_path| file_path.to_string()));
+    });
+
+    match rx.recv_timeout(Duration::from_secs(600)) {
+        Ok(Some(path)) => {
+            fs::write(&path, &package_bytes).map_err(|error| error.to_string())?;
+            Ok(SavedMoriPackageDialog {
+                path: Some(path),
+                bytes_written: package_bytes.len(),
+                cancelled: false,
+            })
+        }
+        Ok(None) => Ok(SavedMoriPackageDialog {
+            path: None,
+            bytes_written: 0,
+            cancelled: true,
+        }),
+        Err(_) => Err("Save dialog timed out without a response.".to_string()),
+    }
+}
+
 #[tauri::command]
 pub fn open_mori_package_json(path: String) -> Result<String, String> {
     let contents = fs::read_to_string(path).map_err(|error| error.to_string())?;
@@ -212,6 +258,37 @@ fn ensure_mori_json_extension(filename: &str) -> String {
     }
 }
 
+fn default_zip_package_filename() -> String {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    format!("mori-package-{timestamp}.mori")
+}
+
+/// Resolve the `.mori` filename for a real zip package save: sanitise
+/// the suggested name and force a single `.mori` extension, or fall
+/// back to a timestamped default.
+fn resolve_zip_package_filename(suggested: Option<String>) -> String {
+    suggested
+        .map(sanitize_filename)
+        .filter(|value| !value.is_empty())
+        .map(|value| ensure_mori_extension(&value))
+        .unwrap_or_else(default_zip_package_filename)
+}
+
+fn ensure_mori_extension(filename: &str) -> String {
+    if filename.ends_with(".mori") {
+        filename.to_string()
+    } else if filename.ends_with(".mori.json") {
+        filename.trim_end_matches(".json").to_string()
+    } else if filename.ends_with(".json") {
+        format!("{}.mori", filename.trim_end_matches(".json"))
+    } else {
+        format!("{filename}.mori")
+    }
+}
+
 fn sanitize_filename(filename: String) -> String {
     filename
         .chars()
@@ -226,7 +303,10 @@ fn sanitize_filename(filename: String) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{ensure_mori_json_extension, resolve_package_filename, sanitize_filename};
+    use super::{
+        ensure_mori_extension, ensure_mori_json_extension, resolve_package_filename,
+        resolve_zip_package_filename, sanitize_filename,
+    };
 
     #[test]
     fn enforces_mori_json_extension() {
@@ -256,5 +336,23 @@ mod tests {
     fn resolves_a_default_filename_when_none_is_suggested() {
         assert!(resolve_package_filename(None).ends_with(".mori.json"));
         assert!(resolve_package_filename(Some("   ".to_string())).ends_with(".mori.json"));
+    }
+
+    #[test]
+    fn enforces_a_single_mori_extension_for_zip_packages() {
+        assert_eq!(ensure_mori_extension("session"), "session.mori");
+        assert_eq!(ensure_mori_extension("session.mori"), "session.mori");
+        assert_eq!(ensure_mori_extension("session.json"), "session.mori");
+        assert_eq!(ensure_mori_extension("session.mori.json"), "session.mori");
+    }
+
+    #[test]
+    fn resolves_a_zip_package_filename() {
+        assert_eq!(
+            resolve_zip_package_filename(Some("my session".to_string())),
+            "my session.mori"
+        );
+        assert!(resolve_zip_package_filename(None).ends_with(".mori"));
+        assert!(!resolve_zip_package_filename(None).ends_with(".mori.json"));
     }
 }

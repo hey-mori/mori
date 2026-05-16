@@ -348,7 +348,12 @@ that is called out.
 
 - `.mori v0` JSON serialization / deserialization plus Tauri
   save / open commands.
-- Reports page with Markdown report builder and `.mori v0` export.
+- Real `.mori` zip package — `fflate`-backed `zipMoriPackage` /
+  `unzipMoriPackage` archive the canonical one-file-per-slice layout
+  into a real `.mori` zip; the Reports export writes it via the
+  desktop `save_mori_package_zip_as` Save As dialog or a browser zip
+  blob download.
+- Reports page with Markdown report builder and `.mori` package export.
 - End-to-end smoke flow documented and guarded by a fixture test
   (`src/lib/connectors/connectorSampleFixture.test.ts`).
 
@@ -376,9 +381,11 @@ against the repository.
 - **Optional watched inbox.** Refresh-only desktop inbox is shipped;
   an opt-in background watcher that loads new files into a "pending
   review" tray is not implemented.
-- **Team / shared memory.** No surface beyond the explicit `.mori v0`
+- **Team / shared memory.** No surface beyond the explicit `.mori`
   package round trip.
-- **`.mori` zip-like packaging.** Today exports are JSON, not zipped.
+- **`.mori` zip import.** The Reports export writes a real `.mori`
+  zip; the import panel still reads JSON / pasted text, so a zip is
+  not yet re-importable through the UI (next slice).
 
 ## 6. Product Principles
 

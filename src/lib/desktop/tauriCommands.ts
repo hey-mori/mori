@@ -34,6 +34,7 @@ export type TauriCommandName =
   | "get_storage_location"
   | "save_mori_package_json"
   | "save_mori_package_json_as"
+  | "save_mori_package_zip_as"
   | "open_mori_package_json"
   | "pick_mori_package_file"
   | "list_recent_mori_packages"
@@ -100,12 +101,22 @@ export type SaveMoriPackageJsonInput = {
   suggestedFilename?: string;
 };
 
+export type SaveMoriPackageZipInput = {
+  /** Zip archive bytes (from `zipMoriPackage`), as a plain number array. */
+  packageBytes: number[];
+  suggestedFilename?: string;
+};
+
 export type TauriCommandMap = {
   get_app_info: { input: undefined; output: AppInfo };
   get_storage_location: { input: undefined; output: StorageLocation };
   save_mori_package_json: { input: SaveMoriPackageJsonInput; output: SavedMoriPackage };
   save_mori_package_json_as: {
     input: SaveMoriPackageJsonInput;
+    output: SavedMoriPackageDialog;
+  };
+  save_mori_package_zip_as: {
+    input: SaveMoriPackageZipInput;
     output: SavedMoriPackageDialog;
   };
   open_mori_package_json: { input: { path: string }; output: string };
@@ -206,6 +217,11 @@ export const tauriCommands = {
     input: SaveMoriPackageJsonInput,
   ): Promise<SavedMoriPackageDialog> {
     return invokeTauriCommand("save_mori_package_json_as", input);
+  },
+  saveMoriPackageZipAs(
+    input: SaveMoriPackageZipInput,
+  ): Promise<SavedMoriPackageDialog> {
+    return invokeTauriCommand("save_mori_package_zip_as", input);
   },
   openMoriPackageJson(path: string): Promise<string> {
     return invokeTauriCommand("open_mori_package_json", { path });

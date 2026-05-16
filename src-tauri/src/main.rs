@@ -16,6 +16,7 @@ fn main() {
             commands::get_storage_location,
             package::save_mori_package_json,
             package::save_mori_package_json_as,
+            package::save_mori_package_zip_as,
             package::open_mori_package_json,
             package::pick_mori_package_file,
             package::list_recent_mori_packages,

@@ -12,7 +12,12 @@ import {
   type FeatureId,
 } from "../../app/featureStatus";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
-import { createMoriPackageFromSession, serializeMoriPackage } from "../../lib/mori-package";
+import {
+  createMoriPackageFromSession,
+  MORI_PACKAGE_ZIP_MIME,
+  serializeMoriPackage,
+  zipMoriPackage,
+} from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
@@ -277,19 +282,22 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
         consolidatedMemories,
         auditTrail,
       });
-      const serialized = serializeMoriPackage(pkg);
+      // `serializeMoriPackage` validates and fails closed; the zip is
+      // built from the same validated package via the canonical layout.
+      serializeMoriPackage(pkg);
       repository.saveMoriPackageDraft(pkg);
-      const filename = `${pkg.manifest.packageId}.mori.json`;
+      const zipBytes = zipMoriPackage(pkg);
+      const filename = `${pkg.manifest.packageId}.mori`;
       if (isTauriRuntime()) {
         try {
-          const saved = await tauriCommands.saveMoriPackageJsonAs({
-            serializedPackage: serialized,
+          const saved = await tauriCommands.saveMoriPackageZipAs({
+            packageBytes: Array.from(zipBytes),
             suggestedFilename: filename,
           });
           if (saved.cancelled) {
             setStatus("Export cancelled. Browser draft 저장됨.");
           } else {
-            setStatus(`Saved desktop package: ${saved.path}`);
+            setStatus(`Saved desktop .mori package: ${saved.path}`);
           }
           return;
         } catch (error) {
@@ -298,7 +306,10 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
         }
       }
       if (typeof window !== "undefined") {
-        const blob = new Blob([serialized], { type: "application/vnd.mori.package+json" });
+        // Copy into a fresh ArrayBuffer-backed view for the Blob ctor.
+        const blob = new Blob([new Uint8Array(zipBytes)], {
+          type: MORI_PACKAGE_ZIP_MIME,
+        });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement("a");
         anchor.href = url;
@@ -307,7 +318,7 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
         anchor.click();
         document.body.removeChild(anchor);
         URL.revokeObjectURL(url);
-        setStatus(`Downloaded ${filename}. Browser draft 저장됨. Desktop save는 Tauri 앱에서만 가능합니다.`);
+        setStatus(`Downloaded ${filename} (.mori zip package). Browser draft 저장됨.`);
       }
     } finally {
       setBusy(false);

@@ -14,6 +14,8 @@ Implemented now:
 - Tauri desktop command for saving serialized `.mori v0 JSON`
 - Tauri desktop command for saving via a native Save As dialog
   (`save_mori_package_json_as`)
+- Tauri desktop command for saving a real `.mori` zip package via a
+  native Save As dialog (`save_mori_package_zip_as`)
 - Tauri desktop command for opening JSON package contents from a path
 - Tauri desktop command for picking a `.mori` file via a native Open
   dialog (`pick_mori_package_file`)
@@ -143,14 +145,20 @@ so `unzipMoriPackage` runs the same validation and per-record checks
 as any other import. The zip codec is `fflate` — a small,
 dependency-free, pure-JS library: no native code, no network.
 `unzipMoriPackage` throws on a corrupt archive or a missing required
-file. Wiring the Reports export and the import panel to read / write
-zip packages are the follow-up slices.
+file.
+
+The Reports `.mori` export writes a real zip package: `zipMoriPackage`
+produces the archive, the desktop `save_mori_package_zip_as` command
+writes it to a user-chosen `.mori` file via the native Save As
+dialog, and the browser downloads the zip blob. Wiring the import
+panel to read a zip package is the follow-up slice.
 
 Limitations:
 
-- The exported file is currently `.mori.json`, not a real zip package.
-  `buildMoriPackageFileLayout` produces the file map; the zip archive
-  step (and its dependency) is not yet shipped.
+- The Reports `.mori` export writes a real zip package. The import
+  panel still reads JSON / pasted package text — wiring zip import is
+  the next slice — so a zip exported now is not yet re-importable
+  through the UI until that lands.
 - Raw source file folders are represented as metadata, not bundled files.
 - `validateMoriPackage` checks the manifest, that each slice is an
   array of objects carrying their identity fields (`id`, and `type`
@@ -158,6 +166,6 @@ Limitations:
   and dependency-free; deeper field-level schema validation can still
   be layered on before fully trusting arbitrary external packages.
 - The desktop export uses a native Save As dialog
-  (`save_mori_package_json_as`) and the Consolidation Review import
+  (`save_mori_package_zip_as`) and the Consolidation Review import
   panel uses a native Open dialog (`pick_mori_package_file`) on
   desktop; the browser keeps the blob download / `File`-pick paths.
