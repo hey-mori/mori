@@ -804,7 +804,8 @@ Reviewed revert flow — eligibility planner landed:
   one memory, and that memory still exists. Only the `status` string
   is read from the snapshot — no raw evidence content.
 - The planner never writes memory: a revert is itself
-  review-before-apply, and the apply path is a later slice.
+  review-before-apply. The apply helper below produces the write but
+  still never persists it.
 - `buildMemoryRevertProposal(plan, action, memory)` converts an
   eligible plan into a `MemoryRevertProposal` — a dedicated reviewable
   proposal carrying the source action id, target memory id, current
@@ -813,12 +814,21 @@ Reviewed revert flow — eligibility planner landed:
   the consolidation preview, so they stay out of the preview's count
   / rank / dedupe machinery. The builder is pure and refuses (throws)
   an ineligible plan — the planner's gate is authoritative.
+- `applyMemoryRevertProposal(proposal, memory, { appliedAt })` turns
+  an accepted revert proposal into the concrete write: the memory
+  with its status restored and `updatedAt` bumped, plus a new
+  `revert` `StoredMemoryReviewAction` carrying a before/after status
+  snapshot. It is pure — it never touches storage and never mutates
+  its inputs; a caller persists the result through the repository. It
+  refuses a memory id mismatch.
 
 UI surfacing — still planned:
 
-- "Undo apply" creates a new `ReviewAction` with
-  `actionType: "revert"`, `reversible: true`, and a `before`/`after`
-  pair that captures the reverted state. Undo is itself reversible.
+- Wiring the revert proposal + apply helper into the Consolidation
+  Review / Memory Audit Trail surface so a reviewer can trigger and
+  accept a revert. The `revert` `StoredMemoryReviewAction` it writes
+  is `reversible: true` and carries a `before`/`after` status
+  snapshot, so a revert is itself reviewable.
 - Discard rows are kept by default (lightweight payload); the user
   can purge them via Settings → Memory cleanup.
 - SQLite-backed audit storage and the `.mori v0` `auditTrail`

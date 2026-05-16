@@ -347,7 +347,8 @@ export type StoredMemoryReviewAction = {
     | "watch"
     | "defer"
     | "apply"
-    | "reset";
+    | "reset"
+    | "revert";
   /** Single-user product today. */
   actor: "local-user";
   timestamp: string;

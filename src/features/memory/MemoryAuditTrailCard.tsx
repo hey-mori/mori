@@ -184,6 +184,8 @@ function actionTone(actionType: MemoryAuditActionType):
       return "orange";
     case "discard":
       return "red";
+    case "revert":
+      return "orange";
     case "reset":
     default:
       return "gray";

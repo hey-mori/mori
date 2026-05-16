@@ -152,11 +152,13 @@ only — no phase numbers.
   planner (`planMemoryReviewRevert`, pure, read-only).
 - Memory Audit Trail reviewed revert flow — proposal builder
   (`buildMemoryRevertProposal` → `MemoryRevertProposal`, pure).
+- Memory Audit Trail reviewed revert flow — apply helper
+  (`applyMemoryRevertProposal`, pure; `revert` audit `actionType`).
 
 **Open priority (highest first):**
 
 1. Memory Audit Trail reviewed revert flow — wire the revert proposal
-   into the Consolidation Review surface and apply path
+   + apply helper into the Memory Audit Trail UI surface
 2. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
    mirror)
 3. CLI wrapper for Claude/Codex workflows, explicit/local only
@@ -176,47 +178,44 @@ backlog with it.
 
 The next slice should be:
 
-**Memory Audit Trail reviewed revert flow — apply helper**
+**Memory Audit Trail reviewed revert flow — per-entry revert eligibility
+in the audit view-model**
 
 Goal:
-Turn an accepted `MemoryRevertProposal` into the concrete memory
-write plus its audit row, as a pure helper — so the UI wiring slice
-that follows only has to call it. The planner and proposal builder
-already exist; this slice produces the apply result without touching
-storage or UI.
+Surface, per audit-trail entry, whether that action can be reverted —
+so the UI slice that follows only has to render a button and call the
+already-built helpers. The planner, proposal builder, and apply
+helper exist; this slice carries their verdict into
+`MemoryAuditTrailViewModel`.
 
 Scope — do:
-- Add `revert` to the `StoredMemoryReviewAction["actionType"]` union
-  (additive; `schemaVersion` stays 1 — the field already tolerates
-  unknown legacy action types in the audit-trail view-model).
-- Add a pure `applyMemoryRevertProposal(proposal, memory, { appliedAt })`
-  helper returning the updated `StoredAcceptedProjectMemory` (status
-  set to `restoreStatus`, `updatedAt` bumped) and a new `revert`
-  `StoredMemoryReviewAction` with a `before` / `after` status
-  snapshot — mirroring the lifecycle apply in
-  `acceptedMemoryPersistence.ts`.
-- Refuse (throw) when the proposal's `targetMemoryId` does not match
-  the supplied memory.
+- Extend `buildMemoryAuditTrailViewModel` to optionally accept the
+  project's accepted memories and, when supplied, attach a per-entry
+  `revert` summary — `{ eligible, ineligibleReason }` — computed via
+  `planMemoryReviewRevert`. Keep the option absent-safe: with no
+  memories passed, entries carry no revert summary and behaviour is
+  unchanged.
+- Keep the helper pure: no IO, no mutation, deterministic.
 
 Scope — do not:
-- Write storage or add UI in this slice — the helper is pure.
-- Auto-apply: the proposal still passes through review acceptance.
+- Add the revert button or apply wiring — that is the next slice.
+- Persist anything or change the audit card's rendering yet.
 - Replay imported `.mori` audit rows.
 
 Suggested files:
-- `src/lib/storage/storageTypes.ts`
-- `src/lib/project-memory/memoryReviewRevert.ts`
-- `src/lib/project-memory/memoryReviewRevert.test.ts`
+- `src/lib/project-memory/memoryAuditTrail.ts`
+- `src/lib/project-memory/memoryAuditTrail.test.ts`
 - `docs/project-memory-consolidation.md`
 
 Tests:
-- the applied memory carries the restore status and a bumped `updatedAt`
-- the audit action is `revert` with a before/after status snapshot
-- a memory id mismatch is refused
+- with accepted memories supplied, an eligible action's entry is
+  marked revertible
+- an ineligible action's entry carries the reason
+- with no memories supplied, entries carry no revert summary
 
-After this slice ships, set the next slice to wiring the revert
-proposal + apply helper into the Consolidation Review / Memory Audit
-Trail surface, then continue with the open backlog.
+After this slice ships, set the next slice to rendering the revert
+action in the Memory Audit Trail card and wiring acceptance through
+the repository, then continue with the open backlog.
 
 ## 9. Stop Conditions
 

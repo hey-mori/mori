@@ -4,6 +4,7 @@ import type {
   StoredMemoryReviewAction,
 } from "../storage/storageTypes";
 import {
+  applyMemoryRevertProposal,
   buildMemoryRevertProposal,
   planMemoryReviewRevert,
 } from "./memoryReviewRevert";
@@ -159,5 +160,56 @@ describe("buildMemoryRevertProposal", () => {
     expect(() => buildMemoryRevertProposal(plan, action, memory)).toThrow(
       /ineligible plan/i,
     );
+  });
+});
+
+describe("applyMemoryRevertProposal", () => {
+  function eligibleProposal(memory = acceptedMemory()) {
+    const action = reviewAction();
+    const plan = planMemoryReviewRevert(action, [memory]);
+    return buildMemoryRevertProposal(plan, action, memory);
+  }
+
+  it("restores the memory status and bumps updatedAt", () => {
+    const memory = acceptedMemory();
+    const result = applyMemoryRevertProposal(eligibleProposal(memory), memory, {
+      appliedAt: "2026-05-16T09:00:00Z",
+    });
+
+    expect(result.memory.status).toBe("watching");
+    expect(result.memory.updatedAt).toBe("2026-05-16T09:00:00Z");
+    expect(result.memory.reviewActionIds).toContain(result.reviewAction.id);
+  });
+
+  it("records a revert audit action with a before/after status snapshot", () => {
+    const memory = acceptedMemory();
+    const result = applyMemoryRevertProposal(eligibleProposal(memory), memory, {
+      appliedAt: "2026-05-16T09:00:00Z",
+    });
+
+    expect(result.reviewAction.actionType).toBe("revert");
+    expect(result.reviewAction.targetMemoryIds).toEqual(["mem-1"]);
+    expect((result.reviewAction.before as { status: string }).status).toBe("accepted");
+    expect((result.reviewAction.after as { status: string }).status).toBe("watching");
+    expect(result.reviewAction.reversible).toBe(true);
+  });
+
+  it("refuses when the proposal targets a different memory", () => {
+    const proposal = eligibleProposal();
+    const otherMemory = acceptedMemory({ id: "mem-other" });
+    expect(() =>
+      applyMemoryRevertProposal(proposal, otherMemory, {
+        appliedAt: "2026-05-16T09:00:00Z",
+      }),
+    ).toThrow(/targets/i);
+  });
+
+  it("does not mutate the input memory", () => {
+    const memory = acceptedMemory();
+    applyMemoryRevertProposal(eligibleProposal(memory), memory, {
+      appliedAt: "2026-05-16T09:00:00Z",
+    });
+    expect(memory.status).toBe("accepted");
+    expect(memory.reviewActionIds).toEqual(["act-1"]);
   });
 });

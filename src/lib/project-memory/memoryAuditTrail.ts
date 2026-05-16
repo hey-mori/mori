@@ -34,6 +34,7 @@ export const MEMORY_AUDIT_ACTION_TYPES: readonly MemoryAuditActionType[] = [
   "defer",
   "discard",
   "reset",
+  "revert",
 ];
 
 export type MemoryAuditActionFilter = MemoryAuditActionType | "all";
@@ -113,6 +114,7 @@ const ACTION_LABELS: Record<MemoryAuditActionType, string> = {
   defer: "Deferred",
   discard: "Discarded",
   reset: "Reset",
+  revert: "Reverted",
 };
 
 /** Readable label for an action type; tolerant of unknown legacy values. */
@@ -240,5 +242,5 @@ function isKnownActionType(value: string): value is MemoryAuditActionType {
 }
 
 function emptyActionTypeCounts(): Record<MemoryAuditActionType, number> {
-  return { apply: 0, accept: 0, edit: 0, watch: 0, defer: 0, discard: 0, reset: 0 };
+  return { apply: 0, accept: 0, edit: 0, watch: 0, defer: 0, discard: 0, reset: 0, revert: 0 };
 }

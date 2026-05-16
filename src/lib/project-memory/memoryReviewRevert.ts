@@ -193,7 +193,83 @@ export function buildMemoryRevertProposal(
   };
 }
 
+export type ApplyMemoryRevertOptions = {
+  /** Timestamp written to the reverted memory and the audit action. */
+  appliedAt: string;
+  /** Id for the new audit action. Defaults to a deterministic value. */
+  actionId?: string;
+};
+
+export type MemoryRevertApplyResult = {
+  /** The memory with its status restored and `updatedAt` bumped. */
+  memory: StoredAcceptedProjectMemory;
+  /** The `revert` audit row recording the restore. */
+  reviewAction: StoredMemoryReviewAction;
+};
+
+/**
+ * Apply an accepted `MemoryRevertProposal`: produce the memory write
+ * (status restored, `updatedAt` bumped, audit id linked) and the new
+ * `revert` audit row. Pure — never touches storage and never mutates
+ * its inputs; a caller persists the result through the normal
+ * repository path. Throws when the proposal does not target the
+ * supplied memory.
+ */
+export function applyMemoryRevertProposal(
+  proposal: MemoryRevertProposal,
+  memory: StoredAcceptedProjectMemory,
+  options: ApplyMemoryRevertOptions,
+): MemoryRevertApplyResult {
+  if (proposal.targetMemoryId !== memory.id) {
+    throw new Error(
+      `Revert proposal targets "${proposal.targetMemoryId}" but was applied to "${memory.id}".`,
+    );
+  }
+
+  const { appliedAt } = options;
+  const actionId =
+    options.actionId ?? `action::revert::${proposal.id}::${appliedAt}`;
+
+  const reviewAction: StoredMemoryReviewAction = {
+    id: actionId,
+    projectId: memory.projectId,
+    actionType: "revert",
+    actor: "local-user",
+    timestamp: appliedAt,
+    sourceProposalId: proposal.id,
+    targetMemoryIds: [memory.id],
+    before: snapshotMemoryStatus(memory, memory.status),
+    after: snapshotMemoryStatus(memory, proposal.restoreStatus),
+    note: `Reverted to "${proposal.restoreStatus}" via audit action ${proposal.sourceActionId}.`,
+    reversible: true,
+    schemaVersion: 1,
+    adapter: memory.adapter,
+  };
+
+  return {
+    memory: {
+      ...memory,
+      status: proposal.restoreStatus,
+      updatedAt: appliedAt,
+      reviewActionIds: [...memory.reviewActionIds, actionId],
+    },
+    reviewAction,
+  };
+}
+
 // ─── internals ────────────────────────────────────────────────────────
+
+/**
+ * Compact before/after snapshot — `{ title, status, summary }`,
+ * matching the shape written by the consolidation apply path. Only the
+ * `status` field is read back by the audit-trail view-model.
+ */
+function snapshotMemoryStatus(
+  memory: StoredAcceptedProjectMemory,
+  status: StoredAcceptedProjectMemoryStatus,
+): { title: string; status: StoredAcceptedProjectMemoryStatus; summary: string } {
+  return { title: memory.title, status, summary: memory.summary };
+}
 
 function isRevertibleActionType(
   value: StoredMemoryReviewAction["actionType"],
