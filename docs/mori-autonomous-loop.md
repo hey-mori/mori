@@ -179,12 +179,16 @@ only — no phase numbers.
 - `.mori` zip-like layout round-trip — `parseMoriPackageFileLayout`
   reassembles a validated `MoriPackageV0` from the one-file-per-slice
   map, the inverse of `buildMoriPackageFileLayout` (dependency-free).
+- Connector template fixture coverage — the `claude-code` and
+  `codex-cli` connector sample JSONL are guarded by pipeline
+  round-trip tests, mirroring the local-capture fixture test.
 
 **Open priority (highest first):**
 
-1. Connector template fixture coverage — guard the `claude-code` and
-   `codex-cli` connector sample JSONL with pipeline round-trip tests,
-   mirroring the local-capture fixture test.
+The dependency-free, in-scope backlog is converged: every remaining
+item below is **deferred** pending an explicit product / dependency /
+scope decision. The loop should not invent a slice to avoid this —
+surface the decision instead (see section 9 stop conditions).
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -211,43 +215,39 @@ backlog with it.
 
 ## 8. Current Next Slice
 
-The next slice should be:
+**The dependency-free in-scope backlog is converged.** The product
+loop — capture → preview → Import Review → Timeline / Evidence Hub →
+Project Memory → Consolidation Review → Accepted Memory → Resume
+Prompt / Reports — is built, tested, and documented end to end. The
+remaining backlog items each hit a section 9 stop condition:
 
-**Connector template fixture coverage — claude-code / codex-cli**
+- **`.mori` zip archive step** — needs an archiving dependency
+  (e.g. `fflate`); a new dependency with product/security
+  implications. The dependency-free halves
+  (`buildMoriPackageFileLayout` / `parseMoriPackageFileLayout`) are
+  shipped, so the slice is ready the moment the dependency is
+  approved.
+- **Team / shared memory** — a large surface with no concrete
+  near-term requirement; cannot be split into a useful production
+  slice without a real specification.
+- **IDE / Terminal integration runtime code** — the explicit-capture
+  design doc is shipped; building an extension waits for a concrete
+  first integration target.
 
-Goal:
-`connectors/claude-code/sample-event.jsonl` and
-`connectors/codex-cli/sample-event.jsonl` ship as the canonical
-output of those connector templates, but no test verifies they still
-round-trip through the connector pipeline. The `local-capture` sample
-has such a fixture test; this slice gives the other two templates the
-same guard, so a template / pipeline drift is caught.
+The next slice is a **product decision**, not a code change. The loop
+should surface this to the user and choose:
 
-Scope — do:
-- Add a fixture test (one file, or extend an existing one) that
-  imports each connector template's `sample-event.jsonl` via
-  `?raw`, and asserts it parses with no errors, previews as valid,
-  and normalizes through `normalizeConnectorEventBatch`.
-- Assert the documented connector ids / event kinds / source kinds
-  for each template, mirroring `connectorLocalCaptureFixture.test.ts`.
+1. Approve a specific archiving dependency → the `.mori` zip archive
+   becomes the next slice.
+2. Specify a concrete team / shared-memory requirement → it becomes
+   sliceable.
+3. Name a first IDE / terminal integration target → the extension
+   work becomes sliceable.
 
-Scope — do not:
-- Change the connector pipeline or the template scripts.
-- Add brittle assertions on copy that is expected to evolve.
-
-Suggested files:
-- `src/lib/connectors/connectorTemplateFixture.test.ts` (new), or
-  extend `connectorLocalCaptureFixture.test.ts`
-- `docs/connectors/*` only if a doc claim turns out stale
-
-Tests:
-- the `claude-code` sample JSONL parses, previews, and normalizes
-- the `codex-cli` sample JSONL parses, previews, and normalizes
-
-After this slice ships, reconcile section 7 with the goal document's
-Current Gaps. Note: the remaining backlog (`.mori` zip archive, team
-memory) is deferred pending an explicit dependency / scope decision —
-surface that to the user rather than guessing.
+Until one of those decisions is made, there is no honest
+dependency-free production slice left to take. Per section 9, this is
+a legitimate stop point — not a clean boundary skipped for
+convenience.
 
 ## 9. Stop Conditions
 
