@@ -23,6 +23,8 @@ import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
 import { FlowFocusHeader } from "../flow-focus/FlowFocusHeader";
 import { TracePanel } from "../flow-focus/TracePanel";
+import { CompanionStrip } from "../companion/CompanionStrip";
+import { useCompanionSignals } from "../companion/useCompanionSignals";
 
 /**
  * Thin orchestrator. The product math has moved into
@@ -147,6 +149,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   // Narrow widths swap the horizontally-scrolling swimlane canvas for a flat
   // vertical chronological list — readable without a wide frame.
   const useChronoList = inspectorNarrow && mode === "timeline";
+  const { signals: companionSignals } = useCompanionSignals();
 
   return (
     <>
@@ -158,6 +161,9 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
         }`}
       >
         <section className="timeline-main">
+          {mode === "timeline" ? (
+            <CompanionStrip signals={companionSignals} onNavigate={setCurrentView} />
+          ) : null}
           {mode === "flow" ? (
             <FlowFocusHeader
               onShowTimeline={() => setCurrentView("timeline")}

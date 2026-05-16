@@ -434,9 +434,13 @@ text into a signal.
   also renders on the Project Memory surface via a shared
   `useCompanionSignals` hook, so Reports and Memory build signals
   the same way without duplicating the wiring.
+- ✅ Companion strip on the Timeline — `CompanionStrip`, a compact
+  one-line affordance, surfaces the single highest-priority signal
+  plus a "+N" count above the Timeline toolbar; clicking it routes
+  to that signal's surface. Suited to the canvas layout, which has
+  no card column.
 - Companion-layer maturity backlog (highest value first):
-  1. surface the companion card on the Timeline surface too;
-  2. a small in-app review queue or notification center;
+  1. a small in-app review queue or notification center;
   3. a session-end companion summary;
   4. resume-companion improvements;
   5. preferences for signal quietness.
