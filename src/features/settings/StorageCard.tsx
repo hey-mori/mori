@@ -18,6 +18,14 @@ const STATE_LABEL: Record<StorageStatusRow["state"], string> = {
   planned: "Planned",
 };
 
+// SQLite connection state — Korean copy with "SQLite" left as a product term.
+const SQLITE_KIND_LABEL: Record<"ok" | "checking" | "error" | "unavailable", string> = {
+  ok: "정상",
+  checking: "확인 중",
+  error: "오류",
+  unavailable: "사용 불가",
+};
+
 export function StorageCard({
   mode,
   sqliteAvailable,
@@ -58,7 +66,7 @@ export function StorageCard({
     <section className="settings-card" aria-label="Storage and export">
       <header className="settings-card-head">
         <div>
-          <h3>Storage / Export</h3>
+          <h3>저장소 / 내보내기</h3>
           <p>현재 활성화된 저장 경로와 내보내기 옵션을 한곳에서 확인합니다. SQLite는 Tauri 데스크톱 모드에서만 동작합니다.</p>
         </div>
         <Button onClick={onOpenReports}>Reports로 이동</Button>
@@ -93,24 +101,24 @@ export function StorageCard({
                       : "gray"
               }
             >
-              {sqliteKind}
+              {SQLITE_KIND_LABEL[sqliteKind]}
             </Badge>
           </header>
           <dl className="settings-sqlite-meta">
             <div>
-              <dt>Applied migrations</dt>
-              <dd>{sqliteStatus?.appliedMigrations.join(", ") || "(none)"}</dd>
+              <dt>적용된 마이그레이션</dt>
+              <dd>{sqliteStatus?.appliedMigrations.join(", ") || "(없음)"}</dd>
             </div>
             <div>
-              <dt>Pending migrations</dt>
-              <dd>{sqliteStatus?.pendingMigrations.join(", ") || "(none)"}</dd>
+              <dt>대기 중 마이그레이션</dt>
+              <dd>{sqliteStatus?.pendingMigrations.join(", ") || "(없음)"}</dd>
             </div>
             <div>
-              <dt>Tables</dt>
+              <dt>테이블</dt>
               <dd>{sqliteStatus?.tables?.length ?? 0}</dd>
             </div>
             <div>
-              <dt>Saved sessions</dt>
+              <dt>저장된 세션</dt>
               <dd>{sqliteSessions.length}</dd>
             </div>
           </dl>
@@ -133,8 +141,8 @@ export function StorageCard({
           ) : null}
           {lastPersist ? (
             <p className="settings-sqlite-last">
-              마지막 저장 · session <code>{lastPersist.sessionId}</code> · events {lastPersist.eventsPersisted} · sources{" "}
-              {lastPersist.sourcesPersisted}
+              마지막 저장 · 세션 <code>{lastPersist.sessionId}</code> · 이벤트{" "}
+              {lastPersist.eventsPersisted}개 · 출처 {lastPersist.sourcesPersisted}개
             </p>
           ) : null}
         </div>

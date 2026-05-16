@@ -330,7 +330,7 @@ function SqliteLoadCard({
           <h3>저장된 세션 다시 불러오기</h3>
           <p>Desktop SQLite에 저장된 세션을 활성 세션으로 다시 불러옵니다.</p>
         </div>
-        <Badge tone="purple">{sessions.length} sessions</Badge>
+        <Badge tone="purple">{sessions.length}개 세션</Badge>
       </header>
       <ul className="settings-sqlite-saved-list">
         {sessions.map((entry) => (
@@ -338,10 +338,12 @@ function SqliteLoadCard({
             <div>
               <strong>{entry.title}</strong>
               <small>
-                {entry.projectName} · events {entry.eventCount} · sources {entry.sourceCount}
+                {entry.projectName} · 이벤트 {entry.eventCount}개 · 출처 {entry.sourceCount}개
               </small>
             </div>
-            <Badge tone={entry.status === "complete" ? "gray" : "green"}>{entry.status}</Badge>
+            <Badge tone={entry.status === "complete" ? "gray" : "green"}>
+              {entry.status === "complete" ? "완료" : "진행 중"}
+            </Badge>
             <Button
               disabled={loadingId === entry.sessionId}
               onClick={async () => {
@@ -349,15 +351,15 @@ function SqliteLoadCard({
                 setLoadingId(entry.sessionId);
                 try {
                   const ok = await onLoad(entry.sessionId);
-                  if (!ok) setError("Failed to load session from SQLite.");
+                  if (!ok) setError("SQLite에서 세션을 불러오지 못했습니다.");
                 } catch (err) {
-                  setError(err instanceof Error ? err.message : "Load failed");
+                  setError(err instanceof Error ? err.message : "세션을 불러오지 못했습니다.");
                 } finally {
                   setLoadingId(null);
                 }
               }}
             >
-              {loadingId === entry.sessionId ? "불러오는 중..." : "Load"}
+              {loadingId === entry.sessionId ? "불러오는 중..." : "불러오기"}
             </Button>
           </li>
         ))}
