@@ -72,6 +72,20 @@ const DENSITY_BUNDLE_DIMENSIONS: Record<TimelineDensity, { width: number; height
   dense: { width: 156, height: 38 },
 };
 
+// Duration-aware card width. A card's width is the pixel span of its
+// [start, end] on the time scale, clamped to a per-density readable range.
+// A 5-minute event therefore renders near `*Min` (a compact cardlet) while a
+// 45-minute event stretches toward `*Max` — width now signals real duration
+// instead of every event looking identically heavy.
+const DENSITY_WIDTH_BOUNDS: Record<
+  TimelineDensity,
+  { eventMin: number; eventMax: number; bundleMin: number; bundleMax: number }
+> = {
+  comfortable: { eventMin: 120, eventMax: 300, bundleMin: 168, bundleMax: 324 },
+  compact: { eventMin: 108, eventMax: 252, bundleMin: 150, bundleMax: 272 },
+  dense: { eventMin: 96, eventMax: 200, bundleMin: 128, bundleMax: 216 },
+};
+
 const DEFAULT_LANE_OFFSET = 38;
 const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
@@ -84,7 +98,10 @@ export function computeTimelineLayout(
   options: TimelineLayoutOptions,
 ): TimelineLayout {
   const density: TimelineDensity = options.density ?? "comfortable";
-  const { width: cardWidth, height: cardHeight } = DENSITY_EVENT_DIMENSIONS[density];
+  const { height: cardHeight } = DENSITY_EVENT_DIMENSIONS[density];
+  // `cardWidth` is now the minimum (cardlet) width; actual widths vary by
+  // event duration. Kept on the layout result as the content-area floor.
+  const cardWidth = DENSITY_WIDTH_BOUNDS[density].eventMin;
   const cardGap = options.cardGapPx ?? DEFAULT_CARD_GAP;
   const laneOffsetPx = options.laneOffsetPx ?? DEFAULT_LANE_OFFSET;
   const laneLabelWidthPx = options.laneLabelWidthPx ?? DEFAULT_LANE_LABEL_WIDTH;
@@ -182,16 +199,18 @@ function layoutLaneItems(
 ): LaidOutTimelineItem[] {
   const maxRight = contentLeftPx + contentWidthPx;
   const placements = items.map((item) => {
-    const dimensions =
-      item.kind === "bundle" ? DENSITY_BUNDLE_DIMENSIONS[density] : DENSITY_EVENT_DIMENSIONS[density];
-    const idealX = computeItemLeft(item.start, range, contentLeftPx, contentWidthPx, dimensions.width);
+    const height =
+      (item.kind === "bundle" ? DENSITY_BUNDLE_DIMENSIONS[density] : DENSITY_EVENT_DIMENSIONS[density])
+        .height;
+    const width = computeItemWidth(item, range, contentWidthPx, density);
+    const idealX = computeItemLeft(item.start, range, contentLeftPx, contentWidthPx, width);
 
     return {
       item,
       x: idealX,
       idealX,
-      width: dimensions.width,
-      height: dimensions.height,
+      width,
+      height,
     };
   });
 
@@ -238,6 +257,28 @@ function getLaneHeight(items: TimelineDisplayItem[], density: TimelineDensity): 
       item.kind === "bundle" ? DENSITY_BUNDLE_DIMENSIONS[density].height : DENSITY_EVENT_DIMENSIONS[density].height,
     ),
   );
+}
+
+/**
+ * Duration-aware item width. The width is the pixel span of the item's
+ * [start, end] on the time scale, clamped to the per-density readable range.
+ * An item with no end (or an end before its start) collapses to the minimum
+ * cardlet width.
+ */
+export function computeItemWidth(
+  item: TimelineDisplayItem,
+  range: TimelineRange,
+  contentWidthPx: number,
+  density: TimelineDensity,
+): number {
+  const bounds = DENSITY_WIDTH_BOUNDS[density];
+  const min = item.kind === "bundle" ? bounds.bundleMin : bounds.eventMin;
+  const max = item.kind === "bundle" ? bounds.bundleMax : bounds.eventMax;
+  const startPct = timestampToXPercent(item.start, range);
+  const endPct = timestampToXPercent(item.end ?? item.start, range);
+  const spanPx = ((endPct - startPct) / 100) * contentWidthPx;
+  if (!Number.isFinite(spanPx) || spanPx <= min) return min;
+  return Math.min(max, spanPx);
 }
 
 function computeItemLeft(

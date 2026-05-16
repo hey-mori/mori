@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { laneOrder } from "../../domain/constants";
 import { moriMockSession } from "../../domain/mock-data";
 import { createTimelineBundles } from "./bundleEvents";
-import { computeTimelineLayout, indexEventAnchors, indexLayout } from "./collisionLayout";
+import {
+  computeItemWidth,
+  computeTimelineLayout,
+  indexEventAnchors,
+  indexLayout,
+} from "./collisionLayout";
+import type { TimelineDisplayItem } from "./displayItems";
 
 const range = {
   start: moriMockSession.session.startedAt,
@@ -82,8 +88,60 @@ describe("computeTimelineLayout", () => {
     expect(dense.cardHeight).toBeLessThan(compact.cardHeight);
     expect(dense.cardWidth).toBeLessThan(compact.cardWidth);
     expect(dense.frameHeight).toBeLessThan(compact.frameHeight);
-    // Dense cards stay wide enough to remain readable, not hairline slivers.
-    expect(dense.cardWidth).toBeGreaterThanOrEqual(120);
+    // Dense cardlets stay wide enough to remain readable, not hairline slivers.
+    expect(dense.cardWidth).toBeGreaterThanOrEqual(90);
+  });
+});
+
+describe("computeItemWidth", () => {
+  const range = { start: "2026-05-14T09:00:00Z", end: "2026-05-14T14:00:00Z" };
+  const contentWidthPx = 1100;
+
+  function eventItem(start: string, end: string | undefined): TimelineDisplayItem {
+    return { kind: "event", start, end } as unknown as TimelineDisplayItem;
+  }
+
+  it("collapses a short or end-less event to the minimum cardlet width", () => {
+    const noEnd = computeItemWidth(
+      eventItem("2026-05-14T10:00:00Z", undefined),
+      range,
+      contentWidthPx,
+      "comfortable",
+    );
+    const fiveMinutes = computeItemWidth(
+      eventItem("2026-05-14T10:00:00Z", "2026-05-14T10:05:00Z"),
+      range,
+      contentWidthPx,
+      "comfortable",
+    );
+    expect(noEnd).toBe(120);
+    expect(fiveMinutes).toBe(120);
+  });
+
+  it("makes a longer event render a wider card than a short one", () => {
+    const short = computeItemWidth(
+      eventItem("2026-05-14T10:00:00Z", "2026-05-14T10:05:00Z"),
+      range,
+      contentWidthPx,
+      "comfortable",
+    );
+    const long = computeItemWidth(
+      eventItem("2026-05-14T10:00:00Z", "2026-05-14T11:30:00Z"),
+      range,
+      contentWidthPx,
+      "comfortable",
+    );
+    expect(long).toBeGreaterThan(short);
+  });
+
+  it("clamps a very long event to the per-density maximum width", () => {
+    const allDay = computeItemWidth(
+      eventItem("2026-05-14T09:00:00Z", "2026-05-14T14:00:00Z"),
+      range,
+      contentWidthPx,
+      "comfortable",
+    );
+    expect(allDay).toBe(300);
   });
 
   it("places cards inside the content area to the right of the lane label column", () => {

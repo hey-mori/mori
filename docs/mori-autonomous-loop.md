@@ -331,9 +331,14 @@ a demo/overview. Highest value first.
   density control is now a 3-way segmented control (넓게 / 보통 /
   조밀); `densityBundleTuning` centralises the per-tier bundling
   params.
-- Duration-aware card width — a 5-minute event still renders the
-  same fixed-width card as a 45-minute one; short events should use
-  a pill/cardlet, medium a compact card, long a wider card.
+- ✅ Duration-aware card width — card width is now the pixel span
+  of the item's `[start, end]` on the time scale, clamped to a
+  per-density readable range (`computeItemWidth` +
+  `DENSITY_WIDTH_BOUNDS`). A short / end-less event collapses to a
+  cardlet minimum; a long event stretches toward the maximum;
+  bundles size to the cluster's real span. (Demo events are mostly
+  instantaneous, so the variation is most visible on bundles — the
+  day-scale stress fixture below will exercise ranged events.)
 - Burst clustering polish — bundles cover ≥3-event clusters, but
   there is no explicit "+N more" overflow affordance and no
   same-source rapid-event grouping.
