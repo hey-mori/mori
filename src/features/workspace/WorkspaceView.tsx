@@ -22,6 +22,7 @@ import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdap
 import { formatDate } from "../../lib/formatting/time";
 import {
   buildWorkspaceSummary,
+  buildWorkspaceSurfaceLinks,
   describeWorkspaceSessionStatus,
 } from "../../lib/workspace/workspaceSummary";
 
@@ -55,6 +56,7 @@ export function WorkspaceView() {
       }),
     [view, mode, repository],
   );
+  const surfaceLinks = useMemo(() => buildWorkspaceSurfaceLinks(view), [view]);
 
   return (
     <div className="page account-profile">
@@ -95,6 +97,31 @@ export function WorkspaceView() {
             </p>
           </section>
 
+          <section className="settings-card account-linked" aria-label="Project surfaces">
+            <header className="settings-card-head">
+              <div>
+                <h3>프로젝트 둘러보기</h3>
+                <p>활성 세션의 작업 표면으로 바로 이동합니다.</p>
+              </div>
+            </header>
+            <ul className="account-linked-list">
+              {surfaceLinks.map((surface) => (
+                <li key={surface.view}>
+                  <span className="account-linked-mark" aria-hidden="true">
+                    {surface.label.charAt(0)}
+                  </span>
+                  <div>
+                    <strong>{surface.label}</strong>
+                    <small>{surface.detail}</small>
+                  </div>
+                  <Button onClick={() => setCurrentView(surface.view)}>
+                    열기
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           <section className="settings-card account-linked" aria-label="Project sessions">
             <header className="settings-card-head">
               <div>
@@ -128,11 +155,6 @@ export function WorkspaceView() {
                 );
               })}
             </ul>
-            <div className="account-identity-actions">
-              <Button onClick={() => setCurrentView("timeline")}>
-                활성 세션 타임라인 열기
-              </Button>
-            </div>
           </section>
 
           <section className="settings-card" aria-label="Multiple projects">

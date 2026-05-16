@@ -4,6 +4,7 @@ import { moriMockSession } from "../../domain/mock-data";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 import {
   buildWorkspaceSummary,
+  buildWorkspaceSurfaceLinks,
   describeWorkspaceSessionStatus,
 } from "./workspaceSummary";
 
@@ -97,6 +98,37 @@ describe("buildWorkspaceSummary", () => {
       "new",
       "old",
     ]);
+  });
+});
+
+describe("buildWorkspaceSurfaceLinks", () => {
+  it("links every core work surface", () => {
+    const links = buildWorkspaceSurfaceLinks(view());
+    expect(links.map((link) => link.view)).toEqual([
+      "timeline",
+      "evidence",
+      "review",
+      "reports",
+      "memory",
+    ]);
+  });
+
+  it("annotates surfaces with factual counts from the active session", () => {
+    const links = buildWorkspaceSurfaceLinks(view());
+    const byView = Object.fromEntries(links.map((link) => [link.view, link.detail]));
+
+    expect(byView.timeline).toContain(String(moriMockSession.events.length));
+    expect(byView.evidence).toContain(String(moriMockSession.sources.length));
+    expect(byView.review).toContain(String(moriMockSession.decisions.length));
+    expect(byView.review).toContain(String(moriMockSession.issues.length));
+  });
+
+  it("reflects an emptied session without inventing content", () => {
+    const links = buildWorkspaceSurfaceLinks(
+      view({ events: [], sources: [], issues: [], decisions: [] }),
+    );
+    const timeline = links.find((link) => link.view === "timeline");
+    expect(timeline?.detail).toBe("이벤트 0개");
   });
 });
 

@@ -139,3 +139,50 @@ export function describeWorkspaceSessionStatus(status: Session["status"]): {
     tone: SESSION_STATUS_TONE[status],
   };
 }
+
+/** A core work surface reachable from the Workspace project hub. */
+export type WorkspaceSurfaceLink = {
+  view: "timeline" | "evidence" | "review" | "reports" | "memory";
+  label: string;
+  /** Factual one-line detail derived from the active session view. */
+  detail: string;
+};
+
+/**
+ * Build the project hub links. The Workspace page is otherwise a
+ * dead-end overview; these turn it into a real entry point to the
+ * project's work surfaces, each annotated with a factual count from
+ * the active session so the hub never promises content that is not
+ * there.
+ */
+export function buildWorkspaceSurfaceLinks(
+  view: SessionViewModel,
+): WorkspaceSurfaceLink[] {
+  return [
+    {
+      view: "timeline",
+      label: "Timeline",
+      detail: `이벤트 ${view.events.length}개`,
+    },
+    {
+      view: "evidence",
+      label: "Evidence",
+      detail: `소스 ${view.sources.length}개`,
+    },
+    {
+      view: "review",
+      label: "Review",
+      detail: `결정 ${view.decisions.length}개 · 이슈 ${view.issues.length}개`,
+    },
+    {
+      view: "reports",
+      label: "Reports",
+      detail: "세션 리포트와 Resume 프롬프트",
+    },
+    {
+      view: "memory",
+      label: "Project Memory",
+      detail: "누적된 프로젝트 메모리",
+    },
+  ];
+}
