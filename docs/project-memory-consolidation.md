@@ -790,7 +790,7 @@ UI surfacing — landed:
 - The helper tolerates legacy / missing fields (unknown action type,
   missing `targetMemoryIds`, unparseable timestamp).
 
-Reviewed revert flow — eligibility planner landed:
+Reviewed revert flow — landed:
 
 - `planMemoryReviewRevert(action, acceptedMemories)`
   (`src/lib/project-memory/memoryReviewRevert.ts`) is a pure helper
@@ -826,18 +826,23 @@ Reviewed revert flow — eligibility planner landed:
   (`{ eligible, ineligibleReason }`) computed via
   `planMemoryReviewRevert`. Omitting the list leaves each entry's
   `revert` as `null`, so the audit view-model stays absent-safe.
+- `revertMemoryReviewAction(action, acceptedMemories, { appliedAt })`
+  is the one-call orchestration — plan, build proposal, apply — used
+  by the UI. It returns the memory write + `revert` audit row and
+  throws the planner's reason when the action is not revertible.
+- The **Memory Audit Trail** card renders a confirm-gated **Revert**
+  affordance on revertible rows (and a muted reason on ineligible
+  ones). Confirming runs `revertMemoryReviewAction`, persists the
+  memory + audit row through `AcceptedMemoryRepository`, and reloads.
+  A revert is never a one-click silent write — it is itself a
+  reviewed action and lands as a `revert` row in the same trail.
 
 UI surfacing — still planned:
 
-- Wiring the revert proposal + apply helper into the Consolidation
-  Review / Memory Audit Trail surface so a reviewer can trigger and
-  accept a revert. The `revert` `StoredMemoryReviewAction` it writes
-  is `reversible: true` and carries a `before`/`after` status
-  snapshot, so a revert is itself reviewable.
 - Discard rows are kept by default (lightweight payload); the user
   can purge them via Settings → Memory cleanup.
-- SQLite-backed audit storage and the `.mori v0` `auditTrail`
-  export.
+- SQLite-backed audit storage parity cleanup (the `.mori v0`
+  `auditTrail` export already ships).
 
 ## Resume Prompt and Reports inclusion policy
 

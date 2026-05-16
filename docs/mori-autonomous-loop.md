@@ -148,23 +148,16 @@ only — no phase numbers.
 - `.mori` auditTrail package slice — optional additive
   `auditTrail?: StoredMemoryReviewAction[]` on `MoriPackageV0`,
   populated on export with `getPackageAuditTrail` read helper.
-- Memory Audit Trail reviewed revert flow — revert eligibility
-  planner (`planMemoryReviewRevert`, pure, read-only).
-- Memory Audit Trail reviewed revert flow — proposal builder
-  (`buildMemoryRevertProposal` → `MemoryRevertProposal`, pure).
-- Memory Audit Trail reviewed revert flow — apply helper
-  (`applyMemoryRevertProposal`, pure; `revert` audit `actionType`).
-- Memory Audit Trail reviewed revert flow — per-entry revert
-  eligibility in `buildMemoryAuditTrailViewModel`.
+- Memory Audit Trail reviewed revert flow — eligibility planner,
+  proposal builder, apply helper, per-entry view-model eligibility,
+  and the confirm-gated Revert affordance in the audit card.
 
 **Open priority (highest first):**
 
-1. Memory Audit Trail reviewed revert flow — render the revert action
-   in the Memory Audit Trail card and persist acceptance
-2. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
+1. SQLite / `.mori` parity cleanup (e.g. SQLite-side `importSummary`
    mirror)
-3. CLI wrapper for Claude/Codex workflows, explicit/local only
-4. IDE / Terminal integration planning, no hidden monitoring
+2. CLI wrapper for Claude/Codex workflows, explicit/local only
+3. IDE / Terminal integration planning, no hidden monitoring
 
 Deferred — revisit when a concrete need appears:
 - Evidence / Import Review polish — audited; the Import Review view,
@@ -180,47 +173,41 @@ backlog with it.
 
 The next slice should be:
 
-**Memory Audit Trail reviewed revert flow — revert affordance in the
-Memory Audit Trail card**
+**SQLite / `.mori` parity cleanup — close one concrete gap**
 
 Goal:
-Let a reviewer trigger and confirm a revert from the Memory Audit
-Trail card. All the logic exists — the planner, proposal builder,
-apply helper, and per-entry eligibility; this slice is the UI + the
-single repository write.
+The desktop SQLite path and the browser / `.mori v0` path should
+persist and round-trip the same data. Audit the SQLite-backed
+storage against the browser adapter and the `.mori v0` package, then
+close the single highest-value concrete parity gap as a small slice.
 
 Scope — do:
-- Pass the project's accepted memories into
-  `buildMemoryAuditTrailViewModel` so entries carry their `revert`
-  summary, and render a **Revert** affordance on revertible entries
-  (disabled, with the reason, when ineligible).
-- On a confirm-gated click: `planMemoryReviewRevert` →
-  `buildMemoryRevertProposal` → `applyMemoryRevertProposal`, then
-  persist the updated memory + the `revert` audit action through the
-  repository, and refresh the card.
-- Keep the confirmation explicit — a revert is a review action, never
-  a one-click silent write.
+- Audit SQLite row mappers (`src/lib/sqlite/*`) and the Tauri
+  commands against `localStorageAdapter` and the `.mori v0` package
+  slices — accepted memory, review actions, import summaries.
+- Pick one concrete gap (a field dropped on the SQLite round-trip, a
+  slice with no SQLite mirror, a mapper that loses data) and close it
+  with mapper + test coverage.
+- Keep the change additive and non-destructive — no schema migration
+  that drops or rewrites existing rows.
 
 Scope — do not:
-- Add brittle screenshot / full-component snapshot tests.
-- Auto-revert or batch-revert; one reviewed action at a time.
-- Replay imported `.mori` audit rows.
+- Rewrite the SQLite schema broadly or add a destructive migration.
+- Add a parity gap that needs a new Tauri command surface if a
+  smaller mapper-only fix exists.
 
 Suggested files:
-- `src/features/memory/MemoryAuditTrailCard.tsx`
-- `src/features/memory/MemoryView.tsx`
-- `src/lib/project-memory/*` (a thin pure orchestration helper if it
-  keeps the component lean)
-- `docs/project-memory-consolidation.md`
+- `src/lib/sqlite/*` (row mappers / schema)
+- `src/lib/sqlite/*.test.ts`
+- `src/lib/desktop/tauriCommands.ts` (only if a command is missing)
+- `docs/mori-package-v0.md` or the relevant storage doc
 
 Tests:
-- a pure orchestration helper (plan → proposal → apply) returns the
-  memory write + audit row for an eligible entry
-- the helper refuses an ineligible entry
+- the chosen field / slice round-trips through the SQLite mappers
+- a row written before the field existed still loads
 
-After this slice ships, the reviewed revert flow is complete — move
-it to **Completed**, set the next slice to the new top backlog item
-(SQLite / `.mori` parity cleanup), and continue.
+After this slice ships, set the next slice to the new top backlog
+item (CLI wrapper for Claude/Codex workflows), and continue.
 
 ## 9. Stop Conditions
 

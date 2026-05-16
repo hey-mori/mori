@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
@@ -33,6 +33,7 @@ import {
   type ProjectMemoryResumePromptPrivacy,
 } from "../../lib/project-memory/projectMemoryResumePrompt";
 import { buildProjectMemoryConsolidationState } from "../../lib/project-memory/projectMemoryConsolidationState";
+import { revertMemoryReviewAction } from "../../lib/project-memory/memoryReviewRevert";
 import { ConsolidationPreviewCard } from "./ConsolidationPreviewCard";
 import { AcceptedMemoriesCard } from "./AcceptedMemoriesCard";
 import { MemoryAuditTrailCard } from "./MemoryAuditTrailCard";
@@ -120,24 +121,44 @@ export function MemoryView() {
   const [memoryStorageSource, setMemoryStorageSource] =
     useState<AcceptedMemoryStorageSource>("browser-local-storage");
   const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
+  const reloadMemory = useCallback(async () => {
     const memoryRepository = getAcceptedMemoryRepository();
-    void Promise.all([
+    const [memoriesResult, actionsResult] = await Promise.all([
       memoryRepository.listAcceptedProjectMemories(projectId),
       memoryRepository.listMemoryReviewActions(projectId),
-    ]).then(([memoriesResult, actionsResult]) => {
-      if (cancelled) return;
-      setAcceptedMemories(memoriesResult.data);
-      setReviewActions(actionsResult.data);
-      const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
-      setMemoryStorageFellBack(fellBack);
-      setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
+    ]);
+    setAcceptedMemories(memoriesResult.data);
+    setReviewActions(actionsResult.data);
+    const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
+    setMemoryStorageFellBack(fellBack);
+    setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
+  }, [projectId]);
+  useEffect(() => {
+    let cancelled = false;
+    void reloadMemory().catch(() => {
+      // Listing failures fall back inside the repository; ignore here.
     });
     return () => {
       cancelled = true;
+      void cancelled;
     };
-  }, [projectId]);
+  }, [reloadMemory]);
+
+  // Reviewed revert: apply a planned revert for one audit action, then
+  // persist the memory write + `revert` audit row and reload. The pure
+  // `revertMemoryReviewAction` throws when the action is not revertible.
+  const handleRevertAction = useCallback(
+    async (action: StoredMemoryReviewAction) => {
+      const result = revertMemoryReviewAction(action, acceptedMemories, {
+        appliedAt: new Date().toISOString(),
+      });
+      const memoryRepository = getAcceptedMemoryRepository();
+      await memoryRepository.saveAcceptedProjectMemories(projectId, [result.memory]);
+      await memoryRepository.appendMemoryReviewActions(projectId, [result.reviewAction]);
+      await reloadMemory();
+    },
+    [acceptedMemories, projectId, reloadMemory],
+  );
 
   // ─── saved-session body loading ──────────────────────────────────────
   const [loadedSessions, setLoadedSessions] = useState<ProjectMemoryLoadedSession[]>([]);
@@ -409,6 +430,8 @@ export function MemoryView() {
 
           <MemoryAuditTrailCard
             actions={reviewActions}
+            acceptedMemories={acceptedMemories}
+            onRevertAction={handleRevertAction}
             storageSource={memoryStorageSource}
             storageFellBack={memoryStorageFellBack}
           />

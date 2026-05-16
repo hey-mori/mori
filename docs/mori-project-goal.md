@@ -253,6 +253,12 @@ that is called out.
   — sorted newest-first, grouped by UTC date, filterable by action
   type. The surface never renders the `before` / `after` snapshots,
   so no raw evidence content is exposed.
+- Reviewed revert flow: a revertible audit row carries a
+  confirm-gated **Revert** affordance. `planMemoryReviewRevert` gates
+  eligibility, `buildMemoryRevertProposal` produces a reviewable
+  `MemoryRevertProposal`, and `applyMemoryRevertProposal` restores
+  the memory's status and writes a `revert` `StoredMemoryReviewAction`
+  — a revert is itself a reviewed action recorded in the same trail.
 
 **Storage**
 
@@ -352,10 +358,6 @@ against the repository.
   reliable bridge that captures live Claude Code / Codex CLI / Git
   activity into `~/.mori/connectors/` for a real workflow is not
   shipped. The user must still run the template scripts manually.
-- **Undo / revert from the audit log.** The Memory Audit Trail UI
-  surfaces the review-action log, but Undo Apply (a new
-  `ReviewAction` row with `actionType: "revert"`) is designed and
-  not implemented.
 - **IDE / terminal / browser extension integrations.** Listed as
   Planned in `source-integrations.md`; no extension code exists.
 - **Optional watched inbox.** Refresh-only desktop inbox is shipped;

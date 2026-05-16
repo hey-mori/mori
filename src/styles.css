@@ -6940,6 +6940,66 @@ pre {
   color: #6e668c;
 }
 
+.memory-audit-revert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11.5px;
+}
+
+.memory-audit-revert.is-ineligible {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+  color: #9a93b3;
+}
+
+.memory-audit-revert-trigger,
+.memory-audit-revert-confirm,
+.memory-audit-revert-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #e6e3f1);
+  background: #fdfcff;
+  font-size: 11.5px;
+  color: #4b4470;
+  cursor: pointer;
+}
+
+.memory-audit-revert-trigger:hover:not(:disabled),
+.memory-audit-revert-cancel:hover {
+  background: #f3f0fb;
+}
+
+.memory-audit-revert-trigger:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.memory-audit-revert-confirm {
+  border-color: #d8923f;
+  background: #fbf0e2;
+  color: #8a541a;
+}
+
+.memory-audit-revert-confirm:hover {
+  background: #f6e4cc;
+}
+
+.memory-audit-revert-prompt {
+  color: #6e668c;
+}
+
+.memory-audit-revert-error {
+  color: #b3261e;
+}
+
 .memory-search {
   display: grid;
   gap: 8px;

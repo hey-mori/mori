@@ -257,6 +257,33 @@ export function applyMemoryRevertProposal(
   };
 }
 
+/**
+ * One-call orchestration of the reviewed revert: plan the revert for
+ * `action`, build the proposal, and apply it — returning the memory
+ * write and `revert` audit row. Pure: never persists and never
+ * mutates. Throws when the action is not revertible, so a caller
+ * (e.g. a confirm-gated UI handler) can surface the reason.
+ */
+export function revertMemoryReviewAction(
+  action: StoredMemoryReviewAction,
+  acceptedMemories: readonly StoredAcceptedProjectMemory[],
+  options: ApplyMemoryRevertOptions,
+): MemoryRevertApplyResult {
+  const plan = planMemoryReviewRevert(action, acceptedMemories);
+  if (!plan.eligible || plan.targetMemoryId === null) {
+    throw new Error(
+      `Cannot revert this action: ${plan.ineligibleReason ?? "not revertible"}`,
+    );
+  }
+  const memory = acceptedMemories.find((entry) => entry.id === plan.targetMemoryId);
+  if (!memory) {
+    // The planner already checked existence; guard for a racing caller.
+    throw new Error("Cannot revert this action: target memory no longer exists.");
+  }
+  const proposal = buildMemoryRevertProposal(plan, action, memory);
+  return applyMemoryRevertProposal(proposal, memory, options);
+}
+
 // ─── internals ────────────────────────────────────────────────────────
 
 /**

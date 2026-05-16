@@ -7,6 +7,7 @@ import {
   applyMemoryRevertProposal,
   buildMemoryRevertProposal,
   planMemoryReviewRevert,
+  revertMemoryReviewAction,
 } from "./memoryReviewRevert";
 
 function acceptedMemory(
@@ -211,5 +212,25 @@ describe("applyMemoryRevertProposal", () => {
     });
     expect(memory.status).toBe("accepted");
     expect(memory.reviewActionIds).toEqual(["act-1"]);
+  });
+});
+
+describe("revertMemoryReviewAction", () => {
+  it("plans, builds, and applies a revert in one call", () => {
+    const memory = acceptedMemory();
+    const result = revertMemoryReviewAction(reviewAction(), [memory], {
+      appliedAt: "2026-05-16T09:00:00Z",
+    });
+    expect(result.memory.status).toBe("watching");
+    expect(result.reviewAction.actionType).toBe("revert");
+    expect(result.reviewAction.targetMemoryIds).toEqual(["mem-1"]);
+  });
+
+  it("throws with the planner's reason for an ineligible action", () => {
+    expect(() =>
+      revertMemoryReviewAction(reviewAction({ actionType: "discard" }), [acceptedMemory()], {
+        appliedAt: "2026-05-16T09:00:00Z",
+      }),
+    ).toThrow(/cannot be reverted/i);
   });
 });

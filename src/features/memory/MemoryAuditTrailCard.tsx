@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Clock4, History, StickyNote } from "lucide-react";
+import { ArrowRight, Clock4, History, StickyNote, Undo2 } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriSection } from "../../components/ui/MoriSection";
 import {
@@ -8,12 +8,16 @@ import {
   MEMORY_AUDIT_ACTION_TYPES,
   type MemoryAuditActionFilter,
   type MemoryAuditActionType,
+  type MemoryAuditTrailEntry,
 } from "../../lib/project-memory/memoryAuditTrail";
 import {
   describeAcceptedMemoryStorageSource,
   type AcceptedMemoryStorageSource,
 } from "../../lib/project-memory/acceptedMemoryRepository";
-import type { StoredMemoryReviewAction } from "../../lib/storage/storageTypes";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../../lib/storage/storageTypes";
 
 /**
  * Memory Audit Trail card on the Project Memory page.
@@ -22,23 +26,31 @@ import type { StoredMemoryReviewAction } from "../../lib/storage/storageTypes";
  * Consolidation Review apply path. Every row is local-only and shows
  * the action type, UTC time, affected-memory count, and an optional
  * reviewer note — never raw evidence content, transcripts, or local
- * paths. Undo / revert and SQLite-backed audit storage are separate,
- * still-planned capabilities.
+ * paths. A revertible row carries a confirm-gated Revert affordance.
  */
 export function MemoryAuditTrailCard({
   actions,
+  acceptedMemories,
+  onRevertAction,
   storageSource,
   storageFellBack,
 }: {
   actions: StoredMemoryReviewAction[];
+  acceptedMemories: StoredAcceptedProjectMemory[];
+  onRevertAction: (action: StoredMemoryReviewAction) => Promise<void>;
   storageSource: AcceptedMemoryStorageSource;
   storageFellBack: boolean;
 }) {
   const [filter, setFilter] = useState<MemoryAuditActionFilter>("all");
   const viewModel = useMemo(
-    () => buildMemoryAuditTrailViewModel(actions, { filter }),
-    [actions, filter],
+    () => buildMemoryAuditTrailViewModel(actions, { filter, acceptedMemories }),
+    [actions, filter, acceptedMemories],
   );
+  const actionsById = useMemo(() => {
+    const map = new Map<string, StoredMemoryReviewAction>();
+    for (const action of actions) map.set(action.id, action);
+    return map;
+  }, [actions]);
 
   const availableFilters = MEMORY_AUDIT_ACTION_TYPES.filter(
     (type) => viewModel.actionTypeCounts[type] > 0,
@@ -119,6 +131,11 @@ export function MemoryAuditTrailCard({
                             <StickyNote size={11} aria-hidden="true" /> {entry.note}
                           </p>
                         ) : null}
+                        <RevertControl
+                          entry={entry}
+                          action={actionsById.get(entry.id)}
+                          onRevertAction={onRevertAction}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -139,7 +156,7 @@ export function MemoryAuditTrailCard({
             ? "데스크톱 SQLite를 사용할 수 없어 localStorage로 대체했습니다. "
             : ""}
           {viewModel.truncated ? "최근 기록만 표시됩니다. " : ""}
-          Undo / revert와 `.mori v0` auditTrail export는 별도 capability로 예정되어 있습니다.
+          되돌릴 수 있는 기록은 확인 후 revert할 수 있으며, revert 자체도 audit 기록으로 남습니다.
         </small>
       </footer>
     </MoriSection>
@@ -166,6 +183,85 @@ function FilterChip({
     >
       {label} <span className="memory-audit-chip-count">{count}</span>
     </button>
+  );
+}
+
+/**
+ * Per-entry Revert affordance. Renders nothing when the view-model
+ * carries no revert summary (built without accepted memories), a muted
+ * reason when the action is not revertible, and a confirm-gated button
+ * otherwise. A revert is always a deliberate, confirmed review action.
+ */
+function RevertControl({
+  entry,
+  action,
+  onRevertAction,
+}: {
+  entry: MemoryAuditTrailEntry;
+  action: StoredMemoryReviewAction | undefined;
+  onRevertAction: (action: StoredMemoryReviewAction) => Promise<void>;
+}) {
+  const [phase, setPhase] = useState<"idle" | "confirming" | "reverting">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  if (!entry.revert) return null;
+
+  if (!entry.revert.eligible) {
+    return (
+      <p className="memory-audit-revert is-ineligible">
+        <Undo2 size={11} aria-hidden="true" /> 되돌릴 수 없음
+        {entry.revert.ineligibleReason ? ` · ${entry.revert.ineligibleReason}` : ""}
+      </p>
+    );
+  }
+
+  if (!action) return null;
+
+  async function confirmRevert() {
+    if (!action) return;
+    setPhase("reverting");
+    setError(null);
+    try {
+      await onRevertAction(action);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Revert failed.");
+      setPhase("idle");
+    }
+  }
+
+  return (
+    <div className="memory-audit-revert">
+      {phase === "confirming" ? (
+        <>
+          <span className="memory-audit-revert-prompt">이 기록을 되돌리시겠습니까?</span>
+          <button
+            type="button"
+            className="memory-audit-revert-confirm"
+            onClick={() => void confirmRevert()}
+          >
+            되돌리기 확인
+          </button>
+          <button
+            type="button"
+            className="memory-audit-revert-cancel"
+            onClick={() => setPhase("idle")}
+          >
+            취소
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="memory-audit-revert-trigger"
+          disabled={phase === "reverting"}
+          onClick={() => setPhase("confirming")}
+        >
+          <Undo2 size={11} aria-hidden="true" />{" "}
+          {phase === "reverting" ? "되돌리는 중…" : "되돌리기"}
+        </button>
+      )}
+      {error ? <span className="memory-audit-revert-error">{error}</span> : null}
+    </div>
   );
 }
 
