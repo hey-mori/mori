@@ -2024,15 +2024,28 @@ kbd {
   list-style: none;
 }
 
-.inspector-linked-rows li {
+.inspector-linked-row {
   display: grid;
   grid-template-columns: auto auto 1fr;
   align-items: center;
   gap: 8px;
+  width: 100%;
   padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+}
+
+button.inspector-linked-row {
+  cursor: pointer;
+}
+
+button.inspector-linked-row.is-linkable:hover {
+  border-color: #c9bdf5;
+  background: var(--purple-50);
 }
 
 .inspector-linked-count {

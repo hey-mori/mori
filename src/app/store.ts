@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { EventType, ViewKey } from "../domain/types";
 import type { TimelineDensity } from "../lib/timeline/collisionLayout";
+import type { ReviewSelection } from "../lib/review-workspace/reviewWorkspace";
 
 type MoriAppState = {
   currentView: ViewKey;
@@ -13,6 +14,12 @@ type MoriAppState = {
   activeLanesOnly: boolean;
   /** When true, the inspector is collapsed (used at narrow widths). */
   inspectorCollapsed: boolean;
+  /**
+   * A one-shot request to open the Review surface focused on a specific
+   * item — set when another surface (e.g. the Timeline event inspector)
+   * deep-links into Review. ReviewView consumes and clears it.
+   */
+  reviewFocus: ReviewSelection | null;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -23,6 +30,9 @@ type MoriAppState = {
   toggleTimelineDensity: () => void;
   toggleActiveLanesOnly: () => void;
   setInspectorCollapsed: (collapsed: boolean) => void;
+  /** Deep-link into Review focused on a specific issue / decision / next action. */
+  openReviewItem: (selection: ReviewSelection) => void;
+  clearReviewFocus: () => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -34,6 +44,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   timelineDensity: "comfortable",
   activeLanesOnly: false,
   inspectorCollapsed: false,
+  reviewFocus: null,
   setCurrentView: (currentView) => set({ currentView }),
   setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
@@ -58,4 +69,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   toggleActiveLanesOnly: () =>
     set((state) => ({ activeLanesOnly: !state.activeLanesOnly })),
   setInspectorCollapsed: (inspectorCollapsed) => set({ inspectorCollapsed }),
+  openReviewItem: (selection) =>
+    set({ reviewFocus: selection, currentView: "review" }),
+  clearReviewFocus: () => set({ reviewFocus: null }),
 }));

@@ -66,6 +66,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const setHoveredEventId = useMoriAppStore((state) => state.setHoveredEventId);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const toggleFilter = useMoriAppStore((state) => state.toggleFilter);
   const clearFilters = useMoriAppStore((state) => state.clearFilters);
   const setTimelineDensity = useMoriAppStore((state) => state.setTimelineDensity);
@@ -252,6 +253,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             session={view}
             model={model}
             onTrace={() => setCurrentView("flow")}
+            onOpenReviewItem={openReviewItem}
           />
         ) : null}
       </div>

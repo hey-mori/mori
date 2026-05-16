@@ -226,6 +226,19 @@ export type ReviewSelection =
   | { kind: "nextAction"; nextActionId: string }
   | { kind: "none" };
 
+/** The Review content tab a selection belongs to. */
+export type ReviewSelectionTab = "issues" | "decisions" | "nextActions";
+
+/**
+ * Map a selection to the Review content tab that holds it — used when a
+ * surface deep-links into Review (e.g. the Timeline event inspector).
+ */
+export function reviewSelectionTab(selection: ReviewSelection): ReviewSelectionTab {
+  if (selection.kind === "decision") return "decisions";
+  if (selection.kind === "nextAction") return "nextActions";
+  return "issues";
+}
+
 /**
  * Choose a default selection so the right-side detail panel is never empty
  * when content exists. Priority order matches user expectation:

@@ -29,6 +29,7 @@ import {
   issueStatusTone,
   pickDefaultReviewSelection,
   priorityTone,
+  reviewSelectionTab,
   UNRESOLVED_REASON_LABEL,
   type ReviewSelection,
   type UnresolvedItem,
@@ -65,6 +66,8 @@ export function ReviewView() {
   const imports = useMoriSessionStore((state) => state.imports);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
+  const reviewFocus = useMoriAppStore((state) => state.reviewFocus);
+  const clearReviewFocus = useMoriAppStore((state) => state.clearReviewFocus);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -74,6 +77,15 @@ export function ReviewView() {
 
   const [activeTab, setActiveTab] = useState<ReviewTab>("issues");
   const [selection, setSelection] = useState<ReviewSelection | null>(null);
+
+  // Consume a one-shot deep-link from another surface (e.g. the Timeline
+  // event inspector): focus the requested item and clear the request.
+  useEffect(() => {
+    if (!reviewFocus || reviewFocus.kind === "none") return;
+    setSelection(reviewFocus);
+    setActiveTab(reviewSelectionTab(reviewFocus));
+    clearReviewFocus();
+  }, [reviewFocus, clearReviewFocus]);
 
   const grouped = useMemo(() => groupIssuesByStatus(view.issues), [view.issues]);
   const summary = useMemo(

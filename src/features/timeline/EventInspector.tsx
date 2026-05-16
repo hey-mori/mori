@@ -23,6 +23,7 @@ import type {
 import { formatTime, formatTimeRange } from "../../lib/formatting/time";
 import { describeTrustLevel } from "../../lib/relationships/relationshipDisplay";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
+import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import {
   buildInspectorViewModel,
   type TimelineRenderModel,
@@ -38,11 +39,14 @@ export function EventInspector({
   session,
   model,
   onTrace,
+  onOpenReviewItem,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
   model: TimelineRenderModel;
   onTrace: () => void;
+  /** Deep-link a linked issue / decision / next action into the Review surface. */
+  onOpenReviewItem?: (selection: ReviewSelection) => void;
 }) {
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
@@ -106,6 +110,7 @@ export function EventInspector({
           decisions={inspector.decisions}
           artifacts={inspector.artifacts}
           nextActions={inspector.nextActions}
+          onOpenReviewItem={onOpenReviewItem}
         />
         {inspector.hiddenRelationshipCount > 0 ? (
           <p className="inspector-hidden-note">
@@ -217,34 +222,83 @@ function LinkedRows({
   decisions,
   artifacts,
   nextActions,
+  onOpenReviewItem,
 }: {
   issues: Issue[];
   decisions: Decision[];
   artifacts: Artifact[];
   nextActions: NextAction[];
+  onOpenReviewItem?: (selection: ReviewSelection) => void;
 }) {
-  const rows: Array<{ label: string; tone: string; items: string[] }> = [
-    { label: "이슈", tone: "red", items: issues.map((issue) => issue.title) },
-    { label: "결정", tone: "green", items: decisions.map((decision) => decision.title) },
-    { label: "파일", tone: "blue", items: artifacts.map((artifact) => artifact.title) },
-    { label: "다음 액션", tone: "purple", items: nextActions.map((action) => action.title) },
+  const rows: Array<{
+    label: string;
+    tone: string;
+    titles: string[];
+    focus: ReviewSelection | null;
+  }> = [
+    {
+      label: "이슈",
+      tone: "red",
+      titles: issues.map((issue) => issue.title),
+      focus: issues[0] ? { kind: "issue", issueId: issues[0].id } : null,
+    },
+    {
+      label: "결정",
+      tone: "green",
+      titles: decisions.map((decision) => decision.title),
+      focus: decisions[0] ? { kind: "decision", decisionId: decisions[0].id } : null,
+    },
+    {
+      label: "파일",
+      tone: "blue",
+      titles: artifacts.map((artifact) => artifact.title),
+      focus: null,
+    },
+    {
+      label: "다음 액션",
+      tone: "purple",
+      titles: nextActions.map((action) => action.title),
+      focus: nextActions[0]
+        ? { kind: "nextAction", nextActionId: nextActions[0].id }
+        : null,
+    },
   ];
   return (
     <ul className="inspector-linked-rows">
-      {rows.map((row) => (
-        <li key={row.label}>
-          <Badge tone={row.tone}>{row.label}</Badge>
-          <span className="inspector-linked-count">{row.items.length}</span>
-          {row.items.length > 0 ? (
-            <span className="inspector-linked-first" title={row.items.join(" · ")}>
-              {row.items[0]}
-              {row.items.length > 1 ? ` · +${row.items.length - 1}` : ""}
-            </span>
-          ) : (
-            <span className="inspector-linked-empty">없음</span>
-          )}
-        </li>
-      ))}
+      {rows.map((row) => {
+        const body = (
+          <>
+            <Badge tone={row.tone}>{row.label}</Badge>
+            <span className="inspector-linked-count">{row.titles.length}</span>
+            {row.titles.length > 0 ? (
+              <span className="inspector-linked-first" title={row.titles.join(" · ")}>
+                {row.titles[0]}
+                {row.titles.length > 1 ? ` · +${row.titles.length - 1}` : ""}
+              </span>
+            ) : (
+              <span className="inspector-linked-empty">없음</span>
+            )}
+          </>
+        );
+        const linkable =
+          row.focus !== null && row.titles.length > 0 && Boolean(onOpenReviewItem);
+        return (
+          <li key={row.label}>
+            {linkable ? (
+              <button
+                type="button"
+                className="inspector-linked-row is-linkable"
+                onClick={() => onOpenReviewItem?.(row.focus as ReviewSelection)}
+                title="Review에서 이 항목 열기"
+              >
+                {body}
+              </button>
+            ) : (
+              <div className="inspector-linked-row">{body}</div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

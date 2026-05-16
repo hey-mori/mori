@@ -16,6 +16,7 @@ import {
   groupIssuesByStatus,
   ISSUE_STATUS_ORDER,
   pickDefaultReviewSelection,
+  reviewSelectionTab,
 } from "./reviewWorkspace";
 
 function makeIssue(overrides: Partial<Issue> = {}): Issue {
@@ -247,6 +248,20 @@ describe("pickDefaultReviewSelection", () => {
     expect(pickDefaultReviewSelection({ issues: [], decisions: [], nextActions: [] })).toEqual({
       kind: "none",
     });
+  });
+});
+
+describe("reviewSelectionTab", () => {
+  it("maps each selection kind to its content tab", () => {
+    expect(reviewSelectionTab({ kind: "issue", issueId: "i" })).toBe("issues");
+    expect(reviewSelectionTab({ kind: "decision", decisionId: "d" })).toBe("decisions");
+    expect(reviewSelectionTab({ kind: "nextAction", nextActionId: "n" })).toBe(
+      "nextActions",
+    );
+  });
+
+  it("falls back to the issues tab for an empty selection", () => {
+    expect(reviewSelectionTab({ kind: "none" })).toBe("issues");
   });
 });
 
