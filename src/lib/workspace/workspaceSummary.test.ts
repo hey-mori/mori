@@ -38,6 +38,23 @@ describe("buildWorkspaceSummary", () => {
     expect(summary.counts.events).toBe(moriMockSession.events.length);
     expect(summary.counts.issues).toBe(moriMockSession.issues.length);
     expect(summary.counts.decisions).toBe(moriMockSession.decisions.length);
+    expect(summary.counts.nextActions).toBe(moriMockSession.nextActions.length);
+  });
+
+  it("counts resolved issues as the project progress signal", () => {
+    const summary = buildWorkspaceSummary({
+      view: view({
+        issues: [
+          { ...moriMockSession.issues[0]!, status: "resolved" },
+          { ...moriMockSession.issues[0]!, id: "iss-open", status: "open" },
+        ],
+      }),
+      mode: "demo",
+      storedSessions: [],
+    });
+
+    expect(summary.counts.issues).toBe(2);
+    expect(summary.counts.resolvedIssues).toBe(1);
   });
 
   it("includes the active session even when it has no saved draft", () => {

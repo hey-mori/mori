@@ -37,7 +37,10 @@ export type WorkspaceSummary = {
   counts: {
     events: number;
     issues: number;
+    /** Issues whose status is `resolved` — the project progress signal. */
+    resolvedIssues: number;
     decisions: number;
+    nextActions: number;
   };
 };
 
@@ -97,7 +100,9 @@ export function buildWorkspaceSummary({
     counts: {
       events: view.events.length,
       issues: view.issues.length,
+      resolvedIssues: view.issues.filter((issue) => issue.status === "resolved").length,
       decisions: view.decisions.length,
+      nextActions: view.nextActions.length,
     },
   };
 }
