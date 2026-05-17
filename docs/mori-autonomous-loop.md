@@ -217,6 +217,11 @@ only — no phase numbers.
 - Client-safe marker surfaced on import — `ParseImportedMemoryResult`
   carries `isClientSafe`; the Consolidation Review import panel notes
   a client-safe package so the Reviewer knows the handoff is partial.
+- Workspace previous-session continuation — `setCurrentSession`
+  repository promotion (no `savedAt` restamp) plus the
+  `loadBrowserSession` store action; the Workspace project hub's
+  saved, non-active session rows carry an "이어가기" action that opens
+  the session and routes to the Timeline.
 
 **Open priority (highest first):**
 
