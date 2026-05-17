@@ -40,6 +40,7 @@ export function WorkspaceView() {
   const mode = useMoriSessionStore(selectSessionMode);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
+  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   useEffect(() => {
@@ -57,6 +58,12 @@ export function WorkspaceView() {
     [view, mode, repository],
   );
   const surfaceLinks = useMemo(() => buildWorkspaceSurfaceLinks(view), [view]);
+
+  const openSession = (sessionId: string) => {
+    if (loadBrowserSession(sessionId)) {
+      setCurrentView("timeline");
+    }
+  };
 
   return (
     <div className="page account-profile">
@@ -133,6 +140,7 @@ export function WorkspaceView() {
             <ul className="account-linked-list">
               {summary.sessions.map((entry) => {
                 const status = describeWorkspaceSessionStatus(entry.status);
+                const canOpen = !entry.isActive && entry.savedAt !== null;
                 return (
                   <li key={entry.sessionId}>
                     <span className="account-linked-mark" aria-hidden="true">
@@ -148,9 +156,16 @@ export function WorkspaceView() {
                             : "아직 저장되지 않음"}
                       </small>
                     </div>
-                    <MoriStatusBadge tone={status.tone}>
-                      {status.label}
-                    </MoriStatusBadge>
+                    <span className="account-session-actions">
+                      <MoriStatusBadge tone={status.tone}>
+                        {status.label}
+                      </MoriStatusBadge>
+                      {canOpen ? (
+                        <Button onClick={() => openSession(entry.sessionId)}>
+                          이어가기
+                        </Button>
+                      ) : null}
+                    </span>
                   </li>
                 );
               })}

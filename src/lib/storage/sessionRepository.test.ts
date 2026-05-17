@@ -301,6 +301,45 @@ describe("BrowserDraftRepository", () => {
     expect(repository.loadSessionAnalysis(draft.session.id)).toBeNull();
   });
 
+  it("setCurrentSession promotes a stored session without restamping savedAt", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    const draftA = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Earlier session",
+        projectName: "Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+    repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Later session",
+        projectName: "Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T15:00:00+09:00",
+      }),
+    );
+
+    const promoted = repository.setCurrentSession(draftA.session.id);
+
+    expect(promoted?.session.id).toBe(draftA.session.id);
+    expect(promoted?.savedAt).toBe(draftA.savedAt);
+    expect(repository.loadCurrentSessionDraft()?.session.id).toBe(draftA.session.id);
+  });
+
+  it("setCurrentSession returns null for an unknown session id", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    expect(repository.setCurrentSession("missing-session")).toBeNull();
+  });
+
   it("persists an optional importSummary on a session import and reads it back", () => {
     const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
     const draft = repository.saveCurrentSessionDraft(

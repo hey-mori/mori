@@ -113,6 +113,13 @@ export type MoriDraftRepository = {
   saveCurrentSessionDraft: (draft: Omit<StoredSessionDraft, "savedAt" | "adapter">) => StoredSessionDraft;
   loadCurrentSessionDraft: () => StoredSessionDraft | null;
   clearCurrentSessionDraft: () => void;
+  /**
+   * Promote an already-stored session draft (by id) to the current
+   * session. Unlike `saveCurrentSessionDraft`, this does not restamp
+   * `savedAt` — opening a saved session is not a save. Returns `null`
+   * when no draft is stored for the id.
+   */
+  setCurrentSession: (sessionId: string) => StoredSessionDraft | null;
   listStoredSessions: () => StoredSessionSummary[];
   saveMoriPackageDraft: (pkg: MoriPackageV0) => StoredMoriPackageDraft;
   loadMoriPackageDraft: (packageId: string) => StoredMoriPackageDraft | null;

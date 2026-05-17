@@ -53,6 +53,16 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     return this.read<StoredSessionDraft>(CURRENT_SESSION_KEY);
   }
 
+  setCurrentSession(sessionId: string): StoredSessionDraft | null {
+    const stored = this.read<StoredSessionDraft>(`${SESSION_PREFIX}${sessionId}`);
+    if (!stored) return null;
+    // Write the stored draft verbatim — opening a saved session must
+    // not restamp its `savedAt`, so this is deliberately not a call to
+    // `saveCurrentSessionDraft`.
+    this.write(CURRENT_SESSION_KEY, stored);
+    return stored;
+  }
+
   listStoredSessions(): StoredSessionSummary[] {
     const sessions: StoredSessionSummary[] = [];
 

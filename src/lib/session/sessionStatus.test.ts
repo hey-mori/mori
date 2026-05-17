@@ -29,6 +29,7 @@ const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionStat
   clearAnalysis: () => {},
   updateAnalysisSettings: () => ({ provider: "deterministic", fallbackToDeterministic: true, ollamaEndpoint: "", ollamaModel: "", ollamaTimeoutMs: 30000 }),
   loadDesktopSession: async () => false,
+  loadBrowserSession: () => false,
   markPersistedToDesktop: () => {},
   ...overrides,
 });

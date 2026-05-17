@@ -70,6 +70,12 @@ export type MoriSessionState = {
   clearAnalysis: () => void;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
+  /**
+   * Open an already-saved browser session draft as the active session.
+   * Used by the Workspace project hub to continue a previous session.
+   * Returns `false` when no draft is stored for the id.
+   */
+  loadBrowserSession: (sessionId: string) => boolean;
   markPersistedToDesktop: () => void;
 };
 
@@ -392,6 +398,28 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   markPersistedToDesktop: () => {
     if (!get().draft) return;
     set({ source: "desktop-sqlite" });
+  },
+  loadBrowserSession: (sessionId) => {
+    if (get().draft?.session.id === sessionId) return true;
+    const repository = getRepository();
+    const draft = repository.setCurrentSession(sessionId);
+    if (!draft) return false;
+
+    const imports = repository.listSessionImports(sessionId);
+    const analysisRecord = repository.loadSessionAnalysis(sessionId);
+
+    set({
+      draft,
+      imports,
+      analysis: analysisRecord?.result ?? null,
+      analysisStatus: analysisRecord ? "succeeded" : "idle",
+      analysisError: null,
+      analysisProviderLabel: analysisRecord?.result.providerLabel ?? null,
+      analysisFallbackUsed: false,
+      initialized: true,
+      source: "browser-draft",
+    });
+    return true;
   },
   loadDesktopSession: async (sessionId) => {
     const service = getPersistenceService();

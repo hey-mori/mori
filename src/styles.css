@@ -6841,6 +6841,12 @@ pre {
   background: white;
 }
 
+.account-session-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .account-linked-mark {
   display: grid;
   place-items: center;

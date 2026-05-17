@@ -272,6 +272,71 @@ describe("useMoriSessionStore desktop persistence", () => {
   });
 });
 
+describe("useMoriSessionStore loadBrowserSession", () => {
+  let repository: BrowserDraftRepository;
+
+  beforeEach(() => {
+    repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  function seedSession(title: string, now: string) {
+    return repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: title,
+        projectName: "Browser Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now,
+      }),
+    );
+  }
+
+  it("opens a previously saved browser session as the active session", () => {
+    const earlier = seedSession("Earlier session", "2026-05-12T13:00:00+09:00");
+    repository.addSessionImport(
+      earlier.session.id,
+      normalizeManualNote({
+        projectId: earlier.project.id,
+        sessionId: earlier.session.id,
+        title: "Note",
+        note: "earlier work",
+        capturedAt: "2026-05-12T13:05:00+09:00",
+      }),
+    );
+    seedSession("Later session", "2026-05-12T15:00:00+09:00");
+
+    const opened = useMoriSessionStore.getState().loadBrowserSession(earlier.session.id);
+
+    expect(opened).toBe(true);
+    const state = useMoriSessionStore.getState();
+    expect(state.draft?.session.id).toBe(earlier.session.id);
+    expect(state.source).toBe("browser-draft");
+    expect(state.imports).toHaveLength(1);
+    expect(repository.loadCurrentSessionDraft()?.session.id).toBe(earlier.session.id);
+  });
+
+  it("returns false for an unknown session id and leaves the store untouched", () => {
+    const opened = useMoriSessionStore.getState().loadBrowserSession("missing-session");
+    expect(opened).toBe(false);
+    expect(useMoriSessionStore.getState().source).toBe("demo");
+    expect(useMoriSessionStore.getState().draft).toBeNull();
+  });
+});
+
 describe("useMoriSessionStore endSession", () => {
   let repository: BrowserDraftRepository;
 
