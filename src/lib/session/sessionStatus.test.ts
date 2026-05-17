@@ -78,20 +78,10 @@ describe("deriveSessionStatus", () => {
   it("derives analysis status - idle with no analysis", () => {
     const state = createMockState({ analysisStatus: "idle", analysis: null });
     const status = deriveSessionStatus(state);
-    
+
     expect(status.hasAnalysis).toBe(false);
-    expect(status.analysisStatusLabel).toBe("No analysis yet");
-    expect(status.analysisTone).toBe("gray");
   });
-  
-  it("derives analysis status - running", () => {
-    const state = createMockState({ analysisStatus: "running" });
-    const status = deriveSessionStatus(state);
-    
-    expect(status.analysisStatusLabel).toBe("Running Quick Pass...");
-    expect(status.analysisTone).toBe("orange");
-  });
-  
+
   it("derives analysis status - succeeded", () => {
     const state = createMockState({
       draft: { session: { id: "s1" } } as any,
@@ -102,8 +92,6 @@ describe("deriveSessionStatus", () => {
     const status = deriveSessionStatus(state);
     
     expect(status.hasAnalysis).toBe(true);
-    expect(status.analysisStatusLabel).toBe("Analysis complete");
-    expect(status.analysisTone).toBe("green");
     expect(status.analysisProviderLabel).toBe("Deterministic");
   });
   

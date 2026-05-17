@@ -19,9 +19,7 @@ export type SessionStatusLabels = {
   // Analysis
   hasAnalysis: boolean;
   analysisProviderLabel: string | null;
-  analysisStatusLabel: string;
-  analysisTone: "gray" | "orange" | "green" | "red";
-  
+
   // Counts
   importCount: number;
   sourceCount: number;
@@ -71,29 +69,7 @@ export function deriveSessionStatus(
   // Analysis labels
   const hasAnalysis = Boolean(state.draft && state.analysis);
   const analysisProviderLabel = state.analysisProviderLabel;
-  
-  let analysisStatusLabel: string;
-  let analysisTone: "gray" | "orange" | "green" | "red";
-  
-  switch (state.analysisStatus) {
-    case "idle":
-      analysisStatusLabel = hasAnalysis ? "Analysis ready" : "No analysis yet";
-      analysisTone = hasAnalysis ? "green" : "gray";
-      break;
-    case "running":
-      analysisStatusLabel = "Running Quick Pass...";
-      analysisTone = "orange";
-      break;
-    case "succeeded":
-      analysisStatusLabel = "Analysis complete";
-      analysisTone = "green";
-      break;
-    case "failed":
-      analysisStatusLabel = "Analysis failed";
-      analysisTone = "red";
-      break;
-  }
-  
+
   // Data basis for reports
   let dataBasisLabel: string;
   let dataBasisTone: "purple" | "blue" | "green";
@@ -118,8 +94,6 @@ export function deriveSessionStatus(
     sourceTone,
     hasAnalysis,
     analysisProviderLabel,
-    analysisStatusLabel,
-    analysisTone,
     importCount: state.imports.length,
     sourceCount: viewCounts?.sourceCount ?? 0,
     eventCount: viewCounts?.eventCount ?? 0,
