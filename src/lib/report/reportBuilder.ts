@@ -8,6 +8,10 @@ import type {
   TimelineEvent,
 } from "../../domain/types";
 import { eventTypeLabels } from "../../domain/constants";
+import {
+  isNextActionCompleted,
+  splitNextActionsByCompletion,
+} from "../session/nextActionCompletion";
 import { getReportEvidenceSummary } from "../sources/traceability";
 import { isMemoryFlaggedForReview } from "../project-memory/projectMemoryResumePrompt";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
@@ -311,9 +315,21 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
     if (view.nextActions.length === 0) {
       lines.push("_다음 액션이 없습니다._");
     } else {
-      const ordered = sortByPriority(view.nextActions);
-      for (const action of ordered) {
-        lines.push(renderNextAction(action, view, privacy));
+      const { pending, completed } = splitNextActionsByCompletion(view.nextActions);
+      if (pending.length === 0) {
+        lines.push("_남은 다음 액션이 없습니다._");
+      } else {
+        for (const action of sortByPriority(pending)) {
+          lines.push(renderNextAction(action, view, privacy));
+        }
+      }
+      if (completed.length > 0) {
+        lines.push("");
+        lines.push("### 완료한 다음 작업");
+        lines.push("");
+        for (const action of sortByPriority(completed)) {
+          lines.push(renderNextAction(action, view, privacy));
+        }
       }
     }
     lines.push("");
@@ -471,7 +487,8 @@ function renderNextAction(
   view: MoriMockSession,
   privacy: ReportPrivacyOptions,
 ): string {
-  const head = `- **${action.title}** _(우선순위 ${action.priority})_`;
+  const doneTag = isNextActionCompleted(action) ? " _(완료)_" : "";
+  const head = `- **${action.title}**${doneTag} _(우선순위 ${action.priority})_`;
   if (privacy.clientSafe) return head;
   const relatedIssue = view.issues.find((issue) => action.relatedIssueIds.includes(issue.id));
   const relatedEvent = view.events.find((event) => action.relatedEventIds.includes(event.id));

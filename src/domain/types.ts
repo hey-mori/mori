@@ -179,6 +179,14 @@ export type NextAction = {
   priority: Priority;
   relatedIssueIds: string[];
   relatedEventIds: string[];
+  /**
+   * User-set completion state. Optional so sessions saved before the
+   * Next Action completion capability default to pending. `completedAt`
+   * is an ISO timestamp set when the user marks the action done; it is
+   * cleared when the action is reopened.
+   */
+  done?: boolean;
+  completedAt?: string;
 };
 
 export type Summary = {

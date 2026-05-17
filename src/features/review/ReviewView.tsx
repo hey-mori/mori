@@ -22,6 +22,10 @@ import {
 import { useMoriAppStore } from "../../app/store";
 import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import {
+  countNextActionCompletion,
+  splitNextActionsByCompletion,
+} from "../../lib/session/nextActionCompletion";
+import {
   getReviewSummary,
   getUnresolvedItems,
   groupIssuesByStatus,
@@ -64,6 +68,7 @@ export function ReviewView() {
   const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
   const analysis = useMoriSessionStore((state) => state.analysis);
   const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
+  const setNextActionCompletion = useMoriSessionStore((state) => state.setNextActionCompletion);
   const imports = useMoriSessionStore((state) => state.imports);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
@@ -271,6 +276,10 @@ export function ReviewView() {
             selection={effectiveSelection}
             view={view}
             onShowTimeline={handleShowTimeline}
+            onToggleNextActionComplete={(id, completed) =>
+              setNextActionCompletion(id, completed)
+            }
+            canEditCompletion={!view.isDemo}
           />
           <ReviewSummaryPanel
             summary={summary}
@@ -577,16 +586,22 @@ function NextActionsTab({
       </div>
     );
   }
+  const progress = countNextActionCompletion(actions);
+  const { pending, completed } = splitNextActionsByCompletion(actions);
+  const ordered = [...pending, ...completed];
   return (
     <section className="review-next-actions">
       <header className="review-section-head">
         <div>
           <h2>Next Actions</h2>
-          <p>이슈와 연결된 다음 작업 후보입니다. Apply된 소스에서 직접 추적됩니다.</p>
+          <p>
+            이슈와 연결된 다음 작업 후보입니다. 완료 처리한 작업은 목록 아래로
+            내려가며, 남은 작업 {progress.pending}개 · 완료 {progress.completed}개입니다.
+          </p>
         </div>
       </header>
       <ul className="review-next-action-list">
-        {actions.map((action) => (
+        {ordered.map((action) => (
           <li key={action.id}>
             <ReviewNextActionRow
               nextAction={action}

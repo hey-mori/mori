@@ -6,6 +6,7 @@ import type {
   Priority,
   TimelineEvent,
 } from "../../domain/types";
+import { isNextActionCompleted } from "../session/nextActionCompletion";
 
 /**
  * Pure derivations for the Review workspace. These helpers stay free of
@@ -175,6 +176,8 @@ export function getUnresolvedItems({
   }
 
   for (const nextAction of nextActions) {
+    // A completed action is no longer unresolved work.
+    if (isNextActionCompleted(nextAction)) continue;
     items.push({ kind: "nextAction", nextAction, reason: "pending-next-action" });
   }
 

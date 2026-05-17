@@ -13,4 +13,20 @@ describe("resume prompt", () => {
     expect(prompt).toContain("Next actions");
     expect(prompt).toContain(".mori");
   });
+
+  it("excludes completed next actions from the resume prompt", () => {
+    const [first, ...rest] = moriMockSession.nextActions;
+    const prompt = buildResumePrompt({
+      ...moriMockSession,
+      nextActions: [
+        { ...first!, done: true, completedAt: "2026-05-18T09:00:00Z" },
+        ...rest,
+      ],
+    });
+
+    expect(prompt).not.toContain(`- ${first!.title}`);
+    for (const action of rest) {
+      expect(prompt).toContain(`- ${action.title}`);
+    }
+  });
 });

@@ -1,5 +1,6 @@
-import { CalendarClock, Layers, Link2, ShieldCheck, Sparkles } from "lucide-react";
+import { CalendarClock, CheckCircle2, Layers, Link2, ShieldCheck, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import {
@@ -8,7 +9,8 @@ import {
   priorityLabels,
 } from "../../domain/constants";
 import type { Decision, Issue, MoriMockSession, NextAction } from "../../domain/types";
-import { formatTime } from "../../lib/formatting/time";
+import { formatDate, formatTime } from "../../lib/formatting/time";
+import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
   getDecisionEvidenceSources,
   getIssueEvidenceSources,
@@ -26,10 +28,15 @@ export function ReviewDetailPanel({
   selection,
   view,
   onShowTimeline,
+  onToggleNextActionComplete,
+  canEditCompletion,
 }: {
   selection: ReviewSelection;
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
+  onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
+  /** False in demo mode — completion cannot be persisted there. */
+  canEditCompletion: boolean;
 }) {
   if (selection.kind === "none") {
     return (
@@ -65,7 +72,15 @@ export function ReviewDetailPanel({
 
   const nextAction = view.nextActions.find((entry) => entry.id === selection.nextActionId);
   if (!nextAction) return <MissingItem label="다음 액션" />;
-  return <NextActionDetail nextAction={nextAction} view={view} onShowTimeline={onShowTimeline} />;
+  return (
+    <NextActionDetail
+      nextAction={nextAction}
+      view={view}
+      onShowTimeline={onShowTimeline}
+      onToggleComplete={onToggleNextActionComplete}
+      canEditCompletion={canEditCompletion}
+    />
+  );
 }
 
 function MissingItem({ label }: { label: string }) {
@@ -271,15 +286,20 @@ function NextActionDetail({
   nextAction,
   view,
   onShowTimeline,
+  onToggleComplete,
+  canEditCompletion,
 }: {
   nextAction: NextAction;
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
+  onToggleComplete: (nextActionId: string, completed: boolean) => void;
+  canEditCompletion: boolean;
 }) {
   const relatedIssues = view.issues.filter((issue) =>
     nextAction.relatedIssueIds.includes(issue.id),
   );
   const relatedEvents = view.events.filter((event) => nextAction.relatedEventIds.includes(event.id));
+  const completed = isNextActionCompleted(nextAction);
 
   return (
     <aside className="review-detail" aria-label="Next action detail">
@@ -287,8 +307,15 @@ function NextActionDetail({
         <div className="review-detail-badges">
           <Badge tone={priorityTone(nextAction.priority)}>{priorityLabels[nextAction.priority]}</Badge>
           <Badge tone="purple">Next action</Badge>
+          {completed ? <Badge tone="green">완료됨</Badge> : null}
         </div>
         <h3>{nextAction.title}</h3>
+        {completed && nextAction.completedAt ? (
+          <p className="review-detail-completed-at">
+            <CheckCircle2 size={13} aria-hidden="true" />
+            <span>완료 처리 {formatDate(nextAction.completedAt)}</span>
+          </p>
+        ) : null}
       </header>
 
       <section className="review-detail-section">
@@ -323,12 +350,27 @@ function NextActionDetail({
       </section>
 
       <section className="review-detail-section">
-        <SectionHeader title="액션" />
+        <SectionHeader
+          title="액션"
+          hint={
+            completed
+              ? "완료한 다음 작업입니다. 다시 미완료로 되돌릴 수 있습니다."
+              : "이 다음 작업을 완료 처리하면 Resume 프롬프트에서 제외됩니다."
+          }
+        />
         <div className="review-detail-actions">
-          <MoriPlannedAction
-            label="완료 처리"
-            title="다음 액션 완료 처리는 다음 마일스톤에서 활성화됩니다."
-          />
+          <Button
+            variant={completed ? "ghost" : "primary"}
+            disabled={!canEditCompletion}
+            title={
+              canEditCompletion
+                ? undefined
+                : "데모 세션에서는 완료 상태가 저장되지 않습니다."
+            }
+            onClick={() => onToggleComplete(nextAction.id, !completed)}
+          >
+            {completed ? "다시 미완료로" : "완료 처리"}
+          </Button>
           <MoriPlannedAction
             label="편집"
             title="다음 액션 편집은 다음 마일스톤에서 활성화됩니다."

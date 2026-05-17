@@ -5327,6 +5327,23 @@ pre {
   box-shadow: 0 6px 18px rgba(98, 70, 245, 0.12);
 }
 
+.review-next-action-row.is-done {
+  background: var(--mori-surface-subtle);
+}
+
+.review-next-action-row.is-done strong {
+  color: var(--mori-text-muted);
+}
+
+.review-detail-completed-at {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--mori-status-success);
+}
+
 .review-next-action-row button {
   display: grid;
   grid-template-columns: 28px 1fr auto;

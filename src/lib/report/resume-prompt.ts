@@ -1,4 +1,5 @@
 import type { MoriMockSession } from "../../domain/types";
+import { isNextActionCompleted } from "../session/nextActionCompletion";
 
 export function buildResumePrompt(data: MoriMockSession): string {
   const lastDecisions = data.decisions
@@ -14,7 +15,11 @@ export function buildResumePrompt(data: MoriMockSession): string {
     .filter((artifact) => artifact.path)
     .map((artifact) => `- ${artifact.path}`)
     .join("\n");
-  const nextActions = data.nextActions.map((action) => `- ${action.title}`).join("\n");
+  // Completed actions are not future work — keep them out of the resume.
+  const nextActions = data.nextActions
+    .filter((action) => !isNextActionCompleted(action))
+    .map((action) => `- ${action.title}`)
+    .join("\n");
 
   return `You are continuing a product design and engineering session for Mori.
 

@@ -227,6 +227,15 @@ only — no phase numbers.
   via `data-mori-theme` (and pre-paint in `main.tsx`), with a Settings
   → 화면 card switching `formal` / `forest` and rendering `nightLake`
   as an honest disabled Planned option.
+- Workspace issue-resolution progress — the Workspace summary rail
+  shows resolved-issue and next-action counts derived from persisted
+  session state.
+- Next Action completion — the first real Review-surface write: a
+  persisted `done` / `completedAt` on `NextAction`, a
+  `setNextActionCompletion` store action that writes the session
+  analysis + memory body, a Review detail-panel toggle, and
+  completion-aware Workspace / Reports / Resume / Companion / Project
+  Memory surfaces (completed actions drop out of future-work prompts).
 
 **Open priority (highest first):**
 

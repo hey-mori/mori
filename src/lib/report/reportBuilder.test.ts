@@ -41,6 +41,24 @@ describe("buildReportMarkdown", () => {
     expect(payload.counts.sources).toBe(moriMockSession.sources.length);
   });
 
+  it("groups completed next actions under their own report sub-section", () => {
+    const [first, ...rest] = moriMockSession.nextActions;
+    const payload = buildReportMarkdown({
+      view: {
+        ...moriMockSession,
+        nextActions: [
+          { ...first!, done: true, completedAt: "2026-05-18T09:00:00Z" },
+          ...rest,
+        ],
+      },
+      type: "personalRetrospective",
+      sections: new Set<ReportSectionId>(["nextActions"]),
+      privacy: privacy(),
+    });
+    expect(payload.markdown).toContain("### 완료한 다음 작업");
+    expect(payload.markdown).toContain(`**${first!.title}** _(완료)_`);
+  });
+
   it("only renders sections present in the sections set", () => {
     const onlySummary = new Set<ReportSectionId>(["summary"]);
     const payload = buildReportMarkdown({

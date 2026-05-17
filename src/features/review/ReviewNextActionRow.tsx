@@ -1,7 +1,8 @@
-import { ListChecks } from "lucide-react";
+import { CheckCircle2, ListChecks } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { priorityLabels } from "../../domain/constants";
 import type { Issue, NextAction } from "../../domain/types";
+import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { priorityTone } from "../../lib/review-workspace/reviewWorkspace";
 
 export function ReviewNextActionRow({
@@ -15,14 +16,21 @@ export function ReviewNextActionRow({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const completed = isNextActionCompleted(nextAction);
   return (
     <article
-      className={`review-next-action-row ${selected ? "is-selected" : ""}`}
+      className={`review-next-action-row ${selected ? "is-selected" : ""} ${
+        completed ? "is-done" : ""
+      }`.trim()}
       aria-current={selected ? "true" : undefined}
     >
       <button type="button" onClick={onSelect}>
         <span className="review-next-action-icon">
-          <ListChecks size={14} aria-hidden="true" />
+          {completed ? (
+            <CheckCircle2 size={14} aria-hidden="true" />
+          ) : (
+            <ListChecks size={14} aria-hidden="true" />
+          )}
         </span>
         <div className="review-next-action-titles">
           <strong>{nextAction.title}</strong>
@@ -36,7 +44,13 @@ export function ReviewNextActionRow({
           </span>
         </div>
         <div className="review-next-action-meta">
-          <Badge tone={priorityTone(nextAction.priority)}>{priorityLabels[nextAction.priority]}</Badge>
+          {completed ? (
+            <Badge tone="green">완료됨</Badge>
+          ) : (
+            <Badge tone={priorityTone(nextAction.priority)}>
+              {priorityLabels[nextAction.priority]}
+            </Badge>
+          )}
           <span>{nextAction.relatedEventIds.length} event</span>
         </div>
       </button>

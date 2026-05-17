@@ -24,6 +24,7 @@ import type {
   SourceRef,
   TimelineEvent,
 } from "../../domain/types";
+import { isNextActionCompleted } from "../session/nextActionCompletion";
 import type {
   ProjectMemoryKeyDecision,
   ProjectMemoryKeyEvidence,
@@ -249,7 +250,11 @@ export function aggregateCounters(loaded: ProjectMemoryLoadedSession[]) {
     issueCount += session.issues.length;
     openIssueCount += session.issues.filter((issue) => issue.status !== "resolved").length;
     decisionCount += session.decisions.length;
-    nextActionCount += session.nextActions.length;
+    // Completed actions are historical; the count feeds the "Pending
+    // next actions" resume line, so only pending actions belong here.
+    nextActionCount += session.nextActions.filter(
+      (action) => !isNextActionCompleted(action),
+    ).length;
   }
 
   return {
@@ -290,7 +295,9 @@ export function pickRecommendedNextSession({
   if (activeSession) {
     const inProgress = activeSession.issues.find((issue) => issue.status === "inProgress");
     if (inProgress) return `진행 중 이슈 마무리: ${inProgress.title}`;
-    const next = activeSession.nextActions[0];
+    const next = activeSession.nextActions.find(
+      (action) => !isNextActionCompleted(action),
+    );
     if (next) return `다음 액션 추진: ${next.title}`;
   }
   return "현재 세션 메모리를 검토하고 다음 작업 범위를 결정";

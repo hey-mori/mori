@@ -31,6 +31,7 @@ import {
   type ProductStateTone,
 } from "../product-state/productState";
 import type { ReviewSelection } from "../review-workspace/reviewWorkspace";
+import { isNextActionCompleted } from "../session/nextActionCompletion";
 
 export type CompanionSignalType =
   | "demo_mode_notice"
@@ -286,15 +287,20 @@ function collectCompanionSignals(input: CompanionSignalInput): CompanionSignal[]
   }
 
   // ── Next actions to carry forward ───────────────────────────────────────
-  if (input.nextActions.length > 0) {
+  // Only pending actions are carry-forward work — completed ones are
+  // historical context, so the companion never nags about them.
+  const pendingNextActions = input.nextActions.filter(
+    (action) => !isNextActionCompleted(action),
+  );
+  if (pendingNextActions.length > 0) {
     signals.push({
       id: "companion-next-actions",
       type: "suggested_next_action",
       severity: "suggestion",
-      title: `다음에 이어갈 액션 ${input.nextActions.length}개가 있습니다`,
+      title: `다음에 이어갈 액션 ${pendingNextActions.length}개가 있습니다`,
       message: "이번 세션에서 정리된 다음 작업입니다. Resume 프롬프트에 함께 담을 수 있어요.",
       sourceSurface: "review",
-      linkedItemIds: input.nextActions.map((action) => action.id),
+      linkedItemIds: pendingNextActions.map((action) => action.id),
       evidenceRefs: [],
       basis: "mixed",
       actionLabel: "다음 액션 보기",

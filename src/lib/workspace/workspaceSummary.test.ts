@@ -41,6 +41,23 @@ describe("buildWorkspaceSummary", () => {
     expect(summary.counts.nextActions).toBe(moriMockSession.nextActions.length);
   });
 
+  it("counts completed next actions as the work-progress signal", () => {
+    const base = moriMockSession.nextActions[0]!;
+    const summary = buildWorkspaceSummary({
+      view: view({
+        nextActions: [
+          { ...base, id: "na-done", done: true, completedAt: "2026-05-18T09:00:00Z" },
+          { ...base, id: "na-pending" },
+        ],
+      }),
+      mode: "demo",
+      storedSessions: [],
+    });
+
+    expect(summary.counts.nextActions).toBe(2);
+    expect(summary.counts.completedNextActions).toBe(1);
+  });
+
   it("counts resolved issues as the project progress signal", () => {
     const summary = buildWorkspaceSummary({
       view: view({

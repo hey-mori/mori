@@ -1,6 +1,7 @@
 import type { SessionMode, SessionViewModel } from "../../app/sessionStore";
 import type { Session } from "../../domain/types";
 import type { ProductStateTone } from "../product-state/productStateLabels";
+import { isNextActionCompleted } from "../session/nextActionCompletion";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 
 /**
@@ -41,6 +42,8 @@ export type WorkspaceSummary = {
     resolvedIssues: number;
     decisions: number;
     nextActions: number;
+    /** Next actions the user has marked done — the work-progress signal. */
+    completedNextActions: number;
   };
 };
 
@@ -103,6 +106,7 @@ export function buildWorkspaceSummary({
       resolvedIssues: view.issues.filter((issue) => issue.status === "resolved").length,
       decisions: view.decisions.length,
       nextActions: view.nextActions.length,
+      completedNextActions: view.nextActions.filter(isNextActionCompleted).length,
     },
   };
 }

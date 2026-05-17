@@ -207,6 +207,18 @@ describe("getUnresolvedItems", () => {
     const items = getUnresolvedItems({ issues, decisions, nextActions: [] });
     expect(items).toEqual([]);
   });
+
+  it("excludes completed next actions from the unresolved feed", () => {
+    const nextActions: NextAction[] = [
+      makeNextAction({ id: "pending" }),
+      makeNextAction({ id: "done", done: true, completedAt: "2026-05-18T09:00:00Z" }),
+    ];
+    const items = getUnresolvedItems({ issues: [], decisions: [], nextActions });
+    const naIds = items
+      .filter((item) => item.kind === "nextAction")
+      .map((item) => (item.kind === "nextAction" ? item.nextAction.id : ""));
+    expect(naIds).toEqual(["pending"]);
+  });
 });
 
 describe("pickDefaultReviewSelection", () => {

@@ -27,6 +27,7 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     updateAnalysisSettings: () => DEFAULT_QUICK_PASS_SETTINGS,
     loadDesktopSession: async () => false,
     loadBrowserSession: () => false,
+    setNextActionCompletion: () => false,
     markPersistedToDesktop: () => undefined,
     ...overrides,
   };

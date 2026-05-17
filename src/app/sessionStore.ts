@@ -15,6 +15,7 @@ import {
 } from "../lib/analysis";
 import type { NormalizedImportCandidate } from "../lib/import";
 import { composeSessionView } from "../lib/session/composeSessionView";
+import { withNextActionCompletion } from "../lib/session/nextActionCompletion";
 import { createBrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import {
   getSessionPersistenceService,
@@ -76,6 +77,14 @@ export type MoriSessionState = {
    * Returns `false` when no draft is stored for the id.
    */
   loadBrowserSession: (sessionId: string) => boolean;
+  /**
+   * Mark a Next Action complete or pending — a Review-surface write.
+   * Persists into the session analysis and the durable memory body so
+   * the change survives reload and feeds Project Memory. Returns
+   * `false` in demo mode, when there is no analysis, or when the id is
+   * unknown.
+   */
+  setNextActionCompletion: (nextActionId: string, completed: boolean) => boolean;
   markPersistedToDesktop: () => void;
 };
 
@@ -398,6 +407,29 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   markPersistedToDesktop: () => {
     if (!get().draft) return;
     set({ source: "desktop-sqlite" });
+  },
+  setNextActionCompletion: (nextActionId, completed) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+    if (!analysis.nextActions.some((action) => action.id === nextActionId)) {
+      return false;
+    }
+
+    const now = new Date().toISOString();
+    const nextAnalysis: MoriAnalysisResult = {
+      ...analysis,
+      nextActions: analysis.nextActions.map((action) =>
+        action.id === nextActionId
+          ? withNextActionCompletion(action, completed, now)
+          : action,
+      ),
+    };
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, nextAnalysis);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
+    set({ analysis: nextAnalysis });
+    return true;
   },
   loadBrowserSession: (sessionId) => {
     if (get().draft?.session.id === sessionId) return true;

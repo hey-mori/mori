@@ -223,7 +223,12 @@ export function WorkspaceView() {
             </p>
             <p className="account-state-line">
               <ListChecks size={14} aria-hidden="true" />
-              <span>다음 작업 {summary.counts.nextActions}개</span>
+              <span>
+                다음 작업 {summary.counts.nextActions}개
+                {summary.counts.nextActions > 0
+                  ? ` · 완료 ${summary.counts.completedNextActions}개`
+                  : ""}
+              </span>
             </p>
             <p className="account-state-note">
               「{view.session.title}」 세션에서 재구성된 항목 수입니다. 세션을 분석하면 이
