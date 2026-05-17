@@ -380,7 +380,19 @@ function QuickPassControl({
           </p>
         </div>
         <div className="analysis-panel-actions">
-          <Button variant="primary" icon={Sparkles} onClick={onRun} disabled={!canRun}>
+          <Button
+            variant="primary"
+            icon={Sparkles}
+            onClick={onRun}
+            disabled={!canRun}
+            title={
+              canRun
+                ? "현재 세션의 소스로 Quick Pass 분석을 실행합니다."
+                : status === "running"
+                  ? "분석이 진행 중입니다."
+                  : "분석하려면 먼저 Evidence에 소스를 가져오세요."
+            }
+          >
             {status === "running" ? "분석 중..." : "Quick Pass 실행"}
           </Button>
           {hasAnalysis ? (
@@ -439,7 +451,9 @@ function QuickPassControl({
                 ? `${providerLabel ?? "Quick Pass"} 실행 중...`
                 : hasAnalysis
                   ? `이전 결과: ${providerLabel ?? "deterministic"} · ${describeProviderName(providerName)}`
-                  : "아직 실행하지 않음"}
+                  : canRun
+                    ? "아직 실행하지 않음"
+                    : "아직 실행하지 않음 · 분석하려면 먼저 Evidence에 소스를 가져오세요"}
         </span>
         {fallbackUsed ? <Badge tone="orange">폴백 사용됨</Badge> : null}
       </div>

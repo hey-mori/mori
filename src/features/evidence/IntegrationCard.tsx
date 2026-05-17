@@ -75,7 +75,6 @@ export function IntegrationCard({
 }) {
   const Icon = INTEGRATION_ICON[integration.id] ?? FileText;
   const isPlanned = integration.status === "planned";
-  const isPartial = integration.status === "partial";
   const actionLabel = getHubCardActionLabel(integration);
   const canTakeAction = Boolean(importKind) && !isPlanned && Boolean(onPrimary) && !primaryDisabled;
   const trustTone = getTrustTone(integration.trustDefault);
@@ -165,7 +164,7 @@ export function IntegrationCard({
                   : "이 항목은 가져오기 패널의 다른 탭에서 처리됩니다."
               }
             >
-              {isPartial ? "Partial · 사용 가능" : actionLabel}
+              {actionLabel}
             </Button>
           </>
         )}
