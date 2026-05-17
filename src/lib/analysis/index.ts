@@ -30,5 +30,10 @@ export {
   type OllamaConnectionProbe,
   type OllamaProviderConfig,
 } from "./ollamaProvider";
+export {
+  describeAnalysisStatus,
+  getAnalysisStatusTone,
+  type AnalysisStatusTone,
+} from "./analysisStatusDisplay";
 export { buildQuickPassPrompt } from "./promptTemplates";
 export { providerNameLabel, resolveQuickPassProvider, type QuickPassProviderConfig } from "./quickPassProvider";

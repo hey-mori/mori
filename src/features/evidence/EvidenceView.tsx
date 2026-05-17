@@ -13,7 +13,15 @@ import {
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { useMoriReviewStore } from "../../app/reviewStore";
-import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib/analysis";
+import {
+  describeAnalysisStatus,
+  getAnalysisStatusTone,
+} from "../../lib/analysis";
+import type {
+  MoriAnalysisStatus,
+  QuickPassAnalysisSettings,
+  QuickPassProviderKind,
+} from "../../lib/analysis";
 import {
   getHubAiPlatform,
   getHubAvailableIntegrations,
@@ -344,7 +352,7 @@ function QuickPassControl({
   onRun,
   onClear,
 }: {
-  status: string;
+  status: MoriAnalysisStatus;
   providerLabel: string | null;
   providerName: string | null;
   error: string | null;
@@ -429,17 +437,7 @@ function QuickPassControl({
         </Button>
       </div>
       <div className="analysis-panel-status">
-        <Badge
-          tone={
-            status === "succeeded"
-              ? "green"
-              : status === "failed"
-                ? "red"
-                : status === "running"
-                  ? "purple"
-                  : "gray"
-          }
-        >
+        <Badge tone={getAnalysisStatusTone(status)}>
           {describeAnalysisStatus(status)}
         </Badge>
         <span>
@@ -491,12 +489,4 @@ function describeProviderName(name: string | null): string {
   if (name === "ollama-quick-pass-v1") return "실제 로컬 LLM";
   if (name === "deterministic-heuristic-v1") return "휴리스틱 (LLM 미사용)";
   return "알 수 없는 제공자";
-}
-
-/** Korean label for the raw Quick Pass analysis status enum. */
-function describeAnalysisStatus(status: string): string {
-  if (status === "succeeded") return "완료";
-  if (status === "failed") return "실패";
-  if (status === "running") return "실행 중";
-  return "대기 중";
 }
