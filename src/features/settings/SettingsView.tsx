@@ -3,6 +3,7 @@ import {
   HardDrive,
   Layers,
   Lock,
+  Palette,
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -32,9 +33,16 @@ import { PrivacyGuaranteesCard } from "./PrivacyGuaranteesCard";
 import { StorageCard } from "./StorageCard";
 import { RepositoriesCard } from "./RepositoriesCard";
 import { PlannedConnectorsCard } from "./PlannedConnectorsCard";
+import { ThemeCard } from "./ThemeCard";
 import { TrustSummaryPanel } from "./TrustSummaryPanel";
 
-type SettingsTab = "localAi" | "privacy" | "storage" | "repositories" | "connectors";
+type SettingsTab =
+  | "localAi"
+  | "privacy"
+  | "storage"
+  | "repositories"
+  | "connectors"
+  | "appearance";
 
 const TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "로컬 AI", icon: Bot },
@@ -42,6 +50,7 @@ const TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "storage", label: "저장소", icon: HardDrive },
   { id: "repositories", label: "리포지토리", icon: ShieldCheck },
   { id: "connectors", label: "커넥터", icon: Layers },
+  { id: "appearance", label: "화면", icon: Palette },
 ];
 
 export function SettingsView() {
@@ -217,6 +226,7 @@ export function SettingsView() {
             />
           ) : null}
           {activeTab === "connectors" ? <PlannedConnectorsCard /> : null}
+          {activeTab === "appearance" ? <ThemeCard /> : null}
           {activeTab === "storage" ? (
             <SqliteLoadCard
               sessions={sqliteSessions}

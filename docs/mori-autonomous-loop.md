@@ -222,6 +222,11 @@ only — no phase numbers.
   `loadBrowserSession` store action; the Workspace project hub's
   saved, non-active session rows carry an "이어가기" action that opens
   the session and routes to the Timeline.
+- Runtime theme switcher — `settings.themeSwitcher` is now implemented:
+  a local `themePreference` model + `themeStore`, applied to `<html>`
+  via `data-mori-theme` (and pre-paint in `main.tsx`), with a Settings
+  → 화면 card switching `formal` / `forest` and rendering `nightLake`
+  as an honest disabled Planned option.
 
 **Open priority (highest first):**
 

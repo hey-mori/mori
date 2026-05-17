@@ -10,12 +10,13 @@ live in `src/components/ui/` (`MoriCard`, `MoriStatusBadge`,
 `MoriScrollArea`, `MoriStatCard`, `MoriToolbar`, `MoriEmptyState`,
 `SegmentedControl`). New
 surfaces should consume the semantic `--mori-*` variables rather than the
-raw token values so a future theme switcher (Planned, registry id
+raw token values so the runtime theme switcher (registry id
 `settings.themeSwitcher`) can remap one layer.
 
 The full theme system policy is in [Theme System](theme-system.md). The
-Mori product surfaces ship with two themes today (`formal` default, plus
-a token-only `forest` variant); `nightLake` is reserved as Planned.
+Mori product surfaces ship with two runtime-selectable themes today
+(`formal` default and a `forest` variant), switched from Settings → 화면;
+`nightLake` is reserved as Planned.
 
 ## Visual Direction
 

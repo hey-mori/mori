@@ -9280,6 +9280,73 @@ pre {
   max-width: 760px;
 }
 
+.theme-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--mori-space-4);
+}
+
+.theme-option {
+  display: grid;
+  gap: var(--mori-space-2);
+  padding: var(--mori-space-5) var(--mori-space-6);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--mori-transition), background var(--mori-transition);
+}
+
+.theme-option:hover:not(:disabled) {
+  border-color: var(--mori-border-strong);
+}
+
+.theme-option.selected {
+  border-color: var(--mori-accent);
+  background: var(--mori-accent-soft);
+}
+
+.theme-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.theme-option-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mori-space-3);
+}
+
+.theme-option-head strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mori-text);
+}
+
+.theme-option-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mori-text-muted);
+}
+
+.theme-option-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--mori-accent);
+  color: var(--mori-text-inverse);
+}
+
+.theme-option-description {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--mori-text-muted);
+}
+
 .settings-empty {
   margin: 0;
   padding: 12px;

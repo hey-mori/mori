@@ -248,7 +248,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "settings.storage.moriPackageJson", label: ".mori v0 JSON package", status: "implemented", description: "Export the full session as JSON." },
   { id: "settings.storage.moriPackageZip", label: ".mori zip package", status: PLANNED, description: "Zip package bundling Markdown + assets.", disabledReason: ".mori zip package is a planned milestone (only JSON exists today)." },
   { id: "settings.repositories.crud", label: "Repository CRUD", status: "implemented", description: "Add, verify, label, and delete saved repository paths." },
-  { id: "settings.themeSwitcher", label: "Theme switcher", status: PLANNED, description: "Visual theme switching.", disabledReason: "Theme tokens exist but the runtime switcher is a planned milestone." },
+  { id: "settings.themeSwitcher", label: "Theme switcher", status: "implemented", description: "Local runtime theme switching between the formal and forest token sets." },
   { id: "settings.privacy.policy", label: "Privacy policy display", status: "implemented", description: "Read-only status cards for Mori's privacy guarantees." },
   // ────────────────────────── Surface-level rollups ──────────────────
   { id: "rollup.aiTranscriptImport", label: "AI transcript import", status: "implemented", description: "Paste Claude / ChatGPT / Codex / Other AI transcripts." },
@@ -268,7 +268,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "rollup.sqlitePersistence", label: "SQLite persistence", status: "implemented", description: "Persistent local SQLite store for sessions, imports, and analysis.", runtime: "desktop" },
   { id: "rollup.moriPackageExport", label: ".mori v0 package export", status: "implemented", description: "Serialise the session to a .mori v0 JSON package." },
   { id: "rollup.moriPackageImport", label: ".mori v0 package import", status: PLANNED, description: "Open a saved .mori v0 package back into a session.", disabledReason: "Reading .mori v0 packages back is a planned milestone." },
-  { id: "rollup.themeSystem", label: "Theme system", status: "partial", description: "Token foundation lands first; the runtime switcher is Planned.", userFacingStatus: "Partial — formal + forest tokens declared; switcher Planned." },
+  { id: "rollup.themeSystem", label: "Theme system", status: "implemented", description: "Three-layer token system with a local runtime switcher for the formal and forest themes." },
   // ────────────────────────── Connector capabilities ─────────────────
   { id: "connector.claudeCodeHook", label: "Claude Code hook", status: "partial", description: "Local Claude Code hook script writes JSONL events; Mori imports them via Evidence Hub → Connector JSONL.", userFacingStatus: "Partial — template + JSONL import works; no live sync." },
   { id: "connector.codexCliWrapper", label: "Codex CLI wrapper", status: "partial", description: "Local Codex CLI wrapper writes JSONL events; Mori imports them via Evidence Hub → Connector JSONL.", userFacingStatus: "Partial — template + JSONL import works; no desktop/web capture." },

@@ -69,17 +69,17 @@ already describes it.
 
 ### `forest`
 
-Token-only sage variant. The selector
-`[data-mori-theme="forest"]` is active when present. The runtime switcher
-is Planned (`settings.themeSwitcher`); today the only way to preview it is
-to set the attribute manually in DevTools.
+A sage variant. The selector `[data-mori-theme="forest"]` is active when
+present. Selectable at runtime from Settings → 화면 (registry id
+`settings.themeSwitcher`).
 
 ### `nightLake` (Planned)
 
-Reserved selector with no token overrides. The selector exists so the
-future switcher can ship without re-plumbing every surface. Until the
-switcher lands, the selector is intentionally inert — half-themed surfaces
-never ship.
+Reserved selector with no token overrides. The Settings → 화면 switcher
+renders it as a disabled, honestly-labelled Planned option — it is never
+a valid stored preference, because selecting it would render nothing.
+The selector exists so the future dark theme can ship without re-plumbing
+every surface.
 
 ## Reusable theme-driven classes
 
@@ -94,12 +94,16 @@ never ship.
 | `.mori-empty-state` | Calm empty-state surface. |
 | `.mori-planned-action` | Disabled-with-tooltip button used by `MoriPlannedAction`. |
 
-## Honesty about the switcher
+## The runtime switcher
 
-The runtime theme switcher itself is **Planned** (registry id
-`settings.themeSwitcher`). The token layer is **implemented** — adopters
-can confidently reference `--mori-*` knowing the switcher won't break their
-surfaces when it lands.
+The runtime theme switcher is **implemented** (registry id
+`settings.themeSwitcher`). It lives at Settings → 화면 and switches
+between `formal` and `forest`. The selected theme is a local-only
+preference (`mori.themePreference` in browser storage); it never syncs
+and never affects data access, capture, or memory. `applyThemeToDocument`
+sets `data-mori-theme` on `<html>`, and `src/main.tsx` applies the saved
+theme before the first paint so a non-default theme does not flash on
+reload.
 
 ## Related
 

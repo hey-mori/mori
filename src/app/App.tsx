@@ -4,6 +4,7 @@ import { useMoriAppStore } from "./store";
 import { useMoriSessionStore } from "./sessionStore";
 import { useMoriRepositoryStore } from "./repositoryStore";
 import { useMoriProfileStore } from "./profileStore";
+import { useMoriThemeStore } from "./themeStore";
 import { StartSessionView } from "../features/start-session/StartSessionView";
 import { TimelineView } from "../features/timeline/TimelineView";
 import { ReviewView } from "../features/review/ReviewView";
@@ -26,6 +27,8 @@ export default function App() {
   const repositoriesInitialized = useMoriRepositoryStore((state) => state.initialized);
   const hydrateProfile = useMoriProfileStore((state) => state.hydrate);
   const profileInitialized = useMoriProfileStore((state) => state.initialized);
+  const hydrateTheme = useMoriThemeStore((state) => state.hydrate);
+  const themeInitialized = useMoriThemeStore((state) => state.initialized);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -38,6 +41,10 @@ export default function App() {
   useEffect(() => {
     if (!profileInitialized) hydrateProfile();
   }, [profileInitialized, hydrateProfile]);
+
+  useEffect(() => {
+    if (!themeInitialized) hydrateTheme();
+  }, [themeInitialized, hydrateTheme]);
 
   return (
     <AppShell>
