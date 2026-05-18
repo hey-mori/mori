@@ -100,6 +100,13 @@ export type TimelineEvent = {
   createdBy: CreatedBy;
   userModified: boolean;
   /**
+   * Free-text note the user attached to the event from the inspector.
+   * Additive — events imported before notes existed simply omit it. A note
+   * is the user's own annotation; it never sets the AI-derived
+   * `userModified` flag.
+   */
+  userNote?: string;
+  /**
    * Stable identity from an external connector (Claude Code hook / Codex
    * CLI wrapper / terminal / git connector). Optional — only present on
    * events imported through a Mori connector JSONL pass. Mori uses this

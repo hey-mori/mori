@@ -50,4 +50,17 @@ describe("applyEventEdits", () => {
     const before = imports();
     expect(applyEventEdits(before, "missing-event", { title: "x" })).toBe(before);
   });
+
+  it("attaches a user note without stamping userModified", () => {
+    const next = applyEventEdits(imports(), eventId, { note: "  확인 필요  " });
+    const event = next[0]!.events.find((e) => e.id === eventId)!;
+    expect(event.userNote).toBe("확인 필요");
+    expect(event.userModified).toBe(false);
+  });
+
+  it("clears a note to empty", () => {
+    const withNote = applyEventEdits(imports(), eventId, { note: "임시 메모" });
+    const cleared = applyEventEdits(withNote, eventId, { note: "" });
+    expect(cleared[0]!.events.find((e) => e.id === eventId)!.userNote).toBe("");
+  });
 });

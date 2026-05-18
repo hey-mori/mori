@@ -31,10 +31,7 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { buildInspectorViewModel } from "../../lib/timeline/timelineViewModel";
-import {
-  TIMELINE_CONTROLS,
-  getPlannedHint,
-} from "../../lib/timeline/timelineControls";
+import { TIMELINE_CONTROLS } from "../../lib/timeline/timelineControls";
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 
 export function EventInspector({
@@ -62,6 +59,7 @@ export function EventInspector({
   onEditEvent?: (edits: TimelineEventEdits) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [noteEditing, setNoteEditing] = useState(false);
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
     view: session,
@@ -219,21 +217,55 @@ export function EventInspector({
             label={TIMELINE_CONTROLS.inspectorMergeEvent.label}
             icon={Combine}
           />
-          <MoriPlannedAction
-            feature="timeline.inspector.addNote"
-            label={TIMELINE_CONTROLS.inspectorAddNote.label}
-            icon={StickyNote}
-          />
         </div>
       </section>
 
       <section className="inspector-section">
-        <SectionHeader title="메모 / 수정" hint="Planned" />
-        <textarea
-          placeholder={getPlannedHint("memoSave") ?? "수정과 메모 저장은 다음 마일스톤에서 제공됩니다."}
-          disabled
-          className="inspector-memo"
-        />
+        <SectionHeader title="메모" />
+        {noteEditing && onEditEvent ? (
+          <InlineEditForm
+            fields={[
+              {
+                id: "note",
+                label: "메모",
+                value: selectedEvent.userNote ?? "",
+                multiline: true,
+              },
+            ]}
+            onSave={(values) => {
+              onEditEvent({ note: values.note });
+              setNoteEditing(false);
+            }}
+            onCancel={() => setNoteEditing(false)}
+          />
+        ) : (
+          <>
+            {selectedEvent.userNote ? (
+              <div className="inspector-summary-card">
+                <span>메모</span>
+                <p>{selectedEvent.userNote}</p>
+              </div>
+            ) : (
+              <p className="inspector-empty">메모가 없습니다.</p>
+            )}
+            {onEditEvent ? (
+              <div className="inspector-actions-row">
+                <Button
+                  icon={StickyNote}
+                  onClick={() => setNoteEditing(true)}
+                  disabled={!canWrite}
+                  title={
+                    canWrite
+                      ? "이 이벤트에 메모를 작성합니다."
+                      : "실제 세션에서 사용할 수 있습니다."
+                  }
+                >
+                  {selectedEvent.userNote ? "메모 편집" : "메모 추가"}
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
       </section>
     </aside>
   );

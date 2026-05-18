@@ -14,18 +14,25 @@
 import type { TimelineEvent } from "../../domain/types";
 import type { StoredSessionImport } from "../storage/storageTypes";
 
-/** Editable text of a Timeline event. Blank / unchanged values are ignored. */
+/**
+ * Editable text of a Timeline event. `title` / `summary` are AI-content
+ * corrections — blank values are ignored. `note` is the user's own
+ * annotation and may be deliberately cleared to empty.
+ */
 export type TimelineEventEdits = {
   title?: string;
   summary?: string;
+  note?: string;
 };
 
 /**
- * Apply a title / summary correction to the event with `eventId`, wherever
- * it lives across the session's imports. A field is only applied when it is
- * present, non-blank after trimming, and different from the current value;
- * any real change stamps `userModified: true`. Returns the original imports
- * array on a no-op so the caller can skip the persistence write.
+ * Apply a title / summary correction and / or a user note to the event with
+ * `eventId`, wherever it lives across the session's imports. `title` /
+ * `summary` are applied only when present, non-blank after trimming, and
+ * changed — and a content change stamps `userModified: true`. `note` may be
+ * cleared to empty and never touches `userModified`, since a note is
+ * annotation, not a correction. Returns the original imports array on a
+ * no-op so the caller can skip the persistence write.
  */
 export function applyEventEdits(
   imports: StoredSessionImport[],
@@ -40,17 +47,32 @@ export function applyEventEdits(
 
     const event = entry.events[index];
     const patch: Partial<TimelineEvent> = {};
+    let contentChanged = false;
 
     const title = edits.title?.trim();
-    if (title && title !== event.title) patch.title = title;
+    if (title && title !== event.title) {
+      patch.title = title;
+      contentChanged = true;
+    }
     const summary = edits.summary?.trim();
-    if (summary && summary !== event.summary) patch.summary = summary;
+    if (summary && summary !== event.summary) {
+      patch.summary = summary;
+      contentChanged = true;
+    }
+    if (edits.note !== undefined) {
+      const note = edits.note.trim();
+      if (note !== (event.userNote ?? "")) patch.userNote = note;
+    }
 
     if (Object.keys(patch).length === 0) return entry;
 
     changed = true;
     const events = entry.events.slice();
-    events[index] = { ...event, ...patch, userModified: true };
+    events[index] = {
+      ...event,
+      ...patch,
+      ...(contentChanged ? { userModified: true } : {}),
+    };
     return { ...entry, events };
   });
 
