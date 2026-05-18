@@ -31,6 +31,7 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     loadDesktopSession: async () => false,
     loadBrowserSession: () => false,
     setNextActionCompletion: () => false,
+    promoteIssueToNextAction: () => null,
     setIssueStatus: () => false,
     editIssue: () => false,
     setDecisionConfirmed: () => false,

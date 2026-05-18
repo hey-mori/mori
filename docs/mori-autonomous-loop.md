@@ -251,6 +251,11 @@ only — no phase numbers.
   `editedAt`, and persisted through the analysis + memory-body write
   path while preserving evidence, trust, status, confirmation, and
   timeline links.
+- Issue promotion to Next Action — `review.promoteToNextAction` is now
+  implemented: a Review issue can add or open a linked Next Action using
+  the issue's suggested action, priority, related issue id, and source
+  event ids; duplicate promotions select the existing action instead of
+  creating another row.
 
 **Open priority (highest first):**
 

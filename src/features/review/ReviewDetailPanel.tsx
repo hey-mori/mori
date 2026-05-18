@@ -1,4 +1,4 @@
-import { CalendarClock, CheckCircle2, Layers, Pencil, ShieldCheck, Sparkles } from "lucide-react";
+import { CalendarClock, CheckCircle2, Layers, ListPlus, Pencil, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -41,6 +41,7 @@ export function ReviewDetailPanel({
   onToggleNextActionComplete,
   onSetIssueStatus,
   onEditIssue,
+  onPromoteIssueToNextAction,
   onSetDecisionConfirmed,
   onEditDecision,
   canEditReview,
@@ -51,6 +52,7 @@ export function ReviewDetailPanel({
   onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
   onSetIssueStatus: (issueId: string, status: IssueStatus) => void;
   onEditIssue: (issueId: string, fields: { title?: string; description?: string }) => boolean;
+  onPromoteIssueToNextAction: (issueId: string) => NextAction | null;
   onSetDecisionConfirmed: (decisionId: string, confirmed: boolean) => void;
   onEditDecision: (
     decisionId: string,
@@ -89,6 +91,7 @@ export function ReviewDetailPanel({
         onShowTimeline={onShowTimeline}
         onSetStatus={onSetIssueStatus}
         onEditIssue={onEditIssue}
+        onPromoteIssueToNextAction={onPromoteIssueToNextAction}
         canEditStatus={canEditReview}
       />
     );
@@ -139,6 +142,7 @@ function IssueDetail({
   onShowTimeline,
   onSetStatus,
   onEditIssue,
+  onPromoteIssueToNextAction,
   canEditStatus,
 }: {
   issue: Issue;
@@ -146,6 +150,7 @@ function IssueDetail({
   onShowTimeline: (eventId: string) => void;
   onSetStatus: (issueId: string, status: IssueStatus) => void;
   onEditIssue: (issueId: string, fields: { title?: string; description?: string }) => boolean;
+  onPromoteIssueToNextAction: (issueId: string) => NextAction | null;
   canEditStatus: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -157,6 +162,9 @@ function IssueDetail({
   const confidencePct = Math.round(issue.confidence * 100);
   const issueTrust = getTrustDisplay(issue.trustLevel);
   const canEditText = canEditStatus;
+  const existingNextAction = view.nextActions.find((action) =>
+    action.relatedIssueIds.includes(issue.id),
+  );
 
   return (
     <aside className="review-detail" aria-label="Issue detail">
@@ -267,10 +275,21 @@ function IssueDetail({
           >
             편집
           </Button>
-          <MoriPlannedAction
-            label="액션으로 승격"
-            title="이슈를 다음 액션으로 승격하는 기능은 다음 마일스톤입니다."
-          />
+          <Button
+            variant={existingNextAction ? "ghost" : "secondary"}
+            icon={ListPlus}
+            disabled={!canEditStatus}
+            title={
+              canEditStatus
+                ? existingNextAction
+                  ? "이미 이 이슈와 연결된 다음 액션이 있습니다."
+                  : "이 이슈를 연결된 다음 액션으로 추가합니다."
+                : "데모 또는 읽기 전용 세션에서는 다음 액션으로 승격할 수 없습니다."
+            }
+            onClick={() => onPromoteIssueToNextAction(issue.id)}
+          >
+            {existingNextAction ? "액션 보기" : "액션으로 승격"}
+          </Button>
         </div>
         {!canEditText ? (
           <p className="review-detail-empty">

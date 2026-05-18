@@ -554,6 +554,33 @@ describe("useMoriSessionStore setIssueStatus", () => {
     );
   });
 
+  it("promotes an issue to a next action and persists it to analysis and memory body", () => {
+    const stored = seedAnalysisWithIssue();
+    const action = useMoriSessionStore.getState().promoteIssueToNextAction("iss-1");
+
+    expect(action).not.toBeNull();
+    expect(action?.id).toBe("nact-user-iss-1");
+    expect(action?.relatedIssueIds).toEqual(["iss-1"]);
+    expect(useMoriSessionStore.getState().analysis!.nextActions[0]?.id).toBe(
+      "nact-user-iss-1",
+    );
+    expect(repository.loadSessionAnalysis(stored.session.id)?.result.nextActions[0]?.id).toBe(
+      "nact-user-iss-1",
+    );
+    expect(repository.loadSessionMemoryBody(stored.session.id)?.nextActions[0]?.id).toBe(
+      "nact-user-iss-1",
+    );
+  });
+
+  it("does not duplicate an already-promoted issue next action", () => {
+    seedAnalysisWithIssue();
+    const first = useMoriSessionStore.getState().promoteIssueToNextAction("iss-1");
+    const second = useMoriSessionStore.getState().promoteIssueToNextAction("iss-1");
+
+    expect(second?.id).toBe(first?.id);
+    expect(useMoriSessionStore.getState().analysis!.nextActions).toHaveLength(1);
+  });
+
   it("returns false with no draft or analysis", () => {
     expect(useMoriSessionStore.getState().setIssueStatus("iss-1", "resolved")).toBe(false);
   });
@@ -570,6 +597,11 @@ describe("useMoriSessionStore setIssueStatus", () => {
     expect(
       useMoriSessionStore.getState().editIssue("missing", { title: "Nope" }),
     ).toBe(false);
+  });
+
+  it("returns null when promoting an unknown issue id", () => {
+    seedAnalysisWithIssue();
+    expect(useMoriSessionStore.getState().promoteIssueToNextAction("missing")).toBeNull();
   });
 });
 

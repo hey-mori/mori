@@ -169,7 +169,7 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ![Review reference](assets/screenshots/review-reference.png)
 
-- **Status:** Implemented — 5 working tabs (Issue Garden, Decision Log, Next Actions, Unresolved, Suggestions) backed by `selectSessionView`, with a sticky right column that hosts both a per-item detail panel and a session-wide summary panel. Mutating controls (status change, edit, promote-to-next-action, confirm/reject decision) are explicitly disabled with "다음 마일스톤" tooltips — the milestone does not pretend write-side review is wired.
+- **Status:** Implemented — 5 working tabs (Issue Garden, Decision Log, Next Actions, Unresolved, Suggestions) backed by `selectSessionView`, with a sticky right column that hosts both a per-item detail panel and a session-wide summary panel. Mutating controls now support issue status changes, issue/decision inline editing, decision confirmation/rejection, Next Action completion, and issue promotion to a linked Next Action; demo/read-only states disable those writes honestly.
 - **Product purpose:** Turn the session into actionable issues, decisions, and next actions.
 - **Primary user job:** Inspect Quick Pass / mock output, follow evidence + timeline links, and triage what still needs review.
 - **Key UI elements:** Page header (demo/draft badge); analysis strip (Quick Pass status, provider, generatedAt, counts, dataBasis, Re-run button); 5-tab nav with per-tab counts; Issue Garden 4-column kanban; Decision Log 5-column table; Next Action list; Unresolved reason-tagged feed; Suggestions list; sticky right column with `ReviewDetailPanel` + `ReviewSummaryPanel` (metrics, status stats, priority bar, alerts, next-action preview, data basis).

@@ -153,6 +153,10 @@ inline user corrections for the visible text fields. Corrected items show a
 `사용자 수정됨` marker and keep their original evidence, timeline links, trust,
 status, and confirmation state intact.
 
+Issue detail panels can also promote an issue into a linked Next Action.
+The promoted action keeps the issue id and source event ids attached, and
+repeated promotion opens the existing action instead of creating a duplicate.
+
 ## Reports (Resume & Report)
 
 ![Resume & Report](./assets/screenshots/resume-report-reference.png)

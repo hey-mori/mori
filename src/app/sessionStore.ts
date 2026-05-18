@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { moriMockSession } from "../domain/mock-data";
-import type { IssueStatus, MoriMockSession } from "../domain/types";
+import type { IssueStatus, MoriMockSession, NextAction } from "../domain/types";
 import type {
   MoriAnalysisProvider,
   MoriAnalysisResult,
@@ -22,6 +22,7 @@ import {
   type DecisionEditFields,
   type IssueEditFields,
 } from "../lib/session/reviewItemEdit";
+import { promoteIssueToNextAction } from "../lib/session/issuePromotion";
 import {
   createStaticMockDataSource,
   type TimelineDataSource,
@@ -114,6 +115,12 @@ export type MoriSessionState = {
    */
   setIssueStatus: (issueId: string, status: IssueStatus) => boolean;
   editIssue: (issueId: string, fields: IssueEditFields) => boolean;
+  /**
+   * Promote an issue into a linked Next Action. If the issue already has
+   * a linked Next Action, returns that existing action without writing.
+   * Returns `null` in demo mode, without analysis, or for an unknown id.
+   */
+  promoteIssueToNextAction: (issueId: string) => NextAction | null;
   /**
    * Confirm or reject a decision — a Review-surface write. Persists into
    * the session analysis and the durable memory body. Returns `false`
@@ -486,6 +493,20 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
     set({ analysis: nextAnalysis });
     return true;
+  },
+  promoteIssueToNextAction: (issueId) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return null;
+
+    const result = promoteIssueToNextAction(analysis, issueId);
+    if (!result.nextAction) return null;
+    if (!result.changed) return result.nextAction;
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, result.analysis);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, result.analysis);
+    set({ analysis: result.analysis });
+    return result.nextAction;
   },
   editIssue: (issueId, fields) => {
     const { draft, analysis } = get();

@@ -69,6 +69,7 @@ export function ReviewView() {
   const analysis = useMoriSessionStore((state) => state.analysis);
   const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
   const setNextActionCompletion = useMoriSessionStore((state) => state.setNextActionCompletion);
+  const promoteIssueToNextAction = useMoriSessionStore((state) => state.promoteIssueToNextAction);
   const setIssueStatus = useMoriSessionStore((state) => state.setIssueStatus);
   const editIssue = useMoriSessionStore((state) => state.editIssue);
   const setDecisionConfirmed = useMoriSessionStore((state) => state.setDecisionConfirmed);
@@ -285,6 +286,16 @@ export function ReviewView() {
             }
             onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
             onEditIssue={(id, fields) => editIssue(id, fields)}
+            onPromoteIssueToNextAction={(id) => {
+              const nextAction = promoteIssueToNextAction(id);
+              if (nextAction) {
+                selectAndOpen(
+                  { kind: "nextAction", nextActionId: nextAction.id },
+                  "nextActions",
+                );
+              }
+              return nextAction;
+            }}
             onSetDecisionConfirmed={(id, confirmed) =>
               setDecisionConfirmed(id, confirmed)
             }
