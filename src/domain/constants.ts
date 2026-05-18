@@ -5,9 +5,9 @@ export const eventTypeLabels: Record<EventType, string> = {
   aiConversation: "AI 대화",
   decision: "결정",
   issue: "이슈",
-  fileCode: "파일/코드",
-  webResearch: "웹/조사",
-  documentNote: "문서/메모",
+  fileCode: "파일",
+  webResearch: "조사",
+  documentNote: "문서",
   artifact: "산출물",
   other: "기타",
 };

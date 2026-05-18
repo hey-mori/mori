@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  brushWidthToZoom,
+  clampZoom,
   computeMinimapViewport,
   FULL_MINIMAP_VIEWPORT,
+  MAX_ZOOM,
+  MIN_ZOOM,
   minimapClickToScrollLeft,
 } from "./minimapViewport";
 
@@ -73,5 +77,32 @@ describe("minimapClickToScrollLeft", () => {
   it("returns 0 for degenerate geometry", () => {
     expect(minimapClickToScrollLeft(0.5, 0, 0)).toBe(0);
     expect(minimapClickToScrollLeft(Number.NaN, 1000, 2000)).toBe(0);
+  });
+});
+
+describe("clampZoom", () => {
+  it("keeps a zoom inside [MIN_ZOOM, MAX_ZOOM]", () => {
+    expect(clampZoom(0.2)).toBe(MIN_ZOOM);
+    expect(clampZoom(2.5)).toBe(2.5);
+    expect(clampZoom(99)).toBe(MAX_ZOOM);
+  });
+
+  it("falls back to MIN_ZOOM for non-finite input", () => {
+    expect(clampZoom(Number.NaN)).toBe(MIN_ZOOM);
+  });
+});
+
+describe("brushWidthToZoom", () => {
+  it("maps a full-width brush to no zoom", () => {
+    expect(brushWidthToZoom(1)).toBe(MIN_ZOOM);
+  });
+
+  it("maps a half-width brush to 2x zoom", () => {
+    expect(brushWidthToZoom(0.5)).toBe(2);
+  });
+
+  it("clamps a hair-thin brush to MAX_ZOOM", () => {
+    expect(brushWidthToZoom(0.01)).toBe(MAX_ZOOM);
+    expect(brushWidthToZoom(0)).toBe(MAX_ZOOM);
   });
 });

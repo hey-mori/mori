@@ -27,10 +27,7 @@ import {
   getTimelineInspectorReviewLinks,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
-import {
-  buildInspectorViewModel,
-  type TimelineRenderModel,
-} from "../../lib/timeline/timelineViewModel";
+import { buildInspectorViewModel } from "../../lib/timeline/timelineViewModel";
 import {
   TIMELINE_CONTROLS,
   getPlannedHint,
@@ -40,13 +37,11 @@ import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 export function EventInspector({
   selectedEvent,
   session,
-  model,
   onTrace,
   onOpenReviewItem,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
-  model: TimelineRenderModel;
   onTrace: () => void;
   /** Deep-link a linked issue / decision / next action into the Review surface. */
   onOpenReviewItem?: (selection: ReviewSelection) => void;
@@ -54,7 +49,6 @@ export function EventInspector({
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
     view: session,
-    model,
   });
   const trust = describeTrustLevel(selectedEvent.trustLevel);
 

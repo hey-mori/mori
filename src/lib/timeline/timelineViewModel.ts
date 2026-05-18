@@ -353,24 +353,16 @@ function buildLaneRenderModels(args: {
   });
 }
 
-/**
- * Public helper: lanes that actually carry visible events. Components use this
- * to optionally hide empty lanes when the user toggles "active lanes only".
- */
-export function getActiveLanes(model: TimelineRenderModel): LaneRenderModel[] {
-  return model.lanes.filter((lane) => lane.itemCount > 0);
-}
-
 /** Public helper to derive a focused relationship subgraph for the Inspector. */
 export function getFocusedRelationships(args: {
-  model: TimelineRenderModel;
+  focusedSet: Set<string>;
   relationships: Relationship[];
 }): Relationship[] {
-  if (args.model.focusedSet.size === 0) return [];
+  if (args.focusedSet.size === 0) return [];
   return args.relationships.filter(
     (relationship) =>
-      args.model.focusedSet.has(relationship.fromId) &&
-      args.model.focusedSet.has(relationship.toId),
+      args.focusedSet.has(relationship.fromId) &&
+      args.focusedSet.has(relationship.toId),
   );
 }
 
@@ -379,9 +371,12 @@ export function getFocusedRelationships(args: {
  * line: count of relationships that touch a member event but are NOT
  * currently visible on screen (because their other endpoint is outside the
  * focused set).
+ *
+ * Takes an explicit `focusedSet` so callers can pass a stable, selection-only
+ * set — the inspector count must not flicker as the user hovers cards.
  */
 export function countHiddenRelationships(args: {
-  model: TimelineRenderModel;
+  focusedSet: Set<string>;
   relationships: Relationship[];
   forEventIds: string[];
 }): number {
@@ -393,7 +388,7 @@ export function countHiddenRelationships(args: {
     const otherEndpoint = targets.has(relationship.fromId)
       ? relationship.toId
       : relationship.fromId;
-    return !args.model.focusedSet.has(otherEndpoint);
+    return !args.focusedSet.has(otherEndpoint);
   }).length;
 }
 
@@ -417,9 +412,8 @@ export type InspectorViewModel = {
 export function buildInspectorViewModel(args: {
   event: TimelineEvent;
   view: MoriMockSession;
-  model: TimelineRenderModel;
 }): InspectorViewModel {
-  const { event, view, model } = args;
+  const { event, view } = args;
   const sources = view.sources.filter((source) => event.sourceRefs.includes(source.id));
   const issues = view.issues.filter((issue) => event.linkedIssueIds.includes(issue.id));
   const decisions = view.decisions.filter((decision) =>
@@ -431,12 +425,16 @@ export function buildInspectorViewModel(args: {
   const nextActions = view.nextActions.filter((action) =>
     action.relatedEventIds.includes(event.id),
   );
+  // The inspector describes the *selected* event. Seed its focus set from
+  // that event alone — never from `model.focusedSet`, which is re-seeded by
+  // hover and would make the inspector flicker as the cursor moves.
+  const selectedFocusSet = getFocusedEntitySet(event.id, view.relationships, 1);
   const focusedRelationships = getFocusedRelationships({
-    model,
+    focusedSet: selectedFocusSet,
     relationships: view.relationships,
   });
   const hiddenRelationshipCount = countHiddenRelationships({
-    model,
+    focusedSet: selectedFocusSet,
     relationships: view.relationships,
     forEventIds: [event.id],
   });

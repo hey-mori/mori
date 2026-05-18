@@ -16,6 +16,11 @@ import {
 import type { NormalizedImportCandidate } from "../lib/import";
 import { composeSessionView } from "../lib/session/composeSessionView";
 import { withNextActionCompletion } from "../lib/session/nextActionCompletion";
+import {
+  createStaticMockDataSource,
+  type TimelineDataSource,
+  type Unsubscribe,
+} from "../lib/session/timelineDataSource";
 import { createBrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import {
   getSessionPersistenceService,
@@ -53,6 +58,17 @@ export type MoriSessionState = {
   analysisFallbackUsed: boolean;
   analysisSettings: QuickPassAnalysisSettings;
   source: SessionSource;
+  /**
+   * Live timeline data-source seam. Static today (there is no backend), so
+   * it never emits. A future polling / SSE source is a drop-in replacement
+   * at this field — see `lib/session/timelineDataSource.ts`.
+   */
+  dataSource: TimelineDataSource<SessionViewModel>;
+  /**
+   * Subscribe to live session-view updates. A no-op while the data source
+   * is static; the wired seam for a future live transport.
+   */
+  subscribeToDataSource: (onUpdate: (view: SessionViewModel) => void) => Unsubscribe;
   hydrate: () => Promise<void>;
   setDraft: (draft: StoredSessionDraft) => void;
   /**
@@ -148,6 +164,8 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   analysisFallbackUsed: false,
   analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
   source: "demo",
+  dataSource: createStaticMockDataSource(demoView),
+  subscribeToDataSource: (onUpdate) => get().dataSource.subscribe(onUpdate),
   hydrate: async () => {
     const repository = getRepository();
     const service = getPersistenceService();

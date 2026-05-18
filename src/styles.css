@@ -537,34 +537,6 @@ kbd {
   height: 0;
 }
 
-.zoom-group {
-  display: inline-grid;
-  grid-template-columns: 36px 36px;
-  height: 36px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-}
-
-.zoom-group button {
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-right: 1px solid var(--line);
-  background: transparent;
-  color: var(--muted);
-}
-
-.zoom-group button:last-child {
-  border-right: 0;
-}
-
-.zoom-group button:disabled {
-  cursor: not-allowed;
-  color: var(--muted-2);
-}
-
 .legend {
   display: flex;
   align-items: center;
@@ -892,9 +864,11 @@ kbd {
   left: 0;
   z-index: 3;
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 9px;
-  padding: 0 12px 0 16px;
+  /* Top padding aligns the label with the lane's first card row instead of
+     floating it mid-lane when the lane stacks a second row. */
+  padding: 30px 12px 0 16px;
   color: #1c2638;
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.98) 82%, rgba(255, 255, 255, 0));
   font-size: 12px;
@@ -971,6 +945,29 @@ kbd {
   grid-template-rows: 12px 1fr 0; /* compact hides the footer slot entirely */
   row-gap: 3px;
   padding: 7px 10px 8px;
+}
+
+/* Entrance animation — a one-shot keyframe that plays only when a card's
+   DOM node first mounts. Existing cards keep their node across re-renders,
+   so adding an event animates just the new card; an initial load animates
+   the whole set in. `transform` lives here, not in the hover transition,
+   so hovering never nudges the card. */
+@keyframes timeline-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .event-card,
+  .timeline-bundle-card {
+    animation: timeline-card-in 200ms ease-out both;
+  }
 }
 
 .event-card:hover {
@@ -1344,6 +1341,12 @@ kbd {
   white-space: nowrap;
 }
 
+/* Edge ticks anchor to the container so labels never spill past the frame. */
+.mini-map-tick.is-start,
+.mini-map-tick.is-end {
+  transform: none;
+}
+
 .mini-track {
   position: relative;
   height: 42px;
@@ -1362,10 +1365,51 @@ kbd {
   position: absolute;
   top: 7px;
   bottom: 7px;
+  min-width: 28px;
   border: 1px solid rgba(98, 70, 245, 0.36);
   border-radius: 7px;
   background: rgba(98, 70, 245, 0.08);
   transition: left 0.08s linear, width 0.08s linear;
+}
+
+.mini-map-viewport.is-draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.mini-map-viewport.is-draggable:active {
+  cursor: grabbing;
+  background: rgba(98, 70, 245, 0.14);
+}
+
+/* Edge grips — drag to resize the brush, which zooms the time axis. */
+.mini-map-handle {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 12px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.mini-map-handle::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: rgba(98, 70, 245, 0.55);
+}
+
+.mini-map-handle.is-left {
+  left: 0;
+}
+
+.mini-map-handle.is-right {
+  right: 0;
 }
 
 .mini-dot {
@@ -11023,37 +11067,6 @@ pre {
   justify-self: end;
 }
 
-.timeline-toolbar-honesty {
-  grid-column: 1 / -1;
-  margin: 0;
-  padding: 8px 12px;
-  border-top: 1px dashed rgba(214, 219, 232, 0.7);
-  color: var(--muted);
-  font-size: 11.5px;
-  line-height: 1.5;
-}
-
-.timeline-toolbar-honesty .dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 7px;
-  border-radius: 50%;
-  background: var(--orange);
-  vertical-align: middle;
-}
-
-.timeline-toolbar-honesty strong {
-  font-weight: 700;
-  color: #4a3206;
-  margin: 0 2px;
-}
-
-.timeline-toolbar .segmented button[disabled] {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
 .toolbar-toggle {
   display: inline-flex;
   align-items: center;
@@ -11080,8 +11093,91 @@ pre {
   color: #3a25c6;
 }
 
-.filter-pop-wrap {
+.toolbar-pop-wrap {
   position: relative;
+}
+
+/* Range dropdown — a compact select-style trigger + radio menu. */
+.toolbar-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.toolbar-select:hover {
+  border-color: var(--line-strong);
+  background: var(--gray-50);
+}
+
+.toolbar-select-caret {
+  color: var(--muted-2);
+}
+
+.toolbar-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: grid;
+  gap: 2px;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 18px 38px rgba(20, 25, 36, 0.12);
+}
+
+.toolbar-menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: white;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.toolbar-menu-item:not(:disabled):hover {
+  background: var(--gray-50);
+}
+
+.toolbar-menu-item.is-planned {
+  color: var(--muted-2);
+  cursor: not-allowed;
+}
+
+.toolbar-menu-check {
+  display: inline-flex;
+  width: 14px;
+  color: var(--purple);
+}
+
+.toolbar-menu-tag {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--gray-50);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .filter-popover {
@@ -11261,9 +11357,11 @@ pre {
   bottom: auto;
   z-index: 5;
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 9px;
-  padding: 0 12px 0 16px;
+  /* Top padding centres the label on the lane's first card row instead of
+     floating it mid-lane when the lane stacks a second row. */
+  padding: 30px 12px 0 16px;
   color: #1c2638;
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.985) 86%, rgba(255, 255, 255, 0));
   font-size: 12px;
@@ -11486,7 +11584,8 @@ pre {
     gap: 6px;
   }
 
-  .toolbar-toggle {
+  .toolbar-toggle,
+  .toolbar-select {
     padding: 0 10px;
     font-size: 11.5px;
   }

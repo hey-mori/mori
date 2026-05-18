@@ -25,6 +25,28 @@ export const FULL_MINIMAP_VIEWPORT: MinimapViewport = {
   widthPercent: 100,
 };
 
+/** Time-axis zoom bounds. 1 = whole span fits; MAX = most zoomed-in. */
+export const MIN_ZOOM = 1;
+export const MAX_ZOOM = 4;
+
+/** The narrowest the minimap brush can get — the inverse of MAX_ZOOM. */
+export const MIN_BRUSH_FRACTION = 1 / MAX_ZOOM;
+
+/** Clamp a raw zoom factor into the supported range. */
+export function clampZoom(zoom: number): number {
+  if (!Number.isFinite(zoom)) return MIN_ZOOM;
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom));
+}
+
+/**
+ * Zoom factor for a brush of the given width fraction (0–1). A half-width
+ * brush means the visible slice is half the span → zoom 2. Clamped.
+ */
+export function brushWidthToZoom(widthFraction: number): number {
+  if (!Number.isFinite(widthFraction) || widthFraction <= 0) return MAX_ZOOM;
+  return clampZoom(1 / widthFraction);
+}
+
 /**
  * Derive the viewport rectangle from a scroller's geometry.
  *

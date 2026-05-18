@@ -3,7 +3,7 @@ import { moriMockSession } from "../../domain/mock-data";
 import type { MoriMockSession } from "../../domain/types";
 import { buildTimelineEventCardViewModel } from "../../features/timeline/lib/timelineCards";
 import { buildTimelineRenderModel } from "./timelineViewModel";
-import type { TimelineDensity } from "./collisionLayout";
+import { MAX_ROWS_PER_LANE } from "./collisionLayout";
 import {
   buildTimelineStressEvents,
   TIMELINE_STRESS_EVENT_COUNT,
@@ -25,11 +25,11 @@ function stressView(): MoriMockSession {
   };
 }
 
-function stressModel(density: TimelineDensity) {
+function stressModel() {
   return buildTimelineRenderModel({
     view: stressView(),
     mode: "timeline",
-    density,
+    density: "comfortable",
     selectedEventId: null,
     hoveredEventId: null,
     activeFilters: [],
@@ -49,18 +49,17 @@ describe("timeline stress fixture", () => {
     expect(lanes.size).toBeGreaterThanOrEqual(6);
   });
 
-  it("keeps every lane on a single row even under bursts", () => {
-    // Bounded growth: clustering must absorb bursts so no lane stacks rows.
-    for (const density of ["comfortable", "compact", "dense"] as TimelineDensity[]) {
-      const model = stressModel(density);
-      for (const lane of model.layout.lanes) {
-        expect(lane.rowCount).toBeLessThanOrEqual(1);
-      }
+  it("keeps every lane within the row cap even under bursts", () => {
+    // Bounded growth: clustering plus the row cap keep any single lane from
+    // stacking unbounded rows under a day-scale burst.
+    const model = stressModel();
+    for (const lane of model.layout.lanes) {
+      expect(lane.rowCount).toBeLessThanOrEqual(MAX_ROWS_PER_LANE);
     }
   });
 
   it("clusters the morning AI-conversation burst into at least one bundle", () => {
-    const model = stressModel("comfortable");
+    const model = stressModel();
     const aiLane = model.lanes.find((lane) => lane.type === "aiConversation");
     expect(aiLane).toBeDefined();
     const bundles = aiLane!.items.filter((item) => item.kind === "bundle");
@@ -68,7 +67,7 @@ describe("timeline stress fixture", () => {
   });
 
   it("flags the connector-imported morning burst as a same-source bundle", () => {
-    const model = stressModel("comfortable");
+    const model = stressModel();
     const aiLane = model.lanes.find((lane) => lane.type === "aiConversation");
     const sameSourceBundle = aiLane!.items.find(
       (item) => item.kind === "bundle" && item.sameConnectorSource !== null,
@@ -79,21 +78,8 @@ describe("timeline stress fixture", () => {
     ).toBe("claude-code");
   });
 
-  it("dense density produces a shorter frame than comfortable at day scale", () => {
-    expect(stressModel("dense").layout.frameHeight).toBeLessThan(
-      stressModel("comfortable").layout.frameHeight,
-    );
-  });
-
-  it("dense density shows at least as many display items as comfortable", () => {
-    // Denser cards mean a lane can show more individual events before merging.
-    expect(stressModel("dense").visibleDisplayItems.length).toBeGreaterThanOrEqual(
-      stressModel("comfortable").visibleDisplayItems.length,
-    );
-  });
-
   it("renders a long ranged event wider than an instantaneous one", () => {
-    const model = stressModel("comfortable");
+    const model = stressModel();
     // stress-evt-09 is a 90-minute AI session; stress-evt-12 is an
     // instantaneous decision. Both stay individual (decisions never bundle,
     // the long AI event is isolated from the morning burst).

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { deriveSessionLifecycle, formatSessionDuration, getSessionStorageScope } from "./sessionLifecycle";
-import type { MoriSessionState } from "./sessionStore";
+import type { MoriSessionState, SessionViewModel } from "./sessionStore";
 import type { Session } from "../domain/types";
 import { DEFAULT_QUICK_PASS_SETTINGS } from "../lib/analysis";
+import { createStaticMockDataSource } from "../lib/session/timelineDataSource";
 
 function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState {
   return {
@@ -16,6 +17,8 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     analysisFallbackUsed: false,
     analysisSettings: DEFAULT_QUICK_PASS_SETTINGS,
     source: "demo",
+    dataSource: createStaticMockDataSource<SessionViewModel>({} as SessionViewModel),
+    subscribeToDataSource: () => () => undefined,
     hydrate: async () => undefined,
     setDraft: () => undefined,
     endSession: () => undefined,

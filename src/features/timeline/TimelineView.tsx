@@ -10,10 +10,10 @@ import {
 import { useMoriAppStore } from "../../app/store";
 import {
   buildTimelineRenderModel,
-  getActiveLanes,
   shouldHideInspector,
   TIMELINE_INSPECTOR_NARROW_MAX_PX,
 } from "../../lib/timeline/timelineViewModel";
+import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { EventInspector } from "./EventInspector";
 import { TimelineBundleInspector } from "./TimelineBundleInspector";
 import {
@@ -61,23 +61,27 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const hoveredEventId = useMoriAppStore((state) => state.hoveredEventId);
   const activeFilters = useMoriAppStore((state) => state.activeFilters);
   const searchQuery = useMoriAppStore((state) => state.searchQuery);
-  const density = useMoriAppStore((state) => state.timelineDensity);
-  const activeLanesOnly = useMoriAppStore((state) => state.activeLanesOnly);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const setHoveredEventId = useMoriAppStore((state) => state.setHoveredEventId);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const toggleFilter = useMoriAppStore((state) => state.toggleFilter);
   const clearFilters = useMoriAppStore((state) => state.clearFilters);
-  const setTimelineDensity = useMoriAppStore((state) => state.setTimelineDensity);
-  const toggleActiveLanesOnly = useMoriAppStore((state) => state.toggleActiveLanesOnly);
   const inspectorCollapsed = useMoriAppStore((state) => state.inspectorCollapsed);
   const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
+
+  // Density is fixed to one comfortable tier — the user-facing density control
+  // was removed. The internal `density` plumbing stays so card sizing and
+  // bundle tuning keep a single, stable code path.
+  const density: TimelineDensity = "comfortable";
 
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
   const [minimapViewport, setMinimapViewport] = useState<MinimapViewport>(
     FULL_MINIMAP_VIEWPORT,
   );
+  // Time-axis zoom. 1 = the whole span fits; >1 widens the layout frame so
+  // the canvas scrolls horizontally. Driven by the minimap brush handles.
+  const [zoomFactor, setZoomFactor] = useState<number>(1);
   const canvasRef = useRef<TimelineCanvasHandle>(null);
 
   // Track the viewport width so the inspector can auto-hide on narrow
@@ -102,7 +106,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
         hoveredEventId,
         activeFilters,
         searchQuery,
-        frameWidth,
+        frameWidth: Math.round(frameWidth * zoomFactor),
         laneLabelWidthPx: LANE_LABEL_WIDTH,
         sessionMode,
         importCount: imports.length,
@@ -117,24 +121,12 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
       activeFilters,
       searchQuery,
       frameWidth,
+      zoomFactor,
       sessionMode,
       imports.length,
       hasAnalysis,
     ],
   );
-
-  const totalLaneCount = model.lanes.length;
-  const activeLaneCount = useMemo(() => getActiveLanes(model).length, [model]);
-
-  // The canvas renders the configured lane order, but the user may want to
-  // hide empty lanes for a tighter rhythm. We pass a model copy whose lane
-  // list has been filtered, while keeping the layout coherent.
-  const renderModel = useMemo(() => {
-    if (!activeLanesOnly) return model;
-    const activeLanes = getActiveLanes(model);
-    if (activeLanes.length === model.lanes.length) return model;
-    return { ...model, lanes: activeLanes };
-  }, [model, activeLanesOnly]);
 
   const handleFrameWidth = useCallback((width: number) => {
     setFrameWidth((current) => (current === width ? current : width));
@@ -159,7 +151,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
     );
   }
 
-  const selectedItem = renderModel.selectedItem ?? model.selectedItem;
+  const selectedItem = model.selectedItem;
   // The inspector hides when the user collapses it or when the viewport is
   // too narrow for a side column. Flow Focus keeps its Trace panel.
   const inspectorNarrow = viewportWidth <= TIMELINE_INSPECTOR_NARROW_MAX_PX;
@@ -189,15 +181,9 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             />
           ) : (
             <TimelineToolbar
-              density={density}
-              onSetDensity={setTimelineDensity}
               activeFilters={activeFilters}
               onToggleFilter={toggleFilter}
               onClearFilters={clearFilters}
-              activeLanesOnly={activeLanesOnly}
-              onToggleActiveLanesOnly={toggleActiveLanesOnly}
-              visibleLaneCount={activeLaneCount}
-              totalLaneCount={totalLaneCount}
               inspectorCollapsed={inspectorCollapsed}
               onToggleInspector={() => setInspectorCollapsed(!inspectorCollapsed)}
               inspectorToggleDisabled={inspectorNarrow}
@@ -205,7 +191,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           )}
           {useChronoList ? (
             <TimelineChronoList
-              model={renderModel}
+              model={model}
               selectedItemId={selectedItem?.id ?? null}
               onSelect={setSelectedEventId}
             />
@@ -213,7 +199,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             <>
               <TimelineCanvas
                 ref={canvasRef}
-                model={renderModel}
+                model={model}
                 relationships={view.relationships}
                 density={density}
                 onFrameWidth={handleFrameWidth}
@@ -230,6 +216,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
                   focusedSet={model.focusedSet}
                   viewport={minimapViewport}
                   onSeek={(fraction) => canvasRef.current?.scrollToFraction(fraction)}
+                  onZoom={setZoomFactor}
                 />
               ) : null}
             </>
@@ -251,7 +238,6 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           <EventInspector
             selectedEvent={selectedItem.event}
             session={view}
-            model={model}
             onTrace={() => setCurrentView("flow")}
             onOpenReviewItem={openReviewItem}
           />

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { deriveSessionStatus } from "./sessionStatus";
-import type { MoriSessionState } from "../../app/sessionStore";
+import type { MoriSessionState, SessionViewModel } from "../../app/sessionStore";
+import { createStaticMockDataSource } from "./timelineDataSource";
 
 const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionState => ({
   initialized: true,
@@ -19,6 +20,8 @@ const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionStat
     ollamaTimeoutMs: 30000,
   },
   source: "demo",
+  dataSource: createStaticMockDataSource<SessionViewModel>({} as SessionViewModel),
+  subscribeToDataSource: () => () => undefined,
   hydrate: async () => {},
   setDraft: () => {},
   endSession: () => {},

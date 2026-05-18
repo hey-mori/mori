@@ -7,7 +7,6 @@ import {
   countHiddenRelationships,
   densityBundleTuning,
   filterEvents,
-  getActiveLanes,
   getFocusedRelationships,
   shouldHideInspector,
   TIMELINE_INSPECTOR_NARROW_MAX_PX,
@@ -146,17 +145,6 @@ describe("buildTimelineRenderModel", () => {
     expect(flowModel.focusedSet.size).toBeGreaterThanOrEqual(timelineModel.focusedSet.size);
   });
 
-  it("getActiveLanes hides lanes with zero items", () => {
-    const lonely = withEvents(
-      moriMockSession.events.filter((event) => event.type === "decision"),
-      [],
-    );
-    const model = buildModel(lonely);
-    const active = getActiveLanes(model);
-    expect(active.every((lane) => lane.itemCount > 0)).toBe(true);
-    expect(active.length).toBeLessThan(model.lanes.length);
-  });
-
   it("computes a layout that places at least one item on the right of the lane labels", () => {
     const model = buildModel(moriMockSession);
     expect(model.layout.items.length).toBe(model.visibleDisplayItems.length);
@@ -169,7 +157,12 @@ describe("buildTimelineRenderModel", () => {
 describe("getFocusedRelationships", () => {
   it("returns no relationships when focusedSet is empty", () => {
     const model = buildModel(withEvents([], []));
-    expect(getFocusedRelationships({ model, relationships: moriMockSession.relationships })).toEqual([]);
+    expect(
+      getFocusedRelationships({
+        focusedSet: model.focusedSet,
+        relationships: moriMockSession.relationships,
+      }),
+    ).toEqual([]);
   });
 
   it("returns only relationships where both endpoints are in the focused set", () => {
@@ -202,7 +195,10 @@ describe("getFocusedRelationships", () => {
     };
     const view = withEvents(moriMockSession.events, [directRelationship, distantRelationship]);
     const model = buildModel(view, { selectedEventId: sampleEvent.id });
-    const focused = getFocusedRelationships({ model, relationships: view.relationships });
+    const focused = getFocusedRelationships({
+      focusedSet: model.focusedSet,
+      relationships: view.relationships,
+    });
     expect(focused.map((relationship) => relationship.id)).toContain(directRelationship.id);
     expect(focused.map((relationship) => relationship.id)).not.toContain(distantRelationship.id);
   });
@@ -212,7 +208,7 @@ describe("countHiddenRelationships", () => {
   it("returns zero when the event has no relationships outside the focused set", () => {
     const model = buildModel(moriMockSession);
     const count = countHiddenRelationships({
-      model,
+      focusedSet: model.focusedSet,
       relationships: [],
       forEventIds: ["any-id"],
     });
@@ -242,7 +238,7 @@ describe("countHiddenRelationships", () => {
     const view = withEvents(moriMockSession.events, [hidden]);
     const model = buildModel(view, { selectedEventId: seed.id });
     const count = countHiddenRelationships({
-      model,
+      focusedSet: model.focusedSet,
       relationships: view.relationships,
       forEventIds: [target.id],
     });
@@ -255,11 +251,9 @@ describe("buildInspectorViewModel", () => {
     const target = moriMockSession.events.find(
       (event) => event.sourceRefs.length > 0,
     )!;
-    const model = buildModel(moriMockSession, { selectedEventId: target.id });
     const inspector = buildInspectorViewModel({
       event: target,
       view: moriMockSession,
-      model,
     });
     expect(inspector.event).toBe(target);
     expect(inspector.confidencePct).toBe(Math.round(target.confidence * 100));

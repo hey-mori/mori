@@ -9,7 +9,6 @@ export {
   buildTimelineRenderModel,
   buildInspectorViewModel,
   filterEvents,
-  getActiveLanes,
   getFocusedRelationships,
   countHiddenRelationships,
   type BuildTimelineRenderModelInput,

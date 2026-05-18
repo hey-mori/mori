@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { EventType, ViewKey } from "../domain/types";
-import type { TimelineDensity } from "../lib/timeline/collisionLayout";
 import type { ReviewSelection } from "../lib/review-workspace/reviewWorkspace";
 
 type MoriAppState = {
@@ -9,9 +8,6 @@ type MoriAppState = {
   hoveredEventId: string | null;
   activeFilters: EventType[];
   searchQuery: string;
-  timelineDensity: TimelineDensity;
-  /** When true, the canvas hides lanes with zero items to tighten the rhythm. */
-  activeLanesOnly: boolean;
   /** When true, the inspector is collapsed (used at narrow widths). */
   inspectorCollapsed: boolean;
   /**
@@ -26,9 +22,6 @@ type MoriAppState = {
   toggleFilter: (eventType: EventType) => void;
   clearFilters: () => void;
   setSearchQuery: (query: string) => void;
-  setTimelineDensity: (density: TimelineDensity) => void;
-  toggleTimelineDensity: () => void;
-  toggleActiveLanesOnly: () => void;
   setInspectorCollapsed: (collapsed: boolean) => void;
   /** Deep-link into Review focused on a specific issue / decision / next action. */
   openReviewItem: (selection: ReviewSelection) => void;
@@ -41,8 +34,6 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   hoveredEventId: null,
   activeFilters: [],
   searchQuery: "",
-  timelineDensity: "comfortable",
-  activeLanesOnly: false,
   inspectorCollapsed: false,
   reviewFocus: null,
   setCurrentView: (currentView) => set({ currentView }),
@@ -56,18 +47,6 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
     })),
   clearFilters: () => set({ activeFilters: [] }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
-  setTimelineDensity: (timelineDensity) => set({ timelineDensity }),
-  toggleTimelineDensity: () =>
-    set((state) => ({
-      timelineDensity:
-        state.timelineDensity === "comfortable"
-          ? "compact"
-          : state.timelineDensity === "compact"
-            ? "dense"
-            : "comfortable",
-    })),
-  toggleActiveLanesOnly: () =>
-    set((state) => ({ activeLanesOnly: !state.activeLanesOnly })),
   setInspectorCollapsed: (inspectorCollapsed) => set({ inspectorCollapsed }),
   openReviewItem: (selection) =>
     set({ reviewFocus: selection, currentView: "review" }),
