@@ -17,6 +17,7 @@ import {
   type ReportSectionId,
   type ReportType,
 } from "../../lib/report/reportBuilder";
+import { buildReportHtmlDocument } from "../../lib/report/reportHtml";
 import { getFeatureControlProps, type FeatureId } from "../../app/featureStatus";
 
 // Format status is sourced from the feature registry so the panel can never
@@ -96,13 +97,19 @@ export function ReportBuilderPanel({
     }
   }
 
-  function handleDownloadMarkdown() {
+  function handleDownload() {
     if (typeof window === "undefined") return;
-    const blob = new Blob([payload.markdown], { type: "text/markdown;charset=utf-8" });
+    const isHtml = format === "html";
+    const content = isHtml
+      ? buildReportHtmlDocument({ markdown: payload.markdown, title: view.session.title })
+      : payload.markdown;
+    const blob = new Blob([content], {
+      type: isHtml ? "text/html;charset=utf-8" : "text/markdown;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${view.session.title.replace(/\s+/g, "_")}-${type}.md`;
+    anchor.download = `${view.session.title.replace(/\s+/g, "_")}-${type}${isHtml ? ".html" : ".md"}`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -237,8 +244,8 @@ export function ReportBuilderPanel({
           >
             {copiedMd ? "복사됨" : "Markdown 복사"}
           </Button>
-          <Button icon={Download} onClick={handleDownloadMarkdown}>
-            .md 다운로드
+          <Button icon={Download} onClick={handleDownload}>
+            {format === "html" ? ".html 다운로드" : ".md 다운로드"}
           </Button>
           <Button onClick={() => setPreviewVisible((value) => !value)}>
             {previewVisible ? "미리보기 숨기기" : "미리보기 보기"}

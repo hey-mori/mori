@@ -227,7 +227,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   // ─────────────────────────── Reports ───────────────────────────
   { id: "reports.export.markdown", label: "Copy / download Markdown", status: "implemented", description: "Render the report as Markdown and copy or download it." },
   { id: "reports.export.pdf", label: "PDF export", status: PLANNED, description: "Render the report as a PDF document.", disabledReason: "PDF export is a planned milestone." },
-  { id: "reports.export.html", label: "HTML export", status: PLANNED, description: "Render the report as a standalone HTML document.", disabledReason: "HTML export is a planned milestone." },
+  { id: "reports.export.html", label: "HTML export", status: "implemented", description: "Render the report as a standalone, self-contained HTML document." },
   { id: "reports.export.moriPackage", label: "Export .mori v0 JSON", status: "implemented", description: "Serialise the session to a .mori v0 JSON package." },
   { id: "reports.copyResumePrompt", label: "Copy resume prompt", status: "implemented", description: "Copy the generated resume prompt." },
   { id: "reports.rerunQuickPass", label: "Re-run Quick Pass", status: "implemented", description: "Trigger a new Quick Pass run from the analysis strip." },
@@ -264,7 +264,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "rollup.reviewWorkspace", label: "Review workspace", status: "partial", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions.", userFacingStatus: "Partial — issue status, issue and decision editing, decision confirmation, Next Action completion, and issue promotion write." },
   { id: "rollup.reportsMarkdown", label: "Markdown reports", status: "implemented", description: "Copy or download report as Markdown." },
   { id: "rollup.reportsPdf", label: "PDF reports", status: PLANNED, description: "Render report as PDF.", disabledReason: "PDF export is a planned milestone." },
-  { id: "rollup.reportsHtml", label: "HTML reports", status: PLANNED, description: "Render report as standalone HTML.", disabledReason: "HTML export is a planned milestone." },
+  { id: "rollup.reportsHtml", label: "HTML reports", status: "implemented", description: "Render the report as a standalone, self-contained HTML document." },
   { id: "rollup.projectMemoryCurrentSession", label: "Project Memory — current session", status: "implemented", description: "Aggregate the active session into a project memory snapshot." },
   { id: "rollup.projectMemoryCrossSession", label: "Project Memory — cross-session", status: PLANNED, description: "Aggregate decisions / issues / evidence across multiple sessions.", disabledReason: "Cross-session aggregation depends on persistence completion (Planned)." },
   { id: "rollup.sqlitePersistence", label: "SQLite persistence", status: "implemented", description: "Persistent local SQLite store for sessions, imports, and analysis.", runtime: "desktop" },
