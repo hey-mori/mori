@@ -106,8 +106,7 @@ export const TIMELINE_CONTROLS: Record<TimelineControlId, TimelineControlSpec> =
   endSession: {
     id: "endSession",
     label: "세션 종료",
-    status: "planned",
-    plannedHint: "Session end + final report writeback is the next persistence milestone.",
+    status: "implemented",
   },
   exportReport: {
     id: "exportReport",
@@ -123,38 +122,32 @@ export const TIMELINE_CONTROLS: Record<TimelineControlId, TimelineControlSpec> =
   memoSave: {
     id: "memoSave",
     label: "Save event memo",
-    status: "planned",
-    plannedHint: "수정 내용 저장은 예정된 영속성 마일스톤입니다.",
+    status: "implemented",
   },
   inspectorEditEvent: {
     id: "inspectorEditEvent",
     label: "이벤트 편집",
-    status: "planned",
-    plannedHint: "이벤트 직접 편집은 수정 마일스톤에서 제공됩니다.",
+    status: "implemented",
   },
   inspectorCreateIssue: {
     id: "inspectorCreateIssue",
     label: "이슈 생성",
-    status: "planned",
-    plannedHint: "수동 이슈 생성은 Review 쓰기 화면에 포함됩니다.",
+    status: "implemented",
   },
   inspectorSplitEvent: {
     id: "inspectorSplitEvent",
     label: "이벤트 분할",
-    status: "planned",
-    plannedHint: "이벤트 분할은 이벤트 수정 마일스톤에서 제공됩니다.",
+    status: "implemented",
   },
   inspectorMergeEvent: {
     id: "inspectorMergeEvent",
     label: "이벤트 병합",
-    status: "planned",
-    plannedHint: "이벤트 병합은 이벤트 수정 마일스톤에서 제공됩니다.",
+    status: "implemented",
   },
   inspectorAddNote: {
     id: "inspectorAddNote",
     label: "메모 추가",
-    status: "planned",
-    plannedHint: "인스펙터 메모는 수정 마일스톤에서 제공됩니다.",
+    status: "implemented",
   },
   inspectorFlowTrace: {
     id: "inspectorFlowTrace",

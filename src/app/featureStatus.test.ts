@@ -74,6 +74,24 @@ describe("getFeatureControlProps", () => {
     expect(props.status).toBe("partial");
     expect(props.statusLabel).toMatch(/Partial/i);
   });
+
+  it("marks shipped Timeline inspector correction actions as enabled", () => {
+    const shippedInspectorActions = [
+      "timeline.inspector.editEvent",
+      "timeline.inspector.split",
+      "timeline.inspector.merge",
+      "timeline.inspector.createIssue",
+      "timeline.inspector.addNote",
+      "timeline.inspector.memoSave",
+    ] as const;
+
+    for (const id of shippedInspectorActions) {
+      const props = getFeatureControlProps(id);
+      expect(props.enabled).toBe(true);
+      expect(props.status).toBe("implemented");
+      expect(props.title).toBeUndefined();
+    }
+  });
 });
 
 describe("listFeaturesByStatus / listFeaturesBySurfacePrefix", () => {

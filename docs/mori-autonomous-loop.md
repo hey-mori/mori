@@ -362,6 +362,11 @@ Shipped:
     OpenAI-compatible endpoints, and Cloud API stay visible but disabled
     with concise Planned reasons, so starting a session never implies a
     provider Mori cannot run.
+8d. ✅ Timeline action status honesty — the app-wide feature registry and
+    legacy Timeline control registry now mark shipped inspector correction
+    actions as implemented: edit event, split, merge, create issue, add note,
+    memo save, and session end. Product-honesty counts and control tooltips
+    now match the real Timeline write path.
 
 ### Timeline Maturity Loop (focused sub-pass)
 

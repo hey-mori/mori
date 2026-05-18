@@ -32,8 +32,24 @@ describe("Timeline control registry", () => {
     expect(isImplemented("search")).toBe(true);
   });
 
-  it("treats session-end and sidebar-collapse as planned", () => {
-    expect(isImplemented("endSession")).toBe(false);
+  it("treats session-end as implemented and sidebar-collapse as planned", () => {
+    expect(isImplemented("endSession")).toBe(true);
     expect(isImplemented("sidebarCollapse")).toBe(false);
+  });
+
+  it("treats shipped inspector correction controls as implemented", () => {
+    const shippedInspectorControls = [
+      "memoSave",
+      "inspectorEditEvent",
+      "inspectorCreateIssue",
+      "inspectorSplitEvent",
+      "inspectorMergeEvent",
+      "inspectorAddNote",
+    ] as const;
+
+    for (const id of shippedInspectorControls) {
+      expect(isImplemented(id)).toBe(true);
+      expect(getPlannedHint(id)).toBeUndefined();
+    }
   });
 });
