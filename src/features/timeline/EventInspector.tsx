@@ -39,12 +39,21 @@ export function EventInspector({
   session,
   onTrace,
   onOpenReviewItem,
+  onCreateIssue,
+  issueCreated = false,
+  canWrite = false,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
   onTrace: () => void;
   /** Deep-link a linked issue / decision / next action into the Review surface. */
   onOpenReviewItem?: (selection: ReviewSelection) => void;
+  /** Promote this event to a Review issue. Absent ⇒ control hidden. */
+  onCreateIssue?: () => void;
+  /** True once this event already has a derived issue. */
+  issueCreated?: boolean;
+  /** True when the active session can persist Timeline writes (real draft). */
+  canWrite?: boolean;
 }) {
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
@@ -141,6 +150,22 @@ export function EventInspector({
           <Button icon={ClipboardCopy} onClick={handleCopy}>
             요약 복사
           </Button>
+          {onCreateIssue ? (
+            <Button
+              icon={PlusCircle}
+              onClick={onCreateIssue}
+              disabled={!canWrite || issueCreated}
+              title={
+                issueCreated
+                  ? "이 이벤트는 이미 이슈로 만들어졌습니다."
+                  : canWrite
+                    ? "이 이벤트를 Review 이슈로 만듭니다."
+                    : "실제 세션에서 사용할 수 있습니다."
+              }
+            >
+              {issueCreated ? "이슈 생성됨" : "이슈 생성"}
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -161,11 +186,6 @@ export function EventInspector({
             feature="timeline.inspector.merge"
             label={TIMELINE_CONTROLS.inspectorMergeEvent.label}
             icon={Combine}
-          />
-          <MoriPlannedAction
-            feature="timeline.inspector.createIssue"
-            label={TIMELINE_CONTROLS.inspectorCreateIssue.label}
-            icon={PlusCircle}
           />
           <MoriPlannedAction
             feature="timeline.inspector.addNote"

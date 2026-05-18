@@ -15,6 +15,7 @@ import {
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { EventInspector } from "./EventInspector";
+import { eventIssueId, isEventPromotedToIssue } from "../../lib/timeline/eventToIssue";
 import { TimelineBundleInspector } from "./TimelineBundleInspector";
 import {
   TimelineCanvas,
@@ -52,6 +53,8 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const imports = useMoriSessionStore((state) => state.imports);
   const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
   const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
+  const analysis = useMoriSessionStore((state) => state.analysis);
+  const createIssueFromEvent = useMoriSessionStore((state) => state.createIssueFromEvent);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -241,6 +244,19 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             session={view}
             onTrace={() => setCurrentView("flow")}
             onOpenReviewItem={openReviewItem}
+            canWrite={sessionMode === "draft" && hasAnalysis}
+            issueCreated={
+              analysis
+                ? isEventPromotedToIssue(analysis, selectedItem.event.id)
+                : false
+            }
+            onCreateIssue={() => {
+              const event = selectedItem.event;
+              if (createIssueFromEvent(event)) {
+                openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) });
+                setCurrentView("review");
+              }
+            }}
           />
         ) : null}
       </div>

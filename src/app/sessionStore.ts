@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { moriMockSession } from "../domain/mock-data";
-import type { IssueStatus, MoriMockSession, NextAction } from "../domain/types";
+import type { IssueStatus, MoriMockSession, NextAction, TimelineEvent } from "../domain/types";
 import type {
   MoriAnalysisProvider,
   MoriAnalysisResult,
@@ -23,6 +23,7 @@ import {
   type IssueEditFields,
 } from "../lib/session/reviewItemEdit";
 import { promoteIssueToNextAction } from "../lib/session/issuePromotion";
+import { createIssueFromEvent as buildIssueFromEvent } from "../lib/timeline/eventToIssue";
 import {
   createStaticMockDataSource,
   type TimelineDataSource,
@@ -115,6 +116,12 @@ export type MoriSessionState = {
    */
   setIssueStatus: (issueId: string, status: IssueStatus) => boolean;
   editIssue: (issueId: string, fields: IssueEditFields) => boolean;
+  /**
+   * Promote a Timeline event into a Review issue — a Timeline-inspector
+   * write. Idempotent: a second call for the same event is a no-op.
+   * Returns `false` in demo mode or without an analysis to write into.
+   */
+  createIssueFromEvent: (event: TimelineEvent) => boolean;
   /**
    * Promote an issue into a linked Next Action. If the issue already has
    * a linked Next Action, returns that existing action without writing.
@@ -525,6 +532,19 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     repository.saveSessionAnalysis(draft.session.id, nextAnalysis);
     persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
     set({ analysis: nextAnalysis });
+    return true;
+  },
+  createIssueFromEvent: (event) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+
+    const result = buildIssueFromEvent(analysis, event, new Date().toISOString());
+    if (!result.changed) return false;
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, result.analysis);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, result.analysis);
+    set({ analysis: result.analysis });
     return true;
   },
   setDecisionConfirmed: (decisionId, confirmed) => {
