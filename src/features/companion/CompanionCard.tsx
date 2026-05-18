@@ -4,8 +4,8 @@ import { Button } from "../../components/ui/Button";
 import type { ViewKey } from "../../domain/types";
 import {
   companionSeverityTone,
-  companionSignalReviewSelection,
   describeCompanionBasis,
+  getCompanionSignalActionTarget,
   type CompanionSignal,
 } from "../../lib/companion/companionSignals";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
@@ -54,12 +54,13 @@ export function CompanionCard({
             // A signal about a specific issue / decision / next action
             // deep-links straight to that item; otherwise it navigates to
             // the signal's surface.
-            const reviewSelection = companionSignalReviewSelection(signal);
-            const action = reviewSelection
-              ? () => onOpenReviewItem(reviewSelection)
-              : signal.destination
-                ? () => onNavigate(signal.destination as ViewKey)
-                : null;
+            const target = getCompanionSignalActionTarget(signal);
+            const action =
+              target?.kind === "review"
+                ? () => onOpenReviewItem(target.selection)
+                : target?.kind === "view"
+                  ? () => onNavigate(target.view)
+                  : null;
             return (
               <li
                 key={signal.id}

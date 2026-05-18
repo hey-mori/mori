@@ -371,6 +371,10 @@ Shipped:
     panel at the top of the Evidence workflow, before integration browsing,
     while planned connectors are collapsed behind an honest disclosure so
     unavailable integrations no longer compete with the next real action.
+8f. ✅ Companion inbox focus — Mori Notes now opens with one recommended
+    next action, backed by the same signal-routing helper used by inline
+    Companion cards. Review-linked signals deep-link to the exact item;
+    other signals navigate to their responsible surface.
 
 ### Timeline Maturity Loop (focused sub-pass)
 

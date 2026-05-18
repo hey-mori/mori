@@ -558,6 +558,28 @@ export function companionSignalReviewSelection(
   }
 }
 
+export type CompanionSignalActionTarget =
+  | { kind: "review"; selection: ReviewSelection }
+  | { kind: "view"; view: ViewKey };
+
+/**
+ * Resolve the concrete navigation target for a companion signal. UI surfaces
+ * use this instead of each re-implementing "review item vs. destination view"
+ * branching, so the inline card and full inbox cannot drift apart.
+ */
+export function getCompanionSignalActionTarget(
+  signal: CompanionSignal,
+): CompanionSignalActionTarget | null {
+  const reviewSelection = companionSignalReviewSelection(signal);
+  if (reviewSelection) {
+    return { kind: "review", selection: reviewSelection };
+  }
+  if (signal.destination) {
+    return { kind: "view", view: signal.destination };
+  }
+  return null;
+}
+
 /** Count a companion signal set by severity tier. */
 export function summarizeCompanionSignals(
   signals: CompanionSignal[],

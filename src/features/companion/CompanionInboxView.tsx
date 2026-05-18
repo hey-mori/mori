@@ -6,9 +6,9 @@ import { useMoriAppStore } from "../../app/store";
 import type { ViewKey } from "../../domain/types";
 import {
   companionSeverityTone,
-  companionSignalReviewSelection,
   describeCompanionBasis,
   describeCompanionSeverity,
+  getCompanionSignalActionTarget,
   groupCompanionSignalsByAction,
   type CompanionSignal,
   type CompanionSignalGroup,
@@ -32,6 +32,7 @@ export function CompanionInboxView() {
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
 
   const groups = useMemo(() => groupCompanionSignalsByAction(feed), [feed]);
+  const topSignal = feed[0] ?? null;
 
   return (
     <div className="page companion-inbox">
@@ -41,6 +42,13 @@ export function CompanionInboxView() {
       />
       <div className="companion-inbox-grid">
         <section className="companion-inbox-main" aria-label="Companion signals">
+          {topSignal ? (
+            <CompanionInboxFocus
+              signal={topSignal}
+              onNavigate={setCurrentView}
+              onOpenReviewItem={openReviewItem}
+            />
+          ) : null}
           {groups.length === 0 ? (
             <p className="companion-inbox-empty">
               지금은 살펴볼 신호가 없습니다. 새 소스를 가져오거나 Quick Pass를
@@ -61,6 +69,47 @@ export function CompanionInboxView() {
         <CompanionInboxRail groups={groups} total={feed.length} isDemo={isDemo} />
       </div>
     </div>
+  );
+}
+
+function CompanionInboxFocus({
+  signal,
+  onNavigate,
+  onOpenReviewItem,
+}: {
+  signal: CompanionSignal;
+  onNavigate: (view: ViewKey) => void;
+  onOpenReviewItem: (selection: ReviewSelection) => void;
+}) {
+  const target = getCompanionSignalActionTarget(signal);
+  const action =
+    target?.kind === "review"
+      ? () => onOpenReviewItem(target.selection)
+      : target?.kind === "view"
+        ? () => onNavigate(target.view)
+        : null;
+
+  return (
+    <section
+      className="companion-inbox-focus"
+      data-mori-tone={companionSeverityTone(signal.severity)}
+      aria-label="추천 다음 행동"
+    >
+      <div className="companion-inbox-focus-copy">
+        <span className="companion-inbox-focus-kicker">추천 다음 행동</span>
+        <h2>{signal.title}</h2>
+        <p>{signal.message}</p>
+        <div className="companion-inbox-focus-meta">
+          <span>{describeCompanionSeverity(signal.severity)}</span>
+          <span>{describeCompanionBasis(signal.basis)}</span>
+        </div>
+      </div>
+      {action ? (
+        <Button variant="primary" onClick={action}>
+          {signal.actionLabel}
+        </Button>
+      ) : null}
+    </section>
   );
 }
 
@@ -106,12 +155,13 @@ function CompanionSignalRow({
   // When the signal is about a specific Review item, the action opens that
   // exact item; otherwise it navigates to the signal's surface. Either way
   // the action only navigates — it never applies or writes anything.
-  const reviewSelection = companionSignalReviewSelection(signal);
-  const action = reviewSelection
-    ? () => onOpenReviewItem(reviewSelection)
-    : signal.destination
-      ? () => onNavigate(signal.destination as ViewKey)
-      : null;
+  const target = getCompanionSignalActionTarget(signal);
+  const action =
+    target?.kind === "review"
+      ? () => onOpenReviewItem(target.selection)
+      : target?.kind === "view"
+        ? () => onNavigate(target.view)
+        : null;
   return (
     <li
       className="companion-signal companion-inbox-row"

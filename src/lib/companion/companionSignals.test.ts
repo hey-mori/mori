@@ -7,6 +7,7 @@ import {
   companionSeverityTone,
   companionSignalReviewSelection,
   COMPANION_ACTION_CATEGORY_ORDER,
+  getCompanionSignalActionTarget,
   getCompanionSignalActionCategory,
   groupCompanionSignalsByAction,
   MAX_COMPANION_SIGNALS,
@@ -375,6 +376,34 @@ describe("getCompanionSignalActionCategory", () => {
     expect(
       getCompanionSignalActionCategory(feed.find((s) => s.type === "ready_to_report")!),
     ).toBe("report");
+  });
+});
+
+describe("getCompanionSignalActionTarget", () => {
+  it("deep-links review signals to the exact review item", () => {
+    const feed = buildCompanionSignalFeed(
+      input({
+        issues: [issue({ id: "issue-target", status: "open" })],
+      }),
+    );
+    const signal = feed.find((entry) => entry.type === "unresolved_issue")!;
+    expect(getCompanionSignalActionTarget(signal)).toEqual({
+      kind: "review",
+      selection: { kind: "issue", issueId: "issue-target" },
+    });
+  });
+
+  it("routes non-review signals to their destination surface", () => {
+    const feed = buildCompanionSignalFeed(
+      input({
+        events: [timelineEvent("event-target")],
+      }),
+    );
+    const signal = feed.find((entry) => entry.type === "ready_to_resume")!;
+    expect(getCompanionSignalActionTarget(signal)).toEqual({
+      kind: "view",
+      view: "reports",
+    });
   });
 });
 
