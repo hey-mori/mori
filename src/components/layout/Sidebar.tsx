@@ -24,19 +24,41 @@ import {
 } from "../../lib/session/sessionTiming";
 import { getFeatureControlProps } from "../../app/featureStatus";
 
-const navItems: Array<{ key: ViewKey; label: string; badge?: string; icon: typeof Play }> = [
-  { key: "start", label: "Start Session", icon: Play },
-  { key: "workspace", label: "Workspace", icon: FolderKanban },
-  { key: "timeline", label: "Timeline", icon: SlidersHorizontal },
-  { key: "evidence", label: "Evidence", icon: FileText },
-  { key: "review", label: "Review", icon: ListChecks },
-  { key: "reports", label: "Reports", icon: PanelRightOpen },
-  { key: "memory", label: "Memory", icon: FolderClock },
-  { key: "companion", label: "Companion", icon: Compass },
-  { key: "settings", label: "Settings", icon: Settings },
+type NavItem = { key: ViewKey; label: string; badge?: string; icon: typeof Play };
+
+/**
+ * The nav is grouped so nine destinations read as an organised structure
+ * rather than a flat list: the entry action, the four session-work
+ * surfaces, the project-level surfaces, and settings.
+ */
+const navGroups: Array<{ label?: string; items: NavItem[] }> = [
+  { items: [{ key: "start", label: "Start Session", icon: Play }] },
+  {
+    label: "작업",
+    items: [
+      { key: "timeline", label: "Timeline", icon: SlidersHorizontal },
+      { key: "evidence", label: "Evidence", icon: FileText },
+      { key: "review", label: "Review", icon: ListChecks },
+      { key: "reports", label: "Reports", icon: PanelRightOpen },
+    ],
+  },
+  {
+    label: "프로젝트",
+    items: [
+      { key: "workspace", label: "Workspace", icon: FolderKanban },
+      { key: "memory", label: "Memory", icon: FolderClock },
+      { key: "companion", label: "Companion", icon: Compass },
+    ],
+  },
+  { items: [{ key: "settings", label: "Settings", icon: Settings }] },
 ];
 
 export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onNavigate: (view: ViewKey) => void }) {
+  const isActive = (key: ViewKey) =>
+    key === currentView ||
+    (currentView === "flow" && key === "timeline") ||
+    (currentView === "consolidation" && key === "memory");
+
   return (
     <aside className="sidebar">
       <button className="brand" onClick={() => onNavigate("timeline")} type="button">
@@ -44,25 +66,27 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
         <span>mori</span>
       </button>
       <nav className="nav">
-        {navItems.map((item, index) => {
-          const Icon = item.icon;
-          const active =
-            item.key === currentView ||
-            (currentView === "flow" && item.key === "timeline") ||
-            (currentView === "consolidation" && item.key === "memory");
-          return (
-            <button
-              className={`nav-item ${active ? "active" : ""}`}
-              key={`${item.label}-${index}`}
-              onClick={() => onNavigate(item.key)}
-              type="button"
-            >
-              <Icon size={17} />
-              <span>{item.label}</span>
-              {item.badge ? <b>{item.badge}</b> : null}
-            </button>
-          );
-        })}
+        {navGroups.map((group, groupIndex) => (
+          <div className="nav-group" key={group.label ?? `group-${groupIndex}`}>
+            {group.label ? <p className="nav-group-label">{group.label}</p> : null}
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  className={`nav-item ${isActive(item.key) ? "active" : ""}`}
+                  key={item.key}
+                  onClick={() => onNavigate(item.key)}
+                  type="button"
+                  title={item.label}
+                >
+                  <Icon size={17} />
+                  <span>{item.label}</span>
+                  {item.badge ? <b>{item.badge}</b> : null}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
       <SidebarSessionCard />
       <SidebarProfile currentView={currentView} onNavigate={onNavigate} />

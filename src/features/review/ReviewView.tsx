@@ -385,7 +385,7 @@ function AnalysisStrip({
                   : hasAnalysis
                     ? `${providerCopy} · ${providerKind}`
                     : importsCount === 0
-                      ? "아직 가져온 소스가 없습니다. Evidence Hub에서 자료를 추가하세요."
+                      ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가하세요."
                       : "가져온 소스가 있습니다. Quick Pass를 실행하면 이슈/결정 후보가 생성됩니다."}
           </span>
         </div>

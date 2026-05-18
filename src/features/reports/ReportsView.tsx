@@ -182,7 +182,7 @@ export function ReportsView() {
             origin={promptOrigin}
             emptyHint={
               imports.length === 0
-                ? "아직 가져온 소스가 없습니다. Evidence Hub에서 자료를 추가한 뒤 Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
+                ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가한 뒤 Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
                 : "Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
             }
           />
@@ -259,7 +259,7 @@ function AnalysisStrip({
                         generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""
                       }`
                     : importsCount === 0
-                      ? "아직 가져온 소스가 없습니다. Evidence Hub에서 자료를 추가하세요."
+                      ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가하세요."
                       : "가져온 소스가 있습니다. Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다."}
           </span>
         </div>

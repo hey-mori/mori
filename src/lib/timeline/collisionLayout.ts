@@ -8,8 +8,6 @@ export type TimelineLayoutOptions = {
   frameWidth: number;
   density?: TimelineDensity;
   cardGapPx?: number;
-  /** Vertical gap between stacked rows inside a lane. */
-  rowGapPx?: number;
   laneOffsetPx?: number;
   laneLabelWidthPx?: number;
   contentRightPaddingPx?: number;
@@ -83,19 +81,10 @@ const DEFAULT_LANE_OFFSET = 38;
 const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
 const DEFAULT_CARD_GAP = 12;
-const DEFAULT_ROW_GAP = 6;
 const LANE_VERTICAL_PADDING = 7;
 /** Lanes with no items render as a slim, de-emphasised band — not a full
  *  content-height row of dead space. */
 const EMPTY_LANE_HEIGHT = 64;
-
-/**
- * Hard cap on stacked rows inside one lane. Beyond this a card falls back
- * onto the last row (rare — bundling absorbs most bursts first). Every lane
- * renders at one uniform height (the busiest lane's row count), so this
- * also bounds how tall the whole timeline gets.
- */
-export const MAX_ROWS_PER_LANE = 2;
 
 export function computeTimelineLayout(
   items: TimelineDisplayItem[],
@@ -129,48 +118,33 @@ export function computeTimelineLayout(
     laneItems.sort((left, right) => new Date(left.start).getTime() - new Date(right.start).getTime());
   }
 
-  const rowGap = options.rowGapPx ?? DEFAULT_ROW_GAP;
+  // Every lane is a single row. Content lanes share one uniform height;
+  // empty lanes collapse to a slim band so the timeline carries no tall
+  // stretches of dead space.
+  const laneHeight = LANE_VERTICAL_PADDING * 2 + cardHeight;
 
-  // Phase 1: pack each lane into rows. Row assignment depends only on a
-  // lane's own items — a card keeps its true time-position and stacks
-  // downward when it would overlap a neighbour.
-  const packs = options.laneOrder.map((type) => ({
-    type,
-    ...packLaneRows(
-      grouped.get(type) ?? [],
+  const placed: LaidOutTimelineItem[] = [];
+  const lanes: LaneLayout[] = [];
+  let cursorY = laneOffsetPx;
+  for (const type of options.laneOrder) {
+    const laneItems = grouped.get(type) ?? [];
+    const laneTop = cursorY;
+    const hasItems = laneItems.length > 0;
+    const thisLaneHeight = hasItems ? laneHeight : EMPTY_LANE_HEIGHT;
+    const y = laneTop + LANE_VERTICAL_PADDING;
+    const placements = layoutLaneRow(
+      laneItems,
       range,
       density,
       contentLeftPx,
       contentWidthPx,
       cardGap,
-    ),
-  }));
-
-  // Phase 2: one uniform lane height for the whole timeline, driven by the
-  // busiest lane. Uniform heights keep the swimlanes reading as an even
-  // grid instead of a jagged stack of differently-sized bands.
-  const globalRowCount = Math.min(
-    MAX_ROWS_PER_LANE,
-    Math.max(1, ...packs.map((pack) => pack.rowCount)),
-  );
-  const laneHeight =
-    LANE_VERTICAL_PADDING * 2 + globalRowCount * cardHeight + (globalRowCount - 1) * rowGap;
-
-  // Phase 3: stack the lanes and resolve every item's absolute coordinates.
-  // Content lanes all share `laneHeight`; empty lanes collapse to a slim
-  // band so the timeline does not carry tall stretches of dead space.
-  const placed: LaidOutTimelineItem[] = [];
-  const lanes: LaneLayout[] = [];
-  let cursorY = laneOffsetPx;
-  for (const pack of packs) {
-    const laneTop = cursorY;
-    const thisLaneHeight = pack.placements.length === 0 ? EMPTY_LANE_HEIGHT : laneHeight;
-    for (const placement of pack.placements) {
-      const y = laneTop + LANE_VERTICAL_PADDING + placement.row * (cardHeight + rowGap);
+    );
+    for (const placement of placements) {
       placed.push({
         itemId: placement.item.id,
         kind: placement.item.kind,
-        laneType: pack.type,
+        laneType: type,
         memberEventIds: placement.item.memberEventIds,
         x: placement.x,
         y,
@@ -183,7 +157,7 @@ export function computeTimelineLayout(
         anchorCenter: { x: placement.x + placement.width / 2, y: y + cardHeight / 2 },
       });
     }
-    lanes.push({ type: pack.type, top: laneTop, height: thisLaneHeight, rowCount: pack.rowCount });
+    lanes.push({ type, top: laneTop, height: thisLaneHeight, rowCount: hasItems ? 1 : 0 });
     cursorY += thisLaneHeight;
   }
 
@@ -223,45 +197,59 @@ type RowPlacement = {
   item: TimelineDisplayItem;
   x: number;
   width: number;
-  row: number;
 };
 
 /**
- * Assign each item in a lane to a row.
+ * Lay out one lane on a single row.
  *
- * A card's x is its *true* start time and is never pushed sideways. Greedy
- * first-fit packing drops a card onto the first row whose last card already
- * ended (in px, including the gap) before this card starts; otherwise a new
- * row opens, up to MAX_ROWS_PER_LANE. Returns only row assignments — the
- * caller resolves absolute y once the uniform lane height is known.
+ * Each card starts at its true time position. A minimal left-to-right
+ * declutter then slides a card right only far enough to clear its
+ * neighbour — never a whole card width. Dense bursts are merged into
+ * bundles upstream (see `bundleEvents.ts`, which keeps lanes single-row),
+ * so residual nudges stay small. A trailing pass pulls the row back in if
+ * the last card would run past the content edge.
  */
-function packLaneRows(
+function layoutLaneRow(
   items: TimelineDisplayItem[],
   range: TimelineRange,
   density: TimelineDensity,
   contentLeftPx: number,
   contentWidthPx: number,
   cardGap: number,
-): { placements: RowPlacement[]; rowCount: number } {
-  if (items.length === 0) return { placements: [], rowCount: 0 };
+): RowPlacement[] {
+  if (items.length === 0) return [];
 
   const placements: RowPlacement[] = items.map((item) => {
     const width = computeItemWidth(item, range, contentWidthPx, density);
     const x = computeItemLeft(item.start, range, contentLeftPx, contentWidthPx, width);
-    return { item, x, width, row: 0 };
+    return { item, x, width };
   });
 
-  const rowEndX: number[] = [];
-  for (const placement of placements) {
-    let row = 0;
-    while (row < rowEndX.length && placement.x < rowEndX[row]!) row += 1;
-    if (row >= MAX_ROWS_PER_LANE) row = MAX_ROWS_PER_LANE - 1;
-    if (row === rowEndX.length) rowEndX.push(0);
-    rowEndX[row] = placement.x + placement.width + cardGap;
-    placement.row = row;
+  // Forward declutter: nudge each card just clear of its predecessor.
+  for (let index = 1; index < placements.length; index += 1) {
+    const previous = placements[index - 1]!;
+    const current = placements[index]!;
+    const minX = previous.x + previous.width + cardGap;
+    if (current.x < minX) current.x = minX;
   }
 
-  return { placements, rowCount: Math.max(1, rowEndX.length) };
+  // Backward overflow pass: if the row now spills past the content edge,
+  // pull the trailing cards left as far as their neighbours allow.
+  const maxRight = contentLeftPx + contentWidthPx;
+  const last = placements[placements.length - 1]!;
+  let overflow = last.x + last.width - maxRight;
+  for (let index = placements.length - 1; index >= 0 && overflow > 0; index -= 1) {
+    const current = placements[index]!;
+    const minLeft =
+      index === 0
+        ? contentLeftPx
+        : placements[index - 1]!.x + placements[index - 1]!.width + cardGap;
+    const shift = Math.min(overflow, current.x - minLeft);
+    current.x -= shift;
+    overflow -= shift;
+  }
+
+  return placements;
 }
 
 /**

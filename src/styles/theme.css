@@ -109,6 +109,30 @@
 }
 
 /**
+ * Typography scale. Mori is a dense productivity surface, so the base body
+ * size is 13.5px (not the browser default 16px) and the headline tiers are
+ * deliberately restrained — large display type pushed content off-screen.
+ * Surfaces should reference these tokens instead of hard-coding px sizes.
+ * The two largest tiers step down inside the ≤768px media query so headings
+ * stay proportional on narrow viewports.
+ */
+:root {
+  --mori-font-size-2xs: 10.5px; /* uppercase eyebrows, micro labels */
+  --mori-font-size-xs: 11.5px;  /* meta, captions, badges */
+  --mori-font-size-sm: 12.5px;  /* secondary text, hints */
+  --mori-font-size-md: 13.5px;  /* base body */
+  --mori-font-size-lg: 15px;    /* card + section titles */
+  --mori-font-size-xl: 17px;    /* panel / inspector headings */
+  --mori-font-size-2xl: 20px;   /* page headers (h1) */
+  --mori-font-size-3xl: 22px;   /* brand mark, hero numbers */
+
+  --mori-line-tight: 1.25;   /* headings, big numbers */
+  --mori-line-snug: 1.35;    /* titles */
+  --mori-line-normal: 1.5;   /* body */
+  --mori-line-relaxed: 1.6;  /* long-form paragraphs */
+}
+
+/**
  * Theme catalogue.
  *
  * Mori ships with two themes today:
@@ -332,10 +356,10 @@
 }
 
 .mori-stat-card-value {
-  font-size: 18px;
+  font-size: var(--mori-font-size-xl);
   font-weight: 800;
   color: var(--mori-text);
-  line-height: 1.1;
+  line-height: var(--mori-line-tight);
 }
 
 .mori-stat-card-hint {
@@ -389,7 +413,7 @@
 .mori-empty-state-title {
   margin: 0;
   color: var(--mori-text);
-  font-size: 16px;
+  font-size: var(--mori-font-size-lg);
   font-weight: 700;
 }
 

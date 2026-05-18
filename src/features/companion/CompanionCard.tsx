@@ -45,7 +45,7 @@ export function CompanionCard({
 
       {signals.length === 0 ? (
         <p className="companion-empty">
-          지금은 특별히 살펴볼 것이 없어요. 새 자료를 가져오거나 Quick Pass를
+          지금은 특별히 살펴볼 것이 없어요. 새 소스를 가져오거나 Quick Pass를
           실행하면 Mori가 다시 짚어 드립니다.
         </p>
       ) : (
@@ -97,8 +97,8 @@ export function CompanionCard({
 
       <footer className="companion-card-foot">
         {isDemo
-          ? "데모 데이터 기준입니다 — Mori는 사용자가 가져온 자료만 사용하며 백그라운드로 감시하지 않습니다."
-          : "Mori는 사용자가 명시적으로 가져온 자료만 사용하며, 메모리를 자동으로 쓰지 않습니다."}
+          ? "데모 데이터 기준입니다 — Mori는 사용자가 가져온 소스만 사용하며 백그라운드로 감시하지 않습니다."
+          : "Mori는 사용자가 명시적으로 가져온 소스만 사용하며, 메모리를 자동으로 쓰지 않습니다."}
       </footer>
     </section>
   );

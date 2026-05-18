@@ -6,7 +6,6 @@ import {
   computeItemWidth,
   computeTimelineLayout,
   indexEventAnchors,
-  MAX_ROWS_PER_LANE,
 } from "./collisionLayout";
 import type { TimelineDisplayItem } from "./displayItems";
 
@@ -59,7 +58,7 @@ describe("computeTimelineLayout", () => {
     expect(first!.laneType).toBe("aiConversation");
   });
 
-  it("keeps every lane within the row cap and maps event anchors through bundles", () => {
+  it("keeps every lane on a single row and maps event anchors through bundles", () => {
     const layout = computeTimelineLayout(displayItems, range, {
       frameWidth: 1240,
       density: "comfortable",
@@ -69,15 +68,26 @@ describe("computeTimelineLayout", () => {
     const researchAnchor = eventIndex.get("evt-dayflow");
 
     for (const lane of layout.lanes) {
-      expect(lane.rowCount).toBeLessThanOrEqual(MAX_ROWS_PER_LANE);
+      expect(lane.rowCount).toBeLessThanOrEqual(1);
+    }
+    // All laid-out items in a lane share one y — the lane's single row.
+    const yByLane = new Map<string, Set<number>>();
+    for (const item of layout.items) {
+      const set = yByLane.get(item.laneType) ?? new Set<number>();
+      set.add(item.y);
+      yByLane.set(item.laneType, set);
+    }
+    for (const ys of yByLane.values()) {
+      expect(ys.size).toBe(1);
     }
     expect(researchAnchor?.kind).toBe("bundle");
     expect(researchAnchor?.itemId).toContain("bundle-webResearch");
   });
 
-  it("places a card at its true start time — clustered cards are never pushed sideways", () => {
-    // Two events seconds apart in the same lane. With min-width cards they
-    // overlap, so they must stack vertically while keeping near-identical x.
+  it("keeps a card near its true start time and only nudges it clear of a neighbour", () => {
+    // Two events minutes apart in the same lane. On a single row their
+    // min-width cards would overlap, so the second is nudged just clear of
+    // the first — never stacked, never shoved a full card-width away.
     const items = [
       eventItem("c1", "aiConversation", "2026-05-14T10:00:00Z"),
       eventItem("c2", "aiConversation", "2026-05-14T10:02:00Z"),
@@ -87,39 +97,15 @@ describe("computeTimelineLayout", () => {
       density: "comfortable",
       laneOrder,
     });
-    const placed = layout.items.filter((item) => item.laneType === "aiConversation");
+    const placed = layout.items
+      .filter((item) => item.laneType === "aiConversation")
+      .sort((a, b) => a.x - b.x);
     expect(placed).toHaveLength(2);
 
-    // True position: x values stay tightly clustered (old behaviour pushed
-    // each card a full card-width to the right, ~120px+ apart).
-    const xs = placed.map((item) => item.x).sort((a, b) => a - b);
-    expect(xs[1]! - xs[0]!).toBeLessThan(80);
-
-    // Stacking: the overlapping cards land on distinct rows.
-    const ys = new Set(placed.map((item) => item.y));
-    expect(ys.size).toBe(2);
-  });
-
-  it("grows the lane height with the row count", () => {
-    const single = computeTimelineLayout(
-      [eventItem("s1", "decision", "2026-05-14T10:00:00Z")],
-      range,
-      { frameWidth: 1240, density: "comfortable", laneOrder },
-    );
-    const stacked = computeTimelineLayout(
-      [
-        eventItem("d1", "decision", "2026-05-14T10:00:00Z"),
-        eventItem("d2", "decision", "2026-05-14T10:01:00Z"),
-        eventItem("d3", "decision", "2026-05-14T10:02:00Z"),
-      ],
-      range,
-      { frameWidth: 1240, density: "comfortable", laneOrder },
-    );
-    const singleLane = single.lanes.find((lane) => lane.type === "decision")!;
-    const stackedLane = stacked.lanes.find((lane) => lane.type === "decision")!;
-    expect(singleLane.rowCount).toBe(1);
-    expect(stackedLane.rowCount).toBe(MAX_ROWS_PER_LANE);
-    expect(stackedLane.height).toBeGreaterThan(singleLane.height);
+    // Single row: both cards share one y.
+    expect(placed[0]!.y).toBe(placed[1]!.y);
+    // Decluttered, not overlapping: the second card clears the first.
+    expect(placed[1]!.x).toBeGreaterThanOrEqual(placed[0]!.x + placed[0]!.width);
   });
 
   it("renders every content lane at one uniform height", () => {
@@ -146,7 +132,7 @@ describe("computeTimelineLayout", () => {
     }
   });
 
-  it("caps a heavily clustered lane at MAX_ROWS_PER_LANE", () => {
+  it("keeps a heavily clustered lane on a single row without overlap", () => {
     const items = Array.from({ length: 8 }, (_, index) =>
       eventItem(`x${index}`, "aiConversation", `2026-05-14T10:0${index}:00Z`),
     );
@@ -156,7 +142,17 @@ describe("computeTimelineLayout", () => {
       laneOrder,
     });
     const lane = layout.lanes.find((entry) => entry.type === "aiConversation")!;
-    expect(lane.rowCount).toBe(MAX_ROWS_PER_LANE);
+    expect(lane.rowCount).toBe(1);
+
+    // Every card on the row is clear of its predecessor.
+    const placed = layout.items
+      .filter((item) => item.laneType === "aiConversation")
+      .sort((a, b) => a.x - b.x);
+    for (let index = 1; index < placed.length; index += 1) {
+      expect(placed[index]!.x).toBeGreaterThanOrEqual(
+        placed[index - 1]!.x + placed[index - 1]!.width,
+      );
+    }
   });
 });
 

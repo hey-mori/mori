@@ -97,7 +97,7 @@ export function ImportReviewView() {
         <div className="review-header-title">
           <h1>Import Review</h1>
           <p>
-            가져온 자료에서 Mori가 추출한 항목을 확인하고 적용 전에 수락 / 폐기를 결정하세요.
+            가져온 소스에서 Mori가 추출한 항목을 확인하고 적용 전에 수락 / 폐기를 결정하세요.
             적용 전까지 세션 메모리에는 추가되지 않습니다.
           </p>
         </div>

@@ -3,7 +3,6 @@ import { moriMockSession } from "../../domain/mock-data";
 import type { MoriMockSession } from "../../domain/types";
 import { buildTimelineEventCardViewModel } from "../../features/timeline/lib/timelineCards";
 import { buildTimelineRenderModel } from "./timelineViewModel";
-import { MAX_ROWS_PER_LANE } from "./collisionLayout";
 import {
   buildTimelineStressEvents,
   TIMELINE_STRESS_EVENT_COUNT,
@@ -49,12 +48,12 @@ describe("timeline stress fixture", () => {
     expect(lanes.size).toBeGreaterThanOrEqual(6);
   });
 
-  it("keeps every lane within the row cap even under bursts", () => {
-    // Bounded growth: clustering plus the row cap keep any single lane from
-    // stacking unbounded rows under a day-scale burst.
+  it("keeps every lane on a single row even under bursts", () => {
+    // Clustering merges day-scale bursts into bundles upstream, so no lane
+    // ever needs more than its single row.
     const model = stressModel();
     for (const lane of model.layout.lanes) {
-      expect(lane.rowCount).toBeLessThanOrEqual(MAX_ROWS_PER_LANE);
+      expect(lane.rowCount).toBeLessThanOrEqual(1);
     }
   });
 

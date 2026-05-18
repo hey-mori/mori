@@ -39,6 +39,10 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  /* Explicit base size — without this the app inherited the browser
+     default 16px, which made every surface read oversized. */
+  font-size: var(--mori-font-size-md);
+  line-height: var(--mori-line-normal);
 }
 
 button,
@@ -74,7 +78,7 @@ button {
   align-items: center;
   gap: 13px;
   margin: 0 0 34px 10px;
-  font-size: 27px;
+  font-size: var(--mori-font-size-3xl);
   font-weight: 800;
   letter-spacing: 0;
   border: 0;
@@ -98,7 +102,21 @@ button {
 
 .nav {
   display: grid;
-  gap: 7px;
+  gap: 14px;
+}
+
+.nav-group {
+  display: grid;
+  gap: 3px;
+}
+
+.nav-group-label {
+  margin: 0 0 2px 13px;
+  font-size: var(--mori-font-size-2xs);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted-2);
 }
 
 .nav-item {
@@ -142,12 +160,12 @@ button {
 }
 
 .session-card strong {
-  font-size: 15px;
+  font-size: var(--mori-font-size-md);
 }
 
 .session-card time {
   margin: 8px 0;
-  font-size: 26px;
+  font-size: var(--mori-font-size-3xl);
   font-weight: 800;
 }
 
@@ -240,7 +258,7 @@ button {
   justify-content: space-between;
   gap: 24px;
   min-height: 76px;
-  padding: 18px 32px 16px;
+  padding: 18px var(--mori-space-10) 16px;
   background: rgba(255, 255, 255, 0.82);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(12px);
@@ -262,7 +280,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  width: 320px;
+  width: clamp(180px, 22vw, 320px);
   height: 38px;
   padding: 0 12px;
   color: var(--muted);
@@ -323,7 +341,7 @@ p {
 .topbar h1,
 .page-header h1 {
   margin-bottom: 6px;
-  font-size: 24px;
+  font-size: var(--mori-font-size-2xl);
   letter-spacing: 0;
 }
 
@@ -1524,7 +1542,7 @@ kbd {
 
 .timeline-header h2 {
   margin: 0 0 6px 0;
-  font-size: 20px;
+  font-size: var(--mori-font-size-xl);
 }
 
 .timeline-header-badges {
@@ -1629,7 +1647,7 @@ kbd {
 }
 
 .metric-card-value {
-  font-size: 20px;
+  font-size: var(--mori-font-size-xl);
   font-weight: 700;
   color: var(--text);
 }
@@ -1941,7 +1959,7 @@ kbd {
 
 .inspector-title {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--mori-font-size-lg);
   line-height: 1.3;
   font-weight: 700;
   color: var(--text);
@@ -2185,12 +2203,12 @@ button.inspector-linked-item.is-linkable:hover {
 
 .inspector h2 {
   margin-bottom: 0;
-  font-size: 22px;
+  font-size: var(--mori-font-size-xl);
 }
 
 .inspector h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--mori-font-size-lg);
 }
 
 .trust-box {
@@ -2372,7 +2390,7 @@ textarea {
 .trace-arrow {
   margin: 18px 0 -4px;
   color: #657085;
-  font-size: 28px;
+  font-size: 20px;
   text-align: center;
 }
 
@@ -2402,7 +2420,10 @@ textarea {
 }
 
 .page {
-  padding: 0 34px 34px;
+  /* One inset drives the page padding AND the full-bleed header breakout
+     below, so they can never drift apart (narrow widths shrink it). */
+  --page-inset: var(--mori-space-9);
+  padding: 0 var(--page-inset) var(--page-inset);
 }
 
 .timeline-empty {
@@ -2444,9 +2465,9 @@ textarea {
 }
 
 .page .page-header {
-  margin: 0 -34px 22px;
-  padding-left: 34px;
-  padding-right: 34px;
+  margin: 0 calc(var(--page-inset) * -1) 22px;
+  padding-left: var(--page-inset);
+  padding-right: var(--page-inset);
 }
 
 .setup-grid {
@@ -2982,7 +3003,7 @@ progress::-webkit-progress-value {
   height: 76px;
   border-radius: 50%;
   background: white;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
 }
 
@@ -3115,7 +3136,7 @@ td a {
 }
 
 .metric strong {
-  font-size: 22px;
+  font-size: var(--mori-font-size-xl);
 }
 
 .resume-body {
@@ -3349,7 +3370,7 @@ pre {
 
 .project-hero h2 {
   margin: 14px 0;
-  font-size: 34px;
+  font-size: 24px;
 }
 
 .project-hero p {
@@ -4335,7 +4356,7 @@ pre {
 
 .review-header-title h1 {
   margin: 0 0 4px 0;
-  font-size: 22px;
+  font-size: var(--mori-font-size-xl);
 }
 
 .review-header-title p {
@@ -5854,7 +5875,7 @@ pre {
 }
 
 .review-summary-metric strong {
-  font-size: 20px;
+  font-size: var(--mori-font-size-xl);
   font-weight: 800;
 }
 
@@ -7421,7 +7442,7 @@ pre {
 
 .memory-hero-head h2 {
   margin: 6px 0 4px 0;
-  font-size: 22px;
+  font-size: var(--mori-font-size-xl);
 }
 
 .memory-hero-head p {
@@ -7488,7 +7509,7 @@ pre {
 }
 
 .memory-hero-stat strong {
-  font-size: 22px;
+  font-size: var(--mori-font-size-xl);
   font-weight: 800;
   color: var(--text);
 }
@@ -8632,7 +8653,7 @@ pre {
 
 .memory-reimport-count dd {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--mori-font-size-lg);
   font-weight: 600;
   color: #2c2549;
 }
@@ -10412,7 +10433,7 @@ pre {
 
 .import-header h2 {
   margin: 0 0 4px 0;
-  font-size: 18px;
+  font-size: var(--mori-font-size-lg);
 }
 
 .import-header p {
@@ -10638,7 +10659,7 @@ pre {
 
 .analysis-panel-header h2 {
   margin: 0 0 4px 0;
-  font-size: 18px;
+  font-size: var(--mori-font-size-lg);
 }
 
 .analysis-panel-header p {
@@ -10685,7 +10706,7 @@ pre {
 }
 
 .analysis-panel-metrics strong {
-  font-size: 20px;
+  font-size: var(--mori-font-size-xl);
 }
 
 .analysis-panel-metrics span {
@@ -11735,4 +11756,154 @@ pre {
 
 .mori-scroll-both {
   overflow: auto;
+}
+
+/* ====================================================================
+   Responsive foundation — canonical breakpoints 1280 / 1024 / 768 / 560.
+   Appended last on purpose: these rules must win over the duplicate
+   `.timeline-toolbar` / `.lane-label` blocks earlier in this file.
+   ==================================================================== */
+
+/* The hamburger + scrim only exist in the off-canvas (<=768px) mode. */
+.sidebar-toggle,
+.sidebar-scrim {
+  display: none;
+}
+
+/* --- Mid widths: the sidebar becomes a compact icon rail. ----------- */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .app-shell {
+    grid-template-columns: 66px minmax(0, 1fr);
+  }
+  .sidebar {
+    padding: 16px 10px;
+  }
+  .brand {
+    margin: 0 0 22px 0;
+    justify-content: center;
+    gap: 0;
+  }
+  .brand span,
+  .nav-group-label,
+  .nav-item span,
+  .nav-item b,
+  .session-card,
+  .profile > div,
+  .profile .status-dot,
+  .collapse {
+    display: none;
+  }
+  .nav-item {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 0;
+  }
+  .profile {
+    justify-content: center;
+  }
+}
+
+/* --- Narrow widths: the sidebar becomes an off-canvas drawer. ------- */
+@media (max-width: 768px) {
+  /* The closed drawer sits at translateX(-100%); clip it so the
+     off-screen panel never adds a phantom horizontal scrollbar. */
+  body {
+    overflow-x: hidden;
+  }
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 224px;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 200ms ease;
+    box-shadow: var(--mori-shadow-overlay);
+  }
+  .app-shell.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+  .sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 55;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    color: var(--text);
+  }
+  .app-shell.sidebar-open .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(20, 25, 36, 0.34);
+  }
+  /* Narrow widths use a tighter page inset; the header breakout follows
+     it automatically through --page-inset. */
+  .page {
+    --page-inset: var(--mori-space-6);
+  }
+  /* Clear room for the floating sidebar toggle in the page chrome. */
+  .topbar {
+    padding-left: 64px;
+  }
+  .page .page-header {
+    padding-left: calc(var(--page-inset) + 50px);
+  }
+  /* Step the two display tiers down a notch on small viewports. */
+  :root {
+    --mori-font-size-2xl: 18px;
+    --mori-font-size-3xl: 20px;
+  }
+}
+
+/* --- Stat / metric strips: reflow fixed-count grids. ---------------- */
+@media (max-width: 768px) {
+  .timeline-header-metrics,
+  .issue-board,
+  .resume-metrics,
+  .evidence-grid,
+  .review-event-card-meta,
+  .review-issue-board-columns,
+  .review-summary-metrics,
+  .session-summary-metrics,
+  .memory-hero-stats,
+  .settings-sqlite-meta,
+  .settings-connector-card dl,
+  .report-format-list,
+  .format-grid,
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .timeline-header-metrics,
+  .issue-board,
+  .resume-metrics,
+  .evidence-grid,
+  .review-event-card-meta,
+  .review-issue-board-columns,
+  .review-summary-metrics,
+  .session-summary-metrics,
+  .memory-hero-stats,
+  .settings-sqlite-meta,
+  .settings-connector-card dl,
+  .report-format-list,
+  .format-grid,
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

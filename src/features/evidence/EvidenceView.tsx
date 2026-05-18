@@ -113,7 +113,7 @@ export function EvidenceView() {
     <div className="page evidence-page">
       <PageHeader
         title="Evidence"
-        subtitle="Mori가 작업을 복원할 때 사용하는 소스를 관리하세요. 사용자가 명시적으로 가져온 자료만 분석에 사용됩니다."
+        subtitle="Mori가 작업을 복원할 때 사용하는 소스를 관리하세요. 사용자가 명시적으로 가져온 소스만 분석에 사용됩니다."
         right={
           <div className="evidence-page-actions">
             <Badge tone={isDemoSession ? "gray" : "green"}>
@@ -320,7 +320,7 @@ function EvidenceEmptyState({
       <p>
         {isDemo
           ? "데모 세션은 미리 정의된 소스만 보여줍니다. 실제 세션을 시작하면 위 카드에서 소스를 추가할 수 있습니다."
-          : "위의 카드에서 AI 대화, Git diff, 메모, URL을 추가하세요. Mori는 사용자가 명시적으로 가져온 자료만 사용합니다."}
+          : "위의 카드에서 AI 대화, Git diff, 메모, URL을 추가하세요. Mori는 사용자가 명시적으로 가져온 소스만 사용합니다."}
       </p>
       {!isDemo ? (
         <Button variant="primary" icon={Plus} onClick={onAdd}>
