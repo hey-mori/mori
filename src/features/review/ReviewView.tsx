@@ -70,7 +70,9 @@ export function ReviewView() {
   const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
   const setNextActionCompletion = useMoriSessionStore((state) => state.setNextActionCompletion);
   const setIssueStatus = useMoriSessionStore((state) => state.setIssueStatus);
+  const editIssue = useMoriSessionStore((state) => state.editIssue);
   const setDecisionConfirmed = useMoriSessionStore((state) => state.setDecisionConfirmed);
+  const editDecision = useMoriSessionStore((state) => state.editDecision);
   const imports = useMoriSessionStore((state) => state.imports);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
@@ -282,9 +284,11 @@ export function ReviewView() {
               setNextActionCompletion(id, completed)
             }
             onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
+            onEditIssue={(id, fields) => editIssue(id, fields)}
             onSetDecisionConfirmed={(id, confirmed) =>
               setDecisionConfirmed(id, confirmed)
             }
+            onEditDecision={(id, fields) => editDecision(id, fields)}
             canEditReview={!view.isDemo}
           />
           <ReviewSummaryPanel

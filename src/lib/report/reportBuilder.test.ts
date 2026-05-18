@@ -119,6 +119,40 @@ describe("buildReportMarkdown", () => {
     expect(safe.markdown).not.toContain(firstIssueDescription);
   });
 
+  it("renders the current user-edited issue and decision text", () => {
+    const payload = buildReportMarkdown({
+      view: {
+        ...moriMockSession,
+        issues: [
+          {
+            ...moriMockSession.issues[0]!,
+            title: "Corrected issue title",
+            description: "Corrected issue description",
+            editedByUser: true,
+            editedAt: "2026-05-18T12:00:00Z",
+          },
+        ],
+        decisions: [
+          {
+            ...moriMockSession.decisions[0]!,
+            title: "Corrected decision title",
+            rationale: "Corrected decision rationale",
+            editedByUser: true,
+            editedAt: "2026-05-18T12:05:00Z",
+          },
+        ],
+      },
+      type: "personalRetrospective",
+      sections: new Set<ReportSectionId>(["issues", "decisions"]),
+      privacy: privacy(),
+    });
+
+    expect(payload.markdown).toContain("Corrected issue title");
+    expect(payload.markdown).toContain("Corrected issue description");
+    expect(payload.markdown).toContain("Corrected decision title");
+    expect(payload.markdown).toContain("Corrected decision rationale");
+  });
+
   it("excludeSourceDetails hides the source list while keeping evidence counts", () => {
     const payload = buildReportMarkdown({
       view: moriMockSession,

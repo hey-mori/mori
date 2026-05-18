@@ -46,6 +46,7 @@ export function ReviewDecisionRow({
         <Badge tone={decision.confirmed ? "green" : trust.tone}>
           {decision.confirmed ? "확정됨" : trust.label}
         </Badge>
+        {decision.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
       </td>
     </tr>
   );

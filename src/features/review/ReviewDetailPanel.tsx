@@ -1,4 +1,5 @@
-import { CalendarClock, CheckCircle2, Layers, Link2, ShieldCheck, Sparkles } from "lucide-react";
+import { CalendarClock, CheckCircle2, Layers, Pencil, ShieldCheck, Sparkles } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
@@ -31,6 +32,7 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { getTrustDisplay, getTrustLabel } from "../../lib/evidence/trust";
+import { InlineEditForm } from "./InlineEditForm";
 
 export function ReviewDetailPanel({
   selection,
@@ -38,7 +40,9 @@ export function ReviewDetailPanel({
   onShowTimeline,
   onToggleNextActionComplete,
   onSetIssueStatus,
+  onEditIssue,
   onSetDecisionConfirmed,
+  onEditDecision,
   canEditReview,
 }: {
   selection: ReviewSelection;
@@ -46,7 +50,12 @@ export function ReviewDetailPanel({
   onShowTimeline: (eventId: string) => void;
   onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
   onSetIssueStatus: (issueId: string, status: IssueStatus) => void;
+  onEditIssue: (issueId: string, fields: { title?: string; description?: string }) => boolean;
   onSetDecisionConfirmed: (decisionId: string, confirmed: boolean) => void;
+  onEditDecision: (
+    decisionId: string,
+    fields: { title?: string; decision?: string; rationale?: string },
+  ) => boolean;
   /** False in demo mode — Review writes cannot be persisted there. */
   canEditReview: boolean;
 }) {
@@ -79,6 +88,7 @@ export function ReviewDetailPanel({
         view={view}
         onShowTimeline={onShowTimeline}
         onSetStatus={onSetIssueStatus}
+        onEditIssue={onEditIssue}
         canEditStatus={canEditReview}
       />
     );
@@ -93,6 +103,7 @@ export function ReviewDetailPanel({
         view={view}
         onShowTimeline={onShowTimeline}
         onSetConfirmed={onSetDecisionConfirmed}
+        onEditDecision={onEditDecision}
         canEditConfirm={canEditReview}
       />
     );
@@ -127,14 +138,17 @@ function IssueDetail({
   view,
   onShowTimeline,
   onSetStatus,
+  onEditIssue,
   canEditStatus,
 }: {
   issue: Issue;
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
   onSetStatus: (issueId: string, status: IssueStatus) => void;
+  onEditIssue: (issueId: string, fields: { title?: string; description?: string }) => boolean;
   canEditStatus: boolean;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
   const evidence = getIssueEvidenceSources(issue, view.events, view.sources);
   const relatedEvents = findEvents(view.events, issue.sourceEventIds);
   const relatedDecisions = view.decisions.filter((decision) =>
@@ -142,6 +156,7 @@ function IssueDetail({
   );
   const confidencePct = Math.round(issue.confidence * 100);
   const issueTrust = getTrustDisplay(issue.trustLevel);
+  const canEditText = canEditStatus;
 
   return (
     <aside className="review-detail" aria-label="Issue detail">
@@ -153,9 +168,30 @@ function IssueDetail({
           {issue.trustLevel === "inferred" ? (
             <Badge tone={confidenceTone(confidencePct)}>{confidencePct}%</Badge>
           ) : null}
+          {issue.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
         </div>
-        <h3>{issue.title}</h3>
-        <p className="review-detail-detail">{issue.description}</p>
+        {isEditing ? (
+          <InlineEditForm
+            fields={[
+              { id: "title", label: "제목", value: issue.title, required: true },
+              { id: "description", label: "설명", value: issue.description, multiline: true },
+            ]}
+            onSave={(values) => {
+              if (onEditIssue(issue.id, values)) setIsEditing(false);
+            }}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <>
+            <h3>{issue.title}</h3>
+            <p className="review-detail-detail">{issue.description}</p>
+            {issue.editedByUser && issue.editedAt ? (
+              <p className="review-detail-time">
+                <CalendarClock size={11} aria-hidden="true" /> 마지막 수정 {formatDate(issue.editedAt)}
+              </p>
+            ) : null}
+          </>
+        )}
       </header>
 
       <section className="review-detail-section">
@@ -218,15 +254,29 @@ function IssueDetail({
       <section className="review-detail-section">
         <SectionHeader title="액션" />
         <div className="review-detail-actions">
-          <MoriPlannedAction
-            label="편집"
-            title="이슈 편집은 다음 마일스톤에서 활성화됩니다."
-          />
+          <Button
+            variant="secondary"
+            icon={Pencil}
+            disabled={!canEditText || isEditing}
+            title={
+              canEditText
+                ? "이슈 제목과 설명을 사용자 수정으로 저장합니다."
+                : "데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다."
+            }
+            onClick={() => setIsEditing(true)}
+          >
+            편집
+          </Button>
           <MoriPlannedAction
             label="액션으로 승격"
             title="이슈를 다음 액션으로 승격하는 기능은 다음 마일스톤입니다."
           />
         </div>
+        {!canEditText ? (
+          <p className="review-detail-empty">
+            데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다.
+          </p>
+        ) : null}
       </section>
     </aside>
   );
@@ -237,20 +287,27 @@ function DecisionDetail({
   view,
   onShowTimeline,
   onSetConfirmed,
+  onEditDecision,
   canEditConfirm,
 }: {
   decision: Decision;
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
   onSetConfirmed: (decisionId: string, confirmed: boolean) => void;
+  onEditDecision: (
+    decisionId: string,
+    fields: { title?: string; decision?: string; rationale?: string },
+  ) => boolean;
   canEditConfirm: boolean;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
   const evidence = getDecisionEvidenceSources(decision, view.events, view.sources);
   const relatedEvents = findEvents(view.events, decision.sourceEventIds);
   const relatedIssues = view.issues.filter((issue) =>
     decision.relatedIssueIds.includes(issue.id),
   );
   const decisionTrust = getTrustDisplay(decision.trustLevel);
+  const canEditText = canEditConfirm;
 
   return (
     <aside className="review-detail" aria-label="Decision detail">
@@ -263,18 +320,42 @@ function DecisionDetail({
           <Badge tone={decisionTrust.tone} title={decisionTrust.description}>
             {decisionTrust.label}
           </Badge>
+          {decision.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
         </div>
-        <h3>{decision.title}</h3>
-        <p className="review-detail-detail">{decision.decision}</p>
-        <p className="review-detail-time">
-          <CalendarClock size={11} aria-hidden="true" /> {formatTime(decision.createdAt)}
-        </p>
+        {isEditing ? (
+          <InlineEditForm
+            fields={[
+              { id: "title", label: "제목", value: decision.title, required: true },
+              { id: "decision", label: "결정 내용", value: decision.decision, multiline: true },
+              { id: "rationale", label: "이유", value: decision.rationale, multiline: true },
+            ]}
+            onSave={(values) => {
+              if (onEditDecision(decision.id, values)) setIsEditing(false);
+            }}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <>
+            <h3>{decision.title}</h3>
+            <p className="review-detail-detail">{decision.decision}</p>
+            <p className="review-detail-time">
+              <CalendarClock size={11} aria-hidden="true" /> {formatTime(decision.createdAt)}
+            </p>
+            {decision.editedByUser && decision.editedAt ? (
+              <p className="review-detail-time">
+                <CalendarClock size={11} aria-hidden="true" /> 마지막 수정 {formatDate(decision.editedAt)}
+              </p>
+            ) : null}
+          </>
+        )}
       </header>
 
-      <section className="review-detail-section">
-        <SectionHeader title="이유" />
-        <p className="review-detail-rationale">{decision.rationale || "(이유 기록 없음)"}</p>
-      </section>
+      {!isEditing ? (
+        <section className="review-detail-section">
+          <SectionHeader title="이유" />
+          <p className="review-detail-rationale">{decision.rationale || "(이유 기록 없음)"}</p>
+        </section>
+      ) : null}
 
       {decision.rejectedOptions.length > 0 ? (
         <section className="review-detail-section">
@@ -346,11 +427,25 @@ function DecisionDetail({
           >
             {decision.confirmed ? "확정 반려" : "확정 처리"}
           </Button>
-          <MoriPlannedAction
-            label="편집"
-            title="결정 편집은 다음 마일스톤에서 활성화됩니다."
-          />
+          <Button
+            variant="secondary"
+            icon={Pencil}
+            disabled={!canEditText || isEditing}
+            title={
+              canEditText
+                ? "결정 제목, 내용, 이유를 사용자 수정으로 저장합니다."
+                : "데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다."
+            }
+            onClick={() => setIsEditing(true)}
+          >
+            편집
+          </Button>
         </div>
+        {!canEditText ? (
+          <p className="review-detail-empty">
+            데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다.
+          </p>
+        ) : null}
       </section>
     </aside>
   );

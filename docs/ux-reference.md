@@ -148,6 +148,11 @@ Key elements:
 
 Issue Garden should separate open, in-progress, resolved, and watching items. Decision Log should capture important choices with rationale, related issues, source events, and evidence.
 
+Current implementation note: Review issue and decision detail panels support
+inline user corrections for the visible text fields. Corrected items show a
+`사용자 수정됨` marker and keep their original evidence, timeline links, trust,
+status, and confirmation state intact.
+
 ## Reports (Resume & Report)
 
 ![Resume & Report](./assets/screenshots/resume-report-reference.png)

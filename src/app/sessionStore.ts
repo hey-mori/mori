@@ -17,6 +17,12 @@ import type { NormalizedImportCandidate } from "../lib/import";
 import { composeSessionView } from "../lib/session/composeSessionView";
 import { withNextActionCompletion } from "../lib/session/nextActionCompletion";
 import {
+  applyDecisionEdit,
+  applyIssueEdit,
+  type DecisionEditFields,
+  type IssueEditFields,
+} from "../lib/session/reviewItemEdit";
+import {
   createStaticMockDataSource,
   type TimelineDataSource,
   type Unsubscribe,
@@ -107,12 +113,14 @@ export type MoriSessionState = {
    * demo mode, when there is no analysis, or when the id is unknown.
    */
   setIssueStatus: (issueId: string, status: IssueStatus) => boolean;
+  editIssue: (issueId: string, fields: IssueEditFields) => boolean;
   /**
    * Confirm or reject a decision — a Review-surface write. Persists into
    * the session analysis and the durable memory body. Returns `false`
    * in demo mode, when there is no analysis, or when the id is unknown.
    */
   setDecisionConfirmed: (decisionId: string, confirmed: boolean) => boolean;
+  editDecision: (decisionId: string, fields: DecisionEditFields) => boolean;
   markPersistedToDesktop: () => void;
 };
 
@@ -479,6 +487,25 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     set({ analysis: nextAnalysis });
     return true;
   },
+  editIssue: (issueId, fields) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+    if (!analysis.issues.some((issue) => issue.id === issueId)) return false;
+
+    const nextAnalysis = applyIssueEdit(
+      analysis,
+      issueId,
+      fields,
+      new Date().toISOString(),
+    );
+    if (nextAnalysis === analysis) return false;
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, nextAnalysis);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
+    set({ analysis: nextAnalysis });
+    return true;
+  },
   setDecisionConfirmed: (decisionId, confirmed) => {
     const { draft, analysis } = get();
     if (!draft || !analysis) return false;
@@ -492,6 +519,27 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
         decision.id === decisionId ? { ...decision, confirmed } : decision,
       ),
     };
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, nextAnalysis);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
+    set({ analysis: nextAnalysis });
+    return true;
+  },
+  editDecision: (decisionId, fields) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+    if (!analysis.decisions.some((decision) => decision.id === decisionId)) {
+      return false;
+    }
+
+    const nextAnalysis = applyDecisionEdit(
+      analysis,
+      decisionId,
+      fields,
+      new Date().toISOString(),
+    );
+    if (nextAnalysis === analysis) return false;
 
     const repository = getRepository();
     repository.saveSessionAnalysis(draft.session.id, nextAnalysis);

@@ -77,6 +77,8 @@ Typical fields:
 - `suggestedNextAction`
 - `assignee`
 - `dueDate`
+- `editedByUser`
+- `editedAt`
 - `confidence`
 - `trustLevel`
 
@@ -97,9 +99,16 @@ Typical fields:
 - `sourceEventIds`
 - `relatedIssueIds`
 - `relatedSourceIds`
+- `editedByUser`
+- `editedAt`
 - `importance`
 - `trustLevel`
 - `confirmed`
+
+`editedByUser` and `editedAt` are optional correction metadata on issues
+and decisions. They mark that the current visible text was corrected by
+the local user while keeping evidence, source event ids, trust, confidence,
+status, and confirmation separate from the correction.
 
 ### Relationship
 
@@ -253,6 +262,8 @@ The current TypeScript prototype uses camelCase equivalents:
   "relatedDecisionIds": ["dec-local-llm"],
   "relatedFileIds": [],
   "suggestedNextAction": "Use Ollama as the MVP default and support LM Studio as an option.",
+  "editedByUser": true,
+  "editedAt": "2026-05-18T12:00:00+09:00",
   "confidence": 0.82,
   "trustLevel": "inferred"
 }
@@ -273,6 +284,8 @@ The current TypeScript prototype uses camelCase equivalents:
   "sourceEventIds": ["evt-start-flow", "evt-recall"],
   "relatedIssueIds": ["iss-collection-risk"],
   "relatedSourceIds": ["src-manual"],
+  "editedByUser": true,
+  "editedAt": "2026-05-18T12:05:00+09:00",
   "importance": "high",
   "trustLevel": "inferred",
   "confirmed": false

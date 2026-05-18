@@ -529,6 +529,31 @@ describe("useMoriSessionStore setIssueStatus", () => {
     ).toBe("resolved");
   });
 
+  it("edits an issue and persists it to analysis and memory body", () => {
+    const stored = seedAnalysisWithIssue();
+    const before = useMoriSessionStore.getState().analysis!.issues[0]!;
+    const ok = useMoriSessionStore.getState().editIssue("iss-1", {
+      title: "Corrected issue",
+      description: "Corrected issue description",
+    });
+
+    expect(ok).toBe(true);
+    const issue = useMoriSessionStore.getState().analysis!.issues[0]!;
+    expect(issue.title).toBe("Corrected issue");
+    expect(issue.description).toBe("Corrected issue description");
+    expect(issue.editedByUser).toBe(true);
+    expect(issue.editedAt).toBeTruthy();
+    expect(issue.status).toBe("open");
+    expect(issue.sourceEventIds).toEqual(before.sourceEventIds);
+    expect(issue.relatedDecisionIds).toEqual(before.relatedDecisionIds);
+
+    const storedAnalysis = repository.loadSessionAnalysis(stored.session.id)?.result;
+    expect(storedAnalysis?.issues[0]?.title).toBe("Corrected issue");
+    expect(repository.loadSessionMemoryBody(stored.session.id)?.issues[0]?.title).toBe(
+      "Corrected issue",
+    );
+  });
+
   it("returns false with no draft or analysis", () => {
     expect(useMoriSessionStore.getState().setIssueStatus("iss-1", "resolved")).toBe(false);
   });
@@ -538,6 +563,13 @@ describe("useMoriSessionStore setIssueStatus", () => {
     expect(useMoriSessionStore.getState().setIssueStatus("missing", "resolved")).toBe(
       false,
     );
+  });
+
+  it("returns false when editing an unknown issue id", () => {
+    seedAnalysisWithIssue();
+    expect(
+      useMoriSessionStore.getState().editIssue("missing", { title: "Nope" }),
+    ).toBe(false);
   });
 });
 
@@ -624,6 +656,34 @@ describe("useMoriSessionStore setDecisionConfirmed", () => {
     ).toBe(true);
   });
 
+  it("edits a decision and persists it to analysis and memory body", () => {
+    const stored = seedAnalysisWithDecision();
+    useMoriSessionStore.getState().setDecisionConfirmed("dec-1", true);
+    const before = useMoriSessionStore.getState().analysis!.decisions[0]!;
+    const ok = useMoriSessionStore.getState().editDecision("dec-1", {
+      title: "Corrected decision",
+      decision: "Corrected decision text",
+      rationale: "Corrected rationale",
+    });
+
+    expect(ok).toBe(true);
+    const decision = useMoriSessionStore.getState().analysis!.decisions[0]!;
+    expect(decision.title).toBe("Corrected decision");
+    expect(decision.decision).toBe("Corrected decision text");
+    expect(decision.rationale).toBe("Corrected rationale");
+    expect(decision.editedByUser).toBe(true);
+    expect(decision.editedAt).toBeTruthy();
+    expect(decision.confirmed).toBe(true);
+    expect(decision.sourceEventIds).toEqual(before.sourceEventIds);
+    expect(decision.relatedIssueIds).toEqual(before.relatedIssueIds);
+
+    const storedAnalysis = repository.loadSessionAnalysis(stored.session.id)?.result;
+    expect(storedAnalysis?.decisions[0]?.title).toBe("Corrected decision");
+    expect(repository.loadSessionMemoryBody(stored.session.id)?.decisions[0]?.title).toBe(
+      "Corrected decision",
+    );
+  });
+
   it("rejects a previously confirmed decision", () => {
     seedAnalysisWithDecision();
     useMoriSessionStore.getState().setDecisionConfirmed("dec-1", true);
@@ -640,6 +700,13 @@ describe("useMoriSessionStore setDecisionConfirmed", () => {
     expect(useMoriSessionStore.getState().setDecisionConfirmed("missing", true)).toBe(
       false,
     );
+  });
+
+  it("returns false when editing an unknown decision id", () => {
+    seedAnalysisWithDecision();
+    expect(
+      useMoriSessionStore.getState().editDecision("missing", { title: "Nope" }),
+    ).toBe(false);
   });
 });
 

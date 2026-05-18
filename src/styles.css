@@ -5600,6 +5600,50 @@ pre {
   font-size: 11px;
 }
 
+.review-inline-edit {
+  display: grid;
+  gap: 10px;
+}
+
+.review-inline-edit-field {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.review-inline-edit-field input,
+.review-inline-edit-field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 8px 10px;
+}
+
+.review-inline-edit-field textarea {
+  resize: vertical;
+  min-height: 76px;
+}
+
+.review-inline-edit-field input:focus,
+.review-inline-edit-field textarea:focus {
+  outline: 2px solid rgba(98, 70, 245, 0.18);
+  border-color: var(--purple);
+}
+
+.review-inline-edit-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .review-detail-badges {
   display: inline-flex;
   flex-wrap: wrap;

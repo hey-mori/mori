@@ -267,6 +267,7 @@ export const PRODUCT_SURFACES: Record<ProductSurfaceId, ProductSurfaceDescriptor
     ownedFeatureIds: [
       "review.statusChange",
       "review.editIssue",
+      "review.editDecision",
       "review.confirmDecision",
       "review.promoteToNextAction",
     ],

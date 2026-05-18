@@ -47,6 +47,7 @@ export function ReviewIssueCard({
           <Badge tone={trust.tone}>
             {isInferred ? `${trust.label} ${confidencePct}%` : trust.label}
           </Badge>
+          {issue.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
         </footer>
       </button>
     </article>

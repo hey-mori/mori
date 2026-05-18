@@ -128,6 +128,8 @@ export type Issue = {
   dueDate?: string;
   createdAt: string;
   updatedAt: string;
+  editedByUser?: boolean;
+  editedAt?: string;
   confidence: number;
   trustLevel: TrustLevel;
 };
@@ -145,6 +147,8 @@ export type Decision = {
   relatedIssueIds: string[];
   relatedSourceIds: string[];
   createdAt: string;
+  editedByUser?: boolean;
+  editedAt?: string;
   importance: Priority;
   trustLevel: TrustLevel;
   confirmed: boolean;

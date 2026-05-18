@@ -244,6 +244,13 @@ only — no phase numbers.
   a `setDecisionConfirmed` store action on the same write path and a
   Review detail-panel confirm / reject toggle; the unresolved feed
   drops confirmed decisions automatically.
+- Review inline editing — `review.editIssue` and `review.editDecision`
+  are now implemented as user correction writes: issue title /
+  description and decision title / decision text / rationale can be
+  edited from the Review detail panel, marked `editedByUser` /
+  `editedAt`, and persisted through the analysis + memory-body write
+  path while preserving evidence, trust, status, confirmation, and
+  timeline links.
 
 **Open priority (highest first):**
 

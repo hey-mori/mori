@@ -110,7 +110,8 @@ Key tasks:
 Expected output:
 
 - Mori can run a local analysis pass over imported sources
-- AI outputs are inspectable, editable, and marked with trust/confidence
+- AI outputs are inspectable, editable, marked with trust/confidence, and
+  user-corrected issue / decision text carries explicit edit metadata
 
 Not included yet:
 
