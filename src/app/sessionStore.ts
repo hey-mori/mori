@@ -24,6 +24,7 @@ import {
 } from "../lib/session/reviewItemEdit";
 import { promoteIssueToNextAction } from "../lib/session/issuePromotion";
 import { createIssueFromEvent as buildIssueFromEvent } from "../lib/timeline/eventToIssue";
+import { applyEventEdits, type TimelineEventEdits } from "../lib/timeline/eventEdits";
 import {
   createStaticMockDataSource,
   type TimelineDataSource,
@@ -122,6 +123,12 @@ export type MoriSessionState = {
    * Returns `false` in demo mode or without an analysis to write into.
    */
   createIssueFromEvent: (event: TimelineEvent) => boolean;
+  /**
+   * Correct a Timeline event's title / summary — a Timeline-inspector
+   * write. Rewrites the owning import and stamps `userModified`. Returns
+   * `false` in demo mode or on a blank / unchanged edit.
+   */
+  updateSessionEvent: (eventId: string, edits: TimelineEventEdits) => boolean;
   /**
    * Promote an issue into a linked Next Action. If the issue already has
    * a linked Next Action, returns that existing action without writing.
@@ -545,6 +552,17 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     repository.saveSessionAnalysis(draft.session.id, result.analysis);
     persistMemoryBodyFromAnalysis(repository, draft.session.id, result.analysis);
     set({ analysis: result.analysis });
+    return true;
+  },
+  updateSessionEvent: (eventId, edits) => {
+    const { draft, imports } = get();
+    if (!draft) return false;
+    const next = applyEventEdits(imports, eventId, edits);
+    if (next === imports) return false;
+
+    const repository = getRepository();
+    repository.putSessionImports(draft.session.id, next);
+    set({ imports: repository.listSessionImports(draft.session.id) });
     return true;
   },
   setDecisionConfirmed: (decisionId, confirmed) => {

@@ -7,7 +7,10 @@ import {
   PlusCircle,
   StickyNote,
 } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
+import { InlineEditForm } from "../review/InlineEditForm";
+import type { TimelineEventEdits } from "../../lib/timeline/eventEdits";
 import { Button } from "../../components/ui/Button";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels, eventTypeTone } from "../../domain/constants";
@@ -42,6 +45,7 @@ export function EventInspector({
   onCreateIssue,
   issueCreated = false,
   canWrite = false,
+  onEditEvent,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
@@ -54,7 +58,10 @@ export function EventInspector({
   issueCreated?: boolean;
   /** True when the active session can persist Timeline writes (real draft). */
   canWrite?: boolean;
+  /** Correct this event's title / summary. Absent ⇒ control hidden. */
+  onEditEvent?: (edits: TimelineEventEdits) => void;
 }) {
+  const [editing, setEditing] = useState(false);
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
     view: session,
@@ -79,15 +86,31 @@ export function EventInspector({
           ) : null}
           {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
         </div>
-        <h3 className="inspector-title">{selectedEvent.title}</h3>
+        {editing ? null : (
+          <h3 className="inspector-title">{selectedEvent.title}</h3>
+        )}
         <p className="inspector-time">{formatTimeRange(selectedEvent.start, selectedEvent.end)}</p>
       </header>
 
       <section className="inspector-section">
-        <div className="inspector-summary-card">
-          <span>요약</span>
-          <p>{selectedEvent.summary}</p>
-        </div>
+        {editing && onEditEvent ? (
+          <InlineEditForm
+            fields={[
+              { id: "title", label: "제목", value: selectedEvent.title, required: true },
+              { id: "summary", label: "요약", value: selectedEvent.summary, multiline: true },
+            ]}
+            onSave={(values) => {
+              onEditEvent({ title: values.title, summary: values.summary });
+              setEditing(false);
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        ) : (
+          <div className="inspector-summary-card">
+            <span>요약</span>
+            <p>{selectedEvent.summary}</p>
+          </div>
+        )}
       </section>
 
       <section className="inspector-section">
@@ -150,6 +173,20 @@ export function EventInspector({
           <Button icon={ClipboardCopy} onClick={handleCopy}>
             요약 복사
           </Button>
+          {onEditEvent ? (
+            <Button
+              icon={Pencil}
+              onClick={() => setEditing(true)}
+              disabled={!canWrite || editing}
+              title={
+                canWrite
+                  ? "이 이벤트의 제목과 요약을 수정합니다."
+                  : "실제 세션에서 사용할 수 있습니다."
+              }
+            >
+              이벤트 편집
+            </Button>
+          ) : null}
           {onCreateIssue ? (
             <Button
               icon={PlusCircle}
@@ -172,11 +209,6 @@ export function EventInspector({
       <section className="inspector-section">
         <SectionHeader title="예정된 액션" hint="Planned" />
         <div className="inspector-actions-row inspector-actions-planned">
-          <MoriPlannedAction
-            feature="timeline.inspector.editEvent"
-            label={TIMELINE_CONTROLS.inspectorEditEvent.label}
-            icon={Pencil}
-          />
           <MoriPlannedAction
             feature="timeline.inspector.split"
             label={TIMELINE_CONTROLS.inspectorSplitEvent.label}
