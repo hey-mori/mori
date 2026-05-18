@@ -27,6 +27,11 @@ import { createIssueFromEvent as buildIssueFromEvent } from "../lib/timeline/eve
 import { applyEventEdits, type TimelineEventEdits } from "../lib/timeline/eventEdits";
 import { splitEventAtMidpoint } from "../lib/timeline/eventSplit";
 import {
+  findMergeTarget,
+  mergeEventWithNext,
+  remapEventIdInAnalysis,
+} from "../lib/timeline/eventMerge";
+import {
   createStaticMockDataSource,
   type TimelineDataSource,
   type Unsubscribe,
@@ -137,6 +142,13 @@ export type MoriSessionState = {
    * demo mode or when the event has no genuine end to cut.
    */
   splitSessionEvent: (eventId: string) => boolean;
+  /**
+   * Merge a Timeline event with its next chronological neighbour — a
+   * Timeline-inspector write. The selected event survives and absorbs the
+   * next; the analysis is remapped so no reference dangles. Returns
+   * `false` in demo mode or when the event is already last.
+   */
+  mergeSessionEvent: (eventId: string) => boolean;
   /**
    * Promote an issue into a linked Next Action. If the issue already has
    * a linked Next Action, returns that existing action without writing.
@@ -581,6 +593,29 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
 
     const repository = getRepository();
     repository.putSessionImports(draft.session.id, next);
+    set({ imports: repository.listSessionImports(draft.session.id) });
+    return true;
+  },
+  mergeSessionEvent: (eventId) => {
+    const { draft, imports, analysis } = get();
+    if (!draft) return false;
+    const allEvents = imports.flatMap((entry) => entry.events);
+    const target = findMergeTarget(allEvents, eventId);
+    if (!target) return false;
+    const nextImports = mergeEventWithNext(imports, eventId);
+    if (nextImports === imports) return false;
+
+    const repository = getRepository();
+    repository.putSessionImports(draft.session.id, nextImports);
+    // The absorbed event's id must not dangle in the analysis.
+    if (analysis) {
+      const nextAnalysis = remapEventIdInAnalysis(analysis, target.id, eventId);
+      if (nextAnalysis !== analysis) {
+        repository.saveSessionAnalysis(draft.session.id, nextAnalysis);
+        persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
+        set({ analysis: nextAnalysis });
+      }
+    }
     set({ imports: repository.listSessionImports(draft.session.id) });
     return true;
   },

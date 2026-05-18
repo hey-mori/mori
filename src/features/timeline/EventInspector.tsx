@@ -12,6 +12,7 @@ import { Badge } from "../../components/ui/Badge";
 import { InlineEditForm } from "../review/InlineEditForm";
 import type { TimelineEventEdits } from "../../lib/timeline/eventEdits";
 import { canSplitEvent } from "../../lib/timeline/eventSplit";
+import { findMergeTarget } from "../../lib/timeline/eventMerge";
 import { Button } from "../../components/ui/Button";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels, eventTypeTone } from "../../domain/constants";
@@ -32,8 +33,6 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { buildInspectorViewModel } from "../../lib/timeline/timelineViewModel";
-import { TIMELINE_CONTROLS } from "../../lib/timeline/timelineControls";
-import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 
 export function EventInspector({
   selectedEvent,
@@ -45,6 +44,7 @@ export function EventInspector({
   canWrite = false,
   onEditEvent,
   onSplitEvent,
+  onMergeEvent,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
@@ -61,9 +61,12 @@ export function EventInspector({
   onEditEvent?: (edits: TimelineEventEdits) => void;
   /** Split this event at its temporal midpoint. Absent ⇒ control hidden. */
   onSplitEvent?: () => void;
+  /** Merge this event with its next neighbour. Absent ⇒ control hidden. */
+  onMergeEvent?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [noteEditing, setNoteEditing] = useState(false);
+  const mergeTarget = findMergeTarget(session.events, selectedEvent.id);
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
     view: session,
@@ -175,64 +178,73 @@ export function EventInspector({
           <Button icon={ClipboardCopy} onClick={handleCopy}>
             요약 복사
           </Button>
-          {onEditEvent ? (
-            <Button
-              icon={Pencil}
-              onClick={() => setEditing(true)}
-              disabled={!canWrite || editing}
-              title={
-                canWrite
-                  ? "이 이벤트의 제목과 요약을 수정합니다."
-                  : "실제 세션에서 사용할 수 있습니다."
-              }
-            >
-              이벤트 편집
-            </Button>
-          ) : null}
-          {onCreateIssue ? (
-            <Button
-              icon={PlusCircle}
-              onClick={onCreateIssue}
-              disabled={!canWrite || issueCreated}
-              title={
-                issueCreated
-                  ? "이 이벤트는 이미 이슈로 만들어졌습니다."
-                  : canWrite
-                    ? "이 이벤트를 Review 이슈로 만듭니다."
-                    : "실제 세션에서 사용할 수 있습니다."
-              }
-            >
-              {issueCreated ? "이슈 생성됨" : "이슈 생성"}
-            </Button>
-          ) : null}
-          {onSplitEvent ? (
-            <Button
-              icon={Split}
-              onClick={onSplitEvent}
-              disabled={!canWrite || !canSplitEvent(selectedEvent)}
-              title={
-                !canSplitEvent(selectedEvent)
-                  ? "끝 시각이 없는 이벤트는 분할할 수 없습니다."
-                  : canWrite
-                    ? "이 이벤트를 시간 중점에서 둘로 나눕니다."
-                    : "실제 세션에서 사용할 수 있습니다."
-              }
-            >
-              이벤트 분할
-            </Button>
-          ) : null}
         </div>
-      </section>
-
-      <section className="inspector-section">
-        <SectionHeader title="예정된 액션" hint="Planned" />
-        <div className="inspector-actions-row inspector-actions-planned">
-          <MoriPlannedAction
-            feature="timeline.inspector.merge"
-            label={TIMELINE_CONTROLS.inspectorMergeEvent.label}
-            icon={Combine}
-          />
-        </div>
+        {onEditEvent || onCreateIssue || onSplitEvent || onMergeEvent ? (
+          <div className="inspector-actions-row">
+            {onEditEvent ? (
+              <Button
+                icon={Pencil}
+                onClick={() => setEditing(true)}
+                disabled={!canWrite || editing}
+                title={
+                  canWrite
+                    ? "이 이벤트의 제목과 요약을 수정합니다."
+                    : "실제 세션에서 사용할 수 있습니다."
+                }
+              >
+                이벤트 편집
+              </Button>
+            ) : null}
+            {onSplitEvent ? (
+              <Button
+                icon={Split}
+                onClick={onSplitEvent}
+                disabled={!canWrite || !canSplitEvent(selectedEvent)}
+                title={
+                  !canSplitEvent(selectedEvent)
+                    ? "끝 시각이 없는 이벤트는 분할할 수 없습니다."
+                    : canWrite
+                      ? "이 이벤트를 시간 중점에서 둘로 나눕니다."
+                      : "실제 세션에서 사용할 수 있습니다."
+                }
+              >
+                이벤트 분할
+              </Button>
+            ) : null}
+            {onMergeEvent ? (
+              <Button
+                icon={Combine}
+                onClick={onMergeEvent}
+                disabled={!canWrite || !mergeTarget}
+                title={
+                  !mergeTarget
+                    ? "다음 이벤트가 없어 병합할 수 없습니다."
+                    : canWrite
+                      ? `다음 이벤트 '${mergeTarget.title}'와 병합합니다.`
+                      : "실제 세션에서 사용할 수 있습니다."
+                }
+              >
+                이벤트 병합
+              </Button>
+            ) : null}
+            {onCreateIssue ? (
+              <Button
+                icon={PlusCircle}
+                onClick={onCreateIssue}
+                disabled={!canWrite || issueCreated}
+                title={
+                  issueCreated
+                    ? "이 이벤트는 이미 이슈로 만들어졌습니다."
+                    : canWrite
+                      ? "이 이벤트를 Review 이슈로 만듭니다."
+                      : "실제 세션에서 사용할 수 있습니다."
+                }
+              >
+                {issueCreated ? "이슈 생성됨" : "이슈 생성"}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <section className="inspector-section">

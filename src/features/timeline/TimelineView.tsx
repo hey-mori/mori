@@ -57,6 +57,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const createIssueFromEvent = useMoriSessionStore((state) => state.createIssueFromEvent);
   const updateSessionEvent = useMoriSessionStore((state) => state.updateSessionEvent);
   const splitSessionEvent = useMoriSessionStore((state) => state.splitSessionEvent);
+  const mergeSessionEvent = useMoriSessionStore((state) => state.mergeSessionEvent);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -250,6 +251,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             canWrite={sessionMode === "draft" && hasAnalysis}
             onEditEvent={(edits) => updateSessionEvent(selectedItem.event.id, edits)}
             onSplitEvent={() => splitSessionEvent(selectedItem.event.id)}
+            onMergeEvent={() => mergeSessionEvent(selectedItem.event.id)}
             issueCreated={
               analysis
                 ? isEventPromotedToIssue(analysis, selectedItem.event.id)
