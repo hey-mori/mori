@@ -237,9 +237,24 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           />
         ) : mode === "flow" && selectedItem && selectedItem.kind === "event" ? (
           <TracePanel
+            key={selectedItem.event.id}
             selectedEvent={selectedItem.event}
             session={view}
             onClearFocus={() => setSelectedEventId(view.events[0]?.id ?? "")}
+            canWrite={sessionMode === "draft" && hasAnalysis}
+            issueCreated={
+              analysis
+                ? isEventPromotedToIssue(analysis, selectedItem.event.id)
+                : false
+            }
+            onCreateIssue={() => {
+              const event = selectedItem.event;
+              if (createIssueFromEvent(event)) {
+                openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) });
+                setCurrentView("review");
+              }
+            }}
+            onEditEvent={(edits) => updateSessionEvent(selectedItem.event.id, edits)}
           />
         ) : selectedItem && selectedItem.kind === "event" ? (
           <EventInspector

@@ -1,8 +1,12 @@
-import { Bell, Link, MessageSquare, Plus, Sparkles } from "lucide-react";
+import { Link, PlusCircle, Sparkles, StickyNote } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { InlineEditForm } from "../review/InlineEditForm";
 import type { MoriMockSession, TimelineEvent } from "../../domain/types";
+import type { TimelineEventEdits } from "../../lib/timeline/eventEdits";
 import { buildFocusGraph } from "../../lib/relationships/focusGraph";
 import {
   describeRelationshipConfidence,
@@ -15,12 +19,25 @@ export function TracePanel({
   selectedEvent,
   session,
   onClearFocus,
+  canWrite = false,
+  issueCreated = false,
+  onCreateIssue,
+  onEditEvent,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
   onClearFocus?: () => void;
+  /** True when the active session can persist Timeline writes (real draft). */
+  canWrite?: boolean;
+  /** True once this event already has a derived issue. */
+  issueCreated?: boolean;
+  /** Promote this event to a Review issue. Absent ⇒ control hidden. */
+  onCreateIssue?: () => void;
+  /** Correct this event / attach a note. Absent ⇒ control hidden. */
+  onEditEvent?: (edits: TimelineEventEdits) => void;
 }) {
   const graph = buildFocusGraph(selectedEvent.id, session.relationships);
+  const [noteEditing, setNoteEditing] = useState(false);
 
   return (
     <aside className="inspector trace">
@@ -71,27 +88,78 @@ export function TracePanel({
         )}
       </section>
       <section className="panel-section">
-        <SectionHeader title="액션" hint="자리표시자입니다. 흐름 편집은 다음 마일스톤에서 제공됩니다." />
+        <SectionHeader title="메모" />
+        {noteEditing && onEditEvent ? (
+          <InlineEditForm
+            fields={[
+              {
+                id: "note",
+                label: "메모",
+                value: selectedEvent.userNote ?? "",
+                multiline: true,
+              },
+            ]}
+            onSave={(values) => {
+              onEditEvent({ note: values.note });
+              setNoteEditing(false);
+            }}
+            onCancel={() => setNoteEditing(false)}
+          />
+        ) : (
+          <>
+            {selectedEvent.userNote ? (
+              <div className="inspector-summary-card">
+                <span>메모</span>
+                <p>{selectedEvent.userNote}</p>
+              </div>
+            ) : (
+              <p className="muted">메모가 없습니다.</p>
+            )}
+          </>
+        )}
+      </section>
+      <section className="panel-section">
+        <SectionHeader title="액션" />
         <div className="trace-actions">
+          {onEditEvent ? (
+            <Button
+              icon={StickyNote}
+              onClick={() => setNoteEditing(true)}
+              disabled={!canWrite || noteEditing}
+              title={
+                canWrite
+                  ? "이 이벤트에 메모를 작성합니다."
+                  : "실제 세션에서 사용할 수 있습니다."
+              }
+            >
+              {selectedEvent.userNote ? "메모 편집" : "메모 추가"}
+            </Button>
+          ) : null}
+          {onCreateIssue ? (
+            <Button
+              icon={PlusCircle}
+              onClick={onCreateIssue}
+              disabled={!canWrite || issueCreated}
+              title={
+                issueCreated
+                  ? "이 이벤트는 이미 이슈로 만들어졌습니다."
+                  : canWrite
+                    ? "이 이벤트를 Review 이슈로 만듭니다."
+                    : "실제 세션에서 사용할 수 있습니다."
+              }
+            >
+              {issueCreated ? "이슈 생성됨" : "이슈 생성"}
+            </Button>
+          ) : null}
+        </div>
+      </section>
+      <section className="panel-section">
+        <SectionHeader title="예정된 액션" hint="Planned" />
+        <div className="trace-actions trace-actions-planned">
           <MoriPlannedAction
             icon={Link}
-            label="링크 편집"
-            title="관계 편집은 아직 구현되지 않았습니다."
-          />
-          <MoriPlannedAction
-            icon={Plus}
-            label="링크 추가"
-            title="관계 추가는 아직 구현되지 않았습니다."
-          />
-          <MoriPlannedAction
-            icon={MessageSquare}
-            label="메모 추가"
-            title="메모 기능은 예정되어 있습니다."
-          />
-          <MoriPlannedAction
-            icon={Bell}
-            label="이슈 생성"
-            title="수동 이슈 생성은 예정되어 있습니다."
+            label="관계 편집"
+            title="관계 추가 / 삭제는 다음 마일스톤에서 제공됩니다."
           />
           <MoriPlannedAction
             icon={Sparkles}
