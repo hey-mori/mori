@@ -36,6 +36,7 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     editIssue: () => false,
     createIssueFromEvent: () => false,
     updateSessionEvent: () => false,
+    splitSessionEvent: () => false,
     setDecisionConfirmed: () => false,
     editDecision: () => false,
     markPersistedToDesktop: () => undefined,

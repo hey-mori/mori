@@ -39,6 +39,7 @@ const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionStat
   editIssue: () => false,
   createIssueFromEvent: () => false,
   updateSessionEvent: () => false,
+  splitSessionEvent: () => false,
   setDecisionConfirmed: () => false,
   editDecision: () => false,
   markPersistedToDesktop: () => {},

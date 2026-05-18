@@ -25,6 +25,7 @@ import {
 import { promoteIssueToNextAction } from "../lib/session/issuePromotion";
 import { createIssueFromEvent as buildIssueFromEvent } from "../lib/timeline/eventToIssue";
 import { applyEventEdits, type TimelineEventEdits } from "../lib/timeline/eventEdits";
+import { splitEventAtMidpoint } from "../lib/timeline/eventSplit";
 import {
   createStaticMockDataSource,
   type TimelineDataSource,
@@ -129,6 +130,13 @@ export type MoriSessionState = {
    * `false` in demo mode or on a blank / unchanged edit.
    */
   updateSessionEvent: (eventId: string, edits: TimelineEventEdits) => boolean;
+  /**
+   * Split a Timeline event at its temporal midpoint into two — a
+   * Timeline-inspector write. The original keeps its id (and references);
+   * a fresh second-half event is inserted after it. Returns `false` in
+   * demo mode or when the event has no genuine end to cut.
+   */
+  splitSessionEvent: (eventId: string) => boolean;
   /**
    * Promote an issue into a linked Next Action. If the issue already has
    * a linked Next Action, returns that existing action without writing.
@@ -558,6 +566,17 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     const { draft, imports } = get();
     if (!draft) return false;
     const next = applyEventEdits(imports, eventId, edits);
+    if (next === imports) return false;
+
+    const repository = getRepository();
+    repository.putSessionImports(draft.session.id, next);
+    set({ imports: repository.listSessionImports(draft.session.id) });
+    return true;
+  },
+  splitSessionEvent: (eventId) => {
+    const { draft, imports } = get();
+    if (!draft) return false;
+    const next = splitEventAtMidpoint(imports, eventId);
     if (next === imports) return false;
 
     const repository = getRepository();

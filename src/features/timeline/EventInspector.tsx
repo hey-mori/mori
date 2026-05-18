@@ -11,6 +11,7 @@ import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { InlineEditForm } from "../review/InlineEditForm";
 import type { TimelineEventEdits } from "../../lib/timeline/eventEdits";
+import { canSplitEvent } from "../../lib/timeline/eventSplit";
 import { Button } from "../../components/ui/Button";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels, eventTypeTone } from "../../domain/constants";
@@ -43,6 +44,7 @@ export function EventInspector({
   issueCreated = false,
   canWrite = false,
   onEditEvent,
+  onSplitEvent,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
@@ -57,6 +59,8 @@ export function EventInspector({
   canWrite?: boolean;
   /** Correct this event's title / summary. Absent ⇒ control hidden. */
   onEditEvent?: (edits: TimelineEventEdits) => void;
+  /** Split this event at its temporal midpoint. Absent ⇒ control hidden. */
+  onSplitEvent?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [noteEditing, setNoteEditing] = useState(false);
@@ -201,17 +205,28 @@ export function EventInspector({
               {issueCreated ? "이슈 생성됨" : "이슈 생성"}
             </Button>
           ) : null}
+          {onSplitEvent ? (
+            <Button
+              icon={Split}
+              onClick={onSplitEvent}
+              disabled={!canWrite || !canSplitEvent(selectedEvent)}
+              title={
+                !canSplitEvent(selectedEvent)
+                  ? "끝 시각이 없는 이벤트는 분할할 수 없습니다."
+                  : canWrite
+                    ? "이 이벤트를 시간 중점에서 둘로 나눕니다."
+                    : "실제 세션에서 사용할 수 있습니다."
+              }
+            >
+              이벤트 분할
+            </Button>
+          ) : null}
         </div>
       </section>
 
       <section className="inspector-section">
         <SectionHeader title="예정된 액션" hint="Planned" />
         <div className="inspector-actions-row inspector-actions-planned">
-          <MoriPlannedAction
-            feature="timeline.inspector.split"
-            label={TIMELINE_CONTROLS.inspectorSplitEvent.label}
-            icon={Split}
-          />
           <MoriPlannedAction
             feature="timeline.inspector.merge"
             label={TIMELINE_CONTROLS.inspectorMergeEvent.label}
