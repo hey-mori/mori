@@ -133,6 +133,15 @@
 }
 
 /**
+ * Layout. One shared width for the right-hand detail / inspector rail so
+ * every "main + rail" surface (Timeline, Evidence, Review, Reports) lines
+ * up instead of each picking its own 336–380px value.
+ */
+:root {
+  --mori-rail: 344px;
+}
+
+/**
  * Theme catalogue.
  *
  * Mori ships with two themes today:
