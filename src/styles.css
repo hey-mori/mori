@@ -2780,6 +2780,11 @@ input,
   text-align: left;
 }
 
+.engine-card-reason {
+  color: #8a5a00;
+  line-height: 1.35;
+}
+
 .muted-card {
   opacity: 0.72;
 }

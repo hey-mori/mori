@@ -20,6 +20,12 @@ import {
   initialSelectedSourceIds,
   toggleSourceSelection,
 } from "../../lib/session/sourceSelection";
+import {
+  buildStartSessionEngineOptions,
+  coerceStartSessionEngineProvider,
+  getDefaultStartSessionEngineOption,
+  type StartSessionEngineOption,
+} from "../../lib/session/startSessionEngineOptions";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import {
   getImplementedCaptureSurfaces,
@@ -39,23 +45,14 @@ const RECORDING_MODES: { mode: RecordingMode; points: string[] }[] = [
   { mode: "ephemeral", points: ["리포트만 저장", "원본 데이터 자동 삭제", "민감 프로젝트에 적합"] },
 ];
 
-type EngineOption = {
-  provider: LlmProvider;
-  label: string;
-  detail: string;
-  model: string;
-  icon: LucideIcon;
-  /** Cloud API needs an explicit API key, configured in Settings — not
-   *  selectable from this local-first setup screen. */
-  available: boolean;
-};
+const ENGINE_OPTIONS = buildStartSessionEngineOptions();
 
-const ENGINE_OPTIONS: EngineOption[] = [
-  { provider: "ollama", label: "Ollama", detail: "llama3.1:8b", model: "llama3.1:8b", icon: Bot, available: true },
-  { provider: "lmStudio", label: "LM Studio", detail: "local-model (8B)", model: "local-model", icon: Database, available: true },
-  { provider: "openAiCompatible", label: "OpenAI Compatible", detail: "http://localhost:1234", model: "local-model", icon: FileCode2, available: true },
-  { provider: "cloudApi", label: "Cloud API", detail: "API 키 필요 · 설정에서 구성", model: "", icon: Cloud, available: false },
-];
+const ENGINE_ICONS: Record<LlmProvider, LucideIcon> = {
+  ollama: Bot,
+  lmStudio: Database,
+  openAiCompatible: FileCode2,
+  cloudApi: Cloud,
+};
 
 export function StartSessionView() {
   const [sessionTitle, setSessionTitle] = useState("Mori 앱 기획");
@@ -65,10 +62,13 @@ export function StartSessionView() {
     initialSelectedSourceIds(sourceOptions),
   );
   const [recordingMode, setRecordingMode] = useState<RecordingMode>("summary");
-  const [engineProvider, setEngineProvider] = useState<LlmProvider>("ollama");
+  const [engineProvider, setEngineProvider] = useState<LlmProvider>(
+    () => getDefaultStartSessionEngineOption().provider,
+  );
   const selectedEngine =
-    ENGINE_OPTIONS.find((engine) => engine.provider === engineProvider) ??
-    ENGINE_OPTIONS[0];
+    ENGINE_OPTIONS.find(
+      (engine) => engine.provider === coerceStartSessionEngineProvider(engineProvider),
+    ) ?? getDefaultStartSessionEngineOption();
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const storageTarget = useMemo<SessionStorageTarget>(
     () => describeSessionStorageTarget({ isDesktop: isTauriRuntime() }),
@@ -179,13 +179,13 @@ export function StartSessionView() {
               ))}
             </div>
           </SetupBlock>
-          <SetupBlock number="4" title="로컬 AI 엔진 선택" note="요약 및 분석을 수행할 로컬/상용 엔진을 선택합니다. Cloud API는 명시적으로 켜야 합니다.">
+          <SetupBlock number="4" title="로컬 AI 엔진 선택" note="현재 세션에 연결할 수 있는 로컬 분석 엔진만 선택할 수 있습니다. Planned 제공자는 설정 화면과 같은 기준으로 비활성화됩니다.">
             <div className="engine-grid">
               {ENGINE_OPTIONS.map((engine) => (
                 <EngineCard
                   key={engine.provider}
                   engine={engine}
-                  selected={engineProvider === engine.provider}
+                  selected={selectedEngine.provider === engine.provider}
                   onSelect={() => setEngineProvider(engine.provider)}
                 />
               ))}
@@ -319,12 +319,12 @@ function EngineCard({
   selected,
   onSelect,
 }: {
-  engine: EngineOption;
+  engine: StartSessionEngineOption;
   selected: boolean;
   onSelect: () => void;
 }) {
-  const Icon = engine.icon;
-  const muted = !engine.available;
+  const Icon = ENGINE_ICONS[engine.provider];
+  const muted = !engine.selectable;
   return (
     <button
       className={`engine-card ${selected ? "selected" : ""} ${muted ? "muted-card" : ""}`}
@@ -332,14 +332,18 @@ function EngineCard({
       disabled={muted}
       aria-pressed={muted ? undefined : selected}
       onClick={muted ? undefined : onSelect}
+      title={muted ? engine.disabledReason : undefined}
     >
       <Icon size={26} />
       <div>
         <strong>{engine.label}</strong>
         <small>{engine.detail}</small>
+        {muted && engine.disabledReason ? (
+          <small className="engine-card-reason">{engine.disabledReason}</small>
+        ) : null}
       </div>
-      <Badge tone={muted ? "gray" : "green"}>
-        {muted ? "비활성" : selected ? "선택됨" : "사용 가능"}
+      <Badge tone={muted ? "orange" : selected ? "purple" : "green"} title={engine.disabledReason}>
+        {muted ? engine.statusLabel : selected ? "선택됨" : "사용 가능"}
       </Badge>
     </button>
   );
@@ -359,7 +363,7 @@ function SessionSummary({
   projectName: string;
   selectedSources: SourceOption[];
   recordingMode: RecordingMode;
-  engine: EngineOption;
+  engine: StartSessionEngineOption;
   storageTarget: SessionStorageTarget;
 }) {
   return (

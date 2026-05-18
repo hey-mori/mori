@@ -356,6 +356,12 @@ Shipped:
     longer emits the English `dataBasis` descriptor ("No data" /
     "Imported sources + Quick Pass analysis"); it is Korean, and
     the three exact-string tests were updated to match.
+8c. ✅ Start Session provider honesty — the Local AI engine picker now
+    derives its provider states from the same feature-status registry as
+    Settings. Ollama remains the only selectable session engine; LM Studio,
+    OpenAI-compatible endpoints, and Cloud API stay visible but disabled
+    with concise Planned reasons, so starting a session never implies a
+    provider Mori cannot run.
 
 ### Timeline Maturity Loop (focused sub-pass)
 
