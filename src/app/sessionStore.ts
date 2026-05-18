@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { moriMockSession } from "../domain/mock-data";
-import type { IssueStatus, MoriMockSession, NextAction, TimelineEvent } from "../domain/types";
+import type {
+  IssueStatus,
+  MoriMockSession,
+  NextAction,
+  RelationshipType,
+  TimelineEvent,
+} from "../domain/types";
 import type {
   MoriAnalysisProvider,
   MoriAnalysisResult,
@@ -31,6 +37,10 @@ import {
   mergeEventWithNext,
   remapEventIdInAnalysis,
 } from "../lib/timeline/eventMerge";
+import {
+  addEventRelationship as buildEventRelationship,
+  removeRelationshipFromAnalysis,
+} from "../lib/relationships/relationshipWrites";
 import {
   createStaticMockDataSource,
   type TimelineDataSource,
@@ -149,6 +159,17 @@ export type MoriSessionState = {
    * `false` in demo mode or when the event is already last.
    */
   mergeSessionEvent: (eventId: string) => boolean;
+  /**
+   * Assert a user event-to-event relationship — a Flow Focus write.
+   * Idempotent and self-link-safe. Returns `false` in demo mode, without
+   * an analysis, or when the exact relationship already exists.
+   */
+  addEventRelationship: (fromId: string, toId: string, type: RelationshipType) => boolean;
+  /**
+   * Remove an AI-inferred (or user) relationship — a Flow Focus write.
+   * Returns `false` in demo mode, without analysis, or for an unknown id.
+   */
+  removeRelationship: (relationshipId: string) => boolean;
   /**
    * Promote an issue into a linked Next Action. If the issue already has
    * a linked Next Action, returns that existing action without writing.
@@ -617,6 +638,30 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       }
     }
     set({ imports: repository.listSessionImports(draft.session.id) });
+    return true;
+  },
+  addEventRelationship: (fromId, toId, type) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+    const next = buildEventRelationship(analysis, fromId, toId, type);
+    if (next === analysis) return false;
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, next);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, next);
+    set({ analysis: next });
+    return true;
+  },
+  removeRelationship: (relationshipId) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+    const next = removeRelationshipFromAnalysis(analysis, relationshipId);
+    if (next === analysis) return false;
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, next);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, next);
+    set({ analysis: next });
     return true;
   },
   setDecisionConfirmed: (decisionId, confirmed) => {

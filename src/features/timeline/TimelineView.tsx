@@ -58,6 +58,8 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const updateSessionEvent = useMoriSessionStore((state) => state.updateSessionEvent);
   const splitSessionEvent = useMoriSessionStore((state) => state.splitSessionEvent);
   const mergeSessionEvent = useMoriSessionStore((state) => state.mergeSessionEvent);
+  const addEventRelationship = useMoriSessionStore((state) => state.addEventRelationship);
+  const removeRelationship = useMoriSessionStore((state) => state.removeRelationship);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -255,6 +257,10 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
               }
             }}
             onEditEvent={(edits) => updateSessionEvent(selectedItem.event.id, edits)}
+            onAddRelationship={(toId, type) =>
+              addEventRelationship(selectedItem.event.id, toId, type)
+            }
+            onRemoveRelationship={(relationshipId) => removeRelationship(relationshipId)}
           />
         ) : selectedItem && selectedItem.kind === "event" ? (
           <EventInspector
