@@ -85,10 +85,6 @@ export function EventInspector({
       <header className="inspector-header">
         <div className="inspector-badges">
           <Badge tone={eventTypeTone[selectedEvent.type]}>{eventTypeLabels[selectedEvent.type]}</Badge>
-          <Badge tone={trust.tone}>{trust.label}</Badge>
-          {selectedEvent.trustLevel === "inferred" ? (
-            <Badge tone={confidenceTone(inspector.confidencePct)}>{inspector.confidencePct}%</Badge>
-          ) : null}
           {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
         </div>
         {editing ? null : (
@@ -387,13 +383,6 @@ function LinkedRows({
       })}
     </ul>
   );
-}
-
-function confidenceTone(pct: number): string {
-  if (pct >= 85) return "green";
-  if (pct >= 60) return "blue";
-  if (pct >= 40) return "orange";
-  return "red";
 }
 
 function trustCopy(trustLevel: TimelineEvent["trustLevel"]): string {

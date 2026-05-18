@@ -1,23 +1,16 @@
-import { ShieldCheck, ShieldQuestion, Eye, type LucideIcon } from "lucide-react";
 import { eventTypeIcons } from "../../domain/constants";
 import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
-import type { TimelineEvent, TrustLevel } from "../../domain/types";
+import type { TimelineEvent } from "../../domain/types";
 import { buildTimelineEventCardViewModel } from "./lib/timelineCards";
-
-const TRUST_ICONS: Record<TrustLevel, LucideIcon> = {
-  verified: ShieldCheck,
-  observed: Eye,
-  inferred: ShieldQuestion,
-};
 
 /**
  * Event card.
  *
- * Reads from `TimelineEventCardViewModel` (built once per event) so the JSX
- * only handles layout + class names. The view model carries the time label,
- * trust glyph, footer meta, aria label, and tooltip — never recompute those
- * inline.
+ * The card's job is to answer "when + what" at a glance: a muted time row,
+ * a prominent title, and one calm meta signal. Trust level is detail — it
+ * lives in the inspector, not stamped on every card, so the lane stays
+ * scannable.
  */
 export function TimelineEventCard({
   event,
@@ -36,7 +29,6 @@ export function TimelineEventCard({
 }) {
   const vm = buildTimelineEventCardViewModel(event);
   const Icon = eventTypeIcons[event.type];
-  const TrustIcon = TRUST_ICONS[event.trustLevel];
   // Progressive disclosure: only the comfortable tier carries footer meta on
   // the card. Compact and dense move that detail into the inspector.
   const densityClass = densityClassName(density);
@@ -44,7 +36,7 @@ export function TimelineEventCard({
 
   return (
     <button
-      className={`event-card card-${vm.tone} trust-${vm.trust.tone} ${focusStateClassName(focusState)} ${densityClass}`}
+      className={`event-card card-${vm.tone} ${focusStateClassName(focusState)} ${densityClass}`}
       onClick={() => onSelect(event.id)}
       onMouseEnter={() => onHover(event.id)}
       onMouseLeave={() => onHover(null)}
@@ -63,16 +55,6 @@ export function TimelineEventCard({
         <span className={`event-card-time tone-${vm.tone}`}>
           <Icon size={11} aria-hidden="true" />
           {vm.timeLabel}
-        </span>
-        <span
-          className={`event-card-trust trust-${vm.trust.tone}`}
-          title={vm.trust.tooltip}
-          aria-hidden="true"
-        >
-          {/* Identical badge width across all trust levels so card headers
-              never jitter when you scan a lane. Confidence detail lives in
-              the inspector + the `title` tooltip. */}
-          <TrustIcon size={11} />
         </span>
       </header>
       <strong className="event-card-title">{vm.title}</strong>

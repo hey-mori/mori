@@ -1051,9 +1051,11 @@ kbd {
 
 .event-card-title {
   display: block;
-  min-height: 17px;
-  font-size: 12.5px;
-  line-height: 1.36;
+  min-height: 18px;
+  /* The title is the card's primary content — give it the base size and
+     full weight so it leads over the muted time + meta rows. */
+  font-size: var(--mori-font-size-md);
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -11503,10 +11505,13 @@ pre {
   color: #6e3e00;
 }
 
-.inspector-actions-planned {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
-  gap: 6px;
+/* Planned inspector actions collapse to one calm muted line instead of a
+   grid of disabled buttons — honest about what's coming without clutter. */
+.inspector-planned-note {
+  margin: 0;
+  font-size: var(--mori-font-size-xs);
+  line-height: 1.5;
+  color: var(--mori-text-muted-2);
 }
 
 .inspector-planned-action {
@@ -11536,37 +11541,8 @@ pre {
   min-width: 0;
 }
 
-.event-card-trust {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  background: rgba(17, 24, 39, 0.05);
-  color: var(--muted);
-}
-
-.event-card-trust.trust-verified {
-  background: rgba(21, 149, 90, 0.08);
-  color: var(--green);
-}
-
-.event-card-trust.trust-observed {
-  background: rgba(35, 105, 246, 0.08);
-  color: var(--blue);
-}
-
-.event-card-trust.trust-inferred {
-  background: var(--orange-50);
-  color: #8a5a08;
-}
-
-/* No trust accent stripe on cards. Trust is communicated by the
- * `event-card-trust` badge in the card header and (when selected) by the
- * purple outline ring. Side bars look AI-template-y and break the calm. */
+/* Trust level is no longer stamped on every card — it is inspector detail.
+ * Cards stay scannable: time, title, one calm meta signal. */
 
 .event-card-summary {
   display: none; /* The inspector owns prose; cards stay scannable. */
