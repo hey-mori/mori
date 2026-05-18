@@ -32,6 +32,7 @@ const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionStat
   loadBrowserSession: () => false,
   setNextActionCompletion: () => false,
   setIssueStatus: () => false,
+  setDecisionConfirmed: () => false,
   markPersistedToDesktop: () => {},
   ...overrides,
 });

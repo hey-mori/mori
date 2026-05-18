@@ -240,6 +240,10 @@ only — no phase numbers.
   `setIssueStatus` store action (same analysis + memory-body write
   path as Next Action completion) and a Review detail-panel status
   picker; the Workspace resolved-issue progress is now live.
+- Decision confirmation — `review.confirmDecision` is now implemented:
+  a `setDecisionConfirmed` store action on the same write path and a
+  Review detail-panel confirm / reject toggle; the unresolved feed
+  drops confirmed decisions automatically.
 
 **Open priority (highest first):**
 

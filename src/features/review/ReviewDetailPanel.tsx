@@ -38,6 +38,7 @@ export function ReviewDetailPanel({
   onShowTimeline,
   onToggleNextActionComplete,
   onSetIssueStatus,
+  onSetDecisionConfirmed,
   canEditReview,
 }: {
   selection: ReviewSelection;
@@ -45,6 +46,7 @@ export function ReviewDetailPanel({
   onShowTimeline: (eventId: string) => void;
   onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
   onSetIssueStatus: (issueId: string, status: IssueStatus) => void;
+  onSetDecisionConfirmed: (decisionId: string, confirmed: boolean) => void;
   /** False in demo mode — Review writes cannot be persisted there. */
   canEditReview: boolean;
 }) {
@@ -85,7 +87,15 @@ export function ReviewDetailPanel({
   if (selection.kind === "decision") {
     const decision = view.decisions.find((entry) => entry.id === selection.decisionId);
     if (!decision) return <MissingItem label="결정" />;
-    return <DecisionDetail decision={decision} view={view} onShowTimeline={onShowTimeline} />;
+    return (
+      <DecisionDetail
+        decision={decision}
+        view={view}
+        onShowTimeline={onShowTimeline}
+        onSetConfirmed={onSetDecisionConfirmed}
+        canEditConfirm={canEditReview}
+      />
+    );
   }
 
   const nextAction = view.nextActions.find((entry) => entry.id === selection.nextActionId);
@@ -226,10 +236,14 @@ function DecisionDetail({
   decision,
   view,
   onShowTimeline,
+  onSetConfirmed,
+  canEditConfirm,
 }: {
   decision: Decision;
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
+  onSetConfirmed: (decisionId: string, confirmed: boolean) => void;
+  canEditConfirm: boolean;
 }) {
   const evidence = getDecisionEvidenceSources(decision, view.events, view.sources);
   const relatedEvents = findEvents(view.events, decision.sourceEventIds);
@@ -309,12 +323,29 @@ function DecisionDetail({
       ) : null}
 
       <section className="review-detail-section">
-        <SectionHeader title="액션" />
+        <SectionHeader
+          title="액션"
+          hint={
+            canEditConfirm
+              ? decision.confirmed
+                ? "확정된 결정입니다. 다시 검토가 필요하면 반려할 수 있습니다."
+                : "검토를 마쳤다면 이 결정을 확정 처리하세요."
+              : "데모 세션에서는 확정 상태가 저장되지 않습니다."
+          }
+        />
         <div className="review-detail-actions">
-          <MoriPlannedAction
-            label="확정 / 반려"
-            title="결정 확정 토글은 다음 마일스톤에서 활성화됩니다."
-          />
+          <Button
+            variant={decision.confirmed ? "ghost" : "primary"}
+            disabled={!canEditConfirm}
+            title={
+              canEditConfirm
+                ? undefined
+                : "데모 세션에서는 확정 상태가 저장되지 않습니다."
+            }
+            onClick={() => onSetConfirmed(decision.id, !decision.confirmed)}
+          >
+            {decision.confirmed ? "확정 반려" : "확정 처리"}
+          </Button>
           <MoriPlannedAction
             label="편집"
             title="결정 편집은 다음 마일스톤에서 활성화됩니다."

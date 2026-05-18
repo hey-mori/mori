@@ -91,6 +91,12 @@ export type MoriSessionState = {
    * demo mode, when there is no analysis, or when the id is unknown.
    */
   setIssueStatus: (issueId: string, status: IssueStatus) => boolean;
+  /**
+   * Confirm or reject a decision — a Review-surface write. Persists into
+   * the session analysis and the durable memory body. Returns `false`
+   * in demo mode, when there is no analysis, or when the id is unknown.
+   */
+  setDecisionConfirmed: (decisionId: string, confirmed: boolean) => boolean;
   markPersistedToDesktop: () => void;
 };
 
@@ -446,6 +452,26 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       ...analysis,
       issues: analysis.issues.map((issue) =>
         issue.id === issueId ? { ...issue, status } : issue,
+      ),
+    };
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, nextAnalysis);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
+    set({ analysis: nextAnalysis });
+    return true;
+  },
+  setDecisionConfirmed: (decisionId, confirmed) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+    if (!analysis.decisions.some((decision) => decision.id === decisionId)) {
+      return false;
+    }
+
+    const nextAnalysis: MoriAnalysisResult = {
+      ...analysis,
+      decisions: analysis.decisions.map((decision) =>
+        decision.id === decisionId ? { ...decision, confirmed } : decision,
       ),
     };
 
