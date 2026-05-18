@@ -367,6 +367,10 @@ Shipped:
     actions as implemented: edit event, split, merge, create issue, add note,
     memo save, and session end. Product-honesty counts and control tooltips
     now match the real Timeline write path.
+8e. ✅ Evidence Hub import focus — opening Add Source now places the import
+    panel at the top of the Evidence workflow, before integration browsing,
+    while planned connectors are collapsed behind an honest disclosure so
+    unavailable integrations no longer compete with the next real action.
 
 ### Timeline Maturity Loop (focused sub-pass)
 

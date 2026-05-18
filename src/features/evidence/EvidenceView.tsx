@@ -1,4 +1,4 @@
-import { Plus, RotateCcw, Settings as SettingsIcon, Shield, Sparkles } from "lucide-react";
+import { ChevronDown, Plus, RotateCcw, Settings as SettingsIcon, Shield, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -147,6 +147,17 @@ export function EvidenceView() {
 
       <div className="evidence-hub-layout">
         <section className="evidence-hub-main">
+          {importOpen ? (
+            <section className="evidence-section evidence-import-section">
+              <ImportPanel
+                variant="embedded"
+                initialKind={importKind}
+                initialAiPlatform={importPlatform}
+                onClose={() => setImportOpen(false)}
+              />
+            </section>
+          ) : null}
+
           <section className="evidence-section">
             <header className="evidence-section-header">
               <div>
@@ -178,14 +189,17 @@ export function EvidenceView() {
             </div>
           </section>
 
-          <section className="evidence-section">
-            <header className="evidence-section-header">
+          <details className="evidence-section evidence-planned-disclosure">
+            <summary className="evidence-planned-summary">
               <div>
                 <h2>계획된 커넥터</h2>
                 <p>아직 활성화되지 않은 통합입니다. 모두 명시적인 사용자 설정이 도착할 때만 작동합니다.</p>
               </div>
-              <Badge tone="gray">{plannedIntegrations.length}개 계획됨</Badge>
-            </header>
+              <span className="evidence-planned-summary-actions">
+                <Badge tone="gray">{plannedIntegrations.length}개 계획됨</Badge>
+                <ChevronDown className="evidence-planned-chevron" size={14} aria-hidden="true" />
+              </span>
+            </summary>
             <div className="evidence-card-grid evidence-card-grid-dense">
               {plannedIntegrations.map((integration) => {
                 const selected =
@@ -203,18 +217,7 @@ export function EvidenceView() {
                 );
               })}
             </div>
-          </section>
-
-          {importOpen ? (
-            <section className="evidence-section evidence-import-section">
-              <ImportPanel
-                variant="embedded"
-                initialKind={importKind}
-                initialAiPlatform={importPlatform}
-                onClose={() => setImportOpen(false)}
-              />
-            </section>
-          ) : null}
+          </details>
 
           <section className="evidence-section">
             <header className="evidence-section-header">

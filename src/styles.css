@@ -3664,6 +3664,56 @@ pre {
   max-width: 600px;
 }
 
+.evidence-planned-disclosure {
+  gap: 0;
+}
+
+.evidence-planned-disclosure[open] {
+  gap: 12px;
+}
+
+.evidence-planned-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.evidence-planned-summary::-webkit-details-marker {
+  display: none;
+}
+
+.evidence-planned-summary h2 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+}
+
+.evidence-planned-summary p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 600px;
+}
+
+.evidence-planned-summary-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.evidence-planned-chevron {
+  color: var(--muted-2);
+  transition: transform 140ms ease;
+}
+
+.evidence-planned-disclosure[open] .evidence-planned-chevron {
+  transform: rotate(180deg);
+}
+
 .evidence-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
