@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { moriMockSession } from "../domain/mock-data";
-import type { MoriMockSession } from "../domain/types";
+import type { IssueStatus, MoriMockSession } from "../domain/types";
 import type {
   MoriAnalysisProvider,
   MoriAnalysisResult,
@@ -85,6 +85,12 @@ export type MoriSessionState = {
    * unknown.
    */
   setNextActionCompletion: (nextActionId: string, completed: boolean) => boolean;
+  /**
+   * Change an issue's status — a Review-surface write. Persists into the
+   * session analysis and the durable memory body. Returns `false` in
+   * demo mode, when there is no analysis, or when the id is unknown.
+   */
+  setIssueStatus: (issueId: string, status: IssueStatus) => boolean;
   markPersistedToDesktop: () => void;
 };
 
@@ -422,6 +428,24 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
         action.id === nextActionId
           ? withNextActionCompletion(action, completed, now)
           : action,
+      ),
+    };
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, nextAnalysis);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
+    set({ analysis: nextAnalysis });
+    return true;
+  },
+  setIssueStatus: (issueId, status) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+    if (!analysis.issues.some((issue) => issue.id === issueId)) return false;
+
+    const nextAnalysis: MoriAnalysisResult = {
+      ...analysis,
+      issues: analysis.issues.map((issue) =>
+        issue.id === issueId ? { ...issue, status } : issue,
       ),
     };
 

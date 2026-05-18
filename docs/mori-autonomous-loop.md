@@ -236,6 +236,10 @@ only — no phase numbers.
   analysis + memory body, a Review detail-panel toggle, and
   completion-aware Workspace / Reports / Resume / Companion / Project
   Memory surfaces (completed actions drop out of future-work prompts).
+- Issue status change — `review.statusChange` is now implemented: a
+  `setIssueStatus` store action (same analysis + memory-body write
+  path as Next Action completion) and a Review detail-panel status
+  picker; the Workspace resolved-issue progress is now live.
 
 **Open priority (highest first):**
 

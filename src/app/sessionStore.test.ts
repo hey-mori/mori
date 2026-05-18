@@ -446,6 +446,101 @@ describe("useMoriSessionStore setNextActionCompletion", () => {
   });
 });
 
+describe("useMoriSessionStore setIssueStatus", () => {
+  let repository: BrowserDraftRepository;
+
+  beforeEach(() => {
+    repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  function seedAnalysisWithIssue() {
+    const built = createSessionDraft({
+      sessionTitle: "Issue status session",
+      projectName: "IS Project",
+      selectedSources: [],
+      recordingMode: "summary",
+      llmProvider: "ollama",
+      llmModel: "llama3.1:8b",
+      storageLocation: "~/Mori/Records",
+      now: fixedNow,
+    });
+    const stored = { ...built, savedAt: fixedNow, adapter: "browser-local-storage" as const };
+    useMoriSessionStore.getState().setDraft(stored);
+
+    const analysis: MoriAnalysisResult = {
+      runId: "run-is",
+      providerName: "deterministic-heuristic-v1",
+      providerLabel: "Deterministic",
+      sessionId: stored.session.id,
+      projectId: stored.project.id,
+      generatedAt: fixedNow,
+      durationMs: 1,
+      inputEventCount: 0,
+      inputSourceCount: 0,
+      summary: { sessionSummary: "s", resumePrompt: "p", highlights: [] },
+      issues: [
+        {
+          ...moriMockSession.issues[0]!,
+          id: "iss-1",
+          sessionId: stored.session.id,
+          status: "open",
+        },
+      ],
+      decisions: [],
+      relationships: [],
+      nextActions: [],
+      rendered: {
+        summary: {
+          id: "summary-run-is",
+          sessionId: stored.session.id,
+          sessionSummary: "s",
+          resumePrompt: "p",
+          reportMarkdown: "",
+          nextActionIds: [],
+          generatedAt: fixedNow,
+        },
+      },
+      confidence: 0.5,
+      notes: [],
+    };
+    useMoriSessionStore.setState({ analysis, analysisStatus: "succeeded" });
+    return stored;
+  }
+
+  it("changes an issue status and persists it to the analysis store", () => {
+    const stored = seedAnalysisWithIssue();
+    const ok = useMoriSessionStore.getState().setIssueStatus("iss-1", "resolved");
+
+    expect(ok).toBe(true);
+    expect(useMoriSessionStore.getState().analysis!.issues[0]!.status).toBe("resolved");
+    expect(
+      repository.loadSessionAnalysis(stored.session.id)?.result.issues[0]?.status,
+    ).toBe("resolved");
+  });
+
+  it("returns false with no draft or analysis", () => {
+    expect(useMoriSessionStore.getState().setIssueStatus("iss-1", "resolved")).toBe(false);
+  });
+
+  it("returns false for an unknown issue id", () => {
+    seedAnalysisWithIssue();
+    expect(useMoriSessionStore.getState().setIssueStatus("missing", "resolved")).toBe(
+      false,
+    );
+  });
+});
+
 describe("useMoriSessionStore endSession", () => {
   let repository: BrowserDraftRepository;
 

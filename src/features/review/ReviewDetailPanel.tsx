@@ -8,7 +8,13 @@ import {
   issueStatusLabels,
   priorityLabels,
 } from "../../domain/constants";
-import type { Decision, Issue, MoriMockSession, NextAction } from "../../domain/types";
+import type {
+  Decision,
+  Issue,
+  IssueStatus,
+  MoriMockSession,
+  NextAction,
+} from "../../domain/types";
 import { formatDate, formatTime } from "../../lib/formatting/time";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
@@ -16,7 +22,9 @@ import {
   getIssueEvidenceSources,
   getSourceDisplayStatus,
 } from "../../lib/sources/traceability";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import {
+  ISSUE_STATUS_ORDER,
   findEvents,
   issueStatusTone,
   priorityTone,
@@ -29,14 +37,16 @@ export function ReviewDetailPanel({
   view,
   onShowTimeline,
   onToggleNextActionComplete,
-  canEditCompletion,
+  onSetIssueStatus,
+  canEditReview,
 }: {
   selection: ReviewSelection;
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
   onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
-  /** False in demo mode — completion cannot be persisted there. */
-  canEditCompletion: boolean;
+  onSetIssueStatus: (issueId: string, status: IssueStatus) => void;
+  /** False in demo mode — Review writes cannot be persisted there. */
+  canEditReview: boolean;
 }) {
   if (selection.kind === "none") {
     return (
@@ -61,7 +71,15 @@ export function ReviewDetailPanel({
   if (selection.kind === "issue") {
     const issue = view.issues.find((entry) => entry.id === selection.issueId);
     if (!issue) return <MissingItem label="이슈" />;
-    return <IssueDetail issue={issue} view={view} onShowTimeline={onShowTimeline} />;
+    return (
+      <IssueDetail
+        issue={issue}
+        view={view}
+        onShowTimeline={onShowTimeline}
+        onSetStatus={onSetIssueStatus}
+        canEditStatus={canEditReview}
+      />
+    );
   }
 
   if (selection.kind === "decision") {
@@ -78,7 +96,7 @@ export function ReviewDetailPanel({
       view={view}
       onShowTimeline={onShowTimeline}
       onToggleComplete={onToggleNextActionComplete}
-      canEditCompletion={canEditCompletion}
+      canEditCompletion={canEditReview}
     />
   );
 }
@@ -98,10 +116,14 @@ function IssueDetail({
   issue,
   view,
   onShowTimeline,
+  onSetStatus,
+  canEditStatus,
 }: {
   issue: Issue;
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
+  onSetStatus: (issueId: string, status: IssueStatus) => void;
+  canEditStatus: boolean;
 }) {
   const evidence = getIssueEvidenceSources(issue, view.events, view.sources);
   const relatedEvents = findEvents(view.events, issue.sourceEventIds);
@@ -159,12 +181,33 @@ function IssueDetail({
       ) : null}
 
       <section className="review-detail-section">
+        <SectionHeader
+          title="상태"
+          hint={
+            canEditStatus
+              ? "이슈 상태를 바꾸면 세션에 저장됩니다."
+              : "데모 세션에서는 상태가 저장되지 않습니다."
+          }
+        />
+        <SegmentedControl
+          ariaLabel="이슈 상태"
+          role="radiogroup"
+          value={issue.status}
+          onChange={(status) => onSetStatus(issue.id, status)}
+          options={ISSUE_STATUS_ORDER.map((status) => ({
+            id: status,
+            label: issueStatusLabels[status],
+            disabled: !canEditStatus,
+            title: canEditStatus
+              ? undefined
+              : "데모 세션에서는 상태가 저장되지 않습니다.",
+          }))}
+        />
+      </section>
+
+      <section className="review-detail-section">
         <SectionHeader title="액션" />
         <div className="review-detail-actions">
-          <MoriPlannedAction
-            label="상태 변경"
-            title="이슈 상태 변경은 다음 마일스톤에서 활성화됩니다."
-          />
           <MoriPlannedAction
             label="편집"
             title="이슈 편집은 다음 마일스톤에서 활성화됩니다."

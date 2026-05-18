@@ -218,7 +218,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "evidence.removeImport", label: "Remove import", status: "implemented", description: "Delete an imported source from the session." },
   { id: "evidence.runQuickPass", label: "Run Quick Pass", status: "implemented", description: "Run the Quick Pass analysis against imported sources." },
   // ─────────────────────────── Review ────────────────────────────
-  { id: "review.statusChange", label: "Change issue status", status: PLANNED, description: "Move issues across Open / In-Progress / Resolved / Watching.", disabledReason: "Issue status writes are part of the Review write milestone." },
+  { id: "review.statusChange", label: "Change issue status", status: "implemented", description: "Move issues across Open / In-Progress / Resolved / Watching from the Review detail panel." },
   { id: "review.editIssue", label: "Edit issue / decision", status: PLANNED, description: "Inline edit issue or decision fields.", disabledReason: "Editing in Review is part of the Review write milestone." },
   { id: "review.confirmDecision", label: "Confirm / reject decision", status: PLANNED, description: "Toggle decision confirmation state.", disabledReason: "Decision confirmation writes are part of the Review write milestone." },
   { id: "review.promoteToNextAction", label: "Promote to next action", status: PLANNED, description: "Promote an issue to a Next Action.", disabledReason: "Promoting to Next Action is part of the Review write milestone." },
@@ -259,7 +259,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "rollup.importReview", label: "Import Review", status: "implemented", description: "Accept / discard / edit imported candidates before applying." },
   { id: "rollup.timeline", label: "Timeline", status: "implemented", description: "Lane / ruler / Inspector / mini-map Timeline surface." },
   { id: "rollup.flowFocus", label: "Flow Focus", status: "partial", description: "Upstream / downstream trace view.", userFacingStatus: "Partial — manual relationship edits are still Planned." },
-  { id: "rollup.reviewWorkspace", label: "Review workspace", status: "partial", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions.", userFacingStatus: "Partial — write actions (status change / edit / promote) are Planned." },
+  { id: "rollup.reviewWorkspace", label: "Review workspace", status: "partial", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions.", userFacingStatus: "Partial — issue status and Next Action completion write; edit / promote / decision confirmation are Planned." },
   { id: "rollup.reportsMarkdown", label: "Markdown reports", status: "implemented", description: "Copy or download report as Markdown." },
   { id: "rollup.reportsPdf", label: "PDF reports", status: PLANNED, description: "Render report as PDF.", disabledReason: "PDF export is a planned milestone." },
   { id: "rollup.reportsHtml", label: "HTML reports", status: PLANNED, description: "Render report as standalone HTML.", disabledReason: "HTML export is a planned milestone." },
