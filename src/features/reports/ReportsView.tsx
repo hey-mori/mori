@@ -44,6 +44,10 @@ import type {
 } from "../../lib/storage/storageTypes";
 import { buildMoriPackageExportPlan } from "../../lib/report/moriPackageExportPlan";
 import {
+  buildSessionWrapUp,
+  type SessionWrapUpActionId,
+} from "../../lib/report/sessionWrapUp";
+import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
@@ -137,6 +141,60 @@ export function ReportsView() {
   const duration = useMemo(() => formatDuration(view.session.startedAt, view.session.endedAt), [view.session.startedAt, view.session.endedAt]);
 
   const { signals: companionSignals } = useCompanionSignals();
+  const wrapUp = useMemo(
+    () =>
+      buildSessionWrapUp({
+        sourceCount: view.sources.length,
+        eventCount: view.events.length,
+        issueCount: view.issues.length,
+        decisionCount: view.decisions.length,
+        nextActionCount: view.nextActions.length,
+        importCount: imports.length,
+        hasAnalysis,
+        analysisRunning: analysisStatus === "running",
+        canRunQuickPass,
+        acceptedMemoryCount: acceptedMemories.length,
+        auditActionCount: reviewActions.length,
+        resumePromptReady: resumePromptText.trim().length > 0,
+      }),
+    [
+      view.sources.length,
+      view.events.length,
+      view.issues.length,
+      view.decisions.length,
+      view.nextActions.length,
+      imports.length,
+      hasAnalysis,
+      analysisStatus,
+      canRunQuickPass,
+      acceptedMemories.length,
+      reviewActions.length,
+      resumePromptText,
+    ],
+  );
+
+  function handleWrapUpAction(actionId: SessionWrapUpActionId) {
+    switch (actionId) {
+      case "addEvidence":
+        setCurrentView("evidence");
+        return;
+      case "runQuickPass":
+        if (canRunQuickPass) void runQuickPass();
+        return;
+      case "reviewMemory":
+        setCurrentView("memory");
+        return;
+      case "reviewHandoff":
+        document.getElementById("reports-handoff")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        return;
+      case "waitForAnalysis":
+      default:
+        return;
+    }
+  }
 
   return (
     <div className="page reports-page">
@@ -194,27 +252,31 @@ export function ReportsView() {
             issueCount={view.issues.length}
             decisionCount={view.decisions.length}
             nextActionCount={view.nextActions.length}
+            wrapUp={wrapUp}
+            onWrapUpAction={handleWrapUpAction}
           />
 
-          <ResumePromptCard
-            prompt={resumePromptText}
-            origin={promptOrigin}
-            emptyHint={
-              imports.length === 0
-                ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가한 뒤 Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
-                : "Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
-            }
-          />
+          <div id="reports-handoff" className="reports-handoff-group">
+            <ResumePromptCard
+              prompt={resumePromptText}
+              origin={promptOrigin}
+              emptyHint={
+                imports.length === 0
+                  ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가한 뒤 Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
+                  : "Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
+              }
+            />
 
-          <WorkContinuationCards view={view} onOpenTimeline={() => setCurrentView("timeline")} />
+            <WorkContinuationCards view={view} onOpenTimeline={() => setCurrentView("timeline")} />
 
-          <MoriPackageStrip
-            view={view}
-            acceptedMemories={acceptedMemories}
-            reviewActions={reviewActions}
-            memoryStorageSource={memoryStorageSource}
-            memoryStorageFellBack={memoryStorageFellBack}
-          />
+            <MoriPackageStrip
+              view={view}
+              acceptedMemories={acceptedMemories}
+              reviewActions={reviewActions}
+              memoryStorageSource={memoryStorageSource}
+              memoryStorageFellBack={memoryStorageFellBack}
+            />
+          </div>
 
           <ReportsCapabilityStrip />
         </section>

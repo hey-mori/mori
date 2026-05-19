@@ -380,6 +380,11 @@ Shipped:
     and audit rows are not silently omitted. The export panel shows full
     vs client-safe package contents before export, including memory and
     audit counts plus any client-safe exclusions.
+8h. ✅ Reports continue-later summary — the Session Summary now includes
+    a compact wrap-up checklist for evidence, Quick Pass review, accepted
+    memory, and handoff readiness. The primary action routes to Evidence,
+    Quick Pass, Project Memory, or the Resume/.mori handoff area based on
+    the current session state, backed by a tested `sessionWrapUp` helper.
 
 ### Timeline Maturity Loop (focused sub-pass)
 

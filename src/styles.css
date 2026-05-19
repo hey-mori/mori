@@ -6396,6 +6396,130 @@ pre {
   font-weight: 700;
 }
 
+.session-wrap-up {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.session-wrap-up-main {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.session-wrap-up-main header {
+  display: grid;
+  gap: 3px;
+}
+
+.session-wrap-up-main h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.session-wrap-up-main p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.session-wrap-up-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-wrap-up-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.session-wrap-up-steps li.status-done {
+  border-color: rgba(40, 167, 69, 0.28);
+}
+
+.session-wrap-up-steps li.status-ready {
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
+.session-wrap-up-steps li.status-attention {
+  border-color: rgba(245, 158, 11, 0.34);
+}
+
+.session-wrap-up-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+
+.session-wrap-up-steps li.status-done .session-wrap-up-icon { color: var(--green); }
+.session-wrap-up-steps li.status-ready .session-wrap-up-icon { color: var(--blue); }
+.session-wrap-up-steps li.status-attention .session-wrap-up-icon { color: var(--orange); }
+
+.session-wrap-up-steps strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-wrap-up-steps small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.session-wrap-up-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reports-handoff-group {
+  display: grid;
+  gap: 14px;
+  scroll-margin-top: 16px;
+}
+
+@media (max-width: 1180px) {
+  .session-wrap-up {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .session-wrap-up-action {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  .session-wrap-up-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Resume prompt card */
 
 .resume-prompt-card {
