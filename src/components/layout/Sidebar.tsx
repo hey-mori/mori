@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/Button";
+import { MoriLogo } from "../brand/MoriLogo";
 import type { ViewKey } from "../../domain/types";
 import { moriMockSession } from "../../domain/mock-data";
 import { useMoriSessionStore } from "../../app/sessionStore";
@@ -61,9 +62,13 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
 
   return (
     <aside className="sidebar">
-      <button className="brand" onClick={() => onNavigate("timeline")} type="button">
-        <div className="brand-mark">M</div>
-        <span>mori</span>
+      <button
+        className="brand"
+        onClick={() => onNavigate("timeline")}
+        type="button"
+        aria-label="Mori — Timeline으로 이동"
+      >
+        <MoriLogo size={32} />
       </button>
       <nav className="nav">
         {navGroups.map((group, groupIndex) => (

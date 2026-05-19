@@ -44,6 +44,15 @@
   --mori-accent-soft: var(--purple-50);
   --mori-accent-strong: var(--purple-100);
 
+  /* ─── Brand ──────────────────────────────────────────────────────── */
+  /* Brand identity only — the app icon + sidebar mark. Not a status color;
+     never substitute this for accent/semantic tokens on product surfaces. */
+  --mori-brand-gradient: linear-gradient(
+    135deg,
+    var(--brand-gradient-start),
+    var(--brand-gradient-end)
+  );
+
   /* ─── Status (semantic) ──────────────────────────────────────────── */
   --mori-status-success: var(--green);
   --mori-status-success-soft: var(--green-50);

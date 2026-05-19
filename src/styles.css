@@ -76,28 +76,17 @@ button {
 .brand {
   display: flex;
   align-items: center;
-  gap: 13px;
-  margin: 0 0 34px 10px;
-  font-size: var(--mori-font-size-3xl);
-  font-weight: 800;
-  letter-spacing: 0;
+  margin: 0 0 34px 8px;
+  padding: 4px;
   border: 0;
+  border-radius: 10px;
   background: transparent;
   text-align: left;
+  cursor: pointer;
 }
 
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  color: white;
-  font-size: 16px;
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 36%),
-    linear-gradient(135deg, #3f7bff, #6d42f4 48%, #1d256d);
-  box-shadow: 0 10px 26px rgba(98, 70, 245, 0.26);
+.brand:hover .mori-logo-word {
+  color: var(--mori-accent);
 }
 
 /**
@@ -258,7 +247,7 @@ button {
   font-size: 12px;
   font-weight: 800;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1b2842, #9b6b58);
+  background: linear-gradient(135deg, #2b3346, #515c78);
 }
 
 .status-dot,
@@ -7093,7 +7082,7 @@ pre {
   font-size: 16px;
   font-weight: 800;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1b2842, #9b6b58);
+  background: linear-gradient(135deg, #2b3346, #515c78);
 }
 
 .account-name-field {
@@ -11941,7 +11930,7 @@ pre {
     justify-content: center;
     gap: 0;
   }
-  .brand span,
+  .brand .mori-logo-word,
   .nav-group-label,
   .nav-item span,
   .nav-item b,

@@ -13,6 +13,10 @@
   --purple: #6246f5;
   --purple-50: #f2efff;
   --purple-100: #e7e1ff;
+  /* Brand gradient — the only place gradient is used in the product chrome
+     (app icon + sidebar mark). Status/semantic colors stay flat. */
+  --brand-gradient-start: #7d5bff;
+  --brand-gradient-end: #b18cff;
   --blue: #2369f6;
   --blue-50: #eef5ff;
   --green: #15955a;
