@@ -129,6 +129,23 @@ export function getHubAiPlatform(integrationId: string): HubAiPlatform | null {
 }
 
 /**
+ * Where a hub card's primary action sends the user: which import surface
+ * opens, plus the platform hint for AI transcripts. Returns `null` when the
+ * integration is not importable yet (planned connectors), so callers can
+ * keep the action inert without re-deriving the rule.
+ */
+export type ImportLaunchTarget = {
+  kind: HubImportKind;
+  platform: HubAiPlatform | null;
+};
+
+export function resolveImportLaunch(integrationId: string): ImportLaunchTarget | null {
+  const kind = getHubImportKind(integrationId);
+  if (!kind) return null;
+  return { kind, platform: getHubAiPlatform(integrationId) };
+}
+
+/**
  * Single source of truth for the primary action label on a hub card. We keep
  * this here (not in the component) so tests can assert label policy without
  * rendering React.

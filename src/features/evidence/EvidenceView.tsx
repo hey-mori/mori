@@ -2,6 +2,7 @@ import { ChevronDown, Plus, RotateCcw, Settings as SettingsIcon, Shield, Sparkle
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriDrawer } from "../../components/ui/MoriDrawer";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
@@ -23,10 +24,10 @@ import type {
   QuickPassProviderKind,
 } from "../../lib/analysis";
 import {
-  getHubAiPlatform,
   getHubAvailableIntegrations,
   getHubImportKind,
   getHubPlannedIntegrations,
+  resolveImportLaunch,
   type HubImportKind,
 } from "../../lib/sources/integrationGroups";
 import { SOURCE_REGISTRY } from "../../lib/sources/sourceRegistry";
@@ -93,10 +94,9 @@ export function EvidenceView() {
   }
 
   function handleIntegrationPrimary(integrationId: string) {
-    const kind = getHubImportKind(integrationId);
-    if (!kind) return;
-    const platform = getHubAiPlatform(integrationId) ?? undefined;
-    openImport(kind, platform as AiTranscriptPlatform | undefined);
+    const target = resolveImportLaunch(integrationId);
+    if (!target) return;
+    openImport(target.kind, (target.platform ?? undefined) as AiTranscriptPlatform | undefined);
   }
 
   const importedSources = view.sources;
@@ -147,17 +147,6 @@ export function EvidenceView() {
 
       <div className="evidence-hub-layout">
         <section className="evidence-hub-main">
-          {importOpen ? (
-            <section className="evidence-section evidence-import-section">
-              <ImportPanel
-                variant="embedded"
-                initialKind={importKind}
-                initialAiPlatform={importPlatform}
-                onClose={() => setImportOpen(false)}
-              />
-            </section>
-          ) : null}
-
           <section className="evidence-section">
             <header className="evidence-section-header">
               <div>
@@ -306,6 +295,19 @@ export function EvidenceView() {
           }
         />
       </div>
+
+      <MoriDrawer
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        ariaLabel="소스 가져오기"
+      >
+        <ImportPanel
+          variant="embedded"
+          initialKind={importKind}
+          initialAiPlatform={importPlatform}
+          onClose={() => setImportOpen(false)}
+        />
+      </MoriDrawer>
     </div>
   );
 }

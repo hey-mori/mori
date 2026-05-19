@@ -5,6 +5,7 @@ import {
   getHubCardActionLabel,
   getHubImportKind,
   getHubPlannedIntegrations,
+  resolveImportLaunch,
 } from "./integrationGroups";
 import { SOURCE_REGISTRY } from "./sourceRegistry";
 
@@ -109,6 +110,34 @@ describe("integrationGroups", () => {
     it("returns null for non-AI integrations", () => {
       expect(getHubAiPlatform("manualNote")).toBeNull();
       expect(getHubAiPlatform("gitDiff")).toBeNull();
+    });
+  });
+
+  describe("resolveImportLaunch", () => {
+    it("resolves an AI transcript integration to its kind and platform", () => {
+      expect(resolveImportLaunch("claudeTranscript")).toEqual({
+        kind: "ai",
+        platform: "claude",
+      });
+      expect(resolveImportLaunch("chatgptTranscript")).toEqual({
+        kind: "ai",
+        platform: "chatgpt",
+      });
+    });
+
+    it("resolves a non-AI importable integration with a null platform", () => {
+      expect(resolveImportLaunch("manualNote")).toEqual({ kind: "note", platform: null });
+      expect(resolveImportLaunch("gitDiff")).toEqual({ kind: "git", platform: null });
+      expect(resolveImportLaunch("connectorJsonl")).toEqual({
+        kind: "connector",
+        platform: null,
+      });
+    });
+
+    it("returns null for planned or unknown integrations", () => {
+      expect(resolveImportLaunch("vscode")).toBeNull();
+      expect(resolveImportLaunch("slack")).toBeNull();
+      expect(resolveImportLaunch("nonexistent")).toBeNull();
     });
   });
 

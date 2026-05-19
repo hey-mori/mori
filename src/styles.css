@@ -4310,11 +4310,69 @@ pre {
 
 /* Import section inset card inside Evidence Hub */
 
-.evidence-import-section {
-  padding: 0;
+/* ============================
+ * MoriDrawer — right-side focused-task overlay
+ * ============================ */
+
+.mori-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mori-drawer-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 25, 36, 0.34);
+  animation: mori-drawer-fade 140ms ease;
+}
+
+.mori-drawer-panel {
+  position: relative;
+  width: min(560px, 100vw);
+  max-height: 100vh;
+  overflow-y: auto;
+  background: var(--mori-surface, #ffffff);
+  border-left: 1px solid var(--mori-border, var(--line));
+  box-shadow: -18px 0 48px rgba(20, 25, 36, 0.18);
+  animation: mori-drawer-slide 180ms ease;
+  outline: none;
+}
+
+@keyframes mori-drawer-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mori-drawer-slide {
+  from { transform: translateX(28px); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (max-width: 600px) {
+  .mori-drawer-panel {
+    width: 100vw;
+    border-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mori-drawer-scrim,
+  .mori-drawer-panel {
+    animation: none;
+  }
+}
+
+/* ImportPanel sits flush inside the drawer — drop the standalone card chrome. */
+.mori-drawer .import-panel.is-embedded {
+  margin: 0;
   border: 0;
-  background: transparent;
+  border-radius: 0;
   box-shadow: none;
+  background: var(--mori-surface, #ffffff);
+  min-height: 100%;
 }
 
 /* Source-level connector import summary block (preview card + Evidence detail). */

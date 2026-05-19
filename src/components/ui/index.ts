@@ -14,6 +14,7 @@ export { Panel } from "./Panel";
 export { SectionHeader } from "./SectionHeader";
 export { Toggle } from "./Toggle";
 export { MoriCard, type MoriCardProps, type MoriCardVariant } from "./MoriCard";
+export { MoriDrawer, type MoriDrawerProps } from "./MoriDrawer";
 export {
   MoriStatusBadge,
   type MoriStatusBadgeProps,
