@@ -100,6 +100,41 @@ button {
   box-shadow: 0 10px 26px rgba(98, 70, 245, 0.26);
 }
 
+/**
+ * Mori brand logo — mark tile + lowercase `mori` wordmark.
+ *
+ * The mark is the only place in the product chrome that carries the brand
+ * gradient. Everything else uses flat tokens (see brand identity reference).
+ */
+.mori-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mori-logo-mark {
+  display: block;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 8px 20px rgba(125, 91, 255, 0.24);
+}
+
+.mori-logo[data-tone="mono"] .mori-logo-mark {
+  box-shadow: none;
+}
+
+.mori-logo-word {
+  font-size: var(--mori-font-size-3xl);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--mori-text);
+  line-height: 1;
+}
+
+.mori-logo[data-tone="mono"] .mori-logo-word {
+  color: currentColor;
+}
+
 .nav {
   display: grid;
   gap: 14px;

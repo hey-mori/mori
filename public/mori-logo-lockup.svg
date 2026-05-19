@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 196 64" role="img" aria-label="Mori">
+  <defs>
+    <linearGradient id="mori-lockup-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7D5BFF" />
+      <stop offset="1" stop-color="#B18CFF" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#mori-lockup-tile)" />
+  <g fill="none" stroke="#FFFFFF" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 32 L32 19 L45 32" />
+    <path d="M19 47 L32 35 L45 47" opacity="0.55" />
+  </g>
+  <text x="80" y="42" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif"
+        font-size="34" font-weight="800" letter-spacing="-0.5" fill="#1F2430">mori</text>
+</svg>
