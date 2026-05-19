@@ -44,6 +44,10 @@ import type {
 } from "../../lib/storage/storageTypes";
 import { buildMoriPackageExportPlan } from "../../lib/report/moriPackageExportPlan";
 import {
+  buildHandoffReadiness,
+  type HandoffReadinessActionId,
+} from "../../lib/report/handoffReadiness";
+import {
   buildSessionWrapUp,
   type SessionWrapUpActionId,
 } from "../../lib/report/sessionWrapUp";
@@ -61,6 +65,7 @@ import { ResumePromptCard, type ResumePromptOrigin } from "./ResumePromptCard";
 import { SessionSummaryStrip } from "./SessionSummaryStrip";
 import { WorkContinuationCards } from "./WorkContinuationCards";
 import { ReportBuilderPanel } from "./ReportBuilderPanel";
+import { HandoffReadinessPanel } from "./HandoffReadinessPanel";
 
 export function ReportsView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
@@ -172,6 +177,44 @@ export function ReportsView() {
       resumePromptText,
     ],
   );
+  const exportPlan = useMemo(
+    () =>
+      buildMoriPackageExportPlan({
+        view,
+        consolidatedMemories: acceptedMemories,
+        auditTrail: reviewActions,
+      }),
+    [view, acceptedMemories, reviewActions],
+  );
+  const handoffReadiness = useMemo(
+    () =>
+      buildHandoffReadiness({
+        sourceCount: view.sources.length,
+        eventCount: view.events.length,
+        issueCount: view.issues.length,
+        decisionCount: view.decisions.length,
+        nextActionCount: view.nextActions.length,
+        hasAnalysis,
+        analysisRunning: analysisStatus === "running",
+        canRunQuickPass,
+        acceptedMemoryCount: acceptedMemories.length,
+        resumePromptReady: resumePromptText.trim().length > 0,
+        exportPlan,
+      }),
+    [
+      view.sources.length,
+      view.events.length,
+      view.issues.length,
+      view.decisions.length,
+      view.nextActions.length,
+      hasAnalysis,
+      analysisStatus,
+      canRunQuickPass,
+      acceptedMemories.length,
+      resumePromptText,
+      exportPlan,
+    ],
+  );
 
   function handleWrapUpAction(actionId: SessionWrapUpActionId) {
     switch (actionId) {
@@ -191,6 +234,35 @@ export function ReportsView() {
         });
         return;
       case "waitForAnalysis":
+      default:
+        return;
+    }
+  }
+
+  function handleHandoffAction(actionId: HandoffReadinessActionId) {
+    switch (actionId) {
+      case "addEvidence":
+        setCurrentView("evidence");
+        return;
+      case "runQuickPass":
+        if (canRunQuickPass) void runQuickPass();
+        return;
+      case "reviewMemory":
+        setCurrentView("memory");
+        return;
+      case "openReportBuilder":
+        document.getElementById("reports-builder")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        return;
+      case "openPackageExport":
+        document.getElementById("reports-package-export")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        return;
+      case "copyResume":
       default:
         return;
     }
@@ -256,6 +328,12 @@ export function ReportsView() {
             onWrapUpAction={handleWrapUpAction}
           />
 
+          <HandoffReadinessPanel
+            model={handoffReadiness}
+            resumePrompt={resumePromptText}
+            onAction={handleHandoffAction}
+          />
+
           <div id="reports-handoff" className="reports-handoff-group">
             <ResumePromptCard
               prompt={resumePromptText}
@@ -275,6 +353,7 @@ export function ReportsView() {
               reviewActions={reviewActions}
               memoryStorageSource={memoryStorageSource}
               memoryStorageFellBack={memoryStorageFellBack}
+              exportPlan={exportPlan}
             />
           </div>
 
@@ -282,6 +361,7 @@ export function ReportsView() {
         </section>
 
         <ReportBuilderPanel
+          id="reports-builder"
           view={view}
           resumePromptOverride={resumePromptText}
           acceptedMemories={acceptedMemories}
@@ -424,12 +504,14 @@ function MoriPackageStrip({
   reviewActions,
   memoryStorageSource,
   memoryStorageFellBack,
+  exportPlan,
 }: {
   view: ReturnType<typeof selectSessionView>;
   acceptedMemories: StoredAcceptedProjectMemory[];
   reviewActions: StoredMemoryReviewAction[];
   memoryStorageSource: AcceptedMemoryStorageSource;
   memoryStorageFellBack: boolean;
+  exportPlan: ReturnType<typeof buildMoriPackageExportPlan>;
 }) {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [phase, setPhase] = useState<MoriExportPhase>("idle");
@@ -438,16 +520,6 @@ function MoriPackageStrip({
     ".mori v0 패키지를 내보낼 준비가 되었습니다.",
   );
   const busy = phase === "running";
-  const exportPlan = useMemo(
-    () =>
-      buildMoriPackageExportPlan({
-        view,
-        consolidatedMemories: acceptedMemories,
-        auditTrail: reviewActions,
-      }),
-    [view, acceptedMemories, reviewActions],
-  );
-
   async function runExport(clientSafe: boolean) {
     const kind: MoriExportKind = clientSafe ? "clientSafe" : "full";
     setPhase("running");
@@ -492,7 +564,7 @@ function MoriPackageStrip({
   const tone = exportPhaseTone(phase);
   const storageLabel = describeAcceptedMemoryStorageSource(memoryStorageSource);
   return (
-    <section className="mori-package-strip" aria-label=".mori package export">
+    <section id="reports-package-export" className="mori-package-strip" aria-label=".mori package export">
       <div className="mori-package-strip-intro">
         <h3>
           <Archive size={14} aria-hidden="true" /> .mori v0 패키지

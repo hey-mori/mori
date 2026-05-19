@@ -6553,6 +6553,131 @@ pre {
   }
 }
 
+/* Handoff readiness */
+
+.handoff-readiness {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  box-shadow: var(--shadow-soft);
+}
+
+.handoff-readiness-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.handoff-readiness-kicker {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.handoff-readiness-head h2 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+}
+
+.handoff-readiness-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.handoff-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.handoff-readiness-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 9px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+}
+
+.handoff-readiness-card.status-ready {
+  border-color: rgba(40, 167, 69, 0.26);
+  background: #f8fcf9;
+}
+
+.handoff-readiness-card.status-attention {
+  border-color: rgba(245, 158, 11, 0.32);
+  background: #fffaf1;
+}
+
+.handoff-readiness-card header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.handoff-readiness-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--purple);
+}
+
+.handoff-readiness-card h3 {
+  margin: 0 0 5px 0;
+  font-size: 13px;
+}
+
+.handoff-readiness-card p {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.handoff-readiness-card ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.handoff-readiness-card footer {
+  display: flex;
+  justify-content: flex-start;
+}
+
+@media (max-width: 980px) {
+  .handoff-readiness-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .handoff-readiness-head {
+    display: grid;
+  }
+}
+
 /* Resume prompt card */
 
 .resume-prompt-card {
