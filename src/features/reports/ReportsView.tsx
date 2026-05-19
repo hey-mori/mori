@@ -15,7 +15,6 @@ import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import {
   buildClientSafeMoriPackage,
   createMoriPackageFromSession,
-  getPackageConsolidatedMemories,
   MORI_PACKAGE_ZIP_MIME,
   serializeMoriPackage,
   zipMoriPackage,
@@ -34,8 +33,16 @@ import {
   type MoriExportWriteResult,
 } from "../../lib/report/exportStatus";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
-import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
+import {
+  describeAcceptedMemoryStorageSource,
+  getAcceptedMemoryRepository,
+  type AcceptedMemoryStorageSource,
+} from "../../lib/project-memory/acceptedMemoryRepository";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../../lib/storage/storageTypes";
+import { buildMoriPackageExportPlan } from "../../lib/report/moriPackageExportPlan";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -77,12 +84,24 @@ export function ReportsView() {
   // runtime-aware repository so desktop mode reads from SQLite.
   const reportProjectId = view.project.id || "default";
   const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
+  const [reviewActions, setReviewActions] = useState<StoredMemoryReviewAction[]>([]);
+  const [memoryStorageSource, setMemoryStorageSource] =
+    useState<AcceptedMemoryStorageSource>("browser-local-storage");
+  const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    void getAcceptedMemoryRepository()
-      .listAcceptedProjectMemories(reportProjectId)
-      .then((result) => {
-        if (!cancelled) setAcceptedMemories(result.data);
+    const memoryRepository = getAcceptedMemoryRepository();
+    void Promise.all([
+      memoryRepository.listAcceptedProjectMemories(reportProjectId),
+      memoryRepository.listMemoryReviewActions(reportProjectId),
+    ])
+      .then(([memoriesResult, actionsResult]) => {
+        if (cancelled) return;
+        setAcceptedMemories(memoriesResult.data);
+        setReviewActions(actionsResult.data);
+        const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
+        setMemoryStorageFellBack(fellBack);
+        setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
       });
     return () => {
       cancelled = true;
@@ -189,7 +208,13 @@ export function ReportsView() {
 
           <WorkContinuationCards view={view} onOpenTimeline={() => setCurrentView("timeline")} />
 
-          <MoriPackageStrip view={view} />
+          <MoriPackageStrip
+            view={view}
+            acceptedMemories={acceptedMemories}
+            reviewActions={reviewActions}
+            memoryStorageSource={memoryStorageSource}
+            memoryStorageFellBack={memoryStorageFellBack}
+          />
 
           <ReportsCapabilityStrip />
         </section>
@@ -331,7 +356,19 @@ async function writeMoriZipPackage(
   return { status: "error", message: "이 환경에서는 내보내기를 사용할 수 없습니다." };
 }
 
-function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView> }) {
+function MoriPackageStrip({
+  view,
+  acceptedMemories,
+  reviewActions,
+  memoryStorageSource,
+  memoryStorageFellBack,
+}: {
+  view: ReturnType<typeof selectSessionView>;
+  acceptedMemories: StoredAcceptedProjectMemory[];
+  reviewActions: StoredMemoryReviewAction[];
+  memoryStorageSource: AcceptedMemoryStorageSource;
+  memoryStorageFellBack: boolean;
+}) {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [phase, setPhase] = useState<MoriExportPhase>("idle");
   const [activeKind, setActiveKind] = useState<MoriExportKind | null>(null);
@@ -339,6 +376,15 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
     ".mori v0 패키지를 내보낼 준비가 되었습니다.",
   );
   const busy = phase === "running";
+  const exportPlan = useMemo(
+    () =>
+      buildMoriPackageExportPlan({
+        view,
+        consolidatedMemories: acceptedMemories,
+        auditTrail: reviewActions,
+      }),
+    [view, acceptedMemories, reviewActions],
+  );
 
   async function runExport(clientSafe: boolean) {
     const kind: MoriExportKind = clientSafe ? "clientSafe" : "full";
@@ -346,12 +392,9 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
     setActiveKind(kind);
     setMessage(exportRunningLabel(kind));
     try {
-      const projectId = view.project.id || "default";
-      const consolidatedMemories = repository.listAcceptedProjectMemories(projectId);
-      const auditTrail = repository.listMemoryReviewActions(projectId);
       const fullPkg = createMoriPackageFromSession(view, {
-        consolidatedMemories,
-        auditTrail,
+        consolidatedMemories: acceptedMemories,
+        auditTrail: reviewActions,
       });
       // The full package is the canonical draft; a client-safe export
       // is a filtered, derived artifact.
@@ -369,10 +412,8 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
       const written = await writeMoriZipPackage(zipBytes, filename);
       const settled = phaseForWriteResult(written);
       if (settled === "success" && clientSafe) {
-        const total = getPackageConsolidatedMemories(fullPkg).length;
-        const kept = getPackageConsolidatedMemories(pkg).length;
         setMessage(
-          `${written.message} · 클라이언트 공유용: memory ${kept}건 포함 / ${total - kept}건 제외.`,
+          `${written.message} · 클라이언트 공유용: memory ${exportPlan.clientSafe.memories}건 포함 / ${exportPlan.clientSafe.droppedMemories}건 제외.`,
         );
       } else {
         setMessage(written.message);
@@ -387,6 +428,7 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
   }
 
   const tone = exportPhaseTone(phase);
+  const storageLabel = describeAcceptedMemoryStorageSource(memoryStorageSource);
   return (
     <section className="mori-package-strip" aria-label=".mori package export">
       <div className="mori-package-strip-intro">
@@ -394,8 +436,28 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
           <Archive size={14} aria-hidden="true" /> .mori v0 패키지
         </h3>
         <p>
-          리포트 외에도 세션 전체를 직렬화한 .mori 파일을 내보낼 수 있습니다. 클라이언트
-          공유용은 client-safe memory만 포함합니다.
+          세션, 근거, 리뷰 결과, 승인된 메모리, 감사 이력을 하나의 로컬 .mori 파일로
+          묶습니다. 가져오기는 자동 병합이 아니라 Consolidation Review로 다시 들어갑니다.
+        </p>
+        <div className="mori-package-export-options" aria-label=".mori export contents">
+          <PackageOptionSummary
+            title="Full package"
+            counts={exportPlan.full}
+            detail={
+              exportPlan.full.sensitiveMemories > 0
+                ? `민감 메모리 ${exportPlan.full.sensitiveMemories}건 포함`
+                : "승인된 메모리와 감사 이력 전체 포함"
+            }
+          />
+          <PackageOptionSummary
+            title="Client-safe"
+            counts={exportPlan.clientSafe}
+            detail={`메모리 ${exportPlan.clientSafe.droppedMemories}건 · 감사 ${exportPlan.clientSafe.droppedAuditRows}건 제외`}
+          />
+        </div>
+        <p className="mori-package-storage-note">
+          Accepted Memory source: {storageLabel}
+          {memoryStorageFellBack ? " · SQLite 읽기 실패로 browser fallback 사용" : ""}
         </p>
       </div>
       <div className="mori-package-strip-actions">
@@ -419,6 +481,48 @@ function MoriPackageStrip({ view }: { view: ReturnType<typeof selectSessionView>
         </p>
       </div>
     </section>
+  );
+}
+
+function PackageOptionSummary({
+  title,
+  counts,
+  detail,
+}: {
+  title: string;
+  counts: {
+    sources: number;
+    events: number;
+    memories: number;
+    auditRows: number;
+  };
+  detail: string;
+}) {
+  return (
+    <article className="mori-package-option">
+      <header>
+        <strong>{title}</strong>
+        <span>{detail}</span>
+      </header>
+      <dl>
+        <div>
+          <dt>sources</dt>
+          <dd>{counts.sources}</dd>
+        </div>
+        <div>
+          <dt>events</dt>
+          <dd>{counts.events}</dd>
+        </div>
+        <div>
+          <dt>memory</dt>
+          <dd>{counts.memories}</dd>
+        </div>
+        <div>
+          <dt>audit</dt>
+          <dd>{counts.auditRows}</dd>
+        </div>
+      </dl>
+    </article>
   );
 }
 

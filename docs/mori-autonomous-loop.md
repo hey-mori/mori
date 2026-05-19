@@ -375,6 +375,11 @@ Shipped:
     next action, backed by the same signal-routing helper used by inline
     Companion cards. Review-linked signals deep-link to the exact item;
     other signals navigate to their responsible surface.
+8g. ✅ Reports `.mori` handoff maturity — package export now uses the
+    runtime-aware accepted-memory repository, so desktop SQLite memories
+    and audit rows are not silently omitted. The export panel shows full
+    vs client-safe package contents before export, including memory and
+    audit counts plus any client-safe exclusions.
 
 ### Timeline Maturity Loop (focused sub-pass)
 
