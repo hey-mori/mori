@@ -376,3 +376,34 @@ export function findEvents(events: TimelineEvent[], ids: string[]): TimelineEven
   const set = new Set(ids);
   return events.filter((event) => set.has(event.id));
 }
+
+/**
+ * A Quick Pass issue suggestion paired with its promotion state. The
+ * Suggestions tab uses this to render a real "promote to next action"
+ * action and to reflect issues that have already been promoted.
+ */
+export type IssueSuggestion = {
+  issue: Issue;
+  /** The id of the next action promoted from this issue, if any. */
+  promotedNextActionId: string | null;
+};
+
+/**
+ * Build the Suggestions tab view model: every issue that carries a
+ * `suggestedNextAction`, annotated with whether a next action has already
+ * been promoted from it. Promotion state is derived from `relatedIssueIds`
+ * so it stays in sync with `promoteIssueToNextAction`.
+ */
+export function buildIssueSuggestions(
+  issues: readonly Issue[],
+  nextActions: readonly NextAction[],
+): IssueSuggestion[] {
+  return issues
+    .filter((issue) => Boolean(issue.suggestedNextAction?.trim().length))
+    .map((issue) => {
+      const promoted = nextActions.find((action) =>
+        action.relatedIssueIds.includes(issue.id),
+      );
+      return { issue, promotedNextActionId: promoted ? promoted.id : null };
+    });
+}

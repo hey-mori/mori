@@ -8,6 +8,7 @@ import type {
   TrustLevel,
 } from "../../domain/types";
 import {
+  buildIssueSuggestions,
   countIssuePriorities,
   countIssueStatuses,
   findEvents,
@@ -349,5 +350,38 @@ describe("getTimelineInspectorReviewLinks", () => {
     const artifactGroup = links.find((group) => group.kind === "artifact")!;
     expect(artifactGroup.items[0].selection).toBeNull();
     expect(artifactGroup.items[0].title).toBe("파일 하나");
+  });
+});
+
+describe("buildIssueSuggestions", () => {
+  it("keeps only issues that carry a suggested next action", () => {
+    const suggestions = buildIssueSuggestions(
+      [
+        makeIssue({ id: "with", suggestedNextAction: "Ship the fix." }),
+        makeIssue({ id: "empty", suggestedNextAction: "" }),
+        makeIssue({ id: "blank", suggestedNextAction: "   " }),
+      ],
+      [],
+    );
+    expect(suggestions.map((item) => item.issue.id)).toEqual(["with"]);
+  });
+
+  it("marks the promoted next action id when one relates to the issue", () => {
+    const suggestions = buildIssueSuggestions(
+      [
+        makeIssue({ id: "promoted", suggestedNextAction: "Done already." }),
+        makeIssue({ id: "pending", suggestedNextAction: "Still open." }),
+      ],
+      [makeNextAction({ id: "na-9", relatedIssueIds: ["promoted"] })],
+    );
+    const byId = new Map(suggestions.map((item) => [item.issue.id, item]));
+    expect(byId.get("promoted")?.promotedNextActionId).toBe("na-9");
+    expect(byId.get("pending")?.promotedNextActionId).toBeNull();
+  });
+
+  it("returns an empty list when no issue has a suggestion", () => {
+    expect(
+      buildIssueSuggestions([makeIssue({ suggestedNextAction: "" })], []),
+    ).toEqual([]);
   });
 });

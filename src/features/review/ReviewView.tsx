@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertTriangle,
+  Check,
   CheckCircle2,
   KanbanSquare,
   ListChecks,
@@ -12,6 +13,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { moriConceptIcon } from "../../components/brand/moriIcons";
 import { issueStatusLabels, priorityLabels } from "../../domain/constants";
 import {
   selectHasRealAnalysis,
@@ -26,6 +28,7 @@ import {
   splitNextActionsByCompletion,
 } from "../../lib/session/nextActionCompletion";
 import {
+  buildIssueSuggestions,
   getReviewSummary,
   getUnresolvedItems,
   groupIssuesByStatus,
@@ -200,7 +203,7 @@ export function ReviewView() {
       <nav className="review-tabs" role="tablist" aria-label="Review tabs">
         {TAB_DEFS.map((tab) => {
           const Icon = tab.icon;
-          const count = countForTab(tab.id, view, summary, unresolved);
+          const count = countForTab(tab.id, view, unresolved);
           return (
             <button
               key={tab.id}
@@ -269,9 +272,22 @@ export function ReviewView() {
           {activeTab === "suggestions" ? (
             <SuggestionsTab
               issues={view.issues}
+              nextActions={view.nextActions}
               hasAnalysis={hasAnalysis}
               providerLabel={analysisProviderLabel}
               mode={mode}
+              onPromote={(issueId) => {
+                const nextAction = promoteIssueToNextAction(issueId);
+                if (nextAction) {
+                  selectAndOpen(
+                    { kind: "nextAction", nextActionId: nextAction.id },
+                    "nextActions",
+                  );
+                }
+              }}
+              onViewNextAction={(nextActionId) =>
+                selectAndOpen({ kind: "nextAction", nextActionId }, "nextActions")
+              }
             />
           ) : null}
         </section>
@@ -320,7 +336,6 @@ export function ReviewView() {
 function countForTab(
   tab: ReviewTab,
   view: ReturnType<typeof selectSessionView>,
-  summary: ReturnType<typeof getReviewSummary>,
   unresolved: UnresolvedItem[],
 ): number {
   switch (tab) {
@@ -333,7 +348,8 @@ function countForTab(
     case "unresolved":
       return unresolved.length;
     case "suggestions":
-      return summary.issueCount; // suggestions derive from issue.suggestedNextAction
+      // Only issues that actually carry a suggested next action.
+      return buildIssueSuggestions(view.issues, view.nextActions).length;
   }
 }
 
@@ -390,9 +406,9 @@ function AnalysisStrip({
           </span>
         </div>
         <div className="review-analysis-counts">
-          <Badge tone="purple">이슈 {summary.issueCount}</Badge>
-          <Badge tone="green">결정 {summary.decisionCount}</Badge>
-          <Badge tone="blue">다음 액션 {summary.nextActionCount}</Badge>
+          <Badge tone="red">이슈 {summary.issueCount}</Badge>
+          <Badge tone="blue">결정 {summary.decisionCount}</Badge>
+          <Badge tone="green">다음 액션 {summary.nextActionCount}</Badge>
           <Badge tone="gray">{dataBasis}</Badge>
           {analysisGeneratedAt ? (
             <span className="review-analysis-time">
@@ -601,7 +617,7 @@ function NextActionsTab({
         <h3>다음 액션이 없습니다</h3>
         <p>
           {hasAnalysis
-            ? "Quick Pass는 다음 액션 후보를 만들지 않았습니다. 이슈를 검토해 직접 다음 액션을 등록하는 기능은 다음 마일스톤입니다."
+            ? "Quick Pass는 다음 액션 후보를 만들지 않았습니다. Suggestions 탭에서 이슈의 추천 작업을 다음 액션으로 승격할 수 있습니다."
             : "Quick Pass를 실행하면 추천 다음 액션 후보가 표시됩니다."}
         </p>
       </div>
@@ -705,7 +721,7 @@ function UnresolvedTab({
           return (
             <li key={`na-${action.id}`} className={selected ? "is-selected" : ""}>
               <button type="button" onClick={() => onSelectNextAction(action.id)}>
-                <Badge tone="purple">{reasonLabel}</Badge>
+                <Badge tone="gray">{reasonLabel}</Badge>
                 <strong>{action.title}</strong>
                 <span>다음 액션 후보</span>
                 <Badge tone={priorityTone(action.priority)}>{priorityLabels[action.priority]}</Badge>
@@ -720,16 +736,23 @@ function UnresolvedTab({
 
 function SuggestionsTab({
   issues,
+  nextActions,
   hasAnalysis,
   providerLabel,
   mode,
+  onPromote,
+  onViewNextAction,
 }: {
   issues: ReturnType<typeof selectSessionView>["issues"];
+  nextActions: ReturnType<typeof selectSessionView>["nextActions"];
   hasAnalysis: boolean;
   providerLabel: string | null;
   mode: "demo" | "draft";
+  onPromote: (issueId: string) => void;
+  onViewNextAction: (nextActionId: string) => void;
 }) {
-  const suggestions = issues.filter((issue) => issue.suggestedNextAction?.trim().length);
+  const suggestions = buildIssueSuggestions(issues, nextActions);
+  const isDemo = mode === "demo";
   // Demo session ships pre-baked suggestions inside mock issues, so we render
   // them straight through. In a real session we only render after the user
   // explicitly runs Quick Pass; we never invent suggestions on our own.
@@ -751,16 +774,20 @@ function SuggestionsTab({
       </div>
     );
   }
+  const pendingCount = suggestions.filter((item) => !item.promotedNextActionId).length;
   return (
     <section className="review-suggestions">
       <header className="review-section-head">
         <div>
           <h2>Suggestions</h2>
-          <p>각 이슈에서 Quick Pass가 제안한 다음 액션입니다. 직접 승격하는 기능은 다음 마일스톤입니다.</p>
+          <p>
+            각 이슈에서 Quick Pass가 제안한 다음 액션입니다. 승격하면 Next Actions 탭에
+            추가됩니다 — 승격 대기 {pendingCount}개.
+          </p>
         </div>
       </header>
       <ul className="review-suggestions-list">
-        {suggestions.map((issue) => (
+        {suggestions.map(({ issue, promotedNextActionId }) => (
           <li key={issue.id}>
             <header>
               <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
@@ -770,6 +797,32 @@ function SuggestionsTab({
               <Sparkles size={11} aria-hidden="true" />
               <span>{issue.suggestedNextAction}</span>
             </p>
+            <div className="review-suggestion-action">
+              {promotedNextActionId ? (
+                <>
+                  <span className="review-suggestion-done">
+                    <Check size={13} aria-hidden="true" /> 다음 액션에 추가됨
+                  </span>
+                  <Button onClick={() => onViewNextAction(promotedNextActionId)}>
+                    다음 액션 보기
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="primary"
+                  icon={moriConceptIcon.nextAction}
+                  onClick={() => onPromote(issue.id)}
+                  disabled={isDemo}
+                  title={
+                    isDemo
+                      ? "데모 세션에서는 승격할 수 없습니다. 실제 세션에서 사용하세요."
+                      : "이 제안을 다음 액션으로 추가합니다."
+                  }
+                >
+                  다음 액션으로 승격
+                </Button>
+              )}
+            </div>
           </li>
         ))}
       </ul>

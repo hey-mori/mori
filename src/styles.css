@@ -5709,6 +5709,24 @@ pre {
   margin-top: 2px;
 }
 
+/* Suggestion → next action promotion row. */
+.review-suggestion-action {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.review-suggestion-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green);
+}
+
 /* Detail panel */
 
 .review-detail {
