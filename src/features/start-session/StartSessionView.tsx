@@ -160,11 +160,17 @@ export function StartSessionView() {
                 </div>
               </div>
             ) : null}
-            <div className="privacy-note">
-              <ShieldCheck size={16} />
-              Summary Mode에서는 원본을 오래 보관하지 않고 요약/이슈/결정/타임라인 중심으로 저장합니다.
-              <b>자세히 보기</b>
-            </div>
+            <details className="privacy-note">
+              <summary>
+                <ShieldCheck size={16} aria-hidden="true" />
+                <span>Summary Mode는 원본을 오래 보관하지 않고 요약·이슈·결정·타임라인 중심으로 저장합니다.</span>
+              </summary>
+              <ul className="privacy-note-detail">
+                <li>저장하는 항목 — AI 대화 요약, 결정 · 이슈 · 산출물, 타임라인 이벤트</li>
+                <li>보관하지 않는 항목 — 전체 원본 대화, 첨부 원본 파일</li>
+                <li>전체 원본이 필요하면 3단계에서 Full Mode를 선택하세요.</li>
+              </ul>
+            </details>
           </SetupBlock>
           <SetupBlock number="3" title="기록 모드 선택">
             <div className="mode-grid">
@@ -342,8 +348,8 @@ function EngineCard({
           <small className="engine-card-reason">{engine.disabledReason}</small>
         ) : null}
       </div>
-      <Badge tone={muted ? "orange" : selected ? "purple" : "green"} title={engine.disabledReason}>
-        {muted ? engine.statusLabel : selected ? "선택됨" : "사용 가능"}
+      <Badge tone={muted ? "orange" : "green"} title={engine.disabledReason}>
+        {muted ? engine.statusLabel : "사용 가능"}
       </Badge>
     </button>
   );
