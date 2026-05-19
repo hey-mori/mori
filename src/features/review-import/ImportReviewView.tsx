@@ -10,9 +10,12 @@ import {
   getConnectorSourceImportBadgeTone,
 } from "../../lib/connectors";
 import {
+  buildImportReviewSummary,
   getReviewCounts,
   isReviewApplyable,
   type ImportReviewDraft,
+  type ImportReviewSummaryItem,
+  type ImportReviewSummaryStatus,
   type ReviewOrigin,
 } from "../../lib/review";
 import { SourceSummaryCard } from "./SourceSummaryCard";
@@ -50,6 +53,13 @@ export function ImportReviewView() {
 
   const counts = getReviewCounts(draft);
   const applyable = isReviewApplyable(draft);
+  const reviewSummary = buildImportReviewSummary({
+    eventCount: draft.events.length,
+    acceptedCount: counts.accepted,
+    discardedCount: counts.discarded,
+    pendingCount: counts.pending,
+    meta: draftMeta,
+  });
 
   function handleApply() {
     if (!draft) return;
@@ -94,6 +104,8 @@ export function ImportReviewView() {
       {statusBanner ? (
         <div className={`review-status tone-${statusBanner.tone}`}>{statusBanner.message}</div>
       ) : null}
+
+      <ImportReviewSummaryPanel summary={reviewSummary} />
 
       <div className="review-layout">
         <SourceSummaryCard source={draft.source} />
@@ -152,6 +164,55 @@ export function ImportReviewView() {
       />
     </div>
   );
+}
+
+function ImportReviewSummaryPanel({
+  summary,
+}: {
+  summary: ReturnType<typeof buildImportReviewSummary>;
+}) {
+  return (
+    <section className="import-review-summary" aria-label="Import review summary">
+      <header>
+        <div>
+          <span className="import-review-summary-kicker">Review before apply</span>
+          <h2>{summary.headline}</h2>
+          <p>{summary.detail}</p>
+        </div>
+      </header>
+      <div className="import-review-summary-grid">
+        {summary.items.map((item) => (
+          <ImportReviewSummaryTile key={item.id} item={item} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ImportReviewSummaryTile({ item }: { item: ImportReviewSummaryItem }) {
+  return (
+    <article className={`import-review-summary-tile status-${item.status}`}>
+      <header>
+        <strong>{item.title}</strong>
+        <Badge tone={reviewSummaryTone(item.status)}>{item.statusLabel}</Badge>
+      </header>
+      <p>{item.detail}</p>
+    </article>
+  );
+}
+
+function reviewSummaryTone(status: ImportReviewSummaryStatus): "green" | "orange" | "gray" | "red" {
+  switch (status) {
+    case "ready":
+      return "green";
+    case "attention":
+      return "orange";
+    case "blocked":
+      return "red";
+    case "waiting":
+    default:
+      return "gray";
+  }
 }
 
 function ReviewFooter({
