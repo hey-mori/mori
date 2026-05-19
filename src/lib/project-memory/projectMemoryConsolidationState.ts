@@ -15,11 +15,10 @@
  *   - What warnings should be surfaced alongside the consolidation
  *     affordance?
  *
- * The Consolidation Review Surface will consume the same shape — the
- * goal here is to land the *contract* now so the UI layer does not
- * have to reverse-engineer it. Accepted Memory Persistence,
- * accept/edit/discard handlers, and Review navigation are all
- * separate capabilities that land later.
+ * The Consolidation Review Surface consumes the same shape so the UI
+ * layer does not have to reverse-engineer proposal availability. Review
+ * navigation and accepted-memory persistence live at the screen/apply
+ * boundary; this module remains pure derivation.
  *
  * Boundaries:
  *   - Pure derivation. No IO, no LLM, no clock side-effects.

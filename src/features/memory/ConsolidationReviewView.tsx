@@ -700,7 +700,7 @@ function InlineEditor({
           >
             저장 (드래프트)
           </Button>
-          <small>편집은 이 검토 세션 내에서만 유지됩니다.</small>
+          <small>편집은 메모리 적용을 누르기 전까지 이 검토 세션에만 유지됩니다.</small>
         </footer>
       </div>
     </div>

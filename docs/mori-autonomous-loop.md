@@ -385,6 +385,11 @@ Shipped:
     memory, and handoff readiness. The primary action routes to Evidence,
     Quick Pass, Project Memory, or the Resume/.mori handoff area based on
     the current session state, backed by a tested `sessionWrapUp` helper.
+8i. ✅ Project Memory persistence honesty — Consolidation preview,
+    proposal statuses, and the evidence inspector now describe the shipped
+    apply boundary accurately: review decisions stay draft until the user
+    clicks "memory apply", then accepted memories and audit rows are saved
+    locally.
 
 ### Timeline Maturity Loop (focused sub-pass)
 

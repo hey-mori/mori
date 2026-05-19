@@ -3,10 +3,9 @@
  *
  * The Consolidation Review Surface needs a place to keep per-
  * proposal user actions (accept / discard / keep watching / defer /
- * inline edit) while the user works through a review. Durable
- * Accepted Memory Persistence is not implemented yet, so this state
- * lives in component memory only — it never writes to localStorage,
- * SQLite, or `.mori v0` packages.
+ * inline edit) while the user works through a review. This state is
+ * intentionally draft-only; the separate apply boundary converts the
+ * reviewed draft into accepted memories and audit rows in local storage.
  *
  * The state is pure and immutable:
  *   - `initializeConsolidationReviewState(proposals)` returns a fresh

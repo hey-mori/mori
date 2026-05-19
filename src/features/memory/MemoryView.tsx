@@ -226,12 +226,10 @@ export function MemoryView() {
   );
 
   // Derive the Project Memory Consolidation State alongside the
-  // view-model. Pure derivation; nothing is persisted. The
-  // ConsolidationPreviewCard surfaces a compact summary; when the
-  // user clicks "Review proposals" the app routes to the
-  // Consolidation Review Surface where review actions stay in a
-  // local draft (Accepted Memory Persistence is a separate
-  // capability that lands later).
+  // view-model. Pure derivation; nothing is persisted here. The
+  // ConsolidationPreviewCard routes to the Consolidation Review Surface,
+  // where decisions stay draft-only until the user applies them as
+  // accepted memories and audit rows.
   const consolidationState = useMemo(
     () => buildProjectMemoryConsolidationState(viewModel, { acceptedMemories }),
     [viewModel, acceptedMemories],

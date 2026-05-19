@@ -18,7 +18,7 @@ import {
  * compact, honest summary of what the Consolidation Review Surface
  * proposes. When proposals exist the "제안 검토" button opens the
  * Consolidation Review surface, where the user accepts / edits /
- * discards each proposal before any memory is persisted.
+ * discards each proposal before deliberately applying local memory writes.
  */
 export function ConsolidationPreviewCard({
   state,
@@ -43,7 +43,7 @@ export function ConsolidationPreviewCard({
       hint={
         <span>
           누적된 Project Memory에서 승격할 항목을 미리 보여줍니다. ‘제안 검토’를 누르면 Consolidation
-          Review에서 각 제안을 검토할 수 있으며, 사용자가 승인하기 전까지는 어떤 메모리도 저장되지
+          Review에서 각 제안을 검토할 수 있으며, ‘메모리 적용’을 누르기 전까지는 어떤 메모리도 저장되지
           않습니다.
         </span>
       }
@@ -81,7 +81,7 @@ export function ConsolidationPreviewCard({
           onClick={reviewable && onOpenReview ? onOpenReview : undefined}
           title={
             reviewable
-              ? "Consolidation Review를 엽니다. Accepted Memory Persistence는 아직 미구현 — 모든 검토 액션은 드래프트로 유지됩니다."
+              ? "Consolidation Review를 엽니다. 검토 후 메모리 적용을 누르면 승인/편집한 항목과 감사 로그가 로컬에 저장됩니다."
               : "검토할 제안이 없습니다."
           }
         >

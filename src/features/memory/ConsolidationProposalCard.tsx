@@ -94,7 +94,7 @@ export function ConsolidationProposalCard({
             onAccept();
           }}
           variant={status === "accepted" ? "primary" : undefined}
-          title="이 제안을 수락합니다 — 검토 드래프트 내에서만 유지됩니다."
+          title="이 제안을 수락 예정으로 표시합니다. 메모리 적용을 누르기 전까지는 저장되지 않습니다."
         >
           수락
         </Button>
@@ -164,11 +164,9 @@ function ConsolidationStatusBadge({ status }: { status: ConsolidationReviewStatu
 }
 
 /**
- * Tone for a draft review decision, drawn from the shared product-state
- * vocabulary. These are in-draft decisions the user is still reviewing,
- * so each keeps a distinct tone: accept is settled (success), discard is
- * the most severe (danger), and `proposed` is the not-yet-touched
- * neutral baseline.
+ * Tone for a pending review decision, drawn from the shared product-state
+ * vocabulary. The decision is still local draft state until the user clicks
+ * Apply; each status keeps a distinct tone so the apply boundary is clear.
  */
 function reviewStatusTone(status: ConsolidationReviewStatus): ProductStateTone {
   switch (status) {
@@ -193,9 +191,9 @@ export function describeReviewStatus(status: ConsolidationReviewStatus): string 
     case "proposed":
       return "검토 대기";
     case "accepted":
-      return "수락 (드래프트)";
+      return "수락 예정";
     case "edited":
-      return "편집 (드래프트)";
+      return "편집 예정";
     case "watching":
       return "관찰";
     case "deferred":
