@@ -390,6 +390,10 @@ Shipped:
     apply boundary accurately: review decisions stay draft until the user
     clicks "memory apply", then accepted memories and audit rows are saved
     locally.
+8j. ✅ Import Review apply handoff — after applying an import, the Evidence
+    Hub now shows the real completion surface with next actions for Timeline,
+    Quick Pass, and Project Memory instead of relying on an unreachable
+    success panel inside the cleared review draft.
 
 ### Timeline Maturity Loop (focused sub-pass)
 

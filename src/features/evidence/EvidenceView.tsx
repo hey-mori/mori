@@ -18,6 +18,10 @@ import {
   describeAnalysisStatus,
   getAnalysisStatusTone,
 } from "../../lib/analysis";
+import {
+  buildImportApplyCompletion,
+  type ImportApplyCompletionActionId,
+} from "../../lib/review/importApplyCompletion";
 import type {
   MoriAnalysisStatus,
   QuickPassAnalysisSettings,
@@ -101,6 +105,32 @@ export function EvidenceView() {
 
   const importedSources = view.sources;
   const isDemoSession = mode === "demo";
+  const importCompletion = useMemo(
+    () =>
+      lastApplied
+        ? buildImportApplyCompletion({
+            appliedCount: lastApplied.appliedCount,
+            hasAnalysis,
+          })
+        : null,
+    [lastApplied, hasAnalysis],
+  );
+
+  function handleImportCompletionAction(actionId: ImportApplyCompletionActionId) {
+    switch (actionId) {
+      case "timeline":
+        setCurrentView("timeline");
+        return;
+      case "quickPass":
+        void runQuickPass();
+        return;
+      case "memory":
+        setCurrentView("memory");
+        return;
+      default:
+        return;
+    }
+  }
 
   // After all hooks are called, defer rendering to the review screen if a
   // draft is in flight. Cancel / apply on the review screen clears the draft
@@ -135,13 +165,28 @@ export function EvidenceView() {
 
       <CompanionStrip signals={companionSignals} onNavigate={setCurrentView} />
 
-      {lastApplied ? (
+      {lastApplied && importCompletion ? (
         <div className="review-applied-banner" role="status">
           <Sparkles size={14} aria-hidden="true" />
-          <span>
-            방금 Apply된 가져오기: <strong>{lastApplied.appliedCount}개의 이벤트</strong>가 세션 타임라인에 추가되었습니다.
+          <span className="review-applied-banner-copy">
+            <strong>{importCompletion.headline}</strong>
+            <small>{importCompletion.detail}</small>
           </span>
-          <Button onClick={clearLastApplied}>닫기</Button>
+          <span className="review-applied-banner-actions">
+            {importCompletion.actions.map((action) => (
+              <Button
+                key={action.id}
+                variant={action.primary ? "primary" : "secondary"}
+                onClick={() => handleImportCompletionAction(action.id)}
+                disabled={action.id === "quickPass" && analysisStatus === "running"}
+              >
+                {action.id === "quickPass" && analysisStatus === "running"
+                  ? "Quick Pass running"
+                  : action.label}
+              </Button>
+            ))}
+            <Button variant="ghost" onClick={clearLastApplied}>Dismiss</Button>
+          </span>
         </div>
       ) : null}
 
