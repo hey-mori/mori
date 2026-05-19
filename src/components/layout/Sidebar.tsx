@@ -1,18 +1,8 @@
-import {
-  ChevronLeft,
-  Compass,
-  FileText,
-  FolderClock,
-  FolderKanban,
-  PanelRightOpen,
-  Play,
-  Settings,
-  SlidersHorizontal,
-  ListChecks,
-} from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/Button";
 import { MoriLogo } from "../brand/MoriLogo";
+import { moriViewIcon } from "../brand/moriIcons";
 import type { ViewKey } from "../../domain/types";
 import { moriMockSession } from "../../domain/mock-data";
 import { useMoriSessionStore } from "../../app/sessionStore";
@@ -25,33 +15,35 @@ import {
 } from "../../lib/session/sessionTiming";
 import { getFeatureControlProps } from "../../app/featureStatus";
 
-type NavItem = { key: ViewKey; label: string; badge?: string; icon: typeof Play };
+type NavKey = keyof typeof moriViewIcon;
+type NavItem = { key: NavKey; label: string; badge?: string };
 
 /**
  * The nav is grouped so nine destinations read as an organised structure
  * rather than a flat list: the entry action, the four session-work
- * surfaces, the project-level surfaces, and settings.
+ * surfaces, the project-level surfaces, and settings. Icons come from the
+ * shared `moriViewIcon` vocabulary so they stay meaning-driven.
  */
 const navGroups: Array<{ label?: string; items: NavItem[] }> = [
-  { items: [{ key: "start", label: "Start Session", icon: Play }] },
+  { items: [{ key: "start", label: "Start Session" }] },
   {
     label: "작업",
     items: [
-      { key: "timeline", label: "Timeline", icon: SlidersHorizontal },
-      { key: "evidence", label: "Evidence", icon: FileText },
-      { key: "review", label: "Review", icon: ListChecks },
-      { key: "reports", label: "Reports", icon: PanelRightOpen },
+      { key: "timeline", label: "Timeline" },
+      { key: "evidence", label: "Evidence" },
+      { key: "review", label: "Review" },
+      { key: "reports", label: "Reports" },
     ],
   },
   {
     label: "프로젝트",
     items: [
-      { key: "workspace", label: "Workspace", icon: FolderKanban },
-      { key: "memory", label: "Memory", icon: FolderClock },
-      { key: "companion", label: "Companion", icon: Compass },
+      { key: "workspace", label: "Workspace" },
+      { key: "memory", label: "Memory" },
+      { key: "companion", label: "Companion" },
     ],
   },
-  { items: [{ key: "settings", label: "Settings", icon: Settings }] },
+  { items: [{ key: "settings", label: "Settings" }] },
 ];
 
 export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onNavigate: (view: ViewKey) => void }) {
@@ -75,7 +67,7 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
           <div className="nav-group" key={group.label ?? `group-${groupIndex}`}>
             {group.label ? <p className="nav-group-label">{group.label}</p> : null}
             {group.items.map((item) => {
-              const Icon = item.icon;
+              const Icon = moriViewIcon[item.key];
               return (
                 <button
                   className={`nav-item ${isActive(item.key) ? "active" : ""}`}

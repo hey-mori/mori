@@ -1,4 +1,5 @@
-import { FileText, HardDrive, Plug, RefreshCw, Save } from "lucide-react";
+import { FileText, Plug, RefreshCw, Save } from "lucide-react";
+import { moriConceptIcon } from "../../components/brand/moriIcons";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type { DatabaseStatus, PersistSessionSnapshotOutput, SqliteSessionListEntry } from "../../lib/sqlite/repositoryContracts";
@@ -88,14 +89,14 @@ export function StorageCard({
         <div className="settings-sqlite-panel">
           <header>
             <h4>
-              <HardDrive size={14} aria-hidden="true" /> Desktop SQLite
+              <moriConceptIcon.desktopSqlite size={14} aria-hidden="true" /> Desktop SQLite
             </h4>
             <Badge
               tone={
                 sqliteKind === "ok"
                   ? "green"
                   : sqliteKind === "checking"
-                    ? "purple"
+                    ? "blue"
                     : sqliteKind === "error"
                       ? "red"
                       : "gray"

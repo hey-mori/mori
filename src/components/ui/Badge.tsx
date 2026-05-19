@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export function Badge({
   children,
-  tone = "purple",
+  tone = "gray",
   title,
 }: {
   children: ReactNode;
