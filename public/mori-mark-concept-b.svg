@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mori mark concept B">
+  <defs>
+    <linearGradient id="mori-b-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7D5BFF" />
+      <stop offset="1" stop-color="#B18CFF" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#mori-b-tile)" />
+  <!-- Memory tag: a notched bookmark with a counter hole — work, marked
+       and remembered, with the point that holds your place. -->
+  <path fill="#FFFFFF" fill-rule="evenodd"
+    d="M25 14 H39 a6 6 0 0 1 6 6 V50 L32 41 L19 50 V20 a6 6 0 0 1 6 -6 Z
+       M27.4 25 a4.6 4.6 0 1 0 9.2 0 a4.6 4.6 0 1 0 -9.2 0 Z" />
+</svg>
