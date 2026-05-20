@@ -10,6 +10,15 @@ export type SessionWrapUpActionId =
   | "reviewHandoff"
   | "waitForAnalysis";
 
+export type SessionWrapUpUnresolvedKind = "issue" | "decision" | "nextAction";
+
+export type SessionWrapUpUnresolvedItem = {
+  id: string;
+  kind: SessionWrapUpUnresolvedKind;
+  title: string;
+  detail: string;
+};
+
 export type SessionWrapUpInput = {
   sourceCount: number;
   eventCount: number;
@@ -24,6 +33,7 @@ export type SessionWrapUpInput = {
   auditActionCount: number;
   staleMemoryCount: number;
   contradictedMemoryCount: number;
+  unresolvedItems?: readonly SessionWrapUpUnresolvedItem[];
   resumePromptReady: boolean;
 };
 
@@ -45,6 +55,11 @@ export type SessionWrapUpAction = {
 export type SessionWrapUpViewModel = {
   steps: SessionWrapUpStep[];
   primaryAction: SessionWrapUpAction;
+  unresolved: {
+    total: number;
+    preview: SessionWrapUpUnresolvedItem[];
+    hiddenCount: number;
+  };
 };
 
 export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpViewModel {
@@ -121,6 +136,7 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
   return {
     steps,
     primaryAction: choosePrimaryAction(input, { hasEvidence, hasReviewedWork }),
+    unresolved: buildUnresolvedPreview(input.unresolvedItems ?? []),
   };
 }
 
@@ -178,6 +194,15 @@ function choosePrimaryAction(
 
 function plural(count: number): string {
   return count === 1 ? "" : "s";
+}
+
+function buildUnresolvedPreview(items: readonly SessionWrapUpUnresolvedItem[]): SessionWrapUpViewModel["unresolved"] {
+  const preview = items.slice(0, 3).map((item) => ({ ...item }));
+  return {
+    total: items.length,
+    preview,
+    hiddenCount: Math.max(0, items.length - preview.length),
+  };
 }
 
 function describeAttentionMemory(input: Pick<SessionWrapUpInput, "staleMemoryCount" | "contradictedMemoryCount">): string {

@@ -50,7 +50,13 @@ import {
 import {
   buildSessionWrapUp,
   type SessionWrapUpActionId,
+  type SessionWrapUpUnresolvedItem,
 } from "../../lib/report/sessionWrapUp";
+import {
+  getUnresolvedItems,
+  UNRESOLVED_REASON_LABEL,
+  type UnresolvedItem,
+} from "../../lib/review-workspace/reviewWorkspace";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -158,6 +164,15 @@ export function ReportsView() {
       contradicted,
     };
   }, [acceptedMemories]);
+  const unresolvedPreviewItems = useMemo(
+    () =>
+      getUnresolvedItems({
+        issues: view.issues,
+        decisions: view.decisions,
+        nextActions: view.nextActions,
+      }).map(toSessionWrapUpUnresolvedItem),
+    [view.issues, view.decisions, view.nextActions],
+  );
   const wrapUp = useMemo(
     () =>
       buildSessionWrapUp({
@@ -174,6 +189,7 @@ export function ReportsView() {
         auditActionCount: reviewActions.length,
         staleMemoryCount: memoryHealth.stale,
         contradictedMemoryCount: memoryHealth.contradicted,
+        unresolvedItems: unresolvedPreviewItems,
         resumePromptReady: resumePromptText.trim().length > 0,
       }),
     [
@@ -189,6 +205,7 @@ export function ReportsView() {
       acceptedMemories.length,
       memoryHealth,
       reviewActions.length,
+      unresolvedPreviewItems,
       resumePromptText,
     ],
   );
@@ -255,6 +272,22 @@ export function ReportsView() {
         });
         return;
       case "waitForAnalysis":
+      default:
+        return;
+    }
+  }
+
+  function handleOpenUnresolvedItem(item: SessionWrapUpUnresolvedItem) {
+    switch (item.kind) {
+      case "issue":
+        openReviewItem({ kind: "issue", issueId: item.id });
+        return;
+      case "decision":
+        openReviewItem({ kind: "decision", decisionId: item.id });
+        return;
+      case "nextAction":
+        openReviewItem({ kind: "nextAction", nextActionId: item.id });
+        return;
       default:
         return;
     }
@@ -350,6 +383,7 @@ export function ReportsView() {
             nextActionCount={view.nextActions.length}
             wrapUp={wrapUp}
             onWrapUpAction={handleWrapUpAction}
+            onOpenUnresolvedItem={handleOpenUnresolvedItem}
           />
 
           <HandoffReadinessPanel
@@ -640,6 +674,31 @@ function MoriPackageStrip({
       </div>
     </section>
   );
+}
+
+function toSessionWrapUpUnresolvedItem(item: UnresolvedItem): SessionWrapUpUnresolvedItem {
+  if (item.kind === "issue") {
+    return {
+      id: item.issue.id,
+      kind: "issue",
+      title: item.issue.title,
+      detail: UNRESOLVED_REASON_LABEL[item.reason],
+    };
+  }
+  if (item.kind === "decision") {
+    return {
+      id: item.decision.id,
+      kind: "decision",
+      title: item.decision.title,
+      detail: UNRESOLVED_REASON_LABEL[item.reason],
+    };
+  }
+  return {
+    id: item.nextAction.id,
+    kind: "nextAction",
+    title: item.nextAction.title,
+    detail: UNRESOLVED_REASON_LABEL[item.reason],
+  };
 }
 
 function PackageOptionSummary({

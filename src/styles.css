@@ -6612,6 +6612,89 @@ pre {
   line-height: 1.35;
 }
 
+.session-wrap-up-unresolved {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.72);
+}
+
+.session-wrap-up-unresolved.is-empty {
+  border-color: rgba(40, 167, 69, 0.2);
+  background: rgba(240, 253, 244, 0.72);
+}
+
+.session-wrap-up-unresolved header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-wrap-up-unresolved strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.session-wrap-up-unresolved span,
+.session-wrap-up-unresolved p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.session-wrap-up-unresolved ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-wrap-up-unresolved button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 9px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  background: white;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.session-wrap-up-unresolved button:hover {
+  border-color: rgba(245, 158, 11, 0.48);
+  background: rgba(255, 247, 237, 0.92);
+}
+
+.session-wrap-up-unresolved button span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.session-wrap-up-unresolved button strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-wrap-up-unresolved button small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .session-wrap-up-action {
   display: flex;
   justify-content: flex-end;

@@ -15,6 +15,7 @@ const base = {
   auditActionCount: 0,
   staleMemoryCount: 0,
   contradictedMemoryCount: 0,
+  unresolvedItems: [],
   resumePromptReady: false,
 };
 
@@ -127,5 +128,26 @@ describe("buildSessionWrapUp", () => {
     expect(viewModel.steps.find((step) => step.id === "memory")?.detail).toContain(
       "2 accepted memories need lifecycle review",
     );
+  });
+
+  it("carries a bounded unresolved-work preview for the continue-later summary", () => {
+    const viewModel = buildSessionWrapUp({
+      ...base,
+      sourceCount: 2,
+      eventCount: 4,
+      hasAnalysis: true,
+      acceptedMemoryCount: 1,
+      resumePromptReady: true,
+      unresolvedItems: [
+        { id: "i-1", kind: "issue", title: "Confirm export path", detail: "Open issue" },
+        { id: "d-1", kind: "decision", title: "Choose handoff scope", detail: "Unconfirmed decision" },
+        { id: "n-1", kind: "nextAction", title: "Draft client-safe report", detail: "Pending action" },
+        { id: "i-2", kind: "issue", title: "Resolve edge case", detail: "Open issue" },
+      ],
+    });
+
+    expect(viewModel.unresolved.total).toBe(4);
+    expect(viewModel.unresolved.preview.map((item) => item.id)).toEqual(["i-1", "d-1", "n-1"]);
+    expect(viewModel.unresolved.hiddenCount).toBe(1);
   });
 });

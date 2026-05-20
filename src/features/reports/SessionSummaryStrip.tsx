@@ -1,9 +1,10 @@
-import { AlertCircle, CheckCircle2, CircleDashed, FileText, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, FileText, Loader2 } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type {
   SessionWrapUpActionId,
   SessionWrapUpStepStatus,
+  SessionWrapUpUnresolvedItem,
   SessionWrapUpViewModel,
 } from "../../lib/report/sessionWrapUp";
 
@@ -18,6 +19,7 @@ export type SessionSummaryStripProps = {
   nextActionCount: number;
   wrapUp?: SessionWrapUpViewModel;
   onWrapUpAction?: (actionId: SessionWrapUpActionId) => void;
+  onOpenUnresolvedItem?: (item: SessionWrapUpUnresolvedItem) => void;
 };
 
 export function SessionSummaryStrip({
@@ -31,6 +33,7 @@ export function SessionSummaryStrip({
   nextActionCount,
   wrapUp,
   onWrapUpAction,
+  onOpenUnresolvedItem,
 }: SessionSummaryStripProps) {
   return (
     <section className="session-summary-strip" aria-label="Session summary">
@@ -67,6 +70,10 @@ export function SessionSummaryStrip({
                 </li>
               ))}
             </ul>
+            <UnresolvedPreview
+              unresolved={wrapUp.unresolved}
+              onOpenItem={onOpenUnresolvedItem}
+            />
           </div>
           <div className="session-wrap-up-action">
             <Button
@@ -81,6 +88,48 @@ export function SessionSummaryStrip({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function UnresolvedPreview({
+  unresolved,
+  onOpenItem,
+}: {
+  unresolved: SessionWrapUpViewModel["unresolved"];
+  onOpenItem?: (item: SessionWrapUpUnresolvedItem) => void;
+}) {
+  if (unresolved.total === 0) {
+    return (
+      <div className="session-wrap-up-unresolved is-empty">
+        <strong>No unresolved review items</strong>
+        <span>Issues, decisions, and next actions are clear for this session.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="session-wrap-up-unresolved" aria-label="Unresolved work preview">
+      <header>
+        <strong>Needs attention before next session</strong>
+        <Badge tone="orange">{unresolved.total} unresolved</Badge>
+      </header>
+      <ul>
+        {unresolved.preview.map((item) => (
+          <li key={`${item.kind}:${item.id}`}>
+            <button type="button" onClick={() => onOpenItem?.(item)}>
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      {unresolved.hiddenCount > 0 ? (
+        <p>{unresolved.hiddenCount} more item{unresolved.hiddenCount === 1 ? "" : "s"} in Review.</p>
+      ) : null}
+    </div>
   );
 }
 
