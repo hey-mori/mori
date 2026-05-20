@@ -1,4 +1,4 @@
-import { BookCheck, Clock4, Eye } from "lucide-react";
+import { BookCheck, ChevronRight, Clock4, Eye } from "lucide-react";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriSection } from "../../components/ui/MoriSection";
 import { formatDateTime } from "../../lib/formatting/time";
@@ -41,11 +41,16 @@ export function AcceptedMemoriesCard({
   reviewActionCount,
   storageSource,
   storageFellBack,
+  onSelectMemory,
+  selectedMemoryId,
 }: {
   memories: StoredAcceptedProjectMemory[];
   reviewActionCount: number;
   storageSource: AcceptedMemoryStorageSource;
   storageFellBack: boolean;
+  /** Open the per-memory provenance drawer when provided. */
+  onSelectMemory?: (memoryId: string) => void;
+  selectedMemoryId?: string | null;
 }) {
   // Show current memory first and archived memory last so a bounded
   // preview never buries guidance-bearing records under retired ones.
@@ -91,30 +96,58 @@ export function AcceptedMemoriesCard({
           <ul className="memory-accepted-list">
           {recent.map((memory) => {
             const group = classifyMemoryLifecycle(memory.status);
+            const isSelected = selectedMemoryId === memory.id;
+            const rowBody = (
+              <>
+                <header>
+                  <strong title={memory.title}>{memory.title}</strong>
+                  <span className="memory-accepted-meta">
+                    <MoriStatusBadge tone={proposalKindTone(memory.kind)}>
+                      {describeProposalKind(memory.kind)}
+                    </MoriStatusBadge>
+                    <MoriStatusBadge tone={getProductMemoryStatusTone(memory.status)}>
+                      {getProductMemoryStatusLabel(memory.status)}
+                    </MoriStatusBadge>
+                    {onSelectMemory ? (
+                      <ChevronRight
+                        size={14}
+                        aria-hidden="true"
+                        className="memory-accepted-chevron"
+                      />
+                    ) : null}
+                  </span>
+                </header>
+                {memory.summary ? <p className="memory-accepted-summary">{memory.summary}</p> : null}
+                <small>
+                  <Clock4 size={11} aria-hidden="true" /> {formatShort(memory.acceptedAt)}
+                  {" · "}
+                  <Eye size={11} aria-hidden="true" /> {memory.evidenceRefs.length}건 evidence ·
+                  {" "}
+                  {memory.sourceSessionIds.length}개 session
+                  {" · "}
+                  <MoriStatusBadge tone="neutral">로컬 전용</MoriStatusBadge>
+                </small>
+              </>
+            );
             return (
-            <li key={memory.id} className={`lifecycle-${group}`}>
-              <header>
-                <strong title={memory.title}>{memory.title}</strong>
-                <span className="memory-accepted-meta">
-                  <MoriStatusBadge tone={proposalKindTone(memory.kind)}>
-                    {describeProposalKind(memory.kind)}
-                  </MoriStatusBadge>
-                  <MoriStatusBadge tone={getProductMemoryStatusTone(memory.status)}>
-                    {getProductMemoryStatusLabel(memory.status)}
-                  </MoriStatusBadge>
-                </span>
-              </header>
-              {memory.summary ? <p className="memory-accepted-summary">{memory.summary}</p> : null}
-              <small>
-                <Clock4 size={11} aria-hidden="true" /> {formatShort(memory.acceptedAt)}
-                {" · "}
-                <Eye size={11} aria-hidden="true" /> {memory.evidenceRefs.length}건 evidence ·
-                {" "}
-                {memory.sourceSessionIds.length}개 session
-                {" · "}
-                <MoriStatusBadge tone="neutral">로컬 전용</MoriStatusBadge>
-              </small>
-            </li>
+              <li
+                key={memory.id}
+                className={`lifecycle-${group} ${isSelected ? "is-selected" : ""}`}
+              >
+                {onSelectMemory ? (
+                  <button
+                    type="button"
+                    className="memory-accepted-row-button"
+                    aria-pressed={isSelected}
+                    aria-label={`${memory.title} — 메모리 자세히 보기`}
+                    onClick={() => onSelectMemory(memory.id)}
+                  >
+                    {rowBody}
+                  </button>
+                ) : (
+                  rowBody
+                )}
+              </li>
             );
           })}
           </ul>

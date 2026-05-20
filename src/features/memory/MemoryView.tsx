@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
+import { MoriDrawer } from "../../components/ui/MoriDrawer";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -36,6 +37,7 @@ import { buildProjectMemoryConsolidationState } from "../../lib/project-memory/p
 import { revertMemoryReviewAction } from "../../lib/project-memory/memoryReviewRevert";
 import { ConsolidationPreviewCard } from "./ConsolidationPreviewCard";
 import { AcceptedMemoriesCard } from "./AcceptedMemoriesCard";
+import { AcceptedMemoryDetailDrawer } from "./AcceptedMemoryDetailDrawer";
 import { MemoryAuditTrailCard } from "./MemoryAuditTrailCard";
 import { QueryableMemoryCard } from "./QueryableMemoryCard";
 import {
@@ -125,6 +127,7 @@ export function MemoryView() {
   const [memoryStorageSource, setMemoryStorageSource] =
     useState<AcceptedMemoryStorageSource>("browser-local-storage");
   const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
   const reloadMemory = useCallback(async () => {
     const memoryRepository = getAcceptedMemoryRepository();
     const [memoriesResult, actionsResult] = await Promise.all([
@@ -428,6 +431,8 @@ export function MemoryView() {
             reviewActionCount={reviewActions.length}
             storageSource={memoryStorageSource}
             storageFellBack={memoryStorageFellBack}
+            onSelectMemory={setSelectedMemoryId}
+            selectedMemoryId={selectedMemoryId}
           />
 
           <QueryableMemoryCard
@@ -469,6 +474,25 @@ export function MemoryView() {
           onStartFollowUp={() => setCurrentView("start")}
         />
       </div>
+
+      <MoriDrawer
+        open={selectedMemoryId !== null}
+        onClose={() => setSelectedMemoryId(null)}
+        ariaLabel="Accepted memory provenance"
+      >
+        {(() => {
+          const memory = acceptedMemories.find((entry) => entry.id === selectedMemoryId);
+          if (!memory) return null;
+          return (
+            <AcceptedMemoryDetailDrawer
+              memory={memory}
+              actions={reviewActions}
+              onRevertAction={handleRevertAction}
+              onClose={() => setSelectedMemoryId(null)}
+            />
+          );
+        })()}
+      </MoriDrawer>
     </div>
   );
 }

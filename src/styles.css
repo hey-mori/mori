@@ -8711,6 +8711,345 @@ pre {
   border-color: #ecd3b6;
 }
 
+/* Accepted-memory row becomes a clickable button when a detail drawer
+   is wired. The row keeps its visual structure; the button strips its
+   own chrome and forwards focus styling. */
+.memory-accepted-row-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.memory-accepted-row-button:hover {
+  background: rgba(125, 91, 255, 0.04);
+}
+
+.memory-accepted-row-button:focus-visible {
+  outline: 2px solid var(--mori-accent, var(--purple));
+  outline-offset: 2px;
+}
+
+.memory-accepted-list li.is-selected {
+  border-color: var(--mori-accent, var(--purple));
+  box-shadow: 0 0 0 2px rgba(125, 91, 255, 0.12);
+}
+
+.memory-accepted-chevron {
+  color: var(--mori-text-muted, var(--muted));
+  margin-left: 4px;
+}
+
+/* === Accepted memory detail drawer === */
+
+.accepted-memory-detail {
+  display: grid;
+  gap: 18px;
+  padding: 22px 24px 26px;
+}
+
+.accepted-memory-detail-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.accepted-memory-detail-titles {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.accepted-memory-detail-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mori-text-muted, var(--muted));
+}
+
+.accepted-memory-detail-titles h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--mori-text, var(--text));
+}
+
+.accepted-memory-detail-summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--mori-text-muted, var(--muted));
+}
+
+.accepted-memory-detail-state {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--mori-border, var(--line));
+  border-radius: 10px;
+  background: var(--mori-surface-subtle, #fbfbfd);
+}
+
+.accepted-memory-detail-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.accepted-memory-detail-meaning {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--mori-text, var(--text));
+}
+
+.accepted-memory-detail-supersede {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--mori-text-muted, var(--muted));
+}
+
+.accepted-memory-detail-supersede code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.accepted-memory-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.accepted-memory-detail-stat {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--mori-border, var(--line));
+  border-radius: 10px;
+  background: var(--mori-surface, #ffffff);
+}
+
+.accepted-memory-detail-stat dt {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mori-text-muted, var(--muted));
+}
+
+.accepted-memory-detail-stat dt small {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--mori-text-muted-2, var(--muted-2));
+  margin-top: 2px;
+}
+
+.accepted-memory-detail-stat dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--mori-text, var(--text));
+}
+
+.accepted-memory-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  font-size: 12px;
+}
+
+.accepted-memory-detail-meta > div {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--mori-border, var(--line));
+  border-radius: 8px;
+  background: var(--mori-surface, #ffffff);
+}
+
+.accepted-memory-detail-note {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--mori-accent, var(--purple));
+  background: var(--mori-accent-soft, var(--purple-50));
+  border-radius: 0 8px 8px 0;
+}
+
+.accepted-memory-detail-note-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mori-accent, var(--purple));
+}
+
+.accepted-memory-detail-note p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--mori-text, var(--text));
+}
+
+.accepted-memory-detail-audit {
+  display: grid;
+  gap: 8px;
+}
+
+.accepted-memory-detail-audit header {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.accepted-memory-detail-audit h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mori-text, var(--text));
+}
+
+.accepted-memory-detail-audit-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--mori-border, var(--line));
+  border-radius: 8px;
+  background: var(--mori-surface-subtle, #fbfbfd);
+  color: var(--mori-text-muted, var(--muted));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.accepted-memory-detail-audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.accepted-memory-detail-audit-list li {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--mori-border, var(--line));
+  border-radius: 8px;
+  background: var(--mori-surface, #ffffff);
+}
+
+.accepted-memory-detail-audit-list li header {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--mori-text-muted, var(--muted));
+}
+
+.accepted-memory-detail-audit-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mori-text, var(--text));
+}
+
+.accepted-memory-detail-audit-reason {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--mori-text-muted-2, var(--muted-2));
+}
+
+.accepted-memory-detail-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.accepted-memory-detail-no-revert {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--mori-border, var(--line));
+  border-radius: 8px;
+  background: var(--mori-surface-subtle, #fbfbfd);
+  font-size: 12px;
+  color: var(--mori-text-muted, var(--muted));
+}
+
+.accepted-memory-detail-revert {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #ecd3b6;
+  border-radius: 10px;
+  background: #fff8ed;
+}
+
+.accepted-memory-detail-revert-head {
+  display: grid;
+  gap: 2px;
+}
+
+.accepted-memory-detail-revert-head strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mori-text, var(--text));
+}
+
+.accepted-memory-detail-revert-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--mori-text-muted, var(--muted));
+}
+
+.accepted-memory-detail-revert p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--mori-text, var(--text));
+}
+
+.accepted-memory-detail-revert-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.accepted-memory-detail-revert-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--mori-status-danger, var(--red));
+}
+
 .memory-audit {
   display: grid;
   gap: 8px;
