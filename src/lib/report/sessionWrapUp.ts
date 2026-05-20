@@ -6,6 +6,7 @@ export type SessionWrapUpActionId =
   | "addEvidence"
   | "runQuickPass"
   | "reviewMemory"
+  | "reviewMemoryHealth"
   | "reviewHandoff"
   | "waitForAnalysis";
 
@@ -21,6 +22,8 @@ export type SessionWrapUpInput = {
   canRunQuickPass: boolean;
   acceptedMemoryCount: number;
   auditActionCount: number;
+  staleMemoryCount: number;
+  contradictedMemoryCount: number;
   resumePromptReady: boolean;
 };
 
@@ -51,6 +54,7 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
     input.issueCount > 0 ||
     input.decisionCount > 0 ||
     input.nextActionCount > 0;
+  const attentionMemoryCount = input.staleMemoryCount + input.contradictedMemoryCount;
 
   const steps: SessionWrapUpStep[] = [
     {
@@ -78,11 +82,27 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
     {
       id: "memory",
       label: "Project memory saved",
-      status: input.acceptedMemoryCount > 0 ? "done" : hasReviewedWork ? "ready" : "attention",
-      statusLabel: input.acceptedMemoryCount > 0 ? "Saved" : hasReviewedWork ? "Review" : "Not yet",
+      status:
+        input.acceptedMemoryCount > 0
+          ? attentionMemoryCount > 0
+            ? "attention"
+            : "done"
+          : hasReviewedWork
+            ? "ready"
+            : "attention",
+      statusLabel:
+        input.acceptedMemoryCount > 0
+          ? attentionMemoryCount > 0
+            ? "Needs review"
+            : "Saved"
+          : hasReviewedWork
+            ? "Review"
+            : "Not yet",
       detail:
         input.acceptedMemoryCount > 0
-          ? `${input.acceptedMemoryCount} accepted memor${input.acceptedMemoryCount === 1 ? "y" : "ies"} with ${input.auditActionCount} audit action${plural(input.auditActionCount)}.`
+          ? attentionMemoryCount > 0
+            ? `${input.acceptedMemoryCount} accepted memor${input.acceptedMemoryCount === 1 ? "y" : "ies"} saved; ${describeAttentionMemory(input)} before handoff.`
+            : `${input.acceptedMemoryCount} accepted memor${input.acceptedMemoryCount === 1 ? "y" : "ies"} with ${input.auditActionCount} audit action${plural(input.auditActionCount)}.`
           : hasReviewedWork
             ? "Open Project Memory when you want reviewed facts to become durable accepted memory."
             : "Accepted memory appears after the session has reviewed material.",
@@ -140,6 +160,14 @@ function choosePrimaryAction(
       enabled: true,
     };
   }
+  if (input.staleMemoryCount + input.contradictedMemoryCount > 0) {
+    return {
+      id: "reviewMemoryHealth",
+      label: "Review memory health",
+      detail: `${describeAttentionMemory(input)} before using memory in reports or resume prompts.`,
+      enabled: true,
+    };
+  }
   return {
     id: "reviewHandoff",
     label: "Review handoff",
@@ -150,4 +178,16 @@ function choosePrimaryAction(
 
 function plural(count: number): string {
   return count === 1 ? "" : "s";
+}
+
+function describeAttentionMemory(input: Pick<SessionWrapUpInput, "staleMemoryCount" | "contradictedMemoryCount">): string {
+  const parts: string[] = [];
+  if (input.staleMemoryCount > 0) {
+    parts.push(`${input.staleMemoryCount} stale`);
+  }
+  if (input.contradictedMemoryCount > 0) {
+    parts.push(`${input.contradictedMemoryCount} contradicted`);
+  }
+  const count = input.staleMemoryCount + input.contradictedMemoryCount;
+  return `${count} accepted memor${count === 1 ? "y needs" : "ies need"} lifecycle review${parts.length > 0 ? ` (${parts.join(", ")})` : ""}`;
 }

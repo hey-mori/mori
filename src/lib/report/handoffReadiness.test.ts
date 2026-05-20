@@ -38,6 +38,8 @@ const base = {
   analysisRunning: false,
   canRunQuickPass: false,
   acceptedMemoryCount: 0,
+  staleMemoryCount: 0,
+  contradictedMemoryCount: 0,
   resumePromptReady: false,
   exportPlan: emptyPlan,
 };
@@ -133,5 +135,36 @@ describe("buildHandoffReadiness", () => {
       action: { id: "openPackageExport" },
     });
     expect(packageItem?.basis.join(" ")).toContain("omits 2 memory records / 4 audit rows");
+  });
+
+  it("routes ready handoff outputs to memory-health review when accepted memory needs attention", () => {
+    const model = buildHandoffReadiness({
+      ...base,
+      sourceCount: 2,
+      eventCount: 8,
+      issueCount: 1,
+      decisionCount: 2,
+      nextActionCount: 3,
+      hasAnalysis: true,
+      acceptedMemoryCount: 3,
+      staleMemoryCount: 1,
+      contradictedMemoryCount: 1,
+      resumePromptReady: true,
+      exportPlan: {
+        ...emptyPlan,
+        full: { ...emptyPlan.full, sources: 2, events: 8, memories: 3, auditRows: 4 },
+        clientSafe: { ...emptyPlan.clientSafe, sources: 2, events: 8, memories: 3, auditRows: 4 },
+      },
+    });
+
+    expect(model.detail).toContain("accepted-memory health");
+    expect(model.items.map((item) => [item.id, item.status, item.action.id])).toEqual([
+      ["resume", "attention", "reviewMemoryHealth"],
+      ["report", "attention", "reviewMemoryHealth"],
+      ["package", "attention", "reviewMemoryHealth"],
+    ]);
+    expect(model.items.find((item) => item.id === "resume")?.basis.join(" ")).toContain(
+      "2 accepted memories need lifecycle review",
+    );
   });
 });

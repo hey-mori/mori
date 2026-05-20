@@ -13,6 +13,8 @@ const base = {
   canRunQuickPass: false,
   acceptedMemoryCount: 0,
   auditActionCount: 0,
+  staleMemoryCount: 0,
+  contradictedMemoryCount: 0,
   resumePromptReady: false,
 };
 
@@ -96,5 +98,34 @@ describe("buildSessionWrapUp", () => {
     expect(viewModel.primaryAction.id).toBe("reviewHandoff");
     expect(viewModel.steps.find((step) => step.id === "memory")?.detail).toContain("5 accepted memories");
     expect(viewModel.steps.find((step) => step.id === "handoff")?.status).toBe("ready");
+  });
+
+  it("routes stale or contradicted accepted memory to lifecycle review before handoff", () => {
+    const viewModel = buildSessionWrapUp({
+      ...base,
+      sourceCount: 3,
+      eventCount: 9,
+      hasAnalysis: true,
+      issueCount: 1,
+      decisionCount: 2,
+      nextActionCount: 2,
+      acceptedMemoryCount: 5,
+      auditActionCount: 7,
+      staleMemoryCount: 1,
+      contradictedMemoryCount: 1,
+      resumePromptReady: true,
+    });
+
+    expect(viewModel.primaryAction).toMatchObject({
+      id: "reviewMemoryHealth",
+      enabled: true,
+    });
+    expect(viewModel.steps.find((step) => step.id === "memory")).toMatchObject({
+      status: "attention",
+      statusLabel: "Needs review",
+    });
+    expect(viewModel.steps.find((step) => step.id === "memory")?.detail).toContain(
+      "2 accepted memories need lifecycle review",
+    );
   });
 });

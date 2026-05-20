@@ -7,6 +7,7 @@ export type HandoffReadinessActionId =
   | "runQuickPass"
   | "addEvidence"
   | "reviewMemory"
+  | "reviewMemoryHealth"
   | "openReportBuilder"
   | "openPackageExport";
 
@@ -44,6 +45,8 @@ export type HandoffReadinessInput = {
   analysisRunning: boolean;
   canRunQuickPass: boolean;
   acceptedMemoryCount: number;
+  staleMemoryCount: number;
+  contradictedMemoryCount: number;
   resumePromptReady: boolean;
   exportPlan: MoriPackageExportPlan;
 };
@@ -69,6 +72,7 @@ export function buildHandoffReadiness(
   ];
   const readyCount = items.filter((item) => item.status === "ready").length;
   const attentionCount = items.filter((item) => item.status === "attention").length;
+  const attentionMemoryCount = countAttentionMemory(input);
 
   return {
     headline:
@@ -76,7 +80,9 @@ export function buildHandoffReadiness(
         ? "Continue-later handoff is ready"
         : `${readyCount} of ${items.length} handoff outputs are ready`,
     detail:
-      attentionCount > 0
+      attentionMemoryCount > 0
+        ? "Review accepted-memory health before relying on this handoff later."
+        : attentionCount > 0
         ? "Review the attention items before sharing outside this session."
         : "Choose the output that matches the next person or tool.",
     items,
@@ -88,6 +94,20 @@ function buildResumeItem(
   derived: { hasEvidence: boolean; hasReview: boolean },
 ): HandoffReadinessItem {
   if (input.resumePromptReady) {
+    if (countAttentionMemory(input) > 0) {
+      return {
+        id: "resume",
+        title: "Resume Prompt",
+        status: "attention",
+        statusLabel: "Memory review",
+        detail: "A continuation prompt is available, but accepted memory needs lifecycle review first.",
+        basis: [
+          derived.hasReview ? "Uses reviewed session output when available." : "Uses captured session summary data.",
+          describeAttentionMemory(input),
+        ],
+        action: { id: "reviewMemoryHealth", label: "Review memory", enabled: true },
+      };
+    }
     return {
       id: "resume",
       title: "Resume Prompt",
@@ -170,6 +190,21 @@ function buildReportItem(
     };
   }
 
+  if (countAttentionMemory(input) > 0) {
+    return {
+      id: "report",
+      title: "Report",
+      status: "attention",
+      statusLabel: "Memory review",
+      detail: "Report export is available, but memory-backed context needs lifecycle review before sharing.",
+      basis: [
+        `${input.issueCount} issue${plural(input.issueCount)}, ${input.decisionCount} decision${plural(input.decisionCount)}, ${input.nextActionCount} next action${plural(input.nextActionCount)}.`,
+        describeAttentionMemory(input),
+      ],
+      action: { id: "reviewMemoryHealth", label: "Review memory", enabled: true },
+    };
+  }
+
   return {
     id: "report",
     title: "Report",
@@ -205,24 +240,51 @@ function buildPackageItem(
   const full = input.exportPlan.full;
   const safe = input.exportPlan.clientSafe;
   const excludesMemory = safe.droppedMemories > 0 || safe.droppedAuditRows > 0;
-  const status: HandoffReadinessStatus = excludesMemory ? "attention" : "ready";
+  const attentionMemoryCount = countAttentionMemory(input);
+  const needsMemoryReview = attentionMemoryCount > 0;
+  const status: HandoffReadinessStatus = excludesMemory || needsMemoryReview ? "attention" : "ready";
 
   return {
     id: "package",
     title: ".mori Package",
     status,
-    statusLabel: excludesMemory ? "Review safety" : "Ready",
-    detail: excludesMemory
+    statusLabel: needsMemoryReview ? "Memory review" : excludesMemory ? "Review safety" : "Ready",
+    detail: needsMemoryReview
+      ? "A package can be exported, but accepted memory health should be reviewed before handoff."
+      : excludesMemory
       ? "Full export and client-safe export are available; client-safe will intentionally omit some memory history."
       : "Full export and client-safe export are available from the package panel.",
     basis: [
       `Full: ${full.sources} source${plural(full.sources)}, ${full.events} event${plural(full.events)}, ${full.memories} memory record${plural(full.memories)}, ${full.auditRows} audit row${plural(full.auditRows)}.`,
       `Client-safe: keeps ${safe.memories} memory record${plural(safe.memories)} and omits ${safe.droppedMemories} memory record${plural(safe.droppedMemories)} / ${safe.droppedAuditRows} audit row${plural(safe.droppedAuditRows)}.`,
+      ...(needsMemoryReview ? [describeAttentionMemory(input)] : []),
     ],
-    action: { id: "openPackageExport", label: "Review exports", enabled: true },
+    action: {
+      id: needsMemoryReview ? "reviewMemoryHealth" : "openPackageExport",
+      label: needsMemoryReview ? "Review memory" : "Review exports",
+      enabled: true,
+    },
   };
 }
 
 function plural(count: number): string {
   return count === 1 ? "" : "s";
+}
+
+function countAttentionMemory(
+  input: Pick<HandoffReadinessInput, "staleMemoryCount" | "contradictedMemoryCount">,
+): number {
+  return input.staleMemoryCount + input.contradictedMemoryCount;
+}
+
+function describeAttentionMemory(
+  input: Pick<HandoffReadinessInput, "staleMemoryCount" | "contradictedMemoryCount">,
+): string {
+  const parts: string[] = [];
+  if (input.staleMemoryCount > 0) parts.push(`${input.staleMemoryCount} stale`);
+  if (input.contradictedMemoryCount > 0) {
+    parts.push(`${input.contradictedMemoryCount} contradicted`);
+  }
+  const count = countAttentionMemory(input);
+  return `${count} accepted memor${count === 1 ? "y needs" : "ies need"} lifecycle review${parts.length > 0 ? ` (${parts.join(", ")})` : ""}.`;
 }

@@ -146,6 +146,18 @@ export function ReportsView() {
   const duration = useMemo(() => formatDuration(view.session.startedAt, view.session.endedAt), [view.session.startedAt, view.session.endedAt]);
 
   const { signals: companionSignals } = useCompanionSignals();
+  const memoryHealth = useMemo(() => {
+    let stale = 0;
+    let contradicted = 0;
+    for (const memory of acceptedMemories) {
+      if (memory.status === "stale") stale += 1;
+      else if (memory.status === "contradicted") contradicted += 1;
+    }
+    return {
+      stale,
+      contradicted,
+    };
+  }, [acceptedMemories]);
   const wrapUp = useMemo(
     () =>
       buildSessionWrapUp({
@@ -160,6 +172,8 @@ export function ReportsView() {
         canRunQuickPass,
         acceptedMemoryCount: acceptedMemories.length,
         auditActionCount: reviewActions.length,
+        staleMemoryCount: memoryHealth.stale,
+        contradictedMemoryCount: memoryHealth.contradicted,
         resumePromptReady: resumePromptText.trim().length > 0,
       }),
     [
@@ -173,6 +187,7 @@ export function ReportsView() {
       analysisStatus,
       canRunQuickPass,
       acceptedMemories.length,
+      memoryHealth,
       reviewActions.length,
       resumePromptText,
     ],
@@ -198,6 +213,8 @@ export function ReportsView() {
         analysisRunning: analysisStatus === "running",
         canRunQuickPass,
         acceptedMemoryCount: acceptedMemories.length,
+        staleMemoryCount: memoryHealth.stale,
+        contradictedMemoryCount: memoryHealth.contradicted,
         resumePromptReady: resumePromptText.trim().length > 0,
         exportPlan,
       }),
@@ -211,6 +228,7 @@ export function ReportsView() {
       analysisStatus,
       canRunQuickPass,
       acceptedMemories.length,
+      memoryHealth,
       resumePromptText,
       exportPlan,
     ],
@@ -226,6 +244,9 @@ export function ReportsView() {
         return;
       case "reviewMemory":
         setCurrentView("memory");
+        return;
+      case "reviewMemoryHealth":
+        setCurrentView("consolidation");
         return;
       case "reviewHandoff":
         document.getElementById("reports-handoff")?.scrollIntoView({
@@ -249,6 +270,9 @@ export function ReportsView() {
         return;
       case "reviewMemory":
         setCurrentView("memory");
+        return;
+      case "reviewMemoryHealth":
+        setCurrentView("consolidation");
         return;
       case "openReportBuilder":
         document.getElementById("reports-builder")?.scrollIntoView({
