@@ -6700,6 +6700,95 @@ pre {
   justify-content: flex-end;
 }
 
+/* Per-memory preview of attention-level accepted memories (stale or
+   contradicted). Each row deep-links to the Project Memory provenance
+   drawer so the user can act on one memory at a time without opening
+   the full Consolidation Review surface. */
+.session-wrap-up-attention-memory {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(125, 91, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(247, 245, 255, 0.85);
+}
+
+.session-wrap-up-attention-memory header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-wrap-up-attention-memory header strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.session-wrap-up-attention-memory ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-wrap-up-attention-memory button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 9px;
+  border: 1px solid rgba(125, 91, 255, 0.22);
+  border-radius: 8px;
+  background: white;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.session-wrap-up-attention-memory button:hover {
+  border-color: rgba(125, 91, 255, 0.42);
+  background: rgba(245, 242, 255, 0.95);
+}
+
+.session-wrap-up-attention-memory button:focus-visible {
+  outline: 2px solid var(--mori-accent, var(--purple));
+  outline-offset: 2px;
+}
+
+.session-wrap-up-attention-memory button span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.session-wrap-up-attention-memory button strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-wrap-up-attention-memory button small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-wrap-up-attention-memory p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .reports-handoff-group {
   display: grid;
   gap: 14px;

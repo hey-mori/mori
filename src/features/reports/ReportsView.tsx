@@ -76,6 +76,7 @@ import { HandoffReadinessPanel } from "./HandoffReadinessPanel";
 export function ReportsView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
+  const openAcceptedMemory = useMoriAppStore((state) => state.openAcceptedMemory);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const sessionState = useMoriSessionStore((state) => state);
@@ -164,6 +165,17 @@ export function ReportsView() {
       contradicted,
     };
   }, [acceptedMemories]);
+  const attentionMemoryEntries = useMemo(
+    () =>
+      acceptedMemories
+        .filter((memory) => memory.status === "stale" || memory.status === "contradicted")
+        .map((memory) => ({
+          id: memory.id,
+          title: memory.title,
+          status: memory.status as "stale" | "contradicted",
+        })),
+    [acceptedMemories],
+  );
   const unresolvedPreviewItems = useMemo(
     () =>
       getUnresolvedItems({
@@ -190,6 +202,7 @@ export function ReportsView() {
         staleMemoryCount: memoryHealth.stale,
         contradictedMemoryCount: memoryHealth.contradicted,
         unresolvedItems: unresolvedPreviewItems,
+        attentionMemories: attentionMemoryEntries,
         resumePromptReady: resumePromptText.trim().length > 0,
       }),
     [
@@ -206,6 +219,7 @@ export function ReportsView() {
       memoryHealth,
       reviewActions.length,
       unresolvedPreviewItems,
+      attentionMemoryEntries,
       resumePromptText,
     ],
   );
@@ -384,6 +398,7 @@ export function ReportsView() {
             wrapUp={wrapUp}
             onWrapUpAction={handleWrapUpAction}
             onOpenUnresolvedItem={handleOpenUnresolvedItem}
+            onOpenAttentionMemory={openAcceptedMemory}
           />
 
           <HandoffReadinessPanel

@@ -150,4 +150,37 @@ describe("buildSessionWrapUp", () => {
     expect(viewModel.unresolved.preview.map((item) => item.id)).toEqual(["i-1", "d-1", "n-1"]);
     expect(viewModel.unresolved.hiddenCount).toBe(1);
   });
+
+  it("previews attention-level memories with a top-3 cap and hidden count", () => {
+    const viewModel = buildSessionWrapUp({
+      ...base,
+      acceptedMemoryCount: 5,
+      staleMemoryCount: 3,
+      contradictedMemoryCount: 2,
+      attentionMemories: [
+        { id: "m-1", title: "Stale memory 1", status: "stale" },
+        { id: "m-2", title: "Stale memory 2", status: "stale" },
+        { id: "m-3", title: "Contradicted memory 1", status: "contradicted" },
+        { id: "m-4", title: "Stale memory 3", status: "stale" },
+        { id: "m-5", title: "Contradicted memory 2", status: "contradicted" },
+      ],
+    });
+
+    expect(viewModel.attentionMemories.total).toBe(5);
+    expect(viewModel.attentionMemories.preview.map((item) => item.id)).toEqual([
+      "m-1",
+      "m-2",
+      "m-3",
+    ]);
+    expect(viewModel.attentionMemories.hiddenCount).toBe(2);
+  });
+
+  it("returns an empty attention-memory preview when no records are supplied", () => {
+    const viewModel = buildSessionWrapUp(base);
+    expect(viewModel.attentionMemories).toEqual({
+      total: 0,
+      preview: [],
+      hiddenCount: 0,
+    });
+  });
 });

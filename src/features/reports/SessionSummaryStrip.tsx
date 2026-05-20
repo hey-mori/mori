@@ -1,8 +1,9 @@
-import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, FileText, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, BookMarked, CheckCircle2, CircleDashed, FileText, Loader2 } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type {
   SessionWrapUpActionId,
+  SessionWrapUpAttentionMemory,
   SessionWrapUpStepStatus,
   SessionWrapUpUnresolvedItem,
   SessionWrapUpViewModel,
@@ -20,6 +21,8 @@ export type SessionSummaryStripProps = {
   wrapUp?: SessionWrapUpViewModel;
   onWrapUpAction?: (actionId: SessionWrapUpActionId) => void;
   onOpenUnresolvedItem?: (item: SessionWrapUpUnresolvedItem) => void;
+  /** Deep-link an attention-level accepted memory into its provenance drawer. */
+  onOpenAttentionMemory?: (memoryId: string) => void;
 };
 
 export function SessionSummaryStrip({
@@ -34,6 +37,7 @@ export function SessionSummaryStrip({
   wrapUp,
   onWrapUpAction,
   onOpenUnresolvedItem,
+  onOpenAttentionMemory,
 }: SessionSummaryStripProps) {
   return (
     <section className="session-summary-strip" aria-label="Session summary">
@@ -73,6 +77,10 @@ export function SessionSummaryStrip({
             <UnresolvedPreview
               unresolved={wrapUp.unresolved}
               onOpenItem={onOpenUnresolvedItem}
+            />
+            <AttentionMemoryPreview
+              attentionMemories={wrapUp.attentionMemories}
+              onOpenMemory={onOpenAttentionMemory}
             />
           </div>
           <div className="session-wrap-up-action">
@@ -131,6 +139,56 @@ function UnresolvedPreview({
       ) : null}
     </div>
   );
+}
+
+function AttentionMemoryPreview({
+  attentionMemories,
+  onOpenMemory,
+}: {
+  attentionMemories: SessionWrapUpViewModel["attentionMemories"];
+  onOpenMemory?: (memoryId: string) => void;
+}) {
+  if (attentionMemories.total === 0) return null;
+  return (
+    <div className="session-wrap-up-attention-memory" aria-label="Memory needs review">
+      <header>
+        <strong>
+          <BookMarked size={13} aria-hidden="true" /> Memory needs lifecycle review
+        </strong>
+        <Badge tone="orange">{attentionMemories.total} accepted memor{attentionMemories.total === 1 ? "y" : "ies"}</Badge>
+      </header>
+      <ul>
+        {attentionMemories.preview.map((memory) => (
+          <li key={memory.id}>
+            <button
+              type="button"
+              onClick={() => onOpenMemory?.(memory.id)}
+              title={`${memory.title} — open provenance drawer`}
+            >
+              <span>
+                <strong>{memory.title}</strong>
+                <small>{describeAttentionMemoryStatus(memory)}</small>
+              </span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      {attentionMemories.hiddenCount > 0 ? (
+        <p>
+          {attentionMemories.hiddenCount} more memor
+          {attentionMemories.hiddenCount === 1 ? "y" : "ies"} in Consolidation Review.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function describeAttentionMemoryStatus(memory: SessionWrapUpAttentionMemory): string {
+  if (memory.status === "stale") {
+    return "Stale — newer work may have superseded this memory.";
+  }
+  return "Contradicted — recent work disagrees with this memory.";
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

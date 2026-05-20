@@ -19,6 +19,18 @@ export type SessionWrapUpUnresolvedItem = {
   detail: string;
 };
 
+/**
+ * One accepted memory that the wrap-up should surface for lifecycle
+ * review before handoff (status === "stale" | "contradicted"). The
+ * Reports surface renders these as deep-link rows that open the
+ * accepted-memory provenance drawer.
+ */
+export type SessionWrapUpAttentionMemory = {
+  id: string;
+  title: string;
+  status: "stale" | "contradicted";
+};
+
 export type SessionWrapUpInput = {
   sourceCount: number;
   eventCount: number;
@@ -34,6 +46,13 @@ export type SessionWrapUpInput = {
   staleMemoryCount: number;
   contradictedMemoryCount: number;
   unresolvedItems?: readonly SessionWrapUpUnresolvedItem[];
+  /**
+   * Optional per-memory list driving the lifecycle-review preview. When
+   * omitted the wrap-up still uses `staleMemoryCount` and
+   * `contradictedMemoryCount` for step status and primary action —
+   * passing the records is additive.
+   */
+  attentionMemories?: readonly SessionWrapUpAttentionMemory[];
   resumePromptReady: boolean;
 };
 
@@ -58,6 +77,11 @@ export type SessionWrapUpViewModel = {
   unresolved: {
     total: number;
     preview: SessionWrapUpUnresolvedItem[];
+    hiddenCount: number;
+  };
+  attentionMemories: {
+    total: number;
+    preview: SessionWrapUpAttentionMemory[];
     hiddenCount: number;
   };
 };
@@ -137,6 +161,7 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
     steps,
     primaryAction: choosePrimaryAction(input, { hasEvidence, hasReviewedWork }),
     unresolved: buildUnresolvedPreview(input.unresolvedItems ?? []),
+    attentionMemories: buildAttentionMemoryPreview(input.attentionMemories ?? []),
   };
 }
 
@@ -197,6 +222,17 @@ function plural(count: number): string {
 }
 
 function buildUnresolvedPreview(items: readonly SessionWrapUpUnresolvedItem[]): SessionWrapUpViewModel["unresolved"] {
+  const preview = items.slice(0, 3).map((item) => ({ ...item }));
+  return {
+    total: items.length,
+    preview,
+    hiddenCount: Math.max(0, items.length - preview.length),
+  };
+}
+
+function buildAttentionMemoryPreview(
+  items: readonly SessionWrapUpAttentionMemory[],
+): SessionWrapUpViewModel["attentionMemories"] {
   const preview = items.slice(0, 3).map((item) => ({ ...item }));
   return {
     total: items.length,
