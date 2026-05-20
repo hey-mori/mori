@@ -16,6 +16,13 @@ type MoriAppState = {
    * deep-links into Review. ReviewView consumes and clears it.
    */
   reviewFocus: ReviewSelection | null;
+  /**
+   * A one-shot request to open the Project Memory surface with a specific
+   * accepted memory's provenance drawer open. Set when another surface
+   * (e.g. Companion Inbox memory-health chips) deep-links into Memory.
+   * `MemoryView` consumes and clears it once the drawer opens.
+   */
+  memoryFocus: { memoryId: string } | null;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -26,6 +33,9 @@ type MoriAppState = {
   /** Deep-link into Review focused on a specific issue / decision / next action. */
   openReviewItem: (selection: ReviewSelection) => void;
   clearReviewFocus: () => void;
+  /** Deep-link into Project Memory with one accepted memory's drawer open. */
+  openAcceptedMemory: (memoryId: string) => void;
+  clearMemoryFocus: () => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -36,6 +46,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   searchQuery: "",
   inspectorCollapsed: false,
   reviewFocus: null,
+  memoryFocus: null,
   setCurrentView: (currentView) => set({ currentView }),
   setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
@@ -51,4 +62,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   openReviewItem: (selection) =>
     set({ reviewFocus: selection, currentView: "review" }),
   clearReviewFocus: () => set({ reviewFocus: null }),
+  openAcceptedMemory: (memoryId) =>
+    set({ memoryFocus: { memoryId }, currentView: "memory" }),
+  clearMemoryFocus: () => set({ memoryFocus: null }),
 }));

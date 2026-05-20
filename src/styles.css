@@ -7325,6 +7325,70 @@ pre {
   color: var(--muted);
 }
 
+/* Stale-memory chips — render below a stale_memory signal's message so
+   the user can deep-link to one accepted memory's provenance drawer
+   without first opening Consolidation Review. */
+.companion-signal-chips {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.companion-signal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 6px;
+  border: 1px solid var(--mori-border, var(--line));
+  border-radius: 999px;
+  background: var(--mori-surface, #ffffff);
+  color: var(--mori-text, var(--text));
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+.companion-signal-chip:hover {
+  border-color: var(--mori-border-strong, var(--line-strong));
+  background: var(--mori-surface-subtle, #fbfbfd);
+}
+
+.companion-signal-chip:focus-visible {
+  outline: 2px solid var(--mori-accent, var(--purple));
+  outline-offset: 2px;
+}
+
+.companion-signal-chip-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mori-status-warning, var(--orange));
+}
+
+.companion-signal-chip-dot.status-contradicted {
+  background: var(--mori-status-danger, var(--red));
+}
+
+.companion-signal-chip-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.companion-signal-chip-status {
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--mori-text-muted, var(--muted));
+}
+
 .companion-card-foot {
   margin: 0;
   font-size: 10.5px;

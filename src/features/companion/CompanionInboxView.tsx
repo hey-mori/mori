@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ArrowRight, Compass, ShieldCheck } from "lucide-react";
+import { ArrowRight, Compass, ExternalLink, ShieldCheck } from "lucide-react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Button } from "../../components/ui/Button";
 import { useMoriAppStore } from "../../app/store";
@@ -13,7 +13,12 @@ import {
   type CompanionSignal,
   type CompanionSignalGroup,
 } from "../../lib/companion/companionSignals";
+import {
+  buildStaleMemoryChips,
+  type StaleMemoryChip,
+} from "../../lib/companion/staleMemoryChips";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
+import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import { useCompanionSignals } from "./useCompanionSignals";
 
 /**
@@ -27,9 +32,10 @@ import { useCompanionSignals } from "./useCompanionSignals";
  * and reviewed; the inbox never watches anything and never writes memory.
  */
 export function CompanionInboxView() {
-  const { feed, isDemo } = useCompanionSignals();
+  const { feed, isDemo, acceptedMemories } = useCompanionSignals();
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
+  const openAcceptedMemory = useMoriAppStore((state) => state.openAcceptedMemory);
 
   const groups = useMemo(() => groupCompanionSignalsByAction(feed), [feed]);
   const topSignal = feed[0] ?? null;
@@ -59,8 +65,10 @@ export function CompanionInboxView() {
               <CompanionInboxSection
                 key={group.category}
                 group={group}
+                acceptedMemories={acceptedMemories}
                 onNavigate={setCurrentView}
                 onOpenReviewItem={openReviewItem}
+                onOpenAcceptedMemory={openAcceptedMemory}
               />
             ))
           )}
@@ -115,12 +123,16 @@ function CompanionInboxFocus({
 
 function CompanionInboxSection({
   group,
+  acceptedMemories,
   onNavigate,
   onOpenReviewItem,
+  onOpenAcceptedMemory,
 }: {
   group: CompanionSignalGroup;
+  acceptedMemories: StoredAcceptedProjectMemory[];
   onNavigate: (view: ViewKey) => void;
   onOpenReviewItem: (selection: ReviewSelection) => void;
+  onOpenAcceptedMemory: (memoryId: string) => void;
 }) {
   return (
     <section className="companion-inbox-section" aria-label={group.label}>
@@ -134,8 +146,10 @@ function CompanionInboxSection({
           <CompanionSignalRow
             key={signal.id}
             signal={signal}
+            acceptedMemories={acceptedMemories}
             onNavigate={onNavigate}
             onOpenReviewItem={onOpenReviewItem}
+            onOpenAcceptedMemory={onOpenAcceptedMemory}
           />
         ))}
       </ul>
@@ -145,12 +159,16 @@ function CompanionInboxSection({
 
 function CompanionSignalRow({
   signal,
+  acceptedMemories,
   onNavigate,
   onOpenReviewItem,
+  onOpenAcceptedMemory,
 }: {
   signal: CompanionSignal;
+  acceptedMemories: StoredAcceptedProjectMemory[];
   onNavigate: (view: ViewKey) => void;
   onOpenReviewItem: (selection: ReviewSelection) => void;
+  onOpenAcceptedMemory: (memoryId: string) => void;
 }) {
   // When the signal is about a specific Review item, the action opens that
   // exact item; otherwise it navigates to the signal's surface. Either way
@@ -162,6 +180,15 @@ function CompanionSignalRow({
       : target?.kind === "view"
         ? () => onNavigate(target.view)
         : null;
+
+  // Stale-memory signals carry the affected accepted-memory ids — render
+  // them as chips so the user can open one memory's provenance drawer
+  // directly without first opening the bulk Consolidation Review surface.
+  const memoryChips: StaleMemoryChip[] =
+    signal.type === "stale_memory"
+      ? buildStaleMemoryChips(signal.linkedItemIds, acceptedMemories)
+      : [];
+
   return (
     <li
       className="companion-signal companion-inbox-row"
@@ -179,6 +206,25 @@ function CompanionSignalRow({
           </span>
         </div>
         <p>{signal.message}</p>
+        {memoryChips.length > 0 ? (
+          <ul className="companion-signal-chips" aria-label="Affected accepted memories">
+            {memoryChips.map((chip) => (
+              <li key={chip.memoryId}>
+                <button
+                  type="button"
+                  className="companion-signal-chip"
+                  onClick={() => onOpenAcceptedMemory(chip.memoryId)}
+                  title={`${chip.title} — 메모리 자세히 보기`}
+                >
+                  <span className={`companion-signal-chip-dot status-${chip.status}`} aria-hidden="true" />
+                  <span className="companion-signal-chip-title">{chip.title}</span>
+                  <span className="companion-signal-chip-status">{chip.status}</span>
+                  <ExternalLink size={11} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
       {action ? <Button onClick={action}>{signal.actionLabel}</Button> : null}
     </li>

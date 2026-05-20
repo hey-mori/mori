@@ -11,6 +11,7 @@ import {
   type CompanionSignal,
 } from "../../lib/companion/companionSignals";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
+import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 
 /**
  * Shared Companion Layer hook.
@@ -22,7 +23,9 @@ import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMe
  *
  * It also loads accepted project memory through the runtime-aware
  * repository so the signal set can flag memory that has gone stale or
- * contradicted — read-only, no writes.
+ * contradicted — read-only, no writes. The full list is exposed so
+ * surfaces like the Companion Inbox can resolve a signal's
+ * `linkedItemIds` into titles without re-loading the memories.
  *
  * Returns both the full `feed` (every signal, for the Companion inbox)
  * and the capped `signals` set (top few, for the calm card / strip).
@@ -31,6 +34,7 @@ export function useCompanionSignals(): {
   feed: CompanionSignal[];
   signals: CompanionSignal[];
   isDemo: boolean;
+  acceptedMemories: StoredAcceptedProjectMemory[];
 } {
   const view = useMoriSessionStore(selectSessionView);
   const mode = useMoriSessionStore(selectSessionMode);
@@ -38,8 +42,7 @@ export function useCompanionSignals(): {
   const imports = useMoriSessionStore((state) => state.imports);
 
   const projectId = view.project.id || "default";
-  const [staleMemoryIds, setStaleMemoryIds] = useState<string[]>([]);
-  const [contradictedMemoryIds, setContradictedMemoryIds] = useState<string[]>([]);
+  const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,27 +50,27 @@ export function useCompanionSignals(): {
       .listAcceptedProjectMemories(projectId)
       .then((result) => {
         if (cancelled) return;
-        const stale: string[] = [];
-        const contradicted: string[] = [];
-        for (const memory of result.data) {
-          if (memory.status === "stale") stale.push(memory.id);
-          else if (memory.status === "contradicted") contradicted.push(memory.id);
-        }
-        setStaleMemoryIds(stale);
-        setContradictedMemoryIds(contradicted);
+        setAcceptedMemories(result.data);
       })
       .catch(() => {
         // The repository falls back internally; a failed read just leaves
         // the memory-health signal off rather than blocking the others.
-        if (!cancelled) {
-          setStaleMemoryIds([]);
-          setContradictedMemoryIds([]);
-        }
+        if (!cancelled) setAcceptedMemories([]);
       });
     return () => {
       cancelled = true;
     };
   }, [projectId]);
+
+  const { staleMemoryIds, contradictedMemoryIds } = useMemo(() => {
+    const stale: string[] = [];
+    const contradicted: string[] = [];
+    for (const memory of acceptedMemories) {
+      if (memory.status === "stale") stale.push(memory.id);
+      else if (memory.status === "contradicted") contradicted.push(memory.id);
+    }
+    return { staleMemoryIds: stale, contradictedMemoryIds: contradicted };
+  }, [acceptedMemories]);
 
   const feed = useMemo(
     () =>
@@ -90,5 +93,5 @@ export function useCompanionSignals(): {
     [feed],
   );
 
-  return { feed, signals, isDemo: mode === "demo" };
+  return { feed, signals, isDemo: mode === "demo", acceptedMemories };
 }

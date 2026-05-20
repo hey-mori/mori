@@ -70,6 +70,8 @@ export function MemoryView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
+  const memoryFocus = useMoriAppStore((state) => state.memoryFocus);
+  const clearMemoryFocus = useMoriAppStore((state) => state.clearMemoryFocus);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -129,6 +131,17 @@ export function MemoryView() {
     useState<AcceptedMemoryStorageSource>("browser-local-storage");
   const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
   const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
+
+  // Consume a one-shot memory-focus deep-link (e.g. from Companion Inbox).
+  // We wait until the requested memory id is present in the loaded
+  // `acceptedMemories` list before opening the drawer so a slow load does
+  // not silently drop the focus. The focus is cleared on a successful open.
+  useEffect(() => {
+    if (!memoryFocus) return;
+    if (!acceptedMemories.some((memory) => memory.id === memoryFocus.memoryId)) return;
+    setSelectedMemoryId(memoryFocus.memoryId);
+    clearMemoryFocus();
+  }, [memoryFocus, acceptedMemories, clearMemoryFocus]);
   const reloadMemory = useCallback(async () => {
     const memoryRepository = getAcceptedMemoryRepository();
     const [memoriesResult, actionsResult] = await Promise.all([
