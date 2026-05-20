@@ -11,7 +11,6 @@ import {
   type CompanionSignal,
 } from "../../lib/companion/companionSignals";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
-import { summarizeMemoryLifecycle } from "../../lib/project-memory/memoryLifecycle";
 
 /**
  * Shared Companion Layer hook.
@@ -39,7 +38,8 @@ export function useCompanionSignals(): {
   const imports = useMoriSessionStore((state) => state.imports);
 
   const projectId = view.project.id || "default";
-  const [attentionMemoryCount, setAttentionMemoryCount] = useState(0);
+  const [staleMemoryIds, setStaleMemoryIds] = useState<string[]>([]);
+  const [contradictedMemoryIds, setContradictedMemoryIds] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,15 +47,22 @@ export function useCompanionSignals(): {
       .listAcceptedProjectMemories(projectId)
       .then((result) => {
         if (cancelled) return;
-        const summary = summarizeMemoryLifecycle(
-          result.data.map((memory) => memory.status),
-        );
-        setAttentionMemoryCount(summary.attention);
+        const stale: string[] = [];
+        const contradicted: string[] = [];
+        for (const memory of result.data) {
+          if (memory.status === "stale") stale.push(memory.id);
+          else if (memory.status === "contradicted") contradicted.push(memory.id);
+        }
+        setStaleMemoryIds(stale);
+        setContradictedMemoryIds(contradicted);
       })
       .catch(() => {
         // The repository falls back internally; a failed read just leaves
         // the memory-health signal off rather than blocking the others.
-        if (!cancelled) setAttentionMemoryCount(0);
+        if (!cancelled) {
+          setStaleMemoryIds([]);
+          setContradictedMemoryIds([]);
+        }
       });
     return () => {
       cancelled = true;
@@ -72,9 +79,10 @@ export function useCompanionSignals(): {
         nextActions: view.nextActions,
         hasAnalysis,
         importCount: imports.length,
-        attentionMemoryCount,
+        staleMemoryIds,
+        contradictedMemoryIds,
       }),
-    [mode, view, hasAnalysis, imports.length, attentionMemoryCount],
+    [mode, view, hasAnalysis, imports.length, staleMemoryIds, contradictedMemoryIds],
   );
 
   const signals = useMemo(

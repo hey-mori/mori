@@ -94,8 +94,14 @@ export type CompanionSignalInput = {
    * Count of accepted project memories in the lifecycle "attention" group
    * (stale / contradicted) — memory that has been superseded by newer work
    * and is worth a review. Optional; omit when memory has not been loaded.
+   * Kept for backward compatibility — `staleMemoryIds` and
+   * `contradictedMemoryIds` carry the per-memory detail when available.
    */
   attentionMemoryCount?: number;
+  /** Ids of accepted memories whose lifecycle status is `stale`. */
+  staleMemoryIds?: string[];
+  /** Ids of accepted memories whose lifecycle status is `contradicted`. */
+  contradictedMemoryIds?: string[];
 };
 
 /** Inferred issues below this confidence are flagged as weak evidence. */
@@ -331,21 +337,26 @@ function collectCompanionSignals(input: CompanionSignalInput): CompanionSignal[]
   }
 
   // ── Accepted memory that has gone stale or contradicted ────────────────
-  const attentionMemoryCount = input.attentionMemoryCount ?? 0;
+  const staleIds = uniqueIds(input.staleMemoryIds ?? []);
+  const contradictedIds = uniqueIds(input.contradictedMemoryIds ?? []);
+  const attentionIds = uniqueIds([...staleIds, ...contradictedIds]);
+  const attentionMemoryCount =
+    attentionIds.length > 0 ? attentionIds.length : input.attentionMemoryCount ?? 0;
   if (attentionMemoryCount > 0) {
+    const breakdown = describeAttentionBreakdown(staleIds.length, contradictedIds.length);
     signals.push({
       id: "companion-stale-memory",
       type: "stale_memory",
       severity: "review",
-      title: `확인이 필요한 메모리가 ${attentionMemoryCount}개 있어요`,
+      title: `확인이 필요한 메모리가 ${attentionMemoryCount}개 있어요${breakdown}`,
       message:
-        "오래되었거나 상충하는 accepted memory입니다. Project Memory에서 검토해 최신 상태로 정리하세요.",
+        "오래되었거나 상충하는 accepted memory입니다. Consolidation Review에서 supersede 또는 retire로 정리하세요.",
       sourceSurface: "memory",
-      linkedItemIds: [],
+      linkedItemIds: attentionIds,
       evidenceRefs: [],
       basis: "mixed",
-      actionLabel: "메모리 검토",
-      destination: "memory",
+      actionLabel: "Consolidation 검토",
+      destination: "consolidation",
       audience: "both",
     });
   }
@@ -599,4 +610,21 @@ export function summarizeCompanionSignals(
 
 function uniqueIds(ids: string[]): string[] {
   return [...new Set(ids)];
+}
+
+/**
+ * Return a parenthetical "(stale N · contradicted M)" suffix when both
+ * sides contribute, or a shorter "(stale N)" / "(contradicted M)" when
+ * only one side is present, or an empty string when neither breakdown
+ * is known. The suffix is always preceded by a leading space when set.
+ */
+function describeAttentionBreakdown(
+  staleCount: number,
+  contradictedCount: number,
+): string {
+  const parts: string[] = [];
+  if (staleCount > 0) parts.push(`stale ${staleCount}`);
+  if (contradictedCount > 0) parts.push(`contradicted ${contradictedCount}`);
+  if (parts.length === 0) return "";
+  return ` (${parts.join(" · ")})`;
 }

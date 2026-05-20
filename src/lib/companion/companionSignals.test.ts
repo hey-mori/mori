@@ -142,7 +142,30 @@ describe("buildCompanionSignals — evidence-based signals", () => {
     const stale = signals.find((signal) => signal.type === "stale_memory");
     expect(stale).toBeDefined();
     expect(stale?.severity).toBe("review");
-    expect(stale?.destination).toBe("memory");
+    expect(stale?.destination).toBe("consolidation");
+  });
+
+  it("carries the actual memory ids when provided and breaks down stale vs contradicted", () => {
+    const signals = buildCompanionSignals(
+      input({
+        staleMemoryIds: ["mem-stale-1", "mem-stale-2"],
+        contradictedMemoryIds: ["mem-contra-1"],
+      }),
+    );
+    const stale = signals.find((signal) => signal.type === "stale_memory");
+    expect(stale).toBeDefined();
+    expect(stale?.linkedItemIds).toEqual(["mem-stale-1", "mem-stale-2", "mem-contra-1"]);
+    expect(stale?.title).toContain("3");
+    expect(stale?.title).toContain("stale 2");
+    expect(stale?.title).toContain("contradicted 1");
+    expect(stale?.destination).toBe("consolidation");
+  });
+
+  it("falls back to the legacy count and a plain title when ids are not provided", () => {
+    const signals = buildCompanionSignals(input({ attentionMemoryCount: 2 }));
+    const stale = signals.find((signal) => signal.type === "stale_memory");
+    expect(stale?.title).toBe("확인이 필요한 메모리가 2개 있어요");
+    expect(stale?.linkedItemIds).toEqual([]);
   });
 
   it("raises no memory-health signal when no memory needs attention", () => {
@@ -155,6 +178,12 @@ describe("buildCompanionSignals — evidence-based signals", () => {
       buildCompanionSignals(input({})).some(
         (signal) => signal.type === "stale_memory",
       ),
+    ).toBe(false);
+    // Empty id arrays should also yield no signal.
+    expect(
+      buildCompanionSignals(
+        input({ staleMemoryIds: [], contradictedMemoryIds: [] }),
+      ).some((signal) => signal.type === "stale_memory"),
     ).toBe(false);
   });
 
