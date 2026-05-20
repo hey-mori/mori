@@ -1,5 +1,16 @@
-import { useMemo, useState } from "react";
-import { ArrowRight, Clock4, ExternalLink, FileText, ShieldCheck, Undo2 } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import {
+  ArrowRight,
+  ClipboardCheck,
+  Clock4,
+  ExternalLink,
+  FileText,
+  GanttChartSquare,
+  GitBranch,
+  ShieldCheck,
+  TriangleAlert,
+  Undo2,
+} from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { formatDateTime } from "../../lib/formatting/time";
@@ -13,6 +24,12 @@ import {
   describeMemoryLifecycleMeaning,
 } from "../../lib/project-memory/memoryProvenance";
 import {
+  buildAcceptedMemoryLinkTargets,
+  countUnlinkableEvidenceRefs,
+  type AcceptedMemoryLinkTarget,
+  type AcceptedMemoryLinkViewSlice,
+} from "../../lib/project-memory/acceptedMemoryLinks";
+import {
   describeProposalKind,
   proposalKindTone,
 } from "../../lib/project-memory/projectMemoryConsolidationState";
@@ -20,6 +37,7 @@ import {
   getProductMemoryStatusLabel,
   getProductMemoryStatusTone,
 } from "../../lib/product-state/productState";
+import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import type {
   StoredAcceptedProjectMemory,
   StoredMemoryReviewAction,
@@ -38,15 +56,31 @@ import type {
 export function AcceptedMemoryDetailDrawer({
   memory,
   actions,
+  view,
   onRevertAction,
+  onNavigateTimelineEvent,
+  onNavigateReviewItem,
   onClose,
 }: {
   memory: StoredAcceptedProjectMemory;
   actions: StoredMemoryReviewAction[];
+  view: AcceptedMemoryLinkViewSlice;
   onRevertAction: (action: StoredMemoryReviewAction) => Promise<void>;
+  onNavigateTimelineEvent: (eventId: string) => void;
+  onNavigateReviewItem: (selection: ReviewSelection) => void;
   onClose: () => void;
 }) {
   const provenance = useMemo(() => buildMemoryProvenance(memory, actions), [memory, actions]);
+  const links = useMemo(() => buildAcceptedMemoryLinkTargets(memory, view), [memory, view]);
+  const unlinkableEvidenceCount = useMemo(
+    () => countUnlinkableEvidenceRefs(memory),
+    [memory],
+  );
+  const hasAnyLinks =
+    links.timelineEvents.length +
+      links.reviewIssues.length +
+      links.reviewDecisions.length >
+    0;
   const [revertPhase, setRevertPhase] = useState<"idle" | "confirming" | "reverting">("idle");
   const [revertError, setRevertError] = useState<string | null>(null);
 
@@ -171,6 +205,86 @@ export function AcceptedMemoryDetailDrawer({
         </section>
       ) : null}
 
+      {hasAnyLinks || unlinkableEvidenceCount > 0 ? (
+        <section className="accepted-memory-detail-links" aria-label="Linked items">
+          <header>
+            <h3>연결된 항목</h3>
+            <p>이 메모리가 가리키는 활성 세션의 항목입니다. 클릭하면 해당 화면으로 이동합니다.</p>
+          </header>
+
+          {links.timelineEvents.length > 0 ? (
+            <LinkGroup
+              icon={<GanttChartSquare size={12} aria-hidden="true" />}
+              label={`타임라인 이벤트 ${links.timelineEvents.length}건`}
+            >
+              {links.timelineEvents.map((target) => (
+                <LinkButton
+                  key={(target.kind === "timelineEvent" ? target.eventId : "")}
+                  title={target.title}
+                  hint={target.kind === "timelineEvent" ? formatShort(target.start) : ""}
+                  onClick={() => {
+                    if (target.kind !== "timelineEvent") return;
+                    onNavigateTimelineEvent(target.eventId);
+                  }}
+                />
+              ))}
+            </LinkGroup>
+          ) : null}
+
+          {links.reviewIssues.length > 0 ? (
+            <LinkGroup
+              icon={<TriangleAlert size={12} aria-hidden="true" />}
+              label={`관련 이슈 ${links.reviewIssues.length}건`}
+            >
+              {links.reviewIssues.map((target) => (
+                <LinkButton
+                  key={selectionKey(target)}
+                  title={target.title}
+                  hint="Review · 이슈"
+                  onClick={() => {
+                    if (target.kind !== "review") return;
+                    onNavigateReviewItem(target.selection);
+                  }}
+                />
+              ))}
+            </LinkGroup>
+          ) : null}
+
+          {links.reviewDecisions.length > 0 ? (
+            <LinkGroup
+              icon={<GitBranch size={12} aria-hidden="true" />}
+              label={`관련 결정 ${links.reviewDecisions.length}건`}
+            >
+              {links.reviewDecisions.map((target) => (
+                <LinkButton
+                  key={selectionKey(target)}
+                  title={target.title}
+                  hint="Review · 결정"
+                  onClick={() => {
+                    if (target.kind !== "review") return;
+                    onNavigateReviewItem(target.selection);
+                  }}
+                />
+              ))}
+            </LinkGroup>
+          ) : null}
+
+          {unlinkableEvidenceCount > 0 ? (
+            <p className="accepted-memory-detail-links-note">
+              <ClipboardCheck size={11} aria-hidden="true" /> {unlinkableEvidenceCount}건의 근거는
+              세션·소스 단위라 여기서 바로 열 수 없습니다 — Evidence 페이지에서 확인하세요.
+            </p>
+          ) : null}
+
+          {!hasAnyLinks ? (
+            <p className="accepted-memory-detail-links-empty">
+              활성 세션에서 직접 열 수 있는 연결된 항목이 없습니다. 다른 세션에서 만들어진 메모리일
+              수 있습니다.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       <section className="accepted-memory-detail-audit" aria-label="Audit history">
         <header>
           <h3>
@@ -233,6 +347,68 @@ export function AcceptedMemoryDetailDrawer({
       </section>
     </article>
   );
+}
+
+function LinkGroup({
+  icon,
+  label,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="accepted-memory-detail-links-group">
+      <p className="accepted-memory-detail-links-group-label">
+        {icon} {label}
+      </p>
+      <ul className="accepted-memory-detail-links-list">{children}</ul>
+    </div>
+  );
+}
+
+function LinkButton({
+  title,
+  hint,
+  onClick,
+}: {
+  title: string;
+  hint: string;
+  onClick: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        className="accepted-memory-detail-link"
+        onClick={onClick}
+      >
+        <span className="accepted-memory-detail-link-title">{title}</span>
+        {hint ? <span className="accepted-memory-detail-link-hint">{hint}</span> : null}
+        <ExternalLink
+          size={12}
+          aria-hidden="true"
+          className="accepted-memory-detail-link-chevron"
+        />
+      </button>
+    </li>
+  );
+}
+
+function selectionKey(target: AcceptedMemoryLinkTarget): string {
+  if (target.kind !== "review") return target.kind;
+  const sel = target.selection;
+  switch (sel.kind) {
+    case "issue":
+      return `issue::${sel.issueId}`;
+    case "decision":
+      return `decision::${sel.decisionId}`;
+    case "nextAction":
+      return `nextAction::${sel.nextActionId}`;
+    default:
+      return "none";
+  }
 }
 
 function ProvenanceStat({

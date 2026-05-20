@@ -69,6 +69,7 @@ import { useCompanionSignals } from "../companion/useCompanionSignals";
 export function MemoryView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
+  const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -487,7 +488,21 @@ export function MemoryView() {
             <AcceptedMemoryDetailDrawer
               memory={memory}
               actions={reviewActions}
+              view={{
+                events: view.events,
+                issues: view.issues,
+                decisions: view.decisions,
+              }}
               onRevertAction={handleRevertAction}
+              onNavigateTimelineEvent={(eventId) => {
+                setSelectedEventId(eventId);
+                setCurrentView("timeline");
+                setSelectedMemoryId(null);
+              }}
+              onNavigateReviewItem={(selection) => {
+                openReviewItem(selection);
+                setSelectedMemoryId(null);
+              }}
               onClose={() => setSelectedMemoryId(null)}
             />
           );
