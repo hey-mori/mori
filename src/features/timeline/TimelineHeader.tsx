@@ -1,4 +1,4 @@
-import { Calendar, Check, ChevronDown, Filter, PanelRight } from "lucide-react";
+import { Calendar, Check, ChevronDown, Filter, PanelRight, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { eventTypeLabels, eventTypeTone, laneOrder } from "../../domain/constants";
 import type { EventType } from "../../domain/types";
@@ -18,6 +18,8 @@ export type TimelineToolbarProps = {
   onToggleInspector: () => void;
   /** Narrow viewports auto-hide the inspector, so the toggle is disabled. */
   inspectorToggleDisabled: boolean;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 };
 
 /**
@@ -41,6 +43,8 @@ export function TimelineToolbar({
   inspectorCollapsed,
   onToggleInspector,
   inspectorToggleDisabled,
+  searchQuery,
+  onSearchChange,
 }: TimelineToolbarProps) {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -106,6 +110,27 @@ export function TimelineToolbar({
             </div>
           ) : null}
         </div>
+      </div>
+      <div className="timeline-toolbar-search" role="search" aria-label="이벤트 검색">
+        <Search size={13} aria-hidden="true" className="timeline-search-icon" />
+        <input
+          type="search"
+          className="timeline-search-input"
+          placeholder="이벤트 검색..."
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          aria-label="타임라인 이벤트 검색"
+        />
+        {searchQuery ? (
+          <button
+            type="button"
+            className="timeline-search-clear"
+            onClick={() => onSearchChange("")}
+            aria-label="검색어 지우기"
+          >
+            <X size={12} />
+          </button>
+        ) : null}
       </div>
       <div className="timeline-toolbar-right">
         <div className="toolbar-pop-wrap" ref={filterPopRef}>

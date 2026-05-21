@@ -546,9 +546,11 @@ kbd {
 }
 
 .timeline-toolbar {
-  display: grid;
+  display: flex;
+  align-items: center;
   gap: 8px;
   padding: 10px 0 8px;
+  flex-wrap: wrap;
 }
 
 .timeline-toolbar-row {
@@ -565,6 +567,62 @@ kbd {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.timeline-toolbar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 140px;
+  max-width: 260px;
+}
+
+.timeline-search-input {
+  width: 100%;
+  padding: 5px 28px 5px 26px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 12px;
+  background: var(--panel-soft);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.timeline-search-input:focus {
+  border-color: var(--accent);
+  background: white;
+}
+
+.timeline-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.timeline-search-icon {
+  position: absolute;
+  left: 7px;
+  color: var(--muted-2);
+  pointer-events: none;
+}
+
+.timeline-search-clear {
+  position: absolute;
+  right: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border: none;
+  background: none;
+  color: var(--muted-2);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.timeline-search-clear:hover {
+  color: var(--text);
+  background: var(--line);
 }
 
 .timeline-toolbar-filters {
@@ -12774,15 +12832,21 @@ pre {
 
 /* Compact one-row toolbar. Filter chips moved into a popover. */
 .timeline-toolbar {
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: white;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
+  flex-wrap: wrap;
+}
+
+.timeline-toolbar .timeline-toolbar-search {
+  flex: 1;
+  min-width: 120px;
+  max-width: 240px;
 }
 
 .timeline-toolbar-left,
@@ -12794,7 +12858,7 @@ pre {
 }
 
 .timeline-toolbar-right {
-  justify-self: end;
+  margin-left: auto;
 }
 
 .toolbar-toggle {

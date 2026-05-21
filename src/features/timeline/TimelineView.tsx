@@ -75,6 +75,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const toggleFilter = useMoriAppStore((state) => state.toggleFilter);
   const clearFilters = useMoriAppStore((state) => state.clearFilters);
+  const setSearchQuery = useMoriAppStore((state) => state.setSearchQuery);
   const inspectorCollapsed = useMoriAppStore((state) => state.inspectorCollapsed);
   const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
 
@@ -196,6 +197,8 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
               inspectorCollapsed={inspectorCollapsed}
               onToggleInspector={() => setInspectorCollapsed(!inspectorCollapsed)}
               inspectorToggleDisabled={inspectorNarrow}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
             />
           )}
           {useChronoList ? (
