@@ -23,7 +23,7 @@ describe("buildTimelineRelationshipViewModels", () => {
     });
     expect(list).toHaveLength(1);
     expect(list[0]!.relationship.id).toBe("rel-test-1");
-    expect(list[0]!.label).toBe("Led to");
+    expect(list[0]!.label).toBe("이어짐");
   });
 
   it("marks the relationship as focused when the other endpoint is in the focus set", () => {

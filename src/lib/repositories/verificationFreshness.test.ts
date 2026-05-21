@@ -28,7 +28,7 @@ describe("getRepositoryVerificationFreshness", () => {
   it("returns the unverified tone for missing metadata", () => {
     const result = getRepositoryVerificationFreshness(undefined, { now: NOW_MS });
     expect(result.tone).toBe("unverified");
-    expect(result.label).toBe("Unverified");
+    expect(result.label).toBe("미인증");
     expect(result.isStale).toBe(false);
     expect(result.ageMs).toBeNull();
   });
@@ -39,7 +39,7 @@ describe("getRepositoryVerificationFreshness", () => {
       { now: NOW_MS },
     );
     expect(result.tone).toBe("failed");
-    expect(result.label).toContain("Verification failed");
+    expect(result.label).toContain("인증 실패");
     expect(result.label).toContain("not a git repository");
     expect(result.isStale).toBe(false);
   });
@@ -48,7 +48,7 @@ describe("getRepositoryVerificationFreshness", () => {
     const verifiedAt = new Date(NOW_MS - 10 * MINUTE).toISOString();
     const result = getRepositoryVerificationFreshness(verified(verifiedAt), { now: NOW_MS });
     expect(result.tone).toBe("fresh");
-    expect(result.label).toMatch(/Verified \d+ minutes ago/);
+    expect(result.label).toMatch(/인증됨 · \d+분 전/);
     expect(result.isStale).toBe(false);
     expect(result.ageMs).toBe(10 * MINUTE);
   });
@@ -58,7 +58,7 @@ describe("getRepositoryVerificationFreshness", () => {
     const result = getRepositoryVerificationFreshness(verified(verifiedAt), { now: NOW_MS });
     expect(result.tone).toBe("stale");
     expect(result.isStale).toBe(true);
-    expect(result.label).toMatch(/^Stale verification/);
+    expect(result.label).toMatch(/^인증 만료/);
   });
 
   it("handles the epoch:<seconds> format the Rust verifier emits", () => {
@@ -68,7 +68,7 @@ describe("getRepositoryVerificationFreshness", () => {
       { now: NOW_MS },
     );
     expect(result.tone).toBe("stale");
-    expect(result.label).toMatch(/2 days ago/);
+    expect(result.label).toMatch(/2일 전/);
   });
 
   it("treats unparseable timestamps gracefully", () => {
@@ -76,14 +76,14 @@ describe("getRepositoryVerificationFreshness", () => {
     expect(result.tone).toBe("fresh");
     expect(result.ageLabel).toBeNull();
     expect(result.isStale).toBe(false);
-    expect(result.label).toBe("Verified");
+    expect(result.label).toBe("인증됨");
   });
 
   it("clamps future-dated verification timestamps to age 0", () => {
     const verifiedAt = new Date(NOW_MS + 2 * HOUR).toISOString();
     const result = getRepositoryVerificationFreshness(verified(verifiedAt), { now: NOW_MS });
     expect(result.ageMs).toBe(0);
-    expect(result.label).toBe("Verified just now");
+    expect(result.label).toBe("인증됨 · 방금");
   });
 
   it("isRepositoryVerificationStale uses the configurable threshold", () => {
@@ -102,10 +102,10 @@ describe("formatVerificationAge", () => {
   });
 
   it("formats common age buckets in human readable units", () => {
-    expect(formatVerificationAge(new Date(NOW_MS - 10 * SECOND).toISOString(), NOW_MS)).toBe("just now");
-    expect(formatVerificationAge(new Date(NOW_MS - 2 * MINUTE).toISOString(), NOW_MS)).toBe("2 minutes ago");
-    expect(formatVerificationAge(new Date(NOW_MS - 3 * HOUR).toISOString(), NOW_MS)).toBe("3 hours ago");
-    expect(formatVerificationAge(new Date(NOW_MS - 2 * DAY).toISOString(), NOW_MS)).toBe("2 days ago");
+    expect(formatVerificationAge(new Date(NOW_MS - 10 * SECOND).toISOString(), NOW_MS)).toBe("방금");
+    expect(formatVerificationAge(new Date(NOW_MS - 2 * MINUTE).toISOString(), NOW_MS)).toBe("2분 전");
+    expect(formatVerificationAge(new Date(NOW_MS - 3 * HOUR).toISOString(), NOW_MS)).toBe("3시간 전");
+    expect(formatVerificationAge(new Date(NOW_MS - 2 * DAY).toISOString(), NOW_MS)).toBe("2일 전");
   });
 });
 

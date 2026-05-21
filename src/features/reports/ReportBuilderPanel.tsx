@@ -198,7 +198,7 @@ export function ReportBuilderPanel({
       </section>
 
       <section className="report-builder-section">
-        <SectionHeader title="4. Privacy" hint="외부 공유 시 권장 옵션" />
+        <SectionHeader title="4. 개인정보 설정" hint="외부 공유 시 권장 옵션" />
         <ul className="report-privacy-list">
           <li>
             <span>

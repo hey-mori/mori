@@ -36,12 +36,12 @@ export function getRepositoryVerificationFreshness(
   options: VerificationFreshnessOptions = {},
 ): VerificationFreshness {
   if (!verification || verification.status === "unverified") {
-    return { tone: "unverified", label: "Unverified", ageLabel: null, ageMs: null, isStale: false };
+    return { tone: "unverified", label: "미인증", ageLabel: null, ageMs: null, isStale: false };
   }
 
   if (verification.status === "failed") {
     const detail = verification.error ? `: ${verification.error}` : "";
-    return { tone: "failed", label: `Verification failed${detail}`, ageLabel: null, ageMs: null, isStale: false };
+    return { tone: "failed", label: `인증 실패${detail}`, ageLabel: null, ageMs: null, isStale: false };
   }
 
   const ageMs = computeAgeMs(verification.verifiedAt, options.now);
@@ -50,8 +50,8 @@ export function getRepositoryVerificationFreshness(
   const isStale = ageMs !== null && ageMs >= threshold;
   const tone: VerificationFreshnessTone = isStale ? "stale" : "fresh";
 
-  const verifiedFragment = ageLabel ? `Verified ${ageLabel}` : "Verified";
-  const label = isStale ? `Stale verification · ${ageLabel ?? ""}`.trim() : verifiedFragment;
+  const verifiedFragment = ageLabel ? `인증됨 · ${ageLabel}` : "인증됨";
+  const label = isStale ? `인증 만료 · ${ageLabel ?? ""}`.trim() : verifiedFragment;
   return { tone, label, ageLabel, ageMs, isStale };
 }
 
@@ -105,14 +105,14 @@ function parseTimestamp(raw: string): number | null {
 
 function formatAge(ageMs: number): string {
   const seconds = Math.max(0, Math.round(ageMs / 1000));
-  if (seconds < 45) return "just now";
+  if (seconds < 45) return "방금";
   const minutes = Math.round(seconds / 60);
-  if (minutes < 2) return "1 minute ago";
-  if (minutes < 60) return `${minutes} minutes ago`;
+  if (minutes < 2) return "1분 전";
+  if (minutes < 60) return `${minutes}분 전`;
   const hours = Math.round(minutes / 60);
-  if (hours < 2) return "1 hour ago";
-  if (hours < 24) return `${hours} hours ago`;
+  if (hours < 2) return "1시간 전";
+  if (hours < 24) return `${hours}시간 전`;
   const days = Math.round(hours / 24);
-  if (days < 2) return "1 day ago";
-  return `${days} days ago`;
+  if (days < 2) return "1일 전";
+  return `${days}일 전`;
 }

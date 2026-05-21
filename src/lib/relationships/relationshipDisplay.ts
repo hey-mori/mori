@@ -8,16 +8,16 @@ export type RelationshipDisplay = {
 };
 
 const RELATIONSHIP_TABLE: Record<RelationshipType, RelationshipDisplay> = {
-  ledTo: { label: "Led to", tone: "blue", description: "Event led directly into the next." },
-  caused: { label: "Caused", tone: "red", description: "Source caused the target." },
-  supported: { label: "Supported", tone: "green", description: "Source supported the target with evidence." },
-  contradicted: { label: "Contradicted", tone: "orange", description: "Source contradicted the target." },
-  createdIssue: { label: "Created issue", tone: "red", description: "Event surfaced an issue." },
-  resolvedIssue: { label: "Resolved issue", tone: "green", description: "Event resolved an issue." },
-  influencedDecision: { label: "Influenced decision", tone: "purple", description: "Event informed a decision." },
-  producedArtifact: { label: "Produced artifact", tone: "blue", description: "Event produced an artifact." },
-  splitFrom: { label: "Split from", tone: "gray", description: "Event was split from another event." },
-  mergedInto: { label: "Merged into", tone: "gray", description: "Event was merged into another." },
+  ledTo: { label: "이어짐", tone: "blue", description: "이벤트가 다음으로 이어졌습니다." },
+  caused: { label: "원인", tone: "red", description: "소스가 대상을 유발했습니다." },
+  supported: { label: "뒷받침", tone: "green", description: "소스가 근거로 대상을 뒷받침했습니다." },
+  contradicted: { label: "상충", tone: "orange", description: "소스가 대상과 상충했습니다." },
+  createdIssue: { label: "이슈 생성", tone: "red", description: "이벤트에서 이슈가 발생했습니다." },
+  resolvedIssue: { label: "이슈 해결", tone: "green", description: "이벤트가 이슈를 해결했습니다." },
+  influencedDecision: { label: "결정에 영향", tone: "purple", description: "이벤트가 결정에 영향을 미쳤습니다." },
+  producedArtifact: { label: "산출물 생성", tone: "blue", description: "이벤트가 산출물을 생성했습니다." },
+  splitFrom: { label: "분리됨", tone: "gray", description: "이벤트가 다른 이벤트에서 분리되었습니다." },
+  mergedInto: { label: "병합됨", tone: "gray", description: "이벤트가 다른 이벤트로 병합되었습니다." },
 };
 
 export function getRelationshipDisplay(type: RelationshipType): RelationshipDisplay {

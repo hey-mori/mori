@@ -8,7 +8,7 @@ describe("buildImportApplyCompletion", () => {
       hasAnalysis: false,
     });
 
-    expect(viewModel.headline).toBe("3 timeline events applied.");
+    expect(viewModel.headline).toBe("타임라인 이벤트 3건이 적용되었습니다.");
     expect(viewModel.actions.map((action) => action.id)).toEqual([
       "timeline",
       "quickPass",
@@ -23,7 +23,7 @@ describe("buildImportApplyCompletion", () => {
       hasAnalysis: true,
     });
 
-    expect(viewModel.headline).toBe("1 timeline event applied.");
+    expect(viewModel.headline).toBe("타임라인 이벤트 1건이 적용되었습니다.");
     expect(viewModel.actions.map((action) => action.id)).toEqual(["timeline", "memory"]);
   });
 });

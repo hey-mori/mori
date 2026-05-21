@@ -7,7 +7,7 @@ import {
 
 describe("getRelationshipDisplay", () => {
   it("returns a label and tone for known relationship types", () => {
-    expect(getRelationshipDisplay("createdIssue").label).toBe("Created issue");
+    expect(getRelationshipDisplay("createdIssue").label).toBe("이슈 생성");
     expect(getRelationshipDisplay("influencedDecision").tone).toBe("purple");
   });
 
