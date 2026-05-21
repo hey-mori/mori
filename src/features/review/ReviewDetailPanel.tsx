@@ -14,6 +14,7 @@ import type {
   IssueStatus,
   MoriMockSession,
   NextAction,
+  Priority,
 } from "../../domain/types";
 import { formatDate, formatTime } from "../../lib/formatting/time";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
@@ -30,8 +31,15 @@ import {
   priorityTone,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
+
+const PRIORITY_ORDER: Priority[] = ["high", "medium", "low"];
 import { getTrustDisplay, getTrustLabel } from "../../lib/evidence/trust";
 import { InlineEditForm } from "./InlineEditForm";
+import type {
+  DecisionEditFields,
+  IssueEditFields,
+  NextActionEditFields,
+} from "../../lib/session/reviewItemEdit";
 
 export function ReviewDetailPanel({
   selection,
@@ -51,14 +59,11 @@ export function ReviewDetailPanel({
   onShowTimeline: (eventId: string) => void;
   onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
   onSetIssueStatus: (issueId: string, status: IssueStatus) => void;
-  onEditIssue: (issueId: string, fields: { title?: string; description?: string }) => boolean;
+  onEditIssue: (issueId: string, fields: IssueEditFields) => boolean;
   onPromoteIssueToNextAction: (issueId: string) => NextAction | null;
   onSetDecisionConfirmed: (decisionId: string, confirmed: boolean) => void;
-  onEditDecision: (
-    decisionId: string,
-    fields: { title?: string; decision?: string; rationale?: string },
-  ) => boolean;
-  onEditNextAction: (nextActionId: string, fields: { title?: string }) => boolean;
+  onEditDecision: (decisionId: string, fields: DecisionEditFields) => boolean;
+  onEditNextAction: (nextActionId: string, fields: NextActionEditFields) => boolean;
   /** False in demo mode — Review writes cannot be persisted there. */
   canEditReview: boolean;
 }) {
@@ -151,7 +156,7 @@ function IssueDetail({
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
   onSetStatus: (issueId: string, status: IssueStatus) => void;
-  onEditIssue: (issueId: string, fields: { title?: string; description?: string }) => boolean;
+  onEditIssue: (issueId: string, fields: IssueEditFields) => boolean;
   onPromoteIssueToNextAction: (issueId: string) => NextAction | null;
   canEditStatus: boolean;
 }) {
@@ -262,6 +267,29 @@ function IssueDetail({
       </section>
 
       <section className="review-detail-section">
+        <SectionHeader
+          title="우선순위"
+          hint={
+            canEditStatus
+              ? "우선순위를 바꾸면 세션에 저장됩니다."
+              : "데모 세션에서는 변경이 저장되지 않습니다."
+          }
+        />
+        <SegmentedControl
+          ariaLabel="이슈 우선순위"
+          role="radiogroup"
+          value={issue.priority}
+          onChange={(priority) => onEditIssue(issue.id, { priority })}
+          options={PRIORITY_ORDER.map((p) => ({
+            id: p,
+            label: priorityLabels[p],
+            disabled: !canEditStatus,
+            title: canEditStatus ? undefined : "데모 세션에서는 저장되지 않습니다.",
+          }))}
+        />
+      </section>
+
+      <section className="review-detail-section">
         <SectionHeader title="액션" />
         <div className="review-detail-actions">
           <Button
@@ -315,10 +343,7 @@ function DecisionDetail({
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
   onSetConfirmed: (decisionId: string, confirmed: boolean) => void;
-  onEditDecision: (
-    decisionId: string,
-    fields: { title?: string; decision?: string; rationale?: string },
-  ) => boolean;
+  onEditDecision: (decisionId: string, fields: DecisionEditFields) => boolean;
   canEditConfirm: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -426,6 +451,29 @@ function DecisionDetail({
 
       <section className="review-detail-section">
         <SectionHeader
+          title="중요도"
+          hint={
+            canEditConfirm
+              ? "중요도를 바꾸면 세션에 저장됩니다."
+              : "데모 세션에서는 변경이 저장되지 않습니다."
+          }
+        />
+        <SegmentedControl
+          ariaLabel="결정 중요도"
+          role="radiogroup"
+          value={decision.importance}
+          onChange={(importance) => onEditDecision(decision.id, { importance })}
+          options={PRIORITY_ORDER.map((p) => ({
+            id: p,
+            label: priorityLabels[p],
+            disabled: !canEditConfirm,
+            title: canEditConfirm ? undefined : "데모 세션에서는 저장되지 않습니다.",
+          }))}
+        />
+      </section>
+
+      <section className="review-detail-section">
+        <SectionHeader
           title="액션"
           hint={
             canEditConfirm
@@ -484,7 +532,7 @@ function NextActionDetail({
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
   onToggleComplete: (nextActionId: string, completed: boolean) => void;
-  onEditNextAction: (nextActionId: string, fields: { title?: string }) => boolean;
+  onEditNextAction: (nextActionId: string, fields: NextActionEditFields) => boolean;
   canEditCompletion: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -561,6 +609,29 @@ function NextActionDetail({
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="review-detail-section">
+        <SectionHeader
+          title="우선순위"
+          hint={
+            canEditCompletion
+              ? "우선순위를 바꾸면 세션에 저장됩니다."
+              : "데모 세션에서는 변경이 저장되지 않습니다."
+          }
+        />
+        <SegmentedControl
+          ariaLabel="다음 액션 우선순위"
+          role="radiogroup"
+          value={nextAction.priority}
+          onChange={(priority) => onEditNextAction(nextAction.id, { priority })}
+          options={PRIORITY_ORDER.map((p) => ({
+            id: p,
+            label: priorityLabels[p],
+            disabled: !canEditCompletion,
+            title: canEditCompletion ? undefined : "데모 세션에서는 저장되지 않습니다.",
+          }))}
+        />
       </section>
 
       <section className="review-detail-section">

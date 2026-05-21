@@ -1,9 +1,15 @@
-import type { Decision, Issue, NextAction } from "../../domain/types";
+import type { Decision, Issue, NextAction, Priority } from "../../domain/types";
 import type { MoriAnalysisResult } from "../analysis";
 
-export type IssueEditFields = Partial<Pick<Issue, "title" | "description">>;
-export type DecisionEditFields = Partial<Pick<Decision, "title" | "decision" | "rationale">>;
-export type NextActionEditFields = Partial<Pick<NextAction, "title">>;
+export type IssueEditFields = Partial<Pick<Issue, "title" | "description" | "priority">>;
+export type DecisionEditFields = Partial<Pick<Decision, "title" | "decision" | "rationale" | "importance">>;
+export type NextActionEditFields = Partial<Pick<NextAction, "title" | "priority">>;
+
+const VALID_PRIORITIES: ReadonlySet<Priority> = new Set(["high", "medium", "low"] as const);
+
+function isValidPriority(value: unknown): value is Priority {
+  return typeof value === "string" && VALID_PRIORITIES.has(value as Priority);
+}
 
 function cleanOptional(value: string | undefined): string | undefined {
   if (value === undefined) return undefined;
@@ -22,6 +28,9 @@ export function setIssueFields(issue: Issue, fields: IssueEditFields, now: strin
 
   if (title) edits.title = title;
   if (description !== undefined) edits.description = description;
+  if (isValidPriority(fields.priority) && fields.priority !== issue.priority) {
+    edits.priority = fields.priority;
+  }
   if (!hasChanged(issue, edits as Record<string, unknown>)) return issue;
 
   return {
@@ -46,6 +55,9 @@ export function setDecisionFields(
   if (title) edits.title = title;
   if (decisionText !== undefined) edits.decision = decisionText;
   if (rationale !== undefined) edits.rationale = rationale;
+  if (isValidPriority(fields.importance) && fields.importance !== decision.importance) {
+    edits.importance = fields.importance;
+  }
   if (!hasChanged(decision, edits as Record<string, unknown>)) return decision;
 
   return {
@@ -99,6 +111,9 @@ export function setNextActionFields(
   const title = cleanOptional(fields.title);
 
   if (title) edits.title = title;
+  if (isValidPriority(fields.priority) && fields.priority !== nextAction.priority) {
+    edits.priority = fields.priority;
+  }
   if (!hasChanged(nextAction, edits as Record<string, unknown>)) return nextAction;
 
   return {
