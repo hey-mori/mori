@@ -1,6 +1,5 @@
 import { Check, Palette } from "lucide-react";
 import { useMoriThemeStore } from "../../app/themeStore";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import type { MoriThemeId } from "../../lib/settings/themePreference";
 
 /**
@@ -14,11 +13,10 @@ import type { MoriThemeId } from "../../lib/settings/themePreference";
  */
 
 type ThemeOption = {
-  id: MoriThemeId | "nightLake";
+  id: MoriThemeId;
   label: string;
   sub: string;
   description: string;
-  planned: boolean;
 };
 
 const THEME_OPTIONS: ThemeOption[] = [
@@ -27,21 +25,18 @@ const THEME_OPTIONS: ThemeOption[] = [
     label: "기본",
     sub: "Formal",
     description: "차분한 흰색·회색 표면과 보라 강조색. Mori의 기본 화면입니다.",
-    planned: false,
   },
   {
     id: "forest",
     label: "Forest",
     sub: "Sage",
     description: "세이지·스프루스 톤으로 살짝 따뜻하게 조정한 변형입니다.",
-    planned: false,
   },
   {
     id: "nightLake",
     label: "Night Lake",
     sub: "Dark",
-    description: "어두운 테마입니다. 아직 토큰이 준비되지 않아 예정 상태입니다.",
-    planned: true,
+    description: "어두운 배경에 밝은 텍스트. 야간 작업이나 저조도 환경에 적합합니다.",
   },
 ];
 
@@ -63,24 +58,19 @@ export function ThemeCard() {
       </header>
       <div className="theme-option-grid" role="radiogroup" aria-label="화면 테마">
         {THEME_OPTIONS.map((option) => {
-          const selected = !option.planned && option.id === theme;
+          const selected = option.id === theme;
           return (
             <button
               key={option.id}
               type="button"
               role="radio"
               aria-checked={selected}
-              disabled={option.planned}
               className={`theme-option${selected ? " selected" : ""}`}
-              onClick={() => {
-                if (!option.planned) setTheme(option.id as MoriThemeId);
-              }}
+              onClick={() => setTheme(option.id)}
             >
               <span className="theme-option-head">
                 <strong>{option.label}</strong>
-                {option.planned ? (
-                  <MoriStatusBadge status="planned">Planned</MoriStatusBadge>
-                ) : selected ? (
+                {selected ? (
                   <span className="theme-option-check" aria-hidden="true">
                     <Check size={13} />
                   </span>

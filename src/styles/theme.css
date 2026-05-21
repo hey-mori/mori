@@ -192,9 +192,82 @@
 }
 
 [data-mori-theme="nightLake"] {
-  /* Planned — see roadmap.md → "theme switcher". Token overrides intentionally
-   * omitted so half-themed surfaces never ship. The selector is reserved to
-   * keep the future migration cheap. */
+  color-scheme: dark;
+
+  /* ─── Raw color layer ────────────────────────────────────────────── */
+  --bg: #0f1117;
+  --panel: #181b24;
+  --panel-soft: #13151d;
+  --line: #262b3a;
+  --line-strong: #333a4f;
+  --text: #dce3f0;
+  --muted: #7f8fa8;
+  --muted-2: #505c72;
+
+  --purple: #9b7dfc;
+  --purple-50: #1c1832;
+  --purple-100: #272044;
+
+  --blue: #5b8ef9;
+  --blue-50: #101b34;
+
+  --green: #34c27a;
+  --green-50: #0c2019;
+
+  --red: #f56f6f;
+  --red-50: #2d1111;
+
+  --orange: #f6b93b;
+  --orange-50: #28200a;
+
+  --cyan: #22b8cc;
+  --cyan-50: #0b2129;
+
+  --gray-50: #1b1f2b;
+
+  /* ─── Semantic overrides ─────────────────────────────────────────── */
+  --mori-bg: var(--bg);
+  --mori-surface: var(--panel);
+  --mori-surface-subtle: var(--panel-soft);
+  --mori-surface-overlay: rgba(24, 27, 36, 0.97);
+
+  --mori-text: var(--text);
+  --mori-text-muted: var(--muted);
+  --mori-text-muted-2: var(--muted-2);
+  --mori-text-inverse: #0f1117;
+
+  --mori-border: var(--line);
+  --mori-border-strong: var(--line-strong);
+  --mori-border-focus: var(--purple);
+
+  --mori-accent: var(--purple);
+  --mori-accent-soft: var(--purple-50);
+  --mori-accent-strong: var(--purple-100);
+
+  --mori-status-success: var(--green);
+  --mori-status-success-soft: var(--green-50);
+  --mori-status-info: var(--blue);
+  --mori-status-info-soft: var(--blue-50);
+  --mori-status-warning: var(--orange);
+  --mori-status-warning-soft: var(--orange-50);
+  --mori-status-danger: var(--red);
+  --mori-status-danger-soft: var(--red-50);
+  --mori-status-neutral: var(--muted);
+  --mori-status-neutral-soft: var(--gray-50);
+
+  --mori-trust-verified: var(--green);
+  --mori-trust-verified-soft: var(--green-50);
+  --mori-trust-observed: var(--blue);
+  --mori-trust-observed-soft: var(--blue-50);
+  --mori-trust-inferred: var(--purple);
+  --mori-trust-inferred-soft: var(--purple-50);
+
+  --mori-shadow-card: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --mori-shadow-card-strong: 0 18px 54px rgba(0, 0, 0, 0.4);
+  --mori-shadow-overlay: 0 18px 38px rgba(0, 0, 0, 0.5);
+
+  --mori-scrollbar-thumb: rgba(180, 190, 220, 0.12);
+  --mori-scrollbar-thumb-hover: rgba(180, 190, 220, 0.24);
 }
 
 /**
@@ -1081,4 +1154,258 @@
   .connector-jsonl-inbox-row-meta {
     margin-top: var(--mori-space-1);
   }
+}
+
+/**
+ * Night Lake dark-theme class overrides.
+ *
+ * The raw CSS variables defined in [data-mori-theme="nightLake"] above handle
+ * every rule that already references var(--bg), var(--panel), etc. These
+ * additional rules fix rules that use hardcoded white / near-white values
+ * and therefore do not auto-update from the variable layer alone.
+ */
+
+/* ─── Shell chrome ───────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .sidebar {
+  background: rgba(15, 17, 23, 0.96);
+  border-right-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] .workspace {
+  background:
+    radial-gradient(circle at 32% 8%, rgba(155, 125, 252, 0.05), transparent 36%),
+    var(--mori-bg);
+}
+
+[data-mori-theme="nightLake"] .topbar,
+[data-mori-theme="nightLake"] .page-header {
+  background: rgba(15, 17, 23, 0.93);
+  border-bottom-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] .topbar-search {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+}
+
+/* ─── Navigation ─────────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .nav-item {
+  color: var(--mori-text-muted);
+}
+
+[data-mori-theme="nightLake"] .nav-item:hover {
+  background: var(--mori-surface);
+  color: var(--mori-text);
+}
+
+[data-mori-theme="nightLake"] .nav-item.active {
+  color: var(--mori-accent);
+  background: var(--mori-accent-soft);
+}
+
+[data-mori-theme="nightLake"] .nav-item b {
+  color: var(--mori-text-muted);
+  background: var(--mori-surface);
+}
+
+[data-mori-theme="nightLake"] .session-card {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] .profile:hover {
+  background: var(--mori-surface);
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .btn {
+  background: var(--mori-surface);
+  color: var(--mori-text);
+  border-color: var(--mori-border);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+}
+
+[data-mori-theme="nightLake"] .btn:hover:not(:disabled) {
+  background: var(--mori-surface-overlay);
+  border-color: var(--mori-border-strong);
+}
+
+[data-mori-theme="nightLake"] .btn:disabled {
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text-muted-2);
+  box-shadow: none;
+}
+
+[data-mori-theme="nightLake"] .btn-primary:disabled {
+  background: var(--mori-surface);
+  color: var(--mori-text-muted-2);
+}
+
+/* ─── Form inputs ────────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] input[type="text"],
+[data-mori-theme="nightLake"] input[type="search"],
+[data-mori-theme="nightLake"] input:not([type="checkbox"]):not([type="radio"]),
+[data-mori-theme="nightLake"] textarea,
+[data-mori-theme="nightLake"] select {
+  background: var(--mori-surface);
+  color: var(--mori-text);
+  border-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] input::placeholder,
+[data-mori-theme="nightLake"] textarea::placeholder {
+  color: var(--mori-text-muted-2);
+}
+
+/* ─── Timeline ───────────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .timeline-scroller {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+}
+
+[data-mori-theme="nightLake"] .timeline-frame {
+  background: var(--mori-surface);
+}
+
+[data-mori-theme="nightLake"] .timeline-chrono-row {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+  color: var(--mori-text);
+}
+
+[data-mori-theme="nightLake"] .timeline-chrono-row:hover {
+  border-color: var(--mori-border-strong);
+}
+
+[data-mori-theme="nightLake"] .timeline-chrono-row.is-selected {
+  border-color: var(--mori-accent);
+  box-shadow: 0 0 0 1px var(--mori-accent);
+}
+
+[data-mori-theme="nightLake"] .time-axis {
+  background: rgba(15, 17, 23, 0.93);
+  border-bottom-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] .time-axis span {
+  color: var(--mori-text-muted);
+}
+
+[data-mori-theme="nightLake"] .event-card {
+  background: var(--mori-surface);
+  color: var(--mori-text);
+  border-color: var(--mori-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22), 0 3px 10px rgba(0, 0, 0, 0.16);
+}
+
+/* ─── Review ─────────────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .review-tabs {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] .review-tab {
+  color: var(--mori-text-muted);
+}
+
+[data-mori-theme="nightLake"] .review-tab.active {
+  color: var(--mori-text);
+  background: var(--mori-surface-subtle);
+}
+
+[data-mori-theme="nightLake"] table {
+  background: var(--mori-surface);
+}
+
+[data-mori-theme="nightLake"] th {
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text-muted);
+  border-bottom-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] td {
+  border-bottom-color: var(--mori-border);
+  color: var(--mori-text);
+}
+
+[data-mori-theme="nightLake"] tr:hover td {
+  background: var(--mori-accent-soft);
+}
+
+/* ─── Cards ──────────────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .card-purple { background: var(--mori-surface); border-color: var(--mori-border); }
+[data-mori-theme="nightLake"] .card-green  { background: var(--mori-surface); border-color: var(--mori-border); }
+[data-mori-theme="nightLake"] .card-red    { background: var(--mori-surface); border-color: var(--mori-border); }
+[data-mori-theme="nightLake"] .card-blue   { background: var(--mori-surface); border-color: var(--mori-border); }
+[data-mori-theme="nightLake"] .card-cyan   { background: var(--mori-surface); border-color: var(--mori-border); }
+[data-mori-theme="nightLake"] .card-gray   { background: var(--mori-surface); border-color: var(--mori-border); }
+
+/* ─── Settings ───────────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .settings-card {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] .theme-option {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+  color: var(--mori-text);
+}
+
+[data-mori-theme="nightLake"] .theme-option.selected {
+  border-color: var(--mori-accent);
+  background: var(--mori-accent-soft);
+}
+
+/* ─── Analysis strip ─────────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .analysis-panel {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+}
+
+[data-mori-theme="nightLake"] .review-analysis-strip {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+}
+
+/* ─── Source / mode / engine selection cards ─────────────────────────────── */
+[data-mori-theme="nightLake"] .source-card {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+  color: var(--mori-text);
+}
+
+[data-mori-theme="nightLake"] .source-card.selected {
+  background: var(--mori-accent-soft);
+  border-color: var(--mori-accent);
+}
+
+[data-mori-theme="nightLake"] .mode-card,
+[data-mori-theme="nightLake"] .engine-card {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+  color: var(--mori-text);
+}
+
+[data-mori-theme="nightLake"] .mode-card.selected,
+[data-mori-theme="nightLake"] .engine-card.selected {
+  border-color: var(--mori-accent);
+  background: var(--mori-accent-soft);
+}
+
+/* ─── Drawer / overlay ───────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .mori-drawer-content {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+}
+
+/* ─── Import / evidence ──────────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .import-panel {
+  background: var(--mori-surface);
+}
+
+/* ─── Inspector gradient fade (Timeline event header) ────────────────────── */
+[data-mori-theme="nightLake"] .event-inspector-header-fade {
+  background: linear-gradient(90deg, rgba(24, 27, 36, 0.98) 82%, transparent);
 }

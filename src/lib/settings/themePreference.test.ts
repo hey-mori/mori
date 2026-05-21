@@ -10,13 +10,13 @@ import {
 import { MemoryKeyValueStorage } from "../storage/memoryStorage";
 
 describe("isSelectableTheme", () => {
-  it("accepts the runtime-selectable themes", () => {
+  it("accepts all runtime-selectable themes", () => {
     expect(isSelectableTheme("formal")).toBe(true);
     expect(isSelectableTheme("forest")).toBe(true);
+    expect(isSelectableTheme("nightLake")).toBe(true);
   });
 
-  it("rejects the planned and unknown themes", () => {
-    expect(isSelectableTheme("nightLake")).toBe(false);
+  it("rejects unknown themes and non-strings", () => {
     expect(isSelectableTheme("bogus")).toBe(false);
     expect(isSelectableTheme(42)).toBe(false);
     expect(isSelectableTheme(null)).toBe(false);
@@ -39,18 +39,20 @@ describe("parseThemePreference", () => {
     ).toEqual(DEFAULT_THEME_PREFERENCE);
   });
 
-  it("falls back to the default for a planned or unknown theme", () => {
-    expect(
-      parseThemePreference(JSON.stringify({ schemaVersion: 1, theme: "nightLake" })),
-    ).toEqual(DEFAULT_THEME_PREFERENCE);
+  it("falls back to the default for an unknown theme", () => {
     expect(
       parseThemePreference(JSON.stringify({ schemaVersion: 1, theme: "bogus" })),
     ).toEqual(DEFAULT_THEME_PREFERENCE);
   });
 
-  it("round-trips a valid preference", () => {
+  it("round-trips a valid preference — forest", () => {
     const stored = serializeThemePreference({ schemaVersion: 1, theme: "forest" });
     expect(parseThemePreference(stored).theme).toBe("forest");
+  });
+
+  it("round-trips a valid preference — nightLake", () => {
+    const stored = serializeThemePreference({ schemaVersion: 1, theme: "nightLake" });
+    expect(parseThemePreference(stored).theme).toBe("nightLake");
   });
 });
 
@@ -61,17 +63,23 @@ describe("loadThemePreference / saveThemePreference", () => {
     );
   });
 
-  it("persists and reloads the selected theme", () => {
+  it("persists and reloads the forest theme", () => {
     const storage = new MemoryKeyValueStorage();
     saveThemePreference({ schemaVersion: 1, theme: "forest" }, storage);
     expect(loadThemePreference(storage).theme).toBe("forest");
   });
 
-  it("recovers the default when storage holds a non-selectable theme", () => {
+  it("persists and reloads the nightLake dark theme", () => {
+    const storage = new MemoryKeyValueStorage();
+    saveThemePreference({ schemaVersion: 1, theme: "nightLake" }, storage);
+    expect(loadThemePreference(storage).theme).toBe("nightLake");
+  });
+
+  it("recovers the default when storage holds an unknown theme", () => {
     const storage = new MemoryKeyValueStorage();
     storage.setItem(
       "mori.themePreference",
-      JSON.stringify({ schemaVersion: 1, theme: "nightLake" }),
+      JSON.stringify({ schemaVersion: 1, theme: "unknownFutureDarkMode" }),
     );
     expect(loadThemePreference(storage).theme).toBe("formal");
   });

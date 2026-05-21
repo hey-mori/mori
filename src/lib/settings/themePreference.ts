@@ -7,8 +7,7 @@
  * held in browser localStorage; it is local-only, never synced, and
  * never affects data access, capture, privacy, or memory.
  *
- * `nightLake` is a reserved Planned theme — it is intentionally not a
- * valid stored value because selecting it would render nothing.
+ * `nightLake` is the dark theme — a full set of dark-mode tokens in `theme.css`.
  *
  * See `docs/theme-system.md`.
  */
@@ -18,10 +17,17 @@ import type { KeyValueStorage } from "../storage/storageTypes";
 const THEME_KEY = "mori.themePreference";
 const THEME_SCHEMA_VERSION = 1 as const;
 
-/** Runtime-selectable themes — both are real token sets today. */
-export const SELECTABLE_THEMES = ["formal", "forest"] as const;
+/** Runtime-selectable themes — all three are real token sets today. */
+export const SELECTABLE_THEMES = ["formal", "forest", "nightLake"] as const;
 
 export type MoriThemeId = (typeof SELECTABLE_THEMES)[number];
+
+export type MoriThemeColorScheme = "light" | "dark";
+
+/** Returns the color-scheme (light/dark) for a given theme. */
+export function getThemeColorScheme(theme: MoriThemeId): MoriThemeColorScheme {
+  return theme === "nightLake" ? "dark" : "light";
+}
 
 export const DEFAULT_THEME: MoriThemeId = "formal";
 

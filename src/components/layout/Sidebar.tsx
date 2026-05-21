@@ -1,11 +1,11 @@
 import { ChevronLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/Button";
 import { MoriLogo } from "../brand/MoriLogo";
 import { moriViewIcon } from "../brand/moriIcons";
 import type { ViewKey } from "../../domain/types";
 import { moriMockSession } from "../../domain/mock-data";
-import { useMoriSessionStore } from "../../app/sessionStore";
+import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriProfileStore } from "../../app/profileStore";
 import { useMoriAppStore } from "../../app/store";
 import { getProfileInitials } from "../../lib/profile/localProfile";
@@ -23,8 +23,12 @@ type NavItem = { key: NavKey; label: string; badge?: string };
  * rather than a flat list: the entry action, the four session-work
  * surfaces, the project-level surfaces, and settings. Icons come from the
  * shared `moriViewIcon` vocabulary so they stay meaning-driven.
+ *
+ * Live badge counts are computed inside the component so session state
+ * gives users at-a-glance context (e.g. how many events, issues, etc.)
+ * without navigating to each surface first.
  */
-const navGroups: Array<{ label?: string; items: NavItem[] }> = [
+const BASE_NAV_GROUPS: Array<{ label?: string; items: NavItem[] }> = [
   { items: [{ key: "start", label: "Start Session" }] },
   {
     label: "작업",
@@ -47,10 +51,30 @@ const navGroups: Array<{ label?: string; items: NavItem[] }> = [
 ];
 
 export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onNavigate: (view: ViewKey) => void }) {
+  const view = useMoriSessionStore(selectSessionView);
+  const imports = useMoriSessionStore((state) => state.imports);
+
   const isActive = (key: ViewKey) =>
     key === currentView ||
     (currentView === "flow" && key === "timeline") ||
     (currentView === "consolidation" && key === "memory");
+
+  // Live badge counts — shown only when non-zero so the nav stays quiet
+  // until the user has actually captured or analysed work.
+  const liveBadges = useMemo<Partial<Record<NavKey, string>>>(() => {
+    const badges: Partial<Record<NavKey, string>> = {};
+    if (view.events.length > 0) {
+      badges.timeline = String(view.events.length);
+    }
+    if (imports.length > 0) {
+      badges.evidence = String(imports.length);
+    }
+    const openIssues = view.issues.filter((issue) => issue.status !== "resolved").length;
+    if (openIssues > 0) {
+      badges.review = String(openIssues);
+    }
+    return badges;
+  }, [view.events.length, view.issues, imports.length]);
 
   return (
     <aside className="sidebar">
@@ -63,11 +87,12 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
         <MoriLogo size={32} />
       </button>
       <nav className="nav">
-        {navGroups.map((group, groupIndex) => (
+        {BASE_NAV_GROUPS.map((group, groupIndex) => (
           <div className="nav-group" key={group.label ?? `group-${groupIndex}`}>
             {group.label ? <p className="nav-group-label">{group.label}</p> : null}
             {group.items.map((item) => {
               const Icon = moriViewIcon[item.key];
+              const badge = item.badge ?? liveBadges[item.key];
               return (
                 <button
                   className={`nav-item ${isActive(item.key) ? "active" : ""}`}
@@ -78,7 +103,7 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
                 >
                   <Icon size={17} />
                   <span>{item.label}</span>
-                  {item.badge ? <b>{item.badge}</b> : null}
+                  {badge ? <b>{badge}</b> : null}
                 </button>
               );
             })}
