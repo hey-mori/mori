@@ -304,19 +304,19 @@ function StatusStrip({
   return (
     <div className="settings-runtime-summary" role="region" aria-label="Mori runtime status">
       <RuntimeStat
-        label="Runtime"
+        label="런타임"
         value={mode === "tauri-desktop" ? "Tauri desktop" : "Browser prototype"}
         tone="info"
       />
-      <RuntimeStat label="Storage" value={storage.value} tone={storage.tone} />
+      <RuntimeStat label="저장소" value={storage.value} tone={storage.tone} />
       <RuntimeStat
-        label="AI provider"
-        value={`${providerLabel}${hasAnalysis ? " · analysis run" : ""}`}
+        label="AI 제공자"
+        value={`${providerLabel}${hasAnalysis ? " · 분석 완료" : ""}`}
         tone={hasAnalysis ? "ok" : "idle"}
       />
       <RuntimeStat
-        label="This session"
-        value={`${importsCount} imports · ${sourceCount} sources · ${repositoryCount} repos`}
+        label="이번 세션"
+        value={`가져오기 ${importsCount}건 · 출처 ${sourceCount}개 · 리포지토리 ${repositoryCount}개`}
         tone={importsCount > 0 || sourceCount > 0 ? "info" : "idle"}
       />
     </div>

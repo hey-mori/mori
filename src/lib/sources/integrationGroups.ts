@@ -165,8 +165,8 @@ export function getHubCardActionLabel(integration: SourceIntegration): string {
     }
     return "추가";
   }
-  if (integration.status === "partial") return "Partial · 사용 가능";
-  return "Planned";
+  if (integration.status === "partial") return "부분 구현 · 사용 가능";
+  return "예정";
 }
 
 function sortByHubOrder(

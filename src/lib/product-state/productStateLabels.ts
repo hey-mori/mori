@@ -126,44 +126,44 @@ export const PRODUCT_AVAILABILITY_LABELS: Record<
   ProductStateDisplay
 > = {
   available: {
-    label: "Available",
+    label: "사용 가능",
     description: "지금 바로 사용할 수 있는 기능입니다.",
     tone: "success",
   },
   partial: {
-    label: "Partial",
+    label: "부분 구현",
     description: "일부만 동작하며 아직 남은 범위가 있습니다.",
     tone: "info",
   },
   planned: {
-    label: "Planned",
+    label: "예정",
     description: "설계되었지만 아직 구현되지 않았습니다.",
     tone: "warning",
     hint: "다음 마일스톤까지 비활성 상태로 유지됩니다.",
   },
   unavailable: {
-    label: "Unavailable",
+    label: "사용 불가",
     description: "현재 런타임에서는 사용할 수 없습니다.",
     tone: "neutral",
   },
   requiresSetup: {
-    label: "Requires setup",
+    label: "설정 필요",
     description: "사용자가 먼저 설정을 마쳐야 동작합니다.",
     tone: "warning",
     hint: "설정을 마치기 전까지 비활성 상태로 유지됩니다.",
   },
   demoOnly: {
-    label: "Demo only",
+    label: "데모 전용",
     description: "데모 데이터에서만 존재하며 실제 캡처는 없습니다.",
     tone: "accent",
   },
   browserOnly: {
-    label: "Browser only",
+    label: "브라우저 전용",
     description: "브라우저 prototype 모드에서만 동작합니다.",
     tone: "info",
   },
   desktopOnly: {
-    label: "Desktop only",
+    label: "데스크톱 전용",
     description: "Tauri 데스크톱 앱에서만 동작합니다.",
     tone: "info",
   },

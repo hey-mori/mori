@@ -57,10 +57,10 @@ export function TrustSummaryPanel({
 
   const storageLabel =
     mode === "browser"
-      ? "Browser draft (localStorage)"
+      ? "Browser 임시 저장 (localStorage)"
       : sqliteKind === "ok"
         ? "Desktop SQLite"
-        : "Tauri desktop · SQLite not initialized";
+        : "Tauri desktop · SQLite 미초기화";
 
   return (
     <aside className="settings-trust" aria-label="Trust summary">

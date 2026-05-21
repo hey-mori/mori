@@ -94,7 +94,7 @@ export function LocalAiCard({
               <dl>
                 <div>
                   <dt>위치</dt>
-                  <dd>{row.isLocal ? "Local" : "Cloud"}</dd>
+                  <dd>{row.isLocal ? "로컬" : "클라우드"}</dd>
                 </div>
                 <div>
                   <dt>받는 데이터</dt>
@@ -120,7 +120,7 @@ export function LocalAiCard({
                   </Button>
                 ) : (
                   <MoriPlannedAction
-                    label="Planned"
+                    label="예정"
                     title="다음 마일스톤에서 활성화됩니다."
                   />
                 )}
@@ -143,19 +143,19 @@ export function LocalAiCard({
       <SectionHeader title="Ollama 세부 설정" hint="endpoint / model / timeout" />
       <div className="settings-provider-config">
         <ProviderField
-          label="Endpoint"
+          label="엔드포인트"
           value={settings.ollamaEndpoint}
           disabled={settings.provider !== "ollama"}
           onChange={(value) => onUpdateSettings({ ollamaEndpoint: value })}
         />
         <ProviderField
-          label="Model"
+          label="모델"
           value={settings.ollamaModel}
           disabled={settings.provider !== "ollama"}
           onChange={(value) => onUpdateSettings({ ollamaModel: value })}
         />
         <ProviderField
-          label="Timeout (ms)"
+          label="타임아웃 (ms)"
           value={String(settings.ollamaTimeoutMs)}
           disabled={settings.provider !== "ollama"}
           onChange={(value) =>

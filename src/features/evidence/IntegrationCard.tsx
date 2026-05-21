@@ -134,7 +134,7 @@ export function IntegrationCard({
             </p>
             <MoriPlannedAction
               icon={ChevronRight}
-              label="Planned"
+              label="예정"
               title="다음 마일스톤에 제공됩니다. 지금은 가져올 수 없습니다."
             />
           </>

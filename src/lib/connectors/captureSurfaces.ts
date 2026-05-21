@@ -618,12 +618,12 @@ export function getCaptureSurfaceForIntegration(
 }
 
 const STATUS_LABEL: Record<CaptureSurfaceStatus, string> = {
-  implemented: "Available",
-  partial: "Partial",
-  manualOnly: "Manual paste only",
-  docsTemplateOnly: "Setup template",
-  planned: "Planned",
-  unavailable: "Unavailable",
+  implemented: "사용 가능",
+  partial: "부분 구현",
+  manualOnly: "수동 붙여넣기만 가능",
+  docsTemplateOnly: "설정 템플릿",
+  planned: "예정",
+  unavailable: "사용 불가",
 };
 
 const STATUS_TONE: Record<

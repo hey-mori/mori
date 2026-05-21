@@ -13,10 +13,10 @@ const STATE_TONE: Record<StorageStatusRow["state"], "green" | "blue" | "purple" 
 };
 
 const STATE_LABEL: Record<StorageStatusRow["state"], string> = {
-  active: "Active",
-  available: "Available",
-  unavailable: "Unavailable",
-  planned: "Planned",
+  active: "활성",
+  available: "사용 가능",
+  unavailable: "사용 불가",
+  planned: "예정",
 };
 
 // SQLite connection state — Korean copy with "SQLite" left as a product term.

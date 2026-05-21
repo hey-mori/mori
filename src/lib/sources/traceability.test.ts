@@ -31,7 +31,7 @@ describe("traceability", () => {
       expect(status.integration).toBe("manualNote");
       expect(status.integrationLabel).toBe("Manual Note");
       expect(status.status).toBe("implemented");
-      expect(status.statusLabel).toBe("Available");
+      expect(status.statusLabel).toBe("사용 가능");
       expect(status.captureMethod).toBe("수동 입력");
       expect(status.trustLabel).toBe("Verified");
       expect(status.trustTone).toBe("green");

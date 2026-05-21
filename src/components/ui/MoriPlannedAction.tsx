@@ -32,7 +32,7 @@ export function MoriPlannedAction({ feature, label, title, icon: Icon }: MoriPla
       data-mori-status={props ? props.status : "planned"}
     >
       {Icon ? <Icon size={13} aria-hidden="true" /> : null}
-      <span>{label ?? feature ?? "Planned"}</span>
+      <span>{label ?? feature ?? "예정"}</span>
     </button>
   );
 }

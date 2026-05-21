@@ -30,15 +30,15 @@ import type { IntegrationStatus } from "../sources/sourceRegistry";
 const HANGUL = /[가-힣]/;
 
 describe("availability label derivation", () => {
-  it("exposes the canonical English status labels", () => {
-    expect(getProductAvailabilityLabel("available")).toBe("Available");
-    expect(getProductAvailabilityLabel("partial")).toBe("Partial");
-    expect(getProductAvailabilityLabel("planned")).toBe("Planned");
-    expect(getProductAvailabilityLabel("unavailable")).toBe("Unavailable");
-    expect(getProductAvailabilityLabel("requiresSetup")).toBe("Requires setup");
-    expect(getProductAvailabilityLabel("demoOnly")).toBe("Demo only");
-    expect(getProductAvailabilityLabel("browserOnly")).toBe("Browser only");
-    expect(getProductAvailabilityLabel("desktopOnly")).toBe("Desktop only");
+  it("exposes the canonical Korean status labels", () => {
+    expect(getProductAvailabilityLabel("available")).toBe("사용 가능");
+    expect(getProductAvailabilityLabel("partial")).toBe("부분 구현");
+    expect(getProductAvailabilityLabel("planned")).toBe("예정");
+    expect(getProductAvailabilityLabel("unavailable")).toBe("사용 불가");
+    expect(getProductAvailabilityLabel("requiresSetup")).toBe("설정 필요");
+    expect(getProductAvailabilityLabel("demoOnly")).toBe("데모 전용");
+    expect(getProductAvailabilityLabel("browserOnly")).toBe("브라우저 전용");
+    expect(getProductAvailabilityLabel("desktopOnly")).toBe("데스크톱 전용");
   });
 
   it("every availability state carries a Korean description", () => {

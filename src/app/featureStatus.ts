@@ -169,10 +169,10 @@ export type FeatureCapability = {
  * Default label per status. UI components can override via `userFacingStatus`.
  */
 export const FEATURE_STATUS_LABEL: Record<FeatureStatus, string> = {
-  implemented: "Available",
-  partial: "Partial",
-  planned: "Planned",
-  unavailable: "Unavailable",
+  implemented: "사용 가능",
+  partial: "부분 구현",
+  planned: "예정",
+  unavailable: "사용 불가",
 };
 
 export const FEATURE_STATUS_TONE: Record<FeatureStatus, "green" | "blue" | "orange" | "gray"> = {

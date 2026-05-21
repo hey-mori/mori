@@ -150,10 +150,10 @@ describe("integrationGroups", () => {
       expect(getHubCardActionLabel(SOURCE_REGISTRY.chatgptTranscript)).toMatch(/AI/);
     });
 
-    it("marks planned integrations with the Planned label, not an active verb", () => {
-      expect(getHubCardActionLabel(SOURCE_REGISTRY.vscode)).toBe("Planned");
-      expect(getHubCardActionLabel(SOURCE_REGISTRY.slack)).toBe("Planned");
-      expect(getHubCardActionLabel(SOURCE_REGISTRY.codexTranscript)).toBe("Planned");
+    it("marks planned integrations with the 예정 label, not an active verb", () => {
+      expect(getHubCardActionLabel(SOURCE_REGISTRY.vscode)).toBe("예정");
+      expect(getHubCardActionLabel(SOURCE_REGISTRY.slack)).toBe("예정");
+      expect(getHubCardActionLabel(SOURCE_REGISTRY.codexTranscript)).toBe("예정");
     });
   });
 });
