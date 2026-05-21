@@ -11,7 +11,7 @@ export function KeyEvidenceCard({ rows }: { rows: ProjectMemoryKeyEvidence[] }) 
           <h3>핵심 Evidence</h3>
           <p>가져온 소스 중 Timeline 이벤트와 가장 많이 연결된 항목을 보여줍니다.</p>
         </div>
-        <Badge tone={rows.length ? "purple" : "gray"}>{rows.length} sources</Badge>
+        <Badge tone={rows.length ? "purple" : "gray"}>{rows.length}개 소스</Badge>
       </header>
       {rows.length === 0 ? (
         <p className="memory-empty">아직 가져온 소스가 없습니다. Evidence에서 소스를 추가하세요.</p>
@@ -35,9 +35,9 @@ export function KeyEvidenceCard({ rows }: { rows: ProjectMemoryKeyEvidence[] }) 
                     <small>{display.rawDataLabel}</small>
                   </span>
                   <small>
-                    {row.relatedEventCount} events
-                    {row.relatedIssueCount > 0 ? ` · ${row.relatedIssueCount} issues` : ""}
-                    {row.relatedDecisionCount > 0 ? ` · ${row.relatedDecisionCount} decisions` : ""}
+                    이벤트 {row.relatedEventCount}건
+                    {row.relatedIssueCount > 0 ? ` · 이슈 ${row.relatedIssueCount}건` : ""}
+                    {row.relatedDecisionCount > 0 ? ` · 결정 ${row.relatedDecisionCount}건` : ""}
                   </small>
                 </div>
               </li>

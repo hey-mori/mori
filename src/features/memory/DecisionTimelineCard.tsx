@@ -18,7 +18,7 @@ export function DecisionTimelineCard({ timeline }: { timeline: DecisionTimelineP
           <h3>결정 흐름</h3>
           <p>이번 세션에서 결정이 어떤 순서로, 어떤 중요도로 누적되었는지 보여줍니다.</p>
         </div>
-        <Badge tone={timeline.length ? "purple" : "gray"}>{timeline.length} decisions</Badge>
+        <Badge tone={timeline.length ? "purple" : "gray"}>{timeline.length}건 결정</Badge>
       </header>
       {timeline.length === 0 ? (
         <p className="memory-empty">결정 후보가 없습니다. Review에서 결정을 확인하거나 Quick Pass를 실행하세요.</p>
