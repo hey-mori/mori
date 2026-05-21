@@ -72,7 +72,7 @@ export function RecentSessionsList({
                 <div className="memory-session-titles">
                   <strong>{entry.title}</strong>
                   <span>
-                    {entry.projectName ?? "(project unknown)"}
+                    {entry.projectName ?? "(프로젝트 없음)"}
                     {entry.savedAt ? ` · 저장 ${formatShort(entry.savedAt)}` : entry.startedAt ? ` · 시작 ${formatShort(entry.startedAt)}` : ""}
                   </span>
                 </div>
@@ -83,8 +83,8 @@ export function RecentSessionsList({
                       {LOAD_LABEL[loadStatusBySessionId[entry.sessionId]]}
                     </Badge>
                   ) : null}
-                  {entry.eventCount !== null ? <span>{entry.eventCount} events</span> : null}
-                  {entry.sourceCount !== null ? <span>{entry.sourceCount} sources</span> : null}
+                  {entry.eventCount !== null ? <span>이벤트 {entry.eventCount}건</span> : null}
+                  {entry.sourceCount !== null ? <span>출처 {entry.sourceCount}건</span> : null}
                 </div>
                 <ChevronRight size={12} aria-hidden="true" />
               </button>

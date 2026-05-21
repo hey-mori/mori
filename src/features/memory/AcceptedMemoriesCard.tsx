@@ -121,9 +121,9 @@ export function AcceptedMemoriesCard({
                 <small>
                   <Clock4 size={11} aria-hidden="true" /> {formatShort(memory.acceptedAt)}
                   {" · "}
-                  <Eye size={11} aria-hidden="true" /> {memory.evidenceRefs.length}건 evidence ·
-                  {" "}
-                  {memory.sourceSessionIds.length}개 session
+                  <Eye size={11} aria-hidden="true" /> 근거 {memory.evidenceRefs.length}건
+                  {" · "}
+                  {memory.sourceSessionIds.length}개 세션
                   {" · "}
                   <MoriStatusBadge tone="neutral">로컬 전용</MoriStatusBadge>
                 </small>

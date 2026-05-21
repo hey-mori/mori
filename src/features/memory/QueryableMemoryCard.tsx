@@ -3,6 +3,7 @@ import { Eye, Layers, Link2, Search } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriSection } from "../../components/ui/MoriSection";
 import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
+import { getProductMemoryStatusLabel } from "../../lib/product-state/productState";
 import {
   searchAcceptedMemories,
   searchProjectMemoryReferences,
@@ -61,7 +62,7 @@ export function QueryableMemoryCard({
       ariaLabel="Queryable Memory"
       title={
         <span className="memory-search-title">
-          <Search size={14} aria-hidden="true" /> Memory Search
+          <Search size={14} aria-hidden="true" /> 메모리 검색
         </span>
       }
       hint={
@@ -111,7 +112,7 @@ export function QueryableMemoryCard({
                     <span className="memory-search-meta">
                       <Badge tone="purple">{describeProposalKind(result.kind)}</Badge>
                       <Badge tone={result.isCurrent ? "green" : "gray"}>
-                        {result.isCurrent ? "현재" : `${result.status} · 비현재`}
+                        {result.isCurrent ? "현재" : `${getProductMemoryStatusLabel(result.status)} · 비현재`}
                       </Badge>
                     </span>
                   </header>
@@ -154,7 +155,7 @@ export function QueryableMemoryCard({
 
       <footer className="memory-search-footer">
         <small>
-          <Badge tone="gray">local-only</Badge> {resultSet.dataBasis} 참조 검색은 활성 세션의
+          <Badge tone="gray">로컬 전용</Badge> {resultSet.dataBasis} 참조 검색은 활성 세션의
           timeline / evidence와 검토 액션 노트를 대상으로 합니다.
         </small>
       </footer>

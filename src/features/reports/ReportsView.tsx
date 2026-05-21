@@ -738,19 +738,19 @@ function PackageOptionSummary({
       </header>
       <dl>
         <div>
-          <dt>sources</dt>
+          <dt>출처</dt>
           <dd>{counts.sources}</dd>
         </div>
         <div>
-          <dt>events</dt>
+          <dt>이벤트</dt>
           <dd>{counts.events}</dd>
         </div>
         <div>
-          <dt>memory</dt>
+          <dt>메모리</dt>
           <dd>{counts.memories}</dd>
         </div>
         <div>
-          <dt>audit</dt>
+          <dt>감사</dt>
           <dd>{counts.auditRows}</dd>
         </div>
       </dl>
@@ -824,11 +824,11 @@ function formatDuration(start: string, end: string): string {
   }
   const ms = endTime - startTime;
   const minutes = Math.floor(ms / 60000);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return `${minutes}분`;
   const hours = Math.floor(minutes / 60);
   const remMin = minutes - hours * 60;
-  if (hours < 24) return remMin ? `${hours}h ${remMin}m` : `${hours}h`;
+  if (hours < 24) return remMin ? `${hours}시간 ${remMin}분` : `${hours}시간`;
   const days = Math.floor(hours / 24);
   const remHours = hours - days * 24;
-  return remHours ? `${days}d ${remHours}h` : `${days}d`;
+  return remHours ? `${days}일 ${remHours}시간` : `${days}일`;
 }
