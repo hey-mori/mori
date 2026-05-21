@@ -198,6 +198,9 @@ export type NextAction = {
    */
   done?: boolean;
   completedAt?: string;
+  /** Set to `true` when the user edits the action's title or priority. */
+  editedByUser?: boolean;
+  editedAt?: string;
 };
 
 export type Summary = {

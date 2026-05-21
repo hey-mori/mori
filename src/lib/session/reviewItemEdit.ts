@@ -1,8 +1,9 @@
-import type { Decision, Issue } from "../../domain/types";
+import type { Decision, Issue, NextAction } from "../../domain/types";
 import type { MoriAnalysisResult } from "../analysis";
 
 export type IssueEditFields = Partial<Pick<Issue, "title" | "description">>;
 export type DecisionEditFields = Partial<Pick<Decision, "title" | "decision" | "rationale">>;
+export type NextActionEditFields = Partial<Pick<NextAction, "title">>;
 
 function cleanOptional(value: string | undefined): string | undefined {
   if (value === undefined) return undefined;
@@ -87,4 +88,40 @@ export function applyDecisionEdit(
   });
 
   return changed ? { ...analysis, decisions } : analysis;
+}
+
+export function setNextActionFields(
+  nextAction: NextAction,
+  fields: NextActionEditFields,
+  now: string,
+): NextAction {
+  const edits: NextActionEditFields = {};
+  const title = cleanOptional(fields.title);
+
+  if (title) edits.title = title;
+  if (!hasChanged(nextAction, edits as Record<string, unknown>)) return nextAction;
+
+  return {
+    ...nextAction,
+    ...edits,
+    editedByUser: true,
+    editedAt: now,
+  };
+}
+
+export function applyNextActionEdit(
+  analysis: MoriAnalysisResult,
+  nextActionId: string,
+  fields: NextActionEditFields,
+  now: string,
+): MoriAnalysisResult {
+  let changed = false;
+  const nextActions = analysis.nextActions.map((action) => {
+    if (action.id !== nextActionId) return action;
+    const next = setNextActionFields(action, fields, now);
+    changed = changed || next !== action;
+    return next;
+  });
+
+  return changed ? { ...analysis, nextActions } : analysis;
 }

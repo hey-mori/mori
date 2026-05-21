@@ -2,7 +2,6 @@ import { CalendarClock, CheckCircle2, Layers, ListPlus, Pencil, ShieldCheck, Spa
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import {
   eventTypeLabels,
@@ -44,6 +43,7 @@ export function ReviewDetailPanel({
   onPromoteIssueToNextAction,
   onSetDecisionConfirmed,
   onEditDecision,
+  onEditNextAction,
   canEditReview,
 }: {
   selection: ReviewSelection;
@@ -58,6 +58,7 @@ export function ReviewDetailPanel({
     decisionId: string,
     fields: { title?: string; decision?: string; rationale?: string },
   ) => boolean;
+  onEditNextAction: (nextActionId: string, fields: { title?: string }) => boolean;
   /** False in demo mode — Review writes cannot be persisted there. */
   canEditReview: boolean;
 }) {
@@ -120,6 +121,7 @@ export function ReviewDetailPanel({
       view={view}
       onShowTimeline={onShowTimeline}
       onToggleComplete={onToggleNextActionComplete}
+      onEditNextAction={onEditNextAction}
       canEditCompletion={canEditReview}
     />
   );
@@ -475,19 +477,23 @@ function NextActionDetail({
   view,
   onShowTimeline,
   onToggleComplete,
+  onEditNextAction,
   canEditCompletion,
 }: {
   nextAction: NextAction;
   view: MoriMockSession;
   onShowTimeline: (eventId: string) => void;
   onToggleComplete: (nextActionId: string, completed: boolean) => void;
+  onEditNextAction: (nextActionId: string, fields: { title?: string }) => boolean;
   canEditCompletion: boolean;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
   const relatedIssues = view.issues.filter((issue) =>
     nextAction.relatedIssueIds.includes(issue.id),
   );
   const relatedEvents = view.events.filter((event) => nextAction.relatedEventIds.includes(event.id));
   const completed = isNextActionCompleted(nextAction);
+  const canEditText = canEditCompletion;
 
   return (
     <aside className="review-detail" aria-label="Next action detail">
@@ -496,14 +502,34 @@ function NextActionDetail({
           <Badge tone={priorityTone(nextAction.priority)}>{priorityLabels[nextAction.priority]}</Badge>
           <Badge tone="purple">Next action</Badge>
           {completed ? <Badge tone="green">완료됨</Badge> : null}
+          {nextAction.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
         </div>
-        <h3>{nextAction.title}</h3>
-        {completed && nextAction.completedAt ? (
-          <p className="review-detail-completed-at">
-            <CheckCircle2 size={13} aria-hidden="true" />
-            <span>완료 처리 {formatDate(nextAction.completedAt)}</span>
-          </p>
-        ) : null}
+        {isEditing ? (
+          <InlineEditForm
+            fields={[
+              { id: "title", label: "제목", value: nextAction.title, required: true },
+            ]}
+            onSave={(values) => {
+              if (onEditNextAction(nextAction.id, values)) setIsEditing(false);
+            }}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          <>
+            <h3>{nextAction.title}</h3>
+            {completed && nextAction.completedAt ? (
+              <p className="review-detail-completed-at">
+                <CheckCircle2 size={13} aria-hidden="true" />
+                <span>완료 처리 {formatDate(nextAction.completedAt)}</span>
+              </p>
+            ) : null}
+            {nextAction.editedByUser && nextAction.editedAt ? (
+              <p className="review-detail-time">
+                <CalendarClock size={11} aria-hidden="true" /> 마지막 수정 {formatDate(nextAction.editedAt)}
+              </p>
+            ) : null}
+          </>
+        )}
       </header>
 
       <section className="review-detail-section">
@@ -541,9 +567,11 @@ function NextActionDetail({
         <SectionHeader
           title="액션"
           hint={
-            completed
-              ? "완료한 다음 작업입니다. 다시 미완료로 되돌릴 수 있습니다."
-              : "이 다음 작업을 완료 처리하면 Resume 프롬프트에서 제외됩니다."
+            canEditCompletion
+              ? completed
+                ? "완료한 다음 작업입니다. 다시 미완료로 되돌릴 수 있습니다."
+                : "이 다음 작업을 완료 처리하면 Resume 프롬프트에서 제외됩니다."
+              : "데모 세션에서는 변경이 저장되지 않습니다."
           }
         />
         <div className="review-detail-actions">
@@ -559,11 +587,25 @@ function NextActionDetail({
           >
             {completed ? "다시 미완료로" : "완료 처리"}
           </Button>
-          <MoriPlannedAction
-            label="편집"
-            title="다음 액션 편집은 다음 마일스톤에서 활성화됩니다."
-          />
+          <Button
+            variant="secondary"
+            icon={Pencil}
+            disabled={!canEditText || isEditing}
+            title={
+              canEditText
+                ? "다음 액션 제목을 사용자 수정으로 저장합니다."
+                : "데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다."
+            }
+            onClick={() => setIsEditing(true)}
+          >
+            편집
+          </Button>
         </div>
+        {!canEditText ? (
+          <p className="review-detail-empty">
+            데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다.
+          </p>
+        ) : null}
       </section>
     </aside>
   );

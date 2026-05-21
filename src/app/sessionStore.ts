@@ -25,8 +25,10 @@ import { withNextActionCompletion } from "../lib/session/nextActionCompletion";
 import {
   applyDecisionEdit,
   applyIssueEdit,
+  applyNextActionEdit,
   type DecisionEditFields,
   type IssueEditFields,
+  type NextActionEditFields,
 } from "../lib/session/reviewItemEdit";
 import { promoteIssueToNextAction } from "../lib/session/issuePromotion";
 import { createIssueFromEvent as buildIssueFromEvent } from "../lib/timeline/eventToIssue";
@@ -183,6 +185,12 @@ export type MoriSessionState = {
    */
   setDecisionConfirmed: (decisionId: string, confirmed: boolean) => boolean;
   editDecision: (decisionId: string, fields: DecisionEditFields) => boolean;
+  /**
+   * Edit a Next Action's title — a Review-surface write. Persists into the
+   * session analysis and the durable memory body. Returns `false` in demo
+   * mode, when there is no analysis, or when the id is unknown or unchanged.
+   */
+  editNextAction: (nextActionId: string, fields: NextActionEditFields) => boolean;
   markPersistedToDesktop: () => void;
 };
 
@@ -694,6 +702,27 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     const nextAnalysis = applyDecisionEdit(
       analysis,
       decisionId,
+      fields,
+      new Date().toISOString(),
+    );
+    if (nextAnalysis === analysis) return false;
+
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, nextAnalysis);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, nextAnalysis);
+    set({ analysis: nextAnalysis });
+    return true;
+  },
+  editNextAction: (nextActionId, fields) => {
+    const { draft, analysis } = get();
+    if (!draft || !analysis) return false;
+    if (!analysis.nextActions.some((action) => action.id === nextActionId)) {
+      return false;
+    }
+
+    const nextAnalysis = applyNextActionEdit(
+      analysis,
+      nextActionId,
       fields,
       new Date().toISOString(),
     );

@@ -42,6 +42,7 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     removeRelationship: () => false,
     setDecisionConfirmed: () => false,
     editDecision: () => false,
+    editNextAction: () => false,
     markPersistedToDesktop: () => undefined,
     ...overrides,
   };
