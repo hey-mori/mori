@@ -186,9 +186,9 @@ function AttentionMemoryPreview({
 
 function describeAttentionMemoryStatus(memory: SessionWrapUpAttentionMemory): string {
   if (memory.status === "stale") {
-    return "Stale — newer work may have superseded this memory.";
+    return "오래됨 — 최근 작업이 이 메모리를 대체했을 수 있습니다.";
   }
-  return "Contradicted — recent work disagrees with this memory.";
+  return "모순됨 — 최근 작업 내용이 이 메모리와 충돌합니다.";
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

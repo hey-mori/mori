@@ -97,7 +97,7 @@ describe("buildHandoffReadiness", () => {
       },
     });
 
-    expect(model.headline).toBe("Continue-later handoff is ready");
+    expect(model.headline).toBe("인계 준비가 완료되었습니다");
     expect(model.items.find((item) => item.id === "resume")).toMatchObject({
       status: "ready",
       action: { id: "copyResume" },
@@ -131,10 +131,10 @@ describe("buildHandoffReadiness", () => {
     const packageItem = model.items.find((item) => item.id === "package");
     expect(packageItem).toMatchObject({
       status: "attention",
-      statusLabel: "Review safety",
+      statusLabel: "안전 검토 필요",
       action: { id: "openPackageExport" },
     });
-    expect(packageItem?.basis.join(" ")).toContain("omits 2 memory records / 4 audit rows");
+    expect(packageItem?.basis.join(" ")).toContain("2건 · 감사 4건 제외");
   });
 
   it("routes ready handoff outputs to memory-health review when accepted memory needs attention", () => {
@@ -157,14 +157,14 @@ describe("buildHandoffReadiness", () => {
       },
     });
 
-    expect(model.detail).toContain("accepted-memory health");
+    expect(model.detail).toContain("승인된 메모리 상태를 검토");
     expect(model.items.map((item) => [item.id, item.status, item.action.id])).toEqual([
       ["resume", "attention", "reviewMemoryHealth"],
       ["report", "attention", "reviewMemoryHealth"],
       ["package", "attention", "reviewMemoryHealth"],
     ]);
     expect(model.items.find((item) => item.id === "resume")?.basis.join(" ")).toContain(
-      "2 accepted memories need lifecycle review",
+      "승인된 메모리 2건에 라이프사이클 검토",
     );
   });
 });

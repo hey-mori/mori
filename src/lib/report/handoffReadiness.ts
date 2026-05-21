@@ -77,14 +77,14 @@ export function buildHandoffReadiness(
   return {
     headline:
       readyCount === items.length
-        ? "Continue-later handoff is ready"
-        : `${readyCount} of ${items.length} handoff outputs are ready`,
+        ? "인계 준비가 완료되었습니다"
+        : `인계 항목 ${readyCount}/${items.length} 준비 완료`,
     detail:
       attentionMemoryCount > 0
-        ? "Review accepted-memory health before relying on this handoff later."
+        ? "이후 인계를 활용하기 전에 승인된 메모리 상태를 검토하세요."
         : attentionCount > 0
-        ? "Review the attention items before sharing outside this session."
-        : "Choose the output that matches the next person or tool.",
+        ? "세션 외부로 공유하기 전에 주의 항목을 검토하세요."
+        : "다음 담당자나 도구에 맞는 출력을 선택하세요.",
     items,
   };
 }
@@ -97,65 +97,65 @@ function buildResumeItem(
     if (countAttentionMemory(input) > 0) {
       return {
         id: "resume",
-        title: "Resume Prompt",
+        title: "Resume 프롬프트",
         status: "attention",
-        statusLabel: "Memory review",
-        detail: "A continuation prompt is available, but accepted memory needs lifecycle review first.",
+        statusLabel: "메모리 검토 필요",
+        detail: "연속 프롬프트를 사용할 수 있지만, 먼저 승인된 메모리 상태 검토가 필요합니다.",
         basis: [
-          derived.hasReview ? "Uses reviewed session output when available." : "Uses captured session summary data.",
+          derived.hasReview ? "가능한 경우 검토된 세션 출력을 사용합니다." : "캡처된 세션 요약 데이터를 사용합니다.",
           describeAttentionMemory(input),
         ],
-        action: { id: "reviewMemoryHealth", label: "Review memory", enabled: true },
+        action: { id: "reviewMemoryHealth", label: "메모리 검토", enabled: true },
       };
     }
     return {
       id: "resume",
-      title: "Resume Prompt",
+      title: "Resume 프롬프트",
       status: "ready",
-      statusLabel: "Ready",
-      detail: "A continuation prompt is available for Claude, Codex, ChatGPT, or your next session.",
+      statusLabel: "준비됨",
+      detail: "Claude, Codex, ChatGPT 또는 다음 세션을 위한 연속 프롬프트가 준비되었습니다.",
       basis: [
-        derived.hasReview ? "Uses reviewed session output when available." : "Uses captured session summary data.",
+        derived.hasReview ? "가능한 경우 검토된 세션 출력을 사용합니다." : "캡처된 세션 요약 데이터를 사용합니다.",
         input.acceptedMemoryCount > 0
-          ? `${input.acceptedMemoryCount} accepted memory record${plural(input.acceptedMemoryCount)} can inform continuation.`
-          : "No accepted memory has been saved yet.",
+          ? `승인된 메모리 ${input.acceptedMemoryCount}건이 연속성에 활용됩니다.`
+          : "아직 승인된 메모리가 없습니다.",
       ],
-      action: { id: "copyResume", label: "Copy prompt", enabled: true },
+      action: { id: "copyResume", label: "프롬프트 복사", enabled: true },
     };
   }
 
   if (input.analysisRunning) {
     return {
       id: "resume",
-      title: "Resume Prompt",
+      title: "Resume 프롬프트",
       status: "waiting",
-      statusLabel: "Running",
-      detail: "Quick Pass is still deriving review material.",
-      basis: ["The prompt will become stronger when analysis finishes."],
-      action: { id: "runQuickPass", label: "Quick Pass running", enabled: false },
+      statusLabel: "실행 중",
+      detail: "Quick Pass가 검토 자료를 도출하는 중입니다.",
+      basis: ["분석이 완료되면 프롬프트가 더 강화됩니다."],
+      action: { id: "runQuickPass", label: "Quick Pass 실행 중", enabled: false },
     };
   }
 
   if (derived.hasEvidence) {
     return {
       id: "resume",
-      title: "Resume Prompt",
+      title: "Resume 프롬프트",
       status: "attention",
-      statusLabel: "Needs review",
-      detail: "Run Quick Pass to create a stronger evidence-based continuation prompt.",
-      basis: [`${input.sourceCount} source${plural(input.sourceCount)} and ${input.eventCount} event${plural(input.eventCount)} are captured.`],
-      action: { id: "runQuickPass", label: "Run Quick Pass", enabled: input.canRunQuickPass },
+      statusLabel: "검토 필요",
+      detail: "Quick Pass를 실행하여 증거 기반 연속 프롬프트를 강화하세요.",
+      basis: [`출처 ${input.sourceCount}개와 이벤트 ${input.eventCount}개가 캡처되었습니다.`],
+      action: { id: "runQuickPass", label: "Quick Pass 실행", enabled: input.canRunQuickPass },
     };
   }
 
   return {
     id: "resume",
-    title: "Resume Prompt",
+    title: "Resume 프롬프트",
     status: "waiting",
-    statusLabel: "Waiting",
-    detail: "Add explicit evidence before Mori can produce useful continuation context.",
-    basis: ["Mori does not infer work from hidden monitoring."],
-    action: { id: "addEvidence", label: "Add evidence", enabled: true },
+    statusLabel: "대기 중",
+    detail: "유용한 연속 컨텍스트를 생성하려면 명시적인 증거를 먼저 추가하세요.",
+    basis: ["Mori는 숨겨진 모니터링으로 작업을 추론하지 않습니다."],
+    action: { id: "addEvidence", label: "증거 추가", enabled: true },
   };
 }
 
@@ -166,58 +166,58 @@ function buildReportItem(
   if (!derived.hasEvidence) {
     return {
       id: "report",
-      title: "Report",
+      title: "보고서",
       status: "waiting",
-      statusLabel: "Waiting",
-      detail: "Reports can be generated, but an empty report is not a useful handoff.",
-      basis: ["Capture a source first so report sections cite real evidence."],
-      action: { id: "addEvidence", label: "Add evidence", enabled: true },
+      statusLabel: "대기 중",
+      detail: "보고서를 생성할 수 있지만, 빈 보고서는 유용한 인계 자료가 아닙니다.",
+      basis: ["보고서 섹션이 실제 증거를 인용할 수 있도록 먼저 소스를 추가하세요."],
+      action: { id: "addEvidence", label: "증거 추가", enabled: true },
     };
   }
 
   if (!derived.hasReview) {
     return {
       id: "report",
-      title: "Report",
+      title: "보고서",
       status: "attention",
-      statusLabel: "Draft",
-      detail: "Markdown and HTML export are available, but the report has no reviewed issues or decisions yet.",
+      statusLabel: "초안",
+      detail: "Markdown 및 HTML 내보내기를 사용할 수 있지만, 검토된 이슈나 결정이 아직 없습니다.",
       basis: [
-        `${input.sourceCount} source${plural(input.sourceCount)} and ${input.eventCount} event${plural(input.eventCount)} are included.`,
-        "Run Quick Pass before sharing a decision-oriented report.",
+        `출처 ${input.sourceCount}개와 이벤트 ${input.eventCount}개가 포함되어 있습니다.`,
+        "결정 중심 보고서를 공유하기 전에 Quick Pass를 실행하세요.",
       ],
-      action: { id: "openReportBuilder", label: "Open builder", enabled: true },
+      action: { id: "openReportBuilder", label: "빌더 열기", enabled: true },
     };
   }
 
   if (countAttentionMemory(input) > 0) {
     return {
       id: "report",
-      title: "Report",
+      title: "보고서",
       status: "attention",
-      statusLabel: "Memory review",
-      detail: "Report export is available, but memory-backed context needs lifecycle review before sharing.",
+      statusLabel: "메모리 검토 필요",
+      detail: "보고서 내보내기를 사용할 수 있지만, 공유 전에 메모리 기반 컨텍스트를 검토하세요.",
       basis: [
-        `${input.issueCount} issue${plural(input.issueCount)}, ${input.decisionCount} decision${plural(input.decisionCount)}, ${input.nextActionCount} next action${plural(input.nextActionCount)}.`,
+        `이슈 ${input.issueCount}개, 결정 ${input.decisionCount}개, 다음 액션 ${input.nextActionCount}개.`,
         describeAttentionMemory(input),
       ],
-      action: { id: "reviewMemoryHealth", label: "Review memory", enabled: true },
+      action: { id: "reviewMemoryHealth", label: "메모리 검토", enabled: true },
     };
   }
 
   return {
     id: "report",
-    title: "Report",
+    title: "보고서",
     status: "ready",
-    statusLabel: "Ready",
-    detail: "Report Builder can export a selected Markdown or HTML report from reviewed session state.",
+    statusLabel: "준비됨",
+    detail: "Report Builder에서 검토된 세션 상태를 Markdown 또는 HTML로 내보낼 수 있습니다.",
     basis: [
-      `${input.issueCount} issue${plural(input.issueCount)}, ${input.decisionCount} decision${plural(input.decisionCount)}, ${input.nextActionCount} next action${plural(input.nextActionCount)}.`,
+      `이슈 ${input.issueCount}개, 결정 ${input.decisionCount}개, 다음 액션 ${input.nextActionCount}개.`,
       input.acceptedMemoryCount > 0
-        ? "Accepted Memory can be included by report audience."
-        : "Project memory is not yet accepted; live-session sections still export.",
+        ? "승인된 메모리를 보고서 대상에 따라 포함할 수 있습니다."
+        : "프로젝트 메모리가 아직 승인되지 않았습니다. 현재 세션 섹션은 계속 내보낼 수 있습니다.",
     ],
-    action: { id: "openReportBuilder", label: "Review report", enabled: true },
+    action: { id: "openReportBuilder", label: "보고서 검토", enabled: true },
   };
 }
 
@@ -228,12 +228,12 @@ function buildPackageItem(
   if (!derived.packageHasContent) {
     return {
       id: "package",
-      title: ".mori Package",
+      title: ".mori 패키지",
       status: "waiting",
-      statusLabel: "Waiting",
-      detail: "A package can be created, but it would not carry useful evidence yet.",
-      basis: ["Add evidence before exporting a handoff package."],
-      action: { id: "addEvidence", label: "Add evidence", enabled: true },
+      statusLabel: "대기 중",
+      detail: "패키지를 만들 수 있지만, 아직 유용한 증거가 포함되지 않습니다.",
+      basis: ["인계 패키지를 내보내기 전에 증거를 추가하세요."],
+      action: { id: "addEvidence", label: "증거 추가", enabled: true },
     };
   }
 
@@ -246,29 +246,25 @@ function buildPackageItem(
 
   return {
     id: "package",
-    title: ".mori Package",
+    title: ".mori 패키지",
     status,
-    statusLabel: needsMemoryReview ? "Memory review" : excludesMemory ? "Review safety" : "Ready",
+    statusLabel: needsMemoryReview ? "메모리 검토 필요" : excludesMemory ? "안전 검토 필요" : "준비됨",
     detail: needsMemoryReview
-      ? "A package can be exported, but accepted memory health should be reviewed before handoff."
+      ? "패키지를 내보낼 수 있지만, 인계 전에 승인된 메모리 상태를 검토하세요."
       : excludesMemory
-      ? "Full export and client-safe export are available; client-safe will intentionally omit some memory history."
-      : "Full export and client-safe export are available from the package panel.",
+      ? "전체 내보내기와 클라이언트 안전 내보내기를 사용할 수 있습니다. 클라이언트 안전 버전은 일부 메모리 기록을 의도적으로 제외합니다."
+      : "패키지 패널에서 전체 내보내기와 클라이언트 안전 내보내기를 사용할 수 있습니다.",
     basis: [
-      `Full: ${full.sources} source${plural(full.sources)}, ${full.events} event${plural(full.events)}, ${full.memories} memory record${plural(full.memories)}, ${full.auditRows} audit row${plural(full.auditRows)}.`,
-      `Client-safe: keeps ${safe.memories} memory record${plural(safe.memories)} and omits ${safe.droppedMemories} memory record${plural(safe.droppedMemories)} / ${safe.droppedAuditRows} audit row${plural(safe.droppedAuditRows)}.`,
+      `전체: 출처 ${full.sources}개, 이벤트 ${full.events}개, 메모리 기록 ${full.memories}건, 감사 행 ${full.auditRows}건.`,
+      `클라이언트 안전: 메모리 기록 ${safe.memories}건 유지, ${safe.droppedMemories}건 · 감사 ${safe.droppedAuditRows}건 제외.`,
       ...(needsMemoryReview ? [describeAttentionMemory(input)] : []),
     ],
     action: {
       id: needsMemoryReview ? "reviewMemoryHealth" : "openPackageExport",
-      label: needsMemoryReview ? "Review memory" : "Review exports",
+      label: needsMemoryReview ? "메모리 검토" : "내보내기 검토",
       enabled: true,
     },
   };
-}
-
-function plural(count: number): string {
-  return count === 1 ? "" : "s";
 }
 
 function countAttentionMemory(
@@ -281,10 +277,10 @@ function describeAttentionMemory(
   input: Pick<HandoffReadinessInput, "staleMemoryCount" | "contradictedMemoryCount">,
 ): string {
   const parts: string[] = [];
-  if (input.staleMemoryCount > 0) parts.push(`${input.staleMemoryCount} stale`);
+  if (input.staleMemoryCount > 0) parts.push(`오래됨 ${input.staleMemoryCount}건`);
   if (input.contradictedMemoryCount > 0) {
-    parts.push(`${input.contradictedMemoryCount} contradicted`);
+    parts.push(`모순 ${input.contradictedMemoryCount}건`);
   }
   const count = countAttentionMemory(input);
-  return `${count} accepted memor${count === 1 ? "y needs" : "ies need"} lifecycle review${parts.length > 0 ? ` (${parts.join(", ")})` : ""}.`;
+  return `승인된 메모리 ${count}건에 라이프사이클 검토가 필요합니다${parts.length > 0 ? ` (${parts.join(", ")})` : ""}.`;
 }

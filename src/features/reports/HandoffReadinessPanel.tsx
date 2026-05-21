@@ -43,12 +43,12 @@ export function HandoffReadinessPanel({
     <section className="handoff-readiness" aria-label="Continue-later handoff readiness">
       <header className="handoff-readiness-head">
         <div>
-          <span className="handoff-readiness-kicker">Finish work</span>
+          <span className="handoff-readiness-kicker">작업 마무리</span>
           <h2>{model.headline}</h2>
           <p>{model.detail}</p>
         </div>
         <Badge tone={overallTone(model.items)}>
-          {model.items.filter((item) => item.status === "ready").length}/{model.items.length} ready
+          {model.items.filter((item) => item.status === "ready").length}/{model.items.length} 완료
         </Badge>
       </header>
 
@@ -108,9 +108,9 @@ function HandoffReadinessCard({
           onClick={() => void onAction(item.action.id)}
         >
           {copyState === "copied"
-            ? "Copied"
+            ? "복사됨"
             : copyState === "error"
-              ? "Copy failed"
+              ? "복사 실패"
               : item.action.label}
         </Button>
       </footer>

@@ -98,29 +98,29 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
   const steps: SessionWrapUpStep[] = [
     {
       id: "capture",
-      label: "Evidence captured",
+      label: "증거 캡처됨",
       status: hasEvidence ? "done" : "attention",
-      statusLabel: hasEvidence ? "Ready" : "Needs source",
+      statusLabel: hasEvidence ? "준비됨" : "소스 필요",
       detail: hasEvidence
-        ? `${input.sourceCount} source${plural(input.sourceCount)} and ${input.eventCount} timeline event${plural(input.eventCount)} are in this session.`
-        : "Add an explicit source before Mori can build a durable handoff.",
+        ? `출처 ${input.sourceCount}개와 타임라인 이벤트 ${input.eventCount}개가 이 세션에 있습니다.`
+        : "지속 가능한 인계 자료를 만들려면 먼저 명시적인 소스를 추가하세요.",
     },
     {
       id: "review",
-      label: "Session reviewed",
+      label: "세션 검토됨",
       status: input.analysisRunning ? "waiting" : hasReviewedWork ? "done" : hasEvidence ? "ready" : "attention",
-      statusLabel: input.analysisRunning ? "Running" : hasReviewedWork ? "Reviewed" : hasEvidence ? "Ready" : "Waiting",
+      statusLabel: input.analysisRunning ? "실행 중" : hasReviewedWork ? "검토됨" : hasEvidence ? "준비됨" : "대기 중",
       detail: input.analysisRunning
-        ? "Quick Pass is running; review output will appear when it finishes."
+        ? "Quick Pass 실행 중 — 완료되면 검토 결과가 표시됩니다."
         : hasReviewedWork
-          ? `${input.issueCount} issue${plural(input.issueCount)}, ${input.decisionCount} decision${plural(input.decisionCount)}, and ${input.nextActionCount} next action${plural(input.nextActionCount)} are available.`
+          ? `이슈 ${input.issueCount}개, 결정 ${input.decisionCount}개, 다음 액션 ${input.nextActionCount}개가 있습니다.`
           : hasEvidence
-            ? "Run Quick Pass to turn captured evidence into issues, decisions, and next actions."
-            : "Review starts after evidence has been imported.",
+            ? "캡처된 증거를 이슈·결정·다음 액션으로 변환하려면 Quick Pass를 실행하세요."
+            : "증거를 가져온 후 검토를 시작할 수 있습니다.",
     },
     {
       id: "memory",
-      label: "Project memory saved",
+      label: "프로젝트 메모리 저장됨",
       status:
         input.acceptedMemoryCount > 0
           ? attentionMemoryCount > 0
@@ -132,28 +132,28 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
       statusLabel:
         input.acceptedMemoryCount > 0
           ? attentionMemoryCount > 0
-            ? "Needs review"
-            : "Saved"
+            ? "검토 필요"
+            : "저장됨"
           : hasReviewedWork
-            ? "Review"
-            : "Not yet",
+            ? "검토"
+            : "아직 없음",
       detail:
         input.acceptedMemoryCount > 0
           ? attentionMemoryCount > 0
-            ? `${input.acceptedMemoryCount} accepted memor${input.acceptedMemoryCount === 1 ? "y" : "ies"} saved; ${describeAttentionMemory(input)} before handoff.`
-            : `${input.acceptedMemoryCount} accepted memor${input.acceptedMemoryCount === 1 ? "y" : "ies"} with ${input.auditActionCount} audit action${plural(input.auditActionCount)}.`
+            ? `승인된 메모리 ${input.acceptedMemoryCount}건 저장됨 — 인계 전 ${describeAttentionMemory(input)}`
+            : `승인된 메모리 ${input.acceptedMemoryCount}건 · 감사 액션 ${input.auditActionCount}건.`
           : hasReviewedWork
-            ? "Open Project Memory when you want reviewed facts to become durable accepted memory."
-            : "Accepted memory appears after the session has reviewed material.",
+            ? "검토된 사실을 지속적인 승인 메모리로 만들려면 프로젝트 메모리를 여세요."
+            : "세션에서 검토된 자료가 생기면 승인 메모리를 만들 수 있습니다.",
     },
     {
       id: "handoff",
-      label: "Continue-later handoff",
+      label: "인계 준비",
       status: input.resumePromptReady ? "ready" : hasEvidence ? "attention" : "waiting",
-      statusLabel: input.resumePromptReady ? "Ready" : hasEvidence ? "Needs review" : "Waiting",
+      statusLabel: input.resumePromptReady ? "준비됨" : hasEvidence ? "검토 필요" : "대기 중",
       detail: input.resumePromptReady
-        ? "Resume Prompt and .mori export are ready below."
-        : "A useful handoff needs evidence plus Quick Pass or demo summary data.",
+        ? "Resume 프롬프트와 .mori 내보내기가 준비되었습니다."
+        : "유용한 인계 자료를 만들려면 증거와 Quick Pass 또는 데모 요약 데이터가 필요합니다.",
     },
   ];
 
@@ -172,53 +172,49 @@ function choosePrimaryAction(
   if (!derived.hasEvidence) {
     return {
       id: "addEvidence",
-      label: "Add evidence",
-      detail: "Start with an explicit import so the handoff has a source trail.",
+      label: "증거 추가",
+      detail: "소스 추적을 위해 먼저 명시적인 가져오기를 시작하세요.",
       enabled: true,
     };
   }
   if (input.analysisRunning) {
     return {
       id: "waitForAnalysis",
-      label: "Quick Pass running",
-      detail: "Mori is still deriving review material from the captured evidence.",
+      label: "Quick Pass 실행 중",
+      detail: "Mori가 캡처된 증거에서 검토 자료를 도출하는 중입니다.",
       enabled: false,
     };
   }
   if (!derived.hasReviewedWork) {
     return {
       id: "runQuickPass",
-      label: "Run Quick Pass",
-      detail: "Create issues, decisions, next actions, and a stronger Resume Prompt.",
+      label: "Quick Pass 실행",
+      detail: "이슈, 결정, 다음 액션을 생성하고 Resume 프롬프트를 강화합니다.",
       enabled: input.canRunQuickPass,
     };
   }
   if (input.acceptedMemoryCount === 0) {
     return {
       id: "reviewMemory",
-      label: "Review Project Memory",
-      detail: "Decide what should become durable accepted memory before the next session.",
+      label: "프로젝트 메모리 검토",
+      detail: "다음 세션 전에 지속적인 승인 메모리로 전환할 항목을 결정하세요.",
       enabled: true,
     };
   }
   if (input.staleMemoryCount + input.contradictedMemoryCount > 0) {
     return {
       id: "reviewMemoryHealth",
-      label: "Review memory health",
-      detail: `${describeAttentionMemory(input)} before using memory in reports or resume prompts.`,
+      label: "메모리 상태 검토",
+      detail: `${describeAttentionMemory(input)} 보고서나 Resume 프롬프트에 메모리를 사용하기 전에 검토하세요.`,
       enabled: true,
     };
   }
   return {
     id: "reviewHandoff",
-    label: "Review handoff",
-    detail: "Copy the Resume Prompt or export a .mori package for the next work session.",
+    label: "인계 검토",
+    detail: "Resume 프롬프트를 복사하거나 다음 작업 세션을 위한 .mori 패키지를 내보내세요.",
     enabled: true,
   };
-}
-
-function plural(count: number): string {
-  return count === 1 ? "" : "s";
 }
 
 function buildUnresolvedPreview(items: readonly SessionWrapUpUnresolvedItem[]): SessionWrapUpViewModel["unresolved"] {
@@ -244,11 +240,11 @@ function buildAttentionMemoryPreview(
 function describeAttentionMemory(input: Pick<SessionWrapUpInput, "staleMemoryCount" | "contradictedMemoryCount">): string {
   const parts: string[] = [];
   if (input.staleMemoryCount > 0) {
-    parts.push(`${input.staleMemoryCount} stale`);
+    parts.push(`오래됨 ${input.staleMemoryCount}건`);
   }
   if (input.contradictedMemoryCount > 0) {
-    parts.push(`${input.contradictedMemoryCount} contradicted`);
+    parts.push(`모순 ${input.contradictedMemoryCount}건`);
   }
   const count = input.staleMemoryCount + input.contradictedMemoryCount;
-  return `${count} accepted memor${count === 1 ? "y needs" : "ies need"} lifecycle review${parts.length > 0 ? ` (${parts.join(", ")})` : ""}`;
+  return `승인된 메모리 ${count}건에 라이프사이클 검토 필요${parts.length > 0 ? ` (${parts.join(", ")})` : ""}`;
 }

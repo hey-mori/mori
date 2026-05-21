@@ -62,7 +62,7 @@ describe("buildSessionWrapUp", () => {
       id: "waitForAnalysis",
       enabled: false,
     });
-    expect(viewModel.steps.find((step) => step.id === "review")?.statusLabel).toBe("Running");
+    expect(viewModel.steps.find((step) => step.id === "review")?.statusLabel).toBe("실행 중");
   });
 
   it("routes reviewed sessions without accepted memory to Project Memory", () => {
@@ -97,7 +97,7 @@ describe("buildSessionWrapUp", () => {
     });
 
     expect(viewModel.primaryAction.id).toBe("reviewHandoff");
-    expect(viewModel.steps.find((step) => step.id === "memory")?.detail).toContain("5 accepted memories");
+    expect(viewModel.steps.find((step) => step.id === "memory")?.detail).toContain("승인된 메모리 5건");
     expect(viewModel.steps.find((step) => step.id === "handoff")?.status).toBe("ready");
   });
 
@@ -123,10 +123,10 @@ describe("buildSessionWrapUp", () => {
     });
     expect(viewModel.steps.find((step) => step.id === "memory")).toMatchObject({
       status: "attention",
-      statusLabel: "Needs review",
+      statusLabel: "검토 필요",
     });
     expect(viewModel.steps.find((step) => step.id === "memory")?.detail).toContain(
-      "2 accepted memories need lifecycle review",
+      "승인된 메모리 2건에 라이프사이클 검토 필요",
     );
   });
 
