@@ -1394,6 +1394,13 @@
   background: var(--mori-accent-soft);
 }
 
+/* ─── Active Session Banner ──────────────────────────────────────────────── */
+[data-mori-theme="nightLake"] .active-session-banner {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+  border-left-color: var(--mori-green);
+}
+
 /* ─── Drawer / overlay ───────────────────────────────────────────────────── */
 [data-mori-theme="nightLake"] .mori-drawer-content {
   background: var(--mori-surface);
