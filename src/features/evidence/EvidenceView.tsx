@@ -181,11 +181,11 @@ export function EvidenceView() {
                 disabled={action.id === "quickPass" && analysisStatus === "running"}
               >
                 {action.id === "quickPass" && analysisStatus === "running"
-                  ? "Quick Pass running"
+                  ? "분석 중..."
                   : action.label}
               </Button>
             ))}
-            <Button variant="ghost" onClick={clearLastApplied}>Dismiss</Button>
+            <Button variant="ghost" onClick={clearLastApplied}>닫기</Button>
           </span>
         </div>
       ) : null}
