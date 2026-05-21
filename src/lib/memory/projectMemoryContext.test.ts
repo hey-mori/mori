@@ -53,7 +53,7 @@ describe("deriveProjectMemoryContext", () => {
       hasAnalysis: true,
     });
     expect(empty.savedReportAvailability.hasAny).toBe(false);
-    expect(empty.savedReportAvailability.label).toBe("No saved reports yet");
+    expect(empty.savedReportAvailability.label).toBe("저장된 리포트 없음");
 
     const populated = deriveProjectMemoryContext({
       view: moriMockSession,
@@ -64,7 +64,7 @@ describe("deriveProjectMemoryContext", () => {
     });
     expect(populated.savedReportAvailability.hasAny).toBe(true);
     expect(populated.savedReportAvailability.total).toBe(3);
-    expect(populated.savedReportAvailability.label).toMatch(/3 saved reports/);
+    expect(populated.savedReportAvailability.label).toBe("리포트 3건");
     expect(populated.savedReportAvailability.tone).toBe("green");
   });
 });
@@ -90,8 +90,8 @@ describe("deriveSavedReportAvailability", () => {
   });
 
   it("singularises the label at count = 1", () => {
-    expect(deriveSavedReportAvailability(1).label).toBe("1 saved report");
-    expect(deriveSavedReportAvailability(2).label).toBe("2 saved reports");
+    expect(deriveSavedReportAvailability(1).label).toBe("리포트 1건");
+    expect(deriveSavedReportAvailability(2).label).toBe("리포트 2건");
   });
 
   it("clamps negative counts to zero behaviour", () => {

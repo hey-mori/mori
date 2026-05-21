@@ -187,7 +187,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "gitDiffPaste",
-    label: "Git diff paste",
+    label: "Git diff 붙여넣기",
     toolFamily: "git",
     surface: "paste",
     status: "implemented",
@@ -207,7 +207,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "tauriGitDiff",
-    label: "Tauri Git diff capture",
+    label: "Tauri Git diff 캡처",
     toolFamily: "git",
     surface: "localCommand",
     status: "implemented",
@@ -247,7 +247,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "quickPass",
-    label: "Quick Pass analysis",
+    label: "Quick Pass 분석",
     toolFamily: "analysis",
     surface: "analysis",
     status: "implemented",
@@ -268,7 +268,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   // ---- Local capture bridge ----
   {
     id: "localCaptureBridge",
-    label: "Local capture CLI bridge (mori-local-capture)",
+    label: "로컬 캡처 CLI 브릿지 (mori-local-capture)",
     toolFamily: "terminal",
     surface: "localCommand",
     status: "docsTemplateOnly",
@@ -303,7 +303,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   // ---- Claude family ----
   {
     id: "claudeCodeHook",
-    label: "Claude Code hook (local JSONL)",
+    label: "Claude Code 훅 (로컬 JSONL)",
     toolFamily: "claude",
     surface: "cli",
     status: "docsTemplateOnly",
@@ -323,7 +323,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "claudeDesktopExport",
-    label: "Claude Desktop export",
+    label: "Claude Desktop 내보내기",
     toolFamily: "claude",
     surface: "desktop",
     status: "planned",
@@ -343,7 +343,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "claudeWebExport",
-    label: "Claude Web export",
+    label: "Claude Web 내보내기",
     toolFamily: "claude",
     surface: "web",
     status: "planned",
@@ -364,7 +364,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   // ---- Codex family ----
   {
     id: "codexCliWrapper",
-    label: "Codex CLI wrapper (local JSONL)",
+    label: "Codex CLI 래퍼 (로컬 JSONL)",
     toolFamily: "codex",
     surface: "cli",
     status: "docsTemplateOnly",
@@ -384,7 +384,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "codexDesktopExport",
-    label: "Codex Desktop export",
+    label: "Codex Desktop 내보내기",
     toolFamily: "codex",
     surface: "desktop",
     status: "planned",
@@ -404,7 +404,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "codexWebGithub",
-    label: "Codex Web · GitHub workflow",
+    label: "Codex Web · GitHub 워크플로",
     toolFamily: "codex",
     surface: "web",
     status: "planned",
@@ -446,7 +446,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "cursorExtension",
-    label: "Cursor extension",
+    label: "Cursor 확장",
     toolFamily: "ide",
     surface: "extension",
     status: "planned",
@@ -466,7 +466,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "terminalShellIntegration",
-    label: "Terminal shell integration",
+    label: "터미널 셸 통합",
     toolFamily: "terminal",
     surface: "cli",
     status: "planned",
@@ -487,7 +487,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "browserExtension",
-    label: "Browser extension",
+    label: "브라우저 확장",
     toolFamily: "browser",
     surface: "extension",
     status: "planned",
@@ -507,7 +507,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "githubPrImport",
-    label: "GitHub PR / commit import",
+    label: "GitHub PR / 커밋 import",
     toolFamily: "git",
     surface: "web",
     status: "planned",
@@ -527,7 +527,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "fileDocumentImport",
-    label: "File / document import",
+    label: "파일 / 문서 import",
     toolFamily: "document",
     surface: "localFile",
     status: "planned",

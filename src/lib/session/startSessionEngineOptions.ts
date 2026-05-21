@@ -30,13 +30,13 @@ const ENGINE_ROWS: Array<
   {
     provider: "lmStudio",
     label: "LM Studio",
-    detail: "OpenAI-compatible local endpoint",
+    detail: "OpenAI 호환 로컬 엔드포인트",
     model: "local-model",
     featureId: "settings.localAi.lmStudio",
   },
   {
     provider: "openAiCompatible",
-    label: "OpenAI-compatible endpoint",
+    label: "OpenAI 호환 엔드포인트",
     detail: "vLLM / LocalAI 등 직접 입력 endpoint",
     model: "local-model",
     featureId: "settings.localAi.openAiCompatible",

@@ -24,7 +24,7 @@ export function createSessionDraft(input: CreateSessionDraftInput): CreatedSessi
   return {
     project: {
       id: projectId,
-      name: input.projectName.trim() || "Untitled Project",
+      name: input.projectName.trim() || "무제 프로젝트",
       description: "Local-first Mori work memory project.",
       createdAt: now,
       updatedAt: now,
@@ -32,7 +32,7 @@ export function createSessionDraft(input: CreateSessionDraftInput): CreatedSessi
     session: {
       id: sessionId,
       projectId,
-      title: input.sessionTitle.trim() || "Untitled Mori Session",
+      title: input.sessionTitle.trim() || "무제 Mori 세션",
       startedAt: now,
       endedAt: now,
       recordingMode: input.recordingMode,

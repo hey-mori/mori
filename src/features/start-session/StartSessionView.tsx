@@ -292,8 +292,8 @@ export function StartSessionView() {
         </div>
         <SessionSummary
           savedDraft={storeDraft}
-          sessionTitle={sessionTitle || "Untitled Mori Session"}
-          projectName={projectName || "Untitled Project"}
+          sessionTitle={sessionTitle || "무제 Mori 세션"}
+          projectName={projectName || "무제 프로젝트"}
           selectedSources={selectedSources}
           recordingMode={recordingMode}
           engine={selectedEngine}
@@ -491,8 +491,8 @@ function SessionSummary({
   return (
     <aside className="summary-panel">
       <h2>세션 요약</h2>
-      <SummaryRow label="세션 이름" value={sessionTitle || "Untitled Mori Session"} />
-      <SummaryRow label="프로젝트" value={projectName || "Untitled Project"} />
+      <SummaryRow label="세션 이름" value={sessionTitle || "무제 Mori 세션"} />
+      <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
       <hr />
       <SummaryRow label="기록할 소스" value={`${selectedSources.length}개 선택됨`} />
       <ul className="summary-source-list">

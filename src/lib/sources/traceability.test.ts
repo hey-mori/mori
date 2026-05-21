@@ -29,7 +29,7 @@ describe("traceability", () => {
       const status = getSourceDisplayStatus(source);
 
       expect(status.integration).toBe("manualNote");
-      expect(status.integrationLabel).toBe("Manual Note");
+      expect(status.integrationLabel).toBe("직접 입력 메모");
       expect(status.status).toBe("implemented");
       expect(status.statusLabel).toBe("사용 가능");
       expect(status.captureMethod).toBe("수동 입력");
@@ -56,7 +56,7 @@ describe("traceability", () => {
       const status = getSourceDisplayStatus(source);
 
       expect(status.integration).toBe("aiConversation");
-      expect(status.integrationLabel).toBe("AI Conversation (Other)");
+      expect(status.integrationLabel).toBe("AI 대화 (기타)");
       expect(status.rawDataLabel).toBe("요약만 보관");
     });
 
@@ -458,8 +458,8 @@ describe("traceability", () => {
       expect(summary.decisionCount).toBe(1);
       expect(summary.hasAnalysis).toBe(true);
       expect(summary.dataBasis).toBe("가져온 소스 + Quick Pass 분석");
-      expect(summary.integrationBreakdown["Manual Note"]).toBe(1);
-      expect(summary.integrationBreakdown["Git Diff (Paste)"]).toBe(1);
+      expect(summary.integrationBreakdown["직접 입력 메모"]).toBe(1);
+      expect(summary.integrationBreakdown["Git Diff (붙여넣기)"]).toBe(1);
       expect(summary.trustBreakdown.verified).toBe(2);
     });
 

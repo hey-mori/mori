@@ -68,7 +68,7 @@ export type SourceIntegration = {
 export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   manualNote: {
     id: "manualNote",
-    label: "Manual Note",
+    label: "직접 입력 메모",
     description: "사용자가 직접 입력하는 자유 형식 텍스트 메모",
     status: "implemented",
     trustDefault: "verified",
@@ -110,7 +110,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   url: {
     id: "url",
-    label: "URL / Browser Page",
+    label: "URL / 브라우저 페이지",
     description: "웹 페이지 URL과 선택적 텍스트 발췌",
     status: "implemented",
     trustDefault: "verified",
@@ -130,7 +130,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   aiConversation: {
     id: "aiConversation",
-    label: "AI Conversation (Other)",
+    label: "AI 대화 (기타)",
     description: "다른 AI 어시스턴트의 일반 대화 기록",
     status: "implemented",
     trustDefault: "verified",
@@ -150,7 +150,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   gitDiff: {
     id: "gitDiff",
-    label: "Git Diff (Paste)",
+    label: "Git Diff (붙여넣기)",
     description: "붙여넣은 unified git diff 출력",
     status: "implemented",
     trustDefault: "verified",
@@ -170,7 +170,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   tauriGitDiff: {
     id: "tauriGitDiff",
-    label: "Git Diff (Desktop Command)",
+    label: "Git Diff (데스크톱)",
     description: "저장된 리포지토리에 대해 Tauri 데스크톱 명령으로 캡처한 git diff",
     status: "implemented",
     trustDefault: "verified",
@@ -190,7 +190,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   repository: {
     id: "repository",
-    label: "Repository Settings",
+    label: "리포지토리 설정",
     description: "명시적 Git diff 캡처를 위해 저장한 리포지토리 경로",
     status: "implemented",
     trustDefault: "verified",
@@ -210,7 +210,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   quickPass: {
     id: "quickPass",
-    label: "Quick Pass Analysis",
+    label: "Quick Pass 분석",
     description: "가져온 소스에서 이슈 · 결정 · 관계를 추출하는 로컬 분석",
     status: "implemented",
     trustDefault: "inferred",
@@ -230,7 +230,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   terminal: {
     id: "terminal",
-    label: "Terminal Commands",
+    label: "터미널 명령",
     description: "터미널 명령 기록과 출력 요약",
     status: "planned",
     trustDefault: "observed",
@@ -250,7 +250,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   fileSystem: {
     id: "fileSystem",
-    label: "File System Changes",
+    label: "파일 시스템 변경",
     description: "로컬 파일 생성 · 수정 · 삭제 이벤트",
     status: "planned",
     trustDefault: "observed",
@@ -270,7 +270,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   editor: {
     id: "editor",
-    label: "Code Editor Activity",
+    label: "코드 에디터 활동",
     description: "일반 코드 에디터의 파일 열기 · 편집 · 이동",
     status: "planned",
     trustDefault: "observed",
@@ -330,7 +330,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   browserTab: {
     id: "browserTab",
-    label: "Browser Tabs",
+    label: "브라우저 탭",
     description: "활성 브라우저 탭 제목과 이동 이벤트",
     status: "planned",
     trustDefault: "observed",
@@ -410,7 +410,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   docs: {
     id: "docs",
-    label: "Documentation Sites",
+    label: "문서 사이트",
     description: "기술 문서와 레퍼런스 페이지 방문 기록",
     status: "planned",
     trustDefault: "observed",
@@ -430,7 +430,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   slack: {
     id: "slack",
-    label: "Slack Messages",
+    label: "Slack 메시지",
     description: "특정 채널에서 가져오는 Slack 대화",
     status: "planned",
     trustDefault: "verified",

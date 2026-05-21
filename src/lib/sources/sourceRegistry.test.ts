@@ -159,7 +159,7 @@ describe("sourceRegistry", () => {
       const integration = getIntegration("manualNote");
       expect(integration).toBeDefined();
       expect(integration?.id).toBe("manualNote");
-      expect(integration?.label).toBe("Manual Note");
+      expect(integration?.label).toBe("직접 입력 메모");
     });
 
     it("returns undefined for invalid ID", () => {

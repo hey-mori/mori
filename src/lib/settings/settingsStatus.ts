@@ -45,7 +45,7 @@ export function getProviderRows(
   return [
     {
       id: "deterministic",
-      label: "Deterministic Quick Pass",
+      label: "결정론적 Quick Pass",
       description: "결정론적 로컬 휴리스틱 — 네트워크 없음, LLM 없음.",
       status: "implemented",
       isLocal: true,
@@ -57,7 +57,7 @@ export function getProviderRows(
     },
     {
       id: "ollama",
-      label: "Ollama (Local LLM)",
+      label: "Ollama (로컬 LLM)",
       description: "로컬에서 실행되는 Ollama 인스턴스. 엔드포인트 / 모델 / 타임아웃을 직접 입력합니다.",
       status: "implemented",
       isLocal: true,
@@ -82,7 +82,7 @@ export function getProviderRows(
     },
     {
       id: "openAiCompatible",
-      label: "OpenAI-compatible endpoint",
+      label: "OpenAI 호환 엔드포인트",
       description: "vLLM / LocalAI 등 OpenAI 호환 로컬 엔드포인트.",
       status: "planned",
       isLocal: true,
@@ -94,7 +94,7 @@ export function getProviderRows(
     },
     {
       id: "cloudApi",
-      label: "Cloud API (explicit opt-in)",
+      label: "Cloud API (명시적 동의 필요)",
       description: "Anthropic / OpenAI 등 외부 API. 명시적 opt-in 후에만 사용됩니다.",
       status: "planned",
       isLocal: false,
@@ -235,7 +235,7 @@ export function getStorageStatusRows({
   return [
     {
       id: "browser-draft",
-      label: "Browser draft (localStorage)",
+      label: "브라우저 draft (localStorage)",
       description: "활성 세션, 가져온 소스, 분석 결과, 리포지토리 목록을 브라우저에 임시 보관합니다.",
       state: "active",
       hint: "데스크톱 모드에서는 SQLite가 source of truth이지만, browser draft는 fallback으로 계속 사용됩니다.",

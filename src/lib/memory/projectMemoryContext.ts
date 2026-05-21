@@ -103,7 +103,7 @@ export function deriveSavedReportAvailability(reportCount: number): SavedReportA
     return {
       total: 0,
       hasAny: false,
-      label: "No saved reports yet",
+      label: "저장된 리포트 없음",
       tone: "gray",
       emptyHint: "Reports 화면에서 Markdown을 복사하거나 .mori v0 JSON을 내보내면 목록에 추가됩니다.",
     };
@@ -111,7 +111,7 @@ export function deriveSavedReportAvailability(reportCount: number): SavedReportA
   return {
     total: reportCount,
     hasAny: true,
-    label: `${reportCount} saved report${reportCount === 1 ? "" : "s"}`,
+    label: `리포트 ${reportCount}건`,
     tone: reportCount >= 3 ? "green" : "blue",
     emptyHint: "",
   };
