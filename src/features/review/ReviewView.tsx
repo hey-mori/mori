@@ -22,6 +22,7 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
+import type { ReviewTab } from "../../app/store";
 import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import {
   countNextActionCompletion,
@@ -49,8 +50,6 @@ import { ReviewSummaryPanel } from "./ReviewSummaryPanel";
 import { CompanionStrip } from "../companion/CompanionStrip";
 import { useCompanionSignals } from "../companion/useCompanionSignals";
 import { formatDateTime } from "../../lib/formatting/time";
-
-type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";
 
 const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare }> = [
   { id: "issues", label: "Issue Garden", icon: KanbanSquare },
@@ -83,6 +82,8 @@ export function ReviewView() {
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const reviewFocus = useMoriAppStore((state) => state.reviewFocus);
   const clearReviewFocus = useMoriAppStore((state) => state.clearReviewFocus);
+  const activeTab = useMoriAppStore((state) => state.reviewTab);
+  const setActiveTab = useMoriAppStore((state) => state.setReviewTab);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -90,7 +91,6 @@ export function ReviewView() {
 
   const { signals: companionSignals } = useCompanionSignals();
 
-  const [activeTab, setActiveTab] = useState<ReviewTab>("issues");
   const [selection, setSelection] = useState<ReviewSelection | null>(null);
 
   // Consume a one-shot deep-link from another surface (e.g. the Timeline

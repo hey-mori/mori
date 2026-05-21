@@ -2,6 +2,12 @@ import { create } from "zustand";
 import type { EventType, ViewKey } from "../domain/types";
 import type { ReviewSelection } from "../lib/review-workspace/reviewWorkspace";
 
+/** Active tab on the Review surface. Persisted so the user returns to the same tab. */
+export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";
+
+/** Active tab on the Settings surface. Persisted so the user returns to the same tab. */
+export type SettingsTab = "localAi" | "privacy" | "storage" | "repositories" | "connectors" | "appearance";
+
 type MoriAppState = {
   currentView: ViewKey;
   selectedEventId: string;
@@ -23,6 +29,17 @@ type MoriAppState = {
    * `MemoryView` consumes and clears it once the drawer opens.
    */
   memoryFocus: { memoryId: string } | null;
+  /**
+   * Active tab on the Review surface. Stored here so the user returns to
+   * the same tab when navigating away and back. Deep-link overrides via
+   * `openReviewItem` still win and update this value.
+   */
+  reviewTab: ReviewTab;
+  /**
+   * Active tab on the Settings surface. Stored here so the user returns
+   * to the same tab when navigating away and back.
+   */
+  settingsTab: SettingsTab;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -36,6 +53,8 @@ type MoriAppState = {
   /** Deep-link into Project Memory with one accepted memory's drawer open. */
   openAcceptedMemory: (memoryId: string) => void;
   clearMemoryFocus: () => void;
+  setReviewTab: (tab: ReviewTab) => void;
+  setSettingsTab: (tab: SettingsTab) => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -47,6 +66,8 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   inspectorCollapsed: false,
   reviewFocus: null,
   memoryFocus: null,
+  reviewTab: "issues",
+  settingsTab: "localAi",
   setCurrentView: (currentView) => set({ currentView }),
   setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
@@ -65,4 +86,6 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   openAcceptedMemory: (memoryId) =>
     set({ memoryFocus: { memoryId }, currentView: "memory" }),
   clearMemoryFocus: () => set({ memoryFocus: null }),
+  setReviewTab: (reviewTab) => set({ reviewTab }),
+  setSettingsTab: (settingsTab) => set({ settingsTab }),
 }));

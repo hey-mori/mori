@@ -23,6 +23,7 @@ import {
   useMoriRepositoryStore,
 } from "../../app/repositoryStore";
 import { useMoriAppStore } from "../../app/store";
+import type { SettingsTab } from "../../app/store";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
 import type { ViewKey } from "../../domain/types";
 import type { RuntimeMode, RecommendedSetupStep } from "../../lib/settings/settingsStatus";
@@ -35,14 +36,6 @@ import { RepositoriesCard } from "./RepositoriesCard";
 import { PlannedConnectorsCard } from "./PlannedConnectorsCard";
 import { ThemeCard } from "./ThemeCard";
 import { TrustSummaryPanel } from "./TrustSummaryPanel";
-
-type SettingsTab =
-  | "localAi"
-  | "privacy"
-  | "storage"
-  | "repositories"
-  | "connectors"
-  | "appearance";
 
 const TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "로컬 AI", icon: Bot },
@@ -88,6 +81,8 @@ export function SettingsView() {
   const activeRepository = useMoriRepositoryStore(selectActiveRepository);
 
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const activeTab = useMoriAppStore((state) => state.settingsTab);
+  const setActiveTab = useMoriAppStore((state) => state.setSettingsTab);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -103,8 +98,6 @@ export function SettingsView() {
 
   const desktopRuntime = useMemo(() => isTauriRuntime(), []);
   const mode: RuntimeMode = desktopRuntime ? "tauri-desktop" : "browser";
-
-  const [activeTab, setActiveTab] = useState<SettingsTab>("localAi");
 
   const providerLabel =
     settings.provider === "ollama"
