@@ -36,7 +36,7 @@ export function ReviewNextActionRow({
           <strong>{nextAction.title}</strong>
           <span>
             {relatedIssues.length > 0
-              ? `Related to: ${relatedIssues
+              ? `관련 이슈: ${relatedIssues
                   .slice(0, 2)
                   .map((issue) => issue.title)
                   .join(", ")}${relatedIssues.length > 2 ? ` 외 ${relatedIssues.length - 2}건` : ""}`
@@ -51,6 +51,7 @@ export function ReviewNextActionRow({
               {priorityLabels[nextAction.priority]}
             </Badge>
           )}
+          {nextAction.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
           <span>{nextAction.relatedEventIds.length} event</span>
         </div>
       </button>
