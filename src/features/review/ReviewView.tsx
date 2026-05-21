@@ -1,6 +1,9 @@
 import {
   Activity,
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Check,
   CheckCircle2,
   GitBranch,
@@ -669,6 +672,33 @@ function IssueGardenFilter({
   );
 }
 
+type DecisionSortField = "title" | "createdAt" | "importance" | "status";
+type SortDir = "asc" | "desc";
+
+const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+function sortDecisions(
+  decisions: ReturnType<typeof selectSessionView>["decisions"],
+  field: DecisionSortField,
+  dir: SortDir,
+) {
+  const sorted = [...decisions].sort((a, b) => {
+    let cmp = 0;
+    if (field === "title") {
+      cmp = a.title.localeCompare(b.title, "ko");
+    } else if (field === "createdAt") {
+      cmp = a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
+    } else if (field === "importance") {
+      cmp = (PRIORITY_RANK[a.importance] ?? 9) - (PRIORITY_RANK[b.importance] ?? 9);
+    } else if (field === "status") {
+      // confirmed first
+      cmp = (b.confirmed ? 1 : 0) - (a.confirmed ? 1 : 0);
+    }
+    return dir === "asc" ? cmp : -cmp;
+  });
+  return sorted;
+}
+
 function DecisionLogTab({
   decisions,
   view,
@@ -680,6 +710,18 @@ function DecisionLogTab({
   selection: ReviewSelection;
   onSelectDecision: (id: string) => void;
 }) {
+  const [sortField, setSortField] = useState<DecisionSortField>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  function handleSort(field: DecisionSortField) {
+    if (field === sortField) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir(field === "createdAt" ? "desc" : "asc");
+    }
+  }
+
   if (decisions.length === 0) {
     return (
       <div className="review-empty">
@@ -690,27 +732,29 @@ function DecisionLogTab({
     );
   }
 
+  const sorted = sortDecisions(decisions, sortField, sortDir);
+
   return (
     <section className="review-decision-log">
       <header className="review-section-head">
         <div>
           <h2>결정 기록</h2>
-          <p>결정 시각, 중요도, 근거 출처를 한 행에서 확인합니다. 행을 클릭하면 오른쪽 패널에 자세한 내용이 표시됩니다.</p>
+          <p>결정 시각, 중요도, 근거 출처를 한 행에서 확인합니다. 열 헤더를 클릭하면 정렬합니다.</p>
         </div>
       </header>
       <div className="review-table-wrap">
         <table>
           <thead>
             <tr>
-              <th scope="col">결정</th>
-              <th scope="col">시각</th>
-              <th scope="col">중요도</th>
+              <SortableHeader label="결정" field="title" active={sortField} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label="시각" field="createdAt" active={sortField} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label="중요도" field="importance" active={sortField} dir={sortDir} onSort={handleSort} />
               <th scope="col">근거</th>
-              <th scope="col">상태</th>
+              <SortableHeader label="상태" field="status" active={sortField} dir={sortDir} onSort={handleSort} />
             </tr>
           </thead>
           <tbody>
-            {decisions.map((decision) => (
+            {sorted.map((decision) => (
               <ReviewDecisionRow
                 key={decision.id}
                 decision={decision}
@@ -726,6 +770,36 @@ function DecisionLogTab({
         </table>
       </div>
     </section>
+  );
+}
+
+function SortableHeader({
+  label,
+  field,
+  active,
+  dir,
+  onSort,
+}: {
+  label: string;
+  field: DecisionSortField;
+  active: DecisionSortField;
+  dir: SortDir;
+  onSort: (field: DecisionSortField) => void;
+}) {
+  const isActive = field === active;
+  const Icon = isActive ? (dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th scope="col" className="sortable-th">
+      <button
+        type="button"
+        className={`sort-th-btn ${isActive ? "is-active" : ""}`}
+        onClick={() => onSort(field)}
+        aria-sort={isActive ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      >
+        {label}
+        <Icon size={12} aria-hidden="true" />
+      </button>
+    </th>
   );
 }
 
