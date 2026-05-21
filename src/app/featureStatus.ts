@@ -67,6 +67,7 @@ export type FeatureId =
   | "review.editIssue"
   | "review.editDecision"
   | "review.confirmDecision"
+  | "review.editNextAction"
   | "review.promoteToNextAction"
   // Reports
   | "reports.export.markdown"
@@ -223,6 +224,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "review.editIssue", label: "Edit issue", status: "implemented", description: "Inline edit issue title and description from the Review detail panel." },
   { id: "review.editDecision", label: "Edit decision", status: "implemented", description: "Inline edit decision title, decision text, and rationale from the Review detail panel." },
   { id: "review.confirmDecision", label: "Confirm / reject decision", status: "implemented", description: "Toggle decision confirmation state from the Review detail panel." },
+  { id: "review.editNextAction", label: "Edit next action", status: "implemented", description: "Inline edit next action title from the Review detail panel." },
   { id: "review.promoteToNextAction", label: "Promote to next action", status: "implemented", description: "Promote a Review issue into a linked Next Action without duplicating an existing action." },
   // ─────────────────────────── Reports ───────────────────────────
   { id: "reports.export.markdown", label: "Copy / download Markdown", status: "implemented", description: "Render the report as Markdown and copy or download it." },
@@ -238,7 +240,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "memory.followUpPrompt", label: "Follow-up session prompt", status: "implemented", description: "Generate a follow-up prompt from the current memory." },
   // ─────────────────────────── Start Session ─────────────────────
   { id: "startSession.savePersistedDraft", label: "Save persisted draft", status: "implemented", description: "Persist the new session draft locally." },
-  { id: "startSession.sourceTileSelection", label: "Source tile selection", status: "partial", description: "Choose which sources to scope the session to.", userFacingStatus: "Partial — tile state not yet persisted." },
+  { id: "startSession.sourceTileSelection", label: "Source tile selection", status: "implemented", description: "Choose which sources to scope the session to. Selection is persisted in the session draft and restored on return." },
   // ─────────────────────────── Settings ──────────────────────────
   { id: "settings.localAi.deterministic", label: "Deterministic Quick Pass", status: "implemented", description: "Local heuristic Quick Pass — no LLM." },
   { id: "settings.localAi.ollama", label: "Ollama (Local LLM)", status: "implemented", description: "Quick Pass via a user-run Ollama instance." },
@@ -261,7 +263,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "rollup.importReview", label: "Import Review", status: "implemented", description: "Accept / discard / edit imported candidates before applying." },
   { id: "rollup.timeline", label: "Timeline", status: "implemented", description: "Lane / ruler / Inspector / mini-map Timeline surface." },
   { id: "rollup.flowFocus", label: "Flow Focus", status: "partial", description: "Upstream / downstream trace view.", userFacingStatus: "Partial — manual relationship edits are still Planned." },
-  { id: "rollup.reviewWorkspace", label: "Review workspace", status: "partial", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions.", userFacingStatus: "Partial — issue status, issue and decision editing, decision confirmation, Next Action completion, and issue promotion write." },
+  { id: "rollup.reviewWorkspace", label: "Review workspace", status: "partial", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions.", userFacingStatus: "Partial — issue status, issue/decision/next-action editing, decision confirmation, completion, and issue promotion all write." },
   { id: "rollup.reportsMarkdown", label: "Markdown reports", status: "implemented", description: "Copy or download report as Markdown." },
   { id: "rollup.reportsPdf", label: "PDF reports", status: PLANNED, description: "Render report as PDF.", disabledReason: "PDF export is a planned milestone." },
   { id: "rollup.reportsHtml", label: "HTML reports", status: "implemented", description: "Render the report as a standalone, self-contained HTML document." },
@@ -270,7 +272,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "rollup.sqlitePersistence", label: "SQLite persistence", status: "implemented", description: "Persistent local SQLite store for sessions, imports, and analysis.", runtime: "desktop" },
   { id: "rollup.moriPackageExport", label: ".mori v0 package export", status: "implemented", description: "Serialise the session to a .mori v0 JSON package." },
   { id: "rollup.moriPackageImport", label: ".mori v0 package import", status: "partial", description: "Import accepted memories from a .mori v0 package via the Consolidation Review surface. Full session restoration is planned.", userFacingStatus: "Partial — memory import via Consolidation Review; full session re-open is planned." },
-  { id: "rollup.themeSystem", label: "Theme system", status: "implemented", description: "Three-layer token system with a local runtime switcher for the formal and forest themes." },
+  { id: "rollup.themeSystem", label: "Theme system", status: "implemented", description: "Three-layer token system with a local runtime switcher for formal, forest, and Night Lake dark themes." },
   // ────────────────────────── Connector capabilities ─────────────────
   { id: "connector.claudeCodeHook", label: "Claude Code hook", status: "partial", description: "Local Claude Code hook script writes JSONL events; Mori imports them via Evidence Hub → Connector JSONL.", userFacingStatus: "Partial — template + JSONL import works; no live sync." },
   { id: "connector.codexCliWrapper", label: "Codex CLI wrapper", status: "partial", description: "Local Codex CLI wrapper writes JSONL events; Mori imports them via Evidence Hub → Connector JSONL.", userFacingStatus: "Partial — template + JSONL import works; no desktop/web capture." },
