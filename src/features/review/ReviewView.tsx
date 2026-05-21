@@ -6,8 +6,10 @@ import {
   GitBranch,
   KanbanSquare,
   ListChecks,
+  Search,
   Sparkles,
   Table2,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -16,6 +18,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { moriConceptIcon } from "../../components/brand/moriIcons";
 import { issueStatusLabels, priorityLabels } from "../../domain/constants";
+import type { Priority } from "../../domain/types";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -482,6 +485,9 @@ function IssueGardenTab({
   hasImports: boolean;
   onGoToEvidence: () => void;
 }) {
+  const [searchText, setSearchText] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+
   if (showQuickPassEmpty) {
     return (
       <div className="review-empty">
@@ -519,6 +525,16 @@ function IssueGardenTab({
     );
   }
 
+  const needle = searchText.trim().toLowerCase();
+  const filteredIssues = view.issues.filter((issue) => {
+    if (priorityFilter !== "all" && issue.priority !== priorityFilter) return false;
+    if (needle && !issue.title.toLowerCase().includes(needle) && !issue.description.toLowerCase().includes(needle)) return false;
+    return true;
+  });
+  const filteredGrouped = groupIssuesByStatus(filteredIssues);
+  const filteredTotal = filteredIssues.length;
+  const isFiltered = needle !== "" || priorityFilter !== "all";
+
   return (
     <section className="review-issue-board">
       <header className="review-section-head">
@@ -527,9 +543,19 @@ function IssueGardenTab({
           <p>상태별로 이슈를 정리합니다. 카드를 클릭하면 오른쪽 패널에 출처와 관련 이벤트가 표시됩니다.</p>
         </div>
       </header>
+      <IssueGardenFilter
+        searchText={searchText}
+        priorityFilter={priorityFilter}
+        totalCount={totalIssues}
+        filteredCount={filteredTotal}
+        isFiltered={isFiltered}
+        onSearchChange={setSearchText}
+        onPriorityChange={setPriorityFilter}
+        onClear={() => { setSearchText(""); setPriorityFilter("all"); }}
+      />
       <div className="review-issue-board-columns">
         {ISSUE_STATUS_ORDER.map((status) => {
-          const columnIssues = grouped[status];
+          const columnIssues = filteredGrouped[status];
           return (
             <article className="review-issue-column" key={status}>
               <header>
@@ -540,7 +566,7 @@ function IssueGardenTab({
               </header>
               <div className="review-issue-column-list">
                 {columnIssues.length === 0 ? (
-                  <p className="review-issue-column-empty">없음</p>
+                  <p className="review-issue-column-empty">{isFiltered ? "일치 없음" : "없음"}</p>
                 ) : (
                   columnIssues.map((issue) => (
                     <ReviewIssueCard
@@ -559,6 +585,87 @@ function IssueGardenTab({
         })}
       </div>
     </section>
+  );
+}
+
+const PRIORITY_FILTER_OPTIONS: Array<{ value: Priority | "all"; label: string }> = [
+  { value: "all", label: "전체" },
+  { value: "high", label: "높음" },
+  { value: "medium", label: "보통" },
+  { value: "low", label: "낮음" },
+];
+
+function IssueGardenFilter({
+  searchText,
+  priorityFilter,
+  totalCount,
+  filteredCount,
+  isFiltered,
+  onSearchChange,
+  onPriorityChange,
+  onClear,
+}: {
+  searchText: string;
+  priorityFilter: Priority | "all";
+  totalCount: number;
+  filteredCount: number;
+  isFiltered: boolean;
+  onSearchChange: (text: string) => void;
+  onPriorityChange: (priority: Priority | "all") => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="review-issue-filter" role="search" aria-label="이슈 필터">
+      <label className="review-issue-filter-search">
+        <Search size={13} aria-hidden="true" className="review-issue-filter-icon" />
+        <input
+          type="search"
+          placeholder="이슈 제목 또는 내용 검색..."
+          value={searchText}
+          onChange={(event) => onSearchChange(event.target.value)}
+          aria-label="이슈 검색"
+        />
+        {searchText ? (
+          <button
+            type="button"
+            className="review-issue-filter-clear-input"
+            onClick={() => onSearchChange("")}
+            aria-label="검색어 지우기"
+          >
+            <X size={12} />
+          </button>
+        ) : null}
+      </label>
+      <div className="review-issue-filter-priority" role="group" aria-label="우선순위 필터">
+        {PRIORITY_FILTER_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            className={`review-issue-filter-pill ${priorityFilter === opt.value ? "is-active" : ""}`}
+            onClick={() => onPriorityChange(opt.value)}
+            aria-pressed={priorityFilter === opt.value}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      {isFiltered ? (
+        <span className="review-issue-filter-count" aria-live="polite">
+          {filteredCount}/{totalCount}건
+          <button
+            type="button"
+            className="review-issue-filter-reset"
+            onClick={onClear}
+            title="필터 초기화"
+          >
+            <X size={11} aria-hidden="true" />
+            초기화
+          </button>
+        </span>
+      ) : (
+        <span className="review-issue-filter-count muted">{totalCount}건</span>
+      )}
+    </div>
   );
 }
 

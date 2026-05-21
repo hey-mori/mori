@@ -18,8 +18,23 @@ import {
   type StaleMemoryChip,
 } from "../../lib/companion/staleMemoryChips";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
-import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
+import type { StoredAcceptedProjectMemory, StoredAcceptedProjectMemoryStatus } from "../../lib/storage/storageTypes";
 import { useCompanionSignals } from "./useCompanionSignals";
+
+const MEMORY_STATUS_LABELS: Record<StoredAcceptedProjectMemoryStatus, string> = {
+  accepted: "승인됨",
+  edited: "수정됨",
+  watching: "관찰 중",
+  deferred: "보류",
+  stale: "오래됨",
+  contradicted: "모순됨",
+  superseded: "대체됨",
+  retired: "은퇴됨",
+};
+
+function memoryStatusLabel(status: StoredAcceptedProjectMemoryStatus): string {
+  return MEMORY_STATUS_LABELS[status] ?? status;
+}
 
 /**
  * Companion Inbox — the Companion Layer's dedicated surface.
@@ -56,10 +71,20 @@ export function CompanionInboxView() {
             />
           ) : null}
           {groups.length === 0 ? (
-            <p className="companion-inbox-empty">
-              지금은 살펴볼 신호가 없습니다. 새 소스를 가져오거나 Quick Pass를
-              실행하면 Mori가 다시 짚어 드립니다.
-            </p>
+            <div className="companion-inbox-empty">
+              <p>
+                지금은 살펴볼 신호가 없습니다. 새 소스를 가져오거나 Quick Pass를
+                실행하면 Mori가 다시 짚어 드립니다.
+              </p>
+              <div className="companion-inbox-empty-actions">
+                <Button onClick={() => setCurrentView("evidence")}>
+                  Evidence Hub에서 소스 가져오기
+                </Button>
+                <Button onClick={() => setCurrentView("review")}>
+                  검토 화면으로 이동
+                </Button>
+              </div>
+            </div>
           ) : (
             groups.map((group) => (
               <CompanionInboxSection
@@ -218,7 +243,7 @@ function CompanionSignalRow({
                 >
                   <span className={`companion-signal-chip-dot status-${chip.status}`} aria-hidden="true" />
                   <span className="companion-signal-chip-title">{chip.title}</span>
-                  <span className="companion-signal-chip-status">{chip.status}</span>
+                  <span className="companion-signal-chip-status">{memoryStatusLabel(chip.status)}</span>
                   <ExternalLink size={11} aria-hidden="true" />
                 </button>
               </li>

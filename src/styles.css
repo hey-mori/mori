@@ -5507,6 +5507,130 @@ pre {
   box-shadow: var(--shadow-soft);
 }
 
+/* Issue Garden filter bar */
+
+.review-issue-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 0 2px;
+}
+
+.review-issue-filter-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 160px;
+  max-width: 320px;
+}
+
+.review-issue-filter-search input[type="search"] {
+  width: 100%;
+  padding: 5px 28px 5px 28px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 12px;
+  background: var(--panel-soft);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.review-issue-filter-search input[type="search"]:focus {
+  border-color: var(--accent);
+  background: white;
+}
+
+.review-issue-filter-search input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+.review-issue-filter-icon {
+  position: absolute;
+  left: 8px;
+  color: var(--muted-2);
+  pointer-events: none;
+}
+
+.review-issue-filter-clear-input {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--muted-2);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.review-issue-filter-clear-input:hover {
+  color: var(--text);
+  background: var(--line);
+}
+
+.review-issue-filter-priority {
+  display: flex;
+  gap: 4px;
+}
+
+.review-issue-filter-pill {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--panel-soft);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.review-issue-filter-pill:hover {
+  background: white;
+  color: var(--text);
+  border-color: var(--muted-2);
+}
+
+.review-issue-filter-pill.is-active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.review-issue-filter-count {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.review-issue-filter-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 11px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.review-issue-filter-reset:hover {
+  background: white;
+  color: var(--text);
+}
+
 .review-issue-board-columns {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -7804,8 +7928,10 @@ pre {
 }
 
 .companion-inbox-empty {
+  display: grid;
+  gap: 14px;
   margin: 0;
-  padding: 24px 16px;
+  padding: 24px 20px;
   text-align: center;
   font-size: 12.5px;
   line-height: 1.6;
@@ -7813,6 +7939,17 @@ pre {
   background: #f7f6fb;
   border: 1px solid var(--line);
   border-radius: 10px;
+}
+
+.companion-inbox-empty p {
+  margin: 0;
+}
+
+.companion-inbox-empty-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .companion-inbox-rail {
