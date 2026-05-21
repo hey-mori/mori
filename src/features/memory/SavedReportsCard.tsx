@@ -50,7 +50,7 @@ export function SavedReportsCard({
                   <strong title={label}>{label}</strong>
                   <span>
                     <Badge tone="purple">.mori v0</Badge>
-                    <small>{sessionCount} session{sessionCount === 1 ? "" : "s"} · {formatShort(entry.savedAt)}</small>
+                    <small>{sessionCount}개 세션 · {formatShort(entry.savedAt)}</small>
                   </span>
                 </div>
               </li>

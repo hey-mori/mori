@@ -211,22 +211,22 @@ export const PRODUCT_DATA_LABELS: Record<ProductDataState, ProductStateDisplay> 
     tone: "info",
   },
   clientSafe: {
-    label: "Client-safe",
+    label: "클라이언트 안전",
     description: "외부 공유에 안전하도록 필터링된 데이터입니다.",
     tone: "success",
   },
   inferred: {
-    label: "Inferred",
+    label: "추론됨",
     description: "AI가 소스와 맥락을 바탕으로 추론한 항목입니다.",
     tone: "inferred",
   },
   verified: {
-    label: "Verified",
+    label: "검증됨",
     description: "원본 근거가 명확한 항목입니다.",
     tone: "verified",
   },
   observed: {
-    label: "Observed",
+    label: "관찰됨",
     description: "시스템이 관찰했지만 의미 해석이 필요한 항목입니다.",
     tone: "observed",
   },

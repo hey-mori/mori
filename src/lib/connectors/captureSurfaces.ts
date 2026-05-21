@@ -127,7 +127,7 @@ export type CaptureSurfaceRow = {
 const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   {
     id: "manualNote",
-    label: "Manual note",
+    label: "직접 입력 메모",
     toolFamily: "manual",
     surface: "paste",
     status: "implemented",
@@ -227,7 +227,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "repositoryMetadata",
-    label: "Repository metadata (Verify)",
+    label: "리포지토리 메타데이터 (Verify)",
     toolFamily: "git",
     surface: "localCommand",
     status: "implemented",
@@ -704,7 +704,7 @@ export function getNextConnectorMilestone(): NextConnectorMilestone {
   // Should not reach here while any surface is non-implemented.
   return {
     surfaceId: "manualNote",
-    label: "Manual note",
+    label: "직접 입력 메모",
     nextStep: "유지 — 모든 capture surface가 implemented 상태입니다.",
     reason: "docsTemplateOnly",
   };

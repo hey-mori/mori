@@ -96,7 +96,7 @@ export function AcceptedMemoryDetailDrawer({
       setRevertPhase("idle");
       onClose();
     } catch (err) {
-      setRevertError(err instanceof Error ? err.message : "Revert failed.");
+      setRevertError(err instanceof Error ? err.message : "되돌리기 실패.");
       setRevertPhase("idle");
     }
   }

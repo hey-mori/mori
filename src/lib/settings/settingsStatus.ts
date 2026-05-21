@@ -155,13 +155,13 @@ export function getPrivacyPolicy(): PrivacyPolicyRow[] {
     },
     {
       id: "client-safe-report-mode",
-      label: "Client-safe report 모드",
-      detail: "리포트 빌더에서 client-safe 모드를 켜면 원본 텍스트 / 출처 상세 / 파일 경로가 제외됩니다.",
+      label: "클라이언트 안전 보고서 모드",
+      detail: "리포트 빌더에서 클라이언트 안전 모드를 켜면 원본 텍스트 / 출처 상세 / 파일 경로가 제외됩니다.",
       state: "default",
     },
     {
       id: "robust-redaction",
-      label: "Robust redaction (PII 자동 마스킹)",
+      label: "강력한 redaction (PII 자동 마스킹)",
       detail: "Markdown 리포트의 추가 PII 자동 마스킹은 다음 마일스톤입니다. 현재는 섹션 단위 필터만 제공됩니다.",
       state: "planned",
     },

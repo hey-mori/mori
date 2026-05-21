@@ -94,9 +94,9 @@ describe("runtime / storage label derivation", () => {
 
 describe("data / provenance label derivation", () => {
   it("keeps the canonical trust terms and tones", () => {
-    expect(getProductDataLabel("verified")).toBe("Verified");
-    expect(getProductDataLabel("observed")).toBe("Observed");
-    expect(getProductDataLabel("inferred")).toBe("Inferred");
+    expect(getProductDataLabel("verified")).toBe("검증됨");
+    expect(getProductDataLabel("observed")).toBe("관찰됨");
+    expect(getProductDataLabel("inferred")).toBe("추론됨");
     expect(getProductDataDisplay("verified").tone).toBe("verified");
     expect(getProductDataDisplay("observed").tone).toBe("observed");
     expect(getProductDataDisplay("inferred").tone).toBe("inferred");
@@ -264,7 +264,7 @@ describe("memory lifecycle vs trust provenance separation", () => {
       getProductDataLabel("verified"),
     );
     expect(getProductMemoryStatusLabel("accepted")).toBe("수락");
-    expect(getProductDataLabel("verified")).toBe("Verified");
+    expect(getProductDataLabel("verified")).toBe("검증됨");
   });
 
   it("keeps companion suggestion state distinct from trust provenance", () => {

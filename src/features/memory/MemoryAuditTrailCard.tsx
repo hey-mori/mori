@@ -227,7 +227,7 @@ function RevertControl({
     try {
       await onRevertAction(action);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Revert failed.");
+      setError(err instanceof Error ? err.message : "되돌리기 실패.");
       setPhase("idle");
     }
   }

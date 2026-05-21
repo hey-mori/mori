@@ -23,7 +23,7 @@ export function RecurringIssuesCard({
           <h3>반복 이슈 Top {rows.length}</h3>
           <p>{scopeNote}</p>
         </div>
-        <Badge tone={rows.length ? "red" : "gray"}>{rows.length} signals</Badge>
+        <Badge tone={rows.length ? "red" : "gray"}>{rows.length}개 신호</Badge>
       </header>
       {rows.length === 0 ? (
         <p className="memory-empty">반복적으로 나타나는 이슈가 없습니다. Review에서 신규 이슈를 확인하세요.</p>

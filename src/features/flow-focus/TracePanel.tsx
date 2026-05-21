@@ -224,7 +224,7 @@ export function TracePanel({
         </div>
       </section>
       <section className="panel-section">
-        <SectionHeader title="예정된 액션" hint="Planned" />
+        <SectionHeader title="예정된 액션" hint="예정" />
         <div className="trace-actions trace-actions-planned">
           <MoriPlannedAction
             icon={Sparkles}
