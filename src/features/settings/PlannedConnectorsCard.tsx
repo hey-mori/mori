@@ -71,7 +71,7 @@ export function PlannedConnectorsCard() {
                   {featureId ? (
                     <MoriFeatureStatusBadge feature={featureId} />
                   ) : (
-                    <Badge tone="gray">Planned</Badge>
+                    <Badge tone="gray">예정</Badge>
                   )}
                 </header>
                 <dl>

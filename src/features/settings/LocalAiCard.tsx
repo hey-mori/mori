@@ -194,7 +194,7 @@ function ProbeRow({ probe }: { probe: ProbeState }) {
   if (probe.status === "ok") {
     return (
       <div className="settings-probe-row tone-ok">
-        <Badge tone="green">Reachable</Badge>
+        <Badge tone="green">연결됨</Badge>
         <span>{probe.message}</span>
         {probe.models.length ? (
           <small>
@@ -207,7 +207,7 @@ function ProbeRow({ probe }: { probe: ProbeState }) {
   }
   return (
     <div className="settings-probe-row tone-err" role="alert">
-      <Badge tone="red">Unreachable</Badge>
+      <Badge tone="red">연결 불가</Badge>
       <span>{probe.message}</span>
     </div>
   );

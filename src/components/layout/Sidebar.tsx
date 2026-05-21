@@ -206,7 +206,7 @@ function SidebarProfile({
       <div className="avatar">{getProfileInitials(profile.displayName)}</div>
       <div>
         <strong>{profile.displayName}</strong>
-        <small>Local Mode</small>
+        <small>로컬 모드</small>
       </div>
       <span className="status-dot" />
     </button>

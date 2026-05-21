@@ -305,7 +305,7 @@ function StatusStrip({
     <div className="settings-runtime-summary" role="region" aria-label="Mori runtime status">
       <RuntimeStat
         label="런타임"
-        value={mode === "tauri-desktop" ? "Tauri desktop" : "Browser prototype"}
+        value={mode === "tauri-desktop" ? "Tauri desktop" : "Browser (Prototype)"}
         tone="info"
       />
       <RuntimeStat label="저장소" value={storage.value} tone={storage.tone} />

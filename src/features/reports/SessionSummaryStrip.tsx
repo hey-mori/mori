@@ -57,7 +57,7 @@ export function SessionSummaryStrip({
         <div className="session-wrap-up" aria-label="Continue-later checklist">
           <div className="session-wrap-up-main">
             <header>
-              <h3>Continue later checklist</h3>
+              <h3>세션 마무리 체크리스트</h3>
               <p>{wrapUp.primaryAction.detail}</p>
             </header>
             <ul className="session-wrap-up-steps">
@@ -109,8 +109,8 @@ function UnresolvedPreview({
   if (unresolved.total === 0) {
     return (
       <div className="session-wrap-up-unresolved is-empty">
-        <strong>No unresolved review items</strong>
-        <span>Issues, decisions, and next actions are clear for this session.</span>
+        <strong>미처리 항목 없음</strong>
+        <span>이슈 · 결정 · 다음 액션이 이 세션에서 모두 정리되었습니다.</span>
       </div>
     );
   }
@@ -118,8 +118,8 @@ function UnresolvedPreview({
   return (
     <div className="session-wrap-up-unresolved" aria-label="Unresolved work preview">
       <header>
-        <strong>Needs attention before next session</strong>
-        <Badge tone="orange">{unresolved.total} unresolved</Badge>
+        <strong>다음 세션 전에 확인 필요</strong>
+        <Badge tone="orange">미처리 {unresolved.total}건</Badge>
       </header>
       <ul>
         {unresolved.preview.map((item) => (
@@ -135,7 +135,7 @@ function UnresolvedPreview({
         ))}
       </ul>
       {unresolved.hiddenCount > 0 ? (
-        <p>{unresolved.hiddenCount} more item{unresolved.hiddenCount === 1 ? "" : "s"} in Review.</p>
+        <p>검토에서 {unresolved.hiddenCount}건 더 확인할 수 있습니다.</p>
       ) : null}
     </div>
   );
@@ -153,9 +153,9 @@ function AttentionMemoryPreview({
     <div className="session-wrap-up-attention-memory" aria-label="Memory needs review">
       <header>
         <strong>
-          <BookMarked size={13} aria-hidden="true" /> Memory needs lifecycle review
+          <BookMarked size={13} aria-hidden="true" /> 승인된 메모리 라이프사이클 검토 필요
         </strong>
-        <Badge tone="orange">{attentionMemories.total} accepted memor{attentionMemories.total === 1 ? "y" : "ies"}</Badge>
+        <Badge tone="orange">승인 메모리 {attentionMemories.total}건</Badge>
       </header>
       <ul>
         {attentionMemories.preview.map((memory) => (
@@ -163,7 +163,7 @@ function AttentionMemoryPreview({
             <button
               type="button"
               onClick={() => onOpenMemory?.(memory.id)}
-              title={`${memory.title} — open provenance drawer`}
+              title={`${memory.title} — 출처 drawer 열기`}
             >
               <span>
                 <strong>{memory.title}</strong>
@@ -176,8 +176,7 @@ function AttentionMemoryPreview({
       </ul>
       {attentionMemories.hiddenCount > 0 ? (
         <p>
-          {attentionMemories.hiddenCount} more memor
-          {attentionMemories.hiddenCount === 1 ? "y" : "ies"} in Consolidation Review.
+          통합 검토에서 {attentionMemories.hiddenCount}건 더 확인할 수 있습니다.
         </p>
       ) : null}
     </div>

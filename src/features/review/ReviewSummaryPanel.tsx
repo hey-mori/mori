@@ -31,7 +31,7 @@ export function ReviewSummaryPanel({
   return (
     <aside className="review-summary" aria-label="Review summary">
       <header className="review-summary-head">
-        <h3>Review Summary</h3>
+        <h3>검토 요약</h3>
         <p>이슈 / 결정 / 다음 액션 현황 + 우선순위 분포.</p>
       </header>
 
@@ -45,19 +45,19 @@ export function ReviewSummaryPanel({
         <SectionHeader title="이슈 상태" />
         <ul className="review-summary-stats">
           <li>
-            <span>Open</span>
+            <span>미처리</span>
             <strong>{summary.unresolvedIssueCount}</strong>
           </li>
           <li>
-            <span>In Progress</span>
+            <span>진행 중</span>
             <strong>{summary.inProgressIssueCount}</strong>
           </li>
           <li>
-            <span>Resolved</span>
+            <span>해결됨</span>
             <strong>{summary.resolvedIssueCount}</strong>
           </li>
           <li>
-            <span>Watching</span>
+            <span>관찰</span>
             <strong>{summary.watchingIssueCount}</strong>
           </li>
         </ul>
@@ -73,13 +73,13 @@ export function ReviewSummaryPanel({
         />
         <ul className="review-summary-pri-legend">
           <li>
-            <i className="legend-dot tone-red" /> High <strong>{priorities.high}</strong>
+            <i className="legend-dot tone-red" /> 높음 <strong>{priorities.high}</strong>
           </li>
           <li>
-            <i className="legend-dot tone-orange" /> Medium <strong>{priorities.medium}</strong>
+            <i className="legend-dot tone-orange" /> 보통 <strong>{priorities.medium}</strong>
           </li>
           <li>
-            <i className="legend-dot tone-blue" /> Low <strong>{priorities.low}</strong>
+            <i className="legend-dot tone-blue" /> 낮음 <strong>{priorities.low}</strong>
           </li>
         </ul>
       </section>
@@ -99,7 +99,7 @@ export function ReviewSummaryPanel({
               {summary.unresolvedIssueCount > 0 ? (
                 <li>
                   <AlertTriangle size={12} aria-hidden="true" />
-                  <span>{summary.unresolvedIssueCount}건의 Open 이슈가 있습니다.</span>
+                  <span>{summary.unresolvedIssueCount}건의 미처리 이슈가 있습니다.</span>
                 </li>
               ) : null}
               {summary.unconfirmedDecisionCount > 0 ? (

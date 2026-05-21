@@ -49,7 +49,7 @@ export function AccountProfileView() {
                 <h3>로컬 프로필</h3>
                 <p>이 기기에만 저장되는 표시 이름입니다. 서버로 전송되지 않습니다.</p>
               </div>
-              <Badge tone="purple">Local Profile</Badge>
+              <Badge tone="purple">로컬 프로필</Badge>
             </header>
             <div className="account-identity-row">
               <span className="account-avatar" aria-hidden="true">

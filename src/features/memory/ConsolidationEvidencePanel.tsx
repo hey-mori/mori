@@ -85,7 +85,7 @@ export function ConsolidationEvidencePanel({
             <dd>{proposal.evidenceRefs.length}</dd>
           </span>
           <span>
-            <dt>Data basis</dt>
+            <dt>데이터 기반</dt>
             <dd>{dataBasisLabel}</dd>
           </span>
         </dl>
@@ -115,7 +115,7 @@ export function ConsolidationEvidencePanel({
               {eventRefs.map((ref) => (
                 <li key={`event-${ref.eventId}`}>
                   <strong>{ref.eventId}</strong>
-                  <small>session: {ref.sessionId}</small>
+                  <small>세션: {ref.sessionId}</small>
                 </li>
               ))}
             </ul>
@@ -131,7 +131,7 @@ export function ConsolidationEvidencePanel({
               {sourceRefs.map((ref) => (
                 <li key={`source-${ref.sourceId}`}>
                   <strong>{ref.sourceId}</strong>
-                  <small>session: {ref.sessionId}</small>
+                  <small>세션: {ref.sessionId}</small>
                 </li>
               ))}
             </ul>
@@ -144,13 +144,13 @@ export function ConsolidationEvidencePanel({
             <ul>
               {proposal.relatedDecisionIds.map((id) => (
                 <li key={`d-${id}`}>
-                  <strong>Decision</strong>
+                  <strong>결정</strong>
                   <small>{id}</small>
                 </li>
               ))}
               {proposal.relatedIssueIds.map((id) => (
                 <li key={`i-${id}`}>
-                  <strong>Issue</strong>
+                  <strong>이슈</strong>
                   <small>{id}</small>
                 </li>
               ))}

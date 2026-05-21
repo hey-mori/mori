@@ -65,7 +65,7 @@ export function TrustSummaryPanel({
   return (
     <aside className="settings-trust" aria-label="Trust summary">
       <header className="settings-trust-head">
-        <Badge tone="purple">Local-first</Badge>
+        <Badge tone="purple">로컬 우선</Badge>
         <h3>Mori 신뢰 요약</h3>
         <p>
           Mori는 사용자가 명시적으로 가져온 데이터만 사용합니다. 이 패널은 지금 활성화된 동작과 절대 일어나지 않는
@@ -77,11 +77,11 @@ export function TrustSummaryPanel({
         <SectionHeader title="현재 동작 모드" />
         <dl className="settings-trust-grid">
           <div>
-            <dt>Runtime</dt>
-            <dd>{mode === "browser" ? "Browser prototype" : "Tauri desktop"}</dd>
+            <dt>런타임</dt>
+            <dd>{mode === "browser" ? "Browser (Prototype)" : "Tauri desktop"}</dd>
           </div>
           <div>
-            <dt>Storage</dt>
+            <dt>저장소</dt>
             <dd>{storageLabel}</dd>
           </div>
           <div>
