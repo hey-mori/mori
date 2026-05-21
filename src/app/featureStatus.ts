@@ -263,7 +263,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "rollup.importReview", label: "Import Review", status: "implemented", description: "Accept / discard / edit imported candidates before applying." },
   { id: "rollup.timeline", label: "Timeline", status: "implemented", description: "Lane / ruler / Inspector / mini-map Timeline surface." },
   { id: "rollup.flowFocus", label: "Flow Focus", status: "partial", description: "Upstream / downstream trace view.", userFacingStatus: "Partial — manual relationship edits are still Planned." },
-  { id: "rollup.reviewWorkspace", label: "Review workspace", status: "partial", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions.", userFacingStatus: "Partial — issue status, issue/decision/next-action editing, decision confirmation, completion, and issue promotion all write." },
+  { id: "rollup.reviewWorkspace", label: "Review workspace", status: "implemented", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions. Issue / decision / next-action editing, status change, confirmation, completion toggle, and promotion all write through to session storage." },
   { id: "rollup.reportsMarkdown", label: "Markdown reports", status: "implemented", description: "Copy or download report as Markdown." },
   { id: "rollup.reportsPdf", label: "PDF reports", status: PLANNED, description: "Render report as PDF.", disabledReason: "PDF export is a planned milestone." },
   { id: "rollup.reportsHtml", label: "HTML reports", status: "implemented", description: "Render the report as a standalone, self-contained HTML document." },
