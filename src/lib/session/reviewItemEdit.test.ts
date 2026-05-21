@@ -4,8 +4,10 @@ import { moriMockSession } from "../../domain/mock-data";
 import {
   applyDecisionEdit,
   applyIssueEdit,
+  applyNextActionEdit,
   setDecisionFields,
   setIssueFields,
+  setNextActionFields,
 } from "./reviewItemEdit";
 
 const editedAt = "2026-05-18T12:00:00.000Z";
@@ -75,6 +77,19 @@ describe("setIssueFields", () => {
     expect(original.editedByUser).toBeUndefined();
     expect(original.editedAt).toBeUndefined();
   });
+
+  it("changes issue priority when a valid different priority is provided", () => {
+    const original = { ...moriMockSession.issues[0]!, priority: "high" as const };
+    const next = setIssueFields(original, { priority: "low" }, editedAt);
+    expect(next.priority).toBe("low");
+    expect(next.editedByUser).toBe(true);
+  });
+
+  it("returns original issue when priority is unchanged", () => {
+    const original = { ...moriMockSession.issues[0]!, priority: "high" as const };
+    const next = setIssueFields(original, { priority: "high" }, editedAt);
+    expect(next).toBe(original);
+  });
 });
 
 describe("setDecisionFields", () => {
@@ -113,6 +128,19 @@ describe("setDecisionFields", () => {
     const original = moriMockSession.decisions[0]!;
     expect(original.editedByUser).toBeUndefined();
     expect(original.editedAt).toBeUndefined();
+  });
+
+  it("changes decision importance when a valid different importance is provided", () => {
+    const original = { ...moriMockSession.decisions[0]!, importance: "high" as const };
+    const next = setDecisionFields(original, { importance: "medium" }, editedAt);
+    expect(next.importance).toBe("medium");
+    expect(next.editedByUser).toBe(true);
+  });
+
+  it("returns original decision when importance is unchanged", () => {
+    const original = { ...moriMockSession.decisions[0]!, importance: "high" as const };
+    const next = setDecisionFields(original, { importance: "high" }, editedAt);
+    expect(next).toBe(original);
   });
 });
 
@@ -161,6 +189,88 @@ describe("applyIssueEdit / applyDecisionEdit", () => {
         original,
         original.decisions[0]!.id,
         { rationale: original.decisions[0]!.rationale },
+        editedAt,
+      ),
+    ).toBe(original);
+  });
+});
+
+describe("setNextActionFields", () => {
+  const baseAction = moriMockSession.nextActions[0]!;
+
+  it("updates title and marks the user correction", () => {
+    const next = setNextActionFields(
+      { ...baseAction, priority: "high" },
+      { title: "Updated action title" },
+      editedAt,
+    );
+    expect(next.title).toBe("Updated action title");
+    expect(next.editedByUser).toBe(true);
+    expect(next.editedAt).toBe(editedAt);
+  });
+
+  it("changes priority when a valid different priority is provided", () => {
+    const original = { ...baseAction, priority: "high" as const };
+    const next = setNextActionFields(original, { priority: "low" }, editedAt);
+    expect(next.priority).toBe("low");
+    expect(next.editedByUser).toBe(true);
+  });
+
+  it("returns original when title is unchanged and no other edits", () => {
+    const original = { ...baseAction };
+    const next = setNextActionFields(original, { title: original.title }, editedAt);
+    expect(next).toBe(original);
+  });
+
+  it("returns original when priority is unchanged", () => {
+    const original = { ...baseAction, priority: "medium" as const };
+    const next = setNextActionFields(original, { priority: "medium" }, editedAt);
+    expect(next).toBe(original);
+  });
+
+  it("preserves relatedIssueIds, relatedEventIds, and done state", () => {
+    const original = { ...baseAction };
+    const next = setNextActionFields(original, { title: "New title" }, editedAt);
+    expect(next.relatedIssueIds).toEqual(original.relatedIssueIds);
+    expect(next.relatedEventIds).toEqual(original.relatedEventIds);
+    expect(next.done).toBe(original.done);
+  });
+});
+
+describe("applyNextActionEdit", () => {
+  function analysisWithAction(): MoriAnalysisResult {
+    const base = analysis();
+    return {
+      ...base,
+      nextActions: [{ ...moriMockSession.nextActions[0]!, priority: "high" as const }],
+    };
+  }
+
+  it("updates the matching next action", () => {
+    const original = analysisWithAction();
+    const next = applyNextActionEdit(
+      original,
+      original.nextActions[0]!.id,
+      { title: "Updated action" },
+      editedAt,
+    );
+    expect(next).not.toBe(original);
+    expect(next.nextActions[0]!.title).toBe("Updated action");
+    expect(next.issues).toBe(original.issues);
+  });
+
+  it("returns the original analysis for an unknown id", () => {
+    const original = analysisWithAction();
+    expect(applyNextActionEdit(original, "missing", { title: "Nope" }, editedAt)).toBe(original);
+  });
+
+  it("returns the original analysis when edits do not change any field", () => {
+    const original = analysisWithAction();
+    expect(
+      applyNextActionEdit(
+        original,
+        original.nextActions[0]!.id,
+        { title: original.nextActions[0]!.title },
         editedAt,
       ),
     ).toBe(original);
