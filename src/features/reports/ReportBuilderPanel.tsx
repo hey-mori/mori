@@ -202,7 +202,7 @@ export function ReportBuilderPanel({
         <ul className="report-privacy-list">
           <li>
             <span>
-              <Lock size={12} aria-hidden="true" /> Client-safe 모드
+              <Lock size={12} aria-hidden="true" /> 클라이언트 안전 모드
               <small>원본 텍스트 / 출처 상세 / 파일 경로 제외</small>
             </span>
             <Toggle

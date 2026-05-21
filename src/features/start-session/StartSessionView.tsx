@@ -122,8 +122,8 @@ export function StartSessionView() {
 
   function handleStartSession() {
     const draft = createSessionDraft({
-      sessionTitle: sessionTitle || "Untitled Mori Session",
-      projectName: projectName || "Untitled Project",
+      sessionTitle: sessionTitle || "제목 없는 세션",
+      projectName: projectName || "제목 없는 프로젝트",
       selectedSources: applySourceSelection(sourceOptions, selectedSourceIds),
       recordingMode,
       llmProvider: selectedEngine.provider,
@@ -213,7 +213,7 @@ export function StartSessionView() {
               <div className="source-group">
                 <p className="source-group-label">
                   예정된 통합
-                  <span className="pill tone-gray">Planned</span>
+                  <span className="pill tone-gray">예정</span>
                 </p>
                 <p className="source-group-hint">
                   아래 통합은 아직 제공되지 않습니다. 이번 세션에서 캡처되지 않으며, Mori는
@@ -349,7 +349,7 @@ function CaptureSurfaceHonestyStrip() {
         <strong>현재 사용 가능한 캡처 경로 {implementedCount}개</strong>
         <span> · </span>
         <span>
-          {plannedCount}개 Planned — Claude Code hook, Codex CLI wrapper,
+          {plannedCount}개 예정 — Claude Code hook, Codex CLI wrapper,
           터미널 / IDE / 브라우저 경로는 문서·템플릿 단계이거나 예정 상태이며,
           Mori는 이들을 임의로 수집하지 않습니다.
         </span>

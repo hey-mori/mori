@@ -205,32 +205,38 @@ export function describeReviewStatus(status: ConsolidationReviewStatus): string 
   }
 }
 
+const IMPORTANCE_LABELS: Record<MemoryProposal["importance"], string> = {
+  high: "높음",
+  medium: "보통",
+  low: "낮음",
+};
+
 function ImportanceBadge({ importance }: { importance: MemoryProposal["importance"] }) {
   const tone: ProductStateTone =
     importance === "high" ? "danger" : importance === "medium" ? "warning" : "info";
-  return <MoriStatusBadge tone={tone}>{importance}</MoriStatusBadge>;
+  return <MoriStatusBadge tone={tone}>{IMPORTANCE_LABELS[importance] ?? importance}</MoriStatusBadge>;
 }
 
 function describeConfidence(confidence: number): string {
-  if (confidence >= 0.75) return `High (${Math.round(confidence * 100)}%)`;
-  if (confidence >= 0.5) return `Medium (${Math.round(confidence * 100)}%)`;
-  return `Low (${Math.round(confidence * 100)}%)`;
+  if (confidence >= 0.75) return `높음 (${Math.round(confidence * 100)}%)`;
+  if (confidence >= 0.5) return `보통 (${Math.round(confidence * 100)}%)`;
+  return `낮음 (${Math.round(confidence * 100)}%)`;
 }
 
 function describeProposedAction(action: MemoryProposal["proposedAction"]): string {
   switch (action) {
     case "promote":
-      return "Promote";
+      return "승급";
     case "merge":
-      return "Merge";
+      return "병합";
     case "markStale":
-      return "Mark stale";
+      return "오래됨으로 표시";
     case "keepWatching":
-      return "Keep watching";
+      return "계속 관찰";
     case "resolve":
-      return "Resolve";
+      return "해결";
     case "scheduleNextSession":
-      return "Schedule next session";
+      return "다음 세션 예약";
     default:
       return action;
   }

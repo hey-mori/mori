@@ -218,7 +218,7 @@ function IssueDetail({
       </section>
 
       <section className="review-detail-section">
-        <SectionHeader title="근거" hint={`${evidence.sourceCount} source · ${evidence.eventCount} event`} />
+        <SectionHeader title="근거" hint={`출처 ${evidence.sourceCount}개 · 이벤트 ${evidence.eventCount}건`} />
         <EvidenceList view={view} sourceIds={evidence.sources.map((source) => source.id)} />
       </section>
 
@@ -426,7 +426,7 @@ function DecisionDetail({
       ) : null}
 
       <section className="review-detail-section">
-        <SectionHeader title="근거" hint={`${evidence.sourceCount} source · ${evidence.eventCount} event`} />
+        <SectionHeader title="근거" hint={`출처 ${evidence.sourceCount}개 · 이벤트 ${evidence.eventCount}건`} />
         <EvidenceList view={view} sourceIds={evidence.sources.map((source) => source.id)} />
       </section>
 
@@ -548,7 +548,7 @@ function NextActionDetail({
       <header className="review-detail-header">
         <div className="review-detail-badges">
           <Badge tone={priorityTone(nextAction.priority)}>{priorityLabels[nextAction.priority]}</Badge>
-          <Badge tone="purple">Next action</Badge>
+          <Badge tone="purple">다음 액션</Badge>
           {completed ? <Badge tone="green">완료됨</Badge> : null}
           {nextAction.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
         </div>

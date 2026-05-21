@@ -359,7 +359,7 @@ function buildDetailMessage(
     }
     case "duplicateOnly": {
       const matched = matchedLabel ? ` 매칭된 저장 세션: ${matchedLabel}.` : "";
-      return `이 파일의 모든 이벤트가 이미 가져온 connector 이벤트입니다. Import Review는 기본 비활성화 — Include duplicates 토글로 다시 가져오거나 매칭된 세션을 열어보세요.${matched}`;
+      return `이 파일의 모든 이벤트가 이미 가져온 connector 이벤트입니다. Import Review는 기본 비활성화 — '중복 포함' 토글로 다시 가져오거나 매칭된 세션을 열어보세요.${matched}`;
     }
     case "historyUnavailable":
       return `저장 세션 기록을 이 모드에서는 사용할 수 없어, 현재 세션과 파일 내부 중복만 검사했습니다. Import Review에서 확인 후 진행하세요. 새 이벤트 ${args.newEventCount}개 후보.`;

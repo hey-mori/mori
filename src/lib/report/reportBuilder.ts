@@ -72,7 +72,7 @@ export const REPORT_TYPE_DEFINITIONS: Array<{
 }> = [
   {
     id: "personalRetrospective",
-    label: "Personal Retrospective",
+    label: "개인 회고",
     description: "내 작업을 되돌아보고 다음 세션 준비를 정리합니다.",
     audience: "본인 (내부 메모)",
     defaultSections: [
@@ -88,7 +88,7 @@ export const REPORT_TYPE_DEFINITIONS: Array<{
   },
   {
     id: "teamUpdate",
-    label: "Team Update",
+    label: "팀 업데이트",
     description: "팀원 공유용 짧은 업데이트입니다. 다음 액션과 결정 위주.",
     audience: "팀원",
     defaultSections: ["summary", "decisions", "issues", "nextActions"],
@@ -96,7 +96,7 @@ export const REPORT_TYPE_DEFINITIONS: Array<{
   },
   {
     id: "clientSafe",
-    label: "Client-safe Report",
+    label: "클라이언트 안전 보고서",
     description: "원본 대화 / 파일 경로 등을 제외한 클라이언트 친화 보고서.",
     audience: "외부 클라이언트",
     defaultSections: ["summary", "decisions", "nextActions"],
@@ -104,7 +104,7 @@ export const REPORT_TYPE_DEFINITIONS: Array<{
   },
   {
     id: "devHandoff",
-    label: "Dev Handoff",
+    label: "개발 인계",
     description: "다음 개발자가 작업을 이어가기 위한 컨텍스트.",
     audience: "다른 개발자",
     defaultSections: ["summary", "timeline", "decisions", "issues", "evidence", "nextActions"],
@@ -112,7 +112,7 @@ export const REPORT_TYPE_DEFINITIONS: Array<{
   },
   {
     id: "workLog",
-    label: "Work Log",
+    label: "작업 기록",
     description: "시간 순으로 무엇을 했는지 기록하는 짧은 로그.",
     audience: "본인 / 매니저",
     defaultSections: ["summary", "timeline", "nextActions"],
@@ -125,17 +125,17 @@ export const SECTION_DEFINITIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { id: "summary", label: "Summary", description: "세션 한 줄 요약 + 카운트" },
+  { id: "summary", label: "요약", description: "세션 한 줄 요약 + 카운트" },
   {
     id: "consolidatedMemory",
-    label: "Accepted Memory",
+    label: "승인된 메모리",
     description: "검토·승인된 프로젝트 메모리 (audience 등급에 따라 노출)",
   },
-  { id: "timeline", label: "Timeline", description: "주요 이벤트 시간 순 정리" },
-  { id: "decisions", label: "Decisions", description: "결정과 이유" },
-  { id: "issues", label: "Issues", description: "Open / In-progress 이슈" },
-  { id: "evidence", label: "Evidence", description: "소스 / 출처 / 신뢰도" },
-  { id: "nextActions", label: "Next Actions", description: "다음 액션 후보" },
+  { id: "timeline", label: "타임라인", description: "주요 이벤트 시간 순 정리" },
+  { id: "decisions", label: "결정", description: "결정과 이유" },
+  { id: "issues", label: "이슈", description: "미처리 / 진행 중 이슈" },
+  { id: "evidence", label: "증거", description: "소스 / 출처 / 신뢰도" },
+  { id: "nextActions", label: "다음 액션", description: "다음 액션 후보" },
 ];
 
 export type ReportInput = {
@@ -192,14 +192,14 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   lines.push(`- 대상: **${typeDef.audience}**`);
   lines.push(`- 생성 시각: ${formatIso(generatedAt)}`);
   lines.push(`- 세션 기간: ${formatIso(view.session.startedAt)} → ${formatIso(view.session.endedAt)}`);
-  lines.push(`- Data basis: ${summary.dataBasis}`);
+  lines.push(`- 데이터 기반: ${summary.dataBasis}`);
   if (privacy.clientSafe) {
-    lines.push(`- Privacy: Client-safe mode`);
+    lines.push(`- Privacy: 클라이언트 안전 모드`);
   }
   lines.push("");
 
   if (sections.has("summary")) {
-    lines.push("## Summary");
+    lines.push("## 요약");
     lines.push("");
     lines.push(view.summary.sessionSummary || "(세션 요약이 아직 생성되지 않았습니다.)");
     lines.push("");
@@ -208,7 +208,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   if (sections.has("consolidatedMemory")) {
-    lines.push("## Accepted Project Memory");
+    lines.push("## 승인된 프로젝트 메모리");
     lines.push("");
     const accepted = input.acceptedMemories ?? [];
     const guidance = accepted.filter((memory) => isReportGuidanceMemory(memory, type));
@@ -232,7 +232,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   if (sections.has("timeline")) {
-    lines.push("## Timeline");
+    lines.push("## 타임라인");
     lines.push("");
     const timelineEvents = orderEvents(view.events).slice(0, type === "workLog" ? 30 : 12);
     if (timelineEvents.length === 0) {
@@ -246,7 +246,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   if (sections.has("decisions")) {
-    lines.push("## Decisions");
+    lines.push("## 결정");
     lines.push("");
     if (view.decisions.length === 0) {
       lines.push("_기록된 결정이 없습니다._");
@@ -259,7 +259,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   if (sections.has("issues")) {
-    lines.push("## Issues");
+    lines.push("## 이슈");
     lines.push("");
     const issues = view.issues.filter((issue) => !privacy.clientSafe || issue.status !== "watching");
     if (issues.length === 0) {
@@ -279,7 +279,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   if (sections.has("evidence")) {
-    lines.push("## Evidence");
+    lines.push("## 증거");
     lines.push("");
     if (view.sources.length === 0) {
       lines.push("_가져온 소스가 없습니다._");
@@ -310,7 +310,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   if (sections.has("nextActions")) {
-    lines.push("## Next Actions");
+    lines.push("## 다음 액션");
     lines.push("");
     if (view.nextActions.length === 0) {
       lines.push("_다음 액션이 없습니다._");
@@ -336,7 +336,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   if (input.resumePromptOverride && type !== "clientSafe") {
-    lines.push("## Resume Prompt");
+    lines.push("## Resume 프롬프트");
     lines.push("");
     lines.push("```text");
     lines.push(input.resumePromptOverride.trim());
@@ -347,7 +347,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   if (warnings.length > 0) {
     lines.push("---");
     lines.push("");
-    lines.push("**Notes:**");
+    lines.push("**참고:**");
     for (const warning of warnings) {
       lines.push(`- ${warning}`);
     }

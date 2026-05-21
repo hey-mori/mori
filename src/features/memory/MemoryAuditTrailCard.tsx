@@ -87,7 +87,7 @@ export function MemoryAuditTrailCard({
         <>
           <div className="memory-audit-filters" role="group" aria-label="Filter by action type">
             <FilterChip
-              label="All"
+              label="전체"
               count={viewModel.totalCount}
               active={filter === "all"}
               onClick={() => setFilter("all")}

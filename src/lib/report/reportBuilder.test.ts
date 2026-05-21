@@ -23,7 +23,7 @@ describe("buildReportMarkdown", () => {
       sections: DEFAULT_SECTIONS,
       privacy: privacy(),
     });
-    expect(payload.markdown).toMatch(/^# .+ · Personal Retrospective/);
+    expect(payload.markdown).toMatch(/^# .+ · 개인 회고/);
   });
 
   it("includes the data basis line and per-section counts in the header", () => {
@@ -33,7 +33,7 @@ describe("buildReportMarkdown", () => {
       sections: DEFAULT_SECTIONS,
       privacy: privacy(),
     });
-    expect(payload.markdown).toContain("Data basis:");
+    expect(payload.markdown).toContain("데이터 기반:");
     expect(payload.counts.events).toBe(moriMockSession.events.length);
     expect(payload.counts.issues).toBe(moriMockSession.issues.length);
     expect(payload.counts.decisions).toBe(moriMockSession.decisions.length);
@@ -67,12 +67,12 @@ describe("buildReportMarkdown", () => {
       sections: onlySummary,
       privacy: privacy(),
     });
-    expect(payload.markdown).toContain("## Summary");
-    expect(payload.markdown).not.toContain("## Timeline");
-    expect(payload.markdown).not.toContain("## Decisions");
-    expect(payload.markdown).not.toContain("## Issues");
-    expect(payload.markdown).not.toContain("## Evidence");
-    expect(payload.markdown).not.toContain("## Next Actions");
+    expect(payload.markdown).toContain("## 요약");
+    expect(payload.markdown).not.toContain("## 타임라인");
+    expect(payload.markdown).not.toContain("## 결정");
+    expect(payload.markdown).not.toContain("## 이슈");
+    expect(payload.markdown).not.toContain("## 증거");
+    expect(payload.markdown).not.toContain("## 다음 액션");
   });
 
   it("excludes the resume prompt section when the report type is client-safe", () => {
@@ -87,7 +87,7 @@ describe("buildReportMarkdown", () => {
     // should never reach a client-facing report — but unrelated content in
     // the session (e.g. an issue titled "Resume Prompt 품질 개선") may still
     // legitimately mention the phrase, which is fine.
-    expect(payload.markdown).not.toContain("## Resume Prompt");
+    expect(payload.markdown).not.toContain("## Resume 프롬프트");
     expect(payload.markdown).not.toContain("secret resume prompt");
   });
 
@@ -99,7 +99,7 @@ describe("buildReportMarkdown", () => {
       privacy: privacy(),
       resumePromptOverride: "Pick up from the Reports milestone.",
     });
-    expect(payload.markdown).toContain("## Resume Prompt");
+    expect(payload.markdown).toContain("## Resume 프롬프트");
     expect(payload.markdown).toContain("Pick up from the Reports milestone.");
   });
 
@@ -113,7 +113,7 @@ describe("buildReportMarkdown", () => {
     const firstEventSummary = moriMockSession.events[0].summary;
     const firstDecisionRationale = moriMockSession.decisions[0].rationale;
     const firstIssueDescription = moriMockSession.issues[0].description;
-    expect(safe.markdown).toContain("Privacy: Client-safe");
+    expect(safe.markdown).toContain("Privacy: 클라이언트 안전");
     expect(safe.markdown).not.toContain(firstEventSummary);
     expect(safe.markdown).not.toContain(firstDecisionRationale);
     expect(safe.markdown).not.toContain(firstIssueDescription);
@@ -160,7 +160,7 @@ describe("buildReportMarkdown", () => {
       sections: new Set<ReportSectionId>(["evidence"]),
       privacy: privacy({ excludeSourceDetails: true }),
     });
-    expect(payload.markdown).toContain("## Evidence");
+    expect(payload.markdown).toContain("## 증거");
     expect(payload.markdown).toContain("총 소스");
     expect(payload.markdown).not.toContain("**소스 목록**");
   });
@@ -181,7 +181,7 @@ describe("buildReportMarkdown", () => {
       privacy: privacy(),
     });
     expect(payload.warnings.some((line) => /가져온 소스가 없습니다/.test(line))).toBe(true);
-    expect(payload.markdown).toContain("Notes:");
+    expect(payload.markdown).toContain("참고:");
   });
 
   it("collapses excessive blank lines and ends with a single trailing newline", () => {
@@ -297,7 +297,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
       privacy: privacy(),
       acceptedMemories: [acceptedMemory()],
     });
-    expect(payload.markdown).toContain("## Accepted Project Memory");
+    expect(payload.markdown).toContain("## 승인된 프로젝트 메모리");
     expect(payload.markdown).toContain("Keep Import Review as a non-bypassable gate");
     expect(payload.markdown).toContain("Every captured event must pass through Import Review");
   });
@@ -309,7 +309,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
       sections: WITH_MEMORY,
       privacy: privacy(),
     });
-    expect(payload.markdown).toContain("## Accepted Project Memory");
+    expect(payload.markdown).toContain("## 승인된 프로젝트 메모리");
     expect(payload.markdown).toContain("검토된 프로젝트 메모리가 없습니다");
   });
 

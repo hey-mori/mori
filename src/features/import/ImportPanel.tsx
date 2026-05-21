@@ -233,7 +233,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     } catch (error) {
       setStatus({
         tone: "error",
-        message: error instanceof Error ? error.message : "Folder picker failed.",
+        message: error instanceof Error ? error.message : "폴더 선택기 오류가 발생했습니다.",
       });
     } finally {
       setPicking(false);
@@ -293,7 +293,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     } catch (error) {
       setStatus({
         tone: "error",
-        message: error instanceof Error ? error.message : "Git diff capture failed.",
+        message: error instanceof Error ? error.message : "Git diff 캡처 중 오류가 발생했습니다.",
       });
     } finally {
       setFetching(false);
@@ -435,7 +435,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       return;
     }
     setConnectorInboxBusy(true);
-    setConnectorInboxStatus({ tone: "info", message: "Refreshing inbox..." });
+    setConnectorInboxStatus({ tone: "info", message: "inbox 새로 고침 중..." });
     try {
       const listing = await listConnectorJsonlInbox();
       setConnectorInbox(listing);
@@ -543,7 +543,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     if (eventsToImport.length === 0) {
       setStatus({
         tone: "error",
-        message: "모든 이벤트가 이미 가져온 항목입니다. Include duplicates를 활성화하거나 다른 파일을 선택하세요.",
+        message: "모든 이벤트가 이미 가져온 항목입니다. '중복 포함'을 활성화하거나 다른 파일을 선택하세요.",
       });
       return;
     }
@@ -619,7 +619,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
         <label>
           제목 <small>(선택)</small>
           <input
-            placeholder={kind === "url" ? "screenpipe 조사" : "Positioning note"}
+            placeholder={kind === "url" ? "screenpipe 조사" : "포지셔닝 메모"}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
           />
@@ -707,9 +707,9 @@ export function ImportPanel(props: ImportPanelProps = {}) {
                       icon={FolderOpen}
                       onClick={() => handlePickRepository()}
                       disabled={!desktopRuntime || picking}
-                      title={desktopRuntime ? "Open native folder picker" : "Native picker requires the Tauri app"}
+                      title={desktopRuntime ? "기본 폴더 선택기 열기" : "기본 선택기는 Tauri 앱에서만 사용 가능합니다"}
                     >
-                      {picking ? "..." : "Browse"}
+                      {picking ? "..." : "찾아보기"}
                     </Button>
                   </div>
                 </label>
@@ -735,7 +735,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
                     onClick={() => handleFetchGitDiff()}
                     disabled={fetching || !desktopRuntime}
                   >
-                    {fetching ? "가져오는 중..." : "Fetch Git Diff"}
+                    {fetching ? "가져오는 중..." : "Git Diff 가져오기"}
                   </Button>
                 </div>
               </div>
@@ -869,16 +869,16 @@ function KindTab({ active, icon: Icon, label, onClick }: { active: boolean; icon
 export function formatRepoOption(repo: import("../../lib/repositories").MoriRepositoryConfig): string {
   const verification = repo.verification;
   if (!verification || verification.status === "unverified") {
-    return `${repo.label} · unverified — ${repo.path}`;
+    return `${repo.label} · 미검증 — ${repo.path}`;
   }
   if (verification.status === "failed") {
-    return `${repo.label} · verify failed — ${repo.path}`;
+    return `${repo.label} · 검증 실패 — ${repo.path}`;
   }
-  const branch = verification.currentBranch ?? "detached";
+  const branch = verification.currentBranch ?? "분리됨";
   const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "";
-  const dirty = verification.isDirty ? " · dirty" : "";
+  const dirty = verification.isDirty ? " · 수정됨" : "";
   const freshness = getRepositoryVerificationFreshness(verification);
-  const staleMarker = freshness.isStale ? " · stale" : "";
+  const staleMarker = freshness.isStale ? " · 오래됨" : "";
   const age = freshness.ageLabel ? ` (${freshness.ageLabel})` : "";
   return `${repo.label} · ${branch} ${sha}${dirty}${staleMarker}${age} — ${repo.path}`;
 }
@@ -896,20 +896,20 @@ function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories")
   if (verification.status === "failed") {
     return (
       <small className="git-fetch-help" role="alert">
-        마지막 verify 실패: {verification.error ?? "unknown error"}
+        마지막 verify 실패: {verification.error ?? "알 수 없는 오류"}
       </small>
     );
   }
-  const branch = verification.currentBranch ?? "detached";
+  const branch = verification.currentBranch ?? "분리됨";
   const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "";
-  const dirty = verification.isDirty ? " · dirty" : "";
+  const dirty = verification.isDirty ? " · 수정됨" : "";
   const freshness = getRepositoryVerificationFreshness(verification);
-  const stalePrefix = freshness.isStale ? "Stale · " : "Verified · ";
+  const stalePrefix = freshness.isStale ? "오래됨 · " : "검증됨 · ";
   const age = freshness.ageLabel ? ` (${freshness.ageLabel})` : "";
   return (
     <small className={`git-fetch-help${freshness.isStale ? " tone-warn" : ""}`}>
       {stalePrefix}{branch} · {sha}{dirty}{age}
-      {freshness.isStale ? " — Re-verify or fetch to refresh." : ""}
+      {freshness.isStale ? " — 다시 검증하거나 Fetch해서 갱신하세요." : ""}
     </small>
   );
 }
@@ -1080,7 +1080,7 @@ function getConnectorSourceImportActionLabel(summary: ConnectorSourceImportSumma
         ? `새 이벤트 ${summary.newEventCount}개만 Import Review로 전달 (중복 ${summary.duplicateEventCount}개 제외)`
         : `새 이벤트 ${summary.newEventCount}개를 Import Review로 전달`;
     case "reviewDuplicatesOptional":
-      return "Include duplicates 토글 후 다시 Import 또는 매칭된 저장 세션 확인";
+      return "'중복 포함' 토글 후 다시 Import 또는 매칭된 저장 세션 확인";
     case "noNewEvents":
       return "추가로 가져올 이벤트가 없습니다";
     case "fixInvalidLines":
@@ -1286,7 +1286,7 @@ function ConnectorJsonlActions({
   const canSendToReview = canImport && Boolean(preview) && !previewBlocksImport;
   return (
     <>
-      <Button onClick={onPreview}>Parse / Preview</Button>
+      <Button onClick={onPreview}>파싱 / 미리보기</Button>
       <Button
         variant="primary"
         icon={Plus}
@@ -1296,9 +1296,9 @@ function ConnectorJsonlActions({
           !canImport
             ? "세션이 없습니다."
             : !preview
-              ? "먼저 Parse / Preview를 실행하세요."
+              ? "먼저 파싱 / 미리보기를 실행하세요."
               : previewBlocksImport
-                ? "모든 이벤트가 이미 가져온 항목입니다. Include duplicates를 활성화하면 다시 가져올 수 있습니다."
+                ? "모든 이벤트가 이미 가져온 항목입니다. '중복 포함'을 활성화하면 다시 가져올 수 있습니다."
                 : includeDuplicates && (preview?.duplicateEventCount ?? 0) > 0
                   ? `${preview!.newEventCount}개 새 + ${preview!.duplicateEventCount}개 중복을 Import Review로 전달합니다.`
                   : (preview?.duplicateEventCount ?? 0) > 0
@@ -1306,7 +1306,7 @@ function ConnectorJsonlActions({
                     : "유효한 이벤트를 Import Review로 전달합니다."
         }
       >
-        Import to Review
+        Import Review로 가져오기
       </Button>
     </>
   );

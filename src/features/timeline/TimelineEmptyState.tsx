@@ -62,7 +62,7 @@ export function TimelineEmptyState({
               : "Quick Pass가 이미 실행 중입니다."
           }
         >
-          Run Quick Pass
+          Quick Pass 실행
         </Button>
       }
     />

@@ -23,12 +23,12 @@ import { ExtractedEventCard } from "./ExtractedEventCard";
 import { GeneratedItemsPanel } from "./GeneratedItemsPanel";
 
 const ORIGIN_LABEL: Record<ReviewOrigin, string> = {
-  "ai-transcript": "AI Transcript",
+  "ai-transcript": "AI 대화",
   "git-diff": "Git Diff",
-  "manual-note": "Manual Note",
+  "manual-note": "직접 입력",
   url: "URL",
   "connector-jsonl": "Connector JSONL",
-  other: "Source",
+  other: "출처",
 };
 
 export function ImportReviewView() {
@@ -175,7 +175,7 @@ function ImportReviewSummaryPanel({
     <section className="import-review-summary" aria-label="Import review summary">
       <header>
         <div>
-          <span className="import-review-summary-kicker">Review before apply</span>
+          <span className="import-review-summary-kicker">적용 전 검토</span>
           <h2>{summary.headline}</h2>
           <p>{summary.detail}</p>
         </div>
@@ -337,7 +337,7 @@ function ReviewDraftMetaStrip({ meta }: { meta: ReviewDraftMeta }) {
       ))}
       {meta.includeDuplicates ? (
         <span className="review-meta-note">
-          Include duplicates 가 활성화되어 있어, 이미 가져온 connector 이벤트도 Apply 시 Timeline에 추가됩니다.
+          '중복 포함'이 활성화되어 있어, 이미 가져온 connector 이벤트도 Apply 시 Timeline에 추가됩니다.
         </span>
       ) : null}
       {meta.savedSessionHistoryAvailable === false ? (
