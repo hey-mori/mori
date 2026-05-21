@@ -381,7 +381,7 @@ export function MemoryView() {
   return (
     <div className="page memory-workspace">
       <PageHeader
-        title="Project Memory"
+        title="프로젝트 메모리"
         subtitle="Mori가 누적한 결정 / 이슈 / 근거 / 리포트 / 재import 기록을 한곳에 모아 다음 세션 컨텍스트로 이어줍니다."
         right={
           <div className="memory-page-actions">

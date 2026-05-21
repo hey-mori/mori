@@ -342,7 +342,7 @@ export function ReportsView() {
   return (
     <div className="page reports-page">
       <PageHeader
-        title="Reports"
+        title="보고서"
         subtitle="Mori의 작업 메모리를 Resume 프롬프트와 공유 가능한 리포트로 만듭니다."
         right={
           <div className="reports-page-actions">
@@ -524,7 +524,7 @@ function AnalysisStrip({
             disabled={!canRun}
             title={canRun ? "Quick Pass 실행" : importsCount === 0 ? "먼저 소스를 가져오세요." : "이미 실행 중입니다."}
           >
-            {status === "running" ? "분석 중..." : hasAnalysis ? "Re-run Quick Pass" : "Run Quick Pass"}
+            {status === "running" ? "분석 중..." : hasAnalysis ? "Quick Pass 재실행" : "Quick Pass 실행"}
           </Button>
         ) : null}
       </div>
@@ -648,7 +648,7 @@ function MoriPackageStrip({
         </p>
         <div className="mori-package-export-options" aria-label=".mori export contents">
           <PackageOptionSummary
-            title="Full package"
+            title="전체 패키지"
             counts={exportPlan.full}
             detail={
               exportPlan.full.sensitiveMemories > 0
@@ -657,13 +657,13 @@ function MoriPackageStrip({
             }
           />
           <PackageOptionSummary
-            title="Client-safe"
+            title="클라이언트 안전"
             counts={exportPlan.clientSafe}
             detail={`메모리 ${exportPlan.clientSafe.droppedMemories}건 · 감사 ${exportPlan.clientSafe.droppedAuditRows}건 제외`}
           />
         </div>
         <p className="mori-package-storage-note">
-          Accepted Memory source: {storageLabel}
+          승인된 메모리 출처: {storageLabel}
           {memoryStorageFellBack ? " · SQLite 읽기 실패로 browser fallback 사용" : ""}
         </p>
       </div>
@@ -779,27 +779,27 @@ function ReportsCapabilityStrip() {
       className="reports-capability-strip"
       title={
         <>
-          <ShieldCheck size={14} aria-hidden="true" /> Report 기능 honesty
+          <ShieldCheck size={14} aria-hidden="true" /> 보고서 기능 현황
         </>
       }
-      hint="현재 Reports 화면이 실제로 할 수 있는 것 / Planned로 남아 있는 것."
-      ariaLabel="Report 기능 honesty"
+      hint="현재 보고서 화면이 실제로 할 수 있는 것 / 예정으로 남아 있는 것."
+      ariaLabel="보고서 기능 현황"
     >
       <div className="reports-capability-grid">
         <MoriStatCard
-          label="Implemented"
+          label="구현됨"
           value={counts.implemented}
           hint="앱 전체 기준"
           tone="success"
         />
         <MoriStatCard
-          label="Partial"
+          label="부분 구현"
           value={counts.partial}
           hint="앱 전체 기준"
           tone="info"
         />
         <MoriStatCard
-          label="Planned"
+          label="예정"
           value={counts.planned}
           hint="앱 전체 기준"
           tone="warning"

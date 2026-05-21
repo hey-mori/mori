@@ -72,7 +72,7 @@ export function ReviewDetailPanel({
       <aside className="review-detail" aria-label="Review detail">
         <header className="review-detail-header">
           <Badge tone="gray">선택된 항목 없음</Badge>
-          <h3>Review detail</h3>
+          <h3>검토 상세</h3>
           <p>왼쪽 목록에서 이슈, 결정, 또는 다음 액션을 선택하면 출처, 신뢰도, 관련 이벤트가 여기 표시됩니다.</p>
         </header>
         <section className="review-detail-section">

@@ -348,8 +348,8 @@ export function ConsolidationReviewView() {
   return (
     <div className="page consolidation-review-page">
       <PageHeader
-        title="Memory Consolidation Review"
-        subtitle="누적된 Project Memory에서 승격할 항목을 검토합니다. 영구 메모리는 사용자가 명시적으로 승인하기 전까지 작성되지 않습니다."
+        title="메모리 통합 검토"
+        subtitle="누적된 프로젝트 메모리에서 승격할 항목을 검토합니다. 영구 메모리는 사용자가 명시적으로 승인하기 전까지 작성되지 않습니다."
         right={
           <div className="consolidation-review-header-actions">
             <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>

@@ -142,7 +142,7 @@ export function EvidenceView() {
   return (
     <div className="page evidence-page">
       <PageHeader
-        title="Evidence"
+        title="증거 허브"
         subtitle="Mori가 작업을 복원할 때 사용하는 소스를 관리하세요. 사용자가 명시적으로 가져온 소스만 분석에 사용됩니다."
         right={
           <div className="evidence-page-actions">

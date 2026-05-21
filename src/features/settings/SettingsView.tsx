@@ -128,8 +128,8 @@ export function SettingsView() {
   return (
     <div className="page settings-workspace">
       <PageHeader
-        title="Settings"
-        subtitle="Mori의 로컬-퍼스트 동작을 한곳에서 관리합니다. Privacy · Local AI · Storage · Repositories · 그리고 아직 비활성화된 Planned Connectors까지 정직하게 보여줍니다."
+        title="설정"
+        subtitle="Mori의 로컬-퍼스트 동작을 한곳에서 관리합니다. 개인정보 · 로컬 AI · 저장소 · 리포지토리 · 그리고 아직 비활성화된 커넥터까지 정직하게 보여줍니다."
         right={
           <div className="settings-page-actions">
             <Badge tone={sessionMode === "demo" ? "gray" : "green"}>

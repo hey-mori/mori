@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Check,
   CheckCircle2,
+  GitBranch,
   KanbanSquare,
   ListChecks,
   Sparkles,
@@ -52,11 +53,11 @@ import { useCompanionSignals } from "../companion/useCompanionSignals";
 import { formatDateTime } from "../../lib/formatting/time";
 
 const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare }> = [
-  { id: "issues", label: "Issue Garden", icon: KanbanSquare },
-  { id: "decisions", label: "Decision Log", icon: Table2 },
-  { id: "nextActions", label: "Next Actions", icon: ListChecks },
-  { id: "unresolved", label: "Unresolved", icon: AlertTriangle },
-  { id: "suggestions", label: "Suggestions", icon: Sparkles },
+  { id: "issues", label: "이슈 가든", icon: KanbanSquare },
+  { id: "decisions", label: "결정 기록", icon: Table2 },
+  { id: "nextActions", label: "다음 액션", icon: ListChecks },
+  { id: "unresolved", label: "미처리", icon: AlertTriangle },
+  { id: "suggestions", label: "제안", icon: Sparkles },
 ];
 
 export function ReviewView() {
@@ -171,8 +172,8 @@ export function ReviewView() {
   return (
     <div className="page review-workspace">
       <PageHeader
-        title="Review"
-        subtitle="가져온 증거와 Timeline 분석을 바탕으로 Mori가 추출한 이슈, 결정, 다음 액션을 검토하세요. 모든 항목은 Apply된 소스에서 추적할 수 있습니다."
+        title="검토"
+        subtitle="가져온 증거와 타임라인 분석을 바탕으로 Mori가 추출한 이슈, 결정, 다음 액션을 검토하세요. 모든 항목은 적용된 소스에서 추적할 수 있습니다."
         right={
           <div className="evidence-page-actions">
             <Badge tone={mode === "demo" ? "gray" : "green"}>
@@ -452,7 +453,7 @@ function AnalysisStrip({
             disabled={!canRun}
             title={canRun ? "Quick Pass 실행" : importsCount === 0 ? "먼저 소스를 가져오세요." : "이미 실행 중입니다."}
           >
-            {status === "running" ? "분석 중..." : hasAnalysis ? "Re-run Quick Pass" : "Run Quick Pass"}
+            {status === "running" ? "분석 중..." : hasAnalysis ? "Quick Pass 재실행" : "Quick Pass 실행"}
           </Button>
         ) : null}
       </div>
@@ -489,13 +490,13 @@ function IssueGardenTab({
         <p>
           Review는 가져온 소스와 Timeline 이벤트를 기반으로 이슈/결정/다음 액션을 추출합니다.
           {hasImports
-            ? " 위의 'Run Quick Pass' 버튼을 사용해 분석을 시작하세요."
+            ? " 위의 'Quick Pass 실행' 버튼을 사용해 분석을 시작하세요."
             : " 먼저 Evidence Hub에서 소스를 가져온 뒤 분석을 실행하세요."}
         </p>
         <div className="review-empty-actions">
           {hasImports ? (
             <Button variant="primary" icon={Sparkles} onClick={onRunQuickPass} disabled={!canRunQuickPass}>
-              Run Quick Pass
+              Quick Pass 실행
             </Button>
           ) : (
             <Button variant="primary" onClick={onGoToEvidence}>
@@ -522,7 +523,7 @@ function IssueGardenTab({
     <section className="review-issue-board">
       <header className="review-section-head">
         <div>
-          <h2>Issue Garden</h2>
+          <h2>이슈 가든</h2>
           <p>상태별로 이슈를 정리합니다. 카드를 클릭하면 오른쪽 패널에 출처와 관련 이벤트가 표시됩니다.</p>
         </div>
       </header>
@@ -586,7 +587,7 @@ function DecisionLogTab({
     <section className="review-decision-log">
       <header className="review-section-head">
         <div>
-          <h2>Decision Log</h2>
+          <h2>결정 기록</h2>
           <p>결정 시각, 중요도, 근거 출처를 한 행에서 확인합니다. 행을 클릭하면 오른쪽 패널에 자세한 내용이 표시됩니다.</p>
         </div>
       </header>
@@ -653,7 +654,7 @@ function NextActionsTab({
     <section className="review-next-actions">
       <header className="review-section-head">
         <div>
-          <h2>Next Actions</h2>
+          <h2>다음 액션</h2>
           <p>
             이슈와 연결된 다음 작업 후보입니다. 완료 처리한 작업은 목록 아래로
             내려가며, 남은 작업 {progress.pending}개 · 완료 {progress.completed}개입니다.
@@ -704,7 +705,7 @@ function UnresolvedTab({
     <section className="review-unresolved">
       <header className="review-section-head">
         <div>
-          <h2>Unresolved</h2>
+          <h2>미처리 항목</h2>
           <p>Open 이슈, 미확정 결정, 추론 신뢰도가 낮은 항목, 대기 중인 다음 액션을 모아 보여줍니다.</p>
         </div>
       </header>
@@ -715,12 +716,19 @@ function UnresolvedTab({
             const issue = item.issue;
             const selected = selection.kind === "issue" && selection.issueId === issue.id;
             return (
-              <li key={`issue-${issue.id}`} className={selected ? "is-selected" : ""}>
+              <li key={`issue-${issue.id}`} className={`review-unresolved-item ${selected ? "is-selected" : ""}`}>
                 <button type="button" onClick={() => onSelectIssue(issue.id)}>
-                  <Badge tone={issueStatusTone(issue.status)}>{reasonLabel}</Badge>
-                  <strong>{issue.title}</strong>
-                  <span>{issue.description}</span>
-                  <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
+                  <span className="review-unresolved-type-icon" aria-hidden="true">
+                    <KanbanSquare size={13} />
+                  </span>
+                  <span className="review-unresolved-body">
+                    <span className="review-unresolved-head">
+                      <strong>{issue.title}</strong>
+                      <Badge tone={issueStatusTone(issue.status)}>{reasonLabel}</Badge>
+                      <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
+                    </span>
+                    {issue.description ? <span className="review-unresolved-desc">{issue.description}</span> : null}
+                  </span>
                 </button>
               </li>
             );
@@ -729,12 +737,19 @@ function UnresolvedTab({
             const decision = item.decision;
             const selected = selection.kind === "decision" && selection.decisionId === decision.id;
             return (
-              <li key={`decision-${decision.id}`} className={selected ? "is-selected" : ""}>
+              <li key={`decision-${decision.id}`} className={`review-unresolved-item ${selected ? "is-selected" : ""}`}>
                 <button type="button" onClick={() => onSelectDecision(decision.id)}>
-                  <Badge tone="orange">{reasonLabel}</Badge>
-                  <strong>{decision.title}</strong>
-                  <span>{decision.decision}</span>
-                  <Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge>
+                  <span className="review-unresolved-type-icon" aria-hidden="true">
+                    <GitBranch size={13} />
+                  </span>
+                  <span className="review-unresolved-body">
+                    <span className="review-unresolved-head">
+                      <strong>{decision.title}</strong>
+                      <Badge tone="orange">{reasonLabel}</Badge>
+                      <Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge>
+                    </span>
+                    {decision.decision ? <span className="review-unresolved-desc">{decision.decision}</span> : null}
+                  </span>
                 </button>
               </li>
             );
@@ -742,12 +757,19 @@ function UnresolvedTab({
           const action = item.nextAction;
           const selected = selection.kind === "nextAction" && selection.nextActionId === action.id;
           return (
-            <li key={`na-${action.id}`} className={selected ? "is-selected" : ""}>
+            <li key={`na-${action.id}`} className={`review-unresolved-item ${selected ? "is-selected" : ""}`}>
               <button type="button" onClick={() => onSelectNextAction(action.id)}>
-                <Badge tone="gray">{reasonLabel}</Badge>
-                <strong>{action.title}</strong>
-                <span>다음 액션 후보</span>
-                <Badge tone={priorityTone(action.priority)}>{priorityLabels[action.priority]}</Badge>
+                <span className="review-unresolved-type-icon" aria-hidden="true">
+                  <ListChecks size={13} />
+                </span>
+                <span className="review-unresolved-body">
+                  <span className="review-unresolved-head">
+                    <strong>{action.title}</strong>
+                    <Badge tone="gray">{reasonLabel}</Badge>
+                    <Badge tone={priorityTone(action.priority)}>{priorityLabels[action.priority]}</Badge>
+                  </span>
+                  <span className="review-unresolved-desc">다음 액션 후보</span>
+                </span>
               </button>
             </li>
           );
@@ -802,9 +824,9 @@ function SuggestionsTab({
     <section className="review-suggestions">
       <header className="review-section-head">
         <div>
-          <h2>Suggestions</h2>
+          <h2>제안</h2>
           <p>
-            각 이슈에서 Quick Pass가 제안한 다음 액션입니다. 승격하면 Next Actions 탭에
+            각 이슈에서 Quick Pass가 제안한 다음 액션입니다. 승격하면 다음 액션 탭에
             추가됩니다 — 승격 대기 {pendingCount}개.
           </p>
         </div>

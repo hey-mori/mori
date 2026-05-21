@@ -150,7 +150,7 @@ export function StartSessionView() {
   return (
     <div className="page">
       <PageHeader
-        title="Start Session"
+        title="세션 시작"
         subtitle="기록 범위를 설정하고 새 작업 메모리 세션을 시작합니다."
       />
 

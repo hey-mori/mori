@@ -29,25 +29,25 @@ type NavItem = { key: NavKey; label: string; badge?: string };
  * without navigating to each surface first.
  */
 const BASE_NAV_GROUPS: Array<{ label?: string; items: NavItem[] }> = [
-  { items: [{ key: "start", label: "Start Session" }] },
+  { items: [{ key: "start", label: "세션 시작" }] },
   {
     label: "작업",
     items: [
-      { key: "timeline", label: "Timeline" },
-      { key: "evidence", label: "Evidence" },
-      { key: "review", label: "Review" },
-      { key: "reports", label: "Reports" },
+      { key: "timeline", label: "타임라인" },
+      { key: "evidence", label: "증거 허브" },
+      { key: "review", label: "검토" },
+      { key: "reports", label: "보고서" },
     ],
   },
   {
     label: "프로젝트",
     items: [
-      { key: "workspace", label: "Workspace" },
-      { key: "memory", label: "Memory" },
-      { key: "companion", label: "Companion" },
+      { key: "workspace", label: "워크스페이스" },
+      { key: "memory", label: "메모리" },
+      { key: "companion", label: "Mori 노트" },
     ],
   },
-  { items: [{ key: "settings", label: "Settings" }] },
+  { items: [{ key: "settings", label: "설정" }] },
 ];
 
 export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onNavigate: (view: ViewKey) => void }) {

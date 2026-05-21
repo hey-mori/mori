@@ -5839,44 +5839,75 @@ pre {
   list-style: none;
 }
 
-.review-unresolved-list li {
+.review-unresolved-item {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: white;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.review-unresolved-list li.is-selected {
+.review-unresolved-item.is-selected {
   border-color: var(--purple);
   box-shadow: 0 4px 14px rgba(98, 70, 245, 0.12);
 }
 
-.review-unresolved-list li button {
+.review-unresolved-item button {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: 28px 1fr;
+  align-items: flex-start;
+  gap: 4px;
   width: 100%;
   padding: 10px 12px;
   border: 0;
   background: transparent;
   text-align: left;
   cursor: pointer;
+  border-radius: 10px;
 }
 
-.review-unresolved-list li button strong {
-  display: block;
+.review-unresolved-item button:hover {
+  background: var(--surface-hover, #f8f7ff);
+}
+
+.review-unresolved-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 2px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.review-unresolved-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.review-unresolved-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.review-unresolved-head strong {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
-.review-unresolved-list li button span {
+.review-unresolved-desc {
   display: block;
-  margin-top: 2px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 11.5px;
+  line-height: 1.45;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

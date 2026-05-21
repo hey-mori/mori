@@ -122,7 +122,7 @@ export function ProjectMemorySummaryPanel({
       </section>
 
       <section className="memory-summary-section">
-        <SectionHeader title="Resume prompt" hint="Project Memory 기반 · 새 세션에 붙여넣기" />
+        <SectionHeader title="Resume 프롬프트" hint="프로젝트 메모리 기반 · 새 세션에 붙여넣기" />
         <div className="memory-summary-prompt-controls">
           <label>
             <span>대상</span>
