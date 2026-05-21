@@ -66,13 +66,13 @@ describe("getFeatureControlProps", () => {
     expect(props.enabled).toBe(false);
     expect(props.status).toBe("planned");
     expect(props.tone).toBe(FEATURE_STATUS_TONE.planned);
-    expect(props.title).toMatch(/planned/i);
+    expect(props.title).toMatch(/예정/);
   });
 
   it("honours userFacingStatus on partial rows", () => {
     const props = getFeatureControlProps("memory.savedSessions");
     expect(props.status).toBe("partial");
-    expect(props.statusLabel).toMatch(/Partial/i);
+    expect(props.statusLabel).toMatch(/부분/);
   });
 
   it("marks shipped Timeline inspector correction actions as enabled", () => {
