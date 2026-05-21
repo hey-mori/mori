@@ -201,22 +201,43 @@ export function ReviewView() {
         onGoToEvidence={() => setCurrentView("evidence")}
       />
 
-      <nav className="review-tabs" role="tablist" aria-label="Review tabs">
+      <nav
+        className="review-tabs"
+        role="tablist"
+        aria-label="Review tabs"
+        onKeyDown={(event) => {
+          const tabIds = TAB_DEFS.map((t) => t.id);
+          const current = tabIds.indexOf(activeTab);
+          let next = -1;
+          if (event.key === "ArrowRight") next = (current + 1) % tabIds.length;
+          else if (event.key === "ArrowLeft") next = (current - 1 + tabIds.length) % tabIds.length;
+          else if (event.key === "Home") next = 0;
+          else if (event.key === "End") next = tabIds.length - 1;
+          if (next !== -1) {
+            event.preventDefault();
+            const nextId = tabIds[next]!;
+            setActiveTab(nextId);
+            (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
+          }
+        }}
+      >
         {TAB_DEFS.map((tab) => {
           const Icon = tab.icon;
           const count = countForTab(tab.id, view, unresolved);
+          const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               type="button"
               role="tab"
-              aria-selected={activeTab === tab.id}
-              className={`review-tab ${activeTab === tab.id ? "active" : ""}`}
+              tabIndex={isActive ? 0 : -1}
+              aria-selected={isActive}
+              className={`review-tab ${isActive ? "active" : ""}`}
               onClick={() => setActiveTab(tab.id)}
             >
               <Icon size={14} aria-hidden="true" />
               <span>{tab.label}</span>
-              <Badge tone={activeTab === tab.id ? "purple" : "gray"}>{count}</Badge>
+              <Badge tone={isActive ? "purple" : "gray"}>{count}</Badge>
             </button>
           );
         })}
