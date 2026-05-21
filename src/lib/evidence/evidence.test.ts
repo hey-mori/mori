@@ -21,10 +21,10 @@ import type { TimelineDisplayItem } from "../timeline/displayItems";
 
 describe("trust helpers", () => {
   it("returns consistent label/tone for each trust level", () => {
-    expect(getTrustDisplay("verified").label).toBe("Verified");
+    expect(getTrustDisplay("verified").label).toBe("검증됨");
     expect(getTrustDisplay("observed").tone).toBe("blue");
     expect(getTrustDisplay("inferred").tone).toBe("purple");
-    expect(getTrustLabel("verified")).toBe("Verified");
+    expect(getTrustLabel("verified")).toBe("검증됨");
     expect(getTrustTone("inferred")).toBe("purple");
   });
 });

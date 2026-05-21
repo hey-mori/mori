@@ -33,7 +33,7 @@ describe("traceability", () => {
       expect(status.status).toBe("implemented");
       expect(status.statusLabel).toBe("사용 가능");
       expect(status.captureMethod).toBe("수동 입력");
-      expect(status.trustLabel).toBe("Verified");
+      expect(status.trustLabel).toBe("검증됨");
       expect(status.trustTone).toBe("green");
       expect(status.rawDataLabel).toBe("원본 전체 보관");
       expect(status.privacyNote).toBeTruthy();
@@ -85,19 +85,19 @@ describe("traceability", () => {
   describe("getSourceTrustLabel", () => {
     it("returns correct label and tone for verified", () => {
       const result = getSourceTrustLabel("verified");
-      expect(result.label).toBe("Verified");
+      expect(result.label).toBe("검증됨");
       expect(result.tone).toBe("green");
     });
 
     it("returns correct label and tone for observed", () => {
       const result = getSourceTrustLabel("observed");
-      expect(result.label).toBe("Observed");
+      expect(result.label).toBe("관찰됨");
       expect(result.tone).toBe("blue");
     });
 
     it("returns correct label and tone for inferred", () => {
       const result = getSourceTrustLabel("inferred");
-      expect(result.label).toBe("Inferred");
+      expect(result.label).toBe("추론됨");
       expect(result.tone).toBe("purple");
     });
 
