@@ -3647,12 +3647,14 @@ hr {
 }
 
 /* Pinned header band: header + optional action bar never scroll away. */
+/* The pinned top region blends into the page background instead of reading as
+   a separate white header bar — controls (tabs, segmented switch, actions)
+   float on the page. It sits outside the scroll region, so content never
+   bleeds under it and no divider is needed. */
 .page-shell-top {
   position: relative;
   z-index: 2;
-  background: var(--mori-surface-overlay);
-  border-bottom: 1px solid var(--mori-border);
-  backdrop-filter: blur(12px);
+  background: var(--mori-bg);
 }
 
 /* The single scroll region. Everything below the header lives here. */
