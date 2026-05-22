@@ -13,12 +13,10 @@ export type TrustSummaryProps = {
   mode: RuntimeMode;
   sqliteKind: "ok" | "checking" | "error" | "unavailable";
   providerKind: QuickPassProviderKind;
-  providerLabel: string;
   importsCount: number;
   hasAnalysis: boolean;
   hasUnsavedDraft: boolean;
   repositoriesTotal: number;
-  sessionMode: "demo" | "draft";
   onAction: (step: RecommendedSetupStep) => void;
 };
 
@@ -37,12 +35,10 @@ export function TrustSummaryPanel({
   mode,
   sqliteKind,
   providerKind,
-  providerLabel,
   importsCount,
   hasAnalysis,
   hasUnsavedDraft,
   repositoriesTotal,
-  sessionMode,
   onAction,
 }: TrustSummaryProps) {
   const step = getRecommendedSetupStep({
@@ -55,46 +51,15 @@ export function TrustSummaryPanel({
     providerKind,
   });
 
-  const storageLabel =
-    mode === "browser"
-      ? "Browser 임시 저장 (localStorage)"
-      : sqliteKind === "ok"
-        ? "Desktop SQLite"
-        : "Tauri desktop · SQLite 미초기화";
-
   return (
-    <aside className="settings-trust" aria-label="Trust summary">
+    <section className="settings-trust" aria-label="신뢰 요약">
       <header className="settings-trust-head">
         <Badge tone="purple">로컬 우선</Badge>
         <h3>Mori 신뢰 요약</h3>
-        <p>
-          Mori는 사용자가 명시적으로 가져온 데이터만 사용합니다. 이 패널은 지금 활성화된 동작과 절대 일어나지 않는
-          동작을 한눈에 보여줍니다.
-        </p>
+        <p>가져온 데이터만 사용합니다. 지금 쓰는 데이터와 절대 하지 않는 동작입니다.</p>
       </header>
 
-      <section className="settings-trust-section">
-        <SectionHeader title="현재 동작 모드" />
-        <dl className="settings-trust-grid">
-          <div>
-            <dt>런타임</dt>
-            <dd>{mode === "browser" ? "Browser (Prototype)" : "Tauri desktop"}</dd>
-          </div>
-          <div>
-            <dt>저장소</dt>
-            <dd>{storageLabel}</dd>
-          </div>
-          <div>
-            <dt>Quick Pass</dt>
-            <dd>{providerLabel}</dd>
-          </div>
-          <div>
-            <dt>Session</dt>
-            <dd>{sessionMode === "demo" ? "Demo (mock 데이터)" : "실제 세션"}</dd>
-          </div>
-        </dl>
-      </section>
-
+      <div className="settings-trust-lists">
       <section className="settings-trust-section">
         <SectionHeader title="사용하는 데이터" />
         <ul className="settings-trust-list tone-active">
@@ -118,6 +83,7 @@ export function TrustSummaryPanel({
           ))}
         </ul>
       </section>
+      </div>
 
       <section className="settings-trust-section">
         <SectionHeader title="추천 다음 단계" />
@@ -134,7 +100,7 @@ export function TrustSummaryPanel({
           <ArrowRight size={14} aria-hidden="true" />
         </button>
       </section>
-    </aside>
+    </section>
   );
 }
 

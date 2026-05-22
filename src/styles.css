@@ -13794,24 +13794,27 @@ pre {
 
 /* Trust summary panel */
 
+/* Folded into the settings column (no longer a sticky rail) — a calm trust
+   section at the foot of the page, with the two data lists side by side. */
 .settings-trust {
   display: grid;
   gap: 12px;
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: white;
+  background: var(--mori-surface);
   box-shadow: var(--shadow-soft);
-  position: sticky;
-  top: 88px;
-  max-height: calc(100vh - 110px);
-  overflow-y: auto;
 }
 
-@media (max-width: 1180px) {
-  .settings-trust {
-    position: static;
-    max-height: none;
+.settings-trust-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px var(--mori-space-8);
+}
+
+@media (max-width: 720px) {
+  .settings-trust-lists {
+    grid-template-columns: 1fr;
   }
 }
 

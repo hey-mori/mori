@@ -177,20 +177,6 @@ export function SettingsView() {
           }
         />
       }
-      aside={
-        <TrustSummaryPanel
-          mode={mode}
-          sqliteKind={sqliteKind}
-          providerKind={settings.provider}
-          providerLabel={providerLabel}
-          importsCount={imports.length}
-          hasAnalysis={hasAnalysis}
-          hasUnsavedDraft={Boolean(sessionDraft) && sqliteKind === "ok"}
-          repositoriesTotal={repositorySettings.repositories.length}
-          sessionMode={sessionMode}
-          onAction={navigateForStep}
-        />
-      }
     >
       <StatusStrip
         mode={mode}
@@ -262,6 +248,17 @@ export function SettingsView() {
             />
           ) : null}
       </div>
+
+      <TrustSummaryPanel
+        mode={mode}
+        sqliteKind={sqliteKind}
+        providerKind={settings.provider}
+        importsCount={imports.length}
+        hasAnalysis={hasAnalysis}
+        hasUnsavedDraft={Boolean(sessionDraft) && sqliteKind === "ok"}
+        repositoriesTotal={repositorySettings.repositories.length}
+        onAction={navigateForStep}
+      />
     </PageShell>
   );
 }
