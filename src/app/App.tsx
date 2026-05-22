@@ -13,6 +13,7 @@ import { ReportsView } from "../features/reports/ReportsView";
 import { MemoryView } from "../features/memory/MemoryView";
 import { ConsolidationReviewView } from "../features/memory/ConsolidationReviewView";
 import { CompanionInboxView } from "../features/companion/CompanionInboxView";
+import { ConnectionsView } from "../features/connections/ConnectionsView";
 import { WorkspaceView } from "../features/workspace/WorkspaceView";
 import { AccountProfileView } from "../features/account/AccountProfileView";
 import { LoginView } from "../features/account/LoginView";
@@ -57,6 +58,7 @@ export default function App() {
       {currentView === "memory" ? <MemoryView /> : null}
       {currentView === "consolidation" ? <ConsolidationReviewView /> : null}
       {currentView === "companion" ? <CompanionInboxView /> : null}
+      {currentView === "connections" ? <ConnectionsView /> : null}
       {currentView === "workspace" ? <WorkspaceView /> : null}
       {currentView === "profile" ? <AccountProfileView /> : null}
       {currentView === "login" ? <LoginView /> : null}

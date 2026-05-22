@@ -1,3 +1,4 @@
+mod claude;
 mod commands;
 mod connectors;
 mod db;
@@ -38,6 +39,12 @@ fn main() {
             repositories::picker::pick_repository_directory,
             connectors::inbox::list_connector_jsonl_inbox,
             connectors::inbox::read_connector_jsonl_file,
+            claude::desktop::discover_claude_desktop,
+            claude::desktop::list_claude_desktop_conversations,
+            claude::desktop::get_claude_desktop_conversation,
+            claude::code::discover_claude_code_sessions,
+            claude::code::get_claude_code_session,
+            claude::installations::discover_local_ai_tools,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

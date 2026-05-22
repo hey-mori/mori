@@ -350,13 +350,13 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   claudeTranscript: {
     id: "claudeTranscript",
-    label: "Claude Transcript",
-    description: "수동 붙여넣기로 가져오는 Claude AI 대화 기록",
+    label: "Claude 대화",
+    description: "수동 붙여넣기 또는 Claude Desktop / Claude Code 연결 페이지를 통해 가져온 Claude 대화 기록",
     status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
-    captureMode: "manual",
-    privacyNote: "사용자가 Claude 대화 텍스트를 직접 붙여넣습니다. Claude API 직접 연결은 향후 예정되어 있습니다.",
+    captureMode: "explicitImport",
+    privacyNote: "사용자가 Claude 대화 텍스트를 붙여넣거나, 연결 페이지에서 Claude Desktop SQLite / Claude Code JSONL 파일을 명시적으로 선택해 가져옵니다. 자동 백그라운드 캡처는 없습니다.",
     supportedInputTypes: ["text/plain"],
     outputRecords: {
       sources: true,

@@ -13,6 +13,7 @@ import {
   HardDrive,
   Layers,
   Lightbulb,
+  Link2,
   Lock,
   Package,
   Play,
@@ -45,6 +46,7 @@ export const moriViewIcon = {
   memory: Layers, // accumulated, structured project memory
   consolidation: BookMarked, // consolidation review of memory proposals
   companion: Compass, // companion guidance
+  connections: Link2, // Claude Desktop / Code conversation bridge
   workspace: FolderKanban, // projects
   settings: Settings,
 } satisfies Partial<Record<ViewKey, LucideIcon>>;

@@ -10,6 +10,7 @@ export type ViewKey =
   | "memory"
   | "consolidation"
   | "companion"
+  | "connections"
   | "workspace"
   | "profile"
   | "login"
@@ -65,6 +66,15 @@ export type Session = {
   storageLocation: string;
   selectedSourceIds: string[];
   status: "recording" | "analyzing" | "complete";
+  /**
+   * Optional human-facing grouping label for the session — e.g. the Claude
+   * project path (`C:/dev/mori`) the imported conversation came from. Set
+   * when a session is created from an external import ("1 Claude
+   * conversation = 1 Mori session"); the sidebar session switcher groups
+   * sessions by this value. Additive — sessions created before this field
+   * (manual Start Session, demo, older imports) simply omit it.
+   */
+  sourceLabel?: string;
 };
 
 export type SourceRef = {

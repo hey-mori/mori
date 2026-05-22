@@ -25,6 +25,14 @@ import type {
   SqliteSessionImportRow,
   SqliteSessionImportWriteResult,
 } from "../sqlite/sessionImportRows";
+import type {
+  ClaudeCodeSessionDetail,
+  ClaudeCodeSessionMeta,
+  ClaudeConversationDetail,
+  ClaudeConversationMeta,
+  ClaudeDesktopDiscovery,
+} from "../claude/types";
+import type { LocalAiToolReport } from "../claude/installations";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
 import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./repositoryCommands";
@@ -59,6 +67,12 @@ export type TauriCommandName =
   | "verify_repository_path"
   | "list_connector_jsonl_inbox"
   | "read_connector_jsonl_file"
+  | "discover_claude_desktop"
+  | "list_claude_desktop_conversations"
+  | "get_claude_desktop_conversation"
+  | "discover_claude_code_sessions"
+  | "get_claude_code_session"
+  | "discover_local_ai_tools"
   | "analyze_session_quick_pass"
   | "generate_report";
 
@@ -168,6 +182,18 @@ export type TauriCommandMap = {
   verify_repository_path: { input: { request: VerifyRepositoryRequest }; output: RepositoryVerificationResult };
   list_connector_jsonl_inbox: { input: undefined; output: ConnectorInboxListing };
   read_connector_jsonl_file: { input: { input: { path: string } }; output: ConnectorJsonlFile };
+  discover_claude_desktop: { input: undefined; output: ClaudeDesktopDiscovery };
+  list_claude_desktop_conversations: { input: undefined; output: ClaudeConversationMeta[] };
+  get_claude_desktop_conversation: {
+    input: { conversationId: string };
+    output: ClaudeConversationDetail;
+  };
+  discover_claude_code_sessions: { input: undefined; output: ClaudeCodeSessionMeta[] };
+  get_claude_code_session: {
+    input: { sessionPath: string };
+    output: ClaudeCodeSessionDetail;
+  };
+  discover_local_ai_tools: { input: undefined; output: LocalAiToolReport };
   analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
   generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };
 };
