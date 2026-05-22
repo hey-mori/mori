@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from "react";
 import {
   Activity,
-  ArrowLeft,
   FileText,
   GanttChartSquare,
   GitBranch,
@@ -83,7 +82,6 @@ function SessionDetailHeader() {
   const source = useMoriSessionStore(selectSessionSource);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
   const imports = useMoriSessionStore((state) => state.imports);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   const context = useMemo(
     () =>
@@ -105,15 +103,14 @@ function SessionDetailHeader() {
         ? "Desktop SQLite"
         : "브라우저 저장";
 
+  // The "작업 세션" catch-all origin label adds no information on the session
+  // screen — the user already knows they are inside a session. Suppress it
+  // for manual / catch-all origins so the header only shows meaningful chips
+  // (a Claude import, a live capture, an in-progress analysis, etc).
+  const showOriginChip = context.origin !== "manual" || context.originLabel !== "작업 세션";
+
   return (
     <div className="session-detail-header">
-      <button
-        type="button"
-        className="session-detail-back"
-        onClick={() => setCurrentView("workspace")}
-      >
-        <ArrowLeft size={13} aria-hidden="true" /> 세션 목록
-      </button>
       <div className="session-detail-headline">
         <h1 title={context.sessionTitle}>{context.sessionTitle}</h1>
         <div className="session-detail-chips">
@@ -122,9 +119,11 @@ function SessionDetailHeader() {
               {context.projectLabel}
             </span>
           ) : null}
-          <MoriStatusBadge tone={originBadgeTone(context.tone)}>
-            {context.originLabel}
-          </MoriStatusBadge>
+          {showOriginChip ? (
+            <MoriStatusBadge tone={originBadgeTone(context.tone)}>
+              {context.originLabel}
+            </MoriStatusBadge>
+          ) : null}
           {context.timeDescriptor ? (
             <span className="session-detail-chip">
               {context.timeDescriptor}

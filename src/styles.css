@@ -4255,30 +4255,6 @@ hr {
   padding: var(--mori-space-6) var(--page-shell-inset) var(--mori-space-4);
 }
 
-/* Back-to-list breadcrumb — sits on its own row above the session title so it
-   is always clear you have drilled into one session, with one click back out. */
-.session-detail-back {
-  flex-basis: 100%;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  width: fit-content;
-  padding: 2px 8px 2px 4px;
-  border: 0;
-  background: none;
-  color: var(--mori-text-muted);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border-radius: var(--mori-radius-sm);
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.session-detail-back:hover {
-  color: var(--mori-text);
-  background: var(--mori-surface-subtle);
-}
-
 .session-detail-headline {
   display: grid;
   gap: 8px;
