@@ -4127,6 +4127,97 @@ hr {
   color: var(--mori-accent);
 }
 
+/* Current / most-recent session strip — a thin band on the surface, not a
+   stacked card. Mori captures runs, so the status word is calm ("최근 작업" /
+   "분석 완료"), never a live "녹화 중" ticker. A list so a future "multiple
+   tracked sessions" feature only grows the list, never rewrites the strip. */
+.home-current-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--mori-space-3);
+}
+
+.home-current {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-5);
+  padding: var(--mori-space-4) var(--mori-space-5);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface-subtle);
+}
+
+.home-current-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
+}
+
+.home-current-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-current-titlerow {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-3);
+  min-width: 0;
+}
+
+.home-current-title {
+  font-size: var(--mori-font-size-md);
+  font-weight: 650;
+  color: var(--mori-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-current-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-3);
+  font-size: var(--mori-font-size-xs);
+  color: var(--mori-text-muted);
+  min-width: 0;
+}
+
+.home-current-project {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.home-current-span,
+.home-current-events,
+.home-current-time {
+  flex-shrink: 0;
+  color: var(--mori-text-muted-2);
+}
+
+.home-current-span::before,
+.home-current-events::before,
+.home-current-time::before {
+  content: "·";
+  margin-right: var(--mori-space-3);
+  color: var(--mori-text-muted-2);
+}
+
+.home-current .btn {
+  flex-shrink: 0;
+}
+
 /* Activity hero — the signature "잔디". One calm card: a contribution heatmap
    over the recent window plus a compact real-data stat strip. Every cell and
    number traces to a stored session; nothing is fabricated. */
@@ -4568,6 +4659,16 @@ hr {
   .home-columns {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--mori-space-8);
+  }
+
+  /* The strip's action drops below the body so the long title never collides
+     with the button at narrow widths. */
+  .home-current {
+    flex-wrap: wrap;
+  }
+
+  .home-current .btn {
+    margin-left: calc(32px + var(--mori-space-5));
   }
 }
 

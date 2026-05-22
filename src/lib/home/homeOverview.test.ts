@@ -344,6 +344,111 @@ describe("잔디 metric lens", () => {
   });
 });
 
+describe("current / most-recent session strip", () => {
+  it("shows the active session with its real event count and a resume action when it has work", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 2,
+        isDemo: false,
+        storedSessions: [
+          stored({ sessionId: "old", startedAt: "2026-05-20T08:00:00+09:00" }),
+          stored({ sessionId: "active", startedAt: "2026-05-21T08:00:00+09:00", title: "활성 세션" }),
+        ],
+        sessionMetrics: [{ sessionId: "active", events: 14, hasReconstructedWork: true }],
+        activeSession: { sessionId: "active", eventCount: 14 },
+      }),
+    );
+
+    expect(overview.currentSessions).toHaveLength(1);
+    const strip = overview.currentSessions[0]!;
+    expect(strip.sessionId).toBe("active");
+    expect(strip.isActive).toBe(true);
+    expect(strip.eventCount).toBe(14);
+    expect(strip.action.kind).toBe("resume");
+    expect(strip.action.label).toBe("이어가기");
+    expect(strip.action.destination).toBe("reports");
+  });
+
+  it("falls back to the most-recent captured session, hiding the event count, when no real session is active", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 2,
+        isDemo: false,
+        storedSessions: [
+          stored({ sessionId: "old", startedAt: "2026-05-20T08:00:00+09:00" }),
+          stored({ sessionId: "recent", startedAt: "2026-05-22T08:00:00+09:00", title: "최근 세션" }),
+        ],
+        sessionMetrics: [{ sessionId: "recent", events: 9 }],
+        activeSession: null,
+      }),
+    );
+
+    const strip = overview.currentSessions[0]!;
+    expect(strip.sessionId).toBe("recent");
+    expect(strip.isActive).toBe(false);
+    // The event count is real only for the loaded active session.
+    expect(strip.eventCount).toBeNull();
+    expect(strip.action.kind).toBe("resume");
+  });
+
+  it("offers 열기 (open → workspace) when the session has no reconstructed work", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 1,
+        isDemo: false,
+        storedSessions: [stored({ sessionId: "bare" })],
+        sessionMetrics: [{ sessionId: "bare" }],
+        activeSession: null,
+      }),
+    );
+    const strip = overview.currentSessions[0]!;
+    expect(strip.action.kind).toBe("open");
+    expect(strip.action.label).toBe("열기");
+    expect(strip.action.destination).toBe("workspace");
+  });
+
+  it("derives a non-live status word from session status, never 녹화 중", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 3,
+        isDemo: false,
+        storedSessions: [
+          stored({ sessionId: "done", status: "complete", startedAt: "2026-05-22T08:00:00+09:00" }),
+        ],
+        activeSession: null,
+      }),
+    );
+    const strip = overview.currentSessions[0]!;
+    expect(strip.statusLabel).toBe("분석 완료");
+    expect(strip.statusLabel).not.toContain("녹화");
+
+    const analyzing = buildHomeOverview(
+      input({
+        realSessionCount: 1,
+        isDemo: false,
+        storedSessions: [stored({ sessionId: "x", status: "analyzing" })],
+        activeSession: null,
+      }),
+    );
+    expect(analyzing.currentSessions[0]!.statusLabel).toBe("분석 중");
+
+    const recording = buildHomeOverview(
+      input({
+        realSessionCount: 1,
+        isDemo: false,
+        storedSessions: [stored({ sessionId: "y", status: "recording" })],
+        activeSession: null,
+      }),
+    );
+    expect(recording.currentSessions[0]!.statusLabel).toBe("최근 작업");
+  });
+
+  it("emits no strip when there are no sessions", () => {
+    const overview = buildHomeOverview(input({ storedSessions: [], realSessionCount: 0 }));
+    expect(overview.currentSessions).toEqual([]);
+  });
+});
+
 describe("formatRelativeKo", () => {
   it("renders sub-minute, minute, hour, and day windows in Korean", () => {
     expect(formatRelativeKo(new Date(NOW - 30_000).toISOString(), NOW)).toBe("방금");

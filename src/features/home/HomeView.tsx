@@ -30,6 +30,7 @@ import {
   buildHomeOverview,
   describeHomeSessionOrigin,
   formatCompactCount,
+  type HomeCurrentSession,
   type HomeNextAction,
   type HomeNextActionKind,
   type HomeOverview,
@@ -111,6 +112,10 @@ export function HomeView() {
       sessionMetrics: metrics,
       realSessionCount,
       isDemo: mode === "demo",
+      // The loaded session is the strip's "active" candidate only when it is a
+      // real (non-demo) session — the demo never reads as live work.
+      activeSession:
+        mode === "demo" ? null : { sessionId: activeSessionId, eventCount: view.events.length },
       metric,
     });
     // `view` / `mode` cover active-session changes; `initialized` re-reads
@@ -123,6 +128,20 @@ export function HomeView() {
       // Recent sessions open the unified workspace on its 흐름 tab.
       openSession("flow");
     }
+  };
+
+  const runCurrentSession = (session: HomeCurrentSession) => {
+    if (session.action.kind === "open") {
+      // Reuse the recent-session navigation: load + open the session workspace.
+      openSessionFlow(session.sessionId);
+      return;
+    }
+    // Resume → reports, switching to the session first (same pattern as the
+    // value-rail resume action).
+    if (session.sessionId !== activeSessionId) {
+      loadBrowserSession(session.sessionId);
+    }
+    setCurrentView("reports");
   };
 
   const runNextAction = (action: HomeNextAction) => {
@@ -193,6 +212,20 @@ export function HomeView() {
                 채워집니다.
               </span>
             </p>
+          ) : null}
+
+          {/* Current / most-recent session strip. A list-of-one today; a future
+              "multiple tracked sessions" feature only grows this list. */}
+          {overview.currentSessions.length > 0 ? (
+            <ul className="home-current-list" aria-label="현재 작업">
+              {overview.currentSessions.map((session) => (
+                <CurrentSessionStrip
+                  key={session.sessionId}
+                  session={session}
+                  onRun={() => runCurrentSession(session)}
+                />
+              ))}
+            </ul>
           ) : null}
 
           <section className="home-activity" aria-label="작업 활동">
@@ -273,6 +306,49 @@ export function HomeView() {
         </div>
       )}
     </PageShell>
+  );
+}
+
+// ─── Current / most-recent session strip ──────────────────────────────────────
+
+function CurrentSessionStrip({
+  session,
+  onRun,
+}: {
+  session: HomeCurrentSession;
+  onRun: () => void;
+}) {
+  const origin = describeHomeSessionOrigin(session.origin);
+  return (
+    <li className="home-current">
+      <span className="home-current-icon" aria-hidden="true">
+        <FolderKanban size={16} />
+      </span>
+      <span className="home-current-body">
+        <span className="home-current-titlerow">
+          <MoriStatusBadge tone={session.statusTone}>{session.statusLabel}</MoriStatusBadge>
+          <span className="home-current-title" title={session.title}>
+            {session.title}
+          </span>
+        </span>
+        <span className="home-current-meta">
+          <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
+          <span className="home-current-project" title={session.projectLabel ?? undefined}>
+            {session.projectLabel ?? "수동 세션"}
+          </span>
+          {session.spanLabel ? (
+            <span className="home-current-span">{session.spanLabel}</span>
+          ) : null}
+          {session.eventCount !== null ? (
+            <span className="home-current-events">이벤트 {session.eventCount}</span>
+          ) : null}
+          <span className="home-current-time">{session.relativeTime}</span>
+        </span>
+      </span>
+      <Button variant="primary" icon={session.action.kind === "resume" ? PlayCircle : ArrowRight} onClick={onRun}>
+        {session.action.label}
+      </Button>
+    </li>
   );
 }
 

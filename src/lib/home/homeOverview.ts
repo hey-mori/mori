@@ -78,6 +78,18 @@ export type HomeOverviewInput = {
   /** Whether the active session is the bundled demo. */
   isDemo: boolean;
   /**
+   * The currently-loaded real session, when one is active (not the demo). The
+   * view passes its id + real event count so the strip can show live numbers;
+   * the rest of its display fields come from the matching stored summary. Null
+   * when only the demo is loaded — the strip then falls back to the most-recent
+   * captured session.
+   */
+  activeSession?: {
+    sessionId: string;
+    /** Real reconstructed event count from the loaded view. */
+    eventCount: number;
+  } | null;
+  /**
    * Which lens the 잔디 heatmap shows. Defaults to `sessions`. When the
    * requested metric has no data anywhere (e.g. no token usage was imported),
    * the grid falls back to `sessions` so it is never empty — the UI disables
@@ -152,11 +164,58 @@ export type HomeNextAction = {
   tone: HomeNextActionTone;
 };
 
+/**
+ * The current / most-recent session strip at the top of the dashboard.
+ *
+ * Mori captures runs; it does not stream a live agent. So this is never a
+ * "녹화 중" ticker — it shows the *active* session when one is loaded, else the
+ * *most-recent captured* session, with a status word that never implies
+ * liveness. It is modelled as a `list` of strips (today always length 0 or 1)
+ * so a future "multiple tracked sessions" view is a data change, not a
+ * component rewrite.
+ */
+export type HomeCurrentSession = {
+  sessionId: string;
+  title: string;
+  /** Whether this is the live active session (true) or the most-recent one. */
+  isActive: boolean;
+  /** Project / source grouping label, or null for a manual session. */
+  projectLabel: string | null;
+  /** How the session entered Mori — drives the origin chip. */
+  origin: HomeRecentSession["origin"];
+  /**
+   * Status word derived from session status. Never "녹화 중" / never a ticker —
+   * `최근 작업` for a captured session, `분석 완료` / `분석 중` from status.
+   */
+  statusLabel: string;
+  statusTone: ProductStateTone;
+  /** Honest work-span descriptor ("2시간 45분" / "5월 21일") or null. */
+  spanLabel: string | null;
+  /** Relative-time label for the anchor timestamp ("2시간 전"). */
+  relativeTime: string;
+  /** Real reconstructed event count — only shown when the session is active. */
+  eventCount: number | null;
+  /**
+   * The single primary action. `resume` (→ reports) when the session has
+   * reconstructed work to carry forward; otherwise `open` (→ workspace).
+   */
+  action: {
+    kind: "resume" | "open";
+    label: string;
+    destination: "reports" | "workspace";
+  };
+};
+
 export type HomeOverview = {
   /** True when the user has no real sessions — show the honest empty state. */
   isEmpty: boolean;
   /** True when only the bundled demo exists (real count is zero). */
   onlyDemo: boolean;
+  /**
+   * The top-of-dashboard strip(s). Always 0 or 1 entry today; a list so the
+   * future "multiple tracked sessions" feature is a data change, not a rewrite.
+   */
+  currentSessions: HomeCurrentSession[];
   metrics: HomeMetric[];
   recentSessions: HomeRecentSession[];
   nextActions: HomeNextAction[];
@@ -211,6 +270,10 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
     ? buildEmptyNextActions()
     : buildNextActions({ active, metricsById, onlyDemo, now });
 
+  const currentSessions = isEmpty
+    ? []
+    : buildCurrentSessions({ active, metricsById, activeSession: input.activeSession ?? null, now });
+
   // The activity heatmap spans every stored session's anchor date — archiving
   // organises the list but never erases that the work happened. Build one
   // weighted-sample set per lens; availability is "has any non-zero value".
@@ -253,6 +316,7 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
   return {
     isEmpty,
     onlyDemo,
+    currentSessions,
     metrics,
     recentSessions,
     nextActions,
@@ -260,6 +324,78 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
     metricAvailability,
     resolvedMetric,
   };
+}
+
+// ─── Current / most-recent session strip ──────────────────────────────────────
+
+/**
+ * Build the top-of-dashboard strip(s). Returns a list — today always 0 or 1
+ * entry — so a future "multiple tracked sessions" surface only changes the
+ * data, never the renderer. The chosen session is the *active* one when a real
+ * session is loaded (it carries a live event count), otherwise the
+ * *most-recent captured* session. Honest by construction: the status word is
+ * derived from session status and never implies a live recording.
+ */
+function buildCurrentSessions(params: {
+  active: StoredSessionSummary[];
+  metricsById: Map<string, HomeSessionMetricSnapshot>;
+  activeSession: { sessionId: string; eventCount: number } | null;
+  now: number;
+}): HomeCurrentSession[] {
+  const { active, metricsById, activeSession, now } = params;
+
+  // Prefer the loaded active session when it is one of the stored summaries;
+  // otherwise fall back to the most-recent captured session.
+  const activeSummary = activeSession
+    ? active.find((session) => session.sessionId === activeSession.sessionId) ?? null
+    : null;
+  const summary = activeSummary ?? active[0] ?? null;
+  if (!summary) return [];
+
+  const isActive = activeSummary !== null;
+  const metric = metricsById.get(summary.sessionId);
+  const projectLabel = summary.sourceLabel?.trim() ? summary.sourceLabel.trim() : null;
+  const eventCount = isActive ? activeSession?.eventCount ?? null : null;
+  const hasReconstructedWork = hasWork(metric);
+
+  return [
+    {
+      sessionId: summary.sessionId,
+      title: summary.title,
+      isActive,
+      projectLabel,
+      origin: projectLabel ? "imported" : "manual",
+      ...describeCurrentStatus(summary.status),
+      spanLabel: spanLabel(summary.startedAt ?? summary.savedAt, undefined),
+      relativeTime: formatRelativeKo(anchorIso(summary), now),
+      eventCount: eventCount && eventCount > 0 ? eventCount : null,
+      action: hasReconstructedWork
+        ? { kind: "resume", label: "이어가기", destination: "reports" }
+        : { kind: "open", label: "열기", destination: "workspace" },
+    },
+  ];
+}
+
+/**
+ * Map a session's lifecycle status to a calm status word + tone. Never
+ * "녹화 중" and never a running timer — a captured session reads "최근 작업",
+ * an analysing one "분석 중", a finished one "분석 완료".
+ */
+function describeCurrentStatus(status: Session["status"]): {
+  statusLabel: string;
+  statusTone: ProductStateTone;
+} {
+  switch (status) {
+    case "analyzing":
+      return { statusLabel: "분석 중", statusTone: "info" };
+    case "complete":
+      return { statusLabel: "분석 완료", statusTone: "success" };
+    case "recording":
+    default:
+      // Mori does not record live; a "recording" session is one still being
+      // assembled from imports — surface it as recent work, not a live capture.
+      return { statusLabel: "최근 작업", statusTone: "neutral" };
+  }
 }
 
 // ─── Metrics strip ──────────────────────────────────────────────────────────
