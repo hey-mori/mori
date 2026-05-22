@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
@@ -432,21 +433,6 @@ export function MemoryView() {
 
           <DecisionTimelineCard timeline={decisionTimeline} />
 
-          <div className="memory-grid-two">
-            <KeyEvidenceCard rows={viewModel.keyEvidence} />
-            <RecurringIssuesCard
-              rows={viewModel.recurringIssues}
-              scopeNote={recurringIssuesScopeNote(viewModel.dataBasis, viewModel.recurringIssues.some((row) => row.crossSession))}
-            />
-          </div>
-
-          <ReimportHistoryCard summary={viewModel.reimportSummary} />
-
-          <ConsolidationPreviewCard
-            state={consolidationState}
-            onOpenReview={() => setCurrentView("consolidation")}
-          />
-
           <AcceptedMemoriesCard
             memories={acceptedMemories}
             reviewActionCount={reviewActions.length}
@@ -456,21 +442,6 @@ export function MemoryView() {
             selectedMemoryId={selectedMemoryId}
           />
 
-          <QueryableMemoryCard
-            memories={acceptedMemories}
-            timelineEvents={view.events}
-            evidenceSources={view.sources}
-            reviewActions={reviewActions}
-          />
-
-          <MemoryAuditTrailCard
-            actions={reviewActions}
-            acceptedMemories={acceptedMemories}
-            onRevertAction={handleRevertAction}
-            storageSource={memoryStorageSource}
-            storageFellBack={memoryStorageFellBack}
-          />
-
           <RecentSessionsList
             sessions={savedSessions}
             loadStatusBySessionId={loadStatusBySessionId}
@@ -478,11 +449,52 @@ export function MemoryView() {
             onStartNewSession={() => setCurrentView("start")}
           />
 
-          <SavedReportsCard
-            packages={packageDrafts}
-            hasCurrentReportSurface
-            onOpenReports={() => setCurrentView("reports")}
-          />
+          {/* Secondary analysis / tools tucked behind one borderless disclosure so
+              the first screen stays calm — these are detail surfaces, not the
+              primary "what's in my memory" view. */}
+          <details className="memory-advanced">
+            <summary className="memory-advanced-summary">
+              <ChevronDown size={14} aria-hidden="true" />
+              메모리 분석 · 통합 검토 · 도구
+            </summary>
+            <div className="memory-advanced-body">
+              <ConsolidationPreviewCard
+                state={consolidationState}
+                onOpenReview={() => setCurrentView("consolidation")}
+              />
+
+              <div className="memory-grid-two">
+                <KeyEvidenceCard rows={viewModel.keyEvidence} />
+                <RecurringIssuesCard
+                  rows={viewModel.recurringIssues}
+                  scopeNote={recurringIssuesScopeNote(viewModel.dataBasis, viewModel.recurringIssues.some((row) => row.crossSession))}
+                />
+              </div>
+
+              <ReimportHistoryCard summary={viewModel.reimportSummary} />
+
+              <QueryableMemoryCard
+                memories={acceptedMemories}
+                timelineEvents={view.events}
+                evidenceSources={view.sources}
+                reviewActions={reviewActions}
+              />
+
+              <MemoryAuditTrailCard
+                actions={reviewActions}
+                acceptedMemories={acceptedMemories}
+                onRevertAction={handleRevertAction}
+                storageSource={memoryStorageSource}
+                storageFellBack={memoryStorageFellBack}
+              />
+
+              <SavedReportsCard
+                packages={packageDrafts}
+                hasCurrentReportSurface
+                onOpenReports={() => setCurrentView("reports")}
+              />
+            </div>
+          </details>
       </div>
 
       <MoriDrawer

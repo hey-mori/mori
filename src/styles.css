@@ -10268,6 +10268,51 @@ pre {
   min-width: 0;
 }
 
+/* Secondary analysis / tools — a borderless disclosure, not another card layer.
+   A hairline top rule separates it from the primary memory view; the summary is
+   a quiet toggle, never a heading. */
+.memory-advanced {
+  border-top: 1px solid var(--line);
+  padding-top: var(--mori-space-7);
+  margin-top: 2px;
+}
+
+.memory-advanced-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  user-select: none;
+  transition: color 120ms ease;
+}
+
+.memory-advanced-summary:hover {
+  color: var(--text);
+}
+
+.memory-advanced-summary::-webkit-details-marker {
+  display: none;
+}
+
+.memory-advanced-summary svg {
+  flex-shrink: 0;
+  transition: transform 150ms ease;
+}
+
+.memory-advanced[open] > .memory-advanced-summary svg {
+  transform: rotate(180deg);
+}
+
+.memory-advanced-body {
+  display: grid;
+  gap: var(--mori-space-7);
+  margin-top: var(--mori-space-7);
+}
+
 /* Warnings list inside the shared warning NoticeBanner. */
 .memory-warnings-list {
   margin: 0;
