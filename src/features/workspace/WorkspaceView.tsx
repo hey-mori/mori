@@ -1,26 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity,
   Archive,
-  ArchiveRestore,
-  CalendarClock,
-  Check,
-  FileText,
-  Flag,
   FolderGit2,
   FolderKanban,
-  Lightbulb,
-  ListChecks,
-  Pencil,
   PlugZap,
   Search,
-  X,
 } from "lucide-react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
-import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -32,11 +20,8 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import { formatDate } from "../../lib/formatting/time";
-import {
-  buildWorkspaceSummary,
-  describeWorkspaceSessionStatus,
-} from "../../lib/workspace/workspaceSummary";
+import { describeWorkspaceSessionStatus } from "../../lib/workspace/workspaceSummary";
+import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import {
   DEFAULT_SESSIONS_BROWSER_FILTERS,
   buildSessionsBrowserModel,
@@ -64,9 +49,6 @@ export function WorkspaceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
-  const renameSession = useMoriSessionStore((state) => state.renameSession);
-  const archiveSession = useMoriSessionStore((state) => state.archiveSession);
-  const unarchiveSession = useMoriSessionStore((state) => state.unarchiveSession);
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSessionDetail = useMoriAppStore((state) => state.openSession);
 
@@ -79,10 +61,6 @@ export function WorkspaceView() {
   const [filters, setFilters] = useState<SessionsBrowserFilters>(
     DEFAULT_SESSIONS_BROWSER_FILTERS,
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  // A monotonically-increasing tick so lifecycle writes (rename / archive)
-  // re-read the stored sessions without a store subscription on the list.
-  const [revision, setRevision] = useState(0);
 
   const activeSessionId = draft?.session.id ?? view.session.id;
 
@@ -99,37 +77,14 @@ export function WorkspaceView() {
           isDemo: mode === "demo",
           isStored: Boolean(draft),
         },
-        storedSessions: repository.listStoredSessions(),
+        storedSessions: mergeDemoSessionSummaries(repository.listStoredSessions()),
         filters,
       }),
-    // `revision` forces a re-read after a lifecycle write; `view`/`draft`/`mode`
-    // cover active-session changes.
+    // `view`/`draft`/`mode` cover active-session changes; the row list is
+    // re-derived whenever any of those change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeSessionId, view, mode, draft, repository, filters, revision],
+    [activeSessionId, view, mode, draft, repository, filters],
   );
-
-  const summary = useMemo(
-    () =>
-      buildWorkspaceSummary({
-        view,
-        mode,
-        storedSessions: repository.listStoredSessions(),
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [view, mode, repository, revision],
-  );
-
-  // Resolve the currently-selected row. Default to the active session so the
-  // inspector is never empty on first paint.
-  const allRows = useMemo(
-    () => model.groups.flatMap((group) => group.sessions),
-    [model.groups],
-  );
-  const selectedRow =
-    allRows.find((row) => row.sessionId === selectedId) ??
-    allRows.find((row) => row.isActive) ??
-    allRows[0] ??
-    null;
 
   const openSession = (row: SessionRow) => {
     if (row.isActive) {
@@ -141,28 +96,6 @@ export function WorkspaceView() {
     }
   };
 
-  const openReport = (row: SessionRow) => {
-    if (row.isActive) {
-      setCurrentView("reports");
-      return;
-    }
-    if (row.savedAt !== null && loadBrowserSession(row.sessionId)) {
-      setCurrentView("reports");
-    }
-  };
-
-  const handleRename = (row: SessionRow, title: string) => {
-    if (renameSession(row.sessionId, title)) setRevision((value) => value + 1);
-  };
-
-  const handleArchive = (row: SessionRow) => {
-    if (archiveSession(row.sessionId)) setRevision((value) => value + 1);
-  };
-
-  const handleUnarchive = (row: SessionRow) => {
-    if (unarchiveSession(row.sessionId)) setRevision((value) => value + 1);
-  };
-
   const hasResults = model.visibleCount > 0;
   // "Empty" honestly means the user has no real sessions yet — only the
   // bundled demo exists. That is when the Connections call-to-action is the
@@ -172,7 +105,6 @@ export function WorkspaceView() {
   return (
     <PageShell
       className="workspace-page"
-      header={<PageHeader compact title="세션" />}
       actionBar={
         <ActionBar
           label="세션 필터"
@@ -228,17 +160,6 @@ export function WorkspaceView() {
               ]}
             />
           }
-        />
-      }
-      aside={
-        <SessionInspector
-          row={selectedRow}
-          summary={selectedRow?.isActive ? summary : null}
-          onOpen={openSession}
-          onOpenReport={openReport}
-          onRename={handleRename}
-          onArchive={handleArchive}
-          onUnarchive={handleUnarchive}
         />
       }
     >
@@ -299,8 +220,8 @@ export function WorkspaceView() {
                   <SessionRowItem
                     key={row.sessionId}
                     row={row}
-                    selected={row.sessionId === selectedRow?.sessionId}
-                    onSelect={() => setSelectedId(row.sessionId)}
+                    selected={false}
+                    onSelect={() => openSession(row)}
                     onOpen={() => openSession(row)}
                   />
                 ))}
@@ -378,238 +299,6 @@ function SessionRowItem({
   );
 }
 
-// ─── Inspector ──────────────────────────────────────────────────────────────
-
-type WorkspaceSummary = ReturnType<typeof buildWorkspaceSummary>;
-
-function SessionInspector({
-  row,
-  summary,
-  onOpen,
-  onOpenReport,
-  onRename,
-  onArchive,
-  onUnarchive,
-}: {
-  row: SessionRow | null;
-  summary: WorkspaceSummary | null;
-  onOpen: (row: SessionRow) => void;
-  onOpenReport: (row: SessionRow) => void;
-  onRename: (row: SessionRow, title: string) => void;
-  onArchive: (row: SessionRow) => void;
-  onUnarchive: (row: SessionRow) => void;
-}) {
-  const [renaming, setRenaming] = useState(false);
-  const [draftTitle, setDraftTitle] = useState("");
-
-  // Reset the rename editor whenever the selection changes.
-  useEffect(() => {
-    setRenaming(false);
-    setDraftTitle(row?.title ?? "");
-  }, [row?.sessionId, row?.title]);
-
-  if (!row) {
-    return (
-      <InspectorPanel ariaLabel="세션 상세">
-        <EmptyState
-          compact
-          icon={FolderKanban}
-          title="세션을 선택하세요"
-          description="왼쪽에서 세션을 선택하면 상세 정보와 작업이 표시됩니다."
-        />
-      </InspectorPanel>
-    );
-  }
-
-  const status = describeWorkspaceSessionStatus(row.status);
-  const origin = describeSessionOrigin(row.origin);
-  const canOpen = row.isActive || row.savedAt !== null;
-
-  const commitRename = () => {
-    onRename(row, draftTitle);
-    setRenaming(false);
-  };
-
-  return (
-    <InspectorPanel
-      ariaLabel="세션 상세"
-      title={row.title}
-      subtitle={row.sourceLabel ?? (row.origin === "demo" ? "데모 세션" : "수동 세션")}
-      headerExtras={
-        <MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge>
-      }
-      footer={
-        <div className="workspace-inspector-actions">
-          <Button
-            variant="primary"
-            onClick={() => onOpen(row)}
-            disabled={!canOpen}
-            title={
-              canOpen
-                ? "이 세션으로 전환하고 타임라인을 엽니다."
-                : "아직 저장되지 않은 세션은 열 수 없습니다."
-            }
-          >
-            열기
-          </Button>
-          <Button
-            variant="secondary"
-            icon={FileText}
-            onClick={() => onOpenReport(row)}
-            disabled={!canOpen}
-            title="이 세션으로 전환하고 리포트를 엽니다."
-          >
-            리포트 보기
-          </Button>
-          {!renaming ? (
-            <Button
-              variant="ghost"
-              icon={Pencil}
-              onClick={() => setRenaming(true)}
-              disabled={row.origin === "demo"}
-              title={
-                row.origin === "demo"
-                  ? "데모 세션은 이름을 바꿀 수 없습니다."
-                  : "세션 이름을 바꿉니다."
-              }
-            >
-              이름 변경
-            </Button>
-          ) : null}
-          {row.origin === "demo" ? null : row.isArchived ? (
-            <Button
-              variant="ghost"
-              icon={ArchiveRestore}
-              onClick={() => onUnarchive(row)}
-              title="보관을 해제하고 기본 목록으로 되돌립니다."
-            >
-              보관 해제
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              icon={Archive}
-              onClick={() => onArchive(row)}
-              title="세션을 보관합니다. 삭제하지 않으며 보관 필터에서 다시 볼 수 있습니다."
-            >
-              보관
-            </Button>
-          )}
-        </div>
-      }
-    >
-      {renaming ? (
-        <div className="workspace-rename" role="group" aria-label="세션 이름 변경">
-          <input
-            type="text"
-            value={draftTitle}
-            autoFocus
-            onChange={(event) => setDraftTitle(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") commitRename();
-              if (event.key === "Escape") setRenaming(false);
-            }}
-            aria-label="새 세션 이름"
-          />
-          <Button variant="primary" icon={Check} onClick={commitRename}>
-            저장
-          </Button>
-          <Button variant="ghost" icon={X} onClick={() => setRenaming(false)}>
-            취소
-          </Button>
-        </div>
-      ) : null}
-
-      <dl className="workspace-detail-grid">
-        <div>
-          <dt>프로젝트</dt>
-          <dd>{row.sourceLabel ?? (row.origin === "demo" ? "데모" : "수동 세션")}</dd>
-        </div>
-        <div>
-          <dt>출처</dt>
-          <dd>
-            <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
-          </dd>
-        </div>
-        <div>
-          <dt>분량</dt>
-          <dd>{row.spanLabel ?? "정보 없음"}</dd>
-        </div>
-        <div>
-          <dt>저장</dt>
-          <dd>{row.savedAt ? formatDate(row.savedAt) : "저장 전"}</dd>
-        </div>
-      </dl>
-
-      {row.isArchived ? (
-        <p className="workspace-detail-note">
-          <Archive size={13} aria-hidden="true" />
-          <span>보관된 세션입니다. 삭제되지 않았으며 언제든 다시 열 수 있습니다.</span>
-        </p>
-      ) : null}
-
-      {summary ? (
-        <section className="workspace-counts" aria-label="재구성된 항목">
-          <h4>
-            <Activity size={13} aria-hidden="true" />
-            <span>재구성된 항목</span>
-          </h4>
-          <ul>
-            <li>
-              <span className="workspace-count-icon" aria-hidden="true">
-                <Activity size={14} />
-              </span>
-              <span>이벤트</span>
-              <b>{summary.counts.events}</b>
-            </li>
-            <li>
-              <span className="workspace-count-icon" aria-hidden="true">
-                <Flag size={14} />
-              </span>
-              <span>
-                이슈
-                {summary.counts.issues > 0
-                  ? ` · 해결 ${summary.counts.resolvedIssues}`
-                  : ""}
-              </span>
-              <b>{summary.counts.issues}</b>
-            </li>
-            <li>
-              <span className="workspace-count-icon" aria-hidden="true">
-                <Lightbulb size={14} />
-              </span>
-              <span>결정</span>
-              <b>{summary.counts.decisions}</b>
-            </li>
-            <li>
-              <span className="workspace-count-icon" aria-hidden="true">
-                <ListChecks size={14} />
-              </span>
-              <span>
-                다음 작업
-                {summary.counts.nextActions > 0
-                  ? ` · 완료 ${summary.counts.completedNextActions}`
-                  : ""}
-              </span>
-              <b>{summary.counts.nextActions}</b>
-            </li>
-          </ul>
-          <p className="workspace-counts-note">
-            현재 활성 세션에서 재구성된 항목 수입니다. 세션을 분석하면 갱신됩니다.
-          </p>
-        </section>
-      ) : (
-        <p className="workspace-detail-note">
-          <CalendarClock size={13} aria-hidden="true" />
-          <span>
-            이 세션을 열면 타임라인 · 증거 · 검토 · 리포트에서 재구성된 항목을 볼 수
-            있습니다.
-          </span>
-        </p>
-      )}
-    </InspectorPanel>
-  );
-}
 
 // ─── Segmented control ────────────────────────────────────────────────────────
 
