@@ -16602,7 +16602,6 @@ pre {
   min-height: 52px;
   padding: var(--mori-space-3) var(--mori-space-5);
   border: 1px solid var(--mori-border);
-  border-left: 3px solid transparent;
   border-radius: var(--mori-radius-md);
   background: var(--mori-surface);
   cursor: pointer;
@@ -16626,7 +16625,7 @@ pre {
 }
 
 .workspace-row.is-active {
-  border-left-color: var(--mori-accent);
+  border-color: var(--mori-accent);
 }
 
 .workspace-row.is-archived {
