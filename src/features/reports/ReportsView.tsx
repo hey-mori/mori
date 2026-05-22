@@ -526,9 +526,9 @@ function ReportsAnalysisNotice({
       <NoticeBanner
         tone="info"
         title="아직 가져온 소스가 없습니다"
-        actions={<Button onClick={onGoToEvidence}>증거 허브로 이동</Button>}
+        actions={<Button onClick={onGoToEvidence}>증거 탭으로 이동</Button>}
       >
-        증거 허브에서 소스를 추가하고 Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다.
+        증거 탭에서 소스를 추가하고 Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다.
       </NoticeBanner>
     );
   }

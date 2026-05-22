@@ -59,8 +59,8 @@ import { ReviewSummaryPanel } from "./ReviewSummaryPanel";
 import { formatDateTime } from "../../lib/formatting/time";
 
 const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare }> = [
-  { id: "issues", label: "이슈 가든", icon: KanbanSquare },
-  { id: "decisions", label: "결정 기록", icon: Table2 },
+  { id: "issues", label: "이슈", icon: KanbanSquare },
+  { id: "decisions", label: "결정", icon: Table2 },
   { id: "nextActions", label: "다음 액션", icon: ListChecks },
   { id: "unresolved", label: "미처리", icon: AlertTriangle },
   { id: "suggestions", label: "제안", icon: Sparkles },
@@ -518,10 +518,10 @@ function ReviewAnalysisNotice({
         tone="info"
         title="아직 가져온 소스가 없습니다"
         actions={
-          <Button onClick={onGoToEvidence}>증거 허브로 이동</Button>
+          <Button onClick={onGoToEvidence}>증거 탭으로 이동</Button>
         }
       >
-        증거 허브에서 소스를 추가하고 Quick Pass를 실행하면 이슈 · 결정 후보가 생성됩니다.
+        증거 탭에서 소스를 추가하고 Quick Pass를 실행하면 이슈와 결정이 정리됩니다.
       </NoticeBanner>
     );
   }
@@ -577,7 +577,7 @@ function IssueGardenTab({
         description={
           hasImports
             ? "가져온 소스와 타임라인 이벤트로 이슈 · 결정 · 다음 액션을 추출합니다."
-            : "먼저 증거 허브에서 소스를 가져온 뒤 분석을 실행하세요."
+            : "먼저 증거 탭에서 소스를 가져온 뒤 분석을 실행하세요."
         }
         actions={
           hasImports ? (
@@ -586,7 +586,7 @@ function IssueGardenTab({
             </Button>
           ) : (
             <Button variant="primary" onClick={onGoToEvidence}>
-              증거 허브로 이동
+              증거 탭으로 이동
             </Button>
           )
         }

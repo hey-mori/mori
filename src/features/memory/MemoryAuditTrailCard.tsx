@@ -68,8 +68,8 @@ export function MemoryAuditTrailCard({
       }
       hint={
         <span>
-          Consolidation Review에서 수행한 memory 검토 결정 기록입니다. 모두 로컬에만 저장되며 원본
-          근거 내용은 표시하지 않습니다.
+          통합 검토에서 내린 메모리 결정 기록입니다. 모두 로컬에만 저장되며 원본 근거 내용은
+          표시하지 않습니다.
         </span>
       }
       actions={

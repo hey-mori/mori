@@ -80,7 +80,7 @@ export function CompanionInboxView() {
           actions={
             <>
               <Button variant="primary" onClick={() => setCurrentView("evidence")}>
-                증거 허브에서 가져오기
+                증거에서 가져오기
               </Button>
               <Button variant="secondary" onClick={() => setCurrentView("review")}>
                 검토 화면으로 이동

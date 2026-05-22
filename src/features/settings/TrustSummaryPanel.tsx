@@ -96,7 +96,7 @@ export function TrustSummaryPanel({
       </section>
 
       <section className="settings-trust-section">
-        <SectionHeader title="Mori가 지금 접근하는 것" />
+        <SectionHeader title="사용하는 데이터" />
         <ul className="settings-trust-list tone-active">
           {ACCESS_ACTIVE.map((line) => (
             <li key={line}>
@@ -108,7 +108,7 @@ export function TrustSummaryPanel({
       </section>
 
       <section className="settings-trust-section">
-        <SectionHeader title="Mori가 절대 하지 않는 것" />
+        <SectionHeader title="절대 하지 않는 것" />
         <ul className="settings-trust-list tone-never">
           {ACCESS_NEVER.map((line) => (
             <li key={line}>

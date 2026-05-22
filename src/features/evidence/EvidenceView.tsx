@@ -149,7 +149,7 @@ export function EvidenceView() {
 
   const actionBar = (
     <ActionBar
-      label="증거 허브 상태"
+      label="증거 상태"
       start={
         <Badge tone={importedSources.length ? "purple" : "gray"}>
           {importedSources.length}개 출처

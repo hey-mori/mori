@@ -335,7 +335,7 @@ export function ConnectionsView() {
                     </p>
                     <p>
                       claude.ai 웹 채팅은 Anthropic 서버에 저장되므로 직접 가져올 수 없습니다. 필요하면
-                      증거 허브에서 대화를 직접 붙여넣으세요.
+                      증거 탭에서 대화를 직접 붙여넣으세요.
                     </p>
                   </HelpDisclosure>
                 </>

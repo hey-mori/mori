@@ -296,7 +296,7 @@ function IntegrationDetailView({
       </section>
 
       <section className="evidence-detail-section">
-        <SectionHeader title="Mori가 접근하는 것" />
+        <SectionHeader title="사용하는 데이터" />
         <ul className="evidence-detail-bullets">
           {accessible.map((line) => (
             <li key={line}>{line}</li>
@@ -305,7 +305,7 @@ function IntegrationDetailView({
       </section>
 
       <section className="evidence-detail-section">
-        <SectionHeader title="Mori가 접근하지 않는 것" />
+        <SectionHeader title="사용하지 않는 데이터" />
         <ul className="evidence-detail-bullets muted">
           {inaccessible.map((line) => (
             <li key={line}>{line}</li>
@@ -378,11 +378,11 @@ function describeAccessible(integration: SourceIntegration): string[] {
   }
   const lines: string[] = [];
   lines.push(`사용자가 명시적으로 ${integration.captureMode === "manual" ? "입력 또는 붙여넣기" : "가져오기"}한 데이터`);
-  if (integration.outputRecords.sources) lines.push("정규화된 SourceRef (출처 기록)");
-  if (integration.outputRecords.timelineEvents) lines.push("정규화된 Timeline Event");
-  if (integration.outputRecords.issues) lines.push("Quick Pass 분석을 통한 이슈 후보");
-  if (integration.outputRecords.decisions) lines.push("Quick Pass 분석을 통한 결정 기록");
-  if (integration.outputRecords.relationships) lines.push("이벤트/소스 간 관계");
+  if (integration.outputRecords.sources) lines.push("정리된 출처");
+  if (integration.outputRecords.timelineEvents) lines.push("정리된 타임라인 이벤트");
+  if (integration.outputRecords.issues) lines.push("Quick Pass로 추출한 이슈");
+  if (integration.outputRecords.decisions) lines.push("Quick Pass로 추출한 결정");
+  if (integration.outputRecords.relationships) lines.push("이벤트·출처 간 관계");
   return lines;
 }
 
