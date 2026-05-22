@@ -84,7 +84,11 @@ const DEFAULT_CARD_GAP = 12;
 const LANE_VERTICAL_PADDING = 7;
 /** Lanes with no items render as a slim, de-emphasised band — not a full
  *  content-height row of dead space. */
-const EMPTY_LANE_HEIGHT = 64;
+// Empty lanes collapse to zero height so they vanish from the canvas rather
+// than reserving a dead band. The lane still exists in the lanes[] array
+// (callers that snapshot lane shape stay stable), but it consumes no row in
+// the laid-out timeline.
+const EMPTY_LANE_HEIGHT = 0;
 
 export function computeTimelineLayout(
   items: TimelineDisplayItem[],
