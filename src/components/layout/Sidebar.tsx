@@ -14,6 +14,7 @@ import {
   toSidebarRow,
   type SidebarSessionRow,
 } from "../../lib/sidebar/sessionList";
+import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
 import { getProfileInitials } from "../../lib/profile/localProfile";
 import { moriViewIcon } from "../brand/moriIcons";
@@ -83,7 +84,7 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
 
   const rows = useMemo<SidebarSessionRow[]>(
     () =>
-      summaries
+      mergeDemoSessionSummaries(summaries)
         .filter((summary) => !summary.archivedAt)
         .map(toSidebarRow),
     [summaries],

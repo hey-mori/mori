@@ -41,6 +41,7 @@ import {
   loadHomeMetricPreference,
   saveHomeMetricPreference,
 } from "../../lib/home/homeMetricPreference";
+import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 
 /**
  * Home — the session-centric landing surface (P2).
@@ -87,14 +88,18 @@ export function HomeView() {
   };
 
   const overview = useMemo<HomeOverview>(() => {
-    let storedSessions: ReturnType<typeof loadStoredSessionSummaries>;
+    let realSessions: ReturnType<typeof loadStoredSessionSummaries>;
     try {
-      storedSessions = loadStoredSessionSummaries();
+      realSessions = loadStoredSessionSummaries();
     } catch {
       // The landing must never break the shell — fail closed to empty.
-      storedSessions = [];
+      realSessions = [];
     }
-    const realSessionCount = storedSessions.length;
+    const realSessionCount = realSessions.length;
+    // Fall through to the bundled demo summaries when the user has not
+    // captured any real work yet, so the dashboard reads as a working install
+    // (heatmap, recent rows, usage) instead of an honest-but-bare empty state.
+    const storedSessions = mergeDemoSessionSummaries(realSessions);
     const metrics = gatherSessionMetrics({
       storedSessions,
       repository,
