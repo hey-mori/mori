@@ -1,7 +1,6 @@
 import {
   Bot,
   HardDrive,
-  Layers,
   Lock,
   Palette,
   ShieldCheck,
@@ -34,7 +33,6 @@ import { PrivacyDefaultsCard } from "./PrivacyDefaultsCard";
 import { PrivacyGuaranteesCard } from "./PrivacyGuaranteesCard";
 import { StorageCard } from "./StorageCard";
 import { RepositoriesCard } from "./RepositoriesCard";
-import { PlannedConnectorsCard } from "./PlannedConnectorsCard";
 import { ThemeCard } from "./ThemeCard";
 import { TrustSummaryPanel } from "./TrustSummaryPanel";
 import { DemoModeCard } from "./DemoModeCard";
@@ -44,7 +42,6 @@ const TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "privacy", label: "개인정보", icon: Lock },
   { id: "storage", label: "저장소", icon: HardDrive },
   { id: "repositories", label: "리포지토리", icon: ShieldCheck },
-  { id: "connectors", label: "커넥터", icon: Layers },
   { id: "appearance", label: "화면", icon: Palette },
 ];
 
@@ -262,7 +259,6 @@ export function SettingsView() {
               onRemove={(id) => removeRepository(id)}
             />
           ) : null}
-          {activeTab === "connectors" ? <PlannedConnectorsCard /> : null}
           {activeTab === "appearance" ? <ThemeCard /> : null}
           {activeTab === "storage" ? (
             <SqliteLoadCard

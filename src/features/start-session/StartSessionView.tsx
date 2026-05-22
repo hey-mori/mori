@@ -2,7 +2,6 @@ import { ArrowRight, Bot, Check, Cloud, Database, FileCode2, FilePlus2, Lock, Pl
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -31,19 +30,19 @@ import {
   type StartSessionEngineOption,
 } from "../../lib/session/startSessionEngineOptions";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import {
-  getImplementedCaptureSurfaces,
-  getPlannedCaptureSurfaces,
-} from "../../lib/connectors/captureSurfaces";
 import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
 import type { LlmProvider, RecordingMode, SourceOption } from "../../domain/types";
 import { useMoriSessionStore, selectSessionMode } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
 const availableSources = sourceOptions.filter((source) => source.status === "available");
-const plannedSources = sourceOptions.filter((source) => source.status === "planned");
 
-const ENGINE_OPTIONS = buildStartSessionEngineOptions();
+// Only selectable engines are offered. Disabled / planned providers are not
+// shown — a muted card the user can't pick is clutter, and the create flow
+// coerces any stale draft provider back to a selectable one anyway.
+const ENGINE_OPTIONS = buildStartSessionEngineOptions().filter(
+  (engine) => engine.selectable,
+);
 
 const ENGINE_ICONS: Record<LlmProvider, LucideIcon> = {
   ollama: Bot,
@@ -279,26 +278,12 @@ export function StartSessionView() {
             ))}
           </div>
         </div>
-        {plannedSources.length > 0 ? (
-          <div className="source-group">
-            <p className="source-group-label">
-              예정된 통합
-              <span className="pill tone-gray">예정</span>
-            </p>
-            <div className="source-grid">
-              {plannedSources.map((source) => (
-                <SourceCard key={source.id} source={source} selected={false} />
-              ))}
-            </div>
-          </div>
-        ) : null}
-        <CaptureSurfaceHelp />
       </SetupBlock>
 
       <SetupBlock
         number="3"
         title="로컬 AI 엔진"
-        note="Quick Pass 분석에 쓸 로컬 엔진입니다. Planned 제공자는 설정과 같은 기준으로 비활성화됩니다."
+        note="Quick Pass 분석에 쓸 로컬 엔진입니다."
       >
         <div className="engine-grid">
           {ENGINE_OPTIONS.map((engine) => (
@@ -315,29 +300,6 @@ export function StartSessionView() {
   );
 }
 
-/**
- * Honest disclosure of which capture surfaces work today vs. which are still
- * planned. Reads from the capture surface matrix so the copy can never drift
- * out of sync with the connector docs. Tucked behind a HelpDisclosure so the
- * first screen stays calm.
- */
-function CaptureSurfaceHelp() {
-  const implementedCount = getImplementedCaptureSurfaces().length;
-  const plannedCount = getPlannedCaptureSurfaces().length;
-  return (
-    <HelpDisclosure label="캡처 경로는 어떻게 동작하나요" ariaLabel="캡처 경로 설명">
-      <p>
-        지금 사용할 수 있는 캡처 경로는 {implementedCount}개입니다. 모든 가져오기는 사용자가
-        직접 붙여넣거나 파일을 선택할 때만 일어납니다.
-      </p>
-      <p>
-        나머지 {plannedCount}개 — Claude Code hook, Codex CLI wrapper, 터미널 / IDE / 브라우저
-        경로 — 는 문서·템플릿 단계이거나 예정 상태이며, Mori는 이들을 임의로 수집하지 않습니다.
-      </p>
-    </HelpDisclosure>
-  );
-}
-
 function SourceCard({
   source,
   selected,
@@ -348,27 +310,19 @@ function SourceCard({
   onToggle?: () => void;
 }) {
   const Icon = source.icon;
-  const planned = source.status === "planned";
   return (
     <button
-      className={`source-card ${selected ? "selected" : ""} ${planned ? "disabled" : ""}`}
+      className={`source-card ${selected ? "selected" : ""}`}
       type="button"
-      disabled={planned}
-      aria-pressed={planned ? undefined : selected}
-      onClick={planned ? undefined : onToggle}
+      aria-pressed={selected}
+      onClick={onToggle}
     >
       <Icon size={28} />
       <div>
         <strong>{source.name}</strong>
         <span><i />{source.detail}</span>
       </div>
-      {planned ? (
-        <span className="pill tone-gray">Planned</span>
-      ) : selected ? (
-        <Check size={17} />
-      ) : (
-        <span className="checkbox" />
-      )}
+      {selected ? <Check size={17} /> : <span className="checkbox" />}
     </button>
   );
 }
@@ -398,27 +352,19 @@ function EngineCard({
   onSelect: () => void;
 }) {
   const Icon = ENGINE_ICONS[engine.provider];
-  const muted = !engine.selectable;
   return (
     <button
-      className={`engine-card ${selected ? "selected" : ""} ${muted ? "muted-card" : ""}`}
+      className={`engine-card ${selected ? "selected" : ""}`}
       type="button"
-      disabled={muted}
-      aria-pressed={muted ? undefined : selected}
-      onClick={muted ? undefined : onSelect}
-      title={muted ? engine.disabledReason : undefined}
+      aria-pressed={selected}
+      onClick={onSelect}
     >
       <Icon size={26} />
       <div>
         <strong>{engine.label}</strong>
         <small>{engine.detail}</small>
-        {muted && engine.disabledReason ? (
-          <small className="engine-card-reason">{engine.disabledReason}</small>
-        ) : null}
       </div>
-      <Badge tone={muted ? "orange" : "green"} title={engine.disabledReason}>
-        {muted ? engine.statusLabel : "사용 가능"}
-      </Badge>
+      <Badge tone="green">사용 가능</Badge>
     </button>
   );
 }

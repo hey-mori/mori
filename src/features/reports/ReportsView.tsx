@@ -1,4 +1,4 @@
-import { Archive, Calendar, FileText, ShieldCheck, Sparkles } from "lucide-react";
+import { Archive, Calendar, FileText, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
@@ -6,13 +6,6 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriFeatureStatusBadge } from "../../components/ui/MoriFeatureStatusBadge";
-import { MoriSection } from "../../components/ui/MoriSection";
-import { MoriStatCard } from "../../components/ui/MoriStatCard";
-import {
-  countFeaturesByStatus,
-  type FeatureId,
-} from "../../app/featureStatus";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import {
   buildClientSafeMoriPackage,
@@ -459,8 +452,6 @@ export function ReportsView() {
               exportPlan={exportPlan}
             />
           </div>
-
-          <ReportsCapabilityStrip />
       </div>
     </PageShell>
   );
@@ -759,64 +750,6 @@ function PackageOptionSummary({
         </div>
       </dl>
     </article>
-  );
-}
-
-/**
- * Honesty strip rendered at the bottom of the Reports surface. Surfaces the
- * implemented / planned export formats so the user never has to guess what
- * the page can actually produce. Counts are sourced from the feature
- * registry — drift is impossible.
- */
-function ReportsCapabilityStrip() {
-  const counts = countFeaturesByStatus();
-  const exportFeatures: FeatureId[] = [
-    "reports.export.markdown",
-    "reports.export.pdf",
-    "reports.export.html",
-    "reports.export.moriPackage",
-    "rollup.moriPackageImport",
-  ];
-  return (
-    <MoriSection
-      subtle
-      className="reports-capability-strip"
-      title={
-        <>
-          <ShieldCheck size={14} aria-hidden="true" /> 보고서 기능 현황
-        </>
-      }
-      hint="현재 보고서 화면이 실제로 할 수 있는 것 / 예정으로 남아 있는 것."
-      ariaLabel="보고서 기능 현황"
-    >
-      <div className="reports-capability-grid">
-        <MoriStatCard
-          label="구현됨"
-          value={counts.implemented}
-          hint="앱 전체 기준"
-          tone="success"
-        />
-        <MoriStatCard
-          label="부분 구현"
-          value={counts.partial}
-          hint="앱 전체 기준"
-          tone="info"
-        />
-        <MoriStatCard
-          label="예정"
-          value={counts.planned}
-          hint="앱 전체 기준"
-          tone="warning"
-        />
-      </div>
-      <ul className="reports-capability-feature-list">
-        {exportFeatures.map((feature) => (
-          <li key={feature}>
-            <MoriFeatureStatusBadge feature={feature} />
-          </li>
-        ))}
-      </ul>
-    </MoriSection>
   );
 }
 

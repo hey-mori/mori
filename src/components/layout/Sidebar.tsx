@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, FolderGit2, History } from "lucide-react";
+import { ChevronDown, FolderGit2, History } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/Button";
 import { MoriLogo } from "../brand/MoriLogo";
@@ -16,7 +16,6 @@ import { useMoriProfileStore } from "../../app/profileStore";
 import { useMoriAppStore } from "../../app/store";
 import { getProfileInitials } from "../../lib/profile/localProfile";
 import { buildWorkContext } from "../../lib/session/workContext";
-import { getFeatureControlProps } from "../../app/featureStatus";
 import {
   discoverClaudeCodeSessions,
   isClaudeBridgeAvailable,
@@ -125,7 +124,6 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
       <SidebarSessionCard />
       <SidebarSessionSwitcher onNavigate={onNavigate} />
       <SidebarProfile currentView={currentView} onNavigate={onNavigate} />
-      <SidebarCollapseButton />
     </aside>
   );
 }
@@ -388,21 +386,6 @@ function SidebarProfile({
         <small>로컬 모드</small>
       </div>
       <span className="status-dot" />
-    </button>
-  );
-}
-
-function SidebarCollapseButton() {
-  const collapseFeature = getFeatureControlProps("appShell.sidebarCollapse");
-  return (
-    <button
-      className="collapse"
-      type="button"
-      aria-label="사이드바 접기"
-      title={collapseFeature.title}
-      disabled={!collapseFeature.enabled}
-    >
-      <ChevronLeft size={18} />
     </button>
   );
 }

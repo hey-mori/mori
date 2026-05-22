@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Plus, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { FileText, Plus, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -32,7 +32,6 @@ import type {
 import {
   getHubAvailableIntegrations,
   getHubImportKind,
-  getHubPlannedIntegrations,
   resolveImportLaunch,
   type HubImportKind,
 } from "../../lib/sources/integrationGroups";
@@ -87,7 +86,6 @@ export function EvidenceView() {
   const clearLastApplied = useMoriReviewStore((state) => state.clearLastApplied);
 
   const availableIntegrations = useMemo(() => getHubAvailableIntegrations(), []);
-  const plannedIntegrations = useMemo(() => getHubPlannedIntegrations(), []);
   const integrationLookup = useMemo(() => {
     const map = new Map<string, (typeof availableIntegrations)[number]>();
     for (const integration of Object.values(SOURCE_REGISTRY)) {
@@ -249,35 +247,6 @@ export function EvidenceView() {
           })}
         </div>
       </section>
-
-      <details className="evidence-section evidence-planned-disclosure">
-        <summary className="evidence-planned-summary">
-          <div>
-            <h2>계획된 커넥터</h2>
-          </div>
-          <span className="evidence-planned-summary-actions">
-            <Badge tone="gray">{plannedIntegrations.length}개 계획됨</Badge>
-            <ChevronDown className="evidence-planned-chevron" size={14} aria-hidden="true" />
-          </span>
-        </summary>
-        <div className="evidence-card-grid evidence-card-grid-dense">
-          {plannedIntegrations.map((integration) => {
-            const selected =
-              selection.kind === "integration" && selection.integrationId === integration.id;
-            return (
-              <IntegrationCard
-                key={integration.id}
-                integration={integration}
-                selected={selected}
-                importKind={null}
-                onInspect={() =>
-                  setSelection({ kind: "integration", integrationId: integration.id })
-                }
-              />
-            );
-          })}
-        </div>
-      </details>
 
       <section className="evidence-section">
         <header className="evidence-section-header">

@@ -479,16 +479,6 @@ button {
   background: var(--green);
 }
 
-.collapse {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 38px;
-  margin-top: 10px;
-  background: transparent;
-  border: 0;
-}
-
 .workspace {
   min-width: 0;
   background:
@@ -3223,10 +3213,6 @@ input,
   background: linear-gradient(180deg, #fff, #faf8ff);
 }
 
-.source-card.disabled {
-  opacity: 0.58;
-}
-
 .source-card div,
 .engine-card div {
   display: grid;
@@ -3248,11 +3234,6 @@ input,
   background: var(--green);
 }
 
-/* A planned source is not live — its status dot must not look green. */
-.source-card.disabled span i {
-  background: var(--muted-2);
-}
-
 .checkbox {
   width: 18px;
   height: 18px;
@@ -3260,7 +3241,7 @@ input,
   border-radius: 4px;
 }
 
-/* Start Session source groups — available imports vs planned integrations. */
+/* Start Session source group — the available imports the user can select. */
 .source-group {
   display: grid;
   gap: 10px;
@@ -3368,15 +3349,6 @@ input,
   min-height: 70px;
   padding: 14px;
   text-align: left;
-}
-
-.engine-card-reason {
-  color: #8a5a00;
-  line-height: 1.35;
-}
-
-.muted-card {
-  opacity: 0.72;
 }
 
 .setup-actions {
@@ -5510,64 +5482,10 @@ pre {
   max-width: 600px;
 }
 
-.evidence-planned-disclosure {
-  gap: 0;
-}
-
-.evidence-planned-disclosure[open] {
-  gap: 12px;
-}
-
-.evidence-planned-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  list-style: none;
-  cursor: pointer;
-}
-
-.evidence-planned-summary::-webkit-details-marker {
-  display: none;
-}
-
-.evidence-planned-summary h2 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-}
-
-.evidence-planned-summary p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-  max-width: 600px;
-}
-
-.evidence-planned-summary-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.evidence-planned-chevron {
-  color: var(--muted-2);
-  transition: transform 140ms ease;
-}
-
-.evidence-planned-disclosure[open] .evidence-planned-chevron {
-  transform: rotate(180deg);
-}
-
 .evidence-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
-}
-
-.evidence-card-grid-dense {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
 .integration-card {
@@ -13522,135 +13440,6 @@ pre {
   line-height: 1.55;
 }
 
-/* Planned connectors */
-
-.settings-connector-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.settings-connector-card {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fff, #fafbfd);
-}
-
-.settings-connector-card header {
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.settings-connector-icon {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--gray-50);
-  color: var(--muted);
-}
-
-.settings-connector-card header > div {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.settings-connector-card strong {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.settings-connector-card header span {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.settings-connector-card dl {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px 10px;
-  margin: 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--panel-soft);
-}
-
-.settings-connector-card dl > div {
-  display: grid;
-  gap: 1px;
-}
-
-.settings-connector-card dt {
-  margin: 0;
-  color: var(--muted-2);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.settings-connector-card dd {
-  margin: 0;
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.settings-connector-card section {
-  display: grid;
-  gap: 4px;
-}
-
-.settings-connector-card section h4 {
-  margin: 0;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.settings-connector-card section ul {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  padding-left: 16px;
-  font-size: 11px;
-  color: var(--text);
-  line-height: 1.5;
-}
-
-.settings-connector-card section ul.muted li {
-  color: var(--muted);
-}
-
-.settings-connector-privacy {
-  margin: 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--purple-50);
-  color: #4734bb;
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.settings-connector-card footer {
-  display: inline-flex;
-  gap: 6px;
-  justify-content: flex-end;
-}
-
 /* Trust summary panel */
 
 .settings-trust {
@@ -15101,8 +14890,7 @@ pre {
   .nav-item b,
   .session-card,
   .profile > div,
-  .profile .status-dot,
-  .collapse {
+  .profile .status-dot {
     display: none;
   }
   .nav-item {
@@ -15200,7 +14988,6 @@ pre {
   .session-summary-metrics,
   .memory-hero-stats,
   .settings-sqlite-meta,
-  .settings-connector-card dl,
   .report-format-list,
   .format-grid,
   .settings-grid {
@@ -15219,7 +15006,6 @@ pre {
   .session-summary-metrics,
   .memory-hero-stats,
   .settings-sqlite-meta,
-  .settings-connector-card dl,
   .report-format-list,
   .format-grid,
   .settings-grid {
