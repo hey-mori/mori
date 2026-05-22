@@ -19,6 +19,7 @@ import {
   describeSessionCardAction,
   deriveSessionTiming,
 } from "../../lib/session/sessionTiming";
+import { buildWorkContext } from "../../lib/session/workContext";
 import { getFeatureControlProps } from "../../app/featureStatus";
 import {
   discoverClaudeCodeSessions,
@@ -133,71 +134,90 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
   );
 }
 
+/**
+ * The lower-left work-context widget. This is deliberately NOT an "ongoing
+ * recording" card: Mori reconstructs work from imported evidence, so the
+ * widget shows *what the user is currently working with* (project + session +
+ * origin) with an honest time span — never a running stopwatch unless a
+ * genuine live capture stream exists (none does yet). See `buildWorkContext`.
+ */
 function SidebarSessionCard() {
   const draft = useMoriSessionStore((state) => state.draft);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
   const endSession = useMoriSessionStore((state) => state.endSession);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
-  const initialTiming = deriveSessionTiming({
+  const deriveInput = {
     draft,
     demoSession: moriMockSession.session,
     analysisStatus,
-  });
-  const [timing, setTiming] = useState(initialTiming);
+  };
+  const [context, setContext] = useState(() => buildWorkContext(deriveInput));
   useEffect(() => {
-    const snapshot = deriveSessionTiming({
-      draft,
-      demoSession: moriMockSession.session,
-      analysisStatus,
-    });
-    setTiming(snapshot);
+    const snapshot = buildWorkContext(deriveInput);
+    setContext(snapshot);
+    // Only a genuine live capture ticks. Imported / manual / demo contexts
+    // are static, so we never spin a per-second interval for them.
     if (!snapshot.isLive) return;
     const interval = window.setInterval(() => {
-      setTiming(
-        deriveSessionTiming({
-          draft,
-          demoSession: moriMockSession.session,
-          analysisStatus,
-        }),
-      );
+      setContext(buildWorkContext(deriveInput));
     }, 1000);
     return () => window.clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, analysisStatus]);
 
-  const title = draft?.session.title ?? moriMockSession.session.title;
-  const startHint = timing.startTimeLabel
-    ? `시작 ${timing.startTimeLabel}`
-    : "시작 기록 없음";
+  const timing = deriveSessionTiming(deriveInput);
   const endSessionFeature = getFeatureControlProps("appShell.endSession");
   const action = describeSessionCardAction(timing.state);
 
   return (
-    <div className="session-card" role="region" aria-label="Current session">
-      <span className="muted">진행 중인 세션</span>
-      <strong>{title}</strong>
-      <small>{startHint} · {timing.stateLabel}</small>
-      <time className={timing.isLive ? "is-live" : ""} aria-live={timing.isLive ? "polite" : "off"}>
-        {timing.durationLabel}
-      </time>
-      {action.kind === "endSession" ? (
+    <div className="session-card" role="region" aria-label="현재 작업 컨텍스트">
+      <span className="session-card-kicker">
+        <span className={`session-card-dot is-${context.tone}`} aria-hidden="true" />
+        작업 컨텍스트
+      </span>
+      {context.projectLabel ? (
+        <span className="session-card-project" title={context.projectLabel}>
+          {context.projectLabel}
+        </span>
+      ) : null}
+      <strong title={context.sessionTitle}>{context.sessionTitle}</strong>
+      <span className="session-card-meta">
+        <span className={`session-card-origin is-${context.tone}`}>
+          {context.originLabel}
+        </span>
+        {context.timeDescriptor ? (
+          <time
+            className={context.isLive ? "is-live" : ""}
+            aria-live={context.isLive ? "polite" : "off"}
+          >
+            {context.timeDescriptor}
+            {context.timeCaption ? (
+              <small className="session-card-time-caption"> {context.timeCaption}</small>
+            ) : null}
+          </time>
+        ) : null}
+      </span>
+      {action.kind === "endSession" && context.origin === "manual" ? (
         <Button
+          variant="secondary"
           disabled={!endSessionFeature.enabled}
           onClick={endSessionFeature.enabled ? endSession : undefined}
           title={
             endSessionFeature.enabled
-              ? "활성 세션을 종료하고 완료 상태로 표시합니다."
+              ? "이 작업 세션을 정리하고 완료로 표시합니다."
               : endSessionFeature.title
           }
         >
-          {action.label}
+          세션 정리
         </Button>
       ) : (
         <Button
+          variant="secondary"
           onClick={() => setCurrentView("reports")}
           title="이 세션의 리포트를 엽니다."
         >
-          {action.label}
+          리포트 보기
         </Button>
       )}
     </div>

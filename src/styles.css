@@ -175,22 +175,91 @@ button {
 
 .session-card {
   display: grid;
-  gap: 9px;
+  gap: 6px;
   margin-top: auto;
-  padding: 18px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--panel);
+}
+
+.session-card-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted-2, var(--muted));
+}
+
+.session-card-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: none;
+}
+
+.session-card-dot.is-green { background: var(--green-500, #22c55e); }
+.session-card-dot.is-orange { background: var(--orange-500, #f59e0b); }
+.session-card-dot.is-purple { background: var(--purple-500, #8b5cf6); }
+.session-card-dot.is-gray { background: var(--muted); }
+
+.session-card-project {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .session-card strong {
   font-size: var(--mori-font-size-md);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
+.session-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.session-card-origin {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--panel-soft);
+}
+
+.session-card-origin.is-green { color: var(--green-700, #15803d); border-color: var(--green-200, #bbf7d0); background: var(--green-50, #f0fdf4); }
+.session-card-origin.is-orange { color: var(--orange-700, #b45309); border-color: var(--orange-200, #fde68a); background: var(--orange-50, #fffbeb); }
+.session-card-origin.is-purple { color: var(--purple-700, #6d28d9); border-color: var(--purple-200, #ddd6fe); background: var(--purple-50, #f5f3ff); }
+
 .session-card time {
-  margin: 8px 0;
-  font-size: var(--mori-font-size-3xl);
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.session-card-time-caption {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .muted,
