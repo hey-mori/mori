@@ -9,47 +9,39 @@ import {
 } from "./navGroups";
 
 describe("NAV_GROUPS entry model", () => {
-  it("leads with Connections as the import front door, not a standalone start action", () => {
-    expect(navEntryKey()).toBe("connections");
-    // The very first group must not be a lone `start` item the way the old
-    // nav put "세션 시작" at the top.
-    expect(NAV_GROUPS[0]?.items[0]?.key).not.toBe("start");
+  it("leads with 홈 (home) as the session-centric landing surface", () => {
+    expect(navEntryKey()).toBe("home");
+    expect(NAV_GROUPS[0]?.items[0]?.key).toBe("home");
   });
 
-  it("keeps the start view reachable as a demoted secondary path", () => {
-    const keys = navKeys();
-    expect(keys).toContain("start");
-    // It is not the entry, and it lives in the 프로젝트 group beside Workspace.
-    expect(keys[0]).not.toBe("start");
-    expect(navGroupLabelForKey("start")).toBe("프로젝트");
-  });
-
-  it("relabels the start action away from recording / 세션 시작 framing", () => {
-    const startItem = NAV_GROUPS.flatMap((group) => group.items).find(
-      (item) => item.key === "start",
-    );
-    expect(startItem?.label).toBe("새 세션");
-  });
-
-  it("orders the work group as import → review → work → synthesise", () => {
-    const workGroup = NAV_GROUPS.find((group) => group.label === "수집 · 작업");
-    expect(workGroup?.items.map((item) => item.key)).toEqual([
-      "connections",
-      "timeline",
-      "evidence",
-      "review",
+  it("exposes exactly the five primary destinations", () => {
+    expect(navKeys()).toEqual([
+      "home",
+      "workspace",
+      "memory",
       "reports",
+      "settings",
     ]);
   });
 
-  it("places Workspace first in the project group as the session hub", () => {
-    const projectGroup = NAV_GROUPS.find((group) => group.label === "프로젝트");
-    expect(projectGroup?.items[0]?.key).toBe("workspace");
+  it("reuses the workspace route for the 세션 label", () => {
+    const sessionItem = NAV_GROUPS.flatMap((group) => group.items).find(
+      (item) => item.key === "workspace",
+    );
+    expect(sessionItem?.label).toBe("세션");
   });
 
-  it("keeps settings as the lone trailing unlabelled group", () => {
+  it("drops the narrower working surfaces from the standing nav", () => {
+    const keys = navKeys();
+    // These remain routable ViewKeys, just reached *through* the primary
+    // destinations rather than as standing nav entries.
+    for (const offNav of ["connections", "timeline", "evidence", "review", "start", "companion"]) {
+      expect(keys).not.toContain(offNav);
+    }
+  });
+
+  it("keeps settings as the lone trailing group", () => {
     const last = NAV_GROUPS[NAV_GROUPS.length - 1];
-    expect(last?.label).toBeUndefined();
     expect(last?.items.map((item) => item.key)).toEqual(["settings"]);
   });
 
@@ -62,6 +54,12 @@ describe("NAV_GROUPS entry model", () => {
   it("has no duplicate keys across groups", () => {
     const keys = navKeys();
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("navGroupLabelForKey resolves a key's group label", () => {
+    // Primary destinations now live in unlabelled groups, so the helper
+    // returns undefined — it must not throw for a present key.
+    expect(navGroupLabelForKey("home")).toBeUndefined();
   });
 
   it("navEntryKey throws on an empty structure", () => {

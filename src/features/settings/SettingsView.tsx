@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -130,11 +129,10 @@ export function SettingsView() {
   return (
     <PageShell
       className="settings-page"
-      header={
-        <PageHeader
-          title="설정"
-          subtitle="Mori의 로컬-퍼스트 동작을 한곳에서 관리합니다. 개인정보 · 로컬 AI · 저장소 · 리포지토리, 그리고 아직 비활성화된 커넥터까지 정직하게 보여줍니다."
-          right={
+      actionBar={
+        <ActionBar
+          label="설정 섹션"
+          end={
             <div className="settings-page-actions">
               <Badge tone={sessionMode === "demo" ? "gray" : "green"}>
                 {sessionMode === "demo" ? "데모 세션" : "실제 세션"}
@@ -142,11 +140,6 @@ export function SettingsView() {
               <Badge tone="purple">{mode === "tauri-desktop" ? "Tauri desktop" : "Browser"}</Badge>
             </div>
           }
-        />
-      }
-      actionBar={
-        <ActionBar
-          label="설정 섹션"
           start={
             <nav
               className="settings-tabs"

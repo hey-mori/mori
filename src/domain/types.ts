@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 
 export type ViewKey =
+  | "home"
   | "start"
   | "timeline"
   | "flow"

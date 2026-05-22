@@ -5,6 +5,7 @@ import { useMoriSessionStore } from "./sessionStore";
 import { useMoriRepositoryStore } from "./repositoryStore";
 import { useMoriProfileStore } from "./profileStore";
 import { useMoriThemeStore } from "./themeStore";
+import { HomeView } from "../features/home/HomeView";
 import { StartSessionView } from "../features/start-session/StartSessionView";
 import { TimelineView } from "../features/timeline/TimelineView";
 import { ReviewView } from "../features/review/ReviewView";
@@ -49,6 +50,7 @@ export default function App() {
 
   return (
     <AppShell>
+      {currentView === "home" ? <HomeView /> : null}
       {currentView === "start" ? <StartSessionView /> : null}
       {currentView === "timeline" ? <TimelineView mode="timeline" /> : null}
       {currentView === "flow" ? <TimelineView mode="flow" /> : null}

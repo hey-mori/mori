@@ -6,7 +6,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -166,27 +165,22 @@ export function StartSessionView() {
   return (
     <PageShell
       className="start-session-page"
-      header={
-        <PageHeader
-          title="새 작업 세션"
-          subtitle="가져온 증거가 모일 빈 작업 세션을 만듭니다. 대부분의 세션은 연결에서 대화를 가져오며 자동으로 만들어집니다."
-          right={
-            <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
-              연결에서 가져오기
-            </Button>
-          }
-        />
-      }
       actionBar={
         <ActionBar
           label="세션 생성"
           start={
-            <Badge tone={hasActiveSession ? "green" : "gray"}>
-              {hasActiveSession ? "활성 세션 있음" : "활성 세션 없음"}
-            </Badge>
+            <>
+              <span className="action-bar-context">새 작업 세션</span>
+              <Badge tone={hasActiveSession ? "green" : "gray"}>
+                {hasActiveSession ? "활성 세션 있음" : "활성 세션 없음"}
+              </Badge>
+            </>
           }
           end={
             <>
+              <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
+                연결에서 가져오기
+              </Button>
               {hasActiveSession ? (
                 <Button variant="secondary" icon={ArrowRight} onClick={handleContinueSession}>
                   현재 세션 계속

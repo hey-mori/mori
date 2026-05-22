@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
@@ -385,12 +384,6 @@ export function MemoryView() {
   return (
     <PageShell
       className="memory-page"
-      header={
-        <PageHeader
-          title="프로젝트 메모리"
-          subtitle="누적된 결정 · 이슈 · 근거 · 리포트를 모아 다음 세션 컨텍스트로 이어줍니다."
-        />
-      }
       actionBar={
         <ActionBar
           label="메모리 데이터 범위"

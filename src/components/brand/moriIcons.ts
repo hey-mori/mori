@@ -11,6 +11,7 @@ import {
   GanttChartSquare,
   GitBranch,
   HardDrive,
+  House,
   Layers,
   Lightbulb,
   Link2,
@@ -37,6 +38,7 @@ import type { ViewKey } from "../../domain/types";
 
 /** Icon for each navigable product surface. */
 export const moriViewIcon = {
+  home: House, // the work-memory landing surface
   start: Play, // begin a work session
   timeline: GanttChartSquare, // chronological session events
   flow: Waypoints, // flow focus / trace path between events

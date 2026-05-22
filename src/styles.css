@@ -3710,6 +3710,15 @@ hr {
   padding-right: var(--page-shell-inset);
 }
 
+/* Headerless surfaces: the sidebar names the destination, so there is no
+   duplicate title band. The action bar becomes the thin pinned top band and
+   carries a touch more vertical breathing room since nothing sits above it. */
+.page-shell.is-headerless .page-shell-top .action-bar {
+  min-height: 56px;
+  padding-top: var(--mori-space-5);
+  padding-bottom: var(--mori-space-5);
+}
+
 /* ── PageHeader ─────────────────────────────────────────────────────────── */
 
 .page-header-titles {
@@ -3783,6 +3792,152 @@ hr {
   display: inline-flex;
   align-items: center;
   gap: var(--mori-space-3);
+  flex-shrink: 0;
+}
+
+/* In-bar context label for off-nav surfaces (연결 · 증거 허브 · Mori 노트 …).
+   The sidebar names the five primary destinations; surfaces reached *through*
+   them carry this quiet label instead of a duplicate page-title band. */
+.action-bar-context {
+  font-size: var(--mori-font-size-md);
+  font-weight: 650;
+  color: var(--mori-text);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* ── Home ───────────────────────────────────────────────────────────────── */
+
+/* The session-centric landing surface. Deliberately calm: a greeting in the
+   thin action band, a one-line intro, and the recent-session list. Richer
+   dashboard content lands in a later step. */
+.home-greeting {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-4);
+  min-width: 0;
+}
+
+.home-greeting strong {
+  font-size: var(--mori-font-size-lg);
+  font-weight: 650;
+  color: var(--mori-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-intro {
+  margin: 0;
+}
+
+.home-intro-lead {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--mori-text-muted);
+  font-size: var(--mori-font-size-md);
+  line-height: var(--mori-line-relaxed);
+}
+
+.home-section {
+  display: grid;
+  gap: var(--mori-space-5);
+}
+
+.home-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mori-space-4);
+}
+
+.home-section-head h2 {
+  margin: 0;
+  font-size: var(--mori-font-size-lg);
+  font-weight: 650;
+  color: var(--mori-text);
+}
+
+.home-section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--mori-text-muted);
+  font-size: var(--mori-font-size-sm);
+}
+
+.home-section-link:hover {
+  color: var(--purple);
+}
+
+.home-session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--mori-space-3);
+}
+
+.home-session-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-5);
+  width: 100%;
+  padding: var(--mori-space-5) var(--mori-space-6);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface);
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.home-session-row:hover {
+  border-color: var(--line-strong);
+  background: var(--panel-soft);
+}
+
+.home-session-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.home-session-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-session-title {
+  font-size: var(--mori-font-size-md);
+  font-weight: 600;
+  color: var(--mori-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-session-meta {
+  font-size: var(--mori-font-size-xs);
+  color: var(--mori-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-session-time {
+  font-size: var(--mori-font-size-xs);
+  color: var(--muted-2);
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -14349,8 +14504,8 @@ pre {
   }
   /* Step the two display tiers down a notch on small viewports. */
   :root {
-    --mori-font-size-2xl: 18px;
-    --mori-font-size-3xl: 20px;
+    --mori-font-size-2xl: 16px;
+    --mori-font-size-3xl: 17.5px;
   }
 }
 

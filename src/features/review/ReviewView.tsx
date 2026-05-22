@@ -18,7 +18,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
@@ -183,35 +182,6 @@ export function ReviewView() {
   return (
     <PageShell
       className="review-page"
-      header={
-        <PageHeader
-          title="검토"
-          subtitle="Mori가 증거에서 추출한 이슈 · 결정 · 다음 액션을 검토합니다. 모든 항목은 적용된 소스로 추적됩니다."
-          right={
-            !isDemo ? (
-              <Button
-                variant="primary"
-                icon={Sparkles}
-                onClick={() => runQuickPass()}
-                disabled={!canRunQuickPass}
-                title={
-                  canRunQuickPass
-                    ? "Quick Pass 실행"
-                    : imports.length === 0
-                      ? "먼저 소스를 가져오세요."
-                      : "이미 실행 중입니다."
-                }
-              >
-                {analysisStatus === "running"
-                  ? "분석 중..."
-                  : hasAnalysis
-                    ? "Quick Pass 재실행"
-                    : "Quick Pass 실행"}
-              </Button>
-            ) : undefined
-          }
-        />
-      }
       actionBar={
         <ActionBar
           label="검토 탭"
@@ -260,11 +230,34 @@ export function ReviewView() {
             </nav>
           }
           end={
-            <div className="review-action-counts">
-              <Badge tone="red">이슈 {summary.issueCount}</Badge>
-              <Badge tone="blue">결정 {summary.decisionCount}</Badge>
-              <Badge tone="green">다음 {summary.nextActionCount}</Badge>
-            </div>
+            <>
+              <div className="review-action-counts">
+                <Badge tone="red">이슈 {summary.issueCount}</Badge>
+                <Badge tone="blue">결정 {summary.decisionCount}</Badge>
+                <Badge tone="green">다음 {summary.nextActionCount}</Badge>
+              </div>
+              {!isDemo ? (
+                <Button
+                  variant="primary"
+                  icon={Sparkles}
+                  onClick={() => runQuickPass()}
+                  disabled={!canRunQuickPass}
+                  title={
+                    canRunQuickPass
+                      ? "Quick Pass 실행"
+                      : imports.length === 0
+                        ? "먼저 소스를 가져오세요."
+                        : "이미 실행 중입니다."
+                  }
+                >
+                  {analysisStatus === "running"
+                    ? "분석 중..."
+                    : hasAnalysis
+                      ? "Quick Pass 재실행"
+                      : "Quick Pass 실행"}
+                </Button>
+              ) : null}
+            </>
           }
         />
       }

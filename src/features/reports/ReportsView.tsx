@@ -2,7 +2,6 @@ import { Archive, Calendar, FileText, ShieldCheck, Sparkles } from "lucide-react
 import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
@@ -345,35 +344,6 @@ export function ReportsView() {
   return (
     <PageShell
       className="reports-page"
-      header={
-        <PageHeader
-          title="보고서"
-          subtitle="작업 메모리를 Resume 프롬프트와 공유 가능한 리포트로 만듭니다."
-          right={
-            !isDemo ? (
-              <Button
-                variant="primary"
-                icon={Sparkles}
-                onClick={() => runQuickPass()}
-                disabled={!canRunQuickPass}
-                title={
-                  canRunQuickPass
-                    ? "Quick Pass 실행"
-                    : imports.length === 0
-                      ? "먼저 소스를 가져오세요."
-                      : "이미 실행 중입니다."
-                }
-              >
-                {analysisStatus === "running"
-                  ? "분석 중..."
-                  : hasAnalysis
-                    ? "Quick Pass 재실행"
-                    : "Quick Pass 실행"}
-              </Button>
-            ) : undefined
-          }
-        />
-      }
       actionBar={
         <ActionBar
           label="보고서 세션 상태"
@@ -387,12 +357,35 @@ export function ReportsView() {
             </>
           }
           end={
-            <div className="reports-action-counts">
-              <Badge tone="purple">출처 {view.sources.length}</Badge>
-              <Badge tone="blue">이벤트 {view.events.length}</Badge>
-              <Badge tone="red">이슈 {view.issues.length}</Badge>
-              <Badge tone="green">결정 {view.decisions.length}</Badge>
-            </div>
+            <>
+              <div className="reports-action-counts">
+                <Badge tone="purple">출처 {view.sources.length}</Badge>
+                <Badge tone="blue">이벤트 {view.events.length}</Badge>
+                <Badge tone="red">이슈 {view.issues.length}</Badge>
+                <Badge tone="green">결정 {view.decisions.length}</Badge>
+              </div>
+              {!isDemo ? (
+                <Button
+                  variant="primary"
+                  icon={Sparkles}
+                  onClick={() => runQuickPass()}
+                  disabled={!canRunQuickPass}
+                  title={
+                    canRunQuickPass
+                      ? "Quick Pass 실행"
+                      : imports.length === 0
+                        ? "먼저 소스를 가져오세요."
+                        : "이미 실행 중입니다."
+                  }
+                >
+                  {analysisStatus === "running"
+                    ? "분석 중..."
+                    : hasAnalysis
+                      ? "Quick Pass 재실행"
+                      : "Quick Pass 실행"}
+                </Button>
+              ) : null}
+            </>
           }
         />
       }

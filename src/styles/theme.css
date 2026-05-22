@@ -126,14 +126,14 @@
  * stay proportional on narrow viewports.
  */
 :root {
-  --mori-font-size-2xs: 10.5px; /* uppercase eyebrows, micro labels */
-  --mori-font-size-xs: 11.5px;  /* meta, captions, badges */
-  --mori-font-size-sm: 12.5px;  /* secondary text, hints */
-  --mori-font-size-md: 13.5px;  /* base body */
-  --mori-font-size-lg: 15px;    /* card + section titles */
-  --mori-font-size-xl: 17px;    /* panel / inspector headings */
-  --mori-font-size-2xl: 20px;   /* page headers (h1) */
-  --mori-font-size-3xl: 22px;   /* brand mark, hero numbers */
+  --mori-font-size-2xs: 10px;   /* uppercase eyebrows, micro labels */
+  --mori-font-size-xs: 11px;    /* meta, captions, badges */
+  --mori-font-size-sm: 12px;    /* secondary text, hints */
+  --mori-font-size-md: 13px;    /* base body */
+  --mori-font-size-lg: 14px;    /* card + section titles */
+  --mori-font-size-xl: 15.5px;  /* panel / inspector headings */
+  --mori-font-size-2xl: 17.5px; /* page / context titles */
+  --mori-font-size-3xl: 19px;   /* brand mark, hero numbers */
 
   --mori-line-tight: 1.25;   /* headings, big numbers */
   --mori-line-snug: 1.35;    /* titles */

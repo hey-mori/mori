@@ -3,7 +3,7 @@ import { ArrowLeft, BrainCircuit, X } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriSection } from "../../components/ui/MoriSection";
-import { PageHeader } from "../../components/layout/PageHeader";
+import { ActionBar } from "../../components/layout/ActionBar";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -347,17 +347,19 @@ export function ConsolidationReviewView() {
 
   return (
     <div className="page consolidation-review-page">
-      <PageHeader
-        title="메모리 통합 검토"
-        subtitle="누적된 프로젝트 메모리에서 승격할 항목을 검토합니다. 영구 메모리는 사용자가 명시적으로 승인하기 전까지 작성되지 않습니다."
-        right={
-          <div className="consolidation-review-header-actions">
+      <ActionBar
+        label="메모리 통합 검토"
+        start={
+          <>
+            <span className="action-bar-context">메모리 통합 검토</span>
             <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>
             <Badge tone="purple">{consolidationState.proposalCount}개 제안</Badge>
-            <Button icon={ArrowLeft} onClick={() => setCurrentView("memory")}>
-              Memory로 돌아가기
-            </Button>
-          </div>
+          </>
+        }
+        end={
+          <Button icon={ArrowLeft} onClick={() => setCurrentView("memory")}>
+            Memory로 돌아가기
+          </Button>
         }
       />
 

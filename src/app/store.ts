@@ -58,7 +58,7 @@ type MoriAppState = {
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
-  currentView: "timeline",
+  currentView: "home",
   selectedEventId: "evt-positioning",
   hoveredEventId: null,
   activeFilters: [],

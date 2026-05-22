@@ -8,7 +8,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import {
@@ -147,11 +146,21 @@ export function EvidenceView() {
   return (
     <PageShell
       className="evidence-page"
-      header={
-        <PageHeader
-          title="증거 허브"
-          subtitle="작업 복원에 사용할 소스를 관리합니다. 직접 가져온 소스만 분석에 쓰입니다."
-          right={
+      actionBar={
+        <ActionBar
+          label="증거 허브 상태"
+          start={
+            <>
+              <span className="action-bar-context">증거 허브</span>
+              <Badge tone={isDemoSession ? "gray" : "green"}>
+                {isDemoSession ? "데모 세션" : "실제 세션"}
+              </Badge>
+              <Badge tone={importedSources.length ? "purple" : "gray"}>
+                {importedSources.length}개 출처
+              </Badge>
+            </>
+          }
+          end={
             <Button
               variant="primary"
               icon={Plus}
@@ -161,21 +170,6 @@ export function EvidenceView() {
             >
               소스 추가
             </Button>
-          }
-        />
-      }
-      actionBar={
-        <ActionBar
-          label="증거 허브 상태"
-          start={
-            <>
-              <Badge tone={isDemoSession ? "gray" : "green"}>
-                {isDemoSession ? "데모 세션" : "실제 세션"}
-              </Badge>
-              <Badge tone={importedSources.length ? "purple" : "gray"}>
-                {importedSources.length}개 출처
-              </Badge>
-            </>
           }
         />
       }

@@ -24,7 +24,6 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
@@ -289,10 +288,11 @@ export function ConnectionsView() {
   if (!bridgeAvailable) {
     return (
       <PageShell
-        header={
-          <PageHeader
-            title="연결"
-            subtitle="외부 AI 도구의 작업을 Mori 세션으로 가져옵니다."
+        className="connections-page"
+        actionBar={
+          <ActionBar
+            label="연결"
+            start={<span className="action-bar-context">연결 · 작업 가져오기</span>}
           />
         }
       >
@@ -309,40 +309,37 @@ export function ConnectionsView() {
   return (
     <PageShell
       className="connections-page"
-      header={
-        <PageHeader
-          title="연결"
-          subtitle="감지한 AI 도구의 로컬 작업을 Mori 세션으로 가져옵니다."
-          right={
+      actionBar={
+        <ActionBar
+          label="연결"
+          start={
+            <>
+              <span className="action-bar-context">연결 · 작업 가져오기</span>
+              {tools.report ? (
+                <>
+                  <Badge tone={importableCount > 0 ? "green" : "gray"}>
+                    {detectedCount}개 감지 · {importableCount}개 가져오기 가능
+                  </Badge>
+                  <HelpDisclosure label="가져올 수 있는 도구" ariaLabel="가져오기 정책 설명">
+                    <p>
+                      데이터가 PC에 로컬로 저장되는 도구만 가져올 수 있습니다 (Claude Desktop ·
+                      Claude Code 등).
+                    </p>
+                    <p>
+                      claude.ai 웹 채팅은 Anthropic 서버에 저장되므로 직접 가져올 수 없습니다. 필요하면
+                      증거 허브에서 대화를 직접 붙여넣으세요.
+                    </p>
+                  </HelpDisclosure>
+                </>
+              ) : null}
+            </>
+          }
+          end={
             <Button icon={RefreshCw} onClick={handleRefresh}>
               새로고침
             </Button>
           }
         />
-      }
-      actionBar={
-        tools.report ? (
-          <ActionBar
-            label="연결 상태"
-            start={
-              <>
-                <Badge tone={importableCount > 0 ? "green" : "gray"}>
-                  {detectedCount}개 감지 · {importableCount}개 가져오기 가능
-                </Badge>
-                <HelpDisclosure label="가져올 수 있는 도구" ariaLabel="가져오기 정책 설명">
-                  <p>
-                    데이터가 PC에 로컬로 저장되는 도구만 가져올 수 있습니다 (Claude Desktop ·
-                    Claude Code 등).
-                  </p>
-                  <p>
-                    claude.ai 웹 채팅은 Anthropic 서버에 저장되므로 직접 가져올 수 없습니다. 필요하면
-                    증거 허브에서 대화를 직접 붙여넣으세요.
-                  </p>
-                </HelpDisclosure>
-              </>
-            }
-          />
-        ) : undefined
       }
     >
       {importStatus ? (

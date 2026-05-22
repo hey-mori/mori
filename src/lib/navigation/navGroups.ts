@@ -4,20 +4,23 @@ import { moriViewIcon } from "../../components/brand/moriIcons";
 /**
  * Sidebar navigation structure as pure, testable data.
  *
- * The entry model is "import-first": Mori reconstructs work from imported
- * evidence, so **연결 (Connections)** — the real import front door — leads the
- * 수집/작업 (capture / work) group. There is no standalone "세션 시작" first
- * action any more; starting a blank session is a *secondary* path that lives
- * at the bottom of the 프로젝트 group under the honest label "새 세션", next to
- * the Workspace session hub it feeds.
+ * The IA is **session-centric**: opening Mori lands on **홈 (home)** — a
+ * one-glance view of "my work memory" — and the sidebar exposes only the five
+ * primary destinations a user navigates between:
  *
- * The group order reads as the product loop: 가져와서 → 검토하고 → 작업하고 →
- * 종합한다 (import → review → work → consolidate), then project-level surfaces,
- * then settings.
+ *   홈 (home) · 세션 (workspace) · 메모리 (memory) · 리포트 (reports) ·
+ *   설정 (settings)
+ *
+ * "세션" reuses the existing `workspace` route (the session hub) — only the
+ * label changed, so deep links and saved state keep working. The narrower
+ * working surfaces that used to crowd the nav (타임라인 / 증거 / 검토 / Flow /
+ * 연결 / Mori 노트) stay fully routable — they are reached *through* the primary
+ * destinations (e.g. opening a session routes into Timeline, import is an
+ * action on 홈 / 세션) rather than as standing nav entries.
  *
  * Keeping this as data (rather than inline JSX in `Sidebar`) lets us assert the
- * entry model never regresses — e.g. that Connections leads, that `start` is
- * never the lone first item, and that every key is a routable `ViewKey`.
+ * entry model never regresses — e.g. that 홈 leads, that exactly the five
+ * primary destinations appear, and that every key is a routable `ViewKey`.
  */
 
 /** Keys that have an icon in the shared `moriViewIcon` vocabulary. */
@@ -42,25 +45,12 @@ export type NavGroup = {
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: "수집 · 작업",
     items: [
-      { key: "connections", label: "연결" },
-      { key: "timeline", label: "타임라인" },
-      { key: "evidence", label: "증거 허브" },
-      { key: "review", label: "검토" },
-      { key: "reports", label: "보고서" },
-    ],
-  },
-  {
-    label: "프로젝트",
-    items: [
-      { key: "workspace", label: "워크스페이스" },
+      { key: "home", label: "홈" },
+      // "세션" reuses the Workspace session-hub route — only the label is new.
+      { key: "workspace", label: "세션" },
       { key: "memory", label: "메모리" },
-      { key: "companion", label: "Mori 노트" },
-      // Demoted from a standalone top-of-nav action. Creating a blank session
-      // is a secondary path that feeds the Workspace session hub, so it sits
-      // last in the project group with an honest "새 세션" label.
-      { key: "start", label: "새 세션" },
+      { key: "reports", label: "리포트" },
     ],
   },
   { items: [{ key: "settings", label: "설정" }] },

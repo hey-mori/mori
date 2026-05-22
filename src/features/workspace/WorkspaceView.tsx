@@ -20,7 +20,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -171,12 +170,6 @@ export function WorkspaceView() {
   return (
     <PageShell
       className="workspace-page"
-      header={
-        <PageHeader
-          title="워크스페이스"
-          subtitle="가져온 Claude 대화와 직접 시작한 작업이 세션으로 쌓입니다. 프로젝트별로 한눈에 보고, 열고, 정리하고, 리포트로 종합하세요."
-        />
-      }
       actionBar={
         <ActionBar
           label="세션 필터"

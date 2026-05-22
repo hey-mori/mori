@@ -6,8 +6,12 @@ import {
 } from "../../lib/layout/pageShell";
 
 export type PageShellProps = {
-  /** A `PageHeader` element. Pinned to the top; content scrolls beneath it. */
-  header: ReactNode;
+  /**
+   * Optional `PageHeader` element. Pinned to the top; content scrolls beneath
+   * it. Headerless surfaces (the sidebar already names the destination) omit
+   * it and rely on the `actionBar` alone for a thin pinned top band.
+   */
+  header?: ReactNode;
   /** Optional row directly under the header — usually an `ActionBar`. */
   actionBar?: ReactNode;
   /** Main scrollable content. */
@@ -41,16 +45,28 @@ export function PageShell({
 }: PageShellProps) {
   const hasAside = pageShellHasAside(aside);
   const widthClass = hasAside ? "is-full" : resolvePageShellMaxWidthClass(maxWidth);
-  const classes = ["page-shell", hasAside ? "has-aside" : "", className]
+  // A surface can drop the title band entirely (the sidebar already names the
+  // destination). The pinned top band still renders for the action bar; when
+  // neither header nor action bar is supplied we skip the band so headerless
+  // content surfaces flush to the top.
+  const hasTop = Boolean(header) || Boolean(actionBar);
+  const classes = [
+    "page-shell",
+    hasAside ? "has-aside" : "",
+    header ? "" : "is-headerless",
+    className,
+  ]
     .filter(Boolean)
     .join(" ");
 
   return (
     <div className={classes}>
-      <div className="page-shell-top">
-        {header}
-        {actionBar}
-      </div>
+      {hasTop ? (
+        <div className="page-shell-top">
+          {header}
+          {actionBar}
+        </div>
+      ) : null}
       <div className="page-shell-scroll mori-scroll">
         <div className={`page-shell-content ${widthClass}`}>
           {hasAside ? (

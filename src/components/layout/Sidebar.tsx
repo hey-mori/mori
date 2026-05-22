@@ -37,15 +37,34 @@ import { NAV_GROUPS, type NavKey } from "../../lib/navigation/navGroups";
  * navigating to each surface first.
  */
 
+/**
+ * Off-nav working surfaces that belong *under* the 세션 (workspace) hub. When
+ * the user opens a session they land on these, so the sidebar lights up 세션
+ * to keep "where am I" honest even though these aren't standing nav entries.
+ */
+const SESSION_SURFACE_VIEWS = new Set<ViewKey>([
+  "workspace",
+  "timeline",
+  "flow",
+  "evidence",
+  "review",
+  "connections",
+  "companion",
+  "start",
+]);
+
 export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onNavigate: (view: ViewKey) => void }) {
   const view = useMoriSessionStore(selectSessionView);
   const imports = useMoriSessionStore((state) => state.imports);
   const connectionsCount = useConnectionsBadgeCount();
 
+  // The nav now exposes five primary destinations; the narrower working
+  // surfaces are reached *through* them. Map an off-nav view to the
+  // destination it belongs under so the sidebar still shows where the user is.
   const isActive = (key: ViewKey) =>
     key === currentView ||
-    (currentView === "flow" && key === "timeline") ||
-    (currentView === "consolidation" && key === "memory");
+    (key === "workspace" && SESSION_SURFACE_VIEWS.has(currentView)) ||
+    (key === "memory" && currentView === "consolidation");
 
   // Live badge counts — shown only when non-zero so the nav stays quiet
   // until the user has actually captured or analysed work.
@@ -71,9 +90,9 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
     <aside className="sidebar">
       <button
         className="brand"
-        onClick={() => onNavigate("timeline")}
+        onClick={() => onNavigate("home")}
         type="button"
-        aria-label="Mori — Timeline으로 이동"
+        aria-label="Mori — 홈으로 이동"
       >
         <MoriLogo size={32} />
       </button>

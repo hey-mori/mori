@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { ArrowRight, Compass, ExternalLink, Inbox, ShieldCheck } from "lucide-react";
+import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
 import { useMoriAppStore } from "../../app/store";
@@ -60,10 +60,10 @@ export function CompanionInboxView() {
   return (
     <PageShell
       className="companion-inbox"
-      header={
-        <PageHeader
-          title="Mori 노트"
-          subtitle="이번 작업에서 살펴볼 신호를 할 일 중심으로 정리했습니다. 모두 사용자가 가져온 소스에서 도출되며, Mori가 메모리를 자동으로 쓰지 않습니다."
+      actionBar={
+        <ActionBar
+          label="Mori 노트"
+          start={<span className="action-bar-context">Mori 노트 · 살펴볼 신호</span>}
         />
       }
       aside={<CompanionInboxRail groups={groups} total={feed.length} isDemo={isDemo} />}
