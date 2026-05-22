@@ -26,16 +26,10 @@ import type {
 import {
   deriveProjectMemoryStats,
   getDecisionTimeline,
-  getProjectMemorySummary,
   scopeLabelFor,
   type DerivedSession,
   type ProjectMemoryDataScope,
 } from "../../lib/project-memory/projectMemory";
-import {
-  buildProjectMemoryResumePrompt,
-  type ProjectMemoryResumePromptAudience,
-  type ProjectMemoryResumePromptPrivacy,
-} from "../../lib/project-memory/projectMemoryResumePrompt";
 import { buildProjectMemoryConsolidationState } from "../../lib/project-memory/projectMemoryConsolidationState";
 import { revertMemoryReviewAction } from "../../lib/project-memory/memoryReviewRevert";
 import { ConsolidationPreviewCard } from "./ConsolidationPreviewCard";
@@ -64,7 +58,6 @@ import { DecisionTimelineCard } from "./DecisionTimelineCard";
 import { RecurringIssuesCard } from "./RecurringIssuesCard";
 import { KeyEvidenceCard } from "./KeyEvidenceCard";
 import { SavedReportsCard } from "./SavedReportsCard";
-import { ProjectMemorySummaryPanel } from "./ProjectMemorySummaryPanel";
 import { ReimportHistoryCard } from "./ReimportHistoryCard";
 import { SegmentedControl, type SegmentedControlOption } from "../../components/ui/SegmentedControl";
 import { ConsolidationReviewView } from "./ConsolidationReviewView";
@@ -346,30 +339,6 @@ export function MemoryView() {
   );
 
   const decisionTimeline = useMemo(() => getDecisionTimeline(view), [view]);
-  const projectMemorySummary = useMemo(
-    () =>
-      getProjectMemorySummary({
-        view,
-        scope: primaryScope,
-        savedSessionCount: savedSessions.filter((entry) => !entry.isCurrent).length,
-        reportCount: packageDrafts.length,
-        hasAnalysis,
-      }),
-    [view, primaryScope, savedSessions, packageDrafts.length, hasAnalysis],
-  );
-  const [resumeAudience, setResumeAudience] = useState<ProjectMemoryResumePromptAudience>("claude");
-  const [resumePrivacy, setResumePrivacy] = useState<ProjectMemoryResumePromptPrivacy>("normal");
-  const resumePrompt = useMemo(
-    () =>
-      buildProjectMemoryResumePrompt({
-        memory: viewModel,
-        audience: resumeAudience,
-        privacyMode: resumePrivacy,
-        acceptedMemories,
-      }),
-    [viewModel, resumeAudience, resumePrivacy, acceptedMemories],
-  );
-  const followUpPrompt = resumePrompt.body;
 
   function handleOpenSession(entry: DerivedSession) {
     if (entry.isCurrent) {
@@ -420,19 +389,6 @@ export function MemoryView() {
             </>
           }
         />
-      }
-      aside={
-        memoryTab === "overview" ? (
-          <ProjectMemorySummaryPanel
-            summary={projectMemorySummary}
-            followUpPrompt={followUpPrompt}
-            audience={resumeAudience}
-            privacyMode={resumePrivacy}
-            onAudienceChange={setResumeAudience}
-            onPrivacyModeChange={setResumePrivacy}
-            onStartFollowUp={() => setCurrentView("start")}
-          />
-        ) : undefined
       }
     >
       {memoryTab === "consolidation" ? (
