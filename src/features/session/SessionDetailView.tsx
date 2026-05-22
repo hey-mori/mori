@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import {
   Activity,
+  ArrowLeft,
   FileText,
   GanttChartSquare,
   GitBranch,
@@ -80,6 +81,7 @@ function SessionDetailHeader() {
   const source = useMoriSessionStore(selectSessionSource);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
   const imports = useMoriSessionStore((state) => state.imports);
+  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   const context = useMemo(
     () =>
@@ -103,6 +105,13 @@ function SessionDetailHeader() {
 
   return (
     <div className="session-detail-header">
+      <button
+        type="button"
+        className="session-detail-back"
+        onClick={() => setCurrentView("workspace")}
+      >
+        <ArrowLeft size={13} aria-hidden="true" /> 세션 목록
+      </button>
       <div className="session-detail-headline">
         <h1 title={context.sessionTitle}>{context.sessionTitle}</h1>
         <div className="session-detail-chips">
