@@ -7,7 +7,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ActionBar } from "../../components/layout/ActionBar";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
@@ -126,19 +128,83 @@ export function SettingsView() {
   }
 
   return (
-    <div className="page settings-workspace">
-      <PageHeader
-        title="설정"
-        subtitle="Mori의 로컬-퍼스트 동작을 한곳에서 관리합니다. 개인정보 · 로컬 AI · 저장소 · 리포지토리 · 그리고 아직 비활성화된 커넥터까지 정직하게 보여줍니다."
-        right={
-          <div className="settings-page-actions">
-            <Badge tone={sessionMode === "demo" ? "gray" : "green"}>
-              {sessionMode === "demo" ? "데모 세션" : "실제 세션"}
-            </Badge>
-            <Badge tone="purple">{mode === "tauri-desktop" ? "Tauri desktop" : "Browser"}</Badge>
-          </div>
-        }
-      />
+    <PageShell
+      className="settings-page"
+      header={
+        <PageHeader
+          title="설정"
+          subtitle="Mori의 로컬-퍼스트 동작을 한곳에서 관리합니다. 개인정보 · 로컬 AI · 저장소 · 리포지토리, 그리고 아직 비활성화된 커넥터까지 정직하게 보여줍니다."
+          right={
+            <div className="settings-page-actions">
+              <Badge tone={sessionMode === "demo" ? "gray" : "green"}>
+                {sessionMode === "demo" ? "데모 세션" : "실제 세션"}
+              </Badge>
+              <Badge tone="purple">{mode === "tauri-desktop" ? "Tauri desktop" : "Browser"}</Badge>
+            </div>
+          }
+        />
+      }
+      actionBar={
+        <ActionBar
+          label="설정 섹션"
+          start={
+            <nav
+              className="settings-tabs"
+              role="tablist"
+              aria-label="설정 섹션"
+              onKeyDown={(event) => {
+                const tabIds = TAB_DEFS.map((t) => t.id);
+                const current = tabIds.indexOf(activeTab);
+                let next = -1;
+                if (event.key === "ArrowRight") next = (current + 1) % tabIds.length;
+                else if (event.key === "ArrowLeft") next = (current - 1 + tabIds.length) % tabIds.length;
+                else if (event.key === "Home") next = 0;
+                else if (event.key === "End") next = tabIds.length - 1;
+                if (next !== -1) {
+                  event.preventDefault();
+                  const nextId = tabIds[next]!;
+                  setActiveTab(nextId);
+                  (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
+                }
+              }}
+            >
+              {TAB_DEFS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    tabIndex={isActive ? 0 : -1}
+                    aria-selected={isActive}
+                    className={`settings-tab ${isActive ? "active" : ""}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    <Icon size={14} aria-hidden="true" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          }
+        />
+      }
+      aside={
+        <TrustSummaryPanel
+          mode={mode}
+          sqliteKind={sqliteKind}
+          providerKind={settings.provider}
+          providerLabel={providerLabel}
+          importsCount={imports.length}
+          hasAnalysis={hasAnalysis}
+          hasUnsavedDraft={Boolean(sessionDraft) && sqliteKind === "ok"}
+          repositoriesTotal={repositorySettings.repositories.length}
+          sessionMode={sessionMode}
+          onAction={navigateForStep}
+        />
+      }
+    >
       <SessionModeBanner />
 
       <StatusStrip
@@ -152,48 +218,7 @@ export function SettingsView() {
         importsCount={imports.length}
       />
 
-      <nav
-        className="settings-tabs"
-        role="tablist"
-        aria-label="Settings sections"
-        onKeyDown={(event) => {
-          const tabIds = TAB_DEFS.map((t) => t.id);
-          const current = tabIds.indexOf(activeTab);
-          let next = -1;
-          if (event.key === "ArrowRight") next = (current + 1) % tabIds.length;
-          else if (event.key === "ArrowLeft") next = (current - 1 + tabIds.length) % tabIds.length;
-          else if (event.key === "Home") next = 0;
-          else if (event.key === "End") next = tabIds.length - 1;
-          if (next !== -1) {
-            event.preventDefault();
-            const nextId = tabIds[next]!;
-            setActiveTab(nextId);
-            (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
-          }
-        }}
-      >
-        {TAB_DEFS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              tabIndex={isActive ? 0 : -1}
-              aria-selected={isActive}
-              className={`settings-tab ${isActive ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <Icon size={14} aria-hidden="true" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="settings-layout">
-        <div className="settings-main">
+      <div className="settings-main">
           {activeTab === "localAi" ? (
             <LocalAiCard
               settings={settings}
@@ -247,22 +272,8 @@ export function SettingsView() {
               onLoad={loadDesktopSession}
             />
           ) : null}
-        </div>
-
-        <TrustSummaryPanel
-          mode={mode}
-          sqliteKind={sqliteKind}
-          providerKind={settings.provider}
-          providerLabel={providerLabel}
-          importsCount={imports.length}
-          hasAnalysis={hasAnalysis}
-          hasUnsavedDraft={Boolean(sessionDraft) && sqliteKind === "ok"}
-          repositoriesTotal={repositorySettings.repositories.length}
-          sessionMode={sessionMode}
-          onAction={navigateForStep}
-        />
       </div>
-    </div>
+    </PageShell>
   );
 }
 

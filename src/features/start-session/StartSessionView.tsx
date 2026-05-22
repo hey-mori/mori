@@ -1,8 +1,13 @@
-import { ArrowRight, Bot, Check, Cloud, Database, FileCode2, Info, Lock, Play, RefreshCcw, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Bot, Check, Cloud, Database, FileCode2, FilePlus2, Lock, PlugZap, RefreshCcw, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { ActionBar } from "../../components/layout/ActionBar";
+import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
+import { InspectorPanel } from "../../components/layout/InspectorPanel";
+import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { sourceOptions } from "../../domain/mock-data";
@@ -40,8 +45,8 @@ const availableSources = sourceOptions.filter((source) => source.status === "ava
 const plannedSources = sourceOptions.filter((source) => source.status === "planned");
 
 const RECORDING_MODES: { mode: RecordingMode; points: string[] }[] = [
-  { mode: "summary", points: ["AI 대화 요약", "주요 결정 / 이슈 / 산출물 중심", "저장 공간 절약"] },
-  { mode: "full", points: ["전체 대화 및 원본 보관", "감사/상세 추적에 적합", "더 많은 저장 공간 사용"] },
+  { mode: "summary", points: ["요약 · 결정 · 이슈 · 산출물 중심", "원본은 짧게만 보관", "저장 공간 절약"] },
+  { mode: "full", points: ["전체 대화 및 원본 보관", "감사 / 상세 추적에 적합", "더 많은 저장 공간 사용"] },
   { mode: "ephemeral", points: ["리포트만 저장", "원본 데이터 자동 삭제", "민감 프로젝트에 적합"] },
 ];
 
@@ -78,6 +83,17 @@ function deriveInitialFormState(draft: StoredSessionDraft | null) {
   };
 }
 
+/**
+ * New work session — the *secondary* entry path.
+ *
+ * Most sessions are created by importing a Claude conversation in 연결
+ * (Connections); this surface exists for the rarer case of starting an empty
+ * work session by hand so imported evidence has somewhere to land. The framing
+ * is deliberately "create a container for evidence", never "start recording" —
+ * Mori reconstructs work from explicit imports, it does not watch or capture in
+ * the background. Existing source / engine / retention controls are kept but
+ * presented honestly and compactly.
+ */
 export function StartSessionView() {
   // Read the store-hydrated draft as the source of truth for initial values.
   // We take the value once at mount (lazy initialiser) so that form edits are
@@ -148,148 +164,50 @@ export function StartSessionView() {
   const hasActiveSession = mode === "draft" && storeDraft !== null;
 
   return (
-    <div className="page">
-      <PageHeader
-        title="세션 시작"
-        subtitle="기록 범위를 설정하고 새 작업 메모리 세션을 시작합니다."
-      />
-
-      {hasActiveSession ? (
-        <ActiveSessionBanner
-          draft={storeDraft}
-          onContinue={handleContinueSession}
-        />
-      ) : null}
-
-      <div className="setup-grid">
-        <div className="setup-stack">
-          <SetupBlock number="1" title="세션 정보">
-            <div className="form-row">
-              <label>
-                세션 이름
-                <input
-                  value={sessionTitle}
-                  placeholder="예: Mori 앱 기획"
-                  onChange={(event) => setSessionTitle(event.target.value)}
-                />
-              </label>
-              <label>
-                프로젝트
-                <input
-                  value={projectName}
-                  placeholder="예: Mori Product"
-                  onChange={(event) => setProjectName(event.target.value)}
-                />
-              </label>
-            </div>
-          </SetupBlock>
-          <SetupBlock
-            number="2"
-            title="기록할 앱 / 소스 선택"
-            note="선택한 앱과 소스의 활동만 기록합니다. Mori는 전체 컴퓨터를 감시하지 않습니다."
-          >
-            <CaptureSurfaceHonestyStrip />
-            <div className="source-group">
-              <p className="source-group-label">
-                지금 가져올 수 있는 소스
-                <span className="source-group-count">{availableSources.length}</span>
-              </p>
-              <div className="source-grid">
-                {availableSources.map((source) => (
-                  <SourceCard
-                    key={source.id}
-                    source={source}
-                    selected={selectedSourceIds.has(source.id)}
-                    onToggle={() =>
-                      setSelectedSourceIds((current) =>
-                        toggleSourceSelection(current, source),
-                      )
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-            {plannedSources.length > 0 ? (
-              <div className="source-group">
-                <p className="source-group-label">
-                  예정된 통합
-                  <span className="pill tone-gray">예정</span>
-                </p>
-                <p className="source-group-hint">
-                  아래 통합은 아직 제공되지 않습니다. 이번 세션에서 캡처되지 않으며, Mori는
-                  이 앱들을 자동으로 읽지 않습니다.
-                </p>
-                <div className="source-grid">
-                  {plannedSources.map((source) => (
-                    <SourceCard key={source.id} source={source} selected={false} />
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            <details className="privacy-note">
-              <summary>
-                <ShieldCheck size={16} aria-hidden="true" />
-                <span>
-                  Summary Mode는 원본을 오래 보관하지 않고 요약·이슈·결정·타임라인 중심으로
-                  저장합니다.
-                </span>
-              </summary>
-              <ul className="privacy-note-detail">
-                <li>저장하는 항목 — AI 대화 요약, 결정 · 이슈 · 산출물, 타임라인 이벤트</li>
-                <li>보관하지 않는 항목 — 전체 원본 대화, 첨부 원본 파일</li>
-                <li>전체 원본이 필요하면 3단계에서 Full Mode를 선택하세요.</li>
-              </ul>
-            </details>
-          </SetupBlock>
-          <SetupBlock number="3" title="기록 모드 선택">
-            <div className="mode-grid">
-              {RECORDING_MODES.map(({ mode: m, points }) => (
-                <ModeCard
-                  key={m}
-                  mode={m}
-                  points={points}
-                  selected={recordingMode === m}
-                  onSelect={() => setRecordingMode(m)}
-                />
-              ))}
-            </div>
-          </SetupBlock>
-          <SetupBlock
-            number="4"
-            title="로컬 AI 엔진 선택"
-            note="현재 세션에 연결할 수 있는 로컬 분석 엔진만 선택할 수 있습니다. Planned 제공자는 설정 화면과 같은 기준으로 비활성화됩니다."
-          >
-            <div className="engine-grid">
-              {ENGINE_OPTIONS.map((engine) => (
-                <EngineCard
-                  key={engine.provider}
-                  engine={engine}
-                  selected={selectedEngine.provider === engine.provider}
-                  onSelect={() => setEngineProvider(engine.provider)}
-                />
-              ))}
-            </div>
-          </SetupBlock>
-          <div className="setup-actions">
-            <Button
-              variant={hasActiveSession ? "secondary" : "primary"}
-              icon={hasActiveSession ? RefreshCcw : Play}
-              onClick={handleStartSession}
-            >
-              {hasActiveSession ? "새 세션으로 교체" : "Mori 세션 시작"}
+    <PageShell
+      className="start-session-page"
+      header={
+        <PageHeader
+          title="새 작업 세션"
+          subtitle="가져온 증거가 모일 빈 작업 세션을 만듭니다. 대부분의 세션은 연결에서 대화를 가져오며 자동으로 만들어집니다."
+          right={
+            <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
+              연결에서 가져오기
             </Button>
-            {hasActiveSession ? (
-              <Button variant="primary" icon={ArrowRight} onClick={handleContinueSession}>
-                현재 세션 계속
+          }
+        />
+      }
+      actionBar={
+        <ActionBar
+          label="세션 생성"
+          start={
+            <Badge tone={hasActiveSession ? "green" : "gray"}>
+              {hasActiveSession ? "활성 세션 있음" : "활성 세션 없음"}
+            </Badge>
+          }
+          end={
+            <>
+              {hasActiveSession ? (
+                <Button variant="secondary" icon={ArrowRight} onClick={handleContinueSession}>
+                  현재 세션 계속
+                </Button>
+              ) : (
+                <Button variant="secondary" icon={Sparkles} onClick={handleResetToDemo}>
+                  데모로 되돌리기
+                </Button>
+              )}
+              <Button
+                variant={hasActiveSession ? "secondary" : "primary"}
+                icon={hasActiveSession ? RefreshCcw : FilePlus2}
+                onClick={handleStartSession}
+              >
+                {hasActiveSession ? "새 세션으로 교체" : "세션 만들기"}
               </Button>
-            ) : null}
-            {!hasActiveSession ? (
-              <Button icon={Sparkles} onClick={handleResetToDemo}>
-                데모로 되돌리기
-              </Button>
-            ) : null}
-          </div>
-        </div>
+            </>
+          }
+        />
+      }
+      aside={
         <SessionSummary
           savedDraft={storeDraft}
           sessionTitle={sessionTitle || "무제 Mori 세션"}
@@ -299,62 +217,157 @@ export function StartSessionView() {
           engine={selectedEngine}
           storageTarget={storageTarget}
         />
-      </div>
-    </div>
-  );
-}
+      }
+    >
+      {hasActiveSession ? (
+        <NoticeBanner
+          tone="success"
+          title="활성 세션이 이미 있습니다"
+          actions={
+            <Button variant="secondary" icon={ArrowRight} onClick={handleContinueSession}>
+              계속 작업
+            </Button>
+          }
+        >
+          {storeDraft.session.title} · {storeDraft.project.name} ·{" "}
+          {recordingModeLabels[storeDraft.session.recordingMode]} · 저장{" "}
+          {formatDateTime(storeDraft.savedAt)}
+        </NoticeBanner>
+      ) : (
+        <NoticeBanner
+          tone="info"
+          title="먼저 연결을 확인하세요"
+          actions={
+            <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
+              연결로 이동
+            </Button>
+          }
+        >
+          대부분의 세션은 연결에서 Claude 대화를 가져오면 자동으로 만들어집니다. 빈 세션이 필요할
+          때만 아래에서 직접 만드세요.
+        </NoticeBanner>
+      )}
 
-/**
- * Banner shown when the user opens Start Session while a real draft is
- * already active. Lets them immediately continue without touching the form.
- */
-function ActiveSessionBanner({
-  draft,
-  onContinue,
-}: {
-  draft: StoredSessionDraft;
-  onContinue: () => void;
-}) {
-  return (
-    <div className="active-session-banner" role="region" aria-label="활성 세션">
-      <div className="active-session-banner-info">
-        <Badge tone="green">활성 세션</Badge>
-        <div>
-          <strong>{draft.session.title}</strong>
-          <span>
-            {draft.project.name} · {recordingModeLabels[draft.session.recordingMode]} · 저장{" "}
-            {formatDateTime(draft.savedAt)}
-          </span>
+      <SetupBlock number="1" title="세션 정보">
+        <div className="form-row">
+          <label>
+            세션 이름
+            <input
+              value={sessionTitle}
+              placeholder="예: Mori 앱 기획"
+              onChange={(event) => setSessionTitle(event.target.value)}
+            />
+          </label>
+          <label>
+            프로젝트
+            <input
+              value={projectName}
+              placeholder="예: Mori Product"
+              onChange={(event) => setProjectName(event.target.value)}
+            />
+          </label>
         </div>
-      </div>
-      <Button variant="primary" icon={ArrowRight} onClick={onContinue}>
-        계속 작업
-      </Button>
-    </div>
+      </SetupBlock>
+
+      <SetupBlock
+        number="2"
+        title="가져올 소스"
+        note="선택한 소스에서 가져온 증거만 이 세션에 모읍니다. Mori는 전체 컴퓨터를 감시하지 않습니다."
+      >
+        <div className="source-group">
+          <p className="source-group-label">
+            지금 가져올 수 있는 소스
+            <span className="source-group-count">{availableSources.length}</span>
+          </p>
+          <div className="source-grid">
+            {availableSources.map((source) => (
+              <SourceCard
+                key={source.id}
+                source={source}
+                selected={selectedSourceIds.has(source.id)}
+                onToggle={() =>
+                  setSelectedSourceIds((current) =>
+                    toggleSourceSelection(current, source),
+                  )
+                }
+              />
+            ))}
+          </div>
+        </div>
+        {plannedSources.length > 0 ? (
+          <div className="source-group">
+            <p className="source-group-label">
+              예정된 통합
+              <span className="pill tone-gray">예정</span>
+            </p>
+            <div className="source-grid">
+              {plannedSources.map((source) => (
+                <SourceCard key={source.id} source={source} selected={false} />
+              ))}
+            </div>
+          </div>
+        ) : null}
+        <CaptureSurfaceHelp />
+      </SetupBlock>
+
+      <SetupBlock
+        number="3"
+        title="보관 범위"
+        note="이 세션이 가져온 증거를 얼마나 오래 보관할지 정합니다."
+      >
+        <div className="mode-grid">
+          {RECORDING_MODES.map(({ mode: m, points }) => (
+            <ModeCard
+              key={m}
+              mode={m}
+              points={points}
+              selected={recordingMode === m}
+              onSelect={() => setRecordingMode(m)}
+            />
+          ))}
+        </div>
+      </SetupBlock>
+
+      <SetupBlock
+        number="4"
+        title="로컬 AI 엔진"
+        note="Quick Pass 분석에 쓸 로컬 엔진입니다. Planned 제공자는 설정과 같은 기준으로 비활성화됩니다."
+      >
+        <div className="engine-grid">
+          {ENGINE_OPTIONS.map((engine) => (
+            <EngineCard
+              key={engine.provider}
+              engine={engine}
+              selected={selectedEngine.provider === engine.provider}
+              onSelect={() => setEngineProvider(engine.provider)}
+            />
+          ))}
+        </div>
+      </SetupBlock>
+    </PageShell>
   );
 }
 
 /**
- * Honest strip above the source-tile grid: which capture surfaces actually
- * work today vs. which are still planned. Reads from the capture surface
- * matrix so the copy can never drift out of sync with the connector docs.
+ * Honest disclosure of which capture surfaces work today vs. which are still
+ * planned. Reads from the capture surface matrix so the copy can never drift
+ * out of sync with the connector docs. Tucked behind a HelpDisclosure so the
+ * first screen stays calm.
  */
-function CaptureSurfaceHonestyStrip() {
+function CaptureSurfaceHelp() {
   const implementedCount = getImplementedCaptureSurfaces().length;
   const plannedCount = getPlannedCaptureSurfaces().length;
   return (
-    <div className="capture-surface-strip" role="note">
-      <Info size={14} aria-hidden="true" />
-      <div>
-        <strong>현재 사용 가능한 캡처 경로 {implementedCount}개</strong>
-        <span> · </span>
-        <span>
-          {plannedCount}개 예정 — Claude Code hook, Codex CLI wrapper,
-          터미널 / IDE / 브라우저 경로는 문서·템플릿 단계이거나 예정 상태이며,
-          Mori는 이들을 임의로 수집하지 않습니다.
-        </span>
-      </div>
-    </div>
+    <HelpDisclosure label="캡처 경로는 어떻게 동작하나요" ariaLabel="캡처 경로 설명">
+      <p>
+        지금 사용할 수 있는 캡처 경로는 {implementedCount}개입니다. 모든 가져오기는 사용자가
+        직접 붙여넣거나 파일을 선택할 때만 일어납니다.
+      </p>
+      <p>
+        나머지 {plannedCount}개 — Claude Code hook, Codex CLI wrapper, 터미널 / IDE / 브라우저
+        경로 — 는 문서·템플릿 단계이거나 예정 상태이며, Mori는 이들을 임의로 수집하지 않습니다.
+      </p>
+    </HelpDisclosure>
   );
 }
 
@@ -428,7 +441,7 @@ function ModeCard({
     >
       <span className="radio" />
       <strong>{recordingModeLabels[mode]}</strong>
-      <small>{selected ? "선택된 기록 모드입니다." : "프로젝트 성격에 따라 선택하세요."}</small>
+      <small>{selected ? "선택된 보관 범위입니다." : "프로젝트 성격에 따라 선택하세요."}</small>
       <ul>
         {points.map((point) => <li key={point}>{point}</li>)}
       </ul>
@@ -489,12 +502,27 @@ function SessionSummary({
   storageTarget: SessionStorageTarget;
 }) {
   return (
-    <aside className="summary-panel">
-      <h2>세션 요약</h2>
+    <InspectorPanel
+      ariaLabel="세션 요약"
+      title="세션 요약"
+      subtitle="만들기 전에 이 세션의 구성을 확인하세요."
+      headerExtras={
+        <Badge tone={savedDraft ? "green" : "gray"}>
+          {savedDraft ? "드래프트 저장됨" : "미저장"}
+        </Badge>
+      }
+      footer={
+        <div className="start-summary-footer">
+          <Lock size={15} aria-hidden="true" />
+          <span>
+            모든 데이터는 로컬에 저장됩니다. Cloud API는 명시적으로 켤 때만 사용합니다.
+          </span>
+        </div>
+      }
+    >
       <SummaryRow label="세션 이름" value={sessionTitle || "무제 Mori 세션"} />
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
-      <hr />
-      <SummaryRow label="기록할 소스" value={`${selectedSources.length}개 선택됨`} />
+      <SummaryRow label="가져올 소스" value={`${selectedSources.length}개 선택됨`} />
       <ul className="summary-source-list">
         {selectedSources.length === 0 ? (
           <li className="summary-source-empty">선택된 소스가 없습니다</li>
@@ -503,7 +531,7 @@ function SessionSummary({
         )}
       </ul>
       <hr />
-      <SummaryRow label="기록 모드" value={recordingModeLabels[recordingMode]} accent />
+      <SummaryRow label="보관 범위" value={recordingModeLabels[recordingMode]} accent />
       <SummaryRow
         label="AI 엔진"
         value={engine.model ? `${engine.label} (${engine.model})` : engine.label}
@@ -511,24 +539,14 @@ function SessionSummary({
       />
       <SummaryRow label="저장 위치" value={storageTarget.label} />
       <SummaryRow label="원본 보관" value={describeRetentionFootprint(recordingMode)} />
-      <SummaryRow label="민감 앱" value="기본 차단" />
-      <div className="draft-status-panel">
-        <strong>{savedDraft ? "세션 드래프트 저장됨" : "세션 드래프트가 아직 저장되지 않음"}</strong>
-        <span>저장소: {storageTarget.detail}</span>
-        <span>패키지 버전: .mori v0.1.0 JSON 지원</span>
-        {savedDraft ? (
-          <>
-            <span>현재 세션: {savedDraft.session.id}</span>
-            <span>저장 시각: {formatDateTime(savedDraft.savedAt)}</span>
-          </>
-        ) : null}
-      </div>
-      <div className="local-first-note">
-        <Lock size={18} />
-        <strong>모든 데이터는 로컬에 안전하게 저장됩니다.</strong>
-        <p>Cloud API는 사용자가 명시적으로 켤 때만 사용합니다. 사용자는 언제든 원본과 요약 데이터를 삭제할 수 있습니다.</p>
-      </div>
-    </aside>
+      {savedDraft ? (
+        <>
+          <hr />
+          <SummaryRow label="현재 세션" value={savedDraft.session.id} />
+          <SummaryRow label="저장 시각" value={formatDateTime(savedDraft.savedAt)} />
+        </>
+      ) : null}
+    </InspectorPanel>
   );
 }
 

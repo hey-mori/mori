@@ -1,6 +1,8 @@
 import { useMemo } from "react";
-import { ArrowRight, Compass, ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowRight, Compass, ExternalLink, Inbox, ShieldCheck } from "lucide-react";
+import { EmptyState } from "../../components/layout/EmptyState";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
 import { useMoriAppStore } from "../../app/store";
 import type { ViewKey } from "../../domain/types";
@@ -56,52 +58,52 @@ export function CompanionInboxView() {
   const topSignal = feed[0] ?? null;
 
   return (
-    <div className="page companion-inbox">
-      <PageHeader
-        title="Mori 노트"
-        subtitle="이번 작업에서 살펴볼 신호를 할 일 중심으로 정리했습니다. 모두 사용자가 가져온 소스에서 도출되며, Mori가 메모리를 자동으로 쓰지 않습니다."
-      />
-      <div className="companion-inbox-grid">
-        <section className="companion-inbox-main" aria-label="Companion signals">
-          {topSignal ? (
-            <CompanionInboxFocus
-              signal={topSignal}
-              onNavigate={setCurrentView}
-              onOpenReviewItem={openReviewItem}
-            />
-          ) : null}
-          {groups.length === 0 ? (
-            <div className="companion-inbox-empty">
-              <p>
-                지금은 살펴볼 신호가 없습니다. 새 소스를 가져오거나 Quick Pass를
-                실행하면 Mori가 다시 짚어 드립니다.
-              </p>
-              <div className="companion-inbox-empty-actions">
-                <Button onClick={() => setCurrentView("evidence")}>
-                  Evidence Hub에서 소스 가져오기
-                </Button>
-                <Button onClick={() => setCurrentView("review")}>
-                  검토 화면으로 이동
-                </Button>
-              </div>
-            </div>
-          ) : (
-            groups.map((group) => (
-              <CompanionInboxSection
-                key={group.category}
-                group={group}
-                acceptedMemories={acceptedMemories}
-                onNavigate={setCurrentView}
-                onOpenReviewItem={openReviewItem}
-                onOpenAcceptedMemory={openAcceptedMemory}
-              />
-            ))
-          )}
-        </section>
-
-        <CompanionInboxRail groups={groups} total={feed.length} isDemo={isDemo} />
-      </div>
-    </div>
+    <PageShell
+      className="companion-inbox"
+      header={
+        <PageHeader
+          title="Mori 노트"
+          subtitle="이번 작업에서 살펴볼 신호를 할 일 중심으로 정리했습니다. 모두 사용자가 가져온 소스에서 도출되며, Mori가 메모리를 자동으로 쓰지 않습니다."
+        />
+      }
+      aside={<CompanionInboxRail groups={groups} total={feed.length} isDemo={isDemo} />}
+    >
+      {topSignal ? (
+        <CompanionInboxFocus
+          signal={topSignal}
+          onNavigate={setCurrentView}
+          onOpenReviewItem={openReviewItem}
+        />
+      ) : null}
+      {groups.length === 0 ? (
+        <EmptyState
+          icon={Inbox}
+          title="살펴볼 신호가 없습니다"
+          description="새 소스를 가져오거나 Quick Pass를 실행하면 Mori가 다시 짚어 드립니다."
+          actions={
+            <>
+              <Button variant="primary" onClick={() => setCurrentView("evidence")}>
+                증거 허브에서 가져오기
+              </Button>
+              <Button variant="secondary" onClick={() => setCurrentView("review")}>
+                검토 화면으로 이동
+              </Button>
+            </>
+          }
+        />
+      ) : (
+        groups.map((group) => (
+          <CompanionInboxSection
+            key={group.category}
+            group={group}
+            acceptedMemories={acceptedMemories}
+            onNavigate={setCurrentView}
+            onOpenReviewItem={openReviewItem}
+            onOpenAcceptedMemory={openAcceptedMemory}
+          />
+        ))
+      )}
+    </PageShell>
   );
 }
 

@@ -3560,6 +3560,28 @@ hr {
   overflow-wrap: anywhere;
 }
 
+/* ─── Start Session (PageShell) ─────────────────────────────────────────
+ * The session-summary now lives inside a shared InspectorPanel aside rather
+ * than the legacy sticky `.summary-panel` card, so the source list aligns to
+ * the inspector body padding and the privacy line sits in the pinned footer. */
+.start-session-page .summary-source-list {
+  margin: 4px 0 0;
+}
+
+.start-summary-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--purple);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.start-summary-footer svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 .page-tight {
   padding-bottom: 20px;
 }
@@ -3651,7 +3673,9 @@ hr {
 .page-shell-split > .inspector-panel,
 .page-shell-split > .mori-inspector-panel,
 .page-shell-split > .evidence-detail,
-.page-shell-split > .review-rail {
+.page-shell-split > .review-rail,
+.page-shell-split > .settings-trust,
+.page-shell-split > .companion-inbox-rail {
   position: sticky;
   top: 0;
   align-self: start;
@@ -3663,7 +3687,9 @@ hr {
   .page-shell-split > .inspector-panel,
   .page-shell-split > .mori-inspector-panel,
   .page-shell-split > .evidence-detail,
-  .page-shell-split > .review-rail {
+  .page-shell-split > .review-rail,
+  .page-shell-split > .settings-trust,
+  .page-shell-split > .companion-inbox-rail {
     position: static;
     max-height: none;
     overflow: visible;
@@ -8716,19 +8742,10 @@ pre {
   text-decoration: underline;
 }
 
-/* Companion Inbox — the Companion Layer's dedicated surface */
-
-.companion-inbox-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 18px;
-  align-items: start;
-}
-
-.companion-inbox-main {
-  display: grid;
-  gap: 12px;
-}
+/* Companion Inbox — the Companion Layer's dedicated surface.
+   The page now sits in a shared PageShell: the signal feed stacks in
+   `.page-shell-main` and the summary rail is the shell's aside, so the old
+   `.companion-inbox-grid` / `.companion-inbox-main` wrappers are gone. */
 
 .companion-inbox-focus {
   display: flex;
@@ -8859,36 +8876,9 @@ pre {
   white-space: nowrap;
 }
 
-.companion-inbox-empty {
-  display: grid;
-  gap: 14px;
-  margin: 0;
-  padding: 24px 20px;
-  text-align: center;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--muted);
-  background: #f7f6fb;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
-
-.companion-inbox-empty p {
-  margin: 0;
-}
-
-.companion-inbox-empty-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
 .companion-inbox-rail {
   display: grid;
   gap: 12px;
-  position: sticky;
-  top: 16px;
 }
 
 .companion-inbox-rail-card {
@@ -8977,15 +8967,6 @@ pre {
   font-size: 10.5px;
   line-height: 1.5;
   color: var(--muted);
-}
-
-@media (max-width: 1100px) {
-  .companion-inbox-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .companion-inbox-rail {
-    position: static;
-  }
 }
 
 @media (max-width: 720px) {
@@ -11774,10 +11755,6 @@ pre {
  * Settings workspace
  * ============================ */
 
-.settings-workspace {
-  padding-bottom: 32px;
-}
-
 .settings-page-actions {
   display: inline-flex;
   align-items: center;
@@ -11846,12 +11823,20 @@ pre {
   align-items: center;
   gap: 4px;
   padding: 4px;
-  margin: 0 0 14px;
+  margin: 0;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: white;
   box-shadow: var(--shadow-soft);
   flex-wrap: wrap;
+}
+
+/* In the shared PageShell the tab strip lives in the ActionBar and the
+   TrustSummaryPanel becomes the aside, so the legacy `.settings-layout`
+   two-column wrapper is no longer rendered. The runtime-summary strip and
+   section cards stack in the shell content column on their own rhythm. */
+.settings-page .settings-runtime-summary {
+  margin: 0;
 }
 
 .settings-tab {
@@ -11879,26 +11864,7 @@ pre {
   color: white;
 }
 
-/* Layout */
-
-.settings-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 16px;
-  align-items: start;
-}
-
-@media (max-width: 1440px) {
-  .settings-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
-}
-
-@media (max-width: 1180px) {
-  .settings-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
+/* Layout — the section cards stack in the PageShell content column. */
 
 .settings-main {
   display: grid;

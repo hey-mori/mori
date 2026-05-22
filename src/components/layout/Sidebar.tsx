@@ -25,42 +25,17 @@ import {
   discoverClaudeCodeSessions,
   isClaudeBridgeAvailable,
 } from "../../lib/claude/claudeTauri";
-
-type NavKey = keyof typeof moriViewIcon;
-type NavItem = { key: NavKey; label: string; badge?: string };
+import { NAV_GROUPS, type NavKey } from "../../lib/navigation/navGroups";
 
 /**
- * The nav is grouped so nine destinations read as an organised structure
- * rather than a flat list: the entry action, the four session-work
- * surfaces, the project-level surfaces, and settings. Icons come from the
- * shared `moriViewIcon` vocabulary so they stay meaning-driven.
+ * Nav structure is defined as pure data in `lib/navigation/navGroups` so the
+ * entry model (Connections leads; "새 세션" is a demoted secondary path) is
+ * unit-tested and can't silently regress here.
  *
- * Live badge counts are computed inside the component so session state
- * gives users at-a-glance context (e.g. how many events, issues, etc.)
- * without navigating to each surface first.
+ * Live badge counts are computed inside the component so session state gives
+ * users at-a-glance context (e.g. how many events, issues, etc.) without
+ * navigating to each surface first.
  */
-const BASE_NAV_GROUPS: Array<{ label?: string; items: NavItem[] }> = [
-  { items: [{ key: "start", label: "세션 시작" }] },
-  {
-    label: "작업",
-    items: [
-      { key: "timeline", label: "타임라인" },
-      { key: "evidence", label: "증거 허브" },
-      { key: "connections", label: "연결" },
-      { key: "review", label: "검토" },
-      { key: "reports", label: "보고서" },
-    ],
-  },
-  {
-    label: "프로젝트",
-    items: [
-      { key: "workspace", label: "워크스페이스" },
-      { key: "memory", label: "메모리" },
-      { key: "companion", label: "Mori 노트" },
-    ],
-  },
-  { items: [{ key: "settings", label: "설정" }] },
-];
 
 export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onNavigate: (view: ViewKey) => void }) {
   const view = useMoriSessionStore(selectSessionView);
@@ -103,7 +78,7 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
         <MoriLogo size={32} />
       </button>
       <nav className="nav">
-        {BASE_NAV_GROUPS.map((group, groupIndex) => (
+        {NAV_GROUPS.map((group, groupIndex) => (
           <div className="nav-group" key={group.label ?? `group-${groupIndex}`}>
             {group.label ? <p className="nav-group-label">{group.label}</p> : null}
             {group.items.map((item) => {
