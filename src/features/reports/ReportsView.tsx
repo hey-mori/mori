@@ -448,18 +448,17 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
   // or page header — Memory owns the surface chrome), with the report builder as
   // a right rail in the shared session-tab split layout.
   if (embedded) {
+    // The session tab strip already shows 흐름 / 증거 / 인사이트 counts as
+    // badges, so the report bar drops the duplicate `actionCounts` block and
+    // keeps only the status badges (capture date, source, Quick Pass state)
+    // and the Quick Pass action.
     return (
       <div className="session-tab-pane reports-embedded">
         <div className="session-tab-actionbar">
           <ActionBar
             label="보고서 세션 상태"
             start={statusBadges}
-            end={
-              <div className="reports-embedded-actions">
-                {quickPassButton}
-                {actionCounts}
-              </div>
-            }
+            end={quickPassButton}
           />
         </div>
         <div className="session-tab-split">
