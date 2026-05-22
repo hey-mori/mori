@@ -2375,7 +2375,7 @@ kbd {
 .empty-state h2 {
   margin: 0;
   color: var(--text);
-  font-size: 17px;
+  font-size: var(--mori-font-size-2xl);
 }
 
 .empty-state p {
@@ -5597,7 +5597,7 @@ pre {
 
 .project-hero h2 {
   margin: 14px 0;
-  font-size: 24px;
+  font-size: var(--mori-font-size-3xl);
 }
 
 .project-hero p {
@@ -9909,7 +9909,7 @@ pre {
 
 .companion-inbox-focus h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--mori-font-size-2xl);
   line-height: 1.25;
 }
 
@@ -11159,7 +11159,7 @@ pre {
 
 .accepted-memory-detail-titles h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--mori-font-size-2xl);
   font-weight: 800;
   line-height: 1.3;
   color: var(--mori-text, var(--text));
@@ -16025,7 +16025,7 @@ pre {
 
 .conversation-viewer-title-row h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--mori-font-size-2xl);
   color: var(--text);
   line-height: 1.35;
   word-break: break-word;
