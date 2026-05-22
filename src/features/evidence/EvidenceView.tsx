@@ -151,14 +151,9 @@ export function EvidenceView() {
     <ActionBar
       label="증거 허브 상태"
       start={
-        <>
-          <Badge tone={isDemoSession ? "gray" : "green"}>
-            {isDemoSession ? "데모 세션" : "실제 세션"}
-          </Badge>
-          <Badge tone={importedSources.length ? "purple" : "gray"}>
-            {importedSources.length}개 출처
-          </Badge>
-        </>
+        <Badge tone={importedSources.length ? "purple" : "gray"}>
+          {importedSources.length}개 출처
+        </Badge>
       }
       end={
         <Button

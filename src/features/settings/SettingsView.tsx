@@ -133,9 +133,6 @@ export function SettingsView() {
           label="설정 섹션"
           end={
             <div className="settings-page-actions">
-              <Badge tone={sessionMode === "demo" ? "gray" : "green"}>
-                {sessionMode === "demo" ? "데모 세션" : "실제 세션"}
-              </Badge>
               <Badge tone="purple">{mode === "tauri-desktop" ? "Tauri desktop" : "Browser"}</Badge>
             </div>
           }

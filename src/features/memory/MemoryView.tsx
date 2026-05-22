@@ -389,9 +389,6 @@ export function MemoryView() {
           label="메모리 데이터 범위"
           start={
             <>
-              <Badge tone={mode === "demo" ? "gray" : "green"}>
-                {mode === "demo" ? "데모 세션" : "실제 세션"}
-              </Badge>
               <Badge tone="purple">{scopeLabel}</Badge>
               <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>
               <HelpDisclosure label="집계 범위" ariaLabel="메모리 집계 범위 설명">

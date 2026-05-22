@@ -370,7 +370,6 @@ export function ReportsView() {
           label="보고서 세션 상태"
           start={
             <>
-              <Badge tone={isDemo ? "gray" : "green"}>{isDemo ? "데모 세션" : "실제 세션"}</Badge>
               <Badge tone="gray" title="이 리포트는 활성 세션을 기준으로 합니다.">
                 <Calendar size={12} aria-hidden="true" /> {formatDate(view.session.startedAt)}
               </Badge>
