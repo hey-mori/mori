@@ -4510,7 +4510,7 @@ hr {
    widgets — every cell and number traces to a stored session. */
 .home-dashboard {
   display: grid;
-  gap: var(--mori-space-9);
+  gap: var(--mori-space-7);
 }
 
 .home-demo-note {
@@ -4624,12 +4624,12 @@ hr {
 }
 
 /* Activity hero — the signature "잔디". One calm card: a contribution heatmap
-   over the recent window plus a compact real-data stat strip. Every cell and
-   number traces to a stored session; nothing is fabricated. */
+   over the recent window plus a compact real-data stat strip. Tighter padding
+   so the card doesn't read as mostly whitespace around a small heatmap. */
 .home-activity {
   display: grid;
-  gap: var(--mori-space-6);
-  padding: var(--mori-space-7);
+  gap: var(--mori-space-5);
+  padding: var(--mori-space-5) var(--mori-space-6);
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-lg);
   background: var(--mori-surface);
