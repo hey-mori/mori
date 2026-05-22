@@ -15,7 +15,11 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ActionBar } from "../../components/layout/ActionBar";
+import { EmptyState } from "../../components/layout/EmptyState";
+import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { PageShell } from "../../components/layout/PageShell";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -162,6 +166,7 @@ export function ReviewView() {
     return selection;
   })();
 
+  const isDemo = mode === "demo";
   const canRunQuickPass = imports.length > 0 && analysisStatus !== "running";
   const showQuickPassEmpty = mode === "draft" && !hasAnalysis;
 
@@ -176,23 +181,138 @@ export function ReviewView() {
   }
 
   return (
-    <div className="page review-workspace">
-      <PageHeader
-        title="검토"
-        subtitle="가져온 증거와 타임라인 분석을 바탕으로 Mori가 추출한 이슈, 결정, 다음 액션을 검토하세요. 모든 항목은 적용된 소스에서 추적할 수 있습니다."
-        right={
-          <div className="evidence-page-actions">
-            <Badge tone={mode === "demo" ? "gray" : "green"}>
-              {mode === "demo" ? "데모 세션" : "실제 세션"}
-            </Badge>
-          </div>
-        }
-      />
+    <PageShell
+      className="review-page"
+      header={
+        <PageHeader
+          title="검토"
+          subtitle="Mori가 증거에서 추출한 이슈 · 결정 · 다음 액션을 검토합니다. 모든 항목은 적용된 소스로 추적됩니다."
+          right={
+            !isDemo ? (
+              <Button
+                variant="primary"
+                icon={Sparkles}
+                onClick={() => runQuickPass()}
+                disabled={!canRunQuickPass}
+                title={
+                  canRunQuickPass
+                    ? "Quick Pass 실행"
+                    : imports.length === 0
+                      ? "먼저 소스를 가져오세요."
+                      : "이미 실행 중입니다."
+                }
+              >
+                {analysisStatus === "running"
+                  ? "분석 중..."
+                  : hasAnalysis
+                    ? "Quick Pass 재실행"
+                    : "Quick Pass 실행"}
+              </Button>
+            ) : undefined
+          }
+        />
+      }
+      actionBar={
+        <ActionBar
+          label="검토 탭"
+          start={
+            <nav
+              className="review-tabs"
+              role="tablist"
+              aria-label="Review tabs"
+              onKeyDown={(event) => {
+                const tabIds = TAB_DEFS.map((t) => t.id);
+                const current = tabIds.indexOf(activeTab);
+                let next = -1;
+                if (event.key === "ArrowRight") next = (current + 1) % tabIds.length;
+                else if (event.key === "ArrowLeft")
+                  next = (current - 1 + tabIds.length) % tabIds.length;
+                else if (event.key === "Home") next = 0;
+                else if (event.key === "End") next = tabIds.length - 1;
+                if (next !== -1) {
+                  event.preventDefault();
+                  const nextId = tabIds[next]!;
+                  setActiveTab(nextId);
+                  (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
+                }
+              }}
+            >
+              {TAB_DEFS.map((tab) => {
+                const Icon = tab.icon;
+                const count = countForTab(tab.id, view, unresolved);
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    tabIndex={isActive ? 0 : -1}
+                    aria-selected={isActive}
+                    className={`review-tab ${isActive ? "active" : ""}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    <Icon size={14} aria-hidden="true" />
+                    <span>{tab.label}</span>
+                    <Badge tone={isActive ? "purple" : "gray"}>{count}</Badge>
+                  </button>
+                );
+              })}
+            </nav>
+          }
+          end={
+            <div className="review-action-counts">
+              <Badge tone="red">이슈 {summary.issueCount}</Badge>
+              <Badge tone="blue">결정 {summary.decisionCount}</Badge>
+              <Badge tone="green">다음 {summary.nextActionCount}</Badge>
+            </div>
+          }
+        />
+      }
+      aside={
+        <aside className="review-rail" aria-label="검토 상세">
+          <ReviewDetailPanel
+            selection={effectiveSelection}
+            view={view}
+            onShowTimeline={handleShowTimeline}
+            onToggleNextActionComplete={(id, completed) =>
+              setNextActionCompletion(id, completed)
+            }
+            onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
+            onEditIssue={(id, fields) => editIssue(id, fields)}
+            onPromoteIssueToNextAction={(id) => {
+              const nextAction = promoteIssueToNextAction(id);
+              if (nextAction) {
+                selectAndOpen(
+                  { kind: "nextAction", nextActionId: nextAction.id },
+                  "nextActions",
+                );
+              }
+              return nextAction;
+            }}
+            onSetDecisionConfirmed={(id, confirmed) =>
+              setDecisionConfirmed(id, confirmed)
+            }
+            onEditDecision={(id, fields) => editDecision(id, fields)}
+            onEditNextAction={(id, fields) => editNextAction(id, fields)}
+            canEditReview={!view.isDemo}
+          />
+          <ReviewSummaryPanel
+            summary={summary}
+            issues={view.issues}
+            decisions={view.decisions}
+            nextActions={view.nextActions}
+            hasAnalysis={hasAnalysis}
+            providerLabel={analysisProviderLabel}
+            dataBasis={dataBasis}
+          />
+        </aside>
+      }
+    >
       <SessionModeBanner />
 
       <CompanionStrip signals={companionSignals} onNavigate={setCurrentView} />
 
-      <AnalysisStrip
+      <ReviewAnalysisNotice
         mode={mode}
         hasAnalysis={hasAnalysis}
         status={analysisStatus}
@@ -200,58 +320,13 @@ export function ReviewView() {
         providerName={analysis?.providerName ?? null}
         analysisGeneratedAt={analysis?.generatedAt ?? null}
         error={analysisError}
-        canRun={canRunQuickPass}
         importsCount={imports.length}
-        summary={summary}
         dataBasis={dataBasis}
-        onRun={() => runQuickPass()}
         onGoToEvidence={() => setCurrentView("evidence")}
       />
 
-      <nav
-        className="review-tabs"
-        role="tablist"
-        aria-label="Review tabs"
-        onKeyDown={(event) => {
-          const tabIds = TAB_DEFS.map((t) => t.id);
-          const current = tabIds.indexOf(activeTab);
-          let next = -1;
-          if (event.key === "ArrowRight") next = (current + 1) % tabIds.length;
-          else if (event.key === "ArrowLeft") next = (current - 1 + tabIds.length) % tabIds.length;
-          else if (event.key === "Home") next = 0;
-          else if (event.key === "End") next = tabIds.length - 1;
-          if (next !== -1) {
-            event.preventDefault();
-            const nextId = tabIds[next]!;
-            setActiveTab(nextId);
-            (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
-          }
-        }}
-      >
-        {TAB_DEFS.map((tab) => {
-          const Icon = tab.icon;
-          const count = countForTab(tab.id, view, unresolved);
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              tabIndex={isActive ? 0 : -1}
-              aria-selected={isActive}
-              className={`review-tab ${isActive ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <Icon size={14} aria-hidden="true" />
-              <span>{tab.label}</span>
-              <Badge tone={isActive ? "purple" : "gray"}>{count}</Badge>
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="review-layout">
-        <section className="review-main">
+      <div className="review-main">
+        <section className="review-main-tab">
           {activeTab === "issues" ? (
             <IssueGardenTab
               grouped={grouped}
@@ -320,46 +395,8 @@ export function ReviewView() {
             />
           ) : null}
         </section>
-
-        <div className="review-sidebar">
-          <ReviewDetailPanel
-            selection={effectiveSelection}
-            view={view}
-            onShowTimeline={handleShowTimeline}
-            onToggleNextActionComplete={(id, completed) =>
-              setNextActionCompletion(id, completed)
-            }
-            onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
-            onEditIssue={(id, fields) => editIssue(id, fields)}
-            onPromoteIssueToNextAction={(id) => {
-              const nextAction = promoteIssueToNextAction(id);
-              if (nextAction) {
-                selectAndOpen(
-                  { kind: "nextAction", nextActionId: nextAction.id },
-                  "nextActions",
-                );
-              }
-              return nextAction;
-            }}
-            onSetDecisionConfirmed={(id, confirmed) =>
-              setDecisionConfirmed(id, confirmed)
-            }
-            onEditDecision={(id, fields) => editDecision(id, fields)}
-            onEditNextAction={(id, fields) => editNextAction(id, fields)}
-            canEditReview={!view.isDemo}
-          />
-          <ReviewSummaryPanel
-            summary={summary}
-            issues={view.issues}
-            decisions={view.decisions}
-            nextActions={view.nextActions}
-            hasAnalysis={hasAnalysis}
-            providerLabel={analysisProviderLabel}
-            dataBasis={dataBasis}
-          />
-        </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 
@@ -383,7 +420,14 @@ function countForTab(
   }
 }
 
-function AnalysisStrip({
+/**
+ * Compact analysis-state notice. The run action and the count badges now live
+ * in the header + action bar, so this only surfaces when there is something
+ * worth saying: a failure, a run in progress, an empty real session, or the
+ * provider/timestamp once results exist. It stays quiet otherwise rather than
+ * occupying a permanent strip.
+ */
+function ReviewAnalysisNotice({
   mode,
   hasAnalysis,
   status,
@@ -391,11 +435,8 @@ function AnalysisStrip({
   providerName,
   analysisGeneratedAt,
   error,
-  canRun,
   importsCount,
-  summary,
   dataBasis,
-  onRun,
   onGoToEvidence,
 }: {
   mode: "demo" | "draft";
@@ -405,65 +446,52 @@ function AnalysisStrip({
   providerName: string | null;
   analysisGeneratedAt: string | null;
   error: string | null;
-  canRun: boolean;
   importsCount: number;
-  summary: ReturnType<typeof getReviewSummary>;
   dataBasis: string;
-  onRun: () => void;
   onGoToEvidence: () => void;
 }) {
-  const isDemo = mode === "demo";
-  const providerCopy = providerLabel ?? "deterministic";
-  const providerKind = providerName === "ollama-quick-pass-v1" ? "local LLM" : "heuristic";
+  if (mode === "demo") return null;
 
+  if (status === "failed") {
+    return (
+      <NoticeBanner tone="danger" title="Quick Pass 실패">
+        {error ?? "알 수 없는 오류"}
+      </NoticeBanner>
+    );
+  }
+  if (status === "running") {
+    return <NoticeBanner tone="info">Quick Pass 실행 중...</NoticeBanner>;
+  }
+  if (!hasAnalysis && importsCount === 0) {
+    return (
+      <NoticeBanner
+        tone="info"
+        title="아직 가져온 소스가 없습니다"
+        actions={
+          <Button onClick={onGoToEvidence}>증거 허브로 이동</Button>
+        }
+      >
+        증거 허브에서 소스를 추가하고 Quick Pass를 실행하면 이슈 · 결정 후보가 생성됩니다.
+      </NoticeBanner>
+    );
+  }
+  if (!hasAnalysis) {
+    return (
+      <NoticeBanner tone="info">
+        가져온 소스가 있습니다. 우측 상단에서 Quick Pass를 실행하면 이슈 · 결정 후보가 생성됩니다.
+      </NoticeBanner>
+    );
+  }
+
+  const providerCopy = providerLabel ?? "deterministic";
+  const providerKind = providerName === "ollama-quick-pass-v1" ? "로컬 LLM" : "휴리스틱";
   return (
-    <div className={`review-analysis-strip status-${status}`} role="region" aria-label="Analysis state">
-      <div className="review-analysis-info">
-        <div>
-          <strong>분석 상태</strong>
-          <span>
-            {isDemo
-              ? "데모 세션의 mock 분석 결과를 보여줍니다."
-              : status === "running"
-                ? "Quick Pass 실행 중..."
-                : status === "failed"
-                  ? `Quick Pass 실패: ${error ?? "알 수 없는 오류"}`
-                  : hasAnalysis
-                    ? `${providerCopy} · ${providerKind}`
-                    : importsCount === 0
-                      ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가하세요."
-                      : "가져온 소스가 있습니다. Quick Pass를 실행하면 이슈/결정 후보가 생성됩니다."}
-          </span>
-        </div>
-        <div className="review-analysis-counts">
-          <Badge tone="red">이슈 {summary.issueCount}</Badge>
-          <Badge tone="blue">결정 {summary.decisionCount}</Badge>
-          <Badge tone="green">다음 액션 {summary.nextActionCount}</Badge>
-          <Badge tone="gray">{dataBasis}</Badge>
-          {analysisGeneratedAt ? (
-            <span className="review-analysis-time">
-              {formatDateTime(analysisGeneratedAt)}
-            </span>
-          ) : null}
-        </div>
-      </div>
-      <div className="review-analysis-actions">
-        {!isDemo && importsCount === 0 ? (
-          <Button onClick={onGoToEvidence}>Evidence Hub로 이동</Button>
-        ) : null}
-        {!isDemo ? (
-          <Button
-            variant="primary"
-            icon={Sparkles}
-            onClick={onRun}
-            disabled={!canRun}
-            title={canRun ? "Quick Pass 실행" : importsCount === 0 ? "먼저 소스를 가져오세요." : "이미 실행 중입니다."}
-          >
-            {status === "running" ? "분석 중..." : hasAnalysis ? "Quick Pass 재실행" : "Quick Pass 실행"}
-          </Button>
-        ) : null}
-      </div>
-    </div>
+    <NoticeBanner tone="success" icon={null}>
+      <span className="review-analysis-meta">
+        {providerCopy} · {providerKind}
+        {analysisGeneratedAt ? ` · ${formatDateTime(analysisGeneratedAt)}` : ""} · {dataBasis}
+      </span>
+    </NoticeBanner>
   );
 }
 
@@ -493,38 +521,37 @@ function IssueGardenTab({
 
   if (showQuickPassEmpty) {
     return (
-      <div className="review-empty">
-        <Sparkles size={28} aria-hidden="true" />
-        <h3>Quick Pass를 실행하면 이슈가 생성됩니다</h3>
-        <p>
-          Review는 가져온 소스와 Timeline 이벤트를 기반으로 이슈/결정/다음 액션을 추출합니다.
-          {hasImports
-            ? " 위의 'Quick Pass 실행' 버튼을 사용해 분석을 시작하세요."
-            : " 먼저 Evidence Hub에서 소스를 가져온 뒤 분석을 실행하세요."}
-        </p>
-        <div className="review-empty-actions">
-          {hasImports ? (
+      <EmptyState
+        icon={Sparkles}
+        title="Quick Pass를 실행하면 이슈가 생성됩니다"
+        description={
+          hasImports
+            ? "가져온 소스와 타임라인 이벤트로 이슈 · 결정 · 다음 액션을 추출합니다."
+            : "먼저 증거 허브에서 소스를 가져온 뒤 분석을 실행하세요."
+        }
+        actions={
+          hasImports ? (
             <Button variant="primary" icon={Sparkles} onClick={onRunQuickPass} disabled={!canRunQuickPass}>
               Quick Pass 실행
             </Button>
           ) : (
             <Button variant="primary" onClick={onGoToEvidence}>
-              Evidence Hub로 이동
+              증거 허브로 이동
             </Button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
     );
   }
 
   const totalIssues = ISSUE_STATUS_ORDER.reduce((acc, status) => acc + grouped[status].length, 0);
   if (totalIssues === 0) {
     return (
-      <div className="review-empty">
-        <CheckCircle2 size={28} aria-hidden="true" />
-        <h3>이슈가 없습니다</h3>
-        <p>이번 세션에서는 처리할 이슈가 없습니다. Quick Pass가 새 이슈를 추출하면 여기에 표시됩니다.</p>
-      </div>
+      <EmptyState
+        icon={CheckCircle2}
+        title="이슈가 없습니다"
+        description="처리할 이슈가 없습니다. Quick Pass가 새 이슈를 추출하면 여기에 표시됩니다."
+      />
     );
   }
 
@@ -540,12 +567,6 @@ function IssueGardenTab({
 
   return (
     <section className="review-issue-board">
-      <header className="review-section-head">
-        <div>
-          <h2>이슈 가든</h2>
-          <p>상태별로 이슈를 정리합니다. 카드를 클릭하면 오른쪽 패널에 출처와 관련 이벤트가 표시됩니다.</p>
-        </div>
-      </header>
       <IssueGardenFilter
         searchText={searchText}
         priorityFilter={priorityFilter}
@@ -724,11 +745,11 @@ function DecisionLogTab({
 
   if (decisions.length === 0) {
     return (
-      <div className="review-empty">
-        <Table2 size={28} aria-hidden="true" />
-        <h3>아직 결정이 없습니다</h3>
-        <p>Quick Pass가 결정을 추출하면 여기 표 형태로 표시됩니다. 각 결정은 근거와 영향까지 함께 보관됩니다.</p>
-      </div>
+      <EmptyState
+        icon={Table2}
+        title="아직 결정이 없습니다"
+        description="Quick Pass가 결정을 추출하면 근거 · 영향과 함께 표로 표시됩니다."
+      />
     );
   }
 
@@ -736,12 +757,6 @@ function DecisionLogTab({
 
   return (
     <section className="review-decision-log">
-      <header className="review-section-head">
-        <div>
-          <h2>결정 기록</h2>
-          <p>결정 시각, 중요도, 근거 출처를 한 행에서 확인합니다. 열 헤더를 클릭하면 정렬합니다.</p>
-        </div>
-      </header>
       <div className="review-table-wrap">
         <table>
           <thead>
@@ -817,15 +832,15 @@ function NextActionsTab({
   const actions = view.nextActions;
   if (actions.length === 0) {
     return (
-      <div className="review-empty">
-        <ListChecks size={28} aria-hidden="true" />
-        <h3>다음 액션이 없습니다</h3>
-        <p>
-          {hasAnalysis
-            ? "Quick Pass는 다음 액션 후보를 만들지 않았습니다. Suggestions 탭에서 이슈의 추천 작업을 다음 액션으로 승격할 수 있습니다."
-            : "Quick Pass를 실행하면 추천 다음 액션 후보가 표시됩니다."}
-        </p>
-      </div>
+      <EmptyState
+        icon={ListChecks}
+        title="다음 액션이 없습니다"
+        description={
+          hasAnalysis
+            ? "제안 탭에서 이슈의 추천 작업을 다음 액션으로 승격할 수 있습니다."
+            : "Quick Pass를 실행하면 추천 다음 액션 후보가 표시됩니다."
+        }
+      />
     );
   }
   const progress = countNextActionCompletion(actions);
@@ -833,14 +848,11 @@ function NextActionsTab({
   const ordered = [...pending, ...completed];
   return (
     <section className="review-next-actions">
-      <header className="review-section-head">
-        <div>
-          <h2>다음 액션</h2>
-          <p>
-            이슈와 연결된 다음 작업 후보입니다. 완료 처리한 작업은 목록 아래로
-            내려가며, 남은 작업 {progress.pending}개 · 완료 {progress.completed}개입니다.
-          </p>
-        </div>
+      <header className="review-list-head">
+        <span className="review-list-progress">
+          <Badge tone="orange">진행 {progress.pending}</Badge>
+          <Badge tone="green">완료 {progress.completed}</Badge>
+        </span>
       </header>
       <ul className="review-next-action-list">
         {ordered.map((action) => (
@@ -875,21 +887,15 @@ function UnresolvedTab({
 }) {
   if (items.length === 0) {
     return (
-      <div className="review-empty">
-        <Activity size={28} aria-hidden="true" />
-        <h3>처리되지 않은 항목이 없습니다</h3>
-        <p>현재 세션에는 추가로 검토할 Open / 미확정 / 낮은 신뢰도 항목이 없습니다.</p>
-      </div>
+      <EmptyState
+        icon={Activity}
+        title="처리되지 않은 항목이 없습니다"
+        description="추가로 검토할 Open · 미확정 · 낮은 신뢰도 항목이 없습니다."
+      />
     );
   }
   return (
     <section className="review-unresolved">
-      <header className="review-section-head">
-        <div>
-          <h2>미처리 항목</h2>
-          <p>Open 이슈, 미확정 결정, 추론 신뢰도가 낮은 항목, 대기 중인 다음 액션을 모아 보여줍니다.</p>
-        </div>
-      </header>
       <ul className="review-unresolved-list">
         {items.map((item) => {
           const reasonLabel = UNRESOLVED_REASON_LABEL[item.reason];
@@ -984,33 +990,29 @@ function SuggestionsTab({
   // explicitly runs Quick Pass; we never invent suggestions on our own.
   if (mode === "draft" && !hasAnalysis) {
     return (
-      <div className="review-empty">
-        <Sparkles size={28} aria-hidden="true" />
-        <h3>Quick Pass 분석 후 추천이 표시됩니다</h3>
-        <p>Quick Pass가 각 이슈에 대해 제안한 다음 액션을 한 곳에서 검토할 수 있습니다.</p>
-      </div>
+      <EmptyState
+        icon={Sparkles}
+        title="Quick Pass 분석 후 추천이 표시됩니다"
+        description="각 이슈에 대해 제안된 다음 액션을 한 곳에서 검토할 수 있습니다."
+      />
     );
   }
   if (suggestions.length === 0) {
     return (
-      <div className="review-empty">
-        <Sparkles size={28} aria-hidden="true" />
-        <h3>현재 분석에서 추천된 액션이 없습니다</h3>
-        <p>{providerLabel ?? "Quick Pass"}는 이번 세션에서 별도의 다음 액션 제안을 만들지 않았습니다.</p>
-      </div>
+      <EmptyState
+        icon={Sparkles}
+        title="추천된 액션이 없습니다"
+        description={`${providerLabel ?? "Quick Pass"}는 이번 세션에서 별도의 다음 액션 제안을 만들지 않았습니다.`}
+      />
     );
   }
   const pendingCount = suggestions.filter((item) => !item.promotedNextActionId).length;
   return (
     <section className="review-suggestions">
-      <header className="review-section-head">
-        <div>
-          <h2>제안</h2>
-          <p>
-            각 이슈에서 Quick Pass가 제안한 다음 액션입니다. 승격하면 다음 액션 탭에
-            추가됩니다 — 승격 대기 {pendingCount}개.
-          </p>
-        </div>
+      <header className="review-list-head">
+        <span className="review-list-progress">
+          <Badge tone="purple">승격 대기 {pendingCount}</Badge>
+        </span>
       </header>
       <ul className="review-suggestions-list">
         {suggestions.map(({ issue, promotedNextActionId }) => (

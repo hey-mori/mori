@@ -1,6 +1,9 @@
 import { Archive, Calendar, FileText, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ActionBar } from "../../components/layout/ActionBar";
+import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { PageShell } from "../../components/layout/PageShell";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -340,22 +343,71 @@ export function ReportsView() {
   }
 
   return (
-    <div className="page reports-page">
-      <PageHeader
-        title="보고서"
-        subtitle="Mori의 작업 메모리를 Resume 프롬프트와 공유 가능한 리포트로 만듭니다."
-        right={
-          <div className="reports-page-actions">
-            <Badge tone={isDemo ? "gray" : "green"}>{isDemo ? "데모 세션" : "실제 세션"}</Badge>
-            <Badge tone="gray" title="이 리포트는 활성 세션을 기준으로 합니다.">
-              <Calendar size={12} aria-hidden="true" /> {formatDate(view.session.startedAt)}
-            </Badge>
-          </div>
-        }
-      />
+    <PageShell
+      className="reports-page"
+      header={
+        <PageHeader
+          title="보고서"
+          subtitle="작업 메모리를 Resume 프롬프트와 공유 가능한 리포트로 만듭니다."
+          right={
+            !isDemo ? (
+              <Button
+                variant="primary"
+                icon={Sparkles}
+                onClick={() => runQuickPass()}
+                disabled={!canRunQuickPass}
+                title={
+                  canRunQuickPass
+                    ? "Quick Pass 실행"
+                    : imports.length === 0
+                      ? "먼저 소스를 가져오세요."
+                      : "이미 실행 중입니다."
+                }
+              >
+                {analysisStatus === "running"
+                  ? "분석 중..."
+                  : hasAnalysis
+                    ? "Quick Pass 재실행"
+                    : "Quick Pass 실행"}
+              </Button>
+            ) : undefined
+          }
+        />
+      }
+      actionBar={
+        <ActionBar
+          label="보고서 세션 상태"
+          start={
+            <>
+              <Badge tone={isDemo ? "gray" : "green"}>{isDemo ? "데모 세션" : "실제 세션"}</Badge>
+              <Badge tone="gray" title="이 리포트는 활성 세션을 기준으로 합니다.">
+                <Calendar size={12} aria-hidden="true" /> {formatDate(view.session.startedAt)}
+              </Badge>
+              <Badge tone="gray">{evidenceSummary.dataBasis}</Badge>
+            </>
+          }
+          end={
+            <div className="reports-action-counts">
+              <Badge tone="purple">출처 {view.sources.length}</Badge>
+              <Badge tone="blue">이벤트 {view.events.length}</Badge>
+              <Badge tone="red">이슈 {view.issues.length}</Badge>
+              <Badge tone="green">결정 {view.decisions.length}</Badge>
+            </div>
+          }
+        />
+      }
+      aside={
+        <ReportBuilderPanel
+          id="reports-builder"
+          view={view}
+          resumePromptOverride={resumePromptText}
+          acceptedMemories={acceptedMemories}
+        />
+      }
+    >
       <SessionModeBanner />
 
-      <AnalysisStrip
+      <ReportsAnalysisNotice
         mode={mode}
         hasAnalysis={hasAnalysis}
         status={analysisStatus}
@@ -363,22 +415,11 @@ export function ReportsView() {
         providerName={analysis?.providerName ?? null}
         generatedAt={analysis?.generatedAt ?? null}
         error={analysisError}
-        canRun={canRunQuickPass}
         importsCount={imports.length}
-        evidenceCounts={{
-          sources: view.sources.length,
-          events: view.events.length,
-          issues: view.issues.length,
-          decisions: view.decisions.length,
-          nextActions: view.nextActions.length,
-        }}
-        dataBasis={evidenceSummary.dataBasis}
-        onRun={() => runQuickPass()}
         onGoToEvidence={() => setCurrentView("evidence")}
       />
 
-      <div className="reports-layout">
-        <section className="reports-main">
+      <div className="reports-main">
           <CompanionCard
             signals={companionSignals}
             isDemo={mode === "demo"}
@@ -431,20 +472,18 @@ export function ReportsView() {
           </div>
 
           <ReportsCapabilityStrip />
-        </section>
-
-        <ReportBuilderPanel
-          id="reports-builder"
-          view={view}
-          resumePromptOverride={resumePromptText}
-          acceptedMemories={acceptedMemories}
-        />
       </div>
-    </div>
+    </PageShell>
   );
 }
 
-function AnalysisStrip({
+/**
+ * Compact analysis-state notice. The Quick Pass action lives in the header and
+ * the evidence counts live in the action bar, so this only surfaces when there
+ * is a meaningful state to report — a failure, a run, an empty real session,
+ * or the provider line once results exist. Stays quiet otherwise.
+ */
+function ReportsAnalysisNotice({
   mode,
   hasAnalysis,
   status,
@@ -452,11 +491,7 @@ function AnalysisStrip({
   providerName,
   generatedAt,
   error,
-  canRun,
   importsCount,
-  evidenceCounts,
-  dataBasis,
-  onRun,
   onGoToEvidence,
 }: {
   mode: "demo" | "draft";
@@ -466,69 +501,49 @@ function AnalysisStrip({
   providerName: string | null;
   generatedAt: string | null;
   error: string | null;
-  canRun: boolean;
   importsCount: number;
-  evidenceCounts: {
-    sources: number;
-    events: number;
-    issues: number;
-    decisions: number;
-    nextActions: number;
-  };
-  dataBasis: string;
-  onRun: () => void;
   onGoToEvidence: () => void;
 }) {
-  const isDemo = mode === "demo";
+  if (mode === "demo") return null;
+
+  if (status === "failed") {
+    return (
+      <NoticeBanner tone="danger" title="Quick Pass 실패">
+        {error ?? "알 수 없는 오류"}
+      </NoticeBanner>
+    );
+  }
+  if (status === "running") {
+    return <NoticeBanner tone="info">Quick Pass 실행 중...</NoticeBanner>;
+  }
+  if (!hasAnalysis && importsCount === 0) {
+    return (
+      <NoticeBanner
+        tone="info"
+        title="아직 가져온 소스가 없습니다"
+        actions={<Button onClick={onGoToEvidence}>증거 허브로 이동</Button>}
+      >
+        증거 허브에서 소스를 추가하고 Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다.
+      </NoticeBanner>
+    );
+  }
+  if (!hasAnalysis) {
+    return (
+      <NoticeBanner tone="info">
+        가져온 소스가 있습니다. 우측 상단에서 Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다.
+      </NoticeBanner>
+    );
+  }
+
   const providerCopy = providerLabel ?? "deterministic";
-  const providerKind = providerName === "ollama-quick-pass-v1" ? "local LLM" : "heuristic";
+  const providerKind = providerName === "ollama-quick-pass-v1" ? "로컬 LLM" : "휴리스틱";
   return (
-    <div className={`reports-analysis-strip status-${status}`} role="region" aria-label="Analysis state">
-      <div className="reports-analysis-info">
-        <div>
-          <strong>분석 상태</strong>
-          <span>
-            {isDemo
-              ? "데모 세션의 mock 분석 결과를 사용합니다."
-              : status === "running"
-                ? "Quick Pass 실행 중..."
-                : status === "failed"
-                  ? `Quick Pass 실패: ${error ?? "알 수 없는 오류"}`
-                  : hasAnalysis
-                    ? `${providerCopy} · ${providerKind}${
-                        generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""
-                      }`
-                    : importsCount === 0
-                      ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가하세요."
-                      : "가져온 소스가 있습니다. Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다."}
-          </span>
-        </div>
-        <div className="reports-analysis-counts">
-          <Badge tone="purple">출처 {evidenceCounts.sources}</Badge>
-          <Badge tone="blue">이벤트 {evidenceCounts.events}</Badge>
-          <Badge tone="red">이슈 {evidenceCounts.issues}</Badge>
-          <Badge tone="green">결정 {evidenceCounts.decisions}</Badge>
-          <Badge tone="orange">다음 액션 {evidenceCounts.nextActions}</Badge>
-          <Badge tone="gray">{dataBasis}</Badge>
-        </div>
-      </div>
-      <div className="reports-analysis-actions">
-        {!isDemo && importsCount === 0 ? (
-          <Button onClick={onGoToEvidence}>Evidence Hub로 이동</Button>
-        ) : null}
-        {!isDemo ? (
-          <Button
-            variant="primary"
-            icon={Sparkles}
-            onClick={onRun}
-            disabled={!canRun}
-            title={canRun ? "Quick Pass 실행" : importsCount === 0 ? "먼저 소스를 가져오세요." : "이미 실행 중입니다."}
-          >
-            {status === "running" ? "분석 중..." : hasAnalysis ? "Quick Pass 재실행" : "Quick Pass 실행"}
-          </Button>
-        ) : null}
-      </div>
-    </div>
+    <NoticeBanner tone="success" icon={null}>
+      <span className="reports-analysis-meta">
+        {providerCopy} · {providerKind}
+        {generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""}
+      </span>
+    </NoticeBanner>
   );
 }
 

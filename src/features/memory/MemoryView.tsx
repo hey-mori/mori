@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActionBar } from "../../components/layout/ActionBar";
+import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
+import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { PageShell } from "../../components/layout/PageShell";
 import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { MoriDrawer } from "../../components/ui/MoriDrawer";
@@ -379,22 +383,51 @@ export function MemoryView() {
   const dataBasisTone = getProjectMemoryDataBasisTone(viewModel.dataBasis);
 
   return (
-    <div className="page memory-workspace">
-      <PageHeader
-        title="프로젝트 메모리"
-        subtitle="Mori가 누적한 결정 / 이슈 / 근거 / 리포트 / 재import 기록을 한곳에 모아 다음 세션 컨텍스트로 이어줍니다."
-        right={
-          <div className="memory-page-actions">
-            <Badge tone={mode === "demo" ? "gray" : "green"}>{mode === "demo" ? "데모 세션" : "실제 세션"}</Badge>
-            <Badge tone="purple">{scopeLabel}</Badge>
-            <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>
-          </div>
-        }
-      />
+    <PageShell
+      className="memory-page"
+      header={
+        <PageHeader
+          title="프로젝트 메모리"
+          subtitle="누적된 결정 · 이슈 · 근거 · 리포트를 모아 다음 세션 컨텍스트로 이어줍니다."
+        />
+      }
+      actionBar={
+        <ActionBar
+          label="메모리 데이터 범위"
+          start={
+            <>
+              <Badge tone={mode === "demo" ? "gray" : "green"}>
+                {mode === "demo" ? "데모 세션" : "실제 세션"}
+              </Badge>
+              <Badge tone="purple">{scopeLabel}</Badge>
+              <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>
+              <HelpDisclosure label="집계 범위" ariaLabel="메모리 집계 범위 설명">
+                <MemoryScopeHelp
+                  mode={mode}
+                  sqliteAvailable={sqliteAvailable}
+                  sqliteKind={sqliteKind}
+                  savedSessionCount={savedSessions.filter((entry) => !entry.isCurrent).length}
+                />
+              </HelpDisclosure>
+            </>
+          }
+        />
+      }
+      aside={
+        <ProjectMemorySummaryPanel
+          summary={projectMemorySummary}
+          followUpPrompt={followUpPrompt}
+          audience={resumeAudience}
+          privacyMode={resumePrivacy}
+          onAudienceChange={setResumeAudience}
+          onPrivacyModeChange={setResumePrivacy}
+          onStartFollowUp={() => setCurrentView("start")}
+        />
+      }
+    >
       <SessionModeBanner />
 
-      <div className="memory-layout">
-        <div className="memory-main">
+      <div className="memory-main">
           <ProjectMemoryHero
             projectName={view.project.name}
             projectDescription={view.project.description}
@@ -415,13 +448,6 @@ export function MemoryView() {
           />
 
           <ProjectMemoryWarningsStrip warnings={viewModel.warnings} />
-
-          <DataScopeNote
-            mode={mode}
-            sqliteAvailable={sqliteAvailable}
-            sqliteKind={sqliteKind}
-            savedSessionCount={savedSessions.filter((entry) => !entry.isCurrent).length}
-          />
 
           <DecisionTimelineCard timeline={decisionTimeline} />
 
@@ -476,17 +502,6 @@ export function MemoryView() {
             hasCurrentReportSurface
             onOpenReports={() => setCurrentView("reports")}
           />
-        </div>
-
-        <ProjectMemorySummaryPanel
-          summary={projectMemorySummary}
-          followUpPrompt={followUpPrompt}
-          audience={resumeAudience}
-          privacyMode={resumePrivacy}
-          onAudienceChange={setResumeAudience}
-          onPrivacyModeChange={setResumePrivacy}
-          onStartFollowUp={() => setCurrentView("start")}
-        />
       </div>
 
       <MoriDrawer
@@ -521,11 +536,16 @@ export function MemoryView() {
           );
         })()}
       </MoriDrawer>
-    </div>
+    </PageShell>
   );
 }
 
-function DataScopeNote({
+/**
+ * Data-scope explanation moved behind a HelpDisclosure in the action bar —
+ * the first screen no longer carries a permanent multi-line note. Same honest
+ * copy, one click away.
+ */
+function MemoryScopeHelp({
   mode,
   sqliteAvailable,
   sqliteKind,
@@ -555,22 +575,24 @@ function DataScopeNote({
     }
   }
   return (
-    <div className="memory-scope-note" role="status">
+    <>
       {lines.map((line) => (
-        <span key={line}>{line}</span>
+        <p key={line}>{line}</p>
       ))}
-    </div>
+    </>
   );
 }
 
 function ProjectMemoryWarningsStrip({ warnings }: { warnings: ProjectMemoryWarning[] }) {
   if (warnings.length === 0) return null;
   return (
-    <ul className="memory-warnings" role="status" aria-label="Project memory data scope notes">
-      {warnings.map((warning) => (
-        <li key={describeWarningKey(warning)}>{describeWarning(warning)}</li>
-      ))}
-    </ul>
+    <NoticeBanner tone="warning" title="데이터 범위 안내">
+      <ul className="memory-warnings-list">
+        {warnings.map((warning) => (
+          <li key={describeWarningKey(warning)}>{describeWarning(warning)}</li>
+        ))}
+      </ul>
+    </NoticeBanner>
   );
 }
 

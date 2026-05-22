@@ -3650,7 +3650,8 @@ hr {
    the scroll region, so 0 is correct here. */
 .page-shell-split > .inspector-panel,
 .page-shell-split > .mori-inspector-panel,
-.page-shell-split > .evidence-detail {
+.page-shell-split > .evidence-detail,
+.page-shell-split > .review-rail {
   position: sticky;
   top: 0;
   align-self: start;
@@ -3661,7 +3662,8 @@ hr {
 @media (max-width: 1180px) {
   .page-shell-split > .inspector-panel,
   .page-shell-split > .mori-inspector-panel,
-  .page-shell-split > .evidence-detail {
+  .page-shell-split > .evidence-detail,
+  .page-shell-split > .review-rail {
     position: static;
     max-height: none;
     overflow: visible;
@@ -4817,11 +4819,6 @@ pre {
   padding-bottom: 28px;
 }
 
-.evidence-page-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
 
 .evidence-hub-layout {
   display: grid;
@@ -6368,215 +6365,93 @@ pre {
  * Review workspace
  * ============================ */
 
-.review-workspace {
-  padding-bottom: 32px;
-}
-
-.review-analysis-strip {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  margin: 0 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: white;
-  box-shadow: var(--shadow-soft);
-}
-
-.review-analysis-strip.status-running {
-  border-color: #d5c5ff;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
-}
-
-.review-analysis-strip.status-failed {
-  border-color: #f3b9b1;
-  background: linear-gradient(180deg, #fff, #fff7f5);
-}
-
-.review-analysis-strip.status-succeeded {
-  border-color: #b9dec3;
-  background: linear-gradient(180deg, #fff, #f6fcf8);
-}
-
-.review-analysis-info {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.review-analysis-info > div:first-child {
-  display: grid;
-  gap: 2px;
-}
-
-.review-analysis-info strong {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-}
-
-.review-analysis-info span {
-  font-size: 13px;
-  color: var(--text);
-}
-
-.review-analysis-counts {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.review-analysis-time {
-  color: var(--muted-2);
-  font-size: 11px;
-}
-
-.review-analysis-actions {
-  display: inline-flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* Tabs */
+/* Tabs — flat, inline pills that sit inside the shared ActionBar. No card
+   chrome of their own; the action bar owns the band. */
 
 .review-tabs {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px;
-  margin: 0 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: white;
-  box-shadow: var(--shadow-soft);
+  gap: 2px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .review-tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 12px;
+  gap: 7px;
+  height: 32px;
+  padding: 0 11px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--mori-radius-pill);
   background: transparent;
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--mori-text-muted);
+  font-size: 12.5px;
   font-weight: 650;
   cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
 }
 
 .review-tab:hover {
-  color: var(--text);
-  background: var(--panel-soft);
+  color: var(--mori-text);
+  background: var(--mori-surface-subtle);
 }
 
 .review-tab.active {
-  background: var(--text);
-  color: white;
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
 }
 
-.review-tab.active .pill {
-  background: rgba(255, 255, 255, 0.16);
-  color: white;
+.review-action-counts {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-/* Two-column layout: main + (detail + summary) sidebar */
-
-.review-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--mori-rail);
-  gap: 16px;
-  align-items: start;
-}
-
-@media (max-width: 1180px) {
-  .review-layout {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 920px) {
+  .review-action-counts {
+    display: none;
   }
 }
 
+/* Compact provider/timestamp meta line in the success notice. */
+.review-analysis-meta {
+  font-variant-numeric: tabular-nums;
+  color: var(--mori-text-muted);
+}
+
+/* Main tab column inside the shell. */
 .review-main {
   display: grid;
-  gap: 14px;
+  gap: var(--mori-space-7);
   min-width: 0;
 }
 
-.review-sidebar {
+.review-main-tab {
   display: grid;
-  gap: 14px;
-  position: sticky;
-  top: 88px;
-  max-height: calc(100vh - 110px);
-  overflow-y: auto;
+  gap: var(--mori-space-6);
+  min-width: 0;
 }
 
-@media (max-width: 1180px) {
-  .review-sidebar {
-    position: static;
-    max-height: none;
-  }
+/* The detail + summary rail stacked in the shell aside. */
+.review-rail {
+  display: grid;
+  gap: var(--mori-space-6);
+  align-content: start;
 }
 
-.review-section-head {
+/* Compact head row above a list/table tab (badges only, no prose). */
+.review-list-head {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.review-section-head h2 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-}
-
-.review-section-head p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-/* Empty state for tabs */
-
-.review-empty {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  padding: 40px 24px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 12px;
-  background: var(--panel-soft);
-  text-align: center;
-  color: var(--muted);
-}
-
-.review-empty svg {
-  color: var(--purple);
-}
-
-.review-empty h3 {
-  margin: 0;
-  font-size: 15px;
-  color: var(--text);
-}
-
-.review-empty p {
-  margin: 0;
-  max-width: 520px;
-  line-height: 1.6;
-  font-size: 13px;
-}
-
-.review-empty-actions {
+.review-list-progress {
   display: inline-flex;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Issue Garden */
@@ -6722,7 +6597,10 @@ pre {
   align-items: start;
 }
 
-@media (max-width: 1440px) {
+/* The board lives inside the shell's constrained main column, so it drops to a
+   two-column grid only when the column itself gets narrow — not at an
+   arbitrary viewport width. */
+@media (max-width: 1180px) {
   .review-issue-board-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -7687,88 +7565,27 @@ pre {
  * Reports workspace
  * ============================ */
 
-.reports-page {
-  padding-bottom: 32px;
-}
-
-.reports-page-actions {
+.reports-action-counts {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-}
-
-.reports-analysis-strip {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  margin: 0 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: white;
-  box-shadow: var(--shadow-soft);
-}
-
-.reports-analysis-strip.status-running { border-color: #d5c5ff; }
-.reports-analysis-strip.status-failed { border-color: #f3b9b1; }
-.reports-analysis-strip.status-succeeded { border-color: #b9dec3; }
-
-.reports-analysis-info {
-  display: grid;
   gap: 6px;
-  min-width: 0;
-}
-
-.reports-analysis-info > div:first-child {
-  display: grid;
-  gap: 2px;
-}
-
-.reports-analysis-info strong {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-}
-
-.reports-analysis-info > div:first-child span {
-  font-size: 13px;
-  color: var(--text);
-}
-
-.reports-analysis-counts {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.reports-analysis-actions {
-  display: inline-flex;
-  gap: 8px;
   flex-shrink: 0;
 }
 
-/* Two-column layout */
-
-.reports-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--mori-rail);
-  gap: 16px;
-  align-items: start;
+@media (max-width: 920px) {
+  .reports-action-counts {
+    display: none;
+  }
 }
 
-@media (max-width: 1180px) {
-  .reports-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.reports-analysis-meta {
+  font-variant-numeric: tabular-nums;
+  color: var(--mori-text-muted);
 }
 
 .reports-main {
   display: grid;
-  gap: 14px;
+  gap: var(--mori-space-7);
   min-width: 0;
 }
 
@@ -9377,8 +9194,19 @@ pre {
   overflow-y: auto;
 }
 
+/* Inside the page shell the rail sticks to the top of the scroll region. */
+.page-shell-split > .report-builder-panel {
+  top: 0;
+  max-height: calc(100vh - 148px);
+}
+
 @media (max-width: 1180px) {
   .report-builder-panel {
+    position: static;
+    max-height: none;
+  }
+
+  .page-shell-split > .report-builder-panel {
     position: static;
     max-height: none;
   }
@@ -9647,39 +9475,22 @@ pre {
  * Project Memory workspace
  * ============================ */
 
-.memory-workspace {
-  padding-bottom: 32px;
-}
-
-.memory-page-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.memory-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 16px;
-  align-items: start;
-}
-
-@media (max-width: 1440px) {
-  .memory-layout {
-    grid-template-columns: minmax(0, 1fr) 340px;
-  }
-}
-
-@media (max-width: 1180px) {
-  .memory-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 .memory-main {
   display: grid;
-  gap: 14px;
+  gap: var(--mori-space-7);
   min-width: 0;
+}
+
+/* Warnings list inside the shared warning NoticeBanner. */
+.memory-warnings-list {
+  margin: 0;
+  padding-left: var(--mori-space-7);
+  display: grid;
+  gap: 3px;
+}
+
+.memory-warnings-list li {
+  line-height: 1.5;
 }
 
 .memory-section-head {
@@ -9822,26 +9633,6 @@ pre {
 
 /* Data-scope honesty note */
 
-.memory-scope-note {
-  display: grid;
-  gap: 4px;
-  padding: 10px 14px;
-  border: 1px solid #d9d0ff;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fbf9ff, #f5efff);
-  color: #4734bb;
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.memory-scope-note span {
-  display: inline;
-}
-
-.memory-scope-note span:not(:last-child)::after {
-  content: " ";
-}
-
 .memory-recurring-sessions {
   display: flex;
   flex-wrap: wrap;
@@ -9849,28 +9640,6 @@ pre {
   margin: 4px 0 0;
   padding: 0;
   list-style: none;
-}
-
-/* Project Memory warnings strip */
-
-.memory-warnings {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 10px 14px;
-  list-style: none;
-  border: 1px dashed #e5dffb;
-  border-radius: 10px;
-  background: #fbfaff;
-  color: #5b4ec0;
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.memory-warnings li {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
 }
 
 /* Memory Consolidation preview card (Phase 2.1) */
@@ -11790,8 +11559,20 @@ pre {
   overflow-y: auto;
 }
 
+/* Inside the page shell the rail sticks to the top of the scroll region, not
+   a page-level topbar — match the other shell asides. */
+.page-shell-split > .memory-summary {
+  top: 0;
+  max-height: calc(100vh - 148px);
+}
+
 @media (max-width: 1180px) {
   .memory-summary {
+    position: static;
+    max-height: none;
+  }
+
+  .page-shell-split > .memory-summary {
     position: static;
     max-height: none;
   }
@@ -13856,16 +13637,18 @@ pre {
   overflow: visible;
 }
 
-/* Compact one-row toolbar. Filter chips moved into a popover. */
+/* Compact one-row toolbar. Filter chips moved into a popover.
+   Reads as the same control band the other surfaces establish with the shared
+   ActionBar: a flat inset row, not a floating card. */
 .timeline-toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: white;
-  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
+  min-height: 52px;
+  padding: var(--mori-space-3) var(--mori-space-5);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface-subtle);
   flex-wrap: wrap;
 }
 
@@ -13873,6 +13656,13 @@ pre {
   flex: 1;
   min-width: 120px;
   max-width: 240px;
+}
+
+/* On the subtle toolbar band, the controls read as raised white pills so they
+   keep contrast against the inset surface. */
+.timeline-toolbar .timeline-search-input,
+.timeline-toolbar .timeline-mode-switch {
+  background: var(--mori-surface);
 }
 
 .timeline-toolbar-left,
