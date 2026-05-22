@@ -290,6 +290,60 @@ describe("buildHomeOverview", () => {
   });
 });
 
+describe("잔디 metric lens", () => {
+  function withSessions(): HomeOverviewInput {
+    return input({
+      realSessionCount: 2,
+      isDemo: false,
+      storedSessions: [
+        stored({ sessionId: "a", startedAt: "2026-05-22T08:00:00+09:00", eventCount: 12, tokenTotal: 5_000 }),
+        stored({ sessionId: "b", startedAt: "2026-05-21T08:00:00+09:00", eventCount: 8, tokenTotal: 3_000 }),
+      ],
+    });
+  }
+
+  it("defaults to the sessions lens with value 1 per session anchor day", () => {
+    const overview = buildHomeOverview(withSessions());
+    expect(overview.resolvedMetric).toBe("sessions");
+    expect(overview.contributionGrid.metric).toBe("sessions");
+    expect(overview.contributionGrid.total).toBe(2); // one per session
+  });
+
+  it("sums eventCount per day for the activity lens", () => {
+    const overview = buildHomeOverview({ ...withSessions(), metric: "activity" });
+    expect(overview.resolvedMetric).toBe("activity");
+    expect(overview.contributionGrid.total).toBe(20); // 12 + 8
+  });
+
+  it("sums tokenTotal per day for the tokens lens", () => {
+    const overview = buildHomeOverview({ ...withSessions(), metric: "tokens" });
+    expect(overview.resolvedMetric).toBe("tokens");
+    expect(overview.contributionGrid.total).toBe(8_000); // 5000 + 3000
+  });
+
+  it("reports availability per lens from the derived totals", () => {
+    const overview = buildHomeOverview(withSessions());
+    expect(overview.metricAvailability).toEqual({ sessions: true, activity: true, tokens: true });
+  });
+
+  it("marks a lens unavailable when its total is zero and resolves back to sessions", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 1,
+        isDemo: false,
+        storedSessions: [stored({ sessionId: "a", eventCount: 5 })], // no tokenTotal
+        metric: "tokens",
+      }),
+    );
+    expect(overview.metricAvailability.tokens).toBe(false);
+    expect(overview.metricAvailability.activity).toBe(true);
+    // Requested tokens has no data -> grid falls back to sessions, never blank.
+    expect(overview.resolvedMetric).toBe("sessions");
+    expect(overview.contributionGrid.metric).toBe("sessions");
+    expect(overview.contributionGrid.total).toBe(1);
+  });
+});
+
 describe("formatRelativeKo", () => {
   it("renders sub-minute, minute, hour, and day windows in Korean", () => {
     expect(formatRelativeKo(new Date(NOW - 30_000).toISOString(), NOW)).toBe("방금");

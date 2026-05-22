@@ -2,7 +2,12 @@ import type { Session } from "../../domain/types";
 import type { ProductStateTone } from "../product-state/productStateLabels";
 import { spanLabel } from "../session/workContext";
 import type { StoredSessionSummary } from "../storage/storageTypes";
-import { buildContributionGrid, type ContributionGrid } from "./contributionGrid";
+import {
+  buildContributionGrid,
+  type ContributionGrid,
+  type ContributionMetric,
+  type ContributionSample,
+} from "./contributionGrid";
 
 /**
  * Home overview view model.
@@ -72,6 +77,13 @@ export type HomeOverviewInput = {
   realSessionCount: number;
   /** Whether the active session is the bundled demo. */
   isDemo: boolean;
+  /**
+   * Which lens the 잔디 heatmap shows. Defaults to `sessions`. When the
+   * requested metric has no data anywhere (e.g. no token usage was imported),
+   * the grid falls back to `sessions` so it is never empty — the UI disables
+   * the unavailable pill rather than showing a blank grid.
+   */
+  metric?: ContributionMetric;
   /** Clock injection for relative-time labels and recent-activity windows. */
   now?: number;
   /** How many recent sessions to surface in the main list. */
@@ -150,6 +162,18 @@ export type HomeOverview = {
   nextActions: HomeNextAction[];
   /** Daily activity heatmap over the recent window (the "잔디"). */
   contributionGrid: ContributionGrid;
+  /**
+   * Whether each 잔디 lens has any non-zero data to show. `sessions` is true
+   * whenever there is at least one stored session; `activity` / `tokens` are
+   * true only when the derived totals are non-zero. The UI disables a pill
+   * whose lens is unavailable rather than rendering an empty grid.
+   */
+  metricAvailability: Record<ContributionMetric, boolean>;
+  /**
+   * The lens actually rendered. Equals the requested `metric` when it has
+   * data; otherwise falls back to `sessions` so the grid is never blank.
+   */
+  resolvedMetric: ContributionMetric;
 };
 
 /** Never surface more than this many next-action cards — the panel stays calm. */
@@ -188,13 +212,54 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
     : buildNextActions({ active, metricsById, onlyDemo, now });
 
   // The activity heatmap spans every stored session's anchor date — archiving
-  // organises the list but never erases that the work happened.
+  // organises the list but never erases that the work happened. Build one
+  // weighted-sample set per lens; availability is "has any non-zero value".
+  const sessionSamples: ContributionSample[] = input.storedSessions.map((session) => ({
+    iso: anchorIso(session),
+    value: 1,
+  }));
+  const activitySamples: ContributionSample[] = input.storedSessions.map((session) => ({
+    iso: anchorIso(session),
+    value: session.eventCount ?? 0,
+  }));
+  const tokenSamples: ContributionSample[] = input.storedSessions.map((session) => ({
+    iso: anchorIso(session),
+    value: session.tokenTotal ?? 0,
+  }));
+
+  const metricAvailability: Record<ContributionMetric, boolean> = {
+    sessions: sessionSamples.some((s) => s.value > 0),
+    activity: activitySamples.some((s) => s.value > 0),
+    tokens: tokenSamples.some((s) => s.value > 0),
+  };
+
+  const requested: ContributionMetric = input.metric ?? "sessions";
+  // Fall back to sessions when the requested lens has no data, so the grid is
+  // never blank. sessions is available whenever any session exists.
+  const resolvedMetric: ContributionMetric = metricAvailability[requested] ? requested : "sessions";
+
+  const samplesForMetric: Record<ContributionMetric, ContributionSample[]> = {
+    sessions: sessionSamples,
+    activity: activitySamples,
+    tokens: tokenSamples,
+  };
+
   const contributionGrid = buildContributionGrid({
-    timestamps: input.storedSessions.map((session) => anchorIso(session)),
+    samples: samplesForMetric[resolvedMetric],
+    metric: resolvedMetric,
     now,
   });
 
-  return { isEmpty, onlyDemo, metrics, recentSessions, nextActions, contributionGrid };
+  return {
+    isEmpty,
+    onlyDemo,
+    metrics,
+    recentSessions,
+    nextActions,
+    contributionGrid,
+    metricAvailability,
+    resolvedMetric,
+  };
 }
 
 // ─── Metrics strip ──────────────────────────────────────────────────────────

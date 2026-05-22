@@ -29,12 +29,18 @@ import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
   buildHomeOverview,
   describeHomeSessionOrigin,
+  formatCompactCount,
   type HomeNextAction,
   type HomeNextActionKind,
   type HomeOverview,
   type HomeRecentSession,
   type HomeSessionMetricSnapshot,
 } from "../../lib/home/homeOverview";
+import type { ContributionMetric } from "../../lib/home/contributionGrid";
+import {
+  loadHomeMetricPreference,
+  saveHomeMetricPreference,
+} from "../../lib/home/homeMetricPreference";
 
 /**
  * Home — the session-centric landing surface (P2).
@@ -70,6 +76,14 @@ export function HomeView() {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const activeSessionId = view.session.id;
 
+  // The 잔디 lens — persisted locally so the choice sticks across reloads.
+  const [metric, setMetric] = useState<ContributionMetric>(() => loadHomeMetricPreference().metric);
+
+  const selectMetric = (next: ContributionMetric) => {
+    setMetric(next);
+    saveHomeMetricPreference(next);
+  };
+
   const overview = useMemo<HomeOverview>(() => {
     let storedSessions: ReturnType<typeof loadStoredSessionSummaries>;
     try {
@@ -97,11 +111,12 @@ export function HomeView() {
       sessionMetrics: metrics,
       realSessionCount,
       isDemo: mode === "demo",
+      metric,
     });
     // `view` / `mode` cover active-session changes; `initialized` re-reads
     // after hydrate populates storage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repository, activeSessionId, mode, view, initialized]);
+  }, [repository, activeSessionId, mode, view, initialized, metric]);
 
   const openSessionFlow = (sessionId: string) => {
     if (sessionId === activeSessionId || loadBrowserSession(sessionId)) {
@@ -183,9 +198,16 @@ export function HomeView() {
           <section className="home-activity" aria-label="작업 활동">
             <header className="home-activity-head">
               <h2>작업 활동</h2>
-              <span className="home-activity-sub">
-                최근 {overview.contributionGrid.weekCount}주 · 활동 {overview.contributionGrid.activeDays}일
-              </span>
+              <div className="home-activity-controls">
+                <MetricToggle
+                  metric={overview.resolvedMetric}
+                  availability={overview.metricAvailability}
+                  onSelect={selectMetric}
+                />
+                <span className="home-activity-sub">
+                  최근 {overview.contributionGrid.weekCount}주 · 활동 {overview.contributionGrid.activeDays}일
+                </span>
+              </div>
             </header>
             <ContributionHeatmap grid={overview.contributionGrid} />
             {overview.metrics.length > 0 ? (
@@ -330,17 +352,91 @@ function NextActionRow({
   );
 }
 
+// ─── 잔디 metric toggle ───────────────────────────────────────────────────────
+
+const METRIC_OPTIONS: { metric: ContributionMetric; label: string }[] = [
+  { metric: "sessions", label: "세션" },
+  { metric: "activity", label: "활동" },
+  { metric: "tokens", label: "토큰" },
+];
+
+// Why a lens is disabled — shown as the pill tooltip so the user understands
+// the gap rather than seeing an empty grid.
+const METRIC_UNAVAILABLE_HINT: Record<ContributionMetric, string> = {
+  sessions: "표시할 세션이 없습니다",
+  activity: "가져온 세션에 단계 정보가 없습니다",
+  tokens: "가져온 세션에 토큰 정보가 없습니다",
+};
+
+function MetricToggle({
+  metric,
+  availability,
+  onSelect,
+}: {
+  metric: ContributionMetric;
+  availability: HomeOverview["metricAvailability"];
+  onSelect: (next: ContributionMetric) => void;
+}) {
+  return (
+    <div className="home-metric-toggle" role="group" aria-label="잔디 지표 선택">
+      {METRIC_OPTIONS.map((option) => {
+        const available = availability[option.metric];
+        const active = option.metric === metric;
+        return (
+          <button
+            key={option.metric}
+            type="button"
+            className="home-metric-pill"
+            aria-pressed={active}
+            disabled={!available}
+            title={available ? undefined : METRIC_UNAVAILABLE_HINT[option.metric]}
+            onClick={() => onSelect(option.metric)}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Contribution heatmap (the 잔디) ──────────────────────────────────────────
 
 // Show only alternating weekday labels (월/수/금) so the axis stays uncluttered.
 const WEEKDAY_LABELS = ["", "월", "", "수", "", "금", ""];
 
+/** Per-lens noun + value formatter for cell tooltips and the aria summary. */
+function describeCellValue(metric: ContributionMetric, count: number): string {
+  switch (metric) {
+    case "tokens":
+      return `토큰 ${formatCompactCount(count)}`;
+    case "activity":
+      return `단계 ${count}개`;
+    case "sessions":
+    default:
+      return `세션 ${count}개`;
+  }
+}
+
+function describeTotal(metric: ContributionMetric, total: number): string {
+  switch (metric) {
+    case "tokens":
+      return `총 토큰 ${formatCompactCount(total)}`;
+    case "activity":
+      return `총 단계 ${total}개`;
+    case "sessions":
+    default:
+      return `총 ${total}회`;
+  }
+}
+
 function ContributionHeatmap({ grid }: { grid: HomeOverview["contributionGrid"] }) {
+  const metric = grid.metric;
   return (
     <div
       className="contrib"
       role="img"
-      aria-label={`최근 ${grid.weekCount}주 작업 활동 · 활동 ${grid.activeDays}일 · 총 ${grid.total}회`}
+      aria-label={`최근 ${grid.weekCount}주 작업 활동 · 활동 ${grid.activeDays}일 · ${describeTotal(metric, grid.total)}`}
     >
       <div className="contrib-scroll mori-scroll">
         <div className="contrib-plot">
@@ -365,7 +461,7 @@ function ContributionHeatmap({ grid }: { grid: HomeOverview["contributionGrid"] 
                       <span
                         key={row}
                         className={`contrib-cell lvl-${day.level}`}
-                        title={`${formatDayKo(day.date)} · 세션 ${day.count}개`}
+                        title={`${formatDayKo(day.date)} · ${describeCellValue(metric, day.count)}`}
                       />
                     ) : (
                       <span key={row} className="contrib-cell is-pad" />
