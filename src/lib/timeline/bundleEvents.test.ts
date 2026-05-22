@@ -85,6 +85,62 @@ describe("timeline workflow bundles", () => {
   });
 });
 
+describe("conversation bundles", () => {
+  function convoTurn(index: number, minute: number): TimelineEvent {
+    const start = `2026-05-22T09:${String(minute).padStart(2, "0")}:00Z`;
+    return {
+      id: `evt-turn-${index}`,
+      sessionId: "s1",
+      projectId: "p1",
+      start,
+      type: "aiConversation",
+      title: `질문 ${index}`,
+      summary: `응답 ${index}`,
+      sourceRefs: [],
+      linkedIssueIds: [],
+      linkedDecisionIds: [],
+      relationshipIds: [],
+      trustLevel: "observed",
+      confidence: 0.9,
+      createdBy: "import",
+      userModified: false,
+    };
+  }
+
+  it("labels a conversation bundle with turn count and time range, never the abstract label", () => {
+    const turns = Array.from({ length: 6 }, (_, index) => convoTurn(index, index));
+    const items = createTimelineBundles(turns, [], {
+      timeWindowMinutes: 3,
+      minEventsForBundle: 3,
+      maxVisibleItemsPerLane: 4,
+    });
+
+    const bundle = items.find((item) => isTimelineBundle(item));
+    expect(bundle && isTimelineBundle(bundle)).toBe(true);
+    if (!bundle || !isTimelineBundle(bundle)) return;
+    expect(bundle.bundleKind).toBe("conversationBurst");
+    expect(bundle.title).toContain("대화 턴");
+    expect(bundle.title).not.toBe("AI 작업 흐름 묶음");
+    // count + range, e.g. "6개 대화 턴 · 09:00–09:05"
+    expect(bundle.title).toMatch(/\d+개 대화 턴/);
+    expect(bundle.summary).toContain("대화 턴");
+  });
+
+  it("keeps individual turns visible when a higher per-lane threshold is set", () => {
+    // Four turns under a min-of-6 threshold must NOT bundle — they read as
+    // individual turns, which is the whole point of the conversation override.
+    const turns = Array.from({ length: 4 }, (_, index) => convoTurn(index, index));
+    const items = createTimelineBundles(turns, [], {
+      timeWindowMinutes: 3,
+      minEventsForBundle: 6,
+      maxVisibleItemsPerLane: 14,
+    });
+
+    expect(items.every((item) => item.kind === "event")).toBe(true);
+    expect(items).toHaveLength(4);
+  });
+});
+
 describe("deriveBundleConnectorSource", () => {
   function ev(id: string, connectorEventId?: string): TimelineEvent {
     return { id, connectorEventId } as unknown as TimelineEvent;

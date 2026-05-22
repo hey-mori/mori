@@ -10,6 +10,7 @@ import {
 
 const ALL_KINDS: TimelineBundleKind[] = [
   "sequence",
+  "conversationBurst",
   "decisionBurst",
   "issueBurst",
   "researchBurst",

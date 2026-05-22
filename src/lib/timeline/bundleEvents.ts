@@ -1,5 +1,6 @@
 import { eventTypeLabels } from "../../domain/constants";
 import type { Decision, EventType, Relationship, TimelineEvent, TrustLevel } from "../../domain/types";
+import { formatTime } from "../formatting/time";
 import type {
   TimelineBundleKind,
   TimelineBundleMember,
@@ -16,6 +17,16 @@ export type CreateTimelineBundlesOptions = {
   maxVisibleItemsPerLane?: number;
   laneDensity?: "comfortable" | "compact" | "dense";
   decisions?: Decision[];
+  /**
+   * Per-lane overrides for the bundle thresholds. A single Claude conversation
+   * lands every turn in the `aiConversation` lane; clustering it with the same
+   * window as a mixed research lane buries readable turns inside one giant
+   * "AI 작업 흐름 묶음". The view model passes a looser override for that lane
+   * so individual turns stay visible.
+   */
+  laneOverrides?: Partial<
+    Record<EventType, { timeWindowMinutes?: number; minEventsForBundle?: number; maxVisibleItemsPerLane?: number }>
+  >;
 };
 
 export function createTimelineBundles(
@@ -41,8 +52,14 @@ export function createTimelineBundles(
 
   const items: TimelineDisplayItem[] = [];
 
-  for (const [, laneEvents] of grouped) {
-    const laneItems = createLaneItems(laneEvents, relationships, preserve, decisionsById, options);
+  for (const [laneType, laneEvents] of grouped) {
+    const laneItems = createLaneItems(
+      laneEvents,
+      relationships,
+      preserve,
+      decisionsById,
+      resolveLaneOptions(laneType, options),
+    );
     items.push(...laneItems);
   }
 
@@ -58,6 +75,21 @@ export function createTimelineDisplayItems(
   options: CreateTimelineBundlesOptions,
 ): TimelineDisplayItem[] {
   return createTimelineBundles(events, relationships, options);
+}
+
+/** Fold a lane's threshold override (if any) into the base bundle options. */
+function resolveLaneOptions(
+  laneType: EventType,
+  options: CreateTimelineBundlesOptions,
+): CreateTimelineBundlesOptions {
+  const override = options.laneOverrides?.[laneType];
+  if (!override) return options;
+  return {
+    ...options,
+    timeWindowMinutes: override.timeWindowMinutes ?? options.timeWindowMinutes,
+    minEventsForBundle: override.minEventsForBundle ?? options.minEventsForBundle,
+    maxVisibleItemsPerLane: override.maxVisibleItemsPerLane ?? options.maxVisibleItemsPerLane,
+  };
 }
 
 function createLaneItems(
@@ -212,7 +244,10 @@ function createBundle(
     representedDecisionIds,
     reason: {
       code: "preserveSingleRow",
-      message: `${cluster.length}개의 ${eventTypeLabels[first.type]} 이벤트가 ${options.timeWindowMinutes}분 이내에 몰려 있어 single-row lane을 유지하기 위해 하나의 work-flow bundle로 표시합니다.`,
+      message:
+        first.type === "aiConversation"
+          ? `${cluster.length}개의 대화 턴이 ${options.timeWindowMinutes}분 이내로 가깝게 이어져, 한눈에 보이도록 하나로 묶었습니다. 펼치면 각 턴을 순서대로 읽을 수 있습니다.`
+          : `${cluster.length}개의 ${eventTypeLabels[first.type]} 이벤트가 ${options.timeWindowMinutes}분 이내에 몰려 있어 single-row lane을 유지하기 위해 하나의 work-flow bundle로 표시합니다.`,
       timeWindowMinutes: options.timeWindowMinutes,
       laneType: first.type,
     },
@@ -245,6 +280,7 @@ function buildBundleTitle(
   bundleKind: TimelineBundleKind,
   cluster: TimelineEvent[],
 ): string {
+  if (laneType === "aiConversation") return buildConversationBundleTitle(cluster);
   if (bundleKind === "researchBurst") return "경쟁 제품 조사 흐름";
   if (bundleKind === "issueBurst") return "이슈 생성 흐름";
   if (bundleKind === "decisionBurst") return "결정 정리 흐름";
@@ -254,8 +290,34 @@ function buildBundleTitle(
     );
     return documentation ? "문서/구조 작업 묶음" : "코드 변경 묶음";
   }
-  if (laneType === "aiConversation") return "AI 작업 흐름 묶음";
   return `${eventTypeLabels[laneType]} work-flow bundle`;
+}
+
+/**
+ * Title for a clustered run of conversation turns: count + time range, with a
+ * topic hint drawn from the cluster's first turn when it is short enough to
+ * read at a glance. The user asked "what is this bundling on?" — this answers
+ * "N turns, this time range, about this", never the abstract "AI 작업 흐름".
+ */
+function buildConversationBundleTitle(cluster: TimelineEvent[]): string {
+  const first = cluster[0]!;
+  const last = cluster[cluster.length - 1]!;
+  const range = `${formatTime(first.start)}–${formatTime(last.end ?? last.start)}`;
+  const topic = conversationTopicHint(first);
+  const base = `${cluster.length}개 대화 턴 · ${range}`;
+  return topic ? `${topic} · ${base}` : base;
+}
+
+/**
+ * A short topic phrase taken from a turn's user-ask title, when it is concise
+ * enough to act as a label. Long asks return null so the bundle falls back to
+ * the count + range form rather than truncating mid-sentence.
+ */
+function conversationTopicHint(event: TimelineEvent): string | null {
+  const compact = event.title.replace(/\s+/g, " ").trim();
+  if (!compact || compact === "(no response captured)") return null;
+  if (compact.length > 24) return null;
+  return compact;
 }
 
 function buildBundleSummary(
@@ -266,6 +328,11 @@ function buildBundleSummary(
   issueCount: number,
 ): string {
   const names = eventNames.join(", ");
+  if (laneType === "aiConversation") {
+    const first = cluster[0]!;
+    const last = cluster[cluster.length - 1]!;
+    return `${formatTime(first.start)}부터 ${formatTime(last.end ?? last.start)}까지 이어진 ${cluster.length}개의 대화 턴입니다. 카드를 펼치면 사용자 발화와 Claude 응답을 순서대로 읽을 수 있습니다.`;
+  }
   if (laneType === "webResearch") {
     return `${names} 등 ${cluster.length}개의 조사 이벤트를 하나의 research burst로 묶어, 같은 탐색 모멘텀으로 읽히게 합니다.`;
   }
@@ -286,6 +353,7 @@ function inferBundleKind(
   issueCount: number,
   decisionCount: number,
 ): TimelineBundleKind {
+  if (laneType === "aiConversation") return "conversationBurst";
   if (laneType === "webResearch") return "researchBurst";
   if (laneType === "issue") return "issueBurst";
   if (laneType === "decision" || decisionCount > 1) return "decisionBurst";

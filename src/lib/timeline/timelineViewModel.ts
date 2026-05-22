@@ -141,6 +141,18 @@ export function buildTimelineRenderModel(
       maxVisibleItemsPerLane: bundleTuning.maxVisibleItemsPerLane,
       laneDensity: input.density,
       decisions: input.view.decisions,
+      // A single Claude conversation packs every turn into the aiConversation
+      // lane. Bundling it with the lane-mix defaults buries readable turns in
+      // one giant blob, so this lane keeps a tighter window and a higher
+      // bundle threshold — individual turns stay visible, only genuinely
+      // rapid-fire runs cluster.
+      laneOverrides: {
+        aiConversation: {
+          timeWindowMinutes: bundleTuning.conversationTimeWindowMinutes,
+          minEventsForBundle: bundleTuning.conversationMinEventsForBundle,
+          maxVisibleItemsPerLane: bundleTuning.conversationMaxVisibleItemsPerLane,
+        },
+      },
     },
   );
 
@@ -230,16 +242,46 @@ export function shouldHideInspector(args: {
 export function densityBundleTuning(density: TimelineDensity): {
   timeWindowMinutes: number;
   maxVisibleItemsPerLane: number;
+  /** Tighter window for the conversation lane — only rapid-fire turns cluster. */
+  conversationTimeWindowMinutes: number;
+  /** Higher threshold so short conversation runs stay as individual turns. */
+  conversationMinEventsForBundle: number;
+  /** More room before the conversation lane density-merges. */
+  conversationMaxVisibleItemsPerLane: number;
 } {
   switch (density) {
     case "comfortable":
-      return { timeWindowMinutes: 12, maxVisibleItemsPerLane: 4 };
+      return {
+        timeWindowMinutes: 12,
+        maxVisibleItemsPerLane: 4,
+        conversationTimeWindowMinutes: 3,
+        conversationMinEventsForBundle: 6,
+        conversationMaxVisibleItemsPerLane: 14,
+      };
     case "compact":
-      return { timeWindowMinutes: 10, maxVisibleItemsPerLane: 5 };
+      return {
+        timeWindowMinutes: 10,
+        maxVisibleItemsPerLane: 5,
+        conversationTimeWindowMinutes: 3,
+        conversationMinEventsForBundle: 6,
+        conversationMaxVisibleItemsPerLane: 18,
+      };
     case "dense":
-      return { timeWindowMinutes: 8, maxVisibleItemsPerLane: 8 };
+      return {
+        timeWindowMinutes: 8,
+        maxVisibleItemsPerLane: 8,
+        conversationTimeWindowMinutes: 2,
+        conversationMinEventsForBundle: 8,
+        conversationMaxVisibleItemsPerLane: 24,
+      };
     default:
-      return { timeWindowMinutes: 10, maxVisibleItemsPerLane: 5 };
+      return {
+        timeWindowMinutes: 10,
+        maxVisibleItemsPerLane: 5,
+        conversationTimeWindowMinutes: 3,
+        conversationMinEventsForBundle: 6,
+        conversationMaxVisibleItemsPerLane: 18,
+      };
   }
 }
 

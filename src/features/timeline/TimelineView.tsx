@@ -28,6 +28,12 @@ import {
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
 import { TimelineChronoList } from "./TimelineChronoList";
+import { ConversationFlowView } from "./ConversationFlowView";
+import { TimelineBasisCaption } from "./TimelineBasisCaption";
+import {
+  describeConversationContext,
+  isConversationSession,
+} from "../../lib/timeline/conversationFlow";
 import { TimelineEmptyState } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
@@ -92,6 +98,21 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   // the canvas scrolls horizontally. Driven by the minimap brush handles.
   const [zoomFactor, setZoomFactor] = useState<number>(1);
   const canvasRef = useRef<TimelineCanvasHandle>(null);
+
+  // A single Claude conversation reads far better as a time-ordered thread
+  // than as a one-lane swimlane, so the timeline offers two reading modes:
+  // "swimlane" (the canvas) and "flow" (the conversation thread). For a
+  // conversation-dominant session we default to flow; the user can still
+  // switch to the swimlane. `null` means "follow the session default".
+  const conversationSession = useMemo(
+    () => isConversationSession(view.events),
+    [view.events],
+  );
+  const [readingModeOverride, setReadingModeOverride] = useState<
+    "swimlane" | "flow" | null
+  >(null);
+  const readingMode: "swimlane" | "flow" =
+    readingModeOverride ?? (conversationSession ? "flow" : "swimlane");
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.
@@ -169,6 +190,11 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   // Narrow widths swap the horizontally-scrolling swimlane canvas for a flat
   // vertical chronological list — readable without a wide frame.
   const useChronoList = inspectorNarrow && mode === "timeline";
+  // At comfortable widths, a conversation session reads as a vertical thread
+  // (the flow view) unless the user switched to the swimlane. The narrow
+  // chrono list takes precedence — it is the readable narrow fallback.
+  const useConversationFlow =
+    !useChronoList && mode === "timeline" && readingMode === "flow";
 
   return (
     <>
@@ -199,10 +225,26 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
               inspectorToggleDisabled={inspectorNarrow}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
+              readingMode={readingMode}
+              onReadingModeChange={setReadingModeOverride}
             />
           )}
+          {mode === "timeline" ? (
+            <TimelineBasisCaption
+              context={conversationSession ? describeConversationContext(view) : null}
+              isConversation={conversationSession}
+              start={model.range.start}
+              end={model.range.end}
+            />
+          ) : null}
           {useChronoList ? (
             <TimelineChronoList
+              model={model}
+              selectedItemId={selectedItem?.id ?? null}
+              onSelect={setSelectedEventId}
+            />
+          ) : useConversationFlow ? (
+            <ConversationFlowView
               model={model}
               selectedItemId={selectedItem?.id ?? null}
               onSelect={setSelectedEventId}

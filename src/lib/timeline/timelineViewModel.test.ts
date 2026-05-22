@@ -282,6 +282,17 @@ describe("densityBundleTuning", () => {
       densityBundleTuning("comfortable").timeWindowMinutes,
     );
   });
+
+  it("gives the conversation lane a tighter window and higher bundle threshold", () => {
+    const tuning = densityBundleTuning("comfortable");
+    // Conversation turns should bundle far less aggressively than the
+    // lane-mix default, so individual turns stay readable.
+    expect(tuning.conversationTimeWindowMinutes).toBeLessThan(tuning.timeWindowMinutes);
+    expect(tuning.conversationMinEventsForBundle).toBeGreaterThan(3);
+    expect(tuning.conversationMaxVisibleItemsPerLane).toBeGreaterThan(
+      tuning.maxVisibleItemsPerLane,
+    );
+  });
 });
 
 describe("shouldHideInspector", () => {

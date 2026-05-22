@@ -2,6 +2,7 @@ import type { EventType, TimelineEvent, TrustLevel } from "../../domain/types";
 
 export type TimelineBundleKind =
   | "sequence"
+  | "conversationBurst"
   | "decisionBurst"
   | "issueBurst"
   | "researchBurst"
@@ -108,6 +109,8 @@ export function describeBundleKind(kind: TimelineBundleKind): string {
   switch (kind) {
     case "sequence":
       return "연속 작업 흐름";
+    case "conversationBurst":
+      return "연속 대화 턴";
     case "decisionBurst":
       return "결정 정리 흐름";
     case "issueBurst":

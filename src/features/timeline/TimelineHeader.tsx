@@ -1,8 +1,20 @@
-import { Calendar, Check, ChevronDown, Filter, PanelRight, Search, X } from "lucide-react";
+import {
+  Calendar,
+  Check,
+  ChevronDown,
+  Filter,
+  MessageSquare,
+  PanelRight,
+  Rows3,
+  Search,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { eventTypeLabels, eventTypeTone, laneOrder } from "../../domain/constants";
 import type { EventType } from "../../domain/types";
 import { getPlannedHint } from "../../lib/timeline/timelineControls";
+
+export type TimelineReadingMode = "swimlane" | "flow";
 
 /**
  * Time-range options. Only `session` is implemented today; `day` / `week`
@@ -20,6 +32,9 @@ export type TimelineToolbarProps = {
   inspectorToggleDisabled: boolean;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  /** Active reading mode — swimlane canvas or conversation flow thread. */
+  readingMode: TimelineReadingMode;
+  onReadingModeChange: (mode: TimelineReadingMode) => void;
 };
 
 /**
@@ -45,6 +60,8 @@ export function TimelineToolbar({
   inspectorToggleDisabled,
   searchQuery,
   onSearchChange,
+  readingMode,
+  onReadingModeChange,
 }: TimelineToolbarProps) {
   const [rangeOpen, setRangeOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -109,6 +126,32 @@ export function TimelineToolbar({
               })}
             </div>
           ) : null}
+        </div>
+        <div
+          className="timeline-mode-switch"
+          role="group"
+          aria-label="타임라인 보기 방식"
+        >
+          <button
+            type="button"
+            className={`timeline-mode-option ${readingMode === "flow" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "flow"}
+            onClick={() => onReadingModeChange("flow")}
+            title="대화 흐름 뷰 — 사용자 발화와 Claude 응답을 시간순으로 읽기"
+          >
+            <MessageSquare size={14} aria-hidden="true" />
+            대화 흐름
+          </button>
+          <button
+            type="button"
+            className={`timeline-mode-option ${readingMode === "swimlane" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "swimlane"}
+            onClick={() => onReadingModeChange("swimlane")}
+            title="타임라인 뷰 — 유형별 스윔레인 캔버스"
+          >
+            <Rows3 size={14} aria-hidden="true" />
+            타임라인
+          </button>
         </div>
       </div>
       <div className="timeline-toolbar-search" role="search" aria-label="이벤트 검색">
