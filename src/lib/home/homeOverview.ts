@@ -1,0 +1,528 @@
+import type { Session } from "../../domain/types";
+import type { ProductStateTone } from "../product-state/productStateLabels";
+import { spanLabel } from "../session/workContext";
+import type { StoredSessionSummary } from "../storage/storageTypes";
+
+/**
+ * Home overview view model.
+ *
+ * The Home dashboard answers four questions at a glance:
+ *  1. **What have I worked on** — recent captured sessions across projects.
+ *  2. **What needs my attention** — framed as *value the user gains* by acting,
+ *     never as a bare "n candidates to review".
+ *  3. **What's next** — the key actions (가져오기 / 이어가기 / 리포트) live in the
+ *     view's action bar; the value cards point at them.
+ *  4. **How am I using AI** — a calm strip of real metrics (session count,
+ *     project count, recent activity, reconstructed items). No fabricated
+ *     numbers, no charts unless there is genuinely enough data.
+ *
+ * This module is a pure transform: it never reads storage, never writes, and
+ * never invents sessions. The view layer gathers the cheap per-session metric
+ * snapshots (issue / decision / next-action / event counts already on disk in
+ * the memory body, no full re-parse) and hands them in. That keeps the whole
+ * derivation testable and the dashboard honest.
+ */
+
+/**
+ * Cheap, already-persisted counts for one session. Derived from the stored
+ * memory body (issues / decisions / next-actions) plus the import event count
+ * — never from a fresh re-parse of the raw conversation. Every field is
+ * optional so a session with no analysis yet contributes zero, not noise.
+ */
+export type HomeSessionMetricSnapshot = {
+  sessionId: string;
+  /**
+   * Reconstructed timeline events. Only the *active* session carries this
+   * cheaply (it is already loaded in memory); other sessions omit it rather
+   * than pay a full import re-parse. Used only for the aggregate "재구성된
+   * 단계" metric, never to gate next-actions.
+   */
+  events?: number;
+  /**
+   * Whether the session has any analysis-derived work on disk (issues /
+   * decisions / next-actions / a summary snapshot). Cheap to read from the
+   * stored memory body. Gates resume / report so they only appear once there
+   * is genuinely something to carry forward or summarise.
+   */
+  hasReconstructedWork?: boolean;
+  /** Open (unresolved) issues — carry-forward risk. */
+  openIssues?: number;
+  /** Total issues reconstructed for the session. */
+  issues?: number;
+  /** Decisions not yet confirmed by the user. */
+  unconfirmedDecisions?: number;
+  /** High-importance decisions — the ones worth promoting to memory. */
+  importantDecisions?: number;
+  /** Total decisions reconstructed for the session. */
+  decisions?: number;
+  /** Next actions still pending (not user-completed). */
+  pendingNextActions?: number;
+};
+
+export type HomeOverviewInput = {
+  /** Every stored session summary (any project, any archive state). */
+  storedSessions: StoredSessionSummary[];
+  /** Cheap per-session counts, keyed nowhere — matched by `sessionId`. */
+  sessionMetrics: HomeSessionMetricSnapshot[];
+  /**
+   * Number of real (non-demo) sessions the user has. Zero means the user is
+   * still on the bundled demo — the honest "nothing captured yet" state.
+   */
+  realSessionCount: number;
+  /** Whether the active session is the bundled demo. */
+  isDemo: boolean;
+  /** Clock injection for relative-time labels and recent-activity windows. */
+  now?: number;
+  /** How many recent sessions to surface in the main list. */
+  recentLimit?: number;
+};
+
+/** One real, calm metric in the work-summary strip. */
+export type HomeMetric = {
+  key: string;
+  /** Big number / short value ("12", "3", "5월 21일"). */
+  value: string;
+  /** Small label under the value. */
+  label: string;
+  /** Optional one-line detail (e.g. "최근 활동 2시간 전"). */
+  hint?: string;
+};
+
+/** A recent session row in the main list. */
+export type HomeRecentSession = {
+  sessionId: string;
+  title: string;
+  status: Session["status"];
+  /** Grouping label (project path) or null for manual sessions. */
+  projectLabel: string | null;
+  /** How the session entered Mori — drives the origin chip. */
+  origin: "imported" | "manual" | "demo";
+  /** Honest work-span descriptor ("2시간 45분" / "5월 21일") or null. */
+  spanLabel: string | null;
+  /** Relative-time label for the row's timestamp ("2시간 전"). */
+  relativeTime: string;
+  /** ISO timestamp the row is anchored to (started, else saved). */
+  anchorIso: string;
+  /** A short factual count summary ("이벤트 12 · 결정 3") or null when empty. */
+  countSummary: string | null;
+  /** Whether the row can be opened (real, saved session). */
+  canOpen: boolean;
+};
+
+/**
+ * The kind of value-centric next action. Drives icon + routing in the view.
+ * Each is framed around what the user *gains*, not a bare candidate count.
+ */
+export type HomeNextActionKind =
+  | "import"
+  | "resume"
+  | "review_decisions"
+  | "open_issues"
+  | "report";
+
+export type HomeNextActionTone = "accent" | "info" | "success" | "neutral";
+
+/** One value-centric "다음에 할 만한 것" card. */
+export type HomeNextAction = {
+  key: string;
+  kind: HomeNextActionKind;
+  /** Calm headline framed as value. */
+  title: string;
+  /** One sentence: what the user gains by doing this. */
+  description: string;
+  /** Action label on the card's button. */
+  actionLabel: string;
+  /** Where the action routes. */
+  destination: "connections" | "reports" | "review" | "workspace";
+  /** When set, switch to this session before routing. */
+  targetSessionId: string | null;
+  tone: HomeNextActionTone;
+};
+
+export type HomeOverview = {
+  /** True when the user has no real sessions — show the honest empty state. */
+  isEmpty: boolean;
+  /** True when only the bundled demo exists (real count is zero). */
+  onlyDemo: boolean;
+  metrics: HomeMetric[];
+  recentSessions: HomeRecentSession[];
+  nextActions: HomeNextAction[];
+};
+
+/** Never surface more than this many next-action cards — the panel stays calm. */
+export const MAX_HOME_NEXT_ACTIONS = 4;
+
+const DEFAULT_RECENT_LIMIT = 6;
+
+/**
+ * Build the Home dashboard view model from stored session summaries plus the
+ * cheap per-session metric snapshots. Pure and clock-injectable.
+ */
+export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
+  const now = input.now ?? Date.now();
+  const recentLimit = input.recentLimit ?? DEFAULT_RECENT_LIMIT;
+  const metricsById = indexMetrics(input.sessionMetrics);
+
+  // Active (non-archived) sessions, newest first.
+  const active = input.storedSessions
+    .filter((session) => !session.archivedAt)
+    .slice()
+    .sort((a, b) => anchorEpoch(b, now) - anchorEpoch(a, now));
+
+  const onlyDemo = input.realSessionCount === 0;
+  const isEmpty = onlyDemo && active.length === 0;
+
+  const recentSessions: HomeRecentSession[] = active
+    .slice(0, recentLimit)
+    .map((session) => toRecentSession(session, metricsById.get(session.sessionId), now));
+
+  const metrics = isEmpty
+    ? []
+    : buildMetrics(active, input.sessionMetrics, now);
+
+  const nextActions = isEmpty
+    ? buildEmptyNextActions()
+    : buildNextActions({ active, metricsById, onlyDemo, now });
+
+  return { isEmpty, onlyDemo, metrics, recentSessions, nextActions };
+}
+
+// ─── Metrics strip ──────────────────────────────────────────────────────────
+
+function buildMetrics(
+  active: StoredSessionSummary[],
+  allMetrics: HomeSessionMetricSnapshot[],
+  now: number,
+): HomeMetric[] {
+  const metrics: HomeMetric[] = [];
+
+  metrics.push({
+    key: "sessions",
+    value: String(active.length),
+    label: "세션",
+    hint: "가져온 작업 실행",
+  });
+
+  const projectCount = countProjects(active);
+  metrics.push({
+    key: "projects",
+    value: String(projectCount),
+    label: "프로젝트",
+    hint: projectCount === 1 ? "현재 작업 중" : "작업이 걸쳐 있는",
+  });
+
+  const totalEvents = allMetrics.reduce((sum, m) => sum + (m.events ?? 0), 0);
+  if (totalEvents > 0) {
+    metrics.push({
+      key: "events",
+      value: formatCompactCount(totalEvents),
+      label: "재구성된 단계",
+      hint: "프롬프트 · 도구 · 결정",
+    });
+  }
+
+  const mostRecent = active[0];
+  if (mostRecent) {
+    metrics.push({
+      key: "recent",
+      value: formatRelativeKo(anchorIso(mostRecent), now),
+      label: "최근 활동",
+      hint: mostRecent.title,
+    });
+  }
+
+  return metrics;
+}
+
+function countProjects(sessions: StoredSessionSummary[]): number {
+  const keys = new Set<string>();
+  for (const session of sessions) {
+    const label = session.sourceLabel?.trim();
+    keys.add(label && label.length > 0 ? `src:${label}` : `proj:${session.projectId}`);
+  }
+  return keys.size;
+}
+
+// ─── Recent session rows ──────────────────────────────────────────────────────
+
+function toRecentSession(
+  session: StoredSessionSummary,
+  metric: HomeSessionMetricSnapshot | undefined,
+  now: number,
+): HomeRecentSession {
+  const projectLabel = session.sourceLabel?.trim() ? session.sourceLabel.trim() : null;
+  const anchor = anchorIso(session);
+  return {
+    sessionId: session.sessionId,
+    title: session.title,
+    status: session.status,
+    projectLabel,
+    origin: projectLabel ? "imported" : "manual",
+    spanLabel: spanLabel(session.startedAt ?? session.savedAt, undefined),
+    relativeTime: formatRelativeKo(anchor, now),
+    anchorIso: anchor,
+    countSummary: buildCountSummary(metric),
+    canOpen: true,
+  };
+}
+
+/**
+ * Compact factual count line for a recent-session row — only the counts that
+ * actually carry signal, so the row stays scannable. Returns null when the
+ * session has no reconstructed items yet.
+ */
+function buildCountSummary(metric: HomeSessionMetricSnapshot | undefined): string | null {
+  if (!metric) return null;
+  const parts: string[] = [];
+  if ((metric.events ?? 0) > 0) parts.push(`이벤트 ${metric.events}`);
+  if ((metric.decisions ?? 0) > 0) parts.push(`결정 ${metric.decisions}`);
+  if ((metric.issues ?? 0) > 0) parts.push(`이슈 ${metric.issues}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+// ─── Value-centric next actions ──────────────────────────────────────────────
+
+function buildNextActions(params: {
+  active: StoredSessionSummary[];
+  metricsById: Map<string, HomeSessionMetricSnapshot>;
+  onlyDemo: boolean;
+  now: number;
+}): HomeNextAction[] {
+  const { active, metricsById, onlyDemo } = params;
+  const actions: HomeNextAction[] = [];
+
+  // Demo-only: the single honest nudge — there is nothing real to act on yet.
+  if (onlyDemo) {
+    return buildEmptyNextActions();
+  }
+
+  // Aggregate the per-session metric snapshots once.
+  let unconfirmedDecisions = 0;
+  let importantDecisions = 0;
+  let openIssues = 0;
+  let pendingNextActions = 0;
+  for (const session of active) {
+    const metric = metricsById.get(session.sessionId);
+    if (!metric) continue;
+    unconfirmedDecisions += metric.unconfirmedDecisions ?? 0;
+    importantDecisions += metric.importantDecisions ?? 0;
+    openIssues += metric.openIssues ?? 0;
+    pendingNextActions += metric.pendingNextActions ?? 0;
+  }
+
+  // The most recent session is the natural "이어가기" target.
+  const mostRecent = active[0] ?? null;
+  const recentMetric = mostRecent ? metricsById.get(mostRecent.sessionId) : undefined;
+
+  const recentHasWork = hasWork(recentMetric);
+
+  // 1. Resume — only when there is genuinely something to carry forward
+  //    (reconstructed work on the most recent session). Framed as the
+  //    context the user takes into the next run, not a bare prompt.
+  if (mostRecent && recentHasWork) {
+    const pending = recentMetric?.pendingNextActions ?? 0;
+    actions.push({
+      key: "resume",
+      kind: "resume",
+      title: `${truncateTitle(mostRecent.title)} 이어가기`,
+      description:
+        pending > 0
+          ? `이 세션의 흐름과 다음 작업 ${pending}개를 다음 실행에 컨텍스트로 가져갈 수 있어요.`
+          : "이 세션의 맥락을 Resume 프롬프트로 묶어 다음 실행에 그대로 이어갈 수 있어요.",
+      actionLabel: "이어가기 준비",
+      destination: "reports",
+      targetSessionId: mostRecent.sessionId,
+      tone: "info",
+    });
+  }
+
+  // 2. Review decisions — value: confirming leaves them in project memory.
+  if (unconfirmedDecisions > 0) {
+    actions.push({
+      key: "review-decisions",
+      kind: "review_decisions",
+      title: "결정을 확인해 메모리에 남기기",
+      description: `확인되지 않은 결정 ${unconfirmedDecisions}개가 있어요. 확인하면 프로젝트 메모리에 남아 다음 작업에서 다시 활용됩니다.`,
+      actionLabel: "결정 검토",
+      destination: "review",
+      targetSessionId: pickSessionWith(active, metricsById, (m) => (m.unconfirmedDecisions ?? 0) > 0),
+      tone: "accent",
+    });
+  }
+
+  // 3. Open issues — value: clearing risk before the next run.
+  if (openIssues > 0) {
+    actions.push({
+      key: "open-issues",
+      kind: "open_issues",
+      title: "열린 이슈 정리하기",
+      description: `아직 해결되지 않은 이슈 ${openIssues}개가 있어요. 다음 작업 전에 확인해 두면 같은 문제를 반복하지 않습니다.`,
+      actionLabel: "이슈 보기",
+      destination: "review",
+      targetSessionId: pickSessionWith(active, metricsById, (m) => (m.openIssues ?? 0) > 0),
+      tone: "neutral",
+    });
+  }
+
+  // 4. Report — value: a durable, shareable record of the work.
+  if (mostRecent && recentHasWork) {
+    actions.push({
+      key: "report",
+      kind: "report",
+      title: "작업을 리포트로 정리하기",
+      description:
+        "지금까지의 세션을 리포트로 묶으면 팀에 공유하거나 나중에 다시 돌아볼 수 있어요.",
+      actionLabel: "리포트 만들기",
+      destination: "reports",
+      targetSessionId: mostRecent.sessionId,
+      tone: "success",
+    });
+  }
+
+  // Always keep import reachable, but only when nothing else outranks it —
+  // otherwise it pushes a genuinely actionable card out of the calm cap.
+  if (actions.length < MAX_HOME_NEXT_ACTIONS) {
+    actions.push(importNextAction());
+  }
+
+  // Importance order: review (memory value) → resume → open issues → report →
+  // import. Sort by a fixed rank so the most valuable card leads.
+  return sortByRank(actions).slice(0, MAX_HOME_NEXT_ACTIONS);
+}
+
+/** The honest demo / empty state next action — just the import front door. */
+function buildEmptyNextActions(): HomeNextAction[] {
+  return [importNextAction()];
+}
+
+function importNextAction(): HomeNextAction {
+  return {
+    key: "import",
+    kind: "import",
+    title: "Claude 작업 가져오기",
+    description:
+      "연결에서 Claude 대화를 가져오면 작업이 세션으로 쌓이고, 여기에서 무엇을 했고 다음에 무엇을 하면 좋을지 한눈에 보입니다.",
+    actionLabel: "가져오기",
+    destination: "connections",
+    targetSessionId: null,
+    tone: "accent",
+  };
+}
+
+const NEXT_ACTION_RANK: Record<HomeNextActionKind, number> = {
+  review_decisions: 0,
+  resume: 1,
+  open_issues: 2,
+  report: 3,
+  import: 4,
+};
+
+function sortByRank(actions: HomeNextAction[]): HomeNextAction[] {
+  return [...actions].sort(
+    (a, b) => NEXT_ACTION_RANK[a.kind] - NEXT_ACTION_RANK[b.kind],
+  );
+}
+
+/**
+ * Whether a session has analysis-derived work worth resuming / reporting.
+ * Prefers the explicit `hasReconstructedWork` flag from the memory body;
+ * falls back to a non-zero event count (the active session always carries
+ * one) or any reconstructed item count.
+ */
+function hasWork(metric: HomeSessionMetricSnapshot | undefined): boolean {
+  if (!metric) return false;
+  if (metric.hasReconstructedWork) return true;
+  if ((metric.events ?? 0) > 0) return true;
+  return (
+    (metric.decisions ?? 0) > 0 ||
+    (metric.issues ?? 0) > 0 ||
+    (metric.pendingNextActions ?? 0) > 0
+  );
+}
+
+function pickSessionWith(
+  sessions: StoredSessionSummary[],
+  metricsById: Map<string, HomeSessionMetricSnapshot>,
+  predicate: (metric: HomeSessionMetricSnapshot) => boolean,
+): string | null {
+  for (const session of sessions) {
+    const metric = metricsById.get(session.sessionId);
+    if (metric && predicate(metric)) return session.sessionId;
+  }
+  return null;
+}
+
+// ─── Origin chip presentation ───────────────────────────────────────────────
+
+const ORIGIN_LABEL: Record<HomeRecentSession["origin"], string> = {
+  imported: "가져옴",
+  manual: "수동",
+  demo: "데모",
+};
+
+const ORIGIN_TONE: Record<HomeRecentSession["origin"], ProductStateTone> = {
+  imported: "neutral",
+  manual: "neutral",
+  demo: "accent",
+};
+
+export function describeHomeSessionOrigin(origin: HomeRecentSession["origin"]): {
+  label: string;
+  tone: ProductStateTone;
+} {
+  return { label: ORIGIN_LABEL[origin], tone: ORIGIN_TONE[origin] };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function indexMetrics(
+  metrics: HomeSessionMetricSnapshot[],
+): Map<string, HomeSessionMetricSnapshot> {
+  const map = new Map<string, HomeSessionMetricSnapshot>();
+  for (const metric of metrics) map.set(metric.sessionId, metric);
+  return map;
+}
+
+function anchorIso(session: StoredSessionSummary): string {
+  return session.startedAt ?? session.savedAt;
+}
+
+function anchorEpoch(session: StoredSessionSummary, fallback: number): number {
+  const parsed = new Date(anchorIso(session)).getTime();
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+function truncateTitle(title: string, max = 24): string {
+  const trimmed = title.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 1)}…`;
+}
+
+/** Compact human label for a count: 1234 → "1.2K". Small counts stay exact. */
+export function formatCompactCount(count: number): string {
+  if (!Number.isFinite(count) || count <= 0) return "0";
+  if (count < 1000) return String(count);
+  const k = count / 1000;
+  return `${k >= 100 ? Math.round(k) : k.toFixed(1).replace(/\.0$/, "")}K`;
+}
+
+/** Compact Korean relative-time label, clock-injectable for tests. */
+export function formatRelativeKo(iso: string, now: number = Date.now()): string {
+  const epoch = new Date(iso).getTime();
+  if (Number.isNaN(epoch)) return "";
+  const diff = now - epoch;
+  if (diff < 0) return formatDateKo(epoch);
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "방금";
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}일 전`;
+  return formatDateKo(epoch);
+}
+
+function formatDateKo(ms: number): string {
+  const date = new Date(ms);
+  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+}

@@ -3808,40 +3808,87 @@ hr {
 
 /* ── Home ───────────────────────────────────────────────────────────────── */
 
-/* The session-centric landing surface. Deliberately calm: a greeting in the
-   thin action band, a one-line intro, and the recent-session list. Richer
-   dashboard content lands in a later step. */
-.home-greeting {
-  display: inline-flex;
+/* The session-centric landing dashboard. Calm by design: a real-data metric
+   strip, a wide recent-session list, and a value-framed "지금 할 만한 것" rail.
+   No fabricated widgets — every number traces to a stored session. */
+.home-dashboard {
+  display: grid;
+  gap: var(--mori-space-9);
+}
+
+.home-demo-note {
+  display: flex;
   align-items: center;
-  gap: var(--mori-space-4);
+  gap: var(--mori-space-3);
+  margin: 0;
+  padding: var(--mori-space-4) var(--mori-space-6);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text-muted);
+  font-size: var(--mori-font-size-sm);
+  line-height: var(--mori-line-normal);
+}
+
+.home-demo-note svg {
+  flex-shrink: 0;
+  color: var(--mori-accent);
+}
+
+/* Work-summary strip — a few big numbers + small labels, never a tile grid.
+   Auto-fit keeps it on one calm row at 1440/1280 and wraps gracefully below. */
+.home-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--mori-space-5);
+}
+
+.home-metric {
+  display: grid;
+  gap: 2px;
+  padding: var(--mori-space-6) var(--mori-space-7);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface);
   min-width: 0;
 }
 
-.home-greeting strong {
-  font-size: var(--mori-font-size-lg);
-  font-weight: 650;
+.home-metric-value {
+  font-size: var(--mori-font-size-3xl);
+  font-weight: 680;
+  line-height: var(--mori-line-tight);
   color: var(--mori-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.home-intro {
-  margin: 0;
+.home-metric-label {
+  font-size: var(--mori-font-size-sm);
+  font-weight: 600;
+  color: var(--mori-text-muted);
 }
 
-.home-intro-lead {
-  margin: 0;
-  max-width: 60ch;
-  color: var(--mori-text-muted);
-  font-size: var(--mori-font-size-md);
-  line-height: var(--mori-line-relaxed);
+.home-metric-hint {
+  font-size: var(--mori-font-size-xs);
+  color: var(--mori-text-muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Two-column body: recent sessions (wide main) + next actions (rail). */
+.home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--mori-space-9);
+  align-items: start;
 }
 
 .home-section {
   display: grid;
   gap: var(--mori-space-5);
+  min-width: 0;
 }
 
 .home-section-head {
@@ -3869,7 +3916,7 @@ hr {
 }
 
 .home-section-link:hover {
-  color: var(--purple);
+  color: var(--mori-accent);
 }
 
 .home-session-list {
@@ -3894,8 +3941,8 @@ hr {
 }
 
 .home-session-row:hover {
-  border-color: var(--line-strong);
-  background: var(--panel-soft);
+  border-color: var(--mori-border-strong);
+  background: var(--mori-surface-subtle);
 }
 
 .home-session-icon {
@@ -3906,13 +3953,13 @@ hr {
   height: 30px;
   flex-shrink: 0;
   border-radius: 8px;
-  background: var(--purple-50);
-  color: var(--purple);
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
 }
 
 .home-session-body {
   display: grid;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   flex: 1;
 }
@@ -3927,18 +3974,145 @@ hr {
 }
 
 .home-session-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-3);
   font-size: var(--mori-font-size-xs);
   color: var(--mori-text-muted);
+  min-width: 0;
+}
+
+.home-session-project {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.home-session-span,
+.home-session-counts {
+  flex-shrink: 0;
+  color: var(--mori-text-muted-2);
+}
+
+.home-session-span::before,
+.home-session-counts::before {
+  content: "·";
+  margin-right: var(--mori-space-3);
+  color: var(--mori-text-muted-2);
 }
 
 .home-session-time {
   font-size: var(--mori-font-size-xs);
-  color: var(--muted-2);
+  color: var(--mori-text-muted-2);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* Value-centric next-action rail. Each card states what the user GAINS by
+   acting — not a bare candidate count. */
+.home-next-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--mori-space-4);
+}
+
+.home-next-card {
+  display: flex;
+  gap: var(--mori-space-4);
+  padding: var(--mori-space-6);
+  border: 1px solid var(--mori-border);
+  border-left: 3px solid var(--mori-border-strong);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface);
+}
+
+.home-next-card.tone-accent {
+  border-left-color: var(--mori-accent);
+}
+
+.home-next-card.tone-info {
+  border-left-color: var(--mori-status-info);
+}
+
+.home-next-card.tone-success {
+  border-left-color: var(--mori-status-success);
+}
+
+.home-next-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text-muted);
+}
+
+.home-next-card.tone-accent .home-next-icon {
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
+}
+
+.home-next-card.tone-info .home-next-icon {
+  background: var(--mori-status-info-soft);
+  color: var(--mori-status-info);
+}
+
+.home-next-card.tone-success .home-next-icon {
+  background: var(--mori-status-success-soft);
+  color: var(--mori-status-success);
+}
+
+.home-next-body {
+  display: grid;
+  gap: var(--mori-space-3);
+  min-width: 0;
+}
+
+.home-next-title {
+  margin: 0;
+  font-size: var(--mori-font-size-md);
+  font-weight: 650;
+  color: var(--mori-text);
+  line-height: var(--mori-line-snug);
+}
+
+.home-next-desc {
+  margin: 0;
+  font-size: var(--mori-font-size-sm);
+  color: var(--mori-text-muted);
+  line-height: var(--mori-line-normal);
+}
+
+.home-next-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--mori-accent);
+  font-size: var(--mori-font-size-sm);
+  font-weight: 600;
+}
+
+.home-next-action:hover {
+  text-decoration: underline;
+}
+
+/* Below ~960px the rail can no longer sit comfortably beside the list, so it
+   stacks under it. Keeps 768 overflow-free. */
+@media (max-width: 960px) {
+  .home-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mori-space-8);
+  }
 }
 
 /* ── InspectorPanel ─────────────────────────────────────────────────────── */
