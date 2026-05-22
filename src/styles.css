@@ -4249,119 +4249,104 @@ hr {
   gap: 0;
 }
 
-.session-detail-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--mori-space-6);
-  flex-wrap: wrap;
-  padding: var(--mori-space-6) var(--page-shell-inset) var(--mori-space-4);
-}
-
-.session-detail-headline {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
-.session-detail-headline h1 {
-  margin: 0;
-  font-size: var(--mori-font-size-xl);
-  line-height: 1.2;
-  letter-spacing: 0;
-  /* Long imported session titles stay on one line; the chips carry context. */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 56ch;
-}
-
-.session-detail-chips {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.session-detail-chip {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 9px;
-  border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-pill);
-  background: var(--mori-surface-subtle);
-  color: var(--mori-text-muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.session-detail-chip.session-detail-project {
-  max-width: 30ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-block;
-  line-height: 20px;
-}
-
-.session-detail-metrics {
-  display: flex;
-  align-items: center;
-  gap: var(--mori-space-5);
-  margin: 0;
-  flex-wrap: wrap;
-}
-
-.session-detail-metric {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--mori-text-muted);
-  font-size: 12.5px;
-}
-
-.session-detail-metric.is-warn {
-  color: var(--mori-warning, #b45309);
-}
-
-.session-detail-metric-icon {
-  display: inline-flex;
-  color: var(--mori-text-muted);
-}
-
-.session-detail-metric.is-warn .session-detail-metric-icon {
-  color: inherit;
-}
-
-.session-detail-metric dt {
-  margin: 0;
-  font-weight: 500;
-}
-
-.session-detail-metric dd {
-  margin: 0;
-  font-weight: 700;
-  color: var(--mori-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.session-detail-metric.is-warn dd {
-  color: inherit;
-}
-
-/* Tab band sits between the pinned header and the scrolling tab content. It is
-   inside the scroll region (so it scrolls with content) but sticks to the top
-   so the tab bar stays reachable while reading a long timeline / list. */
-.session-detail-tabs-band {
+/* Session detail bar — a single tight row carrying the inline session title
+   on the left and the tab strip on the right. No banner, no chip strip, no
+   metric strip; the active tab's content is what the user is here for. */
+.session-detail-bar {
   position: sticky;
   top: 0;
   z-index: 3;
-  padding: 6px var(--page-shell-inset);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px var(--page-shell-inset);
   background: var(--mori-surface-overlay);
   border-bottom: 1px solid var(--mori-border);
   backdrop-filter: blur(12px);
+}
+
+.session-detail-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  max-width: 38ch;
+  white-space: nowrap;
+}
+
+.session-detail-title strong {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--mori-text);
+  letter-spacing: -0.005em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-detail-title-sub {
+  font-size: 11.5px;
+  color: var(--mori-text-muted-2);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.session-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.session-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--mori-text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.session-tab:hover {
+  color: var(--mori-text);
+  background: var(--mori-surface-subtle);
+}
+
+.session-tab.is-active {
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
+}
+
+.session-tab svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.session-tab-count {
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-tab.is-active .session-tab-count {
+  background: rgba(98, 70, 245, 0.16);
+  color: var(--mori-accent);
 }
 
 .session-tabs {
