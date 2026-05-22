@@ -610,6 +610,16 @@ p {
   box-shadow: none;
 }
 
+/* Icon-only button — a square tap target with no label. Use only when the
+   icon's meaning is unambiguous, and always pair with an aria-label + title
+   so the action stays clear to screen readers and on hover. */
+.btn-icon {
+  width: 36px;
+  padding: 0;
+  gap: 0;
+  flex-shrink: 0;
+}
+
 .search {
   display: grid;
   grid-template-columns: 20px 1fr auto;

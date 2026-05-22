@@ -7,6 +7,7 @@ import {
   Layers,
   Lightbulb,
   PlayCircle,
+  Plus,
   PlugZap,
   Sparkles,
 } from "lucide-react";
@@ -175,12 +176,12 @@ export function HomeView() {
               </Button>
               <Button
                 variant="ghost"
-                icon={PlayCircle}
+                icon={Plus}
+                className="btn-icon"
+                aria-label="새 세션"
                 onClick={() => setCurrentView("start")}
-                title="대부분의 세션은 가져오기에서 시작됩니다. 새 세션은 드문 경우입니다."
-              >
-                새 세션
-              </Button>
+                title="새 세션 — 대부분의 세션은 가져오기에서 시작됩니다. 새 세션은 드문 경우입니다."
+              />
             </>
           }
         />
