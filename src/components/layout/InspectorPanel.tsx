@@ -23,9 +23,8 @@ export type InspectorPanelProps = {
  * one skeleton (consistent width, header alignment, scroll boundary, and a
  * footer that stays put while the body scrolls).
  *
- * Distinct from `MoriInspectorPanel` (which has no footer region): this one
- * is the page-shell-aware variant with a pinned action footer, namespaced
- * under `.inspector-panel`.
+ * The single inspector primitive: header + scrollable body + optional pinned
+ * action footer, namespaced under `.inspector-panel`.
  */
 export function InspectorPanel({
   title,

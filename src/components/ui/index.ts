@@ -35,4 +35,3 @@ export {
 } from "./MoriToolbar";
 export { MoriEmptyState, type MoriEmptyStateProps } from "./MoriEmptyState";
 export { MoriSection, type MoriSectionProps } from "./MoriSection";
-export { MoriInspectorPanel, type MoriInspectorPanelProps } from "./MoriInspectorPanel";
