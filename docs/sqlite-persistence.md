@@ -172,7 +172,8 @@ save/load round-trip with an in-memory `rusqlite` database.
   falls back to the browser draft if SQLite is empty for that session id),
   `loadDesktopSession(sessionId)`, and `markPersistedToDesktop()`. The
   derived `source` flag is `demo` / `browser-draft` / `desktop-sqlite` and
-  is rendered as a badge by `SessionModeBanner`.
+  is rendered as a badge by the Settings storage card (`DemoModeCard`) and the
+  sidebar session card.
 - In browser mode the bridge throws a clear "SQLite desktop persistence
   requires the Tauri app" error and the Settings panel renders an
   "unavailable" status with a help line. The existing

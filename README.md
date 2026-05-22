@@ -50,7 +50,7 @@ This repository currently contains the frontend foundation for Mori:
 - Optional deterministic fallback when an Ollama Quick Pass run fails, honestly labeled in the analysis result
 - Placeholder Tauri icon assets so `cargo check` can run against the Rust shell
 - Rust-native SQLite persistence: `rusqlite`-backed migration runner with checksum validation, real save/load of projects, sessions, sources, events, issues, decisions, relationships, artifacts, next actions, and summaries, Tauri command surface, and a Settings status panel
-- Runtime-aware persistence service that routes between browser localStorage and the Tauri SQLite bridge, prefers SQLite as the source of truth in desktop mode, and exposes Load actions for saved SQLite sessions; a "Browser Draft" vs "Desktop SQLite" badge in the SessionModeBanner makes the active source explicit
+- Runtime-aware persistence service that routes between browser localStorage and the Tauri SQLite bridge, prefers SQLite as the source of truth in desktop mode, and exposes Load actions for saved SQLite sessions; a "Browser Draft" vs "Desktop SQLite" badge in the Settings storage card (DemoModeCard) and the sidebar session card makes the active source explicit
 - Tauri v2 desktop shell foundation with native `.mori v0 JSON` save/open commands
 - SQLite migration catalog, normalized row snapshot mapping, validation, and desktop command boundaries
 

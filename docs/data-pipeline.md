@@ -93,8 +93,9 @@ Pipeline-layer helpers (all in `src/app/dataPipeline.ts`):
 
 Demo and real data never mix. `selectSessionView` returns `demoView` (with
 `isDemo: true`) when no draft exists, and `composeSessionView` is called
-the moment a draft appears. The Sidebar / TopSessionBar / SessionModeBanner
-all read the discriminator and tag the data scope.
+the moment a draft appears. The Sidebar session card, the Session Detail
+header, and the Settings storage card all read the discriminator and tag the
+data scope.
 
 ## Adding a new connector to the pipeline
 

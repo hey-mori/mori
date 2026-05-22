@@ -132,7 +132,7 @@ Pipeline notes:
   - `flow-focus`: Flow Focus components (shared with Timeline)
 - `lib`: pure logic such as timeline layout, relationship traversal, trust formatting, resume prompt generation, session status derivation
   - `session/sessionStatus.ts`: centralized helper that derives consistent demo/draft/analysis/persistence status labels and metrics for UI consistency across pages
-  - `session/sessionTiming.ts`: pure helper that derives lifecycle state (demo / active / analyzing / draft / ended), duration labels, and the `isLive` flag that drives the TopSessionBar and Sidebar live timers
+  - `session/sessionTiming.ts`: pure helper that derives lifecycle state (demo / active / analyzing / draft / ended), duration labels, and the `isLive` flag that drives the sidebar session card and Session Detail header live timers
   - `evidence/`: trust display (`trust.ts`), provenance / capture-method labels (`provenance.ts`), and evidence joins (`sourceLinks.ts`). `lib/sources/traceability.ts` is a backward-compat barrel that re-exports these helpers
   - `reports/reportContext.ts`: pulls report data-basis + evidence summary + analysis provider + resume prompt into one snapshot
   - `memory/projectMemoryContext.ts`: project-memory scope snapshot (`scope`, `scopeLabel`, `isCrossSession`, `dataBasisLabel`, `scopeCaveat`) on top of the existing project-memory derivations
@@ -145,14 +145,14 @@ Pipeline notes:
 
 | Page | Route | Primary Purpose | Key Components |
 |------|-------|----------------|----------------|
-| Start Session | `start` | Session initialization and configuration | StartSessionView |
-| Timeline | `timeline` | Main narrative timeline reconstruction | TimelineView (mode=timeline) |
-| Flow Focus | `flow` | Relationship-focused timeline view | TimelineView (mode=flow) |
-| Evidence | `evidence` | Source and import management | EvidenceView, ImportPanel |
-| Review | `review` | Issues, decisions, and next actions | ReviewView (Issue Garden + Decision Log) |
+| Home | `home` | Session-centric landing dashboard (recent sessions, activity heatmap, next steps) | HomeView |
+| Start Session | `start` | Session initialization and configuration (rare; most sessions are imported) | StartSessionView |
+| Session Detail | `session` | Unified per-session workspace; the **흐름** (timeline + Flow Focus), **증거** (sources / import), and **인사이트** (issues / decisions / next actions) tabs live here as embedded views | SessionDetailView (SessionDetailHeader + TimelineView / EvidenceView / ReviewView) |
 | Reports | `reports` | Resume prompts and report generation | ReportsView |
 | Memory | `memory` | Long-term project session history | MemoryView |
-| Settings | `settings` | All configuration surfaces | SettingsView |
+| Settings | `settings` | All configuration surfaces (incl. demo/live toggle via DemoModeCard) | SettingsView |
+
+The legacy `timeline` / `flow` / `evidence` / `review` keys are no longer standalone pages; they normalise to the `session` route and open the matching Session Detail tab, so old deep links never dead-end.
 
 Frontend screens should not know filesystem paths, SQLite details, LLM provider APIs, or package internals directly. Those should arrive as typed data from backend commands.
 

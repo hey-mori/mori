@@ -60,8 +60,8 @@ src/lib/relationships/
 src/lib/session/
   sessionStatus.ts        - cross-page status labels.
   sessionTiming.ts        - real lifecycle + duration + start time labels
-                            consumed by TopSessionBar and the Sidebar
-                            session card.
+                            consumed by the Session Detail header and the
+                            Sidebar session card.
 ```
 
 Rules:
@@ -79,28 +79,27 @@ Rules:
 
 ## Layout contract
 
-The Timeline page has stable zones. Each is documented in the React
-component that owns it.
+The Timeline — the **흐름** tab inside the Session Detail workspace — has
+stable zones. Each is documented in the React component that owns it.
 
 | Zone | Owner | Sticky? |
 |---|---|---|
 | App sidebar | `Sidebar` | sticky to viewport (`position: sticky` since the original shell) |
-| Main product header (TopSessionBar) | `TopSessionBar` | **sticky to viewport top** |
-| Session mode banner | `SessionModeBanner` | non-sticky on purpose |
+| Session header + tab bar | `SessionDetailView` (`SessionDetailHeader`) | **pinned at the top of the workspace** |
 | Timeline toolbar | `TimelineToolbar` | non-sticky (one tight row) |
 | Scroll frame | `TimelineCanvas` | the **only** horizontally-scrolling element |
 | Time ruler | `TimelineAxis` | **sticky to the top of the scroll frame** |
 | Lane labels | `TimelineLane` | **sticky to the left edge of the scroll frame** |
 | Relationship layer | `RelationshipLineLayer` | `z-index: 1` behind cards |
 | Event card layer | `TimelineEventCard` / `TimelineBundleCard` | `z-index: 2` |
-| Right inspector | `EventInspector` / `TimelineBundleInspector` | **sticky below the TopSessionBar** at desktop widths |
+| Right inspector | `EventInspector` / `TimelineBundleInspector` | **sticky to the top of the session scroll area** at desktop widths |
 | Bottom mini-map / overview rail | `TimelineMiniMap` | scrolls with the page |
 
 Behavior:
 
-- The TopSessionBar stays visible above the canvas while the user scrolls
-  down through the page. The bar carries the live session badge plus the
-  session-search input.
+- The Session Detail header and tab bar stay pinned above the canvas while the
+  user scrolls; the live session badge lives in the sidebar session card and
+  the event-search input lives in the Timeline toolbar.
 - The time ruler pins to the top of the scrolling canvas so the time scale
   is always readable.
 - Faint vertical gridlines drop from each ruler tick through the lane area
@@ -341,8 +340,8 @@ single source of truth for session lifecycle + duration labels. It returns:
 - `startTimeLabel`: `13:02` style start time.
 - `isLive`: whether callers should re-render every second.
 
-The TopSessionBar and the Sidebar session card both consume this snapshot
-and re-render once per second only when `isLive` is true. The sidebar
+The Session Detail header and the Sidebar session card both consume this
+snapshot and re-render once per second only when `isLive` is true. The sidebar
 timer is no longer hard-coded; ended sessions show the stored duration
 verbatim; demo mode shows the demo session's baked range.
 

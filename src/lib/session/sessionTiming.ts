@@ -1,9 +1,9 @@
 /**
  * Pure helpers for deriving session start, status, and elapsed-time labels.
  *
- * The Timeline page, the sidebar session card, and the TopSessionBar all show
- * "session timing" information, but until this milestone the sidebar card was
- * hard-coded ("시작: 13:02 · 04:32:19") and the TopSessionBar showed
+ * The sidebar session card and the Session Detail header both show "session
+ * timing" information, but until this milestone the sidebar card was
+ * hard-coded ("시작: 13:02 · 04:32:19") and the header showed
  * `startedAt → endedAt` regardless of whether the session was actually live.
  *
  * `deriveSessionTiming` is the single source of truth. It does not import the

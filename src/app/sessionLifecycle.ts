@@ -28,7 +28,7 @@ export type SessionStorageScope =
 export type SessionLifecycleSnapshot = {
   timing: SessionTimingSnapshot;
   status: SessionStatusLabels;
-  /** Storage scope label suitable for the SessionModeBanner / Sidebar. */
+  /** Storage scope label suitable for the sidebar session card and Settings. */
   storageScope: SessionStorageScope;
   storageScopeLabel: string;
   storageScopeDetail: string;
