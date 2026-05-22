@@ -25,7 +25,6 @@ const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionStat
   subscribeToDataSource: () => () => undefined,
   hydrate: async () => {},
   setDraft: () => {},
-  endSession: () => {},
   addImport: () => null,
   importAsNewSession: () => ({ sessionId: "", candidate: { source: {} as never, events: [] } }),
   commitPendingNewSession: () => {},

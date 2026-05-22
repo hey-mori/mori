@@ -22,7 +22,6 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     subscribeToDataSource: () => () => undefined,
     hydrate: async () => undefined,
     setDraft: () => undefined,
-    endSession: () => undefined,
     addImport: () => null,
     importAsNewSession: () => ({ sessionId: "", candidate: { source: {} as never, events: [] } }),
     commitPendingNewSession: () => undefined,
