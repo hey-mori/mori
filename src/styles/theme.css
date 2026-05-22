@@ -1381,14 +1381,12 @@
   border-color: var(--mori-accent);
 }
 
-[data-mori-theme="nightLake"] .mode-card,
 [data-mori-theme="nightLake"] .engine-card {
   background: var(--mori-surface);
   border-color: var(--mori-border);
   color: var(--mori-text);
 }
 
-[data-mori-theme="nightLake"] .mode-card.selected,
 [data-mori-theme="nightLake"] .engine-card.selected {
   border-color: var(--mori-accent);
   background: var(--mori-accent-soft);

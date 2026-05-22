@@ -43,12 +43,6 @@ import { useMoriAppStore } from "../../app/store";
 const availableSources = sourceOptions.filter((source) => source.status === "available");
 const plannedSources = sourceOptions.filter((source) => source.status === "planned");
 
-const RECORDING_MODES: { mode: RecordingMode; points: string[] }[] = [
-  { mode: "summary", points: ["요약 · 결정 · 이슈 · 산출물 중심", "원본은 짧게만 보관", "저장 공간 절약"] },
-  { mode: "full", points: ["전체 대화 및 원본 보관", "감사 / 상세 추적에 적합", "더 많은 저장 공간 사용"] },
-  { mode: "ephemeral", points: ["리포트만 저장", "원본 데이터 자동 삭제", "민감 프로젝트에 적합"] },
-];
-
 const ENGINE_OPTIONS = buildStartSessionEngineOptions();
 
 const ENGINE_ICONS: Record<LlmProvider, LucideIcon> = {
@@ -90,8 +84,9 @@ function deriveInitialFormState(draft: StoredSessionDraft | null) {
  * work session by hand so imported evidence has somewhere to land. The framing
  * is deliberately "create a container for evidence", never "start recording" —
  * Mori reconstructs work from explicit imports, it does not watch or capture in
- * the background. Existing source / engine / retention controls are kept but
- * presented honestly and compactly.
+ * the background. Source + engine controls stay; the retention-scope choice is
+ * dropped — a container for imported evidence keeps summaries by default, and a
+ * retention policy is premature before live capture exists.
  */
 export function StartSessionView() {
   // Read the store-hydrated draft as the source of truth for initial values.
@@ -107,9 +102,10 @@ export function StartSessionView() {
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(
     () => initial.selectedSourceIds,
   );
-  const [recordingMode, setRecordingMode] = useState<RecordingMode>(
-    () => initial.recordingMode,
-  );
+  // Recording mode is no longer a create-time choice (premature before live
+  // capture exists); a hand-made container keeps summaries by default. We still
+  // honour an existing draft's saved mode for returning users.
+  const recordingMode = initial.recordingMode;
   const [engineProvider, setEngineProvider] = useState<LlmProvider>(
     () => initial.engineProvider,
   );
@@ -308,24 +304,6 @@ export function StartSessionView() {
 
       <SetupBlock
         number="3"
-        title="보관 범위"
-        note="이 세션이 가져온 증거를 얼마나 오래 보관할지 정합니다."
-      >
-        <div className="mode-grid">
-          {RECORDING_MODES.map(({ mode: m, points }) => (
-            <ModeCard
-              key={m}
-              mode={m}
-              points={points}
-              selected={recordingMode === m}
-              onSelect={() => setRecordingMode(m)}
-            />
-          ))}
-        </div>
-      </SetupBlock>
-
-      <SetupBlock
-        number="4"
         title="로컬 AI 엔진"
         note="Quick Pass 분석에 쓸 로컬 엔진입니다. Planned 제공자는 설정과 같은 기준으로 비활성화됩니다."
       >
@@ -417,34 +395,6 @@ function SetupBlock({ number, title, note, children }: { number: string; title: 
   );
 }
 
-function ModeCard({
-  mode,
-  points,
-  selected,
-  onSelect,
-}: {
-  mode: RecordingMode;
-  points: string[];
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      className={`mode-card ${selected ? "selected" : ""}`}
-      type="button"
-      aria-pressed={selected}
-      onClick={onSelect}
-    >
-      <span className="radio" />
-      <strong>{recordingModeLabels[mode]}</strong>
-      <small>{selected ? "선택된 보관 범위입니다." : "프로젝트 성격에 따라 선택하세요."}</small>
-      <ul>
-        {points.map((point) => <li key={point}>{point}</li>)}
-      </ul>
-    </button>
-  );
-}
-
 function EngineCard({
   engine,
   selected,
@@ -527,7 +477,6 @@ function SessionSummary({
         )}
       </ul>
       <hr />
-      <SummaryRow label="보관 범위" value={recordingModeLabels[recordingMode]} accent />
       <SummaryRow
         label="AI 엔진"
         value={engine.model ? `${engine.label} (${engine.model})` : engine.label}

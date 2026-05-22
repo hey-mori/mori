@@ -3261,7 +3261,6 @@ input,
 }
 
 .source-card,
-.mode-card,
 .engine-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -3279,7 +3278,6 @@ input,
 }
 
 .source-card.selected,
-.mode-card.selected,
 .engine-card.selected,
 .report-type-grid .selected,
 .format-grid .selected,
@@ -3413,47 +3411,12 @@ input,
   line-height: 1.5;
 }
 
-.mode-grid,
 .engine-grid,
 .report-type-grid,
 .format-grid,
 .theme-options {
   display: grid;
   gap: 14px;
-}
-
-.mode-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-
-.mode-card {
-  min-height: 150px;
-  padding: 16px;
-  text-align: left;
-}
-
-.radio {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  margin-right: 8px;
-  border: 2px solid var(--purple);
-  border-radius: 50%;
-  vertical-align: middle;
-}
-
-.mode-card small {
-  display: block;
-  margin: 8px 0 12px;
-  color: var(--muted);
-}
-
-.mode-card ul {
-  display: grid;
-  gap: 7px;
-  margin: 0;
-  padding-left: 18px;
-  color: #40506a;
 }
 
 .engine-grid {
