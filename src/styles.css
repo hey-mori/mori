@@ -3063,7 +3063,6 @@ textarea {
   gap: 16px;
   background: var(--mori-surface-raised);
   border: 1px solid var(--mori-border);
-  border-left: 3px solid var(--mori-green);
   border-radius: var(--radius);
   padding: 14px 18px;
   margin-bottom: 22px;
@@ -4196,21 +4195,8 @@ hr {
   gap: var(--mori-space-4);
   padding: var(--mori-space-6);
   border: 1px solid var(--mori-border);
-  border-left: 3px solid var(--mori-border-strong);
   border-radius: var(--mori-radius-lg);
   background: var(--mori-surface);
-}
-
-.home-next-card.tone-accent {
-  border-left-color: var(--mori-accent);
-}
-
-.home-next-card.tone-info {
-  border-left-color: var(--mori-status-info);
-}
-
-.home-next-card.tone-success {
-  border-left-color: var(--mori-status-success);
 }
 
 .home-next-icon {
@@ -9493,22 +9479,9 @@ pre {
   gap: 16px;
   padding: 16px;
   border: 1px solid var(--line);
-  border-left: 4px solid var(--blue);
   border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: var(--mori-surface-raised, #ffffff);
   box-shadow: var(--shadow-soft);
-}
-
-.companion-inbox-focus[data-mori-tone="danger"] {
-  border-left-color: var(--red);
-}
-
-.companion-inbox-focus[data-mori-tone="warning"] {
-  border-left-color: #d8923f;
-}
-
-.companion-inbox-focus[data-mori-tone="neutral"] {
-  border-left-color: var(--muted-2);
 }
 
 .companion-inbox-focus-copy {
@@ -10949,9 +10922,9 @@ pre {
   display: grid;
   gap: 4px;
   padding: 10px 12px;
-  border-left: 3px solid var(--mori-accent, var(--purple));
+  border: 1px solid var(--mori-border, var(--line));
   background: var(--mori-accent-soft, var(--purple-50));
-  border-radius: 0 8px 8px 0;
+  border-radius: 8px;
 }
 
 .accepted-memory-detail-note-label {
@@ -13934,10 +13907,10 @@ pre {
 .analysis-panel-summary {
   margin: 0;
   padding: 10px 12px;
-  border-left: 3px solid #6e62ff;
-  background: #f7f6ff;
+  border: 1px solid var(--mori-border, var(--line));
+  background: var(--mori-surface-subtle, #f7f6ff);
   color: var(--text);
-  border-radius: 4px;
+  border-radius: var(--mori-radius-md, 8px);
   line-height: 1.6;
 }
 

@@ -1390,7 +1390,6 @@
 [data-mori-theme="nightLake"] .active-session-banner {
   background: var(--mori-surface);
   border-color: var(--mori-border);
-  border-left-color: var(--mori-green);
 }
 
 /* ─── Drawer / overlay ───────────────────────────────────────────────────── */
