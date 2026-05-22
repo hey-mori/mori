@@ -5,18 +5,20 @@ import { moriViewIcon } from "../../components/brand/moriIcons";
  * Sidebar navigation structure as pure, testable data.
  *
  * The IA is **session-centric**: opening Mori lands on **홈 (home)** — a
- * one-glance view of "my work memory" — and the sidebar exposes only the five
+ * one-glance view of "my work memory" — and the sidebar exposes only the four
  * primary destinations a user navigates between:
  *
- *   홈 (home) · 세션 (workspace) · 메모리 (memory) · 리포트 (reports) ·
- *   설정 (settings)
+ *   홈 (home) · 세션 (workspace) · 메모리 (memory) · 설정 (settings)
  *
  * "세션" reuses the existing `workspace` route (the session hub) — only the
  * label changed, so deep links and saved state keep working. The narrower
  * working surfaces that used to crowd the nav (타임라인 / 증거 / 검토 / Flow /
  * 연결 / Mori 노트) stay fully routable — they are reached *through* the primary
  * destinations (e.g. opening a session routes into Timeline, import is an
- * action on 홈 / 세션) rather than as standing nav entries.
+ * action on 홈 / 세션) rather than as standing nav entries. **리포트 (reports)**
+ * and **통합 검토 (consolidation)** likewise stay routable but fold *into*
+ * 메모리 — Reports is the terminal output step of the memory loop, so it is
+ * reached through Memory rather than as its own destination.
  *
  * Keeping this as data (rather than inline JSX in `Sidebar`) lets us assert the
  * entry model never regresses — e.g. that 홈 leads, that exactly the five
@@ -50,7 +52,6 @@ export const NAV_GROUPS: NavGroup[] = [
       // "세션" reuses the Workspace session-hub route — only the label is new.
       { key: "workspace", label: "세션" },
       { key: "memory", label: "메모리" },
-      { key: "reports", label: "리포트" },
     ],
   },
   { items: [{ key: "settings", label: "설정" }] },

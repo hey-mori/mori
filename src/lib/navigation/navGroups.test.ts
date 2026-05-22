@@ -14,12 +14,11 @@ describe("NAV_GROUPS entry model", () => {
     expect(NAV_GROUPS[0]?.items[0]?.key).toBe("home");
   });
 
-  it("exposes exactly the five primary destinations", () => {
+  it("exposes exactly the four primary destinations", () => {
     expect(navKeys()).toEqual([
       "home",
       "workspace",
       "memory",
-      "reports",
       "settings",
     ]);
   });
@@ -36,8 +35,9 @@ describe("NAV_GROUPS entry model", () => {
     // These remain routable ViewKeys, just reached *through* the primary
     // destinations rather than as standing nav entries. "session" is the
     // unified Session Detail workspace — opened from 세션 (workspace), never a
-    // standing nav entry of its own.
-    for (const offNav of ["connections", "session", "timeline", "evidence", "review", "start", "companion"]) {
+    // standing nav entry of its own. "reports" and "consolidation" fold into
+    // 메모리 — routable, but reached through Memory, not the standing nav.
+    for (const offNav of ["connections", "session", "timeline", "evidence", "review", "start", "companion", "reports", "consolidation"]) {
       expect(keys).not.toContain(offNav);
     }
   });

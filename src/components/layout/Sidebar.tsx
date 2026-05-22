@@ -61,7 +61,7 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
   const isActive = (key: ViewKey) =>
     key === currentView ||
     (key === "workspace" && SESSION_SURFACE_VIEWS.has(currentView)) ||
-    (key === "memory" && currentView === "consolidation");
+    (key === "memory" && (currentView === "consolidation" || currentView === "reports"));
 
   // Live badge counts — shown only when non-zero so the nav stays quiet
   // until the user has actually captured or analysed work.
