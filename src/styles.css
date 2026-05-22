@@ -481,9 +481,7 @@ button {
 
 .workspace {
   min-width: 0;
-  background:
-    radial-gradient(circle at 32% 8%, rgba(98, 70, 245, 0.05), transparent 36%),
-    linear-gradient(180deg, #fff 0, #fafbfe 38%, #f7f8fb 100%);
+  background: var(--mori-bg, #f8f9fc);
 }
 
 .page-header {
@@ -602,8 +600,8 @@ p {
 .btn-primary {
   color: white;
   border-color: transparent;
-  background: linear-gradient(135deg, #6f4df8, #4f39e8);
-  box-shadow: 0 12px 28px rgba(98, 70, 245, 0.24);
+  background: var(--mori-accent, #6246f5);
+  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.12);
 }
 
 .btn-ghost {
