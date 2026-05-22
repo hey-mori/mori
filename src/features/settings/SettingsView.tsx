@@ -11,7 +11,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -37,6 +36,7 @@ import { RepositoriesCard } from "./RepositoriesCard";
 import { PlannedConnectorsCard } from "./PlannedConnectorsCard";
 import { ThemeCard } from "./ThemeCard";
 import { TrustSummaryPanel } from "./TrustSummaryPanel";
+import { DemoModeCard } from "./DemoModeCard";
 
 const TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "로컬 AI", icon: Bot },
@@ -198,8 +198,6 @@ export function SettingsView() {
         />
       }
     >
-      <SessionModeBanner />
-
       <StatusStrip
         mode={mode}
         sqliteKind={sqliteKind}
@@ -224,6 +222,11 @@ export function SettingsView() {
               <PrivacyDefaultsCard />
               <PrivacyGuaranteesCard />
             </>
+          ) : null}
+          {activeTab === "storage" ? (
+            <DemoModeCard
+              onGoToConnections={() => setCurrentView("connections")}
+            />
           ) : null}
           {activeTab === "storage" ? (
             <StorageCard

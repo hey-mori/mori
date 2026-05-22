@@ -9,7 +9,6 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
-import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -48,10 +47,18 @@ import {
   SourceDetailPanel,
   type EvidenceDetailSelection,
 } from "./SourceDetailPanel";
-import { CompanionStrip } from "../companion/CompanionStrip";
-import { useCompanionSignals } from "../companion/useCompanionSignals";
 
-export function EvidenceView() {
+/**
+ * Evidence Hub.
+ *
+ * Renders standalone (its own `PageShell`) when reached directly, or as the
+ * **증거** tab content inside the unified Session Detail workspace when
+ * `embedded` — in which case the Session Detail owns the single shell + header
+ * and this view renders only its action-bar row + body + inspector inside the
+ * session scroll area, so there is never a double shell. Every capability
+ * (import, Quick Pass, source inspector, removal) is identical in both modes.
+ */
+export function EvidenceView({ embedded = false }: { embedded?: boolean } = {}) {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -68,13 +75,15 @@ export function EvidenceView() {
   const clearAnalysis = useMoriSessionStore((state) => state.clearAnalysis);
   const updateAnalysisSettings = useMoriSessionStore((state) => state.updateAnalysisSettings);
   const removeImport = useMoriSessionStore((state) => state.removeImport);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  // `navigate` routes legacy session-surface keys (timeline) into the unified
+  // Session Detail workspace; other keys (memory / settings) pass through. In
+  // embedded mode this means "Timeline 열기" switches to the 흐름 tab.
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const { signals: companionSignals } = useCompanionSignals();
 
   const reviewDraft = useMoriReviewStore((state) => state.draft);
   const lastApplied = useMoriReviewStore((state) => state.lastApplied);
@@ -140,56 +149,63 @@ export function EvidenceView() {
   // draft is in flight. Cancel / apply on the review screen clears the draft
   // and falls through back to the Evidence Hub on the next render.
   if (reviewDraft) {
-    return <ImportReviewView />;
+    return <ImportReviewView embedded={embedded} />;
   }
 
-  return (
-    <PageShell
-      className="evidence-page"
-      actionBar={
-        <ActionBar
-          label="증거 허브 상태"
-          start={
-            <>
-              <span className="action-bar-context">증거 허브</span>
-              <Badge tone={isDemoSession ? "gray" : "green"}>
-                {isDemoSession ? "데모 세션" : "실제 세션"}
-              </Badge>
-              <Badge tone={importedSources.length ? "purple" : "gray"}>
-                {importedSources.length}개 출처
-              </Badge>
-            </>
-          }
-          end={
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => openImport(importKind ?? "note")}
-              disabled={isDemoSession}
-              title={isDemoSession ? "실제 세션을 시작하면 소스를 추가할 수 있습니다." : "새 소스 추가"}
-            >
-              소스 추가
-            </Button>
-          }
-        />
+  const actionBar = (
+    <ActionBar
+      label="증거 허브 상태"
+      start={
+        embedded ? (
+          <>
+            <Badge tone={isDemoSession ? "gray" : "green"}>
+              {isDemoSession ? "데모 세션" : "실제 세션"}
+            </Badge>
+            <Badge tone={importedSources.length ? "purple" : "gray"}>
+              {importedSources.length}개 출처
+            </Badge>
+          </>
+        ) : (
+          <>
+            <span className="action-bar-context">증거 허브</span>
+            <Badge tone={isDemoSession ? "gray" : "green"}>
+              {isDemoSession ? "데모 세션" : "실제 세션"}
+            </Badge>
+            <Badge tone={importedSources.length ? "purple" : "gray"}>
+              {importedSources.length}개 출처
+            </Badge>
+          </>
+        )
       }
-      aside={
-        <SourceDetailPanel
-          selection={selection}
-          view={view}
-          integrationLookup={integrationLookup}
-          importSummary={
-            selection.kind === "source"
-              ? imports.find((entry) => entry.source.id === selection.sourceId)?.importSummary
-              : undefined
-          }
-        />
+      end={
+        <Button
+          variant="primary"
+          icon={Plus}
+          onClick={() => openImport(importKind ?? "note")}
+          disabled={isDemoSession}
+          title={isDemoSession ? "실제 세션을 시작하면 소스를 추가할 수 있습니다." : "새 소스 추가"}
+        >
+          소스 추가
+        </Button>
       }
-    >
-      <SessionModeBanner />
+    />
+  );
 
-      <CompanionStrip signals={companionSignals} onNavigate={setCurrentView} />
+  const aside = (
+    <SourceDetailPanel
+      selection={selection}
+      view={view}
+      integrationLookup={integrationLookup}
+      importSummary={
+        selection.kind === "source"
+          ? imports.find((entry) => entry.source.id === selection.sourceId)?.importSummary
+          : undefined
+      }
+    />
+  );
 
+  const body = (
+    <>
       {lastApplied && importCompletion ? (
         <NoticeBanner
           tone="success"
@@ -356,6 +372,24 @@ export function EvidenceView() {
           onClose={() => setImportOpen(false)}
         />
       </MoriDrawer>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="session-tab-pane session-tab-evidence">
+        <div className="session-tab-actionbar">{actionBar}</div>
+        <div className="session-tab-split">
+          <div className="session-tab-main">{body}</div>
+          {aside}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <PageShell className="evidence-page" actionBar={actionBar} aside={aside}>
+      {body}
     </PageShell>
   );
 }

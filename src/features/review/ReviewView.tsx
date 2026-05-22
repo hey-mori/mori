@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   GitBranch,
   KanbanSquare,
+  Lightbulb,
   ListChecks,
   Search,
   Sparkles,
@@ -19,7 +20,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
-import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { moriConceptIcon } from "../../components/brand/moriIcons";
@@ -57,8 +57,6 @@ import { ReviewDecisionRow } from "./ReviewDecisionRow";
 import { ReviewNextActionRow } from "./ReviewNextActionRow";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
 import { ReviewSummaryPanel } from "./ReviewSummaryPanel";
-import { CompanionStrip } from "../companion/CompanionStrip";
-import { useCompanionSignals } from "../companion/useCompanionSignals";
 import { formatDateTime } from "../../lib/formatting/time";
 
 const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare }> = [
@@ -69,7 +67,19 @@ const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare 
   { id: "suggestions", label: "제안", icon: Sparkles },
 ];
 
-export function ReviewView() {
+/**
+ * Insights workspace (the surface formerly framed as "검토").
+ *
+ * Renders standalone (its own `PageShell`) when reached directly, or as the
+ * **인사이트** tab content inside the unified Session Detail workspace when
+ * `embedded` — the Session Detail owns the single shell + header, so this
+ * view renders only its action-bar row + body + inspector inside the session
+ * scroll area. Every capability (tabs, Quick Pass, item editing, deep-link
+ * focus, inspector) is identical in both modes. The framing is value-first:
+ * confirming an issue / decision / next action is what carries forward into
+ * project memory — not a bare "검토 후보 N개".
+ */
+export function ReviewView({ embedded = false }: { embedded?: boolean } = {}) {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -88,7 +98,10 @@ export function ReviewView() {
   const editDecision = useMoriSessionStore((state) => state.editDecision);
   const editNextAction = useMoriSessionStore((state) => state.editNextAction);
   const imports = useMoriSessionStore((state) => state.imports);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  // `navigate` routes legacy session-surface keys (timeline / evidence) into
+  // the unified Session Detail workspace, so "타임라인 보기" / "증거 허브로
+  // 이동" switch tabs in embedded mode instead of opening a standalone page.
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const reviewFocus = useMoriAppStore((state) => state.reviewFocus);
   const clearReviewFocus = useMoriAppStore((state) => state.clearReviewFocus);
@@ -99,7 +112,6 @@ export function ReviewView() {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const { signals: companionSignals } = useCompanionSignals();
 
   const [selection, setSelection] = useState<ReviewSelection | null>(null);
 
@@ -179,131 +191,136 @@ export function ReviewView() {
     setCurrentView("timeline");
   }
 
-  return (
-    <PageShell
-      className="review-page"
-      actionBar={
-        <ActionBar
-          label="검토 탭"
-          start={
-            <nav
-              className="review-tabs"
-              role="tablist"
-              aria-label="Review tabs"
-              onKeyDown={(event) => {
-                const tabIds = TAB_DEFS.map((t) => t.id);
-                const current = tabIds.indexOf(activeTab);
-                let next = -1;
-                if (event.key === "ArrowRight") next = (current + 1) % tabIds.length;
-                else if (event.key === "ArrowLeft")
-                  next = (current - 1 + tabIds.length) % tabIds.length;
-                else if (event.key === "Home") next = 0;
-                else if (event.key === "End") next = tabIds.length - 1;
-                if (next !== -1) {
-                  event.preventDefault();
-                  const nextId = tabIds[next]!;
-                  setActiveTab(nextId);
-                  (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
-                }
-              }}
-            >
-              {TAB_DEFS.map((tab) => {
-                const Icon = tab.icon;
-                const count = countForTab(tab.id, view, unresolved);
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    tabIndex={isActive ? 0 : -1}
-                    aria-selected={isActive}
-                    className={`review-tab ${isActive ? "active" : ""}`}
-                    onClick={() => setActiveTab(tab.id)}
-                  >
-                    <Icon size={14} aria-hidden="true" />
-                    <span>{tab.label}</span>
-                    <Badge tone={isActive ? "purple" : "gray"}>{count}</Badge>
-                  </button>
-                );
-              })}
-            </nav>
-          }
-          end={
-            <>
-              <div className="review-action-counts">
-                <Badge tone="red">이슈 {summary.issueCount}</Badge>
-                <Badge tone="blue">결정 {summary.decisionCount}</Badge>
-                <Badge tone="green">다음 {summary.nextActionCount}</Badge>
-              </div>
-              {!isDemo ? (
-                <Button
-                  variant="primary"
-                  icon={Sparkles}
-                  onClick={() => runQuickPass()}
-                  disabled={!canRunQuickPass}
-                  title={
-                    canRunQuickPass
-                      ? "Quick Pass 실행"
-                      : imports.length === 0
-                        ? "먼저 소스를 가져오세요."
-                        : "이미 실행 중입니다."
-                  }
-                >
-                  {analysisStatus === "running"
-                    ? "분석 중..."
-                    : hasAnalysis
-                      ? "Quick Pass 재실행"
-                      : "Quick Pass 실행"}
-                </Button>
-              ) : null}
-            </>
-          }
-        />
-      }
-      aside={
-        <aside className="review-rail" aria-label="검토 상세">
-          <ReviewDetailPanel
-            selection={effectiveSelection}
-            view={view}
-            onShowTimeline={handleShowTimeline}
-            onToggleNextActionComplete={(id, completed) =>
-              setNextActionCompletion(id, completed)
+  const actionBar = (
+    <ActionBar
+      label="인사이트 탭"
+      start={
+        <nav
+          className="review-tabs"
+          role="tablist"
+          aria-label="Insights tabs"
+          onKeyDown={(event) => {
+            const tabIds = TAB_DEFS.map((t) => t.id);
+            const current = tabIds.indexOf(activeTab);
+            let next = -1;
+            if (event.key === "ArrowRight") next = (current + 1) % tabIds.length;
+            else if (event.key === "ArrowLeft")
+              next = (current - 1 + tabIds.length) % tabIds.length;
+            else if (event.key === "Home") next = 0;
+            else if (event.key === "End") next = tabIds.length - 1;
+            if (next !== -1) {
+              event.preventDefault();
+              const nextId = tabIds[next]!;
+              setActiveTab(nextId);
+              (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
             }
-            onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
-            onEditIssue={(id, fields) => editIssue(id, fields)}
-            onPromoteIssueToNextAction={(id) => {
-              const nextAction = promoteIssueToNextAction(id);
-              if (nextAction) {
-                selectAndOpen(
-                  { kind: "nextAction", nextActionId: nextAction.id },
-                  "nextActions",
-                );
+          }}
+        >
+          {TAB_DEFS.map((tab) => {
+            const Icon = tab.icon;
+            const count = countForTab(tab.id, view, unresolved);
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                tabIndex={isActive ? 0 : -1}
+                aria-selected={isActive}
+                className={`review-tab ${isActive ? "active" : ""}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <Icon size={14} aria-hidden="true" />
+                <span>{tab.label}</span>
+                <Badge tone={isActive ? "purple" : "gray"}>{count}</Badge>
+              </button>
+            );
+          })}
+        </nav>
+      }
+      end={
+        <>
+          <div className="review-action-counts">
+            <Badge tone="red">이슈 {summary.issueCount}</Badge>
+            <Badge tone="blue">결정 {summary.decisionCount}</Badge>
+            <Badge tone="green">다음 {summary.nextActionCount}</Badge>
+          </div>
+          {!isDemo ? (
+            <Button
+              variant="primary"
+              icon={Sparkles}
+              onClick={() => runQuickPass()}
+              disabled={!canRunQuickPass}
+              title={
+                canRunQuickPass
+                  ? "Quick Pass 실행"
+                  : imports.length === 0
+                    ? "먼저 소스를 가져오세요."
+                    : "이미 실행 중입니다."
               }
-              return nextAction;
-            }}
-            onSetDecisionConfirmed={(id, confirmed) =>
-              setDecisionConfirmed(id, confirmed)
-            }
-            onEditDecision={(id, fields) => editDecision(id, fields)}
-            onEditNextAction={(id, fields) => editNextAction(id, fields)}
-            canEditReview={!view.isDemo}
-          />
-          <ReviewSummaryPanel
-            summary={summary}
-            issues={view.issues}
-            decisions={view.decisions}
-            nextActions={view.nextActions}
-            hasAnalysis={hasAnalysis}
-            providerLabel={analysisProviderLabel}
-            dataBasis={dataBasis}
-          />
-        </aside>
+            >
+              {analysisStatus === "running"
+                ? "분석 중..."
+                : hasAnalysis
+                  ? "Quick Pass 재실행"
+                  : "Quick Pass 실행"}
+            </Button>
+          ) : null}
+        </>
       }
-    >
-      <SessionModeBanner />
+    />
+  );
 
-      <CompanionStrip signals={companionSignals} onNavigate={setCurrentView} />
+  const aside = (
+    <aside className="review-rail" aria-label="인사이트 상세">
+      <ReviewDetailPanel
+        selection={effectiveSelection}
+        view={view}
+        onShowTimeline={handleShowTimeline}
+        onToggleNextActionComplete={(id, completed) =>
+          setNextActionCompletion(id, completed)
+        }
+        onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
+        onEditIssue={(id, fields) => editIssue(id, fields)}
+        onPromoteIssueToNextAction={(id) => {
+          const nextAction = promoteIssueToNextAction(id);
+          if (nextAction) {
+            selectAndOpen(
+              { kind: "nextAction", nextActionId: nextAction.id },
+              "nextActions",
+            );
+          }
+          return nextAction;
+        }}
+        onSetDecisionConfirmed={(id, confirmed) =>
+          setDecisionConfirmed(id, confirmed)
+        }
+        onEditDecision={(id, fields) => editDecision(id, fields)}
+        onEditNextAction={(id, fields) => editNextAction(id, fields)}
+        canEditReview={!view.isDemo}
+      />
+      <ReviewSummaryPanel
+        summary={summary}
+        issues={view.issues}
+        decisions={view.decisions}
+        nextActions={view.nextActions}
+        hasAnalysis={hasAnalysis}
+        providerLabel={analysisProviderLabel}
+        dataBasis={dataBasis}
+      />
+    </aside>
+  );
+
+  const body = (
+    <>
+      <InsightsValueNote
+        embedded={embedded}
+        mode={mode}
+        hasAnalysis={hasAnalysis}
+        issueCount={summary.issueCount}
+        decisionCount={summary.decisionCount}
+        nextActionCount={summary.nextActionCount}
+      />
 
       <ReviewAnalysisNotice
         mode={mode}
@@ -389,7 +406,62 @@ export function ReviewView() {
           ) : null}
         </section>
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="session-tab-pane session-tab-insights">
+        <div className="session-tab-actionbar">{actionBar}</div>
+        <div className="session-tab-split">
+          <div className="session-tab-main">{body}</div>
+          {aside}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <PageShell className="review-page" actionBar={actionBar} aside={aside}>
+      {body}
     </PageShell>
+  );
+}
+
+/**
+ * Value-first framing strip for the Insights tab. Replaces the old
+ * "검토 후보 N개" framing the user disliked: confirming an issue / decision /
+ * next action is what carries forward into durable project memory. Calm,
+ * concise, and only shown when there is something to confirm. Embedded-only so
+ * it lives inside the session workspace, not on the standalone review page.
+ */
+function InsightsValueNote({
+  embedded,
+  mode,
+  hasAnalysis,
+  issueCount,
+  decisionCount,
+  nextActionCount,
+}: {
+  embedded: boolean;
+  mode: "demo" | "draft";
+  hasAnalysis: boolean;
+  issueCount: number;
+  decisionCount: number;
+  nextActionCount: number;
+}) {
+  if (!embedded) return null;
+  if (mode === "draft" && !hasAnalysis) return null;
+  const total = issueCount + decisionCount + nextActionCount;
+  if (total === 0) return null;
+  return (
+    <p className="session-insights-note">
+      <Lightbulb size={14} aria-hidden="true" />
+      <span>
+        여기서 확인한 이슈 · 결정 · 다음 작업은 프로젝트 메모리에 남아 다음 작업에
+        활용됩니다. 정확하지 않은 항목은 수정하거나 보류하세요.
+      </span>
+    </p>
   );
 }
 

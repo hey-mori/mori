@@ -44,7 +44,7 @@ export function RecentSessionsList({
           <h3>최근 세션</h3>
           <p>현재 세션 + 저장된 browser draft + Desktop SQLite 세션을 한곳에서 보여줍니다.</p>
         </div>
-        <Button icon={Play} onClick={onStartNewSession}>
+        <Button variant="ghost" icon={Play} onClick={onStartNewSession} title="대부분의 세션은 가져오기에서 시작됩니다. 새 세션은 드문 경우입니다.">
           새 세션
         </Button>
       </header>

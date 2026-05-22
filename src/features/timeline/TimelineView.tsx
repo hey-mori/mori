@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { TopSessionBar } from "../../components/layout/TopSessionBar";
 import {
   selectHasRealAnalysis,
@@ -39,8 +38,6 @@ import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
 import { FlowFocusHeader } from "../flow-focus/FlowFocusHeader";
 import { TracePanel } from "../flow-focus/TracePanel";
-import { CompanionStrip } from "../companion/CompanionStrip";
-import { useCompanionSignals } from "../companion/useCompanionSignals";
 
 /**
  * Thin orchestrator. The product math has moved into
@@ -49,8 +46,20 @@ import { useCompanionSignals } from "../companion/useCompanionSignals";
  *   1. wires session state + app state into the model input,
  *   2. swaps between Timeline and Flow Focus mode chrome,
  *   3. renders the appropriate inspector for the selected display item.
+ *
+ * Standalone it owns the `TopSessionBar` + `SessionModeBanner` chrome; as the
+ * **흐름** tab inside the unified Session Detail workspace (`embedded`) the
+ * Session Detail owns the header, so this view drops the top bar and toggles
+ * Timeline ↔ Flow Focus through internal state instead of routing to a
+ * separate `flow` page — no double header, every capability preserved.
  */
-export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
+export function TimelineView({
+  mode: modeProp,
+  embedded = false,
+}: {
+  mode: "timeline" | "flow";
+  embedded?: boolean;
+}) {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -84,6 +93,22 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
   const setSearchQuery = useMoriAppStore((state) => state.setSearchQuery);
   const inspectorCollapsed = useMoriAppStore((state) => state.inspectorCollapsed);
   const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
+  const setSessionTab = useMoriAppStore((state) => state.setSessionTab);
+
+  // Embedded inside Session Detail there is no separate flow route, so the
+  // Timeline ↔ Flow Focus switch is internal state seeded from the prop.
+  // Standalone the prop is authoritative (the route picks the mode).
+  const [embeddedMode, setEmbeddedMode] = useState<"timeline" | "flow">(modeProp);
+  const mode = embedded ? embeddedMode : modeProp;
+  // Switch to a mode: route the standalone surfaces, flip internal state when
+  // embedded so the 흐름 tab keeps Flow Focus inside the same workspace.
+  const goToMode = useCallback(
+    (next: "timeline" | "flow") => {
+      if (embedded) setEmbeddedMode(next);
+      else setCurrentView(next);
+    },
+    [embedded, setCurrentView],
+  );
 
   // Density is fixed to one comfortable tier — the user-facing density control
   // was removed. The internal `density` plumbing stays so card sizing and
@@ -162,22 +187,25 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
     setFrameWidth((current) => (current === width ? current : width));
   }, []);
 
-  // Hooks must run unconditionally — keep this above the empty-variant
-  // early return so the hook order never changes between renders.
-  const { signals: companionSignals } = useCompanionSignals();
-
   if (model.emptyVariant) {
+    const empty = (
+      <TimelineEmptyState
+        variant={model.emptyVariant}
+        onStartSession={() => setCurrentView("start")}
+        onOpenSources={() => (embedded ? setSessionTab("evidence") : setCurrentView("evidence"))}
+        onRunQuickPass={() => runQuickPass()}
+        canRunQuickPass={analysisStatus !== "running"}
+      />
+    );
+    if (embedded) {
+      // Inside the session 흐름 tab the shell content is full-bleed, so wrap
+      // the empty state in a padded pane for breathing room.
+      return <div className="session-tab-pane session-tab-flow-empty">{empty}</div>;
+    }
     return (
       <>
         <TopSessionBar />
-        <SessionModeBanner />
-        <TimelineEmptyState
-          variant={model.emptyVariant}
-          onStartSession={() => setCurrentView("start")}
-          onOpenSources={() => setCurrentView("evidence")}
-          onRunQuickPass={() => runQuickPass()}
-          canRunQuickPass={analysisStatus !== "running"}
-        />
+        {empty}
       </>
     );
   }
@@ -198,20 +226,16 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
 
   return (
     <>
-      <TopSessionBar />
-      <SessionModeBanner />
+      {embedded ? null : <TopSessionBar />}
       <div
-        className={`content-grid ${mode === "flow" ? "flow-grid" : ""} ${
-          inspectorHidden ? "inspector-collapsed" : ""
-        }`}
+        className={`content-grid ${embedded ? "content-grid-embedded" : ""} ${
+          mode === "flow" ? "flow-grid" : ""
+        } ${inspectorHidden ? "inspector-collapsed" : ""}`}
       >
         <section className="timeline-main">
-          {mode === "timeline" ? (
-            <CompanionStrip signals={companionSignals} onNavigate={setCurrentView} />
-          ) : null}
           {mode === "flow" ? (
             <FlowFocusHeader
-              onShowTimeline={() => setCurrentView("timeline")}
+              onShowTimeline={() => goToMode("timeline")}
               hasFocus={Boolean(selectedEventId)}
               onClearFocus={() => setSelectedEventId(view.events[0]?.id ?? "")}
             />
@@ -280,7 +304,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
           <TimelineBundleInspector
             bundle={selectedItem}
             session={view}
-            onTrace={() => setCurrentView("flow")}
+            onTrace={() => goToMode("flow")}
           />
         ) : mode === "flow" && selectedItem && selectedItem.kind === "event" ? (
           <TracePanel
@@ -297,8 +321,9 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             onCreateIssue={() => {
               const event = selectedItem.event;
               if (createIssueFromEvent(event)) {
+                // openReviewItem routes to the Insights surface (the session
+                // 인사이트 tab when embedded) — no separate navigation needed.
                 openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) });
-                setCurrentView("review");
               }
             }}
             onEditEvent={(edits) => updateSessionEvent(selectedItem.event.id, edits)}
@@ -312,7 +337,7 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             key={selectedItem.event.id}
             selectedEvent={selectedItem.event}
             session={view}
-            onTrace={() => setCurrentView("flow")}
+            onTrace={() => goToMode("flow")}
             onOpenReviewItem={openReviewItem}
             canWrite={sessionMode === "draft" && hasAnalysis}
             onEditEvent={(edits) => updateSessionEvent(selectedItem.event.id, edits)}
@@ -326,8 +351,9 @@ export function TimelineView({ mode }: { mode: "timeline" | "flow" }) {
             onCreateIssue={() => {
               const event = selectedItem.event;
               if (createIssueFromEvent(event)) {
+                // openReviewItem routes to the Insights surface (the session
+                // 인사이트 tab when embedded) — no separate navigation needed.
                 openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) });
-                setCurrentView("review");
               }
             }}
           />
