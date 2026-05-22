@@ -78,7 +78,7 @@ export function SettingsView() {
   const verifyingId = useMoriRepositoryStore((state) => state.verifyingId);
   const activeRepository = useMoriRepositoryStore(selectActiveRepository);
 
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
   const activeTab = useMoriAppStore((state) => state.settingsTab);
   const setActiveTab = useMoriAppStore((state) => state.setSettingsTab);
 

@@ -67,7 +67,7 @@ export function WorkspaceView() {
   const renameSession = useMoriSessionStore((state) => state.renameSession);
   const archiveSession = useMoriSessionStore((state) => state.archiveSession);
   const unarchiveSession = useMoriSessionStore((state) => state.unarchiveSession);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSessionDetail = useMoriAppStore((state) => state.openSession);
 
   useEffect(() => {

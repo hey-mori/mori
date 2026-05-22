@@ -33,11 +33,13 @@ describe("app store — session-centric routing", () => {
   });
 
   it("navigate() folds the legacy session surfaces into the matching tab", () => {
-    const expectations: Array<["timeline" | "flow" | "evidence" | "review", "flow" | "evidence" | "insights"]> = [
+    const expectations: Array<["timeline" | "flow" | "evidence" | "review" | "reports", "flow" | "evidence" | "insights" | "report"]> = [
       ["timeline", "flow"],
       ["flow", "flow"],
       ["evidence", "evidence"],
       ["review", "insights"],
+      // A report is per-session — it opens the session workspace's 리포트 tab.
+      ["reports", "report"],
     ];
     for (const [view, tab] of expectations) {
       useMoriAppStore.getState().navigate(view);
@@ -47,8 +49,15 @@ describe("app store — session-centric routing", () => {
     }
   });
 
+  it("navigate() folds consolidation into the Memory 통합 segment", () => {
+    useMoriAppStore.getState().navigate("consolidation");
+    const state = useMoriAppStore.getState();
+    expect(state.currentView).toBe("memory");
+    expect(state.memoryTab).toBe("consolidation");
+  });
+
   it("navigate() passes non-session destinations through unchanged", () => {
-    for (const view of ["home", "memory", "reports", "settings", "connections", "start"] as const) {
+    for (const view of ["home", "memory", "settings", "connections", "start"] as const) {
       useMoriAppStore.getState().navigate(view);
       expect(useMoriAppStore.getState().currentView).toBe(view);
     }

@@ -12,19 +12,18 @@ export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | 
  * issues / decisions / next actions. Stored so the user returns to the same
  * tab, and so other surfaces can deep-link a session straight to a tab.
  */
-export type SessionTab = "flow" | "evidence" | "insights";
+export type SessionTab = "flow" | "evidence" | "insights" | "report";
 
 /** Active tab on the Settings surface. Persisted so the user returns to the same tab. */
 export type SettingsTab = "localAi" | "privacy" | "storage" | "repositories" | "appearance";
 
 /**
- * Active segment inside the Memory surface. Reports and Consolidation fold
- * into Memory (the terminal steps of the memory loop), so they are reached as
- * segments here rather than as standing nav destinations. "overview" is the
- * project-memory view; "consolidation" is the review surface; "reports" is the
- * report builder / handoff. Stored so the user returns to the same segment.
+ * Active segment inside the Memory surface. Memory is cross-session, so it
+ * hosts the project-memory overview and the Consolidation review — both
+ * operate across sessions. (A report is per-session, so it lives in the
+ * Session workspace as its own tab, not here.)
  */
-export type MemoryTab = "overview" | "consolidation" | "reports";
+export type MemoryTab = "overview" | "consolidation";
 
 type MoriAppState = {
   currentView: ViewKey;
@@ -152,6 +151,12 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
           return { currentView: "session", sessionTab: "evidence" };
         case "review":
           return { currentView: "session", sessionTab: "insights" };
+        case "reports":
+          // A report is per-session — open the session workspace on its report tab.
+          return { currentView: "session", sessionTab: "report" };
+        case "consolidation":
+          // Consolidation is cross-session — it lives in Memory's 통합 segment.
+          return { currentView: "memory", memoryTab: "consolidation" };
         default:
           return { currentView: view };
       }

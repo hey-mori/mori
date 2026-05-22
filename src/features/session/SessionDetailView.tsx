@@ -7,6 +7,7 @@ import {
   GitBranch,
   Lightbulb,
   ListChecks,
+  ScrollText,
   Sparkles,
 } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
@@ -27,6 +28,7 @@ import type { WorkContext } from "../../lib/session/workContext";
 import { TimelineView } from "../timeline/TimelineView";
 import { EvidenceView } from "../evidence/EvidenceView";
 import { ReviewView } from "../review/ReviewView";
+import { ReportsView } from "../reports/ReportsView";
 
 /**
  * Session Detail — the unified, tabbed workspace for one session (P3).
@@ -201,6 +203,7 @@ const SESSION_TABS: Array<{ id: SessionTab; label: string; icon: typeof GanttCha
   { id: "flow", label: "흐름", icon: GanttChartSquare },
   { id: "evidence", label: "증거", icon: FileText },
   { id: "insights", label: "인사이트", icon: Sparkles },
+  { id: "report", label: "리포트", icon: ScrollText },
 ];
 
 function SessionTabBar({
@@ -268,6 +271,9 @@ function SessionTabContent({ tab }: { tab: SessionTab }) {
   }
   if (tab === "insights") {
     return <ReviewView />;
+  }
+  if (tab === "report") {
+    return <ReportsView embedded />;
   }
   return <TimelineView mode="timeline" />;
 }

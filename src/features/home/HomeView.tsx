@@ -64,7 +64,9 @@ import {
  * the inputs and renders.
  */
 export function HomeView() {
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  // `navigate` routes session-surface keys (reports → session 리포트 tab, etc.)
+  // through the unified workspace; plain keys pass through unchanged.
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSession = useMoriAppStore((state) => state.openSession);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
   const mode = useMoriSessionStore(selectSessionMode);

@@ -68,12 +68,10 @@ import { ProjectMemorySummaryPanel } from "./ProjectMemorySummaryPanel";
 import { ReimportHistoryCard } from "./ReimportHistoryCard";
 import { SegmentedControl, type SegmentedControlOption } from "../../components/ui/SegmentedControl";
 import { ConsolidationReviewView } from "./ConsolidationReviewView";
-import { ReportsView } from "../reports/ReportsView";
 
 const MEMORY_SEGMENTS: SegmentedControlOption<MemoryTab>[] = [
   { id: "overview", label: "메모리" },
   { id: "consolidation", label: "통합" },
-  { id: "reports", label: "리포트" },
 ];
 
 export function MemoryView() {
@@ -439,8 +437,6 @@ export function MemoryView() {
     >
       {memoryTab === "consolidation" ? (
         <ConsolidationReviewView embedded />
-      ) : memoryTab === "reports" ? (
-        <ReportsView embedded />
       ) : (
       <div className="memory-main">
           <ProjectMemoryHero
@@ -450,7 +446,7 @@ export function MemoryView() {
             scope={primaryScope}
             scopeLabel={scopeLabel}
             onStartFollowUp={() => setCurrentView("start")}
-            onOpenLatestReport={() => setMemoryTab("reports")}
+            onOpenLatestReport={() => setCurrentView("reports")}
             reportAvailable={packageDrafts.length > 0 || hasAnalysis}
             savedReportAvailability={savedReportAvailability}
           />
@@ -517,7 +513,7 @@ export function MemoryView() {
               <SavedReportsCard
                 packages={packageDrafts}
                 hasCurrentReportSurface
-                onOpenReports={() => setMemoryTab("reports")}
+                onOpenReports={() => setCurrentView("reports")}
               />
             </div>
           </details>
