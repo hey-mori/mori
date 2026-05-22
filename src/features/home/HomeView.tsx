@@ -56,6 +56,7 @@ import {
  */
 export function HomeView() {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openSession = useMoriAppStore((state) => state.openSession);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
   const mode = useMoriSessionStore(selectSessionMode);
   const view = useMoriSessionStore(selectSessionView);
@@ -102,9 +103,10 @@ export function HomeView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repository, activeSessionId, mode, view, initialized]);
 
-  const openSession = (sessionId: string, destination: ViewKey) => {
+  const openSessionFlow = (sessionId: string) => {
     if (sessionId === activeSessionId || loadBrowserSession(sessionId)) {
-      setCurrentView(destination);
+      // Recent sessions open the unified workspace on its 흐름 tab.
+      openSession("flow");
     }
   };
 
@@ -112,7 +114,13 @@ export function HomeView() {
     if (action.targetSessionId && action.targetSessionId !== activeSessionId) {
       loadBrowserSession(action.targetSessionId);
     }
-    setCurrentView(action.destination as ViewKey);
+    // 검토(review) destinations now open the session 인사이트 tab; everything
+    // else (가져오기 / 이어가기 / 리포트) stays a top-level destination.
+    if (action.destination === "review") {
+      openSession("insights");
+    } else {
+      setCurrentView(action.destination as ViewKey);
+    }
   };
 
   return (
@@ -208,7 +216,7 @@ export function HomeView() {
                     <RecentSessionRow
                       key={session.sessionId}
                       session={session}
-                      onOpen={() => openSession(session.sessionId, "timeline")}
+                      onOpen={() => openSessionFlow(session.sessionId)}
                     />
                   ))}
                 </ul>
