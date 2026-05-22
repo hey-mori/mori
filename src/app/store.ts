@@ -18,6 +18,13 @@ export type SessionTab = "flow" | "evidence" | "insights" | "report";
 export type SettingsTab = "localAi" | "privacy" | "storage" | "repositories" | "appearance";
 
 /**
+ * Outer tab on the settings sheet (the modal opened from the top-bar user
+ * button). Two segments — the local profile, and the full settings surface.
+ * Stored so the sheet reopens on the last segment.
+ */
+export type SettingsSheetTab = "profile" | "settings";
+
+/**
  * Active segment inside the Memory surface. Memory is cross-session, so it
  * hosts the project-memory overview and the Consolidation review — both
  * operate across sessions. (A report is per-session, so it lives in the
@@ -69,6 +76,14 @@ type MoriAppState = {
    * links (e.g. the hero "리포트" action) set it to switch segment in place.
    */
   memoryTab: MemoryTab;
+  /**
+   * Whether the settings sheet (profile + settings, opened from the top-bar
+   * user button) is open. Lives in the store so any surface can open it —
+   * e.g. an empty-state CTA that wants to drop the user into the storage tab.
+   */
+  settingsSheetOpen: boolean;
+  /** Active segment inside the settings sheet — profile or full settings. */
+  settingsSheetTab: SettingsSheetTab;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -102,6 +117,10 @@ type MoriAppState = {
    * `setCurrentView` so they never land on a standalone page.
    */
   navigate: (view: ViewKey) => void;
+  /** Open the settings sheet, optionally jumping to a segment. */
+  openSettingsSheet: (tab?: SettingsSheetTab) => void;
+  closeSettingsSheet: () => void;
+  setSettingsSheetTab: (tab: SettingsSheetTab) => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -117,6 +136,8 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   sessionTab: "flow",
   settingsTab: "localAi",
   memoryTab: "overview",
+  settingsSheetOpen: false,
+  settingsSheetTab: "profile",
   setCurrentView: (currentView) => set({ currentView }),
   setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
@@ -157,8 +178,21 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
         case "consolidation":
           // Consolidation is cross-session — it lives in Memory's 통합 segment.
           return { currentView: "memory", memoryTab: "consolidation" };
+        case "settings":
+        case "profile":
+          // Settings + profile now live behind the user button as a sheet;
+          // a legacy `navigate("settings")` opens the sheet instead of routing
+          // to a standalone page so existing deep links keep working.
+          return {
+            settingsSheetOpen: true,
+            settingsSheetTab: view === "profile" ? "profile" : "settings",
+          };
         default:
           return { currentView: view };
       }
     }),
+  openSettingsSheet: (tab) =>
+    set(tab ? { settingsSheetOpen: true, settingsSheetTab: tab } : { settingsSheetOpen: true }),
+  closeSettingsSheet: () => set({ settingsSheetOpen: false }),
+  setSettingsSheetTab: (settingsSheetTab) => set({ settingsSheetTab }),
 }));

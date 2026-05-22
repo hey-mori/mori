@@ -7,13 +7,11 @@ import {
   Layers,
   Lightbulb,
   PlayCircle,
-  Plus,
   PlugZap,
   Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
-import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { Button } from "../../components/ui/Button";
@@ -31,7 +29,6 @@ import {
   buildHomeOverview,
   describeHomeSessionOrigin,
   formatCompactCount,
-  type HomeCurrentSession,
   type HomeNextAction,
   type HomeNextActionKind,
   type HomeOverview,
@@ -134,20 +131,6 @@ export function HomeView() {
     }
   };
 
-  const runCurrentSession = (session: HomeCurrentSession) => {
-    if (session.action.kind === "open") {
-      // Reuse the recent-session navigation: load + open the session workspace.
-      openSessionFlow(session.sessionId);
-      return;
-    }
-    // Resume → reports, switching to the session first (same pattern as the
-    // value-rail resume action).
-    if (session.sessionId !== activeSessionId) {
-      loadBrowserSession(session.sessionId);
-    }
-    setCurrentView("reports");
-  };
-
   const runNextAction = (action: HomeNextAction) => {
     if (action.targetSessionId && action.targetSessionId !== activeSessionId) {
       loadBrowserSession(action.targetSessionId);
@@ -162,34 +145,7 @@ export function HomeView() {
   };
 
   return (
-    <PageShell
-      className="home-page"
-      actionBar={
-        <ActionBar
-          label="홈 작업"
-          end={
-            <>
-              <Button
-                variant="primary"
-                icon={PlugZap}
-                onClick={() => setCurrentView("connections")}
-              >
-                가져오기
-              </Button>
-              <Button
-                variant="ghost"
-                icon={Plus}
-                className="btn-icon"
-                aria-label="새 세션"
-                onClick={() => setCurrentView("start")}
-                title="새 세션 — 대부분의 세션은 가져오기에서 시작됩니다. 새 세션은 드문 경우입니다."
-              />
-            </>
-          }
-        />
-      }
-      maxWidth="wide"
-    >
+    <PageShell className="home-page" maxWidth="wide">
       {overview.isEmpty ? (
         <EmptyState
           icon={Layers}
@@ -217,19 +173,10 @@ export function HomeView() {
             </p>
           ) : null}
 
-          {/* Current / most-recent session strip. A list-of-one today; a future
-              "multiple tracked sessions" feature only grows this list. */}
-          {overview.currentSessions.length > 0 ? (
-            <ul className="home-current-list" aria-label="현재 작업">
-              {overview.currentSessions.map((session) => (
-                <CurrentSessionStrip
-                  key={session.sessionId}
-                  session={session}
-                  onRun={() => runCurrentSession(session)}
-                />
-              ))}
-            </ul>
-          ) : null}
+          {/* The current-session strip used to sit here; with the new chrome
+              the primary sidebar already lists every session by recency, so
+              the duplicate strip on Home was redundant and pulled focus from
+              the activity heatmap. */}
 
           <section className="home-activity" aria-label="작업 활동">
             <header className="home-activity-head">
@@ -322,49 +269,6 @@ export function HomeView() {
         </div>
       )}
     </PageShell>
-  );
-}
-
-// ─── Current / most-recent session strip ──────────────────────────────────────
-
-function CurrentSessionStrip({
-  session,
-  onRun,
-}: {
-  session: HomeCurrentSession;
-  onRun: () => void;
-}) {
-  const origin = describeHomeSessionOrigin(session.origin);
-  return (
-    <li className="home-current">
-      <span className="home-current-icon" aria-hidden="true">
-        <FolderKanban size={16} />
-      </span>
-      <span className="home-current-body">
-        <span className="home-current-titlerow">
-          <MoriStatusBadge tone={session.statusTone}>{session.statusLabel}</MoriStatusBadge>
-          <span className="home-current-title" title={session.title}>
-            {session.title}
-          </span>
-        </span>
-        <span className="home-current-meta">
-          <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
-          <span className="home-current-project" title={session.projectLabel ?? undefined}>
-            {session.projectLabel ?? "수동 세션"}
-          </span>
-          {session.spanLabel ? (
-            <span className="home-current-span">{session.spanLabel}</span>
-          ) : null}
-          {session.eventCount !== null ? (
-            <span className="home-current-events">이벤트 {session.eventCount}</span>
-          ) : null}
-          <span className="home-current-time">{session.relativeTime}</span>
-        </span>
-      </span>
-      <Button variant="primary" icon={session.action.kind === "resume" ? PlayCircle : ArrowRight} onClick={onRun}>
-        {session.action.label}
-      </Button>
-    </li>
   );
 }
 

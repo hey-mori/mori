@@ -1,422 +1,228 @@
-import { ChevronDown, FolderGit2, History } from "lucide-react";
+import { Download, FolderGit2, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button } from "../ui/Button";
-import { MoriLogo } from "../brand/MoriLogo";
-import { moriViewIcon } from "../brand/moriIcons";
-import type { ViewKey } from "../../domain/types";
-import { moriMockSession } from "../../domain/mock-data";
+import { useMoriAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
   selectSessionSource,
-  selectSessionView,
   useMoriSessionStore,
 } from "../../app/sessionStore";
-import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
-import { useMoriProfileStore } from "../../app/profileStore";
-import { useMoriAppStore } from "../../app/store";
-import { getProfileInitials } from "../../lib/profile/localProfile";
-import { buildWorkContext } from "../../lib/session/workContext";
 import {
-  discoverClaudeCodeSessions,
-  isClaudeBridgeAvailable,
-} from "../../lib/claude/claudeTauri";
-import { NAV_GROUPS, type NavKey } from "../../lib/navigation/navGroups";
+  filterSidebarRows,
+  formatSidebarRelative,
+  groupSidebarRows,
+  toSidebarRow,
+  type SidebarSessionRow,
+} from "../../lib/sidebar/sessionList";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
+import type { ViewKey } from "../../domain/types";
 
 /**
- * Nav structure is defined as pure data in `lib/navigation/navGroups` so the
- * entry model (Connections leads; "새 세션" is a demoted secondary path) is
- * unit-tested and can't silently regress here.
+ * Primary sidebar — session (conversation) list.
  *
- * Live badge counts are computed inside the component so session state gives
- * users at-a-glance context (e.g. how many events, issues, etc.) without
- * navigating to each surface first.
+ * Drawing on the conversation-list paradigm from Claude / Codex desktop: the
+ * sidebar is a scannable, scrollable list of sessions grouped by recency.
+ * Clicking a row loads that session into the workspace; the top-bar nav
+ * picks which workspace view (홈 / 세션 / 메모리) is on screen.
+ *
+ * The sidebar no longer carries any standing nav buttons or a brand lockup —
+ * those moved to the top bar so this column can focus entirely on session
+ * navigation. Mori notes sits at the bottom (the same `AttentionIndicator`
+ * surface as before, just relocated).
  */
-
-/**
- * Off-nav working surfaces that belong *under* the 세션 (workspace) hub. When
- * the user opens a session they land on these, so the sidebar lights up 세션
- * to keep "where am I" honest even though these aren't standing nav entries.
- */
-const SESSION_SURFACE_VIEWS = new Set<ViewKey>([
-  "workspace",
-  "session",
-  "timeline",
-  "flow",
-  "evidence",
-  "review",
-  "connections",
-  "companion",
-  "start",
-]);
-
-export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onNavigate: (view: ViewKey) => void }) {
-  const view = useMoriSessionStore(selectSessionView);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const connectionsCount = useConnectionsBadgeCount();
-
-  // The nav now exposes five primary destinations; the narrower working
-  // surfaces are reached *through* them. Map an off-nav view to the
-  // destination it belongs under so the sidebar still shows where the user is.
-  const isActive = (key: ViewKey) =>
-    key === currentView ||
-    (key === "workspace" && SESSION_SURFACE_VIEWS.has(currentView)) ||
-    (key === "memory" && (currentView === "consolidation" || currentView === "reports"));
-
-  // Live badge counts — shown only when non-zero so the nav stays quiet
-  // until the user has actually captured or analysed work.
-  const liveBadges = useMemo<Partial<Record<NavKey, string>>>(() => {
-    const badges: Partial<Record<NavKey, string>> = {};
-    if (view.events.length > 0) {
-      badges.timeline = String(view.events.length);
-    }
-    if (imports.length > 0) {
-      badges.evidence = String(imports.length);
-    }
-    const openIssues = view.issues.filter((issue) => issue.status !== "resolved").length;
-    if (openIssues > 0) {
-      badges.review = String(openIssues);
-    }
-    if (connectionsCount !== null && connectionsCount > 0) {
-      badges.connections = String(connectionsCount);
-    }
-    return badges;
-  }, [view.events.length, view.issues, imports.length, connectionsCount]);
-
-  return (
-    <aside className="sidebar">
-      <button
-        className="brand"
-        onClick={() => onNavigate("home")}
-        type="button"
-        aria-label="Mori — 홈으로 이동"
-      >
-        <MoriLogo size={32} />
-      </button>
-      <nav className="nav">
-        {NAV_GROUPS.map((group, groupIndex) => (
-          <div className="nav-group" key={group.label ?? `group-${groupIndex}`}>
-            {group.label ? <p className="nav-group-label">{group.label}</p> : null}
-            {group.items.map((item) => {
-              const Icon = moriViewIcon[item.key];
-              const badge = item.badge ?? liveBadges[item.key];
-              return (
-                <button
-                  className={`nav-item ${isActive(item.key) ? "active" : ""}`}
-                  key={item.key}
-                  onClick={() => onNavigate(item.key)}
-                  type="button"
-                  title={item.label}
-                >
-                  <Icon size={17} />
-                  <span>{item.label}</span>
-                  {badge ? <b>{badge}</b> : null}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
-      {/* Global attention layer (P4) — sits between the nav and the bottom
-          section. Carries margin-top: auto so it pushes away from the nav
-          and groups visually with the session card below it. */}
-      <AttentionIndicator onNavigate={onNavigate} />
-      <SidebarSessionCard />
-      <SidebarSessionSwitcher onNavigate={onNavigate} />
-      <SidebarProfile currentView={currentView} onNavigate={onNavigate} />
-    </aside>
-  );
-}
-
-/**
- * The lower-left work-context widget. This is deliberately NOT an "ongoing
- * recording" card: Mori reconstructs work from imported evidence, so the
- * widget shows *what the user is currently working with* (project + session +
- * origin) with an honest time span — never a running stopwatch unless a
- * genuine live capture stream exists (none does yet). See `buildWorkContext`.
- */
-function SidebarSessionCard() {
-  const draft = useMoriSessionStore((state) => state.draft);
-  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
-
-  const deriveInput = {
-    draft,
-    demoSession: moriMockSession.session,
-    analysisStatus,
-  };
-  const [context, setContext] = useState(() => buildWorkContext(deriveInput));
-  useEffect(() => {
-    const snapshot = buildWorkContext(deriveInput);
-    setContext(snapshot);
-    // Only a genuine live capture ticks. Imported / manual / demo contexts
-    // are static, so we never spin a per-second interval for them.
-    if (!snapshot.isLive) return;
-    const interval = window.setInterval(() => {
-      setContext(buildWorkContext(deriveInput));
-    }, 1000);
-    return () => window.clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, analysisStatus]);
-
-  return (
-    <div className="session-card" role="region" aria-label="현재 작업 컨텍스트">
-      <span className="session-card-kicker">
-        <span className={`session-card-dot is-${context.tone}`} aria-hidden="true" />
-        작업 컨텍스트
-      </span>
-      {context.projectLabel ? (
-        <span className="session-card-project" title={context.projectLabel}>
-          {context.projectLabel}
-        </span>
-      ) : null}
-      <strong title={context.sessionTitle}>{context.sessionTitle}</strong>
-      <span className="session-card-meta">
-        <span className={`session-card-origin is-${context.tone}`}>
-          {context.originLabel}
-        </span>
-        {context.timeDescriptor ? (
-          <time
-            className={context.isLive ? "is-live" : ""}
-            aria-live={context.isLive ? "polite" : "off"}
-          >
-            {context.timeDescriptor}
-            {context.timeCaption ? (
-              <small className="session-card-time-caption"> {context.timeCaption}</small>
-            ) : null}
-          </time>
-        ) : null}
-      </span>
-      <Button
-        variant="secondary"
-        onClick={() => setCurrentView("session")}
-        title="이 세션의 흐름 · 증거 · 인사이트를 엽니다."
-      >
-        세션 열기
-      </Button>
-    </div>
-  );
-}
-
-const SWITCHER_VISIBLE_LIMIT = 6;
-const OTHER_SESSIONS_LABEL = "기타 세션";
-
-type SessionGroup = { label: string; sessions: StoredSessionSummary[] };
-
-/**
- * Session switcher under the active-session card. Under the "1 Claude
- * conversation = 1 Mori session" model the user accumulates many small
- * sessions, so the sidebar offers one-click switching between them, grouped
- * by their Claude project (`sourceLabel`). Collapsed by default to keep the
- * shell quiet; shows the most recent few with a "전체 보기" escape hatch into
- * the Workspace.
- */
-function SidebarSessionSwitcher({ onNavigate }: { onNavigate: (view: ViewKey) => void }) {
+export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void }) {
   const activeSessionId = useMoriSessionStore((state) => state.draft?.session.id ?? null);
   const source = useMoriSessionStore(selectSessionSource);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
   const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
+  const openSession = useMoriAppStore((state) => state.openSession);
+  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
-  const [open, setOpen] = useState(false);
-  const [sessions, setSessions] = useState<StoredSessionSummary[]>([]);
+  const [summaries, setSummaries] = useState(() => safeListSessions());
+  const [query, setQuery] = useState("");
 
+  // Refresh the list whenever the active session changes (a switch or a new
+  // import should be reflected without a manual refresh).
   const refresh = useCallback(() => {
-    try {
-      setSessions(loadStoredSessionSummaries());
-    } catch {
-      // A switcher must never break the shell — fail closed to an empty list.
-      setSessions([]);
-    }
+    setSummaries(safeListSessions());
   }, []);
-
-  // Reload the list whenever the panel opens or the active session changes
-  // (a switch / new import should be reflected without a manual refresh).
   useEffect(() => {
-    if (open) refresh();
-  }, [open, activeSessionId, refresh]);
+    refresh();
+  }, [activeSessionId, refresh]);
+
+  const rows = useMemo<SidebarSessionRow[]>(
+    () =>
+      summaries
+        .filter((summary) => !summary.archivedAt)
+        .map(toSidebarRow),
+    [summaries],
+  );
+
+  const filtered = useMemo(
+    () => filterSidebarRows(rows, query),
+    [rows, query],
+  );
+
+  const groups = useMemo(() => groupSidebarRows(filtered), [filtered]);
 
   const isDesktop = source === "desktop-sqlite";
 
   const handleSwitch = useCallback(
     (sessionId: string) => {
-      if (sessionId === activeSessionId) return;
+      if (sessionId === activeSessionId) {
+        // Already active — just open the session workspace.
+        openSession();
+        return;
+      }
       if (isDesktop) {
         void loadDesktopSession(sessionId).then((ok) => {
-          // Fall back to the browser draft mirror when SQLite has no row.
           if (!ok) loadBrowserSession(sessionId);
+          openSession();
         });
       } else {
         loadBrowserSession(sessionId);
+        openSession();
       }
     },
-    [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession],
+    [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession, openSession],
   );
 
-  const visible = sessions.slice(0, SWITCHER_VISIBLE_LIMIT);
-  const groups = groupSessionsBySource(visible);
-  const hasMore = sessions.length > visible.length;
-
-  // Nothing to switch to (only the active session, or none): keep the
-  // sidebar clean and render nothing.
-  if (sessions.length <= 1) return null;
-
   return (
-    <div className="session-switcher" data-open={open}>
-      <button
-        type="button"
-        className="session-switcher-toggle"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-      >
-        <History size={14} aria-hidden="true" />
-        <span>세션 전환</span>
-        <b>{sessions.length}</b>
-        <ChevronDown
-          size={14}
-          aria-hidden="true"
-          className={`session-switcher-chevron${open ? " is-open" : ""}`}
+    <aside className="sidebar" aria-label="세션 목록">
+      <div className="sidebar-head" role="group" aria-label="빠른 작업">
+        <button
+          type="button"
+          className="sidebar-head-action"
+          onClick={() => setCurrentView("start")}
+          aria-label="새 세션"
+          title="새 세션 — 대부분은 가져오기에서 시작합니다."
+        >
+          <Plus size={15} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="sidebar-head-action"
+          onClick={() => onNavigate("connections")}
+          aria-label="가져오기"
+          title="Claude / Codex / 노트 등 작업 소스를 세션으로 가져옵니다."
+        >
+          <Download size={15} aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="sidebar-search">
+        <Search size={13} aria-hidden="true" />
+        <input
+          type="search"
+          placeholder="세션 검색"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="세션 검색"
         />
-      </button>
-      {open ? (
-        <div className="session-switcher-body mori-scroll">
-          {groups.map((group) => (
-            <div key={group.label} className="session-switcher-group">
-              <p className="session-switcher-group-label" title={group.label}>
-                <FolderGit2 size={12} aria-hidden="true" />
-                <span>{group.label}</span>
-              </p>
-              <ul>
-                {group.sessions.map((session) => {
-                  const active = session.sessionId === activeSessionId;
-                  return (
-                    <li key={session.sessionId}>
-                      <button
-                        type="button"
-                        className={`session-switcher-item${active ? " is-active" : ""}`}
-                        onClick={() => handleSwitch(session.sessionId)}
-                        aria-current={active ? "true" : undefined}
-                        title={session.title}
-                      >
-                        <span className="session-switcher-item-title">{session.title}</span>
-                        <span className="session-switcher-item-time">
-                          {formatRelativeKo(session.startedAt || session.savedAt)}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-          {hasMore ? (
-            <button
-              type="button"
-              className="session-switcher-all"
-              onClick={() => onNavigate("workspace")}
-            >
-              전체 세션 보기 ({sessions.length})
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+      </div>
+
+      <div className="sidebar-list mori-scroll">
+        {rows.length === 0 ? (
+          <SidebarEmpty onImport={() => onNavigate("connections")} />
+        ) : filtered.length === 0 ? (
+          <p className="sidebar-empty-search">검색 결과가 없습니다.</p>
+        ) : (
+          groups.map((group) => (
+            <SessionGroup
+              key={group.bucket}
+              label={group.label}
+              rows={group.rows}
+              activeSessionId={activeSessionId}
+              onSelect={handleSwitch}
+            />
+          ))
+        )}
+      </div>
+
+      <div className="sidebar-foot">
+        <AttentionIndicator onNavigate={onNavigate} />
+      </div>
+    </aside>
+  );
+}
+
+function SessionGroup({
+  label,
+  rows,
+  activeSessionId,
+  onSelect,
+}: {
+  label: string;
+  rows: SidebarSessionRow[];
+  activeSessionId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="sidebar-group">
+      <p className="sidebar-group-label">{label}</p>
+      <ul>
+        {rows.map((row) => (
+          <SessionRow
+            key={row.sessionId}
+            row={row}
+            active={row.sessionId === activeSessionId}
+            onSelect={() => onSelect(row.sessionId)}
+          />
+        ))}
+      </ul>
     </div>
   );
 }
 
-/**
- * Group session summaries by their Claude project label, preserving the
- * most-recent-first order within each group. Sessions without a label fall
- * into a single trailing "기타 세션" bucket so manual / pre-import sessions
- * still appear.
- */
-function groupSessionsBySource(sessions: StoredSessionSummary[]): SessionGroup[] {
-  const order: string[] = [];
-  const map = new Map<string, StoredSessionSummary[]>();
-  for (const session of sessions) {
-    const label = session.sourceLabel?.trim() || OTHER_SESSIONS_LABEL;
-    if (!map.has(label)) {
-      map.set(label, []);
-      order.push(label);
-    }
-    map.get(label)!.push(session);
-  }
-  // Keep the labelled groups first, the catch-all bucket last.
-  order.sort((a, b) => {
-    if (a === OTHER_SESSIONS_LABEL) return 1;
-    if (b === OTHER_SESSIONS_LABEL) return -1;
-    return 0;
-  });
-  return order.map((label) => ({ label, sessions: map.get(label)! }));
-}
-
-/** Compact Korean relative-time label for the switcher rows. */
-function formatRelativeKo(iso: string, now: number = Date.now()): string {
-  const epoch = new Date(iso).getTime();
-  if (Number.isNaN(epoch)) return "";
-  const diff = now - epoch;
-  if (diff < 0) return new Date(epoch).toLocaleDateString();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "방금";
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}일 전`;
-  return new Date(epoch).toLocaleDateString();
-}
-
-function SidebarProfile({
-  currentView,
-  onNavigate,
+function SessionRow({
+  row,
+  active,
+  onSelect,
 }: {
-  currentView: ViewKey;
-  onNavigate: (view: ViewKey) => void;
+  row: SidebarSessionRow;
+  active: boolean;
+  onSelect: () => void;
 }) {
-  const profile = useMoriProfileStore((state) => state.profile);
   return (
-    <button
-      type="button"
-      className={`profile ${currentView === "profile" ? "active" : ""}`}
-      onClick={() => onNavigate("profile")}
-      aria-label="계정 및 프로필 열기"
-    >
-      <div className="avatar">{getProfileInitials(profile.displayName)}</div>
-      <div>
-        <strong>{profile.displayName}</strong>
-        <small>로컬 모드</small>
-      </div>
-      <span className="status-dot" />
-    </button>
+    <li>
+      <button
+        type="button"
+        className={`sidebar-row${active ? " is-active" : ""}`}
+        onClick={onSelect}
+        aria-current={active ? "true" : undefined}
+        title={row.title}
+      >
+        <span className="sidebar-row-title">{row.title}</span>
+        <span className="sidebar-row-meta">
+          {row.sourceLabel ? (
+            <span className="sidebar-row-source" title={row.sourceLabel}>
+              <FolderGit2 size={11} aria-hidden="true" />
+              <span>{row.sourceLabel}</span>
+            </span>
+          ) : null}
+          <span className="sidebar-row-time">
+            {formatSidebarRelative(row.timestamp)}
+          </span>
+        </span>
+      </button>
+    </li>
   );
 }
 
-/**
- * One-shot session count for the Connections nav badge. The Connections
- * page already calls discovery on mount; we replicate a single read here
- * so the sidebar can hint how many Claude sessions are importable without
- * forcing the user to open the page first. Failures are swallowed — a
- * sidebar badge must never break the shell.
- */
-function useConnectionsBadgeCount(): number | null {
-  const [count, setCount] = useState<number | null>(null);
-  useEffect(() => {
-    if (!isClaudeBridgeAvailable()) {
-      setCount(null);
-      return;
-    }
-    let cancelled = false;
-    discoverClaudeCodeSessions()
-      .then((sessions) => {
-        if (cancelled) return;
-        setCount(sessions.length);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setCount(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return count;
+function SidebarEmpty({ onImport }: { onImport: () => void }) {
+  return (
+    <div className="sidebar-empty">
+      <p>아직 세션이 없습니다.</p>
+      <button type="button" onClick={onImport}>
+        Claude / Codex 작업 가져오기
+      </button>
+    </div>
+  );
+}
+
+function safeListSessions() {
+  try {
+    return loadStoredSessionSummaries();
+  } catch {
+    return [];
+  }
 }

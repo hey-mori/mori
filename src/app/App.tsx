@@ -12,8 +12,6 @@ import { MemoryView } from "../features/memory/MemoryView";
 import { CompanionInboxView } from "../features/companion/CompanionInboxView";
 import { ConnectionsView } from "../features/connections/ConnectionsView";
 import { WorkspaceView } from "../features/workspace/WorkspaceView";
-import { AccountProfileView } from "../features/account/AccountProfileView";
-import { SettingsView } from "../features/settings/SettingsView";
 
 export default function App() {
   const currentView = useMoriAppStore((state) => state.currentView);
@@ -42,14 +40,20 @@ export default function App() {
     if (!themeInitialized) hydrateTheme();
   }, [themeInitialized, hydrateTheme]);
 
+  // Settings + profile no longer have a standing route — they live behind the
+  // top-bar user button as a sheet (`SettingsSheet`, rendered inside AppShell).
+  // Any legacy `navigate("settings")` is rerouted by the store to open the
+  // sheet instead of changing `currentView`, so the workspace stays on the
+  // user's last real surface.
   return (
     <AppShell>
       {currentView === "home" ? <HomeView /> : null}
       {currentView === "start" ? <StartSessionView /> : null}
       {/* The unified session workspace. The legacy timeline / flow / evidence /
-          review keys map here too so no deep link dead-ends — they all open the
-          one tabbed Session Detail rather than a standalone page. A report is
-          per-session, so `reports` opens the session workspace on its 리포트 tab. */}
+          review keys map here too so no deep link dead-ends — they all open
+          the one tabbed Session Detail rather than a standalone page. A
+          report is per-session, so `reports` opens the session workspace on
+          its 리포트 tab. */}
       {currentView === "session" ||
       currentView === "timeline" ||
       currentView === "flow" ||
@@ -63,8 +67,6 @@ export default function App() {
       {currentView === "companion" ? <CompanionInboxView /> : null}
       {currentView === "connections" ? <ConnectionsView /> : null}
       {currentView === "workspace" ? <WorkspaceView /> : null}
-      {currentView === "profile" ? <AccountProfileView /> : null}
-      {currentView === "settings" ? <SettingsView /> : null}
     </AppShell>
   );
 }

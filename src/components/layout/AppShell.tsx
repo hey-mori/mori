@@ -1,24 +1,33 @@
 import { useState, type ReactNode } from "react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { TopBar } from "./TopBar";
+import { SettingsSheet } from "./SettingsSheet";
 import { useMoriAppStore } from "../../app/store";
 import type { ViewKey } from "../../domain/types";
 
+/**
+ * Outer app shell — top bar across the top, session-list sidebar on the left,
+ * workspace on the right.
+ *
+ * The top bar carries product nav (홈 / 세션 / 메모리), the brand mark, the
+ * import / new-session shortcuts, and the user button (which opens the
+ * settings sheet). The sidebar is dedicated to the session list, the way
+ * Claude / Codex desktop dedicate their left rail to conversation history.
+ * On narrow widths the sidebar is an off-canvas drawer toggled by the menu
+ * button in the top-left corner.
+ */
 export function AppShell({ children }: { children: ReactNode }) {
-  const currentView = useMoriAppStore((state) => state.currentView);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
-
-  // Off-canvas sidebar state — only meaningful at <=768px, where the
-  // sidebar is a drawer. A nav click closes it so the content is visible.
+  const navigate = useMoriAppStore((state) => state.navigate);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navigate = (view: ViewKey) => {
-    setCurrentView(view);
+  const closeAndNavigate = (view: ViewKey) => {
+    navigate(view);
     setSidebarOpen(false);
   };
 
   return (
-    <div className={`app-shell ${sidebarOpen ? "sidebar-open" : ""}`}>
+    <div className={`app-shell${sidebarOpen ? " sidebar-open" : ""}`}>
       <button
         type="button"
         className="sidebar-toggle"
@@ -28,13 +37,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <Menu size={18} aria-hidden="true" />
       </button>
-      <Sidebar currentView={currentView} onNavigate={navigate} />
+      <TopBar />
+      <Sidebar onNavigate={closeAndNavigate} />
       <div
         className="sidebar-scrim"
         aria-hidden="true"
         onClick={() => setSidebarOpen(false)}
       />
       <main className="workspace">{children}</main>
+      <SettingsSheet />
     </div>
   );
 }

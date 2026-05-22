@@ -57,10 +57,29 @@ describe("app store — session-centric routing", () => {
   });
 
   it("navigate() passes non-session destinations through unchanged", () => {
-    for (const view of ["home", "memory", "settings", "connections", "start"] as const) {
+    for (const view of ["home", "memory", "connections", "start"] as const) {
       useMoriAppStore.getState().navigate(view);
       expect(useMoriAppStore.getState().currentView).toBe(view);
     }
+  });
+
+  it("navigate('settings') opens the settings sheet instead of routing", () => {
+    useMoriAppStore.setState({ currentView: "home", settingsSheetOpen: false });
+    useMoriAppStore.getState().navigate("settings");
+    const state = useMoriAppStore.getState();
+    expect(state.settingsSheetOpen).toBe(true);
+    expect(state.settingsSheetTab).toBe("settings");
+    // The underlying view does not change — the user keeps their place.
+    expect(state.currentView).toBe("home");
+  });
+
+  it("navigate('profile') opens the settings sheet on the profile tab", () => {
+    useMoriAppStore.setState({ currentView: "home", settingsSheetOpen: false });
+    useMoriAppStore.getState().navigate("profile");
+    const state = useMoriAppStore.getState();
+    expect(state.settingsSheetOpen).toBe(true);
+    expect(state.settingsSheetTab).toBe("profile");
+    expect(state.currentView).toBe("home");
   });
 
   it("openReviewItem() deep-links into the session insights tab", () => {

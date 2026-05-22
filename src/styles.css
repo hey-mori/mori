@@ -55,23 +55,416 @@ button {
   cursor: pointer;
 }
 
+/* ─── App chrome ─────────────────────────────────────────────────────────
+   The shell is a 2×2 grid: a thin top bar across the full width, with a
+   session-list sidebar on the left and the workspace on the right. The
+   sidebar and the workspace each scroll inside their own row so the chrome
+   never drifts. Sized variables keep the rest of the surfaces honest. */
+
+:root {
+  --mori-topbar-h: 48px;
+  --mori-sidebar-w: 256px;
+}
+
 .app-shell {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  min-height: 100vh;
+  grid-template-rows: var(--mori-topbar-h) minmax(0, 1fr);
+  grid-template-columns: var(--mori-sidebar-w) minmax(0, 1fr);
+  grid-template-areas:
+    "topbar  topbar"
+    "sidebar workspace";
+  height: 100vh;
+  overflow: hidden;
+}
+
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 18px 0 calc(var(--mori-sidebar-w) + 4px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topnav-item {
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.topnav-item:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.topnav-item.is-active {
+  color: var(--purple);
+  background: var(--purple-50);
+}
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+
+.topbar-user:hover {
+  background: var(--gray-50);
+}
+
+.topbar-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(140deg, #7d5bff, #b18cff);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .sidebar {
-  position: sticky;
-  top: 0;
+  grid-area: sidebar;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  padding: 28px 18px 18px;
-  background: rgba(255, 255, 255, 0.88);
+  min-height: 0;
+  padding: 10px 10px 12px;
+  background: rgba(255, 255, 255, 0.9);
   border-right: 1px solid var(--line);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(14px);
 }
+
+.sidebar-head {
+  display: flex;
+  gap: 4px;
+  padding: 0 4px 8px;
+}
+
+.sidebar-head-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.sidebar-head-action:hover {
+  background: var(--gray-50);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  height: 30px;
+  margin: 0 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--gray-50);
+}
+
+.sidebar-search:focus-within {
+  border-color: var(--purple);
+  background: white;
+  box-shadow: 0 0 0 3px var(--purple-50);
+}
+
+.sidebar-search svg {
+  color: var(--muted-2);
+  flex-shrink: 0;
+}
+
+.sidebar-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.sidebar-search input::placeholder {
+  color: var(--muted-2);
+}
+
+.sidebar-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px 0 8px;
+}
+
+.sidebar-group + .sidebar-group {
+  margin-top: 10px;
+}
+
+.sidebar-group-label {
+  margin: 0 0 4px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.sidebar-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sidebar-row {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  transition: background-color 0.1s ease;
+}
+
+.sidebar-row:hover {
+  background: var(--gray-50);
+}
+
+.sidebar-row.is-active {
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.sidebar-row.is-active .sidebar-row-title {
+  color: var(--purple);
+  font-weight: 600;
+}
+
+.sidebar-row-title {
+  font-size: 12.5px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.sidebar-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--muted-2);
+  min-width: 0;
+}
+
+.sidebar-row-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-row-source span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-row-time {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.sidebar-empty,
+.sidebar-empty-search {
+  padding: 18px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.sidebar-empty p {
+  margin: 0 0 10px;
+}
+
+.sidebar-empty button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--purple);
+  border-radius: 7px;
+  background: var(--purple);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sidebar-empty button:hover {
+  background: #5238df;
+  border-color: #5238df;
+}
+
+.sidebar-foot {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+
+/* The .workspace cell scrolls its own contents. */
+.workspace {
+  grid-area: workspace;
+  overflow: hidden;
+}
+
+/* ─── Settings sheet ─────────────────────────────────────────────────────
+   The modal that hosts the profile + settings surfaces. Triggered by the
+   top-bar user button; covers the workspace area (not the chrome) so the
+   user keeps their orientation. */
+
+.settings-sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.settings-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 18, 28, 0.32);
+  backdrop-filter: blur(2px);
+}
+
+.settings-sheet {
+  position: relative;
+  margin: calc(var(--mori-topbar-h) + 32px) 32px 32px;
+  width: min(1080px, calc(100vw - 96px));
+  max-height: calc(100vh - var(--mori-topbar-h) - 64px);
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(20, 25, 45, 0.24);
+  outline: none;
+  overflow: hidden;
+}
+
+.settings-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.settings-sheet-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.settings-sheet-tab {
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-sheet-tab:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.settings-sheet-tab.is-active {
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.settings-sheet-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.settings-sheet-close:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.settings-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg);
+}
+
+/* ─── End app chrome ─────────────────────────────────────────────────── */
 
 .brand {
   display: flex;
@@ -5720,13 +6113,8 @@ pre {
 }
 
 @media (max-width: 1180px) {
-  .app-shell {
-    grid-template-columns: 206px minmax(0, 1fr);
-  }
-
-  .sidebar {
-    padding-left: 14px;
-    padding-right: 14px;
+  :root {
+    --mori-sidebar-w: 220px;
   }
 
   .content-grid,
@@ -5757,13 +6145,8 @@ pre {
 }
 
 @media (max-width: 1340px) {
-  .app-shell {
-    grid-template-columns: 206px minmax(0, 1fr);
-  }
-
-  .sidebar {
-    padding-left: 14px;
-    padding-right: 14px;
+  :root {
+    --mori-sidebar-w: 232px;
   }
 }
 
@@ -15226,54 +15609,31 @@ pre {
   display: none;
 }
 
-/* --- Mid widths: the sidebar becomes a compact icon rail. ----------- */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .app-shell {
-    grid-template-columns: 66px minmax(0, 1fr);
-  }
-  .sidebar {
-    padding: 16px 10px;
-  }
-  .brand {
-    margin: 0 0 22px 0;
-    justify-content: center;
-    gap: 0;
-  }
-  .brand .mori-logo-word,
-  .nav-group-label,
-  .nav-item span,
-  .nav-item b,
-  .session-card,
-  .profile > div,
-  .profile .status-dot {
-    display: none;
-  }
-  .nav-item {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    padding: 0;
-  }
-  .profile {
-    justify-content: center;
-  }
-}
-
-/* --- Narrow widths: the sidebar becomes an off-canvas drawer. ------- */
+/* --- Narrow widths: the sidebar becomes an off-canvas drawer. -------
+   At ≤768px the top bar still spans full width, but the sidebar lifts out
+   of the grid and slides over the workspace, so the workspace claims the
+   full row. We also reset the top-bar left padding (which on desktop reserves
+   the sidebar column) so the topnav doesn't get pushed off-screen. */
 @media (max-width: 768px) {
-  /* The closed drawer sits at translateX(-100%); clip it so the
-     off-screen panel never adds a phantom horizontal scrollbar. */
   body {
     overflow-x: hidden;
   }
   .app-shell {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "topbar"
+      "workspace";
+  }
+  .topbar {
+    padding-left: 60px;
   }
   .sidebar {
+    grid-area: unset;
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
-    width: 224px;
+    width: 256px;
     z-index: 60;
     transform: translateX(-100%);
     transition: transform 200ms ease;
