@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
-import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriFeatureStatusBadge } from "../../components/ui/MoriFeatureStatusBadge";
@@ -23,8 +22,6 @@ import {
 } from "../../lib/mori-package";
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
-import { CompanionCard } from "../companion/CompanionCard";
-import { useCompanionSignals } from "../companion/useCompanionSignals";
 import {
   exportPhaseRole,
   exportPhaseTone,
@@ -76,7 +73,9 @@ import { ReportBuilderPanel } from "./ReportBuilderPanel";
 import { HandoffReadinessPanel } from "./HandoffReadinessPanel";
 
 export function ReportsView() {
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  // `navigate` routes legacy session-surface keys (timeline / evidence) into
+  // the unified Session Detail workspace; other keys pass through unchanged.
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const openAcceptedMemory = useMoriAppStore((state) => state.openAcceptedMemory);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
@@ -154,7 +153,6 @@ export function ReportsView() {
 
   const duration = useMemo(() => formatDuration(view.session.startedAt, view.session.endedAt), [view.session.startedAt, view.session.endedAt]);
 
-  const { signals: companionSignals } = useCompanionSignals();
   const memoryHealth = useMemo(() => {
     let stale = 0;
     let contradicted = 0;
@@ -398,8 +396,6 @@ export function ReportsView() {
         />
       }
     >
-      <SessionModeBanner />
-
       <ReportsAnalysisNotice
         mode={mode}
         hasAnalysis={hasAnalysis}
@@ -413,13 +409,6 @@ export function ReportsView() {
       />
 
       <div className="reports-main">
-          <CompanionCard
-            signals={companionSignals}
-            isDemo={mode === "demo"}
-            onNavigate={setCurrentView}
-            onOpenReviewItem={openReviewItem}
-          />
-
           <SessionSummaryStrip
             dataBasis={evidenceSummary.dataBasis}
             dataBasisTone={status.dataBasisTone}

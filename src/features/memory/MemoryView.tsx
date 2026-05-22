@@ -3,7 +3,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
-import { SessionModeBanner } from "../../components/layout/SessionModeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { MoriDrawer } from "../../components/ui/MoriDrawer";
 import {
@@ -66,11 +65,11 @@ import { KeyEvidenceCard } from "./KeyEvidenceCard";
 import { SavedReportsCard } from "./SavedReportsCard";
 import { ProjectMemorySummaryPanel } from "./ProjectMemorySummaryPanel";
 import { ReimportHistoryCard } from "./ReimportHistoryCard";
-import { CompanionCard } from "../companion/CompanionCard";
-import { useCompanionSignals } from "../companion/useCompanionSignals";
 
 export function MemoryView() {
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  // `navigate` routes legacy session-surface keys (timeline) into the unified
+  // Session Detail workspace; other keys (start) pass through unchanged.
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const memoryFocus = useMoriAppStore((state) => state.memoryFocus);
@@ -81,7 +80,6 @@ export function MemoryView() {
   const mode = useMoriSessionStore(selectSessionMode);
   const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
   const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
-  const { signals: companionSignals, isDemo: companionIsDemo } = useCompanionSignals();
   const sqliteSessions = useMoriSqliteStore((state) => state.sessions);
   const sqliteKind = useMoriSqliteStore((state) => state.kind);
   const sqliteRefresh = useMoriSqliteStore((state) => state.refresh);
@@ -418,8 +416,6 @@ export function MemoryView() {
         />
       }
     >
-      <SessionModeBanner />
-
       <div className="memory-main">
           <ProjectMemoryHero
             projectName={view.project.name}
@@ -431,13 +427,6 @@ export function MemoryView() {
             onOpenLatestReport={() => setCurrentView("reports")}
             reportAvailable={packageDrafts.length > 0 || hasAnalysis}
             savedReportAvailability={savedReportAvailability}
-          />
-
-          <CompanionCard
-            signals={companionSignals}
-            isDemo={companionIsDemo}
-            onNavigate={setCurrentView}
-            onOpenReviewItem={openReviewItem}
           />
 
           <ProjectMemoryWarningsStrip warnings={viewModel.warnings} />
