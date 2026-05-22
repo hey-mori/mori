@@ -155,17 +155,16 @@ describe("buildCompanionSignals — evidence-based signals", () => {
     const stale = signals.find((signal) => signal.type === "stale_memory");
     expect(stale).toBeDefined();
     expect(stale?.linkedItemIds).toEqual(["mem-stale-1", "mem-stale-2", "mem-contra-1"]);
-    expect(stale?.message).toContain("3");
+    expect(stale?.title).toContain("3");
     expect(stale?.message).toContain("stale 2");
     expect(stale?.message).toContain("contradicted 1");
     expect(stale?.destination).toBe("consolidation");
   });
 
-  it("falls back to the legacy count in the message when ids are not provided", () => {
+  it("falls back to the legacy count in the title when ids are not provided", () => {
     const signals = buildCompanionSignals(input({ attentionMemoryCount: 2 }));
     const stale = signals.find((signal) => signal.type === "stale_memory");
-    expect(stale?.title).toBe("오래된 메모리 최신으로 유지하기");
-    expect(stale?.message).toContain("2건");
+    expect(stale?.title).toBe("오래된 메모리 2건");
     expect(stale?.linkedItemIds).toEqual([]);
   });
 

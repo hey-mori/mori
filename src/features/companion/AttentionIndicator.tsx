@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Compass } from "lucide-react";
-import { Button } from "../../components/ui/Button";
 import { useMoriAppStore } from "../../app/store";
 import type { ViewKey } from "../../domain/types";
 import {
@@ -189,26 +188,33 @@ function AttentionSignalRow({
         ? () => onNavigate(target.view)
         : null;
 
+  // Whole-row clickable notification style. Title leads; the longer message
+  // sits muted below it (so the row reads in two lines max). The basis chip
+  // moved into the `title` attribute as a hover tooltip — it was noise in
+  // the row but still surfaces honestly on hover.
   return (
-    <li
-      className="attention-signal"
-      data-mori-tone={companionSeverityTone(signal.severity)}
-    >
-      <span className="companion-signal-dot" aria-hidden="true" />
-      <div className="attention-signal-body">
-        <div className="attention-signal-head">
-          <strong>{signal.title}</strong>
-          <span
-            className={`companion-signal-basis basis-${signal.basis}`}
-          >
-            {describeCompanionBasis(signal.basis)}
-          </span>
+    <li>
+      <button
+        type="button"
+        className="attention-signal"
+        data-mori-tone={companionSeverityTone(signal.severity)}
+        onClick={action ?? undefined}
+        disabled={!action}
+        title={`${signal.title} — ${describeCompanionBasis(signal.basis)}`}
+      >
+        <span className="companion-signal-dot" aria-hidden="true" />
+        <div className="attention-signal-body">
+          <strong className="attention-signal-title">{signal.title}</strong>
+          <p>{signal.message}</p>
         </div>
-        <p>{signal.message}</p>
-      </div>
-      {action ? (
-        <Button onClick={action}>{signal.actionLabel}</Button>
-      ) : null}
+        {action ? (
+          <ArrowRight
+            size={13}
+            aria-hidden="true"
+            className="attention-signal-arrow"
+          />
+        ) : null}
+      </button>
     </li>
   );
 }
