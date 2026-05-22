@@ -19,7 +19,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { moriConceptIcon } from "../../components/brand/moriIcons";
@@ -68,18 +67,17 @@ const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare 
 ];
 
 /**
- * Insights workspace (the surface formerly framed as "검토").
+ * Insights workspace (the surface formerly framed as "검토") — the **인사이트**
+ * tab inside the unified Session Detail workspace.
  *
- * Renders standalone (its own `PageShell`) when reached directly, or as the
- * **인사이트** tab content inside the unified Session Detail workspace when
- * `embedded` — the Session Detail owns the single shell + header, so this
- * view renders only its action-bar row + body + inspector inside the session
- * scroll area. Every capability (tabs, Quick Pass, item editing, deep-link
- * focus, inspector) is identical in both modes. The framing is value-first:
- * confirming an issue / decision / next action is what carries forward into
- * project memory — not a bare "검토 후보 N개".
+ * The Session Detail owns the single shell + header, so this view renders only
+ * its action-bar row + body + inspector inside the session scroll area. Every
+ * capability — tabs, Quick Pass, item editing, deep-link focus, inspector —
+ * lives here. The framing is value-first: confirming an issue / decision /
+ * next action is what carries forward into project memory — not a bare
+ * "검토 후보 N개".
  */
-export function ReviewView({ embedded = false }: { embedded?: boolean } = {}) {
+export function ReviewView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -100,7 +98,7 @@ export function ReviewView({ embedded = false }: { embedded?: boolean } = {}) {
   const imports = useMoriSessionStore((state) => state.imports);
   // `navigate` routes legacy session-surface keys (timeline / evidence) into
   // the unified Session Detail workspace, so "타임라인 보기" / "증거 허브로
-  // 이동" switch tabs in embedded mode instead of opening a standalone page.
+  // 이동" switch tabs instead of opening a standalone page.
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const reviewFocus = useMoriAppStore((state) => state.reviewFocus);
@@ -314,7 +312,6 @@ export function ReviewView({ embedded = false }: { embedded?: boolean } = {}) {
   const body = (
     <>
       <InsightsValueNote
-        embedded={embedded}
         mode={mode}
         hasAnalysis={hasAnalysis}
         issueCount={summary.issueCount}
@@ -409,22 +406,14 @@ export function ReviewView({ embedded = false }: { embedded?: boolean } = {}) {
     </>
   );
 
-  if (embedded) {
-    return (
-      <div className="session-tab-pane session-tab-insights">
-        <div className="session-tab-actionbar">{actionBar}</div>
-        <div className="session-tab-split">
-          <div className="session-tab-main">{body}</div>
-          {aside}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <PageShell className="review-page" actionBar={actionBar} aside={aside}>
-      {body}
-    </PageShell>
+    <div className="session-tab-pane session-tab-insights">
+      <div className="session-tab-actionbar">{actionBar}</div>
+      <div className="session-tab-split">
+        <div className="session-tab-main">{body}</div>
+        {aside}
+      </div>
+    </div>
   );
 }
 
@@ -432,25 +421,21 @@ export function ReviewView({ embedded = false }: { embedded?: boolean } = {}) {
  * Value-first framing strip for the Insights tab. Replaces the old
  * "검토 후보 N개" framing the user disliked: confirming an issue / decision /
  * next action is what carries forward into durable project memory. Calm,
- * concise, and only shown when there is something to confirm. Embedded-only so
- * it lives inside the session workspace, not on the standalone review page.
+ * concise, and only shown when there is something to confirm.
  */
 function InsightsValueNote({
-  embedded,
   mode,
   hasAnalysis,
   issueCount,
   decisionCount,
   nextActionCount,
 }: {
-  embedded: boolean;
   mode: "demo" | "draft";
   hasAnalysis: boolean;
   issueCount: number;
   decisionCount: number;
   nextActionCount: number;
 }) {
-  if (!embedded) return null;
   if (mode === "draft" && !hasAnalysis) return null;
   const total = issueCount + decisionCount + nextActionCount;
   if (total === 0) return null;

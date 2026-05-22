@@ -8,7 +8,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageShell } from "../../components/layout/PageShell";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -49,16 +48,14 @@ import {
 } from "./SourceDetailPanel";
 
 /**
- * Evidence Hub.
+ * Evidence Hub — the **증거** tab inside the unified Session Detail workspace.
  *
- * Renders standalone (its own `PageShell`) when reached directly, or as the
- * **증거** tab content inside the unified Session Detail workspace when
- * `embedded` — in which case the Session Detail owns the single shell + header
- * and this view renders only its action-bar row + body + inspector inside the
- * session scroll area, so there is never a double shell. Every capability
- * (import, Quick Pass, source inspector, removal) is identical in both modes.
+ * The Session Detail owns the single shell + header, so this view renders only
+ * its action-bar row + body + inspector inside the session scroll area (no
+ * double shell). Every capability — import, Quick Pass, source inspector,
+ * removal — lives here.
  */
-export function EvidenceView({ embedded = false }: { embedded?: boolean } = {}) {
+export function EvidenceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -76,8 +73,8 @@ export function EvidenceView({ embedded = false }: { embedded?: boolean } = {}) 
   const updateAnalysisSettings = useMoriSessionStore((state) => state.updateAnalysisSettings);
   const removeImport = useMoriSessionStore((state) => state.removeImport);
   // `navigate` routes legacy session-surface keys (timeline) into the unified
-  // Session Detail workspace; other keys (memory / settings) pass through. In
-  // embedded mode this means "Timeline 열기" switches to the 흐름 tab.
+  // Session Detail workspace; other keys (memory / settings) pass through, so
+  // "Timeline 열기" switches to the 흐름 tab rather than opening a separate page.
   const setCurrentView = useMoriAppStore((state) => state.navigate);
 
   useEffect(() => {
@@ -149,33 +146,21 @@ export function EvidenceView({ embedded = false }: { embedded?: boolean } = {}) 
   // draft is in flight. Cancel / apply on the review screen clears the draft
   // and falls through back to the Evidence Hub on the next render.
   if (reviewDraft) {
-    return <ImportReviewView embedded={embedded} />;
+    return <ImportReviewView embedded />;
   }
 
   const actionBar = (
     <ActionBar
       label="증거 허브 상태"
       start={
-        embedded ? (
-          <>
-            <Badge tone={isDemoSession ? "gray" : "green"}>
-              {isDemoSession ? "데모 세션" : "실제 세션"}
-            </Badge>
-            <Badge tone={importedSources.length ? "purple" : "gray"}>
-              {importedSources.length}개 출처
-            </Badge>
-          </>
-        ) : (
-          <>
-            <span className="action-bar-context">증거 허브</span>
-            <Badge tone={isDemoSession ? "gray" : "green"}>
-              {isDemoSession ? "데모 세션" : "실제 세션"}
-            </Badge>
-            <Badge tone={importedSources.length ? "purple" : "gray"}>
-              {importedSources.length}개 출처
-            </Badge>
-          </>
-        )
+        <>
+          <Badge tone={isDemoSession ? "gray" : "green"}>
+            {isDemoSession ? "데모 세션" : "실제 세션"}
+          </Badge>
+          <Badge tone={importedSources.length ? "purple" : "gray"}>
+            {importedSources.length}개 출처
+          </Badge>
+        </>
       }
       end={
         <Button
@@ -375,22 +360,14 @@ export function EvidenceView({ embedded = false }: { embedded?: boolean } = {}) 
     </>
   );
 
-  if (embedded) {
-    return (
-      <div className="session-tab-pane session-tab-evidence">
-        <div className="session-tab-actionbar">{actionBar}</div>
-        <div className="session-tab-split">
-          <div className="session-tab-main">{body}</div>
-          {aside}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <PageShell className="evidence-page" actionBar={actionBar} aside={aside}>
-      {body}
-    </PageShell>
+    <div className="session-tab-pane session-tab-evidence">
+      <div className="session-tab-actionbar">{actionBar}</div>
+      <div className="session-tab-split">
+        <div className="session-tab-main">{body}</div>
+        {aside}
+      </div>
+    </div>
   );
 }
 

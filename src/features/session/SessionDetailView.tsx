@@ -39,7 +39,7 @@ import { ReviewView } from "../review/ReviewView";
  *   - **인사이트** — value-framed issues / decisions / next actions to confirm
  *
  * It owns the **single `PageShell`** and header; each tab's view renders only
- * its content (`embedded`) so there is never a double shell or duplicate
+ * its content so there is never a double shell or duplicate
  * header. Tab state lives in the app store (`sessionTab`) so other surfaces
  * (Home next-actions, the Companion inbox, the event inspector) can deep-link
  * a session straight to the right tab and the user returns to the same tab.
@@ -245,18 +245,18 @@ function SessionTabBar({
 // ─── Tab content ────────────────────────────────────────────────────────────
 
 /**
- * Renders the active tab's view in embedded mode (content only — the Session
- * Detail owns the shell + header). The inactive tabs are unmounted, so heavy
- * canvases are not kept alive off-screen. Cross-tab persistent state (selected
- * event, search, active insights tab) already lives in the app store, so
- * switching tabs and returning preserves what the user cares about.
+ * Renders the active tab's view (content only — the Session Detail owns the
+ * shell + header). The inactive tabs are unmounted, so heavy canvases are not
+ * kept alive off-screen. Cross-tab persistent state (selected event, search,
+ * active insights tab) already lives in the app store, so switching tabs and
+ * returning preserves what the user cares about.
  */
 function SessionTabContent({ tab }: { tab: SessionTab }) {
   if (tab === "evidence") {
-    return <EvidenceView embedded />;
+    return <EvidenceView />;
   }
   if (tab === "insights") {
-    return <ReviewView embedded />;
+    return <ReviewView />;
   }
-  return <TimelineView mode="timeline" embedded />;
+  return <TimelineView mode="timeline" />;
 }

@@ -5441,11 +5441,6 @@ pre {
  * Evidence Hub
  * ============================ */
 
-.evidence-page {
-  padding-bottom: 28px;
-}
-
-
 .evidence-hub-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--mori-rail);
