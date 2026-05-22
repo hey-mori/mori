@@ -316,9 +316,14 @@ function RecentSessionRow({
           <span className="home-session-title">{session.title}</span>
           <span className="home-session-meta">
             <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
-            <span className="home-session-project" title={session.projectLabel ?? undefined}>
-              {session.projectLabel ?? "수동 세션"}
-            </span>
+            {/* Only surface the grouping label when there is one — the origin
+                chip already conveys 수동 / 데모, so the previous "수동 세션"
+                fallback was redundant and pulled the row visual weight off. */}
+            {session.projectLabel ? (
+              <span className="home-session-project" title={session.projectLabel}>
+                {session.projectLabel}
+              </span>
+            ) : null}
             {session.spanLabel ? (
               <span className="home-session-span">{session.spanLabel}</span>
             ) : null}
@@ -328,6 +333,7 @@ function RecentSessionRow({
           </span>
         </span>
         <time className="home-session-time">{session.relativeTime}</time>
+        <ArrowRight size={14} aria-hidden="true" className="home-session-arrow" />
       </button>
     </li>
   );

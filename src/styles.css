@@ -4971,6 +4971,21 @@ hr {
   flex-shrink: 0;
 }
 
+.home-session-arrow {
+  margin-left: 2px;
+  color: var(--mori-text-muted-2);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 120ms ease, transform 120ms ease, color 120ms ease;
+  flex-shrink: 0;
+}
+
+.home-session-row:hover .home-session-arrow {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--mori-accent);
+}
+
 /* Compact next-step rail — each row states what the user GAINS by acting, in a
    single scannable line. No big cards, no decorative accent bars. */
 .home-next-list {
