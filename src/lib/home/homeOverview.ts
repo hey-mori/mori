@@ -2,6 +2,7 @@ import type { Session } from "../../domain/types";
 import type { ProductStateTone } from "../product-state/productStateLabels";
 import { spanLabel } from "../session/workContext";
 import type { StoredSessionSummary } from "../storage/storageTypes";
+import { buildContributionGrid, type ContributionGrid } from "./contributionGrid";
 
 /**
  * Home overview view model.
@@ -147,6 +148,8 @@ export type HomeOverview = {
   metrics: HomeMetric[];
   recentSessions: HomeRecentSession[];
   nextActions: HomeNextAction[];
+  /** Daily activity heatmap over the recent window (the "잔디"). */
+  contributionGrid: ContributionGrid;
 };
 
 /** Never surface more than this many next-action cards — the panel stays calm. */
@@ -184,7 +187,14 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
     ? buildEmptyNextActions()
     : buildNextActions({ active, metricsById, onlyDemo, now });
 
-  return { isEmpty, onlyDemo, metrics, recentSessions, nextActions };
+  // The activity heatmap spans every stored session's anchor date — archiving
+  // organises the list but never erases that the work happened.
+  const contributionGrid = buildContributionGrid({
+    timestamps: input.storedSessions.map((session) => anchorIso(session)),
+    now,
+  });
+
+  return { isEmpty, onlyDemo, metrics, recentSessions, nextActions, contributionGrid };
 }
 
 // ─── Metrics strip ──────────────────────────────────────────────────────────

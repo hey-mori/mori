@@ -3979,9 +3979,9 @@ hr {
 
 /* ── Home ───────────────────────────────────────────────────────────────── */
 
-/* The session-centric landing dashboard. Calm by design: a real-data metric
-   strip, a wide recent-session list, and a value-framed "지금 할 만한 것" rail.
-   No fabricated widgets — every number traces to a stored session. */
+/* The session-centric landing dashboard. Calm by design: an activity heatmap
+   hero, a wide recent-session list, and a compact next-step rail. No fabricated
+   widgets — every cell and number traces to a stored session. */
 .home-dashboard {
   display: grid;
   gap: var(--mori-space-9);
@@ -4006,46 +4006,171 @@ hr {
   color: var(--mori-accent);
 }
 
-/* Work-summary strip — a few big numbers + small labels, never a tile grid.
-   Auto-fit keeps it on one calm row at 1440/1280 and wraps gracefully below. */
-.home-metrics {
+/* Activity hero — the signature "잔디". One calm card: a contribution heatmap
+   over the recent window plus a compact real-data stat strip. Every cell and
+   number traces to a stored session; nothing is fabricated. */
+.home-activity {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--mori-space-5);
-}
-
-.home-metric {
-  display: grid;
-  gap: 2px;
-  padding: var(--mori-space-6) var(--mori-space-7);
+  gap: var(--mori-space-6);
+  padding: var(--mori-space-7);
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-lg);
   background: var(--mori-surface);
+}
+
+.home-activity-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mori-space-4);
+}
+
+.home-activity-head h2 {
+  margin: 0;
+  font-size: var(--mori-font-size-lg);
+  font-weight: 650;
+  color: var(--mori-text);
+}
+
+.home-activity-sub {
+  font-size: var(--mori-font-size-xs);
+  color: var(--mori-text-muted);
+  white-space: nowrap;
+}
+
+.home-activity-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mori-space-8);
+  margin: 0;
+  padding-top: var(--mori-space-6);
+  border-top: 1px solid var(--mori-border);
+}
+
+.home-activity-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
   min-width: 0;
 }
 
-.home-metric-value {
-  font-size: var(--mori-font-size-3xl);
+.home-activity-stat dt {
+  font-size: var(--mori-font-size-xs);
+  font-weight: 600;
+  color: var(--mori-text-muted);
+  white-space: nowrap;
+}
+
+.home-activity-stat dd {
+  margin: 0;
+  font-size: var(--mori-font-size-2xl);
   font-weight: 680;
   line-height: var(--mori-line-tight);
   color: var(--mori-text);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.home-metric-label {
-  font-size: var(--mori-font-size-sm);
-  font-weight: 600;
+/* Contribution heatmap. Sizes live in local custom properties so the month
+   axis, weekday axis, and cell grid stay aligned at any width. */
+.contrib {
+  --contrib-cell: 11px;
+  --contrib-gap: 3px;
+  --contrib-wkcol: 16px;
+  --contrib-bodygap: 6px;
+  display: grid;
+  gap: var(--mori-space-4);
+}
+
+.contrib-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.contrib-plot {
+  display: inline-grid;
+  gap: 4px;
+}
+
+.contrib-months {
+  display: flex;
+  gap: var(--contrib-gap);
+  padding-left: calc(var(--contrib-wkcol) + var(--contrib-bodygap));
+}
+
+.contrib-month {
+  flex: none;
+  width: var(--contrib-cell);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--mori-text-muted);
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.contrib-body {
+  display: flex;
+  gap: var(--contrib-bodygap);
+}
+
+.contrib-weekdays {
+  display: flex;
+  flex-direction: column;
+  gap: var(--contrib-gap);
+  width: var(--contrib-wkcol);
+}
+
+.contrib-weekdays span {
+  height: var(--contrib-cell);
+  font-size: 9px;
+  line-height: var(--contrib-cell);
+  color: var(--mori-text-muted-2);
+}
+
+.contrib-weeks {
+  display: flex;
+  gap: var(--contrib-gap);
+}
+
+.contrib-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--contrib-gap);
+}
+
+.contrib-cell {
+  width: var(--contrib-cell);
+  height: var(--contrib-cell);
+  border-radius: 2px;
+  background: var(--mori-surface-subtle);
+}
+
+.contrib-cell.is-pad {
+  background: transparent;
+}
+
+/* Activity intensity ramp — a green data-viz scale ("work done"), kept distinct
+   from brand purple per the colour contract. */
+.contrib-cell.lvl-0 {
+  background: var(--mori-surface-subtle);
+  box-shadow: inset 0 0 0 1px var(--mori-border);
+}
+.contrib-cell.lvl-1 { background: #bde7c9; }
+.contrib-cell.lvl-2 { background: #7bc99a; }
+.contrib-cell.lvl-3 { background: #41a96b; }
+.contrib-cell.lvl-4 { background: #2a7d4f; }
+
+.contrib-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
   color: var(--mori-text-muted);
 }
 
-.home-metric-hint {
-  font-size: var(--mori-font-size-xs);
-  color: var(--mori-text-muted-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.contrib-legend .contrib-cell {
+  width: 10px;
+  height: 10px;
 }
 
 /* Two-column body: recent sessions (wide main) + next actions (rail). */
@@ -4180,88 +4305,91 @@ hr {
   flex-shrink: 0;
 }
 
-/* Value-centric next-action rail. Each card states what the user GAINS by
-   acting — not a bare candidate count. */
+/* Compact next-step rail — each row states what the user GAINS by acting, in a
+   single scannable line. No big cards, no decorative accent bars. */
 .home-next-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--mori-space-4);
+  gap: var(--mori-space-3);
 }
 
-.home-next-card {
+.home-next-trigger {
   display: flex;
+  align-items: center;
   gap: var(--mori-space-4);
-  padding: var(--mori-space-6);
+  width: 100%;
+  padding: var(--mori-space-4) var(--mori-space-5);
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-lg);
   background: var(--mori-surface);
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.home-next-trigger:hover {
+  border-color: var(--mori-border-strong);
+  background: var(--mori-surface-subtle);
 }
 
 .home-next-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   border-radius: 8px;
   background: var(--mori-surface-subtle);
   color: var(--mori-text-muted);
 }
 
-.home-next-card.tone-accent .home-next-icon {
+.home-next-row.tone-accent .home-next-icon {
   background: var(--mori-accent-soft);
   color: var(--mori-accent);
 }
 
-.home-next-card.tone-info .home-next-icon {
+.home-next-row.tone-info .home-next-icon {
   background: var(--mori-status-info-soft);
   color: var(--mori-status-info);
 }
 
-.home-next-card.tone-success .home-next-icon {
+.home-next-row.tone-success .home-next-icon {
   background: var(--mori-status-success-soft);
   color: var(--mori-status-success);
 }
 
-.home-next-body {
+.home-next-text {
   display: grid;
-  gap: var(--mori-space-3);
+  gap: 1px;
   min-width: 0;
+  flex: 1;
 }
 
 .home-next-title {
   margin: 0;
-  font-size: var(--mori-font-size-md);
+  font-size: var(--mori-font-size-sm);
   font-weight: 650;
   color: var(--mori-text);
   line-height: var(--mori-line-snug);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-next-desc {
   margin: 0;
-  font-size: var(--mori-font-size-sm);
+  font-size: var(--mori-font-size-xs);
   color: var(--mori-text-muted);
-  line-height: var(--mori-line-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.home-next-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  align-self: start;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--mori-accent);
-  font-size: var(--mori-font-size-sm);
-  font-weight: 600;
-}
-
-.home-next-action:hover {
-  text-decoration: underline;
+.home-next-arrow {
+  flex-shrink: 0;
+  color: var(--mori-text-muted-2);
 }
 
 /* Below ~960px the rail can no longer sit comfortably beside the list, so it

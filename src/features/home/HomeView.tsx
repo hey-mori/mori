@@ -181,21 +181,25 @@ export function HomeView() {
             </p>
           ) : null}
 
-          {overview.metrics.length > 0 ? (
-            <section className="home-metrics" aria-label="작업 요약">
-              {overview.metrics.map((metric) => (
-                <div className="home-metric" key={metric.key}>
-                  <span className="home-metric-value">{metric.value}</span>
-                  <span className="home-metric-label">{metric.label}</span>
-                  {metric.hint ? (
-                    <span className="home-metric-hint" title={metric.hint}>
-                      {metric.hint}
-                    </span>
-                  ) : null}
-                </div>
-              ))}
-            </section>
-          ) : null}
+          <section className="home-activity" aria-label="작업 활동">
+            <header className="home-activity-head">
+              <h2>작업 활동</h2>
+              <span className="home-activity-sub">
+                최근 {overview.contributionGrid.weekCount}주 · 활동 {overview.contributionGrid.activeDays}일
+              </span>
+            </header>
+            <ContributionHeatmap grid={overview.contributionGrid} />
+            {overview.metrics.length > 0 ? (
+              <dl className="home-activity-stats">
+                {overview.metrics.map((metric) => (
+                  <div className="home-activity-stat" key={metric.key}>
+                    <dt>{metric.label}</dt>
+                    <dd title={metric.hint}>{metric.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+          </section>
 
           <div className="home-columns">
             <section className="home-section home-recent" aria-label="최근 세션">
@@ -230,13 +234,13 @@ export function HomeView() {
               )}
             </section>
 
-            <aside className="home-section home-next" aria-label="지금 할 만한 것">
+            <aside className="home-section home-next" aria-label="다음 단계">
               <header className="home-section-head">
-                <h2>지금 할 만한 것</h2>
+                <h2>다음 단계</h2>
               </header>
               <ul className="home-next-list">
                 {overview.nextActions.map((action) => (
-                  <NextActionCard
+                  <NextActionRow
                     key={action.key}
                     action={action}
                     onRun={() => runNextAction(action)}
@@ -298,7 +302,7 @@ const NEXT_ACTION_ICON: Record<HomeNextActionKind, LucideIcon> = {
   report: FileText,
 };
 
-function NextActionCard({
+function NextActionRow({
   action,
   onRun,
 }: {
@@ -307,19 +311,89 @@ function NextActionCard({
 }) {
   const Icon = NEXT_ACTION_ICON[action.kind];
   return (
-    <li className={`home-next-card tone-${action.tone}`}>
-      <span className="home-next-icon" aria-hidden="true">
-        <Icon size={16} />
-      </span>
-      <div className="home-next-body">
-        <h3 className="home-next-title">{action.title}</h3>
-        <p className="home-next-desc">{action.description}</p>
-        <button type="button" className="home-next-action" onClick={onRun}>
-          {action.actionLabel} <ArrowRight size={13} aria-hidden="true" />
-        </button>
-      </div>
+    <li className={`home-next-row tone-${action.tone}`}>
+      <button
+        type="button"
+        className="home-next-trigger"
+        onClick={onRun}
+        title={action.description}
+      >
+        <span className="home-next-icon" aria-hidden="true">
+          <Icon size={15} />
+        </span>
+        <span className="home-next-text">
+          <span className="home-next-title">{action.title}</span>
+          <span className="home-next-desc">{action.description}</span>
+        </span>
+        <ArrowRight size={14} aria-hidden="true" className="home-next-arrow" />
+      </button>
     </li>
   );
+}
+
+// ─── Contribution heatmap (the 잔디) ──────────────────────────────────────────
+
+// Show only alternating weekday labels (월/수/금) so the axis stays uncluttered.
+const WEEKDAY_LABELS = ["", "월", "", "수", "", "금", ""];
+
+function ContributionHeatmap({ grid }: { grid: HomeOverview["contributionGrid"] }) {
+  return (
+    <div
+      className="contrib"
+      role="img"
+      aria-label={`최근 ${grid.weekCount}주 작업 활동 · 활동 ${grid.activeDays}일 · 총 ${grid.total}회`}
+    >
+      <div className="contrib-scroll mori-scroll">
+        <div className="contrib-plot">
+          <div className="contrib-months" aria-hidden="true">
+            {grid.weeks.map((_, col) => (
+              <span className="contrib-month" key={col}>
+                {grid.months.find((month) => month.col === col)?.label ?? ""}
+              </span>
+            ))}
+          </div>
+          <div className="contrib-body">
+            <div className="contrib-weekdays" aria-hidden="true">
+              {WEEKDAY_LABELS.map((label, row) => (
+                <span key={row}>{label}</span>
+              ))}
+            </div>
+            <div className="contrib-weeks">
+              {grid.weeks.map((week, col) => (
+                <div className="contrib-week" key={col}>
+                  {week.map((day, row) =>
+                    day.date ? (
+                      <span
+                        key={row}
+                        className={`contrib-cell lvl-${day.level}`}
+                        title={`${formatDayKo(day.date)} · 세션 ${day.count}개`}
+                      />
+                    ) : (
+                      <span key={row} className="contrib-cell is-pad" />
+                    ),
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="contrib-legend" aria-hidden="true">
+        <span>적음</span>
+        <span className="contrib-cell lvl-0" />
+        <span className="contrib-cell lvl-1" />
+        <span className="contrib-cell lvl-2" />
+        <span className="contrib-cell lvl-3" />
+        <span className="contrib-cell lvl-4" />
+        <span>많음</span>
+      </div>
+    </div>
+  );
+}
+
+function formatDayKo(isoDate: string): string {
+  const [, month, day] = isoDate.split("-");
+  return `${Number(month)}월 ${Number(day)}일`;
 }
 
 // ─── Per-session metric gathering ─────────────────────────────────────────────

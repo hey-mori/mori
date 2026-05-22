@@ -1392,6 +1392,16 @@
   border-color: var(--mori-border);
 }
 
+/* ─── Home activity heatmap (dark intensity ramp) ────────────────────────── */
+[data-mori-theme="nightLake"] .contrib-cell.lvl-0 {
+  background: var(--mori-surface-subtle);
+  box-shadow: inset 0 0 0 1px var(--mori-border);
+}
+[data-mori-theme="nightLake"] .contrib-cell.lvl-1 { background: #1c4a30; }
+[data-mori-theme="nightLake"] .contrib-cell.lvl-2 { background: #2a7d4f; }
+[data-mori-theme="nightLake"] .contrib-cell.lvl-3 { background: #3aa566; }
+[data-mori-theme="nightLake"] .contrib-cell.lvl-4 { background: #58d68a; }
+
 /* ─── Drawer / overlay ───────────────────────────────────────────────────── */
 [data-mori-theme="nightLake"] .mori-drawer-content {
   background: var(--mori-surface);
