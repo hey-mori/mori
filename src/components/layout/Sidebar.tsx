@@ -15,10 +15,6 @@ import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import { useMoriProfileStore } from "../../app/profileStore";
 import { useMoriAppStore } from "../../app/store";
 import { getProfileInitials } from "../../lib/profile/localProfile";
-import {
-  describeSessionCardAction,
-  deriveSessionTiming,
-} from "../../lib/session/sessionTiming";
 import { buildWorkContext } from "../../lib/session/workContext";
 import { getFeatureControlProps } from "../../app/featureStatus";
 import {
@@ -144,7 +140,6 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
 function SidebarSessionCard() {
   const draft = useMoriSessionStore((state) => state.draft);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
-  const endSession = useMoriSessionStore((state) => state.endSession);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   const deriveInput = {
@@ -165,10 +160,6 @@ function SidebarSessionCard() {
     return () => window.clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, analysisStatus]);
-
-  const timing = deriveSessionTiming(deriveInput);
-  const endSessionFeature = getFeatureControlProps("appShell.endSession");
-  const action = describeSessionCardAction(timing.state);
 
   return (
     <div className="session-card" role="region" aria-label="현재 작업 컨텍스트">
@@ -198,28 +189,13 @@ function SidebarSessionCard() {
           </time>
         ) : null}
       </span>
-      {action.kind === "endSession" && context.origin === "manual" ? (
-        <Button
-          variant="secondary"
-          disabled={!endSessionFeature.enabled}
-          onClick={endSessionFeature.enabled ? endSession : undefined}
-          title={
-            endSessionFeature.enabled
-              ? "이 작업 세션을 정리하고 완료로 표시합니다."
-              : endSessionFeature.title
-          }
-        >
-          세션 정리
-        </Button>
-      ) : (
-        <Button
-          variant="secondary"
-          onClick={() => setCurrentView("reports")}
-          title="이 세션의 리포트를 엽니다."
-        >
-          리포트 보기
-        </Button>
-      )}
+      <Button
+        variant="secondary"
+        onClick={() => setCurrentView("session")}
+        title="이 세션의 흐름 · 증거 · 인사이트를 엽니다."
+      >
+        세션 열기
+      </Button>
     </div>
   );
 }
