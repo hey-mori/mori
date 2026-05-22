@@ -7,7 +7,6 @@ import {
   HardDrive,
   KeyRound,
   Layers,
-  Link2,
   Maximize2,
   Plus,
   RefreshCw,
@@ -24,7 +23,6 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
@@ -820,13 +818,75 @@ function PreviewPanel({
 
 // ─── small subcomponents ──────────────────────────────────────────────────
 
+/**
+ * Static preview of supported tools, shown when running in the browser
+ * prototype. The grid uses the same card shape as the desktop view so the
+ * user knows visually what an actual connection state will look like once
+ * they install the Tauri app — every card carries a "PC 필요" badge so we
+ * never imply a connection that isn't there.
+ */
+const BROWSER_PREVIEW_TOOLS: Array<{ id: string; label: string; description: string }> = [
+  {
+    id: "claude-projects",
+    label: "Claude Desktop",
+    description: "macOS / Windows 설치 시 자동 감지. 대화 + 프로젝트 메타 가져오기.",
+  },
+  {
+    id: "claude-cli-nodejs",
+    label: "Claude Code",
+    description: "Node CLI 설치 시 ~/.claude 세션을 가져옵니다.",
+  },
+  {
+    id: "codex-cli",
+    label: "Codex CLI",
+    description: "OpenAI Codex CLI 세션 (JSONL) 가져오기.",
+  },
+  {
+    id: "claude-chrome-host",
+    label: "Claude Browser",
+    description: "Chrome native messaging 호스트 감지.",
+  },
+];
+
 function ConnectionsBrowserHelp() {
   return (
-    <EmptyState
-      icon={Link2}
-      title="데스크탑 앱에서만 사용할 수 있는 기능입니다"
-      description="연결 기능은 PC에 저장된 Claude / Codex 파일을 감지합니다. 브라우저 프리뷰에서는 접근할 수 없으니 데스크탑 앱(Tauri)을 실행하세요."
-    />
+    <div className="connections-browser-preview">
+      <section className="connections-section">
+        <header className="connections-section-header">
+          <div>
+            <h2>지원되는 도구</h2>
+          </div>
+          <Badge tone="gray">PC 필요</Badge>
+        </header>
+        <p className="connections-browser-note">
+          연결 기능은 PC에 저장된 Claude · Codex 파일을 감지합니다. 데스크탑 앱(Tauri)을 실행하면 아래 도구들의 상태가 채워집니다.
+        </p>
+        <div className="connections-tools-grid">
+          {BROWSER_PREVIEW_TOOLS.map((tool) => {
+            const Icon = TOOL_ICONS[tool.id] ?? Bot;
+            return (
+              <article
+                key={tool.id}
+                className="connections-tool-card connections-tool-tone-gray is-undetected"
+              >
+                <span className="connections-tool-icon">
+                  <Icon size={15} />
+                </span>
+                <div className="connections-tool-body">
+                  <div className="connections-tool-head">
+                    <strong>{tool.label}</strong>
+                    <span className="connections-tool-status connections-tool-status-muted">
+                      PC 필요
+                    </span>
+                  </div>
+                  <p className="connections-tool-description">{tool.description}</p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </div>
   );
 }
 
