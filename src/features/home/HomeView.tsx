@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
-import { PageHeader } from "../../components/layout/PageHeader";
+import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { Button } from "../../components/ui/Button";
@@ -161,11 +161,10 @@ export function HomeView() {
   return (
     <PageShell
       className="home-page"
-      header={
-        <PageHeader
-          compact
-          title="홈"
-          right={
+      actionBar={
+        <ActionBar
+          label="홈 작업"
+          end={
             <>
               <Button
                 variant="primary"
