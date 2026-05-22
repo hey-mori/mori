@@ -292,7 +292,6 @@ export function ConnectionsView() {
     return (
       <PageShell
         className="connections-page"
-        header={<PageHeader compact title="연결" />}
       >
         <ConnectionsBrowserHelp />
       </PageShell>
@@ -307,17 +306,6 @@ export function ConnectionsView() {
   return (
     <PageShell
       className="connections-page"
-      header={
-        <PageHeader
-          compact
-          title="연결"
-          right={
-            <Button icon={RefreshCw} onClick={handleRefresh}>
-              새로고침
-            </Button>
-          }
-        />
-      }
       actionBar={
         <ActionBar
           label="연결"
@@ -341,6 +329,11 @@ export function ConnectionsView() {
                 </>
               ) : null}
             </>
+          }
+          end={
+            <Button icon={RefreshCw} onClick={handleRefresh}>
+              새로고침
+            </Button>
           }
         />
       }

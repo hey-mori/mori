@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
+import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -162,11 +162,10 @@ export function StartSessionView() {
   return (
     <PageShell
       className="start-session-page"
-      header={
-        <PageHeader
-          compact
-          title="새 세션"
-          right={
+      actionBar={
+        <ActionBar
+          label="새 세션 작업"
+          end={
             <>
               <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
                 연결에서 가져오기
