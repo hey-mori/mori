@@ -406,12 +406,19 @@ export function ReviewView() {
     </>
   );
 
+  // On-demand inspector: the aside only renders once the user has explicitly
+  // selected an issue / decision / next action. First paint stays single-column
+  // so the board itself reads as the focus; clicking a card opens the detail.
+  const showAside = selection !== null;
+
   return (
     <div className="session-tab-pane session-tab-insights">
       <div className="session-tab-actionbar">{actionBar}</div>
-      <div className="session-tab-split">
+      <div
+        className={`session-tab-split${showAside ? "" : " is-collapsed"}`}
+      >
         <div className="session-tab-main">{body}</div>
-        {aside}
+        {showAside ? aside : null}
       </div>
     </div>
   );

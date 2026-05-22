@@ -4413,6 +4413,12 @@ hr {
   min-width: 0;
 }
 
+/* On-demand inspector: when nothing is selected, the aside is dropped and the
+   main column claims the full width so the board / list reads at a glance. */
+.session-tab-split.is-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .session-tab-main {
   display: grid;
   gap: var(--mori-space-8);

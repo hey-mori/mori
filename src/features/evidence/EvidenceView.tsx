@@ -324,12 +324,19 @@ export function EvidenceView() {
     </>
   );
 
+  // On-demand inspector: the aside only renders when the user has selected a
+  // source or an integration. First paint stays single-column so the source
+  // list reads at a glance; clicking a row opens the detail.
+  const showAside = selection.kind !== "empty";
+
   return (
     <div className="session-tab-pane session-tab-evidence">
       <div className="session-tab-actionbar">{actionBar}</div>
-      <div className="session-tab-split">
+      <div
+        className={`session-tab-split${showAside ? "" : " is-collapsed"}`}
+      >
         <div className="session-tab-main">{body}</div>
-        {aside}
+        {showAside ? aside : null}
       </div>
     </div>
   );
