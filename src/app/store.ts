@@ -129,7 +129,10 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   hoveredEventId: null,
   activeFilters: [],
   searchQuery: "",
-  inspectorCollapsed: false,
+  // Default the timeline inspector to collapsed — keeps the workspace
+  // single-column on first paint so a session opens calm. The user expands
+  // it on demand from the toolbar toggle; selecting an event also opens it.
+  inspectorCollapsed: true,
   reviewFocus: null,
   memoryFocus: null,
   reviewTab: "issues",
@@ -139,7 +142,11 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   settingsSheetOpen: false,
   settingsSheetTab: "profile",
   setCurrentView: (currentView) => set({ currentView }),
-  setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
+  // Selecting an event auto-expands the timeline inspector — picking an event
+  // is the exact intent the inspector serves, so the user never has to also
+  // hit the toolbar toggle to actually see what they clicked.
+  setSelectedEventId: (selectedEventId) =>
+    set({ selectedEventId, inspectorCollapsed: false }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
   toggleFilter: (eventType) =>
     set((state) => ({
