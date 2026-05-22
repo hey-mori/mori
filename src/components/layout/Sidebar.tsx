@@ -39,14 +39,20 @@ import type { ViewKey } from "../../domain/types";
  * workspace), and 메모리 (cross-session memory).
  */
 
-/** Product-nav entries. Ordered top-to-bottom; "세션" lights up for every
- *  off-nav session-surface view (timeline / evidence / review / report …). */
+/** Product-nav entries. Ordered top-to-bottom; "세션" lights up only for the
+ *  session-detail and the workspace browser — NOT for new-session / import
+ *  flows, which are reached via the head shortcut buttons and light those up
+ *  instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: moriViewIcon.home ?? House },
   { key: "workspace", label: "세션", icon: moriViewIcon.workspace ?? Layers },
   { key: "memory", label: "메모리", icon: moriViewIcon.memory ?? Layers },
 ];
 
+/** Views that belong *under* the 세션 destination — the session detail's own
+ *  tabs route to these keys, so they should still light up "세션". The
+ *  shortcut-button destinations (start / connections) are deliberately NOT
+ *  in this set — they have their own active indicator on the shortcut. */
 const SESSION_VIEWS = new Set<ViewKey>([
   "workspace",
   "session",
@@ -54,9 +60,7 @@ const SESSION_VIEWS = new Set<ViewKey>([
   "flow",
   "evidence",
   "review",
-  "connections",
   "companion",
-  "start",
 ]);
 
 const MEMORY_VIEWS = new Set<ViewKey>(["memory", "consolidation", "reports"]);
@@ -126,18 +130,20 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
       <div className="sidebar-head" role="group" aria-label="빠른 작업">
         <button
           type="button"
-          className="sidebar-head-action"
+          className={`sidebar-head-action${currentView === "start" ? " is-active" : ""}`}
           onClick={() => setCurrentView("start")}
           aria-label="새 세션"
+          aria-current={currentView === "start" ? "page" : undefined}
           title="새 세션 — 대부분은 가져오기에서 시작합니다."
         >
           <Plus size={15} aria-hidden="true" />
         </button>
         <button
           type="button"
-          className="sidebar-head-action"
+          className={`sidebar-head-action${currentView === "connections" ? " is-active" : ""}`}
           onClick={() => onNavigate("connections")}
           aria-label="가져오기"
+          aria-current={currentView === "connections" ? "page" : undefined}
           title="Claude / Codex / 노트 등 작업 소스를 세션으로 가져옵니다."
         >
           <Download size={15} aria-hidden="true" />

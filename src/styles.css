@@ -195,6 +195,12 @@ button {
   color: var(--text);
 }
 
+.sidebar-head-action.is-active {
+  background: var(--purple-50);
+  border-color: transparent;
+  color: var(--purple);
+}
+
 .sidebar-search {
   display: flex;
   align-items: center;
@@ -10984,16 +10990,14 @@ pre {
 
 /* Project hero */
 
+/* The project hero is a heading section now, not a card. Dropping the
+   border + gradient + shadow keeps the page calm — the real cards below
+   (data-range notice, decision flow, etc.) get to feel intentional rather
+   than card-on-card. */
 .memory-hero {
   display: grid;
   gap: 14px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(98, 70, 245, 0.08), transparent 32%),
-    white;
-  box-shadow: var(--shadow-soft);
+  padding: 4px 0 8px;
 }
 
 .memory-hero-head {
@@ -11048,46 +11052,50 @@ pre {
   }
 }
 
+/* Stat tiles are no longer cards — they read as a calm data strip. The
+   number sits left, the label + hint stack to its right; no background,
+   no border, just enough breathing room and a subtle divider on the left. */
 .memory-hero-stat {
   display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--panel-soft);
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 0 4px 12px;
+  border-left: 2px solid var(--mori-border);
 }
 
 .memory-hero-stat dt {
+  order: 2;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 11.5px;
+  font-weight: 600;
 }
 
 .memory-hero-stat dt svg {
   color: var(--purple);
+  opacity: 0.7;
 }
 
 .memory-hero-stat dd {
+  order: 1;
   margin: 0;
   display: grid;
-  gap: 1px;
 }
 
 .memory-hero-stat strong {
-  font-size: var(--mori-font-size-xl);
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .memory-hero-stat small {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.45;
+  display: none;
 }
 
 /* Data-scope honesty note */
