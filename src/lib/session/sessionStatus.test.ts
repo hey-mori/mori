@@ -6,6 +6,7 @@ import { createStaticMockDataSource } from "./timelineDataSource";
 const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionState => ({
   initialized: true,
   draft: null,
+  pendingNewSession: null,
   imports: [],
   analysis: null,
   analysisStatus: "idle",
@@ -26,6 +27,9 @@ const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionStat
   setDraft: () => {},
   endSession: () => {},
   addImport: () => null,
+  importAsNewSession: () => ({ sessionId: "", candidate: { source: {} as never, events: [] } }),
+  commitPendingNewSession: () => {},
+  abandonPendingNewSessionIfEmpty: () => false,
   removeImport: () => {},
   resetToDemo: () => {},
   runQuickPass: async () => null,

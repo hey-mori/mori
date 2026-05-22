@@ -87,6 +87,11 @@ pub struct SessionRow {
     pub storage_location: String,
     pub selected_source_ids_json: String,
     pub status: String,
+    /// Optional grouping label (e.g. the Claude project path) carried onto
+    /// `Session.sourceLabel`. NULL for manual / pre-import sessions. Added by
+    /// migration V005.
+    #[serde(default)]
+    pub source_label: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

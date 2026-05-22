@@ -58,14 +58,14 @@ export function buildImportReviewSummary(
   return {
     headline:
       acceptedCount > 0
-        ? `${acceptedCount} event${plural(acceptedCount)} ready to apply`
+        ? `${acceptedCount}개 이벤트가 적용 준비되었습니다`
         : pendingCount > 0
-          ? `${pendingCount} event${plural(pendingCount)} still need review`
-          : "No accepted events yet",
+          ? `${pendingCount}개 이벤트가 검토 대기 중입니다`
+          : "수락된 이벤트가 아직 없습니다",
     detail:
       duplicateCount > 0
-        ? "Duplicates are identified before apply; review or include them deliberately."
-        : "Nothing is written to the session until you accept events and apply.",
+        ? "적용 전에 중복이 식별됩니다. 의도적으로 포함하거나 검토 후 결정하세요."
+        : "이벤트를 수락하고 적용하기 전까지 세션에 어떤 것도 기록되지 않습니다.",
     items,
   };
 }
@@ -79,37 +79,37 @@ function buildSourceItem(
     if (summary.status === "invalidOnly") {
       return {
         id: "source",
-        title: "Source state",
+        title: "출처 상태",
         status: "blocked",
-        statusLabel: "Invalid",
-        detail: `${invalidCount} invalid line${plural(invalidCount)} must be fixed before useful events can be reviewed.`,
+        statusLabel: "잘못된 항목",
+        detail: `${invalidCount}개의 잘못된 줄을 먼저 수정해야 유효한 이벤트를 검토할 수 있습니다.`,
       };
     }
     if (summary.status === "duplicateOnly") {
       return {
         id: "source",
-        title: "Source state",
+        title: "출처 상태",
         status: "attention",
-        statusLabel: "Already imported",
-        detail: "This source appears to contain only connector events Mori has already seen.",
+        statusLabel: "이미 가져옴",
+        detail: "이 출처는 Mori가 이미 본 connector 이벤트로만 이루어진 것으로 보입니다.",
       };
     }
     if (summary.status === "partialReimport") {
       return {
         id: "source",
-        title: "Source state",
+        title: "출처 상태",
         status: "attention",
-        statusLabel: "Partial re-import",
-        detail: `${summary.newEventCount} new event${plural(summary.newEventCount)} and ${summary.duplicateEventCount} duplicate event${plural(summary.duplicateEventCount)} were detected.`,
+        statusLabel: "부분 재가져오기",
+        detail: `새 이벤트 ${summary.newEventCount}개와 중복 이벤트 ${summary.duplicateEventCount}개가 감지되었습니다.`,
       };
     }
     if (summary.status === "historyUnavailable") {
       return {
         id: "source",
-        title: "Source state",
+        title: "출처 상태",
         status: "attention",
-        statusLabel: "History partial",
-        detail: "Saved-session history was unavailable, so duplicate detection only covered this session and this file.",
+        statusLabel: "기록 부분 확인",
+        detail: "저장 세션 기록을 사용할 수 없어 현재 세션과 이 파일 내부의 중복만 확인했습니다.",
       };
     }
   }
@@ -117,19 +117,19 @@ function buildSourceItem(
   if (input.eventCount === 0) {
     return {
       id: "source",
-      title: "Source state",
+      title: "출처 상태",
       status: "blocked",
-      statusLabel: "No events",
-      detail: "This import did not produce timeline events to review.",
+      statusLabel: "이벤트 없음",
+      detail: "이 가져오기에서는 검토할 Timeline 이벤트가 생성되지 않았습니다.",
     };
   }
 
   return {
     id: "source",
-    title: "Source state",
+    title: "출처 상태",
     status: "ready",
-    statusLabel: "Reviewable",
-    detail: `${input.eventCount} extracted timeline event${plural(input.eventCount)} are ready for review.`,
+    statusLabel: "검토 가능",
+    detail: `${input.eventCount}개의 Timeline 이벤트가 검토 준비되었습니다.`,
   };
 }
 
@@ -144,32 +144,32 @@ function buildDuplicateItem(
   if (duplicateCount === 0 && included === 0) {
     return {
       id: "duplicates",
-      title: "Duplicate handling",
+      title: "중복 처리",
       status: historyAvailable === false ? "attention" : "ready",
-      statusLabel: historyAvailable === false ? "Limited" : "Clear",
+      statusLabel: historyAvailable === false ? "제한적" : "깨끗",
       detail:
         historyAvailable === false
-          ? "Saved-session history was unavailable; only current-session and in-file duplicates were checked."
-          : "No connector duplicates were detected for this review.",
+          ? "저장 세션 기록을 사용할 수 없어 현재 세션과 이 파일 내부의 중복만 확인했습니다."
+          : "이번 검토에서 connector 중복은 감지되지 않았습니다.",
     };
   }
 
   if (includeDuplicates || included > 0) {
     return {
       id: "duplicates",
-      title: "Duplicate handling",
+      title: "중복 처리",
       status: "attention",
-      statusLabel: "Included",
-      detail: `${included || duplicateCount} duplicate event${plural(included || duplicateCount)} are included because duplicate import was explicitly enabled.`,
+      statusLabel: "포함됨",
+      detail: `중복 가져오기가 명시적으로 활성화되어 ${included || duplicateCount}개의 중복 이벤트가 포함됩니다.`,
     };
   }
 
   return {
     id: "duplicates",
-    title: "Duplicate handling",
+    title: "중복 처리",
     status: "attention",
-    statusLabel: "Skipped",
-    detail: `${duplicateCount} duplicate event${plural(duplicateCount)} will stay out unless you re-import with duplicates included.`,
+    statusLabel: "건너뜀",
+    detail: `${duplicateCount}개의 중복 이벤트는 중복 포함 옵션으로 다시 가져오지 않는 한 제외됩니다.`,
   };
 }
 
@@ -177,27 +177,27 @@ function buildReviewItem(input: ImportReviewSummaryInput): ImportReviewSummaryIt
   if (input.pendingCount > 0) {
     return {
       id: "review",
-      title: "Review progress",
+      title: "검토 진행",
       status: "attention",
-      statusLabel: "Pending",
-      detail: `${input.pendingCount} event${plural(input.pendingCount)} still need accept, edit, or discard.`,
+      statusLabel: "대기 중",
+      detail: `${input.pendingCount}개의 이벤트가 수락 · 편집 · 폐기 결정을 기다리고 있습니다.`,
     };
   }
   if (input.acceptedCount > 0) {
     return {
       id: "review",
-      title: "Review progress",
+      title: "검토 진행",
       status: "ready",
-      statusLabel: "Reviewed",
-      detail: `${input.acceptedCount} accepted and ${input.discardedCount} discarded event${plural(input.discardedCount)}.`,
+      statusLabel: "검토 완료",
+      detail: `수락 ${input.acceptedCount}개 · 폐기 ${input.discardedCount}개로 처리되었습니다.`,
     };
   }
   return {
     id: "review",
-    title: "Review progress",
+    title: "검토 진행",
     status: "waiting",
-    statusLabel: "No accepts",
-    detail: "Accept at least one event before applying this import to the Timeline.",
+    statusLabel: "수락 없음",
+    detail: "Timeline에 적용하기 전에 적어도 1개의 이벤트를 수락하세요.",
   };
 }
 
@@ -205,18 +205,18 @@ function buildApplyItem(input: ImportReviewSummaryInput): ImportReviewSummaryIte
   if (input.acceptedCount === 0) {
     return {
       id: "apply",
-      title: "Apply effect",
+      title: "적용 효과",
       status: "waiting",
-      statusLabel: "Disabled",
-      detail: "Apply stays disabled until at least one event is accepted.",
+      statusLabel: "비활성",
+      detail: "적어도 1개의 이벤트를 수락해야 적용이 활성화됩니다.",
     };
   }
   return {
     id: "apply",
-    title: "Apply effect",
+    title: "적용 효과",
     status: "ready",
-    statusLabel: "Will write",
-    detail: `${input.acceptedCount} accepted event${plural(input.acceptedCount)} will be added to the session Timeline. Issues, decisions, and next actions are derived later by Quick Pass.`,
+    statusLabel: "기록 예정",
+    detail: `수락된 ${input.acceptedCount}개 이벤트가 세션 Timeline에 추가됩니다. 이슈 · 결정 · 다음 액션은 이후 Quick Pass에서 도출됩니다.`,
   };
 }
 
@@ -229,8 +229,4 @@ function getDuplicateCount(input: ImportReviewSummaryInput): number {
     (input.meta?.inBatchDuplicateCount ?? 0);
   if (split > 0) return split;
   return input.meta?.duplicateSkippedCount ?? 0;
-}
-
-function plural(count: number): string {
-  return count === 1 ? "" : "s";
 }

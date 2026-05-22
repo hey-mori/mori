@@ -20,7 +20,7 @@ describe("SQLite persistence foundation", () => {
   it("defines an initial migration covering all normalized Mori tables", () => {
     const sql = getSqliteSchemaSql();
 
-    expect(sqliteMigrations).toHaveLength(4);
+    expect(sqliteMigrations).toHaveLength(5);
     expect(validateMigrationCatalog()).toEqual([]);
     expect(migrationMentionsRequiredTables(sql)).toBe(true);
     expect(sql).toContain(`CREATE TABLE IF NOT EXISTS ${migrationTableName}`);
@@ -28,6 +28,8 @@ describe("SQLite persistence foundation", () => {
     expect(sql).toContain("CREATE VIRTUAL TABLE IF NOT EXISTS sources_fts USING fts5");
     expect(requiredSqliteTables).toContain("relationships");
     expect(sql).toContain("connector_event_id");
+    // V005 adds the optional session grouping label.
+    expect(sql).toContain("ALTER TABLE sessions ADD COLUMN source_label");
   });
 
   it("requires the V003 accepted-memory tables in the schema catalog", () => {
@@ -57,6 +59,7 @@ describe("SQLite persistence foundation", () => {
     expect(sqliteMigrations[1]?.filename).toBe("V002__events_connector_identity.sql");
     expect(sqliteMigrations[2]?.filename).toBe("V003__consolidated_memories.sql");
     expect(sqliteMigrations[3]?.filename).toBe("V004__session_imports.sql");
+    expect(sqliteMigrations[4]?.filename).toBe("V005__session_source_label.sql");
     for (const migration of sqliteMigrations) {
       expect(isValidMigrationFilename(migration.filename)).toBe(true);
     }
@@ -65,6 +68,7 @@ describe("SQLite persistence foundation", () => {
       "002",
       "003",
       "004",
+      "005",
     ]);
   });
 

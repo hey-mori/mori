@@ -57,6 +57,10 @@ CREATE TABLE IF NOT EXISTS session_imports (id TEXT PRIMARY KEY, session_id TEXT
 CREATE INDEX IF NOT EXISTS idx_session_imports_session_id ON session_imports(session_id);
 `;
 
+const sessionSourceLabelSql = String.raw`
+ALTER TABLE sessions ADD COLUMN source_label TEXT;
+`;
+
 export const sqliteMigrations: SqliteMigration[] = [
   {
     version: "001",
@@ -85,6 +89,13 @@ export const sqliteMigrations: SqliteMigration[] = [
     name: "session_imports",
     sql: sessionImportsSql,
     checksum: checksumMigrationSql(sessionImportsSql),
+  },
+  {
+    version: "005",
+    filename: "V005__session_source_label.sql",
+    name: "session_source_label",
+    sql: sessionSourceLabelSql,
+    checksum: checksumMigrationSql(sessionSourceLabelSql),
   },
 ];
 

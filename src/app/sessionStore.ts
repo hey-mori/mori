@@ -20,6 +20,8 @@ import {
   sanitizeQuickPassSettings,
 } from "../lib/analysis";
 import type { NormalizedImportCandidate } from "../lib/import";
+import { createSessionDraft } from "../lib/session/createSessionDraft";
+import { rebindCandidateToSession } from "../lib/claude/claudeImport";
 import { composeSessionView } from "../lib/session/composeSessionView";
 import { withNextActionCompletion } from "../lib/session/nextActionCompletion";
 import {
@@ -58,6 +60,7 @@ import type {
   MoriDraftRepository,
   StoredSessionDraft,
   StoredSessionImport,
+  StoredSessionSummary,
 } from "../lib/storage/storageTypes";
 import type {
   ConnectorImportHistorySavedSession,
@@ -77,6 +80,13 @@ export type SessionViewModel = MoriMockSession & {
 export type MoriSessionState = {
   initialized: boolean;
   draft: StoredSessionDraft | null;
+  /**
+   * Bookkeeping for a session created via `importAsNewSession` whose Import
+   * Review is still open. Lets a cancelled review discard the empty session
+   * and restore the previously-active one. Cleared once the review is
+   * applied (`commitPendingNewSession`) or abandoned.
+   */
+  pendingNewSession: { sessionId: string; previousSessionId: string | null } | null;
   imports: StoredSessionImport[];
   analysis: MoriAnalysisResult | null;
   analysisStatus: MoriAnalysisStatus;
@@ -108,6 +118,40 @@ export type MoriSessionState = {
     candidate: NormalizedImportCandidate,
     options?: { importSummary?: ConnectorSourceImportSummary },
   ) => StoredSessionImport | null;
+  /**
+   * Create a brand-new Mori session from an external import and switch to
+   * it — the "1 Claude conversation = 1 Mori session" entry point. The
+   * candidate is re-bound to the new session id and the session is
+   * persisted (browser localStorage today; desktop SQLite saves on apply
+   * via the normal path). The import itself is NOT committed here — it
+   * flows through Import Review like every other import, so the new
+   * session starts empty until the user applies. `previousSessionId` (the
+   * session that was active before) is tracked so a cancelled review can
+   * discard the empty session and restore the prior one.
+   */
+  importAsNewSession: (params: {
+    candidate: NormalizedImportCandidate;
+    title: string;
+    startedAt: string;
+    endedAt: string;
+    projectLabel?: string;
+  }) => { sessionId: string; candidate: NormalizedImportCandidate };
+  /**
+   * Mark the pending new session (created by `importAsNewSession`) as
+   * committed — called when an Import Review for it is applied. Clears the
+   * cleanup bookkeeping so a later cancel won't delete a session that now
+   * holds applied work.
+   */
+  commitPendingNewSession: () => void;
+  /**
+   * Discard the pending new session if it never received an applied import
+   * — called when an Import Review for a freshly-created session is
+   * cancelled. Deletes the empty session and switches back to the session
+   * that was active before. A no-op when there is no pending new session or
+   * when it already holds imports. Returns `true` when a session was
+   * discarded.
+   */
+  abandonPendingNewSessionIfEmpty: () => boolean;
   removeImport: (importId: string) => void;
   resetToDemo: () => void;
   runQuickPass: (provider?: MoriAnalysisProvider) => Promise<MoriAnalysisResult | null>;
@@ -234,6 +278,7 @@ export function setSessionPersistenceServiceForSessionStore(service: SessionPers
 export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   initialized: false,
   draft: null,
+  pendingNewSession: null,
   imports: [],
   analysis: null,
   analysisStatus: "idle",
@@ -346,6 +391,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisFallbackUsed: false,
       initialized: true,
       source: "browser-draft",
+      pendingNewSession: null,
     });
   },
   endSession: () => {
@@ -371,6 +417,120 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     set({ imports: repository.listSessionImports(draft.session.id) });
     return stored;
   },
+  importAsNewSession: (params) => {
+    const repository = getRepository();
+    const previous = get().draft;
+    const now = new Date().toISOString();
+
+    // Reuse the active local project so multi-project stays out of scope.
+    // First-run (demo, no draft) falls back to the conversation's project
+    // label or a neutral name; createSessionDraft mints a project id.
+    const projectName =
+      previous?.project.name ?? params.projectLabel ?? "Claude 가져오기";
+
+    const built = createSessionDraft({
+      sessionTitle: params.title.trim() || "제목 없는 Claude 대화",
+      projectName,
+      selectedSources: [],
+      recordingMode: previous?.session.recordingMode ?? "summary",
+      llmProvider: previous?.session.llmProvider ?? "ollama",
+      llmModel: previous?.session.llmModel ?? "llama3.1:8b",
+      storageLocation: previous?.session.storageLocation ?? "browser:localStorage",
+      now,
+      startedAt: params.startedAt,
+      endedAt: params.endedAt,
+      sourceLabel: params.projectLabel,
+      // A finished Claude conversation is not a live recording.
+      status: "complete",
+    });
+
+    // Keep the new session inside the existing project when one is active so
+    // the imported events stay associated with the same project memory.
+    const session = previous
+      ? { ...built.session, projectId: previous.project.id }
+      : built.session;
+    const project = previous?.project ?? built.project;
+
+    const stored = repository.saveCurrentSessionDraft({ project, session });
+
+    const reboundCandidate = rebindCandidateToSession(params.candidate, {
+      sessionId: stored.session.id,
+      projectId: stored.project.id,
+    });
+
+    set({
+      draft: stored,
+      imports: repository.listSessionImports(stored.session.id),
+      analysis: null,
+      analysisStatus: "idle",
+      analysisError: null,
+      analysisProviderLabel: null,
+      analysisFallbackUsed: false,
+      initialized: true,
+      source: "browser-draft",
+      pendingNewSession: {
+        sessionId: stored.session.id,
+        previousSessionId: previous?.session.id ?? null,
+      },
+    });
+
+    return { sessionId: stored.session.id, candidate: reboundCandidate };
+  },
+  commitPendingNewSession: () => {
+    if (!get().pendingNewSession) return;
+    set({ pendingNewSession: null });
+  },
+  abandonPendingNewSessionIfEmpty: () => {
+    const pending = get().pendingNewSession;
+    if (!pending) return false;
+
+    const repository = getRepository();
+    // Only discard a session that never received an applied import. If the
+    // user applied something the session is real work — leave it.
+    const imports = repository.listSessionImports(pending.sessionId);
+    if (imports.length > 0) {
+      set({ pendingNewSession: null });
+      return false;
+    }
+
+    repository.clearStoredSession(pending.sessionId);
+
+    // Restore the previously-active session when there was one; otherwise
+    // fall back to demo so the shell never points at a deleted session.
+    if (pending.previousSessionId) {
+      const restored = repository.setCurrentSession(pending.previousSessionId);
+      if (restored) {
+        const restoredImports = repository.listSessionImports(restored.session.id);
+        const restoredAnalysis = repository.loadSessionAnalysis(restored.session.id);
+        set({
+          draft: restored,
+          imports: restoredImports,
+          analysis: restoredAnalysis?.result ?? null,
+          analysisStatus: restoredAnalysis ? "succeeded" : "idle",
+          analysisError: null,
+          analysisProviderLabel: restoredAnalysis?.result.providerLabel ?? null,
+          analysisFallbackUsed: false,
+          source: "browser-draft",
+          pendingNewSession: null,
+        });
+        return true;
+      }
+    }
+
+    repository.clearCurrentSessionDraft();
+    set({
+      draft: null,
+      imports: [],
+      analysis: null,
+      analysisStatus: "idle",
+      analysisError: null,
+      analysisProviderLabel: null,
+      analysisFallbackUsed: false,
+      source: "demo",
+      pendingNewSession: null,
+    });
+    return true;
+  },
   removeImport: (importId) => {
     const repository = getRepository();
     const draft = get().draft;
@@ -390,6 +550,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisProviderLabel: null,
       analysisFallbackUsed: false,
       source: "demo",
+      pendingNewSession: null,
     });
   },
   runQuickPass: async (provider) => {
@@ -753,6 +914,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisFallbackUsed: false,
       initialized: true,
       source: "browser-draft",
+      pendingNewSession: null,
     });
     return true;
   },
@@ -794,6 +956,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisFallbackUsed: false,
       initialized: true,
       source: "desktop-sqlite",
+      pendingNewSession: null,
     });
     return true;
   },
@@ -862,6 +1025,17 @@ export function loadConnectorImportHistorySavedSessions(options: {
   const repository = getRepository();
   const snapshots = repository.listConnectorEventIdentitySnapshots(options);
   return snapshots.map((snapshot) => savedSessionFromSnapshot(snapshot));
+}
+
+/**
+ * List every locally-persisted session summary, most-recent first. Used by
+ * the sidebar session switcher to offer one-click switching between the
+ * "1 Claude conversation = 1 session" sessions. Works in both runtimes —
+ * desktop hydrate mirrors SQLite sessions into localStorage, so the browser
+ * adapter is the single source of truth for the switcher list.
+ */
+export function loadStoredSessionSummaries(): StoredSessionSummary[] {
+  return getRepository().listStoredSessions();
 }
 
 /**

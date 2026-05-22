@@ -1,5 +1,5 @@
-import { ArrowLeft, CheckCheck, ListChecks, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, CheckCheck, ListChecks, Sparkles, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { useMoriSessionStore } from "../../app/sessionStore";
@@ -40,11 +40,18 @@ export function ImportReviewView() {
   const apply = useMoriReviewStore((state) => state.apply);
   const cancel = useMoriReviewStore((state) => state.cancel);
   const addImport = useMoriSessionStore((state) => state.addImport);
+  const commitPendingNewSession = useMoriSessionStore(
+    (state) => state.commitPendingNewSession,
+  );
+  const abandonPendingNewSessionIfEmpty = useMoriSessionStore(
+    (state) => state.abandonPendingNewSessionIfEmpty,
+  );
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
 
   const [statusBanner, setStatusBanner] = useState<
     { tone: "error" | "info"; message: string } | null
   >(null);
+  const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
 
   if (!draft) {
     // EvidenceView guards this, but keep a sane fallback for safety.
@@ -60,6 +67,14 @@ export function ImportReviewView() {
     pendingCount: counts.pending,
     meta: draftMeta,
   });
+
+  // Bulk-accept is only meaningful for Claude / Claude Code transcripts:
+  // the AI already produced a single observed-trust summary turn per
+  // exchange, and the user just wants to ingest the whole conversation.
+  // For connector JSONL or manual notes we keep per-event review on so
+  // the user can actually inspect what's being written.
+  const isAiTranscript = draft.origin === "ai-transcript";
+  const hasPendingEvents = counts.pending > 0;
 
   function handleApply() {
     if (!draft) return;
@@ -78,12 +93,23 @@ export function ImportReviewView() {
       setStatusBanner({ tone: "error", message: outcome.reason });
       return;
     }
+    // Applied work means a pending import-created session is now real — keep
+    // it and clear the empty-session cleanup bookkeeping.
+    commitPendingNewSession();
+  }
+
+  function handleCancel() {
+    cancel();
+    // If this review was for a freshly-created import session and nothing
+    // was applied, discard the empty session and restore the prior one so
+    // we never leave an empty "제목 없는 세션" behind.
+    abandonPendingNewSessionIfEmpty();
   }
 
   return (
     <div className="page review-page">
       <header className="review-header">
-        <Button icon={ArrowLeft} onClick={cancel}>
+        <Button icon={ArrowLeft} onClick={handleCancel}>
           Evidence로 돌아가기
         </Button>
         <div className="review-header-title">
@@ -106,6 +132,13 @@ export function ImportReviewView() {
       ) : null}
 
       <ImportReviewSummaryPanel summary={reviewSummary} />
+
+      {isAiTranscript && hasPendingEvents && draft.events.length > 0 ? (
+        <BulkAcceptCallout
+          eventCount={draft.events.length}
+          onAccept={() => setConfirmBulkOpen(true)}
+        />
+      ) : null}
 
       <div className="review-layout">
         <SourceSummaryCard source={draft.source} />
@@ -160,8 +193,99 @@ export function ImportReviewView() {
         applyable={applyable}
         draft={draft}
         onApply={handleApply}
-        onCancel={cancel}
+        onCancel={handleCancel}
       />
+
+      <BulkAcceptConfirm
+        open={confirmBulkOpen}
+        eventCount={draft.events.length}
+        onCancel={() => setConfirmBulkOpen(false)}
+        onConfirm={() => {
+          setAllStatus("accepted");
+          setConfirmBulkOpen(false);
+        }}
+      />
+    </div>
+  );
+}
+
+function BulkAcceptCallout({
+  eventCount,
+  onAccept,
+}: {
+  eventCount: number;
+  onAccept: () => void;
+}) {
+  return (
+    <section className="review-bulk-accept" role="region" aria-label="Claude 대화 전체 수락">
+      <div className="review-bulk-accept-copy">
+        <span className="review-bulk-accept-kicker">
+          <Sparkles size={14} aria-hidden="true" />
+          Claude 대화
+        </span>
+        <strong>{eventCount}개 이벤트를 한 번에 수락할 수 있습니다.</strong>
+        <p>
+          AI 대화에서 추출된 항목입니다. 한 항목씩 검토하는 대신 전체를 일괄 수락하고
+          적용한 뒤, Quick Pass로 이슈 · 결정 · 액션을 추출하는 것이 일반적인 흐름입니다.
+        </p>
+      </div>
+      <Button variant="primary" icon={CheckCheck} onClick={onAccept}>
+        Claude 대화 전체 수락
+      </Button>
+    </section>
+  );
+}
+
+function BulkAcceptConfirm({
+  open,
+  eventCount,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  eventCount: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  if (!open) return null;
+  return (
+    <div className="review-confirm-modal" role="dialog" aria-modal="true" aria-label="전체 수락 확인">
+      <div className="review-confirm-scrim" onClick={onCancel} aria-hidden="true" />
+      <div className="review-confirm-panel">
+        <header className="review-confirm-head">
+          <h2>전체 수락하시겠습니까?</h2>
+          <button
+            type="button"
+            className="review-confirm-close"
+            aria-label="닫기"
+            onClick={onCancel}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </header>
+        <p>
+          {eventCount}개 이벤트를 모두 수락합니다. AI 출처에서 가져온 항목은 검증된
+          데이터(observed)로 표시됩니다.
+        </p>
+        <p className="review-confirm-secondary">
+          적용한 뒤 Quick Pass를 실행하면 이슈 · 결정 · 다음 액션을 추출할 수 있습니다.
+        </p>
+        <footer className="review-confirm-actions">
+          <Button onClick={onCancel}>취소</Button>
+          <Button variant="primary" icon={CheckCheck} onClick={onConfirm}>
+            전체 수락
+          </Button>
+        </footer>
+      </div>
     </div>
   );
 }

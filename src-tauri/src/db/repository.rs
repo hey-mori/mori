@@ -122,7 +122,7 @@ fn upsert_projects(tx: &rusqlite::Transaction<'_>, rows: &[ProjectRow]) -> Resul
 fn upsert_sessions(tx: &rusqlite::Transaction<'_>, rows: &[SessionRow]) -> Result<(), String> {
     let mut stmt = tx
         .prepare(
-            "INSERT INTO sessions (id, project_id, title, started_at, ended_at, recording_mode,\n  llm_provider, llm_model, storage_location, selected_source_ids_json, status, created_at, updated_at)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)\nON CONFLICT(id) DO UPDATE SET\n  project_id = excluded.project_id,\n  title = excluded.title,\n  started_at = excluded.started_at,\n  ended_at = excluded.ended_at,\n  recording_mode = excluded.recording_mode,\n  llm_provider = excluded.llm_provider,\n  llm_model = excluded.llm_model,\n  storage_location = excluded.storage_location,\n  selected_source_ids_json = excluded.selected_source_ids_json,\n  status = excluded.status,\n  updated_at = excluded.updated_at",
+            "INSERT INTO sessions (id, project_id, title, started_at, ended_at, recording_mode,\n  llm_provider, llm_model, storage_location, selected_source_ids_json, status, source_label, created_at, updated_at)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)\nON CONFLICT(id) DO UPDATE SET\n  project_id = excluded.project_id,\n  title = excluded.title,\n  started_at = excluded.started_at,\n  ended_at = excluded.ended_at,\n  recording_mode = excluded.recording_mode,\n  llm_provider = excluded.llm_provider,\n  llm_model = excluded.llm_model,\n  storage_location = excluded.storage_location,\n  selected_source_ids_json = excluded.selected_source_ids_json,\n  status = excluded.status,\n  source_label = excluded.source_label,\n  updated_at = excluded.updated_at",
         )
         .map_err(|error| error.to_string())?;
     for row in rows {
@@ -138,6 +138,7 @@ fn upsert_sessions(tx: &rusqlite::Transaction<'_>, rows: &[SessionRow]) -> Resul
             row.storage_location,
             row.selected_source_ids_json,
             row.status,
+            row.source_label,
             row.created_at,
             row.updated_at,
         ])
@@ -433,7 +434,7 @@ fn load_project(conn: &Connection, project_id: &str) -> Result<ProjectRow, Strin
 
 fn load_session(conn: &Connection, session_id: &str) -> Result<SessionRow, String> {
     conn.query_row(
-        "SELECT id, project_id, title, started_at, ended_at, recording_mode, llm_provider, llm_model, storage_location, selected_source_ids_json, status, created_at, updated_at FROM sessions WHERE id = ?1",
+        "SELECT id, project_id, title, started_at, ended_at, recording_mode, llm_provider, llm_model, storage_location, selected_source_ids_json, status, source_label, created_at, updated_at FROM sessions WHERE id = ?1",
         params![session_id],
         |row| {
             Ok(SessionRow {
@@ -448,8 +449,9 @@ fn load_session(conn: &Connection, session_id: &str) -> Result<SessionRow, Strin
                 storage_location: row.get(8)?,
                 selected_source_ids_json: row.get(9)?,
                 status: row.get(10)?,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
+                source_label: row.get(11)?,
+                created_at: row.get(12)?,
+                updated_at: row.get(13)?,
             })
         },
     )
@@ -721,6 +723,7 @@ mod tests {
                 storage_location: "~/Mori/Records".into(),
                 selected_source_ids_json: "[]".into(),
                 status: "recording".into(),
+                source_label: Some("C:/dev/mori".into()),
                 created_at: "2026-05-12T13:00:00Z".into(),
                 updated_at: "2026-05-12T13:00:00Z".into(),
             }],
@@ -782,6 +785,11 @@ mod tests {
         assert_eq!(loaded.events[0].id, "evt-1");
         assert_eq!(loaded.sources[0].title, "Kickoff");
         assert_eq!(loaded.projects[0].name, "Repo Test");
+        // V005: the optional session grouping label survives the round trip.
+        assert_eq!(
+            loaded.sessions[0].source_label.as_deref(),
+            Some("C:/dev/mori")
+        );
     }
 
     #[test]

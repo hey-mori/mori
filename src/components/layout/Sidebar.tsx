@@ -1,11 +1,17 @@
-import { ChevronLeft } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronLeft, FolderGit2, History } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/Button";
 import { MoriLogo } from "../brand/MoriLogo";
 import { moriViewIcon } from "../brand/moriIcons";
 import type { ViewKey } from "../../domain/types";
 import { moriMockSession } from "../../domain/mock-data";
-import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
+import {
+  loadStoredSessionSummaries,
+  selectSessionSource,
+  selectSessionView,
+  useMoriSessionStore,
+} from "../../app/sessionStore";
+import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import { useMoriProfileStore } from "../../app/profileStore";
 import { useMoriAppStore } from "../../app/store";
 import { getProfileInitials } from "../../lib/profile/localProfile";
@@ -14,6 +20,10 @@ import {
   deriveSessionTiming,
 } from "../../lib/session/sessionTiming";
 import { getFeatureControlProps } from "../../app/featureStatus";
+import {
+  discoverClaudeCodeSessions,
+  isClaudeBridgeAvailable,
+} from "../../lib/claude/claudeTauri";
 
 type NavKey = keyof typeof moriViewIcon;
 type NavItem = { key: NavKey; label: string; badge?: string };
@@ -35,6 +45,7 @@ const BASE_NAV_GROUPS: Array<{ label?: string; items: NavItem[] }> = [
     items: [
       { key: "timeline", label: "타임라인" },
       { key: "evidence", label: "증거 허브" },
+      { key: "connections", label: "연결" },
       { key: "review", label: "검토" },
       { key: "reports", label: "보고서" },
     ],
@@ -53,6 +64,7 @@ const BASE_NAV_GROUPS: Array<{ label?: string; items: NavItem[] }> = [
 export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onNavigate: (view: ViewKey) => void }) {
   const view = useMoriSessionStore(selectSessionView);
   const imports = useMoriSessionStore((state) => state.imports);
+  const connectionsCount = useConnectionsBadgeCount();
 
   const isActive = (key: ViewKey) =>
     key === currentView ||
@@ -73,8 +85,11 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
     if (openIssues > 0) {
       badges.review = String(openIssues);
     }
+    if (connectionsCount !== null && connectionsCount > 0) {
+      badges.connections = String(connectionsCount);
+    }
     return badges;
-  }, [view.events.length, view.issues, imports.length]);
+  }, [view.events.length, view.issues, imports.length, connectionsCount]);
 
   return (
     <aside className="sidebar">
@@ -111,6 +126,7 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
         ))}
       </nav>
       <SidebarSessionCard />
+      <SidebarSessionSwitcher onNavigate={onNavigate} />
       <SidebarProfile currentView={currentView} onNavigate={onNavigate} />
       <SidebarCollapseButton />
     </aside>
@@ -188,6 +204,173 @@ function SidebarSessionCard() {
   );
 }
 
+const SWITCHER_VISIBLE_LIMIT = 6;
+const OTHER_SESSIONS_LABEL = "기타 세션";
+
+type SessionGroup = { label: string; sessions: StoredSessionSummary[] };
+
+/**
+ * Session switcher under the active-session card. Under the "1 Claude
+ * conversation = 1 Mori session" model the user accumulates many small
+ * sessions, so the sidebar offers one-click switching between them, grouped
+ * by their Claude project (`sourceLabel`). Collapsed by default to keep the
+ * shell quiet; shows the most recent few with a "전체 보기" escape hatch into
+ * the Workspace.
+ */
+function SidebarSessionSwitcher({ onNavigate }: { onNavigate: (view: ViewKey) => void }) {
+  const activeSessionId = useMoriSessionStore((state) => state.draft?.session.id ?? null);
+  const source = useMoriSessionStore(selectSessionSource);
+  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
+  const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
+
+  const [open, setOpen] = useState(false);
+  const [sessions, setSessions] = useState<StoredSessionSummary[]>([]);
+
+  const refresh = useCallback(() => {
+    try {
+      setSessions(loadStoredSessionSummaries());
+    } catch {
+      // A switcher must never break the shell — fail closed to an empty list.
+      setSessions([]);
+    }
+  }, []);
+
+  // Reload the list whenever the panel opens or the active session changes
+  // (a switch / new import should be reflected without a manual refresh).
+  useEffect(() => {
+    if (open) refresh();
+  }, [open, activeSessionId, refresh]);
+
+  const isDesktop = source === "desktop-sqlite";
+
+  const handleSwitch = useCallback(
+    (sessionId: string) => {
+      if (sessionId === activeSessionId) return;
+      if (isDesktop) {
+        void loadDesktopSession(sessionId).then((ok) => {
+          // Fall back to the browser draft mirror when SQLite has no row.
+          if (!ok) loadBrowserSession(sessionId);
+        });
+      } else {
+        loadBrowserSession(sessionId);
+      }
+    },
+    [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession],
+  );
+
+  const visible = sessions.slice(0, SWITCHER_VISIBLE_LIMIT);
+  const groups = groupSessionsBySource(visible);
+  const hasMore = sessions.length > visible.length;
+
+  // Nothing to switch to (only the active session, or none): keep the
+  // sidebar clean and render nothing.
+  if (sessions.length <= 1) return null;
+
+  return (
+    <div className="session-switcher" data-open={open}>
+      <button
+        type="button"
+        className="session-switcher-toggle"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+      >
+        <History size={14} aria-hidden="true" />
+        <span>세션 전환</span>
+        <b>{sessions.length}</b>
+        <ChevronDown
+          size={14}
+          aria-hidden="true"
+          className={`session-switcher-chevron${open ? " is-open" : ""}`}
+        />
+      </button>
+      {open ? (
+        <div className="session-switcher-body mori-scroll">
+          {groups.map((group) => (
+            <div key={group.label} className="session-switcher-group">
+              <p className="session-switcher-group-label" title={group.label}>
+                <FolderGit2 size={12} aria-hidden="true" />
+                <span>{group.label}</span>
+              </p>
+              <ul>
+                {group.sessions.map((session) => {
+                  const active = session.sessionId === activeSessionId;
+                  return (
+                    <li key={session.sessionId}>
+                      <button
+                        type="button"
+                        className={`session-switcher-item${active ? " is-active" : ""}`}
+                        onClick={() => handleSwitch(session.sessionId)}
+                        aria-current={active ? "true" : undefined}
+                        title={session.title}
+                      >
+                        <span className="session-switcher-item-title">{session.title}</span>
+                        <span className="session-switcher-item-time">
+                          {formatRelativeKo(session.startedAt || session.savedAt)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+          {hasMore ? (
+            <button
+              type="button"
+              className="session-switcher-all"
+              onClick={() => onNavigate("workspace")}
+            >
+              전체 세션 보기 ({sessions.length})
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Group session summaries by their Claude project label, preserving the
+ * most-recent-first order within each group. Sessions without a label fall
+ * into a single trailing "기타 세션" bucket so manual / pre-import sessions
+ * still appear.
+ */
+function groupSessionsBySource(sessions: StoredSessionSummary[]): SessionGroup[] {
+  const order: string[] = [];
+  const map = new Map<string, StoredSessionSummary[]>();
+  for (const session of sessions) {
+    const label = session.sourceLabel?.trim() || OTHER_SESSIONS_LABEL;
+    if (!map.has(label)) {
+      map.set(label, []);
+      order.push(label);
+    }
+    map.get(label)!.push(session);
+  }
+  // Keep the labelled groups first, the catch-all bucket last.
+  order.sort((a, b) => {
+    if (a === OTHER_SESSIONS_LABEL) return 1;
+    if (b === OTHER_SESSIONS_LABEL) return -1;
+    return 0;
+  });
+  return order.map((label) => ({ label, sessions: map.get(label)! }));
+}
+
+/** Compact Korean relative-time label for the switcher rows. */
+function formatRelativeKo(iso: string, now: number = Date.now()): string {
+  const epoch = new Date(iso).getTime();
+  if (Number.isNaN(epoch)) return "";
+  const diff = now - epoch;
+  if (diff < 0) return new Date(epoch).toLocaleDateString();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "방금";
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}일 전`;
+  return new Date(epoch).toLocaleDateString();
+}
+
 function SidebarProfile({
   currentView,
   onNavigate,
@@ -226,4 +409,35 @@ function SidebarCollapseButton() {
       <ChevronLeft size={18} />
     </button>
   );
+}
+
+/**
+ * One-shot session count for the Connections nav badge. The Connections
+ * page already calls discovery on mount; we replicate a single read here
+ * so the sidebar can hint how many Claude sessions are importable without
+ * forcing the user to open the page first. Failures are swallowed — a
+ * sidebar badge must never break the shell.
+ */
+function useConnectionsBadgeCount(): number | null {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isClaudeBridgeAvailable()) {
+      setCount(null);
+      return;
+    }
+    let cancelled = false;
+    discoverClaudeCodeSessions()
+      .then((sessions) => {
+        if (cancelled) return;
+        setCount(sessions.length);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCount(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return count;
 }

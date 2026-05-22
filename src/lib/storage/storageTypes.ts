@@ -34,6 +34,17 @@ export type StoredSessionSummary = {
   projectName: string;
   savedAt: string;
   status: Session["status"];
+  /**
+   * Session window start (ISO). Surfaced so the sidebar session switcher can
+   * show a relative time without loading the full draft. Optional — callers
+   * fall back to `savedAt` for older records / fixtures that omit it.
+   */
+  startedAt?: string;
+  /**
+   * Optional grouping label (e.g. Claude project path) — drives the
+   * sidebar switcher's group headers. Undefined for manual sessions.
+   */
+  sourceLabel?: string;
 };
 
 export type StoredSessionImport = {

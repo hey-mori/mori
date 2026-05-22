@@ -43,6 +43,12 @@ pub const MIGRATIONS: &[MigrationManifestEntry] = &[
         name: "session_imports",
         sql: include_str!("../../migrations/V004__session_imports.sql"),
     },
+    MigrationManifestEntry {
+        version: "005",
+        filename: "V005__session_source_label.sql",
+        name: "session_source_label",
+        sql: include_str!("../../migrations/V005__session_source_label.sql"),
+    },
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -215,17 +221,19 @@ mod tests {
                 "001".to_string(),
                 "002".to_string(),
                 "003".to_string(),
-                "004".to_string()
+                "004".to_string(),
+                "005".to_string()
             ]
         );
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 4);
+        assert_eq!(applied.len(), 5);
         assert_eq!(applied[0].version, "001");
         assert_eq!(applied[1].version, "002");
         assert_eq!(applied[2].version, "003");
         assert_eq!(applied[3].version, "004");
+        assert_eq!(applied[4].version, "005");
         for record in &applied {
             assert!(!record.checksum.is_empty());
         }
@@ -243,7 +251,8 @@ mod tests {
                 "001".to_string(),
                 "002".to_string(),
                 "003".to_string(),
-                "004".to_string()
+                "004".to_string(),
+                "005".to_string()
             ]
         );
     }

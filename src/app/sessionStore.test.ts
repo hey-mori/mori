@@ -7,6 +7,8 @@ import {
 } from "./sessionStore";
 import { createSessionDraft } from "../lib/session/createSessionDraft";
 import { normalizeManualNote } from "../lib/import";
+import { buildImportCandidateFromClaudeCodeSession } from "../lib/claude/claudeImport";
+import type { ClaudeCodeSessionDetail } from "../lib/claude/types";
 import { BrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import { MemoryKeyValueStorage } from "../lib/storage/memoryStorage";
 import type { MoriAnalysisProvider, MoriAnalysisResult } from "../lib/analysis";
@@ -62,6 +64,7 @@ function resetStore() {
   useMoriSessionStore.setState({
     initialized: false,
     draft: null,
+    pendingNewSession: null,
     imports: [],
     analysis: null,
     analysisStatus: "idle",
@@ -334,6 +337,153 @@ describe("useMoriSessionStore loadBrowserSession", () => {
     expect(opened).toBe(false);
     expect(useMoriSessionStore.getState().source).toBe("demo");
     expect(useMoriSessionStore.getState().draft).toBeNull();
+  });
+});
+
+describe("useMoriSessionStore importAsNewSession", () => {
+  let repository: BrowserDraftRepository;
+
+  beforeEach(() => {
+    repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  function claudeDetail(): ClaudeCodeSessionDetail {
+    return {
+      sessionId: "claude-abc",
+      projectPath: "C--dev-mori",
+      projectName: "C:/dev/mori",
+      filePath: "/x/claude-abc.jsonl",
+      startedAt: "2026-05-20T12:00:00Z",
+      messageCount: 2,
+      title: "Wire the Connections page",
+      messages: [
+        { id: "m1", role: "human", content: "Wire it up", createdAt: "2026-05-20T12:00:00Z" },
+        { id: "m2", role: "assistant", content: "Done.", createdAt: "2026-05-20T12:30:00Z" },
+      ],
+    };
+  }
+
+  function buildCandidate() {
+    return buildImportCandidateFromClaudeCodeSession(claudeDetail(), {
+      projectId: "placeholder-proj",
+      sessionId: "placeholder-sess",
+      capturedAt: fixedNow,
+    });
+  }
+
+  it("creates and switches to a fresh empty session carrying the source label", () => {
+    const candidate = buildCandidate();
+    const { sessionId, candidate: rebound } = useMoriSessionStore.getState().importAsNewSession({
+      candidate,
+      title: "Wire the Connections page",
+      startedAt: "2026-05-20T12:00:00Z",
+      endedAt: "2026-05-20T12:30:00Z",
+      projectLabel: "C:/dev/mori",
+    });
+
+    const state = useMoriSessionStore.getState();
+    expect(state.draft?.session.id).toBe(sessionId);
+    expect(state.draft?.session.title).toBe("Wire the Connections page");
+    expect(state.draft?.session.sourceLabel).toBe("C:/dev/mori");
+    expect(state.draft?.session.startedAt).toBe("2026-05-20T12:00:00Z");
+    expect(state.draft?.session.endedAt).toBe("2026-05-20T12:30:00Z");
+    expect(state.draft?.session.status).toBe("complete");
+    // The new session starts empty — the import is not committed yet.
+    expect(state.imports).toHaveLength(0);
+    expect(state.pendingNewSession?.sessionId).toBe(sessionId);
+    // The returned candidate is re-bound to the real session id.
+    expect(rebound.source.sessionId).toBe(sessionId);
+    expect(rebound.events.every((event) => event.sessionId === sessionId)).toBe(true);
+    // The summary list surfaces the new session with its label.
+    const summary = repository.listStoredSessions().find((s) => s.sessionId === sessionId);
+    expect(summary?.sourceLabel).toBe("C:/dev/mori");
+  });
+
+  it("discards the empty pending session on cancel and restores the previous one", () => {
+    // Seed a prior active session.
+    const prior = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Prior session",
+        projectName: "Mori",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "browser:localStorage",
+        now: fixedNow,
+      }),
+    );
+    useMoriSessionStore.getState().loadBrowserSession(prior.session.id);
+
+    const { sessionId } = useMoriSessionStore.getState().importAsNewSession({
+      candidate: buildCandidate(),
+      title: "Wire the Connections page",
+      startedAt: "2026-05-20T12:00:00Z",
+      endedAt: "2026-05-20T12:30:00Z",
+      projectLabel: "C:/dev/mori",
+    });
+    expect(useMoriSessionStore.getState().draft?.session.id).toBe(sessionId);
+
+    const discarded = useMoriSessionStore.getState().abandonPendingNewSessionIfEmpty();
+
+    expect(discarded).toBe(true);
+    const state = useMoriSessionStore.getState();
+    expect(state.draft?.session.id).toBe(prior.session.id);
+    expect(state.pendingNewSession).toBeNull();
+    // The empty session is gone from storage.
+    expect(
+      repository.listStoredSessions().some((s) => s.sessionId === sessionId),
+    ).toBe(false);
+  });
+
+  it("keeps the session and clears bookkeeping once an import is applied", () => {
+    const { sessionId, candidate: rebound } = useMoriSessionStore.getState().importAsNewSession({
+      candidate: buildCandidate(),
+      title: "Wire the Connections page",
+      startedAt: "2026-05-20T12:00:00Z",
+      endedAt: "2026-05-20T12:30:00Z",
+      projectLabel: "C:/dev/mori",
+    });
+
+    // Simulate Import Review apply committing the accepted candidate.
+    useMoriSessionStore.getState().addImport(rebound);
+    useMoriSessionStore.getState().commitPendingNewSession();
+
+    expect(useMoriSessionStore.getState().pendingNewSession).toBeNull();
+
+    // A late cancel must NOT delete a session that now holds applied work.
+    const discarded = useMoriSessionStore.getState().abandonPendingNewSessionIfEmpty();
+    expect(discarded).toBe(false);
+    expect(useMoriSessionStore.getState().draft?.session.id).toBe(sessionId);
+    expect(
+      repository.listStoredSessions().some((s) => s.sessionId === sessionId),
+    ).toBe(true);
+  });
+
+  it("does not discard a pending session that already received an import", () => {
+    const { sessionId, candidate: rebound } = useMoriSessionStore.getState().importAsNewSession({
+      candidate: buildCandidate(),
+      title: "Conversation",
+      startedAt: "2026-05-20T12:00:00Z",
+      endedAt: "2026-05-20T12:30:00Z",
+    });
+    useMoriSessionStore.getState().addImport(rebound);
+
+    // Even without an explicit commit, a session with imports survives cancel.
+    const discarded = useMoriSessionStore.getState().abandonPendingNewSessionIfEmpty();
+    expect(discarded).toBe(false);
+    expect(useMoriSessionStore.getState().draft?.session.id).toBe(sessionId);
   });
 });
 

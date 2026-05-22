@@ -41,11 +41,11 @@ describe("buildImportReviewSummary", () => {
 
     expect(model.items.find((item) => item.id === "source")).toMatchObject({
       status: "blocked",
-      statusLabel: "No events",
+      statusLabel: "이벤트 없음",
     });
     expect(model.items.find((item) => item.id === "apply")).toMatchObject({
       status: "waiting",
-      statusLabel: "Disabled",
+      statusLabel: "비활성",
     });
   });
 
@@ -56,10 +56,10 @@ describe("buildImportReviewSummary", () => {
       pendingCount: 3,
     });
 
-    expect(model.headline).toBe("3 events still need review");
+    expect(model.headline).toBe("3개 이벤트가 검토 대기 중입니다");
     expect(model.items.find((item) => item.id === "review")).toMatchObject({
       status: "attention",
-      statusLabel: "Pending",
+      statusLabel: "대기 중",
     });
   });
 
@@ -72,9 +72,9 @@ describe("buildImportReviewSummary", () => {
       pendingCount: 0,
     });
 
-    expect(model.headline).toBe("2 events ready to apply");
+    expect(model.headline).toBe("2개 이벤트가 적용 준비되었습니다");
     expect(model.items.find((item) => item.id === "apply")?.detail).toContain(
-      "2 accepted events will be added",
+      "수락된 2개 이벤트가 세션 Timeline에 추가됩니다",
     );
   });
 
@@ -98,10 +98,10 @@ describe("buildImportReviewSummary", () => {
 
     expect(model.items.find((item) => item.id === "source")).toMatchObject({
       status: "attention",
-      statusLabel: "Partial re-import",
+      statusLabel: "부분 재가져오기",
     });
     expect(model.items.find((item) => item.id === "duplicates")?.detail).toContain(
-      "5 duplicate events",
+      "중복 이벤트",
     );
   });
 
@@ -118,7 +118,7 @@ describe("buildImportReviewSummary", () => {
 
     expect(model.items.find((item) => item.id === "duplicates")).toMatchObject({
       status: "attention",
-      statusLabel: "Included",
+      statusLabel: "포함됨",
     });
   });
 
@@ -134,7 +134,7 @@ describe("buildImportReviewSummary", () => {
 
     expect(model.items.find((item) => item.id === "duplicates")).toMatchObject({
       status: "attention",
-      statusLabel: "Limited",
+      statusLabel: "제한적",
     });
   });
 });

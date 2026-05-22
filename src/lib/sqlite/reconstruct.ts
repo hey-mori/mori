@@ -61,6 +61,7 @@ function reconstructSession(row: SqlitePersistenceSnapshot["sessions"][number]):
     storageLocation: row.storage_location,
     selectedSourceIds: parseStringArray(row.selected_source_ids_json),
     status: row.status as Session["status"],
+    ...(row.source_label ? { sourceLabel: row.source_label } : {}),
   };
 }
 

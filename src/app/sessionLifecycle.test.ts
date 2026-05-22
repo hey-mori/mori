@@ -9,6 +9,7 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
   return {
     initialized: true,
     draft: null,
+    pendingNewSession: null,
     imports: [],
     analysis: null,
     analysisStatus: "idle",
@@ -23,6 +24,9 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     setDraft: () => undefined,
     endSession: () => undefined,
     addImport: () => null,
+    importAsNewSession: () => ({ sessionId: "", candidate: { source: {} as never, events: [] } }),
+    commitPendingNewSession: () => undefined,
+    abandonPendingNewSessionIfEmpty: () => false,
     removeImport: () => undefined,
     resetToDemo: () => undefined,
     runQuickPass: async () => null,

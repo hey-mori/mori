@@ -32,6 +32,12 @@ export type SessionRow = {
   storage_location: string;
   selected_source_ids_json: string;
   status: string;
+  /**
+   * Optional grouping label (e.g. the Claude project path) for sessions
+   * created from an external import. NULL for manual / pre-import sessions.
+   * Persisted via migration V005.
+   */
+  source_label: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -207,6 +213,7 @@ function sessionToRow(session: Session): SessionRow {
     storage_location: session.storageLocation,
     selected_source_ids_json: json(session.selectedSourceIds),
     status: session.status,
+    source_label: session.sourceLabel ?? null,
     created_at: session.startedAt,
     updated_at: session.endedAt,
   };

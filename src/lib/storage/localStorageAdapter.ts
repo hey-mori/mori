@@ -79,6 +79,8 @@ export class BrowserDraftRepository implements MoriDraftRepository {
         projectName: draft.project.name,
         savedAt: draft.savedAt,
         status: draft.session.status,
+        startedAt: draft.session.startedAt ?? draft.savedAt,
+        ...(draft.session.sourceLabel ? { sourceLabel: draft.session.sourceLabel } : {}),
       });
     }
 
