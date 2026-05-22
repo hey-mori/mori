@@ -138,6 +138,15 @@ export type TimelineEvent = {
    * stays distinct in the duplicate index.
    */
   connectorEventId?: string;
+  /**
+   * Token usage carried over from an imported Claude turn. Optional and
+   * additive — only present on assistant events imported from a Claude
+   * conversation that reported usage. Events created any other way (manual,
+   * AI-derived, Claude Desktop, or older imports before this field) simply
+   * omit it. `total` is `input + output`; `model` is the reporting model id
+   * when known.
+   */
+  tokenUsage?: { input: number; output: number; total: number; model?: string };
 };
 
 export type Issue = {

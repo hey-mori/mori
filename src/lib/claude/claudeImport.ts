@@ -17,11 +17,16 @@
 import type { TimelineEvent } from "../../domain/types";
 import { createImportId } from "../import/id";
 import type { NormalizedImportCandidate } from "../import/types";
+import {
+  tokenUsageForMessage,
+  tokenUsageMapFromAggregate,
+} from "./tokenUsage";
 import type {
   ClaudeCodeSessionDetail,
   ClaudeConversationDetail,
   ClaudeMessage,
   ClaudeSource,
+  ClaudeTokenUsage,
 } from "./types";
 
 /** Common subset that both desktop and code conversations satisfy. */
@@ -33,6 +38,12 @@ type ClaudeImportSubject = {
   source: ClaudeSource;
   projectName?: string;
   messages: ClaudeMessage[];
+  /**
+   * Session-level token usage (Claude Code only). Carried so the import can
+   * stamp it onto the assistant timeline events instead of dropping it.
+   * Absent for Claude Desktop conversations, which report no usage.
+   */
+  tokenUsage?: ClaudeTokenUsage;
 };
 
 export type BuildClaudeImportInput = {
@@ -72,6 +83,7 @@ export function buildImportCandidateFromClaudeCodeSession(
       source: "code",
       projectName: session.projectName,
       messages: session.messages,
+      tokenUsage: session.tokenUsage,
     },
     input,
   );
@@ -87,10 +99,21 @@ function buildCandidate(
   const turns = pairMessagesIntoTurns(subject.messages);
   const events: TimelineEvent[] = [];
 
+  // The only token usage Mori receives is a session-level aggregate, so it
+  // is attributed to the last assistant turn. The map is keyed by assistant
+  // message id so the lookup naturally lands on the right event — and so it
+  // upgrades to true per-message usage without touching this loop.
+  const lastAssistantMessageId = lastAssistantId(turns);
+  const usageByMessageId = tokenUsageMapFromAggregate(
+    subject.tokenUsage,
+    lastAssistantMessageId,
+  );
+
   for (let index = 0; index < turns.length; index += 1) {
     const turn = turns[index];
     const start = turn.timestamp || capturedAt;
     const eventId = createImportId("evt-claude", `${subject.id}-${index}`, start);
+    const tokenUsage = tokenUsageForMessage(usageByMessageId, turn.assistantMessageId ?? undefined);
     events.push({
       id: eventId,
       sessionId: input.sessionId,
@@ -108,6 +131,7 @@ function buildCandidate(
       createdBy: "import",
       userModified: false,
       connectorEventId: `claude::${subject.source}::${subject.id}::${index}`,
+      ...(tokenUsage ? { tokenUsage } : {}),
     });
   }
 
@@ -220,6 +244,13 @@ type ConversationTurn = {
   title: string;
   summary: string;
   timestamp: string;
+  /**
+   * Stable id of the assistant message that produced this turn, when the
+   * turn has one. Used to attach the assistant message's token usage to the
+   * resulting event. `null` for turns with no assistant message (an
+   * unanswered human turn or a standalone system message).
+   */
+  assistantMessageId: string | null;
 };
 
 /**
@@ -257,6 +288,15 @@ export function pairMessagesIntoTurns(messages: ClaudeMessage[]): ConversationTu
   return turns;
 }
 
+/** Id of the most recent turn that has an assistant message, or null. */
+function lastAssistantId(turns: ConversationTurn[]): string | undefined {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const id = turns[index].assistantMessageId;
+    if (id) return id;
+  }
+  return undefined;
+}
+
 function messageToTurn(
   human: ClaudeMessage | null,
   assistant: ClaudeMessage | null,
@@ -270,6 +310,7 @@ function messageToTurn(
       assistant?.createdAt && assistant.createdAt.trim().length > 0
         ? assistant.createdAt
         : human?.createdAt ?? "",
+    assistantMessageId: assistant?.id ?? null,
   };
 }
 

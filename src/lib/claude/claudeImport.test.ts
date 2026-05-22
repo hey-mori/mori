@@ -138,6 +138,62 @@ describe("buildImportCandidateFromClaudeCodeSession", () => {
     expect(candidate.source.title).toContain("Claude Code");
     expect(candidate.source.detail).toContain("/Users/alice/mori");
   });
+
+  it("carries session token usage onto the last assistant event", () => {
+    const session: ClaudeCodeSessionDetail = {
+      sessionId: "abc-123",
+      projectPath: "-Users-alice-mori",
+      projectName: "/Users/alice/mori",
+      filePath: "/somewhere/abc-123.jsonl",
+      startedAt: "2026-05-20T12:00:00Z",
+      messageCount: 4,
+      title: "Add token usage to imports",
+      tokenUsage: {
+        inputTokens: 300,
+        outputTokens: 120,
+        cacheCreationTokens: 0,
+        cacheReadTokens: 0,
+        totalTokens: 420,
+        assistantTurns: 2,
+        model: "claude-opus-4-7",
+      },
+      messages: [
+        { id: "m1", role: "human", content: "First question", createdAt: "2026-05-20T12:00:00Z" },
+        { id: "m2", role: "assistant", content: "First reply", createdAt: "2026-05-20T12:00:01Z" },
+        { id: "m3", role: "human", content: "Second question", createdAt: "2026-05-20T12:00:02Z" },
+        { id: "m4", role: "assistant", content: "Second reply", createdAt: "2026-05-20T12:00:03Z" },
+      ],
+    };
+    const candidate = buildImportCandidateFromClaudeCodeSession(session, captureInput);
+    expect(candidate.events).toHaveLength(2);
+    // The aggregate lands on the last assistant turn; earlier turns omit it.
+    expect(candidate.events[0].tokenUsage).toBeUndefined();
+    expect(candidate.events[1].tokenUsage).toEqual({
+      input: 300,
+      output: 120,
+      total: 420,
+      model: "claude-opus-4-7",
+    });
+  });
+
+  it("omits token usage when the session reported none", () => {
+    const session: ClaudeCodeSessionDetail = {
+      sessionId: "abc-456",
+      projectPath: "-Users-alice-mori",
+      projectName: "/Users/alice/mori",
+      filePath: "/somewhere/abc-456.jsonl",
+      startedAt: "2026-05-20T12:00:00Z",
+      messageCount: 2,
+      title: "No usage session",
+      messages: [
+        { id: "m1", role: "human", content: "Question", createdAt: "2026-05-20T12:00:00Z" },
+        { id: "m2", role: "assistant", content: "Answer", createdAt: "2026-05-20T12:00:01Z" },
+      ],
+    };
+    const candidate = buildImportCandidateFromClaudeCodeSession(session, captureInput);
+    expect(candidate.events).toHaveLength(1);
+    expect(candidate.events[0].tokenUsage).toBeUndefined();
+  });
 });
 
 describe("rebindCandidateToSession", () => {
