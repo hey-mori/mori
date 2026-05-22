@@ -1,4 +1,4 @@
-import { Download, FolderGit2, Plus, Search } from "lucide-react";
+import { Download, FolderGit2, House, Layers, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -6,6 +6,7 @@ import {
   selectSessionSource,
   useMoriSessionStore,
 } from "../../app/sessionStore";
+import { useMoriProfileStore } from "../../app/profileStore";
 import {
   filterSidebarRows,
   formatSidebarRelative,
@@ -14,34 +15,65 @@ import {
   type SidebarSessionRow,
 } from "../../lib/sidebar/sessionList";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
+import { getProfileInitials } from "../../lib/profile/localProfile";
+import { moriViewIcon } from "../brand/moriIcons";
+import type { LucideIcon } from "lucide-react";
 import type { ViewKey } from "../../domain/types";
 
 /**
- * Primary sidebar — session (conversation) list.
+ * Primary sidebar — full-height navigation column.
  *
- * Drawing on the conversation-list paradigm from Claude / Codex desktop: the
- * sidebar is a scannable, scrollable list of sessions grouped by recency.
- * Clicking a row loads that session into the workspace; the top-bar nav
- * picks which workspace view (홈 / 세션 / 메모리) is on screen.
+ * Mori has no top chrome bar: the workspace runs full height and the sidebar
+ * owns everything we used to spread across a header. From top to bottom:
  *
- * The sidebar no longer carries any standing nav buttons or a brand lockup —
- * those moved to the top bar so this column can focus entirely on session
- * navigation. Mori notes sits at the bottom (the same `AttentionIndicator`
- * surface as before, just relocated).
+ *   1. Quick actions — icon-only 새 세션 / 가져오기 shortcuts.
+ *   2. Product nav — 홈 / 세션 / 메모리, the three top-level destinations.
+ *   3. Session search input.
+ *   4. The session conversation list, grouped by recency.
+ *   5. Mori 노트 + the user button (opens the settings sheet).
+ *
+ * Drawing on the conversation-list paradigm from Claude / Codex desktop:
+ * clicking a row loads that session into the workspace, and the product nav
+ * lets the user switch between 홈 (dashboard), 세션 (the active session's
+ * workspace), and 메모리 (cross-session memory).
  */
+
+/** Product-nav entries. Ordered top-to-bottom; "세션" lights up for every
+ *  off-nav session-surface view (timeline / evidence / review / report …). */
+const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
+  { key: "home", label: "홈", icon: moriViewIcon.home ?? House },
+  { key: "workspace", label: "세션", icon: moriViewIcon.workspace ?? Layers },
+  { key: "memory", label: "메모리", icon: moriViewIcon.memory ?? Layers },
+];
+
+const SESSION_VIEWS = new Set<ViewKey>([
+  "workspace",
+  "session",
+  "timeline",
+  "flow",
+  "evidence",
+  "review",
+  "connections",
+  "companion",
+  "start",
+]);
+
+const MEMORY_VIEWS = new Set<ViewKey>(["memory", "consolidation", "reports"]);
+
 export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void }) {
+  const currentView = useMoriAppStore((state) => state.currentView);
   const activeSessionId = useMoriSessionStore((state) => state.draft?.session.id ?? null);
   const source = useMoriSessionStore(selectSessionSource);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
   const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
   const openSession = useMoriAppStore((state) => state.openSession);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openSettings = useMoriAppStore((state) => state.openSettingsSheet);
+  const profile = useMoriProfileStore((state) => state.profile);
 
   const [summaries, setSummaries] = useState(() => safeListSessions());
   const [query, setQuery] = useState("");
 
-  // Refresh the list whenever the active session changes (a switch or a new
-  // import should be reflected without a manual refresh).
   const refresh = useCallback(() => {
     setSummaries(safeListSessions());
   }, []);
@@ -57,11 +89,7 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
     [summaries],
   );
 
-  const filtered = useMemo(
-    () => filterSidebarRows(rows, query),
-    [rows, query],
-  );
-
+  const filtered = useMemo(() => filterSidebarRows(rows, query), [rows, query]);
   const groups = useMemo(() => groupSidebarRows(filtered), [filtered]);
 
   const isDesktop = source === "desktop-sqlite";
@@ -69,7 +97,6 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
   const handleSwitch = useCallback(
     (sessionId: string) => {
       if (sessionId === activeSessionId) {
-        // Already active — just open the session workspace.
         openSession();
         return;
       }
@@ -86,8 +113,15 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
     [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession, openSession],
   );
 
+  const isActive = (key: ViewKey) => {
+    if (key === "home") return currentView === "home";
+    if (key === "workspace") return SESSION_VIEWS.has(currentView);
+    if (key === "memory") return MEMORY_VIEWS.has(currentView);
+    return key === currentView;
+  };
+
   return (
-    <aside className="sidebar" aria-label="세션 목록">
+    <aside className="sidebar" aria-label="세션 목록 및 메뉴">
       <div className="sidebar-head" role="group" aria-label="빠른 작업">
         <button
           type="button"
@@ -108,6 +142,25 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
           <Download size={15} aria-hidden="true" />
         </button>
       </div>
+
+      <nav className="sidebar-nav" aria-label="주요 메뉴">
+        {PRIMARY_NAV.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.key);
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`sidebar-nav-item${active ? " is-active" : ""}`}
+              onClick={() => onNavigate(item.key)}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon size={14} aria-hidden="true" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       <div className="sidebar-search">
         <Search size={13} aria-hidden="true" />
@@ -140,6 +193,18 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
 
       <div className="sidebar-foot">
         <AttentionIndicator onNavigate={onNavigate} />
+        <button
+          type="button"
+          className="sidebar-user"
+          onClick={() => openSettings()}
+          aria-label={`${profile.displayName} — 프로필 및 설정 열기`}
+          title="프로필 및 설정"
+        >
+          <span className="sidebar-user-avatar" aria-hidden="true">
+            {getProfileInitials(profile.displayName)}
+          </span>
+          <span className="sidebar-user-name">{profile.displayName}</span>
+        </button>
       </div>
     </aside>
   );
