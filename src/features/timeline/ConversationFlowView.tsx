@@ -1,28 +1,41 @@
-import { Layers3, MessageSquare, Sparkles, Terminal, User } from "lucide-react";
-import { useState } from "react";
-import type { TimelineEvent } from "../../domain/types";
-import { formatTime } from "../../lib/formatting/time";
-import { sortDisplayItemsChronologically } from "../../lib/timeline/displayItems";
 import {
-  conversationTurnSegments,
-  type ConversationTurnRole,
-} from "../../lib/timeline/conversationFlow";
+  ChevronDown,
+  ChevronRight,
+  FileEdit,
+  Sparkles,
+  Terminal,
+  User,
+  Zap,
+} from "lucide-react";
+import { useState } from "react";
+import { buildTurns, type Turn } from "../../lib/timeline/buildTurns";
+import {
+  groupTurns,
+  type TurnGroup,
+  type TurnGroupBurst,
+  type TurnGroupOverflow,
+} from "../../lib/timeline/groupTurns";
+import { buildTurnCardModel, type TurnCardModel } from "../../lib/timeline/turnCard";
+import { formatTime } from "../../lib/formatting/time";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 
 /**
- * Conversation flow view — the readable, time-ordered reading mode for a
- * single Claude conversation.
+ * Conversation flow view — the conversation-FIRST reading mode for a single
+ * captured Claude conversation.
  *
- * Phase 1 made one session hold one conversation. The swimlane canvas was
- * built for sessions that mix many event types across lanes; a single
- * conversation collapses into one dense lane, so this view drops the lanes
- * entirely and renders the turns as a vertical thread: user asks above,
- * Claude replies below, tool activity muted. It is strictly time-ordered, so
- * the user always knows the timeline's basis is "시간순".
+ * A Mori session is one conversation, so the flow drops the swimlane and reads
+ * the talk as a vertical thread of TURNS. Each turn is one clean card: the
+ * user's ask (prominent), Claude's reply, and a collapsible muted strip of the
+ * turn's tool calls + file edits (collapsed by default, with a "도구 7 · 파일 3"
+ * count). Token usage, decisions, and issues ride along as small badges.
  *
- * Selecting a turn drives the same `selectedEventId` the canvas uses, so the
- * view toggle keeps the selection intact in both directions. Bundles (rapid
- * runs of turns) render as a collapsed group the user can expand inline.
+ * Two honest groupings sit on top (see `groupTurns`): a **burst** — a tight run
+ * of tool activity — carries a *visible criterion* ("3분 내 도구 호출 7회"); a
+ * pure **overflow** is just an "이 아래 N개 더 보기" disclosure. They look
+ * deliberately different so the user always knows what a collapsed card means.
+ *
+ * Selection drives the same `selectedEventId` the canvas uses, so the view
+ * toggle keeps the selection intact in both directions.
  */
 export function ConversationFlowView({
   model,
@@ -33,154 +46,321 @@ export function ConversationFlowView({
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
 }) {
-  const items = sortDisplayItemsChronologically(model.visibleDisplayItems);
-  if (items.length === 0) return null;
+  // The visible events (already filtered + searched) are the conversation's
+  // turns. `buildTurns` folds them by `turnId`; `groupTurns` then layers the
+  // honest burst / overflow groupings on top of the chronological thread.
+  const turns = buildTurns(model.visibleEvents);
+  if (turns.length === 0) return null;
+  const groups = groupTurns(turns);
 
   return (
     <ol className="conversation-flow" aria-label="대화 흐름">
-      {items.map((item) => {
-        if (item.kind === "bundle") {
-          return (
-            <ConversationBundleGroup
-              key={item.id}
-              bundleId={item.id}
-              title={item.title}
-              start={item.start}
-              end={item.end}
-              count={item.count}
-              members={model.visibleEvents.filter((event) =>
-                item.memberEventIds.includes(event.id),
-              )}
-              selectedItemId={selectedItemId}
-              onSelect={onSelect}
-            />
-          );
-        }
-
-        const selected =
-          item.id === selectedItemId ||
-          (selectedItemId != null && item.memberEventIds.includes(selectedItemId));
-        return (
-          <li key={item.id}>
-            <ConversationTurn
-              event={item.event}
-              selected={selected}
-              onSelect={onSelect}
-            />
-          </li>
-        );
-      })}
+      {groups.map((group) => (
+        <li key={group.id}>
+          <ConversationGroup
+            group={group}
+            selectedItemId={selectedItemId}
+            onSelect={onSelect}
+          />
+        </li>
+      ))}
     </ol>
   );
 }
 
-/** A run of rapid-fire turns, collapsed by default and expandable inline. */
-function ConversationBundleGroup({
-  bundleId,
-  title,
-  start,
-  end,
-  count,
-  members,
+function ConversationGroup({
+  group,
   selectedItemId,
   onSelect,
 }: {
-  bundleId: string;
-  title: string;
-  start: string;
-  end: string;
-  count: number;
-  members: TimelineEvent[];
+  group: TurnGroup;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
 }) {
-  const selectionInside =
-    selectedItemId != null && members.some((event) => event.id === selectedItemId);
-  const [expanded, setExpanded] = useState(selectionInside);
+  switch (group.kind) {
+    case "turn":
+      return (
+        <TurnCard
+          turn={group.turn}
+          selected={isTurnSelected(group.turn, selectedItemId)}
+          onSelect={onSelect}
+        />
+      );
+    case "burst":
+      return <BurstGroup burst={group} selectedItemId={selectedItemId} onSelect={onSelect} />;
+    case "overflow":
+      return (
+        <OverflowGroup overflow={group} selectedItemId={selectedItemId} onSelect={onSelect} />
+      );
+  }
+}
+
+/** One turn card: ask, reply, collapsible activity strip, badges. */
+function TurnCard({
+  turn,
+  selected,
+  onSelect,
+}: {
+  turn: Turn;
+  selected: boolean;
+  onSelect: (eventId: string) => void;
+}) {
+  const card = buildTurnCardModel(turn);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const selectId = turnSelectId(turn);
+
+  return (
+    <article
+      className={`conversation-turn-card ${selected ? "is-selected" : ""}`}
+      aria-current={selected ? "true" : undefined}
+    >
+      <button
+        type="button"
+        className="conversation-turn-main"
+        onClick={() => onSelect(selectId)}
+      >
+        <span className="conversation-turn-head">
+          <span className="conversation-turn-time">{formatTime(card.start)}</span>
+          {card.tokenUsage ? (
+            <span
+              className="conversation-turn-tokens"
+              title={
+                card.tokenUsage.model
+                  ? `${card.tokenUsage.model} · 입력 ${card.tokenUsage.input.toLocaleString()} · 출력 ${card.tokenUsage.output.toLocaleString()}`
+                  : `입력 ${card.tokenUsage.input.toLocaleString()} · 출력 ${card.tokenUsage.output.toLocaleString()}`
+              }
+            >
+              {formatTokens(card.tokenUsage.total)} 토큰
+            </span>
+          ) : null}
+        </span>
+
+        {card.ask ? (
+          <span className="conversation-turn-ask">
+            <span className="conversation-turn-role">
+              <User size={12} aria-hidden="true" /> 사용자
+            </span>
+            <span className="conversation-turn-ask-text">{card.ask}</span>
+          </span>
+        ) : null}
+
+        {card.reply ? (
+          <span className="conversation-turn-reply">
+            <span className="conversation-turn-role">
+              <Sparkles size={12} aria-hidden="true" /> Claude
+            </span>
+            <span className="conversation-turn-reply-text">{card.reply}</span>
+          </span>
+        ) : null}
+
+        {card.fallback ? (
+          <span className="conversation-turn-reply-text is-fallback">{card.fallback}</span>
+        ) : null}
+
+        {card.decisionIds.length > 0 || card.issueIds.length > 0 ? (
+          <span className="conversation-turn-badges">
+            {card.decisionIds.length > 0 ? (
+              <span className="conversation-turn-badge is-decision">
+                결정 {card.decisionIds.length}
+              </span>
+            ) : null}
+            {card.issueIds.length > 0 ? (
+              <span className="conversation-turn-badge is-issue">
+                이슈 {card.issueIds.length}
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+      </button>
+
+      {card.activitySummary ? (
+        <ActivityStrip card={card} open={activityOpen} onToggle={() => setActivityOpen((v) => !v)} />
+      ) : null}
+    </article>
+  );
+}
+
+/** Collapsible muted strip of a turn's tool calls + file edits. */
+function ActivityStrip({
+  card,
+  open,
+  onToggle,
+}: {
+  card: TurnCardModel;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="conversation-turn-activity">
+      <button
+        type="button"
+        className="conversation-turn-activity-toggle"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        {open ? (
+          <ChevronDown size={13} aria-hidden="true" />
+        ) : (
+          <ChevronRight size={13} aria-hidden="true" />
+        )}
+        <Terminal size={12} aria-hidden="true" />
+        <span>{card.activitySummary}</span>
+      </button>
+      {open ? (
+        <ol className="conversation-turn-activity-list">
+          {card.activity.map((item) => (
+            <li key={item.id} className="conversation-turn-activity-item">
+              <span
+                className={`conversation-turn-activity-label ${
+                  item.isFileEdit ? "is-file" : "is-tool"
+                }`}
+              >
+                {item.isFileEdit ? (
+                  <FileEdit size={11} aria-hidden="true" />
+                ) : (
+                  <Terminal size={11} aria-hidden="true" />
+                )}
+                {item.label}
+              </span>
+              <span className="conversation-turn-activity-detail">{item.detail}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * A burst — a tight run of tool turns. Renders with a VISIBLE criterion
+ * ("3분 내 도구 호출 7회") so the grouping rule is on the card, never hidden.
+ * Distinct from an overflow disclosure by design.
+ */
+function BurstGroup({
+  burst,
+  selectedItemId,
+  onSelect,
+}: {
+  burst: TurnGroupBurst;
+  selectedItemId: string | null;
+  onSelect: (itemId: string) => void;
+}) {
+  const selectionInside = burst.turns.some((turn) => isTurnSelected(turn, selectedItemId));
+  const [expanded, setExpanded] = useState(false);
   const open = expanded || selectionInside;
 
   return (
-    <li className="conversation-flow-group">
+    <div className={`conversation-burst ${open ? "is-open" : ""}`}>
       <button
         type="button"
-        className="conversation-flow-group-head"
+        className="conversation-burst-head"
         aria-expanded={open}
-        onClick={() => {
-          setExpanded((value) => !value);
-          onSelect(bundleId);
-        }}
+        onClick={() => setExpanded((v) => !v)}
       >
-        <span className="conversation-flow-group-icon" aria-hidden="true">
-          <Layers3 size={14} />
+        <span className="conversation-burst-icon" aria-hidden="true">
+          <Zap size={14} />
         </span>
-        <span className="conversation-flow-group-body">
-          <strong>{title}</strong>
-          <small>
-            {formatTime(start)}–{formatTime(end)} · 대화 턴 {count}개
-          </small>
+        <span className="conversation-burst-body">
+          <strong>도구 호출 묶음</strong>
+          <span className="conversation-burst-criterion">{burst.criterion}</span>
         </span>
-        <span className="conversation-flow-group-toggle">{open ? "접기" : "펼치기"}</span>
+        <span className="conversation-burst-toggle">
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
       </button>
       {open ? (
-        <ol className="conversation-flow-group-members">
-          {members.map((event) => (
-            <li key={event.id}>
-              <ConversationTurn
-                event={event}
-                selected={event.id === selectedItemId}
+        <ol className="conversation-burst-members">
+          {burst.turns.map((turn) => (
+            <li key={turn.id}>
+              <TurnCard
+                turn={turn}
+                selected={isTurnSelected(turn, selectedItemId)}
                 onSelect={onSelect}
               />
             </li>
           ))}
         </ol>
       ) : null}
-    </li>
+    </div>
   );
 }
 
-const ROLE_ICON: Record<ConversationTurnRole, typeof User> = {
-  user: User,
-  assistant: Sparkles,
-  tool: Terminal,
-  system: MessageSquare,
-};
-
-/** One conversation turn — user ask + Claude reply (+ optional tool note). */
-function ConversationTurn({
-  event,
-  selected,
+/**
+ * Pure overflow disclosure — "이 아래 N개 더 보기". No criterion, no claim;
+ * just reveals the hidden tail. Deliberately styled unlike a burst.
+ */
+function OverflowGroup({
+  overflow,
+  selectedItemId,
   onSelect,
 }: {
-  event: TimelineEvent;
-  selected: boolean;
-  onSelect: (eventId: string) => void;
+  overflow: TurnGroupOverflow;
+  selectedItemId: string | null;
+  onSelect: (itemId: string) => void;
 }) {
-  const segments = conversationTurnSegments(event);
+  const selectionInside = overflow.turns.some((turn) => isTurnSelected(turn, selectedItemId));
+  const [expanded, setExpanded] = useState(false);
+  const open = expanded || selectionInside;
+
+  if (open) {
+    return (
+      <ol className="conversation-overflow-revealed">
+        {overflow.turns.map((turn) => (
+          <li key={turn.id}>
+            <TurnCard
+              turn={turn}
+              selected={isTurnSelected(turn, selectedItemId)}
+              onSelect={onSelect}
+            />
+          </li>
+        ))}
+      </ol>
+    );
+  }
+
   return (
     <button
       type="button"
-      className={`conversation-turn ${selected ? "is-selected" : ""}`}
-      aria-current={selected ? "true" : undefined}
-      onClick={() => onSelect(event.id)}
+      className="conversation-overflow-disclosure"
+      aria-expanded={false}
+      onClick={() => setExpanded(true)}
     >
-      <span className="conversation-turn-time">{formatTime(event.start)}</span>
-      <span className="conversation-turn-segments">
-        {segments.map((segment, index) => {
-          const Icon = ROLE_ICON[segment.role];
-          return (
-            <span
-              key={`${event.id}-${index}`}
-              className={`conversation-segment role-${segment.role}`}
-            >
-              <span className="conversation-segment-role">
-                <Icon size={12} aria-hidden="true" />
-                {segment.label}
-              </span>
-              <span className="conversation-segment-text">{segment.text}</span>
-            </span>
-          );
-        })}
-      </span>
+      <ChevronDown size={13} aria-hidden="true" />
+      <span>{overflow.label}</span>
     </button>
   );
+}
+
+/** The event id a turn selects — the assistant, then ask, then first member. */
+function turnSelectId(turn: Turn): string {
+  return (
+    turn.assistant?.id ??
+    turn.ask?.id ??
+    turn.toolCalls[0]?.id ??
+    turn.fileEdits[0]?.id ??
+    turn.decisions[0]?.id ??
+    turn.issues[0]?.id ??
+    turn.id
+  );
+}
+
+/** Whether the current selection lands on any member event of the turn. */
+function isTurnSelected(turn: Turn, selectedItemId: string | null): boolean {
+  if (selectedItemId == null) return false;
+  if (turn.id === selectedItemId) return true;
+  const members = [
+    turn.ask,
+    turn.assistant,
+    ...turn.toolCalls,
+    ...turn.fileEdits,
+    ...turn.decisions,
+    ...turn.issues,
+  ];
+  return members.some((event) => event?.id === selectedItemId);
+}
+
+/** Compact token total — 12,345 → "12.3k", under 1000 stays exact. */
+function formatTokens(total: number): string {
+  if (total < 1000) return String(total);
+  return `${(total / 1000).toFixed(1)}k`;
 }

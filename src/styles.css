@@ -1094,31 +1094,54 @@ kbd {
   padding: 4px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-.conversation-turn {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 12px;
-  width: 100%;
-  padding: 11px 14px;
+.conversation-flow > li {
+  min-width: 0;
+}
+
+/* ── Turn card ─────────────────────────────────────────────────────────────
+   One conversation turn = one card: the user's ask leads, Claude's reply
+   follows, and a collapsible muted strip carries the turn's tool calls + file
+   edits. */
+.conversation-turn-card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 12px;
   background: white;
-  text-align: left;
-  cursor: pointer;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.04);
+  overflow: hidden;
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-.conversation-turn:hover {
+.conversation-turn-card:hover {
   border-color: var(--line-strong);
 }
 
-.conversation-turn.is-selected {
+.conversation-turn-card.is-selected {
   border-color: var(--purple);
   box-shadow: 0 0 0 1px var(--purple);
+}
+
+.conversation-turn-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 15px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.conversation-turn-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .conversation-turn-time {
@@ -1126,25 +1149,20 @@ kbd {
   font-weight: 700;
   color: var(--muted);
   white-space: nowrap;
-  padding-top: 1px;
 }
 
-.conversation-turn-segments {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+.conversation-turn-tokens {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted-2);
+  background: var(--gray-50);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  cursor: help;
 }
 
-.conversation-segment {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-  padding-left: 10px;
-  border-left: 2px solid var(--line);
-}
-
-.conversation-segment-role {
+.conversation-turn-role {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1152,131 +1170,265 @@ kbd {
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--muted-2);
 }
 
-.conversation-segment-text {
-  font-size: 12.5px;
-  line-height: 1.55;
+/* The user's ask leads — brand-tinted rail, full weight. */
+.conversation-turn-ask {
+  display: grid;
+  gap: 4px;
+  padding-left: 11px;
+  border-left: 2px solid var(--purple);
+}
+
+.conversation-turn-ask .conversation-turn-role {
+  color: var(--purple);
+}
+
+.conversation-turn-ask-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
   color: var(--text);
-  /* Long replies stay readable but never run away — clamp to a calm height. */
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* User asks lead — full weight, brand-tinted rail. */
-.conversation-segment.role-user {
-  border-left-color: var(--purple);
-}
-
-.conversation-segment.role-user .conversation-segment-role {
-  color: var(--purple);
-}
-
-.conversation-segment.role-user .conversation-segment-text {
-  font-weight: 600;
-}
-
-/* Claude replies — neutral, the body of the thread. */
-.conversation-segment.role-assistant {
-  border-left-color: var(--line-strong);
-}
-
-/* Tool activity — muted so mechanical calls never compete with the talk. */
-.conversation-segment.role-tool {
-  border-left-color: var(--line);
-}
-
-.conversation-segment.role-tool .conversation-segment-role {
-  color: var(--muted-2);
-}
-
-.conversation-segment.role-tool .conversation-segment-text {
-  color: var(--muted);
-  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
-  font-size: 11.5px;
-  -webkit-line-clamp: 2;
-}
-
-.conversation-segment.role-system .conversation-segment-text {
-  color: var(--muted);
-}
-
-/* Collapsed run of rapid-fire turns. */
-.conversation-flow-group {
+/* Claude's reply — neutral body of the thread. */
+.conversation-turn-reply {
   display: grid;
+  gap: 4px;
+  padding-left: 11px;
+  border-left: 2px solid var(--line-strong);
+}
+
+.conversation-turn-reply .conversation-turn-role {
+  color: var(--muted);
+}
+
+.conversation-turn-reply-text {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.conversation-turn-reply-text.is-fallback {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Decisions / issues attributed to the turn — small semantic badges. */
+.conversation-turn-badges {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
-.conversation-flow-group-head {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 11px;
-  background: var(--panel-soft);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 140ms ease, background 140ms ease;
+.conversation-turn-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 9px;
+  border: 1px solid transparent;
 }
 
-.conversation-flow-group-head:hover {
-  border-color: var(--purple);
-  background: var(--purple-50);
-}
-
-.conversation-flow-group-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+.conversation-turn-badge.is-decision {
   color: var(--purple);
   background: var(--purple-50);
+  border-color: var(--purple-100);
 }
 
-.conversation-flow-group-body {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
+.conversation-turn-badge.is-issue {
+  color: var(--orange);
+  background: var(--orange-50);
+  border-color: var(--orange);
 }
 
-.conversation-flow-group-body strong {
-  font-size: 12.5px;
+/* Collapsible muted strip — tool calls + file edits, collapsed by default. */
+.conversation-turn-activity {
+  border-top: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.conversation-turn-activity-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 15px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 11.5px;
   font-weight: 700;
+  color: var(--muted);
+  transition: color 140ms ease, background 140ms ease;
+}
+
+.conversation-turn-activity-toggle:hover {
   color: var(--text);
+  background: var(--gray-50);
+}
+
+.conversation-turn-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 15px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.conversation-turn-activity-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 9px;
+}
+
+.conversation-turn-activity-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+
+.conversation-turn-activity-label.is-tool {
+  color: var(--muted);
+  background: var(--gray-50);
+}
+
+.conversation-turn-activity-label.is-file {
+  color: var(--cyan);
+  background: var(--cyan-50);
+}
+
+.conversation-turn-activity-detail {
+  min-width: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  font-family: var(--mono, ui-monospace, "SFMono-Regular", Menlo, monospace);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.conversation-flow-group-body small {
-  font-size: 11px;
-  color: var(--muted);
+/* ── Burst group ───────────────────────────────────────────────────────────
+   A tight run of tool turns. Carries a VISIBLE criterion so the grouping rule
+   is on the card. Deliberately distinct from a plain overflow disclosure. */
+.conversation-burst {
+  display: grid;
+  gap: 8px;
 }
 
-.conversation-flow-group-toggle {
+.conversation-burst-head {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--purple-100);
+  border-radius: 12px;
+  background: var(--purple-50);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease;
+}
+
+.conversation-burst-head:hover {
+  border-color: var(--purple);
+}
+
+.conversation-burst-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  color: white;
+  background: var(--purple);
+}
+
+.conversation-burst-body {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.conversation-burst-body strong {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.conversation-burst-criterion {
   font-size: 11px;
   font-weight: 700;
   color: var(--purple);
-  white-space: nowrap;
 }
 
-.conversation-flow-group-members {
+.conversation-burst-toggle {
+  display: inline-flex;
+  align-items: center;
+  color: var(--purple);
+}
+
+.conversation-burst-members {
   list-style: none;
-  margin: 0;
-  padding: 0 0 0 18px;
+  margin: 0 0 0 16px;
+  padding: 0 0 0 16px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  border-left: 2px solid var(--purple-100);
+}
+
+/* ── Overflow disclosure ───────────────────────────────────────────────────
+   Pure "there are more rows below" affordance — no criterion, no claim. A
+   quiet dashed strip, never styled like a burst. */
+.conversation-overflow-disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  border-left: 2px solid var(--line);
-  margin-left: 14px;
+  width: 100%;
+  padding: 9px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.conversation-overflow-disclosure:hover {
+  border-color: var(--muted-2);
+  color: var(--text);
+  background: var(--gray-50);
+}
+
+.conversation-overflow-revealed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .time-axis {
