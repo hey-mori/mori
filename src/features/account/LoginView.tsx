@@ -69,7 +69,7 @@ export function LoginView() {
               ))}
             </ul>
             <div className="account-identity-actions">
-              <Button variant="primary" onClick={() => setCurrentView("timeline")}>
+              <Button variant="primary" onClick={() => setCurrentView("home")}>
                 Local Mode로 계속
               </Button>
             </div>

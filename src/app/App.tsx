@@ -7,9 +7,7 @@ import { useMoriProfileStore } from "./profileStore";
 import { useMoriThemeStore } from "./themeStore";
 import { HomeView } from "../features/home/HomeView";
 import { StartSessionView } from "../features/start-session/StartSessionView";
-import { TimelineView } from "../features/timeline/TimelineView";
-import { ReviewView } from "../features/review/ReviewView";
-import { EvidenceView } from "../features/evidence/EvidenceView";
+import { SessionDetailView } from "../features/session/SessionDetailView";
 import { ReportsView } from "../features/reports/ReportsView";
 import { MemoryView } from "../features/memory/MemoryView";
 import { ConsolidationReviewView } from "../features/memory/ConsolidationReviewView";
@@ -52,10 +50,16 @@ export default function App() {
     <AppShell>
       {currentView === "home" ? <HomeView /> : null}
       {currentView === "start" ? <StartSessionView /> : null}
-      {currentView === "timeline" ? <TimelineView mode="timeline" /> : null}
-      {currentView === "flow" ? <TimelineView mode="flow" /> : null}
-      {currentView === "evidence" ? <EvidenceView /> : null}
-      {currentView === "review" ? <ReviewView /> : null}
+      {/* The unified session workspace. The legacy timeline / flow / evidence /
+          review keys map here too so no deep link dead-ends — they all open the
+          one tabbed Session Detail rather than a standalone page. */}
+      {currentView === "session" ||
+      currentView === "timeline" ||
+      currentView === "flow" ||
+      currentView === "evidence" ||
+      currentView === "review" ? (
+        <SessionDetailView />
+      ) : null}
       {currentView === "reports" ? <ReportsView /> : null}
       {currentView === "memory" ? <MemoryView /> : null}
       {currentView === "consolidation" ? <ConsolidationReviewView /> : null}

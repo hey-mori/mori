@@ -50,7 +50,9 @@ function memoryStatusLabel(status: StoredAcceptedProjectMemoryStatus): string {
  */
 export function CompanionInboxView() {
   const { feed, isDemo, acceptedMemories } = useCompanionSignals();
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  // `navigate` normalises legacy session-surface destinations (evidence /
+  // review) into the unified Session Detail workspace on the matching tab.
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
   const openAcceptedMemory = useMoriAppStore((state) => state.openAcceptedMemory);
 

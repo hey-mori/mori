@@ -125,7 +125,9 @@ export function StartSessionView() {
   );
   const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
   const resetSessionToDemo = useMoriSessionStore((state) => state.resetToDemo);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  // `navigate` routes the post-setup "evidence" / "timeline" landings into the
+  // unified Session Detail workspace on the matching tab.
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
 
   const selectedSources = useMemo(
     () =>

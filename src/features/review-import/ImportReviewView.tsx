@@ -31,7 +31,14 @@ const ORIGIN_LABEL: Record<ReviewOrigin, string> = {
   other: "출처",
 };
 
-export function ImportReviewView() {
+/**
+ * Import Review — the explicit accept/discard gate before evidence reaches the
+ * session. Shown in place of the Evidence Hub whenever a review draft is in
+ * flight. `embedded` is accepted so the Session Detail's 증거 tab can host it
+ * inside the unified workspace; the layout is the same self-contained
+ * `.page review-page` block in both modes (it never used `PageShell`).
+ */
+export function ImportReviewView(_props: { embedded?: boolean } = {}) {
   const draft = useMoriReviewStore((state) => state.draft);
   const draftMeta = useMoriReviewStore((state) => state.draftMeta);
   const setItemStatus = useMoriReviewStore((state) => state.setItemStatus);

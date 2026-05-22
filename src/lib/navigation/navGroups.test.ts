@@ -34,8 +34,10 @@ describe("NAV_GROUPS entry model", () => {
   it("drops the narrower working surfaces from the standing nav", () => {
     const keys = navKeys();
     // These remain routable ViewKeys, just reached *through* the primary
-    // destinations rather than as standing nav entries.
-    for (const offNav of ["connections", "timeline", "evidence", "review", "start", "companion"]) {
+    // destinations rather than as standing nav entries. "session" is the
+    // unified Session Detail workspace — opened from 세션 (workspace), never a
+    // standing nav entry of its own.
+    for (const offNav of ["connections", "session", "timeline", "evidence", "review", "start", "companion"]) {
       expect(keys).not.toContain(offNav);
     }
   });

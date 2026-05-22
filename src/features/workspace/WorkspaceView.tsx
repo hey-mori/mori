@@ -67,6 +67,7 @@ export function WorkspaceView() {
   const archiveSession = useMoriSessionStore((state) => state.archiveSession);
   const unarchiveSession = useMoriSessionStore((state) => state.unarchiveSession);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openSessionDetail = useMoriAppStore((state) => state.openSession);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -131,11 +132,11 @@ export function WorkspaceView() {
 
   const openSession = (row: SessionRow) => {
     if (row.isActive) {
-      setCurrentView("timeline");
+      openSessionDetail("flow");
       return;
     }
     if (row.savedAt !== null && loadBrowserSession(row.sessionId)) {
-      setCurrentView("timeline");
+      openSessionDetail("flow");
     }
   };
 

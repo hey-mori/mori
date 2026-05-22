@@ -113,7 +113,9 @@ export function ConnectionsView() {
   const view = useMoriSessionStore(selectSessionView);
   const importAsNewSession = useMoriSessionStore((state) => state.importAsNewSession);
   const startReview = useMoriReviewStore((state) => state.startReview);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  // `navigate` routes the post-import "evidence" landing into the unified
+  // Session Detail workspace (its 증거 tab), where Import Review renders.
+  const setCurrentView = useMoriAppStore((state) => state.navigate);
   const isDemoSession = !draft;
 
   const [tools, setTools] = useState<ToolsState>(DEFAULT_TOOLS);
