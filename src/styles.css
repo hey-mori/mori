@@ -496,7 +496,6 @@ button {
     linear-gradient(180deg, #fff 0, #fafbfe 38%, #f7f8fb 100%);
 }
 
-.topbar,
 .page-header {
   display: flex;
   align-items: center;
@@ -509,61 +508,6 @@ button {
   backdrop-filter: blur(12px);
 }
 
-.topbar-title {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.topbar-title p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.topbar-search {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  width: clamp(180px, 22vw, 320px);
-  height: 38px;
-  padding: 0 12px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
-}
-
-.topbar-search input {
-  flex: 1;
-  min-width: 0;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font-size: 14px;
-}
-
-.topbar-search input:disabled {
-  color: var(--muted-2);
-  cursor: not-allowed;
-}
-
-.topbar-search input::placeholder {
-  color: var(--muted-2);
-}
-
-.topbar-search kbd {
-  padding: 2px 6px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  color: var(--muted-2);
-  font-size: 11px;
-  background: var(--panel-soft);
-}
-
-.title-row,
 .toolbar,
 .flow-actions,
 .section-heading,
@@ -583,7 +527,6 @@ p {
   margin-top: 0;
 }
 
-.topbar h1,
 .page-header h1 {
   margin-bottom: 6px;
   font-size: var(--mori-font-size-2xl);
@@ -591,16 +534,11 @@ p {
 }
 
 .page-header p,
-.topbar p,
 .flow-header p,
 .setup-block p,
 .section-heading p {
   margin-bottom: 0;
   color: var(--muted);
-}
-
-.title-row {
-  gap: 8px;
 }
 
 .toolbar {
@@ -5324,10 +5262,6 @@ pre {
   .timeline-toolbar-right {
     flex-wrap: wrap;
   }
-
-  .topbar-search {
-    width: 220px;
-  }
 }
 
 @media (max-width: 900px) {
@@ -5345,10 +5279,6 @@ pre {
   .sidebar {
     padding-left: 14px;
     padding-right: 14px;
-  }
-
-  .topbar-search {
-    width: 240px;
   }
 }
 
@@ -13919,44 +13849,6 @@ pre {
   color: var(--muted);
 }
 
-.session-mode-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 10px 20px 0;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.76);
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.session-mode-banner > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.session-mode-banner strong {
-  color: var(--text);
-  font-size: 12px;
-}
-
-.session-mode-banner.tone-demo {
-  background: rgba(255, 253, 245, 0.82);
-  border-color: #f1e4b8;
-  color: #6f5b19;
-}
-
-.session-mode-banner.tone-draft {
-  background: rgba(236, 247, 238, 0.82);
-  border-color: #c8e6d0;
-  color: #1f5a30;
-}
-
 .analysis-banner {
   display: flex;
   justify-content: space-between;
@@ -14412,31 +14304,12 @@ pre {
  * Timeline product hardening (milestone: Timeline product architecture).
  *
  * Layout contract:
- *   - The TopSessionBar is sticky to the viewport top.
- *   - The SessionModeBanner is non-sticky (deliberate — see component doc).
  *   - The Timeline scroller is the only horizontally-scrolling element.
  *   - The time ruler is sticky to the top of the scroller.
  *   - Lane labels are sticky to the left edge of the scroller.
- *   - The right inspector is sticky to the viewport top below the TopSessionBar.
+ *   - The right inspector is sticky to the viewport top.
  * ===========================================================================
  */
-
-/* Sticky TopSessionBar with subtle elevation when scrolled. */
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 12;
-}
-
-.topbar-live-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 4px rgba(21, 149, 90, 0.16);
-  animation: mori-live-pulse 1.6s ease-in-out infinite;
-}
 
 @keyframes mori-live-pulse {
   0%, 100% {
@@ -14445,14 +14318,6 @@ pre {
   50% {
     box-shadow: 0 0 0 7px rgba(21, 149, 90, 0.04);
   }
-}
-
-.topbar-search {
-  position: relative;
-}
-
-.topbar-search kbd {
-  display: none; /* No global hotkey ships today; we don't claim ⌘K. */
 }
 
 /* Timeline main column ─ tighter, with deliberate scroll behavior. */
@@ -15202,9 +15067,6 @@ pre {
     --page-inset: var(--mori-space-6);
   }
   /* Clear room for the floating sidebar toggle in the page chrome. */
-  .topbar {
-    padding-left: 64px;
-  }
   .page .page-header {
     padding-left: calc(var(--page-inset) + 50px);
   }

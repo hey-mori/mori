@@ -1177,15 +1177,9 @@
     var(--mori-bg);
 }
 
-[data-mori-theme="nightLake"] .topbar,
 [data-mori-theme="nightLake"] .page-header {
   background: rgba(15, 17, 23, 0.93);
   border-bottom-color: var(--mori-border);
-}
-
-[data-mori-theme="nightLake"] .topbar-search {
-  background: var(--mori-surface);
-  border-color: var(--mori-border);
 }
 
 /* ─── Navigation ─────────────────────────────────────────────────────────── */
