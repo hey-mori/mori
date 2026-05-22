@@ -45,11 +45,11 @@ export function RecentSessionsList({
           <p>현재 세션 + 저장된 browser draft + Desktop SQLite 세션을 한곳에서 보여줍니다.</p>
         </div>
         <Button icon={Play} onClick={onStartNewSession}>
-          새 세션 시작
+          새 세션
         </Button>
       </header>
       {sessions.length === 0 ? (
-        <p className="memory-empty">아직 저장된 세션이 없습니다. 새 세션을 시작하면 여기 목록이 채워집니다.</p>
+        <p className="memory-empty">아직 저장된 세션이 없습니다. 연결에서 가져오거나 새 세션을 만들면 여기 목록이 채워집니다.</p>
       ) : (
         <ul className="memory-session-list">
           {sessions.map((entry) => (

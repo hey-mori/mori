@@ -22,10 +22,10 @@ export function TimelineEmptyState({
       <EmptyState
         icon={Sparkles}
         title="데모 세션에는 이벤트가 없습니다"
-        description="실제 작업을 기록하려면 새 세션을 시작하세요. 세션을 시작하면 메모·URL·AI 대화·Git diff를 소스로 가져올 수 있습니다."
+        description="연결에서 Claude 대화를 가져오거나 새 세션을 만들면 메모·URL·AI 대화·Git diff가 소스로 모입니다."
         actions={
           <Button variant="primary" icon={Play} onClick={onStartSession}>
-            세션 시작
+            새 세션
           </Button>
         }
       />

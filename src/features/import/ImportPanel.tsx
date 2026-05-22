@@ -168,17 +168,20 @@ export function ImportPanel(props: ImportPanelProps = {}) {
         <div className="import-header">
           <div>
             <h2>소스 가져오기</h2>
-            <p>세션을 시작하면 메모, URL, AI 대화를 Mori에 직접 가져올 수 있습니다.</p>
+            <p>연결에서 Claude 대화를 가져오거나, 메모·URL·AI 대화를 직접 추가할 수 있습니다.</p>
           </div>
           <Badge tone="gray">데모 세션</Badge>
         </div>
         <p className="import-help">
-          현재 보이는 데이터는 데모용 모의 세션입니다. <b>Start Mori / Session Setup</b>에서 새 세션을 시작하면 가져온 소스가
+          현재 보이는 데이터는 데모용 모의 세션입니다. 연결에서 대화를 가져오거나 새 세션을 만들면 가져온 소스가
           이 화면에 실제로 누적됩니다.
         </p>
         <div className="import-actions">
-          <Button variant="primary" icon={Plus} onClick={() => setCurrentView("start")}>
-            세션 시작으로 이동
+          <Button variant="primary" icon={Plus} onClick={() => setCurrentView("connections")}>
+            연결에서 가져오기
+          </Button>
+          <Button variant="secondary" icon={Plus} onClick={() => setCurrentView("start")}>
+            새 세션
           </Button>
         </div>
       </div>
@@ -520,7 +523,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
 
   async function handleConnectorJsonlImportToReview() {
     if (!draft) {
-      setStatus({ tone: "error", message: "세션이 없습니다. Start Session에서 새 세션을 시작하세요." });
+      setStatus({ tone: "error", message: "활성 세션이 없습니다. 연결에서 가져오거나 새 세션을 만드세요." });
       return;
     }
     const preview =

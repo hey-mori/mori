@@ -32,7 +32,7 @@ export function SessionModeBanner() {
         <span>
           <Badge tone="purple">데모</Badge>
           <strong>Mori 데모 메모리</strong>
-          <span>참고용 데이터입니다 — 세션을 시작하면 로컬 소스를 캡처합니다.</span>
+          <span>참고용 데이터입니다 — 연결에서 가져오거나 새 세션을 만들면 실제 작업이 채워집니다.</span>
         </span>
       </div>
     );

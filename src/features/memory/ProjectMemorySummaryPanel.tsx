@@ -161,7 +161,7 @@ export function ProjectMemorySummaryPanel({
             {copied ? "복사됨" : "프롬프트 복사"}
           </Button>
           <Button icon={Play} onClick={onStartFollowUp}>
-            세션 시작
+            새 세션
           </Button>
         </div>
         <small className="memory-summary-prompt-note">
