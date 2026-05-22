@@ -4,7 +4,7 @@ import type { TimelineEvent } from "../../domain/types";
 import { formatTime } from "../../lib/formatting/time";
 import { sortDisplayItemsChronologically } from "../../lib/timeline/displayItems";
 import {
-  splitTurnSegments,
+  conversationTurnSegments,
   type ConversationTurnRole,
 } from "../../lib/timeline/conversationFlow";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
@@ -155,7 +155,7 @@ function ConversationTurn({
   selected: boolean;
   onSelect: (eventId: string) => void;
 }) {
-  const segments = splitTurnSegments(event);
+  const segments = conversationTurnSegments(event);
   return (
     <button
       type="button"

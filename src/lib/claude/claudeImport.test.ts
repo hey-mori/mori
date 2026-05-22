@@ -90,6 +90,57 @@ describe("buildImportCandidateFromClaudeConversation", () => {
     expect(candidate.source.title).toContain("Plan brainstorming");
   });
 
+  it("stamps actor + turn identity on every imported turn", () => {
+    const conversation: ClaudeConversationDetail = {
+      id: "conv-actor",
+      title: "Actor stamping",
+      createdAt: "2026-05-20T00:00:00Z",
+      updatedAt: "2026-05-21T00:00:00Z",
+      source: "code",
+      messageCount: 4,
+      messages: [
+        { id: "m1", role: "human", content: "Run the tests.", createdAt: "2026-05-20T12:00:00Z" },
+        { id: "m2", role: "assistant", content: "🔧 Bash: npm test", createdAt: "2026-05-20T12:00:01Z" },
+        { id: "m3", role: "human", content: "What broke?", createdAt: "2026-05-20T12:00:02Z" },
+        { id: "m4", role: "assistant", content: "A flaky timer test.", createdAt: "2026-05-20T12:00:03Z" },
+      ],
+    };
+    const candidate = buildImportCandidateFromClaudeConversation(conversation, captureInput);
+    expect(candidate.events).toHaveLength(2);
+
+    // First turn: assistant replied with a tool-use → actor "tool" + toolName.
+    expect(candidate.events[0].actor).toBe("tool");
+    expect(candidate.events[0].toolName).toBe("Bash");
+    expect(candidate.events[0].turnIndex).toBe(0);
+
+    // Second turn: a normal assistant reply, no tool name.
+    expect(candidate.events[1].actor).toBe("assistant");
+    expect(candidate.events[1].toolName).toBeUndefined();
+    expect(candidate.events[1].turnIndex).toBe(1);
+
+    // Turn ids are stable and distinct per turn.
+    expect(candidate.events[0].turnId).toBeTruthy();
+    expect(candidate.events[1].turnId).toBeTruthy();
+    expect(candidate.events[0].turnId).not.toBe(candidate.events[1].turnId);
+  });
+
+  it("stamps a user actor on an unanswered human turn", () => {
+    const conversation: ClaudeConversationDetail = {
+      id: "conv-user",
+      title: "Unanswered",
+      createdAt: "2026-05-20T00:00:00Z",
+      updatedAt: "2026-05-21T00:00:00Z",
+      source: "desktop",
+      messageCount: 1,
+      messages: [
+        { id: "m1", role: "human", content: "Are you there?", createdAt: "2026-05-20T12:00:00Z" },
+      ],
+    };
+    const candidate = buildImportCandidateFromClaudeConversation(conversation, captureInput);
+    expect(candidate.events).toHaveLength(1);
+    expect(candidate.events[0].actor).toBe("user");
+  });
+
   it("always emits at least one event even when the conversation is empty", () => {
     const conversation: ClaudeConversationDetail = {
       id: "conv-empty",

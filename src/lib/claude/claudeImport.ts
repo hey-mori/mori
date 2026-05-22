@@ -14,9 +14,10 @@
  * downstream.
  */
 
-import type { TimelineEvent } from "../../domain/types";
+import type { EventActor, TimelineEvent } from "../../domain/types";
 import { createImportId } from "../import/id";
 import type { NormalizedImportCandidate } from "../import/types";
+import { classifyMessage } from "./conversationStats";
 import {
   tokenUsageForMessage,
   tokenUsageMapFromAggregate,
@@ -113,6 +114,10 @@ function buildCandidate(
     const turn = turns[index];
     const start = turn.timestamp || capturedAt;
     const eventId = createImportId("evt-claude", `${subject.id}-${index}`, start);
+    // Turn identity is its own stable namespace, distinct from the event id, so
+    // that if a future import splits one turn into several per-message events
+    // they can be folded back together by `turnId` (see `buildTurns`).
+    const turnId = createImportId("turn-claude", `${subject.id}-${index}`, start);
     const tokenUsage = tokenUsageForMessage(usageByMessageId, turn.assistantMessageId ?? undefined);
     events.push({
       id: eventId,
@@ -131,6 +136,10 @@ function buildCandidate(
       createdBy: "import",
       userModified: false,
       connectorEventId: `claude::${subject.source}::${subject.id}::${index}`,
+      actor: turn.actor,
+      turnId,
+      turnIndex: index,
+      ...(turn.toolName ? { toolName: turn.toolName } : {}),
       ...(tokenUsage ? { tokenUsage } : {}),
     });
   }
@@ -251,6 +260,14 @@ type ConversationTurn = {
    * unanswered human turn or a standalone system message).
    */
   assistantMessageId: string | null;
+  /**
+   * Who this turn is attributed to, derived from the Claude `role` plus the
+   * tool-use / tool-result classification. Stamped onto the event so the flow
+   * view reads actor as data instead of guessing from the rendered text.
+   */
+  actor: EventActor;
+  /** Tool name when `actor` is `'tool'` and one could be parsed, else null. */
+  toolName: string | null;
 };
 
 /**
@@ -303,6 +320,7 @@ function messageToTurn(
 ): ConversationTurn {
   const titleSeed = (human?.content ?? assistant?.content ?? "").trim();
   const summarySeed = (assistant?.content ?? human?.content ?? "").trim();
+  const { actor, toolName } = classifyTurnActor(human, assistant);
   return {
     title: summarize(titleSeed || "Untitled Claude turn", 90),
     summary: summarize(summarySeed || "(no response captured)", 220),
@@ -311,7 +329,49 @@ function messageToTurn(
         ? assistant.createdAt
         : human?.createdAt ?? "",
     assistantMessageId: assistant?.id ?? null,
+    actor,
+    toolName,
   };
+}
+
+/**
+ * Attribute a paired turn to an actor, reusing the same `classifyMessage`
+ * tool detector the Connections viewer uses so a tool-only assistant reply
+ * (`🔧 Bash: …`) or a tool-result envelope (`↳ 도구 결과 …`) becomes a `tool`
+ * turn rather than masquerading as a normal assistant / user turn. A turn
+ * with a real assistant reply is `assistant`; a human-only turn is `user`;
+ * a standalone non-conversation message is `system`.
+ */
+function classifyTurnActor(
+  human: ClaudeMessage | null,
+  assistant: ClaudeMessage | null,
+): { actor: EventActor; toolName: string | null } {
+  if (assistant) {
+    if (classifyMessage(assistant) === "tool_use") {
+      return { actor: "tool", toolName: parseToolName(assistant.content) };
+    }
+    return { actor: "assistant", toolName: null };
+  }
+  if (human) {
+    if (classifyMessage(human) === "tool_result") {
+      return { actor: "tool", toolName: null };
+    }
+    if (human.role === "human") {
+      return { actor: "user", toolName: null };
+    }
+  }
+  return { actor: "system", toolName: null };
+}
+
+/**
+ * Best-effort tool name from a tool-use reply. Claude Code renders these as
+ * `🔧 <Tool>: <args>`; we take the label between the glyph and the first
+ * colon. Returns null when no name can be parsed.
+ */
+function parseToolName(content: string): string | null {
+  const match = /^\s*🔧\s*([^:\n]+?)\s*(?::|$)/.exec(content);
+  const name = match?.[1]?.trim();
+  return name ? name : null;
 }
 
 function summarize(value: string, max: number): string {

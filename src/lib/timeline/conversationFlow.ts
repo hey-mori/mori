@@ -17,6 +17,7 @@
  * reused by both the toggle default logic and the flow rows.
  */
 import type { MoriMockSession, TimelineEvent } from "../../domain/types";
+import { inferActorFallback } from "./buildTurns";
 
 /**
  * Whether a session reads as a single conversation rather than a mixed
@@ -71,51 +72,52 @@ export type ConversationTurnSegment = {
   text: string;
 };
 
+/** Korean role label for a conversation segment header. */
+export const CONVERSATION_ROLE_LABEL: Record<ConversationTurnRole, string> = {
+  user: "사용자",
+  assistant: "Claude",
+  tool: "도구 호출",
+  system: "기록",
+};
+
 /**
  * Split a paired turn event into the segments the flow view renders.
  *
  * Claude imports pair one human message + the following assistant message into
  * one turn event, stashing the user ask in `title` and Claude's reply in
- * `summary` (see `claudeImport.ts`). The flow view wants those as two visually
- * distinct rows: the user's question prominent, Claude's answer below it. Tool
- * activity is detected from the reply text and surfaced as a muted segment so
- * mechanical tool calls never compete with the actual conversation.
+ * `summary`, and now stamp the turn's actor as data (see `claudeImport.ts`).
+ * The flow view wants those as two visually distinct rows: the user's question
+ * prominent, Claude's answer below it. The reply's role comes from the stamped
+ * `actor` (with `inferActorFallback` reconstructing it for legacy events that
+ * predate the field) instead of re-guessing from the text on every render, so
+ * tool activity stays a muted segment without a per-render regex pass.
  */
-export function splitTurnSegments(event: TimelineEvent): ConversationTurnSegment[] {
+export function conversationTurnSegments(event: TimelineEvent): ConversationTurnSegment[] {
   const segments: ConversationTurnSegment[] = [];
+  const actor = event.actor ?? inferActorFallback(event);
 
   const userText = event.title.trim();
   if (userText && userText !== "(no response captured)") {
-    segments.push({ role: "user", label: "사용자", text: userText });
+    segments.push({ role: "user", label: CONVERSATION_ROLE_LABEL.user, text: userText });
   }
 
   const replyText = event.summary.trim();
   if (replyText && replyText !== userText) {
-    const role = looksLikeToolActivity(replyText) ? "tool" : "assistant";
-    segments.push({
-      role,
-      label: role === "tool" ? "도구 호출" : "Claude",
-      text: replyText,
-    });
+    // A turn whose dominant actor is the tool surfaces its reply as a muted
+    // tool segment; otherwise it reads as Claude's answer.
+    const role: ConversationTurnRole = actor === "tool" ? "tool" : "assistant";
+    segments.push({ role, label: CONVERSATION_ROLE_LABEL[role], text: replyText });
   }
 
   // A turn with neither a usable ask nor a reply still needs one segment so it
   // is never silently dropped from the flow.
   if (segments.length === 0) {
-    segments.push({ role: "system", label: "기록", text: userText || replyText || "내용 없음" });
+    segments.push({
+      role: "system",
+      label: CONVERSATION_ROLE_LABEL.system,
+      text: userText || replyText || "내용 없음",
+    });
   }
 
   return segments;
-}
-
-/**
- * Heuristic: does this assistant text read as mechanical tool activity rather
- * than a human-facing reply? Tool calls / command output get a muted segment
- * so the real conversation stays visually dominant.
- */
-function looksLikeToolActivity(text: string): boolean {
-  return (
-    /^(\$\s|>\s|running\b|executing\b|tool[_\s-]?use|<function|<tool\b)/i.test(text) ||
-    /^(실행|도구 호출|명령 실행)\b/.test(text)
-  );
 }

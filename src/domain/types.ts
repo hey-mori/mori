@@ -44,6 +44,13 @@ export type RelationshipType =
   | "splitFrom"
   | "mergedInto";
 export type IssueStatus = "open" | "inProgress" | "resolved" | "watching";
+/**
+ * Who (or what) produced a timeline event. Stamped at import from the Claude
+ * `role` + tool-use/tool-result classification, so the conversation flow no
+ * longer has to guess roles from text at render time. Legacy events imported
+ * before this field omit it; `inferActorFallback` reconstructs it for them.
+ */
+export type EventActor = "user" | "assistant" | "tool" | "file" | "decision" | "system";
 export type Priority = "high" | "medium" | "low";
 export type EventType = "aiConversation" | "decision" | "issue" | "fileCode" | "webResearch" | "documentNote" | "artifact" | "other";
 export type CreatedBy = "user" | "ai" | "system" | "import";
@@ -147,6 +154,29 @@ export type TimelineEvent = {
    * when known.
    */
   tokenUsage?: { input: number; output: number; total: number; model?: string };
+  /**
+   * Who produced this event, stamped at import from the source `role` and
+   * tool classification (see `claudeImport.ts`). Additive — events imported
+   * before this field, plus manual / AI-derived / demo events, omit it; the
+   * conversation flow falls back to `inferActorFallback` for those.
+   */
+  actor?: EventActor;
+  /**
+   * Stable id of the conversation turn this event belongs to. A captured
+   * Claude conversation is a sequence of turns; one imported turn becomes one
+   * event today, but the id is carried as data so future per-message events
+   * can be folded back together (see `buildTurns`). Additive — omitted on
+   * events that are not part of a captured conversation.
+   */
+  turnId?: string;
+  /** Zero-based ordinal of the turn within its conversation. Paired with `turnId`. */
+  turnIndex?: number;
+  /**
+   * Name of the tool invoked, when `actor` is `'tool'` and the source
+   * identified it (e.g. `"Bash"`). Additive and best-effort — omitted when the
+   * tool could not be named.
+   */
+  toolName?: string;
 };
 
 export type Issue = {

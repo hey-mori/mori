@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { MoriMockSession, TimelineEvent } from "../../domain/types";
 import {
+  conversationTurnSegments,
   describeConversationContext,
   isConversationSession,
-  splitTurnSegments,
 } from "./conversationFlow";
 
 function turn(overrides: Partial<TimelineEvent> = {}): TimelineEvent {
@@ -109,10 +109,14 @@ describe("describeConversationContext", () => {
   });
 });
 
-describe("splitTurnSegments", () => {
-  it("splits a paired turn into a user ask and a Claude reply", () => {
-    const segments = splitTurnSegments(
-      turn({ title: "충돌을 어떻게 해결하지?", summary: "rebase 대신 merge를 추천합니다." }),
+describe("conversationTurnSegments", () => {
+  it("splits a paired turn into a user ask and a Claude reply (actor as data)", () => {
+    const segments = conversationTurnSegments(
+      turn({
+        title: "충돌을 어떻게 해결하지?",
+        summary: "rebase 대신 merge를 추천합니다.",
+        actor: "assistant",
+      }),
     );
     expect(segments).toHaveLength(2);
     expect(segments[0]?.role).toBe("user");
@@ -121,23 +125,33 @@ describe("splitTurnSegments", () => {
     expect(segments[1]?.label).toBe("Claude");
   });
 
-  it("flags mechanical tool output as a muted tool segment", () => {
-    const segments = splitTurnSegments(
-      turn({ title: "테스트 실행해줘", summary: "$ npm test\n실행 중..." }),
+  it("renders a tool-actor reply as a muted tool segment", () => {
+    const segments = conversationTurnSegments(
+      turn({ title: "테스트 실행해줘", summary: "npm test 실행", actor: "tool" }),
+    );
+    expect(segments[1]?.role).toBe("tool");
+    expect(segments[1]?.label).toBe("도구 호출");
+  });
+
+  it("falls back to the regex heuristic for legacy events without an actor", () => {
+    const segments = conversationTurnSegments(
+      turn({ title: "테스트 실행해줘", summary: "$ npm test\n실행 중...", actor: undefined }),
     );
     expect(segments[1]?.role).toBe("tool");
     expect(segments[1]?.label).toBe("도구 호출");
   });
 
   it("does not duplicate the reply when it matches the ask", () => {
-    const segments = splitTurnSegments(turn({ title: "같은 텍스트", summary: "같은 텍스트" }));
+    const segments = conversationTurnSegments(
+      turn({ title: "같은 텍스트", summary: "같은 텍스트", actor: "user" }),
+    );
     expect(segments).toHaveLength(1);
     expect(segments[0]?.role).toBe("user");
   });
 
   it("never drops an empty turn", () => {
-    const segments = splitTurnSegments(
-      turn({ title: "(no response captured)", summary: "" }),
+    const segments = conversationTurnSegments(
+      turn({ title: "(no response captured)", summary: "", actor: "system" }),
     );
     expect(segments).toHaveLength(1);
     expect(segments[0]?.role).toBe("system");
