@@ -8,7 +8,6 @@ import {
   GitCommit,
   Globe,
   Layers,
-  Lock,
   MessageSquare,
   Sparkles,
   Terminal,
@@ -27,10 +26,6 @@ import {
   productAvailabilityFromIntegrationStatus,
 } from "../../lib/product-state/productState";
 import { getTrustDisplay, getTrustTone } from "../../lib/evidence/trust";
-import {
-  getCaptureMethodLabel,
-  getRawDataPolicyLabel,
-} from "../../lib/evidence/provenance";
 
 const INTEGRATION_ICON: Record<string, LucideIcon> = {
   manualNote: FileText,
@@ -94,6 +89,7 @@ export function IntegrationCard({
         className="integration-card-body"
         onClick={onInspect}
         aria-label={`${integration.label} 자세히 보기`}
+        title={integration.privacyNote}
       >
         <div className="integration-card-head">
           <span className={`integration-card-icon tone-${trustTone}`}>
@@ -105,26 +101,11 @@ export function IntegrationCard({
           </div>
           <MoriStatusBadge tone={availability.tone}>{availability.label}</MoriStatusBadge>
         </div>
-        <dl className="integration-card-meta">
-          <div>
-            <dt>캡처 방식</dt>
-            <dd>{getCaptureMethodLabel(integration.captureMode)}</dd>
-          </div>
-          <div>
-            <dt>원본 데이터</dt>
-            <dd>{getRawDataPolicyLabel(integration.rawDataPolicy)}</dd>
-          </div>
-          <div>
-            <dt>신뢰 수준</dt>
-            <dd className={`trust-${integration.trustDefault}`}>
-              {getTrustDisplay(integration.trustDefault).label}
-            </dd>
-          </div>
-        </dl>
-        <p className="integration-card-privacy">
-          <Lock size={11} aria-hidden="true" />
-          <span>{integration.privacyNote}</span>
-        </p>
+        <div className="integration-card-tags">
+          <span className={`integration-card-trust trust-${integration.trustDefault}`}>
+            {getTrustDisplay(integration.trustDefault).label}
+          </span>
+        </div>
       </button>
       <footer className="integration-card-footer">
         {isPlanned ? (

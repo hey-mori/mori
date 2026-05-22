@@ -19,7 +19,13 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { ActionBar } from "../../components/layout/ActionBar";
+import { EmptyState } from "../../components/layout/EmptyState";
+import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
+import { InspectorPanel } from "../../components/layout/InspectorPanel";
+import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { PageShell } from "../../components/layout/PageShell";
 import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { useMoriReviewStore } from "../../app/reviewStore";
@@ -282,13 +288,16 @@ export function ConnectionsView() {
 
   if (!bridgeAvailable) {
     return (
-      <div className="page connections-page">
-        <PageHeader
-          title="연결"
-          subtitle="외부 AI 도구의 작업을 Mori 세션으로 가져옵니다."
-        />
+      <PageShell
+        header={
+          <PageHeader
+            title="연결"
+            subtitle="외부 AI 도구의 작업을 Mori 세션으로 가져옵니다."
+          />
+        }
+      >
         <ConnectionsBrowserHelp />
-      </div>
+      </PageShell>
     );
   }
 
@@ -298,43 +307,63 @@ export function ConnectionsView() {
     tools.report?.tools.filter((tool) => tool.status !== "not-found").length ?? 0;
 
   return (
-    <div className="page connections-page">
-      <PageHeader
-        title="연결"
-        subtitle="외부 AI 도구를 감지하고 로컬에 저장된 작업을 Mori 세션으로 가져옵니다."
-        right={
-          <div className="connections-page-actions">
-            {tools.report ? (
-              <Badge tone={importableCount > 0 ? "green" : "gray"}>
-                {detectedCount}개 감지 · {importableCount}개 가져오기 가능
-              </Badge>
-            ) : null}
+    <PageShell
+      className="connections-page"
+      header={
+        <PageHeader
+          title="연결"
+          subtitle="감지한 AI 도구의 로컬 작업을 Mori 세션으로 가져옵니다."
+          right={
             <Button icon={RefreshCw} onClick={handleRefresh}>
               새로고침
             </Button>
-          </div>
-        }
-      />
-
+          }
+        />
+      }
+      actionBar={
+        tools.report ? (
+          <ActionBar
+            label="연결 상태"
+            start={
+              <>
+                <Badge tone={importableCount > 0 ? "green" : "gray"}>
+                  {detectedCount}개 감지 · {importableCount}개 가져오기 가능
+                </Badge>
+                <HelpDisclosure label="가져올 수 있는 도구" ariaLabel="가져오기 정책 설명">
+                  <p>
+                    데이터가 PC에 로컬로 저장되는 도구만 가져올 수 있습니다 (Claude Desktop ·
+                    Claude Code 등).
+                  </p>
+                  <p>
+                    claude.ai 웹 채팅은 Anthropic 서버에 저장되므로 직접 가져올 수 없습니다. 필요하면
+                    증거 허브에서 대화를 직접 붙여넣으세요.
+                  </p>
+                </HelpDisclosure>
+              </>
+            }
+          />
+        ) : undefined
+      }
+    >
       {importStatus ? (
-        <div
-          className={`connections-status connections-status-${importStatus.tone}`}
-          role="status"
+        <NoticeBanner
+          tone={
+            importStatus.tone === "ok"
+              ? "success"
+              : importStatus.tone === "error"
+                ? "danger"
+                : "info"
+          }
+          onDismiss={() => setImportStatus(null)}
         >
-          <Sparkles size={14} aria-hidden="true" />
-          <span>{importStatus.message}</span>
-        </div>
+          {importStatus.message}
+        </NoticeBanner>
       ) : null}
 
       <section className="connections-section">
         <header className="connections-section-header">
           <div>
             <h2>감지된 AI 도구</h2>
-            <p>
-              Mori가 사용자의 PC에서 찾은 Claude / Codex 관련 도구입니다. 데이터가 로컬에 저장된
-              도구만 가져오기를 지원합니다. claude.ai 웹 채팅은 Anthropic 서버에 저장되므로 직접
-              가져올 수 없습니다.
-            </p>
           </div>
         </header>
         <ToolGrid state={tools} />
@@ -344,10 +373,6 @@ export function ConnectionsView() {
         <header className="connections-section-header">
           <div>
             <h2>Claude 세션</h2>
-            <p>
-              ~/.claude/projects 디렉터리에 저장된 Claude Desktop · Claude Code 세션입니다.
-              프로젝트별로 그룹화되며, 항목을 선택하면 오른쪽에 미리보기가 표시됩니다.
-            </p>
           </div>
           <Badge tone={sessions.sessions.length > 0 ? "purple" : "gray"}>
             {sessions.sessions.length}개 세션
@@ -383,15 +408,13 @@ export function ConnectionsView() {
               onSelect={handleSelectSession}
             />
           </div>
-          <div className="connections-sessions-preview">
-            <PreviewPanel
-              selection={selection}
-              hasActiveSession={!isDemoSession}
-              onImportAsNewSession={handleImportAsNewSession}
-              onImportIntoCurrentSession={handleImportIntoCurrentSession}
-              onOpenViewer={() => setViewerOpen(true)}
-            />
-          </div>
+          <PreviewPanel
+            selection={selection}
+            hasActiveSession={!isDemoSession}
+            onImportAsNewSession={handleImportAsNewSession}
+            onImportIntoCurrentSession={handleImportIntoCurrentSession}
+            onOpenViewer={() => setViewerOpen(true)}
+          />
         </div>
       </section>
 
@@ -403,7 +426,7 @@ export function ConnectionsView() {
         onImportIntoCurrentSession={handleImportIntoCurrentSession}
         hasActiveSession={!isDemoSession}
       />
-    </div>
+    </PageShell>
   );
 }
 
@@ -446,11 +469,13 @@ function ToolGrid({ state }: { state: ToolsState }) {
   }
   if (state.status === "error") {
     return (
-      <div className="connections-empty connections-empty-inline" role="alert">
-        <AlertCircle size={16} aria-hidden="true" />
-        <h3>도구 감지에 실패했습니다</h3>
-        <p>{state.error ?? "알 수 없는 오류"}</p>
-      </div>
+      <EmptyState
+        compact
+        tone="danger"
+        icon={AlertCircle}
+        title="도구 감지에 실패했습니다"
+        description={state.error ?? "알 수 없는 오류"}
+      />
     );
   }
   if (!state.report) return null;
@@ -545,32 +570,33 @@ function SessionsList({
   }
   if (state.status === "error") {
     return (
-      <div className="connections-empty connections-empty-inline" role="alert">
-        <AlertCircle size={16} aria-hidden="true" />
-        <h3>세션을 읽을 수 없습니다</h3>
-        <p>{state.error ?? "알 수 없는 오류"}</p>
-      </div>
+      <EmptyState
+        compact
+        tone="danger"
+        icon={AlertCircle}
+        title="세션을 읽을 수 없습니다"
+        description={state.error ?? "알 수 없는 오류"}
+      />
     );
   }
   if (state.sessions.length === 0) {
     return (
-      <div className="connections-empty connections-empty-inline">
-        <Terminal size={16} aria-hidden="true" />
-        <h3>Claude 세션이 없습니다</h3>
-        <p>
-          Claude Desktop 또는 Claude Code를 한 번 이상 사용하면{" "}
-          <code>~/.claude/projects</code> 아래에 세션 파일이 생성됩니다.
-        </p>
-      </div>
+      <EmptyState
+        compact
+        icon={Terminal}
+        title="Claude 세션이 없습니다"
+        description="Claude Desktop 또는 Claude Code를 한 번 이상 사용하면 ~/.claude/projects 아래에 세션 파일이 생성됩니다."
+      />
     );
   }
   if (hasQuery && filteredCount === 0) {
     return (
-      <div className="connections-empty connections-empty-inline">
-        <Search size={16} aria-hidden="true" />
-        <h3>검색 결과가 없습니다</h3>
-        <p>다른 키워드를 시도하거나 검색을 비워 모든 세션을 표시하세요.</p>
-      </div>
+      <EmptyState
+        compact
+        icon={Search}
+        title="검색 결과가 없습니다"
+        description="다른 키워드를 시도하거나 검색을 비워 모든 세션을 표시하세요."
+      />
     );
   }
   return (
@@ -629,25 +655,34 @@ function PreviewPanel({
 }) {
   if (!selection) {
     return (
-      <div className="connections-preview-empty">
-        <HardDrive size={20} aria-hidden="true" />
-        <h3>세션을 선택하세요</h3>
-        <p>
-          왼쪽에서 세션을 선택하면 메시지 미리보기와 가져오기 버튼이 표시됩니다.
-        </p>
-      </div>
+      <InspectorPanel ariaLabel="세션 미리보기">
+        <EmptyState
+          compact
+          icon={HardDrive}
+          title="세션을 선택하세요"
+          description="왼쪽에서 세션을 선택하면 미리보기와 가져오기가 표시됩니다."
+        />
+      </InspectorPanel>
     );
   }
   if (selection.loading) {
-    return <ListSkeleton label="세션 내용을 불러오는 중..." />;
+    return (
+      <InspectorPanel ariaLabel="세션 미리보기">
+        <ListSkeleton label="세션 내용을 불러오는 중..." />
+      </InspectorPanel>
+    );
   }
   if (selection.error) {
     return (
-      <div className="connections-empty connections-empty-inline" role="alert">
-        <AlertCircle size={16} aria-hidden="true" />
-        <h3>세션을 열 수 없습니다</h3>
-        <p>{selection.error}</p>
-      </div>
+      <InspectorPanel ariaLabel="세션 미리보기">
+        <EmptyState
+          compact
+          tone="danger"
+          icon={AlertCircle}
+          title="세션을 열 수 없습니다"
+          description={selection.error}
+        />
+      </InspectorPanel>
     );
   }
   if (!selection.detail) return null;
@@ -657,50 +692,79 @@ function PreviewPanel({
   const stats = computeConversationStats(detail.messages);
 
   return (
-    <article className="connections-preview-card">
-      <header className="connections-preview-header">
-        <div className="connections-preview-title-row">
-          <h3>{detail.title}</h3>
-          <Button variant="secondary" icon={Maximize2} onClick={onOpenViewer}>
-            전체 대화 보기
-          </Button>
-        </div>
-        <p className="connections-preview-subtitle">
-          Claude (Desktop · Code) · {detail.projectName || "프로젝트 미지정"}
-        </p>
-        <ul className="connections-preview-stat-row" aria-label="대화 통계">
-          <li>
-            <strong>{stats.totalMessages}</strong>
-            <small>메시지</small>
-          </li>
-          <li>
-            <strong>{stats.humanMessages}</strong>
-            <small>사용자 발화</small>
-          </li>
-          <li>
-            <strong>{stats.assistantMessages}</strong>
-            <small>Claude 응답</small>
-          </li>
-          <li>
-            <strong>{stats.toolUses}</strong>
-            <small>도구 호출</small>
-          </li>
-          {stats.durationLabel ? (
-            <li>
-              <strong>{stats.durationLabel}</strong>
-              <small>소요 시간</small>
-            </li>
-          ) : null}
-          {detail.tokenUsage && detail.tokenUsage.totalTokens > 0 ? (
-            <li
-              title={`입력 ${detail.tokenUsage.inputTokens.toLocaleString()} · 출력 ${detail.tokenUsage.outputTokens.toLocaleString()} 토큰${detail.tokenUsage.model ? ` · ${detail.tokenUsage.model}` : ""}`}
+    <InspectorPanel
+      ariaLabel="세션 미리보기"
+      title={detail.title}
+      subtitle={`Claude (Desktop · Code) · ${detail.projectName || "프로젝트 미지정"}`}
+      headerExtras={
+        <Button variant="secondary" icon={Maximize2} onClick={onOpenViewer}>
+          전체 보기
+        </Button>
+      }
+      footer={
+        <>
+          <div className="connections-preview-actions">
+            <Button
+              variant="primary"
+              icon={Sparkles}
+              onClick={onImportAsNewSession}
+              title="이 대화를 위한 새 Mori 세션을 만들고 Import Review로 이동합니다."
             >
-              <strong>{formatTokenCount(detail.tokenUsage.totalTokens)}</strong>
-              <small>토큰</small>
-            </li>
-          ) : null}
-        </ul>
-      </header>
+              새 세션으로 가져오기
+            </Button>
+            <Button
+              variant="secondary"
+              icon={Plus}
+              onClick={onImportIntoCurrentSession}
+              disabled={!hasActiveSession}
+              title={
+                hasActiveSession
+                  ? "이 대화를 현재 활성 세션의 Import Review로 보냅니다."
+                  : "현재 활성 세션이 없습니다. 새 세션으로 가져오거나 세션을 먼저 시작하세요."
+              }
+            >
+              현재 세션에 추가
+            </Button>
+          </div>
+          <HelpDisclosure label="가져오기 동작" ariaLabel="가져오기 동작 설명">
+            <p>기본 동작은 대화마다 새 세션을 만드는 것입니다 (Claude 대화 1개 = Mori 세션 1개).</p>
+            <p>가져온 항목은 Import Review에서 검토한 뒤 적용됩니다.</p>
+          </HelpDisclosure>
+        </>
+      }
+    >
+      <ul className="connections-preview-stat-row" aria-label="대화 통계">
+        <li>
+          <strong>{stats.totalMessages}</strong>
+          <small>메시지</small>
+        </li>
+        <li>
+          <strong>{stats.humanMessages}</strong>
+          <small>사용자 발화</small>
+        </li>
+        <li>
+          <strong>{stats.assistantMessages}</strong>
+          <small>Claude 응답</small>
+        </li>
+        <li>
+          <strong>{stats.toolUses}</strong>
+          <small>도구 호출</small>
+        </li>
+        {stats.durationLabel ? (
+          <li>
+            <strong>{stats.durationLabel}</strong>
+            <small>소요 시간</small>
+          </li>
+        ) : null}
+        {detail.tokenUsage && detail.tokenUsage.totalTokens > 0 ? (
+          <li
+            title={`입력 ${detail.tokenUsage.inputTokens.toLocaleString()} · 출력 ${detail.tokenUsage.outputTokens.toLocaleString()} 토큰${detail.tokenUsage.model ? ` · ${detail.tokenUsage.model}` : ""}`}
+          >
+            <strong>{formatTokenCount(detail.tokenUsage.totalTokens)}</strong>
+            <small>토큰</small>
+          </li>
+        ) : null}
+      </ul>
       <dl className="connections-preview-meta">
         <div>
           <dt>시작</dt>
@@ -747,37 +811,7 @@ function PreviewPanel({
           ) : null}
         </>
       )}
-
-      <footer className="connections-preview-footer">
-        <div className="connections-preview-actions">
-          <Button
-            variant="primary"
-            icon={Sparkles}
-            onClick={onImportAsNewSession}
-            title="이 대화를 위한 새 Mori 세션을 만들고 Import Review로 이동합니다."
-          >
-            새 세션으로 가져오기
-          </Button>
-          <Button
-            variant="secondary"
-            icon={Plus}
-            onClick={onImportIntoCurrentSession}
-            disabled={!hasActiveSession}
-            title={
-              hasActiveSession
-                ? "이 대화를 현재 활성 세션의 Import Review로 보냅니다."
-                : "현재 활성 세션이 없습니다. 새 세션으로 가져오거나 세션을 먼저 시작하세요."
-            }
-          >
-            현재 세션에 추가
-          </Button>
-        </div>
-        <small>
-          기본 동작은 대화마다 새 세션을 만드는 것입니다(Claude 대화 1개 = Mori 세션 1개).
-          가져온 항목은 Import Review에서 검토 후 적용됩니다.
-        </small>
-      </footer>
-    </article>
+    </InspectorPanel>
   );
 }
 
@@ -785,14 +819,11 @@ function PreviewPanel({
 
 function ConnectionsBrowserHelp() {
   return (
-    <div className="connections-empty">
-      <Link2 size={20} aria-hidden="true" />
-      <h2>데스크탑 앱에서만 사용할 수 있는 기능입니다</h2>
-      <p>
-        연결 기능은 사용자의 PC에 저장된 Claude / Codex 도구의 파일을 감지합니다. 브라우저
-        프리뷰에서는 이 파일들에 접근할 수 없으므로 데스크탑 앱(Tauri)을 실행해 주세요.
-      </p>
-    </div>
+    <EmptyState
+      icon={Link2}
+      title="데스크탑 앱에서만 사용할 수 있는 기능입니다"
+      description="연결 기능은 PC에 저장된 Claude / Codex 파일을 감지합니다. 브라우저 프리뷰에서는 접근할 수 없으니 데스크탑 앱(Tauri)을 실행하세요."
+    />
   );
 }
 
