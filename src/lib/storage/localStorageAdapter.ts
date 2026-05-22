@@ -5,6 +5,7 @@ import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 import type { RepositorySettings } from "../repositories";
 import { DEFAULT_REPOSITORY_SETTINGS, sanitizeRepositorySettings } from "../repositories";
+import { deriveSessionSummaryMetrics } from "./sessionSummaryMetrics";
 import type {
   ConnectorEventIdentitySnapshot,
   KeyValueStorage,
@@ -99,6 +100,11 @@ export class BrowserDraftRepository implements MoriDraftRepository {
       const draft = this.read<StoredSessionDraft>(key);
       if (!draft) continue;
 
+      // Derive event/token metrics once from the session's persisted imports.
+      // Token usage lives only on imported events, so this is the cheapest
+      // honest source — sessions with no usage simply omit the token fields.
+      const metrics = deriveSessionSummaryMetrics(this.listSessionImports(draft.session.id));
+
       sessions.push({
         sessionId: draft.session.id,
         projectId: draft.project.id,
@@ -109,6 +115,10 @@ export class BrowserDraftRepository implements MoriDraftRepository {
         startedAt: draft.session.startedAt ?? draft.savedAt,
         ...(draft.session.sourceLabel ? { sourceLabel: draft.session.sourceLabel } : {}),
         ...(draft.session.archivedAt ? { archivedAt: draft.session.archivedAt } : {}),
+        ...(metrics.eventCount !== undefined ? { eventCount: metrics.eventCount } : {}),
+        ...(metrics.tokenTotal !== undefined ? { tokenTotal: metrics.tokenTotal } : {}),
+        ...(metrics.tokenInput !== undefined ? { tokenInput: metrics.tokenInput } : {}),
+        ...(metrics.tokenOutput !== undefined ? { tokenOutput: metrics.tokenOutput } : {}),
       });
     }
 

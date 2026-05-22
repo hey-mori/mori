@@ -52,6 +52,26 @@ export type StoredSessionSummary = {
    * Undefined for active / never-archived sessions.
    */
   archivedAt?: string;
+  /**
+   * Reconstructed timeline-event count for the session, derived once from its
+   * imported events. Lets the Home activity heatmap weight a day by how much
+   * work happened, not just that a session exists. Additive and optional —
+   * sessions with no imports, and records persisted before this field, omit
+   * it (they contribute zero, never a fabricated number).
+   */
+  eventCount?: number;
+  /**
+   * Total Claude token usage across the session's imported events
+   * (`input + output`), derived once via `sumTokenUsage`. Optional and
+   * honest by absence: Claude Desktop sessions carry no usage, and events
+   * imported before token usage was captured omit it — in both cases this
+   * field is left undefined rather than invented or split.
+   */
+  tokenTotal?: number;
+  /** Input-token share of `tokenTotal`. Omitted whenever `tokenTotal` is. */
+  tokenInput?: number;
+  /** Output-token share of `tokenTotal`. Omitted whenever `tokenTotal` is. */
+  tokenOutput?: number;
 };
 
 export type StoredSessionImport = {
