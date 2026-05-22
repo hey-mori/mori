@@ -15652,3 +15652,403 @@ pre {
   gap: 8px;
   margin-top: 6px;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Workspace — sessions browser
+ *
+ * The "projects → sessions" first-class view. A grouped, dense session list
+ * on the left (one row per session, scannable columns) and the shared
+ * InspectorPanel on the right. Purple stays accent / identity only — origin
+ * and status chips carry semantic tone; the active row uses the brand purple
+ * left border as the single accent.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.workspace-page .action-bar {
+  flex-wrap: wrap;
+}
+
+.workspace-search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  min-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-pill);
+  background: var(--mori-surface);
+  color: var(--mori-text-muted);
+}
+
+.workspace-search:focus-within {
+  border-color: var(--mori-border-focus);
+  box-shadow: 0 0 0 3px var(--mori-accent-soft);
+}
+
+.workspace-search input {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--mori-font-size-sm);
+  color: var(--mori-text);
+  outline: none;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Segmented filter / sort control. Quiet pill of options; the active option
+   gets a raised surface, not the brand purple, so the toolbar stays calm. */
+.workspace-segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-pill);
+  background: var(--mori-surface-subtle);
+}
+
+.workspace-segmented-option {
+  border: 0;
+  background: transparent;
+  border-radius: var(--mori-radius-pill);
+  padding: 5px 12px;
+  font: inherit;
+  font-size: var(--mori-font-size-xs);
+  font-weight: 600;
+  color: var(--mori-text-muted);
+  cursor: pointer;
+  transition: background var(--mori-transition-fast), color var(--mori-transition-fast);
+  white-space: nowrap;
+}
+
+.workspace-segmented-option:hover {
+  color: var(--mori-text);
+}
+
+.workspace-segmented-option.is-active {
+  background: var(--mori-surface);
+  color: var(--mori-text);
+  box-shadow: var(--mori-shadow-card);
+}
+
+/* ── Project groups ───────────────────────────────────────────────────── */
+
+.workspace-groups {
+  display: grid;
+  gap: var(--mori-space-8);
+}
+
+.workspace-group {
+  display: grid;
+  gap: var(--mori-space-3);
+}
+
+.workspace-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mori-space-3);
+  padding-bottom: var(--mori-space-2);
+  border-bottom: 1px solid var(--mori-border);
+}
+
+.workspace-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  min-width: 0;
+  font-size: var(--mori-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mori-text-muted-2);
+}
+
+.workspace-group-title svg {
+  flex-shrink: 0;
+  color: var(--mori-text-muted-2);
+}
+
+.workspace-group-title span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Session rows ─────────────────────────────────────────────────────── */
+
+.workspace-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--mori-space-2);
+}
+
+.workspace-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mori-space-5);
+  min-height: 52px;
+  padding: var(--mori-space-3) var(--mori-space-5);
+  border: 1px solid var(--mori-border);
+  border-left: 3px solid transparent;
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
+  cursor: pointer;
+  transition: border-color var(--mori-transition-fast), box-shadow var(--mori-transition-fast);
+}
+
+.workspace-row:hover {
+  border-color: var(--mori-border-strong);
+  box-shadow: var(--mori-shadow-card);
+}
+
+.workspace-row:focus-visible {
+  outline: none;
+  border-color: var(--mori-border-focus);
+  box-shadow: 0 0 0 3px var(--mori-accent-soft);
+}
+
+.workspace-row.is-selected {
+  border-color: var(--mori-border-strong);
+  box-shadow: var(--mori-shadow-card);
+}
+
+.workspace-row.is-active {
+  border-left-color: var(--mori-accent);
+}
+
+.workspace-row.is-archived {
+  background: var(--mori-surface-subtle);
+}
+
+.workspace-row.is-archived .workspace-row-title {
+  color: var(--mori-text-muted);
+}
+
+.workspace-row-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.workspace-row-title {
+  font-size: var(--mori-font-size-md);
+  font-weight: 600;
+  color: var(--mori-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-row-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-3);
+  flex-wrap: wrap;
+  font-size: var(--mori-font-size-xs);
+  color: var(--mori-text-muted);
+}
+
+.workspace-row-active-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: var(--mori-accent);
+}
+
+.workspace-row-active-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mori-accent);
+}
+
+.workspace-row-span {
+  color: var(--mori-text-muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-row-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  flex-shrink: 0;
+}
+
+.workspace-row-archived-tag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--mori-text-muted-2);
+}
+
+/* ── Inspector body ───────────────────────────────────────────────────── */
+
+.workspace-inspector-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mori-space-3);
+}
+
+.workspace-inspector-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.workspace-rename {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  flex-wrap: wrap;
+  padding: var(--mori-space-3);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface-subtle);
+}
+
+.workspace-rename input {
+  flex: 1;
+  min-width: 140px;
+  padding: 7px 10px;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-sm);
+  background: var(--mori-surface);
+  font: inherit;
+  font-size: var(--mori-font-size-sm);
+  color: var(--mori-text);
+}
+
+.workspace-rename input:focus {
+  outline: none;
+  border-color: var(--mori-border-focus);
+  box-shadow: 0 0 0 3px var(--mori-accent-soft);
+}
+
+.workspace-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mori-space-5) var(--mori-space-6);
+  margin: 0;
+}
+
+.workspace-detail-grid div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.workspace-detail-grid dt {
+  font-size: var(--mori-font-size-2xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mori-text-muted-2);
+}
+
+.workspace-detail-grid dd {
+  margin: 0;
+  font-size: var(--mori-font-size-sm);
+  color: var(--mori-text);
+  word-break: break-word;
+}
+
+.workspace-detail-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mori-space-2);
+  margin: 0;
+  padding: var(--mori-space-4);
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface-subtle);
+  font-size: var(--mori-font-size-sm);
+  color: var(--mori-text-muted);
+  line-height: var(--mori-line-normal);
+}
+
+.workspace-detail-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--mori-text-muted-2);
+}
+
+/* ── Reconstructed counts ─────────────────────────────────────────────── */
+
+.workspace-counts {
+  display: grid;
+  gap: var(--mori-space-3);
+}
+
+.workspace-counts h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  margin: 0;
+  font-size: var(--mori-font-size-2xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mori-text-muted-2);
+}
+
+.workspace-counts ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--mori-space-2);
+}
+
+.workspace-counts li {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-3);
+  padding: var(--mori-space-3) var(--mori-space-4);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
+  font-size: var(--mori-font-size-sm);
+  color: var(--mori-text-muted);
+}
+
+.workspace-counts li span:not(.workspace-count-icon) {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-counts li b {
+  font-size: var(--mori-font-size-lg);
+  font-weight: 700;
+  color: var(--mori-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-count-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--mori-radius-sm);
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text-muted);
+  flex-shrink: 0;
+}
+
+.workspace-counts-note {
+  margin: 0;
+  font-size: var(--mori-font-size-xs);
+  color: var(--mori-text-muted-2);
+  line-height: var(--mori-line-normal);
+}
+
+@media (max-width: 768px) {
+  .workspace-detail-grid,
+  .workspace-inspector-actions {
+    grid-template-columns: 1fr;
+  }
+}

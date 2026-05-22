@@ -63,6 +63,33 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     return stored;
   }
 
+  loadStoredSessionDraft(sessionId: string): StoredSessionDraft | null {
+    return this.read<StoredSessionDraft>(`${SESSION_PREFIX}${sessionId}`);
+  }
+
+  saveStoredSessionMetadata(
+    sessionId: string,
+    draft: StoredSessionDraft,
+  ): StoredSessionDraft | null {
+    const existing = this.read<StoredSessionDraft>(`${SESSION_PREFIX}${sessionId}`);
+    if (!existing) return null;
+    // Preserve the original `savedAt`/`adapter` — a metadata edit (rename /
+    // archive) is not a content save and must not restamp the timestamp.
+    const next: StoredSessionDraft = {
+      ...draft,
+      savedAt: existing.savedAt,
+      adapter: existing.adapter,
+    };
+    this.write(`${SESSION_PREFIX}${sessionId}`, next);
+    // Mirror into the current-session key only when this session is current,
+    // so editing a background session never repoints the active draft.
+    const current = this.loadCurrentSessionDraft();
+    if (current?.session.id === sessionId) {
+      this.write(CURRENT_SESSION_KEY, next);
+    }
+    return next;
+  }
+
   listStoredSessions(): StoredSessionSummary[] {
     const sessions: StoredSessionSummary[] = [];
 
@@ -81,6 +108,7 @@ export class BrowserDraftRepository implements MoriDraftRepository {
         status: draft.session.status,
         startedAt: draft.session.startedAt ?? draft.savedAt,
         ...(draft.session.sourceLabel ? { sourceLabel: draft.session.sourceLabel } : {}),
+        ...(draft.session.archivedAt ? { archivedAt: draft.session.archivedAt } : {}),
       });
     }
 

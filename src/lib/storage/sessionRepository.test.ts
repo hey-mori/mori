@@ -340,6 +340,107 @@ describe("BrowserDraftRepository", () => {
     expect(repository.setCurrentSession("missing-session")).toBeNull();
   });
 
+  it("loadStoredSessionDraft reads a session without changing the current pointer", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    const earlier = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Earlier",
+        projectName: "Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+    const later = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Later",
+        projectName: "Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T15:00:00+09:00",
+      }),
+    );
+
+    const loaded = repository.loadStoredSessionDraft(earlier.session.id);
+    expect(loaded?.session.id).toBe(earlier.session.id);
+    // The current pointer is untouched — still on the later session.
+    expect(repository.loadCurrentSessionDraft()?.session.id).toBe(later.session.id);
+    expect(repository.loadStoredSessionDraft("missing")).toBeNull();
+  });
+
+  it("saveStoredSessionMetadata rewrites a background session without restamping savedAt", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    const background = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Background",
+        projectName: "Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+    const active = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Active",
+        projectName: "Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T15:00:00+09:00",
+      }),
+    );
+
+    const saved = repository.saveStoredSessionMetadata(background.session.id, {
+      ...background,
+      session: { ...background.session, title: "Renamed background", archivedAt: "2026-05-22T00:00:00+09:00" },
+    });
+
+    expect(saved?.session.title).toBe("Renamed background");
+    expect(saved?.savedAt).toBe(background.savedAt);
+    // Editing a background session must not repoint the current session.
+    expect(repository.loadCurrentSessionDraft()?.session.id).toBe(active.session.id);
+    const reread = repository.loadStoredSessionDraft(background.session.id);
+    expect(reread?.session.archivedAt).toBe("2026-05-22T00:00:00+09:00");
+    expect(repository.listStoredSessions().find((s) => s.sessionId === background.session.id)?.archivedAt).toBe(
+      "2026-05-22T00:00:00+09:00",
+    );
+  });
+
+  it("saveStoredSessionMetadata mirrors into the current key when editing the current session", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    const current = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Current",
+        projectName: "Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+
+    repository.saveStoredSessionMetadata(current.session.id, {
+      ...current,
+      session: { ...current.session, title: "Current renamed" },
+    });
+
+    expect(repository.loadCurrentSessionDraft()?.session.title).toBe("Current renamed");
+    expect(repository.saveStoredSessionMetadata("missing", current)).toBeNull();
+  });
+
   it("persists an optional importSummary on a session import and reads it back", () => {
     const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
     const draft = repository.saveCurrentSessionDraft(

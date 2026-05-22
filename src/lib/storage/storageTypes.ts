@@ -45,6 +45,13 @@ export type StoredSessionSummary = {
    * sidebar switcher's group headers. Undefined for manual sessions.
    */
   sourceLabel?: string;
+  /**
+   * ISO timestamp the session was archived, when set. Lets the Workspace
+   * sessions browser hide archived sessions from its default list (and
+   * surface them under an archive filter) without loading the full draft.
+   * Undefined for active / never-archived sessions.
+   */
+  archivedAt?: string;
 };
 
 export type StoredSessionImport = {
@@ -131,6 +138,27 @@ export type MoriDraftRepository = {
    * when no draft is stored for the id.
    */
   setCurrentSession: (sessionId: string) => StoredSessionDraft | null;
+  /**
+   * Read a stored session draft by id WITHOUT changing which session is
+   * current. Lets a background session be inspected / edited (rename,
+   * archive) without activating it. Returns `null` when no draft is stored
+   * for the id.
+   */
+  loadStoredSessionDraft: (sessionId: string) => StoredSessionDraft | null;
+  /**
+   * Persist a metadata-only edit (rename / archive / unarchive) to an
+   * already-stored session draft, identified by id. Unlike
+   * `saveCurrentSessionDraft`, this does NOT restamp `savedAt` — a rename or
+   * archive is not a content save — and it does NOT change which session is
+   * current. The per-session record is rewritten, and the current-session
+   * mirror is updated only when the edited session is already the current
+   * one. Returns the stored draft, or `null` when no draft is stored for the
+   * id. The `session.id` must match `sessionId`.
+   */
+  saveStoredSessionMetadata: (
+    sessionId: string,
+    draft: StoredSessionDraft,
+  ) => StoredSessionDraft | null;
   listStoredSessions: () => StoredSessionSummary[];
   saveMoriPackageDraft: (pkg: MoriPackageV0) => StoredMoriPackageDraft;
   loadMoriPackageDraft: (packageId: string) => StoredMoriPackageDraft | null;

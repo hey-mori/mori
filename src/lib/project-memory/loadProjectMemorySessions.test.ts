@@ -18,6 +18,8 @@ function stubRepository(overrides: Partial<MoriDraftRepository> = {}): MoriDraft
     loadCurrentSessionDraft: () => null,
     clearCurrentSessionDraft: vi.fn(),
     setCurrentSession: () => null,
+    loadStoredSessionDraft: () => null,
+    saveStoredSessionMetadata: () => null,
     listStoredSessions: () => [],
     saveMoriPackageDraft: vi.fn() as unknown as MoriDraftRepository["saveMoriPackageDraft"],
     loadMoriPackageDraft: () => null,

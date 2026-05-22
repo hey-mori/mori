@@ -340,6 +340,98 @@ describe("useMoriSessionStore loadBrowserSession", () => {
   });
 });
 
+describe("useMoriSessionStore session lifecycle (rename / archive)", () => {
+  let repository: BrowserDraftRepository;
+
+  beforeEach(() => {
+    repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  function seedSession(title: string, now: string) {
+    return repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: title,
+        projectName: "Browser Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now,
+      }),
+    );
+  }
+
+  it("renames the active session and updates the in-memory draft", () => {
+    const seeded = seedSession("원래 제목", "2026-05-12T13:00:00+09:00");
+    useMoriSessionStore.getState().loadBrowserSession(seeded.session.id);
+
+    const ok = useMoriSessionStore.getState().renameSession(seeded.session.id, "  새 제목  ");
+    expect(ok).toBe(true);
+    expect(useMoriSessionStore.getState().draft?.session.title).toBe("새 제목");
+    expect(repository.loadStoredSessionDraft(seeded.session.id)?.session.title).toBe("새 제목");
+  });
+
+  it("renames a background session without activating it", () => {
+    const background = seedSession("배경 세션", "2026-05-12T13:00:00+09:00");
+    const active = seedSession("활성 세션", "2026-05-12T15:00:00+09:00");
+    useMoriSessionStore.getState().loadBrowserSession(active.session.id);
+
+    const ok = useMoriSessionStore.getState().renameSession(background.session.id, "바뀐 배경");
+    expect(ok).toBe(true);
+    // Active draft is untouched; the current pointer stays on the active one.
+    expect(useMoriSessionStore.getState().draft?.session.id).toBe(active.session.id);
+    expect(repository.loadStoredSessionDraft(background.session.id)?.session.title).toBe("바뀐 배경");
+    expect(repository.loadCurrentSessionDraft()?.session.id).toBe(active.session.id);
+  });
+
+  it("returns false for a blank or unchanged rename", () => {
+    const seeded = seedSession("그대로", "2026-05-12T13:00:00+09:00");
+    useMoriSessionStore.getState().loadBrowserSession(seeded.session.id);
+    expect(useMoriSessionStore.getState().renameSession(seeded.session.id, "   ")).toBe(false);
+    expect(useMoriSessionStore.getState().renameSession(seeded.session.id, "그대로")).toBe(false);
+  });
+
+  it("does not restamp savedAt on a metadata edit", () => {
+    const seeded = seedSession("타임스탬프", "2026-05-12T13:00:00+09:00");
+    const savedAt = repository.loadStoredSessionDraft(seeded.session.id)?.savedAt;
+    useMoriSessionStore.getState().renameSession(seeded.session.id, "다른 제목");
+    expect(repository.loadStoredSessionDraft(seeded.session.id)?.savedAt).toBe(savedAt);
+  });
+
+  it("archives and unarchives a session via additive archivedAt", () => {
+    const seeded = seedSession("보관 대상", "2026-05-12T13:00:00+09:00");
+    useMoriSessionStore.getState().loadBrowserSession(seeded.session.id);
+
+    expect(useMoriSessionStore.getState().archiveSession(seeded.session.id)).toBe(true);
+    expect(useMoriSessionStore.getState().draft?.session.archivedAt).toBeTruthy();
+    expect(repository.loadStoredSessionDraft(seeded.session.id)?.session.archivedAt).toBeTruthy();
+    // Archiving is idempotent.
+    expect(useMoriSessionStore.getState().archiveSession(seeded.session.id)).toBe(false);
+
+    expect(useMoriSessionStore.getState().unarchiveSession(seeded.session.id)).toBe(true);
+    expect(useMoriSessionStore.getState().draft?.session.archivedAt).toBeUndefined();
+    expect(useMoriSessionStore.getState().unarchiveSession(seeded.session.id)).toBe(false);
+  });
+
+  it("returns false for an unknown session id", () => {
+    expect(useMoriSessionStore.getState().renameSession("missing", "x")).toBe(false);
+    expect(useMoriSessionStore.getState().archiveSession("missing")).toBe(false);
+    expect(useMoriSessionStore.getState().unarchiveSession("missing")).toBe(false);
+  });
+});
+
 describe("useMoriSessionStore importAsNewSession", () => {
   let repository: BrowserDraftRepository;
 

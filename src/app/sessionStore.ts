@@ -21,6 +21,11 @@ import {
 } from "../lib/analysis";
 import type { NormalizedImportCandidate } from "../lib/import";
 import { createSessionDraft } from "../lib/session/createSessionDraft";
+import {
+  applySessionArchive,
+  applySessionRename,
+  applySessionUnarchive,
+} from "../lib/session/sessionManagement";
 import { rebindCandidateToSession } from "../lib/claude/claudeImport";
 import { composeSessionView } from "../lib/session/composeSessionView";
 import { withNextActionCompletion } from "../lib/session/nextActionCompletion";
@@ -164,6 +169,30 @@ export type MoriSessionState = {
    * Returns `false` when no draft is stored for the id.
    */
   loadBrowserSession: (sessionId: string) => boolean;
+  /**
+   * Rename a stored session (by id). Updates the persisted draft title in
+   * localStorage; when the renamed session is the active draft, the in-memory
+   * draft is updated too so the title change is reflected immediately across
+   * the shell. Returns `false` in demo mode, for an unknown id, or when the
+   * title is blank / unchanged. A safe, non-destructive Workspace edit.
+   */
+  renameSession: (sessionId: string, title: string) => boolean;
+  /**
+   * Archive a stored session (by id) — a non-destructive "tidy away". Stamps
+   * an `archivedAt` timestamp on the persisted draft so the Workspace hides it
+   * from the default list (it stays reachable via the archive filter and is
+   * never deleted). When the archived session is the active draft, the
+   * in-memory draft is updated too. Idempotent. Returns `false` in demo mode,
+   * for an unknown id, or when the session is already archived.
+   */
+  archiveSession: (sessionId: string) => boolean;
+  /**
+   * Restore an archived session (by id) to the default Workspace list by
+   * clearing its `archivedAt`. The inverse of `archiveSession`. Returns
+   * `false` in demo mode, for an unknown id, or when the session was not
+   * archived.
+   */
+  unarchiveSession: (sessionId: string) => boolean;
   /**
    * Mark a Next Action complete or pending — a Review-surface write.
    * Persists into the session analysis and the durable memory body so
@@ -918,6 +947,18 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     });
     return true;
   },
+  renameSession: (sessionId, title) =>
+    applyStoredSessionEdit(get, set, sessionId, (session) =>
+      applySessionRename(session, title),
+    ),
+  archiveSession: (sessionId) =>
+    applyStoredSessionEdit(get, set, sessionId, (session) =>
+      applySessionArchive(session, new Date().toISOString()),
+    ),
+  unarchiveSession: (sessionId) =>
+    applyStoredSessionEdit(get, set, sessionId, (session) =>
+      applySessionUnarchive(session),
+    ),
   loadDesktopSession: async (sessionId) => {
     const service = getPersistenceService();
     if (!service.isDesktop()) {
@@ -961,6 +1002,50 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     return true;
   },
 }));
+
+/**
+ * Apply a pure session-metadata transform (rename / archive / unarchive) to
+ * a stored session draft by id and persist it. Centralises the three
+ * lifecycle writes so each store action stays a one-liner:
+ *
+ *   - When the id is the active draft, transform that; otherwise read the
+ *     stored per-session record. An unknown id (or demo with no draft) is a
+ *     no-op so a stale Workspace row can never crash the store.
+ *   - The transform runs on the draft's session. When it returns the same
+ *     reference (blank / unchanged / idempotent), nothing is written and the
+ *     action returns `false`.
+ *   - Otherwise the draft is persisted via `saveStoredSessionMetadata`, which
+ *     rewrites the per-session record without restamping `savedAt` and
+ *     leaves the current-session pointer untouched (it only mirrors the edit
+ *     when the edited session is already current).
+ *   - When the edited session is the active draft, the in-memory `draft` is
+ *     updated so the shell reflects the change immediately.
+ */
+function applyStoredSessionEdit(
+  get: () => MoriSessionState,
+  set: (partial: Partial<MoriSessionState>) => void,
+  sessionId: string,
+  transform: (session: StoredSessionDraft["session"]) => StoredSessionDraft["session"],
+): boolean {
+  const repository = getRepository();
+  const active = get().draft;
+  const isActive = active?.session.id === sessionId;
+
+  const stored = isActive ? active : repository.loadStoredSessionDraft(sessionId);
+  if (!stored) return false;
+
+  const nextSession = transform(stored.session);
+  if (nextSession === stored.session) return false;
+
+  const persisted = repository.saveStoredSessionMetadata(sessionId, {
+    ...stored,
+    session: nextSession,
+  });
+  if (!persisted) return false;
+
+  if (isActive) set({ draft: persisted });
+  return true;
+}
 
 function resolveProviderFromSettings(settings: QuickPassAnalysisSettings): MoriAnalysisProvider {
   if (settings.provider === "ollama") {

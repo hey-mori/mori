@@ -75,6 +75,15 @@ export type Session = {
    * (manual Start Session, demo, older imports) simply omit it.
    */
   sourceLabel?: string;
+  /**
+   * ISO timestamp the user archived this session. Optional and additive:
+   * archiving is a non-destructive "tidy away" — the session is hidden from
+   * the default Workspace list (but reachable via the archive filter) and is
+   * never deleted. Sessions saved before this field, and active sessions,
+   * simply omit it. Clearing the field (un-archiving) restores the session
+   * to the default list.
+   */
+  archivedAt?: string;
 };
 
 export type SourceRef = {
