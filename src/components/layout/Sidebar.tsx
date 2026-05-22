@@ -26,6 +26,7 @@ import {
   isClaudeBridgeAvailable,
 } from "../../lib/claude/claudeTauri";
 import { NAV_GROUPS, type NavKey } from "../../lib/navigation/navGroups";
+import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
 
 /**
  * Nav structure is defined as pure data in `lib/navigation/navGroups` so the
@@ -44,6 +45,7 @@ import { NAV_GROUPS, type NavKey } from "../../lib/navigation/navGroups";
  */
 const SESSION_SURFACE_VIEWS = new Set<ViewKey>([
   "workspace",
+  "session",
   "timeline",
   "flow",
   "evidence",
@@ -120,6 +122,10 @@ export function Sidebar({ currentView, onNavigate }: { currentView: ViewKey; onN
           </div>
         ))}
       </nav>
+      {/* Global attention layer (P4) — sits between the nav and the bottom
+          section. Carries margin-top: auto so it pushes away from the nav
+          and groups visually with the session card below it. */}
+      <AttentionIndicator onNavigate={onNavigate} />
       <SidebarSessionCard />
       <SidebarSessionSwitcher onNavigate={onNavigate} />
       <SidebarProfile currentView={currentView} onNavigate={onNavigate} />
