@@ -93,7 +93,7 @@ type ImportPackageMessage =
     }
   | { kind: "error"; message: string };
 
-export function ConsolidationReviewView() {
+export function ConsolidationReviewView({ embedded = false }: { embedded?: boolean } = {}) {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   // Mirror MemoryView's data pipeline. Pure derivation; cheap.
@@ -346,7 +346,7 @@ export function ConsolidationReviewView() {
   const dataBasisTone = getProjectMemoryDataBasisTone(consolidationState.dataBasis);
 
   return (
-    <div className="page consolidation-review-page">
+    <div className={embedded ? "consolidation-review-page is-embedded" : "page consolidation-review-page"}>
       <ActionBar
         label="메모리 통합 검토"
         start={
@@ -357,9 +357,11 @@ export function ConsolidationReviewView() {
           </>
         }
         end={
-          <Button icon={ArrowLeft} onClick={() => setCurrentView("memory")}>
-            Memory로 돌아가기
-          </Button>
+          embedded ? undefined : (
+            <Button icon={ArrowLeft} onClick={() => setCurrentView("memory")}>
+              Memory로 돌아가기
+            </Button>
+          )
         }
       />
 

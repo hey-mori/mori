@@ -42,7 +42,7 @@ export function SessionSummaryStrip({
   return (
     <section className="session-summary-strip" aria-label="Session summary">
       <header>
-        <h2>세션 요약 (Session Summary)</h2>
+        <h2>세션 요약</h2>
         <Badge tone={dataBasisTone}>{dataBasis}</Badge>
       </header>
       <dl className="session-summary-metrics">

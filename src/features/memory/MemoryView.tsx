@@ -14,7 +14,7 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriSqliteStore } from "../../app/sqliteStore";
-import { useMoriAppStore } from "../../app/store";
+import { useMoriAppStore, type MemoryTab } from "../../app/store";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { getSessionPersistenceService } from "../../lib/storage/sessionPersistenceService";
 import type {
@@ -67,6 +67,15 @@ import { KeyEvidenceCard } from "./KeyEvidenceCard";
 import { SavedReportsCard } from "./SavedReportsCard";
 import { ProjectMemorySummaryPanel } from "./ProjectMemorySummaryPanel";
 import { ReimportHistoryCard } from "./ReimportHistoryCard";
+import { SegmentedControl, type SegmentedControlOption } from "../../components/ui/SegmentedControl";
+import { ConsolidationReviewView } from "./ConsolidationReviewView";
+import { ReportsView } from "../reports/ReportsView";
+
+const MEMORY_SEGMENTS: SegmentedControlOption<MemoryTab>[] = [
+  { id: "overview", label: "메모리" },
+  { id: "consolidation", label: "통합" },
+  { id: "reports", label: "리포트" },
+];
 
 export function MemoryView() {
   // `navigate` routes legacy session-surface keys (timeline) into the unified
@@ -76,6 +85,8 @@ export function MemoryView() {
   const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
   const memoryFocus = useMoriAppStore((state) => state.memoryFocus);
   const clearMemoryFocus = useMoriAppStore((state) => state.clearMemoryFocus);
+  const memoryTab = useMoriAppStore((state) => state.memoryTab);
+  const setMemoryTab = useMoriAppStore((state) => state.setMemoryTab);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const view = useMoriSessionStore(selectSessionView);
@@ -387,35 +398,52 @@ export function MemoryView() {
       header={<PageHeader compact title="메모리" />}
       actionBar={
         <ActionBar
-          label="메모리 데이터 범위"
+          label="메모리 보기"
           start={
             <>
-              <Badge tone="purple">{scopeLabel}</Badge>
-              <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>
-              <HelpDisclosure label="집계 범위" ariaLabel="메모리 집계 범위 설명">
-                <MemoryScopeHelp
-                  mode={mode}
-                  sqliteAvailable={sqliteAvailable}
-                  sqliteKind={sqliteKind}
-                  savedSessionCount={savedSessions.filter((entry) => !entry.isCurrent).length}
-                />
-              </HelpDisclosure>
+              <SegmentedControl
+                options={MEMORY_SEGMENTS}
+                value={memoryTab}
+                onChange={setMemoryTab}
+                ariaLabel="메모리 보기 전환"
+              />
+              {memoryTab === "overview" ? (
+                <>
+                  <Badge tone="purple">{scopeLabel}</Badge>
+                  <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>
+                  <HelpDisclosure label="집계 범위" ariaLabel="메모리 집계 범위 설명">
+                    <MemoryScopeHelp
+                      mode={mode}
+                      sqliteAvailable={sqliteAvailable}
+                      sqliteKind={sqliteKind}
+                      savedSessionCount={savedSessions.filter((entry) => !entry.isCurrent).length}
+                    />
+                  </HelpDisclosure>
+                </>
+              ) : null}
             </>
           }
         />
       }
       aside={
-        <ProjectMemorySummaryPanel
-          summary={projectMemorySummary}
-          followUpPrompt={followUpPrompt}
-          audience={resumeAudience}
-          privacyMode={resumePrivacy}
-          onAudienceChange={setResumeAudience}
-          onPrivacyModeChange={setResumePrivacy}
-          onStartFollowUp={() => setCurrentView("start")}
-        />
+        memoryTab === "overview" ? (
+          <ProjectMemorySummaryPanel
+            summary={projectMemorySummary}
+            followUpPrompt={followUpPrompt}
+            audience={resumeAudience}
+            privacyMode={resumePrivacy}
+            onAudienceChange={setResumeAudience}
+            onPrivacyModeChange={setResumePrivacy}
+            onStartFollowUp={() => setCurrentView("start")}
+          />
+        ) : undefined
       }
     >
+      {memoryTab === "consolidation" ? (
+        <ConsolidationReviewView embedded />
+      ) : memoryTab === "reports" ? (
+        <ReportsView embedded />
+      ) : (
       <div className="memory-main">
           <ProjectMemoryHero
             projectName={view.project.name}
@@ -424,7 +452,7 @@ export function MemoryView() {
             scope={primaryScope}
             scopeLabel={scopeLabel}
             onStartFollowUp={() => setCurrentView("start")}
-            onOpenLatestReport={() => setCurrentView("reports")}
+            onOpenLatestReport={() => setMemoryTab("reports")}
             reportAvailable={packageDrafts.length > 0 || hasAnalysis}
             savedReportAvailability={savedReportAvailability}
           />
@@ -455,12 +483,12 @@ export function MemoryView() {
           <details className="memory-advanced">
             <summary className="memory-advanced-summary">
               <ChevronDown size={14} aria-hidden="true" />
-              메모리 분석 · 통합 검토 · 도구
+              메모리 분석 · 도구
             </summary>
             <div className="memory-advanced-body">
               <ConsolidationPreviewCard
                 state={consolidationState}
-                onOpenReview={() => setCurrentView("consolidation")}
+                onOpenReview={() => setMemoryTab("consolidation")}
               />
 
               <div className="memory-grid-two">
@@ -491,11 +519,12 @@ export function MemoryView() {
               <SavedReportsCard
                 packages={packageDrafts}
                 hasCurrentReportSurface
-                onOpenReports={() => setCurrentView("reports")}
+                onOpenReports={() => setMemoryTab("reports")}
               />
             </div>
           </details>
       </div>
+      )}
 
       <MoriDrawer
         open={selectedMemoryId !== null}

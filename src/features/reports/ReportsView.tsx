@@ -66,7 +66,7 @@ import { WorkContinuationCards } from "./WorkContinuationCards";
 import { ReportBuilderPanel } from "./ReportBuilderPanel";
 import { HandoffReadinessPanel } from "./HandoffReadinessPanel";
 
-export function ReportsView() {
+export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
   // `navigate` routes legacy session-surface keys (timeline / evidence) into
   // the unified Session Detail workspace; other keys pass through unchanged.
   const setCurrentView = useMoriAppStore((state) => state.navigate);
@@ -333,68 +333,57 @@ export function ReportsView() {
     }
   }
 
-  return (
-    <PageShell
-      className="reports-page"
-      header={
-        <PageHeader
-          compact
-          title="리포트"
-          right={
-            !isDemo ? (
-              <Button
-                variant="primary"
-                icon={Sparkles}
-                onClick={() => runQuickPass()}
-                disabled={!canRunQuickPass}
-                title={
-                  canRunQuickPass
-                    ? "Quick Pass 실행"
-                    : imports.length === 0
-                      ? "먼저 소스를 가져오세요."
-                      : "이미 실행 중입니다."
-                }
-              >
-                {analysisStatus === "running"
-                  ? "분석 중..."
-                  : hasAnalysis
-                    ? "Quick Pass 재실행"
-                    : "Quick Pass 실행"}
-              </Button>
-            ) : undefined
-          }
-        />
-      }
-      actionBar={
-        <ActionBar
-          label="보고서 세션 상태"
-          start={
-            <>
-              <Badge tone="gray" title="이 리포트는 활성 세션을 기준으로 합니다.">
-                <Calendar size={12} aria-hidden="true" /> {formatDate(view.session.startedAt)}
-              </Badge>
-              <Badge tone="gray">{evidenceSummary.dataBasis}</Badge>
-            </>
-          }
-          end={
-            <div className="reports-action-counts">
-              <Badge tone="purple">출처 {view.sources.length}</Badge>
-              <Badge tone="blue">이벤트 {view.events.length}</Badge>
-              <Badge tone="red">이슈 {view.issues.length}</Badge>
-              <Badge tone="green">결정 {view.decisions.length}</Badge>
-            </div>
-          }
-        />
-      }
-      aside={
-        <ReportBuilderPanel
-          id="reports-builder"
-          view={view}
-          resumePromptOverride={resumePromptText}
-          acceptedMemories={acceptedMemories}
-        />
+  const quickPassButton = !isDemo ? (
+    <Button
+      variant="primary"
+      icon={Sparkles}
+      onClick={() => runQuickPass()}
+      disabled={!canRunQuickPass}
+      title={
+        canRunQuickPass
+          ? "Quick Pass 실행"
+          : imports.length === 0
+            ? "먼저 소스를 가져오세요."
+            : "이미 실행 중입니다."
       }
     >
+      {analysisStatus === "running"
+        ? "분석 중..."
+        : hasAnalysis
+          ? "Quick Pass 재실행"
+          : "Quick Pass 실행"}
+    </Button>
+  ) : undefined;
+
+  const statusBadges = (
+    <>
+      <Badge tone="gray" title="이 리포트는 활성 세션을 기준으로 합니다.">
+        <Calendar size={12} aria-hidden="true" /> {formatDate(view.session.startedAt)}
+      </Badge>
+      <Badge tone="gray">{evidenceSummary.dataBasis}</Badge>
+    </>
+  );
+
+  const actionCounts = (
+    <div className="reports-action-counts">
+      <Badge tone="purple">출처 {view.sources.length}</Badge>
+      <Badge tone="blue">이벤트 {view.events.length}</Badge>
+      <Badge tone="red">이슈 {view.issues.length}</Badge>
+      <Badge tone="green">결정 {view.decisions.length}</Badge>
+    </div>
+  );
+
+  const asideNode = (
+    <ReportBuilderPanel
+      id="reports-builder"
+      view={view}
+      resumePromptOverride={resumePromptText}
+      acceptedMemories={acceptedMemories}
+    />
+  );
+
+  const bodyNode = (
+    <>
       <ReportsAnalysisNotice
         mode={mode}
         hasAnalysis={hasAnalysis}
@@ -452,6 +441,43 @@ export function ReportsView() {
             />
           </div>
       </div>
+    </>
+  );
+
+  // Embedded inside the Memory 리포트 segment: render content-only (no PageShell
+  // or page header — Memory owns the surface chrome), with the report builder as
+  // a right rail in the shared session-tab split layout.
+  if (embedded) {
+    return (
+      <div className="session-tab-pane reports-embedded">
+        <div className="session-tab-actionbar">
+          <ActionBar
+            label="보고서 세션 상태"
+            start={statusBadges}
+            end={
+              <div className="reports-embedded-actions">
+                {quickPassButton}
+                {actionCounts}
+              </div>
+            }
+          />
+        </div>
+        <div className="session-tab-split">
+          <div className="session-tab-main">{bodyNode}</div>
+          {asideNode}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <PageShell
+      className="reports-page"
+      header={<PageHeader compact title="리포트" right={quickPassButton} />}
+      actionBar={<ActionBar label="보고서 세션 상태" start={statusBadges} end={actionCounts} />}
+      aside={asideNode}
+    >
+      {bodyNode}
     </PageShell>
   );
 }

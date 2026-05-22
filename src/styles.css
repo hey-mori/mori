@@ -8481,6 +8481,16 @@ pre {
   flex-shrink: 0;
 }
 
+/* Embedded inside the Memory 리포트 segment: the Quick Pass action sits beside
+   the session counts (it has no page header to live in here). */
+.reports-embedded-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mori-space-5);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 @media (max-width: 920px) {
   .reports-action-counts {
     display: none;

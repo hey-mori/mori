@@ -122,7 +122,7 @@ export function ReportBuilderPanel({
     <aside id={id} className="report-builder-panel" aria-label="Report builder">
       <header className="report-builder-head">
         <div>
-          <h2>리포트 생성기 (Report Builder)</h2>
+          <h2>리포트 생성기</h2>
           <p>리포트 유형 / 섹션 / 형식을 선택하면 미리보기가 실시간으로 갱신됩니다.</p>
         </div>
       </header>

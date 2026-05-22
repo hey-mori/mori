@@ -17,6 +17,15 @@ export type SessionTab = "flow" | "evidence" | "insights";
 /** Active tab on the Settings surface. Persisted so the user returns to the same tab. */
 export type SettingsTab = "localAi" | "privacy" | "storage" | "repositories" | "appearance";
 
+/**
+ * Active segment inside the Memory surface. Reports and Consolidation fold
+ * into Memory (the terminal steps of the memory loop), so they are reached as
+ * segments here rather than as standing nav destinations. "overview" is the
+ * project-memory view; "consolidation" is the review surface; "reports" is the
+ * report builder / handoff. Stored so the user returns to the same segment.
+ */
+export type MemoryTab = "overview" | "consolidation" | "reports";
+
 type MoriAppState = {
   currentView: ViewKey;
   selectedEventId: string;
@@ -55,6 +64,12 @@ type MoriAppState = {
    * to the same tab when navigating away and back.
    */
   settingsTab: SettingsTab;
+  /**
+   * Active segment inside the Memory surface (개요 / 통합 / 리포트). Stored so
+   * navigating away and back returns to the same segment; Memory-internal
+   * links (e.g. the hero "리포트" action) set it to switch segment in place.
+   */
+  memoryTab: MemoryTab;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -70,6 +85,7 @@ type MoriAppState = {
   clearMemoryFocus: () => void;
   setReviewTab: (tab: ReviewTab) => void;
   setSettingsTab: (tab: SettingsTab) => void;
+  setMemoryTab: (tab: MemoryTab) => void;
   /**
    * Open the unified Session Detail workspace, optionally on a specific tab.
    * The single front door other surfaces use to route into a session — the
@@ -101,6 +117,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   reviewTab: "issues",
   sessionTab: "flow",
   settingsTab: "localAi",
+  memoryTab: "overview",
   setCurrentView: (currentView) => set({ currentView }),
   setSelectedEventId: (selectedEventId) => set({ selectedEventId }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
@@ -121,6 +138,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   clearMemoryFocus: () => set({ memoryFocus: null }),
   setReviewTab: (reviewTab) => set({ reviewTab }),
   setSettingsTab: (settingsTab) => set({ settingsTab }),
+  setMemoryTab: (memoryTab) => set({ memoryTab }),
   openSession: (tab) =>
     set(tab ? { currentView: "session", sessionTab: tab } : { currentView: "session" }),
   setSessionTab: (sessionTab) => set({ sessionTab }),
