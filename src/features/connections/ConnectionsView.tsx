@@ -292,10 +292,7 @@ export function ConnectionsView() {
       <PageShell
         className="connections-page"
         actionBar={
-          <ActionBar
-            label="연결"
-            start={<span className="action-bar-context">연결 · 작업 가져오기</span>}
-          />
+          <ActionBar label="연결" title="연결" />
         }
       >
         <ConnectionsBrowserHelp />
@@ -314,9 +311,9 @@ export function ConnectionsView() {
       actionBar={
         <ActionBar
           label="연결"
+          title="연결"
           start={
             <>
-              <span className="action-bar-context">연결 · 작업 가져오기</span>
               {tools.report ? (
                 <>
                   <Badge tone={importableCount > 0 ? "green" : "gray"}>

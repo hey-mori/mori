@@ -174,6 +174,7 @@ export function WorkspaceView() {
       actionBar={
         <ActionBar
           label="세션 필터"
+          title="세션"
           start={
             <>
               <label className="workspace-search">

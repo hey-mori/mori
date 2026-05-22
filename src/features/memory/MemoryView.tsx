@@ -385,6 +385,7 @@ export function MemoryView() {
       actionBar={
         <ActionBar
           label="메모리 데이터 범위"
+          title="메모리"
           start={
             <>
               <Badge tone={mode === "demo" ? "gray" : "green"}>

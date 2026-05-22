@@ -166,13 +166,11 @@ export function StartSessionView() {
       actionBar={
         <ActionBar
           label="세션 생성"
+          title="새 세션"
           start={
-            <>
-              <span className="action-bar-context">새 작업 세션</span>
-              <Badge tone={hasActiveSession ? "green" : "gray"}>
-                {hasActiveSession ? "활성 세션 있음" : "활성 세션 없음"}
-              </Badge>
-            </>
+            <Badge tone={hasActiveSession ? "green" : "gray"}>
+              {hasActiveSession ? "활성 세션 있음" : "활성 세션 없음"}
+            </Badge>
           }
           end={
             <>

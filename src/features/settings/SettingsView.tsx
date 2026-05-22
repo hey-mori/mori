@@ -132,6 +132,7 @@ export function SettingsView() {
       actionBar={
         <ActionBar
           label="설정 섹션"
+          title="설정"
           end={
             <div className="settings-page-actions">
               <Badge tone={sessionMode === "demo" ? "gray" : "green"}>

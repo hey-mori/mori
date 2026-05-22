@@ -63,10 +63,7 @@ export function CompanionInboxView() {
     <PageShell
       className="companion-inbox"
       actionBar={
-        <ActionBar
-          label="Mori 노트"
-          start={<span className="action-bar-context">Mori 노트 · 살펴볼 신호</span>}
-        />
+        <ActionBar label="Mori 노트" title="Mori 노트" />
       }
       aside={<CompanionInboxRail groups={groups} total={feed.length} isDemo={isDemo} />}
     >

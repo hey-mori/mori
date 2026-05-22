@@ -345,6 +345,7 @@ export function ReportsView() {
       actionBar={
         <ActionBar
           label="보고서 세션 상태"
+          title="리포트"
           start={
             <>
               <Badge tone={isDemo ? "gray" : "green"}>{isDemo ? "데모 세션" : "실제 세션"}</Badge>

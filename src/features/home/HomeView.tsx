@@ -130,7 +130,7 @@ export function HomeView() {
       actionBar={
         <ActionBar
           label="홈"
-          start={<span className="action-bar-context">홈</span>}
+          title="홈"
           end={
             <>
               <Button
