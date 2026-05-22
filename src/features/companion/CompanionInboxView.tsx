@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ArrowRight, Compass, ExternalLink, Inbox, ShieldCheck } from "lucide-react";
-import { ActionBar } from "../../components/layout/ActionBar";
+import { PageHeader } from "../../components/layout/PageHeader";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
@@ -62,9 +62,7 @@ export function CompanionInboxView() {
   return (
     <PageShell
       className="companion-inbox"
-      actionBar={
-        <ActionBar label="Mori 노트" title="Mori 노트" />
-      }
+      header={<PageHeader compact title="Mori 노트" />}
       aside={<CompanionInboxRail groups={groups} total={feed.length} isDemo={isDemo} />}
     >
       {topSignal ? (

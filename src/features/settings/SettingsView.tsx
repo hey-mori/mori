@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
+import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -129,10 +130,10 @@ export function SettingsView() {
   return (
     <PageShell
       className="settings-page"
+      header={<PageHeader compact title="설정" />}
       actionBar={
         <ActionBar
           label="설정 섹션"
-          title="설정"
           end={
             <div className="settings-page-actions">
               <Badge tone={sessionMode === "demo" ? "gray" : "green"}>

@@ -20,6 +20,7 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -171,10 +172,10 @@ export function WorkspaceView() {
   return (
     <PageShell
       className="workspace-page"
+      header={<PageHeader compact title="세션" />}
       actionBar={
         <ActionBar
           label="세션 필터"
-          title="세션"
           start={
             <>
               <label className="workspace-search">

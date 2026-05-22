@@ -11,8 +11,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
+import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { Button } from "../../components/ui/Button";
@@ -126,12 +126,11 @@ export function HomeView() {
   return (
     <PageShell
       className="home-page"
-      header={null}
-      actionBar={
-        <ActionBar
-          label="홈"
+      header={
+        <PageHeader
+          compact
           title="홈"
-          end={
+          right={
             <>
               <Button
                 variant="primary"

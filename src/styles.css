@@ -3707,15 +3707,6 @@ hr {
   white-space: nowrap;
 }
 
-/* Thin divider between the consistent page title and the page-specific tools
-   that follow it in the action bar. Only rendered when both are present. */
-.action-bar-divider {
-  width: 1px;
-  height: 16px;
-  flex-shrink: 0;
-  background: var(--mori-border);
-}
-
 /* ── Session Detail (unified tabbed workspace) ──────────────────────────────
    Opening a session lands here: one calm context header + a tab bar (흐름 /
    증거 / 인사이트), and the active tab's view rendered inline (embedded — it

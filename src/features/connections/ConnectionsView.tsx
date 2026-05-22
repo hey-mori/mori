@@ -24,6 +24,7 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
@@ -291,9 +292,7 @@ export function ConnectionsView() {
     return (
       <PageShell
         className="connections-page"
-        actionBar={
-          <ActionBar label="연결" title="연결" />
-        }
+        header={<PageHeader compact title="연결" />}
       >
         <ConnectionsBrowserHelp />
       </PageShell>
@@ -308,10 +307,20 @@ export function ConnectionsView() {
   return (
     <PageShell
       className="connections-page"
+      header={
+        <PageHeader
+          compact
+          title="연결"
+          right={
+            <Button icon={RefreshCw} onClick={handleRefresh}>
+              새로고침
+            </Button>
+          }
+        />
+      }
       actionBar={
         <ActionBar
           label="연결"
-          title="연결"
           start={
             <>
               {tools.report ? (
@@ -332,11 +341,6 @@ export function ConnectionsView() {
                 </>
               ) : null}
             </>
-          }
-          end={
-            <Button icon={RefreshCw} onClick={handleRefresh}>
-              새로고침
-            </Button>
           }
         />
       }

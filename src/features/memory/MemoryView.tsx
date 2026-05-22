@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { MoriDrawer } from "../../components/ui/MoriDrawer";
@@ -382,10 +383,10 @@ export function MemoryView() {
   return (
     <PageShell
       className="memory-page"
+      header={<PageHeader compact title="메모리" />}
       actionBar={
         <ActionBar
           label="메모리 데이터 범위"
-          title="메모리"
           start={
             <>
               <Badge tone={mode === "demo" ? "gray" : "green"}>

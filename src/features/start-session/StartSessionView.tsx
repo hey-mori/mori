@@ -2,10 +2,10 @@ import { ArrowRight, Bot, Check, Cloud, Database, FileCode2, FilePlus2, Lock, Pl
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import { PageHeader } from "../../components/layout/PageHeader";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -163,16 +163,11 @@ export function StartSessionView() {
   return (
     <PageShell
       className="start-session-page"
-      actionBar={
-        <ActionBar
-          label="세션 생성"
+      header={
+        <PageHeader
+          compact
           title="새 세션"
-          start={
-            <Badge tone={hasActiveSession ? "green" : "gray"}>
-              {hasActiveSession ? "활성 세션 있음" : "활성 세션 없음"}
-            </Badge>
-          }
-          end={
+          right={
             <>
               <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
                 연결에서 가져오기
