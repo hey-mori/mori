@@ -4653,6 +4653,70 @@ hr {
   color: var(--mori-text-muted-2);
 }
 
+/* Usage section — 2–3 mini-panels in ONE bordered container so they read as a
+   single honest section. Each panel states its own scope; an absent panel is
+   simply omitted (the whole band hides when nothing is derivable). No inner
+   borders on the panels — hierarchy comes from whitespace + the type tokens. */
+.home-usage-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--mori-space-7);
+  padding: var(--mori-space-6) var(--mori-space-7);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface);
+}
+
+.home-usage-panel {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  align-content: start;
+}
+
+.home-usage-label {
+  font-size: var(--mori-font-size-xs);
+  font-weight: 600;
+  color: var(--mori-text-muted);
+}
+
+.home-usage-value {
+  font-size: var(--mori-font-size-2xl);
+  font-weight: 680;
+  line-height: var(--mori-line-tight);
+  color: var(--mori-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-usage-context {
+  font-size: var(--mori-font-size-xs);
+  color: var(--mori-text-muted-2);
+  line-height: var(--mori-line-snug);
+}
+
+.home-usage-bar {
+  display: flex;
+  gap: 2px;
+  height: 5px;
+  margin-top: 4px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.home-usage-bar-seg {
+  display: block;
+  min-width: 2px;
+  border-radius: 2px;
+}
+
+.home-usage-bar-seg.tone-accent {
+  background: var(--mori-accent);
+}
+
+.home-usage-bar-seg.tone-neutral {
+  background: var(--mori-border-strong);
+}
+
 /* Below ~960px the rail can no longer sit comfortably beside the list, so it
    stacks under it. Keeps 768 overflow-free. */
 @media (max-width: 960px) {

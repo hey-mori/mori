@@ -206,6 +206,26 @@ export type HomeCurrentSession = {
   };
 };
 
+/**
+ * One mini-panel in the usage section. Each STATES ITS OWN SCOPE so no figure
+ * reads as more complete than it is — the section never shows an empty chart
+ * or a fabricated split.
+ */
+export type HomeUsagePanel = {
+  key: "tokens" | "cadence" | "projects";
+  /** Panel heading — leads with the thing, not a triage count. */
+  label: string;
+  /** Big value ("8.0K" / "주당 2.5개"). */
+  value: string;
+  /** One-line scope note — honest about how much data backs the figure. */
+  context: string;
+  /**
+   * Optional tiny bar segments (already normalised to fractions of the whole).
+   * Used for the token input/output split; omitted otherwise — no fake bars.
+   */
+  bar?: { fraction: number; tone: "accent" | "neutral"; label: string }[];
+};
+
 export type HomeOverview = {
   /** True when the user has no real sessions — show the honest empty state. */
   isEmpty: boolean;
@@ -216,6 +236,12 @@ export type HomeOverview = {
    * future "multiple tracked sessions" feature is a data change, not a rewrite.
    */
   currentSessions: HomeCurrentSession[];
+  /**
+   * The usage section's mini-panels. Honest by absence: a panel whose data is
+   * missing is omitted, and an all-empty section yields an empty array (the
+   * view hides the whole band rather than showing zeros).
+   */
+  usagePanels: HomeUsagePanel[];
   metrics: HomeMetric[];
   recentSessions: HomeRecentSession[];
   nextActions: HomeNextAction[];
@@ -274,6 +300,10 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
     ? []
     : buildCurrentSessions({ active, metricsById, activeSession: input.activeSession ?? null, now });
 
+  const usagePanels = isEmpty
+    ? []
+    : buildUsagePanels(active, now);
+
   // The activity heatmap spans every stored session's anchor date — archiving
   // organises the list but never erases that the work happened. Build one
   // weighted-sample set per lens; availability is "has any non-zero value".
@@ -317,6 +347,7 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
     isEmpty,
     onlyDemo,
     currentSessions,
+    usagePanels,
     metrics,
     recentSessions,
     nextActions,
@@ -396,6 +427,139 @@ function describeCurrentStatus(status: Session["status"]): {
       // assembled from imports — surface it as recent work, not a live capture.
       return { statusLabel: "최근 작업", statusTone: "neutral" };
   }
+}
+
+// ─── Usage section ────────────────────────────────────────────────────────────
+
+/** Below this many sessions, sessions-per-week is too noisy to state. */
+const MIN_SESSIONS_FOR_CADENCE = 2;
+
+/**
+ * Build the usage section's mini-panels from the active session summaries.
+ * Every panel states its own scope, and any panel whose data is absent is
+ * omitted (an all-empty section returns `[]`, and the view hides the band).
+ * No fabricated splits, no empty charts.
+ */
+function buildUsagePanels(active: StoredSessionSummary[], now: number): HomeUsagePanel[] {
+  const panels: HomeUsagePanel[] = [];
+
+  const tokens = buildTokenPanel(active);
+  if (tokens) panels.push(tokens);
+
+  const cadence = buildCadencePanel(active, now);
+  if (cadence) panels.push(cadence);
+
+  const projects = buildProjectSpreadPanel(active);
+  if (projects) panels.push(projects);
+
+  return panels;
+}
+
+/**
+ * Token total + input/output split, summed only across sessions that actually
+ * carry token usage. Hidden entirely when no session has tokens — a zero would
+ * be dishonest. The scope line states how many sessions backed the figure
+ * rather than implying a complete total.
+ */
+function buildTokenPanel(active: StoredSessionSummary[]): HomeUsagePanel | null {
+  let total = 0;
+  let input = 0;
+  let output = 0;
+  let withTokens = 0;
+  for (const session of active) {
+    if (session.tokenTotal === undefined || session.tokenTotal <= 0) continue;
+    withTokens += 1;
+    total += session.tokenTotal;
+    input += session.tokenInput ?? 0;
+    output += session.tokenOutput ?? 0;
+  }
+  if (withTokens === 0 || total <= 0) return null;
+
+  const splitTotal = input + output;
+  const bar =
+    splitTotal > 0
+      ? [
+          { fraction: input / splitTotal, tone: "accent" as const, label: `입력 ${formatCompactCount(input)}` },
+          { fraction: output / splitTotal, tone: "neutral" as const, label: `출력 ${formatCompactCount(output)}` },
+        ]
+      : undefined;
+
+  const context =
+    withTokens === active.length
+      ? "가져온 세션 전체 합계"
+      : `토큰 정보가 있는 세션 ${withTokens}개`;
+
+  return {
+    key: "tokens",
+    label: "토큰 사용량",
+    value: formatCompactCount(total),
+    context,
+    bar,
+  };
+}
+
+/**
+ * Sessions-per-week from session anchor dates. The span is the calendar gap
+ * between the oldest and newest anchor (at least one week), so a single
+ * session — or a too-thin sample — yields no panel rather than a misleading
+ * "주당 N개".
+ */
+function buildCadencePanel(active: StoredSessionSummary[], now: number): HomeUsagePanel | null {
+  if (active.length < MIN_SESSIONS_FOR_CADENCE) return null;
+
+  let oldest = now;
+  let newest = 0;
+  for (const session of active) {
+    const epoch = anchorEpoch(session, now);
+    if (epoch < oldest) oldest = epoch;
+    if (epoch > newest) newest = epoch;
+  }
+  const spanMs = Math.max(newest - oldest, 0);
+  const weeks = Math.max(spanMs / (7 * 86_400_000), 1);
+  const perWeek = active.length / weeks;
+  const value = perWeek >= 10 ? String(Math.round(perWeek)) : perWeek.toFixed(1).replace(/\.0$/, "");
+
+  return {
+    key: "cadence",
+    label: "작업 빈도",
+    value: `주당 ${value}개`,
+    context: `세션 ${active.length}개 기준`,
+  };
+}
+
+/**
+ * Top 2–3 source labels by session count, via the existing project counting
+ * convention (a source-labelled session groups by its label; a manual session
+ * groups by project id, surfaced as "수동 세션"). Hidden when there is only one
+ * group — the spread is not yet informative.
+ */
+function buildProjectSpreadPanel(active: StoredSessionSummary[]): HomeUsagePanel | null {
+  const counts = new Map<string, number>();
+  for (const session of active) {
+    const label = session.sourceLabel?.trim();
+    const key = label && label.length > 0 ? label : "수동 세션";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  if (counts.size < 2) return null;
+
+  const top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([label, count]) => `${shortProjectLabel(label)} ${count}`);
+
+  return {
+    key: "projects",
+    label: "프로젝트 분포",
+    value: String(counts.size),
+    context: top.join(" · "),
+  };
+}
+
+/** Trim a long source path to its trailing segment for the spread context. */
+function shortProjectLabel(label: string): string {
+  const parts = label.split(/[\\/]/).filter(Boolean);
+  const tail = parts.length > 0 ? parts[parts.length - 1]! : label;
+  return tail.length <= 18 ? tail : `${tail.slice(0, 17)}…`;
 }
 
 // ─── Metrics strip ──────────────────────────────────────────────────────────

@@ -449,6 +449,117 @@ describe("current / most-recent session strip", () => {
   });
 });
 
+describe("usage section panels", () => {
+  function withUsage(over: Partial<HomeOverviewInput> = {}): HomeOverviewInput {
+    return input({
+      realSessionCount: 3,
+      isDemo: false,
+      storedSessions: [
+        stored({ sessionId: "a", sourceLabel: "C:/dev/mori", startedAt: "2026-05-22T08:00:00+09:00", tokenTotal: 5_000, tokenInput: 3_000, tokenOutput: 2_000 }),
+        stored({ sessionId: "b", sourceLabel: "C:/dev/mori", startedAt: "2026-05-15T08:00:00+09:00", tokenTotal: 3_000, tokenInput: 2_000, tokenOutput: 1_000 }),
+        stored({ sessionId: "c", sourceLabel: "C:/dev/other", startedAt: "2026-05-08T08:00:00+09:00" }),
+      ],
+      ...over,
+    });
+  }
+
+  it("sums tokens only across sessions that carry them and states a partial scope honestly", () => {
+    const overview = buildHomeOverview(withUsage());
+    const tokens = overview.usagePanels.find((p) => p.key === "tokens")!;
+    expect(tokens).toBeDefined();
+    expect(tokens.value).toBe("8K"); // 5000 + 3000, third session has no tokens
+    // Two of three sessions carry tokens → say so rather than implying a full total.
+    expect(tokens.context).toBe("토큰 정보가 있는 세션 2개");
+    expect(tokens.bar).toHaveLength(2);
+    expect(tokens.bar![0]!.label).toContain("입력");
+    expect(tokens.bar![1]!.label).toContain("출력");
+  });
+
+  it("hides the token panel entirely when no session carries tokens (no fake zero)", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 2,
+        isDemo: false,
+        storedSessions: [
+          stored({ sessionId: "a", startedAt: "2026-05-22T08:00:00+09:00" }),
+          stored({ sessionId: "b", startedAt: "2026-05-15T08:00:00+09:00" }),
+        ],
+      }),
+    );
+    expect(overview.usagePanels.some((p) => p.key === "tokens")).toBe(false);
+  });
+
+  it("labels the token scope as a full total when every session carries tokens", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 2,
+        isDemo: false,
+        storedSessions: [
+          stored({ sessionId: "a", startedAt: "2026-05-22T08:00:00+09:00", tokenTotal: 4_000, tokenInput: 3_000, tokenOutput: 1_000 }),
+          stored({ sessionId: "b", startedAt: "2026-05-15T08:00:00+09:00", tokenTotal: 2_000, tokenInput: 1_500, tokenOutput: 500 }),
+        ],
+      }),
+    );
+    const tokens = overview.usagePanels.find((p) => p.key === "tokens")!;
+    expect(tokens.context).toBe("가져온 세션 전체 합계");
+  });
+
+  it("reports sessions-per-week from the anchor span", () => {
+    const overview = buildHomeOverview(withUsage());
+    const cadence = overview.usagePanels.find((p) => p.key === "cadence")!;
+    expect(cadence).toBeDefined();
+    // 3 sessions over a 2-week span → ~1.5/week.
+    expect(cadence.value).toBe("주당 1.5개");
+    expect(cadence.context).toBe("세션 3개 기준");
+  });
+
+  it("hides the cadence panel for a single session (too thin to state a rate)", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 1,
+        isDemo: false,
+        storedSessions: [stored({ sessionId: "solo" })],
+      }),
+    );
+    expect(overview.usagePanels.some((p) => p.key === "cadence")).toBe(false);
+  });
+
+  it("shows the top source labels with counts in the project spread", () => {
+    const overview = buildHomeOverview(withUsage());
+    const spread = overview.usagePanels.find((p) => p.key === "projects")!;
+    expect(spread).toBeDefined();
+    expect(spread.value).toBe("2"); // two distinct sources
+    expect(spread.context).toContain("mori 2");
+    expect(spread.context).toContain("other 1");
+  });
+
+  it("hides the project spread when only one group exists", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 2,
+        isDemo: false,
+        storedSessions: [
+          stored({ sessionId: "a", sourceLabel: "C:/dev/mori", startedAt: "2026-05-22T08:00:00+09:00" }),
+          stored({ sessionId: "b", sourceLabel: "C:/dev/mori", startedAt: "2026-05-15T08:00:00+09:00" }),
+        ],
+      }),
+    );
+    expect(overview.usagePanels.some((p) => p.key === "projects")).toBe(false);
+  });
+
+  it("yields an empty usage section when nothing is honestly derivable", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 1,
+        isDemo: false,
+        storedSessions: [stored({ sessionId: "solo", sourceLabel: "C:/dev/mori" })],
+      }),
+    );
+    // One session: no tokens, too thin for cadence, single project group.
+    expect(overview.usagePanels).toEqual([]);
+  });
+});
+
 describe("formatRelativeKo", () => {
   it("renders sub-minute, minute, hour, and day windows in Korean", () => {
     expect(formatRelativeKo(new Date(NOW - 30_000).toISOString(), NOW)).toBe("방금");

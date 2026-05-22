@@ -36,6 +36,7 @@ import {
   type HomeOverview,
   type HomeRecentSession,
   type HomeSessionMetricSnapshot,
+  type HomeUsagePanel,
 } from "../../lib/home/homeOverview";
 import type { ContributionMetric } from "../../lib/home/contributionGrid";
 import {
@@ -303,6 +304,19 @@ export function HomeView() {
               </ul>
             </aside>
           </div>
+
+          {overview.usagePanels.length > 0 ? (
+            <section className="home-section home-usage" aria-label="사용 현황">
+              <header className="home-section-head">
+                <h2>사용 현황</h2>
+              </header>
+              <div className="home-usage-panels">
+                {overview.usagePanels.map((panel) => (
+                  <UsagePanel key={panel.key} panel={panel} />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       )}
     </PageShell>
@@ -349,6 +363,30 @@ function CurrentSessionStrip({
         {session.action.label}
       </Button>
     </li>
+  );
+}
+
+// ─── Usage panel ──────────────────────────────────────────────────────────────
+
+function UsagePanel({ panel }: { panel: HomeUsagePanel }) {
+  return (
+    <div className="home-usage-panel">
+      <span className="home-usage-label">{panel.label}</span>
+      <span className="home-usage-value">{panel.value}</span>
+      <span className="home-usage-context">{panel.context}</span>
+      {panel.bar ? (
+        <span className="home-usage-bar" aria-hidden="true">
+          {panel.bar.map((segment, index) => (
+            <span
+              key={index}
+              className={`home-usage-bar-seg tone-${segment.tone}`}
+              style={{ flexGrow: Math.max(segment.fraction, 0.001) }}
+              title={segment.label}
+            />
+          ))}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
