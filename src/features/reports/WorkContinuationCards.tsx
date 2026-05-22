@@ -87,7 +87,7 @@ export function WorkContinuationCards({
       <article className="continuation-card continuation-card-resources">
         <header>
           <h3>관련 리소스</h3>
-          <Button onClick={onOpenTimeline}>Timeline 열기</Button>
+          <Button onClick={onOpenTimeline}>타임라인 열기</Button>
         </header>
         {artifacts.length === 0 ? (
           <p className="continuation-empty">등록된 산출물이 없습니다.</p>

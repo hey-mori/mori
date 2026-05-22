@@ -36,10 +36,10 @@ export function TimelineEmptyState({
       <EmptyState
         icon={ListPlus}
         title="이 세션에는 아직 가져온 소스가 없습니다"
-        description="Mori는 사용자가 명시적으로 가져온 검증된 근거만 표시합니다 — 메모, URL, AI 대화, Git diff가 모두 여기에 모입니다."
+        description="가져온 근거만 표시됩니다. 증거 탭에서 메모·URL·AI 대화·Git diff를 추가하세요."
         actions={
           <Button variant="primary" icon={ListPlus} onClick={onOpenSources}>
-            Evidence 열기
+            증거 추가
           </Button>
         }
       />
