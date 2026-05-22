@@ -132,24 +132,26 @@ function SessionDetailHeader() {
           <span className="session-detail-chip session-detail-storage">{sourceLabel}</span>
         </div>
       </div>
-      <dl className="session-detail-metrics" aria-label="세션 지표">
-        <SessionMetric icon={Activity} label="이벤트" value={view.events.length} />
-        <SessionMetric
-          icon={FileText}
-          label="소스"
-          value={mode === "demo" ? view.sources.length : imports.length}
-        />
-        <SessionMetric icon={Lightbulb} label="결정" value={view.decisions.length} />
-        <SessionMetric
-          icon={ListChecks}
-          label="다음 작업"
-          value={pendingNextActions}
-          hint={pendingNextActions > 0 ? "남은" : undefined}
-        />
-        {openIssues > 0 ? (
-          <SessionMetric icon={GitBranch} label="열린 이슈" value={openIssues} tone="warn" />
-        ) : null}
-      </dl>
+      {view.events.length > 0 || imports.length > 0 ? (
+        <dl className="session-detail-metrics" aria-label="세션 지표">
+          <SessionMetric icon={Activity} label="이벤트" value={view.events.length} />
+          <SessionMetric
+            icon={FileText}
+            label="소스"
+            value={mode === "demo" ? view.sources.length : imports.length}
+          />
+          <SessionMetric icon={Lightbulb} label="결정" value={view.decisions.length} />
+          <SessionMetric
+            icon={ListChecks}
+            label="다음 작업"
+            value={pendingNextActions}
+            hint={pendingNextActions > 0 ? "남은" : undefined}
+          />
+          {openIssues > 0 ? (
+            <SessionMetric icon={GitBranch} label="열린 이슈" value={openIssues} tone="warn" />
+          ) : null}
+        </dl>
+      ) : null}
     </div>
   );
 }
