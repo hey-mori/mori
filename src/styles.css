@@ -16112,6 +16112,26 @@ pre {
   gap: 12px;
 }
 
+/*
+ * Virtualised mode: the ol is sized to the whole conversation (so the
+ * scrollbar reflects every message) and acts as a positioning context, while
+ * the inner window holds only the mounted slice. The window keeps the grid +
+ * gap so bubble alignment and spacing are unchanged from the non-virtual list.
+ */
+.conversation-viewer-list.is-virtualized {
+  display: block;
+  position: relative;
+}
+
+.conversation-viewer-window {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  display: grid;
+  gap: 12px;
+  will-change: transform;
+}
+
 .conversation-message {
   display: grid;
   gap: 4px;

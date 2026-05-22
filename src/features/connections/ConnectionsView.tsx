@@ -653,6 +653,17 @@ function PreviewPanel({
   onImportIntoCurrentSession: () => void;
   onOpenViewer: () => void;
 }) {
+  // Hoisted above the early returns so the hook order stays stable. Memoised on
+  // the message array so the O(n) stats walk only reruns when the selected
+  // conversation changes, not on every parent re-render.
+  const detailMessages = selection && !selection.loading && !selection.error
+    ? selection.detail?.messages
+    : undefined;
+  const stats = useMemo(
+    () => computeConversationStats(detailMessages ?? []),
+    [detailMessages],
+  );
+
   if (!selection) {
     return (
       <InspectorPanel ariaLabel="세션 미리보기">
@@ -689,7 +700,6 @@ function PreviewPanel({
 
   const detail = selection.detail;
   const previewMessages = detail.messages.slice(0, 12);
-  const stats = computeConversationStats(detail.messages);
 
   return (
     <InspectorPanel

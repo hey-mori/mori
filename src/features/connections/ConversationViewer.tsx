@@ -8,17 +8,29 @@
  * labels, tool-call highlighting, in-conversation search, and a sticky
  * action bar that re-exposes the import button.
  *
- * Performance: we render every message directly — 300–500 nodes scroll
- * smoothly without virtualisation. If users start opening 5k-message
- * sessions we can swap to react-virtuoso, but the threshold isn't here
- * yet.
+ * Performance: the message list is virtualised — only the rows inside the
+ * viewport (plus a small overscan margin) are mounted, with top/bottom
+ * spacers padding out the scrollbar. A 3–5k-message Claude Code session
+ * therefore keeps a few dozen DOM nodes instead of thousands. The
+ * visible-range math is a pure, unit-tested helper (`conversationWindow`);
+ * this component only owns the DOM measurement and scroll plumbing. The
+ * search field is debounced so the full-content scan doesn't run on every
+ * keystroke.
  *
  * Accessibility: focus moves into the drawer on open, Escape closes it,
  * the search field is wired to a live count, and tool-result bodies are
  * collapsed into a native `<details>` so screen readers can skip them.
  */
 import { Plus, Search, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type UIEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriDrawer } from "../../components/ui/MoriDrawer";
@@ -32,6 +44,24 @@ import type {
   ClaudeCodeSessionDetail,
   ClaudeMessage,
 } from "../../lib/claude/types";
+import { computeVisibleRange, offsetForIndex } from "./conversationWindow";
+
+/**
+ * Vertical gap between bubbles (matches `.conversation-viewer-list` `gap` in
+ * styles.css). We fold it into each row's effective height so the windowing
+ * math and the absolutely-positioned slice stay aligned.
+ */
+const ROW_GAP = 12;
+
+/**
+ * Estimated bubble height (px) for rows we haven't measured yet, gap included.
+ * A typical short turn is ~64px; we bias slightly high so the initial
+ * scrollbar doesn't overshoot and snap back once real heights arrive.
+ */
+const ESTIMATED_ROW_HEIGHT = 96 + ROW_GAP;
+
+/** Rows rendered above and below the viewport to hide scroll seams. */
+const OVERSCAN = 8;
 
 export type ConversationViewerProps = {
   open: boolean;
@@ -68,23 +98,54 @@ export function ConversationViewer({
   hasActiveSession,
 }: ConversationViewerProps) {
   const [query, setQuery] = useState("");
+  // The query the content scan actually runs against — trails `query` by the
+  // debounce window so fast typing doesn't trigger a scan + re-render per key.
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Reset search whenever the drawer reopens with a different session. The
-  // stats memo and scroll position should restart from the top for every
-  // new conversation.
+  // Virtualisation state: scroll position + viewport height drive which rows
+  // are mounted; the measured-height map refines our estimates as rows render.
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const measuredHeights = useRef<Map<number, number>>(new Map());
+  // Bumped whenever a measurement changes so the range memo recomputes.
+  const [measureTick, setMeasureTick] = useState(0);
+
+  const messages = detail?.messages ?? null;
+
+  const rowHeight = useCallback(
+    (index: number) => measuredHeights.current.get(index) ?? ESTIMATED_ROW_HEIGHT,
+    // measureTick is read implicitly via the ref; listing it keeps the
+    // callback identity in sync with measurement updates for the range memo.
+    [measureTick],
+  );
+
+  // Reset search, scroll, and all measurements whenever the drawer reopens
+  // with a different session. Heights from one conversation must not leak into
+  // the next, and everything should restart from the top.
   useEffect(() => {
     if (!open) return;
     setQuery("");
+    setDebouncedQuery("");
+    measuredHeights.current.clear();
+    setMeasureTick((tick) => tick + 1);
+    setScrollTop(0);
     listRef.current?.scrollTo({ top: 0 });
   }, [open, detail?.sessionId]);
+
+  // Debounce the search query so the full-content scan below runs at most once
+  // per ~180ms of typing rather than on every keystroke.
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedQuery(query), 180);
+    return () => window.clearTimeout(handle);
+  }, [query]);
 
   const stats = useMemo(
     () => computeConversationStats(detail?.messages ?? []),
     [detail?.messages],
   );
 
-  const trimmed = query.trim().toLowerCase();
+  const trimmed = debouncedQuery.trim().toLowerCase();
   const matchedIds = useMemo(() => {
     if (!detail || !trimmed) return null;
     const set = new Set<string>();
@@ -96,13 +157,92 @@ export function ConversationViewer({
     return set;
   }, [detail, trimmed]);
 
-  // When the search yields results, scroll the first match into view so
-  // the user can confirm we found their phrase without hunting for it.
+  // First matched message index — used to scroll the match into view even
+  // when its row isn't currently mounted (virtualisation means we can't rely
+  // on a DOM node existing for `scrollIntoView`).
+  const firstMatchIndex = useMemo(() => {
+    if (!messages || !matchedIds || matchedIds.size === 0) return -1;
+    return messages.findIndex((message) => matchedIds.has(message.id));
+  }, [messages, matchedIds]);
+
+  // Track the scroll container's viewport height (initial + on resize) so the
+  // visible-range math has an accurate window.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const node = listRef.current;
+    if (!node) return;
+    setViewportHeight(node.clientHeight);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setViewportHeight(node.clientHeight));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [open, detail?.sessionId]);
+
+  const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    setScrollTop(event.currentTarget.scrollTop);
+  }, []);
+
+  const itemCount = messages?.length ?? 0;
+  const range = useMemo(
+    () =>
+      computeVisibleRange({
+        itemCount,
+        scrollTop,
+        viewportHeight: viewportHeight || 1,
+        rowHeight,
+        overscan: OVERSCAN,
+      }),
+    [itemCount, scrollTop, viewportHeight, rowHeight],
+  );
+
+  // When the (debounced) search yields a match, jump to it. The matched row
+  // may be off-screen and therefore unmounted, so we can't `scrollIntoView` a
+  // DOM node directly. Instead we record the target index and scroll the
+  // container to its estimated offset; the second effect below snaps precisely
+  // once the row is mounted and measured.
+  const pendingMatchIndex = useRef<number>(-1);
   useEffect(() => {
-    if (!open || !matchedIds || matchedIds.size === 0) return;
-    const first = listRef.current?.querySelector<HTMLElement>("[data-search-match='true']");
-    if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [matchedIds, open]);
+    if (!open || firstMatchIndex < 0) return;
+    const node = listRef.current;
+    if (!node) return;
+    pendingMatchIndex.current = firstMatchIndex;
+    const target = offsetForIndex(firstMatchIndex, rowHeight);
+    const centred = Math.max(0, target - node.clientHeight / 2 + ESTIMATED_ROW_HEIGHT / 2);
+    node.scrollTo({ top: centred, behavior: "smooth" });
+    // rowHeight intentionally omitted: the follow-up effect handles refinement
+    // once real measurements arrive, so we don't re-trigger on every measure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstMatchIndex, open]);
+
+  // Once the pending match row is inside the rendered window, centre it
+  // precisely with the real DOM node, then clear the flag so later manual
+  // scrolling is left alone.
+  useLayoutEffect(() => {
+    const targetIndex = pendingMatchIndex.current;
+    if (targetIndex < 0) return;
+    if (targetIndex < range.startIndex || targetIndex > range.endIndex) return;
+    const matchNode = listRef.current?.querySelector<HTMLElement>(
+      "[data-search-match='true']",
+    );
+    if (matchNode) {
+      matchNode.scrollIntoView({ behavior: "smooth", block: "center" });
+      pendingMatchIndex.current = -1;
+    }
+  }, [range.startIndex, range.endIndex, measureTick]);
+
+  // Measure rendered rows after layout and store any height that differs from
+  // our current value, refining future range calculations.
+  const measureRow = useCallback((index: number, node: HTMLLIElement | null) => {
+    if (!node) return;
+    // Fold the inter-row gap into the stored height so cumulative offsets
+    // match the visual layout (the gap sits between, not inside, bubbles).
+    const height = node.offsetHeight + ROW_GAP;
+    if (height <= ROW_GAP) return;
+    if (measuredHeights.current.get(index) !== height) {
+      measuredHeights.current.set(index, height);
+      setMeasureTick((tick) => tick + 1);
+    }
+  }, []);
 
   if (!detail) {
     return <MoriDrawer open={open} onClose={onClose} ariaLabel="대화 전체 보기">{null}</MoriDrawer>;
@@ -202,19 +342,41 @@ export function ConversationViewer({
           </div>
         </header>
 
-        <div className="conversation-viewer-body mori-scroll" ref={listRef}>
+        <div
+          className="conversation-viewer-body mori-scroll"
+          ref={listRef}
+          onScroll={handleScroll}
+        >
           {detail.messages.length === 0 ? (
             <p className="conversation-viewer-empty">표시할 메시지가 없습니다.</p>
           ) : (
-            <ol className="conversation-viewer-list">
-              {detail.messages.map((message) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  matched={matchedIds ? matchedIds.has(message.id) : false}
-                  hasQuery={Boolean(matchedIds)}
-                />
-              ))}
+            // The outer ol is sized to the full conversation so the scrollbar
+            // reflects every message; only the visible slice is mounted,
+            // absolutely positioned at the computed top offset.
+            <ol
+              className="conversation-viewer-list is-virtualized"
+              style={{ height: range.totalHeight }}
+            >
+              <div
+                className="conversation-viewer-window"
+                style={{ transform: `translateY(${range.offsetTop}px)` }}
+              >
+                {detail.messages
+                  .slice(range.startIndex, range.endIndex + 1)
+                  .map((message, sliceIndex) => {
+                    const index = range.startIndex + sliceIndex;
+                    return (
+                      <MessageBubble
+                        key={message.id}
+                        index={index}
+                        message={message}
+                        matched={matchedIds ? matchedIds.has(message.id) : false}
+                        hasQuery={Boolean(matchedIds)}
+                        onMeasure={measureRow}
+                      />
+                    );
+                  })}
+              </div>
             </ol>
           )}
         </div>
@@ -256,12 +418,23 @@ export function ConversationViewer({
 }
 
 type MessageBubbleProps = {
+  index: number;
   message: ClaudeMessage;
   matched: boolean;
   hasQuery: boolean;
+  /** Report this row's measured height back to the virtualiser. */
+  onMeasure: (index: number, node: HTMLLIElement | null) => void;
 };
 
-function MessageBubble({ message, matched, hasQuery }: MessageBubbleProps) {
+function MessageBubble({ index, message, matched, hasQuery, onMeasure }: MessageBubbleProps) {
+  const ref = useRef<HTMLLIElement>(null);
+
+  // Measure after every layout-affecting render (content, query dimming, or
+  // a `<details>` toggle changing the row height) and feed it to the cache.
+  useLayoutEffect(() => {
+    onMeasure(index, ref.current);
+  });
+
   const subkind = classifyMessage(message);
   const isToolResult = subkind === "tool_result";
   const isToolUse = subkind === "tool_use";
@@ -308,7 +481,7 @@ function MessageBubble({ message, matched, hasQuery }: MessageBubbleProps) {
     .join(" ");
 
   return (
-    <li className={className} data-search-match={matched ? "true" : undefined}>
+    <li ref={ref} className={className} data-search-match={matched ? "true" : undefined}>
       <div className="conversation-message-meta">
         <span className="conversation-message-role">{roleLabel}</span>
         {timestamp ? (

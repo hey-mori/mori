@@ -187,6 +187,13 @@ export class BrowserDraftRepository implements MoriDraftRepository {
 
     const deduped = existing.filter((entry) => entry.id !== stored.id);
     deduped.push(stored);
+    // TODO(perf): this re-reads and re-stringifies the session's full imports
+    // array on every add. It is bounded to one session's imports (keyed by
+    // IMPORTS_PREFIX + sessionId), not the global set, so the cost stays small
+    // in practice. Eliminating the full re-stringify would require a schema
+    // change — e.g. one localStorage key per import entry, or an append-only
+    // log — which is higher risk and would ripple through listSessionImports,
+    // putSessionImports, and removeSessionImport. Left as-is intentionally.
     this.write(`${IMPORTS_PREFIX}${sessionId}`, deduped);
     return stored;
   }
