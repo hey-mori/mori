@@ -15059,26 +15059,27 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 12px;
+  height: 30px;
+  padding: 0 11px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 7px;
   background: white;
-  color: var(--text);
+  color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .toolbar-toggle:hover {
+  color: var(--text);
   border-color: var(--line-strong);
-  background: var(--gray-50);
 }
 
 .toolbar-toggle.is-active {
-  border-color: var(--purple);
+  border-color: transparent;
   background: var(--purple-50);
-  color: #3a25c6;
+  color: var(--purple);
 }
 
 .toolbar-pop-wrap {
@@ -15090,15 +15091,16 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 10px 0 12px;
+  height: 30px;
+  padding: 0 8px 0 11px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 7px;
   background: white;
   color: var(--text);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
 .toolbar-select:hover {
