@@ -5247,14 +5247,17 @@ hr {
 
 /* ── EmptyState (layout) ────────────────────────────────────────────────── */
 
+/* One quiet empty pattern for every screen. The default reads as a centered
+   panel with a soft border (no dashed lines, no large min-height) so an
+   empty page feels intentional rather than draft-y. */
 .layout-empty-state {
   display: grid;
   place-items: center;
   align-content: center;
   gap: var(--mori-space-3);
-  min-height: 260px;
-  padding: var(--mori-space-10);
-  border: 1px dashed var(--mori-border-strong);
+  min-height: 220px;
+  padding: var(--mori-space-9) var(--mori-space-8);
+  border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-lg);
   background: var(--mori-surface);
   text-align: center;
@@ -5263,7 +5266,7 @@ hr {
 
 .layout-empty-state.is-compact {
   min-height: 0;
-  padding: var(--mori-space-8) var(--mori-space-7);
+  padding: var(--mori-space-7) var(--mori-space-6);
   border: 0;
   background: transparent;
 }
@@ -5271,16 +5274,16 @@ hr {
 .layout-empty-state-icon {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--mori-accent-soft);
   color: var(--mori-accent);
 }
 
 .layout-empty-state.is-compact .layout-empty-state-icon {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
 }
 
 .layout-empty-state.is-danger .layout-empty-state-icon {
@@ -5291,12 +5294,12 @@ hr {
 .layout-empty-state-title {
   margin: 0;
   color: var(--mori-text);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 650;
 }
 
 .layout-empty-state.is-compact .layout-empty-state-title {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .layout-empty-state-description {
