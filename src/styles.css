@@ -980,17 +980,22 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 14px;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 13px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   background: white;
-  color: #172033;
-  font-size: 13px;
-  font-weight: 650;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
   white-space: nowrap;
-  box-shadow: 0 1px 1px rgba(20, 25, 36, 0.02);
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--gray-50);
+  border-color: var(--line-strong);
 }
 
 .btn:disabled {
@@ -1010,7 +1015,11 @@ p {
   color: white;
   border-color: transparent;
   background: var(--mori-accent, #6246f5);
-  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.12);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #5238df;
+  border-color: transparent;
 }
 
 .btn-ghost {
@@ -1023,7 +1032,7 @@ p {
    icon's meaning is unambiguous, and always pair with an aria-label + title
    so the action stays clear to screen readers and on hover. */
 .btn-icon {
-  width: 36px;
+  width: 32px;
   padding: 0;
   gap: 0;
   flex-shrink: 0;
