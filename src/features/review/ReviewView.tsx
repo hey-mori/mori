@@ -238,11 +238,9 @@ export function ReviewView() {
       }
       end={
         <>
-          <div className="review-action-counts">
-            <Badge tone="red">이슈 {summary.issueCount}</Badge>
-            <Badge tone="blue">결정 {summary.decisionCount}</Badge>
-            <Badge tone="green">다음 {summary.nextActionCount}</Badge>
-          </div>
+          {/* The tab strip already shows 이슈 / 결정 / 다음 액션 counts as
+              per-tab badges; the dedicated right-side counts duplicated them
+              and crowded the row. Dropped — Quick Pass stays as the action. */}
           {!isDemo ? (
             <Button
               variant="primary"
@@ -449,10 +447,7 @@ function InsightsValueNote({
   return (
     <p className="session-insights-note">
       <Lightbulb size={14} aria-hidden="true" />
-      <span>
-        여기서 확인한 이슈 · 결정 · 다음 작업은 프로젝트 메모리에 남아 다음 작업에
-        활용됩니다. 정확하지 않은 항목은 수정하거나 보류하세요.
-      </span>
+      <span>확인한 항목은 프로젝트 메모리에 남아 다음 세션에서 다시 쓰입니다.</span>
     </p>
   );
 }
