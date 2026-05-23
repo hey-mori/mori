@@ -2113,9 +2113,7 @@ kbd {
 
 .event-card.focus-selected {
   border-color: var(--purple);
-  box-shadow: 0 0 0 1px var(--purple), 0 10px 22px rgba(98, 70, 245, 0.14);
-  outline: 2px solid var(--purple);
-  outline-offset: -2px;
+  box-shadow: 0 0 0 1px var(--purple);
   z-index: 3;
 }
 
@@ -3231,13 +3229,17 @@ kbd {
   list-style: none;
 }
 
+/* The inspector itself is the frame — linked-item groups read as text
+   rows separated by a soft divider, not boxed cards inside a card. */
 .inspector-linked-group {
   display: grid;
-  gap: 5px;
-  padding: 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.inspector-linked-group + .inspector-linked-group {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
 }
 
 .inspector-linked-group-head {
