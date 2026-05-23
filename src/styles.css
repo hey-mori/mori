@@ -285,14 +285,22 @@ button {
   background: var(--gray-50);
 }
 
+/* Active row: a subtle neutral fill + a 2px purple bar on the left rather
+   than tinting the whole row purple — keeps multi-row scanning calm while
+   the active session is unmistakable. */
 .sidebar-row.is-active {
-  background: var(--purple-50);
-  color: var(--purple);
+  background: var(--gray-50);
+  box-shadow: inset 2px 0 0 var(--purple);
 }
 
 .sidebar-row.is-active .sidebar-row-title {
-  color: var(--purple);
-  font-weight: 600;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.sidebar-row.is-active .sidebar-row-time,
+.sidebar-row.is-active .sidebar-row-source {
+  color: var(--muted);
 }
 
 .sidebar-row-title {
@@ -5324,14 +5332,14 @@ hr {
 
 .notice-banner {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--mori-space-3);
-  padding: var(--mori-space-4) var(--mori-space-5);
+  padding: 9px 12px;
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-md);
   background: var(--mori-surface);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
 .notice-banner-icon {
@@ -5348,8 +5356,8 @@ hr {
 }
 
 .notice-banner-title {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 650;
   color: var(--mori-text);
 }
 
@@ -5383,9 +5391,10 @@ hr {
   color: var(--mori-text);
 }
 
+/* Tone is carried by the icon + a soft border tint only; the fill stays
+   neutral so banners read as quiet notices instead of saturated callouts. */
 .notice-banner-info {
-  border-color: var(--blue-200, rgba(43, 108, 230, 0.22));
-  background: var(--blue-50);
+  border-color: rgba(43, 108, 230, 0.18);
 }
 
 .notice-banner-info .notice-banner-icon {
@@ -5393,8 +5402,7 @@ hr {
 }
 
 .notice-banner-success {
-  border-color: rgba(21, 149, 90, 0.22);
-  background: var(--green-50);
+  border-color: rgba(21, 149, 90, 0.18);
 }
 
 .notice-banner-success .notice-banner-icon {
@@ -5402,8 +5410,7 @@ hr {
 }
 
 .notice-banner-warning {
-  border-color: rgba(214, 138, 0, 0.28);
-  background: var(--orange-50);
+  border-color: rgba(214, 138, 0, 0.22);
 }
 
 .notice-banner-warning .notice-banner-icon {
@@ -5411,8 +5418,7 @@ hr {
 }
 
 .notice-banner-danger {
-  border-color: rgba(240, 68, 68, 0.24);
-  background: var(--red-50);
+  border-color: rgba(240, 68, 68, 0.22);
 }
 
 .notice-banner-danger .notice-banner-icon {
