@@ -213,6 +213,10 @@ function CompanionSignalRow({
       ? buildStaleMemoryChips(signal.linkedItemIds, acceptedMemories)
       : [];
 
+  // Severity is already the section header (검토 필요 / 다시 시작 가능 / …),
+  // so we don't repeat it as a chip. Basis (추론됨 / 검증됨 / …) is moved
+  // into a hover tooltip on the title to keep the row line clean.
+  const basisLabel = describeCompanionBasis(signal.basis);
   return (
     <li
       className="companion-signal companion-inbox-row"
@@ -221,13 +225,7 @@ function CompanionSignalRow({
       <span className="companion-signal-dot" aria-hidden="true" />
       <div className="companion-signal-body">
         <div className="companion-signal-head">
-          <strong>{signal.title}</strong>
-          <span className="companion-inbox-row-severity">
-            {describeCompanionSeverity(signal.severity)}
-          </span>
-          <span className={`companion-signal-basis basis-${signal.basis}`}>
-            {describeCompanionBasis(signal.basis)}
-          </span>
+          <strong title={`${signal.title} — ${basisLabel}`}>{signal.title}</strong>
         </div>
         <p>{signal.message}</p>
         {memoryChips.length > 0 ? (
@@ -265,16 +263,16 @@ function CompanionInboxRail({
   isDemo: boolean;
 }) {
   return (
-    <aside className="companion-inbox-rail" aria-label="Companion 요약">
+    <aside className="companion-inbox-rail" aria-label="Mori 노트 요약">
       <section className="companion-inbox-rail-card">
         <header>
           <span className="companion-card-mark" aria-hidden="true">
             <Compass size={15} />
           </span>
-          <h3>Companion 요약</h3>
+          <h3>알림 요약</h3>
         </header>
         {groups.length === 0 ? (
-          <p className="companion-inbox-rail-total">살펴볼 신호가 없습니다.</p>
+          <p className="companion-inbox-rail-total">살펴볼 알림이 없습니다.</p>
         ) : (
           <>
             <dl className="companion-inbox-rail-counts">
@@ -286,7 +284,7 @@ function CompanionInboxRail({
               ))}
             </dl>
             <p className="companion-inbox-rail-total">
-              살펴볼 신호 <strong>{total}</strong>건
+              살펴볼 알림 <strong>{total}</strong>건
             </p>
           </>
         )}
@@ -296,14 +294,14 @@ function CompanionInboxRail({
         <ShieldCheck size={14} aria-hidden="true" />
         <p>
           {isDemo
-            ? "데모 데이터 기준입니다. Mori는 사용자가 가져온 소스만 사용하며 백그라운드로 감시하지 않습니다."
-            : "Mori는 사용자가 명시적으로 가져온 소스만 사용합니다. 메모리는 검토 후에만 저장되며, 자동으로 쓰지 않습니다."}
+            ? "데모 데이터 기준입니다. Mori는 가져온 소스만 사용하고 백그라운드로 감시하지 않습니다."
+            : "Mori는 명시적으로 가져온 소스만 사용합니다. 메모리는 검토 후에만 저장됩니다."}
         </p>
       </section>
 
       <p className="companion-inbox-rail-hint">
-        신호는 제안이며 사실이 아닙니다 <ArrowRight size={11} aria-hidden="true" /> 각 항목을
-        검토 화면에서 직접 확인하세요.
+        알림은 제안일 뿐 사실이 아닙니다 <ArrowRight size={11} aria-hidden="true" /> 각 항목을
+        직접 확인하세요.
       </p>
     </aside>
   );
