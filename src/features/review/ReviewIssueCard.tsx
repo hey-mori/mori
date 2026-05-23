@@ -40,11 +40,25 @@ export function ReviewIssueCard({
           <span className="review-issue-card-meta">
             <Calendar size={11} aria-hidden="true" /> {formatDate(issue.createdAt)}
           </span>
-          <span className="review-issue-card-meta">
+          <span
+            className="review-issue-card-meta"
+            title={`이벤트 ${evidence.eventCount}개 · 소스 ${evidence.sourceCount}개${
+              issue.relatedDecisionIds.length
+                ? ` · 결정 ${issue.relatedDecisionIds.length}개`
+                : ""
+            }`}
+          >
             <Link2 size={11} aria-hidden="true" /> {evidence.eventCount}E · {evidence.sourceCount}S
             {issue.relatedDecisionIds.length ? ` · ${issue.relatedDecisionIds.length}D` : ""}
           </span>
-          <Badge tone={trust.tone}>
+          <Badge
+            tone={trust.tone}
+            title={
+              isInferred
+                ? `AI가 추론한 항목입니다. 신뢰도 ${confidencePct}% — 원본 근거에서 확인 후 수락하세요.`
+                : trust.label
+            }
+          >
             {isInferred ? `${trust.label} ${confidencePct}%` : trust.label}
           </Badge>
           {issue.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}

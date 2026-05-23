@@ -62,8 +62,11 @@ const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare 
   { id: "issues", label: "이슈", icon: KanbanSquare },
   { id: "decisions", label: "결정", icon: Table2 },
   { id: "nextActions", label: "다음 액션", icon: ListChecks },
-  { id: "unresolved", label: "미처리", icon: AlertTriangle },
-  { id: "suggestions", label: "제안", icon: Sparkles },
+  // "확인 필요" is plainer than "미처리" — it states what the user does, not
+  // an item state — and "Mori 제안" disambiguates AI-derived rows from the
+  // user-curated lists in the other tabs.
+  { id: "unresolved", label: "확인 필요", icon: AlertTriangle },
+  { id: "suggestions", label: "Mori 제안", icon: Sparkles },
 ];
 
 /**
