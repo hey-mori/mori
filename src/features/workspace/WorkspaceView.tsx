@@ -206,8 +206,7 @@ export function WorkspaceView() {
                 </Button>
               }
             >
-              지금은 데모 세션만 있습니다. 연결에서 Claude 대화를 가져오면 실제 세션이 프로젝트별로
-              쌓입니다.
+              데모 세션입니다. 가져오기로 실제 세션이 들어오면 프로젝트별로 정리됩니다.
             </NoticeBanner>
           ) : null}
           {model.groups.map((group) => (

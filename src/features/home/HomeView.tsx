@@ -171,10 +171,7 @@ export function HomeView() {
           {overview.onlyDemo ? (
             <p className="home-demo-note">
               <Sparkles size={14} aria-hidden="true" />
-              <span>
-                지금은 데모 세션만 있습니다. 연결에서 Claude 작업을 가져오면 아래 요약이 실제 작업으로
-                채워집니다.
-              </span>
+              <span>데모 세션입니다. 가져오기로 실제 작업이 들어오면 자동으로 채워집니다.</span>
             </p>
           ) : null}
 
