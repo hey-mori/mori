@@ -89,7 +89,7 @@ export function StorageCard({
         <div className="settings-sqlite-panel">
           <header>
             <h4>
-              <moriConceptIcon.desktopSqlite size={14} aria-hidden="true" /> Desktop SQLite
+              <moriConceptIcon.desktopSqlite size={14} aria-hidden="true" /> 데스크톱 SQLite
             </h4>
             <Badge
               tone={

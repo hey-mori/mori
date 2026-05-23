@@ -8727,29 +8727,31 @@ pre {
   gap: 8px;
 }
 
+/* Review summary metrics: read as a calm number strip inside the summary
+   panel, not nested tinted tiles. Tone is carried by the number color only. */
 .review-summary-metric {
   display: grid;
   gap: 2px;
-  padding: 10px;
-  border-radius: 10px;
+  padding: 6px 4px;
   text-align: center;
-  background: var(--panel-soft);
+  background: transparent;
 }
 
 .review-summary-metric strong {
   font-size: var(--mori-font-size-xl);
-  font-weight: 800;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .review-summary-metric span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
-.review-summary-metric.tone-purple { background: var(--purple-50); color: var(--purple); }
-.review-summary-metric.tone-green  { background: var(--green-50);  color: var(--green); }
-.review-summary-metric.tone-blue   { background: var(--blue-50);   color: var(--blue); }
+.review-summary-metric.tone-purple strong { color: var(--purple); }
+.review-summary-metric.tone-green  strong { color: var(--green); }
+.review-summary-metric.tone-blue   strong { color: var(--blue); }
 
 .review-summary-section {
   display: grid;
@@ -11661,13 +11663,11 @@ pre {
   color: var(--mori-text-muted, var(--muted));
 }
 
+/* Drawer is already a card; nested state section drops border / bg. */
 .accepted-memory-detail-state {
   display: grid;
   gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid var(--mori-border, var(--line));
-  border-radius: 10px;
-  background: var(--mori-surface-subtle, #fbfbfd);
+  padding: 4px 0;
 }
 
 .accepted-memory-detail-badges {
@@ -11708,19 +11708,15 @@ pre {
 .accepted-memory-detail-stat {
   display: grid;
   gap: 2px;
-  padding: 10px 12px;
-  border: 1px solid var(--mori-border, var(--line));
-  border-radius: 10px;
-  background: var(--mori-surface, #ffffff);
+  padding: 4px 0 4px 10px;
+  border-left: 2px solid var(--mori-border, var(--line));
 }
 
 .accepted-memory-detail-stat dt {
   display: flex;
   flex-direction: column;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 11.5px;
+  font-weight: 500;
   color: var(--mori-text-muted, var(--muted));
 }
 
@@ -11753,10 +11749,8 @@ pre {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 8px 10px;
-  border: 1px solid var(--mori-border, var(--line));
-  border-radius: 8px;
-  background: var(--mori-surface, #ffffff);
+  padding: 4px 0;
+  color: var(--mori-text-muted, var(--muted));
 }
 
 .accepted-memory-detail-note {
@@ -12472,10 +12466,8 @@ pre {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 8px 12px;
-  border-top: 1px solid #ecebf3;
-  background: #fdfcff;
-  border-radius: 0 0 10px 10px;
+  padding: 6px 12px 12px;
+  background: transparent;
 }
 
 .consolidation-inspector {
@@ -12532,10 +12524,12 @@ pre {
 .consolidation-inspector-block {
   display: grid;
   gap: 4px;
-  padding: 8px 10px;
-  border: 1px solid #ecebf3;
-  border-radius: 8px;
-  background: #fdfcff;
+  padding: 2px 0;
+}
+
+.consolidation-inspector-block + .consolidation-inspector-block {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
 }
 
 .consolidation-inspector-block h4 {
@@ -13680,10 +13674,9 @@ pre {
 
 .settings-provider-privacy {
   margin: 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--purple-50);
-  color: #4734bb;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
   font-size: 11px;
   line-height: 1.5;
 }

@@ -154,11 +154,11 @@ export function AcceptedMemoryDetailDrawer({
         />
       </dl>
 
-      <section className="accepted-memory-detail-meta" aria-label="Eligibility and importance">
+      <section className="accepted-memory-detail-meta" aria-label="공개 범위 및 중요도">
         <div>
           <ShieldCheck size={12} aria-hidden="true" />
           <span>
-            Resume Prompt 포함{" "}
+            이어가기 프롬프트{" "}
             <MoriStatusBadge tone={provenance.resumeEligible ? "success" : "neutral"}>
               {provenance.resumeEligible ? "포함" : "제외"}
             </MoriStatusBadge>

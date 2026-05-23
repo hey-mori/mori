@@ -45,10 +45,10 @@ export function ResumePromptCard({
   })();
 
   return (
-    <section className="resume-prompt-card" aria-label="Resume prompt">
+    <section className="resume-prompt-card" aria-label="이어가기 프롬프트">
       <header className="resume-prompt-head">
         <div>
-          <h2>이어가기 프롬프트 (Resume Prompt)</h2>
+          <h2>이어가기 프롬프트</h2>
           <p>Claude / ChatGPT / Codex 다음 세션에 그대로 붙여넣을 수 있는 컨텍스트입니다.</p>
         </div>
         <div className="resume-prompt-meta">

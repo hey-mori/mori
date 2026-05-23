@@ -131,7 +131,7 @@ export function SettingsView() {
           label="설정 섹션"
           end={
             <div className="settings-page-actions">
-              <Badge tone="purple">{mode === "tauri-desktop" ? "Tauri desktop" : "Browser"}</Badge>
+              <Badge tone="purple">{mode === "tauri-desktop" ? "데스크톱" : "브라우저"}</Badge>
             </div>
           }
           start={
@@ -299,10 +299,10 @@ function StatusStrip({
             : { value: `${sqliteLabel} · 사용 불가`, tone: "warn" }
       : { value: getProductRuntimeLabel("browserLocalStorage"), tone: "info" };
   return (
-    <div className="settings-runtime-summary" role="region" aria-label="Mori runtime status">
+    <div className="settings-runtime-summary" role="region" aria-label="Mori 런타임 상태">
       <RuntimeStat
         label="런타임"
-        value={mode === "tauri-desktop" ? "Tauri desktop" : "Browser (Prototype)"}
+        value={mode === "tauri-desktop" ? "데스크톱 (Tauri)" : "브라우저 시범판"}
         tone="info"
       />
       <RuntimeStat label="저장소" value={storage.value} tone={storage.tone} />

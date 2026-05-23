@@ -53,7 +53,7 @@ export function ProjectMemoryHero({
             최근 리포트
           </Button>
           <Button variant="primary" icon={Play} onClick={onStartFollowUp}>
-            Follow-up Session 시작
+            다음 세션 시작
           </Button>
         </div>
       </header>

@@ -92,7 +92,7 @@ export function CompanionCard({
           className="companion-card-seeall"
           onClick={() => onNavigate("companion")}
         >
-          Companion 노트 전체 보기 <ArrowRight size={12} aria-hidden="true" />
+          Mori 노트 전체 보기 <ArrowRight size={12} aria-hidden="true" />
         </button>
       </div>
 

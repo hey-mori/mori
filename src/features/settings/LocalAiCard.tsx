@@ -54,13 +54,13 @@ export function LocalAiCard({
   }
 
   return (
-    <section className="settings-card" aria-label="Local AI providers">
+    <section className="settings-card" aria-label="로컬 AI 제공자">
       <header className="settings-card-head">
         <div>
-          <h3>로컬 AI / Analysis Provider</h3>
+          <h3>로컬 AI 제공자</h3>
           <p>
-            Quick Pass는 가져온 세션 데이터를 이슈 · 결정 · 다음 액션으로 변환합니다. 기본 제공자는 deterministic 로컬
-            휴리스틱이며, 직접 입력한 endpoint를 통해 Ollama 등 로컬 LLM으로 전환할 수 있습니다.
+            Quick Pass가 가져온 세션을 이슈 · 결정 · 다음 액션으로 정리합니다. 기본 제공자는 로컬
+            휴리스틱이며, 직접 입력한 엔드포인트로 Ollama 등 로컬 LLM으로 바꿀 수 있습니다.
           </p>
         </div>
       </header>
@@ -140,7 +140,7 @@ export function LocalAiCard({
         })}
       </div>
 
-      <SectionHeader title="Ollama 세부 설정" hint="endpoint / model / timeout" />
+      <SectionHeader title="Ollama 연결 설정" hint="엔드포인트 · 모델 · 타임아웃" />
       <div className="settings-provider-config">
         <ProviderField
           label="엔드포인트"
@@ -164,8 +164,8 @@ export function LocalAiCard({
         />
         <label className="settings-provider-fallback">
           <span>
-            <strong>Ollama 실패 시 fallback</strong>
-            <small>네트워크 오류 등으로 Ollama가 응답하지 않으면 deterministic 제공자가 대신 분석합니다.</small>
+            <strong>Ollama 실패 시 자동 전환</strong>
+            <small>네트워크 오류 등으로 Ollama가 응답하지 않으면 기본 제공자가 대신 분석합니다.</small>
           </span>
           <Toggle
             active={settings.fallbackToDeterministic}
