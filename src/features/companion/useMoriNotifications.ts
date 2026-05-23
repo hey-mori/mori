@@ -5,10 +5,12 @@ import {
   type MoriNotification,
   type MoriNotificationActionTarget,
 } from "../../lib/notifications/notification";
+import { buildImportFinishedNotifications } from "../../lib/notifications/importFinishedNotifications";
 import {
   getCompanionSignalActionTarget,
   type CompanionSignal,
 } from "../../lib/companion/companionSignals";
+import { useMoriSessionStore } from "../../app/sessionStore";
 import { useCompanionSignals } from "./useCompanionSignals";
 
 /**
@@ -34,18 +36,33 @@ export function useMoriNotifications(): {
   isDemo: boolean;
 } {
   const { feed, isDemo } = useCompanionSignals();
+  const imports = useMoriSessionStore((state) => state.imports);
 
-  const companionNotifications = useMemo<MoriNotification[]>(() => {
-    return feed.map((signal) =>
-      companionSignalToNotification(signal, resolveTarget(signal)),
-    );
-  }, [feed]);
+  const companionNotifications = useMemo<MoriNotification[]>(
+    () =>
+      feed.map((signal) =>
+        companionSignalToNotification(signal, resolveTarget(signal)),
+      ),
+    [feed],
+  );
 
-  // Future producers fan in here. Order = priority for the compose-time
-  // dedupe — earlier feeds win when two producers raise the same id.
+  // Second producer: "방금 가져옴" pulse for sources added within the last
+  // 24 hours. The compose dedupes by id so a single batch is never doubled.
+  const importFinishedNotifications = useMemo<MoriNotification[]>(
+    () => buildImportFinishedNotifications({ imports }),
+    [imports],
+  );
+
+  // Order = priority for the compose-time dedupe — fresh imports lead so a
+  // brand-new "Claude 대화 N건 가져옴" sits above the standing Companion
+  // suggestions. Future producers fan in here as new array entries.
   const notifications = useMemo(
-    () => composeNotifications([companionNotifications]),
-    [companionNotifications],
+    () =>
+      composeNotifications([
+        importFinishedNotifications,
+        companionNotifications,
+      ]),
+    [companionNotifications, importFinishedNotifications],
   );
 
   return { notifications, isDemo };
