@@ -4,6 +4,7 @@ import type {
   NextAction,
   Project,
   Session,
+  SessionVisibility,
   SourceRef,
   TimelineEvent,
 } from "../../domain/types";
@@ -72,6 +73,18 @@ export type StoredSessionSummary = {
   tokenInput?: number;
   /** Output-token share of `tokenTotal`. Omitted whenever `tokenTotal` is. */
   tokenOutput?: number;
+  /**
+   * Optional actor id (mirrors `Session.createdBy`). Reserved for the future
+   * multi-user workroom model so the sidebar / workspace can filter "my
+   * sessions" vs "team sessions" without loading every draft body. Defaults
+   * to `"local-user"` when absent.
+   */
+  createdBy?: string;
+  /**
+   * Optional visibility tier (mirrors `Session.visibility`). Defaults to
+   * `personal` when absent. No read path branches on it today.
+   */
+  visibility?: SessionVisibility;
 };
 
 export type StoredSessionImport = {

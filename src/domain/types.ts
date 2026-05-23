@@ -93,7 +93,31 @@ export type Session = {
    * to the default list.
    */
   archivedAt?: string;
+  /**
+   * Optional actor id who created the session. Reserved for a future
+   * multi-user workroom model (a Project containing sessions from multiple
+   * teammates). Today this is always the implicit local user; callers should
+   * treat `undefined` as `"local-user"`. The field is purely additive — no
+   * UI consumes it yet, and saved sessions before this field load normally.
+   */
+  createdBy?: string;
+  /**
+   * Optional visibility tier for a future workroom model. Defaults to
+   * `personal` when omitted, which matches today's single-user behaviour
+   * (every session is the local user's). When a real team backend lands,
+   * `team` sessions become visible to project members and `shared` sessions
+   * include external collaborators under the client-safe filter rules.
+   * Additive — no read path branches on this yet.
+   */
+  visibility?: SessionVisibility;
 };
+
+/**
+ * Visibility tier for a session under the planned workroom model. Stored as
+ * a stable string union so the persisted shape doesn't churn when the team
+ * backend lands. See `docs/workroom-direction.md` for the lifecycle.
+ */
+export type SessionVisibility = "personal" | "team" | "shared";
 
 export type SourceRef = {
   id: string;

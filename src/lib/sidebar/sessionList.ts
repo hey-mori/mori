@@ -8,7 +8,20 @@ import type { StoredSessionSummary } from "../storage/storageTypes";
  * Mori, sees their last few sessions, picks one. Grouping is computed from a
  * single `now` so tests are deterministic; bucket boundaries are local-day
  * aligned (today / yesterday / this week / earlier) to match calendar intuition.
+ *
+ * Grouping is abstracted into a `SidebarGroupingMode` so a future workroom
+ * model (Project = top-level, sessions nested) can switch the sidebar to
+ * project-first grouping without rewriting the renderer. Today the default
+ * stays `"recency"` — the audit recommendation is to ship the abstraction
+ * but defer the UX switch until a multi-user backend lands.
  */
+
+/**
+ * How the sidebar groups sessions. `recency` is the today / yesterday /
+ * this-week / earlier bucketing; `project` groups by `sourceLabel` (the
+ * project the session belongs to). Add new modes here when they ship.
+ */
+export type SidebarGroupingMode = "recency" | "project";
 
 export type SidebarSessionRow = {
   sessionId: string;
@@ -20,11 +33,17 @@ export type SidebarSessionRow = {
   archived: boolean;
 };
 
+/** Recency-mode buckets. The keys are the only ones that drive the recency
+ *  grouping path; project-mode emits buckets with `"project"` / `"unsourced"`
+ *  carried inline. */
+export type RecencyBucket = "today" | "yesterday" | "thisWeek" | "earlier";
+
 export type SidebarSessionBucket =
-  | "today"
-  | "yesterday"
-  | "thisWeek"
-  | "earlier";
+  | RecencyBucket
+  /** Project-mode bucket id is the project label itself; the bucket is
+   *  carried as `"project"` so the renderer can pick a project-tone style. */
+  | "project"
+  | "unsourced";
 
 export type SidebarSessionGroup = {
   bucket: SidebarSessionBucket;
@@ -32,14 +51,14 @@ export type SidebarSessionGroup = {
   rows: SidebarSessionRow[];
 };
 
-const BUCKET_LABELS: Record<SidebarSessionBucket, string> = {
+const RECENCY_LABELS: Record<RecencyBucket, string> = {
   today: "오늘",
   yesterday: "어제",
   thisWeek: "이번 주",
   earlier: "이전",
 };
 
-const BUCKET_ORDER: SidebarSessionBucket[] = [
+const RECENCY_ORDER: RecencyBucket[] = [
   "today",
   "yesterday",
   "thisWeek",
@@ -74,19 +93,30 @@ export function filterSidebarRows(
 }
 
 /**
- * Group rows into recency buckets relative to `now`. Rows arrive
- * most-recent-first; within each bucket that order is preserved. Empty
- * buckets are dropped.
+ * Group rows into the chosen mode. `recency` (default) buckets rows by
+ * today / yesterday / this week / earlier; `project` buckets by
+ * `sourceLabel` and uses a trailing "기타" bucket for sessions without a
+ * source label. Rows arrive most-recent-first; within each bucket the input
+ * order is preserved. Empty buckets are dropped.
  */
 export function groupSidebarRows(
   rows: SidebarSessionRow[],
   now: number = Date.now(),
+  mode: SidebarGroupingMode = "recency",
+): SidebarSessionGroup[] {
+  if (mode === "project") return groupByProject(rows);
+  return groupByRecency(rows, now);
+}
+
+function groupByRecency(
+  rows: SidebarSessionRow[],
+  now: number,
 ): SidebarSessionGroup[] {
   const today = startOfLocalDay(now);
   const yesterday = today - DAY_MS;
   const weekStart = today - 6 * DAY_MS;
 
-  const map: Record<SidebarSessionBucket, SidebarSessionRow[]> = {
+  const map: Record<RecencyBucket, SidebarSessionRow[]> = {
     today: [],
     yesterday: [],
     thisWeek: [],
@@ -110,11 +140,43 @@ export function groupSidebarRows(
     }
   }
 
-  return BUCKET_ORDER.flatMap((bucket) =>
+  return RECENCY_ORDER.flatMap((bucket) =>
     map[bucket].length > 0
-      ? [{ bucket, label: BUCKET_LABELS[bucket], rows: map[bucket] }]
+      ? [{ bucket, label: RECENCY_LABELS[bucket], rows: map[bucket] }]
       : [],
   );
+}
+
+const UNSOURCED_LABEL = "기타";
+
+/**
+ * Project-mode grouping. Buckets rows by `sourceLabel`; the catch-all bucket
+ * for rows without a label sits at the end so labelled groups always lead.
+ * Within a group the input order (most-recent-first from the caller) is
+ * preserved, so a project's latest session is still the first row.
+ */
+function groupByProject(rows: SidebarSessionRow[]): SidebarSessionGroup[] {
+  const order: string[] = [];
+  const map = new Map<string, SidebarSessionRow[]>();
+  for (const row of rows) {
+    const label = row.sourceLabel?.trim() || UNSOURCED_LABEL;
+    if (!map.has(label)) {
+      map.set(label, []);
+      order.push(label);
+    }
+    map.get(label)!.push(row);
+  }
+  return order
+    .sort((a, b) => {
+      if (a === UNSOURCED_LABEL) return 1;
+      if (b === UNSOURCED_LABEL) return -1;
+      return 0;
+    })
+    .map((label) => ({
+      bucket: label === UNSOURCED_LABEL ? ("unsourced" as const) : ("project" as const),
+      label,
+      rows: map.get(label)!,
+    }));
 }
 
 /**
