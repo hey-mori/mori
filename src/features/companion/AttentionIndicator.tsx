@@ -5,47 +5,46 @@ import type { ViewKey } from "../../domain/types";
 import {
   companionSeverityTone,
   describeCompanionBasis,
-  getCompanionSignalActionTarget,
-  type CompanionSignal,
 } from "../../lib/companion/companionSignals";
+import type {
+  MoriNotification,
+  MoriNotificationActionTarget,
+} from "../../lib/notifications/notification";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
-import { useCompanionSignals } from "./useCompanionSignals";
+import { useMoriNotifications } from "./useMoriNotifications";
 
 /**
- * Global Attention Layer (P4).
+ * Mori 노트 — the global notifications panel anchored to the sidebar foot.
  *
- * A persistent indicator in the sidebar that shows how many Mori notes
- * the current session has generated. Clicking it opens a compact popover
- * panel with the top few signals, framed around what the user *gains* from
- * acting — not a raw "N개 검토 후보" badge.
+ * The panel renders `MoriNotification[]` from `useMoriNotifications()`, the
+ * producer-neutral hook. Today the only producer is the Companion layer
+ * (adapted via `companionSignalToNotification`); future producers (an
+ * import-finished pulse, a memory-stale detector, a package-export ping)
+ * fan into the same hook and flow through this surface unchanged.
  *
- * The panel is a supplementary quick-access surface; the full Companion
- * Inbox (`companion` view) remains the detailed, organised destination.
- *
- * Honesty rules:
- *   - Zero signals → indicator is quiet (no badge, muted colour).
- *   - Demo mode → shown but clearly labelled as demo data.
- *   - Signals come from `useCompanionSignals` — the same hook as the
- *     CompanionCard / CompanionInbox, so the count is always consistent.
+ * Honesty rules carried from the Companion layer:
+ *   - Zero notifications → indicator is quiet (no badge, muted colour).
+ *   - Demo mode → footer copy distinguishes derived-from-demo from real.
+ *   - Notifications surface only what is already imported and reviewed.
  */
 
-const PANEL_SIGNAL_LIMIT = 4;
+const PANEL_LIMIT = 4;
 
 export function AttentionIndicator({
   onNavigate,
 }: {
   onNavigate: (view: ViewKey) => void;
 }) {
-  const { feed, isDemo } = useCompanionSignals();
+  const { notifications, isDemo } = useMoriNotifications();
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
 
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const count = feed.length;
-  const panelSignals = feed.slice(0, PANEL_SIGNAL_LIMIT);
-  const hasMore = feed.length > PANEL_SIGNAL_LIMIT;
+  const count = notifications.length;
+  const visible = notifications.slice(0, PANEL_LIMIT);
+  const hasMore = notifications.length > PANEL_LIMIT;
 
   // Close on Escape, and trap focus briefly so keyboard users can navigate.
   useEffect(() => {
@@ -61,14 +60,11 @@ export function AttentionIndicator({
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  function handleNavigate(view: ViewKey) {
+  function dispatchTarget(target: MoriNotificationActionTarget): void {
     setOpen(false);
-    onNavigate(view);
-  }
-
-  function handleReviewItem(selection: ReviewSelection) {
-    setOpen(false);
-    openReviewItem(selection);
+    if (!target) return;
+    if (target.kind === "view") onNavigate(target.view);
+    else if (target.kind === "review") openReviewItem(target.selection);
   }
 
   return (
@@ -89,7 +85,7 @@ export function AttentionIndicator({
         {count > 0 ? (
           <span
             className="attention-indicator-badge"
-            aria-label={`${count}개 신호`}
+            aria-label={`${count}개 알림`}
           >
             {count}
           </span>
@@ -126,19 +122,18 @@ export function AttentionIndicator({
             </header>
 
             <div className="attention-panel-body">
-              {panelSignals.length === 0 ? (
+              {visible.length === 0 ? (
                 <p className="attention-panel-empty">
                   지금은 특별히 살펴볼 것이 없습니다. 새 소스를 가져오거나
-                  Quick Pass를 실행하면 Mori가 다시 짚어 드립니다.
+                  Quick Pass를 실행하면 다시 짚어 드립니다.
                 </p>
               ) : (
                 <ul className="attention-panel-signals">
-                  {panelSignals.map((signal) => (
-                    <AttentionSignalRow
-                      key={signal.id}
-                      signal={signal}
-                      onNavigate={handleNavigate}
-                      onOpenReviewItem={handleReviewItem}
+                  {visible.map((notification) => (
+                    <NotificationRow
+                      key={notification.id}
+                      notification={notification}
+                      onDispatch={dispatchTarget}
                     />
                   ))}
                 </ul>
@@ -149,11 +144,12 @@ export function AttentionIndicator({
               <button
                 type="button"
                 className="attention-panel-viewall"
-                onClick={() => handleNavigate("companion")}
+                onClick={() => {
+                  setOpen(false);
+                  onNavigate("companion");
+                }}
               >
-                {hasMore
-                  ? `전체 ${count}개 노트 보기`
-                  : "전체 노트 보기"}
+                {hasMore ? `전체 ${count}개 노트 보기` : "전체 노트 보기"}
                 <ArrowRight size={11} aria-hidden="true" />
               </button>
               <p className="attention-panel-privacy">
@@ -169,43 +165,38 @@ export function AttentionIndicator({
   );
 }
 
-// ─── Signal row ───────────────────────────────────────────────────────────────
+// ─── Notification row ─────────────────────────────────────────────────────────
 
-function AttentionSignalRow({
-  signal,
-  onNavigate,
-  onOpenReviewItem,
+/** Maps a notification basis label without re-importing the Companion type. */
+function describeBasis(basis: MoriNotification["basis"]): string {
+  return describeCompanionBasis(basis);
+}
+
+function NotificationRow({
+  notification,
+  onDispatch,
 }: {
-  signal: CompanionSignal;
-  onNavigate: (view: ViewKey) => void;
-  onOpenReviewItem: (selection: ReviewSelection) => void;
+  notification: MoriNotification;
+  onDispatch: (target: MoriNotificationActionTarget) => void;
 }) {
-  const target = getCompanionSignalActionTarget(signal);
-  const action =
-    target?.kind === "review"
-      ? () => onOpenReviewItem(target.selection)
-      : target?.kind === "view"
-        ? () => onNavigate(target.view)
-        : null;
-
-  // Whole-row clickable notification style. Title leads; the longer message
-  // sits muted below it (so the row reads in two lines max). The basis chip
-  // moved into the `title` attribute as a hover tooltip — it was noise in
-  // the row but still surfaces honestly on hover.
+  const target = notification.actionTarget;
+  // The renderer never inspects which producer raised the row — it dispatches
+  // on the producer-neutral target shape.
+  const action = target ? () => onDispatch(target) : null;
   return (
     <li>
       <button
         type="button"
         className="attention-signal"
-        data-mori-tone={companionSeverityTone(signal.severity)}
+        data-mori-tone={companionSeverityTone(notification.severity)}
         onClick={action ?? undefined}
         disabled={!action}
-        title={`${signal.title} — ${describeCompanionBasis(signal.basis)}`}
+        title={`${notification.title} — ${describeBasis(notification.basis)}`}
       >
         <span className="companion-signal-dot" aria-hidden="true" />
         <div className="attention-signal-body">
-          <strong className="attention-signal-title">{signal.title}</strong>
-          <p>{signal.message}</p>
+          <strong className="attention-signal-title">{notification.title}</strong>
+          <p>{notification.message}</p>
         </div>
         {action ? (
           <ArrowRight
@@ -218,3 +209,6 @@ function AttentionSignalRow({
     </li>
   );
 }
+
+/** Re-exported so callers that imported the type from this module keep working. */
+export type { MoriNotification, ReviewSelection };
