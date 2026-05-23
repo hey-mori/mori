@@ -17222,18 +17222,19 @@ pre {
   align-items: center;
   justify-content: space-between;
   gap: var(--mori-space-5);
-  min-height: 52px;
+  min-height: 48px;
   padding: var(--mori-space-3) var(--mori-space-5);
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-md);
   background: var(--mori-surface);
   cursor: pointer;
-  transition: border-color var(--mori-transition-fast), box-shadow var(--mori-transition-fast);
+  transition: border-color var(--mori-transition-fast),
+    background-color var(--mori-transition-fast);
 }
 
 .workspace-row:hover {
   border-color: var(--mori-border-strong);
-  box-shadow: var(--mori-shadow-card);
+  background: var(--mori-surface-subtle);
 }
 
 .workspace-row:focus-visible {
@@ -17244,11 +17245,14 @@ pre {
 
 .workspace-row.is-selected {
   border-color: var(--mori-border-strong);
-  box-shadow: var(--mori-shadow-card);
+  background: var(--mori-surface-subtle);
 }
 
+/* Active session row — purple inset bar matches the sidebar treatment so
+   "this is the loaded session" reads consistently across surfaces. */
 .workspace-row.is-active {
-  border-color: var(--mori-accent);
+  border-color: var(--mori-border);
+  box-shadow: inset 3px 0 0 var(--mori-accent);
 }
 
 .workspace-row.is-archived {
