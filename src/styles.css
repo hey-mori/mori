@@ -10650,11 +10650,11 @@ pre {
 .report-builder-panel {
   display: grid;
   gap: 16px;
-  padding: 16px;
+  padding: 14px 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 11px;
   background: white;
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
   min-width: 0;
   position: sticky;
   top: 88px;
@@ -10702,26 +10702,28 @@ pre {
   gap: 6px;
 }
 
+/* Report-type rows read as a tight selection list, not nested cards inside
+   an already-card panel. No bordered chrome — selection is communicated by
+   the lavender fill + purple icon. */
 .report-type-card {
   display: grid;
   grid-template-columns: 16px 1fr;
-  gap: 8px;
+  gap: 9px;
   padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition: background 120ms ease;
 }
 
 .report-type-card:hover {
-  border-color: var(--line-strong);
+  background: var(--gray-50);
 }
 
 .report-type-card.selected {
-  border-color: var(--purple);
-  background: linear-gradient(180deg, #fff, #f8f4ff);
+  background: var(--purple-50);
 }
 
 .report-type-card svg {
