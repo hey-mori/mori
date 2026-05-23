@@ -3685,30 +3685,45 @@ textarea {
   box-shadow: var(--shadow-soft);
 }
 
+/* Start Session steps read as heading groups, not stacked cards. The shared
+   .setup-block,.summary-panel,… rule above adds a border / bg / shadow that
+   makes the 3 numbered steps feel like card-on-card; reset that for the
+   step blocks specifically and give the numbered indicator a quiet pill. */
 .setup-block {
-  padding: 20px;
+  padding: 4px 2px 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.setup-block + .setup-block {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
 }
 
 .setup-block header {
   display: flex;
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: center;
 }
 
 .setup-block header > span {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  color: white;
+  width: 22px;
+  height: 22px;
+  color: var(--purple);
   border-radius: 999px;
-  background: var(--purple);
-  font-weight: 800;
+  background: var(--purple-50);
+  font-weight: 700;
+  font-size: 12px;
 }
 
 .setup-block h2 {
-  margin-bottom: 5px;
-  font-size: 16px;
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 650;
 }
 
 .form-row {

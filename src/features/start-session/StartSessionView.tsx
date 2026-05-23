@@ -219,15 +219,13 @@ export function StartSessionView() {
       ) : (
         <NoticeBanner
           tone="info"
-          title="먼저 연결을 확인하세요"
           actions={
             <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
               연결로 이동
             </Button>
           }
         >
-          대부분의 세션은 연결에서 Claude 대화를 가져오면 자동으로 만들어집니다. 빈 세션이 필요할
-          때만 아래에서 직접 만드세요.
+          대부분의 세션은 연결에서 가져옵니다. 빈 세션이 필요할 때만 아래에서 만드세요.
         </NoticeBanner>
       )}
 
