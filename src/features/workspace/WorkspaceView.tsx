@@ -132,33 +132,37 @@ export function WorkspaceView() {
                   { value: "manual", label: "수동" },
                 ]}
               />
-              <SegmentedControl
-                ariaLabel="보관 필터"
-                value={filters.archive}
-                onChange={(archive) => setFilters((prev) => ({ ...prev, archive }))}
-                options={[
-                  { value: "active", label: "활성" },
-                  {
-                    value: "archived",
-                    label: model.archivedCount > 0
-                      ? `보관 ${model.archivedCount}`
-                      : "보관",
-                  },
-                  { value: "all", label: "모두" },
-                ]}
-              />
             </>
           }
           end={
-            <SegmentedControl
-              ariaLabel="정렬"
-              value={filters.sort}
-              onChange={(sort) => setFilters((prev) => ({ ...prev, sort }))}
-              options={[
-                { value: "recent", label: "최근" },
-                { value: "title", label: "제목" },
-              ]}
-            />
+            <>
+              {/* 보관 토글은 보관할 게 있을 때만 노출 — 0건이면 토글 자체가 사라져 툴바가 더 깔끔해진다. */}
+              {model.archivedCount > 0 ? (
+                <button
+                  type="button"
+                  className={`workspace-archive-toggle${filters.archive === "archived" ? " is-active" : ""}`}
+                  onClick={() =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      archive: prev.archive === "archived" ? "active" : "archived",
+                    }))
+                  }
+                  title={filters.archive === "archived" ? "활성 세션만 보기" : "보관된 세션 보기"}
+                >
+                  <Archive size={13} aria-hidden="true" />
+                  보관 {model.archivedCount}
+                </button>
+              ) : null}
+              <SegmentedControl
+                ariaLabel="정렬"
+                value={filters.sort}
+                onChange={(sort) => setFilters((prev) => ({ ...prev, sort }))}
+                options={[
+                  { value: "recent", label: "최근" },
+                  { value: "title", label: "제목" },
+                ]}
+              />
+            </>
           }
         />
       }

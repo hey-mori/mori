@@ -17100,6 +17100,35 @@ pre {
   box-shadow: var(--mori-shadow-card);
 }
 
+/* Archive toggle — single pill the toolbar promotes only when there is
+   archived content to surface. Keeps the bar quiet for fresh installs. */
+.workspace-archive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-pill);
+  background: var(--mori-surface);
+  color: var(--mori-text-muted);
+  font-size: var(--mori-font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.workspace-archive-toggle:hover {
+  border-color: var(--mori-border-strong);
+  color: var(--mori-text);
+}
+
+.workspace-archive-toggle.is-active {
+  background: var(--mori-accent-soft);
+  color: var(--mori-accent);
+  border-color: transparent;
+}
+
 /* ── Project groups ───────────────────────────────────────────────────── */
 
 .workspace-groups {
