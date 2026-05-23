@@ -34,17 +34,16 @@ export function ConsolidationPreviewCard({
   return (
     <MoriSection
       className="memory-consolidation"
-      ariaLabel="Project Memory consolidation preview"
+      ariaLabel="프로젝트 메모리 통합 미리보기"
       title={
         <span className="memory-consolidation-title">
-          <BrainCircuit size={14} aria-hidden="true" /> Memory Consolidation
+          <BrainCircuit size={14} aria-hidden="true" /> 메모리 통합
         </span>
       }
       hint={
         <span>
-          누적된 Project Memory에서 승격할 항목을 미리 보여줍니다. ‘제안 검토’를 누르면 Consolidation
-          Review에서 각 제안을 검토할 수 있으며, ‘메모리 적용’을 누르기 전까지는 어떤 메모리도 저장되지
-          않습니다.
+          누적된 프로젝트 메모리에서 승격할 항목을 미리 보여줍니다. ‘제안 검토’를 누르면 통합 검토에서
+          각 제안을 살펴볼 수 있고, ‘메모리 적용’을 누르기 전까지는 아무 것도 저장되지 않습니다.
         </span>
       }
     >
@@ -81,7 +80,7 @@ export function ConsolidationPreviewCard({
           onClick={reviewable && onOpenReview ? onOpenReview : undefined}
           title={
             reviewable
-              ? "Consolidation Review를 엽니다. 검토 후 메모리 적용을 누르면 승인/편집한 항목과 감사 로그가 로컬에 저장됩니다."
+              ? "통합 검토를 엽니다. 메모리 적용을 누르면 승인 / 편집한 항목과 감사 로그가 로컬에 저장됩니다."
               : "검토할 제안이 없습니다."
           }
         >

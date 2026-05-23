@@ -475,12 +475,12 @@ function ImportPackagePanel({
   return (
     <details className="consolidation-review-import">
       <summary>
-        <strong>.mori 패키지에서 accepted memory 가져오기</strong>
-        <span>붙여넣거나 파일로 선택한 .mori v0 패키지의 accepted memory를 검토 제안으로 추가합니다.</span>
+        <strong>.mori 패키지에서 확정 메모리 가져오기</strong>
+        <span>붙여넣거나 파일로 선택한 .mori v0 패키지의 확정 메모리를 검토 제안으로 추가합니다.</span>
       </summary>
       <p className="consolidation-review-import-note">
-        가져온 memory는 자동 병합되지 않습니다. 아래 검토 목록에 제안으로 추가되며, 수락해야만
-        이 프로젝트의 memory가 됩니다. 이미 보유한 항목(originProposalIds / 제목 일치)은
+        가져온 메모리는 자동 병합되지 않습니다. 아래 검토 목록에 제안으로 추가되며, 수락해야만
+        이 프로젝트의 메모리가 됩니다. 이미 보유한 항목(originProposalIds / 제목 일치)은
         건너뜁니다.
       </p>
       <textarea
@@ -517,7 +517,7 @@ function ImportPackagePanel({
       </div>
       {message.kind === "ok" ? (
         <p className="consolidation-review-import-result tone-ok">
-          {message.packageId} · accepted memory {message.memoryCount}건 중 제안 {message.added}건
+          {message.packageId} · 확정 메모리 {message.memoryCount}건 중 제안 {message.added}건
           추가
           {message.skipped > 0 ? ` · 중복 ${message.skipped}건 건너뜀` : ""}.
         </p>
@@ -571,12 +571,11 @@ function ApplyBoundaryBanner({
         <Badge tone="purple">{describeAcceptedMemoryStorageSource(expectedSource)}</Badge>
       </header>
       <p>
-        수락 / 편집 / 관찰 / 연기 상태의 제안이{" "}
+        수락 · 편집 · 관찰 · 연기한 제안이{" "}
         {expectedSource === "desktop-sqlite"
-          ? "데스크톱 SQLite에 영구 저장됩니다"
-          : "브라우저 localStorage에 영구 저장됩니다"}
-        . 폐기한 제안은 감사 로그에만 기록됩니다. 모든 검토 액션은 로컬에만 저장됩니다 — 클라우드
-        동기화 / 외부 계정 접근 없음.
+          ? "데스크톱 SQLite에 저장됩니다"
+          : "브라우저 저장소에 저장됩니다"}
+        . 폐기한 제안은 감사 로그에만 남습니다. 모든 검토 액션은 로컬에서만 저장됩니다.
       </p>
       <dl className="consolidation-review-counts">
         <CountTile label="제안" value={counts.proposed} />
@@ -609,12 +608,12 @@ function ApplyBoundaryBanner({
             {describeAcceptedMemoryStorageSource(applyState.source)}에 저장했습니다.
           </strong>
           <span>
-            감사 로그 {applyState.summary.reviewActionCount}건 기록됨. Project Memory의 Accepted
-            Project Memories 카드와 Resume Prompt / Reports에서 확인할 수 있습니다.
+            감사 로그 {applyState.summary.reviewActionCount}건 기록. 메모리 페이지의 확정 메모리
+            카드와 Resume 프롬프트 · 리포트에서 확인할 수 있습니다.
           </span>
           {applyState.fellBack ? (
             <span className="consolidation-review-apply-fallback">
-              데스크톱 SQLite 저장에 실패해 브라우저 localStorage로 안전하게 대체했습니다
+              데스크톱 SQLite 저장에 실패해 브라우저 저장소로 안전하게 대체했습니다
               {applyState.fallbackReason ? `: ${applyState.fallbackReason}` : "."}
             </span>
           ) : null}
@@ -648,15 +647,15 @@ function EmptyState({
   consolidationState: ReturnType<typeof buildProjectMemoryConsolidationState>;
 }) {
   return (
-    <MoriSection title="제안 없음" ariaLabel="No proposals">
+    <MoriSection title="제안 없음" ariaLabel="제안 없음">
       <p>{consolidationState.emptyReason ?? "현재 검토할 제안이 없습니다."}</p>
       <p className="consolidation-review-honesty">
-        Mori는 로컬에 저장된 세션 메모리에서만 제안을 도출합니다. 더 많은 세션을 저장하거나 Quick
-        Pass를 실행하면 추가 제안이 표시될 수 있습니다.
+        Mori는 로컬에 저장된 세션 메모리에서만 제안을 만듭니다. 세션을 더 저장하거나 Quick Pass를
+        실행하면 새 제안이 나타날 수 있습니다.
       </p>
       <p className="consolidation-review-warnings">
         {consolidationState.warnings.length > 0
-          ? `${consolidationState.warnings.length}건의 데이터 범위 경고가 있습니다 — Memory 페이지의 경고 띠를 확인하세요.`
+          ? `데이터 범위 경고 ${consolidationState.warnings.length}건 — 메모리 페이지의 경고 띠를 확인하세요.`
           : "데이터 범위 경고는 없습니다."}
       </p>
     </MoriSection>

@@ -11242,11 +11242,11 @@ pre {
 .consolidation-review-apply {
   display: grid;
   gap: 10px;
-  padding: 14px 16px;
-  border: 1px solid #d9d0ff;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: linear-gradient(180deg, #fbf9ff, #f5efff);
-  color: #2c2549;
+  background: white;
+  color: var(--text);
 }
 
 .consolidation-review-import {
@@ -11358,42 +11358,57 @@ pre {
   color: #4b4470;
 }
 
+/* Status counts read as an inline number strip, not card tiles. The big
+   number leads, the label sits muted below — no border, no fill, no shadow.
+   A subtle tone dot replaces the colored card background. */
 .consolidation-review-counts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 4px 14px;
   margin: 0;
   padding: 0;
 }
 
 .consolidation-count-tile {
   display: grid;
-  gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid #e6e3f1;
-  border-radius: 8px;
-  background: #ffffff;
+  grid-template-columns: 6px 1fr;
+  align-items: baseline;
+  column-gap: 8px;
+  padding: 2px 0;
 }
 
-.consolidation-count-tile.tone-green { border-color: #cbe6cc; background: #f4fbf4; }
-.consolidation-count-tile.tone-blue { border-color: #cfdcf3; background: #f5f9ff; }
-.consolidation-count-tile.tone-orange { border-color: #f1d8b8; background: #fff8ee; }
-.consolidation-count-tile.tone-red { border-color: #f0c8c5; background: #fff4f3; }
-.consolidation-count-tile.tone-purple { border-color: #d9d0ff; background: #fbf9ff; }
+.consolidation-count-tile::before {
+  content: "";
+  align-self: center;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--muted-2);
+}
+
+.consolidation-count-tile.tone-green::before  { background: var(--green); }
+.consolidation-count-tile.tone-blue::before   { background: var(--blue); }
+.consolidation-count-tile.tone-orange::before { background: #d8923f; }
+.consolidation-count-tile.tone-red::before    { background: var(--red); }
+.consolidation-count-tile.tone-purple::before { background: var(--purple); }
 
 .consolidation-count-tile dt {
-  font-size: 11px;
+  order: 2;
+  grid-column: 2;
+  font-size: 11.5px;
   font-weight: 500;
-  color: #5d5577;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--muted);
 }
 
 .consolidation-count-tile dd {
+  order: 1;
+  grid-column: 2;
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #2c2549;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
 .consolidation-review-apply footer {

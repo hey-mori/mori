@@ -62,16 +62,15 @@ export function AcceptedMemoriesCard({
   return (
     <MoriSection
       className="memory-accepted"
-      ariaLabel="Accepted Project Memories"
+      ariaLabel="확정된 프로젝트 메모리"
       title={
         <span className="memory-accepted-title">
-          <BookCheck size={14} aria-hidden="true" /> Accepted Project Memories
+          <BookCheck size={14} aria-hidden="true" /> 확정 메모리
         </span>
       }
       hint={
         <span>
-          승인한 consolidation 결과를 로컬에 영구 저장합니다. Resume Prompt / Reports와의 연동은
-          별도 capability에서 구현됩니다.
+          승인한 통합 결과를 로컬에 영구 저장합니다. Resume 프롬프트 · 리포트와 연동됩니다.
         </span>
       }
       actions={
@@ -82,8 +81,8 @@ export function AcceptedMemoriesCard({
     >
       {memories.length === 0 ? (
         <p className="memory-accepted-empty">
-          아직 저장된 accepted memory가 없습니다. Memory Consolidation 카드에서 Review를 열고 제안을
-          승인하면 여기 누적됩니다.
+          아직 확정된 메모리가 없습니다. 메모리 통합 카드에서 검토를 열고 제안을 승인하면 여기에
+          누적됩니다.
         </p>
       ) : (
         <>

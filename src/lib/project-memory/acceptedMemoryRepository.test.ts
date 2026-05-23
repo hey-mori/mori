@@ -230,7 +230,7 @@ describe("AcceptedMemoryRepository — desktop fallback", () => {
 
 describe("describeAcceptedMemoryStorageSource", () => {
   it("maps each source to honest copy", () => {
-    expect(describeAcceptedMemoryStorageSource("desktop-sqlite")).toBe("Desktop SQLite");
-    expect(describeAcceptedMemoryStorageSource("browser-local-storage")).toBe("Browser localStorage");
+    expect(describeAcceptedMemoryStorageSource("desktop-sqlite")).toBe("데스크톱 SQLite");
+    expect(describeAcceptedMemoryStorageSource("browser-local-storage")).toBe("브라우저 저장소");
   });
 });

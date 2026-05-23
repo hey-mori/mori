@@ -223,12 +223,12 @@ function isPartialBasis(basis: ProjectMemoryDataBasis): boolean {
 
 function describeUnavailableReason(warnings: ProjectMemoryWarning[]): string {
   if (warnings.some((w) => w.kind === "demo-mode")) {
-    return "데모 세션입니다 — 실제 세션을 시작하기 전까지 consolidation은 비활성화됩니다.";
+    return "데모 세션입니다 — 실제 세션을 시작하기 전까지 통합은 비활성화됩니다.";
   }
   if (warnings.some((w) => w.kind === "storage-unavailable")) {
-    return "로컬 저장소에 접근할 수 없어 consolidation이 Project Memory를 읽지 못합니다.";
+    return "로컬 저장소에 접근할 수 없어 통합이 프로젝트 메모리를 읽지 못합니다.";
   }
-  return "현재 런타임에서는 Project Memory를 사용할 수 없습니다.";
+  return "현재 런타임에서는 프로젝트 메모리를 사용할 수 없습니다.";
 }
 
 function describeEmptyReason(memory: ProjectMemoryViewModel): string {

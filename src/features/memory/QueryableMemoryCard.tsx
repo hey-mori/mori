@@ -79,8 +79,8 @@ export function QueryableMemoryCard({
     >
       {!hasSearchableData ? (
         <p className="memory-search-empty">
-          아직 검색할 accepted memory나 세션 데이터가 없습니다. Consolidation Review에서 제안을
-          승인하면 여기에서 검색할 수 있습니다.
+          아직 검색할 확정 메모리나 세션 데이터가 없습니다. 통합 검토에서 제안을 승인하면 여기에서
+          검색할 수 있습니다.
         </p>
       ) : (
         <>
@@ -96,12 +96,12 @@ export function QueryableMemoryCard({
           </label>
 
           {memories.length === 0 ? (
-            <p className="memory-search-empty">아직 저장된 accepted memory가 없습니다.</p>
+            <p className="memory-search-empty">아직 확정된 메모리가 없습니다.</p>
           ) : resultSet.results.length === 0 ? (
             <p className="memory-search-empty">
               {trimmedQuery
-                ? `"${trimmedQuery}"에 해당하는 accepted memory가 없습니다.`
-                : "검색어를 입력하면 accepted memory를 찾습니다."}
+                ? `"${trimmedQuery}"에 해당하는 메모리가 없습니다.`
+                : "검색어를 입력하면 확정 메모리에서 찾습니다."}
             </p>
           ) : (
             <ul className="memory-search-results">

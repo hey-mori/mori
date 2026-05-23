@@ -209,5 +209,5 @@ export function setAcceptedMemoryRepositoryForTesting(
 export function describeAcceptedMemoryStorageSource(
   source: AcceptedMemoryStorageSource,
 ): string {
-  return source === "desktop-sqlite" ? "Desktop SQLite" : "Browser localStorage";
+  return source === "desktop-sqlite" ? "데스크톱 SQLite" : "브라우저 저장소";
 }
