@@ -4920,9 +4920,9 @@ hr {
   align-items: center;
   gap: var(--mori-space-5);
   width: 100%;
-  padding: var(--mori-space-5) var(--mori-space-6);
+  padding: 10px 14px;
   border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-lg);
+  border-radius: 10px;
   background: var(--mori-surface);
   text-align: left;
   transition: border-color 120ms ease, background 120ms ease;
