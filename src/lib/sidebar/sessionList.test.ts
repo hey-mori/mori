@@ -145,9 +145,16 @@ describe("formatSidebarRelative", () => {
     expect(formatSidebarRelative(new Date(now - 4 * 86_400_000).toISOString(), now)).toBe("4일 전");
   });
 
-  it("falls back to a calendar date for rows older than a week", () => {
+  it("falls back to a short Korean calendar date for rows older than a week", () => {
     const stamp = new Date(now - 14 * 86_400_000).toISOString();
-    expect(formatSidebarRelative(stamp, now)).toMatch(/\d/);
+    // 14 days before 2026-05-22 = 2026-05-08
+    expect(formatSidebarRelative(stamp, now)).toBe("5월 8일");
+  });
+
+  it("renders future timestamps as a short calendar label, not a locale string", () => {
+    const future = new Date(now + 3 * 86_400_000).toISOString();
+    // 3 days after 2026-05-22 = 2026-05-25
+    expect(formatSidebarRelative(future, now)).toBe("5월 25일");
   });
 
   it("returns an empty string for an unparseable timestamp", () => {

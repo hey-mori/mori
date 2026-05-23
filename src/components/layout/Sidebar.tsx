@@ -254,6 +254,12 @@ function SessionRow({
   active: boolean;
   onSelect: () => void;
 }) {
+  // Tooltip carries the full title + project path so identical-title rows
+  // (multiple "Mori 앱 기획" duplicates from re-imports) can be told apart
+  // on hover without expanding the row visually.
+  const tooltip = row.sourceLabel
+    ? `${row.title}\n${row.sourceLabel}`
+    : row.title;
   return (
     <li>
       <button
@@ -261,12 +267,12 @@ function SessionRow({
         className={`sidebar-row${active ? " is-active" : ""}`}
         onClick={onSelect}
         aria-current={active ? "true" : undefined}
-        title={row.title}
+        title={tooltip}
       >
         <span className="sidebar-row-title">{row.title}</span>
         <span className="sidebar-row-meta">
           {row.sourceLabel ? (
-            <span className="sidebar-row-source" title={row.sourceLabel}>
+            <span className="sidebar-row-source">
               <FolderGit2 size={11} aria-hidden="true" />
               <span>{row.sourceLabel}</span>
             </span>

@@ -181,7 +181,9 @@ function groupByProject(rows: SidebarSessionRow[]): SidebarSessionGroup[] {
 
 /**
  * Short relative-time label used in the sidebar list — "방금", "12분 전",
- * "3시간 전", "어제", or a calendar date for older rows.
+ * "3시간 전", "어제", or a calendar date for older rows. Calendar dates are
+ * rendered as "5월 24일" (Korean short form) — the longer "2026. 5. 24."
+ * locale default reads as machine output next to "어제" / "4일 전".
  */
 export function formatSidebarRelative(
   iso: string,
@@ -190,7 +192,9 @@ export function formatSidebarRelative(
   const epoch = new Date(iso).getTime();
   if (Number.isNaN(epoch)) return "";
   const diff = now - epoch;
-  if (diff < 0) return new Date(epoch).toLocaleDateString();
+  // Future timestamps (clock skew, edits scheduled forward) fall through to
+  // a short calendar label rather than the verbose locale string.
+  if (diff < 0) return shortKoreanDate(epoch);
   const minutes = Math.floor(diff / 60_000);
   if (minutes < 1) return "방금";
   if (minutes < 60) return `${minutes}분 전`;
@@ -199,7 +203,7 @@ export function formatSidebarRelative(
   const days = Math.floor(diff / DAY_MS);
   if (days < 2) return "어제";
   if (days < 7) return `${days}일 전`;
-  return new Date(epoch).toLocaleDateString();
+  return shortKoreanDate(epoch);
 }
 
 const DAY_MS = 86_400_000;
@@ -208,4 +212,10 @@ function startOfLocalDay(epoch: number): number {
   const d = new Date(epoch);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
+}
+
+/** "5월 24일" — the short Korean calendar label used in the sidebar list. */
+function shortKoreanDate(epoch: number): string {
+  const d = new Date(epoch);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
