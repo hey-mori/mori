@@ -2045,20 +2045,30 @@ kbd {
   position: absolute;
   z-index: 2;
   display: grid;
-  grid-template-rows: 14px 1fr 13px; /* header / title / footer slot */
-  row-gap: 4px;
-  padding: 9px 11px;
+  grid-template-rows: 13px 1fr 12px; /* header / title / footer slot */
+  row-gap: 3px;
+  padding: 8px 10px 8px 11px;
   color: #172033;
   text-align: left;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  /* Tone is carried as a subtle left-border accent — at scale the eye picks
+     up the lane membership without needing colored text or a heavy chrome. */
+  border-left-width: 3px;
+  border-radius: 7px;
   background: white;
-  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.04), 0 3px 10px rgba(20, 25, 36, 0.035);
-  /* No `transform` in the transition list — hover must not move the card. */
+  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
   transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   overflow: hidden;
   cursor: pointer;
 }
+
+.event-card.card-purple { border-left-color: var(--purple); }
+.event-card.card-green  { border-left-color: var(--green); }
+.event-card.card-red    { border-left-color: var(--red); }
+.event-card.card-blue   { border-left-color: var(--blue); }
+.event-card.card-cyan   { border-left-color: var(--cyan); }
+.event-card.card-orange { border-left-color: #d8923f; }
+.event-card.card-gray   { border-left-color: var(--muted-2); }
 
 .event-card.is-compact {
   grid-template-rows: 12px 1fr 0; /* compact hides the footer slot entirely */
@@ -2125,20 +2135,13 @@ kbd {
 .event-card-time {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
+  gap: 4px;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  font-weight: 600;
   letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
 }
-
-.event-card-time.tone-purple { color: var(--purple); }
-.event-card-time.tone-green  { color: var(--green); }
-.event-card-time.tone-red    { color: var(--red); }
-.event-card-time.tone-blue   { color: var(--blue); }
-.event-card-time.tone-cyan   { color: var(--cyan); }
-.event-card-time.tone-orange { color: #b46100; }
-.event-card-time.tone-gray   { color: var(--muted); }
 
 .event-card-inferred {
   padding: 1px 6px;

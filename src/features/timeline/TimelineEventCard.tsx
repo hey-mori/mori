@@ -1,4 +1,3 @@
-import { eventTypeIcons } from "../../domain/constants";
 import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { TimelineEvent } from "../../domain/types";
@@ -28,7 +27,6 @@ export function TimelineEventCard({
   onHover: (eventId: string | null) => void;
 }) {
   const vm = buildTimelineEventCardViewModel(event);
-  const Icon = eventTypeIcons[event.type];
   // Progressive disclosure: only the comfortable tier carries footer meta on
   // the card. Compact and dense move that detail into the inspector.
   const densityClass = densityClassName(density);
@@ -52,10 +50,9 @@ export function TimelineEventCard({
       title={vm.buttonTitle}
     >
       <header className="event-card-header">
-        <span className={`event-card-time tone-${vm.tone}`}>
-          <Icon size={11} aria-hidden="true" />
-          {vm.timeLabel}
-        </span>
+        {/* The lane's own icon already says what type this event is; the card
+            keeps just the muted time stamp so the title can lead. */}
+        <span className="event-card-time">{vm.timeLabel}</span>
       </header>
       <strong className="event-card-title">{vm.title}</strong>
       {showFooter && vm.primaryMeta ? (
