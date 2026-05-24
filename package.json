@@ -16,6 +16,7 @@
     "check:quick": "npm run check:types && npm run test:changed",
     "check:full": "npm run check:types && npm test",
     "check:release": "npm run check:types && npm test && npm run build",
+    "generate:icons": "node scripts/generate-icons.cjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

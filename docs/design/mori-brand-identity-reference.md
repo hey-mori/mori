@@ -42,10 +42,9 @@ the app — production assets are rebuilt as clean SVG/CSS (see section 4).
 
 ## 3. What should be adapted (not copied literally)
 
-- **The mark.** The concept's literal four/five-point "sparkle star" reads as
-  a generic AI-assistant glow. Mori's mark is **adapted** into a calmer
-  abstract figure: an upward focus beam rising through stacked memory layers
-  — guidance + work continuity — rather than a decorative twinkle.
+- **The mark.** The concept's guiding-light shape is rebuilt as clean vector
+  production art: a soft four-point star over an upward focus beam. It should
+  read as guidance and continuity, not as loose decorative sparkle.
 - **Gradient usage.** The board leans on glossy gradients. In-product,
   gradient is used sparingly: the app icon and the sidebar brand mark only.
   Flat brand color is used everywhere else.
@@ -59,7 +58,8 @@ the app — production assets are rebuilt as clean SVG/CSS (see section 4).
 ## 4. What must NOT be copied blindly
 
 - Do **not** paste the concept PNG anywhere in the running app.
-- Do **not** add decorative AI sparkles, glows, or twinkle motion.
+- Do **not** add extra decorative sparkles, glows, or twinkle motion around
+  the brand mark.
 - Do **not** turn the whole UI purple. Purple is brand accent only.
 - Do **not** let purple bleed into status semantics — verified/observed/
   inferred, issue/decision/next-action, and local/cloud/planned states each
