@@ -157,13 +157,27 @@ export function HomeView() {
           title="아직 작업 기억이 없습니다"
           description="연결에서 Claude 작업을 가져오면 여기에 작업 기억이 쌓이고, 무엇을 해왔고 다음에 무엇을 하면 좋을지 한눈에 보입니다."
           actions={
-            <Button
-              variant="primary"
-              icon={PlugZap}
-              onClick={() => setCurrentView("connections")}
-            >
-              연결에서 작업 가져오기
-            </Button>
+            <>
+              <Button
+                variant="primary"
+                icon={PlugZap}
+                onClick={() => setCurrentView("connections")}
+              >
+                연결에서 작업 가져오기
+              </Button>
+              {/* Secondary path: drop the user straight into the bundled demo
+                  session so they can poke around without having to import
+                  first. With no real draft, openSession() routes to the
+                  demoView the rest of the surfaces already render. */}
+              <Button
+                variant="ghost"
+                icon={Sparkles}
+                onClick={() => openSession("flow")}
+                title="실제 데이터 없이 Mori를 둘러볼 수 있는 데모 세션을 열어봅니다."
+              >
+                체험용 데모 세션 살펴보기
+              </Button>
+            </>
           }
         />
       ) : (
