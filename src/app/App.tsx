@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { AppShell } from "../components/layout/AppShell";
+import { ErrorBoundary } from "../components/layout/ErrorBoundary";
 import { useMoriAppStore } from "./store";
 import { useMoriSessionStore } from "./sessionStore";
 import { useMoriRepositoryStore } from "./repositoryStore";
@@ -73,28 +74,30 @@ export default function App() {
   // user's last real surface.
   return (
     <AppShell>
-      <Suspense fallback={<RouteFallback />}>
-        {currentView === "home" ? <HomeView /> : null}
-        {currentView === "start" ? <StartSessionView /> : null}
-        {/* The unified session workspace. The legacy timeline / flow / evidence /
-            review keys map here too so no deep link dead-ends — they all open
-            the one tabbed Session Detail rather than a standalone page. A
-            report is per-session, so `reports` opens the session workspace on
-            its 리포트 tab. */}
-        {currentView === "session" ||
-        currentView === "timeline" ||
-        currentView === "flow" ||
-        currentView === "evidence" ||
-        currentView === "review" ||
-        currentView === "reports" ? (
-          <SessionDetailView />
-        ) : null}
-        {/* Memory is cross-session; consolidation is its 통합 segment. */}
-        {currentView === "memory" || currentView === "consolidation" ? <MemoryView /> : null}
-        {currentView === "companion" ? <CompanionInboxView /> : null}
-        {currentView === "connections" ? <ConnectionsView /> : null}
-        {currentView === "workspace" ? <WorkspaceView /> : null}
-      </Suspense>
+      <ErrorBoundary resetKey={currentView}>
+        <Suspense fallback={<RouteFallback />}>
+          {currentView === "home" ? <HomeView /> : null}
+          {currentView === "start" ? <StartSessionView /> : null}
+          {/* The unified session workspace. The legacy timeline / flow / evidence /
+              review keys map here too so no deep link dead-ends — they all open
+              the one tabbed Session Detail rather than a standalone page. A
+              report is per-session, so `reports` opens the session workspace on
+              its 리포트 tab. */}
+          {currentView === "session" ||
+          currentView === "timeline" ||
+          currentView === "flow" ||
+          currentView === "evidence" ||
+          currentView === "review" ||
+          currentView === "reports" ? (
+            <SessionDetailView />
+          ) : null}
+          {/* Memory is cross-session; consolidation is its 통합 segment. */}
+          {currentView === "memory" || currentView === "consolidation" ? <MemoryView /> : null}
+          {currentView === "companion" ? <CompanionInboxView /> : null}
+          {currentView === "connections" ? <ConnectionsView /> : null}
+          {currentView === "workspace" ? <WorkspaceView /> : null}
+        </Suspense>
+      </ErrorBoundary>
     </AppShell>
   );
 }

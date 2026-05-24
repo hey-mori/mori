@@ -519,6 +519,81 @@ button {
   letter-spacing: 0;
 }
 
+/* Workspace error boundary — calm amber recovery panel. Never the whole
+ * shell, so the user can still use the sidebar to escape a broken view. */
+.workspace-error-boundary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100%;
+  padding: 64px 24px;
+  overflow: auto;
+}
+
+.workspace-error-boundary-card {
+  width: min(520px, 100%);
+  padding: 22px 22px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--orange-50, #fff7eb);
+  box-shadow: 0 6px 24px rgba(40, 28, 12, 0.06);
+}
+
+.workspace-error-boundary-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #8a4500;
+}
+
+.workspace-error-boundary-card h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.workspace-error-boundary-card p {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.workspace-error-boundary-detail {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: #6a3a00;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(138, 69, 0, 0.18);
+  border-radius: 7px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.workspace-error-boundary-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgba(138, 69, 0, 0.32);
+  border-radius: 7px;
+  background: white;
+  color: #6a3a00;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.workspace-error-boundary-reset:hover {
+  background: rgba(138, 69, 0, 0.08);
+}
+
 /* ─── Settings sheet ─────────────────────────────────────────────────────
    The modal that hosts the profile + settings surfaces. Triggered by the
    user button in the sidebar foot; floats above the workspace so the user
