@@ -5037,21 +5037,21 @@ hr {
 .home-activity-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--mori-space-8);
+  gap: 22px;
   margin: 0;
-  padding-top: var(--mori-space-6);
+  padding-top: 10px;
   border-top: 1px solid var(--mori-border);
 }
 
 .home-activity-stat {
   display: flex;
   flex-direction: column-reverse;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
 .home-activity-stat dt {
-  font-size: var(--mori-font-size-xs);
+  font-size: 11px;
   font-weight: 600;
   color: var(--mori-text-muted);
   white-space: nowrap;
@@ -5059,9 +5059,9 @@ hr {
 
 .home-activity-stat dd {
   margin: 0;
-  font-size: var(--mori-font-size-2xl);
-  font-weight: 680;
-  line-height: var(--mori-line-tight);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
   color: var(--mori-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
