@@ -1228,15 +1228,19 @@ p {
 /* Compact segmented — same scale as the toolbar pills + tab strips so
    "pick one of a few" always reads the same across surfaces. */
 .segmented {
+  /* 30px outer to match the standard toolbar control height (button,
+   * search input, archive toggle). 26px button + 2px padding each side
+   * = 30 outer; the 1px border is inset by border-box. */
   display: inline-flex;
   align-items: center;
   gap: 1px;
   padding: 2px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--gray-50);
   font-size: 12px;
   font-weight: 600;
+  box-sizing: border-box;
 }
 
 .segmented button {
@@ -1244,8 +1248,8 @@ p {
   background: transparent;
   color: var(--muted);
   padding: 0 11px;
-  height: 24px;
-  border-radius: 5px;
+  height: 26px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
@@ -1267,19 +1271,23 @@ p {
 }
 
 .btn {
+  /* 30px to match the unified toolbar control height. Primary CTAs that
+   * want extra prominence stay on the `.btn-primary` modifier which keeps
+   * the original 32px in its own rule. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 32px;
-  padding: 0 13px;
+  min-height: 30px;
+  padding: 0 12px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 8px;
   background: white;
   color: var(--text);
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
+  box-sizing: border-box;
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
@@ -16520,10 +16528,12 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  height: 30px;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-soft);
+  box-sizing: border-box;
   color: var(--muted);
   transition: border-color 120ms ease, background 120ms ease;
 }
@@ -17568,11 +17578,13 @@ pre {
   align-items: center;
   gap: var(--mori-space-2);
   min-width: 200px;
-  padding: 6px 10px;
+  height: 30px;
+  padding: 0 12px;
   border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-pill);
+  border-radius: 8px;
   background: var(--mori-surface);
   color: var(--mori-text-muted);
+  box-sizing: border-box;
 }
 
 .workspace-search:focus-within {
@@ -17632,16 +17644,17 @@ pre {
 .workspace-archive-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 11px;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
   border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-pill);
+  border-radius: 8px;
   background: var(--mori-surface);
   color: var(--mori-text-muted);
   font-size: var(--mori-font-size-xs);
   font-weight: 600;
   cursor: pointer;
+  box-sizing: border-box;
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
