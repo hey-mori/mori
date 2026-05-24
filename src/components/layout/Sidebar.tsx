@@ -1,4 +1,13 @@
-import { CalendarClock, Download, FolderGit2, House, Layers, Plus, Search } from "lucide-react";
+import {
+  Archive,
+  CalendarClock,
+  Download,
+  FolderGit2,
+  House,
+  Layers,
+  Plus,
+  Search,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -12,6 +21,7 @@ import {
   formatSidebarRelative,
   groupSidebarRows,
   toSidebarRow,
+  type SidebarArchiveFilter,
   type SidebarGroupingMode,
   type SidebarSessionRow,
 } from "../../lib/sidebar/sessionList";
@@ -19,6 +29,10 @@ import {
   loadGroupingPreference,
   saveGroupingPreference,
 } from "../../lib/sidebar/groupingPreference";
+import {
+  loadArchivePreference,
+  saveArchivePreference,
+} from "../../lib/sidebar/archivePreference";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
 import { getProfileInitials } from "../../lib/profile/localProfile";
@@ -90,6 +104,13 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
     setGroupingModeState(mode);
     saveGroupingPreference(mode);
   };
+  const [archiveFilter, setArchiveFilterState] = useState<SidebarArchiveFilter>(
+    () => loadArchivePreference(),
+  );
+  const setArchiveFilter = (filter: SidebarArchiveFilter) => {
+    setArchiveFilterState(filter);
+    saveArchivePreference(filter);
+  };
 
   const refresh = useCallback(() => {
     setSummaries(safeListSessions());
@@ -98,12 +119,20 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
     refresh();
   }, [activeSessionId, refresh]);
 
+  const allRows = useMemo<SidebarSessionRow[]>(
+    () => mergeDemoSessionSummaries(summaries).map(toSidebarRow),
+    [summaries],
+  );
+  const archivedCount = useMemo(
+    () => allRows.filter((row) => row.archived).length,
+    [allRows],
+  );
   const rows = useMemo<SidebarSessionRow[]>(
     () =>
-      mergeDemoSessionSummaries(summaries)
-        .filter((summary) => !summary.archivedAt)
-        .map(toSidebarRow),
-    [summaries],
+      archiveFilter === "all"
+        ? allRows
+        : allRows.filter((row) => !row.archived),
+    [allRows, archiveFilter],
   );
 
   const filtered = useMemo(() => filterSidebarRows(rows, query), [rows, query]);
@@ -222,6 +251,28 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
             <FolderGit2 size={13} aria-hidden="true" />
           )}
         </button>
+        {archivedCount > 0 ? (
+          <button
+            type="button"
+            className={`sidebar-grouping-toggle${archiveFilter === "all" ? " is-active" : ""}`}
+            onClick={() =>
+              setArchiveFilter(archiveFilter === "all" ? "active" : "all")
+            }
+            aria-pressed={archiveFilter === "all"}
+            aria-label={
+              archiveFilter === "all"
+                ? "보관된 세션 숨기기"
+                : `보관된 세션 ${archivedCount}건 보기`
+            }
+            title={
+              archiveFilter === "all"
+                ? "보관된 세션도 표시 중 — 누르면 숨김"
+                : `보관된 ${archivedCount}건 — 누르면 목록에 표시`
+            }
+          >
+            <Archive size={13} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
 
       <div className="sidebar-list mori-scroll">
@@ -232,9 +283,10 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
         ) : (
           groups.map((group) => (
             <SessionGroup
-              key={group.bucket}
+              key={`${group.bucket}-${group.label}`}
               label={group.label}
               rows={group.rows}
+              archivedBucket={group.bucket === "archived"}
               activeSessionId={activeSessionId}
               onSelect={handleSwitch}
             />
@@ -263,16 +315,18 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
 function SessionGroup({
   label,
   rows,
+  archivedBucket,
   activeSessionId,
   onSelect,
 }: {
   label: string;
   rows: SidebarSessionRow[];
+  archivedBucket: boolean;
   activeSessionId: string | null;
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="sidebar-group">
+    <div className={`sidebar-group${archivedBucket ? " is-archived" : ""}`}>
       <p className="sidebar-group-label">{label}</p>
       <ul>
         {rows.map((row) => (

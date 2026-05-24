@@ -242,6 +242,12 @@ button {
   border-color: var(--line-strong);
 }
 
+.sidebar-grouping-toggle.is-active {
+  background: var(--purple-50);
+  color: var(--purple);
+  border-color: transparent;
+}
+
 .sidebar-search:focus-within {
   border-color: var(--purple);
   background: white;
@@ -276,6 +282,21 @@ button {
 
 .sidebar-group + .sidebar-group {
   margin-top: 10px;
+}
+
+/* Archive bucket sits below every other group, separated by a single hairline
+ * so the boundary is unmistakable without painting another card. Rows inside
+ * read muted — they're context, not the active workspace. */
+.sidebar-group.is-archived {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar-group.is-archived .sidebar-row-title,
+.sidebar-group.is-archived .sidebar-row-time,
+.sidebar-group.is-archived .sidebar-row-source {
+  color: var(--muted-2);
 }
 
 .sidebar-group-label {

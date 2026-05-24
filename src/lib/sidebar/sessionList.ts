@@ -23,6 +23,14 @@ import type { StoredSessionSummary } from "../storage/storageTypes";
  */
 export type SidebarGroupingMode = "recency" | "project";
 
+/**
+ * Whether the sidebar shows archived sessions. `active` (default) keeps the
+ * tidied-away rows out of the list; `all` reveals them as a final
+ * "보관됨" bucket below every other group. There is no archive-only mode —
+ * the sidebar's job is the live workspace, with archive surfaced as overflow.
+ */
+export type SidebarArchiveFilter = "active" | "all";
+
 export type SidebarSessionRow = {
   sessionId: string;
   title: string;
@@ -43,7 +51,9 @@ export type SidebarSessionBucket =
   /** Project-mode bucket id is the project label itself; the bucket is
    *  carried as `"project"` so the renderer can pick a project-tone style. */
   | "project"
-  | "unsourced";
+  | "unsourced"
+  /** Trailing "보관됨" bucket when the archive filter is `"all"`. */
+  | "archived";
 
 export type SidebarSessionGroup = {
   bucket: SidebarSessionBucket;
@@ -104,8 +114,22 @@ export function groupSidebarRows(
   now: number = Date.now(),
   mode: SidebarGroupingMode = "recency",
 ): SidebarSessionGroup[] {
-  if (mode === "project") return groupByProject(rows);
-  return groupByRecency(rows, now);
+  const active = rows.filter((row) => !row.archived);
+  const archived = rows.filter((row) => row.archived);
+
+  const liveGroups =
+    mode === "project" ? groupByProject(active) : groupByRecency(active, now);
+
+  if (archived.length === 0) return liveGroups;
+
+  return [
+    ...liveGroups,
+    {
+      bucket: "archived" as const,
+      label: `보관됨 ${archived.length}`,
+      rows: archived,
+    },
+  ];
 }
 
 function groupByRecency(
