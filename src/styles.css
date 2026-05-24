@@ -19120,3 +19120,185 @@ pre {
 .project-session-row.is-active .project-session-arrow {
   color: var(--purple);
 }
+
+/* ─── MoriListRow ─────────────────────────────────────────────────────────── */
+
+.mori-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  padding: var(--mori-space-2) var(--mori-space-3);
+  min-height: 40px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  transition: background 120ms ease;
+  text-align: left;
+  cursor: default;
+  user-select: none;
+}
+
+.mori-list-row.is-interactive {
+  cursor: pointer;
+}
+
+.mori-list-row.is-interactive:hover {
+  background: var(--gray-50);
+}
+
+.mori-list-row.is-interactive:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: -2px;
+}
+
+.mori-list-row.is-selected {
+  background: var(--purple-50);
+}
+
+.mori-list-row-leading {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.mori-list-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mori-list-row-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mori-list-row-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.mori-list-row-trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-1);
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--muted);
+}
+
+/* ─── ToolbarSearch / mori-search-field ──────────────────────────────────── */
+
+.mori-search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  padding: 0 var(--mori-space-3);
+  height: 30px;
+  background: var(--gray-50);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  transition: border-color 120ms ease, background 120ms ease;
+  cursor: text;
+}
+
+.mori-search-field:focus-within {
+  border-color: var(--purple);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.mori-search-field input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  min-width: 120px;
+}
+
+.mori-search-field input::placeholder {
+  color: var(--muted-2);
+}
+
+/* ─── MoriSectionHeader ──────────────────────────────────────────────────── */
+
+.mori-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mori-space-3);
+  padding-bottom: var(--mori-space-2);
+}
+
+.mori-section-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mori-section-header-title h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.mori-section-header-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.mori-section-header-action {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-2);
+  flex-shrink: 0;
+}
+
+/* ─── MoriMetricStrip ────────────────────────────────────────────────────── */
+
+.mori-metric-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--mori-space-6);
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+}
+
+.mori-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mori-metric-item dt {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mori-metric-item dd {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.2;
+}
