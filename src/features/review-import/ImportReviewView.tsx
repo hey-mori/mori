@@ -120,15 +120,14 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
           증거로 돌아가기
         </Button>
         <div className="review-header-title">
-          <h1>Import Review</h1>
+          <h1>가져오기 검토</h1>
           <p>
-            가져온 소스에서 Mori가 추출한 항목을 확인하고 적용 전에 수락 / 폐기를 결정하세요.
-            적용 전까지 세션 메모리에는 추가되지 않습니다.
+            추출한 항목을 적용 전에 수락 또는 폐기로 정리하세요. 적용 전까지 세션 메모리에는
+            추가되지 않습니다.
           </p>
         </div>
         <div className="review-header-meta">
           <Badge tone="purple">{ORIGIN_LABEL[draft.origin] ?? draft.origin}</Badge>
-          <Badge tone="gray">{draft.id}</Badge>
         </div>
       </header>
 
@@ -150,11 +149,11 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
       <div className="review-layout">
         <SourceSummaryCard source={draft.source} />
 
-        <section className="review-events" aria-label="Extracted timeline events">
+        <section className="review-events" aria-label="추출된 타임라인 이벤트">
           <header className="review-events-head">
             <div>
-              <h2>추출된 Timeline 이벤트</h2>
-              <p>각 항목은 적용 시점에 세션 타임라인에 추가됩니다. 폐기한 항목은 제외됩니다.</p>
+              <h2>추출된 타임라인 이벤트</h2>
+              <p>각 항목은 적용 시 세션 타임라인에 추가되고, 폐기한 항목은 제외됩니다.</p>
             </div>
             <div className="review-events-actions">
               <Button
