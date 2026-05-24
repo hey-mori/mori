@@ -11631,6 +11631,50 @@ pre {
   color: var(--text);
 }
 
+/* Compact empty-state hero shown above the import panel when there are
+ * no proposals — replaces the noisy 6-tile counter strip when every
+ * count is zero. One row: icon, headline + body, warning chip. */
+.consolidation-empty-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+
+.consolidation-empty-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.consolidation-empty-hero-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.consolidation-empty-hero-body strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.consolidation-empty-hero-body p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
 .consolidation-review-import {
   border: 1px solid var(--line, #e6e3f1);
   border-radius: 10px;

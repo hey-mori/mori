@@ -365,14 +365,24 @@ export function ConsolidationReviewView({ embedded = false }: { embedded?: boole
         }
       />
 
-      <ApplyBoundaryBanner
-        counts={counts}
-        canApply={hasAcceptedOrEdited}
-        applyState={applyState}
-        expectedSource={expectedStorageSource}
-        onApply={handleApply}
-        onBackToMemory={() => setCurrentView("memory")}
-      />
+      {proposals.length === 0 ? (
+        // Compact empty path: the standing apply banner has six zero
+        // tiles + a long privacy paragraph that read as noise when there
+        // is nothing to review. Drop it for a single hero empty state.
+        <ConsolidationEmptyHero
+          consolidationState={consolidationState}
+          expectedSource={expectedStorageSource}
+        />
+      ) : (
+        <ApplyBoundaryBanner
+          counts={counts}
+          canApply={hasAcceptedOrEdited}
+          applyState={applyState}
+          expectedSource={expectedStorageSource}
+          onApply={handleApply}
+          onBackToMemory={() => setCurrentView("memory")}
+        />
+      )}
 
       <ImportPackagePanel
         text={packageText}
@@ -423,9 +433,11 @@ export function ConsolidationReviewView({ embedded = false }: { embedded?: boole
               </MoriSection>
             );
           })}
-          {proposals.length === 0 ? (
-            <EmptyState consolidationState={consolidationState} />
-          ) : null}
+          {/* When the page is empty the ConsolidationEmptyHero above
+              already carries the calm "no proposals" copy — repeating it
+              here just left a large unused column below the import panel.
+              We keep the list section mounted (sans repeat) so the right
+              evidence column stays consistent with the populated layout. */}
         </section>
 
         <ConsolidationEvidencePanel
@@ -641,24 +653,38 @@ function CountTile({ label, value, tone }: { label: string; value: number; tone?
   );
 }
 
-function EmptyState({
+/**
+ * Compact hero shown above the import panel when there are zero
+ * proposals. Replaces the standing apply banner — six zero counters +
+ * the privacy paragraph were noise when the user hasn't accumulated any
+ * memory yet. The hero is one row: icon, headline, supporting line,
+ * optional warning chip.
+ */
+function ConsolidationEmptyHero({
   consolidationState,
+  expectedSource,
 }: {
   consolidationState: ReturnType<typeof buildProjectMemoryConsolidationState>;
+  expectedSource: AcceptedMemoryStorageSource;
 }) {
+  const warningCount = consolidationState.warnings.length;
   return (
-    <MoriSection title="제안 없음" ariaLabel="제안 없음">
-      <p>{consolidationState.emptyReason ?? "현재 검토할 제안이 없습니다."}</p>
-      <p className="consolidation-review-honesty">
-        Mori는 로컬에 저장된 세션 메모리에서만 제안을 만듭니다. 세션을 더 저장하거나 Quick Pass를
-        실행하면 새 제안이 나타날 수 있습니다.
-      </p>
-      <p className="consolidation-review-warnings">
-        {consolidationState.warnings.length > 0
-          ? `데이터 범위 경고 ${consolidationState.warnings.length}건 — 메모리 페이지의 경고 띠를 확인하세요.`
-          : "데이터 범위 경고는 없습니다."}
-      </p>
-    </MoriSection>
+    <section className="consolidation-empty-hero" aria-label="제안 없음">
+      <div className="consolidation-empty-hero-icon" aria-hidden="true">
+        <BrainCircuit size={18} />
+      </div>
+      <div className="consolidation-empty-hero-body">
+        <strong>검토할 제안이 없습니다</strong>
+        <p>
+          {consolidationState.emptyReason ??
+            "세션을 더 저장하거나 Quick Pass를 실행하면 새 제안이 모입니다."}{" "}
+          저장 위치는 {describeAcceptedMemoryStorageSource(expectedSource)}.
+        </p>
+      </div>
+      {warningCount > 0 ? (
+        <Badge tone="orange">데이터 범위 경고 {warningCount}건</Badge>
+      ) : null}
+    </section>
   );
 }
 
