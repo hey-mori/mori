@@ -174,8 +174,8 @@ export function WorkspaceView() {
                 value={filters.sort}
                 onChange={(sort) => setFilters((prev) => ({ ...prev, sort }))}
                 options={[
-                  { value: "recent", label: "최근" },
-                  { value: "title", label: "제목" },
+                  { value: "recent", label: "최근순" },
+                  { value: "title", label: "이름순" },
                 ]}
               />
             </>
