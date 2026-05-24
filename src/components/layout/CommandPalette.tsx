@@ -2,6 +2,7 @@ import {
   CornerDownLeft,
   FolderGit2,
   Layers,
+  Palette,
   Search,
   Settings,
   Sparkles,
@@ -9,6 +10,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMoriAppStore } from "../../app/store";
 import { loadStoredSessionSummaries, useMoriSessionStore } from "../../app/sessionStore";
+import { useMoriThemeStore } from "../../app/themeStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import {
   buildCommands,
@@ -46,6 +48,8 @@ export function CommandPalette({
   const activeSessionId = useMoriSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
+  const currentTheme = useMoriThemeStore((state) => state.theme);
+  const setTheme = useMoriThemeStore((state) => state.setTheme);
 
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
@@ -71,8 +75,8 @@ export function CommandPalette({
   );
 
   const commands = useMemo(
-    () => buildCommands({ sessions, currentView }),
-    [sessions, currentView],
+    () => buildCommands({ sessions, currentView, currentTheme }),
+    [sessions, currentView, currentTheme],
   );
   const filtered = useMemo(() => filterCommands(commands, query), [commands, query]);
   const sections = useMemo(() => groupCommands(filtered), [filtered]);
@@ -151,6 +155,9 @@ export function CommandPalette({
         break;
       case "toggleSidebarCollapsed":
         onToggleSidebarCollapsed?.();
+        break;
+      case "setTheme":
+        setTheme(target.theme);
         break;
     }
     close();
@@ -237,6 +244,8 @@ function CommandIcon({ entry }: { entry: CommandEntry }) {
       return <FolderGit2 size={13} aria-hidden="true" />;
     case "action":
       return <Sparkles size={13} aria-hidden="true" />;
+    case "theme":
+      return <Palette size={13} aria-hidden="true" />;
     case "settings":
       return <Settings size={13} aria-hidden="true" />;
   }

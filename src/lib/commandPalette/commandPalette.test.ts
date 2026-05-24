@@ -57,6 +57,14 @@ describe("buildCommands", () => {
     expect(cmds.some((c) => c.group === "action")).toBe(true);
     expect(cmds.some((c) => c.group === "settings")).toBe(true);
   });
+
+  it("emits theme commands and hides the currently-applied theme", () => {
+    const cmds = buildCommands({ sessions: [], currentTheme: "nightLake" });
+    const themeRows = cmds.filter((c) => c.group === "theme");
+    expect(themeRows.length).toBeGreaterThan(0);
+    expect(themeRows.some((c) => c.id === "theme-nightlake")).toBe(false);
+    expect(themeRows.some((c) => c.id === "theme-formal")).toBe(true);
+  });
 });
 
 describe("filterCommands", () => {
@@ -97,6 +105,7 @@ describe("groupCommands", () => {
       "navigate",
       "session",
       "action",
+      "theme",
       "settings",
     ]);
   });

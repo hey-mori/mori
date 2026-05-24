@@ -1,5 +1,6 @@
 import type { ViewKey } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
+import type { MoriThemeId } from "../settings/themePreference";
 
 /**
  * Command palette — pure helpers.
@@ -17,6 +18,7 @@ export type CommandGroup =
   | "navigate"
   | "session"
   | "action"
+  | "theme"
   | "settings";
 
 /** The intent the renderer should act on when the user picks a command. */
@@ -24,7 +26,8 @@ export type CommandTarget =
   | { kind: "navigate"; view: ViewKey }
   | { kind: "openSession"; sessionId: string; tab?: "flow" | "evidence" | "insights" | "report" }
   | { kind: "openSettings"; segment?: "profile" | "settings" }
-  | { kind: "toggleSidebarCollapsed" };
+  | { kind: "toggleSidebarCollapsed" }
+  | { kind: "setTheme"; theme: MoriThemeId };
 
 export type CommandEntry = {
   /** Stable id so React keys + dedupe never depend on label collisions. */
@@ -74,10 +77,23 @@ const ACTION_COMMANDS: ReadonlyArray<{
   },
 ];
 
+const THEME_COMMANDS: ReadonlyArray<{
+  id: string;
+  label: string;
+  theme: MoriThemeId;
+  keywords?: string[];
+}> = [
+  { id: "theme-formal", label: "라이트 (Formal)", theme: "formal", keywords: ["light", "default", "라이트"] },
+  { id: "theme-forest", label: "포레스트 (Sage)", theme: "forest", keywords: ["green", "sage", "forest"] },
+  { id: "theme-nightlake", label: "다크 (Night Lake)", theme: "nightLake", keywords: ["dark", "night", "다크"] },
+];
+
 export type BuildCommandsInput = {
   sessions: ReadonlyArray<StoredSessionSummary>;
   /** Hide rows for the current view so the palette never offers a no-op. */
   currentView?: ViewKey;
+  /** Hide the row for the currently-applied theme — picking it would be a no-op. */
+  currentTheme?: MoriThemeId;
 };
 
 /**
@@ -121,6 +137,16 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
     target: cmd.target,
   }));
 
+  const themes: CommandEntry[] = THEME_COMMANDS.filter(
+    (cmd) => cmd.theme !== input.currentTheme,
+  ).map((cmd) => ({
+    id: cmd.id,
+    group: "theme",
+    label: cmd.label,
+    keywords: cmd.keywords,
+    target: { kind: "setTheme", theme: cmd.theme },
+  }));
+
   const settings: CommandEntry[] = SETTINGS_COMMANDS.map((cmd) => ({
     id: cmd.id,
     group: "settings",
@@ -129,7 +155,7 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
     target: { kind: "openSettings", segment: cmd.segment },
   }));
 
-  return [...navigate, ...sessions, ...actions, ...settings];
+  return [...navigate, ...sessions, ...actions, ...themes, ...settings];
 }
 
 /**
@@ -172,6 +198,7 @@ export const COMMAND_GROUP_LABEL: Record<CommandGroup, string> = {
   navigate: "이동",
   session: "세션",
   action: "작업",
+  theme: "테마",
   settings: "설정",
 };
 
@@ -184,6 +211,7 @@ export const COMMAND_GROUP_ORDER: ReadonlyArray<CommandGroup> = [
   "navigate",
   "session",
   "action",
+  "theme",
   "settings",
 ];
 
