@@ -6,6 +6,7 @@ import {
   type MoriNotificationActionTarget,
 } from "../../lib/notifications/notification";
 import { buildImportFinishedNotifications } from "../../lib/notifications/importFinishedNotifications";
+import { buildMemoryHealthNotifications } from "../../lib/notifications/memoryHealthNotifications";
 import {
   getCompanionSignalActionTarget,
   type CompanionSignal,
@@ -35,7 +36,7 @@ export function useMoriNotifications(): {
   notifications: MoriNotification[];
   isDemo: boolean;
 } {
-  const { feed, isDemo } = useCompanionSignals();
+  const { feed, isDemo, acceptedMemories } = useCompanionSignals();
   const imports = useMoriSessionStore((state) => state.imports);
 
   const companionNotifications = useMemo<MoriNotification[]>(
@@ -53,16 +54,29 @@ export function useMoriNotifications(): {
     [imports],
   );
 
-  // Order = priority for the compose-time dedupe — fresh imports lead so a
-  // brand-new "Claude 대화 N건 가져옴" sits above the standing Companion
-  // suggestions. Future producers fan in here as new array entries.
+  // Third producer: memory-health (stale / contradiction). One summary row
+  // per category, deep-links into the 통합 surface where per-memory actions
+  // already live.
+  const memoryHealthNotifications = useMemo<MoriNotification[]>(
+    () => buildMemoryHealthNotifications({ acceptedMemories }),
+    [acceptedMemories],
+  );
+
+  // Order = priority for the compose-time dedupe — memory-health and fresh
+  // imports lead the Companion suggestions because they describe state the
+  // user probably wants to clear first. Future producers slot in here.
   const notifications = useMemo(
     () =>
       composeNotifications([
+        memoryHealthNotifications,
         importFinishedNotifications,
         companionNotifications,
       ]),
-    [companionNotifications, importFinishedNotifications],
+    [
+      companionNotifications,
+      importFinishedNotifications,
+      memoryHealthNotifications,
+    ],
   );
 
   return { notifications, isDemo };
