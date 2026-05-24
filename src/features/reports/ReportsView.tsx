@@ -1,4 +1,4 @@
-import { Archive, Calendar, FileText, Sparkles } from "lucide-react";
+import { Archive, Calendar, FileText, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
@@ -99,6 +99,11 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
   const [memoryStorageSource, setMemoryStorageSource] =
     useState<AcceptedMemoryStorageSource>("browser-local-storage");
   const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
+  // The report builder used to sit as a permanent right rail, which read as
+  // empty space until the user actually wanted to customise. Default it
+  // closed so the report content takes full width on entry; toggle from
+  // the action bar opens the builder on demand.
+  const [builderOpen, setBuilderOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     const memoryRepository = getAcceptedMemoryRepository();
@@ -444,26 +449,40 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
     </>
   );
 
-  // Embedded inside the Memory 리포트 segment: render content-only (no PageShell
-  // or page header — Memory owns the surface chrome), with the report builder as
-  // a right rail in the shared session-tab split layout.
+  // Embedded inside the Session 리포트 tab: content-only (no PageShell or
+  // page header — the session bar owns the chrome). The report builder is
+  // an on-demand right rail; users toggle it from the action bar so the
+  // default view is the readable report, not a permanent customise panel.
   if (embedded) {
-    // The session tab strip already shows 흐름 / 증거 / 인사이트 counts as
-    // badges, so the report bar drops the duplicate `actionCounts` block and
-    // keeps only the status badges (capture date, source, Quick Pass state)
-    // and the Quick Pass action.
+    const builderToggle = (
+      <Button
+        icon={builderOpen ? PanelRightClose : PanelRightOpen}
+        onClick={() => setBuilderOpen((open) => !open)}
+        aria-pressed={builderOpen}
+        title={builderOpen ? "리포트 생성기 닫기" : "리포트 생성기 열기"}
+      >
+        리포트 생성기
+      </Button>
+    );
     return (
       <div className="session-tab-pane reports-embedded">
         <div className="session-tab-actionbar">
           <ActionBar
             label="보고서 세션 상태"
             start={statusBadges}
-            end={quickPassButton}
+            end={
+              <>
+                {builderToggle}
+                {quickPassButton}
+              </>
+            }
           />
         </div>
-        <div className="session-tab-split">
+        <div
+          className={`session-tab-split${builderOpen ? "" : " is-collapsed"}`}
+        >
           <div className="session-tab-main">{bodyNode}</div>
-          {asideNode}
+          {builderOpen ? asideNode : null}
         </div>
       </div>
     );
