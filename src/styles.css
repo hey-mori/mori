@@ -17388,6 +17388,47 @@ pre {
   color: var(--mori-text-muted-2);
 }
 
+/* Hover-revealed row action — archive / restore. Hidden by default so the
+   row line stays calm; appears on hover / focus so the affordance is one
+   click without an inspector or a kebab menu. */
+.workspace-row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateX(-2px);
+  transition: opacity 120ms ease, transform 120ms ease,
+    background-color 120ms ease, color 120ms ease;
+}
+
+.workspace-row:hover .workspace-row-action,
+.workspace-row:focus-within .workspace-row-action,
+.workspace-row-action:focus-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.workspace-row-action:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+/* Archived rows surface the unarchive affordance permanently so the user
+   isn't fishing for a way to bring the row back. */
+.workspace-row.is-archived .workspace-row-action {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--mori-text-muted);
+}
+
 /* ── Inspector body ───────────────────────────────────────────────────── */
 
 .workspace-inspector-actions {

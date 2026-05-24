@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Archive,
+  ArchiveRestore,
   FolderGit2,
   FolderKanban,
   PlugZap,
@@ -49,6 +50,8 @@ export function WorkspaceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
+  const archiveSession = useMoriSessionStore((state) => state.archiveSession);
+  const unarchiveSession = useMoriSessionStore((state) => state.unarchiveSession);
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSessionDetail = useMoriAppStore((state) => state.openSession);
 
@@ -57,6 +60,8 @@ export function WorkspaceView() {
   }, [initialized, hydrate]);
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
+  // Increments after a row-level lifecycle write so the sessions list re-reads.
+  const [revision, setRevision] = useState(0);
 
   const [filters, setFilters] = useState<SessionsBrowserFilters>(
     DEFAULT_SESSIONS_BROWSER_FILTERS,
@@ -81,9 +86,11 @@ export function WorkspaceView() {
         filters,
       }),
     // `view`/`draft`/`mode` cover active-session changes; the row list is
-    // re-derived whenever any of those change.
+    // re-derived whenever any of those change. `revision` ticks after a
+    // row-level lifecycle write (archive / unarchive) so the list refreshes
+    // without a store subscription on every saved row.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeSessionId, view, mode, draft, repository, filters],
+    [activeSessionId, view, mode, draft, repository, filters, revision],
   );
 
   const openSession = (row: SessionRow) => {
@@ -94,6 +101,14 @@ export function WorkspaceView() {
     if (row.savedAt !== null && loadBrowserSession(row.sessionId)) {
       openSessionDetail("flow");
     }
+  };
+
+  const handleArchive = (row: SessionRow) => {
+    if (archiveSession(row.sessionId)) setRevision((value) => value + 1);
+  };
+
+  const handleUnarchive = (row: SessionRow) => {
+    if (unarchiveSession(row.sessionId)) setRevision((value) => value + 1);
   };
 
   const hasResults = model.visibleCount > 0;
@@ -226,6 +241,8 @@ export function WorkspaceView() {
                     selected={false}
                     onSelect={() => openSession(row)}
                     onOpen={() => openSession(row)}
+                    onArchive={() => handleArchive(row)}
+                    onUnarchive={() => handleUnarchive(row)}
                   />
                 ))}
               </ul>
@@ -244,11 +261,15 @@ function SessionRowItem({
   selected,
   onSelect,
   onOpen,
+  onArchive,
+  onUnarchive,
 }: {
   row: SessionRow;
   selected: boolean;
   onSelect: () => void;
   onOpen: () => void;
+  onArchive: () => void;
+  onUnarchive: () => void;
 }) {
   const status = describeWorkspaceSessionStatus(row.status);
   const origin = describeSessionOrigin(row.origin);
@@ -260,6 +281,12 @@ function SessionRowItem({
   ]
     .filter(Boolean)
     .join(" ");
+
+  // The active session and bundled demo rows can't be archived (the demo is
+  // a fixture; the active session must stay reachable). Other captured rows
+  // get a hover-revealed archive / restore button so a user can tidy without
+  // a separate inspector panel.
+  const canArchive = row.savedAt !== null && !row.isActive;
 
   return (
     <li>
@@ -295,6 +322,25 @@ function SessionRowItem({
             <span className="workspace-row-archived-tag" title="보관됨">
               <Archive size={12} aria-hidden="true" />
             </span>
+          ) : null}
+          {canArchive ? (
+            <button
+              type="button"
+              className="workspace-row-action"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (row.isArchived) onUnarchive();
+                else onArchive();
+              }}
+              aria-label={row.isArchived ? "보관 해제" : "보관"}
+              title={row.isArchived ? "보관 해제 — 다시 활성 목록으로 돌립니다" : "보관 — 활성 목록에서 숨깁니다 (삭제는 아님)"}
+            >
+              {row.isArchived ? (
+                <ArchiveRestore size={14} aria-hidden="true" />
+              ) : (
+                <Archive size={14} aria-hidden="true" />
+              )}
+            </button>
           ) : null}
         </span>
       </div>
