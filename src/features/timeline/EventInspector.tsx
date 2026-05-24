@@ -91,6 +91,7 @@ export function EventInspector({
           <h3 className="inspector-title">{selectedEvent.title}</h3>
         )}
         <p className="inspector-time">{formatTimeRange(selectedEvent.start, selectedEvent.end)}</p>
+        <InspectorMetaStrip event={selectedEvent} />
       </header>
 
       <section className="inspector-section">
@@ -292,6 +293,37 @@ export function EventInspector({
       </section>
     </aside>
   );
+}
+
+function InspectorMetaStrip({ event }: { event: TimelineEvent }) {
+  const items = [
+    { label: "근거", value: event.sourceRefs.length },
+    { label: "결정", value: event.linkedDecisionIds.length },
+    { label: "이슈", value: event.linkedIssueIds.length },
+    { label: "산출", value: event.artifactIds?.length ?? 0 },
+  ];
+  const usage = event.tokenUsage;
+  return (
+    <div className="inspector-meta-strip" aria-label="Event metadata">
+      {items.map((item) => (
+        <span key={item.label} className={item.value > 0 ? "has-value" : ""}>
+          <strong>{item.value}</strong>
+          {item.label}
+        </span>
+      ))}
+      {usage ? (
+        <span className="has-value" title={usage.model}>
+          <strong>{formatTokenCount(usage.total)}</strong>
+          토큰
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function formatTokenCount(total: number): string {
+  if (total < 1000) return String(total);
+  return `${(total / 1000).toFixed(1)}k`;
 }
 
 function SourcesList({ sources }: { sources: SourceRef[] }) {

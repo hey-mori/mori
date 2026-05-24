@@ -22,6 +22,7 @@ import { TimelineAxis } from "./TimelineAxis";
 import { TimelineGridLines } from "./TimelineGridLines";
 import { TimelineLane } from "./TimelineLane";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
+import { TimelineTimeMarkers } from "./TimelineTimeMarkers";
 import type { Relationship } from "../../domain/types";
 
 export type TimelineCanvasProps = {
@@ -183,6 +184,14 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
           mode={model.mode}
           frameWidth={layout.frameWidth}
           frameHeight={layout.frameHeight}
+        />
+        <TimelineTimeMarkers
+          markers={model.timeGapMarkers}
+          range={model.range}
+          contentLeftPx={layout.contentLeftPx}
+          contentWidthPx={layout.contentWidthPx}
+          topPx={layout.laneOffsetPx}
+          heightPx={Math.max(layout.frameHeight - layout.laneOffsetPx, 0)}
         />
         <div className="lanes" style={laneRowsStyle}>
           {lanes.map((lane) => {

@@ -1,6 +1,7 @@
 import { Layers3 } from "lucide-react";
 import { eventTypeIcons, eventTypeLabels } from "../../domain/constants";
 import type { TimelineEvent } from "../../domain/types";
+import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { sortDisplayItemsChronologically } from "../../lib/timeline/displayItems";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 import {
@@ -23,16 +24,18 @@ export function TimelineChronoList({
   model,
   selectedItemId,
   onSelect,
+  density,
 }: {
   model: TimelineRenderModel;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
+  density: TimelineDensity;
 }) {
   const items = sortDisplayItemsChronologically(model.visibleDisplayItems);
   if (items.length === 0) return null;
 
   return (
-    <ol className="timeline-chrono-list" aria-label="Timeline chronological list">
+    <ol className={`timeline-chrono-list is-${density}`} aria-label="Timeline chronological list">
       {items.map((item) => {
         const selected =
           item.id === selectedItemId ||

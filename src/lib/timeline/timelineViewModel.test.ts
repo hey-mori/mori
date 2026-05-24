@@ -3,6 +3,7 @@ import { moriMockSession } from "../../domain/mock-data";
 import type { MoriMockSession, Relationship, TimelineEvent } from "../../domain/types";
 import {
   buildInspectorViewModel,
+  buildTimelineGapMarkers,
   buildTimelineRenderModel,
   countHiddenRelationships,
   densityBundleTuning,
@@ -292,6 +293,40 @@ describe("densityBundleTuning", () => {
     expect(tuning.conversationMaxVisibleItemsPerLane).toBeGreaterThan(
       tuning.maxVisibleItemsPerLane,
     );
+  });
+});
+
+describe("buildTimelineGapMarkers", () => {
+  function gapEvent(id: string, start: string, end?: string): TimelineEvent {
+    return {
+      ...moriMockSession.events[0]!,
+      id,
+      start,
+      ...(end ? { end } : {}),
+    };
+  }
+
+  it("emits long pauses with a human label", () => {
+    const markers = buildTimelineGapMarkers(
+      [
+        gapEvent("a", "2026-05-22T09:00:00Z", "2026-05-22T09:10:00Z"),
+        gapEvent("b", "2026-05-22T10:05:00Z"),
+      ],
+      "comfortable",
+    );
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.fromEventId).toBe("a");
+    expect(markers[0]?.toEventId).toBe("b");
+    expect(markers[0]?.label).toBe("55분 공백");
+  });
+
+  it("uses density to decide whether a pause is meaningful", () => {
+    const events = [
+      gapEvent("a", "2026-05-22T09:00:00Z"),
+      gapEvent("b", "2026-05-22T09:25:00Z"),
+    ];
+    expect(buildTimelineGapMarkers(events, "comfortable")).toHaveLength(0);
+    expect(buildTimelineGapMarkers(events, "dense")).toHaveLength(1);
   });
 });
 

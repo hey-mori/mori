@@ -18,6 +18,7 @@ import {
 import { buildTurnCardModel, type TurnCardModel } from "../../lib/timeline/turnCard";
 import { formatTime } from "../../lib/formatting/time";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
+import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 
 /**
  * Conversation flow view — the conversation-FIRST reading mode for a single
@@ -41,26 +42,29 @@ export function ConversationFlowView({
   model,
   selectedItemId,
   onSelect,
+  density,
 }: {
   model: TimelineRenderModel;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
+  density: TimelineDensity;
 }) {
   // The visible events (already filtered + searched) are the conversation's
   // turns. `buildTurns` folds them by `turnId`; `groupTurns` then layers the
   // honest burst / overflow groupings on top of the chronological thread.
   const turns = buildTurns(model.visibleEvents);
   if (turns.length === 0) return null;
-  const groups = groupTurns(turns);
+  const groups = groupTurns(turns, conversationGroupingOptions(density, turns.length));
 
   return (
-    <ol className="conversation-flow" aria-label="대화 흐름">
+    <ol className={`conversation-flow is-${density}`} aria-label="대화 흐름">
       {groups.map((group) => (
         <li key={group.id}>
           <ConversationGroup
             group={group}
             selectedItemId={selectedItemId}
             onSelect={onSelect}
+            density={density}
           />
         </li>
       ))}
@@ -72,10 +76,12 @@ function ConversationGroup({
   group,
   selectedItemId,
   onSelect,
+  density,
 }: {
   group: TurnGroup;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
+  density: TimelineDensity;
 }) {
   switch (group.kind) {
     case "turn":
@@ -84,13 +90,26 @@ function ConversationGroup({
           turn={group.turn}
           selected={isTurnSelected(group.turn, selectedItemId)}
           onSelect={onSelect}
+          density={density}
         />
       );
     case "burst":
-      return <BurstGroup burst={group} selectedItemId={selectedItemId} onSelect={onSelect} />;
+      return (
+        <BurstGroup
+          burst={group}
+          selectedItemId={selectedItemId}
+          onSelect={onSelect}
+          density={density}
+        />
+      );
     case "overflow":
       return (
-        <OverflowGroup overflow={group} selectedItemId={selectedItemId} onSelect={onSelect} />
+        <OverflowGroup
+          overflow={group}
+          selectedItemId={selectedItemId}
+          onSelect={onSelect}
+          density={density}
+        />
       );
   }
 }
@@ -100,18 +119,25 @@ function TurnCard({
   turn,
   selected,
   onSelect,
+  density,
 }: {
   turn: Turn;
   selected: boolean;
   onSelect: (eventId: string) => void;
+  density: TimelineDensity;
 }) {
   const card = buildTurnCardModel(turn);
   const [activityOpen, setActivityOpen] = useState(false);
   const selectId = turnSelectId(turn);
+  const compactActivity = density === "dense";
+  const hasBadges =
+    card.decisionIds.length > 0 ||
+    card.issueIds.length > 0 ||
+    (compactActivity && Boolean(card.activitySummary));
 
   return (
     <article
-      className={`conversation-turn-card ${selected ? "is-selected" : ""}`}
+      className={`conversation-turn-card is-${density} ${selected ? "is-selected" : ""}`}
       aria-current={selected ? "true" : undefined}
     >
       <button
@@ -157,7 +183,7 @@ function TurnCard({
           <span className="conversation-turn-reply-text is-fallback">{card.fallback}</span>
         ) : null}
 
-        {card.decisionIds.length > 0 || card.issueIds.length > 0 ? (
+        {hasBadges ? (
           <span className="conversation-turn-badges">
             {card.decisionIds.length > 0 ? (
               <span className="conversation-turn-badge is-decision">
@@ -169,11 +195,17 @@ function TurnCard({
                 이슈 {card.issueIds.length}
               </span>
             ) : null}
+            {compactActivity && card.activitySummary ? (
+              <span className="conversation-turn-badge is-activity">
+                <Terminal size={11} aria-hidden="true" />
+                {card.activitySummary}
+              </span>
+            ) : null}
           </span>
         ) : null}
       </button>
 
-      {card.activitySummary ? (
+      {card.activitySummary && !compactActivity ? (
         <ActivityStrip card={card} open={activityOpen} onToggle={() => setActivityOpen((v) => !v)} />
       ) : null}
     </article>
@@ -240,10 +272,12 @@ function BurstGroup({
   burst,
   selectedItemId,
   onSelect,
+  density,
 }: {
   burst: TurnGroupBurst;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
+  density: TimelineDensity;
 }) {
   const selectionInside = burst.turns.some((turn) => isTurnSelected(turn, selectedItemId));
   const [expanded, setExpanded] = useState(false);
@@ -276,6 +310,7 @@ function BurstGroup({
                 turn={turn}
                 selected={isTurnSelected(turn, selectedItemId)}
                 onSelect={onSelect}
+                density={density}
               />
             </li>
           ))}
@@ -293,10 +328,12 @@ function OverflowGroup({
   overflow,
   selectedItemId,
   onSelect,
+  density,
 }: {
   overflow: TurnGroupOverflow;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
+  density: TimelineDensity;
 }) {
   const selectionInside = overflow.turns.some((turn) => isTurnSelected(turn, selectedItemId));
   const [expanded, setExpanded] = useState(false);
@@ -311,6 +348,7 @@ function OverflowGroup({
               turn={turn}
               selected={isTurnSelected(turn, selectedItemId)}
               onSelect={onSelect}
+              density={density}
             />
           </li>
         ))}
@@ -357,6 +395,28 @@ function isTurnSelected(turn: Turn, selectedItemId: string | null): boolean {
     ...turn.issues,
   ];
   return members.some((event) => event?.id === selectedItemId);
+}
+
+function conversationGroupingOptions(density: TimelineDensity, turnCount: number) {
+  if (density === "dense") {
+    return {
+      burstWindowMinutes: 2,
+      minBurstTurns: 2,
+      maxVisibleGroups: turnCount > 22 ? 18 : undefined,
+    };
+  }
+  if (density === "compact") {
+    return {
+      burstWindowMinutes: 3,
+      minBurstTurns: 3,
+      maxVisibleGroups: turnCount > 30 ? 24 : undefined,
+    };
+  }
+  return {
+    burstWindowMinutes: 3,
+    minBurstTurns: 3,
+    maxVisibleGroups: turnCount > 42 ? 36 : undefined,
+  };
 }
 
 /** Compact token total — 12,345 → "12.3k", under 1000 stays exact. */

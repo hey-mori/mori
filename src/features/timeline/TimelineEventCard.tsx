@@ -1,6 +1,7 @@
 import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { TimelineEvent } from "../../domain/types";
+import { eventTypeIcons, eventTypeTone } from "../../domain/constants";
 import { buildTimelineEventCardViewModel } from "./lib/timelineCards";
 
 /**
@@ -27,6 +28,7 @@ export function TimelineEventCard({
   onHover: (eventId: string | null) => void;
 }) {
   const vm = buildTimelineEventCardViewModel(event);
+  const Icon = eventTypeIcons[event.type];
   // Progressive disclosure: only the comfortable tier carries footer meta on
   // the card. Compact and dense move that detail into the inspector.
   const densityClass = densityClassName(density);
@@ -50,9 +52,11 @@ export function TimelineEventCard({
       title={vm.buttonTitle}
     >
       <header className="event-card-header">
-        {/* The lane's own icon already says what type this event is; the card
-            keeps just the muted time stamp so the title can lead. */}
-        <span className="event-card-time">{vm.timeLabel}</span>
+        <span className="event-card-kind">
+          <Icon size={11} aria-hidden="true" className={`tone-${eventTypeTone[event.type]}`} />
+          <span className="event-card-time">{vm.timeLabel}</span>
+        </span>
+        {density !== "dense" ? <EventSignalBadges event={event} /> : null}
       </header>
       <strong className="event-card-title">{vm.title}</strong>
       {showFooter && vm.primaryMeta ? (
@@ -61,6 +65,23 @@ export function TimelineEventCard({
         </footer>
       ) : null}
     </button>
+  );
+}
+
+function EventSignalBadges({ event }: { event: TimelineEvent }) {
+  const signals = [
+    event.sourceRefs.length > 0 ? `근거 ${event.sourceRefs.length}` : null,
+    event.linkedDecisionIds.length > 0 ? `결정 ${event.linkedDecisionIds.length}` : null,
+    event.linkedIssueIds.length > 0 ? `이슈 ${event.linkedIssueIds.length}` : null,
+    (event.artifactIds?.length ?? 0) > 0 ? `산출 ${event.artifactIds?.length ?? 0}` : null,
+  ].filter((signal): signal is string => Boolean(signal));
+  if (signals.length === 0) return null;
+  return (
+    <span className="event-card-signals" aria-label={signals.join(", ")}>
+      {signals.slice(0, 2).map((signal) => (
+        <span key={signal}>{signal}</span>
+      ))}
+    </span>
   );
 }
 

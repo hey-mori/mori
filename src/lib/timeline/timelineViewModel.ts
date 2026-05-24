@@ -60,6 +60,8 @@ export type TimelineRenderModel = {
   range: TimelineRange;
   /** Axis ticks for the time ruler. */
   ticks: AxisTick[];
+  /** Long pauses between visible events, rendered as phase/gap markers. */
+  timeGapMarkers: TimelineGapMarker[];
   /** Pure layout — frame width/height and absolute item coords. */
   layout: TimelineLayout;
   /** Index by item id for direct lookup. */
@@ -78,6 +80,20 @@ export type TimelineRenderModel = {
   mode: TimelineMode;
   /** Density passed through for components that still need it. */
   density: TimelineDensity;
+};
+
+export type TimelineGapMarker = {
+  id: string;
+  /** Last event before the pause. */
+  fromEventId: string;
+  /** First event after the pause. */
+  toEventId: string;
+  /** Midpoint timestamp between the two events, used for axis placement. */
+  at: string;
+  from: string;
+  to: string;
+  minutes: number;
+  label: string;
 };
 
 export type BuildTimelineRenderModelInput = {
@@ -184,6 +200,7 @@ export function buildTimelineRenderModel(
 
   // 8. Axis ticks.
   const ticks = computeAxisTicks(range, { maxTicks: 6 });
+  const timeGapMarkers = buildTimelineGapMarkers(visibleEvents, input.density);
 
   // 9. Per-lane breakdown.
   const lanes = buildLaneRenderModels({
@@ -199,6 +216,7 @@ export function buildTimelineRenderModel(
     lanes,
     range,
     ticks,
+    timeGapMarkers,
     layout,
     layoutIndex,
     eventAnchorIndex,
@@ -209,6 +227,51 @@ export function buildTimelineRenderModel(
     mode: input.mode,
     density: input.density,
   };
+}
+
+export function buildTimelineGapMarkers(
+  events: readonly TimelineEvent[],
+  density: TimelineDensity,
+): TimelineGapMarker[] {
+  if (events.length < 2) return [];
+  const threshold = gapThresholdMinutes(density);
+  const sorted = [...events].sort(
+    (left, right) => new Date(left.start).getTime() - new Date(right.start).getTime(),
+  );
+  const markers: TimelineGapMarker[] = [];
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previous = sorted[index - 1]!;
+    const next = sorted[index]!;
+    const previousEnd = previous.end ?? previous.start;
+    const gap = minutesBetween(previousEnd, next.start);
+    if (gap < threshold) continue;
+    const fromMs = new Date(previousEnd).getTime();
+    const toMs = new Date(next.start).getTime();
+    markers.push({
+      id: `gap-${previous.id}-${next.id}`,
+      fromEventId: previous.id,
+      toEventId: next.id,
+      at: new Date(fromMs + (toMs - fromMs) / 2).toISOString(),
+      from: previousEnd,
+      to: next.start,
+      minutes: Math.round(gap),
+      label: formatGapLabel(gap),
+    });
+  }
+  return markers;
+}
+
+export function gapThresholdMinutes(density: TimelineDensity): number {
+  switch (density) {
+    case "comfortable":
+      return 45;
+    case "compact":
+      return 30;
+    case "dense":
+      return 20;
+    default:
+      return 30;
+  }
 }
 
 /**
@@ -393,6 +456,19 @@ function buildLaneRenderModels(args: {
       items,
     };
   });
+}
+
+function minutesBetween(start: string, end: string): number {
+  return Math.max(0, new Date(end).getTime() - new Date(start).getTime()) / 60000;
+}
+
+function formatGapLabel(minutes: number): string {
+  const rounded = Math.round(minutes);
+  if (rounded < 60) return `${rounded}분 공백`;
+  const hours = Math.floor(rounded / 60);
+  const remainder = rounded % 60;
+  if (remainder === 0) return `${hours}시간 공백`;
+  return `${hours}시간 ${remainder}분 공백`;
 }
 
 /** Public helper to derive a focused relationship subgraph for the Inspector. */

@@ -92,10 +92,10 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const [mode, setMode] = useState<"timeline" | "flow">(modeProp);
   const goToMode = useCallback((next: "timeline" | "flow") => setMode(next), []);
 
-  // Density is fixed to one comfortable tier — the user-facing density control
-  // was removed. The internal `density` plumbing stays so card sizing and
-  // bundle tuning keep a single, stable code path.
-  const density: TimelineDensity = "comfortable";
+  // Density is fixed to one comfortable tier — the user-facing density
+  // control was removed. The internal `density` plumbing stays so card
+  // sizing and bundle tuning keep a single, stable code path.
+  const density: TimelineDensity = "compact";
 
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
   const [minimapViewport, setMinimapViewport] = useState<MinimapViewport>(
@@ -239,12 +239,14 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
             model={model}
             selectedItemId={selectedItem?.id ?? null}
             onSelect={setSelectedEventId}
+            density={density}
           />
         ) : useConversationFlow ? (
           <ConversationFlowView
             model={model}
             selectedItemId={selectedItem?.id ?? null}
             onSelect={setSelectedEventId}
+            density={density}
           />
         ) : (
           <>
