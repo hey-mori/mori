@@ -151,7 +151,7 @@ export function CommandPalette({
         openSession(target.tab ?? "flow");
         break;
       case "openSettings":
-        openSettingsSheet(target.segment ?? "settings");
+        openSettingsSheet(target.segment ?? "localAi");
         break;
       case "toggleSidebarCollapsed":
         onToggleSidebarCollapsed?.();

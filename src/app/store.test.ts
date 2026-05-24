@@ -68,7 +68,7 @@ describe("app store — session-centric routing", () => {
     useMoriAppStore.getState().navigate("settings");
     const state = useMoriAppStore.getState();
     expect(state.settingsSheetOpen).toBe(true);
-    expect(state.settingsSheetTab).toBe("settings");
+    expect(state.settingsTab).toBe("localAi");
     // The underlying view does not change — the user keeps their place.
     expect(state.currentView).toBe("home");
   });
@@ -78,7 +78,7 @@ describe("app store — session-centric routing", () => {
     useMoriAppStore.getState().navigate("profile");
     const state = useMoriAppStore.getState();
     expect(state.settingsSheetOpen).toBe(true);
-    expect(state.settingsSheetTab).toBe("profile");
+    expect(state.settingsTab).toBe("profile");
     expect(state.currentView).toBe("home");
   });
 

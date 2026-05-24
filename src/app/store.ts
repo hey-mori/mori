@@ -14,21 +14,19 @@ export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | 
  */
 export type SessionTab = "flow" | "evidence" | "insights" | "report";
 
-/** Active tab on the Settings surface. Persisted so the user returns to the same tab. */
+/**
+ * Active page inside the settings sheet. "profile" is the local identity
+ * page; the remaining values are the settings sections. Stored so the sheet
+ * reopens on the last page the user visited.
+ */
 export type SettingsTab =
+  | "profile"
   | "localAi"
   | "privacy"
   | "storage"
   | "repositories"
   | "appearance"
   | "notifications";
-
-/**
- * Outer tab on the settings sheet (the modal opened from the top-bar user
- * button). Two segments — the local profile, and the full settings surface.
- * Stored so the sheet reopens on the last segment.
- */
-export type SettingsSheetTab = "profile" | "settings";
 
 /**
  * Active segment inside the Memory surface. Memory is cross-session, so it
@@ -88,8 +86,6 @@ type MoriAppState = {
    * e.g. an empty-state CTA that wants to drop the user into the storage tab.
    */
   settingsSheetOpen: boolean;
-  /** Active segment inside the settings sheet — profile or full settings. */
-  settingsSheetTab: SettingsSheetTab;
   /**
    * Whether the command palette (Cmd+K / Ctrl+K) is open. Lives in the store
    * so any surface can trigger it — e.g. a "Find anything" CTA in an empty
@@ -135,10 +131,9 @@ type MoriAppState = {
    * `setCurrentView` so they never land on a standalone page.
    */
   navigate: (view: ViewKey) => void;
-  /** Open the settings sheet, optionally jumping to a segment. */
-  openSettingsSheet: (tab?: SettingsSheetTab) => void;
+  /** Open the settings sheet, optionally jumping to a specific page. */
+  openSettingsSheet: (tab?: SettingsTab) => void;
   closeSettingsSheet: () => void;
-  setSettingsSheetTab: (tab: SettingsSheetTab) => void;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
   toggleCommandPalette: () => void;
@@ -164,10 +159,9 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   memoryFocus: null,
   reviewTab: "issues",
   sessionTab: "flow",
-  settingsTab: "localAi",
+  settingsTab: "profile",
   memoryTab: "overview",
   settingsSheetOpen: false,
-  settingsSheetTab: "profile",
   commandPaletteOpen: false,
   currentProjectKey: null,
   setCurrentView: (currentView) => set({ currentView }),
@@ -221,16 +215,15 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
           // to a standalone page so existing deep links keep working.
           return {
             settingsSheetOpen: true,
-            settingsSheetTab: view === "profile" ? "profile" : "settings",
+            settingsTab: view === "profile" ? "profile" : "localAi",
           };
         default:
           return { currentView: view };
       }
     }),
   openSettingsSheet: (tab) =>
-    set(tab ? { settingsSheetOpen: true, settingsSheetTab: tab } : { settingsSheetOpen: true }),
+    set(tab ? { settingsSheetOpen: true, settingsTab: tab } : { settingsSheetOpen: true }),
   closeSettingsSheet: () => set({ settingsSheetOpen: false }),
-  setSettingsSheetTab: (settingsSheetTab) => set({ settingsSheetTab }),
   openCommandPalette: () => set({ commandPaletteOpen: true }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   toggleCommandPalette: () =>

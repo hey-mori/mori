@@ -25,7 +25,7 @@ export type CommandGroup =
 export type CommandTarget =
   | { kind: "navigate"; view: ViewKey }
   | { kind: "openSession"; sessionId: string; tab?: "flow" | "evidence" | "insights" | "report" }
-  | { kind: "openSettings"; segment?: "profile" | "settings" }
+  | { kind: "openSettings"; segment?: "profile" | "localAi" }
   | { kind: "toggleSidebarCollapsed" }
   | { kind: "setTheme"; theme: MoriThemeId };
 
@@ -54,10 +54,10 @@ const NAVIGATE_COMMANDS: ReadonlyArray<{ id: string; label: string; view: ViewKe
 const SETTINGS_COMMANDS: ReadonlyArray<{
   id: string;
   label: string;
-  segment: "profile" | "settings";
+  segment: "profile" | "localAi";
   keywords?: string[];
 }> = [
-  { id: "settings-open", label: "설정 열기", segment: "settings", keywords: ["settings", "환경 설정"] },
+  { id: "settings-open", label: "설정 열기", segment: "localAi", keywords: ["settings", "환경 설정"] },
   { id: "settings-profile", label: "프로필 열기", segment: "profile", keywords: ["account"] },
 ];
 

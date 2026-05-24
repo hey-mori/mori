@@ -5,11 +5,9 @@ import { SETTINGS_TAB_DEFS, SettingsView } from "../../features/settings/Setting
 import { AccountProfileView } from "../../features/account/AccountProfileView";
 import { SettingsRail, type SettingsRailItem } from "../../features/settings/SettingsPrimitives";
 
-const PROFILE_RAIL_ID = "profile";
-
 const RAIL_ITEMS: SettingsRailItem[] = [
   {
-    id: PROFILE_RAIL_ID,
+    id: "profile",
     label: "Profile",
     description: "Name, avatar, local identity",
     icon: UserRound,
@@ -22,23 +20,11 @@ const RAIL_ITEMS: SettingsRailItem[] = [
   })),
 ];
 
-/**
- * Settings sheet — a modal overlay that hosts the settings + profile surfaces.
- *
- * Settings used to be a standing nav entry, which crowded the chrome with a
- * surface most users only visit occasionally. Lifted here: the user clicks
- * their avatar in the top bar and gets a centered sheet with the full
- * settings + profile surface. ESC and scrim close the sheet; the underlying
- * page state never changes, so closing returns the user exactly where they
- * were.
- */
 export function SettingsSheet() {
   const open = useMoriAppStore((state) => state.settingsSheetOpen);
   const close = useMoriAppStore((state) => state.closeSettingsSheet);
-  const tab = useMoriAppStore((state) => state.settingsSheetTab);
-  const setTab = useMoriAppStore((state) => state.setSettingsSheetTab);
-  const settingsTab = useMoriAppStore((state) => state.settingsTab);
-  const setSettingsTab = useMoriAppStore((state) => state.setSettingsTab);
+  const activeTab = useMoriAppStore((state) => state.settingsTab);
+  const setActiveTab = useMoriAppStore((state) => state.setSettingsTab);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,23 +33,11 @@ export function SettingsSheet() {
       if (event.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
-    // Focus the sheet so screen readers announce the dialog and keys route here.
     sheetRef.current?.focus();
     return () => document.removeEventListener("keydown", onKey);
   }, [open, close]);
 
   if (!open) return null;
-
-  const activeRailId = tab === "profile" ? PROFILE_RAIL_ID : settingsTab;
-
-  function handleRailSelect(id: string) {
-    if (id === PROFILE_RAIL_ID) {
-      setTab("profile");
-      return;
-    }
-    setSettingsTab(id as SettingsTab);
-    setTab("settings");
-  }
 
   return (
     <div className="settings-sheet-layer" role="presentation">
@@ -85,26 +59,6 @@ export function SettingsSheet() {
             <strong>Mori Preferences</strong>
             <span>Local-first setup for this device</span>
           </div>
-          <nav className="settings-sheet-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "profile"}
-              className={`settings-sheet-tab${tab === "profile" ? " is-active" : ""}`}
-              onClick={() => setTab("profile")}
-            >
-              프로필
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "settings"}
-              className={`settings-sheet-tab${tab === "settings" ? " is-active" : ""}`}
-              onClick={() => setTab("settings")}
-            >
-              설정
-            </button>
-          </nav>
           <button
             type="button"
             className="settings-sheet-close"
@@ -118,11 +72,11 @@ export function SettingsSheet() {
         <div className="settings-sheet-body">
           <SettingsRail
             items={RAIL_ITEMS}
-            activeId={activeRailId}
-            onSelect={handleRailSelect}
+            activeId={activeTab}
+            onSelect={(id) => setActiveTab(id as SettingsTab)}
           />
           <main className="settings-sheet-content mori-scroll">
-            {tab === "profile" ? <AccountProfileView /> : <SettingsView />}
+            {activeTab === "profile" ? <AccountProfileView /> : <SettingsView />}
           </main>
         </div>
       </div>
@@ -132,6 +86,8 @@ export function SettingsSheet() {
 
 function railDescriptionFor(tab: SettingsTab): string {
   switch (tab) {
+    case "profile":
+      return "Name, avatar, local identity";
     case "localAi":
       return "Quick Pass providers";
     case "privacy":
