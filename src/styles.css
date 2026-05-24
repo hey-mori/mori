@@ -201,16 +201,45 @@ button {
   color: var(--purple);
 }
 
+.sidebar-search-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 2px 8px;
+}
+
 .sidebar-search {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 0 10px;
   height: 30px;
-  margin: 0 2px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--gray-50);
+  min-width: 0;
+}
+
+.sidebar-grouping-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--gray-50);
+  color: var(--muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.sidebar-grouping-toggle:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
 }
 
 .sidebar-search:focus-within {

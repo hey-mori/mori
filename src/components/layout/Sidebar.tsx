@@ -1,4 +1,4 @@
-import { Download, FolderGit2, House, Layers, Plus, Search } from "lucide-react";
+import { CalendarClock, Download, FolderGit2, House, Layers, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -12,8 +12,13 @@ import {
   formatSidebarRelative,
   groupSidebarRows,
   toSidebarRow,
+  type SidebarGroupingMode,
   type SidebarSessionRow,
 } from "../../lib/sidebar/sessionList";
+import {
+  loadGroupingPreference,
+  saveGroupingPreference,
+} from "../../lib/sidebar/groupingPreference";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
 import { getProfileInitials } from "../../lib/profile/localProfile";
@@ -78,6 +83,13 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
 
   const [summaries, setSummaries] = useState(() => safeListSessions());
   const [query, setQuery] = useState("");
+  const [groupingMode, setGroupingModeState] = useState<SidebarGroupingMode>(
+    () => loadGroupingPreference(),
+  );
+  const setGroupingMode = (mode: SidebarGroupingMode) => {
+    setGroupingModeState(mode);
+    saveGroupingPreference(mode);
+  };
 
   const refresh = useCallback(() => {
     setSummaries(safeListSessions());
@@ -95,7 +107,10 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
   );
 
   const filtered = useMemo(() => filterSidebarRows(rows, query), [rows, query]);
-  const groups = useMemo(() => groupSidebarRows(filtered), [filtered]);
+  const groups = useMemo(
+    () => groupSidebarRows(filtered, Date.now(), groupingMode),
+    [filtered, groupingMode],
+  );
 
   const isDesktop = source === "desktop-sqlite";
 
@@ -173,15 +188,40 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
         })}
       </nav>
 
-      <div className="sidebar-search">
-        <Search size={13} aria-hidden="true" />
-        <input
-          type="search"
-          placeholder="세션 검색"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          aria-label="세션 검색"
-        />
+      <div className="sidebar-search-row">
+        <div className="sidebar-search">
+          <Search size={13} aria-hidden="true" />
+          <input
+            type="search"
+            placeholder="세션 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="세션 검색"
+          />
+        </div>
+        <button
+          type="button"
+          className="sidebar-grouping-toggle"
+          onClick={() =>
+            setGroupingMode(groupingMode === "recency" ? "project" : "recency")
+          }
+          aria-label={
+            groupingMode === "recency"
+              ? "프로젝트별로 묶기"
+              : "최근 활동순으로 묶기"
+          }
+          title={
+            groupingMode === "recency"
+              ? "최근 활동순으로 묶음 — 누르면 프로젝트별로 전환"
+              : "프로젝트별로 묶음 — 누르면 최근 활동순으로 전환"
+          }
+        >
+          {groupingMode === "recency" ? (
+            <CalendarClock size={13} aria-hidden="true" />
+          ) : (
+            <FolderGit2 size={13} aria-hidden="true" />
+          )}
+        </button>
       </div>
 
       <div className="sidebar-list mori-scroll">
