@@ -4,6 +4,7 @@ import {
   Boxes,
   Chrome,
   Code2,
+  Download,
   HardDrive,
   KeyRound,
   Layers,
@@ -350,19 +351,18 @@ export function ConnectionsView() {
         </NoticeBanner>
       ) : null}
 
-      <section className="connections-section">
-        <header className="connections-section-header">
+      {/* Sessions lead the page — they're what the user came here for.
+          Tool detection stays available as a smaller details disclosure
+          below so the wall of cards never separates the user from the
+          import action. */}
+      <section className="connections-section connections-sessions-section">
+        <header className="connections-sessions-head">
           <div>
-            <h2>감지된 AI 도구</h2>
-          </div>
-        </header>
-        <ToolGrid state={tools} />
-      </section>
-
-      <section className="connections-section">
-        <header className="connections-section-header">
-          <div>
-            <h2>Claude 세션</h2>
+            <h2>가져올 수 있는 세션</h2>
+            <p>
+              감지된 도구에서 발견한 대화 세션입니다. 클릭하면 우측에서 미리보고
+              지금 세션 또는 새 세션으로 가져올 수 있어요.
+            </p>
           </div>
           <Badge tone={sessions.sessions.length > 0 ? "purple" : "gray"}>
             {sessions.sessions.length}개 세션
@@ -407,6 +407,21 @@ export function ConnectionsView() {
           />
         </div>
       </section>
+
+      {/* Tool inventory moved below sessions: it's reference material once
+          the user is doing real work, so it folds away by default. */}
+      <details className="connections-tools-disclosure">
+        <summary>
+          <span>감지된 AI 도구 {detectedCount}개</span>
+          <small>
+            가져오기 지원 {importableCount}개 · 어디서 데이터를 가져왔는지
+            확인하려면 펼치세요.
+          </small>
+        </summary>
+        <div className="connections-tools-disclosure-body">
+          <ToolGrid state={tools} />
+        </div>
+      </details>
 
       <ConversationViewer
         open={viewerOpen && Boolean(selection?.detail)}
@@ -682,12 +697,7 @@ function PreviewPanel({
   if (!selection) {
     return (
       <InspectorPanel ariaLabel="세션 미리보기">
-        <EmptyState
-          compact
-          icon={HardDrive}
-          title="세션을 선택하세요"
-          description="왼쪽에서 세션을 선택하면 미리보기와 가져오기가 표시됩니다."
-        />
+        <PreviewEmptyGuide hasActiveSession={hasActiveSession} />
       </InspectorPanel>
     );
   }
@@ -872,19 +882,72 @@ const BROWSER_PREVIEW_TOOLS: Array<{ id: string; label: string; description: str
   },
 ];
 
+/**
+ * Empty-state guide for the preview pane. Instead of a generic "select a
+ * session" placeholder it carries the three things the user actually
+ * needs to know: what import does, what client-safe means, and where to
+ * find the import once they pick a session. Sized to match a non-empty
+ * preview pane so the right column never collapses.
+ */
+function PreviewEmptyGuide({ hasActiveSession }: { hasActiveSession: boolean }) {
+  const tips: Array<{ title: string; body: string }> = [
+    {
+      title: "좌측 세션을 선택",
+      body:
+        "프로젝트별로 묶인 대화 목록입니다. 클릭하면 여기에서 메시지 통계와 미리보기가 보입니다.",
+    },
+    {
+      title: "새 세션 / 현재 세션",
+      body: hasActiveSession
+        ? "새 Mori 세션으로 가져오거나, 지금 열려있는 세션에 이벤트로 합칠 수 있어요."
+        : "선택한 대화는 새 Mori 세션으로 가져옵니다. 작업 중인 세션이 있으면 합치는 옵션도 나타납니다.",
+    },
+    {
+      title: "원본은 그대로",
+      body:
+        "Mori는 가져온 대화의 메타데이터와 정리된 이벤트만 보관하고, 원본 파일은 손대지 않습니다.",
+    },
+  ];
+  return (
+    <div className="connections-preview-guide">
+      <header>
+        <strong>가져오기 안내</strong>
+        <p>왼쪽 목록에서 세션을 선택하면 미리보기와 가져오기 버튼이 표시됩니다.</p>
+      </header>
+      <ol>
+        {tips.map((tip) => (
+          <li key={tip.title}>
+            <strong>{tip.title}</strong>
+            <span>{tip.body}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function ConnectionsBrowserHelp() {
   return (
-    <div className="connections-browser-preview">
-      <section className="connections-section">
-        <header className="connections-section-header">
-          <div>
-            <h2>지원되는 도구</h2>
-          </div>
+    <div className="connections-browser-help">
+      <header className="connections-browser-hero">
+        <div className="connections-browser-hero-icon" aria-hidden="true">
+          <Download size={20} />
+        </div>
+        <div>
+          <h1>가져오기</h1>
+          <p>
+            Mori는 PC에 저장된 Claude · Codex 대화 파일을 직접 감지해
+            세션으로 가져옵니다. 데스크탑 앱(Tauri)에서 이 페이지를 열면
+            아래 도구들의 상태가 실시간으로 채워집니다.
+          </p>
+        </div>
+      </header>
+
+      <section className="connections-browser-tools">
+        <header className="connections-browser-tools-head">
+          <h2>지원되는 도구</h2>
           <Badge tone="gray">PC 필요</Badge>
         </header>
-        <p className="connections-browser-note">
-          연결 기능은 PC에 저장된 Claude · Codex 파일을 감지합니다. 데스크탑 앱(Tauri)을 실행하면 아래 도구들의 상태가 채워집니다.
-        </p>
         <div className="connections-tools-grid">
           {BROWSER_PREVIEW_TOOLS.map((tool) => {
             const Icon = TOOL_ICONS[tool.id] ?? Bot;
@@ -909,6 +972,33 @@ function ConnectionsBrowserHelp() {
             );
           })}
         </div>
+      </section>
+
+      <section className="connections-browser-flow" aria-label="가져오기 흐름">
+        <h2>가져오기 흐름</h2>
+        <ol className="connections-browser-flow-steps">
+          <li>
+            <strong>도구 감지</strong>
+            <span>
+              데스크탑 앱이 ~/.claude, ~/.codex 같은 로컬 디렉터리에서 대화
+              파일을 찾아 도구별로 분류합니다.
+            </span>
+          </li>
+          <li>
+            <strong>세션 미리보기</strong>
+            <span>
+              감지된 대화를 메시지 수 · 토큰 · 최근 활동과 함께 목록으로
+              보여줍니다. 클릭하면 미리보기에서 내용을 확인할 수 있어요.
+            </span>
+          </li>
+          <li>
+            <strong>가져오기 실행</strong>
+            <span>
+              새 Mori 세션으로 가져오거나, 작업 중인 세션에 이벤트로
+              합칠 수 있습니다. 원본 파일은 손대지 않아요.
+            </span>
+          </li>
+        </ol>
       </section>
     </div>
   );
