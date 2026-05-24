@@ -8962,12 +8962,11 @@ pre {
 
 .session-summary-strip {
   display: grid;
-  gap: 8px;
-  padding: 14px 16px 16px;
+  gap: 10px;
+  padding: 12px 14px 14px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   background: white;
-  box-shadow: var(--shadow-soft);
 }
 
 .session-summary-strip header {
@@ -8979,7 +8978,8 @@ pre {
 
 .session-summary-strip h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 650;
 }
 
 .session-summary-metrics {
@@ -9062,28 +9062,33 @@ pre {
   list-style: none;
 }
 
+/* Wrap-up step rows: shrink the nested-card chrome to a dashed border so
+   they read as checklist tiles inside the summary card, not stacked cards. */
 .session-wrap-up-steps li {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   align-items: start;
   min-width: 0;
-  padding: 9px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 7px;
+  background: transparent;
 }
 
 .session-wrap-up-steps li.status-done {
-  border-color: rgba(40, 167, 69, 0.28);
+  border-style: solid;
+  border-color: rgba(40, 167, 69, 0.22);
 }
 
 .session-wrap-up-steps li.status-ready {
-  border-color: rgba(37, 99, 235, 0.24);
+  border-style: solid;
+  border-color: rgba(37, 99, 235, 0.22);
 }
 
 .session-wrap-up-steps li.status-attention {
-  border-color: rgba(245, 158, 11, 0.34);
+  border-style: solid;
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 .session-wrap-up-icon {
