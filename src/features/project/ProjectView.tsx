@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   CalendarClock,
   FolderGit2,
   Layers,
@@ -8,8 +7,9 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriListRow } from "../../components/ui/MoriListRow";
+import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
 import { useMoriAppStore } from "../../app/store";
@@ -142,19 +142,6 @@ export function ProjectView() {
             key: "sessions",
             label: "전체 세션",
             value: overview.stats.sessions,
-            hint: `${overview.stats.activeSessions}건 활성 · ${overview.stats.archivedSessions}건 보관`,
-          },
-          {
-            key: "active",
-            label: "활성 세션",
-            value: overview.stats.activeSessions,
-            hint: "보관되지 않은 세션",
-          },
-          {
-            key: "archived",
-            label: "보관 세션",
-            value: overview.stats.archivedSessions,
-            hint: "목록 하단으로 정리됨",
           },
           {
             key: "events",
@@ -221,12 +208,16 @@ function ProjectSessionRowItem({
   active: boolean;
   onOpen: () => void;
 }) {
+  const statusBadge =
+    row.status === "recording" ? (
+      <Badge tone="green">녹화 중</Badge>
+    ) : row.status === "analyzing" ? (
+      <Badge tone="blue">분석 중</Badge>
+    ) : null;
+
   return (
     <li>
-      <MoriListRow
-        selected={active}
-        onClick={onOpen}
-        ariaLabel={row.title}
+      <MoriObjectRow
         title={row.title}
         meta={
           <span>
@@ -234,7 +225,11 @@ function ProjectSessionRowItem({
             {row.eventCount ? ` · 이벤트 ${row.eventCount}건` : ""}
           </span>
         }
-        trailing={<ArrowRight size={14} aria-hidden="true" />}
+        status={statusBadge}
+        selected={active}
+        onClick={onOpen}
+        ariaLabel={row.title}
+        density="compact"
       />
     </li>
   );

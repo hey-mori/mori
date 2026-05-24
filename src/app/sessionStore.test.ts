@@ -340,7 +340,7 @@ describe("useMoriSessionStore loadBrowserSession", () => {
   });
 });
 
-describe("useMoriSessionStore session lifecycle (rename / archive)", () => {
+describe("useMoriSessionStore session lifecycle (rename)", () => {
   let repository: BrowserDraftRepository;
 
   beforeEach(() => {
@@ -410,25 +410,8 @@ describe("useMoriSessionStore session lifecycle (rename / archive)", () => {
     expect(repository.loadStoredSessionDraft(seeded.session.id)?.savedAt).toBe(savedAt);
   });
 
-  it("archives and unarchives a session via additive archivedAt", () => {
-    const seeded = seedSession("보관 대상", "2026-05-12T13:00:00+09:00");
-    useMoriSessionStore.getState().loadBrowserSession(seeded.session.id);
-
-    expect(useMoriSessionStore.getState().archiveSession(seeded.session.id)).toBe(true);
-    expect(useMoriSessionStore.getState().draft?.session.archivedAt).toBeTruthy();
-    expect(repository.loadStoredSessionDraft(seeded.session.id)?.session.archivedAt).toBeTruthy();
-    // Archiving is idempotent.
-    expect(useMoriSessionStore.getState().archiveSession(seeded.session.id)).toBe(false);
-
-    expect(useMoriSessionStore.getState().unarchiveSession(seeded.session.id)).toBe(true);
-    expect(useMoriSessionStore.getState().draft?.session.archivedAt).toBeUndefined();
-    expect(useMoriSessionStore.getState().unarchiveSession(seeded.session.id)).toBe(false);
-  });
-
   it("returns false for an unknown session id", () => {
     expect(useMoriSessionStore.getState().renameSession("missing", "x")).toBe(false);
-    expect(useMoriSessionStore.getState().archiveSession("missing")).toBe(false);
-    expect(useMoriSessionStore.getState().unarchiveSession("missing")).toBe(false);
   });
 });
 

@@ -86,16 +86,7 @@ export type Session = {
    * (manual Start Session, demo, older imports) simply omit it.
    */
   sourceLabel?: string;
-  /**
-   * ISO timestamp the user archived this session. Optional and additive:
-   * archiving is a non-destructive "tidy away" — the session is hidden from
-   * the default Workspace list (but reachable via the archive filter) and is
-   * never deleted. Sessions saved before this field, and active sessions,
-   * simply omit it. Clearing the field (un-archiving) restores the session
-   * to the default list.
-   */
-  archivedAt?: string;
-  /**
+   /**
    * Optional actor id who created the session. Reserved for a future
    * multi-user workroom model (a Project containing sessions from multiple
    * teammates). Today this is always the implicit local user; callers should

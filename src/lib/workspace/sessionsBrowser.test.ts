@@ -77,7 +77,7 @@ describe("buildSessionsBrowserModel", () => {
         stored({ sessionId: "b", sourceLabel: "C:/dev/other" }),
         stored({ sessionId: "c", sourceLabel: undefined }),
       ],
-      filters: filters({ archive: "all" }),
+      filters: filters(),
     });
 
     const labels = model.groups.map((group) => group.label);
@@ -91,7 +91,7 @@ describe("buildSessionsBrowserModel", () => {
     const model = buildSessionsBrowserModel({
       active: activeInput({ sessionId: "x", sourceLabel: "C:/dev/mori" }),
       storedSessions: [stored({ sessionId: "m", sourceLabel: undefined })],
-      filters: filters({ archive: "all" }),
+      filters: filters(),
     });
     const rows = model.groups.flatMap((group) => group.sessions);
     const imported = rows.find((row) => row.sessionId === "x");
@@ -111,34 +111,11 @@ describe("buildSessionsBrowserModel", () => {
     expect(model.groups[0]!.label).toBe("데모");
   });
 
-  it("hides archived sessions by default and reveals them under the archive filter", () => {
-    const input: SessionsBrowserInput = {
-      active: activeInput({ sessionId: "active-1" }),
-      storedSessions: [
-        stored({ sessionId: "live" }),
-        stored({ sessionId: "old", archivedAt: "2026-05-19T00:00:00+09:00" }),
-      ],
-      filters: filters({ archive: "active" }),
-    };
-
-    const active = buildSessionsBrowserModel(input);
-    const activeRows = active.groups.flatMap((group) => group.sessions);
-    expect(activeRows.some((row) => row.sessionId === "old")).toBe(false);
-    expect(active.archivedCount).toBe(1);
-
-    const archived = buildSessionsBrowserModel({
-      ...input,
-      filters: filters({ archive: "archived" }),
-    });
-    const archivedRows = archived.groups.flatMap((group) => group.sessions);
-    expect(archivedRows.map((row) => row.sessionId)).toEqual(["old"]);
-  });
-
   it("filters by origin", () => {
     const model = buildSessionsBrowserModel({
       active: activeInput({ sessionId: "manual-active", sourceLabel: null }),
       storedSessions: [stored({ sessionId: "imp", sourceLabel: "C:/dev/mori" })],
-      filters: filters({ origin: "imported", archive: "all" }),
+      filters: filters({ origin: "imported" }),
     });
     const rows = model.groups.flatMap((group) => group.sessions);
     expect(rows.map((row) => row.sessionId)).toEqual(["imp"]);
@@ -151,7 +128,7 @@ describe("buildSessionsBrowserModel", () => {
         stored({ sessionId: "a", title: "스키마 설계", sourceLabel: "C:/dev/mori" }),
         stored({ sessionId: "b", title: "릴리스 준비", sourceLabel: "C:/dev/other" }),
       ],
-      filters: filters({ query: "mori", archive: "all" }),
+      filters: filters({ query: "mori" }),
     });
     const rows = model.groups.flatMap((group) => group.sessions);
     expect(rows.map((row) => row.sessionId)).toEqual(["a"]);
@@ -181,13 +158,12 @@ describe("buildSessionsBrowserModel", () => {
       active: activeInput({ sessionId: "active-1" }),
       storedSessions: [
         stored({ sessionId: "a" }),
-        stored({ sessionId: "b", archivedAt: "2026-05-19T00:00:00+09:00" }),
+        stored({ sessionId: "b" }),
       ],
-      filters: filters({ archive: "active" }),
+      filters: filters(),
     });
     expect(model.totalCount).toBe(3);
-    expect(model.visibleCount).toBe(2);
-    expect(model.archivedCount).toBe(1);
+    expect(model.visibleCount).toBe(3);
     expect(model.hasAnySession).toBe(true);
   });
 });

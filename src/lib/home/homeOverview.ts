@@ -66,7 +66,7 @@ export type HomeSessionMetricSnapshot = {
 };
 
 export type HomeOverviewInput = {
-  /** Every stored session summary (any project, any archive state). */
+  /** Every stored session summary (any project). */
   storedSessions: StoredSessionSummary[];
   /** Cheap per-session counts, keyed nowhere — matched by `sessionId`. */
   sessionMetrics: HomeSessionMetricSnapshot[];
@@ -277,9 +277,8 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
   const recentLimit = input.recentLimit ?? DEFAULT_RECENT_LIMIT;
   const metricsById = indexMetrics(input.sessionMetrics);
 
-  // Active (non-archived) sessions, newest first.
+  // Sessions, newest first.
   const active = input.storedSessions
-    .filter((session) => !session.archivedAt)
     .slice()
     .sort((a, b) => anchorEpoch(b, now) - anchorEpoch(a, now));
 

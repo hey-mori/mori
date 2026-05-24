@@ -22,9 +22,7 @@ import {
 import type { NormalizedImportCandidate } from "../lib/import";
 import { createSessionDraft } from "../lib/session/createSessionDraft";
 import {
-  applySessionArchive,
   applySessionRename,
-  applySessionUnarchive,
 } from "../lib/session/sessionManagement";
 import { rebindCandidateToSession } from "../lib/claude/claudeImport";
 import { composeSessionView } from "../lib/session/composeSessionView";
@@ -171,22 +169,6 @@ export type MoriSessionState = {
    * title is blank / unchanged. A safe, non-destructive Workspace edit.
    */
   renameSession: (sessionId: string, title: string) => boolean;
-  /**
-   * Archive a stored session (by id) — a non-destructive "tidy away". Stamps
-   * an `archivedAt` timestamp on the persisted draft so the Workspace hides it
-   * from the default list (it stays reachable via the archive filter and is
-   * never deleted). When the archived session is the active draft, the
-   * in-memory draft is updated too. Idempotent. Returns `false` in demo mode,
-   * for an unknown id, or when the session is already archived.
-   */
-  archiveSession: (sessionId: string) => boolean;
-  /**
-   * Restore an archived session (by id) to the default Workspace list by
-   * clearing its `archivedAt`. The inverse of `archiveSession`. Returns
-   * `false` in demo mode, for an unknown id, or when the session was not
-   * archived.
-   */
-  unarchiveSession: (sessionId: string) => boolean;
   /**
    * Mark a Next Action complete or pending — a Review-surface write.
    * Persists into the session analysis and the durable memory body so
@@ -931,14 +913,6 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     applyStoredSessionEdit(get, set, sessionId, (session) =>
       applySessionRename(session, title),
     ),
-  archiveSession: (sessionId) =>
-    applyStoredSessionEdit(get, set, sessionId, (session) =>
-      applySessionArchive(session, new Date().toISOString()),
-    ),
-  unarchiveSession: (sessionId) =>
-    applyStoredSessionEdit(get, set, sessionId, (session) =>
-      applySessionUnarchive(session),
-    ),
   loadDesktopSession: async (sessionId) => {
     const service = getPersistenceService();
     if (!service.isDesktop()) {
@@ -984,9 +958,9 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
 }));
 
 /**
- * Apply a pure session-metadata transform (rename / archive / unarchive) to
- * a stored session draft by id and persist it. Centralises the three
- * lifecycle writes so each store action stays a one-liner:
+ * Apply a pure session-metadata transform (rename) to
+ * a stored session draft by id and persist it. Centralises the
+ * lifecycle write so the store action stays a one-liner:
  *
  *   - When the id is the active draft, transform that; otherwise read the
  *     stored per-session record. An unknown id (or demo with no draft) is a

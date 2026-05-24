@@ -132,7 +132,7 @@ describe("buildHomeOverview", () => {
   });
 
   describe("recent sessions", () => {
-    it("sorts active sessions newest-first and hides archived sessions", () => {
+    it("sorts sessions newest-first", () => {
       const overview = buildHomeOverview(
         input({
           realSessionCount: 3,
@@ -140,12 +140,12 @@ describe("buildHomeOverview", () => {
           storedSessions: [
             stored({ sessionId: "old", startedAt: "2026-05-20T08:00:00+09:00" }),
             stored({ sessionId: "new", startedAt: "2026-05-22T08:00:00+09:00" }),
-            stored({ sessionId: "gone", startedAt: "2026-05-21T08:00:00+09:00", archivedAt: "2026-05-21T09:00:00+09:00" }),
+            stored({ sessionId: "mid", startedAt: "2026-05-21T08:00:00+09:00" }),
           ],
         }),
       );
 
-      expect(overview.recentSessions.map((s) => s.sessionId)).toEqual(["new", "old"]);
+      expect(overview.recentSessions.map((s) => s.sessionId)).toEqual(["new", "mid", "old"]);
     });
 
     it("attaches a factual count summary only when there are reconstructed items", () => {

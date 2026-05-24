@@ -18,7 +18,6 @@ function summary(partial: Partial<StoredSessionSummary>): StoredSessionSummary {
     status: partial.status ?? "complete",
     startedAt: partial.startedAt,
     sourceLabel: partial.sourceLabel,
-    archivedAt: partial.archivedAt,
     eventCount: partial.eventCount,
     tokenTotal: partial.tokenTotal,
     tokenInput: partial.tokenInput,
@@ -48,11 +47,6 @@ describe("toSidebarRow", () => {
     const row = toSidebarRow(summary({ title: "  " }));
     expect(row.title).toBe("제목 없음");
   });
-
-  it("marks archived rows so the view layer can hide them", () => {
-    expect(toSidebarRow(summary({ archivedAt: undefined })).archived).toBe(false);
-    expect(toSidebarRow(summary({ archivedAt: "2026-05-22T10:00:00.000Z" })).archived).toBe(true);
-  });
 });
 
 describe("filterSidebarRows", () => {
@@ -62,13 +56,11 @@ describe("filterSidebarRows", () => {
       title: "Mori 앱 기획",
       timestamp: "2026-05-22T10:00:00.000Z",
       sourceLabel: "C:/dev/mori",
-      archived: false,
     },
     {
       sessionId: "b",
       title: "Jinga 결제",
       timestamp: "2026-05-21T10:00:00.000Z",
-      archived: false,
     },
   ];
 
@@ -92,7 +84,7 @@ describe("groupSidebarRows", () => {
   const now = new Date("2026-05-22T14:00:00").getTime();
 
   function row(id: string, iso: string): SidebarSessionRow {
-    return { sessionId: id, title: id, timestamp: iso, archived: false };
+    return { sessionId: id, title: id, timestamp: iso };
   }
 
   it("buckets rows into today / yesterday / this week / earlier", () => {
@@ -126,42 +118,8 @@ describe("groupSidebarRows", () => {
   it("places rows with an unparseable timestamp into the earlier bucket", () => {
     const groups = groupSidebarRows([row("bad", "not-a-date")], now);
     expect(groups).toEqual([
-      { bucket: "earlier", label: "이전", rows: [{ sessionId: "bad", title: "bad", timestamp: "not-a-date", archived: false }] },
+      { bucket: "earlier", label: "이전", rows: [{ sessionId: "bad", title: "bad", timestamp: "not-a-date" }] },
     ]);
-  });
-
-  it("collects archived rows into a trailing 보관됨 bucket regardless of mode", () => {
-    const live = row("live", new Date(now - 60 * 1000).toISOString());
-    const stashed: SidebarSessionRow = {
-      ...row("old-stash", new Date(now - 30 * 86_400_000).toISOString()),
-      archived: true,
-    };
-    const groups = groupSidebarRows([live, stashed], now);
-    expect(groups.map((g) => g.bucket)).toEqual(["today", "archived"]);
-    expect(groups[1]!.label).toContain("1");
-    expect(groups[1]!.rows.map((r) => r.sessionId)).toEqual(["old-stash"]);
-  });
-
-  it("omits the archived bucket when no rows are archived", () => {
-    const live = row("live", new Date(now - 60 * 1000).toISOString());
-    const groups = groupSidebarRows([live], now);
-    expect(groups.map((g) => g.bucket)).toEqual(["today"]);
-  });
-
-  it("keeps archived rows out of project-mode groups too", () => {
-    const live: SidebarSessionRow = {
-      ...row("a", new Date(now - 60 * 1000).toISOString()),
-      sourceLabel: "alpha",
-    };
-    const stashed: SidebarSessionRow = {
-      ...row("b", new Date(now - 60 * 1000).toISOString()),
-      sourceLabel: "alpha",
-      archived: true,
-    };
-    const groups = groupSidebarRows([live, stashed], now, "project");
-    expect(groups.map((g) => g.bucket)).toEqual(["project", "archived"]);
-    expect(groups[0]!.rows.map((r) => r.sessionId)).toEqual(["a"]);
-    expect(groups[1]!.rows.map((r) => r.sessionId)).toEqual(["b"]);
   });
 });
 

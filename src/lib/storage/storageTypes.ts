@@ -47,12 +47,6 @@ export type StoredSessionSummary = {
    */
   sourceLabel?: string;
   /**
-   * ISO timestamp the session was archived, when set. Lets the Workspace
-   * sessions browser hide archived sessions from its default list (and
-   * surface them under an archive filter) without loading the full draft.
-   * Undefined for active / never-archived sessions.
-   */
-  archivedAt?: string;
   /**
    * Reconstructed timeline-event count for the session, derived once from its
    * imported events. Lets the Home activity heatmap weight a day by how much

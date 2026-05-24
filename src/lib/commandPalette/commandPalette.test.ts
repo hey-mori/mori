@@ -16,7 +16,6 @@ function summary(partial: Partial<StoredSessionSummary>): StoredSessionSummary {
     status: partial.status ?? "complete",
     startedAt: partial.startedAt,
     sourceLabel: partial.sourceLabel,
-    archivedAt: partial.archivedAt,
     eventCount: partial.eventCount,
     tokenTotal: partial.tokenTotal,
     tokenInput: partial.tokenInput,

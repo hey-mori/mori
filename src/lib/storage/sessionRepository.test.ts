@@ -403,7 +403,7 @@ describe("BrowserDraftRepository", () => {
 
     const saved = repository.saveStoredSessionMetadata(background.session.id, {
       ...background,
-      session: { ...background.session, title: "Renamed background", archivedAt: "2026-05-22T00:00:00+09:00" },
+      session: { ...background.session, title: "Renamed background" },
     });
 
     expect(saved?.session.title).toBe("Renamed background");
@@ -411,10 +411,7 @@ describe("BrowserDraftRepository", () => {
     // Editing a background session must not repoint the current session.
     expect(repository.loadCurrentSessionDraft()?.session.id).toBe(active.session.id);
     const reread = repository.loadStoredSessionDraft(background.session.id);
-    expect(reread?.session.archivedAt).toBe("2026-05-22T00:00:00+09:00");
-    expect(repository.listStoredSessions().find((s) => s.sessionId === background.session.id)?.archivedAt).toBe(
-      "2026-05-22T00:00:00+09:00",
-    );
+    expect(reread?.session.title).toBe("Renamed background");
   });
 
   it("saveStoredSessionMetadata mirrors into the current key when editing the current session", () => {

@@ -14,7 +14,6 @@ function summary(partial: Partial<StoredSessionSummary>): StoredSessionSummary {
     status: partial.status ?? "complete",
     startedAt: partial.startedAt,
     sourceLabel: partial.sourceLabel,
-    archivedAt: partial.archivedAt,
     eventCount: partial.eventCount,
     tokenTotal: partial.tokenTotal,
     tokenInput: partial.tokenInput,
@@ -45,24 +44,18 @@ describe("buildProjectOverview", () => {
     expect(overview.fullPath).toBe("C:/dev/mori");
   });
 
-  it("aggregates totals, splitting active vs archived sessions", () => {
+  it("aggregates totals across all sessions", () => {
     const overview = buildProjectOverview({
       projectKey: "C:/dev/mori",
       sessions: [
         summary({ sessionId: "a", sourceLabel: "C:/dev/mori", eventCount: 5 }),
         summary({ sessionId: "b", sourceLabel: "C:/dev/mori", eventCount: 3 }),
-        summary({
-          sessionId: "c",
-          sourceLabel: "C:/dev/mori",
-          eventCount: 1,
-          archivedAt: "2026-05-22T10:00:00.000Z",
-        }),
+        summary({ sessionId: "c", sourceLabel: "C:/dev/mori", eventCount: 1 }),
       ],
       now: NOW,
     });
     expect(overview.stats.sessions).toBe(3);
-    expect(overview.stats.activeSessions).toBe(2);
-    expect(overview.stats.archivedSessions).toBe(1);
+    expect(overview.stats.activeSessions).toBe(3);
     expect(overview.stats.totalEvents).toBe(9);
   });
 

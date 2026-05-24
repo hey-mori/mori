@@ -114,7 +114,6 @@ export class BrowserDraftRepository implements MoriDraftRepository {
         status: draft.session.status,
         startedAt: draft.session.startedAt ?? draft.savedAt,
         ...(draft.session.sourceLabel ? { sourceLabel: draft.session.sourceLabel } : {}),
-        ...(draft.session.archivedAt ? { archivedAt: draft.session.archivedAt } : {}),
         ...(draft.session.createdBy ? { createdBy: draft.session.createdBy } : {}),
         ...(draft.session.visibility ? { visibility: draft.session.visibility } : {}),
         ...(metrics.eventCount !== undefined ? { eventCount: metrics.eventCount } : {}),

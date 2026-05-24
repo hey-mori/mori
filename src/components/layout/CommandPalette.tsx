@@ -255,9 +255,7 @@ function safeListSessions() {
   try {
     // Match the sidebar's "real first, demos as fallback" rule so the
     // palette and the visible list never disagree about what's there.
-    return mergeDemoSessionSummaries(loadStoredSessionSummaries()).filter(
-      (summary) => !summary.archivedAt,
-    );
+    return mergeDemoSessionSummaries(loadStoredSessionSummaries());
   } catch {
     return [];
   }

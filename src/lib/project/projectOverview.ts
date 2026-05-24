@@ -21,7 +21,6 @@ export type ProjectSessionRow = {
   title: string;
   /** Sort timestamp — `startedAt` when present, else `savedAt`. */
   timestamp: string;
-  archived: boolean;
   status: StoredSessionSummary["status"];
   eventCount?: number;
 };
@@ -43,7 +42,6 @@ export type ProjectOverview = {
   stats: {
     sessions: number;
     activeSessions: number;
-    archivedSessions: number;
     totalEvents: number;
     /** ISO timestamp of the project's most recent activity, or null. */
     lastActivity: string | null;
@@ -80,21 +78,17 @@ export function buildProjectOverview(input: BuildProjectOverviewInput): ProjectO
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
 
-  const activeRows = rows.filter((row) => !row.archived);
-  const archivedRows = rows.filter((row) => row.archived);
-
   return {
     key: input.projectKey,
     shortName: shortName(input.projectKey),
     fullPath: input.projectKey,
     stats: {
       sessions: rows.length,
-      activeSessions: activeRows.length,
-      archivedSessions: archivedRows.length,
+      activeSessions: rows.length,
       totalEvents: rows.reduce((sum, row) => sum + (row.eventCount ?? 0), 0),
       lastActivity: rows[0]?.timestamp ?? null,
     },
-    groups: groupByRecency(activeRows, now),
+    groups: groupByRecency(rows, now),
   };
 }
 
@@ -103,7 +97,6 @@ function toRow(summary: StoredSessionSummary): ProjectSessionRow {
     sessionId: summary.sessionId,
     title: summary.title?.trim() || "제목 없음",
     timestamp: summary.startedAt || summary.savedAt,
-    archived: Boolean(summary.archivedAt),
     status: summary.status,
     eventCount: summary.eventCount,
   };

@@ -10,12 +10,10 @@ import type { StoredSessionSummary } from "../storage/storageTypes";
  * accumulates many small sessions. The Workspace is the first-class place to
  * see them all, grouped by their source project (`sourceLabel`, e.g. the
  * Claude project path), open one, and tidy them with safe lifecycle actions
- * (rename / archive). This module turns the flat list of stored session
- * summaries plus the active session into that grouped, filterable model.
+ * (rename). This module turns the flat list of stored session summaries plus
+ * the active session into that grouped, filterable model.
  *
- * It is a pure transform: it never invents sessions and never mutates
- * storage. Archiving is read from the additive `archivedAt` field, so the
- * default list hides archived sessions while the archive filter reveals them.
+ * It is a pure transform: it never invents sessions and never mutates storage.
  */
 
 /** How a session entered Mori — drives the origin chip. */
@@ -24,23 +22,18 @@ export type SessionOrigin = "imported" | "manual" | "demo";
 /** Which sessions the user wants to see. */
 export type SessionOriginFilter = "all" | "imported" | "manual";
 
-/** Whether to show active sessions, archived sessions, or both. */
-export type SessionArchiveFilter = "active" | "archived" | "all";
-
 /** Sort order for the session list. */
 export type SessionSort = "recent" | "title";
 
 export type SessionsBrowserFilters = {
   query: string;
   origin: SessionOriginFilter;
-  archive: SessionArchiveFilter;
   sort: SessionSort;
 };
 
 export const DEFAULT_SESSIONS_BROWSER_FILTERS: SessionsBrowserFilters = {
   query: "",
   origin: "all",
-  archive: "active",
   sort: "recent",
 };
 
@@ -60,7 +53,6 @@ export type SessionRow = {
   /** Honest work-span descriptor ("2시간 45분" / "5월 21일"), never a clock. */
   spanLabel: string | null;
   isActive: boolean;
-  isArchived: boolean;
 };
 
 export type SessionProjectGroup = {
@@ -79,9 +71,7 @@ export type SessionsBrowserModel = {
   visibleCount: number;
   /** Total stored + active sessions before filtering (for "n / m" copy). */
   totalCount: number;
-  /** How many sessions are archived (across all origins). */
-  archivedCount: number;
-  /** Whether any active (non-archived) session exists at all. */
+  /** Whether any session exists at all. */
   hasAnySession: boolean;
   /**
    * How many real (non-demo) sessions exist before filtering. Zero means the
@@ -143,13 +133,11 @@ export function buildSessionsBrowserModel(
       endedAt: active.endedAt,
       spanLabel: spanLabel(active.startedAt ?? undefined, active.endedAt ?? undefined),
       isActive: true,
-      isArchived: false,
     });
   }
 
   const totalCount = rows.length;
-  const archivedCount = rows.filter((row) => row.isArchived).length;
-  const hasAnySession = rows.some((row) => !row.isArchived);
+  const hasAnySession = rows.length > 0;
   const realSessionCount = rows.filter((row) => row.origin !== "demo").length;
 
   const filtered = rows.filter((row) => matchesFilters(row, filters));
@@ -159,7 +147,6 @@ export function buildSessionsBrowserModel(
     groups: groupRows(sorted),
     visibleCount: sorted.length,
     totalCount,
-    archivedCount,
     hasAnySession,
     realSessionCount,
   };
@@ -184,7 +171,6 @@ function rowFromStored(
     // session's start date, which `spanLabel` renders as a single-day label.
     spanLabel: spanLabel(startedAt ?? undefined, undefined),
     isActive: entry.sessionId === activeSessionId,
-    isArchived: Boolean(entry.archivedAt),
   };
 }
 
@@ -193,9 +179,6 @@ function originFromSourceLabel(sourceLabel: string | null): SessionOrigin {
 }
 
 function matchesFilters(row: SessionRow, filters: SessionsBrowserFilters): boolean {
-  if (filters.archive === "active" && row.isArchived) return false;
-  if (filters.archive === "archived" && !row.isArchived) return false;
-
   if (filters.origin === "imported" && row.origin !== "imported") return false;
   if (filters.origin === "manual" && row.origin === "imported") return false;
 

@@ -1,5 +1,4 @@
 import {
-  Archive,
   CalendarClock,
   ChevronDown,
   ChevronRight,
@@ -26,7 +25,6 @@ import {
   groupSidebarRows,
   shortProjectLabel,
   toSidebarRow,
-  type SidebarArchiveFilter,
   type SidebarGroupingMode,
   type SidebarSessionGroup,
   type SidebarSessionRow,
@@ -35,10 +33,6 @@ import {
   loadGroupingPreference,
   saveGroupingPreference,
 } from "../../lib/sidebar/groupingPreference";
-import {
-  loadArchivePreference,
-  saveArchivePreference,
-} from "../../lib/sidebar/archivePreference";
 import {
   loadCollapsedProjects,
   saveCollapsedProjects,
@@ -124,13 +118,6 @@ export function Sidebar({
     saveGroupingPreference(mode);
   };
   const openProject = useMoriAppStore((state) => state.openProject);
-  const [archiveFilter, setArchiveFilterState] = useState<SidebarArchiveFilter>(
-    () => loadArchivePreference(),
-  );
-  const setArchiveFilter = (filter: SidebarArchiveFilter) => {
-    setArchiveFilterState(filter);
-    saveArchivePreference(filter);
-  };
   // Per-project collapse state for the project-tree mode. Stored as a set
   // of collapsed labels so the default ("everything expanded") needs no
   // persistence — we only remember explicit closes.
@@ -158,19 +145,8 @@ export function Sidebar({
     () => mergeDemoSessionSummaries(summaries).map(toSidebarRow),
     [summaries],
   );
-  const archivedCount = useMemo(
-    () => allRows.filter((row) => row.archived).length,
-    [allRows],
-  );
-  const rows = useMemo<SidebarSessionRow[]>(
-    () =>
-      archiveFilter === "all"
-        ? allRows
-        : allRows.filter((row) => !row.archived),
-    [allRows, archiveFilter],
-  );
 
-  const filtered = useMemo(() => filterSidebarRows(rows, query), [rows, query]);
+  const filtered = useMemo(() => filterSidebarRows(allRows, query), [allRows, query]);
   const groups = useMemo(
     () => groupSidebarRows(filtered, Date.now(), groupingMode),
     [filtered, groupingMode],
@@ -309,40 +285,15 @@ export function Sidebar({
             <FolderGit2 size={13} aria-hidden="true" />
           )}
         </button>
-        {archivedCount > 0 ? (
-          <button
-            type="button"
-            className={`sidebar-grouping-toggle${archiveFilter === "all" ? " is-active" : ""}`}
-            onClick={() =>
-              setArchiveFilter(archiveFilter === "all" ? "active" : "all")
-            }
-            aria-pressed={archiveFilter === "all"}
-            aria-label={
-              archiveFilter === "all"
-                ? "보관된 세션 숨기기"
-                : `보관된 세션 ${archivedCount}건 보기`
-            }
-            title={
-              archiveFilter === "all"
-                ? "보관된 세션도 표시 중 — 누르면 숨김"
-                : `보관된 ${archivedCount}건 — 누르면 목록에 표시`
-            }
-          >
-            <Archive size={13} aria-hidden="true" />
-          </button>
-        ) : null}
       </div>
 
       <div className="sidebar-list mori-scroll">
-        {rows.length === 0 ? (
+        {allRows.length === 0 ? (
           <SidebarEmpty onImport={() => onNavigate("connections")} />
         ) : filtered.length === 0 ? (
           <p className="sidebar-empty-search">검색 결과가 없습니다.</p>
         ) : (
           groups.map((group) => {
-            // Project-mode rows render as a collapsible folder; recency /
-            // archived stay as the existing flat group so today / yesterday
-            // / 보관됨 do not pick up an unrelated chevron control.
             const isProject =
               group.bucket === "project" || group.bucket === "unsourced";
             if (isProject) {
@@ -372,7 +323,6 @@ export function Sidebar({
                 key={`${group.bucket}-${group.label}`}
                 label={group.label}
                 rows={group.rows}
-                archivedBucket={group.bucket === "archived"}
                 activeSessionId={activeSessionId}
                 onSelect={handleSwitch}
               />
@@ -497,18 +447,16 @@ function ProjectFolder({
 function SessionGroup({
   label,
   rows,
-  archivedBucket,
   activeSessionId,
   onSelect,
 }: {
   label: string;
   rows: SidebarSessionRow[];
-  archivedBucket: boolean;
   activeSessionId: string | null;
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className={`sidebar-group${archivedBucket ? " is-archived" : ""}`}>
+    <div className="sidebar-group">
       <p className="sidebar-group-label">{label}</p>
       <ul>
         {rows.map((row) => (
