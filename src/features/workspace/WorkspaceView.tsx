@@ -23,7 +23,10 @@ import {
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { describeWorkspaceSessionStatus } from "../../lib/workspace/workspaceSummary";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
-import { shortProjectLabel } from "../../lib/sidebar/sessionList";
+import {
+  formatSidebarRelative,
+  shortProjectLabel,
+} from "../../lib/sidebar/sessionList";
 import {
   DEFAULT_SESSIONS_BROWSER_FILTERS,
   buildSessionsBrowserModel,
@@ -318,8 +321,13 @@ function SessionRowItem({
           <span className="workspace-row-meta">
             <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
             {row.isActive ? <span className="workspace-row-active-dot">진행 중</span> : null}
-            {row.spanLabel ? (
-              <span className="workspace-row-span">{row.spanLabel}</span>
+            {row.startedAt || row.savedAt ? (
+              <span
+                className="workspace-row-span"
+                title={row.spanLabel ?? undefined}
+              >
+                {formatSidebarRelative(row.startedAt ?? row.savedAt ?? "")}
+              </span>
             ) : null}
           </span>
         </div>
