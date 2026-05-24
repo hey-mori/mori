@@ -17610,44 +17610,55 @@ pre {
 
 .workspace-groups {
   display: grid;
-  gap: var(--mori-space-8);
+  gap: 22px;
 }
 
 .workspace-group {
   display: grid;
-  gap: var(--mori-space-3);
+  gap: 8px;
 }
 
 .workspace-group-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--mori-space-3);
-  padding-bottom: var(--mori-space-2);
+  padding: 4px 4px 6px;
   border-bottom: 1px solid var(--mori-border);
 }
 
 .workspace-group-title {
   display: inline-flex;
-  align-items: center;
-  gap: var(--mori-space-2);
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
-  font-size: var(--mori-font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--mori-text-muted-2);
+  color: var(--text);
 }
 
 .workspace-group-title svg {
   flex-shrink: 0;
-  color: var(--mori-text-muted-2);
+  color: var(--muted);
+  transform: translateY(2px);
 }
 
-.workspace-group-title span {
+.workspace-group-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.workspace-group-path {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* ── Session rows ─────────────────────────────────────────────────────── */
@@ -17657,16 +17668,16 @@ pre {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: var(--mori-space-2);
+  gap: 4px;
 }
 
 .workspace-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--mori-space-5);
-  min-height: 48px;
-  padding: var(--mori-space-3) var(--mori-space-5);
+  gap: 16px;
+  min-height: 40px;
+  padding: 8px 14px;
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-md);
   background: var(--mori-surface);

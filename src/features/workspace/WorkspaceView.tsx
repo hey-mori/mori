@@ -23,6 +23,7 @@ import {
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { describeWorkspaceSessionStatus } from "../../lib/workspace/workspaceSummary";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
+import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import {
   DEFAULT_SESSIONS_BROWSER_FILTERS,
   buildSessionsBrowserModel,
@@ -227,9 +228,15 @@ export function WorkspaceView() {
           {model.groups.map((group) => (
             <section key={group.key} className="workspace-group" aria-label={group.label}>
               <header className="workspace-group-head">
-                <span className="workspace-group-title" title={group.label}>
+                <span
+                  className="workspace-group-title"
+                  title={group.label}
+                >
                   <FolderGit2 size={13} aria-hidden="true" />
-                  <span>{group.label}</span>
+                  <span className="workspace-group-name">
+                    {shortProjectLabel(group.label)}
+                  </span>
+                  <span className="workspace-group-path">{group.label}</span>
                 </span>
                 <Badge tone="gray">{group.sessions.length}개</Badge>
               </header>
