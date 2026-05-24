@@ -414,24 +414,33 @@ export function MemoryView() {
 
           <ProjectMemoryWarningsStrip warnings={viewModel.warnings} />
 
-          <DecisionTimelineCard timeline={decisionTimeline} />
+          <div className="memory-core-grid">
+            <AcceptedMemoriesCard
+              memories={acceptedMemories}
+              reviewActionCount={reviewActions.length}
+              storageSource={memoryStorageSource}
+              storageFellBack={memoryStorageFellBack}
+              loading={memoriesLoading}
+              onSelectMemory={setSelectedMemoryId}
+              selectedMemoryId={selectedMemoryId}
+            />
 
-          <AcceptedMemoriesCard
-            memories={acceptedMemories}
-            reviewActionCount={reviewActions.length}
-            storageSource={memoryStorageSource}
-            storageFellBack={memoryStorageFellBack}
-            loading={memoriesLoading}
-            onSelectMemory={setSelectedMemoryId}
-            selectedMemoryId={selectedMemoryId}
-          />
+            <ConsolidationPreviewCard
+              state={consolidationState}
+              onOpenReview={() => setMemoryTab("consolidation")}
+            />
+          </div>
 
-          <RecentSessionsList
-            sessions={savedSessions}
-            loadStatusBySessionId={loadStatusBySessionId}
-            onOpenSession={handleOpenSession}
-            onStartNewSession={() => setCurrentView("start")}
-          />
+          <div className="memory-context-grid">
+            <DecisionTimelineCard timeline={decisionTimeline} />
+
+            <RecentSessionsList
+              sessions={savedSessions}
+              loadStatusBySessionId={loadStatusBySessionId}
+              onOpenSession={handleOpenSession}
+              onStartNewSession={() => setCurrentView("start")}
+            />
+          </div>
 
           {/* Secondary analysis / tools tucked behind one borderless disclosure so
               the first screen stays calm — these are detail surfaces, not the
@@ -442,11 +451,6 @@ export function MemoryView() {
               메모리 분석 · 도구
             </summary>
             <div className="memory-advanced-body">
-              <ConsolidationPreviewCard
-                state={consolidationState}
-                onOpenReview={() => setMemoryTab("consolidation")}
-              />
-
               <div className="memory-grid-two">
                 <KeyEvidenceCard rows={viewModel.keyEvidence} />
                 <RecurringIssuesCard

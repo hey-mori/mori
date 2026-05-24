@@ -1320,6 +1320,22 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22), 0 3px 10px rgba(0, 0, 0, 0.16);
 }
 
+[data-mori-theme="nightLake"] .timeline-density-switch,
+[data-mori-theme="nightLake"] .timeline-gap-marker span,
+[data-mori-theme="nightLake"] .inspector-meta-strip span.has-value {
+  background: var(--mori-surface);
+  border-color: var(--mori-border);
+  color: var(--mori-text);
+}
+
+[data-mori-theme="nightLake"] .inspector-meta-strip span,
+[data-mori-theme="nightLake"] .event-card-signals span,
+[data-mori-theme="nightLake"] .conversation-turn-badge.is-activity {
+  background: var(--mori-surface-subtle);
+  border-color: var(--mori-border);
+  color: var(--mori-text-muted);
+}
+
 /* ─── Review ─────────────────────────────────────────────────────────────── */
 [data-mori-theme="nightLake"] .review-tabs {
   background: var(--mori-surface);

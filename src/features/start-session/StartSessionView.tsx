@@ -202,6 +202,32 @@ export function StartSessionView() {
         />
       }
     >
+      <section className="start-entry-strip" aria-label="세션 시작 방식">
+        <button
+          type="button"
+          className="start-entry-card is-primary"
+          onClick={() => setCurrentView("connections")}
+        >
+          <span className="start-entry-icon">
+            <PlugZap size={16} aria-hidden="true" />
+          </span>
+          <span className="start-entry-copy">
+            <strong>가져오기로 시작</strong>
+            <small>Claude/Codex/OpenCode 작업을 골라 세션과 증거를 함께 만듭니다.</small>
+          </span>
+          <ArrowRight size={13} aria-hidden="true" />
+        </button>
+        <div className="start-entry-card">
+          <span className="start-entry-icon">
+            <FilePlus2 size={16} aria-hidden="true" />
+          </span>
+          <span className="start-entry-copy">
+            <strong>빈 세션 만들기</strong>
+            <small>먼저 컨테이너를 만든 뒤 Evidence 탭에서 소스를 붙입니다.</small>
+          </span>
+        </div>
+      </section>
+
       {hasActiveSession ? (
         <NoticeBanner
           tone="success"

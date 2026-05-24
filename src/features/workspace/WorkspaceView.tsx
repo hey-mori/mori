@@ -179,7 +179,7 @@ export function WorkspaceView() {
           />
         )
       ) : (
-        <div className="workspace-groups">
+        <div className="workspace-browser">
           {onlyDemo ? (
             <NoticeBanner
               tone="info"
@@ -196,35 +196,75 @@ export function WorkspaceView() {
               데모 세션입니다. 가져오기로 실제 세션이 들어오면 프로젝트별로 정리됩니다.
             </NoticeBanner>
           ) : null}
-          {model.groups.map((group) => (
-            <section key={group.key} className="workspace-group" aria-label={group.label}>
-              <header className="workspace-group-head">
-                <span
-                  className="workspace-group-title"
-                  title={group.label}
-                >
-                  <FolderGit2 size={13} aria-hidden="true" />
-                  <span className="workspace-group-name">
-                    {shortProjectLabel(group.label)}
+          <WorkspaceSummaryStrip
+            projectCount={model.groups.filter((group) => !group.isUnsourced).length}
+            visibleCount={model.visibleCount}
+            totalCount={model.totalCount}
+            realSessionCount={model.realSessionCount}
+            filtered={model.visibleCount !== model.totalCount}
+          />
+          <div className="workspace-groups">
+            {model.groups.map((group) => (
+              <section key={group.key} className="workspace-group" aria-label={group.label}>
+                <header className="workspace-group-head">
+                  <span
+                    className="workspace-group-title"
+                    title={group.label}
+                  >
+                    <FolderGit2 size={13} aria-hidden="true" />
+                    <span className="workspace-group-name">
+                      {shortProjectLabel(group.label)}
+                    </span>
+                    <span className="workspace-group-path">{group.label}</span>
                   </span>
-                  <span className="workspace-group-path">{group.label}</span>
-                </span>
-                <Badge tone="gray">{group.sessions.length}개</Badge>
-              </header>
-              <ul className="workspace-rows">
-                {group.sessions.map((row) => (
-                  <SessionRowItem
-                    key={row.sessionId}
-                    row={row}
-                    onOpen={() => openSession(row)}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
+                  <Badge tone="gray">{group.sessions.length}개</Badge>
+                </header>
+                <ul className="workspace-rows">
+                  {group.sessions.map((row) => (
+                    <SessionRowItem
+                      key={row.sessionId}
+                      row={row}
+                      onOpen={() => openSession(row)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         </div>
       )}
     </PageShell>
+  );
+}
+
+function WorkspaceSummaryStrip({
+  projectCount,
+  visibleCount,
+  totalCount,
+  realSessionCount,
+  filtered,
+}: {
+  projectCount: number;
+  visibleCount: number;
+  totalCount: number;
+  realSessionCount: number;
+  filtered: boolean;
+}) {
+  return (
+    <dl className="workspace-summary-strip" aria-label="세션 브라우저 요약">
+      <div>
+        <dt>프로젝트</dt>
+        <dd>{projectCount}</dd>
+      </div>
+      <div>
+        <dt>{filtered ? "표시 중" : "세션"}</dt>
+        <dd>{filtered ? `${visibleCount}/${totalCount}` : totalCount}</dd>
+      </div>
+      <div>
+        <dt>실제 세션</dt>
+        <dd>{realSessionCount}</dd>
+      </div>
+    </dl>
   );
 }
 
@@ -267,6 +307,7 @@ function SessionRowItem({
         timestamp={relative}
         status={status ? <MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge> : null}
         trailing={<ArrowRight size={13} aria-hidden="true" />}
+        density="compact"
       />
     </li>
   );

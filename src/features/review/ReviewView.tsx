@@ -406,10 +406,10 @@ export function ReviewView() {
     </>
   );
 
-  // On-demand inspector: the aside only renders once the user has explicitly
-  // selected an issue / decision / next action. First paint stays single-column
-  // so the board itself reads as the focus; clicking a card opens the detail.
-  const showAside = selection !== null;
+  // Review is an action surface: when there is a meaningful default item,
+  // show the detail rail immediately so the user sees both list and next
+  // decision context on entry. Empty sessions still stay single-column.
+  const showAside = effectiveSelection.kind !== "none";
 
   return (
     <div className="session-tab-pane session-tab-insights">

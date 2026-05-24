@@ -193,37 +193,38 @@ export function HomeView() {
               the duplicate strip on Home was redundant and pulled focus from
               the activity heatmap. */}
 
-          <section className="home-activity" aria-label="작업 활동">
-            <header className="home-activity-head">
-              <h2>작업 활동</h2>
-              <div className="home-activity-controls">
-                <MetricToggle
-                  metric={overview.resolvedMetric}
-                  availability={overview.metricAvailability}
-                  onSelect={selectMetric}
-                />
-                <span className="home-activity-sub">
-                  최근 {overview.contributionGrid.weekCount}주 · 활동 {overview.contributionGrid.activeDays}일
-                </span>
-              </div>
-            </header>
-            <ContributionHeatmap grid={overview.contributionGrid} />
-            {overview.metrics.length > 0 ? (
-              <MoriMetricStrip
-                className="home-activity-stats"
-                items={overview.metrics.map((m) => ({
-                  key: m.key,
-                  label: m.label,
-                  value: m.value,
-                  hint: m.hint,
-                }))}
-              />
-            ) : null}
-          </section>
+          <div className="home-top-grid">
+            <div className="home-main-stack">
+              <section className="home-activity" aria-label="작업 활동">
+                <header className="home-activity-head">
+                  <h2>작업 활동</h2>
+                  <div className="home-activity-controls">
+                    <MetricToggle
+                      metric={overview.resolvedMetric}
+                      availability={overview.metricAvailability}
+                      onSelect={selectMetric}
+                    />
+                    <span className="home-activity-sub">
+                      최근 {overview.contributionGrid.weekCount}주 · 활동 {overview.contributionGrid.activeDays}일
+                    </span>
+                  </div>
+                </header>
+                <ContributionHeatmap grid={overview.contributionGrid} />
+                {overview.metrics.length > 0 ? (
+                  <MoriMetricStrip
+                    className="home-activity-stats"
+                    items={overview.metrics.map((m) => ({
+                      key: m.key,
+                      label: m.label,
+                      value: m.value,
+                      hint: m.hint,
+                    }))}
+                  />
+                ) : null}
+              </section>
 
-          <div className="home-columns">
-            <section className="home-section home-recent" aria-label="최근 세션">
-              <MoriSectionHeader
+              <section className="home-section home-recent" aria-label="최근 세션">
+                <MoriSectionHeader
                   title="최근 세션"
                   action={
                     <button
@@ -236,25 +237,26 @@ export function HomeView() {
                   }
                 />
 
-              {overview.recentSessions.length > 0 ? (
-                <ul className="home-session-list">
-                  {overview.recentSessions.map((session) => (
-                    <RecentSessionRow
-                      key={session.sessionId}
-                      session={session}
-                      onOpen={() => openSessionFlow(session.sessionId)}
-                    />
-                  ))}
-                </ul>
-              ) : (
-                <EmptyState
-                  compact
-                  icon={FolderKanban}
-                  title="표시할 최근 세션이 없습니다"
-                  description="연결에서 Claude 작업을 가져오면 여기에 쌓입니다."
-                />
-              )}
-            </section>
+                {overview.recentSessions.length > 0 ? (
+                  <ul className="home-session-list">
+                    {overview.recentSessions.map((session) => (
+                      <RecentSessionRow
+                        key={session.sessionId}
+                        session={session}
+                        onOpen={() => openSessionFlow(session.sessionId)}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState
+                    compact
+                    icon={FolderKanban}
+                    title="표시할 최근 세션이 없습니다"
+                    description="연결에서 Claude 작업을 가져오면 여기에 쌓입니다."
+                  />
+                )}
+              </section>
+            </div>
 
             <aside className="home-section home-next" aria-label="다음 단계">
               <MoriSectionHeader title="다음 단계" />
@@ -267,19 +269,19 @@ export function HomeView() {
                   />
                 ))}
               </ul>
+              {overview.usagePanels.length > 0 ? (
+                <div className="home-usage-rail" aria-label="사용 현황">
+                  <MoriSectionHeader title="사용 현황" />
+                  <div className="home-usage-panels">
+                    {overview.usagePanels.map((panel) => (
+                      <UsagePanel key={panel.key} panel={panel} />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </aside>
           </div>
 
-          {overview.usagePanels.length > 0 ? (
-            <section className="home-section home-usage" aria-label="사용 현황">
-              <MoriSectionHeader title="사용 현황" />
-              <div className="home-usage-panels">
-                {overview.usagePanels.map((panel) => (
-                  <UsagePanel key={panel.key} panel={panel} />
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
       )}
     </PageShell>
@@ -339,6 +341,7 @@ function RecentSessionRow({
         trailing={<ArrowRight size={13} aria-hidden="true" />}
         onClick={onOpen}
         ariaLabel={session.title}
+        density="compact"
       />
     </li>
   );
