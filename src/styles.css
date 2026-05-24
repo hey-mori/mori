@@ -4879,11 +4879,13 @@ hr {
   height: 10px;
 }
 
-/* Two-column body: recent sessions (wide main) + next actions (rail). */
+/* Two-column body: recent sessions (wide main) + next actions (rail).
+   Narrow rail (280px) since 다음 단계 is usually a single nudge, not a
+   list — leaves more horizontal room for session row meta. */
 .home-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: var(--mori-space-9);
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--mori-space-7);
   align-items: start;
 }
 
