@@ -11003,6 +11003,13 @@ pre {
   margin-right: 4px;
 }
 
+.report-privacy-clientsafe {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
 .report-privacy-caveat {
   margin: 0;
   padding: 8px 10px;

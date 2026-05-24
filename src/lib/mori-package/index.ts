@@ -36,6 +36,12 @@ export {
   buildClientSafeMoriPackage,
   getPackageIsClientSafe,
 } from "./clientSafe";
+export {
+  buildMemoryClientSafeBreakdown,
+  classifyMemoryForClientSafe,
+  type MemoryClientSafeBreakdown,
+  type MemoryClientSafeCategory,
+} from "./memoryClientSafeBreakdown";
 export type {
   MoriPackageFileLayout,
   MoriPackageFileName,

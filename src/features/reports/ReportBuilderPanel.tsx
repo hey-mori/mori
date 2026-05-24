@@ -6,6 +6,7 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Toggle } from "../../components/ui/Toggle";
 import type { MoriMockSession } from "../../domain/types";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
+import { buildMemoryClientSafeBreakdown } from "../../lib/mori-package";
 import {
   buildReportMarkdown,
   DEFAULT_SECTIONS,
@@ -204,6 +205,7 @@ export function ReportBuilderPanel({
             <span>
               <Lock size={12} aria-hidden="true" /> 클라이언트 안전 모드
               <small>원본 텍스트 / 출처 상세 / 파일 경로 제외</small>
+              <ClientSafeBadge memories={acceptedMemories} />
             </span>
             <Toggle
               active={privacy.clientSafe}
@@ -273,5 +275,43 @@ export function ReportBuilderPanel({
         </p>
       </section>
     </aside>
+  );
+}
+
+/**
+ * Inline summary under the "클라이언트 안전 모드" toggle so the user can see at
+ * a glance how the client-safe filter would slice the project's accepted
+ * memory. The breakdown mirrors `buildClientSafeMoriPackage` exactly, with
+ * separate counts for tier-excluded and sensitivity-excluded memories so the
+ * user can act on the right field. Renders nothing when there is no accepted
+ * memory yet — the toggle stays calm until there is something to filter.
+ */
+function ClientSafeBadge({
+  memories,
+}: {
+  memories?: readonly StoredAcceptedProjectMemory[];
+}) {
+  if (!memories || memories.length === 0) return null;
+  const breakdown = buildMemoryClientSafeBreakdown(memories);
+  if (breakdown.included === 0 && breakdown.totalExcluded === 0) return null;
+  const exclusionDetail: string[] = [];
+  if (breakdown.excludedTier > 0) {
+    exclusionDetail.push(`팀/개인 등급 ${breakdown.excludedTier}`);
+  }
+  if (breakdown.excludedSensitive > 0) {
+    exclusionDetail.push(`민감 ${breakdown.excludedSensitive}`);
+  }
+  return (
+    <span className="report-privacy-clientsafe">
+      <Badge tone="green">공유 가능 {breakdown.included}</Badge>
+      {breakdown.totalExcluded > 0 ? (
+        <Badge
+          tone="gray"
+          title={exclusionDetail.length > 0 ? exclusionDetail.join(" · ") : undefined}
+        >
+          제외 {breakdown.totalExcluded}
+        </Badge>
+      ) : null}
+    </span>
   );
 }
