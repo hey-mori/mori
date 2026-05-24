@@ -5036,7 +5036,7 @@ hr {
    widgets — every cell and number traces to a stored session. */
 .home-dashboard {
   display: grid;
-  gap: var(--mori-space-6);
+  gap: var(--mori-space-5);
 }
 
 .home-demo-note {
@@ -5044,9 +5044,9 @@ hr {
   align-items: center;
   gap: var(--mori-space-3);
   margin: 0;
-  padding: var(--mori-space-4) var(--mori-space-6);
+  padding: var(--mori-space-2) var(--mori-space-4);
   border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-lg);
+  border-radius: var(--mori-radius-md);
   background: var(--mori-surface-subtle);
   color: var(--mori-text-muted);
   font-size: var(--mori-font-size-sm);
@@ -5154,8 +5154,8 @@ hr {
    so the card doesn't read as mostly whitespace around a small heatmap. */
 .home-activity {
   display: grid;
-  gap: var(--mori-space-4);
-  padding: var(--mori-space-5) var(--mori-space-6);
+  gap: var(--mori-space-3);
+  padding: var(--mori-space-4) var(--mori-space-5);
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-lg);
   background: var(--mori-surface);
@@ -5371,7 +5371,7 @@ hr {
 .home-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  gap: var(--mori-space-6);
+  gap: var(--mori-space-5);
   align-items: start;
 }
 
@@ -5414,24 +5414,30 @@ hr {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--mori-space-2);
+  gap: 0;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  overflow: hidden;
+}
+
+.home-session-list > li + li {
+  border-top: 1px solid var(--mori-border);
 }
 
 .home-session-row {
   display: flex;
   align-items: center;
-  gap: var(--mori-space-5);
+  gap: var(--mori-space-3);
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-md);
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 0;
   background: var(--mori-surface);
   text-align: left;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition: background 120ms ease;
 }
 
 .home-session-row:hover {
-  border-color: var(--mori-border-strong);
   background: var(--mori-surface-subtle);
 }
 
@@ -5439,10 +5445,10 @@ hr {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 5px;
   background: var(--mori-accent-soft);
   color: var(--mori-accent);
 }
@@ -5521,24 +5527,30 @@ hr {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--mori-space-2);
+  gap: 0;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  overflow: hidden;
+}
+
+.home-next-list > li + li {
+  border-top: 1px solid var(--mori-border);
 }
 
 .home-next-trigger {
   display: flex;
   align-items: center;
-  gap: var(--mori-space-4);
+  gap: var(--mori-space-3);
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-md);
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 0;
   background: var(--mori-surface);
   text-align: left;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition: background 120ms ease;
 }
 
 .home-next-trigger:hover {
-  border-color: var(--mori-border-strong);
   background: var(--mori-surface-subtle);
 }
 
@@ -5546,10 +5558,10 @@ hr {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: 5px;
   background: var(--mori-surface-subtle);
   color: var(--mori-text-muted);
 }
@@ -5608,8 +5620,8 @@ hr {
 .home-usage-panels {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--mori-space-7);
-  padding: var(--mori-space-6) var(--mori-space-7);
+  gap: var(--mori-space-5);
+  padding: var(--mori-space-4) var(--mori-space-5);
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-lg);
   background: var(--mori-surface);
@@ -8314,12 +8326,11 @@ pre {
 
 .review-issue-board {
   display: grid;
-  gap: 12px;
-  padding: 14px 16px 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: white;
-  box-shadow: var(--shadow-soft);
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface);
 }
 
 /* Issue Garden filter bar */
@@ -8518,26 +8529,25 @@ pre {
 /* Issue card */
 
 .review-issue-card {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: white;
-  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface-subtle);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .review-issue-card:hover {
-  border-color: var(--line-strong);
-  transform: translateY(-1px);
+  border-color: var(--mori-border-strong);
 }
 
 .review-issue-card.is-selected {
-  border-color: var(--purple);
-  box-shadow: 0 8px 22px rgba(98, 70, 245, 0.14);
+  border-color: var(--mori-accent);
+  box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.1);
 }
 
 .review-issue-card-body {
   display: grid;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: 5px;
+  padding: 8px 10px;
   border: 0;
   background: transparent;
   text-align: left;
@@ -11518,7 +11528,7 @@ pre {
 
 .memory-main {
   display: grid;
-  gap: var(--mori-space-6);
+  gap: var(--mori-space-5);
   min-width: 0;
 }
 
@@ -11617,8 +11627,8 @@ pre {
    than card-on-card. */
 .memory-hero {
   display: grid;
-  gap: var(--mori-space-5);
-  padding: 0 0 var(--mori-space-3);
+  gap: var(--mori-space-4);
+  padding: 0;
 }
 
 .memory-hero-head {
@@ -11684,7 +11694,7 @@ pre {
 .memory-hero-stat {
   display: grid;
   gap: 2px;
-  padding: var(--mori-space-4) var(--mori-space-5);
+  padding: var(--mori-space-3) var(--mori-space-4);
   background: var(--panel);
 }
 
@@ -14086,8 +14096,8 @@ pre {
 
 .settings-section {
   display: grid;
-  gap: 12px;
-  padding-bottom: 14px;
+  gap: 10px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -18368,7 +18378,7 @@ pre {
 
 .workspace-group {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .workspace-group-head {
@@ -18376,8 +18386,8 @@ pre {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--mori-space-3);
-  padding: 4px 4px 6px;
-  border-bottom: 1px solid var(--mori-border);
+  padding: 2px 2px 4px;
+  margin-bottom: 0;
 }
 
 .workspace-group-title {
@@ -18421,7 +18431,14 @@ pre {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: var(--mori-space-2);
+  gap: 0;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  overflow: hidden;
+}
+
+.workspace-rows > li + li {
+  border-top: 1px solid var(--mori-border);
 }
 
 .workspace-row {
@@ -18429,36 +18446,31 @@ pre {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 42px;
-  padding: 8px 12px;
-  border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-md);
+  min-height: 40px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 0;
   background: var(--mori-surface);
   cursor: pointer;
-  transition: border-color var(--mori-transition-fast),
-    background-color var(--mori-transition-fast);
+  transition: background-color var(--mori-transition-fast);
 }
 
 .workspace-row:hover {
-  border-color: var(--mori-border-strong);
   background: var(--mori-surface-subtle);
 }
 
 .workspace-row:focus-visible {
   outline: none;
-  border-color: var(--mori-border-focus);
-  box-shadow: 0 0 0 3px var(--mori-accent-soft);
+  box-shadow: inset 0 0 0 2px var(--mori-accent-soft);
 }
 
 .workspace-row.is-selected {
-  border-color: var(--mori-border-strong);
   background: var(--mori-surface-subtle);
 }
 
-/* Active session row — soft lavender fill, no bar / border accent. */
+/* Active session row — soft lavender fill. */
 .workspace-row.is-active {
   background: var(--purple-50);
-  border-color: transparent;
 }
 
 .workspace-row.is-active .workspace-row-title {
@@ -19045,7 +19057,7 @@ pre {
 
 .project-session-groups {
   display: grid;
-  gap: var(--mori-space-6);
+  gap: var(--mori-space-5);
 }
 
 .project-session-group ul {
@@ -19053,7 +19065,14 @@ pre {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--mori-space-2);
+  gap: 0;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  overflow: hidden;
+}
+
+.project-session-group ul > li + li {
+  border-top: 1px solid var(--mori-border);
 }
 
 .project-session-group-label {
@@ -19063,62 +19082,6 @@ pre {
   letter-spacing: 0;
   color: var(--muted-2);
   text-transform: none;
-}
-
-.project-session-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--mori-radius-md);
-  background: var(--panel);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.1s ease, background-color 0.1s ease;
-}
-
-.project-session-row:hover {
-  border-color: var(--line-strong);
-  background: var(--gray-50);
-}
-
-.project-session-row.is-active {
-  background: var(--purple-50);
-  border-color: transparent;
-}
-
-.project-session-titles {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.project-session-titles strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.project-session-meta {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.project-session-arrow {
-  color: var(--muted-2);
-  flex-shrink: 0;
-}
-
-.project-session-row:hover .project-session-arrow,
-.project-session-row.is-active .project-session-arrow {
-  color: var(--purple);
 }
 
 /* ─── MoriListRow ─────────────────────────────────────────────────────────── */

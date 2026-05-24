@@ -9,6 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
+import { MoriListRow } from "../../components/ui/MoriListRow";
+import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -133,30 +135,37 @@ export function ProjectView() {
         </div>
       </header>
 
-      <dl className="project-stats mori-metric-strip">
-        <ProjectStat
-          label="전체 세션"
-          value={overview.stats.sessions}
-          hint={`${overview.stats.activeSessions}건 활성 · ${overview.stats.archivedSessions}건 보관`}
-        />
-        <ProjectStat
-          label="활성 세션"
-          value={overview.stats.activeSessions}
-          hint="보관되지 않은 세션"
-        />
-        <ProjectStat
-          label="보관 세션"
-          value={overview.stats.archivedSessions}
-          hint="목록 하단으로 정리됨"
-        />
-        <ProjectStat
-          label="총 이벤트"
-          value={overview.stats.totalEvents}
-          hint={overview.stats.lastActivity
-            ? `최근 활동 ${formatSidebarRelative(overview.stats.lastActivity)}`
-            : "최근 활동 기록 없음"}
-        />
-      </dl>
+      <MoriMetricStrip
+        className="project-stats"
+        items={[
+          {
+            key: "sessions",
+            label: "전체 세션",
+            value: overview.stats.sessions,
+            hint: `${overview.stats.activeSessions}건 활성 · ${overview.stats.archivedSessions}건 보관`,
+          },
+          {
+            key: "active",
+            label: "활성 세션",
+            value: overview.stats.activeSessions,
+            hint: "보관되지 않은 세션",
+          },
+          {
+            key: "archived",
+            label: "보관 세션",
+            value: overview.stats.archivedSessions,
+            hint: "목록 하단으로 정리됨",
+          },
+          {
+            key: "events",
+            label: "총 이벤트",
+            value: overview.stats.totalEvents,
+            hint: overview.stats.lastActivity
+              ? `최근 활동 ${formatSidebarRelative(overview.stats.lastActivity)}`
+              : "최근 활동 기록 없음",
+          },
+        ]}
+      />
 
       <section className="project-sessions mori-section" aria-label="프로젝트 세션">
         <MoriSectionHeader
@@ -203,28 +212,6 @@ export function ProjectView() {
   );
 }
 
-function ProjectStat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: number;
-  hint: string;
-}) {
-  return (
-    <div className="project-stat">
-      <dd>
-        <strong>{value}</strong>
-      </dd>
-      <dt>
-        <span>{label}</span>
-        <small>{hint}</small>
-      </dt>
-    </div>
-  );
-}
-
 function ProjectSessionRowItem({
   row,
   active,
@@ -236,21 +223,19 @@ function ProjectSessionRowItem({
 }) {
   return (
     <li>
-      <button
-        type="button"
-        className={`project-session-row mori-list-row${active ? " is-active" : ""}`}
+      <MoriListRow
+        selected={active}
         onClick={onOpen}
-        aria-current={active ? "true" : undefined}
-      >
-        <div className="project-session-titles">
-          <strong>{row.title}</strong>
-          <span className="project-session-meta">
+        ariaLabel={row.title}
+        title={row.title}
+        meta={
+          <span>
             {formatSidebarRelative(row.timestamp)}
             {row.eventCount ? ` · 이벤트 ${row.eventCount}건` : ""}
           </span>
-        </div>
-        <ArrowRight size={14} aria-hidden="true" className="project-session-arrow" />
-      </button>
+        }
+        trailing={<ArrowRight size={14} aria-hidden="true" />}
+      />
     </li>
   );
 }
