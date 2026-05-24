@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { SettingsSheet } from "./SettingsSheet";
+import { CommandPalette } from "./CommandPalette";
 import { useMoriAppStore } from "../../app/store";
 import {
   loadCollapsePreference,
@@ -21,6 +22,9 @@ import type { ViewKey } from "../../domain/types";
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useMoriAppStore((state) => state.navigate);
+  const toggleCommandPalette = useMoriAppStore(
+    (state) => state.toggleCommandPalette,
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Desktop-only "narrow" mode — independent from the mobile off-canvas
   // drawer state above. When collapsed, the sidebar shrinks to its icon
@@ -38,6 +42,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate(view);
     setSidebarOpen(false);
   };
+
+  // Global Cmd+K / Ctrl+K — opens the command palette from anywhere except
+  // text inputs where the user might be typing the literal "k". Mod+P
+  // ("프로젝트") is a familiar alternate from VS Code so power users from
+  // that ecosystem find it without onboarding.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const isMod = event.metaKey || event.ctrlKey;
+      if (!isMod) return;
+      const key = event.key.toLowerCase();
+      if (key !== "k" && key !== "p") return;
+      event.preventDefault();
+      toggleCommandPalette();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [toggleCommandPalette]);
 
   const shellClass = [
     "app-shell",
@@ -70,6 +91,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
       <main className="workspace">{children}</main>
       <SettingsSheet />
+      <CommandPalette
+        onToggleSidebarCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
     </div>
   );
 }

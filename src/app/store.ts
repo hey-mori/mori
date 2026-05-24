@@ -84,6 +84,12 @@ type MoriAppState = {
   settingsSheetOpen: boolean;
   /** Active segment inside the settings sheet — profile or full settings. */
   settingsSheetTab: SettingsSheetTab;
+  /**
+   * Whether the command palette (Cmd+K / Ctrl+K) is open. Lives in the store
+   * so any surface can trigger it — e.g. a "Find anything" CTA in an empty
+   * state — without having to thread a ref through the component tree.
+   */
+  commandPaletteOpen: boolean;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -121,6 +127,9 @@ type MoriAppState = {
   openSettingsSheet: (tab?: SettingsSheetTab) => void;
   closeSettingsSheet: () => void;
   setSettingsSheetTab: (tab: SettingsSheetTab) => void;
+  openCommandPalette: () => void;
+  closeCommandPalette: () => void;
+  toggleCommandPalette: () => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -141,6 +150,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   memoryTab: "overview",
   settingsSheetOpen: false,
   settingsSheetTab: "profile",
+  commandPaletteOpen: false,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -202,4 +212,8 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
     set(tab ? { settingsSheetOpen: true, settingsSheetTab: tab } : { settingsSheetOpen: true }),
   closeSettingsSheet: () => set({ settingsSheetOpen: false }),
   setSettingsSheetTab: (settingsSheetTab) => set({ settingsSheetTab }),
+  openCommandPalette: () => set({ commandPaletteOpen: true }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false }),
+  toggleCommandPalette: () =>
+    set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
 }));
