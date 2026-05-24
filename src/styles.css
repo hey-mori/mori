@@ -1062,11 +1062,12 @@ kbd {
   align-items: center;
   justify-content: center;
   width: fit-content;
-  min-height: 24px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 750;
+  min-height: 20px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
   /* A badge label is short — never let a tight flex parent wrap it
      character-by-character or crush it below its natural width. */
   white-space: nowrap;
