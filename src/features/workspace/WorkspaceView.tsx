@@ -15,6 +15,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { useMoriAppStore } from "../../app/store";
 import {
   selectSessionMode,
@@ -131,18 +132,12 @@ export function WorkspaceView() {
           label="세션 필터"
           start={
             <>
-              <label className="workspace-search mori-search-field">
-                <Search size={14} aria-hidden="true" />
-                <input
-                  type="search"
-                  value={filters.query}
-                  onChange={(event) =>
-                    setFilters((prev) => ({ ...prev, query: event.target.value }))
-                  }
-                  placeholder="제목 또는 프로젝트로 검색"
-                  aria-label="세션 검색"
-                />
-              </label>
+              <ToolbarSearch
+                value={filters.query}
+                onChange={(query) => setFilters((prev) => ({ ...prev, query }))}
+                placeholder="제목 또는 프로젝트로 검색"
+                ariaLabel="세션 검색"
+              />
               <SegmentedControl
                 ariaLabel="출처 필터"
                 value={filters.origin}

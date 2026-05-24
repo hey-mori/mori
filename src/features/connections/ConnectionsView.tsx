@@ -19,6 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
@@ -367,16 +368,13 @@ export function ConnectionsView() {
         </header>
 
         <div className="connections-sessions-toolbar">
-          <label className="connections-search mori-search-field">
-            <Search size={14} aria-hidden="true" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="제목 또는 프로젝트 경로로 검색"
-              aria-label="Claude 세션 검색"
-            />
-          </label>
+          <ToolbarSearch
+            value={query}
+            onChange={setQuery}
+            placeholder="제목 또는 프로젝트 경로로 검색"
+            ariaLabel="Claude 세션 검색"
+            className="connections-search"
+          />
           {query && filteredSessions.length < sessions.sessions.length ? (
             <small className="connections-search-meta">
               {filteredSessions.length} / {sessions.sessions.length}개 표시

@@ -14,6 +14,8 @@ import type { LucideIcon } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
+import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
+import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 import { Button } from "../../components/ui/Button";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -206,29 +208,32 @@ export function HomeView() {
             </header>
             <ContributionHeatmap grid={overview.contributionGrid} />
             {overview.metrics.length > 0 ? (
-              <dl className="home-activity-stats">
-                {overview.metrics.map((metric) => (
-                  <div className="home-activity-stat" key={metric.key}>
-                    <dt>{metric.label}</dt>
-                    <dd title={metric.hint}>{metric.value}</dd>
-                  </div>
-                ))}
-              </dl>
+              <MoriMetricStrip
+                className="home-activity-stats"
+                items={overview.metrics.map((m) => ({
+                  key: m.key,
+                  label: m.label,
+                  value: m.value,
+                  hint: m.hint,
+                }))}
+              />
             ) : null}
           </section>
 
           <div className="home-columns">
             <section className="home-section home-recent" aria-label="최근 세션">
-              <header className="home-section-head mori-section-row">
-                <h2>최근 세션</h2>
-                <button
-                  type="button"
-                  className="home-section-link"
-                  onClick={() => setCurrentView("workspace")}
-                >
-                  전체 세션 <ArrowRight size={13} aria-hidden="true" />
-                </button>
-              </header>
+              <MoriSectionHeader
+                  title="최근 세션"
+                  action={
+                    <button
+                      type="button"
+                      className="home-section-link"
+                      onClick={() => setCurrentView("workspace")}
+                    >
+                      전체 세션 <ArrowRight size={13} aria-hidden="true" />
+                    </button>
+                  }
+                />
 
               {overview.recentSessions.length > 0 ? (
                 <ul className="home-session-list">
@@ -251,9 +256,7 @@ export function HomeView() {
             </section>
 
             <aside className="home-section home-next" aria-label="다음 단계">
-              <header className="home-section-head mori-section-row">
-                <h2>다음 단계</h2>
-              </header>
+              <MoriSectionHeader title="다음 단계" />
               <ul className="home-next-list">
                 {overview.nextActions.map((action) => (
                   <NextActionRow
@@ -268,9 +271,7 @@ export function HomeView() {
 
           {overview.usagePanels.length > 0 ? (
             <section className="home-section home-usage" aria-label="사용 현황">
-              <header className="home-section-head mori-section-row">
-                <h2>사용 현황</h2>
-              </header>
+              <MoriSectionHeader title="사용 현황" />
               <div className="home-usage-panels">
                 {overview.usagePanels.map((panel) => (
                   <UsagePanel key={panel.key} panel={panel} />

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
+import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
 import { useMoriAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
@@ -158,16 +159,15 @@ export function ProjectView() {
       </dl>
 
       <section className="project-sessions mori-section" aria-label="프로젝트 세션">
-        <header className="project-section-head mori-section-row">
-          <div>
-            <h2>세션</h2>
-            <p>최근 활동 순으로 정리했습니다.</p>
-          </div>
-          <span className="project-section-count">
-            <CalendarClock size={13} aria-hidden="true" />
-            {overview.stats.activeSessions}건
-          </span>
-        </header>
+        <MoriSectionHeader
+          title="세션"
+          action={
+            <span className="project-section-count">
+              <CalendarClock size={13} aria-hidden="true" />
+              {overview.stats.activeSessions}건
+            </span>
+          }
+        />
 
         {overview.groups.length === 0 ? (
           <EmptyState
