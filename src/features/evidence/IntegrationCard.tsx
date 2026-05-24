@@ -1,17 +1,5 @@
 import {
-  Bot,
-  Boxes,
   ChevronRight,
-  Code2,
-  FileText,
-  Folder,
-  GitCommit,
-  Globe,
-  Layers,
-  MessageSquare,
-  Sparkles,
-  Terminal,
-  type LucideIcon,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
@@ -26,28 +14,7 @@ import {
   productAvailabilityFromIntegrationStatus,
 } from "../../lib/product-state/productState";
 import { getTrustDisplay, getTrustTone } from "../../lib/evidence/trust";
-
-const INTEGRATION_ICON: Record<string, LucideIcon> = {
-  manualNote: FileText,
-  url: Globe,
-  aiConversation: Bot,
-  claudeTranscript: Sparkles,
-  chatgptTranscript: Bot,
-  codexTranscript: Code2,
-  gitDiff: GitCommit,
-  tauriGitDiff: GitCommit,
-  repository: Folder,
-  terminal: Terminal,
-  fileSystem: Folder,
-  editor: Code2,
-  vscode: Code2,
-  cursor: Code2,
-  browserTab: Globe,
-  docs: FileText,
-  slack: MessageSquare,
-  notion: Layers,
-  figma: Boxes,
-};
+import { getSourceIcon } from "./sourceIcons";
 
 export function IntegrationCard({
   integration,
@@ -68,7 +35,7 @@ export function IntegrationCard({
   primaryDisabled?: boolean;
   primaryDisabledReason?: string;
 }) {
-  const Icon = INTEGRATION_ICON[integration.id] ?? FileText;
+  const Icon = getSourceIcon(integration.id);
   const isPlanned = integration.status === "planned";
   const actionLabel = getHubCardActionLabel(integration);
   const canTakeAction = Boolean(importKind) && !isPlanned && Boolean(onPrimary) && !primaryDisabled;

@@ -9,6 +9,7 @@ import {
   getConnectorSourceImportBadgeTone,
   type ConnectorSourceImportSummary,
 } from "../../lib/connectors";
+import { getSourceIcon } from "./sourceIcons";
 
 export function ImportedSourceRow({
   source,
@@ -26,6 +27,7 @@ export function ImportedSourceRow({
   onRemove?: () => void;
 }) {
   const display = getSourceDisplayStatus(source);
+  const SourceIcon = getSourceIcon(source.kind);
   const relatedEventCount = events.filter((event) => event.sourceRefs.includes(source.id)).length;
   const summaryBadge =
     importSummary && importSummary.status !== "unknown"
@@ -41,6 +43,11 @@ export function ImportedSourceRow({
       aria-current={selected ? "true" : undefined}
     >
       <MoriObjectRow
+        leading={
+          <span className={`imported-source-icon tone-${display.trustTone}`}>
+            <SourceIcon size={15} />
+          </span>
+        }
         title={source.title}
         subtitle={source.detail}
         meta={

@@ -182,6 +182,125 @@ export function EvidenceView() {
     />
   );
 
+  const hasImportedSources = importedSources.length > 0;
+
+  const sourceCatalogSection = (
+    <section
+      className={`evidence-section evidence-source-catalog${
+        hasImportedSources ? " is-secondary" : ""
+      }`}
+    >
+      <header className="evidence-section-header">
+        <div className="evidence-section-title-row">
+          <h2>{hasImportedSources ? "소스 더 추가" : "소스 추가"}</h2>
+          <HelpDisclosure label="Claude 대화를 가져오려면?" ariaLabel="Claude 가져오기 안내">
+            <p>
+              Claude Desktop · Claude Code 대화는 <strong>연결</strong> 화면에서 로컬 세션을 골라
+              한 번에 가져오는 것이 가장 빠릅니다.
+            </p>
+            <p>여기 "AI 대화" 카드는 다른 도구의 대화나 텍스트를 직접 붙여넣을 때 쓰세요.</p>
+          </HelpDisclosure>
+        </div>
+        <Badge tone="green">{availableIntegrations.length}개</Badge>
+      </header>
+      {isDemoSession ? (
+        <p className="evidence-demo-note">
+          데모 세션에서는 모든 가져오기가 비활성입니다. 새 세션을 시작하면 사용할 수 있습니다.
+        </p>
+      ) : null}
+      <div className="evidence-card-grid">
+        {availableIntegrations.map((integration) => {
+          const importKindForCard = getHubImportKind(integration.id);
+          const selected =
+            selection.kind === "integration" && selection.integrationId === integration.id;
+          return (
+            <IntegrationCard
+              key={integration.id}
+              integration={integration}
+              selected={selected}
+              importKind={importKindForCard}
+              onPrimary={() => handleIntegrationPrimary(integration.id)}
+              primaryDisabled={isDemoSession}
+              primaryDisabledReason="데모 세션에서는 비활성 — 새 세션을 시작하면 사용할 수 있습니다."
+              onInspect={() =>
+                setSelection({ kind: "integration", integrationId: integration.id })
+              }
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+
+  const importedSourcesSection = (
+    <section className="evidence-section evidence-imported-sources">
+      <header className="evidence-section-header">
+        <div>
+          <h2>가져온 소스</h2>
+        </div>
+        <Badge tone={importedSources.length ? "purple" : "gray"}>
+          {importedSources.length}개
+        </Badge>
+      </header>
+      {importedSources.length === 0 ? (
+        <EvidenceEmptyState
+          isDemo={isDemoSession}
+          onAdd={() => openImport("note")}
+        />
+      ) : (
+        <div className="imported-source-list">
+          {importedSources.map((source) => {
+            const importEntry = imports.find((entry) => entry.source.id === source.id);
+            const selected = selection.kind === "source" && selection.sourceId === source.id;
+            return (
+              <ImportedSourceRow
+                key={source.id}
+                source={source}
+                events={view.events}
+                selected={selected}
+                importSummary={importEntry?.importSummary}
+                onSelect={() => setSelection({ kind: "source", sourceId: source.id })}
+                onRemove={
+                  importEntry && !isDemoSession
+                    ? () => {
+                        removeImport(importEntry.id);
+                        if (selected) setSelection({ kind: "empty" });
+                      }
+                    : undefined
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+
+  const quickPassSection =
+    mode === "draft" ? (
+      <QuickPassControl
+        status={analysisStatus}
+        providerLabel={analysisProviderLabel}
+        providerName={analysis?.providerName ?? null}
+        error={analysisError}
+        canRun={imports.length > 0 && analysisStatus !== "running"}
+        hasAnalysis={hasAnalysis}
+        fallbackUsed={analysisFallbackUsed}
+        summary={analysis?.summary.sessionSummary ?? null}
+        issueCount={analysis?.issues.length ?? 0}
+        decisionCount={analysis?.decisions.length ?? 0}
+        nextActionCount={analysis?.nextActions.length ?? 0}
+        confidence={analysis?.confidence ?? null}
+        notes={analysis?.notes ?? []}
+        settings={analysisSettings}
+        onProviderChange={(provider) => updateAnalysisSettings({ provider })}
+        onFallbackChange={(value) => updateAnalysisSettings({ fallbackToDeterministic: value })}
+        onOpenSettings={() => setCurrentView("settings")}
+        onRun={() => runQuickPass()}
+        onClear={clearAnalysis}
+      />
+    ) : null;
+
   const body = (
     <>
       {lastApplied && importCompletion ? (
@@ -206,113 +325,9 @@ export function EvidenceView() {
         </NoticeBanner>
       ) : null}
 
-      <section className="evidence-section">
-        <header className="evidence-section-header">
-          <div className="evidence-section-title-row">
-            <h2>소스 추가</h2>
-            <HelpDisclosure label="Claude 대화를 가져오려면?" ariaLabel="Claude 가져오기 안내">
-              <p>
-                Claude Desktop · Claude Code 대화는 <strong>연결</strong> 화면에서 로컬 세션을 골라
-                한 번에 가져오는 것이 가장 빠릅니다.
-              </p>
-              <p>여기 "AI 대화" 카드는 다른 도구의 대화나 텍스트를 직접 붙여넣을 때 쓰세요.</p>
-            </HelpDisclosure>
-          </div>
-          <Badge tone="green">{availableIntegrations.length}개</Badge>
-        </header>
-        {isDemoSession ? (
-          <p className="evidence-demo-note">
-            데모 세션에서는 모든 가져오기가 비활성입니다. 새 세션을 시작하면 사용할 수 있습니다.
-          </p>
-        ) : null}
-        <div className="evidence-card-grid">
-          {availableIntegrations.map((integration) => {
-            const importKindForCard = getHubImportKind(integration.id);
-            const selected =
-              selection.kind === "integration" && selection.integrationId === integration.id;
-            return (
-              <IntegrationCard
-                key={integration.id}
-                integration={integration}
-                selected={selected}
-                importKind={importKindForCard}
-                onPrimary={() => handleIntegrationPrimary(integration.id)}
-                primaryDisabled={isDemoSession}
-                primaryDisabledReason="데모 세션에서는 비활성 — 새 세션을 시작하면 사용할 수 있습니다."
-                onInspect={() =>
-                  setSelection({ kind: "integration", integrationId: integration.id })
-                }
-              />
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="evidence-section">
-        <header className="evidence-section-header">
-          <div>
-            <h2>가져온 소스</h2>
-          </div>
-          <Badge tone={importedSources.length ? "purple" : "gray"}>
-            {importedSources.length}개
-          </Badge>
-        </header>
-        {importedSources.length === 0 ? (
-          <EvidenceEmptyState
-            isDemo={isDemoSession}
-            onAdd={() => openImport("note")}
-          />
-        ) : (
-          <div className="imported-source-list">
-            {importedSources.map((source) => {
-              const importEntry = imports.find((entry) => entry.source.id === source.id);
-              const selected = selection.kind === "source" && selection.sourceId === source.id;
-              return (
-                <ImportedSourceRow
-                  key={source.id}
-                  source={source}
-                  events={view.events}
-                  selected={selected}
-                  importSummary={importEntry?.importSummary}
-                  onSelect={() => setSelection({ kind: "source", sourceId: source.id })}
-                  onRemove={
-                    importEntry && !isDemoSession
-                      ? () => {
-                          removeImport(importEntry.id);
-                          if (selected) setSelection({ kind: "empty" });
-                        }
-                      : undefined
-                  }
-                />
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {mode === "draft" ? (
-        <QuickPassControl
-          status={analysisStatus}
-          providerLabel={analysisProviderLabel}
-          providerName={analysis?.providerName ?? null}
-          error={analysisError}
-          canRun={imports.length > 0 && analysisStatus !== "running"}
-          hasAnalysis={hasAnalysis}
-          fallbackUsed={analysisFallbackUsed}
-          summary={analysis?.summary.sessionSummary ?? null}
-          issueCount={analysis?.issues.length ?? 0}
-          decisionCount={analysis?.decisions.length ?? 0}
-          nextActionCount={analysis?.nextActions.length ?? 0}
-          confidence={analysis?.confidence ?? null}
-          notes={analysis?.notes ?? []}
-          settings={analysisSettings}
-          onProviderChange={(provider) => updateAnalysisSettings({ provider })}
-          onFallbackChange={(value) => updateAnalysisSettings({ fallbackToDeterministic: value })}
-          onOpenSettings={() => setCurrentView("settings")}
-          onRun={() => runQuickPass()}
-          onClear={clearAnalysis}
-        />
-      ) : null}
+      {hasImportedSources ? importedSourcesSection : sourceCatalogSection}
+      {quickPassSection}
+      {hasImportedSources ? sourceCatalogSection : importedSourcesSection}
 
       <MoriDrawer
         open={importOpen}
