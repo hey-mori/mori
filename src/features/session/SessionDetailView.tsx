@@ -1,7 +1,10 @@
 import { useEffect, useMemo } from "react";
 import {
+  ChevronRight,
   FileText,
+  FolderGit2,
   GanttChartSquare,
+  Layers,
   ScrollText,
   Sparkles,
 } from "lucide-react";
@@ -15,6 +18,7 @@ import {
 import { moriMockSession } from "../../domain/mock-data";
 import { buildWorkContext } from "../../lib/session/workContext";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
+import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { TimelineView } from "../timeline/TimelineView";
 import { EvidenceView } from "../evidence/EvidenceView";
 import { ReviewView } from "../review/ReviewView";
@@ -56,14 +60,17 @@ export function SessionDetailView() {
 }
 
 /**
- * Slim inline title — sits on the same row as the tab strip. Reads as a
- * label, not a banner: no background, no chips, no metric strip. The project
- * path follows as a muted breadcrumb when available so the user can tell two
- * same-titled sessions apart without leaving the workspace.
+ * Slim inline title with a breadcrumb up to the project and workspace.
+ * Reads as a real location indicator (←ish chevrons walking from
+ * 세션 워크스페이스 → project → current session) so the user can always
+ * tell how deep they are; the project crumb is clickable to jump up.
+ * No banner, no chips, no metric strip.
  */
 function SessionTitleInline() {
   const draft = useMoriSessionStore((state) => state.draft);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
+  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openProject = useMoriAppStore((state) => state.openProject);
   const context = useMemo(
     () =>
       buildWorkContext({
@@ -73,15 +80,40 @@ function SessionTitleInline() {
       }),
     [draft, analysisStatus],
   );
+  const projectLabel = context.projectLabel ?? null;
   return (
-    <div className="session-detail-title" title={context.sessionTitle}>
-      <strong>{context.sessionTitle}</strong>
-      {context.projectLabel ? (
-        <span className="session-detail-title-sub" title={context.projectLabel}>
-          {context.projectLabel}
-        </span>
+    <nav className="session-detail-breadcrumb" aria-label="현재 위치">
+      <button
+        type="button"
+        className="session-detail-crumb is-back"
+        onClick={() => setCurrentView("workspace")}
+        title="세션 워크스페이스로 돌아가기"
+      >
+        <Layers size={12} aria-hidden="true" />
+        <span>세션</span>
+      </button>
+      {projectLabel ? (
+        <>
+          <ChevronRight size={11} className="session-detail-crumb-sep" aria-hidden="true" />
+          <button
+            type="button"
+            className="session-detail-crumb"
+            onClick={() => openProject(projectLabel)}
+            title={`${projectLabel} 프로젝트 페이지로 이동`}
+          >
+            <FolderGit2 size={12} aria-hidden="true" />
+            <span>{shortProjectLabel(projectLabel)}</span>
+          </button>
+        </>
       ) : null}
-    </div>
+      <ChevronRight size={11} className="session-detail-crumb-sep" aria-hidden="true" />
+      <span
+        className="session-detail-crumb is-current"
+        title={context.sessionTitle}
+      >
+        {context.sessionTitle}
+      </span>
+    </nav>
   );
 }
 
