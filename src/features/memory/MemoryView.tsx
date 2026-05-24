@@ -4,7 +4,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
-import { Badge } from "../../components/ui/Badge";
 import { MoriDrawer } from "../../components/ui/MoriDrawer";
 import {
   selectHasRealAnalysis,
@@ -46,7 +45,6 @@ import {
   buildProjectMemoryViewModel,
 } from "../../lib/project-memory/projectMemoryViewModel";
 import {
-  getProjectMemoryDataBasisTone,
   type ProjectMemoryLoadedSession,
   type ProjectMemoryLoadedSessionStatus,
   type ProjectMemoryWarning,
@@ -364,7 +362,6 @@ export function MemoryView() {
   }
 
   const scopeLabel = scopeLabelFor(primaryScope);
-  const dataBasisTone = getProjectMemoryDataBasisTone(viewModel.dataBasis);
 
   return (
     <PageShell
@@ -373,28 +370,27 @@ export function MemoryView() {
         <ActionBar
           label="메모리 보기"
           start={
-            <>
-              <SegmentedControl
-                options={MEMORY_SEGMENTS}
-                value={memoryTab}
-                onChange={setMemoryTab}
-                ariaLabel="메모리 보기 전환"
-              />
-              {memoryTab === "overview" ? (
-                <>
-                  <Badge tone="purple">{scopeLabel}</Badge>
-                  <Badge tone={dataBasisTone}>{viewModel.dataBasisLabel}</Badge>
-                  <HelpDisclosure label="집계 범위" ariaLabel="메모리 집계 범위 설명">
-                    <MemoryScopeHelp
-                      mode={mode}
-                      sqliteAvailable={sqliteAvailable}
-                      sqliteKind={sqliteKind}
-                      savedSessionCount={savedSessions.filter((entry) => !entry.isCurrent).length}
-                    />
-                  </HelpDisclosure>
-                </>
-              ) : null}
-            </>
+            <SegmentedControl
+              options={MEMORY_SEGMENTS}
+              value={memoryTab}
+              onChange={setMemoryTab}
+              ariaLabel="메모리 보기 전환"
+            />
+          }
+          end={
+            memoryTab === "overview" ? (
+              // Scope + data-basis used to ride here too, duplicating the
+              // hero badges right below. Keep only the explanatory
+              // disclosure — it adds info instead of repeating it.
+              <HelpDisclosure label="집계 범위" ariaLabel="메모리 집계 범위 설명">
+                <MemoryScopeHelp
+                  mode={mode}
+                  sqliteAvailable={sqliteAvailable}
+                  sqliteKind={sqliteKind}
+                  savedSessionCount={savedSessions.filter((entry) => !entry.isCurrent).length}
+                />
+              </HelpDisclosure>
+            ) : undefined
           }
         />
       }

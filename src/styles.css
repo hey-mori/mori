@@ -11461,8 +11461,12 @@ pre {
 .memory-hero-stats {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  gap: 1px;
   margin: 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--line);
 }
 
 @media (max-width: 1280px) {
@@ -11477,15 +11481,15 @@ pre {
   }
 }
 
-/* Stat tiles are no longer cards — they read as a calm data strip. The
-   number sits left, the label + hint stack to its right; no background,
-   no border, no left accent — just enough breathing room. */
+/* Stat tile — the number leads, the label + hint stack below in a calm
+ * data strip with hairline separators between tiles. The hint stays
+ * visible (was display: none) so each tile carries real context — the
+ * old single-number column was the source of the "thin / empty" read. */
 .memory-hero-stat {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
-  gap: 10px;
-  padding: 4px 0;
+  gap: 2px;
+  padding: 6px 12px;
+  background: var(--panel);
 }
 
 .memory-hero-stat dt {
@@ -11495,31 +11499,41 @@ pre {
   gap: 5px;
   margin: 0;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0;
 }
 
 .memory-hero-stat dt svg {
   color: var(--purple);
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .memory-hero-stat dd {
   order: 1;
   margin: 0;
   display: grid;
+  gap: 0;
 }
 
 .memory-hero-stat strong {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text);
-  line-height: 1;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
 .memory-hero-stat small {
-  display: none;
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--muted-2);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Data-scope honesty note */
