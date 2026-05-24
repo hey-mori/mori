@@ -104,6 +104,7 @@ export function Sidebar({
   onToggleCollapsed?: () => void;
 }) {
   const currentView = useMoriAppStore((state) => state.currentView);
+  const currentProjectKey = useMoriAppStore((state) => state.currentProjectKey);
   const activeSessionId = useMoriSessionStore((state) => state.draft?.session.id ?? null);
   const source = useMoriSessionStore(selectSessionSource);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
@@ -122,6 +123,7 @@ export function Sidebar({
     setGroupingModeState(mode);
     saveGroupingPreference(mode);
   };
+  const openProject = useMoriAppStore((state) => state.openProject);
   const [archiveFilter, setArchiveFilterState] = useState<SidebarArchiveFilter>(
     () => loadArchivePreference(),
   );
@@ -325,6 +327,8 @@ export function Sidebar({
               group.bucket === "project" || group.bucket === "unsourced";
             if (isProject) {
               const collapsed = collapsedProjects.has(group.label);
+              const projectKey = group.label;
+              const canOpenProject = group.bucket === "project";
               return (
                 <ProjectFolder
                   key={`project-${group.label}`}
@@ -332,8 +336,14 @@ export function Sidebar({
                   collapsed={collapsed}
                   searching={query.trim().length > 0}
                   activeSessionId={activeSessionId}
+                  currentProjectKey={
+                    currentView === "project" ? currentProjectKey : null
+                  }
                   onSelect={handleSwitch}
                   onToggle={() => toggleProjectCollapsed(group.label)}
+                  onOpenProject={
+                    canOpenProject ? () => openProject(projectKey) : undefined
+                  }
                 />
               );
             }
@@ -401,15 +411,22 @@ function ProjectFolder({
   collapsed,
   searching,
   activeSessionId,
+  currentProjectKey,
   onSelect,
   onToggle,
+  onOpenProject,
 }: {
   group: SidebarSessionGroup;
   collapsed: boolean;
   searching: boolean;
   activeSessionId: string | null;
+  /** When the user is on a project page, the matching folder lights up. */
+  currentProjectKey: string | null;
   onSelect: (id: string) => void;
   onToggle: () => void;
+  /** Optional — when provided, clicking the folder *name* opens the project
+   *  page. The chevron always toggles open/closed regardless. */
+  onOpenProject?: () => void;
 }) {
   const isOpen = searching ? true : !collapsed;
   const displayLabel = shortProjectLabel(group.label);
@@ -417,25 +434,46 @@ function ProjectFolder({
   const containsActive = group.rows.some(
     (row) => row.sessionId === activeSessionId,
   );
+  const isCurrentProject = currentProjectKey === group.label;
   return (
-    <div className={`sidebar-folder${isOpen ? " is-open" : ""}`}>
-      <button
-        type="button"
-        className={`sidebar-folder-head${containsActive ? " has-active" : ""}`}
-        onClick={onToggle}
-        aria-expanded={isOpen}
-        aria-controls={`sidebar-folder-${encodeURIComponent(group.label)}`}
-        title={fullLabel}
+    <div
+      className={[
+        "sidebar-folder",
+        isOpen ? "is-open" : "",
+        isCurrentProject ? "is-current" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div
+        className={`sidebar-folder-head${containsActive ? " has-active" : ""}${isCurrentProject ? " is-current" : ""}`}
       >
-        {isOpen ? (
-          <ChevronDown size={12} aria-hidden="true" />
-        ) : (
-          <ChevronRight size={12} aria-hidden="true" />
-        )}
-        <FolderGit2 size={12} aria-hidden="true" />
-        <span className="sidebar-folder-name">{displayLabel}</span>
-        <span className="sidebar-folder-count">{group.rows.length}</span>
-      </button>
+        <button
+          type="button"
+          className="sidebar-folder-toggle"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          aria-controls={`sidebar-folder-${encodeURIComponent(group.label)}`}
+          aria-label={isOpen ? `${displayLabel} 접기` : `${displayLabel} 펼치기`}
+        >
+          {isOpen ? (
+            <ChevronDown size={12} aria-hidden="true" />
+          ) : (
+            <ChevronRight size={12} aria-hidden="true" />
+          )}
+        </button>
+        <button
+          type="button"
+          className="sidebar-folder-name-btn"
+          onClick={onOpenProject ?? onToggle}
+          aria-current={isCurrentProject ? "page" : undefined}
+          title={onOpenProject ? `${fullLabel} — 프로젝트 페이지 열기` : fullLabel}
+        >
+          <FolderGit2 size={12} aria-hidden="true" />
+          <span className="sidebar-folder-name">{displayLabel}</span>
+          <span className="sidebar-folder-count">{group.rows.length}</span>
+        </button>
+      </div>
       {isOpen ? (
         <ul
           id={`sidebar-folder-${encodeURIComponent(group.label)}`}

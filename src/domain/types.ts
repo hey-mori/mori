@@ -14,6 +14,8 @@ export type ViewKey =
   | "companion"
   | "connections"
   | "workspace"
+  /** Project workspace — aggregates every session that shares a sourceLabel. */
+  | "project"
   | "profile"
   | "login"
   | "security"

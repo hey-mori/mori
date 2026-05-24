@@ -318,22 +318,15 @@ button {
 }
 
 .sidebar-folder-head {
-  display: grid;
-  grid-template-columns: 12px 12px 1fr auto;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 5px 8px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
+  gap: 2px;
+  padding: 0;
   color: var(--muted);
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0;
-  cursor: pointer;
-  text-align: left;
-  transition: background-color 0.1s ease, color 0.1s ease;
+  border-radius: 7px;
 }
 
 .sidebar-folder-head:hover {
@@ -345,6 +338,55 @@ button {
   color: var(--text);
 }
 
+.sidebar-folder-head.is-current {
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.sidebar-folder-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 24px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.1s ease;
+}
+
+.sidebar-folder-toggle:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-folder-name-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px 4px 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.sidebar-folder-name-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-folder-head.is-current .sidebar-folder-name-btn:hover {
+  background: rgba(98, 70, 245, 0.08);
+}
+
 .sidebar-folder-head svg {
   color: currentColor;
   opacity: 0.85;
@@ -352,6 +394,7 @@ button {
 
 .sidebar-folder-name {
   min-width: 0;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -364,11 +407,16 @@ button {
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--gray-50);
+  flex-shrink: 0;
 }
 
 .sidebar-folder.is-open .sidebar-folder-count {
   color: var(--purple);
   background: var(--purple-50);
+}
+
+.sidebar-folder.is-current > .sidebar-folder-head .sidebar-folder-count {
+  background: white;
 }
 
 .sidebar-folder-body {
@@ -18220,4 +18268,236 @@ pre {
   font-size: 12.5px;
   color: var(--muted);
   text-align: center;
+}
+
+/* ─── Project page ──────────────────────────────────────────────────────
+   Project workspace — single-column dense page. Hero, four-stat strip
+   framed with hairlines (matches the memory hero pattern), sessions
+   grouped by recency. Sized to match the home page's breathing room so
+   the sidebar / memory / project surfaces feel like one family. */
+
+.project-page .page-shell-content {
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+.project-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.project-hero-titles {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.project-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 2px 8px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: var(--purple-50);
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.project-hero-badge svg {
+  opacity: 0.8;
+}
+
+.project-hero h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.project-hero-path {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-hero-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.project-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 22px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--line);
+}
+
+@media (max-width: 760px) {
+  .project-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.project-stat {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  background: var(--panel);
+}
+
+.project-stat dd {
+  margin: 0;
+}
+
+.project-stat strong {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.project-stat dt {
+  display: grid;
+  gap: 2px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.project-stat dt small {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--muted-2);
+  line-height: 1.4;
+}
+
+.project-sessions {
+  margin-top: 28px;
+}
+
+.project-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.project-section-head h2 {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.project-section-head p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.project-section-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.project-session-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.project-session-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.project-session-group-label {
+  margin: 0 0 6px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--muted-2);
+  text-transform: none;
+}
+
+.project-session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.1s ease, background-color 0.1s ease;
+}
+
+.project-session-row:hover {
+  border-color: var(--line-strong);
+  background: var(--gray-50);
+}
+
+.project-session-row.is-active {
+  background: var(--purple-50);
+  border-color: transparent;
+}
+
+.project-session-titles {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.project-session-titles strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-session-meta {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.project-session-arrow {
+  color: var(--muted-2);
+  flex-shrink: 0;
+}
+
+.project-session-row:hover .project-session-arrow,
+.project-session-row.is-active .project-session-arrow {
+  color: var(--purple);
 }

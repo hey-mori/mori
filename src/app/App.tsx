@@ -39,6 +39,11 @@ const WorkspaceView = lazy(() =>
     default: m.WorkspaceView,
   })),
 );
+const ProjectView = lazy(() =>
+  import("../features/project/ProjectView").then((m) => ({
+    default: m.ProjectView,
+  })),
+);
 
 export default function App() {
   const currentView = useMoriAppStore((state) => state.currentView);
@@ -96,6 +101,7 @@ export default function App() {
           {currentView === "companion" ? <CompanionInboxView /> : null}
           {currentView === "connections" ? <ConnectionsView /> : null}
           {currentView === "workspace" ? <WorkspaceView /> : null}
+          {currentView === "project" ? <ProjectView /> : null}
         </Suspense>
       </ErrorBoundary>
     </AppShell>

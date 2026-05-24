@@ -90,6 +90,12 @@ type MoriAppState = {
    * state — without having to thread a ref through the component tree.
    */
   commandPaletteOpen: boolean;
+  /**
+   * The project key (sourceLabel) currently open in the project view. Lives
+   * here so the sidebar folder click + a future Cmd+K project command both
+   * route into the same surface without each having to thread state down.
+   */
+  currentProjectKey: string | null;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -130,6 +136,12 @@ type MoriAppState = {
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
   toggleCommandPalette: () => void;
+  /**
+   * Open the project workspace for a given project key (sourceLabel). The
+   * sidebar folder header calls this; future producers (Cmd+K, deep links)
+   * route through the same action so the surface only has one front door.
+   */
+  openProject: (projectKey: string) => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -151,6 +163,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   settingsSheetOpen: false,
   settingsSheetTab: "profile",
   commandPaletteOpen: false,
+  currentProjectKey: null,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -216,4 +229,6 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   toggleCommandPalette: () =>
     set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
+  openProject: (projectKey) =>
+    set({ currentView: "project", currentProjectKey: projectKey }),
 }));
