@@ -1,6 +1,7 @@
 import { Lock, ShieldCheck, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
+import { SettingsRow, SettingsSection, StatusPill } from "./SettingsPrimitives";
 import {
   groupPrivacyPolicyByState,
   type PrivacyPolicyRow,
@@ -13,7 +14,7 @@ const STATE_TONE: Record<PrivacyPolicyRow["state"], "green" | "blue" | "gray"> =
 };
 
 const STATE_LABEL: Record<PrivacyPolicyRow["state"], string> = {
-  enforced: "아키텍처 보장",
+  enforced: "보장",
   default: "기본값",
   planned: "예정",
 };
@@ -25,15 +26,15 @@ const STATE_ICON: Record<PrivacyPolicyRow["state"], LucideIcon> = {
 };
 
 const GROUP_TITLE: Record<PrivacyPolicyRow["state"], string> = {
-  enforced: "Guaranteed now",
-  default: "Current defaults",
-  planned: "Planned controls",
+  enforced: "항상 지키는 경계",
+  default: "현재 기본값",
+  planned: "준비 중인 제어",
 };
 
 const GROUP_NOTE: Record<PrivacyPolicyRow["state"], string> = {
-  enforced: "These are product boundaries, not toggles.",
-  default: "These settings are available in the relevant workflow.",
-  planned: "Shown for direction only; these controls do not run yet.",
+  enforced: "토글이 아니라 제품 동작입니다.",
+  default: "관련 워크플로에서 명시적으로 선택합니다.",
+  planned: "방향만 표시하며 아직 실행되지 않습니다.",
 };
 
 /**
@@ -47,17 +48,12 @@ export function PrivacyDefaultsCard() {
   const groups = groupPrivacyPolicyByState();
   const order: PrivacyPolicyRow["state"][] = ["enforced", "default", "planned"];
   return (
-    <section className="settings-card" aria-label="Privacy and data policy">
-      <header className="settings-card-head">
-        <div>
-          <h3>Privacy and data flow</h3>
-          <p>
-            Mori stores local profile, sessions, imports, analysis results, repository settings,
-            and reports on this device. Data leaves the device only after you configure and select
-            a provider endpoint.
-          </p>
-        </div>
-      </header>
+    <SettingsSection
+      title="데이터 흐름"
+      eyebrow="Local-first"
+      description="세션과 소스는 이 기기에 저장됩니다. 외부 제공자는 사용자가 직접 설정한 경우에만 사용됩니다."
+      action={<StatusPill tone="green">기본 로컬</StatusPill>}
+    >
       {order.map((state) => {
         const rows = groups[state];
         if (rows.length === 0) return null;
@@ -68,25 +64,29 @@ export function PrivacyDefaultsCard() {
               <Badge tone={STATE_TONE[state]}>{STATE_LABEL[state]}</Badge>
             </header>
             <p className="settings-privacy-group-note">{GROUP_NOTE[state]}</p>
-            <ul className="settings-privacy-list">
+            <div className="settings-row-list">
               {rows.map((row) => {
                 const Icon = STATE_ICON[row.state];
                 return (
-                  <li key={row.id}>
-                    <span className={`settings-privacy-icon tone-${STATE_TONE[row.state]}`}>
-                      <Icon size={14} aria-hidden="true" />
-                    </span>
-                    <div>
-                      <strong>{row.label}</strong>
-                      <p>{row.detail}</p>
-                    </div>
-                  </li>
+                  <SettingsRow
+                    key={row.id}
+                    label={row.label}
+                    description={row.detail}
+                    meta={
+                      <>
+                        <span className={`settings-privacy-icon tone-${STATE_TONE[row.state]}`}>
+                          <Icon size={13} aria-hidden="true" />
+                        </span>
+                        <StatusPill tone={STATE_TONE[row.state]}>{STATE_LABEL[row.state]}</StatusPill>
+                      </>
+                    }
+                  />
                 );
               })}
-            </ul>
+            </div>
           </section>
         );
       })}
-    </section>
+    </SettingsSection>
   );
 }

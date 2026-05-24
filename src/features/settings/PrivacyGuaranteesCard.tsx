@@ -1,5 +1,6 @@
 import { Ban, ShieldCheck } from "lucide-react";
 import { getPrivacyGuarantees } from "../../lib/settings/settingsStatus";
+import { SettingsNotice, SettingsSection, StatusPill } from "./SettingsPrimitives";
 
 /**
  * Privacy & Data Control — the hard "what Mori never does" guarantees.
@@ -12,16 +13,11 @@ import { getPrivacyGuarantees } from "../../lib/settings/settingsStatus";
 export function PrivacyGuaranteesCard() {
   const guarantees = getPrivacyGuarantees();
   return (
-    <section className="settings-card settings-privacy-guarantees" aria-label="Privacy guarantees">
-      <header className="settings-card-head">
-        <div>
-          <h3>What never leaves by default</h3>
-          <p>
-            Mori does not send profile data, imports, repository paths, reports, or memory
-            anywhere by default.
-          </p>
-        </div>
-      </header>
+    <SettingsSection
+      title="Mori가 하지 않는 일"
+      description="프로필, 가져온 소스, 리포지토리 경로, 리포트, 메모리는 기본으로 전송되지 않습니다."
+      action={<StatusPill tone="green">기본 차단</StatusPill>}
+    >
       <ul className="settings-privacy-never">
         {guarantees.map((line) => (
           <li key={line}>
@@ -30,13 +26,9 @@ export function PrivacyGuaranteesCard() {
           </li>
         ))}
       </ul>
-      <footer className="settings-privacy-never-foot">
-        <ShieldCheck size={13} aria-hidden="true" />
-        <span>
-          Provider requests are explicit: if you select Ollama, Mori sends the current session
-          evidence only to the endpoint you entered.
-        </span>
-      </footer>
-    </section>
+      <SettingsNotice icon={ShieldCheck} title="제공자 요청">
+        Ollama를 선택한 경우에만 현재 세션 증거를 사용자가 입력한 endpoint로 보냅니다.
+      </SettingsNotice>
+    </SettingsSection>
   );
 }

@@ -10,6 +10,8 @@ export const NOTIFICATION_CATEGORIES = [
   "memoryReviewNeeded",
   "decisionIssueReviewNeeded",
   "tokenAnomaly",
+  "sourceDisconnected",
+  "projectSummaryChanged",
 ] as const;
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
@@ -28,6 +30,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
     memoryReviewNeeded: false,
     decisionIssueReviewNeeded: false,
     tokenAnomaly: false,
+    sourceDisconnected: false,
+    projectSummaryChanged: false,
   },
 };
 

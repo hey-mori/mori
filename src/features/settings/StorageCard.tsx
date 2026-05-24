@@ -4,6 +4,13 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type { DatabaseStatus, PersistSessionSnapshotOutput, SqliteSessionListEntry } from "../../lib/sqlite/repositoryContracts";
 import { getStorageStatusRows, type RuntimeMode, type StorageStatusRow } from "../../lib/settings/settingsStatus";
+import {
+  SettingsInlineAction,
+  SettingsNotice,
+  SettingsRow,
+  SettingsSection,
+  StatusPill,
+} from "./SettingsPrimitives";
 
 const STATE_TONE: Record<StorageStatusRow["state"], "green" | "blue" | "purple" | "gray" | "orange"> = {
   active: "green",
@@ -64,26 +71,31 @@ export function StorageCard({
     packageDraftCount,
   });
   return (
-    <section className="settings-card" aria-label="Storage and export">
-      <header className="settings-card-head">
-        <div>
-          <h3>저장소 / 내보내기</h3>
-          <p>현재 활성화된 저장 경로와 내보내기 옵션을 한곳에서 확인합니다. SQLite는 Tauri 데스크톱 모드에서만 동작합니다.</p>
-        </div>
-        <Button onClick={onOpenReports}>Reports로 이동</Button>
-      </header>
-      <ul className="settings-storage-list">
+    <SettingsSection
+      title="저장소와 백업"
+      eyebrow="Local data"
+      description="현재 저장 경로와 내보내기 옵션입니다. SQLite는 Tauri 데스크톱 앱에서만 활성화됩니다."
+      action={
+        <SettingsInlineAction onClick={onOpenReports}>
+          Reports 열기
+        </SettingsInlineAction>
+      }
+    >
+      <div className="settings-row-list">
         {rows.map((row) => (
-          <li key={row.id} className={`tone-${row.badgeTone}`}>
-            <header>
-              <strong>{row.label}</strong>
-              <Badge tone={STATE_TONE[row.state]}>{STATE_LABEL[row.state]}</Badge>
-            </header>
-            <p>{row.description}</p>
-            <small>{row.hint}</small>
-          </li>
+          <SettingsRow
+            key={row.id}
+            label={row.label}
+            description={row.description}
+            meta={
+              <>
+                <StatusPill tone={STATE_TONE[row.state]}>{STATE_LABEL[row.state]}</StatusPill>
+                <span>{row.hint}</span>
+              </>
+            }
+          />
         ))}
-      </ul>
+      </div>
 
       {mode === "tauri-desktop" && sqliteAvailable ? (
         <div className="settings-sqlite-panel">
@@ -105,24 +117,28 @@ export function StorageCard({
               {SQLITE_KIND_LABEL[sqliteKind]}
             </Badge>
           </header>
-          <dl className="settings-sqlite-meta">
-            <div>
-              <dt>적용된 마이그레이션</dt>
-              <dd>{sqliteStatus?.appliedMigrations.join(", ") || "(없음)"}</dd>
-            </div>
-            <div>
-              <dt>대기 중 마이그레이션</dt>
-              <dd>{sqliteStatus?.pendingMigrations.join(", ") || "(없음)"}</dd>
-            </div>
-            <div>
-              <dt>테이블</dt>
-              <dd>{sqliteStatus?.tables?.length ?? 0}</dd>
-            </div>
-            <div>
-              <dt>저장된 세션</dt>
-              <dd>{sqliteSessions.length}</dd>
-            </div>
-          </dl>
+          <div className="settings-row-list">
+            <SettingsRow
+              compact
+              label="적용된 마이그레이션"
+              meta={<span>{sqliteStatus?.appliedMigrations.join(", ") || "(없음)"}</span>}
+            />
+            <SettingsRow
+              compact
+              label="대기 중 마이그레이션"
+              meta={<span>{sqliteStatus?.pendingMigrations.join(", ") || "(없음)"}</span>}
+            />
+            <SettingsRow
+              compact
+              label="테이블"
+              meta={<span>{sqliteStatus?.tables?.length ?? 0}</span>}
+            />
+            <SettingsRow
+              compact
+              label="저장된 세션"
+              meta={<span>{sqliteSessions.length}</span>}
+            />
+          </div>
           <div className="settings-sqlite-actions">
             <Button icon={Plug} onClick={onInitializeSqlite}>마이그레이션 적용</Button>
             <Button icon={RefreshCw} onClick={onRefreshSqlite}>새로고침</Button>
@@ -149,12 +165,9 @@ export function StorageCard({
         </div>
       ) : null}
 
-      <div className="settings-export-hint">
-        <FileText size={12} aria-hidden="true" />
-        <span>
-          Markdown / .mori v0 JSON 내보내기는 Reports 화면에 있습니다. PDF · HTML · zip 형식 패키지는 Planned 입니다.
-        </span>
-      </div>
-    </section>
+      <SettingsNotice icon={FileText} title="내보내기">
+        Markdown / .mori v0 JSON은 Reports에서 사용할 수 있습니다. PDF, HTML, zip 패키지는 예정입니다.
+      </SettingsNotice>
+    </SettingsSection>
   );
 }

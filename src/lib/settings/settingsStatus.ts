@@ -18,7 +18,7 @@ export type RuntimeMode = "browser" | "tauri-desktop";
 export type ProviderStatus = "implemented" | "partial" | "planned" | "unavailable";
 
 export type ProviderRow = {
-  id: QuickPassProviderKind | "lmStudio" | "openAiCompatible" | "cloudApi";
+  id: QuickPassProviderKind | "lmStudio" | "openAiCompatible" | "toolNativeApi" | "cloudApi";
   label: string;
   description: string;
   /** UI-facing status: implemented / partial / planned / unavailable. */
@@ -93,6 +93,18 @@ export function getProviderRows(
       canTest: false,
     },
     {
+      id: "toolNativeApi",
+      label: "Claude / Codex / OpenCode 제공자",
+      description: "현재는 가져오기 소스입니다. Quick Pass 제공자로 직접 연결하는 기능은 없습니다.",
+      status: "planned",
+      isLocal: false,
+      privacyNote: "구현 전까지 Mori는 해당 도구 계정이나 API에 연결하지 않습니다.",
+      receivesData: "(구현 시) 사용자가 명시적으로 선택한 세션 데이터",
+      setupRequirement: "계정 / API 경계 설계 후",
+      selected: false,
+      canTest: false,
+    },
+    {
       id: "cloudApi",
       label: "Cloud API (명시적 동의 필요)",
       description: "Anthropic / OpenAI 등 외부 API. 명시적 opt-in 후에만 사용됩니다.",
@@ -125,44 +137,44 @@ export function getPrivacyPolicy(): PrivacyPolicyRow[] {
   return [
     {
       id: "no-background-capture",
-      label: "No background capture",
-      detail: "Mori does not collect screen, app, browser, or clipboard content in the background.",
+      label: "백그라운드 캡처 없음",
+      detail: "Mori는 화면, 앱, 브라우저, 클립보드 내용을 백그라운드에서 수집하지 않습니다.",
       state: "enforced",
     },
     {
       id: "no-browser-scan",
-      label: "No browser or app scanning",
-      detail: "Browser tabs, app windows, and chat tools are not read automatically. Pasted URLs or imports are user-provided.",
+      label: "브라우저 / 앱 스캔 없음",
+      detail: "브라우저 탭, 앱 창, 채팅 도구를 자동으로 읽지 않습니다. URL과 가져오기는 사용자가 제공합니다.",
       state: "enforced",
     },
     {
       id: "no-fs-scan",
-      label: "No disk scan",
-      detail: "Only repository paths you add are stored. Those paths are read only when you run verify or Git diff capture.",
+      label: "디스크 스캔 없음",
+      detail: "사용자가 추가한 리포지토리 경로만 저장하고, 검증 또는 Git diff 캡처 때만 읽습니다.",
       state: "enforced",
     },
     {
       id: "no-oauth",
-      label: "No OAuth connection",
-      detail: "Claude, ChatGPT, Codex, and future integrations are not connected or signed in automatically.",
+      label: "자동 계정 연결 없음",
+      detail: "Claude, ChatGPT, Codex, 향후 integration은 자동으로 연결되거나 로그인되지 않습니다.",
       state: "enforced",
     },
     {
       id: "ai-transcript-summary-only",
-      label: "Imported transcripts are minimized",
-      detail: "AI transcript imports store normalized events, source metadata, and summaries needed for review.",
+      label: "가져온 transcript 최소화",
+      detail: "AI transcript는 검토에 필요한 이벤트, 소스 메타데이터, 요약 형태로 정규화됩니다.",
       state: "default",
     },
     {
       id: "client-safe-report-mode",
-      label: "Client-safe report mode",
-      detail: "When enabled in Reports, original text, source details, and file paths are excluded from the export.",
+      label: "Client-safe 리포트",
+      detail: "Reports에서 켜면 원문, 소스 세부 정보, 파일 경로를 내보내기에서 제외합니다.",
       state: "default",
     },
     {
       id: "robust-redaction",
-      label: "Automatic PII redaction",
-      detail: "Automatic masking for report exports is planned. Today Mori provides section-level export controls.",
+      label: "자동 PII redaction",
+      detail: "리포트 내보내기용 자동 마스킹은 예정입니다. 현재는 섹션 단위 내보내기 제어를 제공합니다.",
       state: "planned",
     },
   ];

@@ -3,6 +3,9 @@ import { useMoriThemeStore } from "../../app/themeStore";
 import type { MoriThemeId } from "../../lib/settings/themePreference";
 import {
   PreferenceToggle,
+  SettingsNotice,
+  SettingsOption,
+  SettingsOptionGroup,
   SettingsRow,
   SettingsSection,
   StatusPill,
@@ -52,52 +55,51 @@ export function ThemeCard() {
 
   return (
     <SettingsSection
-      title="Appearance"
+      title="화면 표시"
       eyebrow="Display"
-      description="Theme is applied and stored on this device. It does not sync and does not change capture, analysis, or memory behavior."
+      description="테마는 이 기기에만 저장됩니다. 캡처, 분석, 메모리 동작에는 영향을 주지 않습니다."
       action={<Palette size={16} aria-hidden="true" />}
     >
-      <div className="theme-option-grid" role="radiogroup" aria-label="화면 테마">
+      <SettingsOptionGroup label="화면 테마">
         {THEME_OPTIONS.map((option) => {
           const selected = option.id === theme;
           return (
-            <button
+            <SettingsOption
               key={option.id}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              className={`theme-option${selected ? " selected" : ""}`}
+              selected={selected}
+              icon={selected ? Check : Palette}
+              label={option.label}
+              description={option.description}
+              meta={
+                <>
+                  <StatusPill tone={selected ? "purple" : "gray"}>
+                    {selected ? "선택됨" : option.sub}
+                  </StatusPill>
+                  <span className={`theme-swatch theme-${option.id}`} aria-hidden="true" />
+                </>
+              }
               onClick={() => setTheme(option.id)}
-            >
-              <span className="theme-option-head">
-                <strong>{option.label}</strong>
-                {selected ? (
-                  <span className="theme-option-check" aria-hidden="true">
-                    <Check size={13} />
-                  </span>
-                ) : (
-                  <span className="theme-option-sub">{option.sub}</span>
-                )}
-              </span>
-              <span className="theme-option-description">{option.description}</span>
-            </button>
+            />
           );
         })}
-      </div>
+      </SettingsOptionGroup>
       <div className="settings-row-list">
         <SettingsRow
-          label="Display density"
-          description="Compact and comfortable density controls are planned for dense review work."
-          meta={<StatusPill tone="gray">Planned</StatusPill>}
+          label="화면 밀도"
+          description="검토 작업을 위한 Compact / Comfortable 전환은 아직 구현되지 않았습니다."
+          meta={<StatusPill tone="gray">예정</StatusPill>}
           control={<PreferenceToggle label="Compact mode" active={false} disabled />}
           disabled
         />
         <SettingsRow
-          label="Demo data visibility"
-          description="Mori currently shows bundled demos only when there are no real saved sessions."
-          meta={<StatusPill tone="blue">Automatic</StatusPill>}
+          label="데모 데이터 표시"
+          description="실제 저장 세션이 없을 때만 번들 데모를 보여줍니다."
+          meta={<StatusPill tone="blue">자동</StatusPill>}
         />
       </div>
+      <SettingsNotice icon={Palette} title="로컬 표시 설정">
+        테마 선택은 동기화되지 않으며 다른 기기나 내보내기 결과를 바꾸지 않습니다.
+      </SettingsNotice>
     </SettingsSection>
   );
 }

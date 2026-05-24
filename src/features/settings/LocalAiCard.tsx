@@ -1,6 +1,5 @@
 import { Bot, Cloud, Code2, Database, Plug, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
@@ -13,6 +12,9 @@ import {
 } from "../../lib/product-state/productState";
 import {
   PreferenceToggle,
+  SettingsNotice,
+  SettingsOptionGroup,
+  SettingsProviderOption,
   SettingsRow,
   SettingsSection,
   StatusPill,
@@ -23,6 +25,7 @@ const ICONS: Record<string, typeof Bot> = {
   ollama: Bot,
   lmStudio: Database,
   openAiCompatible: Code2,
+  toolNativeApi: Plug,
   cloudApi: Cloud,
 };
 
@@ -59,12 +62,11 @@ export function LocalAiCard({
 
   return (
     <SettingsSection
-      title="Local AI providers"
+      title="로컬 AI 제공자"
       eyebrow="Quick Pass"
-      description="Choose what Quick Pass uses to turn imported evidence into issues, decisions, and next actions. Mori only sends data to a provider after you select and configure it."
+      description="Quick Pass가 가져온 증거를 이슈, 결정, 다음 행동으로 정리할 때 사용할 제공자입니다."
     >
-
-      <div className="settings-provider-grid">
+      <SettingsOptionGroup label="Quick Pass 제공자" columns="single">
         {rows.map((row) => {
           const Icon = ICONS[row.id] ?? Bot;
           const canSelect = row.status === "implemented";
@@ -89,15 +91,15 @@ export function LocalAiCard({
             />
           );
         })}
-      </div>
+      </SettingsOptionGroup>
 
       <div className="settings-row-list">
         <SettingsRow
           label="Ollama endpoint"
-          description="Only used when Ollama is the selected provider."
+          description="Ollama 제공자를 선택한 경우에만 사용됩니다."
           control={
             <ProviderField
-              label="엔드포인트"
+              label="Ollama endpoint"
               value={settings.ollamaEndpoint}
               disabled={settings.provider !== "ollama"}
               onChange={(value) => onUpdateSettings({ ollamaEndpoint: value })}
@@ -105,8 +107,8 @@ export function LocalAiCard({
           }
         />
         <SettingsRow
-          label="Model"
-          description="The local model name Mori sends in the Ollama request."
+          label="모델"
+          description="Ollama 요청에 전달할 로컬 모델 이름입니다."
           control={
             <ProviderField
               label="모델"
@@ -117,8 +119,8 @@ export function LocalAiCard({
           }
         />
         <SettingsRow
-          label="Timeout"
-          description="Maximum wait time for a local Ollama response."
+          label="타임아웃"
+          description="로컬 Ollama 응답을 기다리는 최대 시간(ms)입니다."
           control={
             <ProviderField
               label="타임아웃"
@@ -131,8 +133,8 @@ export function LocalAiCard({
           }
         />
         <SettingsRow
-          label="Fallback to Quick Pass"
-          description="If Ollama is unreachable, Mori can use the deterministic local provider instead."
+          label="Quick Pass로 fallback"
+          description="Ollama가 닿지 않으면 결정론적 로컬 제공자로 전환합니다."
           control={
             <PreferenceToggle
               label="Ollama 실패 시 자동 전환"
@@ -146,6 +148,9 @@ export function LocalAiCard({
       </div>
 
       <ProbeRow probe={probe} />
+      <SettingsNotice icon={Cloud} title="외부 제공자">
+        Cloud API는 아직 구현되지 않았습니다. 구현 전까지 Mori는 API key를 저장하지 않고 외부 AI에 데이터를 보내지 않습니다.
+      </SettingsNotice>
     </SettingsSection>
   );
 }
@@ -171,59 +176,56 @@ function ProviderOption({
   onTest?: () => void;
   testBusy: boolean;
 }) {
+  const status = (
+    <MoriStatusBadge tone={availabilityTone}>
+      {availabilityLabel}
+    </MoriStatusBadge>
+  );
+  const actions = canSelect ? (
+    <>
+      <Button
+        variant={isCurrent ? "primary" : "secondary"}
+        onClick={onSelect}
+        disabled={isCurrent}
+        title={isCurrent ? "현재 선택된 제공자입니다." : "Quick Pass 제공자로 선택"}
+      >
+        {isCurrent ? "선택됨" : "선택"}
+      </Button>
+      {onTest ? (
+        <Button
+          icon={Plug}
+          onClick={onTest}
+          disabled={testBusy}
+          title="현재 입력된 Ollama endpoint로 연결을 테스트합니다."
+        >
+          {testBusy ? "테스트 중" : "테스트"}
+        </Button>
+      ) : null}
+    </>
+  ) : (
+    <MoriPlannedAction
+      label="예정"
+      title="다음 마일스톤에서 활성화됩니다."
+    />
+  );
+
   return (
-    <article
-      className={`settings-provider-card ${isCurrent ? "is-selected" : ""} ${row.status === "planned" ? "is-planned" : ""}`}
-      aria-current={isCurrent ? "true" : undefined}
-    >
-      <header>
-        <span className={`settings-provider-icon ${row.isLocal ? "is-local" : "is-cloud"}`}>
-          <Icon size={16} aria-hidden="true" />
-        </span>
-        <div>
-          <strong>{row.label}</strong>
-          <span>{row.description}</span>
-        </div>
-        <MoriStatusBadge tone={availabilityTone}>
-          {availabilityLabel}
-        </MoriStatusBadge>
-      </header>
-      <div className="settings-provider-meta">
+    <SettingsProviderOption
+      selected={isCurrent}
+      planned={!canSelect}
+      icon={Icon}
+      label={row.label}
+      description={`${row.description} ${row.privacyNote}`}
+      locality={
         <StatusPill tone={row.isLocal ? "green" : "orange"}>
-          {row.isLocal ? "Runs locally" : "External service"}
+          {row.isLocal ? "로컬" : "외부"}
         </StatusPill>
-        <span>{row.receivesData}</span>
-        <span>{row.setupRequirement}</span>
-      </div>
-      <p className="settings-provider-privacy">{row.privacyNote}</p>
-      <footer>
-        {canSelect ? (
-          <Button
-            variant={isCurrent ? "primary" : "secondary"}
-            onClick={onSelect}
-            disabled={isCurrent}
-            title={isCurrent ? "현재 선택된 제공자입니다." : "Quick Pass 제공자로 선택"}
-          >
-            {isCurrent ? "Selected" : "Select"}
-          </Button>
-        ) : (
-          <MoriPlannedAction
-            label="Planned"
-            title="다음 마일스톤에서 활성화됩니다."
-          />
-        )}
-        {onTest ? (
-          <Button
-            icon={Plug}
-            onClick={onTest}
-            disabled={testBusy}
-            title="현재 입력된 Ollama 엔드포인트로 연결을 테스트합니다."
-          >
-            {testBusy ? "Testing..." : "Test"}
-          </Button>
-        ) : null}
-      </footer>
-    </article>
+      }
+      dataNotice={row.receivesData}
+      setup={row.setupRequirement}
+      status={status}
+      actions={actions}
+    />
   );
 }
 
@@ -232,7 +234,7 @@ function ProbeRow({ probe }: { probe: ProbeState }) {
   if (probe.status === "checking") {
     return (
       <div className="settings-probe-row">
-        <Badge tone="purple">확인 중</Badge>
+        <StatusPill tone="purple">확인 중</StatusPill>
         <span>Ollama에 연결을 시도하고 있습니다...</span>
       </div>
     );
@@ -240,7 +242,7 @@ function ProbeRow({ probe }: { probe: ProbeState }) {
   if (probe.status === "ok") {
     return (
       <div className="settings-probe-row tone-ok">
-        <Badge tone="green">연결됨</Badge>
+        <StatusPill tone="green">연결됨</StatusPill>
         <span>{probe.message}</span>
         {probe.models.length ? (
           <small>
@@ -253,7 +255,7 @@ function ProbeRow({ probe }: { probe: ProbeState }) {
   }
   return (
     <div className="settings-probe-row tone-err" role="alert">
-      <Badge tone="red">연결 불가</Badge>
+      <StatusPill tone="red">연결 불가</StatusPill>
       <span>{probe.message}</span>
     </div>
   );

@@ -9,8 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { SectionHeader } from "../../components/ui/SectionHeader";
-import { SettingsRow, StatusPill } from "./SettingsPrimitives";
+import { SettingsNotice, SettingsRow, SettingsSection, StatusPill } from "./SettingsPrimitives";
 import {
   deriveLabelFromPath,
   getRepositoryVerificationFreshness,
@@ -89,15 +88,11 @@ export function RepositoriesCard({
   }
 
   return (
-    <section className="settings-card" aria-label="Repositories">
-      <header className="settings-card-head">
-        <div>
-          <h3>리포지토리</h3>
-          <p>
-            Mori remembers only the repository paths you add. It does not scan disk;
-            saved paths are read only when you verify a project or run Git diff capture.
-          </p>
-        </div>
+    <SettingsSection
+      title="리포지토리와 프로젝트"
+      eyebrow="Explicit paths"
+      description="Mori는 사용자가 추가한 경로만 기억합니다. 검증 또는 Git diff 캡처를 실행할 때만 해당 경로를 읽습니다."
+      action={
         <div className="settings-repo-summary">
           <Badge tone="purple">{summary.total}개</Badge>
           {summary.verified > 0 ? <Badge tone="green">검증됨 {summary.verified}</Badge> : null}
@@ -105,7 +100,8 @@ export function RepositoriesCard({
           {summary.failed > 0 ? <Badge tone="red">실패 {summary.failed}</Badge> : null}
           {summary.unverified > 0 ? <Badge tone="gray">미검증 {summary.unverified}</Badge> : null}
         </div>
-      </header>
+      }
+    >
 
       <div className="settings-repo-add">
         <label>
@@ -146,19 +142,19 @@ export function RepositoriesCard({
 
       <div className="settings-row-list">
         <SettingsRow
-          label="Detected project roots"
-          description="Saved repositories become the project roots Mori can offer during Git diff import."
-          meta={<StatusPill tone={repositories.length ? "green" : "gray"}>{repositories.length} saved</StatusPill>}
+          label="프로젝트 루트"
+          description="저장된 리포지토리는 Git diff 가져오기와 세션 프로젝트 분류의 후보가 됩니다."
+          meta={<StatusPill tone={repositories.length ? "green" : "gray"}>{repositories.length}개 저장됨</StatusPill>}
         />
         <SettingsRow
-          label="Import and capture scope"
-          description="Manual imports are scoped to the current session. Git capture uses the selected repository path only."
-          meta={<StatusPill tone="blue">Explicit action</StatusPill>}
+          label="가져오기 범위"
+          description="수동 가져오기는 현재 세션에만 적용됩니다. Git 캡처는 선택된 리포지토리 경로만 사용합니다."
+          meta={<StatusPill tone="blue">명시적 실행</StatusPill>}
         />
         <SettingsRow
-          label="Ignore / include patterns"
-          description="Pattern controls are planned for larger workspaces."
-          meta={<StatusPill tone="gray">Planned</StatusPill>}
+          label="Include / exclude 패턴"
+          description="큰 워크스페이스를 위한 패턴 제어는 아직 구현되지 않았습니다."
+          meta={<StatusPill tone="gray">예정</StatusPill>}
           disabled
         />
       </div>
@@ -224,13 +220,10 @@ export function RepositoriesCard({
         </ul>
       )}
 
-      <SectionHeader title="Mori가 리포지토리에 대해 보장하는 것" />
-      <ul className="settings-repo-pledges">
-        <li>앱 시작 / 화면 전환 / hydrate / SQLite 초기화 시점에 검증을 실행하지 않습니다.</li>
-        <li>저장된 경로 외에는 어떤 디렉터리도 읽지 않습니다.</li>
-        <li>Git diff 캡처와 검증 외에는 디스크에 접근하지 않습니다.</li>
-      </ul>
-    </section>
+      <SettingsNotice icon={CheckCircle2} title="리포지토리 접근">
+        앱 시작, 화면 전환, hydrate, SQLite 초기화 중에는 검증을 실행하지 않습니다. 저장된 경로 외 디렉터리는 읽지 않습니다.
+      </SettingsNotice>
+    </SettingsSection>
   );
 }
 

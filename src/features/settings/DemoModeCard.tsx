@@ -1,12 +1,11 @@
 import { Sparkles } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { Badge } from "../../components/ui/Badge";
 import {
   selectSessionMode,
   selectSessionSource,
   useMoriSessionStore,
 } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
+import { SettingsRow, SettingsSection, StatusPill } from "./SettingsPrimitives";
 
 /**
  * Demo mode toggle card for the Settings storage tab (P6).
@@ -34,7 +33,6 @@ export function DemoModeCard({
   const source = useMoriSessionStore(selectSessionSource);
   const imports = useMoriSessionStore((state) => state.imports);
   const resetToDemo = useMoriSessionStore((state) => state.resetToDemo);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   const isDemo = mode === "demo";
 
@@ -46,53 +44,51 @@ export function DemoModeCard({
         : "브라우저 저장";
 
   return (
-    <section className="settings-card demo-mode-card" aria-label="데이터 소스">
-      <header className="settings-card-head">
-        <div>
-          <h3>데이터 소스</h3>
-          <p>
-            {isDemo
-              ? "현재 Mori 데모 데이터를 보고 있습니다. 실제 Claude 작업을 가져오면 이 화면이 채워집니다."
-              : "실제 작업 데이터를 보고 있습니다. 데모 데이터로 전환해 Mori의 기능을 미리 살펴볼 수 있습니다."}
-          </p>
-        </div>
-        <Badge tone={isDemo ? "gray" : "green"}>
+    <SettingsSection
+      title="데이터 소스"
+      description={
+        isDemo
+          ? "현재 Mori 데모 데이터를 보고 있습니다."
+          : "실제 작업 데이터를 보고 있습니다. 데모는 기능 확인용으로만 전환됩니다."
+      }
+      action={
+        <StatusPill tone={isDemo ? "gray" : "green"}>
           {isDemo ? "데모" : "실제 세션"}
-        </Badge>
-      </header>
-
-      <div className="demo-mode-card-body">
-        {isDemo ? (
-          <div className="demo-mode-card-status">
-            <span className="demo-mode-card-dot is-demo" aria-hidden="true" />
-            <span>
-              <strong>Mori 데모 메모리</strong>
-              <span className="demo-mode-card-detail">참고용 데이터 · 저장되지 않음</span>
-            </span>
-            <Button variant="primary" icon={Sparkles} onClick={onGoToConnections}>
-              실제 작업 가져오기
-            </Button>
-          </div>
-        ) : (
-          <div className="demo-mode-card-status">
-            <span className="demo-mode-card-dot is-live" aria-hidden="true" />
-            <span>
-              <strong>{storageLabel}</strong>
-              <span className="demo-mode-card-detail">
-                가져오기 {imports.length}건
-              </span>
-            </span>
-            <Button
-              variant="ghost"
-              icon={Sparkles}
-              onClick={resetToDemo}
-              title="데모 세션 메모리로 돌아가기. 현재 초안은 저장된 경우 그대로 유지됩니다."
-            >
-              데모 보기
-            </Button>
-          </div>
-        )}
+        </StatusPill>
+      }
+    >
+      <div className="settings-row-list">
+        <SettingsRow
+          label={isDemo ? "Mori 데모 메모리" : storageLabel}
+          description={
+            isDemo
+              ? "참고용 데이터입니다. 실제 작업을 가져오면 현재 세션이 바뀝니다."
+              : `가져오기 ${imports.length}건이 현재 세션에 연결되어 있습니다.`
+          }
+          meta={
+            <span
+              className={`demo-mode-card-dot ${isDemo ? "is-demo" : "is-live"}`}
+              aria-hidden="true"
+            />
+          }
+          control={
+            isDemo ? (
+              <Button variant="primary" icon={Sparkles} onClick={onGoToConnections}>
+                실제 작업 가져오기
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                icon={Sparkles}
+                onClick={resetToDemo}
+                title="데모 세션 메모리로 돌아가기. 현재 초안은 저장된 경우 그대로 유지됩니다."
+              >
+                데모 보기
+              </Button>
+            )
+          }
+        />
       </div>
-    </section>
+    </SettingsSection>
   );
 }
