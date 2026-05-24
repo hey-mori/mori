@@ -485,23 +485,6 @@
   min-width: 0;
 }
 
-.mori-metric-strip {
-  display: grid;
-  gap: 1px;
-  padding: 0;
-  border-top: 1px solid var(--mori-border);
-  border-bottom: 1px solid var(--mori-border);
-  background: var(--mori-border);
-}
-
-.mori-metric-cell {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  padding: var(--mori-space-4) var(--mori-space-5);
-  background: var(--mori-surface);
-}
-
 .mori-list-row {
   min-height: 42px;
   border-radius: var(--mori-radius-md);
