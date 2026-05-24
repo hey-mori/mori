@@ -45,9 +45,9 @@ export function GeneratedItemsPanel({ draft }: { draft: ImportReviewDraft }) {
         <footer className="review-generated-footer">
           <Sparkles size={14} aria-hidden="true" />
           <p>
-            현재 가져오기 단계에서는 이벤트 후보만 추출됩니다. 적용 후 Evidence Hub에서
-            <strong> Quick Pass 실행</strong>을 누르면 이 세션 전체에 대한 이슈/결정/다음 액션 후보를
-            생성할 수 있습니다.
+            현재 가져오기 단계에서는 이벤트 후보만 추출됩니다. 적용 후 증거 탭에서
+            <strong> Quick Pass 실행</strong>을 누르면 이 세션 전체에 대한 이슈 · 결정 · 다음 액션
+            후보를 만들 수 있습니다.
           </p>
         </footer>
       ) : null}

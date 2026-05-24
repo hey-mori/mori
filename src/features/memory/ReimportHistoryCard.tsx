@@ -45,7 +45,7 @@ export function ReimportHistoryCard({
     >
       {!hasData ? (
         <p className="memory-empty">
-          아직 connector 재import 기록이 없습니다. Connector JSONL을 Evidence Hub에서 가져오면 여기 누적됩니다.
+          아직 재가져오기 기록이 없습니다. 세션 안의 증거 탭에서 connector JSONL을 가져오면 여기 누적됩니다.
         </p>
       ) : (
         <>

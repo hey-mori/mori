@@ -139,13 +139,13 @@ const events: TimelineEvent[] = [
   event("evt-positioning", "14:37", "aiConversation", "핵심 포지션 변경", "기억 검색이 아니라 선택한 작업 세션의 흐름 복원으로 포지션을 변경.", ["src-claude", "src-manual"], "inferred", 0.86, [], ["dec-timeline-first", "dec-flow-focus"]),
   event("evt-start-flow", "14:37", "decision", "24/7 기록 대신 Start Mori", "프라이버시 부담을 줄이기 위해 명시적 세션 기반 기록을 채택.", ["src-manual"], "inferred", 0.88, [], ["dec-start-mori"]),
   event("evt-pieces", "14:38", "webResearch", "Pieces 조사", "개발자 메모리 제품의 검색/저장 중심 UX를 분석.", ["src-chrome"], "verified", 0.9, []),
-  event("evt-mvp-scope", "15:05", "aiConversation", "MVP 범위 논의", "Narrative Timeline, Flow Focus, Issue Garden, Decision Log, Resume Prompt로 MVP 범위를 좁힘.", ["src-claude"], "inferred", 0.84, [], ["dec-markdown-first"]),
+  event("evt-mvp-scope", "15:05", "aiConversation", "MVP 범위 논의", "타임라인 · 흐름 · 이슈 · 결정 · 리포트로 MVP 범위를 좁힘.", ["src-claude"], "inferred", 0.84, [], ["dec-markdown-first"]),
   event("evt-local-llm-issue", "15:05", "issue", "로컬 LLM 연결 방식 미정", "Ollama, LM Studio, OpenAI-compatible endpoint 중 기본 연결 방식을 결정해야 함.", ["src-claude"], "inferred", 0.82, ["iss-local-llm"]),
   event("evt-recall", "15:10", "webResearch", "Microsoft Recall 조사", "항상 기록형 제품이 만드는 프라이버시 불안을 분석.", ["src-chrome"], "verified", 0.9, []),
   event("evt-local-llm-priority", "15:20", "decision", "로컬 LLM 우선", "기본 분석 엔진은 Ollama 우선, LM Studio와 OpenAI-compatible endpoint는 선택 옵션.", ["src-claude"], "inferred", 0.87, [], ["dec-local-llm"]),
   event("evt-parser", "15:28", "fileCode", "timeline_parser.py 수정", "이벤트 정규화와 관계 추출 프로토타입을 보완.", ["src-git", "src-terminal"], "verified", 0.93, [], [], [], ["art-parser"]),
   event("evt-collection-risk", "15:42", "issue", "데이터 수집 범위 과도 가능성", "모든 데스크톱 작업을 읽는다는 인상을 피하고 신뢰 가능한 소스만 수집해야 함.", ["src-claude"], "inferred", 0.84, ["iss-collection-risk"]),
-  event("evt-issue-created", "15:42", "aiConversation", "이슈 생성", "열린 제품/기술 이슈를 Issue Garden 후보로 추출.", ["src-claude"], "inferred", 0.8, ["iss-local-llm", "iss-collection-risk", "iss-mori-schema", "iss-report-template"]),
+  event("evt-issue-created", "15:42", "aiConversation", "이슈 생성", "열린 제품 / 기술 이슈를 후보로 추출.", ["src-claude"], "inferred", 0.8, ["iss-local-llm", "iss-collection-risk", "iss-mori-schema", "iss-report-template"]),
   event("evt-next-actions", "15:45", "documentNote", "다음 액션 정리", "데이터 수집 범위, .mori 스키마, 리포트 템플릿을 다음 작업으로 표시.", ["src-manual"], "verified", 0.96, []),
   event("evt-mvp-target", "15:55", "decision", "MVP 타깃 확정", "바이브 코더와 AI 작업자를 1차 타깃으로 확정하고 프리랜서 모드를 후속으로 둠.", ["src-claude"], "inferred", 0.83, [], ["dec-summary-default"]),
   event("evt-report-template", "16:05", "fileCode", "report_template.md 생성", "개인 회고, 팀 공유, 고객 보고, standup 리포트의 Markdown 템플릿 초안 생성.", ["src-git"], "verified", 0.94, [], ["dec-markdown-first"], [], ["art-report-template"]),
@@ -208,7 +208,7 @@ const summary: Summary = {
   sessionSummary: "Mori was positioned as a local-first AI work memory app that reconstructs selected work sessions into timelines, issues, decisions, resume prompts, and reports.",
   resumePrompt: `You are continuing a product design and engineering session for Mori.
 
-Mori is a local-first AI work memory app. It records selected AI work sessions and reconstructs how the work happened into a Narrative Timeline, Flow Focus, Issue Garden, Decision Log, Resume Prompt, Reports, and .mori files.
+Mori is a local-first AI work memory app. It records selected AI work sessions and reconstructs how the work happened into a timeline, flow focus, issues, decisions, resume prompts, reports, and .mori packages.
 
 Last decisions:
 - Use Timeline-first UI.

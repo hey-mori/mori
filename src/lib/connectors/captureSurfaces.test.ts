@@ -57,7 +57,7 @@ describe("matrix consistency invariants", () => {
 
   it("docsTemplateOnly surfaces describe a missing UI as the next step", () => {
     for (const row of getCaptureSurfacesByStatus("docsTemplateOnly")) {
-      expect(row.nextStep).toMatch(/UI|tab|Hub|Import/);
+      expect(row.nextStep).toMatch(/UI|tab|탭|import|Import/);
     }
   });
 

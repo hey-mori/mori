@@ -23,7 +23,7 @@ export function buildResumePrompt(data: MoriMockSession): string {
 
   return `You are continuing a product design and engineering session for Mori.
 
-Mori remembers how the work happened. It is a local-first AI work memory app that records selected AI work sessions and reconstructs them into a Narrative Timeline, Flow Focus, Issue Garden, Decision Log, Resume Prompt, Reports, and .mori files.
+Mori remembers how the work happened. It is a local-first AI work memory app that records selected AI work sessions and reconstructs them into a timeline, flow focus, issues, decisions, resume prompts, reports, and .mori packages.
 
 Last decisions:
 ${lastDecisions}

@@ -152,7 +152,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
           <EmptyState
             icon={Search}
             title="현재 필터에 맞는 이벤트가 없습니다"
-            description="툴바에서 필터를 조정하거나 Evidence Hub에서 소스를 가져오면 타임라인이 채워집니다."
+            description="툴바에서 필터를 조정하거나 증거 탭에서 소스를 가져오면 타임라인이 채워집니다."
           />
         </div>
       </div>

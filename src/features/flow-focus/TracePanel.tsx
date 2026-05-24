@@ -229,7 +229,7 @@ export function TracePanel({
           <MoriPlannedAction
             icon={Sparkles}
             label="재분석"
-            title="Flow Focus에서의 재분석은 예정되어 있습니다."
+            title="흐름 추적에서의 재분석은 예정되어 있습니다."
           />
         </div>
       </section>

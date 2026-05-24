@@ -8,7 +8,7 @@ import type { TrustLevel } from "../../domain/types";
  * partial, docs-only, planned, or unavailable — instead of treating
  * "Claude" or "Codex" as a single product feature.
  *
- * Every visible status copy on the Settings / Evidence Hub / Connector
+ * Every visible status copy on the Settings / 증거 탭 / Connector
  * Setup screens should be derived from this list so the UI cannot
  * accidentally over-promise.
  */
@@ -132,7 +132,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     surface: "paste",
     status: "implemented",
     captureMode: "explicitPaste",
-    userActionRequired: "Evidence Hub → 메모 탭에 직접 작성하고 저장.",
+    userActionRequired: "증거 탭 → 메모 탭에 직접 작성하고 저장.",
     canCreateSource: true,
     canCreateEvents: true,
     canEnterImportReview: false,
@@ -152,7 +152,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     surface: "paste",
     status: "implemented",
     captureMode: "explicitPaste",
-    userActionRequired: "Evidence Hub → URL 탭에 URL과 발췌를 직접 붙여넣기.",
+    userActionRequired: "증거 탭 → URL 탭에 URL과 발췌를 직접 붙여넣기.",
     canCreateSource: true,
     canCreateEvents: true,
     canEnterImportReview: false,
@@ -172,7 +172,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     surface: "paste",
     status: "implemented",
     captureMode: "explicitPaste",
-    userActionRequired: "Evidence Hub → AI 대화 탭에서 플랫폼을 고르고 transcript를 붙여넣기.",
+    userActionRequired: "증거 탭 → AI 대화 탭에서 플랫폼을 고르고 transcript를 붙여넣기.",
     canCreateSource: true,
     canCreateEvents: true,
     canEnterImportReview: true,
@@ -182,7 +182,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriCanAccess: ["붙여넣은 대화 텍스트", "추출한 턴 수 / 코드블록 수 / 토큰 추정"],
     whatMoriNeverAccesses: ["Anthropic / OpenAI 계정", "API 키", "브라우저 / 데스크톱 앱 창"],
     setupRequirement: "설정 불필요.",
-    nextStep: "추가 작업 없음 — Evidence Hub의 Connector JSONL Import 탭이 hook/wrapper 결과도 같은 흐름으로 합류시킴.",
+    nextStep: "추가 작업 없음 — 증거 탭의 Connector JSONL Import 탭이 hook/wrapper 결과도 같은 흐름으로 합류시킴.",
     relatedIntegrationIds: ["claudeTranscript", "chatgptTranscript", "codexTranscript", "aiConversation"],
   },
   {
@@ -192,7 +192,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     surface: "paste",
     status: "implemented",
     captureMode: "explicitPaste",
-    userActionRequired: "Evidence Hub → Git diff 탭에 unified diff 텍스트를 붙여넣기.",
+    userActionRequired: "증거 탭 → Git diff 탭에 unified diff 텍스트를 붙여넣기.",
     canCreateSource: true,
     canCreateEvents: true,
     canEnterImportReview: true,
@@ -297,7 +297,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     setupRequirement:
       "connectors/local-capture/ 의 mori-local-capture.py 실행 (Python 3.8+). 선택적으로 connectors/terminal-helper/ 셸 함수 또는 connectors/vscode-task/ 태스크 템플릿.",
     nextStep:
-      "캡처 결과는 Evidence Hub의 Connector JSONL import로 검토됩니다; 더 깊은 IDE 통합은 별도 Track.",
+      "캡처 결과는 증거 탭의 Connector JSONL import로 검토됩니다; 더 깊은 IDE 통합은 별도 Track.",
     relatedIntegrationIds: ["aiConversation", "gitDiff", "manualNote"],
   },
   // ---- Claude family ----
@@ -604,7 +604,7 @@ export function getPlannedCaptureSurfaces(): CaptureSurfaceRow[] {
 
 /**
  * Look up the capture surface row that maps to a `SourceIntegration.id`
- * from `sourceRegistry.ts`. Used by Evidence Hub when it wants the
+ * from `sourceRegistry.ts`. Used by 증거 탭 when it wants the
  * "honest status" copy without duplicating the registry data.
  */
 export function getCaptureSurfaceForIntegration(

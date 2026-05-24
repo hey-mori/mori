@@ -1229,11 +1229,9 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  min-height: 76px;
-  padding: 18px var(--mori-space-10) 16px;
-  background: rgba(255, 255, 255, 0.82);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(12px);
+  min-height: 60px;
+  padding: 14px var(--mori-space-10) 10px;
+  background: transparent;
 }
 
 .toolbar,
@@ -4634,8 +4632,9 @@ hr {
 }
 
 /* Session detail bar — a single tight row carrying the inline session title
-   on the left and the tab strip on the right. No banner, no chip strip, no
-   metric strip; the active tab's content is what the user is here for. */
+   on the left and the tab strip on the right. Sits flush on the page
+   background so it never reads as a separate white "header" band; the
+   only divider is the page rhythm + the tab pill's own surface. */
 .session-detail-bar {
   position: sticky;
   top: 0;
@@ -4643,10 +4642,8 @@ hr {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 8px var(--page-shell-inset);
-  background: var(--mori-surface-overlay);
-  border-bottom: 1px solid var(--mori-border);
-  backdrop-filter: blur(12px);
+  padding: 14px var(--page-shell-inset) 12px;
+  background: var(--mori-bg);
 }
 
 .session-detail-title {
@@ -4781,7 +4778,8 @@ hr {
 
 .session-tab-actionbar {
   padding: 0 var(--page-shell-inset);
-  border-bottom: 1px solid var(--mori-border);
+  /* No bottom border — the page rhythm + control surfaces carry the
+   * separation. Removes the second "white header" feel the user flagged. */
 }
 
 .session-tab-actionbar .action-bar {
