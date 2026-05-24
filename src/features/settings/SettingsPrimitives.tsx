@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from "react";
+import type { ButtonHTMLAttributes, KeyboardEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Toggle } from "../../components/ui/Toggle";
@@ -103,15 +103,19 @@ export function SettingsRow({
   meta,
   control,
   disabled = false,
+  compact = false,
 }: {
   label: string;
   description?: string;
   meta?: ReactNode;
   control?: ReactNode;
   disabled?: boolean;
+  compact?: boolean;
 }) {
   return (
-    <div className={`settings-row${disabled ? " is-disabled" : ""}`}>
+    <div
+      className={`settings-row${disabled ? " is-disabled" : ""}${compact ? " is-compact" : ""}`}
+    >
       <div className="settings-row-main">
         <strong>{label}</strong>
         {description ? <p>{description}</p> : null}
@@ -119,6 +123,144 @@ export function SettingsRow({
       </div>
       {control ? <div className="settings-row-control">{control}</div> : null}
     </div>
+  );
+}
+
+export function SettingsOptionGroup({
+  label,
+  children,
+  columns = "auto",
+}: {
+  label: string;
+  children: ReactNode;
+  columns?: "auto" | "single";
+}) {
+  return (
+    <div
+      className={`settings-option-group columns-${columns}`}
+      role="group"
+      aria-label={label}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function SettingsOption({
+  selected = false,
+  disabled = false,
+  planned = false,
+  icon: Icon,
+  label,
+  description,
+  meta,
+  action,
+  onClick,
+}: {
+  selected?: boolean;
+  disabled?: boolean;
+  planned?: boolean;
+  icon?: LucideIcon;
+  label: string;
+  description?: string;
+  meta?: ReactNode;
+  action?: ReactNode;
+  onClick?: () => void;
+}) {
+  const clickable = Boolean(onClick) && !disabled && !planned;
+  const className = [
+    "settings-option",
+    selected ? "is-selected" : "",
+    disabled ? "is-disabled" : "",
+    planned ? "is-planned" : "",
+    clickable ? "is-clickable" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const body = (
+    <>
+      {Icon ? (
+        <span className="settings-option-icon" aria-hidden="true">
+          <Icon size={15} />
+        </span>
+      ) : null}
+      <span className="settings-option-main">
+        <strong>{label}</strong>
+        {description ? <small>{description}</small> : null}
+        {meta ? <span className="settings-option-meta">{meta}</span> : null}
+      </span>
+      {action ? <span className="settings-option-action">{action}</span> : null}
+    </>
+  );
+
+  if (clickable) {
+    return (
+      <button
+        type="button"
+        className={className}
+        aria-pressed={selected}
+        onClick={onClick}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <div className={className} aria-current={selected ? "true" : undefined}>
+      {body}
+    </div>
+  );
+}
+
+export function SettingsProviderOption({
+  selected,
+  planned,
+  icon,
+  label,
+  description,
+  locality,
+  dataNotice,
+  setup,
+  status,
+  actions,
+  onSelect,
+}: {
+  selected: boolean;
+  planned?: boolean;
+  icon: LucideIcon;
+  label: string;
+  description: string;
+  locality: ReactNode;
+  dataNotice: string;
+  setup: string;
+  status: ReactNode;
+  actions?: ReactNode;
+  onSelect?: () => void;
+}) {
+  return (
+    <SettingsOption
+      selected={selected}
+      planned={planned}
+      icon={icon}
+      label={label}
+      description={description}
+      onClick={onSelect}
+      meta={
+        <>
+          {locality}
+          <span>{dataNotice}</span>
+          <span>{setup}</span>
+        </>
+      }
+      action={
+        <span className="settings-provider-actions">
+          {status}
+          {actions}
+        </span>
+      }
+    />
   );
 }
 
@@ -132,7 +274,7 @@ export function SettingsCard({
   return <div className={`settings-inline-card ${className}`.trim()}>{children}</div>;
 }
 
-export function StatusPill({
+export function SettingsStatusPill({
   tone = "gray",
   children,
 }: {
@@ -140,6 +282,24 @@ export function StatusPill({
   children: ReactNode;
 }) {
   return <span className={`settings-status-pill tone-${tone}`}>{children}</span>;
+}
+
+export const StatusPill = SettingsStatusPill;
+
+export function SettingsInlineAction({
+  children,
+  className = "",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      className={`settings-inline-action ${className}`.trim()}
+      {...props}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function PreferenceToggle({
@@ -160,17 +320,19 @@ export function PreferenceToggle({
   );
 }
 
-export function LocalOnlyNotice({
+export function SettingsNotice({
   icon: Icon,
   title,
+  tone = "info",
   children,
 }: {
   icon: LucideIcon;
   title: string;
+  tone?: "info" | "success" | "warning" | "danger";
   children: ReactNode;
 }) {
   return (
-    <aside className="local-only-notice">
+    <aside className={`settings-notice tone-${tone}`}>
       <Icon size={15} aria-hidden="true" />
       <span>
         <strong>{title}</strong>
@@ -179,3 +341,5 @@ export function LocalOnlyNotice({
     </aside>
   );
 }
+
+export const LocalOnlyNotice = SettingsNotice;

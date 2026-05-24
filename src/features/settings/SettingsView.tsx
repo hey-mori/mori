@@ -23,8 +23,7 @@ import {
 import { useMoriAppStore } from "../../app/store";
 import type { SettingsTab } from "../../app/store";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
-import type { ViewKey } from "../../domain/types";
-import type { RuntimeMode, RecommendedSetupStep } from "../../lib/settings/settingsStatus";
+import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { getProductRuntimeLabel } from "../../lib/product-state/productState";
 import { LocalAiCard } from "./LocalAiCard";
 import { PrivacyDefaultsCard } from "./PrivacyDefaultsCard";
@@ -32,10 +31,9 @@ import { PrivacyGuaranteesCard } from "./PrivacyGuaranteesCard";
 import { StorageCard } from "./StorageCard";
 import { RepositoriesCard } from "./RepositoriesCard";
 import { ThemeCard } from "./ThemeCard";
-import { TrustSummaryPanel } from "./TrustSummaryPanel";
 import { DemoModeCard } from "./DemoModeCard";
 import { NotificationsCard } from "./NotificationsCard";
-import { StatusPill } from "./SettingsPrimitives";
+import { SettingsSection, StatusPill } from "./SettingsPrimitives";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "로컬 AI", icon: Bot },
@@ -82,7 +80,6 @@ export function SettingsView() {
 
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const activeTab = useMoriAppStore((state) => state.settingsTab);
-  const setActiveTab = useMoriAppStore((state) => state.setSettingsTab);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -104,21 +101,6 @@ export function SettingsView() {
       ? `Ollama · ${settings.ollamaModel}`
       : "Deterministic Quick Pass";
 
-  function navigateForStep(step: RecommendedSetupStep) {
-    const targetMap: Partial<Record<RecommendedSetupStep["id"], ViewKey>> = {
-      "import-source": "evidence",
-      "run-quickpass": "review",
-      "verify-repository": "settings",
-      "save-to-sqlite": "settings",
-      "configure-ollama": "settings",
-    };
-    const view = targetMap[step.id];
-    if (view) setCurrentView(view);
-    if (step.id === "verify-repository") setActiveTab("repositories");
-    if (step.id === "save-to-sqlite") setActiveTab("storage");
-    if (step.id === "configure-ollama") setActiveTab("localAi");
-  }
-
   async function handlePickRepository() {
     const result = await pickRepositoryDirectory({ title: "Mori: Select repository" });
     if (result.cancelled || !result.path) return null;
@@ -129,11 +111,12 @@ export function SettingsView() {
     <div className="settings-content-stack settings-page">
       <div className="settings-pane-head">
         <div>
-          <span className="settings-section-eyebrow">Settings</span>
+          <span className="settings-section-eyebrow">{sectionEyebrow(activeTab)}</span>
           <h2>{SETTINGS_TAB_DEFS.find((entry) => entry.id === activeTab)?.label ?? "설정"}</h2>
+          <p>{sectionDescription(activeTab)}</p>
         </div>
         <StatusPill tone={mode === "tauri-desktop" ? "green" : "blue"}>
-          {mode === "tauri-desktop" ? "Desktop runtime" : "Browser runtime"}
+          {mode === "tauri-desktop" ? "데스크톱 런타임" : "브라우저 런타임"}
         </StatusPill>
       </div>
       <StatusStrip
@@ -208,18 +191,46 @@ export function SettingsView() {
         ) : null}
       </div>
 
-      <TrustSummaryPanel
-        mode={mode}
-        sqliteKind={sqliteKind}
-        providerKind={settings.provider}
-        importsCount={imports.length}
-        hasAnalysis={hasAnalysis}
-        hasUnsavedDraft={Boolean(sessionDraft) && sqliteKind === "ok"}
-        repositoriesTotal={repositorySettings.repositories.length}
-        onAction={navigateForStep}
-      />
     </div>
   );
+}
+
+function sectionEyebrow(tab: SettingsTab): string {
+  switch (tab) {
+    case "localAi":
+      return "Quick Pass";
+    case "privacy":
+      return "Privacy";
+    case "storage":
+      return "Local data";
+    case "repositories":
+      return "Projects";
+    case "appearance":
+      return "Display";
+    case "notifications":
+      return "Signals";
+    case "profile":
+      return "Profile";
+  }
+}
+
+function sectionDescription(tab: SettingsTab): string {
+  switch (tab) {
+    case "localAi":
+      return "가져온 세션을 해석할 로컬 또는 명시적 제공자를 선택합니다.";
+    case "privacy":
+      return "Mori가 기본으로 지키는 로컬 우선 경계입니다.";
+    case "storage":
+      return "이 기기의 저장 위치, SQLite 상태, 내보내기 경로를 확인합니다.";
+    case "repositories":
+      return "Git diff 캡처와 프로젝트 분류에 사용할 경로만 직접 등록합니다.";
+    case "appearance":
+      return "이 기기에만 저장되는 화면 표시 설정입니다.";
+    case "notifications":
+      return "향후 알림 전달 계층이 사용할 로컬 범주 설정입니다.";
+    case "profile":
+      return "이 기기에서만 쓰는 Mori 표시 이름입니다.";
+  }
 }
 
 type RuntimeStatTone = "ok" | "info" | "idle" | "warn" | "error";
@@ -310,14 +321,13 @@ function SqliteLoadCard({
   const [error, setError] = useState<string | null>(null);
   if (sessions.length === 0) return null;
   return (
-    <section className="settings-card" aria-label="SQLite saved sessions">
-      <header className="settings-card-head">
-        <div>
-          <h3>저장된 세션 다시 불러오기</h3>
-          <p>Desktop SQLite에 저장된 세션을 활성 세션으로 다시 불러옵니다.</p>
-        </div>
+    <SettingsSection
+      title="저장된 세션"
+      description="Desktop SQLite에 저장된 세션을 활성 세션으로 다시 불러옵니다."
+      action={
         <Badge tone="purple">{sessions.length}개 세션</Badge>
-      </header>
+      }
+    >
       <ul className="settings-sqlite-saved-list">
         {sessions.map((entry) => (
           <li key={entry.sessionId}>
@@ -355,6 +365,6 @@ function SqliteLoadCard({
           {error}
         </p>
       ) : null}
-    </section>
+    </SettingsSection>
   );
 }

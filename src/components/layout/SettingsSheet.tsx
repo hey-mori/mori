@@ -8,8 +8,8 @@ import { SettingsRail, type SettingsRailItem } from "../../features/settings/Set
 const RAIL_ITEMS: SettingsRailItem[] = [
   {
     id: "profile",
-    label: "Profile",
-    description: "Name, avatar, local identity",
+    label: "프로필",
+    description: "이 기기의 로컬 정체성",
     icon: UserRound,
   },
   ...SETTINGS_TAB_DEFS.map((item) => ({
@@ -56,8 +56,8 @@ export function SettingsSheet() {
       >
         <header className="settings-sheet-head">
           <div className="settings-sheet-title">
-            <strong>Mori Preferences</strong>
-            <span>Local-first setup for this device</span>
+            <strong>Mori 환경설정</strong>
+            <span>이 기기에 저장되는 로컬 설정</span>
           </div>
           <button
             type="button"
@@ -87,18 +87,18 @@ export function SettingsSheet() {
 function railDescriptionFor(tab: SettingsTab): string {
   switch (tab) {
     case "profile":
-      return "Name, avatar, local identity";
+      return "표시 이름과 이니셜";
     case "localAi":
-      return "Quick Pass providers";
+      return "Quick Pass 제공자";
     case "privacy":
-      return "Local-first guarantees";
+      return "로컬 우선 보장";
     case "storage":
-      return "SQLite, backups, data controls";
+      return "SQLite와 내보내기";
     case "repositories":
-      return "Projects and import scope";
+      return "프로젝트 경로";
     case "appearance":
-      return "Theme and density";
+      return "테마와 밀도";
     case "notifications":
-      return "Future alert categories";
+      return "알림 범주";
   }
 }
