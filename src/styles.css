@@ -7980,13 +7980,12 @@ pre {
   }
 }
 
+/* Board columns read as a calm bucket — no nested card chrome, the header
+   names the bucket and the cards sit directly under it. */
 .review-issue-column {
   display: grid;
   gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel-soft);
+  padding: 0 4px;
   min-width: 0;
 }
 
@@ -7994,6 +7993,8 @@ pre {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 2px 4px;
+  border-bottom: 1px solid var(--line);
 }
 
 .review-issue-column-label {
@@ -8003,9 +8004,10 @@ pre {
 }
 
 .review-issue-column-label strong {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--muted);
+  letter-spacing: 0.01em;
 }
 
 .review-issue-column-list {
