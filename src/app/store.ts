@@ -15,7 +15,13 @@ export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | 
 export type SessionTab = "flow" | "evidence" | "insights" | "report";
 
 /** Active tab on the Settings surface. Persisted so the user returns to the same tab. */
-export type SettingsTab = "localAi" | "privacy" | "storage" | "repositories" | "appearance";
+export type SettingsTab =
+  | "localAi"
+  | "privacy"
+  | "storage"
+  | "repositories"
+  | "appearance"
+  | "notifications";
 
 /**
  * Outer tab on the settings sheet (the modal opened from the top-bar user

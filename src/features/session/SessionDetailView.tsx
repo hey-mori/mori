@@ -49,7 +49,7 @@ export function SessionDetailView() {
   const setSessionTab = useMoriAppStore((state) => state.setSessionTab);
 
   return (
-    <PageShell className="session-detail-page">
+    <PageShell className="session-detail-page" maxWidth="full">
       <div className="session-detail-bar">
         <SessionTitleInline />
         <SessionTabBar activeTab={sessionTab} onChange={setSessionTab} />

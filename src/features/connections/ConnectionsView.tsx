@@ -289,7 +289,7 @@ export function ConnectionsView() {
 
   if (!bridgeAvailable) {
     return (
-      <PageShell className="connections-page" maxWidth="wide">
+      <PageShell className="connections-page" maxWidth="detail">
         <ConnectionsBrowserHelp />
       </PageShell>
     );
@@ -303,7 +303,7 @@ export function ConnectionsView() {
   return (
     <PageShell
       className="connections-page"
-      maxWidth="wide"
+      maxWidth="detail"
       actionBar={
         <ActionBar
           label="연결"
@@ -316,12 +316,10 @@ export function ConnectionsView() {
                   </Badge>
                   <HelpDisclosure label="가져올 수 있는 도구" ariaLabel="가져오기 정책 설명">
                     <p>
-                      데이터가 PC에 로컬로 저장되는 도구만 가져올 수 있습니다 (Claude Desktop ·
-                      Claude Code 등).
+                      로컬에 세션 파일이 있는 도구만 가져옵니다.
                     </p>
                     <p>
-                      claude.ai 웹 채팅은 Anthropic 서버에 저장되므로 직접 가져올 수 없습니다. 필요하면
-                      증거 탭에서 대화를 직접 붙여넣으세요.
+                      웹 채팅은 직접 붙여넣기로 기록하세요.
                     </p>
                   </HelpDisclosure>
                 </>
@@ -360,8 +358,7 @@ export function ConnectionsView() {
           <div>
             <h2>가져올 수 있는 세션</h2>
             <p>
-              감지된 도구에서 발견한 대화 세션입니다. 클릭하면 우측에서 미리보고
-              지금 세션 또는 새 세션으로 가져올 수 있어요.
+              세션을 선택해 미리보고 현재 세션 또는 새 세션으로 가져옵니다.
             </p>
           </div>
           <Badge tone={sessions.sessions.length > 0 ? "purple" : "gray"}>
@@ -370,7 +367,7 @@ export function ConnectionsView() {
         </header>
 
         <div className="connections-sessions-toolbar">
-          <label className="connections-search">
+          <label className="connections-search mori-search-field">
             <Search size={14} aria-hidden="true" />
             <input
               type="search"
@@ -410,12 +407,11 @@ export function ConnectionsView() {
 
       {/* Tool inventory moved below sessions: it's reference material once
           the user is doing real work, so it folds away by default. */}
-      <details className="connections-tools-disclosure">
+      <details className="connections-tools-disclosure mori-disclosure">
         <summary>
           <span>감지된 AI 도구 {detectedCount}개</span>
           <small>
-            가져오기 지원 {importableCount}개 · 어디서 데이터를 가져왔는지
-            확인하려면 펼치세요.
+            가져오기 지원 {importableCount}개
           </small>
         </summary>
         <div className="connections-tools-disclosure-body">

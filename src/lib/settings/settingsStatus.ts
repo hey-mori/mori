@@ -125,44 +125,44 @@ export function getPrivacyPolicy(): PrivacyPolicyRow[] {
   return [
     {
       id: "no-background-capture",
-      label: "백그라운드 캡처 없음",
-      detail: "Mori는 활성 세션이 있어도 사용자가 명시적으로 import를 누르기 전까지 어떤 데이터도 수집하지 않습니다.",
+      label: "No background capture",
+      detail: "Mori does not collect screen, app, browser, or clipboard content in the background.",
       state: "enforced",
     },
     {
       id: "no-browser-scan",
-      label: "브라우저 / 앱 자동 스캔 없음",
-      detail: "Mori는 브라우저 탭이나 다른 앱의 창을 읽지 않습니다. URL은 사용자가 직접 붙여넣기로 추가합니다.",
+      label: "No browser or app scanning",
+      detail: "Browser tabs, app windows, and chat tools are not read automatically. Pasted URLs or imports are user-provided.",
       state: "enforced",
     },
     {
       id: "no-fs-scan",
-      label: "파일 시스템 자동 스캔 없음",
-      detail: "Mori는 사용자가 추가한 리포지토리 경로만 기억하고, Git diff를 실행할 때만 그 경로를 읽습니다.",
+      label: "No disk scan",
+      detail: "Only repository paths you add are stored. Those paths are read only when you run verify or Git diff capture.",
       state: "enforced",
     },
     {
       id: "no-oauth",
-      label: "OAuth / 계정 자동 연결 없음",
-      detail: "Claude, ChatGPT, Codex 직접 연동은 명시적으로 Planned 상태이며 자동으로 로그인하지 않습니다.",
+      label: "No OAuth connection",
+      detail: "Claude, ChatGPT, Codex, and future integrations are not connected or signed in automatically.",
       state: "enforced",
     },
     {
       id: "ai-transcript-summary-only",
-      label: "AI Transcript는 요약/메타데이터만 보관",
-      detail: "Claude / ChatGPT / Codex / Other AI 대화는 turn 수 + 첫 user 메시지 요약만 저장합니다.",
+      label: "Imported transcripts are minimized",
+      detail: "AI transcript imports store normalized events, source metadata, and summaries needed for review.",
       state: "default",
     },
     {
       id: "client-safe-report-mode",
-      label: "클라이언트 안전 보고서 모드",
-      detail: "리포트 빌더에서 클라이언트 안전 모드를 켜면 원본 텍스트 / 출처 상세 / 파일 경로가 제외됩니다.",
+      label: "Client-safe report mode",
+      detail: "When enabled in Reports, original text, source details, and file paths are excluded from the export.",
       state: "default",
     },
     {
       id: "robust-redaction",
-      label: "강력한 redaction (PII 자동 마스킹)",
-      detail: "Markdown 리포트의 추가 PII 자동 마스킹은 다음 마일스톤입니다. 현재는 섹션 단위 필터만 제공됩니다.",
+      label: "Automatic PII redaction",
+      detail: "Automatic masking for report exports is planned. Today Mori provides section-level export controls.",
       state: "planned",
     },
   ];
@@ -198,13 +198,13 @@ export function groupPrivacyPolicyByState(
  */
 export function getPrivacyGuarantees(): string[] {
   return [
-    "백그라운드 / 자동 화면 캡처",
-    "브라우저 탭, 다른 앱의 창 읽기",
-    "사용자가 추가하지 않은 디스크 / 폴더 스캔",
-    "OAuth / 자동 계정 연결 (Claude · ChatGPT · Codex)",
-    "키로깅 · 클립보드 가로채기 · 상시 데몬",
-    "Mori 외부 호스트로의 자동 전송 · 클라우드 동기화",
-    "검토 없는 메모리 자동 작성",
+    "백그라운드 화면 캡처 또는 자동 화면 기록",
+    "브라우저 탭이나 다른 앱 창 읽기",
+    "사용자가 추가하지 않은 폴더 스캔",
+    "OAuth 또는 자동 계정 연결",
+    "키 입력 기록, 클립보드 가로채기, 상시 데몬",
+    "자동 업로드 또는 클라우드 동기화",
+    "검토 없는 프로젝트 메모리 저장",
   ];
 }
 

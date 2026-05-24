@@ -155,7 +155,7 @@ export function HomeView() {
         <EmptyState
           icon={Layers}
           title="아직 작업 기억이 없습니다"
-          description="연결에서 Claude 작업을 가져오면 여기에 작업 기억이 쌓이고, 무엇을 해왔고 다음에 무엇을 하면 좋을지 한눈에 보입니다."
+          description="연결에서 작업 세션을 가져오면 최근 흐름과 다음 작업이 여기에 정리됩니다."
           actions={
             <>
               <Button
@@ -165,10 +165,6 @@ export function HomeView() {
               >
                 연결에서 작업 가져오기
               </Button>
-              {/* Secondary path: drop the user straight into the bundled demo
-                  session so they can poke around without having to import
-                  first. With no real draft, openSession() routes to the
-                  demoView the rest of the surfaces already render. */}
               <Button
                 variant="ghost"
                 icon={Sparkles}
@@ -223,7 +219,7 @@ export function HomeView() {
 
           <div className="home-columns">
             <section className="home-section home-recent" aria-label="최근 세션">
-              <header className="home-section-head">
+              <header className="home-section-head mori-section-row">
                 <h2>최근 세션</h2>
                 <button
                   type="button"
@@ -255,7 +251,7 @@ export function HomeView() {
             </section>
 
             <aside className="home-section home-next" aria-label="다음 단계">
-              <header className="home-section-head">
+              <header className="home-section-head mori-section-row">
                 <h2>다음 단계</h2>
               </header>
               <ul className="home-next-list">
@@ -272,7 +268,7 @@ export function HomeView() {
 
           {overview.usagePanels.length > 0 ? (
             <section className="home-section home-usage" aria-label="사용 현황">
-              <header className="home-section-head">
+              <header className="home-section-head mori-section-row">
                 <h2>사용 현황</h2>
               </header>
               <div className="home-usage-panels">
@@ -324,7 +320,7 @@ function RecentSessionRow({
   const origin = describeHomeSessionOrigin(session.origin);
   return (
     <li>
-      <button type="button" className="home-session-row" onClick={onOpen} title={session.title}>
+      <button type="button" className="home-session-row mori-list-row" onClick={onOpen} title={session.title}>
         <span className="home-session-icon" aria-hidden="true">
           <FolderKanban size={15} />
         </span>
@@ -379,7 +375,7 @@ function NextActionRow({
     <li className={`home-next-row tone-${action.tone}`}>
       <button
         type="button"
-        className="home-next-trigger"
+        className="home-next-trigger mori-list-row"
         onClick={onRun}
         title={action.description}
       >

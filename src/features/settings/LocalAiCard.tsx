@@ -4,15 +4,19 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
-import { Toggle } from "../../components/ui/Toggle";
-import { SectionHeader } from "../../components/ui/SectionHeader";
 import { probeOllamaConnection } from "../../lib/analysis";
 import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib/analysis";
-import { getProviderRows } from "../../lib/settings/settingsStatus";
+import { getProviderRows, type ProviderRow as ProviderRowModel } from "../../lib/settings/settingsStatus";
 import {
   getProductAvailabilityDisplay,
   productAvailabilityFromFeatureStatus,
 } from "../../lib/product-state/productState";
+import {
+  PreferenceToggle,
+  SettingsRow,
+  SettingsSection,
+  StatusPill,
+} from "./SettingsPrimitives";
 
 const ICONS: Record<string, typeof Bot> = {
   deterministic: Sparkles,
@@ -54,16 +58,11 @@ export function LocalAiCard({
   }
 
   return (
-    <section className="settings-card" aria-label="로컬 AI 제공자">
-      <header className="settings-card-head">
-        <div>
-          <h3>로컬 AI 제공자</h3>
-          <p>
-            Quick Pass가 가져온 세션을 이슈 · 결정 · 다음 액션으로 정리합니다. 기본 제공자는 로컬
-            휴리스틱이며, 직접 입력한 엔드포인트로 Ollama 등 로컬 LLM으로 바꿀 수 있습니다.
-          </p>
-        </div>
-      </header>
+    <SettingsSection
+      title="Local AI providers"
+      eyebrow="Quick Pass"
+      description="Choose what Quick Pass uses to turn imported evidence into issues, decisions, and next actions. Mori only sends data to a provider after you select and configure it."
+    >
 
       <div className="settings-provider-grid">
         {rows.map((row) => {
@@ -74,110 +73,157 @@ export function LocalAiCard({
             productAvailabilityFromFeatureStatus(row.status),
           );
           return (
-            <article
+            <ProviderOption
               key={row.id}
-              className={`settings-provider-card ${isCurrent ? "is-selected" : ""} ${row.status === "planned" ? "is-planned" : ""}`}
-              aria-current={isCurrent ? "true" : undefined}
-            >
-              <header>
-                <span className={`settings-provider-icon ${row.isLocal ? "is-local" : "is-cloud"}`}>
-                  <Icon size={16} aria-hidden="true" />
-                </span>
-                <div>
-                  <strong>{row.label}</strong>
-                  <span>{row.description}</span>
-                </div>
-                <MoriStatusBadge tone={availability.tone}>
-                  {availability.label}
-                </MoriStatusBadge>
-              </header>
-              <dl>
-                <div>
-                  <dt>위치</dt>
-                  <dd>{row.isLocal ? "로컬" : "클라우드"}</dd>
-                </div>
-                <div>
-                  <dt>받는 데이터</dt>
-                  <dd>{row.receivesData}</dd>
-                </div>
-                <div>
-                  <dt>설정 필요</dt>
-                  <dd>{row.setupRequirement}</dd>
-                </div>
-              </dl>
-              <p className="settings-provider-privacy">{row.privacyNote}</p>
-              <footer>
-                {canSelect ? (
-                  <Button
-                    variant={isCurrent ? "primary" : "secondary"}
-                    onClick={() =>
-                      onProviderChange(row.id === "deterministic" ? "deterministic" : "ollama")
-                    }
-                    disabled={isCurrent}
-                    title={isCurrent ? "현재 선택된 제공자입니다." : "Quick Pass 제공자로 선택"}
-                  >
-                    {isCurrent ? "선택됨" : "선택하기"}
-                  </Button>
-                ) : (
-                  <MoriPlannedAction
-                    label="예정"
-                    title="다음 마일스톤에서 활성화됩니다."
-                  />
-                )}
-                {row.canTest ? (
-                  <Button
-                    icon={Plug}
-                    onClick={handleTest}
-                    disabled={probe.status === "checking"}
-                    title="현재 입력된 Ollama 엔드포인트로 연결을 테스트합니다."
-                  >
-                    {probe.status === "checking" ? "확인 중..." : "연결 테스트"}
-                  </Button>
-                ) : null}
-              </footer>
-            </article>
+              row={row}
+              icon={Icon}
+              isCurrent={isCurrent}
+              canSelect={canSelect}
+              availabilityLabel={availability.label}
+              availabilityTone={availability.tone}
+              onSelect={() =>
+                onProviderChange(row.id === "deterministic" ? "deterministic" : "ollama")
+              }
+              onTest={row.canTest ? handleTest : undefined}
+              testBusy={probe.status === "checking"}
+            />
           );
         })}
       </div>
 
-      <SectionHeader title="Ollama 연결 설정" hint="엔드포인트 · 모델 · 타임아웃" />
-      <div className="settings-provider-config">
-        <ProviderField
-          label="엔드포인트"
-          value={settings.ollamaEndpoint}
-          disabled={settings.provider !== "ollama"}
-          onChange={(value) => onUpdateSettings({ ollamaEndpoint: value })}
-        />
-        <ProviderField
-          label="모델"
-          value={settings.ollamaModel}
-          disabled={settings.provider !== "ollama"}
-          onChange={(value) => onUpdateSettings({ ollamaModel: value })}
-        />
-        <ProviderField
-          label="타임아웃 (ms)"
-          value={String(settings.ollamaTimeoutMs)}
-          disabled={settings.provider !== "ollama"}
-          onChange={(value) =>
-            onUpdateSettings({ ollamaTimeoutMs: parseTimeout(value, settings.ollamaTimeoutMs) })
+      <div className="settings-row-list">
+        <SettingsRow
+          label="Ollama endpoint"
+          description="Only used when Ollama is the selected provider."
+          control={
+            <ProviderField
+              label="엔드포인트"
+              value={settings.ollamaEndpoint}
+              disabled={settings.provider !== "ollama"}
+              onChange={(value) => onUpdateSettings({ ollamaEndpoint: value })}
+            />
           }
         />
-        <label className="settings-provider-fallback">
-          <span>
-            <strong>Ollama 실패 시 자동 전환</strong>
-            <small>네트워크 오류 등으로 Ollama가 응답하지 않으면 기본 제공자가 대신 분석합니다.</small>
-          </span>
-          <Toggle
-            active={settings.fallbackToDeterministic}
-            onClick={() =>
-              onUpdateSettings({ fallbackToDeterministic: !settings.fallbackToDeterministic })
-            }
-          />
-        </label>
+        <SettingsRow
+          label="Model"
+          description="The local model name Mori sends in the Ollama request."
+          control={
+            <ProviderField
+              label="모델"
+              value={settings.ollamaModel}
+              disabled={settings.provider !== "ollama"}
+              onChange={(value) => onUpdateSettings({ ollamaModel: value })}
+            />
+          }
+        />
+        <SettingsRow
+          label="Timeout"
+          description="Maximum wait time for a local Ollama response."
+          control={
+            <ProviderField
+              label="타임아웃"
+              value={String(settings.ollamaTimeoutMs)}
+              disabled={settings.provider !== "ollama"}
+              onChange={(value) =>
+                onUpdateSettings({ ollamaTimeoutMs: parseTimeout(value, settings.ollamaTimeoutMs) })
+              }
+            />
+          }
+        />
+        <SettingsRow
+          label="Fallback to Quick Pass"
+          description="If Ollama is unreachable, Mori can use the deterministic local provider instead."
+          control={
+            <PreferenceToggle
+              label="Ollama 실패 시 자동 전환"
+              active={settings.fallbackToDeterministic}
+              onToggle={() =>
+                onUpdateSettings({ fallbackToDeterministic: !settings.fallbackToDeterministic })
+              }
+            />
+          }
+        />
       </div>
 
       <ProbeRow probe={probe} />
-    </section>
+    </SettingsSection>
+  );
+}
+
+function ProviderOption({
+  row,
+  icon: Icon,
+  isCurrent,
+  canSelect,
+  availabilityLabel,
+  availabilityTone,
+  onSelect,
+  onTest,
+  testBusy,
+}: {
+  row: ProviderRowModel;
+  icon: typeof Bot;
+  isCurrent: boolean;
+  canSelect: boolean;
+  availabilityLabel: string;
+  availabilityTone: Parameters<typeof MoriStatusBadge>[0]["tone"];
+  onSelect: () => void;
+  onTest?: () => void;
+  testBusy: boolean;
+}) {
+  return (
+    <article
+      className={`settings-provider-card ${isCurrent ? "is-selected" : ""} ${row.status === "planned" ? "is-planned" : ""}`}
+      aria-current={isCurrent ? "true" : undefined}
+    >
+      <header>
+        <span className={`settings-provider-icon ${row.isLocal ? "is-local" : "is-cloud"}`}>
+          <Icon size={16} aria-hidden="true" />
+        </span>
+        <div>
+          <strong>{row.label}</strong>
+          <span>{row.description}</span>
+        </div>
+        <MoriStatusBadge tone={availabilityTone}>
+          {availabilityLabel}
+        </MoriStatusBadge>
+      </header>
+      <div className="settings-provider-meta">
+        <StatusPill tone={row.isLocal ? "green" : "orange"}>
+          {row.isLocal ? "Runs locally" : "External service"}
+        </StatusPill>
+        <span>{row.receivesData}</span>
+        <span>{row.setupRequirement}</span>
+      </div>
+      <p className="settings-provider-privacy">{row.privacyNote}</p>
+      <footer>
+        {canSelect ? (
+          <Button
+            variant={isCurrent ? "primary" : "secondary"}
+            onClick={onSelect}
+            disabled={isCurrent}
+            title={isCurrent ? "현재 선택된 제공자입니다." : "Quick Pass 제공자로 선택"}
+          >
+            {isCurrent ? "Selected" : "Select"}
+          </Button>
+        ) : (
+          <MoriPlannedAction
+            label="Planned"
+            title="다음 마일스톤에서 활성화됩니다."
+          />
+        )}
+        {onTest ? (
+          <Button
+            icon={Plug}
+            onClick={onTest}
+            disabled={testBusy}
+            title="현재 입력된 Ollama 엔드포인트로 연결을 테스트합니다."
+          >
+            {testBusy ? "Testing..." : "Test"}
+          </Button>
+        ) : null}
+      </footer>
+    </article>
   );
 }
 
@@ -226,7 +272,7 @@ function ProviderField({
 }) {
   return (
     <label className={`settings-provider-field ${disabled ? "is-disabled" : ""}`}>
-      <span>{label}</span>
+      <span className="sr-only">{label}</span>
       <input
         type="text"
         value={value}

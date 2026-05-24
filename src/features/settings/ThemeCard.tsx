@@ -1,6 +1,12 @@
 import { Check, Palette } from "lucide-react";
 import { useMoriThemeStore } from "../../app/themeStore";
 import type { MoriThemeId } from "../../lib/settings/themePreference";
+import {
+  PreferenceToggle,
+  SettingsRow,
+  SettingsSection,
+  StatusPill,
+} from "./SettingsPrimitives";
 
 /**
  * Theme switcher card.
@@ -45,17 +51,12 @@ export function ThemeCard() {
   const setTheme = useMoriThemeStore((state) => state.setTheme);
 
   return (
-    <section className="settings-card" aria-label="Theme">
-      <header className="settings-card-head">
-        <div>
-          <h3>화면 테마</h3>
-          <p>
-            이 기기에 적용할 화면 테마를 선택합니다. 선택은 이 기기에 저장되며,
-            로컬 설정으로만 적용됩니다 — 동기화나 계정과는 무관합니다.
-          </p>
-        </div>
-        <Palette size={16} aria-hidden="true" />
-      </header>
+    <SettingsSection
+      title="Appearance"
+      eyebrow="Display"
+      description="Theme is applied and stored on this device. It does not sync and does not change capture, analysis, or memory behavior."
+      action={<Palette size={16} aria-hidden="true" />}
+    >
       <div className="theme-option-grid" role="radiogroup" aria-label="화면 테마">
         {THEME_OPTIONS.map((option) => {
           const selected = option.id === theme;
@@ -83,6 +84,20 @@ export function ThemeCard() {
           );
         })}
       </div>
-    </section>
+      <div className="settings-row-list">
+        <SettingsRow
+          label="Display density"
+          description="Compact and comfortable density controls are planned for dense review work."
+          meta={<StatusPill tone="gray">Planned</StatusPill>}
+          control={<PreferenceToggle label="Compact mode" active={false} disabled />}
+          disabled
+        />
+        <SettingsRow
+          label="Demo data visibility"
+          description="Mori currently shows bundled demos only when there are no real saved sessions."
+          meta={<StatusPill tone="blue">Automatic</StatusPill>}
+        />
+      </div>
+    </SettingsSection>
   );
 }

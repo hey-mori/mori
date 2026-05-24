@@ -8,13 +8,16 @@ import {
 
 describe("resolvePageShellMaxWidthClass", () => {
   it("maps each preset to its modifier class", () => {
-    expect(resolvePageShellMaxWidthClass("default")).toBe("is-default");
+    expect(resolvePageShellMaxWidthClass("default")).toBe("is-standard");
+    expect(resolvePageShellMaxWidthClass("standard")).toBe("is-standard");
     expect(resolvePageShellMaxWidthClass("wide")).toBe("is-wide");
+    expect(resolvePageShellMaxWidthClass("detail")).toBe("is-detail");
+    expect(resolvePageShellMaxWidthClass("reading")).toBe("is-reading");
     expect(resolvePageShellMaxWidthClass("full")).toBe("is-full");
   });
 
-  it("defaults to the default preset when omitted", () => {
-    expect(resolvePageShellMaxWidthClass()).toBe("is-default");
+  it("defaults to the standard preset when omitted", () => {
+    expect(resolvePageShellMaxWidthClass()).toBe("is-standard");
   });
 });
 

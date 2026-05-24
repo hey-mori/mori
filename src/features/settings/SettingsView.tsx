@@ -1,4 +1,5 @@
 import {
+  Bell,
   Bot,
   HardDrive,
   Lock,
@@ -6,8 +7,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { ActionBar } from "../../components/layout/ActionBar";
-import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import {
@@ -35,13 +34,16 @@ import { RepositoriesCard } from "./RepositoriesCard";
 import { ThemeCard } from "./ThemeCard";
 import { TrustSummaryPanel } from "./TrustSummaryPanel";
 import { DemoModeCard } from "./DemoModeCard";
+import { NotificationsCard } from "./NotificationsCard";
+import { StatusPill } from "./SettingsPrimitives";
 
-const TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
+export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "로컬 AI", icon: Bot },
   { id: "privacy", label: "개인정보", icon: Lock },
   { id: "storage", label: "저장소", icon: HardDrive },
   { id: "repositories", label: "리포지토리", icon: ShieldCheck },
   { id: "appearance", label: "화면", icon: Palette },
+  { id: "notifications", label: "알림", icon: Bell },
 ];
 
 export function SettingsView() {
@@ -124,60 +126,20 @@ export function SettingsView() {
   }
 
   return (
-    <PageShell
-      className="settings-page"
-      actionBar={
-        <ActionBar
-          label="설정 섹션"
-          end={
-            <div className="settings-page-actions">
-              <Badge tone="purple">{mode === "tauri-desktop" ? "데스크톱" : "브라우저"}</Badge>
-            </div>
-          }
-          start={
-            <nav
-              className="settings-tabs"
-              role="tablist"
-              aria-label="설정 섹션"
-              onKeyDown={(event) => {
-                const tabIds = TAB_DEFS.map((t) => t.id);
-                const current = tabIds.indexOf(activeTab);
-                let next = -1;
-                if (event.key === "ArrowRight") next = (current + 1) % tabIds.length;
-                else if (event.key === "ArrowLeft") next = (current - 1 + tabIds.length) % tabIds.length;
-                else if (event.key === "Home") next = 0;
-                else if (event.key === "End") next = tabIds.length - 1;
-                if (next !== -1) {
-                  event.preventDefault();
-                  const nextId = tabIds[next]!;
-                  setActiveTab(nextId);
-                  (event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next])?.focus();
-                }
-              }}
-            >
-              {TAB_DEFS.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    tabIndex={isActive ? 0 : -1}
-                    aria-selected={isActive}
-                    className={`settings-tab ${isActive ? "active" : ""}`}
-                    onClick={() => setActiveTab(tab.id)}
-                  >
-                    <Icon size={14} aria-hidden="true" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          }
-        />
-      }
-    >
+    <div className="settings-content-stack settings-page">
+      <div className="settings-pane-head">
+        <div>
+          <span className="settings-section-eyebrow">Settings</span>
+          <h2>{SETTINGS_TAB_DEFS.find((entry) => entry.id === activeTab)?.label ?? "설정"}</h2>
+          <p>
+            Local-first preferences for AI, privacy, storage, projects, appearance, and
+            notification categories.
+          </p>
+        </div>
+        <StatusPill tone={mode === "tauri-desktop" ? "green" : "blue"}>
+          {mode === "tauri-desktop" ? "Desktop runtime" : "Browser runtime"}
+        </StatusPill>
+      </div>
       <StatusStrip
         mode={mode}
         sqliteKind={sqliteKind}
@@ -190,63 +152,64 @@ export function SettingsView() {
       />
 
       <div className="settings-main">
-          {activeTab === "localAi" ? (
-            <LocalAiCard
-              settings={settings}
-              onProviderChange={(provider) => updateAnalysisSettings({ provider })}
-              onUpdateSettings={(patch) => updateAnalysisSettings(patch)}
-            />
-          ) : null}
-          {activeTab === "privacy" ? (
-            <>
-              <PrivacyDefaultsCard />
-              <PrivacyGuaranteesCard />
-            </>
-          ) : null}
-          {activeTab === "storage" ? (
-            <DemoModeCard
-              onGoToConnections={() => setCurrentView("connections")}
-            />
-          ) : null}
-          {activeTab === "storage" ? (
-            <StorageCard
-              mode={mode}
-              sqliteAvailable={sqliteAvailable}
-              sqliteKind={sqliteKind}
-              sqliteStatus={sqliteStatus}
-              sqliteSessions={sqliteSessions}
-              sqliteError={sqliteError}
-              lastPersist={lastPersist}
-              packageDraftCount={0}
-              canPersist={Boolean(sessionDraft) && sqliteKind !== "checking"}
-              onInitializeSqlite={() => initializeSqlite()}
-              onRefreshSqlite={() => refreshSqlite()}
-              onPersistSession={() => persistSqlite(sessionView)}
-              onOpenReports={() => setCurrentView("reports")}
-            />
-          ) : null}
-          {activeTab === "repositories" ? (
-            <RepositoriesCard
-              repositories={repositorySettings.repositories}
-              desktopRuntime={desktopRuntime}
-              defaultRepositoryId={activeRepository?.id ?? null}
-              verifyingId={verifyingId}
-              onAdd={({ path, label }) => addRepository({ path, label })}
-              onPickDirectory={handlePickRepository}
-              onRename={(id, label) => renameRepository(id, label)}
-              onSelect={(id) => selectRepository(id)}
-              onVerify={(id) => verifyRepository(id)}
-              onClearVerification={(id) => clearRepositoryVerification(id)}
-              onRemove={(id) => removeRepository(id)}
-            />
-          ) : null}
-          {activeTab === "appearance" ? <ThemeCard /> : null}
-          {activeTab === "storage" ? (
-            <SqliteLoadCard
-              sessions={sqliteSessions}
-              onLoad={loadDesktopSession}
-            />
-          ) : null}
+        {activeTab === "localAi" ? (
+          <LocalAiCard
+            settings={settings}
+            onProviderChange={(provider) => updateAnalysisSettings({ provider })}
+            onUpdateSettings={(patch) => updateAnalysisSettings(patch)}
+          />
+        ) : null}
+        {activeTab === "privacy" ? (
+          <>
+            <PrivacyDefaultsCard />
+            <PrivacyGuaranteesCard />
+          </>
+        ) : null}
+        {activeTab === "storage" ? (
+          <DemoModeCard
+            onGoToConnections={() => setCurrentView("connections")}
+          />
+        ) : null}
+        {activeTab === "storage" ? (
+          <StorageCard
+            mode={mode}
+            sqliteAvailable={sqliteAvailable}
+            sqliteKind={sqliteKind}
+            sqliteStatus={sqliteStatus}
+            sqliteSessions={sqliteSessions}
+            sqliteError={sqliteError}
+            lastPersist={lastPersist}
+            packageDraftCount={0}
+            canPersist={Boolean(sessionDraft) && sqliteKind !== "checking"}
+            onInitializeSqlite={() => initializeSqlite()}
+            onRefreshSqlite={() => refreshSqlite()}
+            onPersistSession={() => persistSqlite(sessionView)}
+            onOpenReports={() => setCurrentView("reports")}
+          />
+        ) : null}
+        {activeTab === "repositories" ? (
+          <RepositoriesCard
+            repositories={repositorySettings.repositories}
+            desktopRuntime={desktopRuntime}
+            defaultRepositoryId={activeRepository?.id ?? null}
+            verifyingId={verifyingId}
+            onAdd={({ path, label }) => addRepository({ path, label })}
+            onPickDirectory={handlePickRepository}
+            onRename={(id, label) => renameRepository(id, label)}
+            onSelect={(id) => selectRepository(id)}
+            onVerify={(id) => verifyRepository(id)}
+            onClearVerification={(id) => clearRepositoryVerification(id)}
+            onRemove={(id) => removeRepository(id)}
+          />
+        ) : null}
+        {activeTab === "appearance" ? <ThemeCard /> : null}
+        {activeTab === "notifications" ? <NotificationsCard /> : null}
+        {activeTab === "storage" ? (
+          <SqliteLoadCard
+            sessions={sqliteSessions}
+            onLoad={loadDesktopSession}
+          />
+        ) : null}
       </div>
 
       <TrustSummaryPanel
@@ -259,7 +222,7 @@ export function SettingsView() {
         repositoriesTotal={repositorySettings.repositories.length}
         onAction={navigateForStep}
       />
-    </PageShell>
+    </div>
   );
 }
 

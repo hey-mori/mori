@@ -7,8 +7,22 @@
  * tone icon role) are unit-testable without rendering.
  */
 
-/** Content width presets. `full` removes the max-width cap entirely. */
-export type PageShellMaxWidth = "default" | "wide" | "full";
+/**
+ * Content width presets. `full` removes the max-width cap entirely.
+ *
+ * The names map to product intents, not individual pages:
+ * - standard: dashboard/list pages
+ * - wide: dense dashboard and project surfaces
+ * - detail: split workspaces that need more canvas
+ * - reading: text/report surfaces
+ */
+export type PageShellMaxWidth =
+  | "default"
+  | "standard"
+  | "wide"
+  | "detail"
+  | "reading"
+  | "full";
 
 /**
  * Resolve a content max-width preset to its modifier class. The actual
@@ -16,16 +30,21 @@ export type PageShellMaxWidth = "default" | "wide" | "full";
  * tuned from one place.
  */
 export function resolvePageShellMaxWidthClass(
-  maxWidth: PageShellMaxWidth = "default",
+  maxWidth: PageShellMaxWidth = "standard",
 ): string {
   switch (maxWidth) {
+    case "reading":
+      return "is-reading";
     case "wide":
       return "is-wide";
+    case "detail":
+      return "is-detail";
     case "full":
       return "is-full";
+    case "standard":
     case "default":
     default:
-      return "is-default";
+      return "is-standard";
   }
 }
 

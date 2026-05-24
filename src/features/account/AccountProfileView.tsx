@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { Lock } from "lucide-react";
-import { PageHeader } from "../../components/layout/PageHeader";
+import { Lock, Sparkles } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { Badge } from "../../components/ui/Badge";
 import { useMoriProfileStore } from "../../app/profileStore";
 import {
   getProfileInitials,
   normalizeDisplayName,
 } from "../../lib/profile/localProfile";
+import {
+  LocalOnlyNotice,
+  SettingsRow,
+  SettingsSection,
+  StatusPill,
+} from "../settings/SettingsPrimitives";
 
 /**
  * Profile.
@@ -27,19 +31,13 @@ export function AccountProfileView() {
   const dirty = trimmed.length > 0 && trimmed !== profile.displayName;
 
   return (
-    <div className="page account-profile">
-      <PageHeader
-        title="프로필"
-        subtitle="Mori의 신원은 이 기기에 저장되는 로컬 프로필 하나뿐입니다. 계정도, 로그인도, 서버도 없습니다."
-      />
-      <section className="settings-card account-identity" aria-label="Local profile">
-        <header className="settings-card-head">
-          <div>
-            <h3>로컬 프로필</h3>
-            <p>이 기기에만 저장되는 표시 이름입니다. 서버로 전송되지 않습니다.</p>
-          </div>
-          <Badge tone="purple">로컬 모드</Badge>
-        </header>
+    <div className="settings-content-stack account-profile">
+      <SettingsSection
+        title="Local profile"
+        eyebrow="Profile"
+        description="A display name for this device. No Mori account, login, billing, or cloud identity exists today."
+        action={<StatusPill tone="green">Local only</StatusPill>}
+      >
         <div className="account-identity-row">
           <span className="account-avatar" aria-hidden="true">
             {getProfileInitials(profile.displayName)}
@@ -72,14 +70,35 @@ export function AccountProfileView() {
             </button>
           ) : null}
         </div>
-        <p className="account-local-note">
-          <Lock size={14} aria-hidden="true" />
-          <span>
-            프로필은 이 기기의 브라우저 저장소에만 보관됩니다. 계정 백엔드가 없으므로 외부로
-            전송되거나 동기화되지 않습니다.
-          </span>
-        </p>
-      </section>
+      </SettingsSection>
+      <SettingsSection
+        title="Identity and sync"
+        description="This is a product seam for future account or sync work. It is intentionally disabled until Mori has an explicit cloud design."
+        action={<StatusPill tone="gray">Not connected</StatusPill>}
+      >
+        <div className="settings-row-list">
+          <SettingsRow
+            label="Account"
+            description="No account backend is configured in Mori."
+            meta={<StatusPill tone="gray">Unavailable</StatusPill>}
+            disabled
+          />
+          <SettingsRow
+            label="Sync"
+            description="Profile and workspace data stay on this device."
+            meta={<StatusPill tone="gray">Future opt-in only</StatusPill>}
+            disabled
+          />
+        </div>
+        <LocalOnlyNotice icon={Lock} title="What is stored">
+          Mori stores the display name and initials in this device's browser storage.
+          It is never used to prove identity to a server.
+        </LocalOnlyNotice>
+        <LocalOnlyNotice icon={Sparkles} title="Future account work">
+          If sync arrives later, this surface should ask for explicit sign-in and clearly
+          show what would leave the device before anything is sent.
+        </LocalOnlyNotice>
+      </SettingsSection>
     </div>
   );
 }

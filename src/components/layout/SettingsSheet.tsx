@@ -1,8 +1,26 @@
-import { X } from "lucide-react";
+import { UserRound, X } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useMoriAppStore } from "../../app/store";
-import { SettingsView } from "../../features/settings/SettingsView";
+import { useMoriAppStore, type SettingsTab } from "../../app/store";
+import { SETTINGS_TAB_DEFS, SettingsView } from "../../features/settings/SettingsView";
 import { AccountProfileView } from "../../features/account/AccountProfileView";
+import { SettingsRail, type SettingsRailItem } from "../../features/settings/SettingsPrimitives";
+
+const PROFILE_RAIL_ID = "profile";
+
+const RAIL_ITEMS: SettingsRailItem[] = [
+  {
+    id: PROFILE_RAIL_ID,
+    label: "Profile",
+    description: "Name, avatar, local identity",
+    icon: UserRound,
+  },
+  ...SETTINGS_TAB_DEFS.map((item) => ({
+    id: item.id,
+    label: item.label,
+    description: railDescriptionFor(item.id),
+    icon: item.icon,
+  })),
+];
 
 /**
  * Settings sheet — a modal overlay that hosts the settings + profile surfaces.
@@ -19,6 +37,8 @@ export function SettingsSheet() {
   const close = useMoriAppStore((state) => state.closeSettingsSheet);
   const tab = useMoriAppStore((state) => state.settingsSheetTab);
   const setTab = useMoriAppStore((state) => state.setSettingsSheetTab);
+  const settingsTab = useMoriAppStore((state) => state.settingsTab);
+  const setSettingsTab = useMoriAppStore((state) => state.setSettingsTab);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,6 +53,17 @@ export function SettingsSheet() {
   }, [open, close]);
 
   if (!open) return null;
+
+  const activeRailId = tab === "profile" ? PROFILE_RAIL_ID : settingsTab;
+
+  function handleRailSelect(id: string) {
+    if (id === PROFILE_RAIL_ID) {
+      setTab("profile");
+      return;
+    }
+    setSettingsTab(id as SettingsTab);
+    setTab("settings");
+  }
 
   return (
     <div className="settings-sheet-layer" role="presentation">
@@ -50,6 +81,10 @@ export function SettingsSheet() {
         tabIndex={-1}
       >
         <header className="settings-sheet-head">
+          <div className="settings-sheet-title">
+            <strong>Mori Preferences</strong>
+            <span>Local-first setup for this device</span>
+          </div>
           <nav className="settings-sheet-tabs" role="tablist">
             <button
               type="button"
@@ -81,9 +116,33 @@ export function SettingsSheet() {
           </button>
         </header>
         <div className="settings-sheet-body">
-          {tab === "profile" ? <AccountProfileView /> : <SettingsView />}
+          <SettingsRail
+            items={RAIL_ITEMS}
+            activeId={activeRailId}
+            onSelect={handleRailSelect}
+          />
+          <main className="settings-sheet-content mori-scroll">
+            {tab === "profile" ? <AccountProfileView /> : <SettingsView />}
+          </main>
         </div>
       </div>
     </div>
   );
+}
+
+function railDescriptionFor(tab: SettingsTab): string {
+  switch (tab) {
+    case "localAi":
+      return "Quick Pass providers";
+    case "privacy":
+      return "Local-first guarantees";
+    case "storage":
+      return "SQLite, backups, data controls";
+    case "repositories":
+      return "Projects and import scope";
+    case "appearance":
+      return "Theme and density";
+    case "notifications":
+      return "Future alert categories";
+  }
 }

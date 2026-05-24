@@ -25,15 +25,15 @@ const STATE_ICON: Record<PrivacyPolicyRow["state"], LucideIcon> = {
 };
 
 const GROUP_TITLE: Record<PrivacyPolicyRow["state"], string> = {
-  enforced: "아키텍처로 보장되는 동작",
-  default: "기본값으로 켜진 정책",
-  planned: "예정된 정책",
+  enforced: "Guaranteed now",
+  default: "Current defaults",
+  planned: "Planned controls",
 };
 
 const GROUP_NOTE: Record<PrivacyPolicyRow["state"], string> = {
-  enforced: "코드 차원에서 보장되며 사용자가 끌 수 있는 설정이 아닙니다.",
-  default: "현재 세션 설정에서 기본으로 켜져 있습니다.",
-  planned: "설계되었지만 아직 동작하지 않습니다.",
+  enforced: "These are product boundaries, not toggles.",
+  default: "These settings are available in the relevant workflow.",
+  planned: "Shown for direction only; these controls do not run yet.",
 };
 
 /**
@@ -50,10 +50,11 @@ export function PrivacyDefaultsCard() {
     <section className="settings-card" aria-label="Privacy and data policy">
       <header className="settings-card-head">
         <div>
-          <h3>개인정보 · 데이터 정책</h3>
+          <h3>Privacy and data flow</h3>
           <p>
-            Mori의 개인정보 posture는 사용자가 토글하는 설정이 아니라 앱 아키텍처에 baked-in 되어
-            있습니다. 아래 항목은 상태 카드이며, "아키텍처 보장"은 코드 차원에서 보장되는 동작입니다.
+            Mori stores local profile, sessions, imports, analysis results, repository settings,
+            and reports on this device. Data leaves the device only after you configure and select
+            a provider endpoint.
           </p>
         </div>
       </header>

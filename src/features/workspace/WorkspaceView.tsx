@@ -14,6 +14,7 @@ import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useMoriAppStore } from "../../app/store";
 import {
   selectSessionMode,
@@ -124,12 +125,13 @@ export function WorkspaceView() {
   return (
     <PageShell
       className="workspace-page"
+      maxWidth="wide"
       actionBar={
         <ActionBar
           label="세션 필터"
           start={
             <>
-              <label className="workspace-search">
+              <label className="workspace-search mori-search-field">
                 <Search size={14} aria-hidden="true" />
                 <input
                   type="search"
@@ -146,9 +148,9 @@ export function WorkspaceView() {
                 value={filters.origin}
                 onChange={(origin) => setFilters((prev) => ({ ...prev, origin }))}
                 options={[
-                  { value: "all", label: "전체" },
-                  { value: "imported", label: "가져옴" },
-                  { value: "manual", label: "수동" },
+                  { id: "all", label: "전체" },
+                  { id: "imported", label: "가져옴" },
+                  { id: "manual", label: "수동" },
                 ]}
               />
             </>
@@ -177,8 +179,8 @@ export function WorkspaceView() {
                 value={filters.sort}
                 onChange={(sort) => setFilters((prev) => ({ ...prev, sort }))}
                 options={[
-                  { value: "recent", label: "최근순" },
-                  { value: "title", label: "이름순" },
+                  { id: "recent", label: "최근순" },
+                  { id: "title", label: "이름순" },
                 ]}
               />
             </>
@@ -301,7 +303,7 @@ function SessionRowItem({
   return (
     <li>
       <div
-        className={classes}
+        className={`${classes} mori-list-row`}
         role="button"
         tabIndex={0}
         aria-pressed={selected}
@@ -360,38 +362,5 @@ function SessionRowItem({
         </span>
       </div>
     </li>
-  );
-}
-
-
-// ─── Segmented control ────────────────────────────────────────────────────────
-
-function SegmentedControl<T extends string>({
-  value,
-  onChange,
-  options,
-  ariaLabel,
-}: {
-  value: T;
-  onChange: (value: T) => void;
-  options: Array<{ value: T; label: string }>;
-  ariaLabel: string;
-}) {
-  return (
-    <div className="workspace-segmented" role="group" aria-label={ariaLabel}>
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className={`workspace-segmented-option${
-            option.value === value ? " is-active" : ""
-          }`}
-          aria-pressed={option.value === value}
-          onClick={() => onChange(option.value)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
   );
 }

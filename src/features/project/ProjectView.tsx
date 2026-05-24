@@ -132,7 +132,7 @@ export function ProjectView() {
         </div>
       </header>
 
-      <dl className="project-stats">
+      <dl className="project-stats mori-metric-strip">
         <ProjectStat
           label="전체 세션"
           value={overview.stats.sessions}
@@ -157,11 +157,11 @@ export function ProjectView() {
         />
       </dl>
 
-      <section className="project-sessions" aria-label="프로젝트 세션">
-        <header className="project-section-head">
+      <section className="project-sessions mori-section" aria-label="프로젝트 세션">
+        <header className="project-section-head mori-section-row">
           <div>
             <h2>세션</h2>
-            <p>이 프로젝트로 분류된 세션들을 최근 활동 순으로 묶었습니다.</p>
+            <p>최근 활동 순으로 정리했습니다.</p>
           </div>
           <span className="project-section-count">
             <CalendarClock size={13} aria-hidden="true" />
@@ -238,7 +238,7 @@ function ProjectSessionRowItem({
     <li>
       <button
         type="button"
-        className={`project-session-row${active ? " is-active" : ""}`}
+        className={`project-session-row mori-list-row${active ? " is-active" : ""}`}
         onClick={onOpen}
         aria-current={active ? "true" : undefined}
       >

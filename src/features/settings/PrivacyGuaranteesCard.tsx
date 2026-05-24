@@ -15,10 +15,10 @@ export function PrivacyGuaranteesCard() {
     <section className="settings-card settings-privacy-guarantees" aria-label="Privacy guarantees">
       <header className="settings-card-head">
         <div>
-          <h3>Mori가 절대 하지 않는 것</h3>
+          <h3>What never leaves by default</h3>
           <p>
-            아래 동작은 설정 항목이 아니라 Mori의 설계 자체입니다. 어떤 세션 상태에서도
-            일어나지 않습니다.
+            Mori does not send profile data, imports, repository paths, reports, or memory
+            anywhere by default.
           </p>
         </div>
       </header>
@@ -33,8 +33,8 @@ export function PrivacyGuaranteesCard() {
       <footer className="settings-privacy-never-foot">
         <ShieldCheck size={13} aria-hidden="true" />
         <span>
-          캡처는 항상 명시적이고, 메모리는 검토 후에만 저장됩니다. 데이터는 이 기기를 벗어나지
-          않습니다.
+          Provider requests are explicit: if you select Ollama, Mori sends the current session
+          evidence only to the endpoint you entered.
         </span>
       </footer>
     </section>

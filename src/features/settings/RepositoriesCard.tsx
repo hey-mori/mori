@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { SettingsRow, StatusPill } from "./SettingsPrimitives";
 import {
   deriveLabelFromPath,
   getRepositoryVerificationFreshness,
@@ -93,8 +94,8 @@ export function RepositoriesCard({
         <div>
           <h3>리포지토리</h3>
           <p>
-            Mori는 사용자가 명시적으로 추가한 리포지토리 경로만 기억합니다. 디스크를 자동으로 스캔하지 않으며,
-            저장된 경로는 Git diff 가져오기 또는 검증 버튼을 직접 누를 때만 읽습니다.
+            Mori remembers only the repository paths you add. It does not scan disk;
+            saved paths are read only when you verify a project or run Git diff capture.
           </p>
         </div>
         <div className="settings-repo-summary">
@@ -141,6 +142,25 @@ export function RepositoriesCard({
           </Button>
         </div>
         {error ? <p className="settings-repo-error" role="alert">{error}</p> : null}
+      </div>
+
+      <div className="settings-row-list">
+        <SettingsRow
+          label="Detected project roots"
+          description="Saved repositories become the project roots Mori can offer during Git diff import."
+          meta={<StatusPill tone={repositories.length ? "green" : "gray"}>{repositories.length} saved</StatusPill>}
+        />
+        <SettingsRow
+          label="Import and capture scope"
+          description="Manual imports are scoped to the current session. Git capture uses the selected repository path only."
+          meta={<StatusPill tone="blue">Explicit action</StatusPill>}
+        />
+        <SettingsRow
+          label="Ignore / include patterns"
+          description="Pattern controls are planned for larger workspaces."
+          meta={<StatusPill tone="gray">Planned</StatusPill>}
+          disabled
+        />
       </div>
 
       {repositories.length === 0 ? (
