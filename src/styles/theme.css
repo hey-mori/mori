@@ -572,18 +572,34 @@
  * tighter header row so feature surfaces can stop inventing their own
  * `<section className="evidence-section">` markup.
  */
+/* Flat by default — no card chrome. The header (title + hint) acts as the
+ * visual anchor and the page's vertical rhythm separates sections from
+ * each other. This kills the "카드 적층" feel where every memory subcard
+ * floated on its own white surface against an already-white page. Opt
+ * back into the boxed look with `.mori-section.is-card` when a section
+ * really does need a distinct surface (e.g. nested inside a coloured
+ * banner). */
 .mori-section {
   display: grid;
-  gap: var(--mori-space-4);
-  padding: var(--mori-space-7) var(--mori-space-8);
+  gap: var(--mori-space-3);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mori-section.is-card {
+  padding: var(--mori-space-6) var(--mori-space-7);
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-lg);
   background: var(--mori-surface);
-  box-shadow: var(--mori-shadow-card);
 }
 
 .mori-section.is-subtle {
+  padding: var(--mori-space-6) var(--mori-space-7);
   background: var(--mori-surface-subtle);
+  border-radius: var(--mori-radius-lg);
   box-shadow: none;
 }
 
