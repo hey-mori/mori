@@ -471,13 +471,38 @@ function ToolGrid({ state }: { state: ToolsState }) {
   }
   if (!state.report) return null;
   const ordered = orderToolsForDisplay(state.report.tools);
+  // Split usable tools from reference-only ones. The reference cards used
+  // to crowd the grid even though they have no action — collapsing them
+  // into a single disclosure recovers a screen of vertical space while
+  // keeping them discoverable for the curious.
+  const primary = ordered.filter((tool) => tool.canImport || isDetectedTool(tool));
+  const reference = ordered.filter((tool) => !tool.canImport && !isDetectedTool(tool));
   return (
-    <div className="connections-tools-grid">
-      {ordered.map((tool) => (
-        <ToolCard key={tool.id} tool={tool} />
-      ))}
-    </div>
+    <>
+      <div className="connections-tools-grid">
+        {primary.map((tool) => (
+          <ToolCard key={tool.id} tool={tool} />
+        ))}
+      </div>
+      {reference.length > 0 ? (
+        <details className="connections-tools-reference">
+          <summary>
+            <span>참조 도구 {reference.length}개</span>
+            <small>이 도구들은 감지만 합니다 — 가져오기는 별도 패스에서 지원됩니다.</small>
+          </summary>
+          <div className="connections-tools-grid is-reference">
+            {reference.map((tool) => (
+              <ToolCard key={tool.id} tool={tool} />
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </>
   );
+}
+
+function isDetectedTool(tool: DetectedTool): boolean {
+  return tool.status !== "not-found";
 }
 
 /**

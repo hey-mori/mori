@@ -16272,6 +16272,56 @@ pre {
   gap: 8px;
 }
 
+.connections-tools-grid.is-reference {
+  margin-top: 10px;
+  opacity: 0.85;
+}
+
+.connections-tools-reference {
+  margin-top: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: var(--gray-50);
+}
+
+.connections-tools-reference[open] {
+  padding: 0 12px 12px;
+}
+
+.connections-tools-reference > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.connections-tools-reference > summary::-webkit-details-marker {
+  display: none;
+}
+
+.connections-tools-reference > summary::before {
+  content: "▶";
+  font-size: 9px;
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+}
+
+.connections-tools-reference[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.connections-tools-reference > summary small {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
 .connections-tool-card {
   display: grid;
   grid-template-columns: 32px 1fr;
