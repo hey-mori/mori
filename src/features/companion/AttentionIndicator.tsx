@@ -32,8 +32,13 @@ const PANEL_LIMIT = 4;
 
 export function AttentionIndicator({
   onNavigate,
+  compact = false,
 }: {
   onNavigate: (view: ViewKey) => void;
+  /** When true, the indicator renders as an icon-only quick-action button
+   *  (sidebar head) with a small count badge. Otherwise it shows the full
+   *  "Mori 노트" pill with label + badge (sidebar foot / legacy). */
+  compact?: boolean;
 }) {
   const { notifications, isDemo } = useMoriNotifications();
   const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
@@ -72,20 +77,26 @@ export function AttentionIndicator({
       <button
         ref={buttonRef}
         type="button"
-        className={`attention-indicator${count > 0 ? " has-signals" : ""}`}
+        className={`attention-indicator${count > 0 ? " has-signals" : ""}${compact ? " is-compact" : ""}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        title="Mori 노트 — 이번 세션에서 살펴볼 것"
+        aria-label={count > 0 ? `Mori 노트 — 알림 ${count}건` : "Mori 노트"}
+        title={
+          count > 0
+            ? `Mori 노트 — 살펴볼 알림 ${count}건`
+            : "Mori 노트 — 이번 세션에서 살펴볼 것"
+        }
       >
         <span className="attention-indicator-icon" aria-hidden="true">
-          <Compass size={16} />
+          <Compass size={compact ? 15 : 16} />
         </span>
-        <span className="attention-indicator-label">Mori 노트</span>
+        {compact ? null : <span className="attention-indicator-label">Mori 노트</span>}
         {count > 0 ? (
           <span
             className="attention-indicator-badge"
-            aria-label={`${count}개 알림`}
+            aria-hidden={compact ? "true" : undefined}
+            aria-label={compact ? undefined : `${count}개 알림`}
           >
             {count}
           </span>

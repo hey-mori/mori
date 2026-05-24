@@ -285,12 +285,10 @@ button {
   background: var(--gray-50);
 }
 
-/* Active row: a subtle neutral fill + a 2px purple bar on the left rather
-   than tinting the whole row purple — keeps multi-row scanning calm while
-   the active session is unmistakable. */
+/* Active row: a soft lavender fill — no left bar, no border accent.
+   The fill + heavier title weight is enough to mark the picked session. */
 .sidebar-row.is-active {
-  background: var(--gray-50);
-  box-shadow: inset 2px 0 0 var(--purple);
+  background: var(--purple-50);
 }
 
 .sidebar-row.is-active .sidebar-row-title {
@@ -372,9 +370,12 @@ button {
 }
 
 .sidebar-foot {
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--line);
   margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* The .workspace cell scrolls its own contents. */
@@ -1601,12 +1602,11 @@ kbd {
   text-transform: uppercase;
 }
 
-/* The user's ask leads — brand-tinted rail, full weight. */
+/* The user's ask leads — role label + heavier text carry the structure
+   instead of a colored left bar. */
 .conversation-turn-ask {
   display: grid;
   gap: 4px;
-  padding-left: 11px;
-  border-left: 2px solid var(--purple);
 }
 
 .conversation-turn-ask .conversation-turn-role {
@@ -1624,12 +1624,10 @@ kbd {
   overflow: hidden;
 }
 
-/* Claude's reply — neutral body of the thread. */
+/* Claude's reply — neutral body of the thread, also no bar. */
 .conversation-turn-reply {
   display: grid;
   gap: 4px;
-  padding-left: 11px;
-  border-left: 2px solid var(--line-strong);
 }
 
 .conversation-turn-reply .conversation-turn-role {
@@ -1818,11 +1816,10 @@ kbd {
 .conversation-burst-members {
   list-style: none;
   margin: 0 0 0 16px;
-  padding: 0 0 0 16px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-left: 2px solid var(--purple-100);
 }
 
 /* ── Overflow disclosure ───────────────────────────────────────────────────
@@ -2063,13 +2060,10 @@ kbd {
   display: grid;
   grid-template-rows: 13px 1fr 12px; /* header / title / footer slot */
   row-gap: 3px;
-  padding: 8px 10px 8px 11px;
+  padding: 8px 10px;
   color: #172033;
   text-align: left;
   border: 1px solid var(--line);
-  /* Tone is carried as a subtle left-border accent — at scale the eye picks
-     up the lane membership without needing colored text or a heavy chrome. */
-  border-left-width: 3px;
   border-radius: 7px;
   background: white;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
@@ -2078,13 +2072,16 @@ kbd {
   cursor: pointer;
 }
 
-.event-card.card-purple { border-left-color: var(--purple); }
-.event-card.card-green  { border-left-color: var(--green); }
-.event-card.card-red    { border-left-color: var(--red); }
-.event-card.card-blue   { border-left-color: var(--blue); }
-.event-card.card-cyan   { border-left-color: var(--cyan); }
-.event-card.card-orange { border-left-color: #d8923f; }
-.event-card.card-gray   { border-left-color: var(--muted-2); }
+/* Tone is carried as a soft fill (very low-alpha tint) — no left bar, no
+   colored text. The lane icon at the left of the row already names the
+   type; a faint background hint is enough at scale. */
+.event-card.card-purple { background: #fbfaff; }
+.event-card.card-green  { background: #f7fbf7; }
+.event-card.card-red    { background: #fff8f8; }
+.event-card.card-blue   { background: #f8faff; }
+.event-card.card-cyan   { background: #f6fcfc; }
+.event-card.card-orange { background: #fff9f1; }
+.event-card.card-gray   { background: white; }
 
 .event-card.is-compact {
   grid-template-rows: 12px 1fr 0; /* compact hides the footer slot entirely */
@@ -8182,8 +8179,8 @@ pre {
   background: rgba(98, 70, 245, 0.08);
 }
 
-.review-decision-row.is-selected td:first-child {
-  box-shadow: inset 3px 0 0 var(--purple);
+.review-decision-row.is-selected {
+  background: var(--purple-50);
 }
 
 .review-decision-evidence {
@@ -10096,15 +10093,12 @@ pre {
    to the right of the sidebar.
    ──────────────────────────────────────────────────────────────────────────── */
 
-/* Indicator button — replaces the session-card's margin-top:auto so it acts
-   as the spacer that pushes both itself and the bottom section to the foot of
-   the sidebar. */
+/* Default indicator — full pill with label + badge. Used in any legacy
+   placement; the sidebar now opts into the compact icon-only variant. */
 .attention-indicator {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-top: auto;  /* Pushes away from the nav; session card follows below */
-  margin-bottom: 10px;
   padding: 8px 13px;
   width: 100%;
   background: transparent;
@@ -10120,18 +10114,57 @@ pre {
 
 .attention-indicator:hover {
   background: var(--gray-50);
-  border-color: var(--line);
   color: var(--text);
 }
 
 .attention-indicator[aria-expanded="true"] {
   background: var(--purple-50);
-  border-color: var(--purple-100);
   color: var(--purple);
 }
 
 .attention-indicator.has-signals {
   color: var(--text);
+}
+
+/* Compact variant — icon-only quick-action button matching .sidebar-head-action.
+   The count badge sits as a small dot above the icon. */
+.attention-indicator.is-compact {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  gap: 0;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.attention-indicator.is-compact:hover {
+  background: var(--gray-50);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.attention-indicator.is-compact[aria-expanded="true"] {
+  background: var(--purple-50);
+  border-color: transparent;
+  color: var(--purple);
+}
+
+.attention-indicator.is-compact .attention-indicator-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 14px;
+  border: 1.5px solid white;
 }
 
 .attention-indicator-icon {
@@ -10145,12 +10178,12 @@ pre {
 }
 
 .attention-indicator-badge {
-  min-width: 20px;
-  padding: 2px 6px;
+  min-width: 18px;
+  padding: 1px 6px;
   background: var(--purple);
   color: #fff;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-align: center;
   line-height: 1.4;
@@ -10163,13 +10196,14 @@ pre {
   z-index: 199;
 }
 
-/* Panel — floats just to the right of the sidebar, anchored to the bottom. */
+/* Panel — floats just to the right of the sidebar, anchored to the top
+   (since the trigger now lives in the sidebar head). */
 .attention-panel {
   position: fixed;
   left: calc(var(--mori-sidebar-w, 256px) + 8px);
-  bottom: 16px;
+  top: 12px;
   width: 340px;
-  max-height: min(520px, calc(100vh - 80px));
+  max-height: min(520px, calc(100vh - 24px));
   display: flex;
   flex-direction: column;
   background: var(--panel);
@@ -11132,14 +11166,13 @@ pre {
 
 /* Stat tiles are no longer cards — they read as a calm data strip. The
    number sits left, the label + hint stack to its right; no background,
-   no border, just enough breathing room and a subtle divider on the left. */
+   no border, no left accent — just enough breathing room. */
 .memory-hero-stat {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: 10px;
-  padding: 4px 0 4px 12px;
-  border-left: 2px solid var(--mori-border);
+  padding: 4px 0;
 }
 
 .memory-hero-stat dt {
@@ -11732,8 +11765,7 @@ pre {
 .accepted-memory-detail-stat {
   display: grid;
   gap: 2px;
-  padding: 4px 0 4px 10px;
-  border-left: 2px solid var(--mori-border, var(--line));
+  padding: 4px 0;
 }
 
 .accepted-memory-detail-stat dt {
@@ -16158,10 +16190,8 @@ pre {
 }
 
 .connections-list-item.is-active {
-  border-color: var(--purple);
-  background: white;
-  box-shadow: inset 3px 0 0 var(--purple);
-  padding-left: 14px;
+  border-color: transparent;
+  background: var(--purple-50);
 }
 
 .connections-list-title {
@@ -17263,11 +17293,14 @@ pre {
   background: var(--mori-surface-subtle);
 }
 
-/* Active session row — purple inset bar matches the sidebar treatment so
-   "this is the loaded session" reads consistently across surfaces. */
+/* Active session row — soft lavender fill, no bar / border accent. */
 .workspace-row.is-active {
-  border-color: var(--mori-border);
-  box-shadow: inset 3px 0 0 var(--mori-accent);
+  background: var(--purple-50);
+  border-color: transparent;
+}
+
+.workspace-row.is-active .workspace-row-title {
+  font-weight: 650;
 }
 
 .workspace-row.is-archived {

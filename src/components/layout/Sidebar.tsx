@@ -148,6 +148,10 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
         >
           <Download size={15} aria-hidden="true" />
         </button>
+        {/* Mori 노트 — promoted to the head so it sits with the other quick
+            actions instead of buried in the foot. Compact icon + count
+            badge; the popup panel still opens on click. */}
+        <AttentionIndicator onNavigate={onNavigate} compact />
       </div>
 
       <nav className="sidebar-nav" aria-label="주요 메뉴">
@@ -199,7 +203,6 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
       </div>
 
       <div className="sidebar-foot">
-        <AttentionIndicator onNavigate={onNavigate} />
         <button
           type="button"
           className="sidebar-user"
