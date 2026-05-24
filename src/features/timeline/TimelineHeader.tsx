@@ -9,7 +9,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { eventTypeLabels, eventTypeTone, laneOrder } from "../../domain/constants";
 import type { EventType } from "../../domain/types";
 import { getPlannedHint } from "../../lib/timeline/timelineControls";
@@ -260,7 +260,7 @@ export function TimelineToolbar({
 
 /** Close a popover when a pointerdown lands outside its wrapper. */
 function useClickOutside(
-  ref: React.RefObject<HTMLElement | null>,
+  ref: RefObject<HTMLElement | null>,
   open: boolean,
   onClose: () => void,
 ) {
