@@ -131,10 +131,6 @@ export function SettingsView() {
         <div>
           <span className="settings-section-eyebrow">Settings</span>
           <h2>{SETTINGS_TAB_DEFS.find((entry) => entry.id === activeTab)?.label ?? "설정"}</h2>
-          <p>
-            Local-first preferences for AI, privacy, storage, projects, appearance, and
-            notification categories.
-          </p>
         </div>
         <StatusPill tone={mode === "tauri-desktop" ? "green" : "blue"}>
           {mode === "tauri-desktop" ? "Desktop runtime" : "Browser runtime"}
