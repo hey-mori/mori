@@ -11780,6 +11780,55 @@ pre {
   color: #6e668c;
 }
 
+/* Loading-state skeleton — three calm muted rows that read as
+ * "list is being fetched" without competing with real content. */
+.memory-accepted-list-skeleton .memory-accepted-skeleton-row {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line, #e6e3f1);
+  border-radius: 8px;
+  background: #fdfcff;
+}
+
+.memory-accepted-skeleton-line {
+  display: block;
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    rgba(140, 130, 180, 0.08) 0%,
+    rgba(140, 130, 180, 0.16) 50%,
+    rgba(140, 130, 180, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: memoryAcceptedSkeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.memory-accepted-skeleton-line-title {
+  width: 60%;
+}
+
+.memory-accepted-skeleton-line-meta {
+  width: 35%;
+  height: 8px;
+}
+
+@keyframes memoryAcceptedSkeletonShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-accepted-skeleton-line {
+    animation: none;
+  }
+}
+
 .memory-accepted-list {
   display: grid;
   gap: 8px;

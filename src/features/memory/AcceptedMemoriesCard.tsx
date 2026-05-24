@@ -41,6 +41,7 @@ export function AcceptedMemoriesCard({
   reviewActionCount,
   storageSource,
   storageFellBack,
+  loading = false,
   onSelectMemory,
   selectedMemoryId,
 }: {
@@ -48,6 +49,9 @@ export function AcceptedMemoriesCard({
   reviewActionCount: number;
   storageSource: AcceptedMemoryStorageSource;
   storageFellBack: boolean;
+  /** When true, render skeleton rows instead of the "0건" empty state so a
+   *  brief async load never reads as "you have no memories". */
+  loading?: boolean;
   /** Open the per-memory provenance drawer when provided. */
   onSelectMemory?: (memoryId: string) => void;
   selectedMemoryId?: string | null;
@@ -79,7 +83,9 @@ export function AcceptedMemoriesCard({
         </MoriStatusBadge>
       }
     >
-      {memories.length === 0 ? (
+      {loading && memories.length === 0 ? (
+        <MemoryListSkeleton />
+      ) : memories.length === 0 ? (
         <p className="memory-accepted-empty">
           아직 확정된 메모리가 없습니다. 메모리 통합 카드에서 검토를 열고 제안을 승인하면 여기에
           누적됩니다.
@@ -209,4 +215,27 @@ function formatShort(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+/**
+ * Three muted placeholder rows shown while the repository read is in
+ * flight. Calm enough to read as loading, not as content — three rows is
+ * enough for the user to perceive "list is coming" without filling the
+ * card on a surface that may turn out to be empty.
+ */
+function MemoryListSkeleton() {
+  return (
+    <ul
+      className="memory-accepted-list memory-accepted-list-skeleton"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      {[0, 1, 2].map((index) => (
+        <li key={index} className="memory-accepted-skeleton-row">
+          <span className="memory-accepted-skeleton-line memory-accepted-skeleton-line-title" />
+          <span className="memory-accepted-skeleton-line memory-accepted-skeleton-line-meta" />
+        </li>
+      ))}
+    </ul>
+  );
 }

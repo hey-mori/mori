@@ -134,6 +134,7 @@ export function MemoryView() {
   const [memoryStorageSource, setMemoryStorageSource] =
     useState<AcceptedMemoryStorageSource>("browser-local-storage");
   const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
+  const [memoriesLoading, setMemoriesLoading] = useState(true);
   const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
 
   // Consume a one-shot memory-focus deep-link (e.g. from Companion Inbox).
@@ -148,15 +149,22 @@ export function MemoryView() {
   }, [memoryFocus, acceptedMemories, clearMemoryFocus]);
   const reloadMemory = useCallback(async () => {
     const memoryRepository = getAcceptedMemoryRepository();
-    const [memoriesResult, actionsResult] = await Promise.all([
-      memoryRepository.listAcceptedProjectMemories(projectId),
-      memoryRepository.listMemoryReviewActions(projectId),
-    ]);
-    setAcceptedMemories(memoriesResult.data);
-    setReviewActions(actionsResult.data);
-    const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
-    setMemoryStorageFellBack(fellBack);
-    setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
+    try {
+      const [memoriesResult, actionsResult] = await Promise.all([
+        memoryRepository.listAcceptedProjectMemories(projectId),
+        memoryRepository.listMemoryReviewActions(projectId),
+      ]);
+      setAcceptedMemories(memoriesResult.data);
+      setReviewActions(actionsResult.data);
+      const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
+      setMemoryStorageFellBack(fellBack);
+      setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
+    } finally {
+      // Resolve the loading flag whether the read succeeded or fell back,
+      // so the empty state can stop pretending to fetch forever on a
+      // surface where the repository itself returned an empty list.
+      setMemoriesLoading(false);
+    }
   }, [projectId]);
   useEffect(() => {
     let cancelled = false;
@@ -416,6 +424,7 @@ export function MemoryView() {
             reviewActionCount={reviewActions.length}
             storageSource={memoryStorageSource}
             storageFellBack={memoryStorageFellBack}
+            loading={memoriesLoading}
             onSelectMemory={setSelectedMemoryId}
             selectedMemoryId={selectedMemoryId}
           />
