@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowRight,
   FolderGit2,
   FolderKanban,
   PlugZap,
@@ -215,8 +216,6 @@ export function WorkspaceView() {
                   <SessionRowItem
                     key={row.sessionId}
                     row={row}
-                    selected={false}
-                    onSelect={() => openSession(row)}
                     onOpen={() => openSession(row)}
                   />
                 ))}
@@ -233,13 +232,9 @@ export function WorkspaceView() {
 
 function SessionRowItem({
   row,
-  selected,
-  onSelect,
   onOpen,
 }: {
   row: SessionRow;
-  selected: boolean;
-  onSelect: () => void;
   onOpen: () => void;
 }) {
   const origin = describeSessionOrigin(row.origin);
@@ -252,26 +247,26 @@ function SessionRowItem({
   const showStatusBadge =
     row.status !== "complete" && !(row.origin === "demo" && row.status === "recording");
   const status = showStatusBadge ? describeWorkspaceSessionStatus(row.status) : null;
+  const relative = row.startedAt || row.savedAt
+    ? formatSidebarRelative(row.startedAt ?? row.savedAt ?? "")
+    : null;
 
   return (
     <li>
       <MoriObjectRow
-        selected={selected || row.isActive}
-        onClick={onSelect}
-        onDoubleClick={onOpen}
+        leading={<FolderKanban size={15} />}
+        onClick={onOpen}
         ariaLabel={row.title}
         title={row.title}
         meta={
           <>
             <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
-            {row.startedAt || row.savedAt ? (
-              <span title={row.spanLabel ?? undefined}>
-                {formatSidebarRelative(row.startedAt ?? row.savedAt ?? "")}
-              </span>
-            ) : null}
+            {row.spanLabel ? <span>{row.spanLabel}</span> : null}
           </>
         }
+        timestamp={relative}
         status={status ? <MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge> : null}
+        trailing={<ArrowRight size={13} aria-hidden="true" />}
       />
     </li>
   );

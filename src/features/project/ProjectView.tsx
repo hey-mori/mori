@@ -1,6 +1,8 @@
 import {
+  ArrowRight,
   CalendarClock,
   FolderGit2,
+  FolderKanban,
   Layers,
   Plus,
 } from "lucide-react";
@@ -185,7 +187,6 @@ export function ProjectView() {
                     <ProjectSessionRowItem
                       key={row.sessionId}
                       row={row}
-                      active={row.sessionId === activeSessionId}
                       onOpen={() => openSessionId(row.sessionId)}
                     />
                   ))}
@@ -201,11 +202,9 @@ export function ProjectView() {
 
 function ProjectSessionRowItem({
   row,
-  active,
   onOpen,
 }: {
   row: ProjectSessionRow;
-  active: boolean;
   onOpen: () => void;
 }) {
   const statusBadge =
@@ -218,18 +217,15 @@ function ProjectSessionRowItem({
   return (
     <li>
       <MoriObjectRow
+        leading={<FolderKanban size={15} />}
         title={row.title}
-        meta={
-          <span>
-            {formatSidebarRelative(row.timestamp)}
-            {row.eventCount ? ` · 이벤트 ${row.eventCount}건` : ""}
-          </span>
-        }
+        meta={row.eventCount ? <span>이벤트 {row.eventCount}건</span> : undefined}
+        timestamp={formatSidebarRelative(row.timestamp)}
         status={statusBadge}
-        selected={active}
         onClick={onOpen}
         ariaLabel={row.title}
         density="compact"
+        trailing={<ArrowRight size={13} aria-hidden="true" />}
       />
     </li>
   );
