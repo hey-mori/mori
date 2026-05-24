@@ -162,6 +162,7 @@ button {
 
 .sidebar-head {
   display: flex;
+  align-items: center;
   gap: 4px;
   padding: 0 4px 8px;
 }
@@ -563,18 +564,19 @@ button {
   width: 28px;
   height: 28px;
   padding: 0;
-  margin: 0 6px;
-  border: 0;
+  margin-left: auto;
+  border: 1px solid transparent;
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  align-self: flex-end;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  flex-shrink: 0;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
 .sidebar-collapse-toggle:hover {
   background: var(--gray-50);
+  border-color: var(--line);
   color: var(--text);
 }
 
@@ -598,6 +600,10 @@ button {
   padding: 0 0 8px;
 }
 
+.sidebar.is-collapsed .sidebar-collapse-toggle {
+  margin-left: 0;
+}
+
 .sidebar.is-collapsed .sidebar-nav {
   margin: 0;
   padding: 6px 0;
@@ -614,11 +620,6 @@ button {
 .sidebar.is-collapsed .sidebar-user {
   justify-content: center;
   padding: 6px 4px;
-}
-
-.sidebar.is-collapsed .sidebar-collapse-toggle {
-  margin: 0 auto;
-  align-self: center;
 }
 
 /* The .workspace cell scrolls its own contents. */

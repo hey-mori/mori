@@ -234,6 +234,26 @@ export function Sidebar({
             actions instead of buried in the foot. Compact icon + count
             badge; the popup panel still opens on click. */}
         <AttentionIndicator onNavigate={onNavigate} compact />
+        {onToggleCollapsed ? (
+          <button
+            type="button"
+            className="sidebar-collapse-toggle"
+            onClick={onToggleCollapsed}
+            aria-pressed={collapsed}
+            aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            title={
+              collapsed
+                ? "사이드바를 펼쳐 세션 목록을 다시 표시"
+                : "사이드바를 접어 작업 영역을 넓힘"
+            }
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={14} aria-hidden="true" />
+            ) : (
+              <PanelLeftClose size={14} aria-hidden="true" />
+            )}
+          </button>
+        ) : null}
       </div>
 
       <nav className="sidebar-nav" aria-label="주요 메뉴">
@@ -374,26 +394,6 @@ export function Sidebar({
           </span>
           <span className="sidebar-user-name">{profile.displayName}</span>
         </button>
-        {onToggleCollapsed ? (
-          <button
-            type="button"
-            className="sidebar-collapse-toggle"
-            onClick={onToggleCollapsed}
-            aria-pressed={collapsed}
-            aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
-            title={
-              collapsed
-                ? "사이드바를 펼쳐 세션 목록을 다시 표시"
-                : "사이드바를 접어 작업 영역을 넓힘"
-            }
-          >
-            {collapsed ? (
-              <PanelLeftOpen size={14} aria-hidden="true" />
-            ) : (
-              <PanelLeftClose size={14} aria-hidden="true" />
-            )}
-          </button>
-        ) : null}
       </div>
     </aside>
   );
