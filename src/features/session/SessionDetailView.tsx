@@ -34,7 +34,7 @@ import { ReportsView } from "../reports/ReportsView";
  *
  *   - **흐름**    — Timeline + conversation thread
  *   - **증거**    — imported sources / evidence
- *   - **인사이트** — issues / decisions / next actions to confirm
+ *   - **검토**    — issues / decisions / next actions to confirm
  *   - **리포트**  — per-session report + resume builder
  */
 export function SessionDetailView() {
@@ -128,7 +128,7 @@ type SessionTabSpec = {
 const SESSION_TABS: SessionTabSpec[] = [
   { id: "flow", label: "흐름", icon: GanttChartSquare },
   { id: "evidence", label: "증거", icon: FileText },
-  { id: "insights", label: "인사이트", icon: Sparkles },
+  { id: "insights", label: "검토", icon: Sparkles },
   { id: "report", label: "리포트", icon: ScrollText },
 ];
 
@@ -136,7 +136,7 @@ const SESSION_TABS: SessionTabSpec[] = [
  * Tab strip with count badges in place of the deprecated metric strip.
  *  - 흐름:    timeline event count
  *  - 증거:    imported source count
- *  - 인사이트: open issues + unconfirmed decisions + pending next actions
+ *  - 검토: open issues + unconfirmed decisions + pending next actions
  *  - 리포트:  no count (it is an output, not a counted collection)
  *
  * A zero count is hidden rather than rendered as "(0)" so the bar stays calm

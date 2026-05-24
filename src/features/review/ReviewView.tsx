@@ -70,8 +70,7 @@ const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare 
 ];
 
 /**
- * Insights workspace (the surface formerly framed as "검토") — the **인사이트**
- * tab inside the unified Session Detail workspace.
+ * Review workspace — the **검토** tab inside the unified Session Detail workspace.
  *
  * The Session Detail owns the single shell + header, so this view renders only
  * its action-bar row + body + inspector inside the session scroll area. Every
@@ -194,7 +193,7 @@ export function ReviewView() {
 
   const actionBar = (
     <ActionBar
-      label="인사이트 탭"
+      label="검토 탭"
       start={
         <nav
           className="review-tabs"
@@ -271,7 +270,7 @@ export function ReviewView() {
   );
 
   const aside = (
-    <aside className="review-rail" aria-label="인사이트 상세">
+    <aside className="review-rail" aria-label="검토 상세">
       <ReviewDetailPanel
         selection={effectiveSelection}
         view={view}

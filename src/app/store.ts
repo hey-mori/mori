@@ -65,7 +65,7 @@ type MoriAppState = {
   reviewTab: ReviewTab;
   /**
    * Active tab inside the unified Session Detail workspace (흐름 / 증거 /
-   * 인사이트). Stored so navigating away and back returns to the same tab;
+   * 검토). Stored so navigating away and back returns to the same tab;
    * `openSession` overrides it when another surface deep-links a tab.
    */
   sessionTab: SessionTab;
