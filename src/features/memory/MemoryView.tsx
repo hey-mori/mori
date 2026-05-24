@@ -366,6 +366,7 @@ export function MemoryView() {
   return (
     <PageShell
       className="memory-page"
+      maxWidth="wide"
       actionBar={
         <ActionBar
           label="메모리 보기"

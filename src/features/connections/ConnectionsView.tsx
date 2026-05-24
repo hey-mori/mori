@@ -288,9 +288,7 @@ export function ConnectionsView() {
 
   if (!bridgeAvailable) {
     return (
-      <PageShell
-        className="connections-page"
-      >
+      <PageShell className="connections-page" maxWidth="wide">
         <ConnectionsBrowserHelp />
       </PageShell>
     );
@@ -304,6 +302,7 @@ export function ConnectionsView() {
   return (
     <PageShell
       className="connections-page"
+      maxWidth="wide"
       actionBar={
         <ActionBar
           label="연결"
