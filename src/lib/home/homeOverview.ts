@@ -143,7 +143,9 @@ export type HomeNextActionKind =
   | "resume"
   | "review_decisions"
   | "open_issues"
-  | "report";
+  | "report"
+  | "explore_demo"
+  | "open_memory";
 
 export type HomeNextActionTone = "accent" | "info" | "success" | "neutral";
 
@@ -158,7 +160,7 @@ export type HomeNextAction = {
   /** Action label on the card's button. */
   actionLabel: string;
   /** Where the action routes. */
-  destination: "connections" | "reports" | "review" | "workspace";
+  destination: "connections" | "reports" | "review" | "workspace" | "session" | "memory";
   /** When set, switch to this session before routing. */
   targetSessionId: string | null;
   tone: HomeNextActionTone;
@@ -765,9 +767,43 @@ function buildNextActions(params: {
   return sortByRank(actions).slice(0, MAX_HOME_NEXT_ACTIONS);
 }
 
-/** The honest demo / empty state next action — just the import front door. */
+/**
+ * Demo / empty state next actions. The import front door leads, followed
+ * by two soft entry points so a fresh install never reads as "one card
+ * floating in an empty column": one to tour the bundled demo session and
+ * one to peek at the memory surface so the user understands what's
+ * waiting once real work arrives.
+ */
 function buildEmptyNextActions(): HomeNextAction[] {
-  return [importNextAction()];
+  return [importNextAction(), exploreDemoAction(), openMemoryAction()];
+}
+
+function exploreDemoAction(): HomeNextAction {
+  return {
+    key: "explore-demo",
+    kind: "explore_demo",
+    title: "데모 세션 둘러보기",
+    description:
+      "실제 작업을 가져오기 전에 Mori가 세션을 어떻게 정리하는지 데모 세션으로 미리 확인할 수 있어요.",
+    actionLabel: "데모 열기",
+    destination: "session",
+    targetSessionId: null,
+    tone: "info",
+  };
+}
+
+function openMemoryAction(): HomeNextAction {
+  return {
+    key: "open-memory",
+    kind: "open_memory",
+    title: "프로젝트 메모리 살펴보기",
+    description:
+      "결정과 이슈가 어떻게 누적되어 다음 세션의 컨텍스트가 되는지 메모리 페이지에서 미리 볼 수 있어요.",
+    actionLabel: "메모리 열기",
+    destination: "memory",
+    targetSessionId: null,
+    tone: "neutral",
+  };
 }
 
 function importNextAction(): HomeNextAction {
@@ -790,6 +826,8 @@ const NEXT_ACTION_RANK: Record<HomeNextActionKind, number> = {
   open_issues: 2,
   report: 3,
   import: 4,
+  explore_demo: 5,
+  open_memory: 6,
 };
 
 function sortByRank(actions: HomeNextAction[]): HomeNextAction[] {

@@ -363,6 +363,8 @@ const NEXT_ACTION_ICON: Record<HomeNextActionKind, LucideIcon> = {
   review_decisions: Lightbulb,
   open_issues: CheckCircle2,
   report: FileText,
+  explore_demo: Sparkles,
+  open_memory: Layers,
 };
 
 function NextActionRow({

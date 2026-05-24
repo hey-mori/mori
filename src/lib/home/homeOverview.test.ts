@@ -36,16 +36,21 @@ function input(over: Partial<HomeOverviewInput> = {}): HomeOverviewInput {
 
 describe("buildHomeOverview", () => {
   describe("empty / demo-only state", () => {
-    it("is empty with only the import next action when there are no real sessions and no stored sessions", () => {
+    it("leads with import and follows with calm demo / memory entry points so the column never reads as one floating CTA", () => {
       const overview = buildHomeOverview(input({ storedSessions: [], realSessionCount: 0 }));
 
       expect(overview.isEmpty).toBe(true);
       expect(overview.onlyDemo).toBe(true);
       expect(overview.metrics).toHaveLength(0);
       expect(overview.recentSessions).toHaveLength(0);
-      expect(overview.nextActions).toHaveLength(1);
-      expect(overview.nextActions[0]!.kind).toBe("import");
+      expect(overview.nextActions.map((a) => a.kind)).toEqual([
+        "import",
+        "explore_demo",
+        "open_memory",
+      ]);
       expect(overview.nextActions[0]!.destination).toBe("connections");
+      expect(overview.nextActions[1]!.destination).toBe("session");
+      expect(overview.nextActions[2]!.destination).toBe("memory");
     });
 
     it("treats a demo-only store (sessions present but realSessionCount 0) as onlyDemo and offers just import", () => {
@@ -60,7 +65,13 @@ describe("buildHomeOverview", () => {
       expect(overview.onlyDemo).toBe(true);
       // A demo session in the store still lists, but it is not "empty".
       expect(overview.isEmpty).toBe(false);
-      expect(overview.nextActions.map((a) => a.kind)).toEqual(["import"]);
+      // Import leads; demo and memory peeks follow so the column never
+      // reads as a single floating CTA in an empty install.
+      expect(overview.nextActions.map((a) => a.kind)).toEqual([
+        "import",
+        "explore_demo",
+        "open_memory",
+      ]);
     });
   });
 
