@@ -16,6 +16,7 @@ import { PageShell } from "../../components/layout/PageShell";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
 import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
+import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { Button } from "../../components/ui/Button";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -321,33 +322,24 @@ function RecentSessionRow({
   const origin = describeHomeSessionOrigin(session.origin);
   return (
     <li>
-      <button type="button" className="home-session-row mori-list-row" onClick={onOpen} title={session.title}>
-        <span className="home-session-icon" aria-hidden="true">
-          <FolderKanban size={15} />
-        </span>
-        <span className="home-session-body">
-          <span className="home-session-title">{session.title}</span>
-          <span className="home-session-meta">
+      <MoriObjectRow
+        leading={<FolderKanban size={15} />}
+        title={session.title}
+        meta={
+          <>
             <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
-            {/* Only surface the grouping label when there is one — the origin
-                chip already conveys 수동 / 데모, so the previous "수동 세션"
-                fallback was redundant and pulled the row visual weight off. */}
             {session.projectLabel ? (
-              <span className="home-session-project" title={session.projectLabel}>
-                {session.projectLabel}
-              </span>
+              <span title={session.projectLabel}>{session.projectLabel}</span>
             ) : null}
-            {session.spanLabel ? (
-              <span className="home-session-span">{session.spanLabel}</span>
-            ) : null}
-            {session.countSummary ? (
-              <span className="home-session-counts">{session.countSummary}</span>
-            ) : null}
-          </span>
-        </span>
-        <time className="home-session-time">{session.relativeTime}</time>
-        <ArrowRight size={14} aria-hidden="true" className="home-session-arrow" />
-      </button>
+            {session.spanLabel ? <span>{session.spanLabel}</span> : null}
+            {session.countSummary ? <span>{session.countSummary}</span> : null}
+          </>
+        }
+        timestamp={session.relativeTime}
+        trailing={<ArrowRight size={13} aria-hidden="true" />}
+        onClick={onOpen}
+        ariaLabel={session.title}
+      />
     </li>
   );
 }
@@ -374,21 +366,14 @@ function NextActionRow({
   const Icon = NEXT_ACTION_ICON[action.kind];
   return (
     <li className={`home-next-row tone-${action.tone}`}>
-      <button
-        type="button"
-        className="home-next-trigger mori-list-row"
+      <MoriObjectRow
+        leading={<Icon size={15} />}
+        title={action.title}
+        subtitle={action.description}
+        trailing={<ArrowRight size={13} aria-hidden="true" />}
         onClick={onRun}
-        title={action.description}
-      >
-        <span className="home-next-icon" aria-hidden="true">
-          <Icon size={15} />
-        </span>
-        <span className="home-next-text">
-          <span className="home-next-title">{action.title}</span>
-          <span className="home-next-desc">{action.description}</span>
-        </span>
-        <ArrowRight size={14} aria-hidden="true" className="home-next-arrow" />
-      </button>
+        ariaLabel={action.title}
+      />
     </li>
   );
 }

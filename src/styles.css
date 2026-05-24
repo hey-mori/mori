@@ -19159,6 +19159,126 @@ pre {
   color: var(--muted);
 }
 
+/* ─── MoriObjectRow ──────────────────────────────────────────────────────── */
+
+.mori-object-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mori-space-3);
+  width: 100%;
+  padding: 9px var(--mori-space-3);
+  background: transparent;
+  text-align: left;
+  cursor: default;
+  user-select: none;
+}
+
+.mori-object-row--compact {
+  padding: 5px var(--mori-space-3);
+  min-height: 32px;
+}
+
+.mori-object-row--comfortable {
+  min-height: 44px;
+}
+
+.mori-object-row.is-interactive {
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.mori-object-row.is-interactive:hover {
+  background: var(--gray-50);
+}
+
+.mori-object-row.is-interactive:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+.mori-object-row.is-selected {
+  background: var(--purple-50);
+}
+
+.mori-object-row-leading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--muted);
+}
+
+.mori-object-row-body {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mori-object-row-title {
+  display: block;
+  font-size: var(--mori-font-size-md);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.mori-object-row-subtitle {
+  display: block;
+  font-size: var(--mori-font-size-sm);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.mori-object-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px var(--mori-space-2);
+  font-size: var(--mori-font-size-xs);
+  color: var(--muted-2);
+  line-height: 1.4;
+  margin-top: 1px;
+}
+
+.mori-object-row-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.mori-object-row-timestamp {
+  font-size: var(--mori-font-size-xs);
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+.mori-object-row-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mori-object-row-trailing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-2);
+}
+
 /* ─── ToolbarSearch / mori-search-field ──────────────────────────────────── */
 
 .mori-search-field {

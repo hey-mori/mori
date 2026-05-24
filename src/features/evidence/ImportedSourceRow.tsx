@@ -1,6 +1,7 @@
-import { ChevronRight, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
 import {
@@ -20,13 +21,6 @@ export function ImportedSourceRow({
   source: SourceRef;
   events: TimelineEvent[];
   selected: boolean;
-  /**
-   * Optional source-level re-import summary captured at import time.
-   * Only present for connector JSONL imports that ran through the
-   * cross-session preview path. The row degrades cleanly to no badge
-   * when the field is absent (every import that landed before this
-   * milestone falls into that bucket).
-   */
   importSummary?: ConnectorSourceImportSummary;
   onSelect: () => void;
   onRemove?: () => void;
@@ -46,22 +40,24 @@ export function ImportedSourceRow({
       className={`imported-source-row ${selected ? "is-selected" : ""}`}
       aria-current={selected ? "true" : undefined}
     >
-      <button type="button" className="imported-source-body" onClick={onSelect}>
-        <div className="imported-source-titles">
-          <strong title={source.title}>{source.title}</strong>
-          <span className="imported-source-detail">{source.detail}</span>
-        </div>
-        <div className="imported-source-meta">
-          <Badge tone="purple">{display.integrationLabel}</Badge>
-          <Badge tone={display.trustTone}>{display.trustLabel}</Badge>
-          <Badge tone={display.rawDataTone}>{display.rawDataLabel}</Badge>
-          {summaryBadge ? <Badge tone={summaryBadge.tone}>{summaryBadge.label}</Badge> : null}
-          <span className="imported-source-events">
-            {relatedEventCount} event{relatedEventCount === 1 ? "" : "s"}
-          </span>
-        </div>
-        <ChevronRight size={14} aria-hidden="true" className="imported-source-chevron" />
-      </button>
+      <MoriObjectRow
+        title={source.title}
+        subtitle={source.detail}
+        meta={
+          <>
+            <Badge tone="purple">{display.integrationLabel}</Badge>
+            <Badge tone={display.trustTone}>{display.trustLabel}</Badge>
+            <Badge tone={display.rawDataTone}>{display.rawDataLabel}</Badge>
+            {summaryBadge ? <Badge tone={summaryBadge.tone}>{summaryBadge.label}</Badge> : null}
+            <span>
+              {relatedEventCount} event{relatedEventCount === 1 ? "" : "s"}
+            </span>
+          </>
+        }
+        selected={selected}
+        onClick={onSelect}
+        ariaLabel={source.title}
+      />
       {onRemove ? (
         <Button icon={Trash2} onClick={onRemove} aria-label="가져온 소스 제거" title="가져온 소스 제거" />
       ) : null}

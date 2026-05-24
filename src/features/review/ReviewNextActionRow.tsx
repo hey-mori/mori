@@ -1,5 +1,6 @@
 import { CheckCircle2, ListChecks } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
+import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { priorityLabels } from "../../domain/constants";
 import type { Issue, NextAction } from "../../domain/types";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
@@ -17,6 +18,14 @@ export function ReviewNextActionRow({
   onSelect: () => void;
 }) {
   const completed = isNextActionCompleted(nextAction);
+  const relatedLabel =
+    relatedIssues.length > 0
+      ? `관련 이슈: ${relatedIssues
+          .slice(0, 2)
+          .map((issue) => issue.title)
+          .join(", ")}${relatedIssues.length > 2 ? ` 외 ${relatedIssues.length - 2}건` : ""}`
+      : "관련된 이슈가 아직 연결되지 않음";
+
   return (
     <article
       className={`review-next-action-row ${selected ? "is-selected" : ""} ${
@@ -24,37 +33,34 @@ export function ReviewNextActionRow({
       }`.trim()}
       aria-current={selected ? "true" : undefined}
     >
-      <button type="button" onClick={onSelect}>
-        <span className="review-next-action-icon">
-          {completed ? (
+      <MoriObjectRow
+        leading={
+          completed ? (
             <CheckCircle2 size={14} aria-hidden="true" />
           ) : (
             <ListChecks size={14} aria-hidden="true" />
-          )}
-        </span>
-        <div className="review-next-action-titles">
-          <strong>{nextAction.title}</strong>
-          <span>
-            {relatedIssues.length > 0
-              ? `관련 이슈: ${relatedIssues
-                  .slice(0, 2)
-                  .map((issue) => issue.title)
-                  .join(", ")}${relatedIssues.length > 2 ? ` 외 ${relatedIssues.length - 2}건` : ""}`
-              : "관련된 이슈가 아직 연결되지 않음"}
-          </span>
-        </div>
-        <div className="review-next-action-meta">
-          {completed ? (
-            <Badge tone="green">완료됨</Badge>
-          ) : (
-            <Badge tone={priorityTone(nextAction.priority)}>
-              {priorityLabels[nextAction.priority]}
-            </Badge>
-          )}
-          {nextAction.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
-          <span>{nextAction.relatedEventIds.length} event</span>
-        </div>
-      </button>
+          )
+        }
+        title={nextAction.title}
+        subtitle={relatedLabel}
+        status={
+          <>
+            {completed ? (
+              <Badge tone="green">완료됨</Badge>
+            ) : (
+              <Badge tone={priorityTone(nextAction.priority)}>
+                {priorityLabels[nextAction.priority]}
+              </Badge>
+            )}
+            {nextAction.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
+          </>
+        }
+        meta={<span>{nextAction.relatedEventIds.length} event</span>}
+        selected={selected}
+        onClick={onSelect}
+        ariaLabel={nextAction.title}
+        density="compact"
+      />
     </article>
   );
 }

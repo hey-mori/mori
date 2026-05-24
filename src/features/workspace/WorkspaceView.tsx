@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Archive,
-  ArchiveRestore,
   FolderGit2,
   FolderKanban,
   PlugZap,
@@ -14,6 +12,7 @@ import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
+import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { useMoriAppStore } from "../../app/store";
@@ -44,8 +43,8 @@ import {
  * accumulates many small sessions, often re-importing past conversations into
  * new ones. This page is where they see every session at a glance, grouped by
  * its source project (the Claude project path), open one to keep working,
- * report on it, and tidy it with safe lifecycle actions — rename and archive
- * (non-destructive; never delete). The right rail inspects the selected
+ * report on it, and tidy it with safe lifecycle actions — rename.
+ * The right rail inspects the selected
  * session; when the selection is the active session it also shows the live
  * reconstruction counts.
  */
@@ -56,8 +55,6 @@ export function WorkspaceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
-  const archiveSession = useMoriSessionStore((state) => state.archiveSession);
-  const unarchiveSession = useMoriSessionStore((state) => state.unarchiveSession);
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSessionDetail = useMoriAppStore((state) => state.openSession);
 
@@ -93,7 +90,7 @@ export function WorkspaceView() {
       }),
     // `view`/`draft`/`mode` cover active-session changes; the row list is
     // re-derived whenever any of those change. `revision` ticks after a
-    // row-level lifecycle write (archive / unarchive) so the list refreshes
+    // row-level lifecycle write so the list refreshes
     // without a store subscription on every saved row.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeSessionId, view, mode, draft, repository, filters, revision],
@@ -107,14 +104,6 @@ export function WorkspaceView() {
     if (row.savedAt !== null && loadBrowserSession(row.sessionId)) {
       openSessionDetail("flow");
     }
-  };
-
-  const handleArchive = (row: SessionRow) => {
-    if (archiveSession(row.sessionId)) setRevision((value) => value + 1);
-  };
-
-  const handleUnarchive = (row: SessionRow) => {
-    if (unarchiveSession(row.sessionId)) setRevision((value) => value + 1);
   };
 
   const hasResults = model.visibleCount > 0;
@@ -151,40 +140,21 @@ export function WorkspaceView() {
             </>
           }
           end={
-            <>
-              {/* 보관 토글은 보관할 게 있을 때만 노출 — 0건이면 토글 자체가 사라져 툴바가 더 깔끔해진다. */}
-              {model.archivedCount > 0 ? (
-                <button
-                  type="button"
-                  className={`workspace-archive-toggle${filters.archive === "archived" ? " is-active" : ""}`}
-                  onClick={() =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      archive: prev.archive === "archived" ? "active" : "archived",
-                    }))
-                  }
-                  title={filters.archive === "archived" ? "활성 세션만 보기" : "보관된 세션 보기"}
-                >
-                  <Archive size={13} aria-hidden="true" />
-                  보관 {model.archivedCount}
-                </button>
-              ) : null}
-              <SegmentedControl
-                ariaLabel="정렬"
-                value={filters.sort}
-                onChange={(sort) => setFilters((prev) => ({ ...prev, sort }))}
-                options={[
-                  { id: "recent", label: "최근순" },
-                  { id: "title", label: "이름순" },
-                ]}
-              />
-            </>
+            <SegmentedControl
+              ariaLabel="정렬"
+              value={filters.sort}
+              onChange={(sort) => setFilters((prev) => ({ ...prev, sort }))}
+              options={[
+                { id: "recent", label: "최근순" },
+                { id: "title", label: "이름순" },
+              ]}
+            />
           }
         />
       }
     >
       {!hasResults ? (
-        onlyDemo && filters.archive !== "archived" && filters.origin !== "imported" && !filters.query.trim() ? (
+        onlyDemo && filters.origin !== "imported" && !filters.query.trim() ? (
           <EmptyState
             icon={FolderKanban}
             title="아직 세션이 없습니다"
@@ -248,8 +218,6 @@ export function WorkspaceView() {
                     selected={false}
                     onSelect={() => openSession(row)}
                     onOpen={() => openSession(row)}
-                    onArchive={() => handleArchive(row)}
-                    onUnarchive={() => handleUnarchive(row)}
                   />
                 ))}
               </ul>
@@ -268,94 +236,36 @@ function SessionRowItem({
   selected,
   onSelect,
   onOpen,
-  onArchive,
-  onUnarchive,
 }: {
   row: SessionRow;
   selected: boolean;
   onSelect: () => void;
   onOpen: () => void;
-  onArchive: () => void;
-  onUnarchive: () => void;
 }) {
   const status = describeWorkspaceSessionStatus(row.status);
   const origin = describeSessionOrigin(row.origin);
-  const classes = [
-    "workspace-row",
-    selected ? "is-selected" : "",
-    row.isActive ? "is-active" : "",
-    row.isArchived ? "is-archived" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  // The active session and bundled demo rows can't be archived (the demo is
-  // a fixture; the active session must stay reachable). Other captured rows
-  // get a hover-revealed archive / restore button so a user can tidy without
-  // a separate inspector panel.
-  const canArchive = row.savedAt !== null && !row.isActive;
 
   return (
     <li>
-      <div
-        className={`${classes} mori-list-row`}
-        role="button"
-        tabIndex={0}
-        aria-pressed={selected}
+      <MoriObjectRow
+        selected={selected || row.isActive}
         onClick={onSelect}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onSelect();
-          }
-        }}
         onDoubleClick={onOpen}
-      >
-        <div className="workspace-row-main">
-          <span className="workspace-row-title" title={row.title}>
-            {row.title}
-          </span>
-          <span className="workspace-row-meta">
+        ariaLabel={row.title}
+        title={row.title}
+        meta={
+          <>
             <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
             {row.isActive ? <span className="workspace-row-active-dot">진행 중</span> : null}
             {row.startedAt || row.savedAt ? (
-              <span
-                className="workspace-row-span"
-                title={row.spanLabel ?? undefined}
-              >
+              <span title={row.spanLabel ?? undefined}>
                 {formatSidebarRelative(row.startedAt ?? row.savedAt ?? "")}
               </span>
             ) : null}
-          </span>
-        </div>
-        <span className="workspace-row-status">
-          <MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge>
-          {row.isArchived ? (
-            <span className="workspace-row-archived-tag" title="보관됨">
-              <Archive size={12} aria-hidden="true" />
-            </span>
-          ) : null}
-          {canArchive ? (
-            <button
-              type="button"
-              className="workspace-row-action"
-              onClick={(event) => {
-                event.stopPropagation();
-                if (row.isArchived) onUnarchive();
-                else onArchive();
-              }}
-              aria-label={row.isArchived ? "보관 해제" : "보관"}
-              title={row.isArchived ? "보관 해제 — 다시 활성 목록으로 돌립니다" : "보관 — 활성 목록에서 숨깁니다 (삭제는 아님)"}
-            >
-              {row.isArchived ? (
-                <ArchiveRestore size={14} aria-hidden="true" />
-              ) : (
-                <Archive size={14} aria-hidden="true" />
-              )}
-            </button>
-          ) : null}
-        </span>
-      </div>
+          </>
+        }
+        status={<MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge>}
+      />
     </li>
   );
 }
