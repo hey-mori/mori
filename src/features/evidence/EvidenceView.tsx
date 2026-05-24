@@ -220,6 +220,11 @@ export function EvidenceView() {
           </div>
           <Badge tone="green">{availableIntegrations.length}개</Badge>
         </header>
+        {isDemoSession ? (
+          <p className="evidence-demo-note">
+            데모 세션에서는 모든 가져오기가 비활성입니다. 새 세션을 시작하면 사용할 수 있습니다.
+          </p>
+        ) : null}
         <div className="evidence-card-grid">
           {availableIntegrations.map((integration) => {
             const importKindForCard = getHubImportKind(integration.id);

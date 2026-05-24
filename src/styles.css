@@ -6288,6 +6288,13 @@ pre {
   margin: 0;
 }
 
+.evidence-demo-note {
+  margin: 0 2px 6px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .evidence-section-header p {
   margin: 0;
   color: var(--muted);

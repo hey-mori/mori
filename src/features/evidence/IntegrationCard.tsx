@@ -129,25 +129,18 @@ export function IntegrationCard({
             {actionLabel}
           </Button>
         ) : (
-          <>
-            <p className="integration-card-footer-note">
-              {primaryDisabled
+          <Button
+            variant="secondary"
+            disabled
+            icon={ChevronRight}
+            title={
+              primaryDisabled
                 ? primaryDisabledReason ?? "이 세션에서는 추가할 수 없습니다."
-                : "가져오기 패널의 다른 탭에서 처리됩니다."}
-            </p>
-            <Button
-              variant="secondary"
-              disabled
-              icon={ChevronRight}
-              title={
-                primaryDisabled
-                  ? primaryDisabledReason ?? "이 세션에서는 추가할 수 없습니다."
-                  : "이 항목은 가져오기 패널의 다른 탭에서 처리됩니다."
-              }
-            >
-              {actionLabel}
-            </Button>
-          </>
+                : "이 항목은 가져오기 패널의 다른 탭에서 처리됩니다."
+            }
+          >
+            {actionLabel}
+          </Button>
         )}
       </footer>
     </article>
