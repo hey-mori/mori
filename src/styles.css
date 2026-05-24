@@ -1,31 +1,14 @@
 :root {
-  color-scheme: light;
+  /* Color + shadow tokens live in styles/tokens.css (light) and are
+   * remapped per-theme by styles/theme.css (forest, nightLake). Keeping
+   * the values out of this :root block fixes a cascade bug: when this
+   * file is imported after theme.css, a redeclared :root rule wins on
+   * equal specificity and silently strands the dark theme.
+   *
+   * Anything that belongs to *every* theme — typography defaults,
+   * font-rendering — still lives here. */
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --bg: #f7f8fb;
-  --panel: #ffffff;
-  --panel-soft: #fbfbfd;
-  --line: #e7e9f1;
-  --line-strong: #d7dbea;
-  --text: #111827;
-  --muted: #657085;
-  --muted-2: #98a1b3;
-  --purple: #6246f5;
-  --purple-50: #f2efff;
-  --purple-100: #e7e1ff;
-  --blue: #2369f6;
-  --blue-50: #eef5ff;
-  --green: #15955a;
-  --green-50: #edf9f2;
-  --red: #f04444;
-  --red-50: #fff1f1;
-  --orange: #f59e0b;
-  --orange-50: #fff7e8;
-  --cyan: #0f9aaa;
-  --cyan-50: #edfafd;
-  --gray-50: #f3f5f9;
-  --shadow: 0 18px 54px rgba(27, 36, 58, 0.08);
-  --shadow-soft: 0 10px 28px rgba(34, 41, 56, 0.06);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
