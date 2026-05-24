@@ -8,4 +8,5 @@ src-tauri/target/
 src-tauri/gen/
 src-tauri/Cargo.lock
 .claude/
+.omo/run-continuation/
 *.log
