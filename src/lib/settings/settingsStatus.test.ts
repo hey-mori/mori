@@ -17,9 +17,9 @@ function settings(overrides: Partial<QuickPassAnalysisSettings> = {}): QuickPass
 }
 
 describe("getProviderRows", () => {
-  it("marks the currently-selected provider as selected and exposes 5 rows", () => {
+  it("marks the currently-selected provider as selected and exposes 6 rows", () => {
     const rows = getProviderRows(settings({ provider: "ollama" }));
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(6);
     expect(rows.find((row) => row.id === "ollama")?.selected).toBe(true);
     expect(rows.find((row) => row.id === "deterministic")?.selected).toBe(false);
   });
@@ -31,6 +31,7 @@ describe("getProviderRows", () => {
     expect(byId.ollama.status).toBe("implemented");
     expect(byId.lmStudio.status).toBe("planned");
     expect(byId.openAiCompatible.status).toBe("planned");
+    expect(byId.toolNativeApi.status).toBe("planned");
     expect(byId.cloudApi.status).toBe("planned");
   });
 
