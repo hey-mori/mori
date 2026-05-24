@@ -943,32 +943,39 @@ p {
   gap: 10px;
 }
 
+/* Compact segmented — same scale as the toolbar pills + tab strips so
+   "pick one of a few" always reads the same across surfaces. */
 .segmented {
-  display: inline-grid;
-  grid-template-columns: 52px 58px 72px;
-  height: 36px;
-  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  font-size: 13px;
+  border-radius: 7px;
+  background: var(--gray-50);
+  font-size: 12px;
   font-weight: 600;
 }
 
 .segmented button {
   border: 0;
-  border-right: 1px solid var(--line);
   background: transparent;
+  color: var(--muted);
+  padding: 0 11px;
+  height: 24px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.segmented button:hover:not(:disabled):not(.active) {
   color: var(--text);
 }
 
-.segmented button:last-child {
-  border-right: 0;
-}
-
 .segmented button.active {
-  background: var(--text);
-  color: white;
+  background: white;
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.06);
 }
 
 .segmented button:disabled {
