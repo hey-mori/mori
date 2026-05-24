@@ -3,6 +3,10 @@ import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { SettingsSheet } from "./SettingsSheet";
 import { useMoriAppStore } from "../../app/store";
+import {
+  loadCollapsePreference,
+  saveCollapsePreference,
+} from "../../lib/sidebar/collapsePreference";
 import type { ViewKey } from "../../domain/types";
 
 /**
@@ -18,14 +22,33 @@ import type { ViewKey } from "../../domain/types";
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useMoriAppStore((state) => state.navigate);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Desktop-only "narrow" mode — independent from the mobile off-canvas
+  // drawer state above. When collapsed, the sidebar shrinks to its icon
+  // rail so the workspace gets more breathing room; toggling it back
+  // unfolds the search + session list without touching the drawer.
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(
+    () => loadCollapsePreference(),
+  );
+  const setSidebarCollapsed = (collapsed: boolean) => {
+    setSidebarCollapsedState(collapsed);
+    saveCollapsePreference(collapsed);
+  };
 
   const closeAndNavigate = (view: ViewKey) => {
     navigate(view);
     setSidebarOpen(false);
   };
 
+  const shellClass = [
+    "app-shell",
+    sidebarOpen ? "sidebar-open" : "",
+    sidebarCollapsed ? "sidebar-collapsed" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className={`app-shell${sidebarOpen ? " sidebar-open" : ""}`}>
+    <div className={shellClass}>
       <button
         type="button"
         className="sidebar-toggle"
@@ -35,7 +58,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <Menu size={18} aria-hidden="true" />
       </button>
-      <Sidebar onNavigate={closeAndNavigate} />
+      <Sidebar
+        onNavigate={closeAndNavigate}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
       <div
         className="sidebar-scrim"
         aria-hidden="true"

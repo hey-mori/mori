@@ -73,6 +73,14 @@ button {
   overflow: hidden;
 }
 
+/* Desktop "focus" mode — the sidebar shrinks to its icon rail so the
+ * workspace gets more breathing room. The mobile drawer (sidebar-open)
+ * still expands to full width when triggered, so this only affects the
+ * standing grid track. */
+.app-shell.sidebar-collapsed {
+  --mori-sidebar-w: 56px;
+}
+
 .sidebar {
   grid-area: sidebar;
   display: flex;
@@ -426,6 +434,71 @@ button {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.sidebar-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0 6px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  align-self: flex-end;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sidebar-collapse-toggle:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+/* Collapsed sidebar — the icon rail.
+ *
+ * Every text-heavy descendant (search input, group labels, session rows,
+ * username) hides so only the navigation icons + the head shortcuts +
+ * the collapse toggle remain. Buttons that stay visible go icon-only
+ * with centred glyphs so the 56px column reads cleanly. */
+.sidebar.is-collapsed .sidebar-search-row,
+.sidebar.is-collapsed .sidebar-list,
+.sidebar.is-collapsed .sidebar-nav-item span,
+.sidebar.is-collapsed .sidebar-user-name {
+  display: none;
+}
+
+.sidebar.is-collapsed .sidebar-head {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 8px;
+}
+
+.sidebar.is-collapsed .sidebar-nav {
+  margin: 0;
+  padding: 6px 0;
+}
+
+.sidebar.is-collapsed .sidebar-nav-item {
+  justify-content: center;
+  padding: 0;
+  width: 32px;
+  height: 28px;
+  align-self: center;
+}
+
+.sidebar.is-collapsed .sidebar-user {
+  justify-content: center;
+  padding: 6px 4px;
+}
+
+.sidebar.is-collapsed .sidebar-collapse-toggle {
+  margin: 0 auto;
+  align-self: center;
 }
 
 /* The .workspace cell scrolls its own contents. */

@@ -5,6 +5,8 @@ import {
   FolderGit2,
   House,
   Layers,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Search,
 } from "lucide-react";
@@ -84,7 +86,15 @@ const SESSION_VIEWS = new Set<ViewKey>([
 
 const MEMORY_VIEWS = new Set<ViewKey>(["memory", "consolidation", "reports"]);
 
-export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void }) {
+export function Sidebar({
+  onNavigate,
+  collapsed = false,
+  onToggleCollapsed,
+}: {
+  onNavigate: (view: ViewKey) => void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
+}) {
   const currentView = useMoriAppStore((state) => state.currentView);
   const activeSessionId = useMoriSessionStore((state) => state.draft?.session.id ?? null);
   const source = useMoriSessionStore(selectSessionSource);
@@ -170,7 +180,10 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
   };
 
   return (
-    <aside className="sidebar" aria-label="세션 목록 및 메뉴">
+    <aside
+      className={`sidebar${collapsed ? " is-collapsed" : ""}`}
+      aria-label="세션 목록 및 메뉴"
+    >
       <div className="sidebar-head" role="group" aria-label="빠른 작업">
         <button
           type="button"
@@ -307,6 +320,26 @@ export function Sidebar({ onNavigate }: { onNavigate: (view: ViewKey) => void })
           </span>
           <span className="sidebar-user-name">{profile.displayName}</span>
         </button>
+        {onToggleCollapsed ? (
+          <button
+            type="button"
+            className="sidebar-collapse-toggle"
+            onClick={onToggleCollapsed}
+            aria-pressed={collapsed}
+            aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            title={
+              collapsed
+                ? "사이드바를 펼쳐 세션 목록을 다시 표시"
+                : "사이드바를 접어 작업 영역을 넓힘"
+            }
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={14} aria-hidden="true" />
+            ) : (
+              <PanelLeftClose size={14} aria-hidden="true" />
+            )}
+          </button>
+        ) : null}
       </div>
     </aside>
   );

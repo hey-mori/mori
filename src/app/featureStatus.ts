@@ -209,7 +209,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "timeline.inspector.memoSave", label: "Save event memo", status: "implemented", description: "Persist event memo corrections through the session import write path." },
   // ─────────────────────────── App shell ─────────────────────────
   { id: "appShell.endSession", label: "End session", status: "implemented", description: "Finalise the active session and mark it ended; report export stays an explicit step on the Reports surface." },
-  { id: "appShell.sidebarCollapse", label: "Collapse sidebar", status: PLANNED, description: "Hide the sidebar to widen the workspace.", disabledReason: "사이드바 접기는 반응형 셸 마일스톤의 일부입니다." },
+  { id: "appShell.sidebarCollapse", label: "Collapse sidebar", status: "implemented", description: "Hide the sidebar to widen the workspace." },
   // ─────────────────────────── Evidence ──────────────────────────
   { id: "evidence.addSource.manualNote", label: "Manual note import", status: "implemented", description: "Paste arbitrary text as a verified source." },
   { id: "evidence.addSource.urlImport", label: "URL import", status: "implemented", description: "Add a URL with optional excerpt." },

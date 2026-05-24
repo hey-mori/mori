@@ -116,8 +116,7 @@ export const TIMELINE_CONTROLS: Record<TimelineControlId, TimelineControlSpec> =
   sidebarCollapse: {
     id: "sidebarCollapse",
     label: "Collapse sidebar",
-    status: "planned",
-    plannedHint: "Sidebar collapse is part of the responsive shell milestone.",
+    status: "implemented",
   },
   memoSave: {
     id: "memoSave",

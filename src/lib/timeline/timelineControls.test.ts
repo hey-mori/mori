@@ -32,9 +32,9 @@ describe("Timeline control registry", () => {
     expect(isImplemented("search")).toBe(true);
   });
 
-  it("treats session-end as implemented and sidebar-collapse as planned", () => {
+  it("treats session-end and sidebar-collapse as implemented", () => {
     expect(isImplemented("endSession")).toBe(true);
-    expect(isImplemented("sidebarCollapse")).toBe(false);
+    expect(isImplemented("sidebarCollapse")).toBe(true);
   });
 
   it("treats shipped inspector correction controls as implemented", () => {
