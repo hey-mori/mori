@@ -242,8 +242,16 @@ function SessionRowItem({
   onSelect: () => void;
   onOpen: () => void;
 }) {
-  const status = describeWorkspaceSessionStatus(row.status);
   const origin = describeSessionOrigin(row.origin);
+  // Status badge only surfaces meaningful state. "complete" is the default for
+  // every imported session (which is trivially "already-finished past work"),
+  // so it would just paint a green pill on every row. The demo session is a
+  // static fixture, not a live recording, so its "recording" status is
+  // misleading. We keep the badge for genuine in-flight state — `analyzing`
+  // on any session, and `recording` on a real (non-demo) manual draft.
+  const showStatusBadge =
+    row.status !== "complete" && !(row.origin === "demo" && row.status === "recording");
+  const status = showStatusBadge ? describeWorkspaceSessionStatus(row.status) : null;
 
   return (
     <li>
@@ -256,7 +264,6 @@ function SessionRowItem({
         meta={
           <>
             <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
-            {row.isActive ? <span className="workspace-row-active-dot">진행 중</span> : null}
             {row.startedAt || row.savedAt ? (
               <span title={row.spanLabel ?? undefined}>
                 {formatSidebarRelative(row.startedAt ?? row.savedAt ?? "")}
@@ -264,7 +271,7 @@ function SessionRowItem({
             ) : null}
           </>
         }
-        status={<MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge>}
+        status={status ? <MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge> : null}
       />
     </li>
   );

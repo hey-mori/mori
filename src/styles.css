@@ -18268,22 +18268,6 @@ pre {
   color: var(--mori-text-muted);
 }
 
-.workspace-row-active-dot {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: 600;
-  color: var(--mori-accent);
-}
-
-.workspace-row-active-dot::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mori-accent);
-}
-
 .workspace-row-span {
   color: var(--mori-text-muted-2);
   font-variant-numeric: tabular-nums;
