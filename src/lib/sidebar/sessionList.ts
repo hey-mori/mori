@@ -243,3 +243,17 @@ function shortKoreanDate(epoch: number): string {
   const d = new Date(epoch);
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
+
+/**
+ * Display label for a project folder in the sidebar tree. Trims a path
+ * like "C:/dev/mori" down to "mori"; leaves a single-segment label
+ * alone; falls back to "기타" for an empty input. The full path stays
+ * available to render in a tooltip so the user never loses context.
+ */
+export function shortProjectLabel(sourceLabel: string | undefined): string {
+  const trimmed = sourceLabel?.trim();
+  if (!trimmed) return "기타";
+  const parts = trimmed.split(/[\\/]+/).filter(Boolean);
+  if (parts.length === 0) return trimmed;
+  return parts[parts.length - 1]!;
+}

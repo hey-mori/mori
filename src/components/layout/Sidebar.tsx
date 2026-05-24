@@ -1,6 +1,8 @@
 import {
   Archive,
   CalendarClock,
+  ChevronDown,
+  ChevronRight,
   Download,
   FolderGit2,
   House,
@@ -22,9 +24,11 @@ import {
   filterSidebarRows,
   formatSidebarRelative,
   groupSidebarRows,
+  shortProjectLabel,
   toSidebarRow,
   type SidebarArchiveFilter,
   type SidebarGroupingMode,
+  type SidebarSessionGroup,
   type SidebarSessionRow,
 } from "../../lib/sidebar/sessionList";
 import {
@@ -35,6 +39,10 @@ import {
   loadArchivePreference,
   saveArchivePreference,
 } from "../../lib/sidebar/archivePreference";
+import {
+  loadCollapsedProjects,
+  saveCollapsedProjects,
+} from "../../lib/sidebar/projectExpansionPreference";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
 import { getProfileInitials } from "../../lib/profile/localProfile";
@@ -121,6 +129,21 @@ export function Sidebar({
     setArchiveFilterState(filter);
     saveArchivePreference(filter);
   };
+  // Per-project collapse state for the project-tree mode. Stored as a set
+  // of collapsed labels so the default ("everything expanded") needs no
+  // persistence — we only remember explicit closes.
+  const [collapsedProjects, setCollapsedProjectsState] = useState<Set<string>>(
+    () => loadCollapsedProjects(),
+  );
+  const toggleProjectCollapsed = useCallback((label: string) => {
+    setCollapsedProjectsState((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      saveCollapsedProjects(next);
+      return next;
+    });
+  }, []);
 
   const refresh = useCallback(() => {
     setSummaries(safeListSessions());
@@ -294,16 +317,37 @@ export function Sidebar({
         ) : filtered.length === 0 ? (
           <p className="sidebar-empty-search">검색 결과가 없습니다.</p>
         ) : (
-          groups.map((group) => (
-            <SessionGroup
-              key={`${group.bucket}-${group.label}`}
-              label={group.label}
-              rows={group.rows}
-              archivedBucket={group.bucket === "archived"}
-              activeSessionId={activeSessionId}
-              onSelect={handleSwitch}
-            />
-          ))
+          groups.map((group) => {
+            // Project-mode rows render as a collapsible folder; recency /
+            // archived stay as the existing flat group so today / yesterday
+            // / 보관됨 do not pick up an unrelated chevron control.
+            const isProject =
+              group.bucket === "project" || group.bucket === "unsourced";
+            if (isProject) {
+              const collapsed = collapsedProjects.has(group.label);
+              return (
+                <ProjectFolder
+                  key={`project-${group.label}`}
+                  group={group}
+                  collapsed={collapsed}
+                  searching={query.trim().length > 0}
+                  activeSessionId={activeSessionId}
+                  onSelect={handleSwitch}
+                  onToggle={() => toggleProjectCollapsed(group.label)}
+                />
+              );
+            }
+            return (
+              <SessionGroup
+                key={`${group.bucket}-${group.label}`}
+                label={group.label}
+                rows={group.rows}
+                archivedBucket={group.bucket === "archived"}
+                activeSessionId={activeSessionId}
+                onSelect={handleSwitch}
+              />
+            );
+          })
         )}
       </div>
 
@@ -345,6 +389,73 @@ export function Sidebar({
   );
 }
 
+/**
+ * Project-mode folder. Renders the project as a header with chevron +
+ * shortened name + session count; sessions sit indented underneath until
+ * the user collapses the folder. While the user is actively searching we
+ * force every folder open so a hit inside a collapsed project does not
+ * silently hide itself.
+ */
+function ProjectFolder({
+  group,
+  collapsed,
+  searching,
+  activeSessionId,
+  onSelect,
+  onToggle,
+}: {
+  group: SidebarSessionGroup;
+  collapsed: boolean;
+  searching: boolean;
+  activeSessionId: string | null;
+  onSelect: (id: string) => void;
+  onToggle: () => void;
+}) {
+  const isOpen = searching ? true : !collapsed;
+  const displayLabel = shortProjectLabel(group.label);
+  const fullLabel = group.label;
+  const containsActive = group.rows.some(
+    (row) => row.sessionId === activeSessionId,
+  );
+  return (
+    <div className={`sidebar-folder${isOpen ? " is-open" : ""}`}>
+      <button
+        type="button"
+        className={`sidebar-folder-head${containsActive ? " has-active" : ""}`}
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls={`sidebar-folder-${encodeURIComponent(group.label)}`}
+        title={fullLabel}
+      >
+        {isOpen ? (
+          <ChevronDown size={12} aria-hidden="true" />
+        ) : (
+          <ChevronRight size={12} aria-hidden="true" />
+        )}
+        <FolderGit2 size={12} aria-hidden="true" />
+        <span className="sidebar-folder-name">{displayLabel}</span>
+        <span className="sidebar-folder-count">{group.rows.length}</span>
+      </button>
+      {isOpen ? (
+        <ul
+          id={`sidebar-folder-${encodeURIComponent(group.label)}`}
+          className="sidebar-folder-body"
+        >
+          {group.rows.map((row) => (
+            <SessionRow
+              key={row.sessionId}
+              row={row}
+              active={row.sessionId === activeSessionId}
+              onSelect={() => onSelect(row.sessionId)}
+              hideSource
+            />
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function SessionGroup({
   label,
   rows,
@@ -379,10 +490,14 @@ function SessionRow({
   row,
   active,
   onSelect,
+  hideSource = false,
 }: {
   row: SidebarSessionRow;
   active: boolean;
   onSelect: () => void;
+  /** Suppress the source chip — used when the row is already nested under
+   *  a project folder that names the same source. */
+  hideSource?: boolean;
 }) {
   // Tooltip carries the full title + project path so identical-title rows
   // (multiple "Mori 앱 기획" duplicates from re-imports) can be told apart
@@ -394,14 +509,14 @@ function SessionRow({
     <li>
       <button
         type="button"
-        className={`sidebar-row${active ? " is-active" : ""}`}
+        className={`sidebar-row${active ? " is-active" : ""}${hideSource ? " is-nested" : ""}`}
         onClick={onSelect}
         aria-current={active ? "true" : undefined}
         title={tooltip}
       >
         <span className="sidebar-row-title">{row.title}</span>
         <span className="sidebar-row-meta">
-          {row.sourceLabel ? (
+          {row.sourceLabel && !hideSource ? (
             <span className="sidebar-row-source">
               <FolderGit2 size={11} aria-hidden="true" />
               <span>{row.sourceLabel}</span>

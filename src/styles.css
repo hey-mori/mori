@@ -307,6 +307,95 @@ button {
   gap: 1px;
 }
 
+/* ─── Project folder (sidebar tree mode) ────────────────────────────────
+   Project = top-level unit, sessions sit indented under it. The folder
+   head is a single clickable row carrying the chevron, folder glyph,
+   short project name, and a count chip. Nested session rows drop the
+   redundant project chip so the indent itself conveys ownership. */
+
+.sidebar-folder + .sidebar-folder {
+  margin-top: 4px;
+}
+
+.sidebar-folder-head {
+  display: grid;
+  grid-template-columns: 12px 12px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.sidebar-folder-head:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.sidebar-folder-head.has-active {
+  color: var(--text);
+}
+
+.sidebar-folder-head svg {
+  color: currentColor;
+  opacity: 0.85;
+}
+
+.sidebar-folder-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-folder-count {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted-2);
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--gray-50);
+}
+
+.sidebar-folder.is-open .sidebar-folder-count {
+  color: var(--purple);
+  background: var(--purple-50);
+}
+
+.sidebar-folder-body {
+  list-style: none;
+  padding: 2px 0 2px 14px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  position: relative;
+}
+
+/* Faint guide line so the nested rows visually attach to the folder. */
+.sidebar-folder-body::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--line);
+}
+
+.sidebar-row.is-nested {
+  padding-left: 8px;
+}
+
 .sidebar-row {
   display: grid;
   grid-template-rows: auto auto;
