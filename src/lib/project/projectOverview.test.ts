@@ -59,6 +59,63 @@ describe("buildProjectOverview", () => {
     expect(overview.stats.totalEvents).toBe(9);
   });
 
+  it("adds evidence, review, memory, and report readiness from session insights", () => {
+    const overview = buildProjectOverview({
+      projectKey: "C:/dev/mori",
+      sessions: [
+        summary({ sessionId: "a", sourceLabel: "C:/dev/mori", eventCount: 5 }),
+        summary({ sessionId: "b", sourceLabel: "C:/dev/mori", eventCount: 3 }),
+      ],
+      sessionInsights: [
+        {
+          sessionId: "a",
+          sourceCount: 2,
+          openIssues: 1,
+          unconfirmedDecisions: 2,
+          pendingNextActions: 1,
+          decisionCount: 3,
+          hasSummary: true,
+          reportCount: 1,
+        },
+        {
+          sessionId: "b",
+          sourceCount: 1,
+          openIssues: 0,
+          unconfirmedDecisions: 1,
+          pendingNextActions: 0,
+          decisionCount: 1,
+          hasSummary: false,
+        },
+      ],
+      now: NOW,
+    });
+
+    expect(overview.stats.totalSources).toBe(3);
+    expect(overview.stats.reviewItems).toBe(5);
+    expect(overview.stats.memoryCandidates).toBe(6);
+    expect(overview.stats.savedReports).toBe(1);
+    expect(overview.focusItems.map((item) => [item.key, item.count, item.enabled])).toEqual([
+      ["review", 5, true],
+      ["evidence", 3, true],
+      ["memory", 6, true],
+      ["report", 1, true],
+    ]);
+  });
+
+  it("keeps readiness rows but disables unavailable work", () => {
+    const overview = buildProjectOverview({
+      projectKey: "alpha",
+      sessions: [summary({ sessionId: "a", sourceLabel: "alpha" })],
+      now: NOW,
+    });
+
+    expect(overview.focusItems).toHaveLength(4);
+    expect(overview.focusItems.find((item) => item.key === "review")?.enabled).toBe(false);
+    expect(overview.focusItems.find((item) => item.key === "evidence")?.enabled).toBe(false);
+    expect(overview.focusItems.find((item) => item.key === "memory")?.enabled).toBe(false);
+    expect(overview.focusItems.find((item) => item.key === "report")?.enabled).toBe(true);
+  });
+
   it("groups active sessions into today / thisWeek / earlier", () => {
     const overview = buildProjectOverview({
       projectKey: "alpha",
@@ -92,6 +149,8 @@ describe("buildProjectOverview", () => {
     });
     expect(overview.stats.sessions).toBe(0);
     expect(overview.stats.lastActivity).toBeNull();
+    expect(overview.stats.totalSources).toBe(0);
+    expect(overview.focusItems.every((item) => !item.enabled)).toBe(true);
     expect(overview.groups).toEqual([]);
   });
 });

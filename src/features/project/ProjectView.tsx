@@ -1,19 +1,23 @@
 import {
   ArrowRight,
   CalendarClock,
+  ClipboardCheck,
+  Database,
+  FileText,
   FolderGit2,
   FolderKanban,
   Layers,
   Plus,
+  ScrollText,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
+import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { useMoriAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
@@ -23,9 +27,13 @@ import {
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import {
   buildProjectOverview,
+  type ProjectFocusItem,
   type ProjectSessionRow,
+  type ProjectSessionInsightSnapshot,
 } from "../../lib/project/projectOverview";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
+import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 
 /**
  * Project workspace — the unit-of-work page.
@@ -48,6 +56,7 @@ export function ProjectView() {
   const projectKey = useMoriAppStore((state) => state.currentProjectKey);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openSession = useMoriAppStore((state) => state.openSession);
+  const setMemoryTab = useMoriAppStore((state) => state.setMemoryTab);
   const source = useMoriSessionStore(selectSessionSource);
   const loadBrowserSession = useMoriSessionStore(
     (state) => state.loadBrowserSession,
@@ -59,6 +68,7 @@ export function ProjectView() {
     (state) => state.draft?.session.id ?? null,
   );
 
+  const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [summaries, setSummaries] = useState(() => safeListSessions());
   useEffect(() => {
     setSummaries(safeListSessions());
@@ -66,27 +76,51 @@ export function ProjectView() {
 
   const overview = useMemo(() => {
     if (!projectKey) return null;
+    const storedSessions = mergeDemoSessionSummaries(summaries);
     return buildProjectOverview({
       projectKey,
-      sessions: mergeDemoSessionSummaries(summaries),
+      sessions: storedSessions,
+      sessionInsights: gatherProjectSessionInsights(storedSessions, repository),
     });
-  }, [projectKey, summaries]);
+  }, [projectKey, repository, summaries]);
 
   const isDesktop = source === "desktop-sqlite";
-  const openSessionId = (sessionId: string) => {
+  const openSessionId = (sessionId: string, tab: Parameters<typeof openSession>[0] = "flow") => {
     if (sessionId === activeSessionId) {
-      openSession("flow");
+      openSession(tab);
       return;
     }
     if (isDesktop) {
       void loadDesktopSession(sessionId).then((ok) => {
         if (!ok) loadBrowserSession(sessionId);
-        openSession("flow");
+        openSession(tab);
       });
     } else {
       loadBrowserSession(sessionId);
-      openSession("flow");
+      openSession(tab);
     }
+  };
+
+  const openFocusItem = (item: ProjectFocusItem) => {
+    const targetSessionId = item.targetSessionId;
+    if (!item.enabled || !targetSessionId) return;
+    if (item.destination === "memory") {
+      if (targetSessionId !== activeSessionId) {
+        if (isDesktop) {
+          void loadDesktopSession(targetSessionId).then((ok) => {
+            if (!ok) loadBrowserSession(targetSessionId);
+            setMemoryTab("overview");
+            setCurrentView("memory");
+          });
+          return;
+        }
+        loadBrowserSession(targetSessionId);
+      }
+      setMemoryTab("overview");
+      setCurrentView("memory");
+      return;
+    }
+    openSessionId(targetSessionId, item.destination);
   };
 
   if (!projectKey || !overview) {
@@ -153,8 +187,45 @@ export function ProjectView() {
               ? `최근 활동 ${formatSidebarRelative(overview.stats.lastActivity)}`
               : "최근 활동 기록 없음",
           },
+          {
+            key: "sources",
+            label: "증거 소스",
+            value: overview.stats.totalSources,
+          },
+          {
+            key: "review",
+            label: "검토 항목",
+            value: overview.stats.reviewItems,
+          },
+          {
+            key: "memory",
+            label: "메모리 후보",
+            value: overview.stats.memoryCandidates,
+          },
         ]}
       />
+
+      <section className="project-focus mori-section" aria-label="프로젝트 작업 상태">
+        <MoriSectionHeader
+          title="작업 상태"
+          action={
+            overview.stats.savedReports > 0 ? (
+              <MoriStatusBadge tone="success">
+                리포트 {overview.stats.savedReports}개
+              </MoriStatusBadge>
+            ) : null
+          }
+        />
+        <ul className="project-focus-list">
+          {overview.focusItems.map((item) => (
+            <ProjectFocusRow
+              key={item.key}
+              item={item}
+              onOpen={() => openFocusItem(item)}
+            />
+          ))}
+        </ul>
+      </section>
 
       <section className="project-sessions mori-section" aria-label="프로젝트 세션">
         <MoriSectionHeader
@@ -209,17 +280,22 @@ function ProjectSessionRowItem({
 }) {
   const statusBadge =
     row.status === "recording" ? (
-      <Badge tone="green">녹화 중</Badge>
+      <MoriStatusBadge tone="success">진행 중</MoriStatusBadge>
     ) : row.status === "analyzing" ? (
-      <Badge tone="blue">분석 중</Badge>
+      <MoriStatusBadge tone="info">분석 중</MoriStatusBadge>
     ) : null;
+  const meta = [
+    row.eventCount ? `이벤트 ${row.eventCount}건` : null,
+    row.sourceCount ? `소스 ${row.sourceCount}개` : null,
+    row.reviewCount ? `검토 ${row.reviewCount}건` : null,
+  ].filter((label): label is string => Boolean(label));
 
   return (
     <li>
       <MoriObjectRow
         leading={<FolderKanban size={15} />}
         title={row.title}
-        meta={row.eventCount ? <span>이벤트 {row.eventCount}건</span> : undefined}
+        meta={meta.length > 0 ? meta.map((label) => <span key={label}>{label}</span>) : undefined}
         timestamp={formatSidebarRelative(row.timestamp)}
         status={statusBadge}
         onClick={onOpen}
@@ -231,10 +307,93 @@ function ProjectSessionRowItem({
   );
 }
 
+function ProjectFocusRow({
+  item,
+  onOpen,
+}: {
+  item: ProjectFocusItem;
+  onOpen: () => void;
+}) {
+  const Icon =
+    item.destination === "insights"
+      ? ClipboardCheck
+      : item.destination === "evidence"
+        ? Database
+        : item.destination === "memory"
+          ? FileText
+          : ScrollText;
+  return (
+    <li>
+      <MoriObjectRow
+        leading={<Icon size={15} />}
+        title={item.title}
+        subtitle={item.detail}
+        status={<MoriStatusBadge tone={item.tone}>{item.statusLabel}</MoriStatusBadge>}
+        trailing={item.enabled ? <ArrowRight size={13} aria-hidden="true" /> : null}
+        onClick={item.enabled ? onOpen : undefined}
+        ariaLabel={item.title}
+        density="compact"
+      />
+    </li>
+  );
+}
+
 function safeListSessions() {
   try {
     return loadStoredSessionSummaries();
   } catch {
     return [];
   }
+}
+
+function gatherProjectSessionInsights(
+  summaries: ReturnType<typeof loadStoredSessionSummaries>,
+  repository: ReturnType<typeof createBrowserDraftRepository>,
+): ProjectSessionInsightSnapshot[] {
+  let reportSessionIds = new Map<string, number>();
+  try {
+    reportSessionIds = repository.listMoriPackageDrafts().reduce((map, draft) => {
+      for (const sessionId of draft.package.manifest.sessionIds) {
+        map.set(sessionId, (map.get(sessionId) ?? 0) + 1);
+      }
+      return map;
+    }, new Map<string, number>());
+  } catch {
+    reportSessionIds = new Map();
+  }
+
+  return summaries.map((summary) => {
+    let sourceCount = 0;
+    try {
+      sourceCount = repository.listSessionImports(summary.sessionId).length;
+    } catch {
+      sourceCount = 0;
+    }
+
+    let body;
+    try {
+      body = repository.loadSessionMemoryBody(summary.sessionId);
+    } catch {
+      body = null;
+    }
+
+    if (!body) {
+      return {
+        sessionId: summary.sessionId,
+        sourceCount,
+        reportCount: reportSessionIds.get(summary.sessionId) ?? 0,
+      };
+    }
+
+    return {
+      sessionId: summary.sessionId,
+      sourceCount,
+      openIssues: body.issues.filter((issue) => issue.status === "open").length,
+      unconfirmedDecisions: body.decisions.filter((decision) => !decision.confirmed).length,
+      pendingNextActions: body.nextActions.filter((action) => !isNextActionCompleted(action)).length,
+      decisionCount: body.decisions.length,
+      hasSummary: Boolean(body.summarySnapshot),
+      reportCount: reportSessionIds.get(summary.sessionId) ?? 0,
+    };
+  });
 }
