@@ -306,12 +306,12 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: var(--mori-radius-pill);
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 5px;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-weight: 650;
+  letter-spacing: 0;
   background: var(--mori-status-neutral-soft);
   color: var(--mori-status-neutral);
 }
