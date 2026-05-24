@@ -507,6 +507,18 @@ button {
   overflow: hidden;
 }
 
+/* Calm placeholder shown while a lazy route chunk is in flight. Sized to
+ * the workspace bounds so the surrounding shell never jumps. */
+.route-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 13px;
+  color: var(--muted-2);
+  letter-spacing: 0;
+}
+
 /* ─── Settings sheet ─────────────────────────────────────────────────────
    The modal that hosts the profile + settings surfaces. Triggered by the
    user button in the sidebar foot; floats above the workspace so the user
