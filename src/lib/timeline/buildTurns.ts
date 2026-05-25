@@ -1,7 +1,7 @@
 /**
  * Fold timeline events into conversation turns.
  *
- * A captured Claude conversation is a sequence of turns. The import now stamps
+ * A captured conversation or agent run is a sequence of turns. The import now stamps
  * `turnId` + `actor` onto every event as data (see `claudeImport.ts`), so the
  * timeline can group events back into turns deterministically instead of
  * re-deriving structure from rendered text on every render.

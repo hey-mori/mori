@@ -1,8 +1,9 @@
 /**
  * Turn-card view model.
  *
- * The conversation flow renders one TURN as one card: the user's ask, Claude's
- * reply, and a collapsible muted strip of the turn's tool calls + file edits.
+ * The flow view renders one imported/captured turn as one card: the initiating
+ * activity, an assistant/source response when present, and a collapsible muted
+ * strip of mechanical tool calls + file edits.
  * `buildTurns` produces the structural `Turn`; this derives the *renderable*
  * shape — the strings, labels, counts, and badges the card draws — so the
  * React component stays a thin renderer and the derivation is unit-testable.
@@ -41,7 +42,7 @@ export type TurnCardModel = {
   start: string;
   /** The user's ask, prominent. Null when the turn opens with no human ask. */
   ask: string | null;
-  /** Claude's reply. Null when the turn captured no answer. */
+  /** Assistant/source reply. Null when the turn captured no answer. */
   reply: string | null;
   /**
    * When the turn has neither a usable ask nor a reply (a bare tool / system
@@ -71,7 +72,7 @@ export type TurnCardModel = {
 export function buildTurnCardModel(turn: Turn): TurnCardModel {
   const askEvent = turn.ask ?? null;
   // Today one imported turn is a single paired event whose `title` is the user
-  // ask and `summary` is Claude's reply; that event lands in `assistant` (or,
+  // ask and `summary` is the assistant/source reply; that event lands in `assistant` (or,
   // for a tool-only turn, `toolCalls`) by its actor, leaving `ask` null. So the
   // human ask is read from whichever member carries it, preferring an explicit
   // `ask` slot, then the assistant reply event, then the first tool call.
@@ -135,7 +136,7 @@ function buildActivity(turn: Turn): TurnActivityItem[] {
     items.push({
       id: event.id,
       label: event.toolName?.trim() || "도구",
-      detail: cleanText(event.summary) ?? cleanText(event.title) ?? "도구 호출",
+      detail: cleanText(event.summary) ?? cleanText(event.title) ?? "도구 활동",
       isFileEdit: false,
     });
   }

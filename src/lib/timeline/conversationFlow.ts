@@ -1,8 +1,8 @@
 /**
  * Conversation-flow helpers.
  *
- * Phase 1 made "1 Claude conversation = 1 Mori session": a single session now
- * holds one conversation's worth of turns, every one typed `aiConversation`.
+ * Some imports are conversation-dominant work units: one source conversation
+ * or agent run represented as a sequence of `aiConversation` events.
  * The swimlane canvas was built for sessions that mix many event types across
  * lanes; a single-conversation session collapses into one dense lane that the
  * time-window bundler then over-clusters into meaningless "270개 이벤트" blobs.
@@ -10,7 +10,7 @@
  * These pure helpers let the Timeline:
  *   1. detect when a session is really one conversation (so it can default to
  *      the readable chronological "대화 흐름" view), and
- *   2. turn a paired turn event (`title` = user ask, `summary` = Claude reply)
+ *   2. turn a paired turn event (`title` = initiating ask, `summary` = reply)
  *      into a small, role-aware view model the flow view renders.
  *
  * No React, no domain mutation — just derivation, so it is unit-testable and
@@ -74,20 +74,20 @@ export type ConversationTurnSegment = {
 
 /** Korean role label for a conversation segment header. */
 export const CONVERSATION_ROLE_LABEL: Record<ConversationTurnRole, string> = {
-  user: "사용자",
-  assistant: "Claude",
-  tool: "도구 호출",
+  user: "User",
+  assistant: "어시스턴트",
+  tool: "도구 활동",
   system: "기록",
 };
 
 /**
  * Split a paired turn event into the segments the flow view renders.
  *
- * Claude imports pair one human message + the following assistant message into
- * one turn event, stashing the user ask in `title` and Claude's reply in
- * `summary`, and now stamp the turn's actor as data (see `claudeImport.ts`).
- * The flow view wants those as two visually distinct rows: the user's question
- * prominent, Claude's answer below it. The reply's role comes from the stamped
+ * Conversation imports pair one human message + the following assistant message into
+ * one turn event, stashing the user ask in `title` and the response in
+ * `summary`, and stamp the turn's actor as data when the source can provide it.
+ * The flow view wants those as two visually distinct rows: the initiating ask
+ * prominent, the source response below it. The reply's role comes from the stamped
  * `actor` (with `inferActorFallback` reconstructing it for legacy events that
  * predate the field) instead of re-guessing from the text on every render, so
  * tool activity stays a muted segment without a per-render regex pass.
@@ -104,7 +104,7 @@ export function conversationTurnSegments(event: TimelineEvent): ConversationTurn
   const replyText = event.summary.trim();
   if (replyText && replyText !== userText) {
     // A turn whose dominant actor is the tool surfaces its reply as a muted
-    // tool segment; otherwise it reads as Claude's answer.
+    // tool segment; otherwise it reads as an assistant/source answer.
     const role: ConversationTurnRole = actor === "tool" ? "tool" : "assistant";
     segments.push({ role, label: CONVERSATION_ROLE_LABEL[role], text: replyText });
   }

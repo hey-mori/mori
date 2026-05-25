@@ -23,7 +23,7 @@ const DEFAULT_RECENCY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_LIMIT = 3;
 
 /** Korean labels keyed by source kind so the title reads naturally. */
-const IMPORT_LABEL: Record<SourceKind, string> = {
+const IMPORT_LABEL: Partial<Record<SourceKind, string>> = {
   aiConversation: "AI 대화",
   claudeTranscript: "Claude 대화",
   chatgptTranscript: "ChatGPT 대화",

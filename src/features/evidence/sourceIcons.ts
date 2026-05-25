@@ -17,6 +17,7 @@ const SOURCE_ICON: Record<string, LucideIcon> = {
   manualNote: FileText,
   url: Globe,
   aiConversation: Bot,
+  desktopTranscriptImport: Bot,
   claudeTranscript: Sparkles,
   chatgptTranscript: Bot,
   codexTranscript: Code2,
@@ -25,6 +26,10 @@ const SOURCE_ICON: Record<string, LucideIcon> = {
   tauriGitDiff: GitCommit,
   repository: Folder,
   terminal: Terminal,
+  terminalShell: Terminal,
+  git: GitCommit,
+  gitCommand: GitCommit,
+  githubPrImport: GitCommit,
   fileSystem: Folder,
   editor: Code2,
   vscode: Code2,
@@ -33,8 +38,14 @@ const SOURCE_ICON: Record<string, LucideIcon> = {
   browserTab: Globe,
   docs: FileText,
   slack: MessageSquare,
+  discord: MessageSquare,
   notion: Layers,
   figma: Boxes,
+  linear: Layers,
+  jira: Layers,
+  buildLog: Terminal,
+  deployLog: Terminal,
+  automation: Boxes,
 };
 
 export function getSourceIcon(kind: string): LucideIcon {

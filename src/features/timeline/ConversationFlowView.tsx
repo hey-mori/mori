@@ -27,14 +27,14 @@ import {
 } from "../../components/ui/MoriActionMenu";
 
 /**
- * Conversation flow view — the conversation-FIRST reading mode for a single
- * captured Claude conversation.
+ * Activity flow view — the source/turn-FIRST reading mode for a
+ * conversation-dominant work unit.
  *
- * A Mori session is one conversation, so the flow drops the swimlane and reads
- * the talk as a vertical thread of TURNS. Each turn is one clean card: the
- * user's ask (prominent), Claude's reply, and a collapsible muted strip of the
- * turn's tool calls + file edits (collapsed by default, with a "도구 7 · 파일 3"
- * count). Token usage, decisions, and issues ride along as small badges.
+ * Some Mori sessions are mostly one imported conversation or agent run, so the
+ * flow drops the swimlane and reads the work as a vertical thread of turns.
+ * Each turn is one clean card: initiating ask, response, and a collapsible
+ * muted strip of tool calls + file edits. Token usage, decisions, and issues
+ * ride along as small badges.
  *
  * Two honest groupings sit on top (see `groupTurns`): a **burst** — a tight run
  * of tool activity — carries a *visible criterion* ("3분 내 도구 호출 7회"); a
@@ -65,7 +65,7 @@ export function ConversationFlowView({
   const groups = groupTurns(turns, conversationGroupingOptions(density, turns.length));
 
   return (
-    <ol className={`conversation-flow is-${density}`} aria-label="대화 흐름">
+    <ol className={`conversation-flow is-${density}`} aria-label="활동 흐름">
       {groups.map((group) => (
         <li key={group.id}>
           <ConversationGroup
@@ -195,7 +195,7 @@ function TurnCard({
         {card.reply ? (
           <span className="conversation-turn-reply">
             <span className="conversation-turn-role">
-              <Sparkles size={12} aria-hidden="true" /> Claude
+              <Sparkles size={12} aria-hidden="true" /> 어시스턴트
             </span>
             <span className="conversation-turn-reply-text">{card.reply}</span>
           </span>
@@ -328,7 +328,7 @@ function BurstGroup({
           <Zap size={14} />
         </span>
         <span className="conversation-burst-body">
-          <strong>도구 호출 묶음</strong>
+          <strong>도구 활동 묶음</strong>
           <span className="conversation-burst-criterion">{burst.criterion}</span>
         </span>
         <span className="conversation-burst-toggle">

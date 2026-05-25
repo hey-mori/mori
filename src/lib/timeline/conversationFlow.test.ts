@@ -122,7 +122,7 @@ describe("conversationTurnSegments", () => {
     expect(segments[0]?.role).toBe("user");
     expect(segments[0]?.text).toContain("충돌");
     expect(segments[1]?.role).toBe("assistant");
-    expect(segments[1]?.label).toBe("Claude");
+    expect(segments[1]?.label).toBe("어시스턴트");
   });
 
   it("renders a tool-actor reply as a muted tool segment", () => {
@@ -130,7 +130,7 @@ describe("conversationTurnSegments", () => {
       turn({ title: "테스트 실행해줘", summary: "npm test 실행", actor: "tool" }),
     );
     expect(segments[1]?.role).toBe("tool");
-    expect(segments[1]?.label).toBe("도구 호출");
+    expect(segments[1]?.label).toBe("도구 활동");
   });
 
   it("falls back to the regex heuristic for legacy events without an actor", () => {
@@ -138,7 +138,7 @@ describe("conversationTurnSegments", () => {
       turn({ title: "테스트 실행해줘", summary: "$ npm test\n실행 중...", actor: undefined }),
     );
     expect(segments[1]?.role).toBe("tool");
-    expect(segments[1]?.label).toBe("도구 호출");
+    expect(segments[1]?.label).toBe("도구 활동");
   });
 
   it("does not duplicate the reply when it matches the ask", () => {

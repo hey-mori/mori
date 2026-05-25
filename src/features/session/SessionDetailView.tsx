@@ -16,6 +16,7 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { moriMockSession } from "../../domain/mock-data";
+import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
 import { buildWorkContext } from "../../lib/session/workContext";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
@@ -52,6 +53,7 @@ export function SessionDetailView() {
     <PageShell className="session-detail-page" maxWidth="full">
       <div className="session-detail-bar">
         <SessionTitleInline />
+        <SessionOriginInline />
         <SessionTabBar activeTab={sessionTab} onChange={setSessionTab} />
       </div>
       <SessionTabContent tab={sessionTab} />
@@ -118,6 +120,41 @@ function SessionTitleInline() {
 }
 
 // ─── Tab bar ──────────────────────────────────────────────────────────────────
+
+function SessionOriginInline() {
+  const view = useMoriSessionStore(selectSessionView);
+  const mode = useMoriSessionStore(selectSessionMode);
+  const imports = useMoriSessionStore((state) => state.imports);
+  const summary = useMemo(
+    () =>
+      buildSessionOriginSummary({
+        session: view.session,
+        sources: view.sources,
+        events: view.events,
+        importCount: mode === "demo" ? 0 : imports.length,
+        isDemo: mode === "demo",
+      }),
+    [view.session, view.sources, view.events, imports.length, mode],
+  );
+
+  return (
+    <div
+      className="session-origin-strip"
+      aria-label="작업 단위 출처 요약"
+      title={
+        summary.projectHint
+          ? `${summary.boundaryLabel} · ${summary.projectHint}`
+          : summary.boundaryLabel
+      }
+    >
+      <span className="session-origin-chip is-primary">{summary.boundaryLabel}</span>
+      <span className="session-origin-chip">{summary.sourceMixLabel}</span>
+      <span className="session-origin-meta">{summary.sourceCountLabel}</span>
+      <span className="session-origin-meta">{summary.eventCountLabel}</span>
+      <span className="session-origin-meta">{summary.retentionLabel}</span>
+    </div>
+  );
+}
 
 type SessionTabSpec = {
   id: SessionTab;
