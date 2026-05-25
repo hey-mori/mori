@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { MoriActionCluster } from "../ui/MoriActionCluster";
 
 export type ActionBarProps = {
   /** Left cluster — the page's controls: filters, tabs, search, status. */
@@ -23,8 +24,14 @@ export function ActionBar({ start, end, label, className = "" }: ActionBarProps)
       role="toolbar"
       aria-label={label}
     >
-      <div className="action-bar-start">{start}</div>
-      {end ? <div className="action-bar-end">{end}</div> : null}
+      <MoriActionCluster className="action-bar-start" align="start">
+        {start}
+      </MoriActionCluster>
+      {end ? (
+        <MoriActionCluster className="action-bar-end" align="end" wrap={false}>
+          {end}
+        </MoriActionCluster>
+      ) : null}
     </div>
   );
 }

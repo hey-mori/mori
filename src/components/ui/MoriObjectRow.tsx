@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
+import type { MoriMenuPosition } from "./MoriActionMenu";
 
 export type MoriObjectRowDensity = "comfortable" | "compact";
 
@@ -25,6 +26,7 @@ export type MoriObjectRowProps = {
   className?: string;
   onClick?: () => void;
   onDoubleClick?: () => void;
+  onActionMenu?: (position: MoriMenuPosition) => void;
   /** Forwarded to the root element as aria-label. */
   ariaLabel?: string;
   /** When true, renders as a plain div (non-interactive) regardless of onClick. */
@@ -56,6 +58,7 @@ export function MoriObjectRow({
   className = "",
   onClick,
   onDoubleClick,
+  onActionMenu,
   ariaLabel,
   static: isStatic = false,
 }: MoriObjectRowProps) {
@@ -81,9 +84,18 @@ export function MoriObjectRow({
       aria-label={ariaLabel}
       onClick={interactive ? onClick : undefined}
       onDoubleClick={interactive ? onDoubleClick : undefined}
+      onContextMenu={
+        onActionMenu
+          ? (event) => {
+              event.preventDefault();
+              onActionMenu({ x: event.clientX, y: event.clientY });
+            }
+          : undefined
+      }
       onKeyDown={
         interactive
           ? (event) => {
+              if (handleActionMenuKey(event, onActionMenu)) return;
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
                 onClick?.();
@@ -119,4 +131,18 @@ export function MoriObjectRow({
       ) : null}
     </div>
   );
+}
+
+function handleActionMenuKey(
+  event: KeyboardEvent<HTMLDivElement>,
+  onActionMenu: MoriObjectRowProps["onActionMenu"],
+): boolean {
+  if (!onActionMenu) return false;
+  if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) {
+    return false;
+  }
+  event.preventDefault();
+  const rect = event.currentTarget.getBoundingClientRect();
+  onActionMenu({ x: rect.left + 16, y: rect.top + Math.min(rect.height, 32) });
+  return true;
 }

@@ -10,7 +10,6 @@ import {
   KanbanSquare,
   Lightbulb,
   ListChecks,
-  Search,
   Sparkles,
   Table2,
   X,
@@ -21,6 +20,7 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { SearchField } from "../../components/ui/SearchField";
 import { moriConceptIcon } from "../../components/brand/moriIcons";
 import { issueStatusLabels, priorityLabels } from "../../domain/constants";
 import type { Priority } from "../../domain/types";
@@ -694,26 +694,13 @@ function IssueGardenFilter({
 }) {
   return (
     <div className="review-issue-filter" role="search" aria-label="이슈 필터">
-      <label className="review-issue-filter-search">
-        <Search size={13} aria-hidden="true" className="review-issue-filter-icon" />
-        <input
-          type="search"
-          placeholder="이슈 제목 또는 내용 검색..."
-          value={searchText}
-          onChange={(event) => onSearchChange(event.target.value)}
-          aria-label="이슈 검색"
-        />
-        {searchText ? (
-          <button
-            type="button"
-            className="review-issue-filter-clear-input"
-            onClick={() => onSearchChange("")}
-            aria-label="검색어 지우기"
-          >
-            <X size={12} />
-          </button>
-        ) : null}
-      </label>
+      <SearchField
+        className="review-issue-filter-search"
+        value={searchText}
+        onChange={onSearchChange}
+        placeholder="이슈 제목 또는 내용 검색"
+        ariaLabel="이슈 검색"
+      />
       <div className="review-issue-filter-priority" role="group" aria-label="우선순위 필터">
         {PRIORITY_FILTER_OPTIONS.map((opt) => (
           <button

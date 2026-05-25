@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardCopy, FileText, PlusCircle, Search } from "lucide-react";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -12,6 +13,8 @@ import {
   TIMELINE_INSPECTOR_NARROW_MAX_PX,
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
+import type { TimelineEvent } from "../../domain/types";
+import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 import { EventInspector } from "./EventInspector";
 import { eventIssueId, isEventPromotedToIssue } from "../../lib/timeline/eventToIssue";
 import { TimelineBundleInspector } from "./TimelineBundleInspector";
@@ -198,6 +201,75 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   // chrono list takes precedence — it is the readable narrow fallback.
   const useConversationFlow =
     !useChronoList && mode === "timeline" && readingMode === "flow";
+  const buildEventMenuItems = useCallback(
+    (event: TimelineEvent): MoriMenuItemSpec[] => {
+      const issueCreated = analysis ? isEventPromotedToIssue(analysis, event.id) : false;
+      const items: MoriMenuItemSpec[] = [
+        {
+          id: "open-details",
+          label: "상세 열기",
+          icon: Search,
+          onSelect: () => setSelectedEventId(event.id),
+        },
+        {
+          id: "copy-summary",
+          label: "이벤트 내용 복사",
+          icon: ClipboardCopy,
+          onSelect: () =>
+            copyText(`${event.title}\n\n${event.summary}\n\n${event.start}${event.end ? ` - ${event.end}` : ""}`),
+        },
+        {
+          id: "copy-reference",
+          label: "이벤트 참조 복사",
+          icon: ClipboardCopy,
+          onSelect: () => copyText(`mori:event:${event.id}`),
+        },
+      ];
+      if (event.sourceRefs.length > 0) {
+        items.push({
+          id: "open-evidence",
+          label: "관련 증거 열기",
+          icon: FileText,
+          onSelect: () => setSessionTab("evidence"),
+        });
+      }
+      if (issueCreated) {
+        items.push(
+          { type: "separator", id: "review-separator" },
+          {
+            id: "open-issue",
+            label: "생성된 이슈 열기",
+            icon: PlusCircle,
+            onSelect: () => openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) }),
+          },
+        );
+      } else if (sessionMode === "draft" && hasAnalysis) {
+        items.push(
+          { type: "separator", id: "review-separator" },
+          {
+            id: "create-issue",
+            label: "이슈로 만들기",
+            icon: PlusCircle,
+            onSelect: () => {
+              if (createIssueFromEvent(event)) {
+                openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) });
+              }
+            },
+          },
+        );
+      }
+      return items;
+    },
+    [
+      analysis,
+      createIssueFromEvent,
+      hasAnalysis,
+      openReviewItem,
+      sessionMode,
+      setSelectedEventId,
+      setSessionTab,
+    ],
+  );
 
   return (
     <div
@@ -240,6 +312,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
             selectedItemId={selectedItem?.id ?? null}
             onSelect={setSelectedEventId}
             density={density}
+            eventMenuItems={buildEventMenuItems}
           />
         ) : useConversationFlow ? (
           <ConversationFlowView
@@ -247,6 +320,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
             selectedItemId={selectedItem?.id ?? null}
             onSelect={setSelectedEventId}
             density={density}
+            eventMenuItems={buildEventMenuItems}
           />
         ) : (
           <>
@@ -259,6 +333,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
               onViewportChange={setMinimapViewport}
               onSelect={setSelectedEventId}
               onHover={setHoveredEventId}
+              eventMenuItems={(item) => buildEventMenuItems(item.event)}
             />
             {mode === "timeline" ? (
               <TimelineMiniMap
@@ -335,4 +410,14 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
       ) : null}
     </div>
   );
+}
+
+function copyText(text: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    try {
+      void navigator.clipboard.writeText(text).catch(() => {});
+    } catch {
+      // Clipboard access is permission-gated in some browser shells.
+    }
+  }
 }

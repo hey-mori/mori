@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { SearchField } from "./SearchField";
 
 export type ToolbarSearchProps = {
   value: string;
@@ -20,15 +20,12 @@ export function ToolbarSearch({
   className = "",
 }: ToolbarSearchProps) {
   return (
-    <label className={`mori-search-field ${className}`.trim()}>
-      <Search size={14} aria-hidden="true" />
-      <input
-        type="search"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        aria-label={ariaLabel ?? placeholder}
-      />
-    </label>
+    <SearchField
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      ariaLabel={ariaLabel}
+      className={className}
+    />
   );
 }

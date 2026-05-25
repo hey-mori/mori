@@ -15,8 +15,9 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
+import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
 import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
-import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
+import { MoriSection } from "../../components/ui/MoriSection";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -205,17 +206,18 @@ export function ProjectView() {
         ]}
       />
 
-      <section className="project-focus mori-section" aria-label="프로젝트 작업 상태">
-        <MoriSectionHeader
-          title="작업 상태"
-          action={
-            overview.stats.savedReports > 0 ? (
-              <MoriStatusBadge tone="success">
-                리포트 {overview.stats.savedReports}개
-              </MoriStatusBadge>
-            ) : null
-          }
-        />
+      <MoriSection
+        className="project-focus"
+        title="작업 상태"
+        actions={
+          overview.stats.savedReports > 0 ? (
+            <MoriStatusBadge tone="success">
+              리포트 {overview.stats.savedReports}개
+            </MoriStatusBadge>
+          ) : null
+        }
+        ariaLabel="프로젝트 작업 상태"
+      >
         <ul className="project-focus-list">
           {overview.focusItems.map((item) => (
             <ProjectFocusRow
@@ -225,19 +227,19 @@ export function ProjectView() {
             />
           ))}
         </ul>
-      </section>
+      </MoriSection>
 
-      <section className="project-sessions mori-section" aria-label="프로젝트 세션">
-        <MoriSectionHeader
-          title="세션"
-          action={
-            <span className="project-section-count">
-              <CalendarClock size={13} aria-hidden="true" />
-              {overview.stats.activeSessions}건
-            </span>
-          }
-        />
-
+      <MoriSection
+        className="project-sessions"
+        title="세션"
+        actions={
+          <span className="project-section-count">
+            <CalendarClock size={13} aria-hidden="true" />
+            {overview.stats.activeSessions}건
+          </span>
+        }
+        ariaLabel="프로젝트 세션"
+      >
         {overview.groups.length === 0 ? (
           <EmptyState
             compact
@@ -266,7 +268,7 @@ export function ProjectView() {
             ))}
           </div>
         )}
-      </section>
+      </MoriSection>
     </PageShell>
   );
 }
@@ -295,7 +297,7 @@ function ProjectSessionRowItem({
       <MoriObjectRow
         leading={<FolderKanban size={15} />}
         title={row.title}
-        meta={meta.length > 0 ? meta.map((label) => <span key={label}>{label}</span>) : undefined}
+        meta={<MoriMetadataLine items={meta} />}
         timestamp={formatSidebarRelative(row.timestamp)}
         status={statusBadge}
         onClick={onOpen}

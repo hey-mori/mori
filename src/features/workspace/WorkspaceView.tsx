@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
+  Clipboard,
+  ClipboardCopy,
+  FileText,
   FolderGit2,
   FolderKanban,
+  GanttChartSquare,
+  Pencil,
   PlugZap,
+  ScrollText,
   Search,
 } from "lucide-react";
 import { ActionBar } from "../../components/layout/ActionBar";
@@ -14,6 +20,13 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
+import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
+import {
+  MoriContextMenu,
+  MoriOverflowMenu,
+  useContextMenuPosition,
+  type MoriMenuItemSpec,
+} from "../../components/ui/MoriActionMenu";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { useMoriAppStore } from "../../app/store";
@@ -56,8 +69,10 @@ export function WorkspaceView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
+  const renameSession = useMoriSessionStore((state) => state.renameSession);
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSessionDetail = useMoriAppStore((state) => state.openSession);
+  const openProject = useMoriAppStore((state) => state.openProject);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -97,13 +112,21 @@ export function WorkspaceView() {
     [activeSessionId, view, mode, draft, repository, filters, revision],
   );
 
-  const openSession = (row: SessionRow) => {
+  const openSession = (row: SessionRow, tab: Parameters<typeof openSessionDetail>[0] = "flow") => {
     if (row.isActive) {
-      openSessionDetail("flow");
+      openSessionDetail(tab);
       return;
     }
     if (row.savedAt !== null && loadBrowserSession(row.sessionId)) {
-      openSessionDetail("flow");
+      openSessionDetail(tab);
+    }
+  };
+
+  const renameRow = (row: SessionRow) => {
+    const title = window.prompt("세션 이름", row.title);
+    if (!title) return;
+    if (renameSession(row.sessionId, title)) {
+      setRevision((value) => value + 1);
     }
   };
 
@@ -225,6 +248,11 @@ export function WorkspaceView() {
                       key={row.sessionId}
                       row={row}
                       onOpen={() => openSession(row)}
+                      onOpenTab={(tab) => openSession(row, tab)}
+                      onOpenProject={
+                        row.sourceLabel ? () => openProject(row.sourceLabel as string) : undefined
+                      }
+                      onRename={() => renameRow(row)}
                     />
                   ))}
                 </ul>
@@ -273,10 +301,17 @@ function WorkspaceSummaryStrip({
 function SessionRowItem({
   row,
   onOpen,
+  onOpenTab,
+  onOpenProject,
+  onRename,
 }: {
   row: SessionRow;
   onOpen: () => void;
+  onOpenTab: (tab: "flow" | "evidence" | "insights" | "report") => void;
+  onOpenProject?: () => void;
+  onRename: () => void;
 }) {
+  const menu = useContextMenuPosition();
   const origin = describeSessionOrigin(row.origin);
   // Status badge only surfaces meaningful state. "complete" is the default for
   // every imported session (which is trivially "already-finished past work"),
@@ -290,25 +325,120 @@ function SessionRowItem({
   const relative = row.startedAt || row.savedAt
     ? formatSidebarRelative(row.startedAt ?? row.savedAt ?? "")
     : null;
+  const menuItems = buildSessionMenuItems({
+    row,
+    onOpen,
+    onOpenTab,
+    onOpenProject,
+    onRename,
+  });
 
   return (
     <li>
       <MoriObjectRow
         leading={<FolderKanban size={15} />}
         onClick={onOpen}
+        onActionMenu={menu.openAt}
         ariaLabel={row.title}
         title={row.title}
         meta={
-          <>
-            <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
-            {row.spanLabel ? <span>{row.spanLabel}</span> : null}
-          </>
+          <MoriMetadataLine
+            items={[
+              <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>,
+              row.spanLabel,
+            ]}
+          />
         }
         timestamp={relative}
         status={status ? <MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge> : null}
-        trailing={<ArrowRight size={13} aria-hidden="true" />}
+        trailing={
+          <span className="workspace-row-trailing-actions">
+            <MoriOverflowMenu items={menuItems} label={`${row.title} 작업`} />
+            <ArrowRight size={13} aria-hidden="true" />
+          </span>
+        }
         density="compact"
+      />
+      <MoriContextMenu
+        open={menu.open}
+        position={menu.position}
+        items={menuItems}
+        onClose={menu.close}
+        label={`${row.title} 작업`}
       />
     </li>
   );
+}
+
+function buildSessionMenuItems({
+  row,
+  onOpen,
+  onOpenTab,
+  onOpenProject,
+  onRename,
+}: {
+  row: SessionRow;
+  onOpen: () => void;
+  onOpenTab: (tab: "flow" | "evidence" | "insights" | "report") => void;
+  onOpenProject?: () => void;
+  onRename: () => void;
+}): MoriMenuItemSpec[] {
+  const items: MoriMenuItemSpec[] = [
+    { id: "open", label: "세션 열기", icon: ArrowRight, onSelect: onOpen },
+    { id: "open-flow", label: "흐름 열기", icon: GanttChartSquare, onSelect: () => onOpenTab("flow") },
+    { id: "open-evidence", label: "증거 열기", icon: FileText, onSelect: () => onOpenTab("evidence") },
+    { id: "open-review", label: "검토 열기", icon: Clipboard, onSelect: () => onOpenTab("insights") },
+    { id: "open-report", label: "리포트 열기", icon: ScrollText, onSelect: () => onOpenTab("report") },
+  ];
+  if (onOpenProject) {
+    items.push({
+      id: "open-project",
+      label: "프로젝트 열기",
+      icon: FolderGit2,
+      onSelect: onOpenProject,
+    });
+  }
+  items.push(
+    { type: "separator", id: "manage-separator" },
+    {
+      id: "rename",
+      label: "이름 변경",
+      icon: Pencil,
+      onSelect: onRename,
+      disabled: row.origin === "demo",
+      title: row.origin === "demo" ? "데모 세션은 이름을 바꿀 수 없습니다." : undefined,
+    },
+    { type: "separator", id: "copy-separator" },
+    {
+      id: "copy-title",
+      label: "제목 복사",
+      icon: ClipboardCopy,
+      onSelect: () => copyText(row.title),
+    },
+    {
+      id: "copy-id",
+      label: "세션 ID 복사",
+      icon: ClipboardCopy,
+      onSelect: () => copyText(row.sessionId),
+    },
+  );
+  if (row.sourceLabel) {
+    items.push({
+      id: "copy-project",
+      label: "프로젝트 경로 복사",
+      icon: ClipboardCopy,
+      onSelect: () => copyText(row.sourceLabel ?? ""),
+    });
+  }
+  return items;
+}
+
+function copyText(text: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    try {
+      void navigator.clipboard.writeText(text).catch(() => {});
+    } catch {
+      // Clipboard access is permission-gated in some browser shells.
+    }
+  }
 }

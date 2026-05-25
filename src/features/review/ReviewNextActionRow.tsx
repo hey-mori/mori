@@ -1,6 +1,7 @@
 import { CheckCircle2, ListChecks } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
+import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
 import { priorityLabels } from "../../domain/constants";
 import type { Issue, NextAction } from "../../domain/types";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
@@ -55,7 +56,7 @@ export function ReviewNextActionRow({
             {nextAction.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
           </>
         }
-        meta={<span>{nextAction.relatedEventIds.length} event</span>}
+        meta={<MoriMetadataLine items={[`${nextAction.relatedEventIds.length} event`]} />}
         selected={selected}
         onClick={onSelect}
         ariaLabel={nextAction.title}

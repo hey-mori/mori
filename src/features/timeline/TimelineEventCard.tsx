@@ -3,6 +3,11 @@ import { focusStateClassName, type EventFocusState } from "../../lib/timeline/fo
 import type { TimelineEvent } from "../../domain/types";
 import { eventTypeIcons, eventTypeTone } from "../../domain/constants";
 import { buildTimelineEventCardViewModel } from "./lib/timelineCards";
+import {
+  MoriContextMenu,
+  useContextMenuPosition,
+  type MoriMenuItemSpec,
+} from "../../components/ui/MoriActionMenu";
 
 /**
  * Event card.
@@ -19,6 +24,7 @@ export function TimelineEventCard({
   density,
   onSelect,
   onHover,
+  menuItems,
 }: {
   event: TimelineEvent;
   layout: LaidOutTimelineItem;
@@ -26,7 +32,9 @@ export function TimelineEventCard({
   density: TimelineDensity;
   onSelect: (eventId: string) => void;
   onHover: (eventId: string | null) => void;
+  menuItems?: MoriMenuItemSpec[];
 }) {
+  const menu = useContextMenuPosition();
   const vm = buildTimelineEventCardViewModel(event);
   const Icon = eventTypeIcons[event.type];
   // Progressive disclosure: only the comfortable tier carries footer meta on
@@ -38,6 +46,8 @@ export function TimelineEventCard({
     <button
       className={`event-card card-${vm.tone} ${focusStateClassName(focusState)} ${densityClass}`}
       onClick={() => onSelect(event.id)}
+      onContextMenu={menuItems ? menu.onContextMenu : undefined}
+      onKeyDown={menuItems ? menu.onKeyDown : undefined}
       onMouseEnter={() => onHover(event.id)}
       onMouseLeave={() => onHover(null)}
       style={{
@@ -63,6 +73,15 @@ export function TimelineEventCard({
         <footer className="event-card-footer">
           <span className="event-card-meta">{vm.primaryMeta}</span>
         </footer>
+      ) : null}
+      {menuItems ? (
+        <MoriContextMenu
+          open={menu.open}
+          position={menu.position}
+          items={menuItems}
+          onClose={menu.close}
+          label={`${event.title} 작업`}
+        />
       ) : null}
     </button>
   );

@@ -24,6 +24,7 @@ import { TimelineLane } from "./TimelineLane";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
 import { TimelineTimeMarkers } from "./TimelineTimeMarkers";
 import type { Relationship } from "../../domain/types";
+import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 
 export type TimelineCanvasProps = {
   model: TimelineRenderModel;
@@ -38,6 +39,7 @@ export type TimelineCanvasProps = {
   onViewportChange?: (viewport: MinimapViewport) => void;
   onSelect: (itemId: string) => void;
   onHover: (itemId: string | null) => void;
+  eventMenuItems?: (event: TimelineRenderModel["visibleDisplayItems"][number] & { kind: "event" }) => MoriMenuItemSpec[];
 };
 
 /** Imperative handle so the minimap can pan the canvas. */
@@ -66,7 +68,7 @@ const LANE_LABEL_WIDTH = 138;
  */
 export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasProps>(
   function TimelineCanvas(
-    { model, relationships, density, onFrameWidth, onViewportChange, onSelect, onHover },
+    { model, relationships, density, onFrameWidth, onViewportChange, onSelect, onHover, eventMenuItems },
     ref,
   ) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -213,6 +215,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
                 focusedSet={model.focusedSet}
                 onSelect={onSelect}
                 onHover={onHover}
+                eventMenuItems={eventMenuItems}
               />
             );
           })}

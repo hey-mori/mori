@@ -17,6 +17,8 @@ import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
 import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
+import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
+import { MoriSection } from "../../components/ui/MoriSection";
 import { Button } from "../../components/ui/Button";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -223,10 +225,11 @@ export function HomeView() {
                 ) : null}
               </section>
 
-              <section className="home-section home-recent" aria-label="최근 세션">
-                <MoriSectionHeader
+              <MoriSection
+                className="home-section home-recent"
+                ariaLabel="최근 세션"
                   title="최근 세션"
-                  action={
+                actions={
                     <button
                       type="button"
                       className="home-section-link"
@@ -235,8 +238,7 @@ export function HomeView() {
                       전체 세션 <ArrowRight size={13} aria-hidden="true" />
                     </button>
                   }
-                />
-
+              >
                 {overview.recentSessions.length > 0 ? (
                   <ul className="home-session-list">
                     {overview.recentSessions.map((session) => (
@@ -255,11 +257,14 @@ export function HomeView() {
                     description="연결에서 Claude 작업을 가져오면 여기에 쌓입니다."
                   />
                 )}
-              </section>
+              </MoriSection>
             </div>
 
-            <aside className="home-section home-next" aria-label="다음 단계">
-              <MoriSectionHeader title="다음 단계" />
+            <MoriSection
+              className="home-section home-next"
+              title="다음 단계"
+              ariaLabel="다음 단계"
+            >
               <ul className="home-next-list">
                 {overview.nextActions.map((action) => (
                   <NextActionRow
@@ -279,7 +284,7 @@ export function HomeView() {
                   </div>
                 </div>
               ) : null}
-            </aside>
+            </MoriSection>
           </div>
 
         </div>
@@ -328,14 +333,16 @@ function RecentSessionRow({
         leading={<FolderKanban size={15} />}
         title={session.title}
         meta={
-          <>
-            <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
-            {session.projectLabel ? (
-              <span title={session.projectLabel}>{session.projectLabel}</span>
-            ) : null}
-            {session.spanLabel ? <span>{session.spanLabel}</span> : null}
-            {session.countSummary ? <span>{session.countSummary}</span> : null}
-          </>
+          <MoriMetadataLine
+            items={[
+              <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>,
+              session.projectLabel ? (
+                <span title={session.projectLabel}>{session.projectLabel}</span>
+              ) : null,
+              session.spanLabel,
+              session.countSummary,
+            ]}
+          />
         }
         timestamp={session.relativeTime}
         trailing={<ArrowRight size={13} aria-hidden="true" />}

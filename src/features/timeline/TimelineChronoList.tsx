@@ -9,6 +9,11 @@ import {
   buildTimelineEventCardViewModel,
   buildTrustGlyph,
 } from "./lib/timelineCards";
+import {
+  MoriContextMenu,
+  useContextMenuPosition,
+  type MoriMenuItemSpec,
+} from "../../components/ui/MoriActionMenu";
 
 /**
  * Narrow-width Timeline fallback.
@@ -25,11 +30,13 @@ export function TimelineChronoList({
   selectedItemId,
   onSelect,
   density,
+  eventMenuItems,
 }: {
   model: TimelineRenderModel;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
   density: TimelineDensity;
+  eventMenuItems?: (event: TimelineEvent) => MoriMenuItemSpec[];
 }) {
   const items = sortDisplayItemsChronologically(model.visibleDisplayItems);
   if (items.length === 0) return null;
@@ -75,40 +82,74 @@ export function TimelineChronoList({
           );
         }
 
-        const vm = buildTimelineEventCardViewModel(item.event);
-        const Icon = eventTypeIcons[item.event.type];
         return (
-          <li key={item.id}>
-            <button
-              type="button"
-              className={`timeline-chrono-row card-${vm.tone} ${selected ? "is-selected" : ""}`}
-              aria-current={selected ? "true" : undefined}
-              onClick={() => onSelect(item.id)}
-            >
-              <span className="timeline-chrono-time">{vm.timeLabel}</span>
-              <span className={`timeline-chrono-icon tone-${vm.tone}`}>
-                <Icon size={14} aria-hidden="true" />
-              </span>
-              <span className="timeline-chrono-body">
-                <strong>{vm.title}</strong>
-                <small>
-                  {eventTypeLabels[item.event.type]} · {vm.trust.label}
-                </small>
-              </span>
-              {vm.primaryMeta ? (
-                <span className="timeline-chrono-meta">{vm.primaryMeta}</span>
-              ) : null}
-            </button>
-            {selected ? (
-              <div className="timeline-chrono-detail" role="region">
-                <p>{item.event.summary}</p>
-                <small>{eventDetailMeta(item.event)}</small>
-              </div>
-            ) : null}
-          </li>
+          <TimelineChronoEventRow
+            key={item.id}
+            event={item.event}
+            selected={selected}
+            onSelect={() => onSelect(item.id)}
+            menuItems={eventMenuItems?.(item.event)}
+          />
         );
       })}
     </ol>
+  );
+}
+
+function TimelineChronoEventRow({
+  event,
+  selected,
+  onSelect,
+  menuItems,
+}: {
+  event: TimelineEvent;
+  selected: boolean;
+  onSelect: () => void;
+  menuItems?: MoriMenuItemSpec[];
+}) {
+  const menu = useContextMenuPosition();
+  const vm = buildTimelineEventCardViewModel(event);
+  const Icon = eventTypeIcons[event.type];
+  return (
+    <li>
+      <button
+        type="button"
+        className={`timeline-chrono-row card-${vm.tone} ${selected ? "is-selected" : ""}`}
+        aria-current={selected ? "true" : undefined}
+        onClick={onSelect}
+        onContextMenu={menuItems ? menu.onContextMenu : undefined}
+        onKeyDown={menuItems ? menu.onKeyDown : undefined}
+      >
+        <span className="timeline-chrono-time">{vm.timeLabel}</span>
+        <span className={`timeline-chrono-icon tone-${vm.tone}`}>
+          <Icon size={14} aria-hidden="true" />
+        </span>
+        <span className="timeline-chrono-body">
+          <strong>{vm.title}</strong>
+          <small>
+            {eventTypeLabels[event.type]} · {vm.trust.label}
+          </small>
+        </span>
+        {vm.primaryMeta ? (
+          <span className="timeline-chrono-meta">{vm.primaryMeta}</span>
+        ) : null}
+      </button>
+      {selected ? (
+        <div className="timeline-chrono-detail" role="region">
+          <p>{event.summary}</p>
+          <small>{eventDetailMeta(event)}</small>
+        </div>
+      ) : null}
+      {menuItems ? (
+        <MoriContextMenu
+          open={menu.open}
+          position={menu.position}
+          items={menuItems}
+          onClose={menu.close}
+          label={`${event.title} 작업`}
+        />
+      ) : null}
+    </li>
   );
 }
 

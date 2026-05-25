@@ -1,5 +1,6 @@
 import { Badge } from "../../components/ui/Badge";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
+import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
 import { priorityLabels } from "../../domain/constants";
 import type { Issue, SourceRef, TimelineEvent } from "../../domain/types";
 import { formatDate } from "../../lib/formatting/time";
@@ -34,13 +35,19 @@ export function ReviewIssueCard({
         title={issue.title}
         subtitle={issue.description}
         meta={
-          <>
-            <span>{formatDate(issue.createdAt)}</span>
-            <span title={`이벤트 ${evidence.eventCount}개 · 소스 ${evidence.sourceCount}개`}>
-              {evidence.eventCount}E · {evidence.sourceCount}S
-              {issue.relatedDecisionIds.length ? ` · ${issue.relatedDecisionIds.length}D` : ""}
-            </span>
-          </>
+          <MoriMetadataLine
+            items={[
+              formatDate(issue.createdAt),
+              <span
+                title={`이벤트 ${evidence.eventCount}개 · 소스 ${evidence.sourceCount}개`}
+              >
+                {evidence.eventCount}E · {evidence.sourceCount}S
+                {issue.relatedDecisionIds.length
+                  ? ` · ${issue.relatedDecisionIds.length}D`
+                  : ""}
+              </span>,
+            ]}
+          />
         }
         status={
           <>

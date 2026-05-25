@@ -6,6 +6,7 @@ import type { EventType } from "../../domain/types";
 import type { LaidOutTimelineItem, LaneLayout, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import { getEventFocusState } from "../../lib/timeline/focusState";
+import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 
 /**
  * One lane row.
@@ -30,6 +31,7 @@ export function TimelineLane({
   focusedSet,
   onSelect,
   onHover,
+  eventMenuItems,
 }: {
   icon: LucideIcon;
   label: string;
@@ -44,6 +46,7 @@ export function TimelineLane({
   focusedSet: Set<string>;
   onSelect: (itemId: string) => void;
   onHover: (itemId: string | null) => void;
+  eventMenuItems?: (event: TimelineDisplayItem & { kind: "event" }) => MoriMenuItemSpec[];
 }) {
   const colorClass = `lane-tone-${eventTypeTone[tone]}`;
   const isEmpty = items.length === 0;
@@ -97,6 +100,7 @@ export function TimelineLane({
             focusState={focusState}
             onSelect={onSelect}
             onHover={onHover}
+            menuItems={eventMenuItems?.(item)}
           />
         );
       })}

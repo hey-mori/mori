@@ -2,14 +2,19 @@ import {
   CalendarClock,
   ChevronDown,
   ChevronRight,
+  Clipboard,
+  ClipboardCopy,
   Download,
+  FileText,
   FolderGit2,
+  GanttChartSquare,
   House,
   Layers,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   Plus,
-  Search,
+  ScrollText,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMoriAppStore } from "../../app/store";
@@ -41,8 +46,15 @@ import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
 import { getProfileInitials } from "../../lib/profile/localProfile";
 import { moriViewIcon } from "../brand/moriIcons";
+import { SearchField } from "../ui/SearchField";
+import {
+  MoriContextMenu,
+  useContextMenuPosition,
+  type MoriMenuItemSpec,
+} from "../ui/MoriActionMenu";
 import type { LucideIcon } from "lucide-react";
 import type { ViewKey } from "../../domain/types";
+import type { SessionTab } from "../../app/store";
 
 /**
  * Primary sidebar — full-height navigation column.
@@ -103,6 +115,7 @@ export function Sidebar({
   const source = useMoriSessionStore(selectSessionSource);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
   const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
+  const renameSession = useMoriSessionStore((state) => state.renameSession);
   const openSession = useMoriAppStore((state) => state.openSession);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openSettings = useMoriAppStore((state) => state.openSettingsSheet);
@@ -155,19 +168,19 @@ export function Sidebar({
   const isDesktop = source === "desktop-sqlite";
 
   const handleSwitch = useCallback(
-    (sessionId: string) => {
+    (sessionId: string, tab?: SessionTab) => {
       if (sessionId === activeSessionId) {
-        openSession();
+        openSession(tab);
         return;
       }
       if (isDesktop) {
         void loadDesktopSession(sessionId).then((ok) => {
           if (!ok) loadBrowserSession(sessionId);
-          openSession();
+          openSession(tab);
         });
       } else {
         loadBrowserSession(sessionId);
-        openSession();
+        openSession(tab);
       }
     },
     [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession, openSession],
@@ -179,6 +192,15 @@ export function Sidebar({
     if (key === "memory") return MEMORY_VIEWS.has(currentView);
     return key === currentView;
   };
+
+  const handleRenameSession = useCallback(
+    (row: SidebarSessionRow) => {
+      const title = window.prompt("세션 이름", row.title);
+      if (!title) return;
+      if (renameSession(row.sessionId, title)) refresh();
+    },
+    [refresh, renameSession],
+  );
 
   return (
     <aside
@@ -252,16 +274,13 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-search-row">
-        <div className="sidebar-search">
-          <Search size={13} aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="세션 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="세션 검색"
-          />
-        </div>
+        <SearchField
+          className="sidebar-search"
+          value={query}
+          onChange={setQuery}
+          placeholder="세션 검색"
+          ariaLabel="세션 검색"
+        />
         <button
           type="button"
           className="sidebar-grouping-toggle"
@@ -311,6 +330,8 @@ export function Sidebar({
                     currentView === "project" ? currentProjectKey : null
                   }
                   onSelect={handleSwitch}
+                  onOpenTab={handleSwitch}
+                  onRename={handleRenameSession}
                   onToggle={() => toggleProjectCollapsed(group.label)}
                   onOpenProject={
                     canOpenProject ? () => openProject(projectKey) : undefined
@@ -325,6 +346,9 @@ export function Sidebar({
                 rows={group.rows}
                 activeSessionId={activeSessionId}
                 onSelect={handleSwitch}
+                onOpenTab={handleSwitch}
+                onOpenProject={(projectKey) => openProject(projectKey)}
+                onRename={handleRenameSession}
               />
             );
           })
@@ -363,6 +387,8 @@ function ProjectFolder({
   activeSessionId,
   currentProjectKey,
   onSelect,
+  onOpenTab,
+  onRename,
   onToggle,
   onOpenProject,
 }: {
@@ -373,6 +399,8 @@ function ProjectFolder({
   /** When the user is on a project page, the matching folder lights up. */
   currentProjectKey: string | null;
   onSelect: (id: string) => void;
+  onOpenTab: (id: string, tab: SessionTab) => void;
+  onRename: (row: SidebarSessionRow) => void;
   onToggle: () => void;
   /** Optional — when provided, clicking the folder *name* opens the project
    *  page. The chevron always toggles open/closed regardless. */
@@ -435,6 +463,9 @@ function ProjectFolder({
               row={row}
               active={row.sessionId === activeSessionId}
               onSelect={() => onSelect(row.sessionId)}
+              onOpenTab={(tab) => onOpenTab(row.sessionId, tab)}
+              onOpenProject={onOpenProject}
+              onRename={() => onRename(row)}
               hideSource
             />
           ))}
@@ -449,11 +480,17 @@ function SessionGroup({
   rows,
   activeSessionId,
   onSelect,
+  onOpenTab,
+  onOpenProject,
+  onRename,
 }: {
   label: string;
   rows: SidebarSessionRow[];
   activeSessionId: string | null;
   onSelect: (id: string) => void;
+  onOpenTab: (id: string, tab: SessionTab) => void;
+  onOpenProject: (projectKey: string) => void;
+  onRename: (row: SidebarSessionRow) => void;
 }) {
   return (
     <div className="sidebar-group">
@@ -465,6 +502,11 @@ function SessionGroup({
             row={row}
             active={row.sessionId === activeSessionId}
             onSelect={() => onSelect(row.sessionId)}
+            onOpenTab={(tab) => onOpenTab(row.sessionId, tab)}
+            onOpenProject={
+              row.sourceLabel ? () => onOpenProject(row.sourceLabel as string) : undefined
+            }
+            onRename={() => onRename(row)}
           />
         ))}
       </ul>
@@ -476,27 +518,43 @@ function SessionRow({
   row,
   active,
   onSelect,
+  onOpenTab,
+  onOpenProject,
+  onRename,
   hideSource = false,
 }: {
   row: SidebarSessionRow;
   active: boolean;
   onSelect: () => void;
+  onOpenTab: (tab: SessionTab) => void;
+  onOpenProject?: () => void;
+  onRename: () => void;
   /** Suppress the source chip — used when the row is already nested under
    *  a project folder that names the same source. */
   hideSource?: boolean;
 }) {
+  const menu = useContextMenuPosition();
   // Tooltip carries the full title + project path so identical-title rows
   // (multiple "Mori 앱 기획" duplicates from re-imports) can be told apart
   // on hover without expanding the row visually.
   const tooltip = row.sourceLabel
     ? `${row.title}\n${row.sourceLabel}`
     : row.title;
+  const menuItems = buildSidebarSessionMenuItems({
+    row,
+    onOpen: onSelect,
+    onOpenTab,
+    onOpenProject,
+    onRename,
+  });
   return (
     <li>
       <button
         type="button"
         className={`sidebar-row${active ? " is-active" : ""}${hideSource ? " is-nested" : ""}`}
         onClick={onSelect}
+        onContextMenu={menu.onContextMenu}
+        onKeyDown={menu.onKeyDown}
         aria-current={active ? "true" : undefined}
         title={tooltip}
       >
@@ -513,8 +571,81 @@ function SessionRow({
           </span>
         </span>
       </button>
+      <MoriContextMenu
+        open={menu.open}
+        position={menu.position}
+        items={menuItems}
+        onClose={menu.close}
+        label={`${row.title} 작업`}
+      />
     </li>
   );
+}
+
+function buildSidebarSessionMenuItems({
+  row,
+  onOpen,
+  onOpenTab,
+  onOpenProject,
+  onRename,
+}: {
+  row: SidebarSessionRow;
+  onOpen: () => void;
+  onOpenTab: (tab: SessionTab) => void;
+  onOpenProject?: () => void;
+  onRename: () => void;
+}): MoriMenuItemSpec[] {
+  const items: MoriMenuItemSpec[] = [
+    { id: "open", label: "세션 열기", icon: ChevronRight, onSelect: onOpen },
+    { id: "open-flow", label: "흐름 열기", icon: GanttChartSquare, onSelect: () => onOpenTab("flow") },
+    { id: "open-evidence", label: "증거 열기", icon: FileText, onSelect: () => onOpenTab("evidence") },
+    { id: "open-review", label: "검토 열기", icon: Clipboard, onSelect: () => onOpenTab("insights") },
+    { id: "open-report", label: "리포트 열기", icon: ScrollText, onSelect: () => onOpenTab("report") },
+  ];
+  if (onOpenProject) {
+    items.push({
+      id: "open-project",
+      label: "프로젝트 열기",
+      icon: FolderGit2,
+      onSelect: onOpenProject,
+    });
+  }
+  items.push(
+    { type: "separator", id: "manage-separator" },
+    { id: "rename", label: "이름 변경", icon: Pencil, onSelect: onRename },
+    { type: "separator", id: "copy-separator" },
+    {
+      id: "copy-title",
+      label: "제목 복사",
+      icon: ClipboardCopy,
+      onSelect: () => copyText(row.title),
+    },
+    {
+      id: "copy-id",
+      label: "세션 ID 복사",
+      icon: ClipboardCopy,
+      onSelect: () => copyText(row.sessionId),
+    },
+  );
+  if (row.sourceLabel) {
+    items.push({
+      id: "copy-project",
+      label: "프로젝트 경로 복사",
+      icon: ClipboardCopy,
+      onSelect: () => copyText(row.sourceLabel ?? ""),
+    });
+  }
+  return items;
+}
+
+function copyText(text: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    try {
+      void navigator.clipboard.writeText(text).catch(() => {});
+    } catch {
+      // Clipboard access is permission-gated in some browser shells.
+    }
+  }
 }
 
 function SidebarEmpty({ onImport }: { onImport: () => void }) {

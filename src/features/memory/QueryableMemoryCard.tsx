@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Eye, Layers, Link2, Search } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriSection } from "../../components/ui/MoriSection";
+import { SearchField } from "../../components/ui/SearchField";
 import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
 import { getProductMemoryStatusLabel } from "../../lib/product-state/productState";
 import {
@@ -84,16 +85,13 @@ export function QueryableMemoryCard({
         </p>
       ) : (
         <>
-          <label className="memory-search-input">
-            <Search size={13} aria-hidden="true" />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="제목 / 요약 / 근거에서 검색"
-              aria-label="Search project memory"
-            />
-          </label>
+          <SearchField
+            className="memory-search-input"
+            value={query}
+            onChange={setQuery}
+            placeholder="제목 / 요약 / 근거에서 검색"
+            ariaLabel="프로젝트 메모리 검색"
+          />
 
           {memories.length === 0 ? (
             <p className="memory-search-empty">아직 확정된 메모리가 없습니다.</p>
