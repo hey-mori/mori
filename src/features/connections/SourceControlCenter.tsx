@@ -17,14 +17,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import {
   buildConnectorControlCenter,
   describeControlCenterAvailability,
   getConnectorSetupGuide,
-  partitionControlCenterSurfaces,
+  type ControlCenterAvailability,
   type ControlCenterAiPlatform,
+  type ControlCenterGroup,
   type ControlCenterImportKind,
   type ControlCenterSurface,
 } from "../../lib/connectors";
@@ -54,15 +54,54 @@ const FAMILY_ICON: Record<CaptureSurfaceToolFamily, LucideIcon> = {
   analysis: Bot,
 };
 
+/** One-line description per family — sets context once a category is opened. */
+const FAMILY_BLURB: Record<CaptureSurfaceToolFamily, string> = {
+  claude: "Claude Code · Desktop · Web 대화를 가져옵니다.",
+  codex: "Codex CLI 실행과 내보내기를 가져옵니다.",
+  opencode: "OpenCode CLI 실행을 가져옵니다.",
+  git: "diff · 커밋 변경을 증거로 가져옵니다.",
+  terminal: "명령 요약을 명시적으로 캡처합니다.",
+  manual: "메모와 URL을 직접 기록합니다.",
+  document: "선택한 파일/문서를 가져옵니다.",
+  ide: "에디터 활동을 캡처합니다.",
+  browser: "선택한 페이지를 추가합니다.",
+  analysis: "가져온 증거를 분석합니다.",
+};
+
+const AVAILABILITY_PRIORITY: ControlCenterAvailability[] = [
+  "available",
+  "needsSetup",
+  "needsDesktopApp",
+  "planned",
+  "unavailable",
+];
+
+/** A family's leading status + how many sources it holds, for its category tile. */
+function summarizeGroup(group: ControlCenterGroup): {
+  availability: ControlCenterAvailability;
+  count: number;
+} {
+  let best: ControlCenterAvailability = "unavailable";
+  let bestRank = AVAILABILITY_PRIORITY.length;
+  for (const surface of group.surfaces) {
+    const rank = AVAILABILITY_PRIORITY.indexOf(surface.availability);
+    if (rank < bestRank) {
+      bestRank = rank;
+      best = surface.availability;
+    }
+  }
+  return { availability: best, count: group.surfaces.length };
+}
+
 /**
- * Source Control Center — a compact, honest inventory of every way work can
- * enter Mori, built entirely from the capture-surface matrix via the pure
- * `buildConnectorControlCenter` view-model. It leads with the sources the user
- * can act on (available + needs-setup) as dense rows, and folds the planned
- * catalogue into a disclosure so a wall of inert "예정" cards never buries the
- * real import paths. It can never imply a connected state that does not exist:
+ * Source Control Center — a calm, categorised hub for every way work can enter
+ * Mori. Built from the capture-surface matrix via `buildConnectorControlCenter`.
+ *
+ * The page reads in two moves instead of one long marketplace list: pick a
+ * source *family* from the icon grid, then act on that family's sources in the
+ * panel below. It can never imply a connected state that does not exist —
  * planned sources stay inert, desktop-only sources disable in the browser, and
- * each row states what Mori can and cannot read.
+ * each source states what Mori can and cannot read.
  */
 export function SourceControlCenter({
   isDesktop,
@@ -70,49 +109,54 @@ export function SourceControlCenter({
   onImport,
   onOpenRepositorySettings,
 }: SourceControlCenterProps) {
-  const { counts, actionable, planned } = useMemo(() => {
-    const vm = buildConnectorControlCenter({ isDesktop, hasActiveSession });
-    return { counts: vm.counts, ...partitionControlCenterSurfaces(vm) };
-  }, [isDesktop, hasActiveSession]);
+  const { groups, counts } = useMemo(
+    () => buildConnectorControlCenter({ isDesktop, hasActiveSession }),
+    [isDesktop, hasActiveSession],
+  );
+
+  // Default to the first family that has a usable source so the panel opens on
+  // something actionable rather than a planned-only category.
+  const defaultFamily =
+    (groups.find((group) => group.surfaces.some((s) => s.availability === "available")) ??
+      groups[0])?.family ?? null;
+  const [activeFamily, setActiveFamily] = useState<CaptureSurfaceToolFamily | null>(null);
+  const selectedFamily = activeFamily ?? defaultFamily;
+  const selectedGroup =
+    groups.find((group) => group.family === selectedFamily) ?? groups[0] ?? null;
 
   return (
     <section className="source-cc" aria-label="소스 연결">
       <header className="source-cc-head">
         <div className="source-cc-head-text">
           <h2>소스 연결</h2>
-          <p>모든 가져오기는 명시적이며, 검토를 거쳐야 타임라인에 들어갑니다.</p>
+          <p>종류를 고른 뒤 가져오기를 실행하세요. 모든 가져오기는 검토를 거쳐 타임라인에 들어갑니다.</p>
         </div>
-        <div className="source-cc-counts">
-          <Badge tone="green">{counts.available} 사용 가능</Badge>
-          {counts.needsSetup > 0 ? (
-            <Badge tone="orange">{counts.needsSetup} 설정 필요</Badge>
-          ) : null}
-          {counts.needsDesktopApp > 0 ? (
-            <Badge tone="blue">{counts.needsDesktopApp} 데스크톱</Badge>
-          ) : null}
-          {counts.planned > 0 ? <Badge tone="gray">{counts.planned} 예정</Badge> : null}
-        </div>
+        <ReadinessSummary counts={counts} />
       </header>
 
-      <div className="source-cc-list" role="list">
-        {actionable.map((surface) => (
-          <SourceRow
-            key={surface.id}
-            surface={surface}
-            onImport={onImport}
-            onOpenRepositorySettings={onOpenRepositorySettings}
+      <div className="source-cc-categories" role="tablist" aria-label="소스 종류">
+        {groups.map((group) => (
+          <CategoryTile
+            key={group.family}
+            group={group}
+            selected={group.family === selectedFamily}
+            onSelect={() => setActiveFamily(group.family)}
           />
         ))}
       </div>
 
-      {planned.length > 0 ? (
-        <details className="source-cc-planned">
-          <summary>
-            <span className="source-cc-planned-label">예정된 소스 {planned.length}개</span>
-            <small>설계만 완료 — 무엇을 읽고 읽지 않을지 미리 확인할 수 있습니다.</small>
-          </summary>
-          <div className="source-cc-list is-planned" role="list">
-            {planned.map((surface) => (
+      {selectedGroup ? (
+        <div
+          className="source-cc-panel"
+          role="tabpanel"
+          aria-label={`${selectedGroup.label} 소스`}
+        >
+          <div className="source-cc-panel-head">
+            <strong>{selectedGroup.label}</strong>
+            <span>{FAMILY_BLURB[selectedGroup.family]}</span>
+          </div>
+          <div className="source-cc-panel-list" role="list">
+            {selectedGroup.surfaces.map((surface) => (
               <SourceRow
                 key={surface.id}
                 surface={surface}
@@ -121,9 +165,66 @@ export function SourceControlCenter({
               />
             ))}
           </div>
-        </details>
+        </div>
       ) : null}
     </section>
+  );
+}
+
+/** Compact, calm status legend: a coloured dot + count per readiness bucket. */
+function ReadinessSummary({
+  counts,
+}: {
+  counts: ReturnType<typeof buildConnectorControlCenter>["counts"];
+}) {
+  const items: Array<{ n: number; tone: string; label: string }> = [
+    { n: counts.available, tone: "green", label: "사용 가능" },
+    { n: counts.needsSetup, tone: "orange", label: "설정 필요" },
+    { n: counts.needsDesktopApp, tone: "blue", label: "데스크톱" },
+    { n: counts.planned, tone: "gray", label: "예정" },
+  ].filter((item) => item.n > 0);
+  return (
+    <ul className="source-cc-summary" aria-label="소스 상태 요약">
+      {items.map((item) => (
+        <li key={item.label}>
+          <span className={`source-cc-dot tone-${item.tone}`} aria-hidden="true" />
+          <strong>{item.n}</strong>
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CategoryTile({
+  group,
+  selected,
+  onSelect,
+}: {
+  group: ControlCenterGroup;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const Icon = FAMILY_ICON[group.family] ?? Bot;
+  const summary = summarizeGroup(group);
+  const status = describeControlCenterAvailability(summary.availability);
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      className={`source-cc-tile is-${summary.availability}${selected ? " is-selected" : ""}`}
+      onClick={onSelect}
+    >
+      <span className={`source-cc-tile-icon tone-${status.tone}`}>
+        <Icon size={17} aria-hidden="true" />
+      </span>
+      <span className="source-cc-tile-name">{group.label}</span>
+      <span className="source-cc-tile-status">
+        <span className={`source-cc-dot tone-${status.tone}`} aria-hidden="true" />
+        {status.label}
+      </span>
+    </button>
   );
 }
 
@@ -138,14 +239,19 @@ function SourceRow({
 }) {
   const [open, setOpen] = useState(false);
   const availability = describeControlCenterAvailability(surface.availability);
-  const Icon = FAMILY_ICON[surface.toolFamily] ?? Bot;
+  // Available sources need no status flag — the enabled action says it all.
+  // Everything else carries a quiet chip so the row explains why it can't run yet.
+  const showStatus = surface.availability !== "available";
   const detailId = `source-detail-${surface.id}`;
-  // When a step-by-step setup guide exists it supersedes the one-line
-  // "해야 할 일" / "설정" meta, so those rows are dropped to avoid repeating it.
+  // A step-by-step setup guide, when present, supersedes the one-line
+  // "해야 할 일" / "설정" meta so the detail never repeats itself.
   const guide = getConnectorSetupGuide(surface.id);
 
   return (
-    <div className={`source-row is-${surface.availability}${open ? " is-open" : ""}`} role="listitem">
+    <div
+      className={`source-row is-${surface.availability}${open ? " is-open" : ""}`}
+      role="listitem"
+    >
       <div className="source-row-main">
         <button
           type="button"
@@ -154,14 +260,13 @@ function SourceRow({
           aria-controls={detailId}
           onClick={() => setOpen((value) => !value)}
         >
-          <span className={`source-row-icon tone-${availability.tone}`}>
-            <Icon size={15} aria-hidden="true" />
-          </span>
-          <span className="source-row-body">
-            <span className="source-row-title">{surface.label}</span>
-          </span>
-          <Badge tone={availability.tone}>{availability.label}</Badge>
-          <ChevronDown size={15} aria-hidden="true" className="source-row-caret" />
+          <span className="source-row-title">{surface.label}</span>
+          {showStatus ? (
+            <span className={`source-row-status tone-${availability.tone}`}>
+              {availability.label}
+            </span>
+          ) : null}
+          <ChevronDown size={14} aria-hidden="true" className="source-row-caret" />
         </button>
         <div className="source-row-action">
           <RowAction
@@ -220,6 +325,20 @@ function SourceRow({
   );
 }
 
+/** Short, icon-led verb for an import action — the row title already names the source. */
+function importVerb(kind: ControlCenterImportKind | undefined): string {
+  switch (kind) {
+    case "note":
+      return "작성";
+    case "url":
+      return "추가";
+    case "ai":
+      return "붙여넣기";
+    default:
+      return "가져오기";
+  }
+}
+
 function RowAction({
   surface,
   onImport,
@@ -237,10 +356,10 @@ function RowAction({
         size="sm"
         icon={Plus}
         disabled={!action.enabled}
-        title={action.disabledReason}
+        title={action.disabledReason ?? action.label}
         onClick={() => action.importKind && onImport(action.importKind, action.importPlatform)}
       >
-        {action.label}
+        {importVerb(action.importKind)}
       </Button>
     );
   }
@@ -251,15 +370,14 @@ function RowAction({
         size="sm"
         icon={SettingsIcon}
         disabled={!action.enabled}
-        title={action.disabledReason}
+        title={action.disabledReason ?? action.label}
         onClick={onOpenRepositorySettings}
       >
-        {action.label}
+        설정
       </Button>
     );
   }
-  // `none` — planned / unavailable. Render an inert, clearly disabled chip so
-  // the row never looks actionable.
+  // `none` — planned / unavailable. An inert chip so the row never looks actionable.
   return (
     <span className="source-row-inert" aria-disabled="true">
       {action.label}

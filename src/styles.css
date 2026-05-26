@@ -20271,21 +20271,139 @@ button.settings-option {
   color: var(--muted);
 }
 
-.source-cc-counts {
+/* Status legend — coloured dots, not a row of heavy pills. */
+.source-cc-summary {
   display: flex;
-  gap: 6px;
   flex-wrap: wrap;
-  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-/* Dense rows — one source per row, hairline-separated, no card grid. */
-.source-cc-list {
-  display: flex;
-  flex-direction: column;
+.source-cc-summary li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.source-cc-summary strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.source-cc-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+
+.source-cc-dot.tone-green { background: var(--green); }
+.source-cc-dot.tone-orange { background: var(--orange); }
+.source-cc-dot.tone-blue { background: var(--blue); }
+.source-cc-dot.tone-gray { background: var(--muted-2); }
+.source-cc-dot.tone-purple { background: var(--purple); }
+
+/* Category tiles — pick a source family, then drill into it in the panel below. */
+.source-cc-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.source-cc-tile {
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+  padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  overflow: hidden;
   background: var(--panel-soft);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.source-cc-tile:hover {
+  border-color: var(--muted-2);
+}
+
+.source-cc-tile.is-selected {
+  border-color: var(--purple);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--purple);
+}
+
+.source-cc-tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.source-cc-tile-icon.tone-green { color: var(--green); background: var(--green-50); border-color: transparent; }
+.source-cc-tile-icon.tone-orange { color: #b46100; background: var(--orange-50); border-color: transparent; }
+.source-cc-tile-icon.tone-blue { color: var(--blue); background: var(--blue-50); border-color: transparent; }
+.source-cc-tile-icon.tone-gray { color: var(--muted-2); background: var(--gray-50); border-color: transparent; }
+
+.source-cc-tile-name {
+  max-width: 100%;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-cc-tile-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Selected family panel — the handful of sources in that family, as rows. */
+.source-cc-panel {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  overflow: hidden;
+}
+
+.source-cc-panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.source-cc-panel-head strong {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.source-cc-panel-head span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.source-cc-panel-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .source-row + .source-row {
@@ -20318,26 +20436,8 @@ button.settings-option {
   background: var(--hover, rgba(120, 120, 140, 0.06));
 }
 
-.source-row-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  flex: none;
-  border-radius: 7px;
-  color: var(--muted);
-  background: var(--panel);
-  border: 1px solid var(--line);
-}
-
-.source-row-body {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-
 .source-row-title {
+  flex: 1 1 auto;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
@@ -20345,6 +20445,20 @@ button.settings-option {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Status chip — shown only for sources that can't run yet (setup / desktop / planned). */
+.source-row-status {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 650;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.source-row-status.tone-green { color: var(--green); background: var(--green-50); }
+.source-row-status.tone-orange { color: #b46100; background: var(--orange-50); }
+.source-row-status.tone-blue { color: var(--blue); background: var(--blue-50); }
+.source-row-status.tone-gray { color: var(--muted-2); background: var(--gray-50); }
 
 .source-row-status-line {
   margin: 0;
@@ -20375,16 +20489,6 @@ button.settings-option {
   border: 1px dashed var(--line);
   border-radius: 999px;
   white-space: nowrap;
-}
-
-/* Planned rows read lighter so the actionable list stays dominant. */
-.source-cc-list.is-planned {
-  background: transparent;
-}
-
-.source-cc-list.is-planned .source-row-title {
-  font-weight: 550;
-  color: var(--muted);
 }
 
 /* Expanded per-row detail — access scope + setup, aligned under the title. */
@@ -20543,30 +20647,8 @@ button.settings-option {
   color: var(--muted-2);
 }
 
-/* Planned disclosure */
-.source-cc-planned > summary {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  cursor: pointer;
-  padding: 8px 2px;
-  font-size: 12px;
-  color: var(--muted);
-  list-style: none;
-}
-
-.source-cc-planned > summary::-webkit-details-marker {
-  display: none;
-}
-
-.source-cc-planned-label {
-  font-weight: 650;
-  color: var(--text);
-}
-
-.source-cc-planned > summary small {
-  color: var(--muted-2);
-  font-size: 11px;
+.source-row-detail {
+  padding-left: 14px;
 }
 
 @media (max-width: 720px) {
