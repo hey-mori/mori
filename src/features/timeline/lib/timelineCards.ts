@@ -24,6 +24,7 @@ import { getTrustDisplay } from "../../../lib/evidence/trust";
 import {
   buildEventActivityDescriptor,
   getActivityLaneVisuals,
+  joinActivityMeta,
   type TimelineEvidenceChip,
 } from "../../../lib/timeline/activityModel";
 import { buildBundleDensityProfile, type TimelineDisplayBundle } from "../../../lib/timeline/displayItems";
@@ -47,6 +48,8 @@ export type TimelineEventCardViewModel = {
   /** Lane label for screen readers. */
   laneLabel: string;
   activityLabel: string;
+  /** Lane + activity joined for a compact meta line, deduped when identical. */
+  categoryLabel: string;
   activityKind: ReturnType<typeof buildEventActivityDescriptor>["activityKind"];
   sourceLabel: string;
   importance: string;
@@ -135,6 +138,7 @@ export function buildTimelineEventCardViewModel(
     tone,
     laneLabel,
     activityLabel: descriptor.activityVisuals.shortLabel,
+    categoryLabel: joinActivityMeta(laneLabel, descriptor.activityVisuals.shortLabel),
     activityKind: descriptor.activityKind,
     sourceLabel: descriptor.sourceVisuals.shortLabel,
     importance: descriptor.importance,

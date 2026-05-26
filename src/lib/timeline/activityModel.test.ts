@@ -10,6 +10,7 @@ import {
   getEventImportance,
   getImportanceLabel,
   getSourceFamilyVisuals,
+  joinActivityMeta,
   getTimelineLaneForEvent,
   groupEventsByActivityLane,
   timelineActivityLaneOrder,
@@ -166,6 +167,12 @@ describe("activity descriptors", () => {
     expect(getImportanceLabel("high")).toBe("높음");
     expect(getImportanceLabel("medium")).toBe("보통");
     expect(getImportanceLabel("low")).toBe("낮음");
+  });
+
+  it("collapses a duplicated lane/activity meta to one token", () => {
+    expect(joinActivityMeta("대화", "대화")).toBe("대화");
+    expect(joinActivityMeta("검토", "결정")).toBe("검토 · 결정");
+    expect(joinActivityMeta("Git", "커밋")).toBe("Git · 커밋");
   });
 
   it("groups events by normalized activity lane", () => {

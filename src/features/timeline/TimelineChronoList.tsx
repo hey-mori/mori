@@ -130,7 +130,7 @@ function TimelineChronoEventRow({
         <span className="timeline-chrono-body">
           <strong>{vm.title}</strong>
           <small>
-            {vm.laneLabel} / {vm.activityLabel} / {vm.trust.label}
+            {vm.categoryLabel} · {vm.trust.label}
           </small>
         </span>
         {vm.primaryMeta ? (

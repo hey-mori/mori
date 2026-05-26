@@ -20,7 +20,7 @@ import { formatTime } from "../../lib/formatting/time";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import type { TimelineEvent } from "../../domain/types";
-import { buildEventActivityDescriptor } from "../../lib/timeline/activityModel";
+import { buildEventActivityDescriptor, joinActivityMeta } from "../../lib/timeline/activityModel";
 import {
   MoriContextMenu,
   useContextMenuPosition,
@@ -183,7 +183,10 @@ function TurnCard({
           <span className="conversation-turn-time">{formatTime(card.start)}</span>
           {workActivity ? (
             <span className={`conversation-turn-work-meta tone-${workActivity.laneVisuals.tone}`}>
-              {workActivity.laneVisuals.shortLabel} / {workActivity.activityVisuals.shortLabel}
+              {joinActivityMeta(
+                workActivity.laneVisuals.shortLabel,
+                workActivity.activityVisuals.shortLabel,
+              )}
             </span>
           ) : null}
           {card.tokenUsage ? (

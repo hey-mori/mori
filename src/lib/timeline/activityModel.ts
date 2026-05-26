@@ -400,6 +400,16 @@ export function getImportanceLabel(importance: EventImportance): string {
   return IMPORTANCE_LABELS[importance] ?? IMPORTANCE_LABELS.low;
 }
 
+/**
+ * Join a lane/category label with an activity label for a compact meta line,
+ * collapsing to one token when they are identical. Many events sit in a lane
+ * named after their own activity (대화 / 대화, 파일 / 파일), so without this a
+ * card or row would print the same word twice.
+ */
+export function joinActivityMeta(primary: string, secondary: string): string {
+  return primary === secondary ? primary : `${primary} · ${secondary}`;
+}
+
 export function getEventImportance(args: {
   event: TimelineEvent;
   sources?: readonly SourceRef[] | ReadonlyMap<string, SourceRef>;
