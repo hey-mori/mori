@@ -4,10 +4,15 @@ import {
   buildEventActivityDescriptor,
   deriveActivityKind,
   deriveSourceFamily,
+  getActivityLaneVisuals,
+  getActivityVisuals,
   getEventEvidenceRefs,
   getEventImportance,
+  getImportanceLabel,
+  getSourceFamilyVisuals,
   getTimelineLaneForEvent,
   groupEventsByActivityLane,
+  timelineActivityLaneOrder,
 } from "./activityModel";
 
 function event(overrides: Partial<TimelineEvent> = {}): TimelineEvent {
@@ -120,7 +125,7 @@ describe("activity descriptors", () => {
 
     expect(descriptor.sourceFamilies).toEqual(["ai", "git"]);
     expect(descriptor.evidenceChips.map((chip) => chip.shortLabel)).toEqual(["Claude", "mori"]);
-    expect(descriptor.metadataLine).toContain("evidence 2");
+    expect(descriptor.metadataLine).toContain("근거 2");
     expect(getEventImportance({ event: ev, sources: [] })).toBe("high");
   });
 
@@ -131,6 +136,36 @@ describe("activity descriptors", () => {
     });
     expect(chips).toHaveLength(1);
     expect(chips[0]!.shortLabel).toBe("codex-cli");
+  });
+
+  it("localizes activity, lane, and source-family labels for the Korean-first UI", () => {
+    // No user-facing label/shortLabel may leak ASCII letters — the timeline is
+    // a Korean-first surface. Recognised tokens (AI / Git / URL / Diff) are
+    // allowed inside an otherwise-Korean string, so we forbid only a label
+    // that is *entirely* ASCII/punctuation (e.g. the old "Issue update").
+    const isFullyAscii = (text: string) => /^[\x00-\x7f]+$/.test(text);
+    const allowedAsciiOnly = new Set(["AI", "Git", "URL", "Diff"]);
+
+    for (const lane of timelineActivityLaneOrder) {
+      const visuals = getActivityLaneVisuals(lane);
+      expect(visuals.label.length).toBeGreaterThan(0);
+      if (isFullyAscii(visuals.label)) {
+        expect(allowedAsciiOnly.has(visuals.label)).toBe(true);
+      }
+    }
+
+    expect(getActivityVisuals("conversation").label).toBe("대화");
+    expect(getActivityVisuals("issueUpdate").label).toBe("이슈 업데이트");
+    expect(getActivityVisuals("urlReference").shortLabel).toBe("URL");
+    expect(getSourceFamilyVisuals("ai").label).toBe("AI 소스");
+    expect(getActivityLaneVisuals("review").label).toBe("검토");
+    expect(getActivityLaneVisuals("git").label).toBe("Git");
+  });
+
+  it("labels event importance in Korean", () => {
+    expect(getImportanceLabel("high")).toBe("높음");
+    expect(getImportanceLabel("medium")).toBe("보통");
+    expect(getImportanceLabel("low")).toBe("낮음");
   });
 
   it("groups events by normalized activity lane", () => {

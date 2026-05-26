@@ -20,6 +20,7 @@
 import { eventTypeLabels } from "../../../domain/constants";
 import type { SourceRef, TimelineEvent, TrustLevel } from "../../../domain/types";
 import { formatTime, formatTimeRange, minutesBetween } from "../../../lib/formatting/time";
+import { getTrustDisplay } from "../../../lib/evidence/trust";
 import {
   buildEventActivityDescriptor,
   getActivityLaneVisuals,
@@ -172,13 +173,12 @@ export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): Tim
   };
 }
 
-// ─── Trust glyph table ──────────────────────────────────────────────────────
-
-const TRUST_LABEL: Record<TrustLevel, string> = {
-  verified: "Verified",
-  observed: "Observed",
-  inferred: "Inferred",
-};
+// ─── Trust glyph ──────────────────────────────────────────────────────────
+//
+// Trust labels are Korean and come from the single source of truth
+// (`getTrustDisplay` in `lib/evidence/trust.ts`) so the timeline reads the
+// same trust vocabulary as the Review surface and inspector — no duplicate
+// English map. The CSS tone token stays a stable enum keyed by level.
 
 const TRUST_TONE: Record<TrustLevel, TimelineCardTrustTone> = {
   verified: "verified",
@@ -187,11 +187,11 @@ const TRUST_TONE: Record<TrustLevel, TimelineCardTrustTone> = {
 };
 
 export function buildTrustGlyph(level: TrustLevel, confidence: number): TimelineCardTrustGlyph {
-  const label = TRUST_LABEL[level];
+  const label = getTrustDisplay(level).label;
   const tone = TRUST_TONE[level];
   const confidencePct = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
   const tooltip = level === "inferred"
-    ? `${label} · ${confidencePct}% confidence`
+    ? `${label} · 신뢰도 ${confidencePct}%`
     : label;
   return { level, label, tone, tooltip };
 }

@@ -33,7 +33,7 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { buildInspectorViewModel } from "../../lib/timeline/timelineViewModel";
-import { deriveSourceFamily } from "../../lib/timeline/activityModel";
+import { deriveSourceFamily, getImportanceLabel } from "../../lib/timeline/activityModel";
 import { sourceFamilyIcons } from "./lib/activityIcons";
 
 export function EventInspector({
@@ -98,7 +98,7 @@ export function EventInspector({
         )}
         <p className="inspector-time">{formatTimeRange(selectedEvent.start, selectedEvent.end)}</p>
         <p className="inspector-work-context">
-          {projectHint.projectLabel} / {activity.sourceVisuals.label} / {activity.importance}
+          {projectHint.projectLabel} / {activity.sourceVisuals.label} / 중요도 {getImportanceLabel(activity.importance)}
         </p>
         <InspectorMetaStrip event={selectedEvent} />
       </header>

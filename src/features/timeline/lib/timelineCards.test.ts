@@ -73,15 +73,20 @@ describe("buildTimelineEventCardViewModel", () => {
 });
 
 describe("buildTrustGlyph", () => {
-  it("emits the confidence percent for inferred events", () => {
+  it("uses the canonical Korean trust label and embeds confidence for inferred events", () => {
     const glyph = buildTrustGlyph("inferred", 0.847);
     expect(glyph.tone).toBe("inferred");
-    expect(glyph.tooltip).toMatch(/85% confidence/);
+    expect(glyph.label).toBe("추론됨");
+    expect(glyph.tooltip).toMatch(/신뢰도 85%/);
   });
 
   it("does not embed confidence for verified / observed", () => {
-    expect(buildTrustGlyph("verified", 0.9).tooltip).toBe("Verified");
-    expect(buildTrustGlyph("observed", 0.5).tooltip).toBe("Observed");
+    const verified = buildTrustGlyph("verified", 0.9);
+    expect(verified.label).toBe("검증됨");
+    expect(verified.tooltip).toBe("검증됨");
+    const observed = buildTrustGlyph("observed", 0.5);
+    expect(observed.label).toBe("관찰됨");
+    expect(observed.tooltip).toBe("관찰됨");
   });
 });
 

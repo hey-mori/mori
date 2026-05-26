@@ -113,64 +113,71 @@ export const timelineActivityLaneOrder: ActivityLaneId[] = [
   "unknown",
 ];
 
+// Korean-first labels. Mori is a Korean-first product; these visuals feed the
+// timeline lane headers, conversation-flow group headers, inspector badges,
+// card labels, the minimap, and aria-labels, so they must read as the rest of
+// the app does. `shortLabel` keeps widely-recognised tokens (AI / Git / URL /
+// Diff) as-is rather than forcing an awkward translation.
 const SOURCE_FAMILY_VISUALS: Record<TimelineSourceFamily, ActivityVisuals> = {
-  ai: { label: "AI source", shortLabel: "AI", tone: "purple", description: "AI conversation or agent output" },
-  code: { label: "Code source", shortLabel: "Code", tone: "blue", description: "Editor, file, or code workspace evidence" },
-  terminal: { label: "Terminal source", shortLabel: "Term", tone: "gray", description: "Command-line or shell evidence" },
-  git: { label: "Git source", shortLabel: "Git", tone: "green", description: "Git diff, commit, branch, or repository evidence" },
-  design: { label: "Design source", shortLabel: "Design", tone: "cyan", description: "Design artifact or design-tool evidence" },
-  tracker: { label: "Tracker source", shortLabel: "Issue", tone: "orange", description: "Issue tracker or project-management evidence" },
-  docs: { label: "Document source", shortLabel: "Doc", tone: "gray", description: "Document, note, or knowledge-base evidence" },
-  communication: { label: "Discussion source", shortLabel: "Chat", tone: "cyan", description: "Discussion or team-message evidence" },
-  research: { label: "Research source", shortLabel: "Web", tone: "cyan", description: "Browser, URL, or research evidence" },
-  build: { label: "Build source", shortLabel: "Build", tone: "orange", description: "Build or test-log evidence" },
-  deploy: { label: "Deploy source", shortLabel: "Deploy", tone: "green", description: "Deploy or release evidence" },
-  automation: { label: "Automation source", shortLabel: "Auto", tone: "purple", description: "Automation or scheduled-agent evidence" },
-  manual: { label: "Manual source", shortLabel: "Note", tone: "gray", description: "User-provided note or manual context" },
-  unknown: { label: "Unknown source", shortLabel: "Source", tone: "gray", description: "Unclassified source evidence" },
+  ai: { label: "AI 소스", shortLabel: "AI", tone: "purple", description: "AI 대화 또는 에이전트 출력" },
+  code: { label: "코드 소스", shortLabel: "코드", tone: "blue", description: "에디터·파일·코드 작업 근거" },
+  terminal: { label: "터미널 소스", shortLabel: "터미널", tone: "gray", description: "명령줄 또는 셸 근거" },
+  git: { label: "Git 소스", shortLabel: "Git", tone: "green", description: "Git diff·커밋·브랜치·저장소 근거" },
+  design: { label: "디자인 소스", shortLabel: "디자인", tone: "cyan", description: "디자인 산출물 또는 디자인 도구 근거" },
+  tracker: { label: "이슈 트래커 소스", shortLabel: "이슈", tone: "orange", description: "이슈 트래커 또는 프로젝트 관리 근거" },
+  docs: { label: "문서 소스", shortLabel: "문서", tone: "gray", description: "문서·노트·지식베이스 근거" },
+  communication: { label: "대화 소스", shortLabel: "메시지", tone: "cyan", description: "토론 또는 팀 메시지 근거" },
+  research: { label: "리서치 소스", shortLabel: "웹", tone: "cyan", description: "브라우저·URL·리서치 근거" },
+  build: { label: "빌드 소스", shortLabel: "빌드", tone: "orange", description: "빌드 또는 테스트 로그 근거" },
+  deploy: { label: "배포 소스", shortLabel: "배포", tone: "green", description: "배포 또는 릴리스 근거" },
+  automation: { label: "자동화 소스", shortLabel: "자동화", tone: "purple", description: "자동화 또는 예약 에이전트 근거" },
+  manual: { label: "수동 입력 소스", shortLabel: "노트", tone: "gray", description: "사용자가 직접 입력한 노트 또는 맥락" },
+  unknown: { label: "분류 전 소스", shortLabel: "소스", tone: "gray", description: "아직 분류되지 않은 소스 근거" },
 };
 
 const ACTIVITY_VISUALS: Record<ActivityKind, ActivityVisuals> = {
-  conversation: { label: "Conversation", shortLabel: "Talk", tone: "purple", description: "Human, AI, or discussion turn" },
-  command: { label: "Command", shortLabel: "Cmd", tone: "gray", description: "Terminal or tool command activity" },
-  fileChange: { label: "File change", shortLabel: "File", tone: "blue", description: "File, editor, or code change" },
-  commit: { label: "Commit", shortLabel: "Commit", tone: "green", description: "Git commit or repository checkpoint" },
-  diff: { label: "Diff", shortLabel: "Diff", tone: "green", description: "Git diff or change set" },
-  designChange: { label: "Design change", shortLabel: "Design", tone: "cyan", description: "Design artifact or frame update" },
-  issueUpdate: { label: "Issue update", shortLabel: "Issue", tone: "orange", description: "Issue, ticket, or project-tracker update" },
-  decision: { label: "Decision", shortLabel: "Decision", tone: "green", description: "Recorded decision or rationale" },
-  reviewItem: { label: "Review item", shortLabel: "Review", tone: "orange", description: "Review issue, decision, or next action" },
-  note: { label: "Note", shortLabel: "Note", tone: "gray", description: "Manual note or document note" },
-  urlReference: { label: "URL reference", shortLabel: "URL", tone: "cyan", description: "URL, browser, or research reference" },
-  buildRun: { label: "Build run", shortLabel: "Build", tone: "orange", description: "Build activity or test execution" },
-  testRun: { label: "Test run", shortLabel: "Test", tone: "orange", description: "Test execution or test log" },
-  deploy: { label: "Deploy", shortLabel: "Deploy", tone: "green", description: "Deploy or release activity" },
-  report: { label: "Report", shortLabel: "Report", tone: "blue", description: "Report output or generated artifact" },
-  handoff: { label: "Handoff", shortLabel: "Handoff", tone: "blue", description: "Resume, handoff, or package output" },
-  memory: { label: "Memory", shortLabel: "Memory", tone: "purple", description: "Project-memory or durable context event" },
-  sourceImport: { label: "Source import", shortLabel: "Import", tone: "cyan", description: "Captured source or import boundary" },
-  automationRun: { label: "Automation run", shortLabel: "Auto", tone: "purple", description: "Automation or agent-run activity" },
-  artifact: { label: "Artifact", shortLabel: "Artifact", tone: "blue", description: "Produced work artifact" },
-  unknown: { label: "Activity", shortLabel: "Activity", tone: "gray", description: "Unclassified activity" },
+  conversation: { label: "대화", shortLabel: "대화", tone: "purple", description: "사람·AI·토론 발언" },
+  command: { label: "명령", shortLabel: "명령", tone: "gray", description: "터미널 또는 도구 명령 활동" },
+  fileChange: { label: "파일 변경", shortLabel: "파일", tone: "blue", description: "파일·에디터·코드 변경" },
+  commit: { label: "커밋", shortLabel: "커밋", tone: "green", description: "Git 커밋 또는 저장소 체크포인트" },
+  diff: { label: "Git 변경", shortLabel: "Diff", tone: "green", description: "Git diff 또는 변경 묶음" },
+  designChange: { label: "디자인 변경", shortLabel: "디자인", tone: "cyan", description: "디자인 산출물 또는 프레임 변경" },
+  issueUpdate: { label: "이슈 업데이트", shortLabel: "이슈", tone: "orange", description: "이슈·티켓·트래커 업데이트" },
+  decision: { label: "결정", shortLabel: "결정", tone: "green", description: "기록된 결정 또는 근거" },
+  reviewItem: { label: "검토 항목", shortLabel: "검토", tone: "orange", description: "검토 이슈·결정·다음 행동" },
+  note: { label: "노트", shortLabel: "노트", tone: "gray", description: "수동 노트 또는 문서 노트" },
+  urlReference: { label: "URL 참조", shortLabel: "URL", tone: "cyan", description: "URL·브라우저·리서치 참조" },
+  buildRun: { label: "빌드 실행", shortLabel: "빌드", tone: "orange", description: "빌드 활동 또는 테스트 실행" },
+  testRun: { label: "테스트 실행", shortLabel: "테스트", tone: "orange", description: "테스트 실행 또는 테스트 로그" },
+  deploy: { label: "배포", shortLabel: "배포", tone: "green", description: "배포 또는 릴리스 활동" },
+  report: { label: "리포트", shortLabel: "리포트", tone: "blue", description: "리포트 출력 또는 생성된 산출물" },
+  handoff: { label: "핸드오프", shortLabel: "핸드오프", tone: "blue", description: "재개·핸드오프 또는 패키지 출력" },
+  memory: { label: "메모리", shortLabel: "메모리", tone: "purple", description: "프로젝트 메모리 또는 지속 맥락 이벤트" },
+  sourceImport: { label: "소스 가져오기", shortLabel: "가져오기", tone: "cyan", description: "캡처된 소스 또는 가져오기 경계" },
+  automationRun: { label: "자동화 실행", shortLabel: "자동화", tone: "purple", description: "자동화 또는 에이전트 실행 활동" },
+  artifact: { label: "산출물", shortLabel: "산출물", tone: "blue", description: "생성된 작업 산출물" },
+  unknown: { label: "활동", shortLabel: "활동", tone: "gray", description: "분류되지 않은 활동" },
 };
 
+// Lanes get their own concise nouns rather than reusing the (longer) activity
+// labels, so a lane / conversation-flow group header reads as one calm word.
 const LANE_VISUALS: Record<ActivityLaneId, ActivityVisuals> = {
-  conversation: ACTIVITY_VISUALS.conversation,
-  command: ACTIVITY_VISUALS.command,
-  files: { label: "Files", shortLabel: "Files", tone: "blue", description: "File and code changes" },
-  git: { label: "Git", shortLabel: "Git", tone: "green", description: "Diffs, commits, and repository context" },
-  design: ACTIVITY_VISUALS.designChange,
-  tracker: ACTIVITY_VISUALS.issueUpdate,
-  docs: { label: "Docs", shortLabel: "Docs", tone: "gray", description: "Documents and notes" },
-  research: ACTIVITY_VISUALS.urlReference,
-  build: ACTIVITY_VISUALS.buildRun,
-  deploy: ACTIVITY_VISUALS.deploy,
-  automation: ACTIVITY_VISUALS.automationRun,
-  review: { label: "Review", shortLabel: "Review", tone: "orange", description: "Decisions, issues, and next actions" },
-  handoff: ACTIVITY_VISUALS.handoff,
-  memory: ACTIVITY_VISUALS.memory,
-  notes: ACTIVITY_VISUALS.note,
-  unknown: ACTIVITY_VISUALS.unknown,
+  conversation: { label: "대화", shortLabel: "대화", tone: "purple", description: "사람·AI·토론 발언" },
+  command: { label: "명령", shortLabel: "명령", tone: "gray", description: "터미널 또는 도구 명령" },
+  files: { label: "파일", shortLabel: "파일", tone: "blue", description: "파일 및 코드 변경" },
+  git: { label: "Git", shortLabel: "Git", tone: "green", description: "Diff·커밋·저장소 맥락" },
+  design: { label: "디자인", shortLabel: "디자인", tone: "cyan", description: "디자인 산출물 및 프레임 변경" },
+  tracker: { label: "이슈", shortLabel: "이슈", tone: "orange", description: "이슈·티켓·트래커 업데이트" },
+  docs: { label: "문서", shortLabel: "문서", tone: "gray", description: "문서 및 노트" },
+  research: { label: "리서치", shortLabel: "리서치", tone: "cyan", description: "URL·브라우저·리서치 참조" },
+  build: { label: "빌드", shortLabel: "빌드", tone: "orange", description: "빌드 활동 및 테스트 실행" },
+  deploy: { label: "배포", shortLabel: "배포", tone: "green", description: "배포 또는 릴리스 활동" },
+  automation: { label: "자동화", shortLabel: "자동화", tone: "purple", description: "자동화 또는 에이전트 실행" },
+  review: { label: "검토", shortLabel: "검토", tone: "orange", description: "결정·이슈·다음 행동" },
+  handoff: { label: "핸드오프", shortLabel: "핸드오프", tone: "blue", description: "재개·핸드오프·패키지 출력" },
+  memory: { label: "메모리", shortLabel: "메모리", tone: "purple", description: "프로젝트 메모리 또는 지속 맥락" },
+  notes: { label: "노트", shortLabel: "노트", tone: "gray", description: "수동 노트 또는 문서 노트" },
+  unknown: { label: "활동", shortLabel: "활동", tone: "gray", description: "분류되지 않은 활동" },
 };
 
 export function buildSourceIndex(sources: readonly SourceRef[]): Map<string, SourceRef> {
@@ -382,6 +389,17 @@ export function getSourceFamilyVisuals(family: TimelineSourceFamily): ActivityVi
   return SOURCE_FAMILY_VISUALS[family] ?? SOURCE_FAMILY_VISUALS.unknown;
 }
 
+const IMPORTANCE_LABELS: Record<EventImportance, string> = {
+  high: "높음",
+  medium: "보통",
+  low: "낮음",
+};
+
+/** Korean label for an event's derived importance, for inspector display. */
+export function getImportanceLabel(importance: EventImportance): string {
+  return IMPORTANCE_LABELS[importance] ?? IMPORTANCE_LABELS.low;
+}
+
 export function getEventImportance(args: {
   event: TimelineEvent;
   sources?: readonly SourceRef[] | ReadonlyMap<string, SourceRef>;
@@ -497,8 +515,8 @@ export function buildEventActivityDescriptor(args: {
   const metadataParts = [
     activityVisuals.shortLabel,
     sourceVisuals.shortLabel,
-    evidenceChips.length > 0 ? `evidence ${evidenceChips.length}` : null,
-    linkCount > 0 ? `links ${linkCount}` : null,
+    evidenceChips.length > 0 ? `근거 ${evidenceChips.length}` : null,
+    linkCount > 0 ? `연결 ${linkCount}` : null,
   ].filter((part): part is string => Boolean(part));
 
   return {
