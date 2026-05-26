@@ -124,6 +124,18 @@ export type MoriSessionState = {
     options?: { importSummary?: ConnectorSourceImportSummary },
   ) => StoredSessionImport | null;
   /**
+   * Apply several normalized candidates to the active session in one pass —
+   * the apply path for a reviewed Work Bundle. Each candidate becomes its own
+   * `StoredSessionImport` (its own SourceRef + events), so per-source
+   * provenance survives into the Evidence Hub and Timeline rather than being
+   * flattened into a single merged source. Returns the stored records in
+   * input order; an empty input or missing draft yields an empty array
+   * without touching storage.
+   */
+  addImportBatch: (
+    candidates: NormalizedImportCandidate[],
+  ) => StoredSessionImport[];
+  /**
    * Create a brand-new Mori session from an external import and switch to
    * it — the "1 Claude conversation = 1 Mori session" entry point. The
    * candidate is re-bound to the new session id and the session is
@@ -424,6 +436,17 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     if (!draft) return null;
 
     const stored = repository.addSessionImport(draft.session.id, candidate, options);
+    set({ imports: repository.listSessionImports(draft.session.id) });
+    return stored;
+  },
+  addImportBatch: (candidates) => {
+    const repository = getRepository();
+    const draft = get().draft;
+    if (!draft || candidates.length === 0) return [];
+
+    const stored = candidates.map((candidate) =>
+      repository.addSessionImport(draft.session.id, candidate),
+    );
     set({ imports: repository.listSessionImports(draft.session.id) });
     return stored;
   },

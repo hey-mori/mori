@@ -172,6 +172,16 @@ that is called out.
 - Pure connector dedupe across the current session, saved sessions,
   and the incoming batch.
 - Secret-pattern detection (`containsLikelySecret`) at import time.
+- Work Bundle import (`buildWorkBundlePreview` + `addImportBatch` +
+  `WorkBundlePanel`). Assembles several normalized candidates from one work
+  session (transcript / Codex / OpenCode / git diff / terminal log / note)
+  into a single composite preview — detected source families, work-context
+  hint, proposed title, event / source / file counts, cross-source dedup,
+  trust + capture-fidelity summary, redaction / secret flags, span, and a
+  "what will be created" summary — then applies each source as its own
+  session import so per-source provenance survives into the Evidence Hub and
+  Timeline. The preview is the review-before-apply gate; no durable-memory
+  gate is bypassed. See [work-bundle-import.md](work-bundle-import.md).
 
 **Timeline and Review Experience**
 

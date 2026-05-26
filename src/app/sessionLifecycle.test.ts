@@ -24,6 +24,7 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
     hydrate: async () => undefined,
     setDraft: () => undefined,
     addImport: () => null,
+    addImportBatch: () => [],
     importAsNewSession: () => ({ sessionId: "", candidate: { source: {} as never, events: [] } }),
     commitPendingNewSession: () => undefined,
     abandonPendingNewSessionIfEmpty: () => false,

@@ -136,6 +136,15 @@ Maintain this list as the project evolves. Capability-based names
 only — no phase numbers.
 
 **Completed (do not redo):**
+- Work Bundle import — composite multi-source preview. `buildWorkBundlePreview`
+  (pure) reconstructs several normalized candidates (transcript + Codex/OpenCode
+  run JSONL + git diff + terminal log + note) into one work unit (detected
+  families, work-context hint, proposed title, event/source/file counts,
+  cross-source dedup, trust + fidelity summary, redaction/secret flags, span,
+  what-will-be-created). `addImportBatch` applies each source as its own import
+  so per-source provenance survives; `WorkBundlePanel` (Connections hub) is the
+  review-before-apply surface. Backed by a synthetic fixture + tests; see
+  `docs/work-bundle-import.md`.
 - Queryable Memory — accepted-memory search helper
   (`searchAcceptedMemories`).
 - Queryable Memory — Project Memory search UI (`QueryableMemoryCard`).

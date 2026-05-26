@@ -55,6 +55,7 @@ import type {
 import { isTauriRuntime } from "../../lib/desktop";
 import { ConversationViewer } from "./ConversationViewer";
 import { SourceControlCenter } from "./SourceControlCenter";
+import { WorkBundlePanel } from "../import/WorkBundlePanel";
 
 type SessionsState = {
   status: "idle" | "loading" | "ready" | "error";
@@ -306,6 +307,7 @@ export function ConnectionsView() {
     return (
       <PageShell className="connections-page" maxWidth="detail">
         {controlCenter}
+        <WorkBundlePanel />
         <ConnectionsBrowserHelp />
       </PageShell>
     );
@@ -366,6 +368,8 @@ export function ConnectionsView() {
       ) : null}
 
       {controlCenter}
+
+      <WorkBundlePanel />
 
       {/* Sessions lead the page — they're what the user came here for.
           Tool detection stays available as a smaller details disclosure
