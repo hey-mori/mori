@@ -6,6 +6,7 @@ import type {
   NormalizedImportCandidate,
 } from "./types";
 import { createImportId } from "./id";
+import { assessTranscriptFidelity } from "./captureFidelity";
 
 /**
  * Platform-specific integration ID mapping
@@ -187,6 +188,7 @@ export function normalizeAiTranscript(input: NormalizeAiTranscriptInput): Normal
       rawRetention: "summaryOnly",
       capturedAt,
       relatedEventIds: [eventId],
+      captureFidelity: assessTranscriptFidelity(input.text),
     },
     events: [
       {

@@ -1,5 +1,6 @@
 import type { NormalizedImportCandidate, NormalizeAiConversationTextInput } from "./types";
 import { createImportId } from "./id";
+import { assessTranscriptFidelity } from "./captureFidelity";
 
 export function normalizeAiConversationText(input: NormalizeAiConversationTextInput): NormalizedImportCandidate {
   const capturedAt = input.capturedAt ?? new Date().toISOString();
@@ -20,6 +21,7 @@ export function normalizeAiConversationText(input: NormalizeAiConversationTextIn
       rawRetention: "summaryOnly",
       capturedAt,
       relatedEventIds: [eventId],
+      captureFidelity: assessTranscriptFidelity(input.text),
     },
     events: [
       {

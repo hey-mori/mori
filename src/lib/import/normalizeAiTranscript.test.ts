@@ -129,6 +129,22 @@ describe("normalizeAiTranscript", () => {
       expect(result.source.rawRetention).toBe("summaryOnly");
     });
 
+    it("stamps capture fidelity onto the source", () => {
+      const full = normalizeAiTranscript({
+        ...mockBase,
+        platform: "claude",
+        text: "User: What is TypeScript?\nAssistant: A typed superset of JavaScript.",
+      });
+      expect(full.source.captureFidelity?.level).toBe("full");
+
+      const partial = normalizeAiTranscript({
+        ...mockBase,
+        platform: "claude",
+        text: "Assistant: ...as I was saying, that completes the change.",
+      });
+      expect(partial.source.captureFidelity?.level).toBe("partial");
+    });
+
     it("uses custom title when provided", () => {
       const input: NormalizeAiTranscriptInput = {
         ...mockBase,

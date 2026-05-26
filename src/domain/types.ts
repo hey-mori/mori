@@ -136,6 +136,38 @@ export type Session = {
  */
 export type SessionVisibility = "personal" | "team" | "shared";
 
+/**
+ * How complete / faithful a captured source looks relative to the work it
+ * claims to represent. This judges the *capture*, not the content quality:
+ * - `full` — the capture looks whole (a transcript with a natural start and
+ *   both sides of the exchange, a valid full diff, a session bracketed by
+ *   start/finish events).
+ * - `partial` — a recognisable but incomplete capture (begins mid-stream,
+ *   carries a truncation marker, one side of an exchange missing).
+ * - `fragment` — both ends missing / a snippet (e.g. starts mid-conversation
+ *   *and* is truncated).
+ * - `unknown` — completeness cannot be assessed (e.g. a paste with no
+ *   structure to read). Mori says "unknown" rather than guessing.
+ *
+ * It sits alongside `trustLevel` (who vouches for the data) and
+ * `rawRetention` (how much we kept). Downstream consumers (Resume Prompt,
+ * Reports, Project Memory) must never present `partial` / `fragment` /
+ * `unknown` evidence as if it were a complete record.
+ */
+export type CaptureFidelityLevel = "full" | "partial" | "fragment" | "unknown";
+
+/**
+ * `reasons` are stable machine codes (not prose) explaining the level, e.g.
+ * `"startsMidConversation"`, `"truncationMarker"`, `"noRoleMarkers"`. UI and
+ * report builders map codes to locale copy. Kept as `string[]` (not a union)
+ * so the persisted shape stays stable as new capture paths add their own
+ * codes.
+ */
+export type CaptureFidelity = {
+  level: CaptureFidelityLevel;
+  reasons: string[];
+};
+
 export type SourceRef = {
   id: string;
   sessionId: string;
@@ -148,6 +180,13 @@ export type SourceRef = {
   rawRetention: "retained" | "deleted" | "summaryOnly";
   capturedAt: string;
   relatedEventIds: string[];
+  /**
+   * Optional honest assessment of how complete the captured input looked at
+   * import time. Additive — sources captured before this field, and paths
+   * where completeness genuinely cannot be assessed, omit it; consumers treat
+   * a missing value as `unknown` and never overclaim. See {@link CaptureFidelity}.
+   */
+  captureFidelity?: CaptureFidelity;
 };
 
 export type TimelineEvent = {
