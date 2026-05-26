@@ -392,3 +392,47 @@ export function describeControlCenterAvailability(
 ): { label: string; tone: string } {
   return { label: AVAILABILITY_LABEL[availability], tone: AVAILABILITY_TONE[availability] };
 }
+
+export type ControlCenterPartition = {
+  /**
+   * Sources the user can act on now or after a setup step — available,
+   * needs-setup, or needs-desktop. Sorted available-first so the hub leads
+   * with what works right now; ties broken by family order.
+   */
+  actionable: ControlCenterSurface[];
+  /** Designed-but-unbuilt sources — reference only, no action. Family order. */
+  planned: ControlCenterSurface[];
+};
+
+/**
+ * Flatten the grouped view-model into an actionable list and a planned list.
+ * The hub renders the actionable list as dense rows and folds the planned
+ * catalogue into a disclosure, so a wall of inert "예정" cards never buries
+ * the few sources the user can actually use.
+ */
+export function partitionControlCenterSurfaces(
+  vm: ConnectorControlCenterViewModel,
+): ControlCenterPartition {
+  const familyRank = new Map(FAMILY_ORDER.map((family, index) => [family, index]));
+  const flat = vm.groups.flatMap((group) => group.surfaces);
+  const byFamily = (a: ControlCenterSurface, b: ControlCenterSurface) =>
+    (familyRank.get(a.toolFamily) ?? FAMILY_ORDER.length) -
+    (familyRank.get(b.toolFamily) ?? FAMILY_ORDER.length);
+  const actionable = flat
+    .filter(
+      (surface) =>
+        surface.availability === "available" ||
+        surface.availability === "needsSetup" ||
+        surface.availability === "needsDesktopApp",
+    )
+    .sort(
+      (a, b) =>
+        AVAILABILITY_RANK[a.availability] - AVAILABILITY_RANK[b.availability] || byFamily(a, b),
+    );
+  const planned = flat
+    .filter(
+      (surface) => surface.availability === "planned" || surface.availability === "unavailable",
+    )
+    .sort(byFamily);
+  return { actionable, planned };
+}

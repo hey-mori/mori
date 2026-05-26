@@ -20336,31 +20336,30 @@ button.settings-option {
 
 .source-cc {
   display: grid;
-  gap: var(--mori-space-5);
-  margin-bottom: var(--mori-space-8);
+  gap: var(--mori-space-4);
+  margin-bottom: var(--mori-space-7);
 }
 
 .source-cc-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: baseline;
   gap: 16px;
   flex-wrap: wrap;
 }
 
-.source-cc-head h2 {
-  margin: 0 0 4px;
-  font-size: var(--mori-font-size-xl);
+.source-cc-head-text h2 {
+  margin: 0;
+  font-size: var(--mori-font-size-lg);
   font-weight: 700;
   color: var(--text);
 }
 
-.source-cc-head p {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.55;
+.source-cc-head-text p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--muted);
-  max-width: 640px;
 }
 
 .source-cc-counts {
@@ -20370,125 +20369,175 @@ button.settings-option {
   align-items: center;
 }
 
-.source-cc-groups {
-  display: grid;
-  gap: 18px;
-}
-
-.source-cc-group {
-  display: grid;
-  gap: 8px;
-}
-
-.source-cc-group-label {
+/* Dense rows — one source per row, hairline-separated, no card grid. */
+.source-cc-list {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--muted);
-}
-
-.source-cc-group-label svg {
-  color: var(--muted-2);
-}
-
-.source-cc-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
-  gap: 10px;
-}
-
-.source-cc-card {
-  display: grid;
-  gap: 7px;
-  align-content: start;
-  min-width: 0;
-  padding: 12px 13px;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 10px;
+  overflow: hidden;
   background: var(--panel-soft);
 }
 
-.source-cc-card.is-planned,
-.source-cc-card.is-unavailable {
-  background: transparent;
-  border-style: dashed;
+.source-row + .source-row {
+  border-top: 1px solid var(--line);
 }
 
-.source-cc-card-head {
+.source-row-main {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding-right: 12px;
+}
+
+.source-row-toggle {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.source-cc-card-title {
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--text);
+  gap: 10px;
   min-width: 0;
-  overflow-wrap: anywhere;
+  padding: 9px 4px 9px 12px;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  border-radius: 8px;
 }
 
-.source-cc-card-status {
+.source-row-toggle:hover {
+  background: var(--hover, rgba(120, 120, 140, 0.06));
+}
+
+.source-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 7px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.source-row-body {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.source-row-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-row-status-line {
   margin: 0;
   font-size: 11.5px;
-  line-height: 1.45;
-  color: var(--muted);
-}
-
-.source-cc-card-privacy {
-  margin: 0;
-  font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--muted-2);
 }
 
-.source-cc-detail {
-  display: grid;
-  gap: 10px;
+.source-row-caret {
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+  flex: none;
 }
 
-.source-cc-detail-block ul {
+.source-row.is-open .source-row-caret {
+  transform: rotate(180deg);
+}
+
+.source-row-action {
+  flex: none;
+}
+
+.source-row-inert {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-2);
+  padding: 3px 9px;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Planned rows read lighter so the actionable list stays dominant. */
+.source-cc-list.is-planned {
+  background: transparent;
+}
+
+.source-cc-list.is-planned .source-row-title {
+  font-weight: 550;
+  color: var(--muted);
+}
+
+/* Expanded per-row detail — access scope + setup, aligned under the title. */
+.source-row-detail {
+  display: grid;
+  gap: 10px;
+  padding: 2px 14px 14px 48px;
+}
+
+.source-row-privacy {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.source-row-access {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.source-row-access-block ul {
   margin: 4px 0 0;
   padding-left: 16px;
   display: grid;
   gap: 2px;
 }
 
-.source-cc-detail-block li {
+.source-row-access-block li {
   font-size: 11.5px;
   line-height: 1.45;
   color: var(--muted);
   overflow-wrap: anywhere;
 }
 
-.source-cc-detail-can {
+.source-row-can {
   font-size: 11.5px;
   font-weight: 650;
   color: var(--text);
 }
 
-.source-cc-detail-cannot {
+.source-row-cannot {
   font-size: 11.5px;
   font-weight: 650;
   color: var(--muted);
 }
 
-.source-cc-detail-meta {
+.source-row-meta {
   margin: 0;
   display: grid;
   gap: 6px;
 }
 
-.source-cc-detail-meta div {
+.source-row-meta div {
   display: grid;
-  gap: 2px;
+  grid-template-columns: 80px 1fr;
+  gap: 8px;
+  align-items: baseline;
 }
 
-.source-cc-detail-meta dt {
+.source-row-meta dt {
   font-size: 10.5px;
   font-weight: 650;
   text-transform: uppercase;
@@ -20496,7 +20545,7 @@ button.settings-option {
   color: var(--muted-2);
 }
 
-.source-cc-detail-meta dd {
+.source-row-meta dd {
   margin: 0;
   font-size: 11.5px;
   line-height: 1.45;
@@ -20504,18 +20553,37 @@ button.settings-option {
   overflow-wrap: anywhere;
 }
 
-.source-cc-card-footer {
+/* Planned disclosure */
+.source-cc-planned > summary {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 2px;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 2px;
+  font-size: 12px;
+  color: var(--muted);
+  list-style: none;
 }
 
-.source-cc-inert {
-  font-size: 11.5px;
-  font-weight: 600;
+.source-cc-planned > summary::-webkit-details-marker {
+  display: none;
+}
+
+.source-cc-planned-label {
+  font-weight: 650;
+  color: var(--text);
+}
+
+.source-cc-planned > summary small {
   color: var(--muted-2);
-  padding: 4px 10px;
-  border: 1px dashed var(--line);
-  border-radius: 999px;
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .source-row-access {
+    grid-template-columns: 1fr;
+  }
+  .source-row-detail {
+    padding-left: 14px;
+  }
 }

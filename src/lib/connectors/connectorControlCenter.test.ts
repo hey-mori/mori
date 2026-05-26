@@ -3,6 +3,7 @@ import { getAllCaptureSurfaces } from "./captureSurfaces";
 import {
   buildConnectorControlCenter,
   describeControlCenterAvailability,
+  partitionControlCenterSurfaces,
   type BuildControlCenterInput,
   type ControlCenterSurface,
 } from "./connectorControlCenter";
@@ -170,6 +171,36 @@ describe("privacy passthrough", () => {
       expect(surface.privacyBoundary.length).toBeGreaterThan(8);
       expect(surface.whatMoriNeverAccesses.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("partitionControlCenterSurfaces", () => {
+  it("splits surfaces into actionable + planned with no overlap and full coverage", () => {
+    const vm = buildConnectorControlCenter(BROWSER_WITH_SESSION);
+    const { actionable, planned } = partitionControlCenterSurfaces(vm);
+    const all = allSurfaces(BROWSER_WITH_SESSION);
+    expect(actionable.length + planned.length).toBe(all.length);
+    const ids = new Set([...actionable, ...planned].map((s) => s.id));
+    expect(ids.size).toBe(all.length);
+    // No planned surface leaks into the actionable list and vice versa.
+    expect(actionable.every((s) => s.availability !== "planned")).toBe(true);
+    expect(planned.every((s) => s.availability === "planned" || s.availability === "unavailable")).toBe(
+      true,
+    );
+  });
+
+  it("orders the actionable list available-first", () => {
+    const vm = buildConnectorControlCenter(BROWSER_WITH_SESSION);
+    const { actionable } = partitionControlCenterSurfaces(vm);
+    const firstNonAvailable = actionable.findIndex((s) => s.availability !== "available");
+    if (firstNonAvailable !== -1) {
+      // Every surface after the first non-available one is also non-available.
+      for (let i = firstNonAvailable; i < actionable.length; i += 1) {
+        expect(actionable[i]!.availability).not.toBe("available");
+      }
+    }
+    // In the browser the manual / paste sources are available and lead.
+    expect(actionable[0]?.availability).toBe("available");
   });
 });
 

@@ -115,6 +115,7 @@ export type {
 export {
   buildConnectorControlCenter,
   describeControlCenterAvailability,
+  partitionControlCenterSurfaces,
 } from "./connectorControlCenter";
 export type {
   BuildControlCenterInput,
@@ -126,5 +127,6 @@ export type {
   ControlCenterCounts,
   ControlCenterGroup,
   ControlCenterImportKind,
+  ControlCenterPartition,
   ControlCenterSurface,
 } from "./connectorControlCenter";
