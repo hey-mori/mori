@@ -24,6 +24,7 @@
  *     same prompt can be shared in a status update.
  */
 import { containsLikelySecret } from "../connectors";
+import type { CaptureFidelity } from "../../domain/types";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 import type {
   ProjectMemoryDataBasis,
@@ -220,7 +221,12 @@ export function buildProjectMemoryResumePrompt(
   }
   if (sectionSet.has("limitations")) {
     sections.push(
-      buildLimitationsSection(memory.dataBasis, memory.warnings, flaggedMemoryCount),
+      buildLimitationsSection(
+        memory.dataBasis,
+        memory.warnings,
+        flaggedMemoryCount,
+        summarizeEvidenceFidelity(memory.keyEvidence),
+      ),
     );
   }
 
@@ -553,15 +559,45 @@ function formatEvidenceLine(
   privacy: ProjectMemoryResumePromptPrivacy,
 ): string {
   const session = evidence.sessionIsActive ? "current" : evidence.sessionTitle;
+  const fidelity = describeEvidenceFidelitySuffix(evidence.source.captureFidelity);
   if (privacy === "summaryOnly") {
-    return `- (source) · ${evidence.relatedEventCount} events · ${session}`;
+    return `- (source) · ${evidence.relatedEventCount} events · ${session}${fidelity}`;
   }
   const rawTitle = evidence.source.title;
   const title = privacy === "clientSafe"
     ? sanitizeForClientSafe(rawTitle, { allowSourceTitle: false })
     : sanitizeForNormal(rawTitle);
   // We never include `source.uri` — that can carry full URLs or local paths.
-  return `- ${title} · ${evidence.source.kind} · ${evidence.relatedEventCount} events · ${session}`;
+  return `- ${title} · ${evidence.source.kind} · ${evidence.relatedEventCount} events · ${session}${fidelity}`;
+}
+
+/** Honest, English suffix for a low-fidelity evidence source. Empty when complete or absent. */
+function describeEvidenceFidelitySuffix(fidelity?: CaptureFidelity): string {
+  switch (fidelity?.level) {
+    case "partial":
+      return " · partial capture";
+    case "fragment":
+      return " · fragment";
+    case "unknown":
+      return " · completeness unknown";
+    default:
+      return "";
+  }
+}
+
+type EvidenceFidelitySummary = { incompleteCount: number; unknownCount: number };
+
+function summarizeEvidenceFidelity(
+  rows: readonly ProjectMemoryKeyEvidence[],
+): EvidenceFidelitySummary {
+  let incompleteCount = 0;
+  let unknownCount = 0;
+  for (const row of rows) {
+    const level = row.source.captureFidelity?.level;
+    if (level === "partial" || level === "fragment") incompleteCount += 1;
+    else if (level === "unknown") unknownCount += 1;
+  }
+  return { incompleteCount, unknownCount };
 }
 
 function buildRecentSessionsSection(
@@ -615,6 +651,7 @@ function buildLimitationsSection(
   basis: ProjectMemoryDataBasis,
   warnings: ProjectMemoryWarning[],
   flaggedMemoryCount: number,
+  evidenceFidelity: EvidenceFidelitySummary,
 ): ProjectMemoryResumePromptSection {
   const lines: string[] = [`- Data basis: ${describeBasisForPreamble(basis)}`];
   for (const warning of warnings) {
@@ -624,6 +661,16 @@ function buildLimitationsSection(
   if (flaggedMemoryCount > 0) {
     lines.push(
       `- ${flaggedMemoryCount} accepted ${flaggedMemoryCount === 1 ? "memory" : "memories"} flagged for re-review (stale / contradicted / watching) — not used as guidance.`,
+    );
+  }
+  if (evidenceFidelity.incompleteCount > 0) {
+    lines.push(
+      `- ${evidenceFidelity.incompleteCount} key evidence ${evidenceFidelity.incompleteCount === 1 ? "source is a" : "sources are"} partial / fragment ${evidenceFidelity.incompleteCount === 1 ? "capture" : "captures"} — treat as incomplete records, not full transcripts.`,
+    );
+  }
+  if (evidenceFidelity.unknownCount > 0) {
+    lines.push(
+      `- ${evidenceFidelity.unknownCount} key evidence ${evidenceFidelity.unknownCount === 1 ? "source" : "sources"} could not be assessed for completeness.`,
     );
   }
   lines.push("- Mori reads only locally saved sessions. No cloud sync, no background watching, no external account access.");

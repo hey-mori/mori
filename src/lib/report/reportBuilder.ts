@@ -13,6 +13,7 @@ import {
   splitNextActionsByCompletion,
 } from "../session/nextActionCompletion";
 import { getReportEvidenceSummary } from "../sources/traceability";
+import { getCaptureFidelityDisplay } from "../evidence/fidelityDisplay";
 import { isMemoryFlaggedForReview } from "../project-memory/projectMemoryResumePrompt";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 
@@ -185,6 +186,15 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   if (privacy.clientSafe) {
     warnings.push("Client-safe 모드: 원본 텍스트 / 파일 경로 / 출처 상세는 제외됩니다.");
   }
+  const incompleteCaptureCount = view.sources.filter((source) => {
+    const level = source.captureFidelity?.level;
+    return level === "partial" || level === "fragment";
+  }).length;
+  if (incompleteCaptureCount > 0) {
+    warnings.push(
+      `근거 ${incompleteCaptureCount}건은 부분/조각 캡처입니다 — 완전한 기록이 아닐 수 있습니다.`,
+    );
+  }
 
   const lines: string[] = [];
   lines.push(`# ${view.session.title} · ${typeDef.label}`);
@@ -299,7 +309,11 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
         lines.push("**소스 목록**");
         for (const source of view.sources) {
           const captured = formatIso(source.capturedAt);
-          lines.push(`- *${source.kind}* · ${source.title} — ${captured}`);
+          const fidelity = source.captureFidelity
+            ? getCaptureFidelityDisplay(source.captureFidelity)
+            : null;
+          const fidelityTag = fidelity && fidelity.shouldSurface ? ` · ${fidelity.label}` : "";
+          lines.push(`- *${source.kind}* · ${source.title} — ${captured}${fidelityTag}`);
         }
       } else {
         lines.push("");

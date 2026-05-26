@@ -202,6 +202,60 @@ describe("buildProjectMemoryResumePrompt — self audience", () => {
   });
 });
 
+describe("buildProjectMemoryResumePrompt — capture fidelity", () => {
+  function withEvidenceFidelity(
+    level: "full" | "partial" | "fragment" | "unknown",
+  ): ProjectMemoryViewModel {
+    return baseViewModel({
+      keyEvidence: [
+        {
+          source: {
+            id: "src-1",
+            sessionId: "s-cur",
+            kind: "aiConversation",
+            title: "Claude transcript on auth",
+            detail: "",
+            trustLevel: "observed",
+            redactionStatus: "notNeeded",
+            rawRetention: "summaryOnly",
+            capturedAt: "2026-05-10T09:00:00Z",
+            relatedEventIds: [],
+            captureFidelity: { level, reasons: [] },
+          },
+          sessionId: "s-cur",
+          sessionTitle: "Current sprint",
+          sessionIsActive: true,
+          relatedEventCount: 4,
+          relatedIssueCount: 1,
+          relatedDecisionCount: 1,
+        },
+      ],
+    });
+  }
+
+  it("marks partial-capture evidence in the evidence line and limitations", () => {
+    const result = build({ audience: "self", memory: withEvidenceFidelity("partial") });
+    const evidence = result.sections.find((section) => section.key === "evidence");
+    expect(evidence?.lines.join("\n")).toContain("partial capture");
+    const limitations = result.sections.find((section) => section.key === "limitations");
+    expect(limitations?.lines.join("\n")).toMatch(/partial \/ fragment/);
+  });
+
+  it("notes unassessable evidence under limitations", () => {
+    const result = build({ audience: "self", memory: withEvidenceFidelity("unknown") });
+    const limitations = result.sections.find((section) => section.key === "limitations");
+    expect(limitations?.lines.join("\n")).toMatch(/could not be assessed for completeness/);
+  });
+
+  it("adds no fidelity note when the evidence capture is complete", () => {
+    const result = build({ audience: "self", memory: withEvidenceFidelity("full") });
+    const evidence = result.sections.find((section) => section.key === "evidence");
+    expect(evidence?.lines.join("\n")).not.toContain("partial capture");
+    const limitations = result.sections.find((section) => section.key === "limitations");
+    expect(limitations?.lines.join("\n")).not.toMatch(/partial \/ fragment/);
+  });
+});
+
 describe("buildProjectMemoryResumePrompt — audience variants", () => {
   it("claude prompt includes coding-agent continuation instructions", () => {
     const result = build({ audience: "claude" });

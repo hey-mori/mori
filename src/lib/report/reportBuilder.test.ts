@@ -41,6 +41,24 @@ describe("buildReportMarkdown", () => {
     expect(payload.counts.sources).toBe(moriMockSession.sources.length);
   });
 
+  it("warns and tags the source list when a source is a partial capture", () => {
+    const [firstSource, ...restSources] = moriMockSession.sources;
+    const payload = buildReportMarkdown({
+      view: {
+        ...moriMockSession,
+        sources: [
+          { ...firstSource!, captureFidelity: { level: "partial", reasons: ["truncatedHunk"] } },
+          ...restSources,
+        ],
+      },
+      type: "personalRetrospective",
+      sections: new Set<ReportSectionId>(["evidence"]),
+      privacy: privacy(),
+    });
+    expect(payload.warnings.some((warning) => warning.includes("부분/조각 캡처"))).toBe(true);
+    expect(payload.markdown).toContain("일부만 캡처");
+  });
+
   it("groups completed next actions under their own report sub-section", () => {
     const [first, ...rest] = moriMockSession.nextActions;
     const payload = buildReportMarkdown({
