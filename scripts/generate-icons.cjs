@@ -1,14 +1,28 @@
-// Generates Mori's production icon assets from the same vector geometry used
-// by the React/SVG brand mark.
+// Generates Mori's production app-icon assets from the same vector geometry
+// used by the React/SVG brand mark (a guiding star over a soft focus beam on a
+// purple-gradient tile).
+//
+// The packaged app icon is NOT the same composition as the in-product CSS mark:
+// each platform gets a native treatment so the icon reads correctly in the Dock,
+// the taskbar, the app switcher, the installer, and File Explorer.
+//
+//   - macOS  (.icns)            squircle tile + ~9.8% safe-area margin (Apple grid).
+//   - Windows (.ico)            near-full-bleed tile; small sizes drop the beam and
+//                               enlarge the star so 16/20/24px stay legible; BMP
+//                               entries below 256px for maximum Explorer compatibility.
+//   - Linux / generic (.png)    balanced margin; small sizes simplify like Windows.
+//   - iOS web-clip              full-bleed opaque square (iOS applies its own mask).
+//
+// Dependency-free on purpose: this must run anywhere Node runs (incl. CI).
 //
 // Files produced:
 //   public/apple-touch-icon.png
-//   src-tauri/icons/icon.png          (1024x1024 source with alpha corners)
+//   src-tauri/icons/icon.png          (1024 macOS-style source)
 //   src-tauri/icons/32x32.png
 //   src-tauri/icons/128x128.png
 //   src-tauri/icons/128x128@2x.png
-//   src-tauri/icons/icon.ico
-//   src-tauri/icons/icon.icns
+//   src-tauri/icons/icon.ico          (16/20/24/32/40/48/64/128 BMP + 256 PNG)
+//   src-tauri/icons/icon.icns         (retina-complete PNG entries)
 
 const fs = require("fs");
 const path = require("path");
@@ -17,9 +31,12 @@ const zlib = require("zlib");
 const ROOT = path.join(__dirname, "..");
 const PUBLIC_DIR = path.join(ROOT, "public");
 const OUT_DIR = path.join(ROOT, "src-tauri", "icons");
+
+// Content space. The star/beam/gradient are authored in this 1024 box; a tile is
+// then placed inside the output canvas with a platform-specific margin + corner.
 const VIEWBOX = 1024;
-const TILE_RADIUS = 152;
-const NATIVE_ICON_INSET_RATIO = 0.075;
+
+const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
 
 const TILE_STOPS = [
   { t: 0, color: [0x5c, 0x52, 0xf4] },
@@ -52,41 +69,88 @@ const STAR_SEGMENTS = [
   ["Z"],
 ];
 
-const STAR_POLYGON = flattenPath(STAR_SEGMENTS, 18);
+const STAR_POLYGON = flattenPath(STAR_SEGMENTS, 22);
+// The star's vertical extent is 226..836 (centre 531); the beam fills the space
+// below it. When the beam is dropped at small sizes we recentre the star.
+const STAR_CENTER = [512, 531];
+const STAR_RECENTER_SHIFT = 512 - STAR_CENTER[1];
+
+// Platform compositions. `margin` is the transparent inset as a fraction of the
+// canvas on each side; `radiusRatio` is the corner radius as a fraction of the
+// (post-margin) tile side; `exp` is the superellipse exponent (2 = circular
+// arc, ~4-5 = Apple-style continuous "squircle" corner).
+const MAC = { margin: 0.098, radiusRatio: 0.225, exp: 5 };
+const GENERIC = { margin: 0.07, radiusRatio: 0.2, exp: 4 };
+const FULL_BLEED = { fullBleed: true };
+
+function windowsProfile(size) {
+  // Windows does not mask icons, so the tile fills most of the frame. Small
+  // sizes hug the edge harder so the taskbar/Explorer icon never looks tiny.
+  return { margin: size < 48 ? 0.035 : 0.06, radiusRatio: size < 48 ? 0.17 : 0.2, exp: 4 };
+}
+
+// Level-of-detail by final display size, independent of platform.
+const BEAM_MIN_SIZE = 64; // below this the beam turns to mud — drop it.
+
+// ICO entries at/above this size are PNG-compressed; smaller entries are BMP.
+const ICO_PNG_MIN_SIZE = 128;
+
+function starScaleFor(size) {
+  if (size <= 20) return 1.16;
+  if (size <= 32) return 1.08;
+  return 1;
+}
 
 let CRC_TABLE = null;
+const rgbaCache = new Map();
 const pngCache = new Map();
 
 fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
-writePng(path.join(PUBLIC_DIR, "apple-touch-icon.png"), 180);
-writePng(path.join(OUT_DIR, "icon.png"), 1024, NATIVE_ICON_INSET_RATIO);
-writePng(path.join(OUT_DIR, "32x32.png"), 32, NATIVE_ICON_INSET_RATIO);
-writePng(path.join(OUT_DIR, "128x128.png"), 128, NATIVE_ICON_INSET_RATIO);
-writePng(path.join(OUT_DIR, "128x128@2x.png"), 256, NATIVE_ICON_INSET_RATIO);
-writeIco(path.join(OUT_DIR, "icon.ico"), [16, 32, 48, 64, 128, 256], NATIVE_ICON_INSET_RATIO);
-writeIcns(path.join(OUT_DIR, "icon.icns"), NATIVE_ICON_INSET_RATIO);
+writePng(path.join(PUBLIC_DIR, "apple-touch-icon.png"), 180, FULL_BLEED);
+writePng(path.join(OUT_DIR, "icon.png"), 1024, MAC);
+writePng(path.join(OUT_DIR, "32x32.png"), 32, GENERIC);
+writePng(path.join(OUT_DIR, "128x128.png"), 128, GENERIC);
+writePng(path.join(OUT_DIR, "128x128@2x.png"), 256, GENERIC);
+writeIco(path.join(OUT_DIR, "icon.ico"), [16, 20, 24, 32, 40, 48, 64, 128, 256], windowsProfile);
+writeIcns(path.join(OUT_DIR, "icon.icns"), MAC);
 
 console.log(`Wrote Mori icon assets to ${OUT_DIR}`);
 
-function writePng(outputPath, size, insetRatio = 0) {
-  fs.writeFileSync(outputPath, pngForSize(size, insetRatio));
+// --- output helpers --------------------------------------------------------
+
+function writePng(outputPath, size, profile) {
+  fs.writeFileSync(outputPath, pngForSize(size, profile));
 }
 
-function pngForSize(size, insetRatio = 0) {
-  const key = `${size}:${insetRatio}`;
-
-  if (!pngCache.has(key)) {
-    pngCache.set(key, encodePng(size, size, renderIcon(size, insetRatio)));
+function rgbaForSize(size, profile) {
+  const key = `${size}:${profileKey(profile)}`;
+  if (!rgbaCache.has(key)) {
+    rgbaCache.set(key, renderIcon(size, profile));
   }
+  return rgbaCache.get(key);
+}
 
+function pngForSize(size, profile) {
+  const key = `${size}:${profileKey(profile)}`;
+  if (!pngCache.has(key)) {
+    pngCache.set(key, encodePng(size, size, rgbaForSize(size, profile)));
+  }
   return pngCache.get(key);
 }
 
-function renderIcon(size, insetRatio) {
-  const samples = size <= 64 ? 4 : size <= 256 ? 3 : 2;
+function profileKey(profile) {
+  return profile.fullBleed ? "full" : `${profile.margin}|${profile.radiusRatio}|${profile.exp}`;
+}
+
+// --- rasteriser ------------------------------------------------------------
+
+function renderIcon(size, profile) {
+  const samples = clampInt(Math.round(768 / size), 2, 24);
   const sampleCount = samples * samples;
+  const beamOn = size >= BEAM_MIN_SIZE;
+  const starPolygon = starPolygonFor(starScaleFor(size), beamOn ? 0 : STAR_RECENTER_SHIFT);
   const rgba = Buffer.alloc(size * size * 4);
 
   for (let y = 0; y < size; y += 1) {
@@ -98,9 +162,9 @@ function renderIcon(size, insetRatio) {
 
       for (let sy = 0; sy < samples; sy += 1) {
         for (let sx = 0; sx < samples; sx += 1) {
-          const px = ((x + (sx + 0.5) / samples) / size) * VIEWBOX;
-          const py = ((y + (sy + 0.5) / samples) / size) * VIEWBOX;
-          const color = colorAtExport(px, py, insetRatio);
+          const cx = ((x + (sx + 0.5) / samples) / size) * VIEWBOX;
+          const cy = ((y + (sy + 0.5) / samples) / size) * VIEWBOX;
+          const color = pixelColor(cx, cy, profile, beamOn, starPolygon);
 
           pr += color.r * color.a;
           pg += color.g * color.a;
@@ -111,9 +175,9 @@ function renderIcon(size, insetRatio) {
 
       const alpha = pa / sampleCount;
       const i = (y * size + x) * 4;
-      rgba[i] = alpha > 0 ? Math.round(pr / pa) : 0;
-      rgba[i + 1] = alpha > 0 ? Math.round(pg / pa) : 0;
-      rgba[i + 2] = alpha > 0 ? Math.round(pb / pa) : 0;
+      rgba[i] = pa > 0 ? Math.round(pr / pa) : 0;
+      rgba[i + 1] = pa > 0 ? Math.round(pg / pa) : 0;
+      rgba[i + 2] = pa > 0 ? Math.round(pb / pa) : 0;
       rgba[i + 3] = Math.round(alpha * 255);
     }
   }
@@ -121,51 +185,68 @@ function renderIcon(size, insetRatio) {
   return rgba;
 }
 
-function colorAtExport(x, y, insetRatio) {
-  if (insetRatio === 0) {
-    return colorAt(x, y);
+// Maps a canvas point (0..VIEWBOX) onto the tile, returning the composited color.
+function pixelColor(cx, cy, profile, beamOn, starPolygon) {
+  let u;
+  let v;
+
+  if (profile.fullBleed) {
+    if (cx < 0 || cx > VIEWBOX || cy < 0 || cy > VIEWBOX) {
+      return TRANSPARENT;
+    }
+    u = cx;
+    v = cy;
+  } else {
+    const m = VIEWBOX * profile.margin;
+    const side = VIEWBOX - 2 * m;
+    const r = side * profile.radiusRatio;
+
+    if (!insideSquircle(cx, cy, m, m, VIEWBOX - m, VIEWBOX - m, r, profile.exp)) {
+      return TRANSPARENT;
+    }
+
+    u = ((cx - m) / side) * VIEWBOX;
+    v = ((cy - m) / side) * VIEWBOX;
   }
 
-  const inset = VIEWBOX * insetRatio;
-  const contentSize = VIEWBOX - inset * 2;
+  let color = gradientColor((u + v) / (VIEWBOX * 2));
 
-  if (x < inset || x > VIEWBOX - inset || y < inset || y > VIEWBOX - inset) {
-    return { r: 0, g: 0, b: 0, a: 0 };
-  }
-
-  return colorAt(((x - inset) / contentSize) * VIEWBOX, ((y - inset) / contentSize) * VIEWBOX);
-}
-
-function colorAt(x, y) {
-  if (!insideRoundedRect(x, y, VIEWBOX, VIEWBOX, TILE_RADIUS)) {
-    return { r: 0, g: 0, b: 0, a: 0 };
-  }
-
-  let color = gradientColor((x + y) / (VIEWBOX * 2));
-
-  if (pointInPolygon(x, y, BEAM_POLYGON)) {
-    const beamAlpha = 0.18 + 0.2 * clamp((y - 500) / (VIEWBOX - 500));
+  if (beamOn && pointInPolygon(u, v, BEAM_POLYGON)) {
+    const beamAlpha = 0.18 + 0.2 * clamp((v - 500) / (VIEWBOX - 500));
     color = blend(color, { r: 255, g: 255, b: 255, a: beamAlpha });
   }
 
-  if (pointInPolygon(x, y, STAR_POLYGON)) {
-    color = blend(color, { r: 255, g: 255, b: 255, a: 1 });
+  if (pointInPolygon(u, v, starPolygon)) {
+    color = { r: 255, g: 255, b: 255, a: 1 };
   }
 
   return color;
 }
 
-function insideRoundedRect(x, y, width, height, radius) {
-  if (x < 0 || x > width || y < 0 || y > height) {
+// Superellipse-cornered rounded rectangle. exp=2 is a circular arc; higher
+// exponents give the continuous-corner "squircle" macOS uses.
+function insideSquircle(x, y, x0, y0, x1, y1, r, exp) {
+  if (x < x0 || x > x1 || y < y0 || y > y1) {
     return false;
   }
 
-  const cx = clampToRange(x, radius, width - radius);
-  const cy = clampToRange(y, radius, height - radius);
-  const dx = x - cx;
-  const dy = y - cy;
+  const qx = clampToRange(x, x0 + r, x1 - r);
+  const qy = clampToRange(y, y0 + r, y1 - r);
+  const dx = Math.abs(x - qx) / r;
+  const dy = Math.abs(y - qy) / r;
 
-  return dx * dx + dy * dy <= radius * radius;
+  if (dx === 0 || dy === 0) {
+    return true;
+  }
+
+  return Math.pow(dx, exp) + Math.pow(dy, exp) <= 1;
+}
+
+function starPolygonFor(scale, shiftY) {
+  return STAR_POLYGON.map(([px, py]) => [
+    STAR_CENTER[0] + (px - STAR_CENTER[0]) * scale,
+    STAR_CENTER[1] + (py - STAR_CENTER[1]) * scale + shiftY,
+  ]);
 }
 
 function gradientColor(t) {
@@ -174,19 +255,19 @@ function gradientColor(t) {
   const lower = TILE_STOPS[TILE_STOPS.indexOf(upper) - 1];
   const span = upper.t - lower.t || 1;
   const localT = clamp((t - lower.t) / span);
-  const color = [
-    lerp(lower.color[0], upper.color[0], localT),
-    lerp(lower.color[1], upper.color[1], localT),
-    lerp(lower.color[2], upper.color[2], localT),
-  ];
 
-  return { r: color[0], g: color[1], b: color[2], a: 1 };
+  return {
+    r: lerp(lower.color[0], upper.color[0], localT),
+    g: lerp(lower.color[1], upper.color[1], localT),
+    b: lerp(lower.color[2], upper.color[2], localT),
+    a: 1,
+  };
 }
 
 function blend(dst, src) {
   const outA = src.a + dst.a * (1 - src.a);
   if (outA === 0) {
-    return { r: 0, g: 0, b: 0, a: 0 };
+    return TRANSPARENT;
   }
 
   return {
@@ -256,6 +337,8 @@ function cubicPoint(p0, p1, p2, p3, t) {
   ];
 }
 
+// --- PNG encoding ----------------------------------------------------------
+
 function encodePng(width, height, rgba) {
   const stride = width * 4 + 1;
   const filtered = Buffer.alloc(height * stride);
@@ -315,8 +398,22 @@ function crc32(buf) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function writeIco(outputPath, sizes, insetRatio = 0) {
-  const images = sizes.map((size) => ({ size, png: pngForSize(size, insetRatio) }));
+// --- ICO encoding ----------------------------------------------------------
+
+// Small sizes (<=64px) are stored as uncompressed BMP/DIB entries; some Windows
+// shell surfaces (small Explorer views, legacy code paths) render PNG-in-ICO
+// poorly at those sizes, so BMP is the safe choice. 128/256 stay PNG — they only
+// appear in large views that handle PNG fine, and PNG keeps the file small.
+function writeIco(outputPath, sizes, profileFn) {
+  const images = sizes.map((size) => {
+    const profile = profileFn(size);
+    const data =
+      size >= ICO_PNG_MIN_SIZE
+        ? pngForSize(size, profile)
+        : encodeBmpEntry(size, rgbaForSize(size, profile));
+    return { size, data };
+  });
+
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0);
   header.writeUInt16LE(1, 2);
@@ -333,26 +430,75 @@ function writeIco(outputPath, sizes, insetRatio = 0) {
     directory[3] = 0;
     directory.writeUInt16LE(1, 4);
     directory.writeUInt16LE(32, 6);
-    directory.writeUInt32LE(image.png.length, 8);
+    directory.writeUInt32LE(image.data.length, 8);
     directory.writeUInt32LE(offset, 12);
     directories.push(directory);
-    offset += image.png.length;
+    offset += image.data.length;
   }
 
-  fs.writeFileSync(outputPath, Buffer.concat([header, ...directories, ...images.map((image) => image.png)]));
+  fs.writeFileSync(
+    outputPath,
+    Buffer.concat([header, ...directories, ...images.map((image) => image.data)]),
+  );
 }
 
-function writeIcns(outputPath, insetRatio = 0) {
+// 32bpp bottom-up BGRA DIB with a derived 1-bit AND mask, per the ICO spec.
+function encodeBmpEntry(size, rgba) {
+  const header = Buffer.alloc(40);
+  header.writeUInt32LE(40, 0);
+  header.writeInt32LE(size, 4);
+  header.writeInt32LE(size * 2, 8); // colour data + AND mask
+  header.writeUInt16LE(1, 12);
+  header.writeUInt16LE(32, 14);
+  header.writeUInt32LE(0, 16); // BI_RGB
+
+  const pixels = Buffer.alloc(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    const srcRow = (size - 1 - y) * size * 4; // bottom-up
+    const dstRow = y * size * 4;
+    for (let x = 0; x < size; x += 1) {
+      const s = srcRow + x * 4;
+      const d = dstRow + x * 4;
+      pixels[d] = rgba[s + 2]; // B
+      pixels[d + 1] = rgba[s + 1]; // G
+      pixels[d + 2] = rgba[s]; // R
+      pixels[d + 3] = rgba[s + 3]; // A
+    }
+  }
+
+  const maskRowBytes = Math.ceil(size / 32) * 4;
+  const mask = Buffer.alloc(maskRowBytes * size);
+  for (let y = 0; y < size; y += 1) {
+    const srcRow = (size - 1 - y) * size * 4;
+    const dstRow = y * maskRowBytes;
+    for (let x = 0; x < size; x += 1) {
+      if (rgba[srcRow + x * 4 + 3] < 128) {
+        mask[dstRow + (x >> 3)] |= 0x80 >> (x & 7);
+      }
+    }
+  }
+
+  return Buffer.concat([header, pixels, mask]);
+}
+
+// --- ICNS encoding ---------------------------------------------------------
+
+// Retina-complete: each logical size is emitted under both its 1x and the
+// matching @2x OSType so macOS can pick the right asset at any scale factor.
+function writeIcns(outputPath, profile) {
   const entries = [
     ["icp4", 16],
+    ["ic11", 32],
     ["icp5", 32],
-    ["icp6", 64],
+    ["ic12", 64],
     ["ic07", 128],
+    ["ic13", 256],
     ["ic08", 256],
+    ["ic14", 512],
     ["ic09", 512],
     ["ic10", 1024],
   ].map(([type, size]) => {
-    const png = pngForSize(size, insetRatio);
+    const png = pngForSize(size, profile);
     const header = Buffer.alloc(8);
     header.write(type, 0, "ascii");
     header.writeUInt32BE(png.length + header.length, 4);
@@ -361,16 +507,25 @@ function writeIcns(outputPath, insetRatio = 0) {
 
   const header = Buffer.alloc(8);
   header.write("icns", 0, "ascii");
-  header.writeUInt32BE(header.length + entries.reduce((sum, entry) => sum + entry.length, 0), 4);
+  header.writeUInt32BE(
+    header.length + entries.reduce((sum, entry) => sum + entry.length, 0),
+    4,
+  );
 
   fs.writeFileSync(outputPath, Buffer.concat([header, ...entries]));
 }
+
+// --- math ------------------------------------------------------------------
 
 function clamp(value) {
   return Math.max(0, Math.min(1, value));
 }
 
 function clampToRange(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function clampInt(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
