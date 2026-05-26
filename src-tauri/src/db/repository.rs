@@ -156,7 +156,7 @@ fn replace_sources(
         .map_err(|error| error.to_string())?;
     let mut stmt = tx
         .prepare(
-            "INSERT INTO sources (id, session_id, kind, title, detail, uri, trust_level, redaction_status, raw_retention, captured_at, related_event_ids_json)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT INTO sources (id, session_id, kind, title, detail, uri, trust_level, redaction_status, raw_retention, captured_at, related_event_ids_json, capture_fidelity_json)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
         )
         .map_err(|error| error.to_string())?;
     for row in rows {
@@ -172,6 +172,7 @@ fn replace_sources(
             row.raw_retention,
             row.captured_at,
             row.related_event_ids_json,
+            row.capture_fidelity_json,
         ])
         .map_err(|error| error.to_string())?;
     }
@@ -461,7 +462,7 @@ fn load_session(conn: &Connection, session_id: &str) -> Result<SessionRow, Strin
 fn load_sources(conn: &Connection, session_id: &str) -> Result<Vec<SourceRow>, String> {
     let mut stmt = conn
         .prepare(
-            "SELECT id, session_id, kind, title, detail, uri, trust_level, redaction_status, raw_retention, captured_at, related_event_ids_json FROM sources WHERE session_id = ?1 ORDER BY captured_at",
+            "SELECT id, session_id, kind, title, detail, uri, trust_level, redaction_status, raw_retention, captured_at, related_event_ids_json, capture_fidelity_json FROM sources WHERE session_id = ?1 ORDER BY captured_at",
         )
         .map_err(|error| error.to_string())?;
     let rows = stmt
@@ -478,6 +479,7 @@ fn load_sources(conn: &Connection, session_id: &str) -> Result<Vec<SourceRow>, S
                 raw_retention: row.get(8)?,
                 captured_at: row.get(9)?,
                 related_event_ids_json: row.get(10)?,
+                capture_fidelity_json: row.get(11)?,
             })
         })
         .map_err(|error| error.to_string())?;
@@ -739,6 +741,7 @@ mod tests {
                 raw_retention: "retained".into(),
                 captured_at: "2026-05-12T13:05:00Z".into(),
                 related_event_ids_json: "[\"evt-1\"]".into(),
+                capture_fidelity_json: Some("{\"level\":\"partial\",\"reasons\":[\"truncationMarker\"]}".into()),
             }],
             events: vec![EventRow {
                 id: "evt-1".into(),
@@ -789,6 +792,11 @@ mod tests {
         assert_eq!(
             loaded.sessions[0].source_label.as_deref(),
             Some("C:/dev/mori")
+        );
+        // V006: the optional source capture-fidelity JSON survives the round trip.
+        assert_eq!(
+            loaded.sources[0].capture_fidelity_json.as_deref(),
+            Some("{\"level\":\"partial\",\"reasons\":[\"truncationMarker\"]}")
         );
     }
 

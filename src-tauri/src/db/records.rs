@@ -109,6 +109,11 @@ pub struct SourceRow {
     pub raw_retention: String,
     pub captured_at: String,
     pub related_event_ids_json: String,
+    /// JSON-encoded `CaptureFidelity`, or NULL when the capture was not
+    /// assessed. Added by migration V006; serialised as an optional field so
+    /// snapshots written before it deserialize unchanged.
+    #[serde(default)]
+    pub capture_fidelity_json: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

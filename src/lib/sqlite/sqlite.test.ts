@@ -20,7 +20,7 @@ describe("SQLite persistence foundation", () => {
   it("defines an initial migration covering all normalized Mori tables", () => {
     const sql = getSqliteSchemaSql();
 
-    expect(sqliteMigrations).toHaveLength(5);
+    expect(sqliteMigrations).toHaveLength(6);
     expect(validateMigrationCatalog()).toEqual([]);
     expect(migrationMentionsRequiredTables(sql)).toBe(true);
     expect(sql).toContain(`CREATE TABLE IF NOT EXISTS ${migrationTableName}`);
@@ -30,6 +30,8 @@ describe("SQLite persistence foundation", () => {
     expect(sql).toContain("connector_event_id");
     // V005 adds the optional session grouping label.
     expect(sql).toContain("ALTER TABLE sessions ADD COLUMN source_label");
+    // V006 adds the optional capture-fidelity column.
+    expect(sql).toContain("ALTER TABLE sources ADD COLUMN capture_fidelity_json");
   });
 
   it("requires the V003 accepted-memory tables in the schema catalog", () => {
@@ -60,6 +62,7 @@ describe("SQLite persistence foundation", () => {
     expect(sqliteMigrations[2]?.filename).toBe("V003__consolidated_memories.sql");
     expect(sqliteMigrations[3]?.filename).toBe("V004__session_imports.sql");
     expect(sqliteMigrations[4]?.filename).toBe("V005__session_source_label.sql");
+    expect(sqliteMigrations[5]?.filename).toBe("V006__source_capture_fidelity.sql");
     for (const migration of sqliteMigrations) {
       expect(isValidMigrationFilename(migration.filename)).toBe(true);
     }
@@ -69,6 +72,7 @@ describe("SQLite persistence foundation", () => {
       "003",
       "004",
       "005",
+      "006",
     ]);
   });
 
@@ -103,6 +107,29 @@ describe("SQLite persistence foundation", () => {
     expect(rebuilt.events[0]?.sourceRefs).toEqual(moriMockSession.events[0]?.sourceRefs);
     expect(rebuilt.sources).toHaveLength(moriMockSession.sources.length);
     expect(rebuilt.decisions[0]?.rejectedOptions).toEqual(moriMockSession.decisions[0]?.rejectedOptions);
+  });
+
+  it("round-trips a source's capture fidelity through snapshot and reconstruct", () => {
+    const [firstSource, ...restSources] = moriMockSession.sources;
+    const session = {
+      ...moriMockSession,
+      sources: [
+        { ...firstSource!, captureFidelity: { level: "partial" as const, reasons: ["truncationMarker"] } },
+        ...restSources,
+      ],
+    };
+    const snapshot = createSqlitePersistenceSnapshot(session);
+    expect(snapshot.sources[0]?.capture_fidelity_json).toContain("partial");
+
+    const rebuilt = reconstructMoriSession(snapshot);
+    expect(rebuilt.sources[0]?.captureFidelity).toEqual({
+      level: "partial",
+      reasons: ["truncationMarker"],
+    });
+    // A source with no fidelity reconstructs without the key (not `undefined`-valued).
+    if (restSources.length > 0) {
+      expect(rebuilt.sources[1]?.captureFidelity).toBeUndefined();
+    }
   });
 
   it("validates snapshot foreign keys and JSON array columns before persistence", () => {

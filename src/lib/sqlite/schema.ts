@@ -61,6 +61,10 @@ const sessionSourceLabelSql = String.raw`
 ALTER TABLE sessions ADD COLUMN source_label TEXT;
 `;
 
+const sourceCaptureFidelitySql = String.raw`
+ALTER TABLE sources ADD COLUMN capture_fidelity_json TEXT;
+`;
+
 export const sqliteMigrations: SqliteMigration[] = [
   {
     version: "001",
@@ -96,6 +100,13 @@ export const sqliteMigrations: SqliteMigration[] = [
     name: "session_source_label",
     sql: sessionSourceLabelSql,
     checksum: checksumMigrationSql(sessionSourceLabelSql),
+  },
+  {
+    version: "006",
+    filename: "V006__source_capture_fidelity.sql",
+    name: "source_capture_fidelity",
+    sql: sourceCaptureFidelitySql,
+    checksum: checksumMigrationSql(sourceCaptureFidelitySql),
   },
 ];
 

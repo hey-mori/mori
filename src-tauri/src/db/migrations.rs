@@ -49,6 +49,12 @@ pub const MIGRATIONS: &[MigrationManifestEntry] = &[
         name: "session_source_label",
         sql: include_str!("../../migrations/V005__session_source_label.sql"),
     },
+    MigrationManifestEntry {
+        version: "006",
+        filename: "V006__source_capture_fidelity.sql",
+        name: "source_capture_fidelity",
+        sql: include_str!("../../migrations/V006__source_capture_fidelity.sql"),
+    },
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -222,18 +228,20 @@ mod tests {
                 "002".to_string(),
                 "003".to_string(),
                 "004".to_string(),
-                "005".to_string()
+                "005".to_string(),
+                "006".to_string()
             ]
         );
         assert!(outcome.already_applied.is_empty());
 
         let applied = applied_migrations(&conn).expect("read applied");
-        assert_eq!(applied.len(), 5);
+        assert_eq!(applied.len(), 6);
         assert_eq!(applied[0].version, "001");
         assert_eq!(applied[1].version, "002");
         assert_eq!(applied[2].version, "003");
         assert_eq!(applied[3].version, "004");
         assert_eq!(applied[4].version, "005");
+        assert_eq!(applied[5].version, "006");
         for record in &applied {
             assert!(!record.checksum.is_empty());
         }
@@ -252,7 +260,8 @@ mod tests {
                 "002".to_string(),
                 "003".to_string(),
                 "004".to_string(),
-                "005".to_string()
+                "005".to_string(),
+                "006".to_string()
             ]
         );
     }

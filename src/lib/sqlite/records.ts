@@ -54,6 +54,8 @@ export type SourceRow = {
   raw_retention: string;
   captured_at: string;
   related_event_ids_json: string;
+  /** JSON-encoded `CaptureFidelity`, or NULL when not assessed. Added by V006. */
+  capture_fidelity_json: string | null;
 };
 
 export type EventRow = {
@@ -232,6 +234,7 @@ function sourceToRow(source: SourceRef): SourceRow {
     raw_retention: source.rawRetention,
     captured_at: source.capturedAt,
     related_event_ids_json: json(source.relatedEventIds),
+    capture_fidelity_json: source.captureFidelity ? json(source.captureFidelity) : null,
   };
 }
 

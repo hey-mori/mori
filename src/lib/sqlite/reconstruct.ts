@@ -66,6 +66,7 @@ function reconstructSession(row: SqlitePersistenceSnapshot["sessions"][number]):
 }
 
 function reconstructSource(row: SqlitePersistenceSnapshot["sources"][number]): SourceRef {
+  const captureFidelity = parseCaptureFidelity(row.capture_fidelity_json);
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -78,7 +79,26 @@ function reconstructSource(row: SqlitePersistenceSnapshot["sources"][number]): S
     rawRetention: row.raw_retention as SourceRef["rawRetention"],
     capturedAt: row.captured_at,
     relatedEventIds: parseStringArray(row.related_event_ids_json),
+    ...(captureFidelity ? { captureFidelity } : {}),
   };
+}
+
+function parseCaptureFidelity(raw: string | null): SourceRef["captureFidelity"] {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as { level?: unknown }).level === "string" &&
+      Array.isArray((parsed as { reasons?: unknown }).reasons)
+    ) {
+      return parsed as SourceRef["captureFidelity"];
+    }
+  } catch {
+    // Malformed JSON → treat as not assessed.
+  }
+  return undefined;
 }
 
 function reconstructEvent(row: SqlitePersistenceSnapshot["events"][number]): TimelineEvent {
