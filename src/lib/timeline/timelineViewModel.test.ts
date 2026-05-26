@@ -130,6 +130,24 @@ describe("buildTimelineRenderModel", () => {
     expect(model.visibleEvents.every((event) => event.type === "decision")).toBe(true);
   });
 
+  it("flags filteredEmpty when a search hides every event", () => {
+    const model = buildModel(moriMockSession, { searchQuery: "zzz-no-such-event-xyz" });
+    expect(model.emptyVariant).toBeNull();
+    expect(model.visibleDisplayItems).toHaveLength(0);
+    expect(model.filteredEmpty).toBe(true);
+  });
+
+  it("does not flag filteredEmpty when no filter or search is active", () => {
+    const model = buildModel(moriMockSession);
+    expect(model.filteredEmpty).toBe(false);
+  });
+
+  it("does not treat a data-empty session as filteredEmpty", () => {
+    const emptyView = { ...moriMockSession, events: [] };
+    const model = buildModel(emptyView, { searchQuery: "anything" });
+    expect(model.filteredEmpty).toBe(false);
+  });
+
   it("resolves the selected item from selectedEventId", () => {
     const target = moriMockSession.events[2]!;
     const model = buildModel(moriMockSession, { selectedEventId: target.id });

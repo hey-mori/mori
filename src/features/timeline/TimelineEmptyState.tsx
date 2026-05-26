@@ -1,4 +1,4 @@
-import { ListPlus, Play, Sparkles } from "lucide-react";
+import { ListPlus, Play, SearchX, Sparkles } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 
@@ -63,6 +63,26 @@ export function TimelineEmptyState({
           }
         >
           Quick Pass 실행
+        </Button>
+      }
+    />
+  );
+}
+
+/**
+ * Shown when the session has events but the active filter + search hide every
+ * one of them. Keeps the toolbar above it (so the controls that caused the
+ * empty result stay reachable) and offers a one-click reset.
+ */
+export function TimelineNoResultsState({ onClear }: { onClear: () => void }) {
+  return (
+    <EmptyState
+      icon={SearchX}
+      title="조건에 맞는 이벤트가 없습니다"
+      description="현재 검색어 또는 레인 필터에 해당하는 이벤트가 없습니다. 조건을 지우면 전체 타임라인이 다시 표시됩니다."
+      actions={
+        <Button variant="secondary" icon={SearchX} onClick={onClear}>
+          검색·필터 지우기
         </Button>
       }
     />

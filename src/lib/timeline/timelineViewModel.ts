@@ -58,6 +58,13 @@ export type LaneRenderModel = {
 export type TimelineRenderModel = {
   /** Empty-state variant; when non-null, the canvas is not rendered. */
   emptyVariant: TimelineEmptyVariant | null;
+  /**
+   * True when the session has events but the active filter + search hide every
+   * one of them. Distinct from `emptyVariant` (which is about missing data):
+   * here the canvas would render blank, so the view shows a "no results, clear
+   * filters" affordance instead of a confusing empty grid.
+   */
+  filteredEmpty: boolean;
   /** Visible events after filter + search. */
   visibleEvents: TimelineEvent[];
   /** Visible display items (events + bundles). */
@@ -222,8 +229,17 @@ export function buildTimelineRenderModel(
     sourceIndex,
   });
 
+  // Real data exists but the filter + search hid everything → not a data-empty
+  // state, but the canvas would render blank. Surface it as a no-results state.
+  const filteredEmpty =
+    emptyVariant === null &&
+    input.view.events.length > 0 &&
+    visibleDisplayItems.length === 0 &&
+    (input.activeFilters.length > 0 || input.searchQuery.trim().length > 0);
+
   return {
     emptyVariant,
+    filteredEmpty,
     visibleEvents,
     visibleDisplayItems,
     lanes,

@@ -35,7 +35,7 @@ import {
   describeConversationContext,
   isConversationSession,
 } from "../../lib/timeline/conversationFlow";
-import { TimelineEmptyState } from "./TimelineEmptyState";
+import { TimelineEmptyState, TimelineNoResultsState } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
 import { FlowFocusHeader } from "../flow-focus/FlowFocusHeader";
@@ -305,7 +305,14 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
             end={model.range.end}
           />
         ) : null}
-        {useChronoList ? (
+        {mode === "timeline" && model.filteredEmpty ? (
+          <TimelineNoResultsState
+            onClear={() => {
+              clearFilters();
+              setSearchQuery("");
+            }}
+          />
+        ) : useChronoList ? (
           <TimelineChronoList
             model={model}
             selectedItemId={selectedItem?.id ?? null}
