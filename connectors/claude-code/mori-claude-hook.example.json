@@ -1,25 +1,20 @@
 {
-  "$comment": "Example Claude Code hook configuration that calls the Mori local hook script. Drop this snippet into your Claude Code hooks settings — Mori does NOT install it for you. Update the script path before use.",
-  "hooks": [
-    {
-      "id": "mori.local-jsonl",
-      "events": [
-        "session_started",
-        "prompt_submitted",
-        "tool_started",
-        "tool_finished",
-        "file_changed",
-        "session_finished"
-      ],
-      "command": "/usr/local/bin/mori-claude-hook.sh",
-      "args": ["--out", "~/.mori/connectors/claude-code"],
-      "transport": "stdin",
-      "$privacy": {
-        "captureMethod": "local_hook",
-        "rawDataPolicy": "summary_only",
-        "redacted": true,
-        "note": "Local JSONL only. No network. Bodies truncated to 2KB and run through best-effort redaction before writing."
+  "$comment": "Example Claude Code hooks configuration. Merge the `hooks` object into your Claude Code settings.json (~/.claude/settings.json or .claude/settings.json) — Mori does NOT install it for you. Replace ABSOLUTE_PATH with the real path to mori-claude-hook.sh (macOS / Linux) or mori-claude-hook.ps1 (Windows). The script forwards each event to mori-claude-hook.py, which writes typed connector JSONL to ~/.mori/connectors/claude-code/. Output is summary metadata only — no prompt or tool payloads are stored.",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "ABSOLUTE_PATH/mori-claude-hook.sh" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "ABSOLUTE_PATH/mori-claude-hook.sh" }] }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [{ "type": "command", "command": "ABSOLUTE_PATH/mori-claude-hook.sh" }]
       }
-    }
-  ]
+    ],
+    "SessionEnd": [
+      { "hooks": [{ "type": "command", "command": "ABSOLUTE_PATH/mori-claude-hook.sh" }] }
+    ]
+  }
 }

@@ -1,48 +1,20 @@
 #!/usr/bin/env pwsh
-# Mori · Claude Code local hook (PowerShell variant)
+# Mori · Claude Code local hook (launcher, PowerShell)
 #
-# Reads one Claude Code hook payload from stdin, wraps it in a Mori
-# ConnectorEvent envelope, and appends one JSONL line to the user's
-# local Mori connector inbox. No network. No background scan.
+# Forwards the Claude Code hook payload on stdin to the Python mapper,
+# which classifies it and appends one typed Mori ConnectorEvent line to
+# the local connector inbox. No network. No background scan. Raw payloads
+# are never stored — summary metadata only.
+#
+# Requires Python on PATH. Remove this script + the matching Claude Code
+# hook entries to uninstall.
 
-param(
-  [string]$Out = "$env:USERPROFILE\.mori\connectors\claude-code"
-)
+$dir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$script = Join-Path $dir "mori-claude-hook.py"
 
-$ErrorActionPreference = "Stop"
-
-if (-not (Test-Path -LiteralPath $Out)) {
-  New-Item -ItemType Directory -Force -Path $Out | Out-Null
+$python = "python"
+if (-not (Get-Command $python -ErrorAction SilentlyContinue)) {
+  $python = "python3"
 }
 
-$today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
-$outFile = Join-Path $Out "$today.jsonl"
-$now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-$eventId = "claude-hook-{0}-{1}" -f (Get-Date -Format "yyyyMMddHHmmss"), $PID
-
-# Read the entire hook payload from stdin.
-$payload = [Console]::In.ReadToEnd()
-if ($payload.Length -gt 2048) {
-  $payload = $payload.Substring(0, 2048)
-}
-
-$envelope = [PSCustomObject]@{
-  id           = $eventId
-  connectorId  = "claudeCodeHook"
-  kind         = "prompt_submitted"
-  occurredAt   = $now
-  summary      = "Claude Code hook event"
-  rawText      = $payload
-  privacy      = [PSCustomObject]@{
-    captureMethod  = "local_hook"
-    rawDataPolicy  = "summary_only"
-  }
-  provenance   = [PSCustomObject]@{
-    toolName     = "mori-claude-hook.ps1"
-    toolVersion  = "0.1.0"
-  }
-}
-
-# ConvertTo-Json with -Compress writes a single line, perfect for JSONL.
-$line = $envelope | ConvertTo-Json -Depth 6 -Compress
-Add-Content -LiteralPath $outFile -Value $line -Encoding utf8
+[Console]::In.ReadToEnd() | & $python $script @args

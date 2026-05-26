@@ -10,32 +10,35 @@ auto-installed.
 
 ## What this hook captures
 
-When you configure Claude Code to call the Mori hook script for an event,
-the script writes one Mori `ConnectorEvent` JSON line to a local file.
-The events that make sense to enable today are:
+The launcher forwards each Claude Code hook payload (on stdin) to
+`mori-claude-hook.py` (Python 3 required), which classifies it and writes
+one **typed** Mori `ConnectorEvent` JSON line to a local file:
 
-- `session_started` — the recording boundary; Mori's Source title comes
-  from here
-- `prompt_submitted` — your prompt summary
-- `tool_started` / `tool_finished` — Claude tool invocations + exit codes
-- `file_changed` — file paths Claude edited (path only, not contents)
-- `session_finished` — the close-out event
+| Claude Code hook | Mori connector kind | Captured field |
+|---|---|---|
+| `SessionStart` | `session_started` | repo name (from `cwd`); Mori's Source title comes from here |
+| `UserPromptSubmit` | `prompt_submitted` | first line of the prompt |
+| `PostToolUse` · Edit/Write/MultiEdit/NotebookEdit | `file_changed` | edited file path (path only, not contents) |
+| `PostToolUse` · Bash | `command_finished` | the command line |
+| `PostToolUse` · other tools | `tool_finished` | tool name |
+| `SessionEnd` | `session_finished` | end reason |
+
+`Stop` is intentionally not mapped (it fires on every assistant turn);
+only `SessionEnd` marks a real session boundary.
 
 Each event includes:
-- A short `summary` line (no full prompts/responses by default)
+- A short `summary` line (never the full prompt / tool body)
 - An `occurredAt` ISO timestamp
 - A `privacy.captureMethod: "local_hook"` tag
 - A `privacy.rawDataPolicy: "summary_only"` tag
-
-The script truncates the captured payload to **2 KB** before writing.
 
 ## What this hook never does
 
 - **No network calls.** The script writes to a local JSONL file. Mori
   imports the file when you click Import in the app.
-- **No raw prompt / response bodies by default.** The script writes a
-  summary line. If you change `rawDataPolicy` to `retained`, the body is
-  still capped at 2 KB and runs through Mori's redaction pass on import.
+- **No raw prompt / response bodies.** The mapper writes a one-line
+  summary per event and never stores the prompt text, tool input, or tool
+  output. Summaries still run through Mori's redaction pass on import.
 - **No Anthropic / cloud transmission.** Mori never reads your Anthropic
   account.
 - **No file-system scan.** The hook only writes what Claude Code's own
@@ -79,11 +82,11 @@ to clean up.
 
 ## Security checklist
 
-- [x] The script is small enough to read in one screen — read it before
-  installing.
+- [x] The launcher and `mori-claude-hook.py` are short enough to read
+  before installing — do read them.
 - [x] The script never opens a network socket.
-- [x] The script never reads environment variables beyond the ones it
-  echoes back through `provenance.host` / `provenance.toolName`.
+- [x] The script reads only the home directory (to resolve the default
+  output path) and the hostname (echoed back as `provenance.host`).
 - [x] The script never calls `git` / `npm` / any other tool.
 - [x] The JSONL file is plain text under your home directory; you can
   inspect, edit, or delete it with any text editor.

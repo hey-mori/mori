@@ -25,25 +25,38 @@ import {
 import { normalizeConnectorEventBatch } from "./normalizeConnectorEvents";
 
 describe("connectors/claude-code/sample-event.jsonl", () => {
-  it("parses without validation errors", () => {
+  it("parses without validation errors across the typed hook kinds", () => {
     const outcome = parseConnectorJsonl(claudeCodeSample);
     expect(outcome.errors).toEqual([]);
-    expect(outcome.events.length).toBe(4);
+    expect(outcome.events.length).toBe(5);
     for (const event of outcome.events) {
       expect(event.connectorId).toBe("claudeCodeHook");
+      expect(event.privacy.captureMethod).toBe("local_hook");
       expect(event.privacy.rawDataPolicy).toBe("summary_only");
+      expect(event.provenance.toolName).toBe("mori-claude-hook.py");
       expect(event.rawText).toBeUndefined();
     }
+    // Each hook maps to its own typed kind — not the old single placeholder.
+    expect(outcome.events.map((event) => event.kind).sort()).toEqual([
+      "command_finished",
+      "file_changed",
+      "prompt_submitted",
+      "session_finished",
+      "session_started",
+    ]);
+    // The typed events carry their distinguishing field.
+    expect(outcome.events.find((event) => event.kind === "file_changed")?.filePath).toBeTruthy();
+    expect(outcome.events.find((event) => event.kind === "command_finished")?.command).toBeTruthy();
   });
 
   it("previews as a non-empty valid bucket", () => {
     const preview = buildConnectorJsonlPreview(claudeCodeSample);
     expect(preview.kind).toBe("valid");
-    expect(preview.validEventCount).toBe(4);
+    expect(preview.validEventCount).toBe(5);
     expect(preview.invalidLineCount).toBe(0);
   });
 
-  it("normalizes into one claudeTranscript source with the documented events", () => {
+  it("normalizes into one full-fidelity claudeTranscript source", () => {
     const outcome = parseConnectorJsonl(claudeCodeSample);
     const candidates = normalizeConnectorEventBatch({
       projectId: "p-template",
@@ -52,13 +65,16 @@ describe("connectors/claude-code/sample-event.jsonl", () => {
     });
     expect(candidates).toHaveLength(1);
     expect(candidates[0]?.source.kind).toBe("claudeTranscript");
+    // Bracketed by session_started + session_finished → a complete capture.
+    expect(candidates[0]?.source.captureFidelity?.level).toBe("full");
 
     const timelineEvents = candidates.flatMap((candidate) => candidate.events);
-    // session_started produces no TimelineEvent; the other three do.
+    // session_started produces no TimelineEvent; the other four do.
     expect(timelineEvents.map((event) => event.type).sort()).toEqual([
       "aiConversation",
-      "aiConversation",
       "documentNote",
+      "fileCode",
+      "fileCode",
     ]);
     for (const event of timelineEvents) {
       expect(event.connectorEventId).toBeTruthy();
