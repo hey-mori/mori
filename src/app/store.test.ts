@@ -96,4 +96,23 @@ describe("app store — session-centric routing", () => {
     expect(useMoriAppStore.getState().currentView).toBe("session");
     expect(useMoriAppStore.getState().sessionTab).toBe("evidence");
   });
+
+  it("requestEvidenceImport() routes to the 증거 tab and arms a one-shot", () => {
+    useMoriAppStore.setState({
+      currentView: "connections",
+      sessionTab: "flow",
+      evidenceImportRequest: null,
+    });
+    useMoriAppStore.getState().requestEvidenceImport("ai", "claude");
+    const state = useMoriAppStore.getState();
+    expect(state.currentView).toBe("session");
+    expect(state.sessionTab).toBe("evidence");
+    expect(state.evidenceImportRequest).toEqual({ kind: "ai", platform: "claude" });
+  });
+
+  it("clearEvidenceImportRequest() consumes the one-shot", () => {
+    useMoriAppStore.setState({ evidenceImportRequest: { kind: "git" } });
+    useMoriAppStore.getState().clearEvidenceImportRequest();
+    expect(useMoriAppStore.getState().evidenceImportRequest).toBeNull();
+  });
 });

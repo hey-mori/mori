@@ -36,6 +36,18 @@ export type SettingsTab =
  */
 export type MemoryTab = "overview" | "consolidation";
 
+/**
+ * A one-shot request to open the Evidence import drawer on a specific tab.
+ * Set when another surface (the Source Control Center on the 연결 page)
+ * deep-links into an import flow. The Evidence Hub consumes and clears it once
+ * the drawer opens. The platform hint is honoured only by the AI transcript
+ * tab; other kinds ignore it.
+ */
+export type EvidenceImportRequest = {
+  kind: "note" | "url" | "ai" | "git" | "connector";
+  platform?: "claude" | "chatgpt" | "codex" | "other";
+};
+
 type MoriAppState = {
   currentView: ViewKey;
   selectedEventId: string;
@@ -57,6 +69,11 @@ type MoriAppState = {
    * `MemoryView` consumes and clears it once the drawer opens.
    */
   memoryFocus: { memoryId: string } | null;
+  /**
+   * A one-shot request to open the Evidence import drawer on a given tab.
+   * Set by `requestEvidenceImport`; the Evidence Hub consumes and clears it.
+   */
+  evidenceImportRequest: EvidenceImportRequest | null;
   /**
    * Active tab on the Review surface. Stored here so the user returns to
    * the same tab when navigating away and back. Deep-link overrides via
@@ -111,6 +128,15 @@ type MoriAppState = {
   /** Deep-link into Project Memory with one accepted memory's drawer open. */
   openAcceptedMemory: (memoryId: string) => void;
   clearMemoryFocus: () => void;
+  /**
+   * Deep-link into the Evidence import drawer on a given tab. Routes to the
+   * session workspace's 증거 tab and arms a one-shot the Evidence Hub reads.
+   */
+  requestEvidenceImport: (
+    kind: EvidenceImportRequest["kind"],
+    platform?: EvidenceImportRequest["platform"],
+  ) => void;
+  clearEvidenceImportRequest: () => void;
   setReviewTab: (tab: ReviewTab) => void;
   setSettingsTab: (tab: SettingsTab) => void;
   setMemoryTab: (tab: MemoryTab) => void;
@@ -157,6 +183,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   inspectorCollapsed: true,
   reviewFocus: null,
   memoryFocus: null,
+  evidenceImportRequest: null,
   reviewTab: "issues",
   sessionTab: "flow",
   settingsTab: "profile",
@@ -186,6 +213,13 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   openAcceptedMemory: (memoryId) =>
     set({ memoryFocus: { memoryId }, currentView: "memory" }),
   clearMemoryFocus: () => set({ memoryFocus: null }),
+  requestEvidenceImport: (kind, platform) =>
+    set({
+      evidenceImportRequest: { kind, platform },
+      currentView: "session",
+      sessionTab: "evidence",
+    }),
+  clearEvidenceImportRequest: () => set({ evidenceImportRequest: null }),
   setReviewTab: (reviewTab) => set({ reviewTab }),
   setSettingsTab: (settingsTab) => set({ settingsTab }),
   setMemoryTab: (memoryTab) => set({ memoryTab }),

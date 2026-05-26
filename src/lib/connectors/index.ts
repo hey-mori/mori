@@ -112,3 +112,19 @@ export type {
   CaptureSurfaceToolFamily,
   NextConnectorMilestone,
 } from "./captureSurfaces";
+export {
+  buildConnectorControlCenter,
+  describeControlCenterAvailability,
+} from "./connectorControlCenter";
+export type {
+  BuildControlCenterInput,
+  ConnectorControlCenterViewModel,
+  ControlCenterAction,
+  ControlCenterActionKind,
+  ControlCenterAiPlatform,
+  ControlCenterAvailability,
+  ControlCenterCounts,
+  ControlCenterGroup,
+  ControlCenterImportKind,
+  ControlCenterSurface,
+} from "./connectorControlCenter";

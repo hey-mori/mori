@@ -77,6 +77,10 @@ export function EvidenceView() {
   // Session Detail workspace; other keys (memory / settings) pass through, so
   // "Timeline 열기" switches to the 흐름 tab rather than opening a separate page.
   const setCurrentView = useMoriAppStore((state) => state.navigate);
+  const evidenceImportRequest = useMoriAppStore((state) => state.evidenceImportRequest);
+  const clearEvidenceImportRequest = useMoriAppStore(
+    (state) => state.clearEvidenceImportRequest,
+  );
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -112,6 +116,16 @@ export function EvidenceView() {
     if (!target) return;
     openImport(target.kind, (target.platform ?? undefined) as AiTranscriptPlatform | undefined);
   }
+
+  // Consume a one-shot import deep-link from the Source Control Center: open
+  // the drawer on the requested tab, then clear the request so it fires once.
+  useEffect(() => {
+    if (!evidenceImportRequest) return;
+    setImportKind(evidenceImportRequest.kind);
+    setImportPlatform(evidenceImportRequest.platform);
+    setImportOpen(true);
+    clearEvidenceImportRequest();
+  }, [evidenceImportRequest, clearEvidenceImportRequest]);
 
   const importedSources = view.sources;
   const isDemoSession = mode === "demo";

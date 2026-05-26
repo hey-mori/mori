@@ -52,7 +52,9 @@ import type {
   ClaudeCodeSessionDetail,
   ClaudeCodeSessionMeta,
 } from "../../lib/claude/types";
+import { isTauriRuntime } from "../../lib/desktop";
 import { ConversationViewer } from "./ConversationViewer";
+import { SourceControlCenter } from "./SourceControlCenter";
 
 type SessionsState = {
   status: "idle" | "loading" | "ready" | "error";
@@ -117,7 +119,10 @@ export function ConnectionsView() {
   // `navigate` routes the post-import "evidence" landing into the unified
   // Session Detail workspace (its 증거 tab), where Import Review renders.
   const setCurrentView = useMoriAppStore((state) => state.navigate);
+  const requestEvidenceImport = useMoriAppStore((state) => state.requestEvidenceImport);
+  const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
   const isDemoSession = !draft;
+  const desktopRuntime = isTauriRuntime();
 
   const [tools, setTools] = useState<ToolsState>(DEFAULT_TOOLS);
   const [sessions, setSessions] = useState<SessionsState>(DEFAULT_SESSIONS);
@@ -288,9 +293,19 @@ export function ConnectionsView() {
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [filteredSessions]);
 
+  const controlCenter = (
+    <SourceControlCenter
+      isDesktop={desktopRuntime}
+      hasActiveSession={!isDemoSession}
+      onImport={requestEvidenceImport}
+      onOpenRepositorySettings={() => openSettingsSheet("repositories")}
+    />
+  );
+
   if (!bridgeAvailable) {
     return (
       <PageShell className="connections-page" maxWidth="detail">
+        {controlCenter}
         <ConnectionsBrowserHelp />
       </PageShell>
     );
@@ -349,6 +364,8 @@ export function ConnectionsView() {
           {importStatus.message}
         </NoticeBanner>
       ) : null}
+
+      {controlCenter}
 
       {/* Sessions lead the page — they're what the user came here for.
           Tool detection stays available as a smaller details disclosure
