@@ -29,6 +29,7 @@ export function TimelineBundleCard({
 }) {
   const vm = buildTimelineBundleViewModel(bundle);
   const showFooter = density === "comfortable";
+  const hasDensity = vm.densityProfile.some((value) => value > 0);
 
   return (
     <button
@@ -55,9 +56,20 @@ export function TimelineBundleCard({
         <span className="timeline-bundle-count">{bundle.count}개 이벤트</span>
       </header>
       <strong className="timeline-bundle-title">{vm.title}</strong>
-      {showFooter && vm.typeMixLabel ? (
+      {showFooter && (vm.typeMixLabel || hasDensity) ? (
         <footer className="timeline-bundle-footer">
-          <span>{vm.typeMixLabel}</span>
+          {vm.typeMixLabel ? <span>{vm.typeMixLabel}</span> : null}
+          {hasDensity ? (
+            <span
+              className={`timeline-bundle-density tone-${vm.tone}`}
+              aria-hidden="true"
+              title="이 묶음의 시간대별 활동 밀도"
+            >
+              {vm.densityProfile.map((value, index) => (
+                <span key={index} style={{ height: `${Math.max(16, Math.round(value * 100))}%` }} />
+              ))}
+            </span>
+          ) : null}
         </footer>
       ) : null}
     </button>

@@ -129,6 +129,49 @@ export function describeBundleKind(kind: TimelineBundleKind): string {
   }
 }
 
+/**
+ * Per-segment density profile for a bundle, derived from when its member
+ * events occurred across the bundle's `[start, end]` span. Returns `segments`
+ * normalized heights in `0..1` (the busiest segment is `1`). Pure — it reads
+ * the bundle's own `members`, never the event store.
+ *
+ * The bundle card renders this as a calm, subordinate micro-bar so a dense
+ * burst *looks* dense without the card having to expand or spill a count
+ * list. A burst clustered at one moment leans left; a steady stream spreads
+ * evenly; an instantaneous cluster collapses to a single full bar.
+ */
+export function buildBundleDensityProfile(
+  bundle: Pick<TimelineDisplayBundle, "start" | "end" | "members">,
+  segments = 7,
+): number[] {
+  const count = Math.max(1, Math.floor(segments));
+  const buckets = new Array<number>(count).fill(0);
+  const members = bundle.members ?? [];
+  if (members.length === 0) return buckets;
+
+  const startMs = new Date(bundle.start).getTime();
+  const endMs = new Date(bundle.end).getTime();
+  const span = endMs - startMs;
+  if (!Number.isFinite(span) || span <= 0) {
+    // Instantaneous cluster — show the whole burst as one full bar so the
+    // card still reads as dense rather than empty.
+    buckets[0] = 1;
+    return buckets;
+  }
+
+  for (const member of members) {
+    const t = new Date(member.start).getTime();
+    if (!Number.isFinite(t)) continue;
+    let idx = Math.floor(((t - startMs) / span) * count);
+    if (idx < 0) idx = 0;
+    if (idx >= count) idx = count - 1;
+    buckets[idx] += 1;
+  }
+
+  const max = Math.max(...buckets, 1);
+  return buckets.map((value) => value / max);
+}
+
 /** Korean label for why a cluster of events was bundled. */
 export function describeBundleReason(code: TimelineBundleReasonCode): string {
   switch (code) {

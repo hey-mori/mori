@@ -26,7 +26,7 @@ import {
   getActivityLaneVisuals,
   type TimelineEvidenceChip,
 } from "../../../lib/timeline/activityModel";
-import type { TimelineDisplayBundle } from "../../../lib/timeline/displayItems";
+import { buildBundleDensityProfile, type TimelineDisplayBundle } from "../../../lib/timeline/displayItems";
 
 export type TimelineCardTrustTone = "verified" | "observed" | "inferred";
 
@@ -85,6 +85,12 @@ export type TimelineBundleViewModel = {
    *  bundle inspector, not on the card. */
   typeMixLabel: string;
   laneLabel: string;
+  /**
+   * Per-segment density of the clustered members (0..1, busiest = 1). Rendered
+   * as a calm micro-bar so a dense burst reads as dense without expanding the
+   * card. Empty (all zeros) when the bundle carries no member timing.
+   */
+  densityProfile: number[];
   /** ARIA + tooltip text. */
   ariaLabel: string;
   buttonTitle: string;
@@ -167,6 +173,7 @@ export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): Tim
     timeLabel,
     title: bundle.title,
     typeMixLabel,
+    densityProfile: buildBundleDensityProfile(bundle),
     ariaLabel: buttonTitle,
     buttonTitle,
     bundle,
