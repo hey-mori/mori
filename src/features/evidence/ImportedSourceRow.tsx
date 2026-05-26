@@ -3,6 +3,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
+import { MoriFidelityBadge } from "../../components/ui/MoriFidelityBadge";
 import {
   MoriContextMenu,
   MoriOverflowMenu,
@@ -64,6 +65,7 @@ export function ImportedSourceRow({
             items={[
               <Badge tone="purple">{display.integrationLabel}</Badge>,
               <Badge tone={display.trustTone}>{display.trustLabel}</Badge>,
+              <MoriFidelityBadge fidelity={source.captureFidelity} />,
               <Badge tone={display.rawDataTone}>{display.rawDataLabel}</Badge>,
               summaryBadge ? (
                 <Badge tone={summaryBadge.tone}>{summaryBadge.label}</Badge>

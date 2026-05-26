@@ -2,10 +2,12 @@ import { CalendarClock, Lock, MapPin, ShieldCheck } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriTrustBadge } from "../../components/ui/MoriTrustBadge";
+import { MoriFidelityBadge } from "../../components/ui/MoriFidelityBadge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels } from "../../domain/constants";
 import type { MoriMockSession } from "../../domain/types";
 import { getEventEvidenceSources, getSourceDisplayStatus } from "../../lib/sources/traceability";
+import { getCaptureFidelityDisplay } from "../../lib/evidence/fidelityDisplay";
 import type { SourceIntegration } from "../../lib/sources/sourceRegistry";
 import {
   getCaptureMethodLabel,
@@ -105,6 +107,9 @@ function SourceDetailView({
   }
 
   const display = getSourceDisplayStatus(source);
+  const fidelityDisplay = source.captureFidelity
+    ? getCaptureFidelityDisplay(source.captureFidelity)
+    : null;
   const integration = integrationLookup.get(source.kind);
   const relatedEvents = view.events.filter((event) => event.sourceRefs.includes(source.id));
 
@@ -113,6 +118,7 @@ function SourceDetailView({
       <header className="evidence-detail-header">
         <div className="evidence-detail-badges">
           <MoriTrustBadge level={source.trustLevel} />
+          <MoriFidelityBadge fidelity={source.captureFidelity} />
           <MoriStatusBadge
             tone={getProductAvailabilityTone(
               productAvailabilityFromIntegrationStatus(display.status),
@@ -141,6 +147,17 @@ function SourceDetailView({
             <dt>원본 데이터 정책</dt>
             <dd>{display.rawDataLabel}</dd>
           </div>
+          {fidelityDisplay && fidelityDisplay.shouldSurface ? (
+            <div>
+              <dt>캡처 완전성</dt>
+              <dd>
+                {fidelityDisplay.label}
+                {fidelityDisplay.reasonLabels.length > 0
+                  ? ` · ${fidelityDisplay.reasonLabels.join(", ")}`
+                  : ""}
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt>
               <CalendarClock size={11} /> 가져온 시각

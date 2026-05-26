@@ -2,6 +2,7 @@ import { CalendarClock, FileText, Lock } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriTrustBadge } from "../../components/ui/MoriTrustBadge";
+import { MoriFidelityBadge } from "../../components/ui/MoriFidelityBadge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import type { SourceRef } from "../../domain/types";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
@@ -29,6 +30,7 @@ export function SourceSummaryCard({ source }: { source: SourceRef }) {
       <div className="review-source-card-badges">
         <Badge tone="purple">{display.integrationLabel}</Badge>
         <MoriTrustBadge level={source.trustLevel} />
+        <MoriFidelityBadge fidelity={source.captureFidelity} />
         <MoriStatusBadge
           tone={getProductAvailabilityTone(
             productAvailabilityFromIntegrationStatus(display.status),
