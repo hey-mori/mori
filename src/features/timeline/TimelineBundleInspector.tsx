@@ -8,6 +8,7 @@ import type { MoriMockSession } from "../../domain/types";
 import { formatTimeRange } from "../../lib/formatting/time";
 import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import {
+  buildBundleDensityProfile,
   describeBundleKind,
   describeBundleReason,
   type TimelineDisplayBundle,
@@ -25,6 +26,8 @@ export function TimelineBundleInspector({
 }) {
   const trust = describeTrustLevel(bundle.trustLevel);
   const laneVisuals = getActivityLaneVisuals(bundle.laneType);
+  const densityProfile = buildBundleDensityProfile(bundle);
+  const hasDensity = densityProfile.some((value) => value > 0);
   const includedEvents = session.events.filter((event) => bundle.memberEventIds.includes(event.id));
   const sources = session.sources.filter((source) =>
     includedEvents.some((event) => event.sourceRefs.includes(source.id)),
@@ -68,6 +71,24 @@ export function TimelineBundleInspector({
           </small>
         </div>
       </section>
+
+      {hasDensity ? (
+        <section className="inspector-section">
+          <SectionHeader title="활동 밀도" hint={formatTimeRange(bundle.start, bundle.end)} />
+          <div className="inspector-trust-card">
+            <span
+              className={`timeline-bundle-density tone-${laneVisuals.tone}`}
+              style={{ height: 22, opacity: 0.7, marginLeft: 0, gap: 2.5 }}
+              aria-hidden="true"
+            >
+              {densityProfile.map((value, index) => (
+                <span key={index} style={{ height: `${Math.max(16, Math.round(value * 100))}%`, width: 3 }} />
+              ))}
+            </span>
+            <small>묶음 구간을 따라 이벤트가 언제 몰렸는지 보여줍니다.</small>
+          </div>
+        </section>
+      ) : null}
 
       <section className="inspector-section">
         <SectionHeader title="유형 구성" />
