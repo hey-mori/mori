@@ -665,11 +665,14 @@ Open (highest value first):
     - Open — the broader `Badge` → `MoriStatusBadge` migration is
       intentionally partial and should continue surface-by-surface, not
       as one reckless rewrite. Remaining trust-badge sites
-      (`KeyEvidenceCard`, `ReviewDetailPanel`, `ImportedSourceRow`) and
-      the Timeline card trust map (`timelineCards.ts`) are deliberately
-      left for their own focused passes; the legacy `FEATURE_STATUS_TONE`
-      scale used by `productFlow.ts` is left untouched until its
-      consumers can move together.
+      (`KeyEvidenceCard`, `ReviewDetailPanel`, `ImportedSourceRow`) are
+      deliberately left for their own focused passes; the legacy
+      `FEATURE_STATUS_TONE` scale used by `productFlow.ts` is left
+      untouched until its consumers can move together.
+    - ✅ Timeline card trust map — `timelineCards.ts` no longer keeps a
+      duplicate English `TRUST_LABEL`; the trust glyph now reads the
+      canonical Korean `getTrustDisplay`, with a localized inferred
+      confidence tooltip.
 13. Settings provider cards — planned / unavailable AI providers
     still look like selectable options; mark them clearly.
 14. Settings trust panel — the privacy / trust text block is dense;
@@ -721,6 +724,11 @@ Open (highest value first):
       ("원본 전체 보관", "수동 입력", …) are Korean. The
       Implemented/Partial/Planned/Unavailable status vocabulary is
       deliberately kept English as the canonical status terms.
+    - ✅ Timeline source-aware labels — the activity-kind, lane, and
+      source-family visuals in `activityModel.ts` (lane headers,
+      conversation-flow group headers, inspector badges, card labels,
+      minimap, aria-labels) and the event-inspector importance line were
+      still English from the source-aware-lanes work; all are now Korean.
     - Open: other English-only surfaces can be swept as spotted.
 23. ✅ Sidebar session timer honesty — a just-started session was
     labeled "Saved" with a frozen `00:00:00` clock because
