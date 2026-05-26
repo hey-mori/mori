@@ -65,5 +65,5 @@ export function getConfidenceTone(percent: number): "green" | "blue" | "orange" 
 
 export function describeConfidence(percent: number): { label: string; tone: ReturnType<typeof getConfidenceTone> } {
   const tone = getConfidenceTone(percent);
-  return { label: `${Math.round(percent)}% confidence`, tone };
+  return { label: `신뢰도 ${Math.round(percent)}%`, tone };
 }

@@ -159,7 +159,7 @@ function SessionOriginInline() {
     >
       <span className="session-origin-chip is-primary">{summary.boundaryLabel}</span>
       <span className="session-origin-chip">{summary.sourceMixLabel}</span>
-      <span className="session-origin-meta">context {projectHint.projectLabel}</span>
+      <span className="session-origin-meta">맥락 {projectHint.projectLabel}</span>
       <span className="session-origin-meta">{summary.sourceCountLabel}</span>
       <span className="session-origin-meta">{summary.eventCountLabel}</span>
       <span className="session-origin-meta">{summary.retentionLabel}</span>

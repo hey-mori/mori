@@ -39,7 +39,7 @@ describe("confidence helpers", () => {
   });
 
   it("rounds the percent into the human label", () => {
-    expect(describeConfidence(72.7).label).toBe("73% confidence");
+    expect(describeConfidence(72.7).label).toBe("신뢰도 73%");
   });
 });
 

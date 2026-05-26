@@ -27,8 +27,8 @@ describe("describeRelationshipConfidence", () => {
   });
 
   it("clamps invalid values", () => {
-    expect(describeRelationshipConfidence(2).label).toBe("100% confidence");
-    expect(describeRelationshipConfidence(-1).label).toBe("0% confidence");
+    expect(describeRelationshipConfidence(2).label).toBe("신뢰도 100%");
+    expect(describeRelationshipConfidence(-1).label).toBe("신뢰도 0%");
     expect(describeRelationshipConfidence(Number.NaN).tone).toBe("gray");
   });
 });
