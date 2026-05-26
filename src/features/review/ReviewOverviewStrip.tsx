@@ -58,7 +58,7 @@ export function ReviewOverviewStrip({
           <>
             <AlertTriangle size={16} aria-hidden="true" />
             <div className="review-overview-attention-body">
-              <strong>확인 필요 {model.attentionTotal}건</strong>
+              <strong>검토 필요 {model.attentionTotal}건</strong>
               <span className="review-overview-attention-chips">
                 {model.attention.map((item) => (
                   <span key={item.key}>
