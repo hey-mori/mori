@@ -712,14 +712,27 @@
 .mori-section-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--mori-space-2);
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .mori-section-body {
   display: grid;
   gap: var(--mori-space-4);
   min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .mori-section-head {
+    gap: var(--mori-space-3);
+    flex-wrap: wrap;
+  }
+
+  .mori-section-actions {
+    justify-content: flex-start;
+  }
 }
 
 /**

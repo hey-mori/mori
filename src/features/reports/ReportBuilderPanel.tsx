@@ -2,6 +2,7 @@ import { Check, ClipboardCopy, Download, FileText, Lock, Sparkles } from "lucide
 import { useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { MoriActionCluster } from "../../components/ui/MoriActionCluster";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Toggle } from "../../components/ui/Toggle";
 import type { MoriMockSession } from "../../domain/types";
@@ -240,21 +241,22 @@ export function ReportBuilderPanel({
 
       <section className="report-builder-section">
         <SectionHeader title="5. 미리보기 / 내보내기" hint={`이벤트 ${payload.counts.events} · 이슈 ${payload.counts.issues} · 결정 ${payload.counts.decisions}`} />
-        <div className="report-builder-actions">
+        <MoriActionCluster className="report-builder-actions">
           <Button
             variant="primary"
             icon={copiedMd ? Check : ClipboardCopy}
+            size="sm"
             onClick={handleCopyMarkdown}
           >
             {copiedMd ? "복사됨" : "Markdown 복사"}
           </Button>
-          <Button icon={Download} onClick={handleDownload}>
+          <Button icon={Download} size="sm" onClick={handleDownload}>
             {format === "html" ? ".html 다운로드" : ".md 다운로드"}
           </Button>
-          <Button onClick={() => setPreviewVisible((value) => !value)}>
+          <Button size="sm" onClick={() => setPreviewVisible((value) => !value)}>
             {previewVisible ? "미리보기 숨기기" : "미리보기 보기"}
           </Button>
-        </div>
+        </MoriActionCluster>
         {payload.warnings.length > 0 ? (
           <ul className="report-warnings">
             {payload.warnings.map((warning) => (

@@ -340,7 +340,7 @@ function SourceCard({
       aria-pressed={selected}
       onClick={onToggle}
     >
-      <Icon size={28} />
+      <Icon size={18} aria-hidden="true" />
       <div>
         <strong>{source.name}</strong>
         <span><i />{source.detail}</span>
@@ -382,7 +382,7 @@ function EngineCard({
       aria-pressed={selected}
       onClick={onSelect}
     >
-      <Icon size={26} />
+      <Icon size={18} aria-hidden="true" />
       <div>
         <strong>{engine.label}</strong>
         <small>{engine.detail}</small>

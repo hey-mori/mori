@@ -402,49 +402,49 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
       />
 
       <div className="reports-main">
-          <SessionSummaryStrip
-            dataBasis={evidenceSummary.dataBasis}
-            dataBasisTone={status.dataBasisTone}
-            duration={duration}
-            sourceCount={view.sources.length}
-            eventCount={view.events.length}
-            issueCount={view.issues.length}
-            decisionCount={view.decisions.length}
-            nextActionCount={view.nextActions.length}
-            wrapUp={wrapUp}
-            onWrapUpAction={handleWrapUpAction}
-            onOpenUnresolvedItem={handleOpenUnresolvedItem}
-            onOpenAttentionMemory={openAcceptedMemory}
+        <SessionSummaryStrip
+          dataBasis={evidenceSummary.dataBasis}
+          dataBasisTone={status.dataBasisTone}
+          duration={duration}
+          sourceCount={view.sources.length}
+          eventCount={view.events.length}
+          issueCount={view.issues.length}
+          decisionCount={view.decisions.length}
+          nextActionCount={view.nextActions.length}
+          wrapUp={wrapUp}
+          onWrapUpAction={handleWrapUpAction}
+          onOpenUnresolvedItem={handleOpenUnresolvedItem}
+          onOpenAttentionMemory={openAcceptedMemory}
+        />
+
+        <HandoffReadinessPanel
+          model={handoffReadiness}
+          resumePrompt={resumePromptText}
+          onAction={handleHandoffAction}
+        />
+
+        <div id="reports-handoff" className="reports-handoff-group">
+          <ResumePromptCard
+            prompt={resumePromptText}
+            origin={promptOrigin}
+            emptyHint={
+              imports.length === 0
+                ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가한 뒤 Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
+                : "Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
+            }
           />
 
-          <HandoffReadinessPanel
-            model={handoffReadiness}
-            resumePrompt={resumePromptText}
-            onAction={handleHandoffAction}
+          <WorkContinuationCards view={view} onOpenTimeline={() => setCurrentView("timeline")} />
+
+          <MoriPackageStrip
+            view={view}
+            acceptedMemories={acceptedMemories}
+            reviewActions={reviewActions}
+            memoryStorageSource={memoryStorageSource}
+            memoryStorageFellBack={memoryStorageFellBack}
+            exportPlan={exportPlan}
           />
-
-          <div id="reports-handoff" className="reports-handoff-group">
-            <ResumePromptCard
-              prompt={resumePromptText}
-              origin={promptOrigin}
-              emptyHint={
-                imports.length === 0
-                  ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가한 뒤 Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
-                  : "Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
-              }
-            />
-
-            <WorkContinuationCards view={view} onOpenTimeline={() => setCurrentView("timeline")} />
-
-            <MoriPackageStrip
-              view={view}
-              acceptedMemories={acceptedMemories}
-              reviewActions={reviewActions}
-              memoryStorageSource={memoryStorageSource}
-              memoryStorageFellBack={memoryStorageFellBack}
-              exportPlan={exportPlan}
-            />
-          </div>
+        </div>
       </div>
     </>
   );

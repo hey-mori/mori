@@ -12,6 +12,7 @@ import {
   type MouseEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { focusFirstElement } from "./focusTrap";
 
 export type MoriMenuPosition = {
   x: number;
@@ -98,6 +99,11 @@ export function MoriOverflowMenu({
   const [position, setPosition] = useState<MoriMenuPosition | null>(null);
   const open = position !== null;
 
+  function closeMenu() {
+    setPosition(null);
+    window.requestAnimationFrame(() => buttonRef.current?.focus());
+  }
+
   function openFromButton() {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -115,7 +121,7 @@ export function MoriOverflowMenu({
         aria-expanded={open}
         onClick={(event) => {
           event.stopPropagation();
-          if (open) setPosition(null);
+          if (open) closeMenu();
           else openFromButton();
         }}
         onKeyDown={(event) => {
@@ -132,7 +138,7 @@ export function MoriOverflowMenu({
         <MoriMenuLayer
           position={position}
           items={items}
-          onClose={() => setPosition(null)}
+          onClose={closeMenu}
           label={label}
           align="end"
         />
@@ -188,17 +194,23 @@ function MoriMenuLayer({
         onClose();
         return;
       }
-      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      if (event.key === "Tab") {
+        onClose();
+        return;
+      }
+      if (
+        event.key !== "ArrowDown" &&
+        event.key !== "ArrowUp" &&
+        event.key !== "Home" &&
+        event.key !== "End"
+      ) return;
       event.preventDefault();
       const buttons = Array.from(
         ref.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
       );
       if (buttons.length === 0) return;
       const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-      const next =
-        event.key === "ArrowDown"
-          ? (index + 1) % buttons.length
-          : (index - 1 + buttons.length) % buttons.length;
+      const next = menuFocusIndex(event.key, index, buttons.length);
       buttons[next]?.focus();
     }
     document.addEventListener("pointerdown", onPointerDown);
@@ -212,9 +224,7 @@ function MoriMenuLayer({
   useEffect(() => {
     if (actionableItems.length === 0) return;
     window.setTimeout(() => {
-      ref.current
-        ?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
-        ?.focus();
+      focusFirstElement(ref.current);
     }, 0);
   }, [actionableItems.length]);
 
@@ -261,4 +271,11 @@ function MoriMenuLayer({
     </div>,
     document.body,
   );
+}
+
+function menuFocusIndex(key: string, index: number, length: number): number {
+  if (key === "Home") return 0;
+  if (key === "End") return length - 1;
+  if (key === "ArrowDown") return (index + 1) % length;
+  return (index - 1 + length) % length;
 }

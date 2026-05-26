@@ -4,6 +4,7 @@ import { useMoriAppStore, type SettingsTab } from "../../app/store";
 import { SETTINGS_TAB_DEFS, SettingsView } from "../../features/settings/SettingsView";
 import { AccountProfileView } from "../../features/account/AccountProfileView";
 import { SettingsRail, type SettingsRailItem } from "../../features/settings/SettingsPrimitives";
+import { focusFirstElement, trapTabKey } from "../ui/focusTrap";
 
 const RAIL_ITEMS: SettingsRailItem[] = [
   {
@@ -26,15 +27,29 @@ export function SettingsSheet() {
   const activeTab = useMoriAppStore((state) => state.settingsTab);
   const setActiveTab = useMoriAppStore((state) => state.setSettingsTab);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape") {
+        close();
+        return;
+      }
+      trapTabKey(event, sheetRef.current);
     };
     document.addEventListener("keydown", onKey);
-    sheetRef.current?.focus();
-    return () => document.removeEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.requestAnimationFrame(() => focusFirstElement(sheetRef.current));
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+      previousFocusRef.current?.focus();
+    };
   }, [open, close]);
 
   if (!open) return null;
@@ -51,12 +66,12 @@ export function SettingsSheet() {
         className="settings-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="프로필 및 설정"
+        aria-labelledby="settings-sheet-title"
         tabIndex={-1}
       >
         <header className="settings-sheet-head">
           <div className="settings-sheet-title">
-            <strong>Mori 환경설정</strong>
+            <strong id="settings-sheet-title">Mori 환경설정</strong>
             <span>이 기기에 저장되는 로컬 설정</span>
           </div>
           <button

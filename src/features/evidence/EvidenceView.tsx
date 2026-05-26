@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriDrawer } from "../../components/ui/MoriDrawer";
+import { MoriActionCluster } from "../../components/ui/MoriActionCluster";
 import { MoriSection } from "../../components/ui/MoriSection";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { ActionBar } from "../../components/layout/ActionBar";
@@ -190,9 +191,10 @@ export function EvidenceView() {
       className={`evidence-section evidence-source-catalog${
         hasImportedSources ? " is-secondary" : ""
       }`}
-      title={
-        <span className="evidence-section-title-row">
-          {hasImportedSources ? "소스 더 추가" : "소스 추가"}
+      title={hasImportedSources ? "소스 더 추가" : "소스 추가"}
+      actions={
+        <MoriActionCluster wrap={false}>
+          <Badge tone="green">{availableIntegrations.length}개</Badge>
           <HelpDisclosure label="Claude 대화를 가져오려면?" ariaLabel="Claude 가져오기 안내">
             <p>
               Claude Desktop · Claude Code 대화는 <strong>연결</strong> 화면에서 로컬 세션을 골라
@@ -200,9 +202,8 @@ export function EvidenceView() {
             </p>
             <p>여기 "AI 대화" 카드는 다른 도구의 대화나 텍스트를 직접 붙여넣을 때 쓰세요.</p>
           </HelpDisclosure>
-        </span>
+        </MoriActionCluster>
       }
-      actions={<Badge tone="green">{availableIntegrations.length}개</Badge>}
       ariaLabel={hasImportedSources ? "소스 더 추가" : "소스 추가"}
     >
       {isDemoSession ? (

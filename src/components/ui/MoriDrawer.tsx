@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { focusFirstElement, trapTabKey } from "./focusTrap";
 
 export type MoriDrawerProps = {
   /** When false the drawer (and its children) are unmounted entirely. */
@@ -20,19 +21,28 @@ export type MoriDrawerProps = {
  */
 export function MoriDrawer({ open, onClose, ariaLabel, children }: MoriDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      trapTabKey(event, panelRef.current);
     };
     document.addEventListener("keydown", onKey);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    panelRef.current?.focus();
+    window.requestAnimationFrame(() => focusFirstElement(panelRef.current));
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
+      previousFocusRef.current?.focus();
     };
   }, [open, onClose]);
 

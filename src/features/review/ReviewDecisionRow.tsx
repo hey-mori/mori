@@ -26,7 +26,13 @@ export function ReviewDecisionRow({
     <tr
       className={`review-decision-row ${selected ? "is-selected" : ""}`}
       aria-current={selected ? "true" : undefined}
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onSelect();
+      }}
     >
       <td>
         <strong>{decision.title}</strong>

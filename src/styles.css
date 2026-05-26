@@ -1538,9 +1538,9 @@ p {
   min-width: 188px;
   max-width: min(280px, calc(100vw - 16px));
   padding: 5px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--mori-border-strong, var(--line-strong));
   border-radius: var(--radius-md);
-  background: var(--panel);
+  background: var(--mori-surface, var(--panel));
   box-shadow: 0 16px 36px rgba(25, 32, 48, 0.16);
 }
 
@@ -1577,6 +1577,7 @@ p {
 .mori-menu-item:focus-visible {
   background: var(--gray-50);
   outline: none;
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .mori-menu-item.is-destructive {
@@ -1590,6 +1591,10 @@ p {
 .mori-menu-item:disabled {
   color: var(--muted-2);
   cursor: not-allowed;
+}
+
+.mori-menu-item:disabled svg {
+  color: var(--muted-2);
 }
 
 .mori-menu-separator {
@@ -4599,6 +4604,10 @@ button.start-entry-card:hover {
   .start-entry-strip {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .start-session-page .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .setup-block,
@@ -4702,19 +4711,38 @@ input,
 
 .source-card,
 .engine-card {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
+  min-width: 0;
+  border: 1px solid var(--mori-border, var(--line));
+  border-radius: var(--mori-radius-md, 8px);
+  background: var(--mori-surface, #ffffff);
+  color: var(--mori-text, var(--text));
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .source-card {
   display: grid;
-  grid-template-columns: 34px 1fr auto;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  min-height: 62px;
-  padding: var(--mori-space-3) var(--mori-space-4);
+  gap: var(--mori-space-3);
+  min-height: 54px;
+  padding: var(--mori-space-3);
   text-align: left;
+}
+
+.source-card:hover,
+.engine-card:hover {
+  border-color: var(--mori-border-strong, var(--line-strong));
+  background: var(--mori-surface-subtle, var(--panel-soft));
+}
+
+.source-card:focus-visible,
+.engine-card:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
 }
 
 .source-card.selected,
@@ -4729,7 +4757,8 @@ input,
 .source-card div,
 .engine-card div {
   display: grid;
-  gap: 5px;
+  gap: 3px;
+  min-width: 0;
 }
 
 .source-card span {
@@ -4738,6 +4767,16 @@ input,
   gap: 6px;
   color: var(--muted);
   font-size: 12px;
+  min-width: 0;
+}
+
+.source-card strong,
+.engine-card strong,
+.source-card span,
+.engine-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .source-card span i {
@@ -4856,11 +4895,11 @@ input,
 
 .engine-card {
   display: grid;
-  grid-template-columns: 34px 1fr auto;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  min-height: 70px;
-  padding: 14px;
+  gap: var(--mori-space-3);
+  min-height: 58px;
+  padding: var(--mori-space-3);
   text-align: left;
 }
 
@@ -4952,6 +4991,11 @@ hr {
  * the inspector body padding and the privacy line sits in the pinned footer. */
 .start-session-page .summary-source-list {
   margin: 4px 0 0;
+}
+
+.start-session-page .form-row {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--mori-space-4);
 }
 
 .start-summary-footer {
@@ -7102,18 +7146,6 @@ pre {
   font-size: 16px;
 }
 
-/* Section title + inline help disclosure on one calm row. */
-.evidence-section-title-row {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--mori-space-3);
-  flex-wrap: wrap;
-}
-
-.evidence-section-title-row h2 {
-  margin: 0;
-}
-
 .evidence-demo-note {
   margin: 0 2px 6px;
   font-size: 12px;
@@ -8983,8 +9015,10 @@ pre {
   background: var(--panel-soft);
 }
 
-.review-decision-row.is-selected {
-  background: rgba(98, 70, 245, 0.08);
+.review-decision-row:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: -2px;
+  background: var(--panel-soft);
 }
 
 .review-decision-row.is-selected {
@@ -11597,6 +11631,13 @@ pre {
   background: var(--gray-50);
 }
 
+.report-type-card:focus-visible,
+.report-format-button:focus-visible,
+.report-section-list input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
 .report-type-card.selected {
   background: var(--purple-50);
 }
@@ -11689,6 +11730,14 @@ pre {
   background: white;
   text-align: center;
   cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.report-format-button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--panel-soft);
 }
 
 .report-format-button.selected {
@@ -11728,11 +11777,13 @@ pre {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
+  min-width: 0;
 }
 
 .report-privacy-list span {
   display: grid;
   gap: 2px;
+  min-width: 0;
   font-size: 12px;
   font-weight: 600;
   color: var(--text);
@@ -11771,6 +11822,7 @@ pre {
   display: inline-flex;
   gap: 6px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .report-warnings {
@@ -11812,6 +11864,7 @@ pre {
   max-height: 360px;
   overflow: auto;
   white-space: pre-wrap;
+  overscroll-behavior: contain;
 }
 
 .report-data-basis {
@@ -11821,6 +11874,18 @@ pre {
   margin: 0;
   font-size: 11px;
   color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .report-privacy-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .report-builder-actions,
+  .report-builder-actions .btn {
+    width: 100%;
+  }
 }
 
 /* ============================
@@ -15897,19 +15962,35 @@ button.settings-option {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  min-height: 30px;
+  padding: 0 11px;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
+  border-radius: var(--radius-sm);
+  background: var(--mori-surface, #ffffff);
   color: var(--muted);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 650;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.import-kind-tab:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.import-kind-tab:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
 }
 
 .import-kind-tab.active {
-  background: var(--text);
-  color: white;
-  border-color: var(--text);
+  background: var(--purple-50);
+  color: var(--purple);
+  border-color: rgba(98, 70, 245, 0.28);
 }
 
 .import-form {
@@ -15931,6 +16012,7 @@ button.settings-option {
 }
 
 .import-form input,
+.import-form select,
 .import-form textarea {
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -15938,6 +16020,20 @@ button.settings-option {
   background: white;
   color: var(--text);
   font: inherit;
+}
+
+.import-form input,
+.import-form select {
+  height: 36px;
+  min-height: 36px;
+}
+
+.import-form input:focus-visible,
+.import-form select:focus-visible,
+.import-form textarea:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+  border-color: var(--purple);
 }
 
 .import-form textarea {
@@ -16343,10 +16439,19 @@ button.settings-option {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .git-fetch-path-row input {
   flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 620px) {
+  .git-fetch-path-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .repository-add {
@@ -19925,6 +20030,21 @@ button.settings-option {
   color: var(--muted-2);
 }
 
+@media (max-width: 700px) {
+  .mori-object-row {
+    align-items: flex-start;
+  }
+
+  .mori-object-row-aside {
+    align-items: flex-start;
+    margin-left: 0;
+  }
+
+  .mori-object-row-timestamp {
+    white-space: normal;
+  }
+}
+
 /* ─── ToolbarSearch / mori-search-field ──────────────────────────────────── */
 
 .mori-search-field {
@@ -19933,6 +20053,7 @@ button.settings-option {
   gap: var(--mori-space-2);
   padding: 0 var(--mori-space-3);
   height: 30px;
+  max-width: 100%;
   background: var(--gray-50);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -19951,12 +20072,25 @@ button.settings-option {
 
 .mori-search-field input {
   flex: 1;
+  height: 100%;
+  padding: 0;
   border: none;
   background: transparent;
   font-size: 13px;
   color: var(--text);
   outline: none;
   min-width: 120px;
+}
+
+@media (max-width: 640px) {
+  .mori-search-field {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .mori-search-field input {
+    min-width: 0;
+  }
 }
 
 .mori-search-field input::placeholder {

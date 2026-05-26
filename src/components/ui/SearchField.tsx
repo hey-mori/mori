@@ -1,4 +1,5 @@
 import { Search, X } from "lucide-react";
+import { useRef } from "react";
 
 export type SearchFieldProps = {
   value: string;
@@ -23,10 +24,20 @@ export function SearchField({
   clearLabel = "검색 지우기",
   autoFocus = false,
 }: SearchFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   return (
-    <label className={`mori-search-field ${className}`.trim()}>
+    <div
+      className={`mori-search-field ${className}`.trim()}
+      role="search"
+      onMouseDown={(event) => {
+        if ((event.target as HTMLElement).closest("button")) return;
+        inputRef.current?.focus();
+      }}
+    >
       <Search size={14} aria-hidden="true" />
       <input
+        ref={inputRef}
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -45,6 +56,6 @@ export function SearchField({
           <X size={12} aria-hidden="true" />
         </button>
       ) : null}
-    </label>
+    </div>
   );
 }

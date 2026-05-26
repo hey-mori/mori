@@ -228,16 +228,16 @@ export function HomeView() {
               <MoriSection
                 className="home-section home-recent"
                 ariaLabel="최근 세션"
-                  title="최근 세션"
+                title="최근 세션"
                 actions={
-                    <button
-                      type="button"
-                      className="home-section-link"
-                      onClick={() => setCurrentView("workspace")}
-                    >
-                      전체 세션 <ArrowRight size={13} aria-hidden="true" />
-                    </button>
-                  }
+                  <button
+                    type="button"
+                    className="home-section-link"
+                    onClick={() => setCurrentView("workspace")}
+                  >
+                    전체 세션 <ArrowRight size={13} aria-hidden="true" />
+                  </button>
+                }
               >
                 {overview.recentSessions.length > 0 ? (
                   <ul className="home-session-list">

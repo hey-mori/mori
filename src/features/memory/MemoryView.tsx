@@ -399,7 +399,7 @@ export function MemoryView() {
       {memoryTab === "consolidation" ? (
         <ConsolidationReviewView embedded />
       ) : (
-      <div className="memory-main">
+        <div className="memory-main">
           <ProjectMemoryHero
             projectName={view.project.name}
             projectDescription={view.project.description}
@@ -483,7 +483,7 @@ export function MemoryView() {
               />
             </div>
           </details>
-      </div>
+        </div>
       )}
 
       <MoriDrawer
