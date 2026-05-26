@@ -13,6 +13,8 @@ import {
   TIMELINE_INSPECTOR_NARROW_MAX_PX,
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
+import { selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
+import { timelineActivityLaneOrder } from "../../lib/timeline/activityModel";
 import type { TimelineEvent } from "../../domain/types";
 import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 import { EventInspector } from "./EventInspector";
@@ -168,6 +170,55 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const handleFrameWidth = useCallback((width: number) => {
     setFrameWidth((current) => (current === width ? current : width));
   }, []);
+
+  // Arrow-key navigation for the swimlane: ← → move within a lane by time,
+  // ↑ ↓ jump to the nearest item in the adjacent non-empty lane. Defined
+  // before the empty-state early return so hook order stays stable. Disabled
+  // in Flow Focus, the narrow chrono list, the conversation thread, and while
+  // the user is typing in an input.
+  useEffect(() => {
+    const narrow = viewportWidth <= TIMELINE_INSPECTOR_NARROW_MAX_PX;
+    const swimlaneActive = mode === "timeline" && !narrow && readingMode !== "flow";
+    if (!swimlaneActive) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const items = model.visibleDisplayItems;
+      if (items.length === 0) return;
+      const current = selectedEventId || null;
+      let nextId: string | null = null;
+      switch (event.key) {
+        case "ArrowRight":
+          nextId = selectInLane(items, current, "next");
+          break;
+        case "ArrowLeft":
+          nextId = selectInLane(items, current, "prev");
+          break;
+        case "ArrowDown":
+          nextId = selectAcrossLane(items, current, "down", timelineActivityLaneOrder);
+          break;
+        case "ArrowUp":
+          nextId = selectAcrossLane(items, current, "up", timelineActivityLaneOrder);
+          break;
+        default:
+          return;
+      }
+      if (nextId) {
+        event.preventDefault();
+        setSelectedEventId(nextId);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mode, viewportWidth, readingMode, model.visibleDisplayItems, selectedEventId, setSelectedEventId]);
 
   if (model.emptyVariant) {
     // Inside the session 흐름 tab the shell content is full-bleed, so wrap the
