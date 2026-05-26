@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   GitBranch,
   KanbanSquare,
-  Lightbulb,
   ListChecks,
   Sparkles,
   Table2,
@@ -55,7 +54,7 @@ import { ReviewIssueCard } from "./ReviewIssueCard";
 import { ReviewDecisionRow } from "./ReviewDecisionRow";
 import { ReviewNextActionRow } from "./ReviewNextActionRow";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
-import { ReviewSummaryPanel } from "./ReviewSummaryPanel";
+import { ReviewOverviewStrip } from "./ReviewOverviewStrip";
 import { formatDateTime } from "../../lib/formatting/time";
 
 const TAB_DEFS: Array<{ id: ReviewTab; label: string; icon: typeof KanbanSquare }> = [
@@ -269,54 +268,45 @@ export function ReviewView() {
     />
   );
 
+  // The rail is a single context inspector for the selected item. Session-level
+  // status (counts, attention, priority mix) moved to the main-canvas overview
+  // strip, so the side panel is no longer the only place the page makes sense.
   const aside = (
-    <aside className="review-rail" aria-label="검토 상세">
-      <ReviewDetailPanel
-        selection={effectiveSelection}
-        view={view}
-        onShowTimeline={handleShowTimeline}
-        onToggleNextActionComplete={(id, completed) =>
-          setNextActionCompletion(id, completed)
+    <ReviewDetailPanel
+      selection={effectiveSelection}
+      view={view}
+      onShowTimeline={handleShowTimeline}
+      onToggleNextActionComplete={(id, completed) =>
+        setNextActionCompletion(id, completed)
+      }
+      onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
+      onEditIssue={(id, fields) => editIssue(id, fields)}
+      onPromoteIssueToNextAction={(id) => {
+        const nextAction = promoteIssueToNextAction(id);
+        if (nextAction) {
+          selectAndOpen(
+            { kind: "nextAction", nextActionId: nextAction.id },
+            "nextActions",
+          );
         }
-        onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
-        onEditIssue={(id, fields) => editIssue(id, fields)}
-        onPromoteIssueToNextAction={(id) => {
-          const nextAction = promoteIssueToNextAction(id);
-          if (nextAction) {
-            selectAndOpen(
-              { kind: "nextAction", nextActionId: nextAction.id },
-              "nextActions",
-            );
-          }
-          return nextAction;
-        }}
-        onSetDecisionConfirmed={(id, confirmed) =>
-          setDecisionConfirmed(id, confirmed)
-        }
-        onEditDecision={(id, fields) => editDecision(id, fields)}
-        onEditNextAction={(id, fields) => editNextAction(id, fields)}
-        canEditReview={!view.isDemo}
-      />
-      <ReviewSummaryPanel
-        summary={summary}
-        issues={view.issues}
-        decisions={view.decisions}
-        nextActions={view.nextActions}
-        hasAnalysis={hasAnalysis}
-        providerLabel={analysisProviderLabel}
-        dataBasis={dataBasis}
-      />
-    </aside>
+        return nextAction;
+      }}
+      onSetDecisionConfirmed={(id, confirmed) =>
+        setDecisionConfirmed(id, confirmed)
+      }
+      onEditDecision={(id, fields) => editDecision(id, fields)}
+      onEditNextAction={(id, fields) => editNextAction(id, fields)}
+      canEditReview={!view.isDemo}
+    />
   );
 
   const body = (
     <>
-      <InsightsValueNote
+      <ReviewOverviewStrip
+        summary={summary}
+        issues={view.issues}
         mode={mode}
         hasAnalysis={hasAnalysis}
-        issueCount={summary.issueCount}
-        decisionCount={summary.decisionCount}
-        nextActionCount={summary.nextActionCount}
       />
 
       <ReviewAnalysisNotice
@@ -421,36 +411,6 @@ export function ReviewView() {
         {showAside ? aside : null}
       </div>
     </div>
-  );
-}
-
-/**
- * Value-first framing strip for the Insights tab. Replaces the old
- * "검토 후보 N개" framing the user disliked: confirming an issue / decision /
- * next action is what carries forward into durable project memory. Calm,
- * concise, and only shown when there is something to confirm.
- */
-function InsightsValueNote({
-  mode,
-  hasAnalysis,
-  issueCount,
-  decisionCount,
-  nextActionCount,
-}: {
-  mode: "demo" | "draft";
-  hasAnalysis: boolean;
-  issueCount: number;
-  decisionCount: number;
-  nextActionCount: number;
-}) {
-  if (mode === "draft" && !hasAnalysis) return null;
-  const total = issueCount + decisionCount + nextActionCount;
-  if (total === 0) return null;
-  return (
-    <p className="session-insights-note">
-      <Lightbulb size={14} aria-hidden="true" />
-      <span>확인한 항목은 프로젝트 메모리에 남아 다음 세션에서 다시 쓰입니다.</span>
-    </p>
   );
 }
 

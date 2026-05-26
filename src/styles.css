@@ -5240,7 +5240,7 @@ hr {
 .page-shell-split > .inspector-panel,
 .page-shell-split > .mori-inspector-panel,
 .page-shell-split > .evidence-detail,
-.page-shell-split > .review-rail,
+.page-shell-split > .review-detail,
 .page-shell-split > .settings-trust,
 .page-shell-split > .companion-inbox-rail {
   position: sticky;
@@ -5253,7 +5253,7 @@ hr {
 @media (max-width: 1180px) {
   .page-shell-split > .inspector-panel,
   .page-shell-split > .evidence-detail,
-  .page-shell-split > .review-rail,
+  .page-shell-split > .review-detail,
   .page-shell-split > .settings-trust,
   .page-shell-split > .companion-inbox-rail {
     position: static;
@@ -5586,7 +5586,7 @@ hr {
 
 /* The inspector rail sticks within the shell scroll region, like other rails. */
 .session-tab-split > .evidence-detail,
-.session-tab-split > .review-rail {
+.session-tab-split > .review-detail {
   position: sticky;
   top: 56px;
   align-self: start;
@@ -5600,7 +5600,7 @@ hr {
   }
 
   .session-tab-split > .evidence-detail,
-  .session-tab-split > .review-rail {
+  .session-tab-split > .review-detail {
     position: static;
     max-height: none;
     overflow: visible;
@@ -5633,27 +5633,6 @@ hr {
   position: sticky;
   top: 56px;
   max-height: calc(100vh - 210px);
-}
-
-/* Value-first framing strip on the 인사이트 tab. */
-.session-insights-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  margin: 0;
-  padding: var(--mori-space-3) var(--mori-space-5);
-  border: 1px solid var(--mori-border);
-  border-radius: var(--mori-radius-lg);
-  background: var(--mori-accent-soft);
-  color: var(--mori-text);
-  font-size: var(--mori-font-size-sm);
-  line-height: var(--mori-line-normal);
-}
-
-.session-insights-note svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--mori-accent);
 }
 
 /* ── Home ───────────────────────────────────────────────────────────────── */
@@ -8848,13 +8827,6 @@ pre {
   min-width: 0;
 }
 
-/* The detail + summary rail stacked in the shell aside. */
-.review-rail {
-  display: grid;
-  gap: var(--mori-space-6);
-  align-content: start;
-}
-
 /* Compact head row above a list/table tab (badges only, no prose). */
 .review-list-head {
   display: flex;
@@ -9725,208 +9697,172 @@ pre {
   flex-wrap: wrap;
 }
 
-/* Summary panel */
-
-.review-summary {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: white;
+/* Review overview strip — horizontal, main-canvas session status.
+   Carries the at-a-glance signal that used to sit in the right rail (what
+   needs attention, the issue lifecycle, the priority mix) so the page is
+   self-explanatory without reading the side panel. Wraps to a stack on
+   narrow widths; the value caption spans the full width below the segments. */
+.review-overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--mori-space-4) var(--mori-space-6);
+  padding: 12px 16px;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-lg);
+  background: var(--mori-surface);
   box-shadow: var(--shadow-soft);
 }
 
-.review-summary-head h3 {
-  margin: 0 0 4px 0;
-  font-size: 14px;
-}
-
-.review-summary-head p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.55;
-}
-
-.review-summary-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-/* Review summary metrics: read as a calm number strip inside the summary
-   panel, not nested tinted tiles. Tone is carried by the number color only. */
-.review-summary-metric {
-  display: grid;
-  gap: 2px;
-  padding: 6px 4px;
-  text-align: center;
-  background: transparent;
-}
-
-.review-summary-metric strong {
-  font-size: var(--mori-font-size-xl);
-  font-weight: 700;
-  color: var(--text);
-}
-
-.review-summary-metric span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.review-summary-metric.tone-purple strong { color: var(--purple); }
-.review-summary-metric.tone-green  strong { color: var(--green); }
-.review-summary-metric.tone-blue   strong { color: var(--blue); }
-
-.review-summary-section {
-  display: grid;
-  gap: 8px;
-}
-
-.review-summary-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.review-summary-stats li {
+.review-overview-attention {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.review-summary-stats li strong {
-  color: var(--text);
-  font-weight: 700;
-}
-
-.review-summary-bar {
-  display: flex;
-  width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: var(--gray-50);
-}
-
-.review-summary-bar .seg {
-  display: block;
-  height: 100%;
-}
-
-.review-summary-bar .seg-high { background: var(--red); }
-.review-summary-bar .seg-medium { background: var(--orange); }
-.review-summary-bar .seg-low { background: var(--blue); }
-
-.review-summary-pri-legend {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.review-summary-pri-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.review-summary-pri-legend li strong {
-  margin-left: auto;
-  color: var(--text);
-}
-
-.review-summary-alerts {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.review-summary-alerts li {
-  display: inline-flex;
   align-items: flex-start;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 9px;
+  flex: 1 1 230px;
+  min-width: 200px;
+  padding: 8px 10px;
   border-radius: 8px;
   background: var(--orange-50);
   color: #8a4500;
-  font-size: 11px;
-  line-height: 1.55;
 }
 
-.review-summary-alerts li svg {
+.review-overview-attention svg {
   flex-shrink: 0;
   margin-top: 1px;
   color: #b46100;
 }
 
-.review-summary-alerts li.review-summary-alert-ok {
+.review-overview-attention.is-clear {
   background: var(--green-50);
   color: var(--green);
 }
 
-.review-summary-alerts li.review-summary-alert-ok svg {
+.review-overview-attention.is-clear svg {
   color: var(--green);
 }
 
-.review-summary-actions {
+.review-overview-attention-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.review-overview-attention-body strong {
+  font-size: var(--mori-font-size-sm);
+  font-weight: 700;
+}
+
+.review-overview-attention-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 11px;
+}
+
+/* Each non-attention block reads as a labelled segment, divided by a hairline
+   on comfortable widths. */
+.review-overview-segment {
   display: grid;
   gap: 6px;
+  align-content: start;
+  padding-left: var(--mori-space-6);
+  border-left: 1px solid var(--mori-border);
+}
+
+.review-overview-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.review-overview-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.review-summary-actions li {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px;
-  align-items: center;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+.review-overview-stats li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
   font-size: 12px;
-}
-
-.review-summary-actions li span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.review-summary-empty {
-  margin: 0;
-  padding: 8px;
-  border: 1px dashed var(--line);
-  border-radius: 8px;
   color: var(--muted);
-  font-size: 11px;
-  text-align: center;
 }
 
-.review-summary-basis {
-  margin: 0;
-  font-size: 12px;
+.review-overview-stats li strong {
   color: var(--text);
-  line-height: 1.55;
+  font-weight: 700;
 }
 
-.review-summary-basis.muted {
+.review-overview-priority {
+  display: grid;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.review-overview-bar {
+  display: flex;
+  width: 100%;
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--gray-50);
+}
+
+.review-overview-bar .seg { display: block; height: 100%; }
+.review-overview-bar .seg-high { background: var(--red); }
+.review-overview-bar .seg-medium { background: var(--orange); }
+.review-overview-bar .seg-low { background: var(--blue); }
+
+.review-overview-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-overview-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.review-overview-legend li strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.review-overview-caption {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--mori-border);
   color: var(--muted);
   font-size: 11px;
+  line-height: var(--mori-line-normal);
+}
+
+.review-overview-caption svg {
+  flex-shrink: 0;
+  color: var(--mori-accent);
+}
+
+/* Narrow: drop the segment dividers and let everything stack full-width. */
+@media (max-width: 720px) {
+  .review-overview-segment {
+    padding-left: 0;
+    border-left: none;
+  }
 }
 
 /* ============================
@@ -17229,6 +17165,36 @@ button.settings-option {
   min-width: 0;
 }
 
+/* Bundle density micro-bar — a calm, subordinate sparkline of when the
+ * clustered members occurred across the bundle's span. Sits at the right of
+ * the footer; bar tone matches the lane. Decorative (aria-hidden); the
+ * "N개 이벤트" count carries the magnitude for assistive tech. */
+.timeline-bundle-density {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  height: 8px;
+  overflow: visible;
+  opacity: 0.5;
+}
+
+.timeline-bundle-density > span {
+  width: 2px;
+  min-height: 1px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.timeline-bundle-density.tone-purple { color: var(--purple); }
+.timeline-bundle-density.tone-green  { color: var(--green); }
+.timeline-bundle-density.tone-red    { color: var(--red); }
+.timeline-bundle-density.tone-blue   { color: var(--blue); }
+.timeline-bundle-density.tone-cyan   { color: var(--cyan); }
+.timeline-bundle-density.tone-orange { color: #b46100; }
+.timeline-bundle-density.tone-gray   { color: #5b6477; }
+
 .timeline-bundle-title {
   align-self: center;
 }
@@ -17496,7 +17462,6 @@ button.settings-option {
   .evidence-grid,
   .review-event-card-meta,
   .review-issue-board-columns,
-  .review-summary-metrics,
   .session-summary-metrics,
   .memory-hero-stats,
   .settings-sqlite-meta,
@@ -17514,7 +17479,6 @@ button.settings-option {
   .evidence-grid,
   .review-event-card-meta,
   .review-issue-board-columns,
-  .review-summary-metrics,
   .session-summary-metrics,
   .memory-hero-stats,
   .settings-sqlite-meta,
