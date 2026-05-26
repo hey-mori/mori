@@ -6,6 +6,7 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels, eventTypeTone } from "../../domain/constants";
 import type { MoriMockSession } from "../../domain/types";
 import { formatTimeRange } from "../../lib/formatting/time";
+import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import {
   describeBundleKind,
   describeBundleReason,
@@ -23,6 +24,7 @@ export function TimelineBundleInspector({
   onTrace: () => void;
 }) {
   const trust = describeTrustLevel(bundle.trustLevel);
+  const laneVisuals = getActivityLaneVisuals(bundle.laneType);
   const includedEvents = session.events.filter((event) => bundle.memberEventIds.includes(event.id));
   const sources = session.sources.filter((source) =>
     includedEvents.some((event) => event.sourceRefs.includes(source.id)),
@@ -34,7 +36,7 @@ export function TimelineBundleInspector({
     <aside className="inspector" aria-label="Bundle inspector">
       <header className="inspector-header">
         <div className="inspector-badges">
-          <Badge tone={eventTypeTone[bundle.laneType]}>{eventTypeLabels[bundle.laneType]}</Badge>
+          <Badge tone={laneVisuals.tone}>{laneVisuals.label}</Badge>
           <Badge tone={trust.tone}>{trust.label}</Badge>
           <Badge tone="gray">{describeBundleKind(bundle.bundleKind)}</Badge>
         </div>

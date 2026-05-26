@@ -7,7 +7,6 @@
  * no React dependencies. Components consume a finished `TimelineRenderModel`
  * and never reach into `event.linkedIssueIds.length` style domain access.
  */
-import { laneOrder as defaultLaneOrder } from "../../domain/constants";
 import type {
   Decision,
   EventType,
@@ -16,6 +15,15 @@ import type {
   Relationship,
   TimelineEvent,
 } from "../../domain/types";
+import {
+  buildEventActivityDescriptor,
+  buildSourceIndex,
+  getTimelineLaneForEvent,
+  timelineActivityLaneOrder,
+  type EventActivityDescriptor,
+  type ActivityLaneId,
+} from "./activityModel";
+import { deriveProjectIdentityHint, type ProjectIdentityHint } from "../session/projectIdentity";
 import { getFocusedEntitySet } from "../relationships/traversal";
 import { createTimelineDisplayItems } from "./bundleEvents";
 import {
@@ -38,7 +46,7 @@ export type TimelineEmptyVariant =
   | "draft-needs-quick-pass";
 
 export type LaneRenderModel = {
-  type: EventType;
+  type: ActivityLaneId;
   /** Number of events in the visible filter set on this lane. */
   eventCount: number;
   /** Number of display items (post-bundling) on this lane. */
@@ -80,6 +88,8 @@ export type TimelineRenderModel = {
   mode: TimelineMode;
   /** Density passed through for components that still need it. */
   density: TimelineDensity;
+  /** Source index used by card/list/inspector view-models. */
+  sourceIndex: Map<string, MoriMockSession["sources"][number]>;
 };
 
 export type TimelineGapMarker = {
@@ -105,7 +115,7 @@ export type BuildTimelineRenderModelInput = {
   activeFilters: EventType[];
   searchQuery: string;
   frameWidth: number;
-  laneOrder?: EventType[];
+  laneOrder?: ActivityLaneId[];
   laneLabelWidthPx?: number;
   /**
    * Whether the session is the demo (no real imports). Used purely to decide
@@ -119,7 +129,8 @@ export type BuildTimelineRenderModelInput = {
 export function buildTimelineRenderModel(
   input: BuildTimelineRenderModelInput,
 ): TimelineRenderModel {
-  const laneOrder = input.laneOrder ?? defaultLaneOrder;
+  const laneOrder = input.laneOrder ?? timelineActivityLaneOrder;
+  const sourceIndex = buildSourceIndex(input.view.sources);
 
   // 1. Empty state — short-circuit before anything else.
   const emptyVariant = chooseEmptyVariant({
@@ -150,6 +161,7 @@ export function buildTimelineRenderModel(
     visibleEvents,
     input.view.relationships,
     {
+      sources: input.view.sources,
       timeWindowMinutes: bundleTuning.timeWindowMinutes,
       minEventsForBundle: 3,
       preserveSelectedEventId: input.selectedEventId,
@@ -163,7 +175,7 @@ export function buildTimelineRenderModel(
       // bundle threshold — individual turns stay visible, only genuinely
       // rapid-fire runs cluster.
       laneOverrides: {
-        aiConversation: {
+        conversation: {
           timeWindowMinutes: bundleTuning.conversationTimeWindowMinutes,
           minEventsForBundle: bundleTuning.conversationMinEventsForBundle,
           maxVisibleItemsPerLane: bundleTuning.conversationMaxVisibleItemsPerLane,
@@ -207,6 +219,7 @@ export function buildTimelineRenderModel(
     laneOrder,
     visibleEvents,
     visibleDisplayItems,
+    sourceIndex,
   });
 
   return {
@@ -226,6 +239,7 @@ export function buildTimelineRenderModel(
     focusActive,
     mode: input.mode,
     density: input.density,
+    sourceIndex,
   };
 }
 
@@ -432,15 +446,17 @@ function computeFocusedSet(args: {
 }
 
 function buildLaneRenderModels(args: {
-  laneOrder: EventType[];
+  laneOrder: ActivityLaneId[];
   visibleEvents: TimelineEvent[];
   visibleDisplayItems: TimelineDisplayItem[];
+  sourceIndex: ReadonlyMap<string, MoriMockSession["sources"][number]>;
 }): LaneRenderModel[] {
-  const eventCounts = new Map<EventType, number>();
+  const eventCounts = new Map<ActivityLaneId, number>();
   for (const event of args.visibleEvents) {
-    eventCounts.set(event.type, (eventCounts.get(event.type) ?? 0) + 1);
+    const lane = getTimelineLaneForEvent({ event, sources: args.sourceIndex });
+    eventCounts.set(lane, (eventCounts.get(lane) ?? 0) + 1);
   }
-  const laneItems = new Map<EventType, TimelineDisplayItem[]>();
+  const laneItems = new Map<ActivityLaneId, TimelineDisplayItem[]>();
   for (const lane of args.laneOrder) laneItems.set(lane, []);
   for (const item of args.visibleDisplayItems) {
     const bucket = laneItems.get(item.laneType);
@@ -521,6 +537,8 @@ export type InspectorViewModel = {
   nextActions: MoriMockSession["nextActions"];
   hiddenRelationshipCount: number;
   focusedRelationships: Relationship[];
+  activity: EventActivityDescriptor;
+  projectHint: ProjectIdentityHint;
 };
 
 /**
@@ -567,5 +585,15 @@ export function buildInspectorViewModel(args: {
     nextActions,
     hiddenRelationshipCount,
     focusedRelationships,
+    activity: buildEventActivityDescriptor({
+      event,
+      sources: view.sources,
+      density: "comfortable",
+    }),
+    projectHint: deriveProjectIdentityHint({
+      session: view.session,
+      sources: view.sources,
+      events: view.events,
+    }),
   };
 }

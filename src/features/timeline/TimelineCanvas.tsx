@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { eventTypeIcons, eventTypeLabels } from "../../domain/constants";
+import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import {
@@ -25,6 +25,7 @@ import { RelationshipLineLayer } from "./RelationshipLineLayer";
 import { TimelineTimeMarkers } from "./TimelineTimeMarkers";
 import type { Relationship } from "../../domain/types";
 import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
+import { activityLaneIcons } from "./lib/activityIcons";
 
 export type TimelineCanvasProps = {
   model: TimelineRenderModel;
@@ -200,11 +201,12 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
             const laneLayout = layout.lanes.find((entry) => entry.type === lane.type);
             if (!laneLayout) return null;
             return (
+              // Lanes are derived from normalized activity, not persisted event type.
               <TimelineLane
                 key={lane.type}
-                icon={eventTypeIcons[lane.type]}
-                label={eventTypeLabels[lane.type]}
-                tone={lane.type}
+                icon={activityLaneIcons[lane.type]}
+                label={getActivityLaneVisuals(lane.type).label}
+                tone={getActivityLaneVisuals(lane.type).tone}
                 lane={laneLayout}
                 laneLabelWidthPx={layout.laneLabelWidthPx}
                 items={lane.items}
@@ -216,6 +218,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
                 onSelect={onSelect}
                 onHover={onHover}
                 eventMenuItems={eventMenuItems}
+                sourceIndex={model.sourceIndex}
               />
             );
           })}

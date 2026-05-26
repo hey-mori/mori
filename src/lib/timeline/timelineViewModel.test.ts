@@ -106,14 +106,22 @@ describe("buildTimelineRenderModel", () => {
   it("returns lanes in the configured order", () => {
     const model = buildModel(moriMockSession);
     expect(model.lanes.map((lane) => lane.type)).toEqual([
-      "aiConversation",
-      "decision",
-      "issue",
-      "fileCode",
-      "webResearch",
-      "documentNote",
-      "artifact",
-      "other",
+      "conversation",
+      "command",
+      "files",
+      "git",
+      "design",
+      "tracker",
+      "docs",
+      "research",
+      "build",
+      "deploy",
+      "automation",
+      "review",
+      "handoff",
+      "memory",
+      "notes",
+      "unknown",
     ]);
   });
 
@@ -261,6 +269,8 @@ describe("buildInspectorViewModel", () => {
     expect(inspector.sources.map((source) => source.id).sort()).toEqual(
       target.sourceRefs.slice().sort(),
     );
+    expect(inspector.activity.activityKind).toBeTruthy();
+    expect(inspector.projectHint.projectLabel).toBeTruthy();
   });
 });
 

@@ -19,7 +19,7 @@ describe("timeline workflow bundles", () => {
       decisions: moriMockSession.decisions,
     });
 
-    const researchBundle = items.find((item) => item.id.includes("bundle-webResearch"));
+    const researchBundle = items.find((item) => item.id.includes("bundle-research"));
     expect(researchBundle && isTimelineBundle(researchBundle)).toBe(true);
     expect(researchBundle && isTimelineBundle(researchBundle) ? researchBundle.count : 0).toBeGreaterThanOrEqual(3);
     expect(researchBundle && isTimelineBundle(researchBundle) ? researchBundle.title : "").toContain("조사");
@@ -58,7 +58,7 @@ describe("timeline workflow bundles", () => {
       decisions: moriMockSession.decisions,
     });
 
-    const noteBundles = items.filter((item) => item.kind === "bundle" && item.laneType === "documentNote");
+    const noteBundles = items.filter((item) => item.kind === "bundle" && item.laneType === "docs");
     expect(noteBundles).toHaveLength(0);
   });
 
@@ -71,7 +71,7 @@ describe("timeline workflow bundles", () => {
       decisions: moriMockSession.decisions,
     });
 
-    const researchBundle = items.find((item) => item.id.includes("bundle-webResearch"));
+    const researchBundle = items.find((item) => item.id.includes("bundle-research"));
     expect(researchBundle && isTimelineBundle(researchBundle)).toBe(true);
     if (!researchBundle || !isTimelineBundle(researchBundle)) return;
 

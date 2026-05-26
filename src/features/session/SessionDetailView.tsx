@@ -17,6 +17,7 @@ import {
 } from "../../app/sessionStore";
 import { moriMockSession } from "../../domain/mock-data";
 import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
+import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
 import { buildWorkContext } from "../../lib/session/workContext";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
@@ -136,6 +137,15 @@ function SessionOriginInline() {
       }),
     [view.session, view.sources, view.events, imports.length, mode],
   );
+  const projectHint = useMemo(
+    () =>
+      deriveProjectIdentityHint({
+        session: view.session,
+        sources: view.sources,
+        events: view.events,
+      }),
+    [view.session, view.sources, view.events],
+  );
 
   return (
     <div
@@ -149,6 +159,7 @@ function SessionOriginInline() {
     >
       <span className="session-origin-chip is-primary">{summary.boundaryLabel}</span>
       <span className="session-origin-chip">{summary.sourceMixLabel}</span>
+      <span className="session-origin-meta">context {projectHint.projectLabel}</span>
       <span className="session-origin-meta">{summary.sourceCountLabel}</span>
       <span className="session-origin-meta">{summary.eventCountLabel}</span>
       <span className="session-origin-meta">{summary.retentionLabel}</span>

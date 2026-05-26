@@ -1,5 +1,5 @@
 import { useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
-import { eventTypeTone, laneOrder } from "../../domain/constants";
+import { getActivityLaneVisuals, timelineActivityLaneOrder } from "../../lib/timeline/activityModel";
 import { focusStateClassName, getEventFocusState } from "../../lib/timeline/focusState";
 import { timestampToXPercent, type TimelineRange } from "../../lib/timeline/layout";
 import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
@@ -48,14 +48,14 @@ export function TimelineMiniMap({
   const placed = useMemo(() => {
     return items.map((item) => {
       const xPercent = timestampToXPercent(item.start, range);
-      const laneIndex = Math.max(0, laneOrder.indexOf(item.laneType));
+      const laneIndex = Math.max(0, timelineActivityLaneOrder.indexOf(item.laneType));
       return { item, xPercent, laneIndex };
     });
   }, [items, range]);
 
   if (placed.length === 0) return null;
 
-  const totalLanes = laneOrder.length;
+  const totalLanes = timelineActivityLaneOrder.length;
   const selectedDot = placed.find((dot) => dot.item.id === selectedItemId);
   const interactive = Boolean(onSeek);
 
@@ -197,7 +197,7 @@ export function TimelineMiniMap({
           return (
             <i
               key={item.id}
-              className={`mini-dot tone-${eventTypeTone[item.laneType]} ${focusStateClassName(state)} ${item.kind === "bundle" ? "is-bundle" : ""}`}
+              className={`mini-dot tone-${getActivityLaneVisuals(item.laneType).tone} ${focusStateClassName(state)} ${item.kind === "bundle" ? "is-bundle" : ""}`}
               style={{
                 left: `${xPercent}%`,
                 top: `${topPercent}%`,

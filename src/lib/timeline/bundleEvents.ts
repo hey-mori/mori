@@ -1,6 +1,12 @@
 import { eventTypeLabels } from "../../domain/constants";
-import type { Decision, EventType, Relationship, TimelineEvent, TrustLevel } from "../../domain/types";
+import type { Decision, EventType, Relationship, SourceRef, TimelineEvent, TrustLevel } from "../../domain/types";
 import { formatTime } from "../formatting/time";
+import {
+  buildSourceIndex,
+  getActivityLaneVisuals,
+  getTimelineLaneForEvent,
+  type ActivityLaneId,
+} from "./activityModel";
 import type {
   TimelineBundleKind,
   TimelineBundleMember,
@@ -17,6 +23,7 @@ export type CreateTimelineBundlesOptions = {
   maxVisibleItemsPerLane?: number;
   laneDensity?: "comfortable" | "compact" | "dense";
   decisions?: Decision[];
+  sources?: readonly SourceRef[];
   /**
    * Per-lane overrides for the bundle thresholds. A single Claude conversation
    * lands every turn in the `aiConversation` lane; clustering it with the same
@@ -25,7 +32,7 @@ export type CreateTimelineBundlesOptions = {
    * so individual turns stay visible.
    */
   laneOverrides?: Partial<
-    Record<EventType, { timeWindowMinutes?: number; minEventsForBundle?: number; maxVisibleItemsPerLane?: number }>
+    Record<ActivityLaneId, { timeWindowMinutes?: number; minEventsForBundle?: number; maxVisibleItemsPerLane?: number }>
   >;
 };
 
@@ -40,13 +47,15 @@ export function createTimelineBundles(
   ]);
   const decisionsById = new Map((options.decisions ?? []).map((decision) => [decision.id, decision]));
 
-  const grouped = new Map<EventType, TimelineEvent[]>();
+  const sourceIndex = buildSourceIndex(options.sources ?? []);
+  const grouped = new Map<ActivityLaneId, TimelineEvent[]>();
   for (const event of [...events].sort(byStart)) {
-    const bucket = grouped.get(event.type);
+    const lane = getTimelineLaneForEvent({ event, sources: sourceIndex });
+    const bucket = grouped.get(lane);
     if (bucket) {
       bucket.push(event);
     } else {
-      grouped.set(event.type, [event]);
+      grouped.set(lane, [event]);
     }
   }
 
@@ -54,6 +63,7 @@ export function createTimelineBundles(
 
   for (const [laneType, laneEvents] of grouped) {
     const laneItems = createLaneItems(
+      laneType,
       laneEvents,
       relationships,
       preserve,
@@ -79,7 +89,7 @@ export function createTimelineDisplayItems(
 
 /** Fold a lane's threshold override (if any) into the base bundle options. */
 function resolveLaneOptions(
-  laneType: EventType,
+  laneType: ActivityLaneId,
   options: CreateTimelineBundlesOptions,
 ): CreateTimelineBundlesOptions {
   const override = options.laneOverrides?.[laneType];
@@ -93,6 +103,7 @@ function resolveLaneOptions(
 }
 
 function createLaneItems(
+  laneType: ActivityLaneId,
   laneEvents: TimelineEvent[],
   relationships: Relationship[],
   preserve: Set<string>,
@@ -111,7 +122,7 @@ function createLaneItems(
   for (const event of laneEvents) {
     if (preserve.has(event.id) || isImportantEvent(event, decisionsById)) {
       flushCluster();
-      items.push(toDisplayEvent(event));
+      items.push(toDisplayEvent(event, laneType));
       continue;
     }
 
@@ -132,9 +143,9 @@ function createLaneItems(
 
   for (const cluster of clusters) {
     if (cluster.length >= options.minEventsForBundle) {
-      items.push(createBundle(cluster, relationships, options));
+      items.push(createBundle(laneType, cluster, relationships, options));
     } else {
-      items.push(...cluster.map(toDisplayEvent));
+      items.push(...cluster.map((event) => toDisplayEvent(event, laneType)));
     }
   }
 
@@ -163,7 +174,7 @@ function mergeLaneDensityOverflow(
     const right = mutable[candidateIndex + 1];
     if (!left || !right || left.kind !== "event" || right.kind !== "event") break;
 
-    const merged = createBundle([left.event, right.event], relationships, {
+    const merged = createBundle(left.laneType, [left.event, right.event], relationships, {
       timeWindowMinutes: options.timeWindowMinutes,
     });
 
@@ -203,6 +214,7 @@ function findBestMergeCandidate(
 }
 
 function createBundle(
+  laneType: ActivityLaneId,
   cluster: TimelineEvent[],
   relationships: Relationship[],
   options: Pick<CreateTimelineBundlesOptions, "timeWindowMinutes">,
@@ -222,11 +234,11 @@ function createBundle(
 
   return {
     kind: "bundle",
-    id: `bundle-${first.type}-${first.id}-${last.id}`,
-    laneType: first.type,
+    id: `bundle-${laneType}-${first.id}-${last.id}`,
+    laneType,
     start: first.start,
     end: last.end ?? last.start,
-    title: buildBundleTitle(first.type, bundleKind, cluster),
+    title: buildBundleTitle(laneType, first.type, bundleKind, cluster),
     summary: buildBundleSummary(first.type, dominantEventNames, cluster, representedDecisionIds.length, representedIssueIds.length),
     bundleKind,
     dominantType: first.type,
@@ -245,11 +257,11 @@ function createBundle(
     reason: {
       code: "preserveSingleRow",
       message:
-        first.type === "aiConversation"
+        laneType === "conversation"
           ? `${cluster.length}개의 대화 턴이 ${options.timeWindowMinutes}분 이내로 가깝게 이어져, 한눈에 보이도록 하나로 묶었습니다. 펼치면 각 턴을 순서대로 읽을 수 있습니다.`
           : `${cluster.length}개의 ${eventTypeLabels[first.type]} 이벤트가 ${options.timeWindowMinutes}분 이내에 몰려 있어 single-row lane을 유지하기 위해 하나의 work-flow bundle로 표시합니다.`,
       timeWindowMinutes: options.timeWindowMinutes,
-      laneType: first.type,
+      laneType,
     },
     anchorEventId: cluster[Math.floor(cluster.length / 2)]?.id ?? first.id,
     sameConnectorSource: deriveBundleConnectorSource(cluster),
@@ -276,11 +288,12 @@ export function deriveBundleConnectorSource(events: TimelineEvent[]): string | n
 }
 
 function buildBundleTitle(
-  laneType: EventType,
+  laneType: ActivityLaneId,
+  dominantType: EventType,
   bundleKind: TimelineBundleKind,
   cluster: TimelineEvent[],
 ): string {
-  if (laneType === "aiConversation") return buildConversationBundleTitle(cluster);
+  if (laneType === "conversation") return buildConversationBundleTitle(cluster);
   if (bundleKind === "researchBurst") return "경쟁 제품 조사 흐름";
   if (bundleKind === "issueBurst") return "이슈 생성 흐름";
   if (bundleKind === "decisionBurst") return "결정 정리 흐름";
@@ -290,7 +303,7 @@ function buildBundleTitle(
     );
     return documentation ? "문서/구조 작업 묶음" : "코드 변경 묶음";
   }
-  return `${eventTypeLabels[laneType]} work-flow bundle`;
+  return `${getActivityLaneVisuals(laneType).label || eventTypeLabels[dominantType]} work-flow bundle`;
 }
 
 /**
@@ -368,11 +381,11 @@ function inferBundleTrustLevel(events: TimelineEvent[]): TrustLevel {
   return "observed";
 }
 
-function toDisplayEvent(event: TimelineEvent): TimelineDisplayEvent {
+function toDisplayEvent(event: TimelineEvent, laneType: ActivityLaneId): TimelineDisplayEvent {
   return {
     kind: "event",
     id: event.id,
-    laneType: event.type,
+    laneType,
     start: event.start,
     end: event.end,
     event,

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { eventTypeTone } from "../../domain/constants";
-import type { EventType, Relationship } from "../../domain/types";
+import type { Relationship } from "../../domain/types";
 import type { LaidOutTimelineItem } from "../../lib/timeline/collisionLayout";
+import { getActivityLaneVisuals, type ActivityLaneId } from "../../lib/timeline/activityModel";
 import {
   buildVisibleConnectors,
   defaultConnectorCap,
@@ -34,7 +34,7 @@ export function RelationshipLineLayer({
         focusActive,
         relationships,
         eventAnchorIndex: eventAnchorLayouts,
-        toneOfLane: (laneType: EventType) => eventTypeTone[laneType],
+        toneOfLane: (laneType: ActivityLaneId) => getActivityLaneVisuals(laneType).tone,
         maxConnectors: defaultConnectorCap(mode),
       }),
     [mode, focusedSet, focusActive, relationships, eventAnchorLayouts],

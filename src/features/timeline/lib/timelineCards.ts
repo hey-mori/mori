@@ -17,9 +17,14 @@
  * Inspector view model lives next door in `timelineViewModel.ts`. This file
  * is the boundary for the cards rendered INSIDE the lanes.
  */
-import { eventTypeLabels, eventTypeTone } from "../../../domain/constants";
-import type { TimelineEvent, TrustLevel } from "../../../domain/types";
+import { eventTypeLabels } from "../../../domain/constants";
+import type { SourceRef, TimelineEvent, TrustLevel } from "../../../domain/types";
 import { formatTime, formatTimeRange, minutesBetween } from "../../../lib/formatting/time";
+import {
+  buildEventActivityDescriptor,
+  getActivityLaneVisuals,
+  type TimelineEvidenceChip,
+} from "../../../lib/timeline/activityModel";
 import type { TimelineDisplayBundle } from "../../../lib/timeline/displayItems";
 
 export type TimelineCardTrustTone = "verified" | "observed" | "inferred";
@@ -40,6 +45,11 @@ export type TimelineEventCardViewModel = {
   tone: string;
   /** Lane label for screen readers. */
   laneLabel: string;
+  activityLabel: string;
+  activityKind: ReturnType<typeof buildEventActivityDescriptor>["activityKind"];
+  sourceLabel: string;
+  importance: string;
+  evidenceChips: TimelineEvidenceChip[];
   /** "13:02" or "13:02 – 13:18" depending on whether the event spans ≥1 minute. */
   timeLabel: string;
   /** Whether the time label is a range or a single time. */
@@ -73,6 +83,7 @@ export type TimelineBundleViewModel = {
    *  one calm footer signal. Per-category evidence counts live in the
    *  bundle inspector, not on the card. */
   typeMixLabel: string;
+  laneLabel: string;
   /** ARIA + tooltip text. */
   ariaLabel: string;
   buttonTitle: string;
@@ -83,9 +94,13 @@ export type TimelineCardViewModel = TimelineEventCardViewModel | TimelineBundleV
 
 // ─── Builders ───────────────────────────────────────────────────────────────
 
-export function buildTimelineEventCardViewModel(event: TimelineEvent): TimelineEventCardViewModel {
-  const tone = eventTypeTone[event.type] ?? "gray";
-  const laneLabel = eventTypeLabels[event.type] ?? event.type;
+export function buildTimelineEventCardViewModel(
+  event: TimelineEvent,
+  sources: readonly SourceRef[] | ReadonlyMap<string, SourceRef> = [],
+): TimelineEventCardViewModel {
+  const descriptor = buildEventActivityDescriptor({ event, sources, density: "compact" });
+  const tone = descriptor.laneVisuals.tone;
+  const laneLabel = descriptor.laneVisuals.label;
   const hasRange = event.end ? minutesBetween(event.start, event.end) >= 1 : false;
   const timeLabel = hasRange && event.end
     ? formatTimeRange(event.start, event.end)
@@ -112,6 +127,11 @@ export function buildTimelineEventCardViewModel(event: TimelineEvent): TimelineE
     id: event.id,
     tone,
     laneLabel,
+    activityLabel: descriptor.activityVisuals.shortLabel,
+    activityKind: descriptor.activityKind,
+    sourceLabel: descriptor.sourceVisuals.shortLabel,
+    importance: descriptor.importance,
+    evidenceChips: descriptor.evidenceChips,
     timeLabel,
     hasTimeRange: hasRange,
     title: event.title,
@@ -124,7 +144,8 @@ export function buildTimelineEventCardViewModel(event: TimelineEvent): TimelineE
 }
 
 export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): TimelineBundleViewModel {
-  const tone = eventTypeTone[bundle.laneType] ?? "gray";
+  const laneVisuals = getActivityLaneVisuals(bundle.laneType);
+  const tone = laneVisuals.tone;
 
   const typeMixEntries = Object.entries(bundle.eventTypeCounts ?? {})
     .filter((entry): entry is [keyof typeof eventTypeLabels, number] => Boolean(entry[1]));
@@ -141,6 +162,7 @@ export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): Tim
     kind: "bundle",
     id: bundle.id,
     tone,
+    laneLabel: laneVisuals.label,
     timeLabel,
     title: bundle.title,
     typeMixLabel,

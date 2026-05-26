@@ -1,4 +1,5 @@
 import type { EventType, TimelineEvent, TrustLevel } from "../../domain/types";
+import type { ActivityLaneId } from "./activityModel";
 
 export type TimelineBundleKind =
   | "sequence"
@@ -20,7 +21,7 @@ export type TimelineBundleReason = {
   code: TimelineBundleReasonCode;
   message: string;
   timeWindowMinutes: number;
-  laneType: EventType;
+  laneType: ActivityLaneId;
 };
 
 export type TimelineBundleMember = {
@@ -39,7 +40,7 @@ export type TimelineBundleMember = {
 export type TimelineDisplayEvent = {
   kind: "event";
   id: string;
-  laneType: EventType;
+  laneType: ActivityLaneId;
   start: string;
   end?: string;
   event: TimelineEvent;
@@ -49,7 +50,7 @@ export type TimelineDisplayEvent = {
 export type TimelineDisplayBundle = {
   kind: "bundle";
   id: string;
-  laneType: EventType;
+  laneType: ActivityLaneId;
   start: string;
   end: string;
   title: string;

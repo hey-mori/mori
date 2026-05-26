@@ -20,6 +20,7 @@ import { formatTime } from "../../lib/formatting/time";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import type { TimelineEvent } from "../../domain/types";
+import { buildEventActivityDescriptor } from "../../lib/timeline/activityModel";
 import {
   MoriContextMenu,
   useContextMenuPosition,
@@ -74,6 +75,7 @@ export function ConversationFlowView({
             onSelect={onSelect}
             density={density}
             eventMenuItems={eventMenuItems}
+            sourceIndex={model.sourceIndex}
           />
         </li>
       ))}
@@ -87,12 +89,14 @@ function ConversationGroup({
   onSelect,
   density,
   eventMenuItems,
+  sourceIndex,
 }: {
   group: TurnGroup;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
   density: TimelineDensity;
   eventMenuItems?: (event: TimelineEvent) => MoriMenuItemSpec[];
+  sourceIndex: TimelineRenderModel["sourceIndex"];
 }) {
   switch (group.kind) {
     case "turn":
@@ -103,6 +107,7 @@ function ConversationGroup({
           onSelect={onSelect}
           density={density}
           eventMenuItems={eventMenuItems}
+          sourceIndex={sourceIndex}
         />
       );
     case "burst":
@@ -113,6 +118,7 @@ function ConversationGroup({
           onSelect={onSelect}
           density={density}
           eventMenuItems={eventMenuItems}
+          sourceIndex={sourceIndex}
         />
       );
     case "overflow":
@@ -123,6 +129,7 @@ function ConversationGroup({
           onSelect={onSelect}
           density={density}
           eventMenuItems={eventMenuItems}
+          sourceIndex={sourceIndex}
         />
       );
   }
@@ -135,12 +142,14 @@ function TurnCard({
   onSelect,
   density,
   eventMenuItems,
+  sourceIndex,
 }: {
   turn: Turn;
   selected: boolean;
   onSelect: (eventId: string) => void;
   density: TimelineDensity;
   eventMenuItems?: (event: TimelineEvent) => MoriMenuItemSpec[];
+  sourceIndex: TimelineRenderModel["sourceIndex"];
 }) {
   const menu = useContextMenuPosition();
   const card = buildTurnCardModel(turn);
@@ -154,6 +163,9 @@ function TurnCard({
 
   const primaryEvent = turnPrimaryEvent(turn);
   const menuItems = primaryEvent ? eventMenuItems?.(primaryEvent) : undefined;
+  const workActivity = primaryEvent
+    ? buildEventActivityDescriptor({ event: primaryEvent, sources: sourceIndex, density })
+    : null;
 
   return (
     <article
@@ -169,6 +181,11 @@ function TurnCard({
       >
         <span className="conversation-turn-head">
           <span className="conversation-turn-time">{formatTime(card.start)}</span>
+          {workActivity ? (
+            <span className={`conversation-turn-work-meta tone-${workActivity.laneVisuals.tone}`}>
+              {workActivity.laneVisuals.shortLabel} / {workActivity.activityVisuals.shortLabel}
+            </span>
+          ) : null}
           {card.tokenUsage ? (
             <span
               className="conversation-turn-tokens"
@@ -305,12 +322,14 @@ function BurstGroup({
   onSelect,
   density,
   eventMenuItems,
+  sourceIndex,
 }: {
   burst: TurnGroupBurst;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
   density: TimelineDensity;
   eventMenuItems?: (event: TimelineEvent) => MoriMenuItemSpec[];
+  sourceIndex: TimelineRenderModel["sourceIndex"];
 }) {
   const selectionInside = burst.turns.some((turn) => isTurnSelected(turn, selectedItemId));
   const [expanded, setExpanded] = useState(false);
@@ -345,6 +364,7 @@ function BurstGroup({
                 onSelect={onSelect}
                 density={density}
                 eventMenuItems={eventMenuItems}
+                sourceIndex={sourceIndex}
               />
             </li>
           ))}
@@ -364,12 +384,14 @@ function OverflowGroup({
   onSelect,
   density,
   eventMenuItems,
+  sourceIndex,
 }: {
   overflow: TurnGroupOverflow;
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
   density: TimelineDensity;
   eventMenuItems?: (event: TimelineEvent) => MoriMenuItemSpec[];
+  sourceIndex: TimelineRenderModel["sourceIndex"];
 }) {
   const selectionInside = overflow.turns.some((turn) => isTurnSelected(turn, selectedItemId));
   const [expanded, setExpanded] = useState(false);
@@ -386,6 +408,7 @@ function OverflowGroup({
               onSelect={onSelect}
               density={density}
               eventMenuItems={eventMenuItems}
+              sourceIndex={sourceIndex}
             />
           </li>
         ))}

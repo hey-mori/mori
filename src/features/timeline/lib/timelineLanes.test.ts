@@ -38,14 +38,22 @@ describe("timelineLanes", () => {
   it("listLaneLabels matches the canonical lane order", () => {
     const labels = listLaneLabels();
     expect(labels.map((entry) => entry.type)).toEqual([
-      "aiConversation",
-      "decision",
-      "issue",
-      "fileCode",
-      "webResearch",
-      "documentNote",
-      "artifact",
-      "other",
+      "conversation",
+      "command",
+      "files",
+      "git",
+      "design",
+      "tracker",
+      "docs",
+      "research",
+      "build",
+      "deploy",
+      "automation",
+      "review",
+      "handoff",
+      "memory",
+      "notes",
+      "unknown",
     ]);
   });
 

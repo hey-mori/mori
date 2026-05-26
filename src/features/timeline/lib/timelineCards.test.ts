@@ -89,7 +89,7 @@ describe("buildTimelineBundleViewModel", () => {
   const bundle: TimelineDisplayBundle = {
     kind: "bundle",
     id: "bundle-1",
-    laneType: "aiConversation",
+    laneType: "conversation",
     start: "2026-05-14T10:00:00Z",
     end: "2026-05-14T10:30:00Z",
     title: "Work-flow bundle",
@@ -112,7 +112,7 @@ describe("buildTimelineBundleViewModel", () => {
       code: "preserveSingleRow",
       message: "test",
       timeWindowMinutes: 12,
-      laneType: "aiConversation",
+      laneType: "conversation",
     },
     anchorEventId: "e2",
     sameConnectorSource: null,

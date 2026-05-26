@@ -1,6 +1,5 @@
 import { Layers3 } from "lucide-react";
-import { eventTypeIcons, eventTypeLabels } from "../../domain/constants";
-import type { TimelineEvent } from "../../domain/types";
+import type { SourceRef, TimelineEvent } from "../../domain/types";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { sortDisplayItemsChronologically } from "../../lib/timeline/displayItems";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
@@ -9,6 +8,7 @@ import {
   buildTimelineEventCardViewModel,
   buildTrustGlyph,
 } from "./lib/timelineCards";
+import { activityKindIcons } from "./lib/activityIcons";
 import {
   MoriContextMenu,
   useContextMenuPosition,
@@ -89,6 +89,7 @@ export function TimelineChronoList({
             selected={selected}
             onSelect={() => onSelect(item.id)}
             menuItems={eventMenuItems?.(item.event)}
+            sourceIndex={model.sourceIndex}
           />
         );
       })}
@@ -101,15 +102,17 @@ function TimelineChronoEventRow({
   selected,
   onSelect,
   menuItems,
+  sourceIndex,
 }: {
   event: TimelineEvent;
   selected: boolean;
   onSelect: () => void;
   menuItems?: MoriMenuItemSpec[];
+  sourceIndex?: ReadonlyMap<string, SourceRef>;
 }) {
   const menu = useContextMenuPosition();
-  const vm = buildTimelineEventCardViewModel(event);
-  const Icon = eventTypeIcons[event.type];
+  const vm = buildTimelineEventCardViewModel(event, sourceIndex ?? []);
+  const Icon = activityKindIcons[vm.activityKind] ?? activityKindIcons.unknown;
   return (
     <li>
       <button
@@ -127,7 +130,7 @@ function TimelineChronoEventRow({
         <span className="timeline-chrono-body">
           <strong>{vm.title}</strong>
           <small>
-            {eventTypeLabels[event.type]} · {vm.trust.label}
+            {vm.laneLabel} / {vm.activityLabel} / {vm.trust.label}
           </small>
         </span>
         {vm.primaryMeta ? (

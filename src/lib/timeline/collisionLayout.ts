@@ -1,6 +1,6 @@
-import type { EventType } from "../../domain/types";
 import type { TimelineDisplayItem } from "./displayItems";
 import { timestampToXPercent, type TimelineRange } from "./layout";
+import type { ActivityLaneId } from "./activityModel";
 
 export type TimelineDensity = "comfortable" | "compact" | "dense";
 
@@ -11,13 +11,13 @@ export type TimelineLayoutOptions = {
   laneOffsetPx?: number;
   laneLabelWidthPx?: number;
   contentRightPaddingPx?: number;
-  laneOrder: EventType[];
+  laneOrder: ActivityLaneId[];
 };
 
 export type LaidOutTimelineItem = {
   itemId: string;
   kind: TimelineDisplayItem["kind"];
-  laneType: EventType;
+  laneType: ActivityLaneId;
   memberEventIds: string[];
   x: number;
   y: number;
@@ -31,7 +31,7 @@ export type LaidOutTimelineItem = {
 };
 
 export type LaneLayout = {
-  type: EventType;
+  type: ActivityLaneId;
   top: number;
   height: number;
   rowCount: number;
@@ -108,7 +108,7 @@ export function computeTimelineLayout(
   const contentLeftPx = laneLabelWidthPx;
   const contentWidthPx = Math.max(cardWidth, options.frameWidth - contentLeftPx - contentRightPadding);
 
-  const grouped = new Map<EventType, TimelineDisplayItem[]>();
+  const grouped = new Map<ActivityLaneId, TimelineDisplayItem[]>();
   for (const lane of options.laneOrder) grouped.set(lane, []);
   for (const item of items) {
     const bucket = grouped.get(item.laneType);

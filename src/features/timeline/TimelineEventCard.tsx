@@ -1,8 +1,8 @@
 import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
-import type { TimelineEvent } from "../../domain/types";
-import { eventTypeIcons, eventTypeTone } from "../../domain/constants";
+import type { SourceRef, TimelineEvent } from "../../domain/types";
 import { buildTimelineEventCardViewModel } from "./lib/timelineCards";
+import { activityKindIcons } from "./lib/activityIcons";
 import {
   MoriContextMenu,
   useContextMenuPosition,
@@ -25,6 +25,7 @@ export function TimelineEventCard({
   onSelect,
   onHover,
   menuItems,
+  sourceIndex,
 }: {
   event: TimelineEvent;
   layout: LaidOutTimelineItem;
@@ -33,10 +34,11 @@ export function TimelineEventCard({
   onSelect: (eventId: string) => void;
   onHover: (eventId: string | null) => void;
   menuItems?: MoriMenuItemSpec[];
+  sourceIndex?: ReadonlyMap<string, SourceRef>;
 }) {
   const menu = useContextMenuPosition();
-  const vm = buildTimelineEventCardViewModel(event);
-  const Icon = eventTypeIcons[event.type];
+  const vm = buildTimelineEventCardViewModel(event, sourceIndex ?? []);
+  const Icon = activityKindIcons[vm.activityKind] ?? activityKindIcons.unknown;
   // Progressive disclosure: only the comfortable tier carries footer meta on
   // the card. Compact and dense move that detail into the inspector.
   const densityClass = densityClassName(density);
@@ -63,10 +65,13 @@ export function TimelineEventCard({
     >
       <header className="event-card-header">
         <span className="event-card-kind">
-          <Icon size={11} aria-hidden="true" className={`tone-${eventTypeTone[event.type]}`} />
+          <Icon size={11} aria-hidden="true" className={`tone-${vm.tone}`} />
           <span className="event-card-time">{vm.timeLabel}</span>
+          {density !== "dense" ? (
+            <span className="event-card-activity">{vm.activityLabel}</span>
+          ) : null}
         </span>
-        {density !== "dense" ? <EventSignalBadges event={event} /> : null}
+        {density !== "dense" ? <EventSignalBadges event={event} vm={vm} /> : null}
       </header>
       <strong className="event-card-title">{vm.title}</strong>
       {showFooter && vm.primaryMeta ? (
@@ -87,8 +92,15 @@ export function TimelineEventCard({
   );
 }
 
-function EventSignalBadges({ event }: { event: TimelineEvent }) {
+function EventSignalBadges({
+  event,
+  vm,
+}: {
+  event: TimelineEvent;
+  vm: ReturnType<typeof buildTimelineEventCardViewModel>;
+}) {
   const signals = [
+    vm.evidenceChips[0]?.shortLabel ?? null,
     event.sourceRefs.length > 0 ? `근거 ${event.sourceRefs.length}` : null,
     event.linkedDecisionIds.length > 0 ? `결정 ${event.linkedDecisionIds.length}` : null,
     event.linkedIssueIds.length > 0 ? `이슈 ${event.linkedIssueIds.length}` : null,

@@ -11,7 +11,7 @@ function laidOutItem(overrides: Partial<LaidOutTimelineItem> & { itemId: string 
   return {
     itemId: overrides.itemId,
     kind: overrides.kind ?? "event",
-    laneType: overrides.laneType ?? "aiConversation",
+    laneType: overrides.laneType ?? "conversation",
     memberEventIds: overrides.memberEventIds ?? [overrides.itemId],
     x: overrides.x ?? 0,
     y: overrides.y ?? 0,
@@ -73,9 +73,9 @@ describe("chooseRelationshipVisibility", () => {
 describe("buildVisibleConnectors", () => {
   const anchors = new Map<string, LaidOutTimelineItem>([
     ["a", laidOutItem({ itemId: "item-a", memberEventIds: ["a"] })],
-    ["b", laidOutItem({ itemId: "item-b", memberEventIds: ["b"], laneType: "decision" })],
+    ["b", laidOutItem({ itemId: "item-b", memberEventIds: ["b"], laneType: "review" })],
     ["c", laidOutItem({ itemId: "item-c", memberEventIds: ["c"] })],
-    ["d", laidOutItem({ itemId: "item-d", memberEventIds: ["d"], laneType: "issue" })],
+    ["d", laidOutItem({ itemId: "item-d", memberEventIds: ["d"], laneType: "tracker" })],
   ]);
   const focused = new Set(["a", "b", "c"]);
 

@@ -59,7 +59,7 @@ describe("timeline stress fixture", () => {
 
   it("clusters the morning AI-conversation burst into at least one bundle", () => {
     const model = stressModel();
-    const aiLane = model.lanes.find((lane) => lane.type === "aiConversation");
+    const aiLane = model.lanes.find((lane) => lane.type === "conversation");
     expect(aiLane).toBeDefined();
     const bundles = aiLane!.items.filter((item) => item.kind === "bundle");
     expect(bundles.length).toBeGreaterThanOrEqual(1);
@@ -67,7 +67,7 @@ describe("timeline stress fixture", () => {
 
   it("flags the connector-imported morning burst as a same-source bundle", () => {
     const model = stressModel();
-    const aiLane = model.lanes.find((lane) => lane.type === "aiConversation");
+    const aiLane = model.lanes.find((lane) => lane.type === "conversation");
     const sameSourceBundle = aiLane!.items.find(
       (item) => item.kind === "bundle" && item.sameConnectorSource !== null,
     );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { laneOrder } from "../../domain/constants";
 import { moriMockSession } from "../../domain/mock-data";
+import { timelineActivityLaneOrder as laneOrder } from "./activityModel";
 import { createTimelineBundles } from "./bundleEvents";
 import {
   computeItemWidth,
@@ -55,7 +55,7 @@ describe("computeTimelineLayout", () => {
     expect(first).toBeDefined();
     expect(second).toBeDefined();
     expect(first!.x).toBeLessThan(second!.x);
-    expect(first!.laneType).toBe("aiConversation");
+    expect(first!.laneType).toBe("conversation");
   });
 
   it("keeps every lane on a single row and maps event anchors through bundles", () => {
@@ -81,7 +81,7 @@ describe("computeTimelineLayout", () => {
       expect(ys.size).toBe(1);
     }
     expect(researchAnchor?.kind).toBe("bundle");
-    expect(researchAnchor?.itemId).toContain("bundle-webResearch");
+    expect(researchAnchor?.itemId).toContain("bundle-research");
   });
 
   it("keeps a card near its true start time and only nudges it clear of a neighbour", () => {
@@ -89,8 +89,8 @@ describe("computeTimelineLayout", () => {
     // min-width cards would overlap, so the second is nudged just clear of
     // the first — never stacked, never shoved a full card-width away.
     const items = [
-      eventItem("c1", "aiConversation", "2026-05-14T10:00:00Z"),
-      eventItem("c2", "aiConversation", "2026-05-14T10:02:00Z"),
+      eventItem("c1", "conversation", "2026-05-14T10:00:00Z"),
+      eventItem("c2", "conversation", "2026-05-14T10:02:00Z"),
     ];
     const layout = computeTimelineLayout(items, range, {
       frameWidth: 1240,
@@ -98,7 +98,7 @@ describe("computeTimelineLayout", () => {
       laneOrder,
     });
     const placed = layout.items
-      .filter((item) => item.laneType === "aiConversation")
+      .filter((item) => item.laneType === "conversation")
       .sort((a, b) => a.x - b.x);
     expect(placed).toHaveLength(2);
 
@@ -112,9 +112,9 @@ describe("computeTimelineLayout", () => {
     // A busy lane and a quiet lane must share a height; empty lanes collapse
     // to a slimmer band so the timeline is not a jagged stack of sizes.
     const items = [
-      eventItem("u1", "aiConversation", "2026-05-14T10:00:00Z"),
-      eventItem("u2", "aiConversation", "2026-05-14T10:01:00Z"),
-      eventItem("u3", "decision", "2026-05-14T10:00:00Z"),
+      eventItem("u1", "conversation", "2026-05-14T10:00:00Z"),
+      eventItem("u2", "conversation", "2026-05-14T10:01:00Z"),
+      eventItem("u3", "review", "2026-05-14T10:00:00Z"),
     ];
     const layout = computeTimelineLayout(items, range, {
       frameWidth: 1240,
@@ -134,19 +134,19 @@ describe("computeTimelineLayout", () => {
 
   it("keeps a heavily clustered lane on a single row without overlap", () => {
     const items = Array.from({ length: 8 }, (_, index) =>
-      eventItem(`x${index}`, "aiConversation", `2026-05-14T10:0${index}:00Z`),
+      eventItem(`x${index}`, "conversation", `2026-05-14T10:0${index}:00Z`),
     );
     const layout = computeTimelineLayout(items, range, {
       frameWidth: 1240,
       density: "comfortable",
       laneOrder,
     });
-    const lane = layout.lanes.find((entry) => entry.type === "aiConversation")!;
+    const lane = layout.lanes.find((entry) => entry.type === "conversation")!;
     expect(lane.rowCount).toBe(1);
 
     // Every card on the row is clear of its predecessor.
     const placed = layout.items
-      .filter((item) => item.laneType === "aiConversation")
+      .filter((item) => item.laneType === "conversation")
       .sort((a, b) => a.x - b.x);
     for (let index = 1; index < placed.length; index += 1) {
       expect(placed[index]!.x).toBeGreaterThanOrEqual(

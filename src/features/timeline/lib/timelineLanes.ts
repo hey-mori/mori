@@ -5,12 +5,18 @@
  * exposes typed lane snapshots so consumers (the canvas, the legend, the
  * mini-map) read structured data instead of recomputing it inline.
  */
-import { laneOrder as defaultLaneOrder, eventTypeLabels, eventTypeTone } from "../../../domain/constants";
-import type { EventType, TimelineEvent } from "../../../domain/types";
+import type { TimelineEvent } from "../../../domain/types";
+import {
+  buildSourceIndex,
+  getActivityLaneVisuals,
+  getTimelineLaneForEvent,
+  timelineActivityLaneOrder as defaultLaneOrder,
+  type ActivityLaneId,
+} from "../../../lib/timeline/activityModel";
 import type { LaneRenderModel, TimelineRenderModel } from "../../../lib/timeline/timelineViewModel";
 
 export type TimelineLaneViewModel = {
-  type: EventType;
+  type: ActivityLaneId;
   label: string;
   tone: string;
   eventCount: number;
@@ -36,8 +42,8 @@ export function getActiveTimelineLaneViewModels(model: TimelineRenderModel): Tim
 function toLaneViewModel(lane: LaneRenderModel): TimelineLaneViewModel {
   return {
     type: lane.type,
-    label: eventTypeLabels[lane.type] ?? lane.type,
-    tone: eventTypeTone[lane.type] ?? "gray",
+    label: getActivityLaneVisuals(lane.type).label,
+    tone: getActivityLaneVisuals(lane.type).tone,
     eventCount: lane.eventCount,
     itemCount: lane.itemCount,
     hasContent: lane.itemCount > 0,
@@ -48,11 +54,11 @@ function toLaneViewModel(lane: LaneRenderModel): TimelineLaneViewModel {
  * Convenience for surfaces (Memory cards, Reports) that just want the lane
  * order with labels — no full render-model required.
  */
-export function listLaneLabels(): Array<{ type: EventType; label: string; tone: string }> {
+export function listLaneLabels(): Array<{ type: ActivityLaneId; label: string; tone: string }> {
   return defaultLaneOrder.map((type) => ({
     type,
-    label: eventTypeLabels[type] ?? type,
-    tone: eventTypeTone[type] ?? "gray",
+    label: getActivityLaneVisuals(type).label,
+    tone: getActivityLaneVisuals(type).tone,
   }));
 }
 
@@ -61,10 +67,12 @@ export function listLaneLabels(): Array<{ type: EventType; label: string; tone: 
  * full render model. Useful for Memory / Reports summaries that don't need
  * collision layout.
  */
-export function countEventsByLane(events: TimelineEvent[]): Record<EventType, number> {
-  const counts = Object.fromEntries(defaultLaneOrder.map((type) => [type, 0])) as Record<EventType, number>;
+export function countEventsByLane(events: TimelineEvent[]): Record<ActivityLaneId, number> {
+  const counts = Object.fromEntries(defaultLaneOrder.map((type) => [type, 0])) as Record<ActivityLaneId, number>;
+  const sourceIndex = buildSourceIndex([]);
   for (const event of events) {
-    counts[event.type] = (counts[event.type] ?? 0) + 1;
+    const lane = getTimelineLaneForEvent({ event, sources: sourceIndex });
+    counts[lane] = (counts[lane] ?? 0) + 1;
   }
   return counts;
 }

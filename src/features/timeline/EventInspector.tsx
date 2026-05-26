@@ -33,6 +33,8 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { buildInspectorViewModel } from "../../lib/timeline/timelineViewModel";
+import { deriveSourceFamily } from "../../lib/timeline/activityModel";
+import { sourceFamilyIcons } from "./lib/activityIcons";
 
 export function EventInspector({
   selectedEvent,
@@ -72,6 +74,8 @@ export function EventInspector({
     view: session,
   });
   const trust = describeTrustLevel(selectedEvent.trustLevel);
+  const activity = inspector.activity;
+  const projectHint = inspector.projectHint;
 
   function handleCopy() {
     const text = `${formatTimeRange(selectedEvent.start, selectedEvent.end)}\n${selectedEvent.title}\n\n${selectedEvent.summary}`;
@@ -84,6 +88,8 @@ export function EventInspector({
     <aside className="inspector" aria-label="Event inspector">
       <header className="inspector-header">
         <div className="inspector-badges">
+          <Badge tone={activity.laneVisuals.tone}>{activity.laneVisuals.label}</Badge>
+          <Badge tone={activity.activityVisuals.tone}>{activity.activityVisuals.label}</Badge>
           <Badge tone={eventTypeTone[selectedEvent.type]}>{eventTypeLabels[selectedEvent.type]}</Badge>
           {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
         </div>
@@ -91,6 +97,9 @@ export function EventInspector({
           <h3 className="inspector-title">{selectedEvent.title}</h3>
         )}
         <p className="inspector-time">{formatTimeRange(selectedEvent.start, selectedEvent.end)}</p>
+        <p className="inspector-work-context">
+          {projectHint.projectLabel} / {activity.sourceVisuals.label} / {activity.importance}
+        </p>
         <InspectorMetaStrip event={selectedEvent} />
       </header>
 
@@ -128,6 +137,7 @@ export function EventInspector({
             {selectedEvent.userModified ? " · 사용자 수정함" : ""}
           </small>
         </div>
+        <EventEvidenceChips sources={inspector.sources} />
         <SourcesList sources={inspector.sources} />
       </section>
 
@@ -350,6 +360,26 @@ function SourcesList({ sources }: { sources: SourceRef[] }) {
         );
       })}
     </ul>
+  );
+}
+
+function EventEvidenceChips({ sources }: { sources: SourceRef[] }) {
+  if (sources.length === 0) return null;
+  return (
+    <div className="timeline-evidence-chips" aria-label="Evidence sources">
+      {sources.slice(0, 4).map((source) => {
+        const family = deriveSourceFamily(source.kind);
+        const Icon = sourceFamilyIcons[family] ?? sourceFamilyIcons.unknown;
+        return (
+          <span key={source.id} className="timeline-evidence-chip" title={source.title}>
+            <Icon size={11} aria-hidden="true" />
+            <strong>{source.title}</strong>
+            <small>{source.trustLevel}</small>
+          </span>
+        );
+      })}
+      {sources.length > 4 ? <span className="timeline-evidence-chip">+{sources.length - 4}</span> : null}
+    </div>
   );
 }
 

@@ -1,8 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { TimelineEventCard } from "./TimelineEventCard";
 import { TimelineBundleCard } from "./TimelineBundleCard";
-import { eventTypeTone } from "../../domain/constants";
-import type { EventType } from "../../domain/types";
+import type { SourceRef } from "../../domain/types";
 import type { LaidOutTimelineItem, LaneLayout, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import { getEventFocusState } from "../../lib/timeline/focusState";
@@ -32,10 +31,11 @@ export function TimelineLane({
   onSelect,
   onHover,
   eventMenuItems,
+  sourceIndex,
 }: {
   icon: LucideIcon;
   label: string;
-  tone: EventType;
+  tone: string;
   lane: LaneLayout;
   laneLabelWidthPx: number;
   items: TimelineDisplayItem[];
@@ -47,8 +47,9 @@ export function TimelineLane({
   onSelect: (itemId: string) => void;
   onHover: (itemId: string | null) => void;
   eventMenuItems?: (event: TimelineDisplayItem & { kind: "event" }) => MoriMenuItemSpec[];
+  sourceIndex?: ReadonlyMap<string, SourceRef>;
 }) {
-  const colorClass = `lane-tone-${eventTypeTone[tone]}`;
+  const colorClass = `lane-tone-${tone}`;
   const isEmpty = items.length === 0;
   // Skip empty lanes entirely — they used to render as a dim 64px band even
   // when they had no events, which made the canvas look busier than it is.
@@ -101,6 +102,7 @@ export function TimelineLane({
             onSelect={onSelect}
             onHover={onHover}
             menuItems={eventMenuItems?.(item)}
+            sourceIndex={sourceIndex}
           />
         );
       })}

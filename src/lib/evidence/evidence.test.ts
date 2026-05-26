@@ -93,7 +93,7 @@ describe("source-links helpers", () => {
     const eventLike: TimelineDisplayItem = {
       kind: "event",
       id: "evt-x",
-      laneType: "decision",
+      laneType: "review",
       start: "2026-01-01T00:00:00Z",
       event: moriMockSession.events[0]!,
       memberEventIds: ["evt-x"],

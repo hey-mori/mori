@@ -2308,6 +2308,28 @@ kbd {
   cursor: help;
 }
 
+.conversation-turn-work-meta {
+  display: inline-flex;
+  align-items: center;
+  max-width: 132px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--gray-50);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 750;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-turn-work-meta.tone-purple { color: var(--purple); background: var(--purple-50); border-color: var(--purple-100); }
+.conversation-turn-work-meta.tone-green { color: var(--green); background: var(--green-50); }
+.conversation-turn-work-meta.tone-blue { color: var(--blue); background: var(--blue-50); }
+.conversation-turn-work-meta.tone-cyan { color: var(--cyan); background: var(--cyan-50); }
+.conversation-turn-work-meta.tone-orange { color: #b46100; background: var(--orange-50); }
+
 .conversation-turn-card.is-dense .conversation-turn-tokens {
   display: none;
 }
@@ -2992,6 +3014,20 @@ kbd {
   font-weight: 600;
   letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
+}
+
+.event-card-activity {
+  max-width: 54px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.055);
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 750;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .event-card-signals {
@@ -3993,6 +4029,13 @@ kbd {
   font-weight: 600;
 }
 
+.inspector-work-context {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .inspector-meta-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4091,6 +4134,40 @@ kbd {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
+}
+
+.timeline-evidence-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.timeline-evidence-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.timeline-evidence-chip strong {
+  max-width: 128px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.timeline-evidence-chip small {
+  color: var(--muted-2);
+  font-size: 9.5px;
+  text-transform: uppercase;
 }
 
 .inspector-source-list {
