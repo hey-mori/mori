@@ -2,8 +2,10 @@ import {
   Bot,
   Boxes,
   Braces,
+  Check,
   ChevronDown,
   Chrome,
+  ClipboardCopy,
   Code2,
   FileText,
   FolderOpen,
@@ -20,12 +22,13 @@ import { Button } from "../../components/ui/Button";
 import {
   buildConnectorControlCenter,
   describeControlCenterAvailability,
+  getConnectorSetupGuide,
   partitionControlCenterSurfaces,
   type ControlCenterAiPlatform,
   type ControlCenterImportKind,
   type ControlCenterSurface,
 } from "../../lib/connectors";
-import type { CaptureSurfaceToolFamily } from "../../lib/connectors";
+import type { CaptureSurfaceToolFamily, ConnectorSetupGuide } from "../../lib/connectors";
 
 export type SourceControlCenterProps = {
   /** True when running inside the Tauri desktop app. */
@@ -137,6 +140,9 @@ function SourceRow({
   const availability = describeControlCenterAvailability(surface.availability);
   const Icon = FAMILY_ICON[surface.toolFamily] ?? Bot;
   const detailId = `source-detail-${surface.id}`;
+  // When a step-by-step setup guide exists it supersedes the one-line
+  // "해야 할 일" / "설정" meta, so those rows are dropped to avoid repeating it.
+  const guide = getConnectorSetupGuide(surface.id);
 
   return (
     <div className={`source-row is-${surface.availability}${open ? " is-open" : ""}`} role="listitem">
@@ -168,6 +174,7 @@ function SourceRow({
       {open ? (
         <div className="source-row-detail" id={detailId}>
           <p className="source-row-status-line">{surface.statusDescription.short}</p>
+          {guide ? <SetupGuide guide={guide} /> : null}
           <p className="source-row-privacy" role="note">
             {surface.privacyBoundary}
           </p>
@@ -190,14 +197,18 @@ function SourceRow({
             </div>
           </div>
           <dl className="source-row-meta">
-            <div>
-              <dt>해야 할 일</dt>
-              <dd>{surface.userActionRequired}</dd>
-            </div>
-            <div>
-              <dt>설정</dt>
-              <dd>{surface.setupRequirement}</dd>
-            </div>
+            {guide ? null : (
+              <>
+                <div>
+                  <dt>해야 할 일</dt>
+                  <dd>{surface.userActionRequired}</dd>
+                </div>
+                <div>
+                  <dt>설정</dt>
+                  <dd>{surface.setupRequirement}</dd>
+                </div>
+              </>
+            )}
             <div>
               <dt>다음 단계</dt>
               <dd>{surface.nextStep}</dd>
@@ -253,5 +264,55 @@ function RowAction({
     <span className="source-row-inert" aria-disabled="true">
       {action.label}
     </span>
+  );
+}
+
+/**
+ * In-app setup steps for a docs-template connector — the hook / CLI wrappers /
+ * local-capture bridge. The parent only renders this when a guide exists, so
+ * the detail stays lean for sources that need no setup.
+ */
+function SetupGuide({ guide }: { guide: ConnectorSetupGuide }) {
+  return (
+    <div className="source-row-setup">
+      <strong className="source-row-setup-title">설정 방법</strong>
+      <ol className="source-row-setup-steps">
+        {guide.steps.map((step, index) => (
+          <li key={index}>
+            <span className="source-row-setup-text">{step.text}</span>
+            {step.command ? <CopyableCommand command={step.command} /> : null}
+          </li>
+        ))}
+      </ol>
+      <p className="source-row-setup-note">{guide.importNote}</p>
+    </div>
+  );
+}
+
+function CopyableCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    void navigator.clipboard
+      .writeText(command)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      })
+      .catch(() => {});
+  }
+  return (
+    <div className="source-row-command">
+      <code>{command}</code>
+      <button
+        type="button"
+        className="source-row-command-copy"
+        onClick={copy}
+        aria-label={copied ? "복사됨" : "명령 복사"}
+        title={copied ? "복사됨" : "명령 복사"}
+      >
+        {copied ? <Check size={13} aria-hidden="true" /> : <ClipboardCopy size={13} aria-hidden="true" />}
+      </button>
+    </div>
   );
 }

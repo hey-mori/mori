@@ -117,6 +117,14 @@ export {
   describeControlCenterAvailability,
   partitionControlCenterSurfaces,
 } from "./connectorControlCenter";
+export {
+  getConnectorSetupGuide,
+  hasConnectorSetupGuide,
+} from "./connectorSetupGuide";
+export type {
+  ConnectorSetupGuide,
+  ConnectorSetupStep,
+} from "./connectorSetupGuide";
 export type {
   BuildControlCenterInput,
   ConnectorControlCenterViewModel,
