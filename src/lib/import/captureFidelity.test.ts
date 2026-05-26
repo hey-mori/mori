@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { assessTranscriptFidelity, TRANSCRIPT_FIDELITY_REASON } from "./captureFidelity";
+import {
+  assessGitDiffFidelity,
+  assessTranscriptFidelity,
+  assessUrlFidelity,
+  GIT_DIFF_FIDELITY_REASON,
+  TRANSCRIPT_FIDELITY_REASON,
+  URL_FIDELITY_REASON,
+} from "./captureFidelity";
 
 describe("assessTranscriptFidelity", () => {
   it("reports a clean user/assistant exchange as full with no reasons", () => {
@@ -81,5 +88,89 @@ describe("assessTranscriptFidelity", () => {
 
     expect(result.level).toBe("full");
     expect(result.reasons).not.toContain(TRANSCRIPT_FIDELITY_REASON.truncationMarker);
+  });
+});
+
+describe("assessGitDiffFidelity", () => {
+  const completeDiff = [
+    "diff --git a/src/foo.ts b/src/foo.ts",
+    "index 1234567..89abcde 100644",
+    "--- a/src/foo.ts",
+    "+++ b/src/foo.ts",
+    "@@ -1,3 +1,4 @@",
+    " const a = 1;",
+    "-const b = 2;",
+    "+const b = 3;",
+    "+const c = 4;",
+    " const d = 5;",
+  ].join("\n");
+
+  it("reports a complete diff (final hunk matches its header) as full", () => {
+    const result = assessGitDiffFidelity(completeDiff);
+
+    expect(result.level).toBe("full");
+    expect(result.reasons).toEqual([]);
+  });
+
+  it("flags a diff cut off mid-hunk as partial", () => {
+    const truncated = [
+      "diff --git a/src/foo.ts b/src/foo.ts",
+      "index 1234567..89abcde 100644",
+      "--- a/src/foo.ts",
+      "+++ b/src/foo.ts",
+      "@@ -1,6 +1,7 @@",
+      " const a = 1;",
+      "-const b = 2;",
+      "+const b = 3;",
+    ].join("\n");
+
+    const result = assessGitDiffFidelity(truncated);
+
+    expect(result.level).toBe("partial");
+    expect(result.reasons).toContain(GIT_DIFF_FIDELITY_REASON.truncatedHunk);
+  });
+
+  it("treats a header-only diff with no hunks (rename/mode change) as full", () => {
+    const renameOnly = [
+      "diff --git a/old.ts b/new.ts",
+      "similarity index 100%",
+      "rename from old.ts",
+      "rename to new.ts",
+    ].join("\n");
+
+    expect(assessGitDiffFidelity(renameOnly).level).toBe("full");
+  });
+
+  it("does not flag a complete diff whose blank context lines lost their leading space", () => {
+    const strippedBlanks = [
+      "diff --git a/src/foo.ts b/src/foo.ts",
+      "@@ -1,3 +1,3 @@",
+      " const a = 1;",
+      "",
+      "-const b = 2;",
+      "+const b = 3;",
+    ].join("\n");
+
+    expect(assessGitDiffFidelity(strippedBlanks).level).toBe("full");
+  });
+});
+
+describe("assessUrlFidelity", () => {
+  it("reports a bare URL as a full reference", () => {
+    const result = assessUrlFidelity();
+
+    expect(result.level).toBe("full");
+    expect(result.reasons).toEqual([]);
+  });
+
+  it("reports a URL with a selected excerpt as partial (excerpt only)", () => {
+    const result = assessUrlFidelity("the part of the page I copied");
+
+    expect(result.level).toBe("partial");
+    expect(result.reasons).toContain(URL_FIDELITY_REASON.excerptOnly);
+  });
+
+  it("treats whitespace-only excerpt as a bare URL", () => {
+    expect(assessUrlFidelity("   ").level).toBe("full");
   });
 });

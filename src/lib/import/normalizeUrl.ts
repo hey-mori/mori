@@ -1,5 +1,6 @@
 import type { NormalizedImportCandidate, NormalizeUrlSourceInput } from "./types";
 import { createImportId } from "./id";
+import { assessUrlFidelity } from "./captureFidelity";
 
 export function normalizeUrlSource(input: NormalizeUrlSourceInput): NormalizedImportCandidate {
   const capturedAt = input.capturedAt ?? new Date().toISOString();
@@ -19,6 +20,7 @@ export function normalizeUrlSource(input: NormalizeUrlSourceInput): NormalizedIm
       rawRetention: "retained",
       capturedAt,
       relatedEventIds: [eventId],
+      captureFidelity: assessUrlFidelity(input.selectedText),
     },
     events: [
       {

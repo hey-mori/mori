@@ -6,6 +6,7 @@ import {
   parseConnectorJsonl,
   type ConnectorEvent,
 } from "./index";
+import { CONNECTOR_FIDELITY_REASON } from "./normalizeConnectorEvents";
 
 function event(overrides: Partial<ConnectorEvent>): ConnectorEvent {
   return {
@@ -166,6 +167,67 @@ describe("normalizeConnectorEventBatch", () => {
     });
     expect(candidate.source.trustLevel).toBe("observed");
     expect(candidate.source.rawRetention).toBe("summaryOnly");
+  });
+});
+
+describe("connector bucket capture fidelity", () => {
+  it("marks a session bracketed by start + finish as full", () => {
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events: [
+        event({ id: "s", kind: "session_started" }),
+        event({ id: "p", kind: "prompt_submitted" }),
+        event({ id: "e", kind: "session_finished" }),
+      ],
+      applyRedaction: false,
+    });
+    expect(candidate.source.captureFidelity?.level).toBe("full");
+    expect(candidate.source.captureFidelity?.reasons).toEqual([]);
+  });
+
+  it("marks a mid-session slice (no start, no finish) as partial with both reasons", () => {
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events: [event({ id: "p", kind: "prompt_submitted" })],
+      applyRedaction: false,
+    });
+    expect(candidate.source.captureFidelity?.level).toBe("partial");
+    expect(candidate.source.captureFidelity?.reasons).toContain(CONNECTOR_FIDELITY_REASON.noSessionStart);
+    expect(candidate.source.captureFidelity?.reasons).toContain(CONNECTOR_FIDELITY_REASON.noSessionEnd);
+  });
+
+  it("flags a session that started but was not finished", () => {
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events: [
+        event({ id: "s", kind: "session_started" }),
+        event({ id: "p", kind: "prompt_submitted" }),
+      ],
+      applyRedaction: false,
+    });
+    expect(candidate.source.captureFidelity?.level).toBe("partial");
+    expect(candidate.source.captureFidelity?.reasons).toEqual([CONNECTOR_FIDELITY_REASON.noSessionEnd]);
+  });
+
+  it("treats a single-artifact bucket (lone git diff) as full", () => {
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events: [
+        event({
+          id: "g",
+          connectorId: "git",
+          sessionId: "delta",
+          kind: "git_diff_captured",
+          git: { repoPath: "/x", additions: 4, deletions: 1, files: [{ path: "src/foo.ts" }] },
+        }),
+      ],
+      applyRedaction: false,
+    });
+    expect(candidate.source.captureFidelity?.level).toBe("full");
   });
 });
 

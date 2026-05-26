@@ -1,4 +1,12 @@
-import type { CreatedBy, EventType, SourceKind, SourceRef, TimelineEvent, TrustLevel } from "../../domain/types";
+import type {
+  CaptureFidelity,
+  CreatedBy,
+  EventType,
+  SourceKind,
+  SourceRef,
+  TimelineEvent,
+  TrustLevel,
+} from "../../domain/types";
 import { createImportId } from "../import/id";
 import { redactText } from "./redaction";
 import { getConnectorEventIdentity } from "./connectorEventIdentity";
@@ -114,6 +122,7 @@ function buildCandidate(
     rawRetention,
     capturedAt: bucket.capturedAt,
     relatedEventIds: timelineEvents.map((event) => event.id),
+    captureFidelity: deriveSourceFidelity(sortedEvents),
   };
 
   return { source, events: timelineEvents };
@@ -232,6 +241,46 @@ function describeBucket(
   const summary = parts.length > 0 ? parts.join(" · ") : `${events.length} events`;
   const session = externalSessionId ? ` · session ${externalSessionId}` : "";
   return `${connectorLabel(connectorId)} · ${summary}${session}`;
+}
+
+/** Stable reason codes for connector-bucket capture fidelity. */
+export const CONNECTOR_FIDELITY_REASON = {
+  /** A session-shaped bucket has no `session_started` event — capture began mid-session. */
+  noSessionStart: "noSessionStart",
+  /** A session-shaped bucket has no `session_finished` event — the session end was not captured. */
+  noSessionEnd: "noSessionEnd",
+} as const;
+
+// Live-activity kinds that mark a bucket as "session-shaped": their presence
+// means the bucket represents an ongoing session, for which a missing
+// start / finish marker is a real completeness gap. Single-artifact buckets
+// (a lone git diff, a transcript import, a note) are complete on their own.
+const SESSION_ACTIVITY_KINDS: ReadonlySet<ConnectorEventKind> = new Set([
+  "prompt_submitted",
+  "assistant_message",
+  "tool_started",
+  "tool_finished",
+  "command_started",
+  "command_finished",
+  "file_changed",
+]);
+
+/**
+ * Honest read of how complete a connector bucket is. A bucket built from live
+ * session activity is `full` only when it is bracketed by both a
+ * `session_started` and a `session_finished` event; otherwise it is a
+ * mid-session slice and reported `partial`. Buckets that are a single discrete
+ * artifact (a captured diff, an imported transcript, a note) are `full`.
+ */
+function deriveSourceFidelity(events: ConnectorEvent[]): CaptureFidelity {
+  const kinds = new Set(events.map((event) => event.kind));
+  const sessionShaped = [...kinds].some((kind) => SESSION_ACTIVITY_KINDS.has(kind));
+  if (!sessionShaped) return { level: "full", reasons: [] };
+
+  const reasons: string[] = [];
+  if (!kinds.has("session_started")) reasons.push(CONNECTOR_FIDELITY_REASON.noSessionStart);
+  if (!kinds.has("session_finished")) reasons.push(CONNECTOR_FIDELITY_REASON.noSessionEnd);
+  return reasons.length === 0 ? { level: "full", reasons: [] } : { level: "partial", reasons };
 }
 
 function deriveSourceRetention(events: ConnectorEvent[]): SourceRef["rawRetention"] {

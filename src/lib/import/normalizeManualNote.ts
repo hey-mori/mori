@@ -19,6 +19,9 @@ export function normalizeManualNote(input: NormalizeManualNoteInput): Normalized
       rawRetention: "retained",
       capturedAt,
       relatedEventIds: [eventId],
+      // A typed note is a complete, deliberate artifact — it captures exactly
+      // what the user meant, so there is no larger thing it is a slice of.
+      captureFidelity: { level: "full", reasons: [] },
     },
     events: [
       {

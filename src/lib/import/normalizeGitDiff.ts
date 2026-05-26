@@ -1,6 +1,7 @@
 import type { TimelineEvent } from "../../domain/types";
 import { createImportId } from "./id";
 import { categorizeFile, isLikelyGitDiff, parseGitDiff, type GitDiffFile } from "./parseGitDiff";
+import { assessGitDiffFidelity } from "./captureFidelity";
 import type { NormalizedImportCandidate, NormalizeBaseInput } from "./types";
 
 export type NormalizeGitDiffInput = NormalizeBaseInput & {
@@ -68,6 +69,7 @@ export function normalizeGitDiff(input: NormalizeGitDiffInput): NormalizedImport
       rawRetention: "retained",
       capturedAt,
       relatedEventIds: [eventId],
+      captureFidelity: assessGitDiffFidelity(input.diffText),
     },
     events: [event],
   };
