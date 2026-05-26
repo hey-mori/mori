@@ -580,6 +580,18 @@ button {
   color: var(--text);
 }
 
+/* Brand focus ring for the sidebar controls. Without this they fall back to
+ * the browser's OS-accent default outline (e.g. orange), which looks off-brand
+ * and stray after a click collapses the rail. */
+.sidebar-head-action:focus-visible,
+.sidebar-collapse-toggle:focus-visible,
+.sidebar-grouping-toggle:focus-visible,
+.sidebar-nav-item:focus-visible,
+.sidebar-user:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
 /* Collapsed sidebar — the icon rail.
  *
  * Every text-heavy descendant (search input, group labels, session rows,
