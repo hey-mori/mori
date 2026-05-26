@@ -11,6 +11,13 @@ export type {
 } from "./types";
 export { normalizeAiConversationText } from "./normalizeAiConversation";
 export { normalizeAiTranscript } from "./normalizeAiTranscript";
+export {
+  isChatGptExport,
+  parseChatGptExport,
+  type ChatGptExportParse,
+  type ChatGptExportRole,
+  type ChatGptExportTurn,
+} from "./parseChatGptExport";
 export { normalizeManualNote } from "./normalizeManualNote";
 export { normalizeUrlSource } from "./normalizeUrl";
 export {

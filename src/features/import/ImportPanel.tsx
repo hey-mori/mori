@@ -15,6 +15,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import {
   GitDiffParseError,
+  isChatGptExport,
   normalizeAiConversationText,
   normalizeAiTranscript,
   normalizeGitDiff,
@@ -648,6 +649,16 @@ export function ImportPanel(props: ImportPanelProps = {}) {
                 <option value="other">Other AI Chat</option>
               </select>
             </label>
+            {platform === "chatgpt" ? (
+              <p className="import-privacy-note">
+                <small>
+                  대화 텍스트를 붙여넣거나, ChatGPT <b>데이터 내보내기</b>의 conversations.json 내용을 그대로 붙여넣을 수 있습니다. Mori는 사용자가 직접 붙여넣은 파일만 읽습니다.
+                </small>
+                {body.trim() && isChatGptExport(body) ? (
+                  <Badge tone="green">내보내기 파일 감지됨 · 메시지를 구조적으로 추출합니다</Badge>
+                ) : null}
+              </p>
+            ) : null}
             <p className="import-privacy-note">
               <small>
                 수동 붙여넣기 전용. Claude/ChatGPT/Codex 직접 연동은 계획 단계입니다. 현재 Mori는 브라우저 탭이나 앱을 자동 스캔하지 않습니다.

@@ -7,6 +7,7 @@ import type {
 } from "./types";
 import { createImportId } from "./id";
 import { assessTranscriptFidelity } from "./captureFidelity";
+import { parseChatGptExport, type ChatGptExportTurn } from "./parseChatGptExport";
 
 /**
  * Platform-specific integration ID mapping
@@ -105,6 +106,34 @@ function parseTranscriptTurns(text: string, platform: AiTranscriptPlatform): AiT
   return turns;
 }
 
+/** Convert a structured ChatGPT export turn into the generic transcript turn shape. */
+function chatGptTurnToTranscriptTurn(turn: ChatGptExportTurn): AiTranscriptTurn {
+  const role: AiTranscriptTurn["role"] =
+    turn.role === "user" || turn.role === "assistant" || turn.role === "system"
+      ? turn.role
+      : "unknown";
+  return {
+    role,
+    content: turn.content,
+    hasCodeBlocks: /```/.test(turn.content),
+    hasToolUse: /<function|<tool|tool_use/.test(turn.content),
+  };
+}
+
+/**
+ * Resolve transcript turns for a platform. ChatGPT exports arrive as JSON, so
+ * we try the structured export parser first and only fall back to the
+ * line-based plain-text parser when the text is not an export file. Every
+ * other platform uses the plain-text parser directly.
+ */
+function resolveTranscriptTurns(text: string, platform: AiTranscriptPlatform): AiTranscriptTurn[] {
+  if (platform === "chatgpt") {
+    const exported = parseChatGptExport(text);
+    if (exported) return exported.turns.map(chatGptTurnToTranscriptTurn);
+  }
+  return parseTranscriptTurns(text, platform);
+}
+
 /**
  * Generate parse summary from turns
  */
@@ -155,8 +184,9 @@ export function normalizeAiTranscript(input: NormalizeAiTranscriptInput): Normal
   const integrationId = getIntegrationId(input.platform);
   const title = input.title?.trim() || `${platformLabel} conversation`;
 
-  // Parse transcript structure
-  const turns = parseTranscriptTurns(input.text, input.platform);
+  // Parse transcript structure (ChatGPT export JSON is handled structurally;
+  // every other platform and pasted plain text uses the line-based parser).
+  const turns = resolveTranscriptTurns(input.text, input.platform);
   const parseSummary = generateParseSummary(input.platform, turns, input.text);
 
   const sourceId = createImportId("src-ai", title, capturedAt);
