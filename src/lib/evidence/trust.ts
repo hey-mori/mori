@@ -34,7 +34,7 @@ const TRUST_TABLE: Record<TrustLevel, TrustDisplay> = {
   inferred: {
     level: "inferred",
     label: "추론됨",
-    description: "AI가 소스와 맥락을 바탕으로 추론한 항목입니다.",
+    description: "소스와 맥락을 바탕으로 추론한 항목입니다.",
     tone: "purple",
   },
 };

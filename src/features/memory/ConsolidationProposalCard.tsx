@@ -82,7 +82,7 @@ export function ConsolidationProposalCard({
           </span>
         </dl>
         {entry.edits.title !== null || entry.edits.summary !== null ? (
-          <small className="consolidation-card-edited">사용자 편집 적용됨</small>
+          <small className="consolidation-card-edited">사용자 편집 반영됨</small>
         ) : null}
         {entry.note ? <small className="consolidation-card-note">메모: {entry.note}</small> : null}
       </button>

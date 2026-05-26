@@ -90,7 +90,7 @@ function buildSourceItem(
         id: "source",
         title: "출처 상태",
         status: "attention",
-        statusLabel: "이미 가져옴",
+        statusLabel: "이미 가져온 항목",
         detail: "이 출처는 Mori가 이미 본 connector 이벤트로만 이루어진 것으로 보입니다.",
       };
     }

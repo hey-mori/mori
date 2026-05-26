@@ -50,7 +50,7 @@ export function ReviewOverviewStrip({
           <>
             <ShieldCheck size={16} aria-hidden="true" />
             <div className="review-overview-attention-body">
-              <strong>모두 처리됨</strong>
+              <strong>모두 검토 완료</strong>
               <span>확인이 필요한 이슈 · 결정이 없습니다.</span>
             </div>
           </>

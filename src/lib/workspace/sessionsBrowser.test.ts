@@ -170,7 +170,7 @@ describe("buildSessionsBrowserModel", () => {
 
 describe("describeSessionOrigin", () => {
   it("maps each origin to a Korean label and tone", () => {
-    expect(describeSessionOrigin("imported")).toEqual({ label: "가져옴", tone: "neutral" });
+    expect(describeSessionOrigin("imported")).toEqual({ label: "가져온 세션", tone: "neutral" });
     expect(describeSessionOrigin("manual")).toEqual({ label: "수동", tone: "neutral" });
     expect(describeSessionOrigin("demo")).toEqual({ label: "데모", tone: "accent" });
   });

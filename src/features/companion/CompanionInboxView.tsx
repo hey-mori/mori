@@ -20,23 +20,9 @@ import {
   type StaleMemoryChip,
 } from "../../lib/companion/staleMemoryChips";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
-import type { StoredAcceptedProjectMemory, StoredAcceptedProjectMemoryStatus } from "../../lib/storage/storageTypes";
+import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
+import { getProductMemoryStatusLabel } from "../../lib/product-state/productState";
 import { useCompanionSignals } from "./useCompanionSignals";
-
-const MEMORY_STATUS_LABELS: Record<StoredAcceptedProjectMemoryStatus, string> = {
-  accepted: "승인됨",
-  edited: "수정됨",
-  watching: "관찰 중",
-  deferred: "보류",
-  stale: "오래됨",
-  contradicted: "모순됨",
-  superseded: "대체됨",
-  retired: "은퇴됨",
-};
-
-function memoryStatusLabel(status: StoredAcceptedProjectMemoryStatus): string {
-  return MEMORY_STATUS_LABELS[status] ?? status;
-}
 
 /**
  * Companion Inbox — the Companion Layer's dedicated surface.
@@ -240,7 +226,7 @@ function CompanionSignalRow({
                 >
                   <span className={`companion-signal-chip-dot status-${chip.status}`} aria-hidden="true" />
                   <span className="companion-signal-chip-title">{chip.title}</span>
-                  <span className="companion-signal-chip-status">{memoryStatusLabel(chip.status)}</span>
+                  <span className="companion-signal-chip-status">{getProductMemoryStatusLabel(chip.status)}</span>
                   <ExternalLink size={11} aria-hidden="true" />
                 </button>
               </li>

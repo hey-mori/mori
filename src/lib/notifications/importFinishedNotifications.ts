@@ -3,7 +3,7 @@ import type { SourceKind } from "../../domain/types";
 import type { MoriNotification } from "./notification";
 
 /**
- * Build "방금 가져옴" notifications from the active session's recent imports.
+ * Build "가져오기 완료" notifications from the active session's recent imports.
  *
  * Each notification's id is stable per import (`import-finished:<importId>`)
  * so the renderer's id-based dedupe never duplicates a single batch. Only
@@ -72,8 +72,8 @@ function toNotification(entry: StoredSessionImport): MoriNotification {
   const kindLabel = IMPORT_LABEL[entry.source.kind] ?? "소스";
   const eventCount = entry.events.length;
   const title = eventCount > 0
-    ? `${kindLabel} ${eventCount}건 가져옴`
-    : `${kindLabel} 가져옴`;
+    ? `${kindLabel} ${eventCount}건 가져오기 완료`
+    : `${kindLabel} 가져오기 완료`;
   return {
     id: `import-finished:${entry.id}`,
     kind: "import_finished",

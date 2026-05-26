@@ -56,7 +56,7 @@ export function ReviewIssueCard({
               tone={trust.tone}
               title={
                 isInferred
-                  ? `AI가 추론한 항목입니다. 신뢰도 ${confidencePct}% — 원본 근거에서 확인 후 수락하세요.`
+                  ? `추론된 항목입니다. 신뢰도 ${confidencePct}% — 원본 근거에서 확인 후 수락하세요.`
                   : trust.label
               }
             >

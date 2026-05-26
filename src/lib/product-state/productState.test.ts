@@ -125,7 +125,7 @@ describe("memory lifecycle label derivation", () => {
     expect(getProductMemoryStatusLabel("stale")).toBe("오래됨");
     expect(getProductMemoryStatusLabel("contradicted")).toBe("상충");
     expect(getProductMemoryStatusLabel("superseded")).toBe("대체됨");
-    expect(getProductMemoryStatusLabel("retired")).toBe("은퇴");
+    expect(getProductMemoryStatusLabel("retired")).toBe("사용 중지");
   });
 
   it("maps current statuses to success and archived statuses to neutral", () => {

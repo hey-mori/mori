@@ -63,7 +63,7 @@ export function useMoriNotifications(): {
     [feed],
   );
 
-  // Second producer: "방금 가져옴" pulse for sources added within the last
+  // Second producer: "가져오기 완료" pulse for sources added within the last
   // 24 hours. The compose dedupes by id so a single batch is never doubled.
   const importFinishedNotifications = useMemo<MoriNotification[]>(
     () => buildImportFinishedNotifications({ imports }),

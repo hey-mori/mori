@@ -157,7 +157,7 @@ export function WorkspaceView() {
                 onChange={(origin) => setFilters((prev) => ({ ...prev, origin }))}
                 options={[
                   { id: "all", label: "전체" },
-                  { id: "imported", label: "가져옴" },
+                  { id: "imported", label: "가져오기" },
                   { id: "manual", label: "수동" },
                 ]}
               />

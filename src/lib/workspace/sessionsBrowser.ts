@@ -256,7 +256,7 @@ function groupRows(rows: SessionRow[]): SessionProjectGroup[] {
 // ─── Origin chip presentation ───────────────────────────────────────────────
 
 const ORIGIN_LABEL: Record<SessionOrigin, string> = {
-  imported: "가져옴",
+  imported: "가져온 세션",
   manual: "수동",
   demo: "데모",
 };

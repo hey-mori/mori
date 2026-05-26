@@ -55,7 +55,7 @@ describe("useMoriNotifications compose contract", () => {
         id: "import-finished-batch-77",
         kind: "import_finished",
         severity: "info",
-        title: "Claude 세션 3개 가져옴",
+        title: "Claude 세션 3개 가져오기 완료",
         message: "방금 가져오기로 추가했습니다.",
         basis: "state",
         linkedItemIds: [],

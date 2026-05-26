@@ -67,7 +67,7 @@ describe("buildImportFinishedNotifications", () => {
       "import-finished:fresh-1",
       "import-finished:fresh-2",
     ]);
-    expect(notifications[0]!.title).toBe("Claude 대화 3건 가져옴");
+    expect(notifications[0]!.title).toBe("Claude 대화 3건 가져오기 완료");
   });
 
   it("caps the visible feed so one big batch doesn't flood the panel", () => {
@@ -111,9 +111,9 @@ describe("buildImportFinishedNotifications", () => {
       ],
     });
     expect(notifications.map((n) => n.title)).toEqual([
-      "Git diff 가져옴",
-      "메모 가져옴",
-      "URL / 페이지 가져옴",
+      "Git diff 가져오기 완료",
+      "메모 가져오기 완료",
+      "URL / 페이지 가져오기 완료",
     ]);
   });
 });

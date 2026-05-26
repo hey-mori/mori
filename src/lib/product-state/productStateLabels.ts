@@ -206,7 +206,7 @@ export const PRODUCT_RUNTIME_LABELS: Record<
  */
 export const PRODUCT_DATA_LABELS: Record<ProductDataState, ProductStateDisplay> = {
   imported: {
-    label: "가져옴",
+    label: "가져온 소스",
     description: "사용자가 명시적으로 가져온 데이터입니다.",
     tone: "info",
   },
@@ -217,7 +217,7 @@ export const PRODUCT_DATA_LABELS: Record<ProductDataState, ProductStateDisplay> 
   },
   inferred: {
     label: "추론됨",
-    description: "AI가 소스와 맥락을 바탕으로 추론한 항목입니다.",
+    description: "소스와 맥락을 바탕으로 추론한 항목입니다.",
     tone: "inferred",
   },
   verified: {
@@ -295,7 +295,7 @@ export const PRODUCT_MEMORY_STATUS_LABELS: Record<
     tone: "neutral",
   },
   retired: {
-    label: "은퇴",
+    label: "사용 중지",
     description: "더 이상 지침으로 쓰이지 않고 보관된 항목입니다.",
     tone: "neutral",
   },
