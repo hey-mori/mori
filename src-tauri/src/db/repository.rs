@@ -1,8 +1,9 @@
 use rusqlite::{params, Connection};
 
 use super::records::{
-    ArtifactRow, DecisionRow, EventRow, IssueRow, NextActionRow, ProjectRow, RelationshipRow,
-    SessionListEntry, SessionRow, SessionSnapshot, SnapshotPersistResult, SourceRow, SummaryRow,
+    ArtifactRow, ClearAllDataResult, DecisionRow, EventRow, IssueRow, NextActionRow, ProjectRow,
+    RelationshipRow, SessionListEntry, SessionRow, SessionSnapshot, SnapshotPersistResult,
+    SourceRow, SummaryRow,
 };
 
 pub fn save_session_snapshot(
@@ -75,6 +76,65 @@ pub fn load_session_snapshot(
         artifacts,
         next_actions,
         summaries,
+    })
+}
+
+/// Remove every user work record from the database — all sessions, projects,
+/// and their cascaded children, plus the unparented `relationships`,
+/// `session_imports`, and consolidated-memory tables. Runs in one transaction
+/// so a failure leaves the database untouched. Deletes are issued child→parent
+/// explicitly, so the wipe is correct regardless of FK-cascade enforcement.
+///
+/// Migration metadata (`_mori_migrations`) and the schema itself are left
+/// intact — this is a data reset, not a teardown. Used by the Settings
+/// "clear data and view demo" action.
+pub fn clear_all_data(conn: &mut Connection) -> Result<ClearAllDataResult, String> {
+    let tx = conn.transaction().map_err(|error| error.to_string())?;
+
+    // Children of sessions (cascade targets) — explicit so order is obvious.
+    tx.execute("DELETE FROM relationships", [])
+        .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM summaries", [])
+        .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM next_actions", [])
+        .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM artifacts", [])
+        .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM decisions", [])
+        .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM issues", [])
+        .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM events", [])
+        .map_err(|error| error.to_string())?;
+    tx.execute("DELETE FROM sources", [])
+        .map_err(|error| error.to_string())?;
+
+    let session_imports_deleted = tx
+        .execute("DELETE FROM session_imports", [])
+        .map_err(|error| error.to_string())? as u64;
+    let sessions_deleted = tx
+        .execute("DELETE FROM sessions", [])
+        .map_err(|error| error.to_string())? as u64;
+    let projects_deleted = tx
+        .execute("DELETE FROM projects", [])
+        .map_err(|error| error.to_string())? as u64;
+
+    // Durable project memory + its append-only audit. A full reset is an
+    // explicit, confirmed factory wipe, so these are cleared too — matching
+    // the browser localStorage reset.
+    let consolidated_memories_deleted = tx
+        .execute("DELETE FROM consolidated_memories", [])
+        .map_err(|error| error.to_string())? as u64;
+    tx.execute("DELETE FROM consolidated_memory_audit", [])
+        .map_err(|error| error.to_string())?;
+
+    tx.commit().map_err(|error| error.to_string())?;
+
+    Ok(ClearAllDataResult {
+        sessions_deleted,
+        projects_deleted,
+        session_imports_deleted,
+        consolidated_memories_deleted,
     })
 }
 
@@ -851,5 +911,45 @@ mod tests {
         assert_eq!(entries[0].event_count, 1);
         assert_eq!(entries[0].source_count, 1);
         assert_eq!(entries[0].project_name, "Repo Test");
+    }
+
+    #[test]
+    fn clear_all_data_empties_every_work_table() {
+        let mut conn = open_in_memory().expect("open db");
+        apply_migrations(&mut conn).expect("apply migrations");
+        save_session_snapshot(&mut conn, &fixture_snapshot()).expect("save");
+
+        let result = clear_all_data(&mut conn).expect("clear");
+        assert_eq!(result.sessions_deleted, 1);
+        assert_eq!(result.projects_deleted, 1);
+
+        assert!(list_sessions(&conn).expect("list").is_empty());
+        for table in [
+            "sessions",
+            "projects",
+            "sources",
+            "events",
+            "issues",
+            "decisions",
+            "relationships",
+            "artifacts",
+            "next_actions",
+            "summaries",
+        ] {
+            let count: i64 = conn
+                .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
+                .expect("count");
+            assert_eq!(count, 0, "table {table} should be empty after clear");
+        }
+    }
+
+    #[test]
+    fn clear_all_data_on_empty_db_is_a_noop() {
+        let mut conn = open_in_memory().expect("open db");
+        apply_migrations(&mut conn).expect("apply migrations");
+
+        let result = clear_all_data(&mut conn).expect("clear empty");
+        assert_eq!(result.sessions_deleted, 0);
+        assert_eq!(result.projects_deleted, 0);
     }
 }

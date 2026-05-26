@@ -29,6 +29,17 @@ pub struct SessionListEntry {
     pub source_count: i64,
 }
 
+/// Per-table row counts removed by a full local-data wipe. Returned so the
+/// reset UI can report honestly what was cleared.
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClearAllDataResult {
+    pub sessions_deleted: u64,
+    pub projects_deleted: u64,
+    pub session_imports_deleted: u64,
+    pub consolidated_memories_deleted: u64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotPersistResult {

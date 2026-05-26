@@ -1,10 +1,12 @@
-import { Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Sparkles, Trash2 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import {
   selectSessionMode,
   selectSessionSource,
   useMoriSessionStore,
 } from "../../app/sessionStore";
+import { useMoriSqliteStore } from "../../app/sqliteStore";
 import { SettingsRow, SettingsSection, StatusPill } from "./SettingsPrimitives";
 
 /**
@@ -33,6 +35,12 @@ export function DemoModeCard({
   const source = useMoriSessionStore(selectSessionSource);
   const imports = useMoriSessionStore((state) => state.imports);
   const resetToDemo = useMoriSessionStore((state) => state.resetToDemo);
+  const clearAllDataAndViewDemo = useMoriSessionStore(
+    (state) => state.clearAllDataAndViewDemo,
+  );
+  const refreshSqlite = useMoriSqliteStore((state) => state.refresh);
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const isDemo = mode === "demo";
 
@@ -84,6 +92,55 @@ export function DemoModeCard({
                 title="데모 세션 메모리로 돌아가기. 현재 초안은 저장된 경우 그대로 유지됩니다."
               >
                 데모 보기
+              </Button>
+            )
+          }
+        />
+        <SettingsRow
+          label="기존 데이터 모두 지우고 데모 보기"
+          description={
+            confirmingReset
+              ? "저장된 모든 세션·메모리·리포트 초안이 영구히 삭제됩니다. 로컬 AI·리포지토리 설정은 유지됩니다."
+              : "이 기기에 저장된 모든 세션·가져오기·프로젝트 메모리를 지우고 Mori 데모 데이터로 되돌립니다."
+          }
+          control={
+            confirmingReset ? (
+              <div className="demo-mode-card-confirm">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={resetting}
+                  onClick={() => setConfirmingReset(false)}
+                >
+                  취소
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={Trash2}
+                  disabled={resetting}
+                  onClick={async () => {
+                    setResetting(true);
+                    try {
+                      await clearAllDataAndViewDemo();
+                      await refreshSqlite();
+                    } finally {
+                      setResetting(false);
+                      setConfirmingReset(false);
+                    }
+                  }}
+                >
+                  {resetting ? "지우는 중…" : "지우고 데모 보기"}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                icon={Trash2}
+                onClick={() => setConfirmingReset(true)}
+                title="이 기기에 저장된 모든 작업 데이터를 지우고 데모로 되돌립니다. 되돌릴 수 없습니다."
+              >
+                전체 초기화
               </Button>
             )
           }

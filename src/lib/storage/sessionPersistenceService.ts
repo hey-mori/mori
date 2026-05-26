@@ -12,6 +12,7 @@ import {
   validateSqlitePersistenceSnapshot,
 } from "../sqlite";
 import type {
+  ClearAllSqliteDataResult,
   DatabaseStatus,
   PersistSessionSnapshotOutput,
   SqliteSessionListEntry,
@@ -27,6 +28,7 @@ export type SqliteDesktopCommands = {
   persistSessionSnapshot: typeof tauriCommands.persistSessionSnapshot;
   loadSqliteSessionSnapshot: typeof tauriCommands.loadSqliteSessionSnapshot;
   listSqliteSessions: typeof tauriCommands.listSqliteSessions;
+  clearAllSqliteData: typeof tauriCommands.clearAllSqliteData;
 };
 
 export type SessionPersistenceServiceOptions = {
@@ -127,6 +129,16 @@ export class SessionPersistenceService {
       throw new Error(`Invalid snapshot: ${validation.issues.join("; ")}`);
     }
     return this.commands.persistSessionSnapshot({ snapshot });
+  }
+
+  /**
+   * Wipe every user work record from the desktop SQLite database (sessions,
+   * projects, their children, session imports, and consolidated memory).
+   * Desktop-only — the browser path clears localStorage instead.
+   */
+  async clearAllDesktopData(): Promise<ClearAllSqliteDataResult> {
+    requireDesktop(this.runtime);
+    return this.commands.clearAllSqliteData();
   }
 
   async loadSessionFromDesktop(sessionId: string): Promise<LoadedDesktopSession> {

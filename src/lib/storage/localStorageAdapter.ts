@@ -175,6 +175,25 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     }
   }
 
+  clearAllLocalData(): void {
+    // Configuration is setup, not captured work — dropping a user's Ollama
+    // endpoint or registered repository paths on a data reset would be
+    // surprising, so those keys are preserved.
+    const preserved = new Set<string>([QUICK_PASS_SETTINGS_KEY, REPOSITORY_SETTINGS_KEY]);
+    // Collect first, then remove — mutating storage while iterating by index
+    // shifts later keys and would skip entries.
+    const removable: string[] = [];
+    for (let index = 0; index < this.storage.length; index += 1) {
+      const key = this.storage.key(index);
+      if (!key?.startsWith("mori.")) continue;
+      if (preserved.has(key)) continue;
+      removable.push(key);
+    }
+    for (const key of removable) {
+      this.storage.removeItem(key);
+    }
+  }
+
   addSessionImport(
     sessionId: string,
     candidate: NormalizedImportCandidate,

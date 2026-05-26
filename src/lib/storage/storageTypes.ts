@@ -159,6 +159,15 @@ export type MoriDraftRepository = {
   loadCurrentSessionDraft: () => StoredSessionDraft | null;
   clearCurrentSessionDraft: () => void;
   /**
+   * Wipe every locally-persisted work record — all session drafts and
+   * their imports / analyses / memory bodies, every accepted Project
+   * Memory row, the memory audit log, and saved `.mori` package drafts.
+   * Configuration (Quick Pass provider settings, registered repository
+   * paths) is preserved. Used by the "clear data and view demo" reset;
+   * irreversible.
+   */
+  clearAllLocalData: () => void;
+  /**
    * Promote an already-stored session draft (by id) to the current
    * session. Unlike `saveCurrentSessionDraft`, this does not restamp
    * `savedAt` — opening a saved session is not a save. Returns `null`

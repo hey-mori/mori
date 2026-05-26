@@ -16,8 +16,8 @@ pub use session_imports::{
 };
 pub use connection::{database_path, open_database};
 pub use migrations::{apply_migrations, applied_migrations, MIGRATIONS, MIGRATION_TABLE_NAME};
-pub use records::DatabaseStatus;
-pub use repository::{list_sessions, load_session_snapshot, save_session_snapshot};
+pub use records::{ClearAllDataResult, DatabaseStatus};
+pub use repository::{clear_all_data, list_sessions, load_session_snapshot, save_session_snapshot};
 
 #[cfg(test)]
 pub use connection::open_in_memory;

@@ -4,12 +4,13 @@ use rusqlite::Connection;
 use serde::Serialize;
 
 use crate::db::{
-    append_memory_review_actions, apply_migrations, applied_migrations, database_path,
-    list_accepted_memories, list_all_session_imports, list_memory_review_actions,
+    append_memory_review_actions, apply_migrations, applied_migrations, clear_all_data,
+    database_path, list_accepted_memories, list_all_session_imports, list_memory_review_actions,
     list_session_imports, list_sessions, load_session_snapshot, open_database,
     save_accepted_memories, save_session_imports, save_session_snapshot, AcceptedMemoryRow,
-    AcceptedMemoryWriteResult, DatabaseStatus, MemoryReviewActionRow, MemoryReviewActionWriteResult,
-    SessionImportRow, SessionImportWriteResult, MIGRATIONS, MIGRATION_TABLE_NAME,
+    AcceptedMemoryWriteResult, ClearAllDataResult, DatabaseStatus, MemoryReviewActionRow,
+    MemoryReviewActionWriteResult, SessionImportRow, SessionImportWriteResult, MIGRATIONS,
+    MIGRATION_TABLE_NAME,
 };
 use crate::db::records::{SessionListEntry, SessionSnapshot, SnapshotPersistResult};
 
@@ -212,6 +213,16 @@ pub fn list_all_session_import_rows(
     with_connection(&state, |conn, _| {
         ensure_migrated(conn)?;
         list_all_session_imports(conn)
+    })
+}
+
+#[tauri::command]
+pub fn clear_all_sqlite_data(
+    state: tauri::State<'_, SqliteState>,
+) -> Result<ClearAllDataResult, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        clear_all_data(conn)
     })
 }
 

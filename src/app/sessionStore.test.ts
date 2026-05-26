@@ -189,7 +189,9 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
 });
 
 describe("useMoriSessionStore desktop persistence", () => {
+  let desktopClearCalls = 0;
   beforeEach(() => {
+    desktopClearCalls = 0;
     const storage = new MemoryKeyValueStorage();
     const repository = new BrowserDraftRepository(storage);
     setSessionRepositoryForTesting(repository);
@@ -227,6 +229,15 @@ describe("useMoriSessionStore desktop persistence", () => {
         }),
         loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(moriMockSession),
         listSqliteSessions: async () => ({ sessions: [] }),
+        clearAllSqliteData: async () => {
+          desktopClearCalls += 1;
+          return {
+            sessionsDeleted: 1,
+            projectsDeleted: 1,
+            sessionImportsDeleted: 0,
+            consolidatedMemoriesDeleted: 0,
+          };
+        },
       },
     });
     setSessionPersistenceServiceForSessionStore(service);
@@ -247,6 +258,17 @@ describe("useMoriSessionStore desktop persistence", () => {
     expect(state.draft?.session.id).toBe(moriMockSession.session.id);
     expect(state.imports.length).toBe(moriMockSession.sources.length);
     expect(state.source).toBe("desktop-sqlite");
+  });
+
+  it("clearAllDataAndViewDemo wipes SQLite and returns to demo in desktop mode", async () => {
+    const before = useMoriSessionStore.getState().dataResetNonce;
+    await useMoriSessionStore.getState().clearAllDataAndViewDemo();
+
+    expect(desktopClearCalls).toBe(1);
+    const state = useMoriSessionStore.getState();
+    expect(state.draft).toBeNull();
+    expect(state.source).toBe("demo");
+    expect(state.dataResetNonce).toBe(before + 1);
   });
 
   it("marks the active session as desktop SQLite after an explicit persist", () => {

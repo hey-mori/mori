@@ -113,6 +113,7 @@ export function Sidebar({
   const currentProjectKey = useMoriAppStore((state) => state.currentProjectKey);
   const activeSessionId = useMoriSessionStore((state) => state.draft?.session.id ?? null);
   const source = useMoriSessionStore(selectSessionSource);
+  const dataResetNonce = useMoriSessionStore((state) => state.dataResetNonce);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
   const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
   const renameSession = useMoriSessionStore((state) => state.renameSession);
@@ -152,7 +153,7 @@ export function Sidebar({
   }, []);
   useEffect(() => {
     refresh();
-  }, [activeSessionId, refresh]);
+  }, [activeSessionId, dataResetNonce, refresh]);
 
   const allRows = useMemo<SidebarSessionRow[]>(
     () => mergeDemoSessionSummaries(summaries).map(toSidebarRow),

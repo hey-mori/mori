@@ -45,6 +45,12 @@ function stubDesktopCommands(overrides: Partial<SqliteDesktopCommands> = {}): Sq
       decisionsPersisted: snapshot.decisions.length,
     }),
     loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(moriMockSession),
+    clearAllSqliteData: async () => ({
+      sessionsDeleted: 0,
+      projectsDeleted: 0,
+      sessionImportsDeleted: 0,
+      consolidatedMemoriesDeleted: 0,
+    }),
     listSqliteSessions: async () => ({
       sessions: [
         {

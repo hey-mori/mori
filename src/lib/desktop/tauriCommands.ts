@@ -9,6 +9,7 @@ import type {
 } from "../../domain/backend-contracts";
 import type { MoriMockSession, Session, SourceRef } from "../../domain/types";
 import type {
+  ClearAllSqliteDataResult,
   DatabaseStatus,
   ListSessionsOutput,
   PersistSessionSnapshotOutput,
@@ -59,6 +60,7 @@ export type TauriCommandName =
   | "persist_session_imports"
   | "list_session_import_rows"
   | "list_all_session_import_rows"
+  | "clear_all_sqlite_data"
   | "create_session"
   | "import_ai_conversation"
   | "import_git_diff"
@@ -171,6 +173,7 @@ export type TauriCommandMap = {
     input: undefined;
     output: SqliteSessionImportRow[];
   };
+  clear_all_sqlite_data: { input: undefined; output: ClearAllSqliteDataResult };
   create_session: { input: CreateSessionInput; output: Session };
   import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
   import_git_diff: { input: ImportSourceInput; output: SourceRef };
@@ -304,6 +307,9 @@ export const tauriCommands = {
   },
   listAllSessionImportRows(): Promise<SqliteSessionImportRow[]> {
     return invokeTauriCommand("list_all_session_import_rows", undefined);
+  },
+  clearAllSqliteData(): Promise<ClearAllSqliteDataResult> {
+    return invokeTauriCommand("clear_all_sqlite_data", undefined);
   },
   createSession(input: CreateSessionInput): Promise<Session> {
     return invokeTauriCommand("create_session", input);

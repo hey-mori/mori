@@ -56,6 +56,14 @@ export type ListSessionsOutput = {
   sessions: SqliteSessionListEntry[];
 };
 
+/** Per-table row counts removed by a full desktop SQLite data wipe. */
+export type ClearAllSqliteDataResult = {
+  sessionsDeleted: number;
+  projectsDeleted: number;
+  sessionImportsDeleted: number;
+  consolidatedMemoriesDeleted: number;
+};
+
 export type MoriSqliteRepository = {
   initializeDatabase: () => Promise<DatabaseStatus>;
   persistSessionSnapshot: (input: PersistSessionSnapshotInput) => Promise<PersistSessionSnapshotOutput>;

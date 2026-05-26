@@ -99,6 +99,14 @@ export type MoriSessionState = {
   analysisSettings: QuickPassAnalysisSettings;
   source: SessionSource;
   /**
+   * Bumped whenever a data reset wipes stored sessions
+   * (`clearAllDataAndViewDemo`). Surfaces purely as a re-read signal: the
+   * sidebar session list and other localStorage-derived views read it as an
+   * effect dependency so they refresh even when the active session id does
+   * not change (e.g. wiping background sessions while already in demo).
+   */
+  dataResetNonce: number;
+  /**
    * Live timeline data-source seam. Static today (there is no backend), so
    * it never emits. A future polling / SSE source is a drop-in replacement
    * at this field — see `lib/session/timelineDataSource.ts`.
@@ -151,6 +159,16 @@ export type MoriSessionState = {
   abandonPendingNewSessionIfEmpty: () => boolean;
   removeImport: (importId: string) => void;
   resetToDemo: () => void;
+  /**
+   * Wipe all locally-persisted work data and return to the bundled demo
+   * session. Unlike `resetToDemo` — which only drops the active draft and
+   * leaves other saved sessions, accepted memories, and package drafts in
+   * place — this clears every session and its analyses / memory bodies,
+   * accepted Project Memory, the audit log, and saved packages. Quick Pass
+   * and repository settings are preserved. In desktop mode it also wipes the
+   * SQLite database (sessions the user registered there). Irreversible.
+   */
+  clearAllDataAndViewDemo: () => Promise<void>;
   runQuickPass: (provider?: MoriAnalysisProvider) => Promise<MoriAnalysisResult | null>;
   clearAnalysis: () => void;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
@@ -292,6 +310,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   analysisFallbackUsed: false,
   analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
   source: "demo",
+  dataResetNonce: 0,
   dataSource: createStaticMockDataSource(demoView),
   subscribeToDataSource: (onUpdate) => get().dataSource.subscribe(onUpdate),
   hydrate: async () => {
@@ -542,6 +561,35 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisFallbackUsed: false,
       source: "demo",
       pendingNewSession: null,
+    });
+  },
+  clearAllDataAndViewDemo: async () => {
+    const repository = getRepository();
+    repository.clearAllLocalData();
+    const service = getPersistenceService();
+    if (service.isDesktop()) {
+      // Desktop sessions live in SQLite, not localStorage — wipe them too.
+      // A failure here is non-fatal: localStorage is already cleared and the
+      // demo view still shows; the SQLite list refresh will reveal any rows
+      // that survived so the state stays honest rather than silently wrong.
+      try {
+        await service.clearAllDesktopData();
+      } catch {
+        // Intentionally swallowed — see above. The SQLite store's own refresh
+        // surfaces the real post-clear state.
+      }
+    }
+    set({
+      draft: null,
+      imports: [],
+      analysis: null,
+      analysisStatus: "idle",
+      analysisError: null,
+      analysisProviderLabel: null,
+      analysisFallbackUsed: false,
+      source: "demo",
+      pendingNewSession: null,
+      dataResetNonce: get().dataResetNonce + 1,
     });
   },
   runQuickPass: async (provider) => {

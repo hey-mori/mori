@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
-import { createDeterministicQuickPassProvider } from "../analysis";
+import { DEFAULT_QUICK_PASS_SETTINGS, createDeterministicQuickPassProvider } from "../analysis";
 import { normalizeAiConversationText, normalizeManualNote, normalizeUrlSource } from "../import";
 import { createMoriPackageFromSession } from "../mori-package";
 import { createSessionDraft } from "../session/createSessionDraft";
@@ -299,6 +299,61 @@ describe("BrowserDraftRepository", () => {
     expect(repository.listSessionImports(draft.session.id)).toHaveLength(0);
     expect(repository.listStoredSessions()).toHaveLength(0);
     expect(repository.loadSessionAnalysis(draft.session.id)).toBeNull();
+  });
+
+  it("clearAllLocalData wipes every work record but preserves settings", () => {
+    const storage = new MemoryKeyValueStorage();
+    const repository = new BrowserDraftRepository(storage);
+
+    const draft = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Wipe me",
+        projectName: "Wipe Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+    repository.addSessionImport(
+      draft.session.id,
+      normalizeManualNote({
+        projectId: draft.project.id,
+        sessionId: draft.session.id,
+        title: "Note",
+        note: "to be cleared",
+        capturedAt: "2026-05-12T13:05:00+09:00",
+      }),
+    );
+    repository.saveSessionMemoryBody(draft.session.id, {
+      issues: [],
+      decisions: [],
+      nextActions: [],
+    });
+    repository.saveMoriPackageDraft(createMoriPackageFromSession(moriMockSession));
+
+    // Configuration the reset must keep.
+    repository.saveQuickPassSettings({ ...DEFAULT_QUICK_PASS_SETTINGS, provider: "ollama" });
+    repository.saveRepositorySettings({
+      repositories: [
+        { id: "r-a", label: "A", path: "/repo/a", createdAt: "2026-05-12T13:00:00+09:00" },
+      ],
+      selectedRepositoryId: "r-a",
+    });
+
+    repository.clearAllLocalData();
+
+    expect(repository.loadCurrentSessionDraft()).toBeNull();
+    expect(repository.listStoredSessions()).toHaveLength(0);
+    expect(repository.listSessionImports(draft.session.id)).toHaveLength(0);
+    expect(repository.loadSessionMemoryBody(draft.session.id)).toBeNull();
+    expect(repository.listMoriPackageDrafts()).toHaveLength(0);
+
+    // Settings survive the wipe.
+    expect(repository.loadQuickPassSettings().provider).toBe("ollama");
+    expect(repository.loadRepositorySettings().repositories).toHaveLength(1);
   });
 
   it("setCurrentSession promotes a stored session without restamping savedAt", () => {

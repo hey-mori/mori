@@ -15158,6 +15158,12 @@ button.settings-option {
   background: var(--purple);
 }
 
+.demo-mode-card-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .theme-option-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
