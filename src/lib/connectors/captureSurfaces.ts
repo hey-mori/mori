@@ -28,6 +28,7 @@ export type CaptureSurfaceId =
   | "codexCliWrapper"
   | "codexDesktopExport"
   | "codexWebGithub"
+  | "openCodeCli"
   | "vscodeExtension"
   | "cursorExtension"
   | "terminalShellIntegration"
@@ -40,6 +41,7 @@ export type CaptureSurfaceToolFamily =
   | "manual"
   | "claude"
   | "codex"
+  | "opencode"
   | "git"
   | "ide"
   | "browser"
@@ -421,6 +423,38 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     setupRequirement: "현재는 paste 또는 git diff 활용.",
     nextStep: "github-pr-import.md에 따라 사용자가 URL을 입력하면 paste + diff를 결합하는 importer 설계.",
     relatedIntegrationIds: ["codexTranscript"],
+  },
+  // ---- OpenCode family ----
+  {
+    id: "openCodeCli",
+    label: "OpenCode CLI 래퍼 (로컬 JSONL)",
+    toolFamily: "opencode",
+    surface: "cli",
+    status: "docsTemplateOnly",
+    captureMode: "localCliWrapper",
+    userActionRequired:
+      "사용자가 PATH에 wrapper를 설치하고 `mori-opencode-wrapper.sh -- opencode run ...` 형태로 직접 실행.",
+    canCreateSource: true,
+    canCreateEvents: true,
+    canEnterImportReview: true,
+    rawDataPolicy: "summaryOnly",
+    trustDefault: "observed",
+    privacyBoundary:
+      "wrapper는 prompt summary / exit code / duration / --git 옵션 시 shortstat만 기록합니다. OpenCode 출력 본문은 수집하지 않습니다.",
+    whatMoriCanAccess: [
+      "session_started / prompt summary / command_finished 메타데이터",
+      "(옵션) git diff --shortstat 한 줄",
+    ],
+    whatMoriNeverAccesses: [
+      "OpenCode 계정",
+      "API 키",
+      "환경 변수",
+      "git diff 본문",
+      "stdout/stderr 전체",
+    ],
+    setupRequirement: "connectors/opencode-cli/ 템플릿을 PATH에 설치.",
+    nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 wrapper 설치를 돕는 in-app 가이드.",
+    relatedIntegrationIds: [],
   },
   // ---- IDE / shell / browser families (planned) ----
   {

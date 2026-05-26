@@ -128,6 +128,7 @@ export type BuildControlCenterInput = {
 const FAMILY_ORDER: CaptureSurfaceToolFamily[] = [
   "claude",
   "codex",
+  "opencode",
   "git",
   "terminal",
   "manual",
@@ -140,6 +141,7 @@ const FAMILY_LABEL: Record<CaptureSurfaceToolFamily, string> = {
   manual: "직접 입력",
   claude: "Claude",
   codex: "Codex",
+  opencode: "OpenCode",
   git: "Git",
   ide: "에디터 / IDE",
   browser: "브라우저",
@@ -207,6 +209,7 @@ function resolveImportKind(
     case "localCaptureBridge":
     case "claudeCodeHook":
     case "codexCliWrapper":
+    case "openCodeCli":
       return { kind: "connector" };
     default:
       return null;
@@ -222,6 +225,7 @@ const IMPORT_ACTION_LABEL: Partial<Record<CaptureSurfaceId, string>> = {
   localCaptureBridge: "Connector JSONL 가져오기",
   claudeCodeHook: "Connector JSONL 가져오기",
   codexCliWrapper: "Connector JSONL 가져오기",
+  openCodeCli: "Connector JSONL 가져오기",
 };
 
 const NO_SESSION_REASON =

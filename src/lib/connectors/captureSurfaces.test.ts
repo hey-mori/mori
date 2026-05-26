@@ -98,6 +98,19 @@ describe("matrix consistency invariants", () => {
     expect(row?.canEnterImportReview).toBe(true);
     expect(row?.rawDataPolicy).toBe("summaryOnly");
   });
+
+  it("lists OpenCode as its own family with an honest docs-template surface", () => {
+    const row = getAllCaptureSurfaces().find((entry) => entry.id === "openCodeCli");
+    expect(row).toBeDefined();
+    expect(row?.toolFamily).toBe("opencode");
+    // A shipped wrapper template — explicit, summary-only, review-gated.
+    expect(row?.status).toBe("docsTemplateOnly");
+    expect(row?.captureMode).toBe("localCliWrapper");
+    expect(row?.canEnterImportReview).toBe(true);
+    expect(row?.rawDataPolicy).toBe("summaryOnly");
+    // It must never imply account access.
+    expect(row?.whatMoriNeverAccesses.join(" ")).toMatch(/계정|API/);
+  });
 });
 
 describe("getCaptureSurfacesByFamily", () => {

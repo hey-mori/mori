@@ -151,6 +151,8 @@ function connectorLabel(connectorId: ConnectorId): string {
       return "Claude Code session";
     case "codexCliWrapper":
       return "Codex CLI session";
+    case "openCodeCli":
+      return "OpenCode session";
     case "terminalShell":
       return "Terminal shell session";
     case "terminal":
@@ -182,6 +184,12 @@ function mapConnectorToSourceKind(connectorId: ConnectorId, events: ConnectorEve
       return "claudeTranscript";
     case "codexCliWrapper":
       return "codexTranscript";
+    case "openCodeCli":
+      // OpenCode is an AI coding agent. There is no dedicated SourceKind yet,
+      // so its capture flows through the generic AI-conversation path (its
+      // OpenCode identity is preserved via connectorId + the "OpenCode
+      // session" source title) — the same pattern as desktop transcript import.
+      return "aiConversation";
     case "terminalShell":
     case "terminal":
       return "terminal";

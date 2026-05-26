@@ -1,6 +1,7 @@
 import {
   Bot,
   Boxes,
+  Braces,
   Chrome,
   Code2,
   FileText,
@@ -39,6 +40,7 @@ export type SourceControlCenterProps = {
 const FAMILY_ICON: Record<CaptureSurfaceToolFamily, LucideIcon> = {
   claude: Sparkles,
   codex: Code2,
+  opencode: Braces,
   git: GitBranch,
   terminal: Terminal,
   manual: FileText,

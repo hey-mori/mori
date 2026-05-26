@@ -18,6 +18,7 @@
 import { describe, expect, it } from "vitest";
 import claudeCodeSample from "../../../connectors/claude-code/sample-event.jsonl?raw";
 import codexCliSample from "../../../connectors/codex-cli/sample-event.jsonl?raw";
+import openCodeSample from "../../../connectors/opencode-cli/sample-event.jsonl?raw";
 import {
   buildConnectorJsonlPreview,
   parseConnectorJsonl,
@@ -116,6 +117,64 @@ describe("connectors/codex-cli/sample-event.jsonl", () => {
     // session_started produces no TimelineEvent; command_finished and
     // git_diff_captured both become fileCode events.
     expect(timelineEvents.map((event) => event.type)).toEqual([
+      "fileCode",
+      "fileCode",
+    ]);
+    for (const event of timelineEvents) {
+      expect(event.connectorEventId).toBeTruthy();
+      expect(event.createdBy).toBe("import");
+    }
+  });
+});
+
+describe("connectors/opencode-cli/sample-event.jsonl", () => {
+  it("parses without validation errors across the typed wrapper kinds", () => {
+    const outcome = parseConnectorJsonl(openCodeSample);
+    expect(outcome.errors).toEqual([]);
+    expect(outcome.events.length).toBe(5);
+    for (const event of outcome.events) {
+      expect(event.connectorId).toBe("openCodeCli");
+      expect(event.privacy.captureMethod).toBe("local_cli_wrapper");
+      expect(event.privacy.rawDataPolicy).toBe("summary_only");
+      expect(event.provenance.toolName).toBe("mori-opencode-wrapper.sh");
+      expect(event.rawText).toBeUndefined();
+    }
+    expect(outcome.events.map((event) => event.kind).sort()).toEqual([
+      "command_finished",
+      "git_diff_captured",
+      "prompt_submitted",
+      "session_finished",
+      "session_started",
+    ]);
+  });
+
+  it("previews as a non-empty valid bucket", () => {
+    const preview = buildConnectorJsonlPreview(openCodeSample);
+    expect(preview.kind).toBe("valid");
+    expect(preview.validEventCount).toBe(5);
+    expect(preview.invalidLineCount).toBe(0);
+  });
+
+  it("normalizes into one full-fidelity OpenCode source on the AI conversation path", () => {
+    const outcome = parseConnectorJsonl(openCodeSample);
+    const candidates = normalizeConnectorEventBatch({
+      projectId: "p-template",
+      sessionId: "template-session",
+      events: outcome.events,
+    });
+    expect(candidates).toHaveLength(1);
+    // OpenCode has no dedicated SourceKind yet, so it rides the generic
+    // AI-conversation path; its identity stays in the source title.
+    expect(candidates[0]?.source.kind).toBe("aiConversation");
+    expect(candidates[0]?.source.title).toContain("OpenCode");
+    // Bracketed by session_started + session_finished → a complete capture.
+    expect(candidates[0]?.source.captureFidelity?.level).toBe("full");
+
+    const timelineEvents = candidates.flatMap((candidate) => candidate.events);
+    // session_started produces no TimelineEvent; the other four do.
+    expect(timelineEvents.map((event) => event.type).sort()).toEqual([
+      "aiConversation",
+      "documentNote",
       "fileCode",
       "fileCode",
     ]);

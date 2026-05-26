@@ -20,6 +20,7 @@ import type { SourceRef, TimelineEvent } from "../../domain/types";
 export type ConnectorId =
   | "claudeCodeHook"
   | "codexCliWrapper"
+  | "openCodeCli"
   | "terminalShell"
   | "terminal"
   | "gitCommand"
@@ -32,6 +33,7 @@ export type ConnectorId =
 export const KNOWN_CONNECTOR_IDS = [
   "claudeCodeHook",
   "codexCliWrapper",
+  "openCodeCli",
   "terminalShell",
   "terminal",
   "gitCommand",
