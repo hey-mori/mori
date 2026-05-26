@@ -12619,6 +12619,89 @@ pre {
   color: #6e668c;
 }
 
+/* Empty-state "how memory accumulates" loop — turns the hollow centerpiece
+   into a guide. New classes only, so it never collides with the source hub. */
+.memory-loop {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.memory-loop-lead {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.memory-loop-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.memory-loop-steps li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-soft);
+}
+
+.memory-loop-steps li.is-destination {
+  border-color: var(--green);
+  background: linear-gradient(180deg, #fff, #f5fcf7);
+}
+
+.memory-loop-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 7px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.memory-loop-steps li.is-destination .memory-loop-icon {
+  color: var(--green);
+  border-color: transparent;
+  background: var(--green-50, #eaf7ef);
+}
+
+.memory-loop-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.memory-loop-text strong {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.memory-loop-text small {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted-2);
+}
+
+@media (max-width: 560px) {
+  .memory-loop-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Loading-state skeleton — three calm muted rows that read as
  * "list is being fetched" without competing with real content. */
 .memory-accepted-list-skeleton .memory-accepted-skeleton-row {
@@ -14149,7 +14232,7 @@ pre {
 
 .memory-session-row {
   display: grid;
-  grid-template-columns: 28px 1fr auto 12px;
+  grid-template-columns: 28px minmax(0, 1fr) 12px;
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -14168,6 +14251,20 @@ pre {
 .memory-session-row.is-current {
   border-color: var(--green);
   background: linear-gradient(180deg, #fff, #f5fcf7);
+}
+
+/* Title block + metadata stacked in one column so the badges wrap *under*
+   the title instead of competing with it for width in the narrow right
+   rail (where the title previously crushed to an ellipsis). */
+.memory-session-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.memory-session-chevron {
+  color: var(--muted-2);
+  align-self: center;
 }
 
 .memory-session-titles {

@@ -423,6 +423,7 @@ export function MemoryView() {
               loading={memoriesLoading}
               onSelectMemory={setSelectedMemoryId}
               selectedMemoryId={selectedMemoryId}
+              onOpenConsolidation={() => setMemoryTab("consolidation")}
             />
 
             <ConsolidationPreviewCard

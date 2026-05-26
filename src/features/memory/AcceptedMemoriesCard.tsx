@@ -1,4 +1,5 @@
-import { BookCheck, ChevronRight, Clock4, Eye } from "lucide-react";
+import { ArrowRight, BookCheck, ChevronRight, Clock4, Download, Eye, GitMerge, ListChecks } from "lucide-react";
+import { Button } from "../../components/ui/Button";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriSection } from "../../components/ui/MoriSection";
 import { formatDateTime } from "../../lib/formatting/time";
@@ -44,6 +45,7 @@ export function AcceptedMemoriesCard({
   loading = false,
   onSelectMemory,
   selectedMemoryId,
+  onOpenConsolidation,
 }: {
   memories: StoredAcceptedProjectMemory[];
   reviewActionCount: number;
@@ -55,6 +57,8 @@ export function AcceptedMemoriesCard({
   /** Open the per-memory provenance drawer when provided. */
   onSelectMemory?: (memoryId: string) => void;
   selectedMemoryId?: string | null;
+  /** Route to the Consolidation review (the empty-state CTA). */
+  onOpenConsolidation?: () => void;
 }) {
   // Show current memory first and archived memory last so a bounded
   // preview never buries guidance-bearing records under retired ones.
@@ -86,10 +90,7 @@ export function AcceptedMemoriesCard({
       {loading && memories.length === 0 ? (
         <MemoryListSkeleton />
       ) : memories.length === 0 ? (
-        <p className="memory-accepted-empty">
-          아직 확정된 메모리가 없습니다. 메모리 통합 카드에서 검토를 열고 제안을 승인하면 여기에
-          누적됩니다.
-        </p>
+        <MemoryLoopEmpty onOpenConsolidation={onOpenConsolidation} />
       ) : (
         <>
           <MemoryLifecycleStrip
@@ -170,6 +171,50 @@ export function AcceptedMemoriesCard({
         </small>
       </footer>
     </MoriSection>
+  );
+}
+
+/**
+ * Empty state for the accepted-memory card. Rather than a single bare line,
+ * it shows the four-step loop by which durable memory accumulates, so a
+ * first-run / demo user understands *how* this surface fills — and gives a
+ * direct route into the Consolidation review where memory is approved.
+ */
+function MemoryLoopEmpty({ onOpenConsolidation }: { onOpenConsolidation?: () => void }) {
+  const steps: { icon: typeof Download; title: string; note: string }[] = [
+    { icon: Download, title: "가져오기", note: "작업 소스를 세션으로 가져옵니다" },
+    { icon: ListChecks, title: "검토", note: "이슈·결정을 확인합니다" },
+    { icon: GitMerge, title: "통합", note: "세션 간 메모리를 검토합니다" },
+    { icon: BookCheck, title: "확정 메모리", note: "승인하면 여기에 누적됩니다" },
+  ];
+  return (
+    <div className="memory-loop">
+      <p className="memory-loop-lead">
+        아직 확정된 메모리가 없습니다. 메모리는 검토를 거쳐 이렇게 쌓입니다.
+      </p>
+      <ol className="memory-loop-steps">
+        {steps.map((step, index) => {
+          const Icon = step.icon;
+          const isLast = index === steps.length - 1;
+          return (
+            <li key={step.title} className={isLast ? "is-destination" : ""}>
+              <span className="memory-loop-icon" aria-hidden="true">
+                <Icon size={14} />
+              </span>
+              <span className="memory-loop-text">
+                <strong>{step.title}</strong>
+                <small>{step.note}</small>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {onOpenConsolidation ? (
+        <Button variant="primary" size="sm" icon={ArrowRight} onClick={onOpenConsolidation}>
+          메모리 통합 열기
+        </Button>
+      ) : null}
+    </div>
   );
 }
 

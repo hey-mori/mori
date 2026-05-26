@@ -69,24 +69,26 @@ export function RecentSessionsList({
                     <Layers size={14} aria-hidden="true" />
                   )}
                 </span>
-                <div className="memory-session-titles">
-                  <strong>{entry.title}</strong>
-                  <span>
-                    {entry.projectName ?? "(프로젝트 없음)"}
-                    {entry.savedAt ? ` · 저장 ${formatShort(entry.savedAt)}` : entry.startedAt ? ` · 시작 ${formatShort(entry.startedAt)}` : ""}
-                  </span>
+                <div className="memory-session-body">
+                  <div className="memory-session-titles">
+                    <strong>{entry.title}</strong>
+                    <span>
+                      {entry.projectName ?? "(프로젝트 없음)"}
+                      {entry.savedAt ? ` · 저장 ${formatShort(entry.savedAt)}` : entry.startedAt ? ` · 시작 ${formatShort(entry.startedAt)}` : ""}
+                    </span>
+                  </div>
+                  <div className="memory-session-meta">
+                    <Badge tone={SCOPE_TONE[entry.scope] ?? "gray"}>{entry.scopeLabel}</Badge>
+                    {loadStatusBySessionId?.[entry.sessionId] && entry.scope !== "current-session" ? (
+                      <Badge tone={LOAD_TONE[loadStatusBySessionId[entry.sessionId]]}>
+                        {LOAD_LABEL[loadStatusBySessionId[entry.sessionId]]}
+                      </Badge>
+                    ) : null}
+                    {entry.eventCount !== null ? <span>이벤트 {entry.eventCount}건</span> : null}
+                    {entry.sourceCount !== null ? <span>출처 {entry.sourceCount}건</span> : null}
+                  </div>
                 </div>
-                <div className="memory-session-meta">
-                  <Badge tone={SCOPE_TONE[entry.scope] ?? "gray"}>{entry.scopeLabel}</Badge>
-                  {loadStatusBySessionId?.[entry.sessionId] && entry.scope !== "current-session" ? (
-                    <Badge tone={LOAD_TONE[loadStatusBySessionId[entry.sessionId]]}>
-                      {LOAD_LABEL[loadStatusBySessionId[entry.sessionId]]}
-                    </Badge>
-                  ) : null}
-                  {entry.eventCount !== null ? <span>이벤트 {entry.eventCount}건</span> : null}
-                  {entry.sourceCount !== null ? <span>출처 {entry.sourceCount}건</span> : null}
-                </div>
-                <ChevronRight size={12} aria-hidden="true" />
+                <ChevronRight size={12} aria-hidden="true" className="memory-session-chevron" />
               </button>
             </li>
           ))}
