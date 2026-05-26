@@ -17689,128 +17689,37 @@ button.settings-option {
   color: var(--muted);
 }
 
-/* Browser-mode (no Tauri bridge) help screen — used to be just a tool
- * grid floating in an empty page. Now it's a proper landing: hero +
- * supported tools + a three-step flow card so the user understands what
- * the page will do once they open the desktop app. */
-.connections-browser-help {
-  display: grid;
-  gap: 28px;
-  padding-top: 16px;
-}
-
-.connections-browser-hero {
+/* Browser-mode desktop note — a calm one-line footnote under the source
+ * hub. The Source Control Center is now the canonical source inventory, so
+ * the old hero + tool cards + three-step flow are gone; this only states
+ * what the desktop app adds and where to import in the browser. */
+.connections-desktop-note {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  padding: 4px 0 0;
-}
-
-.connections-browser-hero-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: var(--purple-50);
-  color: var(--purple);
-  flex-shrink: 0;
-}
-
-.connections-browser-hero h1 {
-  margin: 0 0 6px;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--text);
-}
-
-.connections-browser-hero p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--muted);
-  max-width: 640px;
-}
-
-.connections-browser-tools-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.connections-browser-tools-head h2 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.connections-browser-flow h2 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.connections-browser-flow-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  counter-reset: connections-step;
-}
-
-@media (max-width: 760px) {
-  .connections-browser-flow-steps {
-    grid-template-columns: 1fr;
-  }
-}
-
-.connections-browser-flow-steps li {
-  position: relative;
-  display: grid;
-  gap: 4px;
-  padding: 14px 14px 14px 48px;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  background: white;
-  counter-increment: connections-step;
-}
-
-.connections-browser-flow-steps li::before {
-  content: counter(connections-step);
-  position: absolute;
-  left: 14px;
-  top: 14px;
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--purple-50);
-  color: var(--purple);
-  font-size: 12px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.connections-browser-flow-steps li strong {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.connections-browser-flow-steps li span {
+  border-radius: 9px;
+  background: var(--panel-soft);
   font-size: 12px;
   line-height: 1.55;
   color: var(--muted);
+}
+
+.connections-desktop-note > svg {
+  color: var(--muted-2);
+  flex: none;
+  margin-top: 1px;
+}
+
+.connections-desktop-note code {
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
 }
 
 /* ── Detected-tools grid ─────────────────────────────────────────────── */

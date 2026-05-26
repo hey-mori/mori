@@ -4,11 +4,11 @@ import {
   Boxes,
   Chrome,
   Code2,
-  Download,
   HardDrive,
   KeyRound,
   Layers,
   Maximize2,
+  Monitor,
   Plus,
   RefreshCw,
   Search,
@@ -864,36 +864,6 @@ function PreviewPanel({
 // ─── small subcomponents ──────────────────────────────────────────────────
 
 /**
- * Static preview of supported tools, shown when running in the browser
- * prototype. The grid uses the same card shape as the desktop view so the
- * user knows visually what an actual connection state will look like once
- * they install the Tauri app — every card carries a "PC 필요" badge so we
- * never imply a connection that isn't there.
- */
-const BROWSER_PREVIEW_TOOLS: Array<{ id: string; label: string; description: string }> = [
-  {
-    id: "claude-projects",
-    label: "Claude Desktop",
-    description: "macOS / Windows 설치 시 자동 감지. 대화 + 프로젝트 메타 가져오기.",
-  },
-  {
-    id: "claude-cli-nodejs",
-    label: "Claude Code",
-    description: "Node CLI 설치 시 ~/.claude 세션을 가져옵니다.",
-  },
-  {
-    id: "codex-cli",
-    label: "Codex CLI",
-    description: "OpenAI Codex CLI 세션 (JSONL) 가져오기.",
-  },
-  {
-    id: "claude-chrome-host",
-    label: "Claude Browser",
-    description: "Chrome native messaging 호스트 감지.",
-  },
-];
-
-/**
  * Empty-state guide for the preview pane. Instead of a generic "select a
  * session" placeholder it carries the three things the user actually
  * needs to know: what import does, what client-safe means, and where to
@@ -937,81 +907,22 @@ function PreviewEmptyGuide({ hasActiveSession }: { hasActiveSession: boolean }) 
   );
 }
 
+/**
+ * Browser-mode footnote. The Source Control Center above is now the canonical
+ * source inventory (every paste path is usable here; desktop-only sources are
+ * marked as such), so this is just one honest line about what the desktop app
+ * adds — no competing hero, no duplicate tool cards, no flow explainer.
+ */
 function ConnectionsBrowserHelp() {
   return (
-    <div className="connections-browser-help">
-      <header className="connections-browser-hero">
-        <div className="connections-browser-hero-icon" aria-hidden="true">
-          <Download size={20} />
-        </div>
-        <div>
-          <h1>가져오기</h1>
-          <p>
-            Mori는 PC에 저장된 Claude · Codex 대화 파일을 직접 감지해
-            세션으로 가져옵니다. 데스크탑 앱(Tauri)에서 이 페이지를 열면
-            아래 도구들의 상태가 실시간으로 채워집니다.
-          </p>
-        </div>
-      </header>
-
-      <section className="connections-browser-tools">
-        <header className="connections-browser-tools-head">
-          <h2>지원되는 도구</h2>
-          <Badge tone="gray">PC 필요</Badge>
-        </header>
-        <div className="connections-tools-grid">
-          {BROWSER_PREVIEW_TOOLS.map((tool) => {
-            const Icon = TOOL_ICONS[tool.id] ?? Bot;
-            return (
-              <article
-                key={tool.id}
-                className="connections-tool-card connections-tool-tone-gray is-undetected"
-              >
-                <span className="connections-tool-icon">
-                  <Icon size={15} />
-                </span>
-                <div className="connections-tool-body">
-                  <div className="connections-tool-head">
-                    <strong>{tool.label}</strong>
-                    <span className="connections-tool-status connections-tool-status-muted">
-                      PC 필요
-                    </span>
-                  </div>
-                  <p className="connections-tool-description">{tool.description}</p>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="connections-browser-flow" aria-label="가져오기 흐름">
-        <h2>가져오기 흐름</h2>
-        <ol className="connections-browser-flow-steps">
-          <li>
-            <strong>도구 감지</strong>
-            <span>
-              데스크탑 앱이 ~/.claude, ~/.codex 같은 로컬 디렉터리에서 대화
-              파일을 찾아 도구별로 분류합니다.
-            </span>
-          </li>
-          <li>
-            <strong>세션 미리보기</strong>
-            <span>
-              감지된 대화를 메시지 수 · 토큰 · 최근 활동과 함께 목록으로
-              보여줍니다. 클릭하면 미리보기에서 내용을 확인할 수 있어요.
-            </span>
-          </li>
-          <li>
-            <strong>가져오기 실행</strong>
-            <span>
-              새 Mori 세션으로 가져오거나, 작업 중인 세션에 이벤트로
-              합칠 수 있습니다. 원본 파일은 손대지 않아요.
-            </span>
-          </li>
-        </ol>
-      </section>
-    </div>
+    <p className="connections-desktop-note">
+      <Monitor size={14} aria-hidden="true" />
+      <span>
+        데스크톱 앱(Tauri)에서는 <code>~/.claude</code> · <code>~/.codex</code>에 저장된 대화
+        파일을 자동으로 감지해 세션으로 가져옵니다. 브라우저에서는 위 소스 목록의 붙여넣기
+        경로를 사용하세요.
+      </span>
+    </p>
   );
 }
 
