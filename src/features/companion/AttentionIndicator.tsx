@@ -52,6 +52,9 @@ export function AttentionIndicator({
   const markAllRead = useNotificationReadStore((state) => state.markAllRead);
 
   const [open, setOpen] = useState(false);
+  // The drawer docks to the sidebar's right edge so it opens *next to* the bell
+  // (the trigger is on the left), not on the opposite side of the screen.
+  const [anchorLeft, setAnchorLeft] = useState(0);
   const [toast, setToast] = useState<MoriNotification | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -105,6 +108,17 @@ export function AttentionIndicator({
     return () => window.clearTimeout(timeout);
   }, [notifications]);
 
+  // Measure the sidebar's right edge on open so the drawer docks flush against
+  // it — correct whether the sidebar is expanded or collapsed.
+  function toggleOpen(): void {
+    if (!open) {
+      const sidebar = buttonRef.current?.closest(".sidebar");
+      const rect = (sidebar ?? buttonRef.current)?.getBoundingClientRect();
+      if (rect) setAnchorLeft(Math.round(rect.right));
+    }
+    setOpen((v) => !v);
+  }
+
   function dispatchTarget(
     target: MoriNotificationActionTarget,
     notificationId?: string,
@@ -127,7 +141,7 @@ export function AttentionIndicator({
         ref={buttonRef}
         type="button"
         className={`attention-indicator${unreadCount > 0 ? " has-signals" : ""}${compact ? " is-compact" : ""}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={unreadCount > 0 ? `알림 — 안 읽음 ${unreadCount}건` : "알림"}
@@ -192,6 +206,7 @@ export function AttentionIndicator({
                   <aside
                     ref={drawerRef}
                     className="noti-drawer"
+                    style={{ left: anchorLeft }}
                     role="dialog"
                     aria-label="알림"
                     aria-modal="false"
