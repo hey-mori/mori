@@ -280,12 +280,10 @@ function ProjectSessionRowItem({
   row: ProjectSessionRow;
   onOpen: () => void;
 }) {
-  const statusBadge =
-    row.status === "recording" ? (
-      <MoriStatusBadge tone="success">진행 중</MoriStatusBadge>
-    ) : row.status === "analyzing" ? (
-      <MoriStatusBadge tone="info">분석 중</MoriStatusBadge>
-    ) : null;
+  // No per-row timestamp: the session group header (오늘 / 이번 주 / 이전) already
+  // states recency, so repeating a relative date on every row was a second date.
+  // No process badge (진행 중 / 분석 중) either — that is pipeline state the user
+  // does not act on from a list.
   const meta = [
     row.eventCount ? `이벤트 ${row.eventCount}건` : null,
     row.sourceCount ? `소스 ${row.sourceCount}개` : null,
@@ -298,8 +296,6 @@ function ProjectSessionRowItem({
         leading={<FolderKanban size={15} />}
         title={row.title}
         meta={<MoriMetadataLine items={meta} />}
-        timestamp={formatSidebarRelative(row.timestamp)}
-        status={statusBadge}
         onClick={onOpen}
         ariaLabel={row.title}
         density="compact"
