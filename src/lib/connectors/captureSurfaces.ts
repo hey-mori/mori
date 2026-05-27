@@ -109,6 +109,15 @@ export type CaptureSurfaceRow = {
   whatMoriNeverAccesses: string[];
   /** What the user needs to install / configure / paste. */
   setupRequirement: string;
+  /**
+   * The intended primary capture path for this tool family. Today this is the
+   * local hook / CLI wrapper — it emits structured per-event JSONL as the user
+   * works (explicit emit + explicit import, never a background watcher), which
+   * is the richest reviewable evidence Mori can ingest. The UI surfaces it with
+   * a "추천" marker so the long catalogue of paste / export / planned paths does
+   * not bury the path that is actually worth setting up.
+   */
+  recommended?: boolean;
   /** The single concrete next step that would move this surface forward. */
   nextStep: string;
   /** Existing `SourceIntegration` ids in `sourceRegistry.ts` this surface
@@ -320,6 +329,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriCanAccess: ["사용자가 등록한 hook 이벤트의 summary", "tool 호출 메타데이터", "session start/finish 시각"],
     whatMoriNeverAccesses: ["Claude 계정", "Anthropic API 키", "다른 앱 / 브라우저", "raw transcript 본문 (기본은 summary_only)"],
     setupRequirement: "connectors/claude-code/ 템플릿을 사용자가 PATH에 설치.",
+    recommended: true,
     nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 hook 설치를 돕는 in-app 가이드.",
     relatedIntegrationIds: ["claudeTranscript"],
   },
@@ -381,6 +391,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriCanAccess: ["session_started / command_finished 메타데이터", "(옵션) git diff --shortstat 한 줄"],
     whatMoriNeverAccesses: ["Codex 계정", "API 키", "환경 변수", "git diff 본문", "stdout/stderr 전체"],
     setupRequirement: "connectors/codex-cli/ 템플릿을 PATH에 설치.",
+    recommended: true,
     nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 wrapper 설치를 돕는 in-app 가이드.",
     relatedIntegrationIds: ["codexTranscript"],
   },
@@ -453,6 +464,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
       "stdout/stderr 전체",
     ],
     setupRequirement: "connectors/opencode-cli/ 템플릿을 PATH에 설치.",
+    recommended: true,
     nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 wrapper 설치를 돕는 in-app 가이드.",
     relatedIntegrationIds: [],
   },

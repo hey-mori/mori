@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, Check, Cloud, Database, FileCode2, FilePlus2, Lock, PlugZap, RefreshCcw, Sparkles } from "lucide-react";
+import { ArrowRight, Bot, Braces, Check, Cloud, Code2, Database, FileCode2, FilePlus2, Lock, PlugZap, RefreshCcw, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -8,7 +8,7 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { sourceOptions } from "../../domain/mock-data";
+import { InfoHint } from "../../components/ui/InfoHint";
 import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
 import {
@@ -18,11 +18,6 @@ import {
 } from "../../lib/session/sessionStorageTarget";
 import { isTauriRuntime } from "../../lib/desktop";
 import { formatDateTime } from "../../lib/formatting/time";
-import {
-  applySourceSelection,
-  initialSelectedSourceIds,
-  toggleSourceSelection,
-} from "../../lib/session/sourceSelection";
 import {
   buildStartSessionEngineOptions,
   coerceStartSessionEngineProvider,
@@ -35,7 +30,35 @@ import type { LlmProvider, RecordingMode, SourceOption } from "../../domain/type
 import { useMoriSessionStore, selectSessionMode } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 
-const availableSources = sourceOptions.filter((source) => source.status === "available");
+/**
+ * AI-agent anchors for a hand-made session. A Mori session is one AI-agent
+ * work session, so the only thing you choose at creation is which agent it is
+ * about (the spine). Git / terminal / file material attaches later as evidence
+ * inside the session — it is never a session of its own.
+ */
+type AgentOption = { id: string; name: string; detail: string; icon: LucideIcon };
+
+const AGENT_OPTIONS: AgentOption[] = [
+  { id: "opt-claude", name: "Claude", detail: "Claude Code · Desktop · Web", icon: Sparkles },
+  { id: "opt-codex", name: "Codex", detail: "Codex CLI · 내보내기", icon: Code2 },
+  { id: "opt-opencode", name: "OpenCode", detail: "OpenCode CLI", icon: Braces },
+];
+
+const DEFAULT_AGENT_ID = AGENT_OPTIONS[0]!.id;
+
+/** Build the SourceOption the session draft stores for the chosen agent. */
+function agentSourceOption(agent: AgentOption): SourceOption {
+  return {
+    id: agent.id,
+    name: agent.name,
+    detail: agent.detail,
+    kind: "aiConversation",
+    enabled: true,
+    selected: true,
+    status: "available",
+    icon: agent.icon,
+  };
+}
 
 // Only selectable engines are offered. Disabled / planned providers are not
 // shown — a muted card the user can't pick is clutter, and the create flow
@@ -61,15 +84,18 @@ function deriveInitialFormState(draft: StoredSessionDraft | null) {
     return {
       sessionTitle: "",
       projectName: "",
-      selectedSourceIds: initialSelectedSourceIds(sourceOptions),
+      agentId: DEFAULT_AGENT_ID,
       recordingMode: "summary" as RecordingMode,
       engineProvider: getDefaultStartSessionEngineOption().provider,
     };
   }
+  const savedAgent = draft.session.selectedSourceIds.find((id) =>
+    AGENT_OPTIONS.some((agent) => agent.id === id),
+  );
   return {
     sessionTitle: draft.session.title,
     projectName: draft.project.name,
-    selectedSourceIds: new Set(draft.session.selectedSourceIds),
+    agentId: savedAgent ?? DEFAULT_AGENT_ID,
     recordingMode: draft.session.recordingMode,
     engineProvider: draft.session.llmProvider,
   };
@@ -98,9 +124,7 @@ export function StartSessionView() {
 
   const [sessionTitle, setSessionTitle] = useState(() => initial.sessionTitle);
   const [projectName, setProjectName] = useState(() => initial.projectName);
-  const [selectedSourceIds, setSelectedSourceIds] = useState<Set<string>>(
-    () => initial.selectedSourceIds,
-  );
+  const [selectedAgentId, setSelectedAgentId] = useState(() => initial.agentId);
   // Recording mode is no longer a create-time choice (premature before live
   // capture exists); a hand-made container keeps summaries by default. We still
   // honour an existing draft's saved mode for returning users.
@@ -124,19 +148,14 @@ export function StartSessionView() {
   // unified Session Detail workspace on the matching tab.
   const setCurrentView = useMoriAppStore((state) => state.navigate);
 
-  const selectedSources = useMemo(
-    () =>
-      applySourceSelection(sourceOptions, selectedSourceIds).filter(
-        (source) => source.selected,
-      ),
-    [selectedSourceIds],
-  );
+  const selectedAgent =
+    AGENT_OPTIONS.find((agent) => agent.id === selectedAgentId) ?? AGENT_OPTIONS[0]!;
 
   function handleStartSession() {
     const draft = createSessionDraft({
       sessionTitle: sessionTitle || "제목 없는 세션",
       projectName: projectName || "제목 없는 프로젝트",
-      selectedSources: applySourceSelection(sourceOptions, selectedSourceIds),
+      selectedSources: [agentSourceOption(selectedAgent)],
       recordingMode,
       llmProvider: selectedEngine.provider,
       llmModel: selectedEngine.model,
@@ -195,7 +214,7 @@ export function StartSessionView() {
           savedDraft={storeDraft}
           sessionTitle={sessionTitle || "무제 Mori 세션"}
           projectName={projectName || "무제 프로젝트"}
-          selectedSources={selectedSources}
+          agent={selectedAgent}
           recordingMode={recordingMode}
           engine={selectedEngine}
           storageTarget={storageTarget}
@@ -213,7 +232,7 @@ export function StartSessionView() {
           </span>
           <span className="start-entry-copy">
             <strong>가져오기로 시작</strong>
-            <small>Claude/Codex/OpenCode 작업을 골라 세션과 증거를 함께 만듭니다.</small>
+            <small>Claude/Codex/OpenCode 작업을 골라 세션과 자료를 함께 만듭니다.</small>
           </span>
           <ArrowRight size={13} aria-hidden="true" />
         </button>
@@ -223,7 +242,7 @@ export function StartSessionView() {
           </span>
           <span className="start-entry-copy">
             <strong>빈 세션 만들기</strong>
-            <small>먼저 컨테이너를 만든 뒤 Evidence 탭에서 소스를 붙입니다.</small>
+            <small>먼저 세션을 만든 뒤 증거 탭에서 자료를 붙입니다.</small>
           </span>
         </div>
       </section>
@@ -278,28 +297,23 @@ export function StartSessionView() {
 
       <SetupBlock
         number="2"
-        title="가져올 소스"
-        note="선택한 소스에서 가져온 증거만 이 세션에 모읍니다. Mori는 전체 컴퓨터를 감시하지 않습니다."
+        title="AI 에이전트"
+        titleExtra={
+          <InfoHint align="start" label="AI 에이전트 안내">
+            작업 세션 하나는 AI 에이전트 하나로 시작합니다. Git · 터미널 · 파일 같은 자료는 세션을 만든
+            뒤 같은 세션에 붙입니다. Mori는 전체 컴퓨터를 감시하지 않습니다.
+          </InfoHint>
+        }
       >
-        <div className="source-group">
-          <p className="source-group-label">
-            지금 가져올 수 있는 소스
-            <span className="source-group-count">{availableSources.length}</span>
-          </p>
-          <div className="source-grid">
-            {availableSources.map((source) => (
-              <SourceCard
-                key={source.id}
-                source={source}
-                selected={selectedSourceIds.has(source.id)}
-                onToggle={() =>
-                  setSelectedSourceIds((current) =>
-                    toggleSourceSelection(current, source),
-                  )
-                }
-              />
-            ))}
-          </div>
+        <div className="agent-grid">
+          {AGENT_OPTIONS.map((agent) => (
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              selected={selectedAgentId === agent.id}
+              onSelect={() => setSelectedAgentId(agent.id)}
+            />
+          ))}
         </div>
       </SetupBlock>
 
@@ -323,40 +337,55 @@ export function StartSessionView() {
   );
 }
 
-function SourceCard({
-  source,
+function AgentCard({
+  agent,
   selected,
-  onToggle,
+  onSelect,
 }: {
-  source: SourceOption;
+  agent: AgentOption;
   selected: boolean;
-  onToggle?: () => void;
+  onSelect: () => void;
 }) {
-  const Icon = source.icon;
+  const Icon = agent.icon;
   return (
     <button
       className={`source-card ${selected ? "selected" : ""}`}
       type="button"
       aria-pressed={selected}
-      onClick={onToggle}
+      onClick={onSelect}
     >
       <Icon size={18} aria-hidden="true" />
       <div>
-        <strong>{source.name}</strong>
-        <span><i />{source.detail}</span>
+        <strong>{agent.name}</strong>
+        <span>{agent.detail}</span>
       </div>
       {selected ? <Check size={17} /> : <span className="checkbox" />}
     </button>
   );
 }
 
-function SetupBlock({ number, title, note, children }: { number: string; title: string; note?: string; children: ReactNode }) {
+function SetupBlock({
+  number,
+  title,
+  note,
+  titleExtra,
+  children,
+}: {
+  number: string;
+  title: string;
+  note?: string;
+  titleExtra?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="setup-block">
       <header>
         <span>{number}</span>
         <div>
-          <h2>{title}</h2>
+          <h2>
+            {title}
+            {titleExtra}
+          </h2>
           {note ? <p>{note}</p> : null}
         </div>
       </header>
@@ -396,7 +425,7 @@ function SessionSummary({
   savedDraft,
   sessionTitle,
   projectName,
-  selectedSources,
+  agent,
   recordingMode,
   engine,
   storageTarget,
@@ -404,7 +433,7 @@ function SessionSummary({
   savedDraft: StoredSessionDraft | null;
   sessionTitle: string;
   projectName: string;
-  selectedSources: SourceOption[];
+  agent: AgentOption;
   recordingMode: RecordingMode;
   engine: StartSessionEngineOption;
   storageTarget: SessionStorageTarget;
@@ -430,14 +459,7 @@ function SessionSummary({
     >
       <SummaryRow label="세션 이름" value={sessionTitle || "무제 Mori 세션"} />
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
-      <SummaryRow label="가져올 소스" value={`${selectedSources.length}개 선택됨`} />
-      <ul className="summary-source-list">
-        {selectedSources.length === 0 ? (
-          <li className="summary-source-empty">선택된 소스가 없습니다</li>
-        ) : (
-          selectedSources.map((source) => <li key={source.id}>{source.name}</li>)
-        )}
-      </ul>
+      <SummaryRow label="AI 에이전트" value={agent.name} />
       <hr />
       <SummaryRow
         label="AI 엔진"

@@ -63,6 +63,25 @@ describe("buildConnectorControlCenter", () => {
     expect(families).not.toContain("analysis");
   });
 
+  it("tags AI-agent families as session anchors and the rest as evidence", () => {
+    const groups = buildConnectorControlCenter(DESKTOP_WITH_SESSION).groups;
+    const roleOf = (family: string) => groups.find((g) => g.family === family)?.role;
+    for (const agent of ["claude", "codex", "opencode"]) {
+      expect(roleOf(agent)).toBe("agent");
+    }
+    for (const evidence of ["git", "terminal", "manual", "document", "ide", "browser"]) {
+      expect(roleOf(evidence)).toBe("evidence");
+    }
+  });
+
+  it("marks the local hook / CLI wrapper surfaces as recommended", () => {
+    for (const id of ["claudeCodeHook", "codexCliWrapper", "openCodeCli"]) {
+      expect(findSurface(DESKTOP_WITH_SESSION, id).recommended).toBe(true);
+    }
+    // A plain paste surface is never the recommended capture path.
+    expect(findSurface(DESKTOP_WITH_SESSION, "aiTranscriptPaste").recommended).toBe(false);
+  });
+
   it("sorts surfaces inside a group available-first", () => {
     for (const group of buildConnectorControlCenter(BROWSER_WITH_SESSION).groups) {
       const ranks = group.surfaces.map((s) =>

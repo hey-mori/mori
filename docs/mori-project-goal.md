@@ -48,6 +48,38 @@ Git / notes / URLs, review every AI interpretation, accumulate durable
 project memory, and produce a continuation prompt or report when it is
 time to resume.
 
+**The session unit — an AI-agent work session.** A Mori *session* is one
+**AI-agent work session**, not a free-floating bundle of unrelated
+sources. It has a single **spine**: one AI coding conversation in one
+agent — Claude *or* Codex *or* OpenCode. Around that spine attach the
+**ribs**: the Git diffs, terminal runs, files, notes, and URLs produced
+during *that same piece of work*. So "one Claude conversation = one Mori
+session" and "a session is a unit of work" are the same statement — the
+conversation is the anchor, the surrounding evidence hangs off it. This
+resolves an earlier ambiguity where importing a conversation produced a
+per-conversation session while the Work Bundle implied a session was an
+arbitrary merge of many sources. Consequences that follow from this
+definition:
+
+- **Agents anchor; everything else is evidence.** Claude / Codex /
+  OpenCode are session anchors. Git, terminal, documents, notes, URLs,
+  IDE, and browser sources are evidence you attach to a session — never
+  a session of their own. The source hub presents this split (agent
+  families first, evidence families second).
+- **The canonical way to start a session is to import / continue an AI
+  conversation.** A hand-made empty session is a secondary container.
+- **Attaching surrounding evidence is auto-*association*, never
+  auto-*capture*.** Mori may group already-captured evidence (hook JSONL
+  from the same window, a Git diff the user fetched) onto a session's
+  spine, but it never captures new evidence in the background or watches
+  the machine. Association is automatic; capture stays explicit
+  (Product Principle: explicit import / capture, no hidden capture).
+- **The Work Bundle is the manual fallback, not the model.** Hand-pasting
+  several sources into one bundle is the rare path for when no
+  auto-detected conversation exists; the composite preview / per-source
+  provenance engine is unchanged, but it is no longer presented as the
+  primary way to form a session.
+
 ## 2. Core User Problem
 
 Users work across Claude, Codex, ChatGPT, CLI tools, Git, terminal,
@@ -181,7 +213,12 @@ that is called out.
   "what will be created" summary — then applies each source as its own
   session import so per-source provenance survives into the Evidence Hub and
   Timeline. The preview is the review-before-apply gate; no durable-memory
-  gate is bypassed. See [work-bundle-import.md](work-bundle-import.md).
+  gate is bypassed. See [work-bundle-import.md](work-bundle-import.md). As of
+  the source-hub IA pass this is the **manual fallback** for assembling a
+  session by hand; the canonical way to form a session is to import / continue
+  an AI conversation (the spine), with other sources attached as evidence. The
+  `WorkBundlePanel` is demoted to an advanced disclosure in the Connections
+  hub.
 
 **Timeline and Review Experience**
 

@@ -115,6 +115,7 @@ export type {
 export {
   buildConnectorControlCenter,
   describeControlCenterAvailability,
+  familyRole,
   partitionControlCenterSurfaces,
 } from "./connectorControlCenter";
 export {
@@ -133,6 +134,7 @@ export type {
   ControlCenterAiPlatform,
   ControlCenterAvailability,
   ControlCenterCounts,
+  ControlCenterFamilyRole,
   ControlCenterGroup,
   ControlCenterImportKind,
   ControlCenterPartition,

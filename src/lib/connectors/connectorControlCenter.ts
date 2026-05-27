@@ -21,6 +21,15 @@ import {
   type CaptureSurfaceToolFamily,
 } from "./captureSurfaces";
 
+/**
+ * Whether a source family *anchors* a work session or only *attaches evidence*
+ * to one. A Mori session is one AI-agent work session: a single Claude / Codex
+ * / OpenCode conversation is its spine, and git / terminal / file / note
+ * evidence attaches to that spine. So the AI-agent families are session
+ * anchors; every other family is evidence you add to an existing session.
+ */
+export type ControlCenterFamilyRole = "agent" | "evidence";
+
 /** Runtime-aware usability of a capture surface in the Control Center. */
 export type ControlCenterAvailability =
   /** Implemented / partial and usable right now in this runtime. */
@@ -82,6 +91,8 @@ export type ControlCenterSurface = {
   setupRequirement: string;
   /** The single concrete next step that moves this surface forward. */
   nextStep: string;
+  /** True for the intended primary capture path (the local hook / CLI wrapper). */
+  recommended: boolean;
   rawDataPolicy: CaptureSurfaceRawDataPolicy;
   action: ControlCenterAction;
 };
@@ -89,6 +100,8 @@ export type ControlCenterSurface = {
 export type ControlCenterGroup = {
   family: CaptureSurfaceToolFamily;
   label: string;
+  /** Session anchor (AI agent) or evidence attached to a session. */
+  role: ControlCenterFamilyRole;
   surfaces: ControlCenterSurface[];
 };
 
@@ -136,6 +149,22 @@ const FAMILY_ORDER: CaptureSurfaceToolFamily[] = [
   "ide",
   "browser",
 ];
+
+/**
+ * AI-agent families — the ones that anchor a work session. Everything else is
+ * evidence attached to a session. Kept as a set so the role derivation has one
+ * source of truth.
+ */
+const AGENT_FAMILIES: ReadonlySet<CaptureSurfaceToolFamily> = new Set([
+  "claude",
+  "codex",
+  "opencode",
+]);
+
+/** A family anchors a session (AI agent) or contributes evidence to one. */
+export function familyRole(family: CaptureSurfaceToolFamily): ControlCenterFamilyRole {
+  return AGENT_FAMILIES.has(family) ? "agent" : "evidence";
+}
 
 const FAMILY_LABEL: Record<CaptureSurfaceToolFamily, string> = {
   manual: "직접 입력",
@@ -309,6 +338,7 @@ function toControlCenterSurface(
     userActionRequired: row.userActionRequired,
     setupRequirement: row.setupRequirement,
     nextStep: row.nextStep,
+    recommended: row.recommended ?? false,
     rawDataPolicy: row.rawDataPolicy,
     action: resolveAction(row, availability, input),
   };
@@ -343,6 +373,7 @@ export function buildConnectorControlCenter(
     .map(([family, familySurfaces]) => ({
       family,
       label: FAMILY_LABEL[family],
+      role: familyRole(family),
       surfaces: sortSurfaces(familySurfaces),
     }));
 

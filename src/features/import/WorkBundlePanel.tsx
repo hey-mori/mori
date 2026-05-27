@@ -173,8 +173,9 @@ export function WorkBundlePanel() {
             <Boxes size={18} /> 작업 번들 가져오기
           </h2>
           <p>
-            한 작업 세션이 남긴 여러 소스(대화 · Codex/OpenCode 실행 · git diff · 터미널 로그 · 메모)를 모아
-            하나의 작업 단위로 미리 보고 함께 가져옵니다.
+            자동 감지된 대화가 없을 때 쓰는 수동 경로입니다. 한 작업이 남긴 여러 소스(대화 ·
+            Codex/OpenCode 실행 · git diff · 터미널 로그 · 메모)를 직접 붙여 하나의 작업 세션으로
+            미리 보고 함께 가져옵니다.
           </p>
         </div>
         <Badge tone={hasSession ? "green" : "gray"}>{hasSession ? "실제 세션" : "세션 필요"}</Badge>
@@ -234,7 +235,7 @@ export function WorkBundlePanel() {
         </div>
         <p className="work-bundle-privacy" role="note">
           붙여넣거나 명시적으로 추가한 소스만 처리합니다. 폴더 감시·계정 스캔·자동 메모 작성은 없습니다.
-          적용하면 각 소스가 별도 증거로 저장되어 어떤 소스가 어떤 이벤트를 만들었는지 추적할 수 있습니다.
+          적용하면 각 소스가 별도 자료로 저장되어 어떤 소스가 어떤 이벤트를 만들었는지 추적할 수 있습니다.
         </p>
       </div>
 

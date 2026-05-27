@@ -485,9 +485,13 @@ button {
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   color: var(--text);
   font-weight: 500;
+  /* Fade the trailing edge instead of an ellipsis — a long title dissolves
+     softly rather than ending in "…". Only overflowing text reaches the fade
+     zone, so short titles are unaffected. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent);
 }
 
 .sidebar-row-meta {
@@ -774,8 +778,9 @@ button {
 }
 
 .settings-sheet-title {
-  display: grid;
-  gap: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -783,11 +788,6 @@ button {
   font-size: 13px;
   line-height: 1.2;
   color: var(--text);
-}
-
-.settings-sheet-title span {
-  font-size: 11px;
-  color: var(--muted);
 }
 
 .settings-sheet-tabs {
@@ -838,7 +838,7 @@ button {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 246px minmax(0, 1fr);
+  grid-template-columns: 196px minmax(0, 1fr);
   overflow: hidden;
   background: var(--bg);
 }
@@ -1782,7 +1782,9 @@ kbd {
 
 .timeline-search-input {
   width: 100%;
-  padding: 5px 28px 5px 26px;
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 30px 0 30px;
   border: 1px solid var(--line);
   border-radius: 7px;
   font-size: 12px;
@@ -4841,7 +4843,8 @@ input,
   margin-left: auto;
 }
 
-.source-grid {
+.source-grid,
+.agent-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
@@ -6140,27 +6143,34 @@ hr {
   line-height: var(--mori-line-snug);
 }
 
-.home-usage-bar {
+/* Per-session token column chart. Fixed-width columns (so the chart reads the
+   same regardless of how many sessions are plotted); height encodes the
+   session's token total against the busiest plotted session. Accent fill — the
+   AI-usage figure is the panel's identity metric — over a subtle empty track. */
+.home-usage-chart {
   display: flex;
-  gap: 2px;
-  height: 5px;
+  align-items: flex-end;
+  gap: 3px;
+  height: 40px;
   margin-top: 4px;
-  border-radius: 3px;
-  overflow: hidden;
 }
 
-.home-usage-bar-seg {
-  display: block;
-  min-width: 2px;
+.home-usage-col {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
   border-radius: 2px;
+  background: var(--mori-surface-subtle);
+  box-shadow: inset 0 0 0 1px var(--mori-border);
 }
 
-.home-usage-bar-seg.tone-accent {
+.home-usage-col-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 2px;
   background: var(--mori-accent);
-}
-
-.home-usage-bar-seg.tone-neutral {
-  background: var(--mori-border-strong);
 }
 
 /* Below ~960px the rail can no longer sit comfortably beside the list, so it
@@ -8942,6 +8952,14 @@ pre {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   align-items: start;
+}
+
+/* The 검토 board is a three-bucket Kanban (이슈 / 결정 / 다음 액션), so it
+   overrides the four-column issue-status grid with three equal tracks at wide
+   widths. Narrow-width collapses (2 / 1 column) inherit from the base
+   .review-issue-board-columns media queries below. */
+.review-board-columns {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* The board lives inside the shell's constrained main column, so it drops to a
@@ -14595,12 +14613,12 @@ pre {
 
 .settings-rail-item {
   width: 100%;
-  min-height: 46px;
+  min-height: 34px;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -14630,25 +14648,18 @@ pre {
   color: var(--purple);
 }
 
-.settings-rail-item span {
-  display: grid;
-  gap: 1px;
+.settings-rail-label {
+  overflow: hidden;
   min-width: 0;
-}
-
-.settings-rail-item strong {
   font-size: 12.5px;
   line-height: 1.25;
-  font-weight: 700;
-}
-
-.settings-rail-item small {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 10.5px;
-  line-height: 1.35;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.settings-rail-item.is-active .settings-rail-label {
+  font-weight: 700;
 }
 
 .settings-content-stack {
@@ -14667,19 +14678,18 @@ pre {
   border-bottom: 1px solid var(--line);
 }
 
+.settings-pane-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
 .settings-pane-head h2 {
-  margin: 2px 0 3px;
+  margin: 0;
   color: var(--text);
   font-size: 18px;
   line-height: 1.2;
-}
-
-.settings-pane-head p {
-  margin: 0;
-  max-width: 560px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
 }
 
 .settings-section {
@@ -14701,27 +14711,18 @@ pre {
   gap: 16px;
 }
 
+.settings-section-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
 .settings-section-head h3 {
-  margin: 1px 0 4px;
+  margin: 0;
   color: var(--text);
   font-size: 15px;
   line-height: 1.25;
-}
-
-.settings-section-head p {
-  margin: 0;
-  max-width: 660px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.settings-section-eyebrow {
-  color: var(--muted-2);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .settings-section-action {
@@ -17161,6 +17162,13 @@ button.settings-option {
   opacity: 0.4;
 }
 
+/* An empty lane is a slim band, so center its label instead of using the
+   first-card-row top padding that taller content lanes rely on. */
+.lane.is-empty .lane-label {
+  padding-top: 0;
+  align-items: center;
+}
+
 /* Sticky inspector — pinned to the top of the session scroll area. */
 .inspector {
   position: sticky;
@@ -17669,6 +17677,198 @@ button.settings-option {
   max-width: 640px;
 }
 
+/* ── Work-session feed ────────────────────────────────────────────────────
+   Single-column feed of resumable AI work sessions, grouped by project. Each
+   card expands inline; no separate inspector pane. */
+.connections-session-feed {
+  display: grid;
+  gap: var(--mori-space-5);
+}
+
+.connections-feed-group {
+  display: grid;
+  gap: 8px;
+}
+
+.connections-feed-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+  font-size: 11px;
+}
+
+.connections-feed-group-head svg {
+  flex: none;
+  color: var(--muted-2);
+}
+
+.connections-feed-group-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.connections-feed-group-head > span {
+  flex: none;
+  color: var(--muted-2);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.connections-feed-group > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.connections-session-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, white);
+  overflow: hidden;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.connections-session-card:hover {
+  border-color: var(--muted-2);
+}
+
+.connections-session-card.is-open {
+  border-color: var(--purple);
+  box-shadow: inset 0 0 0 1px var(--purple);
+}
+
+.connections-session-card-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.connections-session-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connections-session-card-meta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.connections-session-card-caret {
+  flex: none;
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+}
+
+.connections-session-card.is-open .connections-session-card-caret {
+  transform: rotate(180deg);
+}
+
+.connections-session-card-detail {
+  display: grid;
+  gap: 14px;
+  padding: 0 14px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.connections-session-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connections-session-stats li {
+  display: grid;
+  gap: 1px;
+}
+
+.connections-session-stats strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.connections-session-stats small {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.connections-session-messages {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connections-session-messages li {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.connections-session-messages li.role-assistant {
+  background: var(--purple-50);
+}
+
+.connections-session-role {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+}
+
+.connections-session-messages p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.connections-session-empty-copy {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.connections-session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* Tool inventory disclosure — sits below the sessions block now that
  * sessions lead the page. Default-closed so it doesn't dominate. */
 .connections-tools-disclosure {
@@ -17721,81 +17921,59 @@ button.settings-option {
   gap: 10px;
 }
 
-/* Preview pane empty-state guide — replaces the generic "select a session"
- * card with three concrete tips so the right column carries real value
- * even when the user hasn't picked anything yet. */
-.connections-preview-guide {
-  display: grid;
-  gap: 14px;
-  padding: 4px 2px;
-}
-
-.connections-preview-guide > header {
-  display: grid;
-  gap: 4px;
-}
-
-.connections-preview-guide > header strong {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.connections-preview-guide > header p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--muted);
-}
-
-.connections-preview-guide ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 8px;
-  counter-reset: connections-tip;
-}
-
-.connections-preview-guide ol li {
-  position: relative;
-  display: grid;
-  gap: 2px;
-  padding: 10px 12px 10px 36px;
+/* Advanced manual-bundle disclosure — same calm chrome as the tools list, so
+ * the demoted Work Bundle reads as a fallback rather than a primary action. */
+.connections-advanced-disclosure {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
-  counter-increment: connections-tip;
+  border-radius: 10px;
+  background: var(--panel-soft);
+  padding: 0 14px;
+  margin-bottom: var(--mori-space-6);
 }
 
-.connections-preview-guide ol li::before {
-  content: counter(connections-tip);
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--purple-50);
-  color: var(--purple);
-  font-size: 11px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+.connections-advanced-disclosure[open] {
+  padding: 0 14px 14px;
 }
 
-.connections-preview-guide ol li strong {
-  font-size: 12.5px;
-  font-weight: 700;
+.connections-advanced-disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
   color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.connections-preview-guide ol li span {
+.connections-advanced-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.connections-advanced-disclosure > summary::before {
+  content: "▶";
+  font-size: 9px;
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+  transform: translateY(-1px);
+}
+
+.connections-advanced-disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.connections-advanced-disclosure > summary small {
+  font-weight: 500;
   font-size: 11.5px;
-  line-height: 1.5;
   color: var(--muted);
+}
+
+/* The bundle panel already carries its own section margins; neutralise them
+ * inside the disclosure so it sits flush in the folded body. */
+.connections-advanced-disclosure-body .work-bundle-panel {
+  margin: 0;
 }
 
 /* Browser-mode desktop note — a calm one-line footnote under the source
@@ -17984,10 +18162,15 @@ button.settings-option {
 }
 
 .connections-tool-head strong {
+  flex: 1;
+  min-width: 0;
   font-size: 12.5px;
   font-weight: 650;
   color: var(--text);
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .connections-tool-status {
@@ -18022,31 +18205,6 @@ button.settings-option {
   border: 1px dashed var(--line-strong);
 }
 
-.connections-tool-description {
-  margin: 0;
-  font-size: 11.5px;
-  color: var(--muted);
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.connections-tool-path {
-  display: block;
-  font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
-  font-size: 10.5px;
-  color: var(--muted-2);
-  background: var(--panel-soft);
-  border-radius: 5px;
-  padding: 2px 7px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
 .connections-tool-footer {
   display: inline-flex;
   flex-wrap: wrap;
@@ -18054,13 +18212,18 @@ button.settings-option {
   align-items: center;
 }
 
-.connections-tool-notes {
-  margin: 0;
-  padding-top: 4px;
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.5;
-  border-top: 1px dashed var(--line);
+/* Tool detail moved into the InfoHint bubble — description, detected path,
+   and the honesty note stack vertically inside the tooltip. */
+.connections-tool-hint {
+  display: grid;
+  gap: 5px;
+}
+
+.connections-tool-hint code {
+  font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
+  font-size: 10.5px;
+  color: #c9c9d6;
+  overflow-wrap: anywhere;
 }
 
 .connections-tool-skel-line {
@@ -18095,118 +18258,23 @@ button.settings-option {
   color: var(--muted);
 }
 
-.connections-sessions-layout {
-  display: grid;
-  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
-  gap: var(--mori-space-6);
-  align-items: start;
-}
+/* ── Session meta chips (used by the work-session feed) ───────────────── */
 
-@media (max-width: 1180px) {
-  .connections-sessions-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.connections-sessions-list {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  border-radius: var(--mori-radius-lg);
-  padding: var(--mori-space-4);
-  min-height: 280px;
-}
-
-/* The preview is now a shared InspectorPanel; inside the sessions layout it
-   sticks to the top of the scroll region and reuses the panel chrome. */
-.connections-sessions-layout .inspector-panel {
-  top: var(--mori-space-3);
-  max-height: calc(100vh - 220px);
-}
-
-/* ── Session list items ───────────────────────────────────────────────── */
-
-.connections-list-items {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: var(--mori-space-2);
-}
-
-.connections-list-group {
-  display: grid;
-  gap: 6px;
-}
-
-.connections-list-group > ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.connections-list-group-label {
-  display: block;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted-2);
-  padding: 4px 6px 0;
-  font-weight: 700;
-  /* Long decoded paths shouldn't break the layout — show a fixed-width
-     ellipsised line and let the title attribute carry the full path. */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.connections-list-item {
-  width: 100%;
-  text-align: left;
-  border: 1px solid transparent;
-  background: white;
-  border-radius: var(--mori-radius-md);
-  padding: 9px 12px;
-  display: grid;
-  gap: 6px;
-  cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
-}
-
-.connections-list-item:hover {
-  border-color: var(--line);
-  background: white;
-  box-shadow: var(--shadow-soft);
-}
-
-.connections-list-item.is-active {
-  border-color: transparent;
-  background: var(--purple-50);
-}
-
-.connections-list-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  word-break: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.4;
-}
-
-.connections-list-meta {
+/* Agent chip — names the AI agent that anchors this work session. */
+.connections-list-agent {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--muted);
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--purple);
+  background: var(--purple-50);
+  padding: 1px 7px;
+  border-radius: 999px;
 }
 
-.connections-list-meta small {
-  font-size: 11px;
+.connections-list-agent svg {
+  flex: none;
 }
 
 .connections-list-tokens {
@@ -18218,186 +18286,6 @@ button.settings-option {
   content: "·";
   margin-right: 8px;
   color: var(--line-strong, var(--line));
-}
-
-/* ── Preview pane ─────────────────────────────────────────────────────── */
-
-.connections-preview-card {
-  display: grid;
-  gap: 14px;
-}
-
-.connections-preview-header h3 {
-  margin: 0 0 4px 0;
-  font-size: 15px;
-  color: var(--text);
-}
-
-.connections-preview-subtitle {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.connections-preview-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--panel-soft);
-  margin: 0;
-}
-
-.connections-preview-meta > div {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.connections-preview-meta dt {
-  margin: 0;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted-2);
-}
-
-.connections-preview-meta dd {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text);
-}
-
-.connections-preview-pathbox {
-  font-size: 12px;
-  border: 1px dashed var(--line);
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-
-.connections-preview-pathbox summary {
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 11px;
-  list-style: none;
-}
-
-.connections-preview-pathbox summary::-webkit-details-marker {
-  display: none;
-}
-
-.connections-preview-pathbox summary::before {
-  content: "▸ ";
-  color: var(--muted-2);
-}
-
-.connections-preview-pathbox[open] summary::before {
-  content: "▾ ";
-}
-
-.connections-preview-pathbox code {
-  display: block;
-  margin-top: 6px;
-  padding: 6px 8px;
-  background: var(--panel-soft);
-  border-radius: 6px;
-  font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
-  font-size: 11px;
-  color: var(--muted);
-  word-break: break-all;
-}
-
-.connections-preview-messages {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.connections-preview-messages li {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: var(--panel-soft);
-  display: grid;
-  gap: 4px;
-}
-
-.connections-preview-messages li.role-human {
-  background: white;
-}
-
-.connections-preview-messages li.role-assistant {
-  background: var(--purple-50);
-  border-color: rgba(98, 70, 245, 0.18);
-}
-
-.connections-preview-role {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
-.connections-preview-messages li.role-assistant .connections-preview-role {
-  color: var(--purple);
-}
-
-.connections-preview-messages p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text);
-  line-height: 1.55;
-  word-break: break-word;
-}
-
-.connections-preview-footer {
-  display: grid;
-  gap: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--line);
-}
-
-.connections-preview-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-/* In the inspector footer the rail is narrow — let the import buttons grow
-   to fill the row so they don't wrap into an awkward stagger. */
-.inspector-panel-footer .connections-preview-actions .btn {
-  flex: 1 1 auto;
-  justify-content: center;
-}
-
-.connections-preview-footer small {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.connections-preview-empty,
-.connections-preview-empty-copy {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.connections-preview-empty {
-  display: grid;
-  justify-items: center;
-  text-align: center;
-  gap: 6px;
-  padding: 36px 18px;
-}
-
-.connections-preview-empty h3 {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text);
 }
 
 /* ── Shared empty / error blocks ──────────────────────────────────────── */
@@ -18441,81 +18329,6 @@ button.settings-option {
   to {
     transform: rotate(360deg);
   }
-}
-
-/* ────────────────────────────────────────────────────────────────────────
- * Connections preview — stat row + "view all" trigger
- * ──────────────────────────────────────────────────────────────────────── */
-
-.connections-preview-title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.connections-preview-title-row h3 {
-  margin: 0 0 4px 0;
-  font-size: 15px;
-  color: var(--text);
-  line-height: 1.35;
-  flex: 1;
-  min-width: 0;
-  word-break: break-word;
-}
-
-.connections-preview-stat-row {
-  list-style: none;
-  margin: 0;
-  padding: 8px 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 18px;
-  background: var(--panel-soft);
-  border-radius: 8px;
-  border: 1px solid var(--line);
-}
-
-.connections-preview-stat-row li {
-  display: grid;
-  gap: 1px;
-  min-width: 60px;
-}
-
-.connections-preview-stat-row strong {
-  font-size: 14px;
-  color: var(--text);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.connections-preview-stat-row small {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted-2);
-}
-
-.connections-preview-show-all {
-  border: 1px dashed var(--line);
-  background: transparent;
-  border-radius: 8px;
-  padding: 8px 10px;
-  color: var(--purple);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.connections-preview-show-all:hover {
-  background: var(--purple-50);
-  border-color: var(--purple);
-}
-
-.connections-preview-show-all:focus-visible {
-  outline: 2px solid var(--purple);
-  outline-offset: 2px;
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -20380,6 +20193,95 @@ button.settings-option {
   color: var(--muted);
 }
 
+/* Heading + inline info icon sit on one baseline-centred line. */
+.source-cc-head-text h2,
+.connections-sessions-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* ── InfoHint — icon + hover/focus tooltip (copy-diet primitive) ────────── */
+.info-hint {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.info-hint-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: help;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.info-hint-trigger:hover,
+.info-hint-trigger:focus-visible {
+  color: var(--purple);
+  background: var(--purple-50);
+  outline: none;
+}
+
+.info-hint-bubble {
+  position: absolute;
+  top: calc(100% + 7px);
+  z-index: 60;
+  width: max-content;
+  max-width: 280px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #23232e;
+  color: #f3f3f6;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 24px rgba(20, 20, 35, 0.22);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  transition: opacity 0.13s ease, transform 0.13s ease, visibility 0.13s;
+  pointer-events: none;
+}
+
+.info-hint-start .info-hint-bubble {
+  left: 0;
+}
+
+.info-hint-end .info-hint-bubble {
+  right: 0;
+}
+
+.info-hint-center .info-hint-bubble {
+  left: 50%;
+  transform: translate(-50%, -3px);
+}
+
+.info-hint:hover .info-hint-bubble,
+.info-hint-trigger:focus-visible + .info-hint-bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.info-hint-center:hover .info-hint-bubble,
+.info-hint-center .info-hint-trigger:focus-visible + .info-hint-bubble {
+  transform: translate(-50%, 0);
+}
+
 /* Status legend — coloured dots, not a row of heavy pills. */
 .source-cc-summary {
   display: flex;
@@ -20417,6 +20319,54 @@ button.settings-option {
 .source-cc-dot.tone-gray { background: var(--muted-2); }
 .source-cc-dot.tone-purple { background: var(--purple); }
 
+/* Role clusters — AI agents (start a session) lead; evidence sources recede. */
+.source-cc-cluster {
+  display: grid;
+  gap: 8px;
+}
+
+.source-cc-cluster-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.source-cc-cluster-head strong {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.source-cc-cluster-head span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* Agents are the hero (start a session): solid white tiles with soft depth
+   that lift on hover. Selected tiles opt out so their accent style wins. */
+.source-cc-cluster:not(.is-muted) .source-cc-tile:not(.is-selected) {
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(20, 25, 40, 0.04);
+}
+
+.source-cc-cluster:not(.is-muted) .source-cc-tile:not(.is-selected):hover {
+  border-color: var(--line);
+  box-shadow: 0 6px 18px rgba(20, 25, 40, 0.09);
+  transform: translateY(-1px);
+}
+
+/* The evidence cluster is secondary: quieter, transparent chips. */
+.source-cc-cluster.is-muted .source-cc-cluster-head strong {
+  color: var(--muted);
+}
+
+.source-cc-cluster.is-muted .source-cc-tile:not(.is-selected) {
+  background: transparent;
+}
+
 /* Category tiles — pick a source family, then drill into it in the panel below. */
 .source-cc-categories {
   display: grid;
@@ -20428,13 +20378,14 @@ button.settings-option {
   display: grid;
   justify-items: start;
   gap: 7px;
-  padding: 11px 12px;
+  padding: 12px 13px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 11px;
   background: var(--panel-soft);
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.12s ease, background 0.12s ease;
+  transition: border-color 0.14s ease, background 0.14s ease, box-shadow 0.14s ease,
+    transform 0.14s ease;
 }
 
 .source-cc-tile:hover {
@@ -20443,8 +20394,8 @@ button.settings-option {
 
 .source-cc-tile.is-selected {
   border-color: var(--purple);
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--purple);
+  background: linear-gradient(180deg, #fff, #faf8ff);
+  box-shadow: 0 6px 18px rgba(98, 70, 245, 0.14);
 }
 
 .source-cc-tile-icon {
@@ -20568,6 +20519,17 @@ button.settings-option {
 .source-row-status.tone-orange { color: #b46100; background: var(--orange-50); }
 .source-row-status.tone-blue { color: var(--blue); background: var(--blue-50); }
 .source-row-status.tone-gray { color: var(--muted-2); background: var(--gray-50); }
+
+/* "추천" marker — the intended primary capture path (the local hook / wrapper). */
+.source-row-recommended {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--purple);
+  background: var(--purple-50);
+}
 
 .source-row-status-line {
   margin: 0;

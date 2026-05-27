@@ -1,14 +1,6 @@
 import {
-  Bot,
-  Chrome,
-  Code2,
-  FileText,
-  Folder,
-  GitBranch,
   Globe2,
   MessageSquare,
-  NotebookPen,
-  SquareTerminal,
 } from "lucide-react";
 import type {
   Artifact,
@@ -19,7 +11,6 @@ import type {
   Project,
   Relationship,
   Session,
-  SourceOption,
   SourceRef,
   Summary,
   TimelineEvent,
@@ -46,23 +37,6 @@ const session: Session = {
   selectedSourceIds: ["src-claude", "src-codex", "src-cursor", "src-vscode", "src-terminal", "src-chrome", "src-finder", "src-manual", "src-git"],
   status: "recording",
 };
-
-// `status` is honest about what Mori can capture today. Only explicit
-// imports are `available` and pre-selected; IDE / terminal / browser /
-// file surfaces are `planned` — shown but never selected, so a session
-// never claims to capture a surface Mori does not actually read.
-export const sourceOptions: SourceOption[] = [
-  { id: "opt-claude", name: "Claude Code", detail: "transcript / hook import", kind: "aiConversation", enabled: true, selected: true, status: "available", icon: Bot },
-  { id: "opt-codex", name: "Codex CLI", detail: "session transcript", kind: "aiConversation", enabled: true, selected: true, status: "available", icon: Bot },
-  { id: "opt-git", name: "Git diff", detail: "pasted or captured diff", kind: "gitDiff", enabled: true, selected: true, status: "available", icon: GitBranch },
-  { id: "opt-manual", name: "Manual notes", detail: "user-confirmed context", kind: "manualNote", enabled: true, selected: true, status: "available", icon: NotebookPen },
-  { id: "opt-cursor", name: "Cursor", detail: "IDE activity", kind: "file", enabled: false, selected: false, status: "planned", icon: Code2 },
-  { id: "opt-vscode", name: "VS Code", detail: "workspace events", kind: "file", enabled: false, selected: false, status: "planned", icon: Code2 },
-  { id: "opt-terminal", name: "Terminal", detail: "command summary", kind: "terminal", enabled: false, selected: false, status: "planned", icon: SquareTerminal },
-  { id: "opt-chrome", name: "Chrome tabs", detail: "browser tabs", kind: "browser", enabled: false, selected: false, status: "planned", icon: Chrome },
-  { id: "opt-finder", name: "Finder / File System", detail: "file changes", kind: "file", enabled: false, selected: false, status: "planned", icon: Folder },
-  { id: "opt-figma", name: "Figma", detail: "design files", kind: "file", enabled: false, selected: false, status: "planned", icon: FileText },
-];
 
 const sources: SourceRef[] = [
   {

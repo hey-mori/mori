@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../components/ui/Button";
+import { InfoHint } from "../../components/ui/InfoHint";
 import {
   buildConnectorControlCenter,
   describeControlCenterAvailability,
@@ -114,10 +115,17 @@ export function SourceControlCenter({
     [isDesktop, hasActiveSession],
   );
 
-  // Default to the first family that has a usable source so the panel opens on
-  // something actionable rather than a planned-only category.
+  // A session is anchored by an AI agent; everything else attaches evidence to
+  // it. Split the families along that line so the hub reads "start a session"
+  // (agent) then "add evidence" (rest), instead of one flat marketplace.
+  const agentGroups = groups.filter((group) => group.role === "agent");
+  const evidenceGroups = groups.filter((group) => group.role === "evidence");
+
+  // Open on an agent family that can actually start a session today, so the
+  // panel never lands on a planned-only or evidence-only category first.
   const defaultFamily =
-    (groups.find((group) => group.surfaces.some((s) => s.availability === "available")) ??
+    (agentGroups.find((group) => group.surfaces.some((s) => s.availability === "available")) ??
+      agentGroups[0] ??
       groups[0])?.family ?? null;
   const [activeFamily, setActiveFamily] = useState<CaptureSurfaceToolFamily | null>(null);
   const selectedFamily = activeFamily ?? defaultFamily;
@@ -125,25 +133,35 @@ export function SourceControlCenter({
     groups.find((group) => group.family === selectedFamily) ?? groups[0] ?? null;
 
   return (
-    <section className="source-cc" aria-label="소스 연결">
+    <section className="source-cc" aria-label="세션 연결">
       <header className="source-cc-head">
         <div className="source-cc-head-text">
-          <h2>소스 연결</h2>
-          <p>종류를 고른 뒤 가져오기를 실행하세요. 모든 가져오기는 검토를 거쳐 타임라인에 들어갑니다.</p>
+          <h2>
+            세션 연결
+            <InfoHint align="start" label="세션 연결 안내">
+              AI 에이전트 하나가 작업 세션이 됩니다. 에이전트를 고르면 그 작업의 자료(Git · 터미널 ·
+              파일)를 같은 세션에 붙입니다. 모든 가져오기는 검토를 거쳐 타임라인에 들어갑니다.
+            </InfoHint>
+          </h2>
         </div>
         <ReadinessSummary counts={counts} />
       </header>
 
-      <div className="source-cc-categories" role="tablist" aria-label="소스 종류">
-        {groups.map((group) => (
-          <CategoryTile
-            key={group.family}
-            group={group}
-            selected={group.family === selectedFamily}
-            onSelect={() => setActiveFamily(group.family)}
-          />
-        ))}
-      </div>
+      <CategoryCluster
+        title="AI 에이전트"
+        hint="작업 세션 시작 · 이어가기"
+        groups={agentGroups}
+        selectedFamily={selectedFamily}
+        onSelect={setActiveFamily}
+      />
+      <CategoryCluster
+        title="자료"
+        hint="세션에 붙이는 소스"
+        groups={evidenceGroups}
+        selectedFamily={selectedFamily}
+        onSelect={setActiveFamily}
+        muted
+      />
 
       {selectedGroup ? (
         <div
@@ -193,6 +211,48 @@ function ReadinessSummary({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * A labeled row of category tiles for one role. The agent cluster leads ("start
+ * a session"); the evidence cluster is muted ("add evidence to a session"). Both
+ * drive the same selected-family panel below, so picking either kind opens its
+ * sources in place.
+ */
+function CategoryCluster({
+  title,
+  hint,
+  groups,
+  selectedFamily,
+  onSelect,
+  muted,
+}: {
+  title: string;
+  hint: string;
+  groups: ControlCenterGroup[];
+  selectedFamily: CaptureSurfaceToolFamily | null;
+  onSelect: (family: CaptureSurfaceToolFamily) => void;
+  muted?: boolean;
+}) {
+  if (groups.length === 0) return null;
+  return (
+    <div className={`source-cc-cluster${muted ? " is-muted" : ""}`}>
+      <div className="source-cc-cluster-head">
+        <strong>{title}</strong>
+        <span>{hint}</span>
+      </div>
+      <div className="source-cc-categories" role="tablist" aria-label={title}>
+        {groups.map((group) => (
+          <CategoryTile
+            key={group.family}
+            group={group}
+            selected={group.family === selectedFamily}
+            onSelect={() => onSelect(group.family)}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -261,6 +321,9 @@ function SourceRow({
           onClick={() => setOpen((value) => !value)}
         >
           <span className="source-row-title">{surface.label}</span>
+          {surface.recommended ? (
+            <span className="source-row-recommended">추천</span>
+          ) : null}
           {showStatus ? (
             <span className={`source-row-status tone-${availability.tone}`}>
               {availability.label}

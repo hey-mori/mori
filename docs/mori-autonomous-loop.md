@@ -422,6 +422,25 @@ Shipped:
     attention state before Resume Prompt, report, or `.mori` handoff. The
     primary action opens Consolidation Review rather than silently exporting
     questionable memory context.
+8p. ✅ Source-hub session-model IA — the Connections hub ("세션 연결") is now
+    organized around the canonical session unit: a Mori session is one
+    AI-agent work session (one Claude / Codex / OpenCode conversation as the
+    spine, with Git / terminal / file / note material attached as ribs). The
+    `SourceControlCenter` splits families into an "AI 에이전트 (작업 세션 시작)"
+    cluster and a "자료 (세션에 붙이기)" cluster (`ControlCenterGroup.role`
+    via `familyRole`), the local hook / CLI wrapper surfaces carry a "추천"
+    marker (`CaptureSurfaceRow.recommended`), the auto-detected sessions list
+    is reframed as "이어서 할 작업 세션" (a single-column inline-expand
+    `SessionFeed`/`SessionCard` feed replacing the old list + inspector
+    pane, Korean relative time via `formatClaudeRelativeKo`), and the manual
+    Work Bundle is demoted to an advanced disclosure. A copy-diet `InfoHint`
+    (icon + hover/focus tooltip) trims first-screen prose. Start Session now
+    picks a single AI agent (Claude / Codex / OpenCode) instead of a
+    multi-select source grid — the orphaned `sourceOptions` (mock-data) and
+    `sourceSelection` lib + test were removed. The session-unit definition is
+    documented in `mori-project-goal.md` §1. Open follow-ups: propagating the
+    "증거"→"자료" wording decision app-wide (Evidence Hub still says 증거) and
+    auto-associating already-captured evidence onto a session spine.
 8o. Session Summary unresolved-work preview — the Reports Session Summary
     now shows the first unresolved Review items before continue-later
     handoff, using the Review workspace's existing unresolved ordering.

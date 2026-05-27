@@ -2,8 +2,10 @@ import {
   AlertCircle,
   Bot,
   Boxes,
+  ChevronDown,
   Chrome,
   Code2,
+  FolderGit2,
   HardDrive,
   KeyRound,
   Layers,
@@ -19,11 +21,11 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { InfoHint } from "../../components/ui/InfoHint";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
-import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
 import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
@@ -31,7 +33,7 @@ import { useMoriAppStore } from "../../app/store";
 import { useMoriReviewStore } from "../../app/reviewStore";
 import {
   discoverClaudeCodeSessions,
-  formatClaudeTimestamp,
+  formatClaudeRelativeKo,
   getClaudeCodeSession,
   isClaudeBridgeAvailable,
   shortMessagePreview,
@@ -40,6 +42,7 @@ import { buildImportCandidateFromClaudeCodeSession } from "../../lib/claude/clau
 import {
   computeConversationStats,
   formatTokenCount,
+  type ConversationStats,
 } from "../../lib/claude/conversationStats";
 import {
   discoverLocalAiTools,
@@ -307,7 +310,7 @@ export function ConnectionsView() {
     return (
       <PageShell className="connections-page" maxWidth="detail">
         {controlCenter}
-        <WorkBundlePanel />
+        <AdvancedBundleDisclosure />
         <ConnectionsBrowserHelp />
       </PageShell>
     );
@@ -369,20 +372,19 @@ export function ConnectionsView() {
 
       {controlCenter}
 
-      <WorkBundlePanel />
-
-      {/* Sessions lead the page — they're what the user came here for.
-          Tool detection stays available as a smaller details disclosure
-          below so the wall of cards never separates the user from the
-          import action. */}
+      {/* The auto-detected AI work sessions are the centerpiece: one Claude
+          conversation = one Mori work session. They lead the page; the manual
+          multi-source bundle and tool detection fold away below as advanced /
+          reference material. */}
       <section className="connections-section connections-sessions-section">
         <header className="connections-sessions-head">
-          <div>
-            <h2>가져올 수 있는 세션</h2>
-            <p>
-              세션을 선택해 미리보고 현재 세션 또는 새 세션으로 가져옵니다.
-            </p>
-          </div>
+          <h2>
+            이어서 할 작업 세션
+            <InfoHint align="start" label="작업 세션 안내">
+              Claude에서 한 작업을 골라 Mori 작업 세션으로 가져옵니다. 대화 하나가 작업 세션 하나가
+              되고, 그때 함께 쓴 Git · 터미널 · 파일을 같은 세션에 자료로 붙일 수 있습니다.
+            </InfoHint>
+          </h2>
           <Badge tone={sessions.sessions.length > 0 ? "purple" : "gray"}>
             {sessions.sessions.length}개 세션
           </Badge>
@@ -403,26 +405,21 @@ export function ConnectionsView() {
           ) : null}
         </div>
 
-        <div className="connections-sessions-layout">
-          <div className="connections-sessions-list">
-            <SessionsList
-              state={sessions}
-              grouped={grouped}
-              hasQuery={query.trim().length > 0}
-              filteredCount={filteredSessions.length}
-              selectedPath={selection?.filePath ?? null}
-              onSelect={handleSelectSession}
-            />
-          </div>
-          <PreviewPanel
-            selection={selection}
-            hasActiveSession={!isDemoSession}
-            onImportAsNewSession={handleImportAsNewSession}
-            onImportIntoCurrentSession={handleImportIntoCurrentSession}
-            onOpenViewer={() => setViewerOpen(true)}
-          />
-        </div>
+        <SessionFeed
+          state={sessions}
+          grouped={grouped}
+          hasQuery={query.trim().length > 0}
+          filteredCount={filteredSessions.length}
+          selection={selection}
+          hasActiveSession={!isDemoSession}
+          onSelect={handleSelectSession}
+          onImportAsNewSession={handleImportAsNewSession}
+          onImportIntoCurrentSession={handleImportIntoCurrentSession}
+          onOpenViewer={() => setViewerOpen(true)}
+        />
       </section>
+
+      <AdvancedBundleDisclosure />
 
       {/* Tool inventory moved below sessions: it's reference material once
           the user is doing real work, so it folds away by default. */}
@@ -560,6 +557,7 @@ function ToolCard({ tool }: { tool: DetectedTool }) {
       className={`connections-tool-card connections-tool-tone-${tone}${
         isDetected ? "" : " is-undetected"
       }`}
+      title={tool.path ?? undefined}
     >
       <span className={`connections-tool-icon connections-tool-icon-${tone}`}>
         <Icon size={18} />
@@ -570,13 +568,16 @@ function ToolCard({ tool }: { tool: DetectedTool }) {
           <span className={`connections-tool-status connections-tool-status-${tone}`}>
             {getToolStatusLabel(tool.status)}
           </span>
+          {tool.description || tool.notes || tool.path ? (
+            <InfoHint align="end" label={`${tool.label} 세부`}>
+              <span className="connections-tool-hint">
+                <span>{tool.description}</span>
+                {tool.path ? <code>{tool.path}</code> : null}
+                {tool.notes ? <span>{tool.notes}</span> : null}
+              </span>
+            </InfoHint>
+          ) : null}
         </div>
-        <p className="connections-tool-description">{tool.description}</p>
-        {tool.path ? (
-          <code className="connections-tool-path" title={tool.path}>
-            {tool.path}
-          </code>
-        ) : null}
         <div className="connections-tool-footer">
           {tool.canImport ? (
             <Badge tone="green">가져오기 지원</Badge>
@@ -587,28 +588,42 @@ function ToolCard({ tool }: { tool: DetectedTool }) {
             <Badge tone="purple">{tool.sessionCount}개 세션</Badge>
           ) : null}
         </div>
-        {tool.notes ? <p className="connections-tool-notes">{tool.notes}</p> : null}
       </div>
     </article>
   );
 }
 
-// ─── Sessions list ────────────────────────────────────────────────────────
+// ─── Session feed ─────────────────────────────────────────────────────────
 
-function SessionsList({
+/**
+ * A single-column feed of resumable AI work sessions, grouped by project.
+ * Replaces the old list + separate inspector pane: each row is a compact card,
+ * and selecting one expands it inline to show the conversation preview and the
+ * import actions. The surface now reads as a feed of work to continue rather
+ * than a file browser with a detail pane.
+ */
+function SessionFeed({
   state,
   grouped,
   hasQuery,
   filteredCount,
-  selectedPath,
+  selection,
+  hasActiveSession,
   onSelect,
+  onImportAsNewSession,
+  onImportIntoCurrentSession,
+  onOpenViewer,
 }: {
   state: SessionsState;
   grouped: Array<[string, ClaudeCodeSessionMeta[]]>;
   hasQuery: boolean;
   filteredCount: number;
-  selectedPath: string | null;
+  selection: Selection;
+  hasActiveSession: boolean;
   onSelect: (meta: ClaudeCodeSessionMeta) => void;
+  onImportAsNewSession: () => void;
+  onImportIntoCurrentSession: () => void;
+  onOpenViewer: () => void;
 }) {
   if (state.status === "loading" || state.status === "idle") {
     return <ListSkeleton label="Claude 세션을 검색하는 중..." />;
@@ -645,165 +660,169 @@ function SessionsList({
     );
   }
   return (
-    <ul className="connections-list-items">
-      {grouped.map(([projectName, sessions]) => (
-        <li key={projectName} className="connections-list-group">
-          <strong className="connections-list-group-label" title={projectName}>
-            {projectName}
-          </strong>
+    <div className="connections-session-feed">
+      {grouped.map(([projectName, projectSessions]) => (
+        <section key={projectName} className="connections-feed-group">
+          <header className="connections-feed-group-head">
+            <FolderGit2 size={13} aria-hidden="true" />
+            <strong title={projectName}>{projectName}</strong>
+            <span>{projectSessions.length}</span>
+          </header>
           <ul>
-            {sessions.map((session) => {
-              const active = session.filePath === selectedPath;
-              return (
-                <li key={session.filePath}>
-                  <button
-                    type="button"
-                    className={`connections-list-item${active ? " is-active" : ""}`}
-                    onClick={() => onSelect(session)}
-                    aria-pressed={active}
-                  >
-                    <span className="connections-list-title">{session.title}</span>
-                    <span className="connections-list-meta">
-                      <Badge tone="purple">{session.messageCount}개 메시지</Badge>
-                      {session.tokenUsage && session.tokenUsage.totalTokens > 0 ? (
-                        <small className="connections-list-tokens">
-                          {formatTokenCount(session.tokenUsage.totalTokens)} 토큰
-                        </small>
-                      ) : null}
-                      <small>{formatClaudeTimestamp(session.startedAt)}</small>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+            {projectSessions.map((session) => (
+              <li key={session.filePath}>
+                <SessionCard
+                  session={session}
+                  selection={
+                    selection?.filePath === session.filePath ? selection : null
+                  }
+                  hasActiveSession={hasActiveSession}
+                  onSelect={() => onSelect(session)}
+                  onImportAsNewSession={onImportAsNewSession}
+                  onImportIntoCurrentSession={onImportIntoCurrentSession}
+                  onOpenViewer={onOpenViewer}
+                />
+              </li>
+            ))}
           </ul>
-        </li>
+        </section>
       ))}
-    </ul>
+    </div>
   );
 }
 
-// ─── Preview pane ─────────────────────────────────────────────────────────
-
-function PreviewPanel({
+/**
+ * One resumable work session. Collapsed it shows the title and a compact meta
+ * line (agent · message count · tokens · relative time). When it is the
+ * selected card, `selection` is non-null and the card expands inline with the
+ * conversation preview and the import actions.
+ */
+function SessionCard({
+  session,
   selection,
   hasActiveSession,
+  onSelect,
   onImportAsNewSession,
   onImportIntoCurrentSession,
   onOpenViewer,
 }: {
+  session: ClaudeCodeSessionMeta;
   selection: Selection;
   hasActiveSession: boolean;
+  onSelect: () => void;
   onImportAsNewSession: () => void;
   onImportIntoCurrentSession: () => void;
   onOpenViewer: () => void;
 }) {
-  // Hoisted above the early returns so the hook order stays stable. Memoised on
-  // the message array so the O(n) stats walk only reruns when the selected
-  // conversation changes, not on every parent re-render.
-  const detailMessages = selection && !selection.loading && !selection.error
-    ? selection.detail?.messages
-    : undefined;
+  const expanded = selection !== null;
+  // Hook order stays stable across collapsed/expanded — stats only do real work
+  // for the one expanded card whose detail has loaded.
+  const detailMessages =
+    selection && !selection.loading && !selection.error
+      ? selection.detail?.messages
+      : undefined;
   const stats = useMemo(
     () => computeConversationStats(detailMessages ?? []),
     [detailMessages],
   );
 
-  if (!selection) {
-    return (
-      <InspectorPanel ariaLabel="세션 미리보기">
-        <PreviewEmptyGuide hasActiveSession={hasActiveSession} />
-      </InspectorPanel>
-    );
-  }
-  if (selection.loading) {
-    return (
-      <InspectorPanel ariaLabel="세션 미리보기">
-        <ListSkeleton label="세션 내용을 불러오는 중..." />
-      </InspectorPanel>
-    );
-  }
-  if (selection.error) {
-    return (
-      <InspectorPanel ariaLabel="세션 미리보기">
-        <EmptyState
-          compact
-          tone="danger"
-          icon={AlertCircle}
-          title="세션을 열 수 없습니다"
-          description={selection.error}
-        />
-      </InspectorPanel>
-    );
-  }
-  if (!selection.detail) return null;
-
-  const detail = selection.detail;
-  const previewMessages = detail.messages.slice(0, 12);
-
   return (
-    <InspectorPanel
-      ariaLabel="세션 미리보기"
-      title={detail.title}
-      subtitle={`Claude (Desktop · Code) · ${detail.projectName || "프로젝트 미지정"}`}
-      headerExtras={
-        <Button variant="secondary" icon={Maximize2} onClick={onOpenViewer}>
-          전체 보기
-        </Button>
-      }
-      footer={
-        <>
-          <div className="connections-preview-actions">
-            <Button
-              variant="primary"
-              icon={Sparkles}
-              onClick={onImportAsNewSession}
-              title="이 대화를 위한 새 Mori 세션을 만들고 Import Review로 이동합니다."
-            >
-              새 세션으로 가져오기
-            </Button>
-            <Button
-              variant="secondary"
-              icon={Plus}
-              onClick={onImportIntoCurrentSession}
-              disabled={!hasActiveSession}
-              title={
-                hasActiveSession
-                  ? "이 대화를 현재 활성 세션의 Import Review로 보냅니다."
-                  : "현재 활성 세션이 없습니다. 새 세션으로 가져오거나 세션을 먼저 시작하세요."
-              }
-            >
-              현재 세션에 추가
-            </Button>
-          </div>
-          <HelpDisclosure label="가져오기 동작" ariaLabel="가져오기 동작 설명">
-            <p>기본 동작은 대화마다 새 세션을 만드는 것입니다 (Claude 대화 1개 = Mori 세션 1개).</p>
-            <p>가져온 항목은 Import Review에서 검토한 뒤 적용됩니다.</p>
-          </HelpDisclosure>
-        </>
-      }
-    >
-      <ul className="connections-preview-stat-row" aria-label="대화 통계">
+    <article className={`connections-session-card${expanded ? " is-open" : ""}`}>
+      <button
+        type="button"
+        className="connections-session-card-head"
+        aria-expanded={expanded}
+        onClick={onSelect}
+      >
+        <span className="connections-session-card-title">{session.title}</span>
+        <span className="connections-session-card-meta">
+          <span className="connections-list-agent">
+            <Sparkles size={11} aria-hidden="true" />
+            Claude
+          </span>
+          <span>{session.messageCount}개 메시지</span>
+          {session.tokenUsage && session.tokenUsage.totalTokens > 0 ? (
+            <span className="connections-list-tokens">
+              {formatTokenCount(session.tokenUsage.totalTokens)} 토큰
+            </span>
+          ) : null}
+          <span>{formatClaudeRelativeKo(session.startedAt)}</span>
+        </span>
+        <ChevronDown
+          size={15}
+          aria-hidden="true"
+          className="connections-session-card-caret"
+        />
+      </button>
+      {expanded ? (
+        <div className="connections-session-card-detail">
+          {selection.loading ? (
+            <ListSkeleton label="세션 내용을 불러오는 중..." />
+          ) : selection.error ? (
+            <EmptyState
+              compact
+              tone="danger"
+              icon={AlertCircle}
+              title="세션을 열 수 없습니다"
+              description={selection.error}
+            />
+          ) : selection.detail ? (
+            <SessionCardDetail
+              detail={selection.detail}
+              stats={stats}
+              hasActiveSession={hasActiveSession}
+              onImportAsNewSession={onImportAsNewSession}
+              onImportIntoCurrentSession={onImportIntoCurrentSession}
+              onOpenViewer={onOpenViewer}
+            />
+          ) : null}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+/** The expanded body of a selected session card: stats, message preview, actions. */
+function SessionCardDetail({
+  detail,
+  stats,
+  hasActiveSession,
+  onImportAsNewSession,
+  onImportIntoCurrentSession,
+  onOpenViewer,
+}: {
+  detail: ClaudeCodeSessionDetail;
+  stats: ConversationStats;
+  hasActiveSession: boolean;
+  onImportAsNewSession: () => void;
+  onImportIntoCurrentSession: () => void;
+  onOpenViewer: () => void;
+}) {
+  const previewMessages = detail.messages.slice(0, 4);
+  const remaining = detail.messages.length - previewMessages.length;
+  return (
+    <>
+      <ul className="connections-session-stats" aria-label="대화 통계">
         <li>
           <strong>{stats.totalMessages}</strong>
           <small>메시지</small>
         </li>
         <li>
           <strong>{stats.humanMessages}</strong>
-          <small>사용자 발화</small>
+          <small>사용자</small>
         </li>
         <li>
           <strong>{stats.assistantMessages}</strong>
-          <small>Claude 응답</small>
+          <small>Claude</small>
         </li>
         <li>
           <strong>{stats.toolUses}</strong>
-          <small>도구 호출</small>
+          <small>도구</small>
         </li>
         {stats.durationLabel ? (
           <li>
             <strong>{stats.durationLabel}</strong>
-            <small>소요 시간</small>
+            <small>시간</small>
           </li>
         ) : null}
         {detail.tokenUsage && detail.tokenUsage.totalTokens > 0 ? (
@@ -815,99 +834,63 @@ function PreviewPanel({
           </li>
         ) : null}
       </ul>
-      <dl className="connections-preview-meta">
-        <div>
-          <dt>시작</dt>
-          <dd>{formatClaudeTimestamp(detail.startedAt)}</dd>
-        </div>
-        <div>
-          <dt>출처</dt>
-          <dd>Claude (Desktop · Code)</dd>
-        </div>
-      </dl>
-      <details className="connections-preview-pathbox">
-        <summary>파일 경로 보기</summary>
-        <code>{detail.filePath}</code>
-      </details>
 
       {previewMessages.length === 0 ? (
-        <p className="connections-preview-empty-copy">
+        <p className="connections-session-empty-copy">
           이 세션에는 표시할 메시지가 없습니다.
         </p>
       ) : (
-        <>
-          <ol className="connections-preview-messages">
-            {previewMessages.map((message) => (
-              <li key={message.id} className={`role-${message.role}`}>
-                <span className="connections-preview-role">
-                  {message.role === "human"
-                    ? "사용자"
-                    : message.role === "assistant"
-                      ? "Claude"
-                      : message.role}
-                </span>
-                <p>{shortMessagePreview(message.content, 280)}</p>
-              </li>
-            ))}
-          </ol>
-          {detail.messages.length > previewMessages.length ? (
-            <button
-              type="button"
-              className="connections-preview-show-all"
-              onClick={onOpenViewer}
-            >
-              + {detail.messages.length - previewMessages.length}개 메시지 전체 보기
-            </button>
-          ) : null}
-        </>
+        <ol className="connections-session-messages">
+          {previewMessages.map((message) => (
+            <li key={message.id} className={`role-${message.role}`}>
+              <span className="connections-session-role">
+                {message.role === "human"
+                  ? "사용자"
+                  : message.role === "assistant"
+                    ? "Claude"
+                    : message.role}
+              </span>
+              <p>{shortMessagePreview(message.content, 200)}</p>
+            </li>
+          ))}
+        </ol>
       )}
-    </InspectorPanel>
-  );
-}
 
-// ─── small subcomponents ──────────────────────────────────────────────────
+      <div className="connections-session-actions">
+        <Button
+          variant="primary"
+          icon={Sparkles}
+          onClick={onImportAsNewSession}
+          title="이 대화를 척추로 새 Mori 작업 세션을 만들고 Import Review로 이동합니다."
+        >
+          새 작업 세션으로 가져오기
+        </Button>
+        <Button
+          variant="secondary"
+          icon={Plus}
+          onClick={onImportIntoCurrentSession}
+          disabled={!hasActiveSession}
+          title={
+            hasActiveSession
+              ? "이 대화를 현재 작업 세션의 증거로 합칩니다 (Import Review를 거칩니다)."
+              : "현재 활성 세션이 없습니다. 새 작업 세션으로 가져오거나 세션을 먼저 시작하세요."
+          }
+        >
+          현재 세션에 합치기
+        </Button>
+        <Button variant="ghost" icon={Maximize2} onClick={onOpenViewer}>
+          {remaining > 0 ? `전체 보기 · +${remaining}` : "전체 보기"}
+        </Button>
+      </div>
 
-/**
- * Empty-state guide for the preview pane. Instead of a generic "select a
- * session" placeholder it carries the three things the user actually
- * needs to know: what import does, what client-safe means, and where to
- * find the import once they pick a session. Sized to match a non-empty
- * preview pane so the right column never collapses.
- */
-function PreviewEmptyGuide({ hasActiveSession }: { hasActiveSession: boolean }) {
-  const tips: Array<{ title: string; body: string }> = [
-    {
-      title: "좌측 세션을 선택",
-      body:
-        "프로젝트별로 묶인 대화 목록입니다. 클릭하면 여기에서 메시지 통계와 미리보기가 보입니다.",
-    },
-    {
-      title: "새 세션 / 현재 세션",
-      body: hasActiveSession
-        ? "새 Mori 세션으로 가져오거나, 지금 열려있는 세션에 이벤트로 합칠 수 있어요."
-        : "선택한 대화는 새 Mori 세션으로 가져옵니다. 작업 중인 세션이 있으면 합치는 옵션도 나타납니다.",
-    },
-    {
-      title: "원본은 그대로",
-      body:
-        "Mori는 가져온 대화의 메타데이터와 정리된 이벤트만 보관하고, 원본 파일은 손대지 않습니다.",
-    },
-  ];
-  return (
-    <div className="connections-preview-guide">
-      <header>
-        <strong>가져오기 안내</strong>
-        <p>왼쪽 목록에서 세션을 선택하면 미리보기와 가져오기 버튼이 표시됩니다.</p>
-      </header>
-      <ol>
-        {tips.map((tip) => (
-          <li key={tip.title}>
-            <strong>{tip.title}</strong>
-            <span>{tip.body}</span>
-          </li>
-        ))}
-      </ol>
-    </div>
+      <HelpDisclosure label="가져오기 동작" ariaLabel="가져오기 동작 설명">
+        <p>기본 동작은 대화마다 새 작업 세션을 만드는 것입니다 — Claude 대화 1개 = Mori 작업 세션 1개.</p>
+        <p>
+          가져온 항목은 Import Review에서 검토한 뒤 적용되고, 같은 세션에 Git · 터미널 · 파일
+          자료를 더 붙일 수 있습니다.
+        </p>
+      </HelpDisclosure>
+    </>
   );
 }
 
@@ -927,6 +910,28 @@ function ConnectionsBrowserHelp() {
         경로를 사용하세요.
       </span>
     </p>
+  );
+}
+
+/**
+ * Manual multi-source bundle, demoted to an advanced disclosure. Importing an
+ * AI conversation (above) is the canonical way to start a work session; this is
+ * the rarer fallback for hand-assembling a session from several pasted sources
+ * (transcript + git + terminal + note) when no auto-detected conversation
+ * exists. The engine and review-before-apply preview are unchanged — only its
+ * prominence is.
+ */
+function AdvancedBundleDisclosure() {
+  return (
+    <details className="connections-advanced-disclosure mori-disclosure">
+      <summary>
+        <span>고급 · 여러 소스를 직접 묶어 한 세션으로</span>
+        <small>자동 감지된 대화가 없을 때 transcript · git · 터미널 · 메모를 손으로 붙여 가져오기</small>
+      </summary>
+      <div className="connections-advanced-disclosure-body">
+        <WorkBundlePanel />
+      </div>
+    </details>
   );
 }
 
