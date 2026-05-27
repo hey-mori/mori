@@ -9,31 +9,28 @@ import type {
   MoriNotification,
   MoriNotificationActionTarget,
 } from "../../lib/notifications/notification";
-import {
-  formatNotificationTime,
-  notificationIcon,
-  notificationProjectLabel,
-} from "../../lib/notifications/notificationPresentation";
+import { notificationIcon } from "../../lib/notifications/notificationPresentation";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import { useMoriNotifications } from "./useMoriNotifications";
+import { NotificationFeedList } from "./NotificationFeedList";
 
 /**
- * 알림 — the global notification bell anchored to the sidebar head.
+ * 알림 — the notification bell + a right-side notification drawer.
  *
- * This is a real notification *feed*, not a triage dashboard: it renders the
- * producer-neutral `MoriNotification[]` from `useMoriNotifications()` newest
- * first, mixing live current-session notices ("결정 2건 확인 필요") with dated
- * cross-session events ("이 세션이 정리됐어요 · ng-gw · 2시간 전"). The badge is
- * an *unread* count (so it climbs as work piles up, capped at 9+), and a fresh
- * arrival flashes a toast once.
+ * Clicking the bell slides a full-height drawer in from the right edge (a
+ * non-blocking "notification center"), showing the producer-neutral
+ * `MoriNotification[]` feed newest first, grouped by time. A drawer — not a
+ * small popover or a centered modal — because the feed is a cross-session
+ * stream that grows: it needs room and a scroll, but must never block the
+ * canvas. The badge is an *unread* count, capped at 9+; a fresh arrival flashes
+ * a toast once.
  *
- * Read-state lives in `useNotificationReadStore` (notifications are recomputed
- * every render, so "read" cannot live on the record). Clicking a row marks it
- * read and navigates; "모두 읽음" clears the badge.
+ * Read-state lives in `useNotificationReadStore` (the feed is recomputed every
+ * render). Clicking a row marks it read and navigates; "모두 읽음" clears the
+ * badge. The drawer is portaled to <body> so no transformed/overflow ancestor
+ * can clip it.
  */
 
-/** Newest-N shown in the popover; the rest live on the full 알림 page. */
-const PANEL_LIMIT = 8;
 /** Above this, the badge shows "9+" so a busy bell never overflows its pill. */
 const BADGE_CAP = 9;
 
@@ -55,10 +52,9 @@ export function AttentionIndicator({
   const markAllRead = useNotificationReadStore((state) => state.markAllRead);
 
   const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
   const [toast, setToast] = useState<MoriNotification | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const knownNotificationIdsRef = useRef<Set<string> | null>(null);
   const toastReadyRef = useRef(false);
 
@@ -66,10 +62,9 @@ export function AttentionIndicator({
     () => notifications.reduce((n, item) => (readIds.has(item.id) ? n : n + 1), 0),
     [notifications, readIds],
   );
-  const visible = notifications.slice(0, PANEL_LIMIT);
   const badgeLabel = unreadCount > BADGE_CAP ? `${BADGE_CAP}+` : String(unreadCount);
 
-  // Close on Escape; focus the panel for keyboard users when it opens.
+  // Close on Escape; focus the drawer for keyboard users when it opens.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -79,7 +74,7 @@ export function AttentionIndicator({
       }
     };
     document.addEventListener("keydown", onKey);
-    panelRef.current?.focus();
+    drawerRef.current?.focus();
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
@@ -126,33 +121,13 @@ export function AttentionIndicator({
     }
   }
 
-  function openAllNotifications(): void {
-    setOpen(false);
-    setToast(null);
-    onNavigate("companion");
-  }
-
-  // Anchor the panel to the bell's actual position so it stays correct whether
-  // the sidebar is expanded or collapsed, then portal it to <body> so no
-  // transformed/overflow ancestor can clip or occlude it.
-  function toggleOpen(): void {
-    if (!open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setAnchor({
-        left: Math.round(rect.right + 8),
-        top: Math.round(Math.max(8, Math.min(rect.top, window.innerHeight - 540))),
-      });
-    }
-    setOpen((v) => !v);
-  }
-
   return (
     <>
       <button
         ref={buttonRef}
         type="button"
         className={`attention-indicator${unreadCount > 0 ? " has-signals" : ""}${compact ? " is-compact" : ""}`}
-        onClick={toggleOpen}
+        onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={unreadCount > 0 ? `알림 — 안 읽음 ${unreadCount}건` : "알림"}
@@ -176,149 +151,106 @@ export function AttentionIndicator({
       {typeof document !== "undefined"
         ? createPortal(
             <>
-      {toast ? (
-        <div className="attention-toast" role="status" aria-live="polite">
-          <button
-            type="button"
-            className="attention-toast-main"
-            onClick={() => dispatchTarget(toast.actionTarget, toast.id)}
-            disabled={!toast.actionTarget}
-            title={toast.actionTarget ? `${toast.actionLabel}로 이동` : toast.title}
-          >
-            <span className="attention-toast-icon" aria-hidden="true">
-              <ToastIcon notification={toast} />
-            </span>
-            <span className="attention-toast-copy">
-              <span className="attention-toast-kicker">새 알림</span>
-              <strong>{toast.title}</strong>
-            </span>
-            {toast.actionTarget ? <ArrowRight size={13} aria-hidden="true" /> : null}
-          </button>
-          <button
-            type="button"
-            className="attention-toast-close"
-            onClick={() => setToast(null)}
-            aria-label="알림 토스트 닫기"
-          >
-            <X size={13} aria-hidden="true" />
-          </button>
-        </div>
-      ) : null}
-
-      {open ? (
-        <>
-          {/* Transparent scrim — closes the panel on click-outside. */}
-          <div
-            className="attention-panel-scrim"
-            aria-hidden="true"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            ref={panelRef}
-            className="attention-panel"
-            style={{ left: anchor.left, top: anchor.top }}
-            role="dialog"
-            aria-label="알림"
-            aria-modal="false"
-            tabIndex={-1}
-          >
-            <header className="attention-panel-head">
-              <h3>알림</h3>
-              {unreadCount > 0 ? (
-                <button
-                  type="button"
-                  className="attention-panel-markall"
-                  onClick={() => markAllRead(notifications.map((n) => n.id))}
-                  title="모든 알림을 읽음으로 표시"
-                >
-                  <CheckCheck size={13} aria-hidden="true" />
-                  모두 읽음
-                </button>
+              {toast ? (
+                <div className="attention-toast" role="status" aria-live="polite">
+                  <button
+                    type="button"
+                    className="attention-toast-main"
+                    onClick={() => dispatchTarget(toast.actionTarget, toast.id)}
+                    disabled={!toast.actionTarget}
+                    title={toast.actionTarget ? `${toast.actionLabel}로 이동` : toast.title}
+                  >
+                    <span className="attention-toast-icon" aria-hidden="true">
+                      <ToastIcon notification={toast} />
+                    </span>
+                    <span className="attention-toast-copy">
+                      <span className="attention-toast-kicker">새 알림</span>
+                      <strong>{toast.title}</strong>
+                    </span>
+                    {toast.actionTarget ? <ArrowRight size={13} aria-hidden="true" /> : null}
+                  </button>
+                  <button
+                    type="button"
+                    className="attention-toast-close"
+                    onClick={() => setToast(null)}
+                    aria-label="알림 토스트 닫기"
+                  >
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                </div>
               ) : null}
-            </header>
 
-            <div className="attention-panel-body">
-              {visible.length === 0 ? (
-                <p className="attention-panel-empty">
-                  아직 알림이 없습니다. 세션을 가져오거나 분석을 실행하면 여기에
-                  쌓입니다.
-                </p>
-              ) : (
-                <ul className="attention-feed">
-                  {visible.map((notification) => (
-                    <NotificationRow
-                      key={notification.id}
-                      notification={notification}
-                      read={readIds.has(notification.id)}
-                      onDispatch={dispatchTarget}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
+              {open ? (
+                <>
+                  {/* Transparent scrim — closes on click-outside without dimming
+                      the canvas, so the drawer stays non-blocking. */}
+                  <div
+                    className="noti-drawer-scrim"
+                    aria-hidden="true"
+                    onClick={() => setOpen(false)}
+                  />
+                  <aside
+                    ref={drawerRef}
+                    className="noti-drawer"
+                    role="dialog"
+                    aria-label="알림"
+                    aria-modal="false"
+                    tabIndex={-1}
+                  >
+                    <header className="noti-drawer-head">
+                      <span className="noti-drawer-icon" aria-hidden="true">
+                        <Bell size={15} />
+                      </span>
+                      <h2>알림</h2>
+                      {unreadCount > 0 ? (
+                        <button
+                          type="button"
+                          className="noti-markall"
+                          onClick={() => markAllRead(notifications.map((n) => n.id))}
+                          title="모든 알림을 읽음으로 표시"
+                        >
+                          <CheckCheck size={13} aria-hidden="true" />
+                          모두 읽음
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="noti-drawer-close"
+                        onClick={() => setOpen(false)}
+                        aria-label="알림 닫기"
+                      >
+                        <X size={16} aria-hidden="true" />
+                      </button>
+                    </header>
 
-            <footer className="attention-panel-foot">
-              <button
-                type="button"
-                className="attention-panel-viewall"
-                onClick={openAllNotifications}
-              >
-                모든 알림 보기
-                <ArrowRight size={11} aria-hidden="true" />
-              </button>
-              <p className="attention-panel-privacy">
-                {isDemo
-                  ? "데모 데이터 기준입니다."
-                  : "가져온 소스에서만 생성됩니다."}
-              </p>
-            </footer>
-          </div>
-        </>
-      ) : null}
+                    <div className="noti-drawer-body mori-scroll">
+                      {notifications.length === 0 ? (
+                        <p className="noti-drawer-empty">
+                          아직 알림이 없습니다. 세션을 가져오거나 분석을 실행하면
+                          여기에 시간순으로 쌓입니다.
+                        </p>
+                      ) : (
+                        <NotificationFeedList
+                          notifications={notifications}
+                          readIds={readIds}
+                          onDispatch={dispatchTarget}
+                        />
+                      )}
+                    </div>
+
+                    <p className="noti-drawer-privacy">
+                      {isDemo
+                        ? "데모 데이터 기준입니다."
+                        : "가져온 소스에서만 생성됩니다."}
+                    </p>
+                  </aside>
+                </>
+              ) : null}
             </>,
             document.body,
           )
         : null}
     </>
-  );
-}
-
-// ─── Feed row ───────────────────────────────────────────────────────────────
-
-function NotificationRow({
-  notification,
-  read,
-  onDispatch,
-}: {
-  notification: MoriNotification;
-  read: boolean;
-  onDispatch: (target: MoriNotificationActionTarget, id: string) => void;
-}) {
-  const Icon = notificationIcon(notification.kind);
-  const project = notificationProjectLabel(notification);
-  const time = formatNotificationTime(notification.createdAt);
-
-  return (
-    <li>
-      <button
-        type="button"
-        className={`attention-feed-row${read ? " is-read" : ""}`}
-        onClick={() => onDispatch(notification.actionTarget, notification.id)}
-        title={notification.message}
-      >
-        <span className="attention-feed-unread" aria-hidden="true" />
-        <span className="attention-feed-icon" aria-hidden="true">
-          <Icon size={15} />
-        </span>
-        <span className="attention-feed-body">
-          <span className="attention-feed-title">{notification.title}</span>
-          <span className="attention-feed-meta">
-            {project ? <span>{project}</span> : null}
-            <span>{time}</span>
-          </span>
-        </span>
-      </button>
-    </li>
   );
 }
 
