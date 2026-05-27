@@ -80,7 +80,9 @@ import type { SessionTab } from "../../app/store";
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: moriViewIcon.home ?? House },
   { key: "workspace", label: "프로젝트", icon: moriViewIcon.workspace ?? Layers },
-  { key: "memory", label: "메모리", icon: moriViewIcon.memory ?? Layers },
+  // 메모리 is no longer a standing tab: durable project memory lives on each
+  // project page (ProjectView). The memory overview / consolidation review stay
+  // routable through a project's "메모리 통합" action and the command palette.
 ];
 
 /** Views that belong *under* the 프로젝트 destination — the session detail's own
@@ -193,8 +195,11 @@ export function Sidebar({
 
   const isActive = (key: ViewKey) => {
     if (key === "home") return currentView === "home";
-    if (key === "workspace") return SESSION_VIEWS.has(currentView);
-    if (key === "memory") return MEMORY_VIEWS.has(currentView);
+    // 메모리 folded into 프로젝트: project, session, and memory / consolidation /
+    // reports surfaces all light up the single 프로젝트 destination.
+    if (key === "workspace") {
+      return SESSION_VIEWS.has(currentView) || MEMORY_VIEWS.has(currentView);
+    }
     return key === currentView;
   };
 

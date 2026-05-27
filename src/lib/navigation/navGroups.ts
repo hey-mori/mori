@@ -4,10 +4,10 @@ import { moriViewIcon } from "../../components/brand/moriIcons";
 /**
  * Primary navigation as pure, testable data.
  *
- * Opening Mori lands on **홈 (home)** and the nav exposes three primary
+ * Opening Mori lands on **홈 (home)** and the nav exposes two primary
  * destinations:
  *
- *   홈 (home) · 프로젝트 (workspace) · 메모리 (memory)
+ *   홈 (home) · 프로젝트 (workspace)
  *
  * "프로젝트" reuses the existing `workspace` route (the projects→sessions
  * browser) — only the label changed, so deep links and saved state keep
@@ -20,10 +20,12 @@ import { moriViewIcon } from "../../components/brand/moriIcons";
  * The narrower working surfaces (타임라인 / 증거 / 검토 / Flow / 연결 / Mori 노트)
  * stay fully routable but are reached *through* the primary destinations
  * (opening a session from the sidebar routes into Timeline, import is a
- * top-bar action, etc.). **리포트** and **통합 검토** likewise stay routable but
- * fold into 메모리 / a session's report tab. Settings is no longer a standing
- * nav entry: it lives behind the top-bar user button as a sheet, so the
- * standing nav stays focused on the three product destinations.
+ * top-bar action, etc.). **메모리**, **리포트**, and **통합 검토** likewise stay
+ * routable but fold into 프로젝트: durable memory lives on each project page,
+ * and the memory overview / consolidation review are reached through a
+ * project's "메모리 통합" action (or the command palette). Settings is no longer
+ * a standing nav entry: it lives behind the top-bar user button as a sheet, so
+ * the standing nav stays focused on the two product destinations.
  *
  * Keeping this as data (rather than inline JSX) lets us assert the entry
  * model never regresses — e.g. that 홈 leads, that exactly the three primary
@@ -55,9 +57,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: "home", label: "홈" },
       // "프로젝트" reuses the Workspace projects→sessions browser route — only
-      // the label is new.
+      // the label is new. 메모리 folds into it (durable memory per project page).
       { key: "workspace", label: "프로젝트" },
-      { key: "memory", label: "메모리" },
     ],
   },
 ];

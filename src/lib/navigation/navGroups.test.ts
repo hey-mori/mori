@@ -14,11 +14,10 @@ describe("NAV_GROUPS entry model", () => {
     expect(NAV_GROUPS[0]?.items[0]?.key).toBe("home");
   });
 
-  it("exposes exactly the three primary destinations", () => {
+  it("exposes exactly the two primary destinations", () => {
     expect(navKeys()).toEqual([
       "home",
       "workspace",
-      "memory",
     ]);
   });
 
@@ -43,6 +42,7 @@ describe("NAV_GROUPS entry model", () => {
       "review",
       "start",
       "companion",
+      "memory",
       "reports",
       "consolidation",
       "settings",
