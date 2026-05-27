@@ -129,6 +129,59 @@ describe("buildHomeOverview", () => {
       // Two distinct: the "C:/dev/mori" source group + the manual project.
       expect(projects!.value).toBe("2");
     });
+
+    it("derives current and longest activity streaks from session anchor days", () => {
+      const overview = buildHomeOverview(
+        input({
+          realSessionCount: 7,
+          isDemo: false,
+          // NOW is 2026-05-22 (KST).
+          storedSessions: [
+            // Live run ending today: 3 consecutive days.
+            stored({ sessionId: "c1", startedAt: "2026-05-22T09:00:00+09:00" }),
+            stored({ sessionId: "c2", startedAt: "2026-05-21T09:00:00+09:00" }),
+            stored({ sessionId: "c3", startedAt: "2026-05-20T09:00:00+09:00" }),
+            // Earlier, longer run (4 days) separated by a gap.
+            stored({ sessionId: "l1", startedAt: "2026-05-13T09:00:00+09:00" }),
+            stored({ sessionId: "l2", startedAt: "2026-05-12T09:00:00+09:00" }),
+            stored({ sessionId: "l3", startedAt: "2026-05-11T09:00:00+09:00" }),
+            stored({ sessionId: "l4", startedAt: "2026-05-10T09:00:00+09:00" }),
+          ],
+        }),
+      );
+      const byKey = Object.fromEntries(overview.metrics.map((m) => [m.key, m]));
+      expect(byKey["streak-current"]!.value).toBe("3일");
+      expect(byKey["streak-longest"]!.value).toBe("4일");
+    });
+
+    it("counts the current streak from yesterday when today has no session yet", () => {
+      const overview = buildHomeOverview(
+        input({
+          realSessionCount: 2,
+          isDemo: false,
+          // No session today (05-22); two consecutive days ending yesterday.
+          storedSessions: [
+            stored({ sessionId: "y1", startedAt: "2026-05-21T09:00:00+09:00" }),
+            stored({ sessionId: "y2", startedAt: "2026-05-20T09:00:00+09:00" }),
+          ],
+        }),
+      );
+      const current = overview.metrics.find((m) => m.key === "streak-current");
+      expect(current!.value).toBe("2일");
+    });
+
+    it("shows no streak tiles when activity is older than yesterday", () => {
+      const overview = buildHomeOverview(
+        input({
+          realSessionCount: 1,
+          isDemo: false,
+          storedSessions: [stored({ sessionId: "old", startedAt: "2026-05-10T09:00:00+09:00" })],
+        }),
+      );
+      expect(overview.metrics.some((m) => m.key === "streak-current")).toBe(false);
+      // A lone day is not a "longest streak" worth a tile either.
+      expect(overview.metrics.some((m) => m.key === "streak-longest")).toBe(false);
+    });
   });
 
   describe("recent sessions", () => {

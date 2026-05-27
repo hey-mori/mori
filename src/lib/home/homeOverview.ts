@@ -633,6 +633,27 @@ function buildMetrics(
     hint: projectCount === 1 ? "현재 작업 중" : "작업이 걸쳐 있는",
   });
 
+  // Activity streaks read off the same per-day cadence as the 잔디. A current
+  // streak only earns a tile while it is live (≥1); a longest streak only when
+  // it is more than a single day (a "1일 최장" is noise, not an achievement).
+  const streaks = buildActivityStreaks(active, now);
+  if (streaks.current > 0) {
+    metrics.push({
+      key: "streak-current",
+      value: `${streaks.current}일`,
+      label: "현재 연속",
+      hint: "연속으로 작업한 날",
+    });
+  }
+  if (streaks.longest > 1) {
+    metrics.push({
+      key: "streak-longest",
+      value: `${streaks.longest}일`,
+      label: "최장 연속",
+      hint: "가장 길게 이어간 흐름",
+    });
+  }
+
   const totalEvents = allMetrics.reduce((sum, m) => sum + (m.events ?? 0), 0);
   if (totalEvents > 0) {
     metrics.push({
@@ -654,6 +675,52 @@ function buildMetrics(
   }
 
   return metrics;
+}
+
+/**
+ * Current and longest consecutive-day activity streaks from session anchor
+ * dates. Days are counted in local time (Korea has no DST, so a day ordinal is
+ * a clean floor of local-midnight epochs). The *current* streak counts back
+ * from today, or from yesterday when today has no session yet, so it does not
+ * read 0 just because the user has not worked yet today. Computed over every
+ * stored session — not the windowed grid — so a long streak is never clipped.
+ */
+function buildActivityStreaks(
+  sessions: StoredSessionSummary[],
+  now: number,
+): { current: number; longest: number } {
+  const ordinals = new Set<number>();
+  for (const session of sessions) {
+    ordinals.add(dayOrdinal(anchorEpoch(session, now)));
+  }
+  if (ordinals.size === 0) return { current: 0, longest: 0 };
+
+  const sorted = [...ordinals].sort((a, b) => a - b);
+
+  let longest = 1;
+  let run = 1;
+  for (let i = 1; i < sorted.length; i += 1) {
+    run = sorted[i] === sorted[i - 1]! + 1 ? run + 1 : 1;
+    if (run > longest) longest = run;
+  }
+
+  const today = dayOrdinal(now);
+  // Anchor the current streak at today, else yesterday — otherwise it is broken.
+  let anchor = ordinals.has(today) ? today : ordinals.has(today - 1) ? today - 1 : null;
+  let current = 0;
+  while (anchor !== null && ordinals.has(anchor)) {
+    current += 1;
+    anchor -= 1;
+  }
+
+  return { current, longest };
+}
+
+/** Whole-day ordinal for an epoch in local time (days since the local epoch). */
+function dayOrdinal(epoch: number): number {
+  const date = new Date(epoch);
+  date.setHours(0, 0, 0, 0);
+  return Math.round(date.getTime() / 86_400_000);
 }
 
 function countProjects(sessions: StoredSessionSummary[]): number {
