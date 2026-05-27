@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Clipboard,
   ClipboardCopy,
-  Download,
   FileText,
   FolderGit2,
   GanttChartSquare,
@@ -217,23 +216,13 @@ export function Sidebar({
       <div className="sidebar-head" role="group" aria-label="빠른 작업">
         <button
           type="button"
-          className={`sidebar-head-action${currentView === "start" ? " is-active" : ""}`}
+          className={`sidebar-head-action${currentView === "start" || currentView === "connections" ? " is-active" : ""}`}
           onClick={() => setCurrentView("start")}
           aria-label="새 세션"
           aria-current={currentView === "start" ? "page" : undefined}
-          title="새 세션 — 대부분은 가져오기에서 시작합니다."
+          title="새 세션 — 새 대화를 시작하거나 기존 대화를 가져옵니다."
         >
           <Plus size={15} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          className={`sidebar-head-action${currentView === "connections" ? " is-active" : ""}`}
-          onClick={() => onNavigate("connections")}
-          aria-label="가져오기"
-          aria-current={currentView === "connections" ? "page" : undefined}
-          title="Claude / Codex / 노트 등 작업 소스를 세션으로 가져옵니다."
-        >
-          <Download size={15} aria-hidden="true" />
         </button>
         {/* Mori 노트 — promoted to the head so it sits with the other quick
             actions instead of buried in the foot. Compact icon + count

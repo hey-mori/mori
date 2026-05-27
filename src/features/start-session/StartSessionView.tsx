@@ -102,16 +102,15 @@ function deriveInitialFormState(draft: StoredSessionDraft | null) {
 }
 
 /**
- * New work session — the *secondary* entry path.
+ * New session — the single 새 세션 entry.
  *
- * Most sessions are created by importing a Claude conversation in 연결
- * (Connections); this surface exists for the rarer case of starting an empty
- * work session by hand so imported evidence has somewhere to land. The framing
- * is deliberately "create a container for evidence", never "start recording" —
- * Mori reconstructs work from explicit imports, it does not watch or capture in
- * the background. Source + engine controls stay; the retention-scope choice is
- * dropped — a container for imported evidence keeps summaries by default, and a
- * retention policy is premature before live capture exists.
+ * Two paths live here: "기존 대화 가져오기 · 이어가기" routes into the
+ * Connections import surface (pick an already-finished Claude / Codex /
+ * OpenCode conversation), and "새 대화 시작" creates the session container
+ * here, after which the user starts the conversation in their own agent and
+ * Mori captures it through the explicit capture hook — Mori never drives the
+ * agent or watches the machine. Source + engine controls stay; the
+ * retention-scope choice is dropped (premature before live capture exists).
  */
 export function StartSessionView() {
   // Read the store-hydrated draft as the source of truth for initial values.
@@ -183,11 +182,11 @@ export function StartSessionView() {
       className="start-session-page"
       actionBar={
         <ActionBar
-          label="새 세션 작업"
+          label="새 세션"
           end={
             <>
               <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
-                연결에서 가져오기
+                기존 대화 가져오기
               </Button>
               {hasActiveSession ? (
                 <Button variant="secondary" icon={ArrowRight} onClick={handleContinueSession}>
@@ -231,8 +230,8 @@ export function StartSessionView() {
             <PlugZap size={16} aria-hidden="true" />
           </span>
           <span className="start-entry-copy">
-            <strong>가져오기로 시작</strong>
-            <small>Claude/Codex/OpenCode 작업을 골라 세션과 자료를 함께 만듭니다.</small>
+            <strong>기존 대화 가져오기 · 이어가기</strong>
+            <small>Claude · Codex · OpenCode에서 이미 한 대화를 골라 작업 세션으로 가져옵니다.</small>
           </span>
           <ArrowRight size={13} aria-hidden="true" />
         </button>
@@ -241,8 +240,8 @@ export function StartSessionView() {
             <FilePlus2 size={16} aria-hidden="true" />
           </span>
           <span className="start-entry-copy">
-            <strong>빈 세션 만들기</strong>
-            <small>먼저 세션을 만든 뒤 증거 탭에서 자료를 붙입니다.</small>
+            <strong>새 대화 시작</strong>
+            <small>아래에서 세션을 만든 뒤 그 에이전트로 새 작업을 시작하세요. Mori 캡처 훅이 대화를 기록하면 증거 탭에서 가져옵니다.</small>
           </span>
         </div>
       </section>
@@ -261,18 +260,7 @@ export function StartSessionView() {
           {recordingModeLabels[storeDraft.session.recordingMode]} · 저장{" "}
           {formatDateTime(storeDraft.savedAt)}
         </NoticeBanner>
-      ) : (
-        <NoticeBanner
-          tone="info"
-          actions={
-            <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
-              연결로 이동
-            </Button>
-          }
-        >
-          대부분의 세션은 연결에서 가져옵니다. 빈 세션이 필요할 때만 아래에서 만드세요.
-        </NoticeBanner>
-      )}
+      ) : null}
 
       <SetupBlock number="1" title="세션 정보">
         <div className="form-row">
@@ -298,6 +286,7 @@ export function StartSessionView() {
       <SetupBlock
         number="2"
         title="AI 에이전트"
+        note="세션을 만든 뒤 이 에이전트에서 새 대화를 시작하세요 — Mori 캡처 훅이 기록한 대화를 증거 탭에서 가져옵니다. Mori가 직접 대화를 진행하지는 않습니다."
         titleExtra={
           <InfoHint align="start" label="AI 에이전트 안내">
             작업 세션 하나는 AI 에이전트 하나로 시작합니다. Git · 터미널 · 파일 같은 자료는 세션을 만든

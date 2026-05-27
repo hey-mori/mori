@@ -156,18 +156,12 @@ export function ProjectView() {
         </div>
         <div className="project-hero-actions">
           <Button
-            icon={Layers}
-            onClick={() => setCurrentView("workspace")}
-            title="전체 프로젝트 / 세션 목록"
-          >
-            전체 세션
-          </Button>
-          <Button
             variant="primary"
             icon={Plus}
             onClick={() => setCurrentView("start")}
+            title="이 프로젝트에 새 세션을 시작합니다 — 새 대화 또는 기존 대화 가져오기."
           >
-            새 세션 시작
+            새 세션
           </Button>
         </div>
       </header>
