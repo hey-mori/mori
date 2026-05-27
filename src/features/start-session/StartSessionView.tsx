@@ -1,4 +1,16 @@
-import { ArrowRight, Bot, Braces, Check, Cloud, Code2, Database, FileCode2, FilePlus2, Lock, PlugZap, RefreshCcw, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  Braces,
+  Cloud,
+  Code2,
+  Database,
+  FileCode2,
+  FilePlus2,
+  Lock,
+  RefreshCcw,
+  Sparkles,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -8,7 +20,7 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { InfoHint } from "../../components/ui/InfoHint";
+import { MoriDrawer } from "../../components/ui/MoriDrawer";
 import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
 import {
@@ -29,12 +41,19 @@ import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
 import type { LlmProvider, RecordingMode, SourceOption } from "../../domain/types";
 import { useMoriSessionStore, selectSessionMode } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
+import { SourceControlCenter } from "../connections/SourceControlCenter";
+import { ImportPanel } from "../import/ImportPanel";
+import type {
+  CaptureSurfaceToolFamily,
+  ControlCenterAiPlatform,
+  ControlCenterImportKind,
+} from "../../lib/connectors";
+import type { HubImportKind } from "../../lib/sources/integrationGroups";
+import type { AiTranscriptPlatform } from "../../lib/import";
 
 /**
- * AI-agent anchors for a hand-made session. A Mori session is one AI-agent
- * work session, so the only thing you choose at creation is which agent it is
- * about (the spine). Git / terminal / file material attaches later as evidence
- * inside the session — it is never a session of its own.
+ * AI-agent anchors for a hand-made session. A Mori session is one AI-agent work
+ * session, so the agent (the spine) is the single thing you choose at creation.
  */
 type AgentOption = { id: string; name: string; detail: string; icon: LucideIcon };
 
@@ -44,7 +63,17 @@ const AGENT_OPTIONS: AgentOption[] = [
   { id: "opt-opencode", name: "OpenCode", detail: "OpenCode CLI", icon: Braces },
 ];
 
-const DEFAULT_AGENT_ID = AGENT_OPTIONS[0]!.id;
+/** Map the Source Control Center's agent families onto the create-time agent. */
+const FAMILY_TO_AGENT: Partial<Record<CaptureSurfaceToolFamily, AgentOption>> = {
+  claude: AGENT_OPTIONS[0]!,
+  codex: AGENT_OPTIONS[1]!,
+  opencode: AGENT_OPTIONS[2]!,
+};
+const AGENT_ID_TO_FAMILY: Record<string, CaptureSurfaceToolFamily> = {
+  "opt-claude": "claude",
+  "opt-codex": "codex",
+  "opt-opencode": "opencode",
+};
 
 /** Build the SourceOption the session draft stores for the chosen agent. */
 function agentSourceOption(agent: AgentOption): SourceOption {
@@ -60,12 +89,7 @@ function agentSourceOption(agent: AgentOption): SourceOption {
   };
 }
 
-// Only selectable engines are offered. Disabled / planned providers are not
-// shown — a muted card the user can't pick is clutter, and the create flow
-// coerces any stale draft provider back to a selectable one anyway.
-const ENGINE_OPTIONS = buildStartSessionEngineOptions().filter(
-  (engine) => engine.selectable,
-);
+const ENGINE_OPTIONS = buildStartSessionEngineOptions().filter((engine) => engine.selectable);
 
 const ENGINE_ICONS: Record<LlmProvider, LucideIcon> = {
   ollama: Bot,
@@ -74,17 +98,12 @@ const ENGINE_ICONS: Record<LlmProvider, LucideIcon> = {
   cloudApi: Cloud,
 };
 
-/**
- * Derive sensible initial form values from a persisted draft when the user
- * returns to Start Session while a session already exists. Falls back to
- * neutral defaults when no draft is present (first-run path).
- */
 function deriveInitialFormState(draft: StoredSessionDraft | null) {
   if (!draft) {
     return {
       sessionTitle: "",
       projectName: "",
-      agentId: DEFAULT_AGENT_ID,
+      family: "claude" as CaptureSurfaceToolFamily,
       recordingMode: "summary" as RecordingMode,
       engineProvider: getDefaultStartSessionEngineOption().provider,
     };
@@ -95,27 +114,21 @@ function deriveInitialFormState(draft: StoredSessionDraft | null) {
   return {
     sessionTitle: draft.session.title,
     projectName: draft.project.name,
-    agentId: savedAgent ?? DEFAULT_AGENT_ID,
+    family: (savedAgent ? AGENT_ID_TO_FAMILY[savedAgent] : undefined) ?? "claude",
     recordingMode: draft.session.recordingMode,
     engineProvider: draft.session.llmProvider,
   };
 }
 
 /**
- * New session — the single 새 세션 entry.
- *
- * Two paths live here: "기존 대화 가져오기 · 이어가기" routes into the
- * Connections import surface (pick an already-finished Claude / Codex /
- * OpenCode conversation), and "새 대화 시작" creates the session container
- * here, after which the user starts the conversation in their own agent and
- * Mori captures it through the explicit capture hook — Mori never drives the
- * agent or watches the machine. Source + engine controls stay; the
- * retention-scope choice is dropped (premature before live capture exists).
+ * 새 세션 — the single session entry. One agent picker (the Source Control
+ * Center) drives everything: its per-agent surfaces import an existing
+ * conversation inline (no separate page), and the same selected agent anchors
+ * "새 대화 시작", which creates the session container so the user can go start
+ * the conversation in their own agent — Mori then imports what the capture
+ * hook records. Mori never drives the agent or watches the machine.
  */
 export function StartSessionView() {
-  // Read the store-hydrated draft as the source of truth for initial values.
-  // We take the value once at mount (lazy initialiser) so that form edits are
-  // not clobbered by store re-renders while the user types.
   const storeDraft = useMoriSessionStore((state) => state.draft);
   const mode = useMoriSessionStore(selectSessionMode);
 
@@ -123,14 +136,18 @@ export function StartSessionView() {
 
   const [sessionTitle, setSessionTitle] = useState(() => initial.sessionTitle);
   const [projectName, setProjectName] = useState(() => initial.projectName);
-  const [selectedAgentId, setSelectedAgentId] = useState(() => initial.agentId);
-  // Recording mode is no longer a create-time choice (premature before live
-  // capture exists); a hand-made container keeps summaries by default. We still
-  // honour an existing draft's saved mode for returning users.
-  const recordingMode = initial.recordingMode;
-  const [engineProvider, setEngineProvider] = useState<LlmProvider>(
-    () => initial.engineProvider,
+  const [selectedFamily, setSelectedFamily] = useState<CaptureSurfaceToolFamily>(
+    () => initial.family,
   );
+  const recordingMode = initial.recordingMode;
+  const [engineProvider, setEngineProvider] = useState<LlmProvider>(() => initial.engineProvider);
+
+  // Inline import drawer — the destination for the Source Control Center's
+  // per-agent import actions, so "기존 대화 가져오기" happens on this page
+  // instead of routing away.
+  const [importOpen, setImportOpen] = useState(false);
+  const [importKind, setImportKind] = useState<HubImportKind>("ai");
+  const [importPlatform, setImportPlatform] = useState<AiTranscriptPlatform | undefined>(undefined);
 
   const selectedEngine =
     ENGINE_OPTIONS.find(
@@ -143,14 +160,19 @@ export function StartSessionView() {
   );
   const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
   const resetSessionToDemo = useMoriSessionStore((state) => state.resetToDemo);
-  // `navigate` routes the post-setup "evidence" / "timeline" landings into the
-  // unified Session Detail workspace on the matching tab.
   const setCurrentView = useMoriAppStore((state) => state.navigate);
+  const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
 
-  const selectedAgent =
-    AGENT_OPTIONS.find((agent) => agent.id === selectedAgentId) ?? AGENT_OPTIONS[0]!;
+  const selectedAgent = FAMILY_TO_AGENT[selectedFamily] ?? null;
+
+  function openImportDrawer(kind: ControlCenterImportKind, platform?: ControlCenterAiPlatform) {
+    setImportKind(kind as HubImportKind);
+    setImportPlatform(platform as AiTranscriptPlatform | undefined);
+    setImportOpen(true);
+  }
 
   function handleStartSession() {
+    if (!selectedAgent) return;
     const draft = createSessionDraft({
       sessionTitle: sessionTitle || "제목 없는 세션",
       projectName: projectName || "제목 없는 프로젝트",
@@ -170,7 +192,6 @@ export function StartSessionView() {
     setCurrentView("timeline");
   }
 
-  /** Switch back to the existing session without changing anything. */
   function handleContinueSession() {
     setCurrentView("evidence");
   }
@@ -185,9 +206,6 @@ export function StartSessionView() {
           label="새 세션"
           end={
             <>
-              <Button variant="secondary" icon={PlugZap} onClick={() => setCurrentView("connections")}>
-                기존 대화 가져오기
-              </Button>
               {hasActiveSession ? (
                 <Button variant="secondary" icon={ArrowRight} onClick={handleContinueSession}>
                   현재 세션 계속
@@ -198,9 +216,11 @@ export function StartSessionView() {
                 </Button>
               )}
               <Button
-                variant={hasActiveSession ? "secondary" : "primary"}
+                variant={selectedAgent ? "primary" : "secondary"}
                 icon={hasActiveSession ? RefreshCcw : FilePlus2}
                 onClick={handleStartSession}
+                disabled={!selectedAgent}
+                title={selectedAgent ? undefined : "AI 에이전트를 먼저 선택하세요."}
               >
                 {hasActiveSession ? "새 세션으로 교체" : "세션 만들기"}
               </Button>
@@ -220,32 +240,6 @@ export function StartSessionView() {
         />
       }
     >
-      <section className="start-entry-strip" aria-label="세션 시작 방식">
-        <button
-          type="button"
-          className="start-entry-card is-primary"
-          onClick={() => setCurrentView("connections")}
-        >
-          <span className="start-entry-icon">
-            <PlugZap size={16} aria-hidden="true" />
-          </span>
-          <span className="start-entry-copy">
-            <strong>기존 대화 가져오기 · 이어가기</strong>
-            <small>Claude · Codex · OpenCode에서 이미 한 대화를 골라 작업 세션으로 가져옵니다.</small>
-          </span>
-          <ArrowRight size={13} aria-hidden="true" />
-        </button>
-        <div className="start-entry-card">
-          <span className="start-entry-icon">
-            <FilePlus2 size={16} aria-hidden="true" />
-          </span>
-          <span className="start-entry-copy">
-            <strong>새 대화 시작</strong>
-            <small>아래에서 세션을 만든 뒤 그 에이전트로 새 작업을 시작하세요. Mori 캡처 훅이 대화를 기록하면 증거 탭에서 가져옵니다.</small>
-          </span>
-        </div>
-      </section>
-
       {hasActiveSession ? (
         <NoticeBanner
           tone="success"
@@ -262,94 +256,73 @@ export function StartSessionView() {
         </NoticeBanner>
       ) : null}
 
-      <SetupBlock number="1" title="세션 정보">
-        <div className="form-row">
-          <label>
-            세션 이름
-            <input
-              value={sessionTitle}
-              placeholder="예: Mori 앱 기획"
-              onChange={(event) => setSessionTitle(event.target.value)}
-            />
-          </label>
-          <label>
-            프로젝트
-            <input
-              value={projectName}
-              placeholder="예: Mori Product"
-              onChange={(event) => setProjectName(event.target.value)}
-            />
-          </label>
-        </div>
-      </SetupBlock>
+      {/* One agent picker. Selecting an agent shows its import surfaces right
+          here (no separate page) and anchors the "새 대화 시작" block below. */}
+      <SourceControlCenter
+        isDesktop={isTauriRuntime()}
+        hasActiveSession={hasActiveSession}
+        onImport={openImportDrawer}
+        onOpenRepositorySettings={() => openSettingsSheet("repositories")}
+        selectedFamily={selectedFamily}
+        onSelectFamily={setSelectedFamily}
+      />
 
       <SetupBlock
-        number="2"
-        title="AI 에이전트"
-        note="세션을 만든 뒤 이 에이전트에서 새 대화를 시작하세요 — Mori 캡처 훅이 기록한 대화를 증거 탭에서 가져옵니다. Mori가 직접 대화를 진행하지는 않습니다."
-        titleExtra={
-          <InfoHint align="start" label="AI 에이전트 안내">
-            작업 세션 하나는 AI 에이전트 하나로 시작합니다. Git · 터미널 · 파일 같은 자료는 세션을 만든
-            뒤 같은 세션에 붙입니다. Mori는 전체 컴퓨터를 감시하지 않습니다.
-          </InfoHint>
+        title="새 대화 시작"
+        note={
+          selectedAgent
+            ? `${selectedAgent.name}로 새 작업을 시작할 세션을 만듭니다. 만든 뒤 그 에이전트에서 대화하면 Mori 캡처 훅이 기록한 내용을 가져옵니다 — Mori가 직접 대화를 진행하지는 않습니다.`
+            : "위에서 AI 에이전트(Claude · Codex · OpenCode)를 선택하면 새 대화 세션을 시작할 수 있습니다."
         }
       >
-        <div className="agent-grid">
-          {AGENT_OPTIONS.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              selected={selectedAgentId === agent.id}
-              onSelect={() => setSelectedAgentId(agent.id)}
-            />
-          ))}
-        </div>
+        {selectedAgent ? (
+          <>
+            <div className="form-row">
+              <label>
+                세션 이름
+                <input
+                  value={sessionTitle}
+                  placeholder="예: Mori 앱 기획"
+                  onChange={(event) => setSessionTitle(event.target.value)}
+                />
+              </label>
+              <label>
+                프로젝트
+                <input
+                  value={projectName}
+                  placeholder="예: Mori Product"
+                  onChange={(event) => setProjectName(event.target.value)}
+                />
+              </label>
+            </div>
+            <div className="engine-grid">
+              {ENGINE_OPTIONS.map((engine) => (
+                <EngineCard
+                  key={engine.provider}
+                  engine={engine}
+                  selected={selectedEngine.provider === engine.provider}
+                  onSelect={() => setEngineProvider(engine.provider)}
+                />
+              ))}
+            </div>
+            <div className="start-create-action">
+              <Button variant="primary" icon={FilePlus2} onClick={handleStartSession}>
+                {selectedAgent.name}로 세션 만들기
+              </Button>
+            </div>
+          </>
+        ) : null}
       </SetupBlock>
 
-      <SetupBlock
-        number="3"
-        title="로컬 AI 엔진"
-        note="Quick Pass 분석에 쓸 로컬 엔진입니다."
-      >
-        <div className="engine-grid">
-          {ENGINE_OPTIONS.map((engine) => (
-            <EngineCard
-              key={engine.provider}
-              engine={engine}
-              selected={selectedEngine.provider === engine.provider}
-              onSelect={() => setEngineProvider(engine.provider)}
-            />
-          ))}
-        </div>
-      </SetupBlock>
+      <MoriDrawer open={importOpen} onClose={() => setImportOpen(false)} ariaLabel="소스 가져오기">
+        <ImportPanel
+          variant="embedded"
+          initialKind={importKind}
+          initialAiPlatform={importPlatform}
+          onClose={() => setImportOpen(false)}
+        />
+      </MoriDrawer>
     </PageShell>
-  );
-}
-
-function AgentCard({
-  agent,
-  selected,
-  onSelect,
-}: {
-  agent: AgentOption;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  const Icon = agent.icon;
-  return (
-    <button
-      className={`source-card ${selected ? "selected" : ""}`}
-      type="button"
-      aria-pressed={selected}
-      onClick={onSelect}
-    >
-      <Icon size={18} aria-hidden="true" />
-      <div>
-        <strong>{agent.name}</strong>
-        <span>{agent.detail}</span>
-      </div>
-      {selected ? <Check size={17} /> : <span className="checkbox" />}
-    </button>
   );
 }
 
@@ -360,7 +333,7 @@ function SetupBlock({
   titleExtra,
   children,
 }: {
-  number: string;
+  number?: string;
   title: string;
   note?: string;
   titleExtra?: ReactNode;
@@ -369,7 +342,7 @@ function SetupBlock({
   return (
     <section className="setup-block">
       <header>
-        <span>{number}</span>
+        {number ? <span>{number}</span> : null}
         <div>
           <h2>
             {title}
@@ -422,7 +395,7 @@ function SessionSummary({
   savedDraft: StoredSessionDraft | null;
   sessionTitle: string;
   projectName: string;
-  agent: AgentOption;
+  agent: AgentOption | null;
   recordingMode: RecordingMode;
   engine: StartSessionEngineOption;
   storageTarget: SessionStorageTarget;
@@ -448,7 +421,7 @@ function SessionSummary({
     >
       <SummaryRow label="세션 이름" value={sessionTitle || "무제 Mori 세션"} />
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
-      <SummaryRow label="AI 에이전트" value={agent.name} />
+      <SummaryRow label="AI 에이전트" value={agent?.name ?? "에이전트 미선택"} />
       <hr />
       <SummaryRow
         label="AI 엔진"

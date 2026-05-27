@@ -40,6 +40,13 @@ export type SourceControlCenterProps = {
   onImport: (kind: ControlCenterImportKind, platform?: ControlCenterAiPlatform) => void;
   /** Open Settings → Repositories (the git-capture setup surface). */
   onOpenRepositorySettings: () => void;
+  /**
+   * Optional controlled selection. When provided, the parent owns which source
+   * family is open so the same selection can drive a sibling surface (the
+   * 새 세션 page's "새 대화 시작" action keys off it). Omit for self-managed state.
+   */
+  selectedFamily?: CaptureSurfaceToolFamily | null;
+  onSelectFamily?: (family: CaptureSurfaceToolFamily) => void;
 };
 
 const FAMILY_ICON: Record<CaptureSurfaceToolFamily, LucideIcon> = {
@@ -109,6 +116,8 @@ export function SourceControlCenter({
   hasActiveSession,
   onImport,
   onOpenRepositorySettings,
+  selectedFamily: controlledFamily,
+  onSelectFamily,
 }: SourceControlCenterProps) {
   const { groups, counts } = useMemo(
     () => buildConnectorControlCenter({ isDesktop, hasActiveSession }),
@@ -127,7 +136,10 @@ export function SourceControlCenter({
     (agentGroups.find((group) => group.surfaces.some((s) => s.availability === "available")) ??
       agentGroups[0] ??
       groups[0])?.family ?? null;
-  const [activeFamily, setActiveFamily] = useState<CaptureSurfaceToolFamily | null>(null);
+  const [internalFamily, setInternalFamily] = useState<CaptureSurfaceToolFamily | null>(null);
+  // Controlled when the parent passes `selectedFamily`; self-managed otherwise.
+  const activeFamily = controlledFamily !== undefined ? controlledFamily : internalFamily;
+  const setActiveFamily = onSelectFamily ?? setInternalFamily;
   const selectedFamily = activeFamily ?? defaultFamily;
   const selectedGroup =
     groups.find((group) => group.family === selectedFamily) ?? groups[0] ?? null;
