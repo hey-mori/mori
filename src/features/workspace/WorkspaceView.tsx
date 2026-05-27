@@ -7,6 +7,7 @@ import {
   FolderGit2,
   FolderKanban,
   GanttChartSquare,
+  LayoutDashboard,
   Pencil,
   PlugZap,
   ScrollText,
@@ -307,7 +308,7 @@ function SessionRowItem({
 }: {
   row: SessionRow;
   onOpen: () => void;
-  onOpenTab: (tab: "overview" | "flow" | "evidence" | "insights") => void;
+  onOpenTab: (tab: "overview" | "flow" | "evidence" | "insights" | "report") => void;
   onOpenProject?: () => void;
   onRename: () => void;
 }) {
@@ -379,16 +380,17 @@ function buildSessionMenuItems({
 }: {
   row: SessionRow;
   onOpen: () => void;
-  onOpenTab: (tab: "overview" | "flow" | "evidence" | "insights") => void;
+  onOpenTab: (tab: "overview" | "flow" | "evidence" | "insights" | "report") => void;
   onOpenProject?: () => void;
   onRename: () => void;
 }): MoriMenuItemSpec[] {
   const items: MoriMenuItemSpec[] = [
     { id: "open", label: "세션 열기", icon: ArrowRight, onSelect: onOpen },
-    { id: "open-overview", label: "개요 열기", icon: ScrollText, onSelect: () => onOpenTab("overview") },
+    { id: "open-overview", label: "개요 열기", icon: LayoutDashboard, onSelect: () => onOpenTab("overview") },
     { id: "open-flow", label: "흐름 열기", icon: GanttChartSquare, onSelect: () => onOpenTab("flow") },
     { id: "open-evidence", label: "증거 열기", icon: FileText, onSelect: () => onOpenTab("evidence") },
     { id: "open-review", label: "검토 열기", icon: Clipboard, onSelect: () => onOpenTab("insights") },
+    { id: "open-report", label: "리포트 열기", icon: ScrollText, onSelect: () => onOpenTab("report") },
   ];
   if (onOpenProject) {
     items.push({

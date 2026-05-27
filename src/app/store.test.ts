@@ -33,13 +33,13 @@ describe("app store — session-centric routing", () => {
   });
 
   it("navigate() folds the legacy session surfaces into the matching tab", () => {
-    const expectations: Array<["timeline" | "flow" | "evidence" | "review" | "reports", "flow" | "evidence" | "insights" | "overview"]> = [
+    const expectations: Array<["timeline" | "flow" | "evidence" | "review" | "reports", "flow" | "evidence" | "insights" | "report"]> = [
       ["timeline", "flow"],
       ["flow", "flow"],
       ["evidence", "evidence"],
       ["review", "insights"],
-      // The per-session report is merged into the session 개요 tab.
-      ["reports", "overview"],
+      // The per-session report opens the session workspace's 리포트 tab.
+      ["reports", "report"],
     ];
     for (const [view, tab] of expectations) {
       useMoriAppStore.getState().navigate(view);

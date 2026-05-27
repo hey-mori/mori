@@ -10,6 +10,7 @@ import {
   GanttChartSquare,
   House,
   Layers,
+  LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
@@ -111,7 +112,12 @@ export function Sidebar({
 }) {
   const currentView = useMoriAppStore((state) => state.currentView);
   const currentProjectKey = useMoriAppStore((state) => state.currentProjectKey);
-  const activeSessionId = useMoriSessionStore((state) => state.draft?.session.id ?? null);
+  // Highlight the open session's row. A real session is identified by its
+  // draft; a bundled demo session has no draft, so fall back to demoSessionId
+  // — that way clicking a demo row both opens it and lights it up.
+  const activeSessionId = useMoriSessionStore(
+    (state) => state.draft?.session.id ?? state.demoSessionId ?? null,
+  );
   const source = useMoriSessionStore(selectSessionSource);
   const dataResetNonce = useMoriSessionStore((state) => state.dataResetNonce);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
@@ -598,10 +604,11 @@ function buildSidebarSessionMenuItems({
 }): MoriMenuItemSpec[] {
   const items: MoriMenuItemSpec[] = [
     { id: "open", label: "세션 열기", icon: ChevronRight, onSelect: onOpen },
-    { id: "open-overview", label: "개요 열기", icon: ScrollText, onSelect: () => onOpenTab("overview") },
+    { id: "open-overview", label: "개요 열기", icon: LayoutDashboard, onSelect: () => onOpenTab("overview") },
     { id: "open-flow", label: "흐름 열기", icon: GanttChartSquare, onSelect: () => onOpenTab("flow") },
     { id: "open-evidence", label: "증거 열기", icon: FileText, onSelect: () => onOpenTab("evidence") },
     { id: "open-review", label: "검토 열기", icon: Clipboard, onSelect: () => onOpenTab("insights") },
+    { id: "open-report", label: "리포트 열기", icon: ScrollText, onSelect: () => onOpenTab("report") },
   ];
   if (onOpenProject) {
     items.push({

@@ -6,6 +6,7 @@ import {
   GanttChartSquare,
   LayoutDashboard,
   Layers,
+  ScrollText,
   Sparkles,
 } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
@@ -15,7 +16,6 @@ import {
   selectSessionView,
   useMoriSessionStore,
 } from "../../app/sessionStore";
-import { moriMockSession } from "../../domain/mock-data";
 import { buildWorkContext } from "../../lib/session/workContext";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
@@ -23,6 +23,7 @@ import { TimelineView } from "../timeline/TimelineView";
 import { EvidenceView } from "../evidence/EvidenceView";
 import { ReviewView } from "../review/ReviewView";
 import { ReportsView } from "../reports/ReportsView";
+import { OverviewView } from "./OverviewView";
 
 /**
  * Session Detail — the unified, tabbed workspace for one session.
@@ -32,10 +33,11 @@ import { ReportsView } from "../reports/ReportsView";
  * subtle inline label, then the tab strip with count badges in place of the
  * old "이벤트 24 · 소스 5 · 결정 7 …" metric strip. Tabs:
  *
- *   - **개요**    — session at a glance + resume prompt + .mori export
+ *   - **개요**    — session at a glance (identity · summary · scale · quick nav)
  *   - **흐름**    — Timeline + conversation thread
  *   - **증거**    — imported sources / evidence
  *   - **검토**    — issues / decisions / next actions to confirm
+ *   - **리포트**  — handoff outputs: continue-context, report, .mori export
  */
 export function SessionDetailView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
@@ -69,16 +71,21 @@ export function SessionDetailView() {
 function SessionTitleInline() {
   const draft = useMoriSessionStore((state) => state.draft);
   const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
+  // The demo branch of buildWorkContext reads `demoSession` for the title /
+  // span. Feed it the *currently open* demo session (the per-session view)
+  // rather than the canonical mock, so the breadcrumb names the session the
+  // user actually clicked instead of always "Mori 앱 기획".
+  const demoSession = useMoriSessionStore(selectSessionView).session;
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openProject = useMoriAppStore((state) => state.openProject);
   const context = useMemo(
     () =>
       buildWorkContext({
         draft,
-        demoSession: moriMockSession.session,
+        demoSession,
         analysisStatus,
       }),
-    [draft, analysisStatus],
+    [draft, demoSession, analysisStatus],
   );
   const projectLabel = context.projectLabel ?? null;
   return (
@@ -130,6 +137,7 @@ const SESSION_TABS: SessionTabSpec[] = [
   { id: "flow", label: "흐름", icon: GanttChartSquare },
   { id: "evidence", label: "증거", icon: FileText },
   { id: "insights", label: "검토", icon: Sparkles },
+  { id: "report", label: "리포트", icon: ScrollText },
 ];
 
 /**
@@ -138,6 +146,7 @@ const SESSION_TABS: SessionTabSpec[] = [
  *  - 흐름:    timeline event count
  *  - 증거:    imported source count
  *  - 검토:    open issues + unconfirmed decisions + pending next actions
+ *  - 리포트:  no count (it is an output, not a counted collection)
  *
  * A zero count is hidden rather than rendered as "(0)" so the bar stays calm
  * on a fresh session.
@@ -163,6 +172,7 @@ function SessionTabBar({
       flow: view.events.length,
       evidence: sources,
       insights: openIssues + unconfirmedDecisions + pendingNextActions,
+      report: null,
     };
   }, [view, imports, mode]);
 
@@ -214,8 +224,9 @@ function SessionTabBar({
 // ─── Tab content ────────────────────────────────────────────────────────────
 
 function SessionTabContent({ tab }: { tab: SessionTab }) {
-  if (tab === "overview") return <ReportsView embedded />;
+  if (tab === "overview") return <OverviewView />;
   if (tab === "evidence") return <EvidenceView />;
   if (tab === "insights") return <ReviewView />;
+  if (tab === "report") return <ReportsView />;
   return <TimelineView mode="timeline" />;
 }

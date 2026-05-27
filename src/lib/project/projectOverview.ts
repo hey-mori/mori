@@ -78,7 +78,7 @@ export type ProjectSessionInsightSnapshot = {
   reportCount?: number;
 };
 
-export type ProjectFocusDestination = "insights" | "evidence" | "memory" | "overview";
+export type ProjectFocusDestination = "insights" | "evidence" | "memory" | "report";
 
 export type ProjectFocusItem = {
   key: string;
@@ -255,8 +255,8 @@ function buildFocusItems(
       statusLabel:
         stats.savedReports > 0 ? `${stats.savedReports}개` : rows.length > 0 ? "작성 가능" : "대기",
       tone: stats.savedReports > 0 ? "success" : "neutral",
-      actionLabel: "개요",
-      destination: "overview",
+      actionLabel: "리포트",
+      destination: "report",
       targetSessionId: reportTarget,
       enabled: Boolean(reportTarget),
     },

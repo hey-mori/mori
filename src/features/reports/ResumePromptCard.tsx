@@ -45,11 +45,11 @@ export function ResumePromptCard({
   })();
 
   return (
-    <section className="resume-prompt-card" aria-label="이어가기 프롬프트">
+    <section className="resume-prompt-card" aria-label="다음 세션으로 이어가기">
       <header className="resume-prompt-head">
         <div>
-          <h2>이어가기 프롬프트</h2>
-          <p>Claude / ChatGPT / Codex 다음 세션에 그대로 붙여넣을 수 있는 컨텍스트입니다.</p>
+          <h2>다음 세션으로 이어가기</h2>
+          <p>이 세션에서 연결된 AI가 한 작업을 정리한 컨텍스트입니다. Claude / ChatGPT / Codex 다음 대화에 붙여넣으면 이어서 작업할 수 있습니다.</p>
         </div>
         <div className="resume-prompt-meta">
           {originBadge}
@@ -58,9 +58,9 @@ export function ResumePromptCard({
             onClick={handleCopy}
             disabled={!hasPrompt}
             variant={hasPrompt ? "primary" : "secondary"}
-            title={hasPrompt ? "프롬프트를 클립보드로 복사" : "프롬프트가 비어 있습니다"}
+            title={hasPrompt ? "컨텍스트를 클립보드로 복사" : "컨텍스트가 비어 있습니다"}
           >
-            {copied ? "복사됨" : "프롬프트 복사"}
+            {copied ? "복사됨" : "컨텍스트 복사"}
           </Button>
         </div>
       </header>

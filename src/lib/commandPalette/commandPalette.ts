@@ -24,7 +24,7 @@ export type CommandGroup =
 /** The intent the renderer should act on when the user picks a command. */
 export type CommandTarget =
   | { kind: "navigate"; view: ViewKey }
-  | { kind: "openSession"; sessionId: string; tab?: "overview" | "flow" | "evidence" | "insights" }
+  | { kind: "openSession"; sessionId: string; tab?: "overview" | "flow" | "evidence" | "insights" | "report" }
   | { kind: "openSettings"; segment?: "profile" | "localAi" }
   | { kind: "toggleSidebarCollapsed" }
   | { kind: "setTheme"; theme: MoriThemeId };

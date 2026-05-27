@@ -1,10 +1,7 @@
-import { Archive, Calendar, FileText, PanelRightClose, PanelRightOpen, Sparkles } from "lucide-react";
+import { Archive, FileText, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { PageHeader } from "../../components/layout/PageHeader";
-import { PageShell } from "../../components/layout/PageShell";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import {
@@ -26,28 +23,12 @@ import {
   type MoriExportWriteResult,
 } from "../../lib/report/exportStatus";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import {
-  describeAcceptedMemoryStorageSource,
-  getAcceptedMemoryRepository,
-  type AcceptedMemoryStorageSource,
-} from "../../lib/project-memory/acceptedMemoryRepository";
+import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
 import type {
   StoredAcceptedProjectMemory,
   StoredMemoryReviewAction,
 } from "../../lib/storage/storageTypes";
 import { buildMoriPackageExportPlan } from "../../lib/report/moriPackageExportPlan";
-import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
-import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
-import {
-  buildSessionWrapUp,
-  type SessionWrapUpActionId,
-  type SessionWrapUpUnresolvedItem,
-} from "../../lib/report/sessionWrapUp";
-import {
-  getUnresolvedItems,
-  UNRESOLVED_REASON_LABEL,
-  type UnresolvedItem,
-} from "../../lib/review-workspace/reviewWorkspace";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -55,22 +36,16 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
-import { formatDate, formatDateTime } from "../../lib/formatting/time";
-import { deriveSessionStatus } from "../../lib/session/sessionStatus";
-import { getReportEvidenceSummary } from "../../lib/sources/traceability";
+import { formatDateTime } from "../../lib/formatting/time";
 import { ResumePromptCard, type ResumePromptOrigin } from "./ResumePromptCard";
-import { SessionSummaryStrip } from "./SessionSummaryStrip";
 import { ReportBuilderPanel } from "./ReportBuilderPanel";
 
-export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
+export function ReportsView() {
   // `navigate` routes legacy session-surface keys (timeline / evidence) into
   // the unified Session Detail workspace; other keys pass through unchanged.
   const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
-  const openAcceptedMemory = useMoriAppStore((state) => state.openAcceptedMemory);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
-  const sessionState = useMoriSessionStore((state) => state);
   const view = useMoriSessionStore(selectSessionView);
   const mode = useMoriSessionStore(selectSessionMode);
   const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
@@ -92,14 +67,7 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
   const reportProjectId = view.project.id || "default";
   const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
   const [reviewActions, setReviewActions] = useState<StoredMemoryReviewAction[]>([]);
-  const [memoryStorageSource, setMemoryStorageSource] =
-    useState<AcceptedMemoryStorageSource>("browser-local-storage");
   const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
-  // The report builder used to sit as a permanent right rail, which read as
-  // empty space until the user actually wanted to customise. Default it
-  // closed so the report content takes full width on entry; toggle from
-  // the action bar opens the builder on demand.
-  const [builderOpen, setBuilderOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     const memoryRepository = getAcceptedMemoryRepository();
@@ -111,24 +79,12 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
         if (cancelled) return;
         setAcceptedMemories(memoriesResult.data);
         setReviewActions(actionsResult.data);
-        const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
-        setMemoryStorageFellBack(fellBack);
-        setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
+        setMemoryStorageFellBack(memoriesResult.fellBack || actionsResult.fellBack);
       });
     return () => {
       cancelled = true;
     };
   }, [reportProjectId]);
-
-  const status = useMemo(
-    () =>
-      deriveSessionStatus(sessionState, {
-        sourceCount: view.sources.length,
-        eventCount: view.events.length,
-      }),
-    [sessionState, view.sources.length, view.events.length],
-  );
-  const evidenceSummary = useMemo(() => getReportEvidenceSummary(view), [view]);
 
   const isDemo = mode === "demo";
   const canRunQuickPass = !isDemo && imports.length > 0 && analysisStatus !== "running";
@@ -146,78 +102,6 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
     return { kind: "fallback" };
   }, [hasAnalysis, isDemo, analysisProviderLabel]);
 
-  const duration = useMemo(() => formatDuration(view.session.startedAt, view.session.endedAt), [view.session.startedAt, view.session.endedAt]);
-
-  const memoryHealth = useMemo(() => {
-    let stale = 0;
-    let contradicted = 0;
-    for (const memory of acceptedMemories) {
-      if (memory.status === "stale") stale += 1;
-      else if (memory.status === "contradicted") contradicted += 1;
-    }
-    return {
-      stale,
-      contradicted,
-    };
-  }, [acceptedMemories]);
-  const attentionMemoryEntries = useMemo(
-    () =>
-      acceptedMemories
-        .filter((memory) => memory.status === "stale" || memory.status === "contradicted")
-        .map((memory) => ({
-          id: memory.id,
-          title: memory.title,
-          status: memory.status as "stale" | "contradicted",
-        })),
-    [acceptedMemories],
-  );
-  const unresolvedPreviewItems = useMemo(
-    () =>
-      getUnresolvedItems({
-        issues: view.issues,
-        decisions: view.decisions,
-        nextActions: view.nextActions,
-      }).map(toSessionWrapUpUnresolvedItem),
-    [view.issues, view.decisions, view.nextActions],
-  );
-  const wrapUp = useMemo(
-    () =>
-      buildSessionWrapUp({
-        sourceCount: view.sources.length,
-        eventCount: view.events.length,
-        issueCount: view.issues.length,
-        decisionCount: view.decisions.length,
-        nextActionCount: view.nextActions.length,
-        importCount: imports.length,
-        hasAnalysis,
-        analysisRunning: analysisStatus === "running",
-        canRunQuickPass,
-        acceptedMemoryCount: acceptedMemories.length,
-        auditActionCount: reviewActions.length,
-        staleMemoryCount: memoryHealth.stale,
-        contradictedMemoryCount: memoryHealth.contradicted,
-        unresolvedItems: unresolvedPreviewItems,
-        attentionMemories: attentionMemoryEntries,
-        resumePromptReady: resumePromptText.trim().length > 0,
-      }),
-    [
-      view.sources.length,
-      view.events.length,
-      view.issues.length,
-      view.decisions.length,
-      view.nextActions.length,
-      imports.length,
-      hasAnalysis,
-      analysisStatus,
-      canRunQuickPass,
-      acceptedMemories.length,
-      memoryHealth,
-      reviewActions.length,
-      unresolvedPreviewItems,
-      attentionMemoryEntries,
-      resumePromptText,
-    ],
-  );
   const exportPlan = useMemo(
     () =>
       buildMoriPackageExportPlan({
@@ -227,70 +111,6 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
       }),
     [view, acceptedMemories, reviewActions],
   );
-  const originSummary = useMemo(
-    () =>
-      buildSessionOriginSummary({
-        session: view.session,
-        sources: view.sources,
-        events: view.events,
-        importCount: isDemo ? 0 : imports.length,
-        isDemo,
-      }),
-    [view.session, view.sources, view.events, imports.length, isDemo],
-  );
-  const projectHint = useMemo(
-    () =>
-      deriveProjectIdentityHint({
-        session: view.session,
-        sources: view.sources,
-        events: view.events,
-      }),
-    [view.session, view.sources, view.events],
-  );
-  const overviewSummaryText =
-    (hasAnalysis && analysis ? analysis.summary.sessionSummary : view.summary.sessionSummary) || null;
-
-  function handleWrapUpAction(actionId: SessionWrapUpActionId) {
-    switch (actionId) {
-      case "addEvidence":
-        setCurrentView("evidence");
-        return;
-      case "runQuickPass":
-        if (canRunQuickPass) void runQuickPass();
-        return;
-      case "reviewMemory":
-        setCurrentView("memory");
-        return;
-      case "reviewMemoryHealth":
-        setCurrentView("consolidation");
-        return;
-      case "reviewHandoff":
-        document.getElementById("reports-handoff")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-        return;
-      case "waitForAnalysis":
-      default:
-        return;
-    }
-  }
-
-  function handleOpenUnresolvedItem(item: SessionWrapUpUnresolvedItem) {
-    switch (item.kind) {
-      case "issue":
-        openReviewItem({ kind: "issue", issueId: item.id });
-        return;
-      case "decision":
-        openReviewItem({ kind: "decision", decisionId: item.id });
-        return;
-      case "nextAction":
-        openReviewItem({ kind: "nextAction", nextActionId: item.id });
-        return;
-      default:
-        return;
-    }
-  }
 
   const quickPassButton = !isDemo ? (
     <Button
@@ -314,141 +134,58 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
     </Button>
   ) : undefined;
 
-  const statusBadges = (
-    <>
-      <Badge tone="gray" title="이 리포트는 활성 세션을 기준으로 합니다.">
-        <Calendar size={12} aria-hidden="true" /> {formatDate(view.session.startedAt)}
-      </Badge>
-      <Badge tone="gray">{evidenceSummary.dataBasis}</Badge>
-    </>
-  );
-
-  const actionCounts = (
-    <div className="reports-action-counts">
-      <Badge tone="purple">출처 {view.sources.length}</Badge>
-      <Badge tone="blue">이벤트 {view.events.length}</Badge>
-      <Badge tone="red">이슈 {view.issues.length}</Badge>
-      <Badge tone="green">결정 {view.decisions.length}</Badge>
-    </div>
-  );
-
-  const asideNode = (
-    <ReportBuilderPanel
-      id="reports-builder"
-      view={view}
-      resumePromptOverride={resumePromptText}
-      acceptedMemories={acceptedMemories}
-    />
-  );
-
-  const bodyNode = (
-    <>
-      <ReportsAnalysisNotice
-        mode={mode}
-        hasAnalysis={hasAnalysis}
-        status={analysisStatus}
-        providerLabel={analysisProviderLabel}
-        providerName={analysis?.providerName ?? null}
-        generatedAt={analysis?.generatedAt ?? null}
-        error={analysisError}
-        importsCount={imports.length}
-        onGoToEvidence={() => setCurrentView("evidence")}
-      />
-
-      <div className="reports-main">
-        <SessionOverviewHero
-          originSummary={originSummary}
-          projectLabel={projectHint.projectLabel}
-          summaryText={overviewSummaryText}
-        />
-
-        <SessionSummaryStrip
-          dataBasis={evidenceSummary.dataBasis}
-          dataBasisTone={status.dataBasisTone}
-          duration={duration}
-          sourceCount={view.sources.length}
-          eventCount={view.events.length}
-          issueCount={view.issues.length}
-          decisionCount={view.decisions.length}
-          nextActionCount={view.nextActions.length}
-          wrapUp={wrapUp}
-          onWrapUpAction={handleWrapUpAction}
-          onOpenUnresolvedItem={handleOpenUnresolvedItem}
-          onOpenAttentionMemory={openAcceptedMemory}
-        />
-
-        <div id="reports-handoff" className="reports-handoff-group">
-          <ResumePromptCard
-            prompt={resumePromptText}
-            origin={promptOrigin}
-            emptyHint={
-              imports.length === 0
-                ? "아직 가져온 소스가 없습니다. Evidence에서 소스를 추가한 뒤 Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
-                : "Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
-            }
-          />
-
-          <MoriPackageStrip
-            view={view}
-            acceptedMemories={acceptedMemories}
-            reviewActions={reviewActions}
-            memoryStorageSource={memoryStorageSource}
-            memoryStorageFellBack={memoryStorageFellBack}
-            exportPlan={exportPlan}
-          />
-        </div>
-      </div>
-    </>
-  );
-
-  // Embedded inside the Session 리포트 tab: content-only (no PageShell or
-  // page header — the session bar owns the chrome). The report builder is
-  // an on-demand right rail; users toggle it from the action bar so the
-  // default view is the readable report, not a permanent customise panel.
-  if (embedded) {
-    const builderToggle = (
-      <Button
-        icon={builderOpen ? PanelRightClose : PanelRightOpen}
-        onClick={() => setBuilderOpen((open) => !open)}
-        aria-pressed={builderOpen}
-        title={builderOpen ? "리포트 생성기 닫기" : "리포트 생성기 열기"}
-      >
-        리포트 생성기
-      </Button>
-    );
-    return (
-      <div className="session-tab-pane reports-embedded">
-        <div className="session-tab-actionbar">
-          <ActionBar
-            label="세션 개요"
-            start={statusBadges}
-            end={
-              <>
-                {builderToggle}
-                {quickPassButton}
-              </>
-            }
-          />
-        </div>
-        <div
-          className={`session-tab-split${builderOpen ? "" : " is-collapsed"}`}
-        >
-          <div className="session-tab-main">{bodyNode}</div>
-          {builderOpen ? asideNode : null}
-        </div>
-      </div>
-    );
-  }
-
+  // The 리포트 tab is the session's handoff / output surface — three stacked
+  // sections: the continue-context, the report builder, and the .mori export.
+  // Session identity, scale metrics, and the wrap-up checklist live in the
+  // 개요 tab, not here.
   return (
-    <PageShell
-      className="reports-page"
-      header={<PageHeader compact title="리포트" right={quickPassButton} />}
-      actionBar={<ActionBar label="세션 개요" start={statusBadges} end={actionCounts} />}
-      aside={asideNode}
-    >
-      {bodyNode}
-    </PageShell>
+    <div className="session-tab-pane reports-embedded">
+      <div className="session-tab-actionbar">
+        <ActionBar label="리포트" end={quickPassButton} />
+      </div>
+      <div className="session-tab-split is-collapsed">
+        <div className="session-tab-main">
+          <ReportsAnalysisNotice
+            mode={mode}
+            hasAnalysis={hasAnalysis}
+            status={analysisStatus}
+            providerLabel={analysisProviderLabel}
+            providerName={analysis?.providerName ?? null}
+            generatedAt={analysis?.generatedAt ?? null}
+            error={analysisError}
+            importsCount={imports.length}
+            onGoToEvidence={() => setCurrentView("evidence")}
+          />
+
+          <div className="reports-main">
+            <ResumePromptCard
+              prompt={resumePromptText}
+              origin={promptOrigin}
+              emptyHint={
+                imports.length === 0
+                  ? "아직 가져온 소스가 없습니다. 증거 탭에서 소스를 추가한 뒤 Quick Pass를 실행하면 분석 기반 컨텍스트가 표시됩니다."
+                  : "Quick Pass를 실행하면 분석 기반 컨텍스트가 표시됩니다."
+              }
+            />
+
+            <ReportBuilderPanel
+              id="reports-builder"
+              view={view}
+              resumePromptOverride={resumePromptText}
+              acceptedMemories={acceptedMemories}
+            />
+
+            <MoriPackageStrip
+              view={view}
+              acceptedMemories={acceptedMemories}
+              reviewActions={reviewActions}
+              memoryStorageFellBack={memoryStorageFellBack}
+              exportPlan={exportPlan}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -458,34 +195,11 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
  * project context) plus a one-line "what this session was" summary, so the 개요
  * tab opens by telling the user what they are looking at before the metrics.
  */
-function SessionOverviewHero({
-  originSummary,
-  projectLabel,
-  summaryText,
-}: {
-  originSummary: ReturnType<typeof buildSessionOriginSummary>;
-  projectLabel: string;
-  summaryText: string | null;
-}) {
-  return (
-    <section className="session-overview-hero" aria-label="세션 개요">
-      <div className="session-overview-origin">
-        <Badge tone="purple">{originSummary.boundaryLabel}</Badge>
-        <span className="session-overview-mix">{originSummary.sourceMixLabel}</span>
-        {projectLabel ? (
-          <span className="session-overview-context">맥락 · {projectLabel}</span>
-        ) : null}
-      </div>
-      {summaryText ? <p className="session-overview-summary">{summaryText}</p> : null}
-    </section>
-  );
-}
-
 /**
- * Compact analysis-state notice. The Quick Pass action lives in the header and
- * the evidence counts live in the action bar, so this only surfaces when there
- * is a meaningful state to report — a failure, a run, an empty real session,
- * or the provider line once results exist. Stays quiet otherwise.
+ * Compact analysis-state notice. The Quick Pass action lives in the action bar,
+ * so this only surfaces when there is a meaningful state to report — a failure,
+ * a run, an empty real session, or the provider line once results exist. Stays
+ * quiet otherwise.
  */
 function ReportsAnalysisNotice({
   mode,
@@ -594,14 +308,12 @@ function MoriPackageStrip({
   view,
   acceptedMemories,
   reviewActions,
-  memoryStorageSource,
   memoryStorageFellBack,
   exportPlan,
 }: {
   view: ReturnType<typeof selectSessionView>;
   acceptedMemories: StoredAcceptedProjectMemory[];
   reviewActions: StoredMemoryReviewAction[];
-  memoryStorageSource: AcceptedMemoryStorageSource;
   memoryStorageFellBack: boolean;
   exportPlan: ReturnType<typeof buildMoriPackageExportPlan>;
 }) {
@@ -654,7 +366,6 @@ function MoriPackageStrip({
   }
 
   const tone = exportPhaseTone(phase);
-  const storageLabel = describeAcceptedMemoryStorageSource(memoryStorageSource);
   return (
     <section id="reports-package-export" className="mori-package-strip" aria-label=".mori package export">
       <div className="mori-package-strip-intro">
@@ -662,28 +373,14 @@ function MoriPackageStrip({
           <Archive size={14} aria-hidden="true" /> .mori v0 패키지
         </h3>
         <p>
-          세션, 근거, 리뷰 결과, 승인된 메모리, 감사 이력을 하나의 로컬 .mori 파일로
-          묶습니다. 가져오기는 자동 병합이 아니라 Consolidation Review로 다시 들어갑니다.
+          세션·근거·리뷰·승인 메모리를 하나의 로컬 .mori 파일로 묶습니다. 가져오기는 자동 병합이 아니라 검토를 다시 거칩니다.
         </p>
-        <div className="mori-package-export-options" aria-label=".mori export contents">
-          <PackageOptionSummary
-            title="전체 패키지"
-            counts={exportPlan.full}
-            detail={
-              exportPlan.full.sensitiveMemories > 0
-                ? `민감 메모리 ${exportPlan.full.sensitiveMemories}건 포함`
-                : "승인된 메모리와 감사 이력 전체 포함"
-            }
-          />
-          <PackageOptionSummary
-            title="클라이언트 안전"
-            counts={exportPlan.clientSafe}
-            detail={`메모리 ${exportPlan.clientSafe.droppedMemories}건 · 감사 ${exportPlan.clientSafe.droppedAuditRows}건 제외`}
-          />
-        </div>
-        <p className="mori-package-storage-note">
-          승인된 메모리 출처: {storageLabel}
-          {memoryStorageFellBack ? " · SQLite 읽기 실패로 browser fallback 사용" : ""}
+        <p className="mori-package-content-line">
+          출처 {exportPlan.full.sources} · 이벤트 {exportPlan.full.events} · 메모리 {exportPlan.full.memories} · 감사 {exportPlan.full.auditRows}
+          {exportPlan.clientSafe.droppedMemories > 0 || exportPlan.clientSafe.droppedAuditRows > 0
+            ? ` · 클라이언트 공유 시 메모리 ${exportPlan.clientSafe.droppedMemories}·감사 ${exportPlan.clientSafe.droppedAuditRows} 제외`
+            : ""}
+          {memoryStorageFellBack ? " · SQLite 읽기 실패, browser fallback" : ""}
         </p>
       </div>
       <div className="mori-package-strip-actions">
@@ -708,88 +405,4 @@ function MoriPackageStrip({
       </div>
     </section>
   );
-}
-
-function toSessionWrapUpUnresolvedItem(item: UnresolvedItem): SessionWrapUpUnresolvedItem {
-  if (item.kind === "issue") {
-    return {
-      id: item.issue.id,
-      kind: "issue",
-      title: item.issue.title,
-      detail: UNRESOLVED_REASON_LABEL[item.reason],
-    };
-  }
-  if (item.kind === "decision") {
-    return {
-      id: item.decision.id,
-      kind: "decision",
-      title: item.decision.title,
-      detail: UNRESOLVED_REASON_LABEL[item.reason],
-    };
-  }
-  return {
-    id: item.nextAction.id,
-    kind: "nextAction",
-    title: item.nextAction.title,
-    detail: UNRESOLVED_REASON_LABEL[item.reason],
-  };
-}
-
-function PackageOptionSummary({
-  title,
-  counts,
-  detail,
-}: {
-  title: string;
-  counts: {
-    sources: number;
-    events: number;
-    memories: number;
-    auditRows: number;
-  };
-  detail: string;
-}) {
-  return (
-    <article className="mori-package-option">
-      <header>
-        <strong>{title}</strong>
-        <span>{detail}</span>
-      </header>
-      <dl>
-        <div>
-          <dt>출처</dt>
-          <dd>{counts.sources}</dd>
-        </div>
-        <div>
-          <dt>이벤트</dt>
-          <dd>{counts.events}</dd>
-        </div>
-        <div>
-          <dt>메모리</dt>
-          <dd>{counts.memories}</dd>
-        </div>
-        <div>
-          <dt>감사</dt>
-          <dd>{counts.auditRows}</dd>
-        </div>
-      </dl>
-    </article>
-  );
-}
-
-function formatDuration(start: string, end: string): string {
-  const startTime = new Date(start).getTime();
-  const endTime = new Date(end).getTime();
-  if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
-    return "—";
-  }
-  const ms = endTime - startTime;
-  const minutes = Math.floor(ms / 60000);
-  if (minutes < 60) return `${minutes}분`;
-  const hours = Math.floor(minutes / 60);
-  const remMin = minutes - hours * 60;
-  if (hours < 24) return remMin ? `${hours}시간 ${remMin}분` : `${hours}시간`;
-  const days = Math.floor(hours / 24);
-  const remHours = hours - days * 24;
-  return remHours ? `${days}일 ${remHours}시간` : `${days}일`;
 }

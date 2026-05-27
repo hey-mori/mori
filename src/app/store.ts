@@ -13,7 +13,7 @@ export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | 
  * issues / decisions / next actions. Stored so the user returns to the same
  * tab, and so other surfaces can deep-link a session straight to a tab.
  */
-export type SessionTab = "overview" | "flow" | "evidence" | "insights";
+export type SessionTab = "overview" | "flow" | "evidence" | "insights" | "report";
 
 /**
  * Active page inside the settings sheet. "profile" is the local identity
@@ -240,8 +240,8 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
         case "review":
           return { currentView: "session", sessionTab: "insights" };
         case "reports":
-          // The per-session report is now merged into the session 개요 tab.
-          return { currentView: "session", sessionTab: "overview" };
+          // The per-session report / handoff outputs live in their own 리포트 tab.
+          return { currentView: "session", sessionTab: "report" };
         case "consolidation":
           // Consolidation is cross-session — it lives in Memory's 통합 segment.
           return { currentView: "memory", memoryTab: "consolidation" };
