@@ -285,7 +285,7 @@ export function StartSessionView() {
         </NoticeBanner>
       ) : null}
 
-      <FieldBlock number="1" title="AI 에이전트" complete={Boolean(selectedAgent)}>
+      <FieldBlock number="1" title="AI 에이전트">
         <div className="agent-grid">
           {AGENT_OPTIONS.map((agent) => (
             <PickCard
@@ -303,7 +303,7 @@ export function StartSessionView() {
         </div>
       </FieldBlock>
 
-      <FieldBlock number="2" title="시작 방법" complete={method !== null}>
+      <FieldBlock number="2" title="시작 방법">
         <div className="agent-grid start-method-grid">
           <PickCard
             icon={FilePlus2}
@@ -338,7 +338,7 @@ export function StartSessionView() {
         ) : null}
       </FieldBlock>
 
-      <FieldBlock number="3" title="세션 설정" complete={canCreate}>
+      <FieldBlock number="3" title="세션 설정">
         <div className="form-row">
           <label>
             프로젝트
@@ -521,21 +521,16 @@ function DetectedSessionPicker({
 function FieldBlock({
   number,
   title,
-  complete,
   children,
 }: {
   number: string;
   title: string;
-  complete?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section className={`setup-block${complete ? " is-complete" : ""}`}>
+    <section className="setup-block">
       <header>
-        <span className="setup-block-num">
-          {number}
-          {complete ? <Check size={11} aria-hidden="true" className="setup-block-check" /> : null}
-        </span>
+        <span className="setup-block-num">{number}</span>
         <div>
           <h2>{title}</h2>
         </div>

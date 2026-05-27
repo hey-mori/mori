@@ -5252,28 +5252,6 @@ hr {
   justify-content: center;
 }
 
-/* A completed wizard step swaps its number for a calm green check. */
-/* The step number stays visible; completion is a small check beside it,
-   never a swap of the number for a check. */
-.setup-block-num {
-  position: relative;
-}
-
-.setup-block.is-complete .setup-block-num {
-  background: var(--green-50, #e7f6ec);
-  color: var(--green, #1f9254);
-}
-
-.setup-block-check {
-  position: absolute;
-  right: -5px;
-  bottom: -5px;
-  padding: 1px;
-  border-radius: 999px;
-  background: var(--green, #1f9254);
-  color: white;
-}
-
 .summary-row b.muted {
   color: var(--muted-2);
   font-weight: 500;
