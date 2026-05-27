@@ -37,7 +37,7 @@ import { NotificationsCard } from "./NotificationsCard";
 import { SettingsSection, StatusPill } from "./SettingsPrimitives";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
-  { id: "localAi", label: "로컬 AI", icon: Bot },
+  { id: "localAi", label: "AI 엔진", icon: Bot },
   { id: "privacy", label: "개인정보", icon: Lock },
   { id: "storage", label: "저장소", icon: HardDrive },
   { id: "repositories", label: "리포지토리", icon: ShieldCheck },
@@ -238,7 +238,7 @@ function StatusStrip({
   importsCount: number;
 }) {
   // Honest storage language: the browser prototype's store *is*
-  // localStorage — it is not a broken SQLite, so it never reads "error".
+  // localStorage, which is not a broken SQLite, so it never reads "error".
   // Runtime / storage names come from the shared product-state model.
   const sqliteLabel = getProductRuntimeLabel("desktopSQLite");
   const storage: { value: string; tone: RuntimeStatTone } =

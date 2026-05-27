@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Lock, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useMoriProfileStore } from "../../app/profileStore";
 import {
@@ -8,7 +8,6 @@ import {
 } from "../../lib/profile/localProfile";
 import {
   SettingsInlineAction,
-  SettingsNotice,
   SettingsRow,
   SettingsSection,
   StatusPill,
@@ -20,7 +19,7 @@ import {
  * Mori is local-first and has no account backend, so this surface is just
  * the real local profile: a display name held in this device's browser
  * storage. There is no login, no plan, no billing, and no linked sign-in
- * methods — the profile never leaves the device and never proves identity
+ * methods. The profile never leaves the device and never proves identity
  * to any server. See `docs/account-profile-settings-references.md` §2.
  */
 export function AccountProfileView() {
@@ -115,10 +114,6 @@ export function AccountProfileView() {
             disabled
           />
         </div>
-        <SettingsNotice icon={Lock} title="동기화가 생겨도 먼저 보여주고 켭니다" tone="success">
-          지금은 로그인·플랜·결제·팀 권한이 없고, 프로필과 작업 데이터는 이 기기에만 남습니다.
-          동기화가 추가되면 전송 대상과 데이터를 먼저 보여준 뒤 사용자가 직접 켜는 명시적 opt-in으로만 동작합니다.
-        </SettingsNotice>
       </SettingsSection>
     </div>
   );

@@ -60,15 +60,17 @@ export function LocalAiCard({
     }
   }
 
+  const selectableRows = rows.filter((row) => row.status === "implemented");
+  const plannedRows = rows.filter((row) => row.status !== "implemented");
+
   return (
     <SettingsSection
-      title="로컬 AI 제공자"
+      title="AI 제공자"
       description="Quick Pass가 가져온 증거를 이슈, 결정, 다음 행동으로 정리할 때 사용할 제공자입니다."
     >
       <SettingsOptionGroup label="Quick Pass 제공자" columns="single">
-        {rows.map((row) => {
+        {selectableRows.map((row) => {
           const Icon = ICONS[row.id] ?? Bot;
-          const canSelect = row.status === "implemented";
           const isCurrent = row.selected;
           const availability = getProductAvailabilityDisplay(
             productAvailabilityFromFeatureStatus(row.status),
@@ -79,7 +81,7 @@ export function LocalAiCard({
               row={row}
               icon={Icon}
               isCurrent={isCurrent}
-              canSelect={canSelect}
+              canSelect
               availabilityLabel={availability.label}
               availabilityTone={availability.tone}
               onSelect={() =>
@@ -91,6 +93,34 @@ export function LocalAiCard({
           );
         })}
       </SettingsOptionGroup>
+
+      {plannedRows.length > 0 ? (
+        <details className="settings-planned-disclosure">
+          <summary>
+            <span>예정 제공자 {plannedRows.length}개</span>
+            <small>구현 전까지 선택할 수 없고, 외부로 데이터를 보내지 않습니다.</small>
+          </summary>
+          <ul className="settings-planned-list">
+            {plannedRows.map((row) => {
+              const Icon = ICONS[row.id] ?? Bot;
+              return (
+                <li key={row.id}>
+                  <span className="settings-planned-icon" aria-hidden="true">
+                    <Icon size={14} />
+                  </span>
+                  <div className="settings-planned-text">
+                    <strong>{row.label}</strong>
+                    <small>{row.description}</small>
+                  </div>
+                  <StatusPill tone={row.isLocal ? "green" : "orange"}>
+                    {row.isLocal ? "로컬" : "외부"}
+                  </StatusPill>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      ) : null}
 
       <div className="settings-row-list">
         <SettingsRow

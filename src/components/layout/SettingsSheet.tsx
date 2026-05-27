@@ -4,7 +4,6 @@ import { useMoriAppStore, type SettingsTab } from "../../app/store";
 import { SETTINGS_TAB_DEFS, SettingsView } from "../../features/settings/SettingsView";
 import { AccountProfileView } from "../../features/account/AccountProfileView";
 import { SettingsRail, type SettingsRailItem } from "../../features/settings/SettingsPrimitives";
-import { InfoHint } from "../ui/InfoHint";
 import { focusFirstElement, trapTabKey } from "../ui/focusTrap";
 
 const RAIL_ITEMS: SettingsRailItem[] = [
@@ -66,10 +65,7 @@ export function SettingsSheet() {
       >
         <header className="settings-sheet-head">
           <div className="settings-sheet-title">
-            <strong id="settings-sheet-title">Mori 환경설정</strong>
-            <InfoHint label="설정 저장 위치">
-              모든 설정은 이 기기에만 저장되며 동기화되지 않습니다.
-            </InfoHint>
+            <strong id="settings-sheet-title">환경설정</strong>
           </div>
           <button
             type="button"

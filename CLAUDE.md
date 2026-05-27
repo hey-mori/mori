@@ -1,4 +1,4 @@
-# Claude project instructions — Mori
+# Claude project instructions · Mori
 
 Read these before changing code or committing.
 
@@ -16,7 +16,7 @@ Read these before changing code or committing.
 Every commit MUST follow [`docs/commit-format.md`](docs/commit-format.md).
 That file is the authoritative spec. The short form:
 
-- Subject: `<type>: <imperative lower-case summary>` — no trailing period,
+- Subject: `<type>: <imperative lower-case summary>`, no trailing period,
   under ~70 chars. Type is one of `feat`, `fix`, `refactor`, `test`,
   `docs`, `chore`.
 - One blank line after the subject.
@@ -37,11 +37,18 @@ Before running `git commit`, re-check the message against the spec.
 If `src-tauri/` changed, also run `cargo check` and `cargo test` in that
 directory.
 
+## Writing style — non-negotiable
+
+- Never use the em dash `—` anywhere: not in UI strings, not in code
+  comments, not in docs or commit messages. Use `,` or `·` instead, or
+  split into two sentences. (An en dash `–` inside a numeric range like
+  `3–7` is fine; the banned character is the em dash `—`, U+2014.)
+
 ## Do not
 
 - Push to the remote unless explicitly asked.
 - Skip hooks (`--no-verify`) or bypass signing.
-- Use `git rebase -i` or other interactive git commands — the harness has
+- Use `git rebase -i` or other interactive git commands; the harness has
   no terminal.
 - Overpurple the UI. Brand purple is accent / identity only; status
   colours stay semantic (see brand identity reference).
