@@ -234,21 +234,11 @@ export function ProjectView() {
         items={[
           {
             key: "sessions",
-            label: "전체 세션",
+            label: "세션",
             value: overview.stats.sessions,
-          },
-          {
-            key: "events",
-            label: "총 이벤트",
-            value: overview.stats.totalEvents,
             hint: overview.stats.lastActivity
               ? `최근 활동 ${formatSidebarRelative(overview.stats.lastActivity)}`
               : "최근 활동 기록 없음",
-          },
-          {
-            key: "sources",
-            label: "증거 소스",
-            value: overview.stats.totalSources,
           },
           {
             key: "review",
@@ -257,8 +247,8 @@ export function ProjectView() {
           },
           {
             key: "memory",
-            label: "메모리 후보",
-            value: overview.stats.memoryCandidates,
+            label: "확정 메모리",
+            value: memories.length,
           },
         ]}
       />
