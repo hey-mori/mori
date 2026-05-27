@@ -2,6 +2,8 @@ import {
   AlertCircle,
   ArrowRight,
   Braces,
+  Check,
+  ChevronDown,
   ClipboardPaste,
   Code2,
   FilePlus2,
@@ -14,7 +16,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { ActionBar } from "../../components/layout/ActionBar";
@@ -24,7 +26,6 @@ import { Button } from "../../components/ui/Button";
 import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
 import {
-  describeRetentionFootprint,
   describeSessionStorageTarget,
   type SessionStorageTarget,
 } from "../../lib/session/sessionStorageTarget";
@@ -40,7 +41,7 @@ import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
 import { normalizeAiTranscript, type AiTranscriptPlatform } from "../../lib/import";
-import type { RecordingMode, SourceOption } from "../../domain/types";
+import type { SourceOption } from "../../domain/types";
 import {
   selectSessionMode,
   selectSessionView,
@@ -70,12 +71,14 @@ import type { ClaudeCodeSessionMeta } from "../../lib/claude/types";
  *   2. 대화      — how this session's conversation arrives: 기록에서 불러오기
  *                  (the agent's own work records, auto-detected), 붙여넣기, or
  *                  빈 세션으로 시작 (anchor first; Mori never drives the agent).
- *   3. 세션 정보 — project, name, retention.
+ *   3. 세션 정보 — project + name.
  *
- * Import-method availability is agent-scoped and honest: record detection is
- * real for Claude today and shown as 곧 for agents that do not have it yet, so
- * the screen never hardcodes "Claude Code" as the only source. Engine choice
- * lives in settings; the summary shows the default with a 변경 link.
+ * Retention is deliberately one unified rule, not a per-session toggle: Mori
+ * keeps the summary + metadata locally and never stores the full raw
+ * transcript. A three-way choice would add complexity and dishonesty (pasted /
+ * detected transcripts are summary-only no matter what the toggle said), so it
+ * is stated as a fact instead. Engine choice lives in settings; the summary
+ * shows the default with a 변경 link.
  */
 
 type AgentOption = {
@@ -110,13 +113,6 @@ const AGENT_OPTIONS: AgentOption[] = [
 
 type ImportMethod = "records" | "paste" | "fresh";
 const NEW_PROJECT_VALUE = "__new__";
-
-type RetentionOption = { mode: RecordingMode; label: string; detail: string };
-const RETENTION_OPTIONS: RetentionOption[] = [
-  { mode: "summary", label: "요약 보관", detail: "기본 · 원본은 짧게만" },
-  { mode: "full", label: "전체 보관", detail: "원본 전체 · 공간 많이" },
-  { mode: "ephemeral", label: "리포트만", detail: "임시 · 원본 자동 삭제" },
-];
 
 function agentSourceOption(agent: AgentOption): SourceOption {
   return {
@@ -154,7 +150,6 @@ export function StartSessionView() {
   const [selectedDetected, setSelectedDetected] = useState<ClaudeCodeSessionMeta | null>(null);
   const [pasteText, setPasteText] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
-  const [retention, setRetention] = useState<RecordingMode>("summary");
   const [creating, setCreating] = useState(false);
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
@@ -165,6 +160,13 @@ export function StartSessionView() {
   const selectedEngine = useMemo(() => getDefaultStartSessionEngineOption(), []);
 
   const existingProjects = useMemo(() => gatherExistingProjects(), []);
+  const projectOptions = useMemo(
+    () => [
+      ...existingProjects.map((project) => ({ value: project, label: shortProjectLabel(project) })),
+      { value: NEW_PROJECT_VALUE, label: "+ 새 프로젝트" },
+    ],
+    [existingProjects],
+  );
   const [projectChoice, setProjectChoice] = useState<string>(
     () => existingProjects[0] ?? NEW_PROJECT_VALUE,
   );
@@ -211,7 +213,7 @@ export function StartSessionView() {
         sessionTitle: sessionTitle || "제목 없는 세션",
         projectName: projectName || "제목 없는 프로젝트",
         selectedSources: [agentSourceOption(selectedAgent)],
-        recordingMode: retention,
+        recordingMode: "summary",
         llmProvider: selectedEngine.provider,
         llmModel: selectedEngine.model,
         storageLocation: storageTarget.location,
@@ -239,7 +241,7 @@ export function StartSessionView() {
           startedAt,
           endedAt,
           projectLabel: projectName || detail.projectName || undefined,
-          recordingMode: retention,
+          recordingMode: "summary",
         });
         startReview(rebound, "ai-transcript");
         setCurrentView("evidence");
@@ -270,7 +272,7 @@ export function StartSessionView() {
           startedAt: capturedAt,
           endedAt: capturedAt,
           projectLabel: projectName || undefined,
-          recordingMode: retention,
+          recordingMode: "summary",
         });
         startReview(rebound, "ai-transcript");
         setCurrentView("evidence");
@@ -289,19 +291,6 @@ export function StartSessionView() {
   }
 
   const hasActiveSession = mode === "draft" && storeDraft !== null;
-
-  const sourceValue =
-    method === "records"
-      ? selectedDetected
-        ? `${shortProjectLabel(selectedDetected.projectName)} · ${selectedDetected.title}`
-        : "대화 선택 필요"
-      : method === "paste"
-        ? pasteText.trim()
-          ? "붙여넣은 대화"
-          : "내용 필요"
-        : method === "fresh"
-          ? "새 작업 (대화는 이후 가져오기)"
-          : "미선택";
 
   const resolvedName =
     method === "records"
@@ -344,10 +333,8 @@ export function StartSessionView() {
           savedDraft={storeDraft}
           agent={selectedAgent}
           method={method}
-          sourceValue={sourceValue}
           sessionName={resolvedName}
           projectName={projectName}
-          retention={retention}
           engine={selectedEngine}
           storageTarget={storageTarget}
           onChangeEngine={() => openSettingsSheet("localAi")}
@@ -448,7 +435,7 @@ export function StartSessionView() {
                   onChange={(event) => setPasteText(event.target.value)}
                 />
                 <p className="start-import-note">
-                  수동 붙여넣기 전용입니다. Mori는 브라우저 탭이나 앱을 자동으로 스캔하지 않습니다.
+                  붙여넣은 텍스트만 사용합니다. Mori가 브라우저나 앱을 들여다보지 않습니다.
                 </p>
               </div>
             ) : null}
@@ -456,8 +443,8 @@ export function StartSessionView() {
             {method === "fresh" ? (
               <div className="method-detail">
                 <p className="start-import-note">
-                  Mori는 대화를 대신 시작하지 않습니다. 빈 세션을 만들어 두면, {selectedAgent.name}
-                  에서 작업한 뒤 캡처 훅이나 가져오기로 그 대화를 증거 탭에 채울 수 있습니다.
+                  대화는 {selectedAgent.name}에서 직접 하면 됩니다. 빈 세션을 만들어 두면, 작업한
+                  대화를 나중에 증거 탭에서 가져와 채울 수 있습니다.
                 </p>
               </div>
             ) : null}
@@ -467,21 +454,11 @@ export function StartSessionView() {
         )}
       </FieldBlock>
 
-      <FieldBlock number="3" title="세션 정보" subtitle="프로젝트와 보관 방식을 정합니다.">
+      <FieldBlock number="3" title="세션 정보" subtitle="프로젝트와 이름을 정합니다.">
         <div className="form-row">
-          <label>
-            프로젝트
-            <select
-              value={projectChoice}
-              onChange={(event) => setProjectChoice(event.target.value)}
-            >
-              {existingProjects.map((project) => (
-                <option key={project} value={project}>
-                  {shortProjectLabel(project)}
-                </option>
-              ))}
-              <option value={NEW_PROJECT_VALUE}>+ 새 프로젝트</option>
-            </select>
+          <div className="form-field">
+            <span className="form-field-label">프로젝트</span>
+            <MoriSelect value={projectChoice} options={projectOptions} onChange={setProjectChoice} />
             {projectChoice === NEW_PROJECT_VALUE ? (
               <input
                 className="start-new-project-input"
@@ -490,15 +467,11 @@ export function StartSessionView() {
                 onChange={(event) => setNewProjectName(event.target.value)}
               />
             ) : null}
-          </label>
+          </div>
           <label>
             세션 이름
             {method === "records" ? (
-              <input
-                value={selectedDetected?.title ?? ""}
-                placeholder="대화 제목에서 자동"
-                disabled
-              />
+              <input value={selectedDetected?.title ?? ""} placeholder="대화 제목에서 자동" disabled />
             ) : (
               <input
                 value={sessionTitle}
@@ -510,29 +483,10 @@ export function StartSessionView() {
           </label>
         </div>
 
-        <div className="start-retention">
-          <span className="start-field-label">보관 정책</span>
-          <div className="retention-options">
-            {RETENTION_OPTIONS.map((option) => (
-              <button
-                key={option.mode}
-                type="button"
-                aria-pressed={retention === option.mode}
-                className={`retention-option${retention === option.mode ? " selected" : ""}`}
-                onClick={() => setRetention(option.mode)}
-              >
-                <strong>{option.label}</strong>
-                <small>{option.detail}</small>
-              </button>
-            ))}
-          </div>
-          {method === "records" || method === "paste" ? (
-            <p className="start-import-note">
-              가져온 대화 원본 전체는 저장되지 않고 요약과 메타데이터만 남습니다. 보관 정책은 이후
-              세션에 붙는 증거에 적용됩니다.
-            </p>
-          ) : null}
-        </div>
+        <p className="start-retention-note">
+          <Lock size={13} aria-hidden="true" />
+          요약과 메타데이터만 이 기기에 저장합니다. 원본 대화 전체는 보관하지 않습니다.
+        </p>
       </FieldBlock>
     </PageShell>
   );
@@ -735,14 +689,86 @@ function PickTile({
   );
 }
 
+/**
+ * A small styled single-select. The native <select> popup is OS-painted and
+ * reads as a default form control; this keeps the closed and open states in
+ * Mori's own surface language (a button trigger + a lavender-highlighted
+ * listbox), closing on outside-click or Escape.
+ */
+function MoriSelect({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  const current = options.find((option) => option.value === value);
+
+  return (
+    <div className={`mori-select${open ? " is-open" : ""}`} ref={rootRef}>
+      <button
+        type="button"
+        className="mori-select-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span>{current?.label ?? "선택"}</span>
+        <ChevronDown size={15} aria-hidden="true" />
+      </button>
+      {open ? (
+        <ul className="mori-select-menu" role="listbox">
+          {options.map((option) => {
+            const selected = option.value === value;
+            return (
+              <li key={option.value} role="option" aria-selected={selected}>
+                <button
+                  type="button"
+                  className={`mori-select-option${selected ? " is-selected" : ""}`}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <span>{option.label}</span>
+                  {selected ? <Check size={14} aria-hidden="true" /> : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function SessionSummary({
   savedDraft,
   agent,
   method,
-  sourceValue,
   sessionName,
   projectName,
-  retention,
   engine,
   storageTarget,
   onChangeEngine,
@@ -751,10 +777,8 @@ function SessionSummary({
   savedDraft: StoredSessionDraft | null;
   agent: AgentOption | null;
   method: ImportMethod | null;
-  sourceValue: string;
   sessionName: string;
   projectName: string;
-  retention: RecordingMode;
   engine: StartSessionEngineOption;
   storageTarget: SessionStorageTarget;
   onChangeEngine: () => void;
@@ -779,23 +803,22 @@ function SessionSummary({
     >
       <SummaryRow label="에이전트" value={agent?.name ?? "미선택"} muted={!agent} />
       <SummaryRow label="가져오기 방식" value={methodLabel(method)} muted={!method} />
-      <SummaryRow label="대화 출처" value={sourceValue} muted={!method} />
       <SummaryRow label="세션 이름" value={sessionName} />
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
       <hr />
       <div className="summary-row">
         <span />
         <span>분석 엔진</span>
-        <b className="accent">
-          {engine.model ? `${engine.label} (${engine.model})` : engine.label}
+        <b className="accent summary-row-engine">
+          <span className="summary-row-engine-label" title={engine.label}>
+            {engine.model ? `${engine.label} (${engine.model})` : engine.label}
+          </span>
           <button type="button" className="start-engine-change" onClick={onChangeEngine}>
             <Settings2 size={12} aria-hidden="true" /> 변경
           </button>
         </b>
       </div>
       <SummaryRow label="보관 위치" value={storageTarget.label} />
-      <SummaryRow label="보관 정책" value={describeRetentionFootprint(retention)} />
-      <div className="start-summary-action">{createAction}</div>
     </InspectorPanel>
   );
 }
@@ -815,7 +838,9 @@ function SummaryRow({
     <div className="summary-row">
       <span />
       <span>{label}</span>
-      <b className={accent ? "accent" : muted ? "muted" : ""}>{value}</b>
+      <b className={accent ? "accent" : muted ? "muted" : ""} title={value}>
+        {value}
+      </b>
     </div>
   );
 }
