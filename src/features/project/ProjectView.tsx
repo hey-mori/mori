@@ -7,9 +7,12 @@ import {
   FileText,
   FolderGit2,
   FolderKanban,
+  FolderPlus,
   Layers,
+  Pencil,
   Plus,
   ScrollText,
+  Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -38,6 +41,8 @@ import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdap
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
+import { useMoriProjectStore } from "../../app/projectStore";
+import { projectDisplayName } from "../../lib/projects/userProjects";
 
 /**
  * Project workspace — the unit-of-work page.
@@ -59,8 +64,16 @@ import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes
 export function ProjectView() {
   const projectKey = useMoriAppStore((state) => state.currentProjectKey);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const openProject = useMoriAppStore((state) => state.openProject);
   const openSession = useMoriAppStore((state) => state.openSession);
   const setMemoryTab = useMoriAppStore((state) => state.setMemoryTab);
+
+  const userProjects = useMoriProjectStore((state) => state.projects);
+  const hydrateProjects = useMoriProjectStore((state) => state.hydrate);
+  const projectsInitialized = useMoriProjectStore((state) => state.initialized);
+  const createUserProjectRecord = useMoriProjectStore((state) => state.createProject);
+  const renameUserProjectRecord = useMoriProjectStore((state) => state.renameProject);
+  const deleteUserProjectRecord = useMoriProjectStore((state) => state.deleteProject);
   const source = useMoriSessionStore(selectSessionSource);
   const loadBrowserSession = useMoriSessionStore(
     (state) => state.loadBrowserSession,
@@ -130,6 +143,46 @@ export function ProjectView() {
     };
   }, [projectId]);
 
+  useEffect(() => {
+    if (!projectsInitialized) hydrateProjects();
+  }, [projectsInitialized, hydrateProjects]);
+
+  // Display name honours a user override; whether the project is explicitly
+  // created decides if it can be deleted (a session-derived project cannot).
+  const displayName = projectKey
+    ? projectDisplayName(projectKey, userProjects)
+    : "";
+  const isCreatedProject = userProjects.some(
+    (entry) => entry.key === projectKey && entry.created,
+  );
+
+  function handleCreateProject() {
+    const input = window.prompt(
+      "새 프로젝트 이름 (경로를 적으면 그 경로로 그룹화됩니다)",
+    );
+    const key = input?.trim();
+    if (!key) return;
+    const createdKey = createUserProjectRecord({ key });
+    if (createdKey) openProject(createdKey);
+  }
+
+  function handleRenameProject() {
+    if (!projectKey) return;
+    const next = window.prompt("프로젝트 표시 이름", displayName);
+    if (next === null) return;
+    renameUserProjectRecord(projectKey, next);
+  }
+
+  function handleDeleteProject() {
+    if (!projectKey || !isCreatedProject) return;
+    const ok = window.confirm(
+      `'${displayName}' 프로젝트를 목록에서 제거할까요? 세션은 삭제되지 않습니다.`,
+    );
+    if (!ok) return;
+    deleteUserProjectRecord(projectKey);
+    setCurrentView("workspace");
+  }
+
   const isDesktop = source === "desktop-sqlite";
   const openSessionId = (sessionId: string, tab: Parameters<typeof openSession>[0] = "flow") => {
     if (sessionId === activeSessionId) {
@@ -177,9 +230,14 @@ export function ProjectView() {
           title="프로젝트를 선택하세요"
           description="좌측 사이드바의 프로젝트 폴더 이름을 누르면 그 프로젝트의 전체 세션과 메모리가 한 페이지에 보입니다."
           actions={
-            <Button onClick={() => setCurrentView("workspace")}>
-              전체 세션 보기
-            </Button>
+            <>
+              <Button variant="primary" icon={Plus} onClick={handleCreateProject}>
+                새 프로젝트
+              </Button>
+              <Button variant="ghost" onClick={() => setCurrentView("workspace")}>
+                전체 세션 보기
+              </Button>
+            </>
           }
         />
       </PageShell>
@@ -194,12 +252,38 @@ export function ProjectView() {
             <FolderGit2 size={14} aria-hidden="true" />
             <span>프로젝트</span>
           </div>
-          <h1>{overview.shortName}</h1>
+          <h1>{displayName || overview.shortName}</h1>
           <p className="project-hero-path" title={overview.fullPath}>
             {overview.fullPath}
           </p>
         </div>
         <div className="project-hero-actions">
+          <Button
+            variant="ghost"
+            icon={Pencil}
+            onClick={handleRenameProject}
+            title="이 프로젝트의 표시 이름을 바꿉니다 (세션은 그대로)."
+          >
+            이름 변경
+          </Button>
+          {isCreatedProject ? (
+            <Button
+              variant="ghost"
+              icon={Trash2}
+              onClick={handleDeleteProject}
+              title="이 프로젝트를 목록에서 제거합니다. 세션은 삭제되지 않습니다."
+            >
+              삭제
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            icon={FolderPlus}
+            onClick={handleCreateProject}
+            title="새 프로젝트를 만들어 바로 엽니다."
+          >
+            새 프로젝트
+          </Button>
           <Button
             variant="primary"
             icon={Plus}
