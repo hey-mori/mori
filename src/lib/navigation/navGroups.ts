@@ -4,20 +4,26 @@ import { moriViewIcon } from "../../components/brand/moriIcons";
 /**
  * Primary navigation as pure, testable data.
  *
- * The IA is **session-centric**: opening Mori lands on **홈 (home)** and the
- * top bar exposes the three primary destinations:
+ * Opening Mori lands on **홈 (home)** and the nav exposes three primary
+ * destinations:
  *
- *   홈 (home) · 세션 (workspace) · 메모리 (memory)
+ *   홈 (home) · 프로젝트 (workspace) · 메모리 (memory)
  *
- * "세션" reuses the existing `workspace` route (the session hub) — only the
- * label changed, so deep links and saved state keep working. The narrower
- * working surfaces (타임라인 / 증거 / 검토 / Flow / 연결 / Mori 노트) stay fully
- * routable but are reached *through* the primary destinations (opening a
- * session from the sidebar routes into Timeline, import is a top-bar action,
- * etc.). **리포트** and **통합 검토** likewise stay routable but fold into 메모리
- * / a session's report tab. Settings is no longer a standing nav entry: it
- * lives behind the top-bar user button as a sheet, so the standing nav stays
- * focused on the three product destinations.
+ * "프로젝트" reuses the existing `workspace` route (the projects→sessions
+ * browser) — only the label changed, so deep links and saved state keep
+ * working. That page is organised project-first (sessions grouped under their
+ * source project, a project-count stat leading), which is what the label
+ * names; Mori's *capture* model stays session-centric ("1 conversation = 1
+ * session"), but *browsing* happens by project, so the two do not conflict.
+ * Drilling into a project opens the per-project overview (ProjectView).
+ *
+ * The narrower working surfaces (타임라인 / 증거 / 검토 / Flow / 연결 / Mori 노트)
+ * stay fully routable but are reached *through* the primary destinations
+ * (opening a session from the sidebar routes into Timeline, import is a
+ * top-bar action, etc.). **리포트** and **통합 검토** likewise stay routable but
+ * fold into 메모리 / a session's report tab. Settings is no longer a standing
+ * nav entry: it lives behind the top-bar user button as a sheet, so the
+ * standing nav stays focused on the three product destinations.
  *
  * Keeping this as data (rather than inline JSX) lets us assert the entry
  * model never regresses — e.g. that 홈 leads, that exactly the three primary
@@ -48,8 +54,9 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     items: [
       { key: "home", label: "홈" },
-      // "세션" reuses the Workspace session-hub route — only the label is new.
-      { key: "workspace", label: "세션" },
+      // "프로젝트" reuses the Workspace projects→sessions browser route — only
+      // the label is new.
+      { key: "workspace", label: "프로젝트" },
       { key: "memory", label: "메모리" },
     ],
   },

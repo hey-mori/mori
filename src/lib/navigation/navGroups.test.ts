@@ -22,11 +22,11 @@ describe("NAV_GROUPS entry model", () => {
     ]);
   });
 
-  it("reuses the workspace route for the 세션 label", () => {
-    const sessionItem = NAV_GROUPS.flatMap((group) => group.items).find(
+  it("reuses the workspace route for the 프로젝트 label", () => {
+    const projectsItem = NAV_GROUPS.flatMap((group) => group.items).find(
       (item) => item.key === "workspace",
     );
-    expect(sessionItem?.label).toBe("세션");
+    expect(projectsItem?.label).toBe("프로젝트");
   });
 
   it("drops the narrower working surfaces from the standing nav", () => {
