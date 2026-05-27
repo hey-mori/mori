@@ -4053,11 +4053,36 @@ kbd {
 }
 
 .inspector-header {
+  position: relative;
   display: grid;
   gap: 6px;
   margin-bottom: 18px;
   padding-bottom: 16px;
+  padding-right: 28px;
   border-bottom: 1px solid var(--line);
+}
+
+/* Close the inspector from within the panel — the in-panel X the toolbar toggle
+   alone did not give. */
+.inspector-close {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.inspector-close:hover {
+  background: var(--gray-50);
+  color: var(--text);
 }
 
 .inspector-badges {
@@ -5228,9 +5253,25 @@ hr {
 }
 
 /* A completed wizard step swaps its number for a calm green check. */
-.setup-block.is-complete header > span {
+/* The step number stays visible; completion is a small check beside it,
+   never a swap of the number for a check. */
+.setup-block-num {
+  position: relative;
+}
+
+.setup-block.is-complete .setup-block-num {
   background: var(--green-50, #e7f6ec);
   color: var(--green, #1f9254);
+}
+
+.setup-block-check {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  padding: 1px;
+  border-radius: 999px;
+  background: var(--green, #1f9254);
+  color: white;
 }
 
 .summary-row b.muted {
@@ -5238,14 +5279,37 @@ hr {
   font-weight: 500;
 }
 
-/* Inline "import an existing conversation" surface inside 새 세션. */
-.start-import-inline {
+/* Inline detected-conversation picker, grouped by project then session. */
+.start-detected {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   margin-top: 10px;
 }
 
-.start-detected-list {
+.start-detected-group {
+  display: grid;
+  gap: 6px;
+}
+
+.start-detected-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.start-detected-group-head strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.start-detected-group-head span {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.start-detected-group ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -5253,14 +5317,32 @@ hr {
   gap: 6px;
 }
 
-.start-detected-list li {
+.start-detected-row {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--panel, white);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.start-detected-row:hover {
+  border-color: var(--line-strong);
+}
+
+.start-detected-row.is-selected {
+  border-color: var(--purple);
+  background: var(--mori-accent-soft, var(--purple-50));
+}
+
+.start-detected-check {
+  color: var(--purple);
+  flex-shrink: 0;
 }
 
 .start-detected-main {
@@ -5284,15 +5366,8 @@ hr {
   color: var(--muted);
 }
 
-.start-import-paste {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .start-import-spin {
-  animation: mori-spin 0.9s linear infinite;
+  animation: connections-spin 0.9s linear infinite;
   vertical-align: -2px;
 }
 
@@ -6172,6 +6247,20 @@ hr {
   display: grid;
   gap: var(--mori-space-4);
   min-width: 0;
+}
+
+/* Home lists use single-purpose rows (icon, text, one trailing arrow), so the
+   arrow should sit at the vertical centre. The shared row top-aligns for the
+   multi-line / timestamp layouts these rows do not use. */
+.home-session-list .mori-object-row,
+.home-next-list .mori-object-row {
+  align-items: center;
+}
+
+/* Keep the section action ("전체 프로젝트") on the title's centre line rather
+   than floating to the top of the header. */
+.home-section .mori-section-head {
+  align-items: center;
 }
 
 .home-next {

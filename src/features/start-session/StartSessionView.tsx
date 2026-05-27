@@ -10,6 +10,7 @@ import {
   Download,
   FileCode2,
   FilePlus2,
+  FolderGit2,
   Lock,
   RefreshCw,
   Sparkles,
@@ -23,7 +24,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriDrawer } from "../../components/ui/MoriDrawer";
 import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
 import {
@@ -45,7 +45,6 @@ import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
 import type { AiTranscriptPlatform } from "../../lib/import";
-import type { HubImportKind } from "../../lib/sources/integrationGroups";
 import type { LlmProvider, RecordingMode, SourceOption } from "../../domain/types";
 import {
   selectSessionMode,
@@ -54,7 +53,6 @@ import {
 } from "../../app/sessionStore";
 import { useMoriReviewStore } from "../../app/reviewStore";
 import { useMoriAppStore } from "../../app/store";
-import { ImportPanel } from "../import/ImportPanel";
 import {
   discoverClaudeCodeSessions,
   formatClaudeRelativeKo,
@@ -62,10 +60,7 @@ import {
   isClaudeBridgeAvailable,
 } from "../../lib/claude/claudeTauri";
 import { buildImportCandidateFromClaudeCodeSession } from "../../lib/claude/claudeImport";
-import type {
-  ClaudeCodeSessionDetail,
-  ClaudeCodeSessionMeta,
-} from "../../lib/claude/types";
+import type { ClaudeCodeSessionMeta } from "../../lib/claude/types";
 
 type AgentOption = {
   id: string;
@@ -108,11 +103,11 @@ const ENGINE_ICONS: Record<LlmProvider, LucideIcon> = {
 
 /**
  * 새 세션 — a single, fully-visible creation page (the cloud "인스턴스 생성"
- * pattern): every section is shown at once on the left and the right rail
- * summarises what will be created and carries the one create action. Nothing
- * navigates away — importing an existing conversation happens inline. Nothing
- * is pre-selected, so the create button stays disabled until the required
- * choices are made.
+ * pattern). Every section is shown at once on the left; the right rail
+ * summarises what will be created and carries the one create action. Importing
+ * an existing conversation happens inline: detected work sessions are grouped
+ * by project, the user selects one, and the single "세션 생성" action creates
+ * the session from it. Nothing navigates away, nothing is pre-selected.
  */
 export function StartSessionView() {
   const storeDraft = useMoriSessionStore((state) => state.draft);
@@ -127,10 +122,11 @@ export function StartSessionView() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [method, setMethod] = useState<StartMethod | null>(null);
   const [sessionTitle, setSessionTitle] = useState("");
+  const [selectedDetected, setSelectedDetected] = useState<ClaudeCodeSessionMeta | null>(null);
+  const [creating, setCreating] = useState(false);
   const [engineProvider, setEngineProvider] = useState<LlmProvider>(
     () => getDefaultStartSessionEngineOption().provider,
   );
-  const [importOpen, setImportOpen] = useState(false);
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const storageTarget = useMemo<SessionStorageTarget>(
@@ -139,16 +135,12 @@ export function StartSessionView() {
   );
   const recordingMode: RecordingMode = "summary";
 
-  // Existing projects the new session can be filed under (derived from stored
-  // sessions). Creating a project from scratch is a later milestone; for now
-  // the user picks an existing one or types a new label.
   const existingProjects = useMemo(() => gatherExistingProjects(), []);
   const [projectChoice, setProjectChoice] = useState<string>(
     () => existingProjects[0] ?? NEW_PROJECT_VALUE,
   );
   const [newProjectName, setNewProjectName] = useState("");
-  const projectName =
-    projectChoice === NEW_PROJECT_VALUE ? newProjectName : projectChoice;
+  const projectName = projectChoice === NEW_PROJECT_VALUE ? newProjectName : projectChoice;
 
   const selectedEngine =
     ENGINE_OPTIONS.find(
@@ -156,41 +148,62 @@ export function StartSessionView() {
     ) ?? getDefaultStartSessionEngineOption();
 
   const selectedAgent = AGENT_OPTIONS.find((agent) => agent.id === selectedAgentId) ?? null;
-  const canCreate = Boolean(selectedAgent) && method === "new";
 
-  function handleStartSession() {
-    if (!selectedAgent || method !== "new") return;
-    const draft = createSessionDraft({
-      sessionTitle: sessionTitle || "제목 없는 세션",
-      projectName: projectName || "제목 없는 프로젝트",
-      selectedSources: [agentSourceOption(selectedAgent)],
-      recordingMode,
-      llmProvider: selectedEngine.provider,
-      llmModel: selectedEngine.model,
-      storageLocation: storageTarget.location,
-    });
-    const stored = repository.saveCurrentSessionDraft(draft);
-    setSessionDraft(stored);
-    setCurrentView("evidence");
+  // The single create action covers both methods: a new conversation creates
+  // the container; an imported one creates the session from the picked
+  // conversation. So it enables once the method's required input is present.
+  const canCreate =
+    (method === "new" && Boolean(selectedAgent)) ||
+    (method === "import" && Boolean(selectedDetected));
+
+  function selectDetected(meta: ClaudeCodeSessionMeta) {
+    setSelectedDetected((current) => (current?.filePath === meta.filePath ? null : meta));
+    // Filing the import under the conversation's own project keeps the work
+    // where it belongs; the user can still change it.
+    if (existingProjects.includes(meta.projectName)) setProjectChoice(meta.projectName);
   }
 
-  function handleImportDetected(detail: ClaudeCodeSessionDetail) {
-    const capturedAt = new Date().toISOString();
-    const candidate = buildImportCandidateFromClaudeCodeSession(detail, {
-      projectId: view.project.id,
-      sessionId: view.session.id,
-      capturedAt,
-    });
-    const { startedAt, endedAt } = deriveConversationWindow(detail, capturedAt);
-    const { candidate: rebound } = importAsNewSession({
-      candidate,
-      title: detail.title,
-      startedAt,
-      endedAt,
-      projectLabel: projectName || detail.projectName || undefined,
-    });
-    startReview(rebound, "ai-transcript");
-    setCurrentView("evidence");
+  async function handleCreate() {
+    if (creating) return;
+    if (method === "new" && selectedAgent) {
+      const draft = createSessionDraft({
+        sessionTitle: sessionTitle || "제목 없는 세션",
+        projectName: projectName || "제목 없는 프로젝트",
+        selectedSources: [agentSourceOption(selectedAgent)],
+        recordingMode,
+        llmProvider: selectedEngine.provider,
+        llmModel: selectedEngine.model,
+        storageLocation: storageTarget.location,
+      });
+      const stored = repository.saveCurrentSessionDraft(draft);
+      setSessionDraft(stored);
+      setCurrentView("evidence");
+      return;
+    }
+    if (method === "import" && selectedDetected) {
+      setCreating(true);
+      try {
+        const detail = await getClaudeCodeSession(selectedDetected.filePath);
+        const capturedAt = new Date().toISOString();
+        const candidate = buildImportCandidateFromClaudeCodeSession(detail, {
+          projectId: view.project.id,
+          sessionId: view.session.id,
+          capturedAt,
+        });
+        const { startedAt, endedAt } = deriveConversationWindow(detail, capturedAt);
+        const { candidate: rebound } = importAsNewSession({
+          candidate,
+          title: detail.title,
+          startedAt,
+          endedAt,
+          projectLabel: projectName || detail.projectName || undefined,
+        });
+        startReview(rebound, "ai-transcript");
+        setCurrentView("evidence");
+      } catch {
+        setCreating(false);
+      }
+    }
   }
 
   function handleResetToDemo() {
@@ -202,6 +215,15 @@ export function StartSessionView() {
   }
 
   const hasActiveSession = mode === "draft" && storeDraft !== null;
+  const createTitle = canCreate
+    ? undefined
+    : !selectedAgent
+      ? "AI 에이전트를 먼저 선택하세요."
+      : !method
+        ? "시작 방법을 선택하세요."
+        : method === "import"
+          ? "아래에서 가져올 대화를 선택하세요."
+          : undefined;
 
   return (
     <PageShell
@@ -228,6 +250,7 @@ export function StartSessionView() {
           agent={selectedAgent}
           method={method}
           sessionTitle={sessionTitle}
+          selectedConversationTitle={selectedDetected?.title ?? null}
           projectName={projectName}
           recordingMode={recordingMode}
           engine={selectedEngine}
@@ -236,19 +259,11 @@ export function StartSessionView() {
             <Button
               variant="primary"
               icon={FilePlus2}
-              onClick={handleStartSession}
-              disabled={!canCreate}
-              title={
-                canCreate
-                  ? undefined
-                  : !selectedAgent
-                    ? "AI 에이전트를 먼저 선택하세요."
-                    : method === "import"
-                      ? "아래에서 대화를 가져오면 세션이 만들어집니다."
-                      : "시작 방법을 선택하세요."
-              }
+              onClick={() => void handleCreate()}
+              disabled={!canCreate || creating}
+              title={createTitle}
             >
-              세션 생성
+              {creating ? "생성 중..." : "세션 생성"}
             </Button>
           }
         />
@@ -270,7 +285,7 @@ export function StartSessionView() {
         </NoticeBanner>
       ) : null}
 
-      <FieldBlock title="AI 에이전트" complete={Boolean(selectedAgent)}>
+      <FieldBlock number="1" title="AI 에이전트" complete={Boolean(selectedAgent)}>
         <div className="agent-grid">
           {AGENT_OPTIONS.map((agent) => (
             <PickCard
@@ -279,15 +294,16 @@ export function StartSessionView() {
               title={agent.name}
               detail={agent.detail}
               selected={selectedAgentId === agent.id}
-              onSelect={() =>
-                setSelectedAgentId((current) => (current === agent.id ? null : agent.id))
-              }
+              onSelect={() => {
+                setSelectedAgentId((current) => (current === agent.id ? null : agent.id));
+                setSelectedDetected(null);
+              }}
             />
           ))}
         </div>
       </FieldBlock>
 
-      <FieldBlock title="시작 방법" complete={method !== null}>
+      <FieldBlock number="2" title="시작 방법" complete={method !== null}>
         <div className="agent-grid start-method-grid">
           <PickCard
             icon={FilePlus2}
@@ -301,15 +317,18 @@ export function StartSessionView() {
             title="기존 대화 가져오기"
             detail="이미 한 대화를 골라 세션으로 가져옵니다."
             selected={method === "import"}
-            onSelect={() => setMethod(method === "import" ? null : "import")}
+            onSelect={() => {
+              setMethod(method === "import" ? null : "import");
+              setSelectedDetected(null);
+            }}
           />
         </div>
 
         {method === "import" ? (
-          <ImportInline
+          <DetectedSessionPicker
             agent={selectedAgent}
-            onPaste={() => setImportOpen(true)}
-            onImportDetected={handleImportDetected}
+            selectedFilePath={selectedDetected?.filePath ?? null}
+            onSelect={selectDetected}
           />
         ) : method === "new" ? (
           <p className="start-import-note">
@@ -319,7 +338,7 @@ export function StartSessionView() {
         ) : null}
       </FieldBlock>
 
-      <FieldBlock title="세션 설정" complete={method === "new"}>
+      <FieldBlock number="3" title="세션 설정" complete={canCreate}>
         <div className="form-row">
           <label>
             프로젝트
@@ -346,7 +365,11 @@ export function StartSessionView() {
           <label>
             세션 이름
             {method === "import" ? (
-              <input value="" placeholder="가져온 대화 제목을 사용합니다" disabled />
+              <input
+                value={selectedDetected?.title ?? ""}
+                placeholder="대화 제목에서 자동"
+                disabled
+              />
             ) : (
               <input
                 value={sessionTitle}
@@ -370,42 +393,36 @@ export function StartSessionView() {
           </div>
         </div>
       </FieldBlock>
-
-      <MoriDrawer open={importOpen} onClose={() => setImportOpen(false)} ariaLabel="대화 가져오기">
-        <ImportPanel
-          variant="embedded"
-          initialKind={"ai" as HubImportKind}
-          initialAiPlatform={selectedAgent?.platform}
-          onClose={() => setImportOpen(false)}
-        />
-      </MoriDrawer>
     </PageShell>
   );
 }
 
-/** Inline "import an existing conversation" surface — detected sessions for the
- *  selected agent (desktop) plus a paste fallback. No navigation away. */
-function ImportInline({
+/**
+ * Inline picker for an existing conversation, grouped by project then session.
+ * Selecting a row highlights it and lifts the choice up; the actual create
+ * happens through the right-rail "세션 생성" action. Direct paste is kept in the
+ * codebase (the Import panel) but intentionally not surfaced here: pasted
+ * transcripts are format-fragile and lossy, so the detected-session path leads.
+ */
+function DetectedSessionPicker({
   agent,
-  onPaste,
-  onImportDetected,
+  selectedFilePath,
+  onSelect,
 }: {
   agent: AgentOption | null;
-  onPaste: () => void;
-  onImportDetected: (detail: ClaudeCodeSessionDetail) => void;
+  selectedFilePath: string | null;
+  onSelect: (meta: ClaudeCodeSessionMeta) => void;
 }) {
   const bridge = isClaudeBridgeAvailable();
   const isClaude = agent?.platform === "claude";
   const [sessions, setSessions] = useState<ClaudeCodeSessionMeta[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [importingPath, setImportingPath] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!bridge || !isClaude) return;
     setStatus("loading");
     try {
-      const list = await discoverClaudeCodeSessions();
-      setSessions(list);
+      setSessions(await discoverClaudeCodeSessions());
       setStatus("ready");
     } catch {
       setStatus("error");
@@ -416,75 +433,98 @@ function ImportInline({
     void load();
   }, [load]);
 
-  async function importOne(meta: ClaudeCodeSessionMeta) {
-    setImportingPath(meta.filePath);
-    try {
-      const detail = await getClaudeCodeSession(meta.filePath);
-      onImportDetected(detail);
-    } catch {
-      setImportingPath(null);
+  const grouped = useMemo(() => {
+    const map = new Map<string, ClaudeCodeSessionMeta[]>();
+    for (const session of sessions) {
+      const list = map.get(session.projectName) ?? [];
+      list.push(session);
+      map.set(session.projectName, list);
     }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [sessions]);
+
+  if (!isClaude) {
+    return (
+      <p className="start-import-note">
+        {agent?.name ?? "이 에이전트"}는 곧 작업 세션 자동 감지를 지원합니다.
+      </p>
+    );
+  }
+  if (!bridge) {
+    return (
+      <p className="start-import-note">
+        데스크톱 앱에서 Claude 작업 세션을 자동으로 감지합니다.
+      </p>
+    );
+  }
+  if (status === "loading" || status === "idle") {
+    return (
+      <p className="start-import-note">
+        <RefreshCw size={14} aria-hidden="true" className="start-import-spin" /> 작업 세션을 불러오는 중...
+      </p>
+    );
+  }
+  if (status === "error") {
+    return (
+      <p className="start-import-note">
+        <AlertCircle size={14} aria-hidden="true" /> 작업 세션을 읽지 못했습니다.
+      </p>
+    );
+  }
+  if (sessions.length === 0) {
+    return <p className="start-import-note">감지된 작업 세션이 없습니다.</p>;
   }
 
   return (
-    <div className="start-import-inline">
-      {!isClaude ? (
-        <p className="start-import-note">
-          {agent?.name ?? "이 에이전트"} 대화는 직접 붙여넣어 가져옵니다.
-        </p>
-      ) : !bridge ? (
-        <p className="start-import-note">
-          데스크톱 앱에서 Claude 작업 세션을 자동으로 감지합니다. 브라우저에서는 대화를 붙여넣으세요.
-        </p>
-      ) : status === "loading" ? (
-        <p className="start-import-note">
-          <RefreshCw size={14} aria-hidden="true" className="start-import-spin" /> 감지된 작업 세션을 불러오는 중...
-        </p>
-      ) : status === "error" ? (
-        <p className="start-import-note">
-          <AlertCircle size={14} aria-hidden="true" /> 작업 세션을 읽지 못했습니다.
-        </p>
-      ) : sessions.length === 0 ? (
-        <p className="start-import-note">감지된 작업 세션이 없습니다. 대화를 직접 붙여넣어 가져오세요.</p>
-      ) : (
-        <ul className="start-detected-list">
-          {sessions.slice(0, 8).map((session) => (
-            <li key={session.filePath}>
-              <div className="start-detected-main">
-                <strong>{session.title}</strong>
-                <span className="start-detected-meta">
-                  {session.projectName} · 메시지 {session.messageCount} ·{" "}
-                  {formatClaudeRelativeKo(session.startedAt)}
-                </span>
-              </div>
-              <Button
-                size="sm"
-                variant="primary"
-                icon={Download}
-                disabled={importingPath !== null}
-                onClick={() => void importOne(session)}
-              >
-                {importingPath === session.filePath ? "가져오는 중..." : "가져오기"}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="start-import-paste">
-        <Button variant="secondary" icon={FilePlus2} onClick={onPaste}>
-          대화 직접 붙여넣기
-        </Button>
-        <span className="start-import-note">가져온 대화가 그대로 새 작업 세션이 됩니다.</span>
-      </div>
+    <div className="start-detected" role="radiogroup" aria-label="가져올 작업 세션">
+      {grouped.map(([project, projectSessions]) => (
+        <section key={project} className="start-detected-group">
+          <header className="start-detected-group-head">
+            <FolderGit2 size={13} aria-hidden="true" />
+            <strong title={project}>{shortProjectLabel(project)}</strong>
+            <span>{projectSessions.length}</span>
+          </header>
+          <ul>
+            {projectSessions.map((session) => {
+              const selected = selectedFilePath === session.filePath;
+              return (
+                <li key={session.filePath}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`start-detected-row${selected ? " is-selected" : ""}`}
+                    onClick={() => onSelect(session)}
+                  >
+                    <span className="start-detected-main">
+                      <strong>{session.title}</strong>
+                      <span className="start-detected-meta">
+                        메시지 {session.messageCount} · {formatClaudeRelativeKo(session.startedAt)}
+                      </span>
+                    </span>
+                    {selected ? (
+                      <Check size={16} aria-hidden="true" className="start-detected-check" />
+                    ) : (
+                      <span className="checkbox" aria-hidden="true" />
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
 
 function FieldBlock({
+  number,
   title,
   complete,
   children,
 }: {
+  number: string;
   title: string;
   complete?: boolean;
   children: ReactNode;
@@ -492,7 +532,10 @@ function FieldBlock({
   return (
     <section className={`setup-block${complete ? " is-complete" : ""}`}>
       <header>
-        <span>{complete ? <Check size={14} aria-hidden="true" /> : null}</span>
+        <span className="setup-block-num">
+          {number}
+          {complete ? <Check size={11} aria-hidden="true" className="setup-block-check" /> : null}
+        </span>
         <div>
           <h2>{title}</h2>
         </div>
@@ -564,6 +607,7 @@ function SessionSummary({
   agent,
   method,
   sessionTitle,
+  selectedConversationTitle,
   projectName,
   recordingMode,
   engine,
@@ -574,6 +618,7 @@ function SessionSummary({
   agent: AgentOption | null;
   method: StartMethod | null;
   sessionTitle: string;
+  selectedConversationTitle: string | null;
   projectName: string;
   recordingMode: RecordingMode;
   engine: StartSessionEngineOption;
@@ -582,6 +627,10 @@ function SessionSummary({
 }) {
   const methodLabel =
     method === "new" ? "새 대화 시작" : method === "import" ? "기존 대화 가져오기" : "미선택";
+  const nameValue =
+    method === "import"
+      ? selectedConversationTitle ?? "대화 선택 필요"
+      : sessionTitle || "무제 Mori 세션";
   return (
     <InspectorPanel
       ariaLabel="세션 요약"
@@ -603,8 +652,8 @@ function SessionSummary({
       <SummaryRow label="시작 방법" value={methodLabel} muted={!method} />
       <SummaryRow
         label="세션 이름"
-        value={method === "import" ? "대화 제목에서 자동" : sessionTitle || "무제 Mori 세션"}
-        muted={method === "import"}
+        value={nameValue}
+        muted={method === "import" && !selectedConversationTitle}
       />
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
       <hr />
@@ -666,7 +715,7 @@ function safeListSessions() {
  * is the last timestamped message. Both fall back to `capturedAt`.
  */
 function deriveConversationWindow(
-  detail: ClaudeCodeSessionDetail,
+  detail: { startedAt?: string; messages: Array<{ createdAt?: string }> },
   capturedAt: string,
 ): { startedAt: string; endedAt: string } {
   const startedAt = detail.startedAt?.trim() || capturedAt;
