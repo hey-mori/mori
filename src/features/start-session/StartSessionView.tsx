@@ -16,7 +16,14 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { ActionBar } from "../../components/layout/ActionBar";
@@ -706,39 +713,81 @@ function MoriSelect({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     function onPointerDown(event: PointerEvent) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
-    function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
     document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
+    return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
+
+  // When the menu opens, move focus to the selected option so arrow keys take
+  // over immediately and Escape returns focus to the trigger.
+  useEffect(() => {
+    if (!open) return;
+    const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>(".mori-select-option");
+    if (!buttons?.length) return;
+    const index = Math.max(0, options.findIndex((option) => option.value === value));
+    buttons[index]?.focus();
+  }, [open, options, value]);
+
+  function close(focusTrigger: boolean) {
+    setOpen(false);
+    if (focusTrigger) triggerRef.current?.focus();
+  }
+
+  function onTriggerKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+      event.preventDefault();
+      setOpen(true);
+    }
+  }
+
+  function onMenuKeyDown(event: ReactKeyboardEvent<HTMLUListElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close(true);
+      return;
+    }
+    const buttons = [...(listRef.current?.querySelectorAll<HTMLButtonElement>(".mori-select-option") ?? [])];
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      buttons[Math.min(buttons.length - 1, index + 1)]?.focus();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      buttons[Math.max(0, index - 1)]?.focus();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      buttons[0]?.focus();
+    } else if (event.key === "End") {
+      event.preventDefault();
+      buttons[buttons.length - 1]?.focus();
+    }
+  }
 
   const current = options.find((option) => option.value === value);
 
   return (
     <div className={`mori-select${open ? " is-open" : ""}`} ref={rootRef}>
       <button
+        ref={triggerRef}
         type="button"
         className="mori-select-trigger"
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen((prev) => !prev)}
+        onKeyDown={onTriggerKeyDown}
       >
         <span>{current?.label ?? "선택"}</span>
         <ChevronDown size={15} aria-hidden="true" />
       </button>
       {open ? (
-        <ul className="mori-select-menu" role="listbox">
+        <ul className="mori-select-menu" role="listbox" ref={listRef} onKeyDown={onMenuKeyDown}>
           {options.map((option) => {
             const selected = option.value === value;
             return (
@@ -748,7 +797,7 @@ function MoriSelect({
                   className={`mori-select-option${selected ? " is-selected" : ""}`}
                   onClick={() => {
                     onChange(option.value);
-                    setOpen(false);
+                    close(true);
                   }}
                 >
                   <span>{option.label}</span>

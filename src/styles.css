@@ -5347,24 +5347,29 @@ hr {
   min-width: 0;
 }
 
+/* Korean titles must wrap at word boundaries (keep-all), never mid-syllable,
+   so a tight tile shows "기록에서 / 불러오기" instead of "기록에 / 서 불러 / 오기". */
 .pick-tile-body strong {
-  display: flex;
-  align-items: center;
-  gap: 7px;
   font-size: 13.5px;
   font-weight: 650;
   color: var(--text);
+  word-break: keep-all;
 }
 
-.pick-tile-body span {
+.pick-tile-body > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   font-size: 12px;
   color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: keep-all;
 }
 
 .pick-tile-rec {
-  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--mori-accent-soft, var(--purple-50));
@@ -5372,6 +5377,7 @@ hr {
   font-size: 10.5px;
   font-style: normal;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 /* Selection mark — a radio dot, filled when selected (never a checkmark). */
