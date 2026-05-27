@@ -1,4 +1,4 @@
-import { ArrowRightLeft, ClipboardList } from "lucide-react";
+import { ArrowRightLeft, ClipboardList, X } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
@@ -19,10 +19,13 @@ export function TimelineBundleInspector({
   bundle,
   session,
   onTrace,
+  onClose,
 }: {
   bundle: TimelineDisplayBundle;
   session: MoriMockSession;
   onTrace: () => void;
+  /** Close the inspector from within the panel. Absent ⇒ the X is hidden. */
+  onClose?: () => void;
 }) {
   const trust = describeTrustLevel(bundle.trustLevel);
   const laneVisuals = getActivityLaneVisuals(bundle.laneType);
@@ -38,6 +41,17 @@ export function TimelineBundleInspector({
   return (
     <aside className="inspector" aria-label="Bundle inspector">
       <header className="inspector-header">
+        {onClose ? (
+          <button
+            type="button"
+            className="inspector-close"
+            onClick={onClose}
+            aria-label="인스펙터 닫기"
+            title="인스펙터 닫기"
+          >
+            <X size={15} aria-hidden="true" />
+          </button>
+        ) : null}
         <div className="inspector-badges">
           <Badge tone={laneVisuals.tone}>{laneVisuals.label}</Badge>
           <Badge tone={trust.tone}>{trust.label}</Badge>

@@ -6,6 +6,7 @@ import {
   Combine,
   PlusCircle,
   StickyNote,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
@@ -47,6 +48,7 @@ export function EventInspector({
   onEditEvent,
   onSplitEvent,
   onMergeEvent,
+  onClose,
 }: {
   selectedEvent: TimelineEvent;
   session: MoriMockSession;
@@ -65,6 +67,8 @@ export function EventInspector({
   onSplitEvent?: () => void;
   /** Merge this event with its next neighbour. Absent ⇒ control hidden. */
   onMergeEvent?: () => void;
+  /** Close the inspector from within the panel. Absent ⇒ the X is hidden. */
+  onClose?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [noteEditing, setNoteEditing] = useState(false);
@@ -87,6 +91,17 @@ export function EventInspector({
   return (
     <aside className="inspector" aria-label="Event inspector">
       <header className="inspector-header">
+        {onClose ? (
+          <button
+            type="button"
+            className="inspector-close"
+            onClick={onClose}
+            aria-label="인스펙터 닫기"
+            title="인스펙터 닫기"
+          >
+            <X size={15} aria-hidden="true" />
+          </button>
+        ) : null}
         <div className="inspector-badges">
           <Badge tone={activity.laneVisuals.tone}>{activity.laneVisuals.label}</Badge>
           <Badge tone={activity.activityVisuals.tone}>{activity.activityVisuals.label}</Badge>
