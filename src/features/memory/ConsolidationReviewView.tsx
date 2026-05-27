@@ -93,7 +93,10 @@ type ImportPackageMessage =
     }
   | { kind: "error"; message: string };
 
-export function ConsolidationReviewView({ embedded = false }: { embedded?: boolean } = {}) {
+export function ConsolidationReviewView({
+  embedded = false,
+  onBack,
+}: { embedded?: boolean; onBack?: () => void } = {}) {
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
 
   // Mirror MemoryView's data pipeline. Pure derivation; cheap.
@@ -357,7 +360,13 @@ export function ConsolidationReviewView({ embedded = false }: { embedded?: boole
           </>
         }
         end={
-          embedded ? undefined : (
+          embedded ? (
+            onBack ? (
+              <Button icon={ArrowLeft} onClick={onBack}>
+                메모리로
+              </Button>
+            ) : undefined
+          ) : (
             <Button icon={ArrowLeft} onClick={() => setCurrentView("memory")}>
               Memory로 돌아가기
             </Button>

@@ -12,7 +12,7 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { useMoriSqliteStore } from "../../app/sqliteStore";
-import { useMoriAppStore, type MemoryTab } from "../../app/store";
+import { useMoriAppStore } from "../../app/store";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { getSessionPersistenceService } from "../../lib/storage/sessionPersistenceService";
 import type {
@@ -57,13 +57,7 @@ import { RecurringIssuesCard } from "./RecurringIssuesCard";
 import { KeyEvidenceCard } from "./KeyEvidenceCard";
 import { SavedReportsCard } from "./SavedReportsCard";
 import { ReimportHistoryCard } from "./ReimportHistoryCard";
-import { SegmentedControl, type SegmentedControlOption } from "../../components/ui/SegmentedControl";
 import { ConsolidationReviewView } from "./ConsolidationReviewView";
-
-const MEMORY_SEGMENTS: SegmentedControlOption<MemoryTab>[] = [
-  { id: "overview", label: "메모리" },
-  { id: "consolidation", label: "통합" },
-];
 
 export function MemoryView() {
   // `navigate` routes legacy session-surface keys (timeline) into the unified
@@ -368,18 +362,10 @@ export function MemoryView() {
       className="memory-page"
       maxWidth="wide"
       actionBar={
-        <ActionBar
-          label="메모리 보기"
-          start={
-            <SegmentedControl
-              options={MEMORY_SEGMENTS}
-              value={memoryTab}
-              onChange={setMemoryTab}
-              ariaLabel="메모리 보기 전환"
-            />
-          }
-          end={
-            memoryTab === "overview" ? (
+        memoryTab === "consolidation" ? undefined : (
+          <ActionBar
+            label="메모리"
+            end={
               // Scope + data-basis used to ride here too, duplicating the
               // hero badges right below. Keep only the explanatory
               // disclosure — it adds info instead of repeating it.
@@ -391,13 +377,13 @@ export function MemoryView() {
                   savedSessionCount={savedSessions.filter((entry) => !entry.isCurrent).length}
                 />
               </HelpDisclosure>
-            ) : undefined
-          }
-        />
+            }
+          />
+        )
       }
     >
       {memoryTab === "consolidation" ? (
-        <ConsolidationReviewView embedded />
+        <ConsolidationReviewView embedded onBack={() => setMemoryTab("overview")} />
       ) : (
         <div className="memory-main">
           <ProjectMemoryHero
@@ -433,8 +419,6 @@ export function MemoryView() {
           </div>
 
           <div className="memory-context-grid">
-            <DecisionTimelineCard timeline={decisionTimeline} />
-
             <RecentSessionsList
               sessions={savedSessions}
               loadStatusBySessionId={loadStatusBySessionId}
@@ -452,6 +436,8 @@ export function MemoryView() {
               메모리 분석 · 도구
             </summary>
             <div className="memory-advanced-body">
+              <DecisionTimelineCard timeline={decisionTimeline} />
+
               <div className="memory-grid-two">
                 <KeyEvidenceCard rows={viewModel.keyEvidence} />
                 <RecurringIssuesCard
