@@ -118,7 +118,7 @@ export type HomeRecentSession = {
   sessionId: string;
   title: string;
   status: Session["status"];
-  /** Grouping label (project path) or null for manual sessions. */
+  /** Short project name (trailing path segment) or null for manual sessions. */
   projectLabel: string | null;
   /** How the session entered Mori — drives the origin chip. */
   origin: "imported" | "manual" | "demo";
@@ -222,10 +222,13 @@ export type HomeUsagePanel = {
   /** One-line scope note — honest about how much data backs the figure. */
   context: string;
   /**
-   * Optional tiny bar segments (already normalised to fractions of the whole).
-   * Used for the token input/output split; omitted otherwise — no fake bars.
+   * Optional fixed-width column chart — one column per recent session that
+   * carries the metric, oldest → newest, each height normalised to the busiest
+   * session in the set (`fraction` in 0..1). Tokens panel only, and only when
+   * there are at least two sessions to compare; a single column would be noise,
+   * so it is omitted (the value + scope line still stand alone).
    */
-  bar?: { fraction: number; tone: "accent" | "neutral"; label: string }[];
+  columns?: { fraction: number; label: string }[];
 };
 
 export type HomeOverview = {
@@ -267,6 +270,30 @@ export type HomeOverview = {
 export const MAX_HOME_NEXT_ACTIONS = 4;
 
 const DEFAULT_RECENT_LIMIT = 6;
+
+/** Activity heatmap window bounds, in weeks. The window fits the data: it
+ *  reaches back to the earliest captured session (so older history — even last
+ *  year — is shown, not clipped) but never shorter than ~4 months (so a fresh
+ *  install still reads as a calendar, not a stub) nor longer than ~1 year (so
+ *  it never overflows the rail). Fitting the data also keeps the grid from
+ *  showing a large empty pre-history expanse. */
+const HEATMAP_MIN_WEEKS = 18;
+const HEATMAP_MAX_WEEKS = 53;
+const WEEK_MS = 7 * 86_400_000;
+
+/**
+ * Choose the heatmap window: from the earliest stored-session anchor to now,
+ * clamped to [MIN, MAX] weeks. Returns the minimum when there are no sessions.
+ */
+function heatmapWeeks(sessions: StoredSessionSummary[], now: number): number {
+  let earliest = now;
+  for (const session of sessions) {
+    const epoch = anchorEpoch(session, now);
+    if (epoch < earliest) earliest = epoch;
+  }
+  const span = Math.ceil((now - earliest) / WEEK_MS) + 1;
+  return Math.min(HEATMAP_MAX_WEEKS, Math.max(HEATMAP_MIN_WEEKS, span));
+}
 
 /**
  * Build the Home dashboard view model from stored session summaries plus the
@@ -342,6 +369,7 @@ export function buildHomeOverview(input: HomeOverviewInput): HomeOverview {
     samples: samplesForMetric[resolvedMetric],
     metric: resolvedMetric,
     now,
+    weeks: heatmapWeeks(input.storedSessions, now),
   });
 
   return {
@@ -435,6 +463,13 @@ function describeCurrentStatus(status: Session["status"]): {
 /** Below this many sessions, sessions-per-week is too noisy to state. */
 const MIN_SESSIONS_FOR_CADENCE = 2;
 
+/** Below this many token-carrying sessions, a one-bar chart is just noise. */
+const MIN_SESSIONS_FOR_TOKEN_CHART = 2;
+
+/** Most recent token-carrying sessions to plot — keeps the fixed-width chart
+ *  inside the narrow usage rail without horizontal overflow. */
+const MAX_TOKEN_CHART_COLUMNS = 16;
+
 /**
  * Build the usage section's mini-panels from the active session summaries.
  * Every panel states its own scope, and any panel whose data is absent is
@@ -457,33 +492,20 @@ function buildUsagePanels(active: StoredSessionSummary[], now: number): HomeUsag
 }
 
 /**
- * Token total + input/output split, summed only across sessions that actually
- * carry token usage. Hidden entirely when no session has tokens — a zero would
- * be dishonest. The scope line states how many sessions backed the figure
- * rather than implying a complete total.
+ * Token total, summed only across sessions that actually carry token usage,
+ * with a per-session column chart of the magnitude. Hidden entirely when no
+ * session has tokens — a zero would be dishonest. The scope line states how
+ * many sessions backed the figure rather than implying a complete total.
  */
 function buildTokenPanel(active: StoredSessionSummary[]): HomeUsagePanel | null {
   let total = 0;
-  let input = 0;
-  let output = 0;
   let withTokens = 0;
   for (const session of active) {
     if (session.tokenTotal === undefined || session.tokenTotal <= 0) continue;
     withTokens += 1;
     total += session.tokenTotal;
-    input += session.tokenInput ?? 0;
-    output += session.tokenOutput ?? 0;
   }
   if (withTokens === 0 || total <= 0) return null;
-
-  const splitTotal = input + output;
-  const bar =
-    splitTotal > 0
-      ? [
-          { fraction: input / splitTotal, tone: "accent" as const, label: `입력 ${formatCompactCount(input)}` },
-          { fraction: output / splitTotal, tone: "neutral" as const, label: `출력 ${formatCompactCount(output)}` },
-        ]
-      : undefined;
 
   const context =
     withTokens === active.length
@@ -495,8 +517,32 @@ function buildTokenPanel(active: StoredSessionSummary[]): HomeUsagePanel | null 
     label: "토큰 사용량",
     value: formatCompactCount(total),
     context,
-    bar,
+    columns: buildTokenColumns(active),
   };
+}
+
+/**
+ * Per-session token columns for the usage chart. `active` is newest-first, so
+ * the most recent token-carrying sessions are taken from the front and then
+ * reversed to read oldest → newest left-to-right (matching the 잔디). Each
+ * height is normalised to the busiest session in the plotted set. Returns
+ * `undefined` for fewer than two token sessions — a lone bar is not a chart.
+ */
+function buildTokenColumns(
+  active: StoredSessionSummary[],
+): HomeUsagePanel["columns"] {
+  const tokenSessions = active.filter((session) => (session.tokenTotal ?? 0) > 0);
+  if (tokenSessions.length < MIN_SESSIONS_FOR_TOKEN_CHART) return undefined;
+
+  const plotted = tokenSessions.slice(0, MAX_TOKEN_CHART_COLUMNS).reverse();
+  const max = Math.max(...plotted.map((session) => session.tokenTotal ?? 0), 1);
+  return plotted.map((session) => {
+    const tokens = session.tokenTotal ?? 0;
+    return {
+      fraction: tokens / max,
+      label: `${session.title} · 토큰 ${formatCompactCount(tokens)}`,
+    };
+  });
 }
 
 /**
@@ -626,14 +672,18 @@ function toRecentSession(
   metric: HomeSessionMetricSnapshot | undefined,
   now: number,
 ): HomeRecentSession {
-  const projectLabel = session.sourceLabel?.trim() ? session.sourceLabel.trim() : null;
+  const sourceLabel = session.sourceLabel?.trim();
+  const hasSource = Boolean(sourceLabel && sourceLabel.length > 0);
+  // Show the project NAME (trailing path segment, e.g. "mori"), not the raw
+  // folder path — matching the sidebar / workspace convention.
+  const projectLabel = hasSource ? shortProjectLabel(sourceLabel!) : null;
   const anchor = anchorIso(session);
   return {
     sessionId: session.sessionId,
     title: session.title,
     status: session.status,
     projectLabel,
-    origin: projectLabel ? "imported" : "manual",
+    origin: hasSource ? "imported" : "manual",
     spanLabel: spanLabel(session.startedAt ?? session.savedAt, undefined),
     relativeTime: formatRelativeKo(anchor, now),
     anchorIso: anchor,

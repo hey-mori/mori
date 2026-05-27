@@ -481,9 +481,33 @@ describe("usage section panels", () => {
     expect(tokens.value).toBe("8K"); // 5000 + 3000, third session has no tokens
     // Two of three sessions carry tokens → say so rather than implying a full total.
     expect(tokens.context).toBe("토큰 정보가 있는 세션 2개");
-    expect(tokens.bar).toHaveLength(2);
-    expect(tokens.bar![0]!.label).toContain("입력");
-    expect(tokens.bar![1]!.label).toContain("출력");
+  });
+
+  it("plots per-session token columns oldest→newest, normalised to the busiest session", () => {
+    const overview = buildHomeOverview(withUsage());
+    const tokens = overview.usagePanels.find((p) => p.key === "tokens")!;
+    // Two of three sessions carry tokens; the token-less one is not plotted.
+    expect(tokens.columns).toHaveLength(2);
+    // Oldest first: session b (3000) then the busiest, newest session a (5000).
+    expect(tokens.columns![0]!.fraction).toBeCloseTo(0.6);
+    expect(tokens.columns![1]!.fraction).toBe(1);
+    expect(tokens.columns![0]!.label).toContain("토큰");
+  });
+
+  it("omits the token column chart for a single token session (a one-bar chart is noise)", () => {
+    const overview = buildHomeOverview(
+      input({
+        realSessionCount: 1,
+        isDemo: false,
+        storedSessions: [
+          stored({ sessionId: "solo", startedAt: "2026-05-22T08:00:00+09:00", tokenTotal: 4_000, tokenInput: 3_000, tokenOutput: 1_000 }),
+        ],
+      }),
+    );
+    const tokens = overview.usagePanels.find((p) => p.key === "tokens")!;
+    expect(tokens).toBeDefined();
+    expect(tokens.value).toBe("4K");
+    expect(tokens.columns).toBeUndefined();
   });
 
   it("hides the token panel entirely when no session carries tokens (no fake zero)", () => {

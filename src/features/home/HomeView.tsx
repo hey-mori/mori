@@ -235,7 +235,7 @@ export function HomeView() {
                     className="home-section-link"
                     onClick={() => setCurrentView("workspace")}
                   >
-                    전체 세션 <ArrowRight size={13} aria-hidden="true" />
+                    전체 프로젝트 <ArrowRight size={13} aria-hidden="true" />
                   </button>
                 }
               >
@@ -300,20 +300,38 @@ function UsagePanel({ panel }: { panel: HomeUsagePanel }) {
     <div className="home-usage-panel">
       <span className="home-usage-label">{panel.label}</span>
       <span className="home-usage-value">{panel.value}</span>
-      <span className="home-usage-context">{panel.context}</span>
-      {panel.bar ? (
-        <span className="home-usage-bar" aria-hidden="true">
-          {panel.bar.map((segment, index) => (
-            <span
-              key={index}
-              className={`home-usage-bar-seg tone-${segment.tone}`}
-              style={{ flexGrow: Math.max(segment.fraction, 0.001) }}
-              title={segment.label}
-            />
-          ))}
-        </span>
+      {panel.columns && panel.columns.length > 0 ? (
+        <UsageColumnChart columns={panel.columns} />
       ) : null}
+      <span className="home-usage-context">{panel.context}</span>
     </div>
+  );
+}
+
+/**
+ * Fixed-width per-session token column chart. Each column is the same width
+ * regardless of how many sessions are plotted, so the chart reads consistently
+ * in the narrow usage rail; height encodes the session's token total relative
+ * to the busiest plotted session. Decorative — the per-column title carries the
+ * session + token figure for hover, and the panel's value/context state the
+ * honest totals for assistive tech.
+ */
+function UsageColumnChart({
+  columns,
+}: {
+  columns: NonNullable<HomeUsagePanel["columns"]>;
+}) {
+  return (
+    <span className="home-usage-chart" aria-hidden="true">
+      {columns.map((column, index) => (
+        <span key={index} className="home-usage-col" title={column.label}>
+          <span
+            className="home-usage-col-fill"
+            style={{ height: `${Math.max(column.fraction * 100, 6)}%` }}
+          />
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -327,6 +345,10 @@ function RecentSessionRow({
   onOpen: () => void;
 }) {
   const origin = describeHomeSessionOrigin(session.origin);
+  // The "가져온 세션" origin is the common, uninformative case — nearly every
+  // session is imported — so it is dropped as chrome. Only the distinctive
+  // origins (데모 / 수동) earn a chip.
+  const showOrigin = session.origin !== "imported";
   return (
     <li>
       <MoriObjectRow
@@ -335,7 +357,9 @@ function RecentSessionRow({
         meta={
           <MoriMetadataLine
             items={[
-              <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>,
+              showOrigin ? (
+                <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
+              ) : null,
               session.projectLabel ? (
                 <span title={session.projectLabel}>{session.projectLabel}</span>
               ) : null,
