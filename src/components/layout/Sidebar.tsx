@@ -101,6 +101,19 @@ const SESSION_VIEWS = new Set<ViewKey>([
 
 const MEMORY_VIEWS = new Set<ViewKey>(["memory", "consolidation", "reports"]);
 
+/** Views whose subject is a *specific* session — only on these should the
+ *  matching session row light up as active. On home / project / workspace /
+ *  memory the active session is just background state, so highlighting its row
+ *  there reads as "this session is selected" when it is not. */
+const SESSION_SUBJECT_VIEWS = new Set<ViewKey>([
+  "session",
+  "timeline",
+  "flow",
+  "evidence",
+  "review",
+  "companion",
+]);
+
 export function Sidebar({
   onNavigate,
   collapsed = false,
@@ -118,6 +131,12 @@ export function Sidebar({
   const activeSessionId = useMoriSessionStore(
     (state) => state.draft?.session.id ?? state.demoSessionId ?? null,
   );
+  // Only light up a session row when the user is actually viewing that session.
+  // On home / project / workspace / memory the active session is background
+  // state, so its row must not read as "selected".
+  const highlightedSessionId = SESSION_SUBJECT_VIEWS.has(currentView)
+    ? activeSessionId
+    : null;
   const source = useMoriSessionStore(selectSessionSource);
   const dataResetNonce = useMoriSessionStore((state) => state.dataResetNonce);
   const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
@@ -325,7 +344,7 @@ export function Sidebar({
                   group={group}
                   collapsed={collapsed}
                   searching={query.trim().length > 0}
-                  activeSessionId={activeSessionId}
+                  activeSessionId={highlightedSessionId}
                   currentProjectKey={
                     currentView === "project" ? currentProjectKey : null
                   }
@@ -344,7 +363,7 @@ export function Sidebar({
                 key={`${group.bucket}-${group.label}`}
                 label={group.label}
                 rows={group.rows}
-                activeSessionId={activeSessionId}
+                activeSessionId={highlightedSessionId}
                 onSelect={handleSwitch}
                 onOpenTab={handleSwitch}
                 onOpenProject={(projectKey) => openProject(projectKey)}
