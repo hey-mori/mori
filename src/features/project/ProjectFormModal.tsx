@@ -113,7 +113,7 @@ export function ProjectFormModal({
             <textarea
               value={description}
               rows={3}
-              placeholder="이 프로젝트가 어떤 작업인지 적어두면 나중에 한눈에 알아볼 수 있어요."
+              placeholder="어떤 작업인지 간단히"
               onChange={(event) => setDescription(event.target.value)}
             />
           </label>

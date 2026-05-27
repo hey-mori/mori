@@ -9,7 +9,10 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMoriAppStore } from "../../app/store";
-import { loadStoredSessionSummaries, useMoriSessionStore } from "../../app/sessionStore";
+import {
+  loadStoredSessionSummaries,
+  useMoriSessionStore,
+} from "../../app/sessionStore";
 import { useMoriThemeStore } from "../../app/themeStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import {
@@ -44,7 +47,9 @@ export function CommandPalette({
   const navigate = useMoriAppStore((state) => state.navigate);
   const openSession = useMoriAppStore((state) => state.openSession);
   const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
-  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
+  const loadBrowserSession = useMoriSessionStore(
+    (state) => state.loadBrowserSession,
+  );
   const activeSessionId = useMoriSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
@@ -69,16 +74,16 @@ export function CommandPalette({
   // Sessions are re-read every time the palette opens — the live sidebar
   // already tracks them, but reading fresh here means a new import is
   // findable without a parent rerender.
-  const sessions = useMemo(
-    () => (open ? safeListSessions() : []),
-    [open],
-  );
+  const sessions = useMemo(() => (open ? safeListSessions() : []), [open]);
 
   const commands = useMemo(
     () => buildCommands({ sessions, currentView, currentTheme }),
     [sessions, currentView, currentTheme],
   );
-  const filtered = useMemo(() => filterCommands(commands, query), [commands, query]);
+  const filtered = useMemo(
+    () => filterCommands(commands, query),
+    [commands, query],
+  );
   const sections = useMemo(() => groupCommands(filtered), [filtered]);
   // Flatten in display order so arrow-key navigation walks the same list
   // the user sees on screen.
@@ -167,7 +172,11 @@ export function CommandPalette({
 
   return (
     <div className="command-palette-layer" role="presentation">
-      <div className="command-palette-scrim" onClick={close} aria-hidden="true" />
+      <div
+        className="command-palette-scrim"
+        onClick={close}
+        aria-hidden="true"
+      />
       <div
         className="command-palette"
         role="dialog"
@@ -179,7 +188,7 @@ export function CommandPalette({
           <input
             ref={inputRef}
             type="text"
-            placeholder="세션 검색, 이동, 설정… (Cmd+K)"
+            placeholder="검색, 이동, 설정… (Cmd+K)"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             aria-label="명령 검색"

@@ -22637,10 +22637,17 @@ button.settings-option {
   overflow: hidden;
 }
 
+.project-modal .settings-sheet-head {
+  /* The shared header padding is tuned for the wide settings sheet; align it
+     to this modal's body padding so the title's left edge and the close
+     button's right edge line up with the form fields. */
+  padding: 12px 20px;
+}
+
 .project-modal-body {
   display: grid;
-  gap: 14px;
-  padding: 18px 18px 16px;
+  gap: 16px;
+  padding: 18px 20px;
   overflow: auto;
 }
 
@@ -22710,7 +22717,7 @@ button.settings-option {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 13px 18px;
+  padding: 14px 20px;
   border-top: 1px solid var(--line);
   background: var(--panel-soft, #fafbfd);
 }

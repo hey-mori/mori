@@ -5,7 +5,6 @@ import {
   FolderGit2,
   GanttChartSquare,
   LayoutDashboard,
-  Layers,
   ScrollText,
   Sparkles,
 } from "lucide-react";
@@ -76,7 +75,6 @@ function SessionTitleInline() {
   // rather than the canonical mock, so the breadcrumb names the session the
   // user actually clicked instead of always "Mori 앱 기획".
   const demoSession = useMoriSessionStore(selectSessionView).session;
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openProject = useMoriAppStore((state) => state.openProject);
   const context = useMemo(
     () =>
@@ -90,18 +88,8 @@ function SessionTitleInline() {
   const projectLabel = context.projectLabel ?? null;
   return (
     <nav className="session-detail-breadcrumb" aria-label="현재 위치">
-      <button
-        type="button"
-        className="session-detail-crumb is-back"
-        onClick={() => setCurrentView("workspace")}
-        title="프로젝트로 돌아가기"
-      >
-        <Layers size={12} aria-hidden="true" />
-        <span>프로젝트</span>
-      </button>
       {projectLabel ? (
         <>
-          <ChevronRight size={11} className="session-detail-crumb-sep" aria-hidden="true" />
           <button
             type="button"
             className="session-detail-crumb"
@@ -111,9 +99,9 @@ function SessionTitleInline() {
             <FolderGit2 size={12} aria-hidden="true" />
             <span>{shortProjectLabel(projectLabel)}</span>
           </button>
+          <ChevronRight size={11} className="session-detail-crumb-sep" aria-hidden="true" />
         </>
       ) : null}
-      <ChevronRight size={11} className="session-detail-crumb-sep" aria-hidden="true" />
       <span
         className="session-detail-crumb is-current"
         title={context.sessionTitle}
