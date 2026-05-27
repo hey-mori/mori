@@ -26,7 +26,6 @@ import {
 import { useMoriProfileStore } from "../../app/profileStore";
 import {
   filterSidebarRows,
-  formatSidebarRelative,
   groupSidebarRows,
   shortProjectLabel,
   toSidebarRow,
@@ -555,17 +554,14 @@ function SessionRow({
         title={tooltip}
       >
         <span className="sidebar-row-title">{row.title}</span>
-        <span className="sidebar-row-meta">
-          {row.sourceLabel && !hideSource ? (
+        {row.sourceLabel && !hideSource ? (
+          <span className="sidebar-row-meta">
             <span className="sidebar-row-source">
               <FolderGit2 size={11} aria-hidden="true" />
               <span>{row.sourceLabel}</span>
             </span>
-          ) : null}
-          <span className="sidebar-row-time">
-            {formatSidebarRelative(row.timestamp)}
           </span>
-        </span>
+        ) : null}
       </button>
       <MoriContextMenu
         open={menu.open}

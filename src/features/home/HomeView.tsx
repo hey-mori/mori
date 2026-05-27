@@ -368,7 +368,6 @@ function RecentSessionRow({
             ]}
           />
         }
-        timestamp={session.relativeTime}
         trailing={<ArrowRight size={13} aria-hidden="true" />}
         onClick={onOpen}
         ariaLabel={session.title}
