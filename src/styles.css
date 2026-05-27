@@ -2801,9 +2801,21 @@ kbd {
   background: rgba(247, 248, 251, 0.46);
 }
 
+/* An empty lane stays full-height (uniform grid) but reads de-emphasised so the
+   populated lanes lead. Dim the lane element itself (not its cards) so the
+   per-card entrance animation, which holds opacity:1 under fill-mode both,
+   can't override the fade. */
 .lane.is-empty {
   background: transparent;
-  opacity: 0.34;
+  opacity: 0.42;
+}
+
+/* Category filter = highlight/dim, never hide. A lane the active filter
+   excludes fades back as a whole; its events stay rendered and selectable, and
+   the swimlane structure never collapses. */
+.lane.is-dimmed {
+  opacity: 0.4;
+  transition: opacity 140ms ease;
 }
 
 .lane:last-child {
@@ -2919,6 +2931,14 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
+/* A lane with no events still shows its 0 — every category reports a number —
+   but the zero recedes so populated lanes read first. */
+.lane-label-count.is-zero {
+  color: var(--muted-2);
+  opacity: 0.45;
+  font-weight: 500;
+}
+
 .lane.lane-tone-purple .lane-label-icon { color: var(--purple); }
 .lane.lane-tone-green  .lane-label-icon { color: var(--green); }
 .lane.lane-tone-red    .lane-label-icon { color: var(--red); }
@@ -2932,6 +2952,11 @@ kbd {
 .event-card {
   position: absolute;
   z-index: 2;
+  /* Rest width is the laid-out width (a CSS var, not an inline width); hover
+     and selection expand it rightward up to a readable max, so dense,
+     near-overlapping cards stay slim until the user reaches for one. */
+  width: var(--card-w);
+  --card-w-expanded: 264px;
   display: grid;
   grid-template-rows: 13px 1fr 12px; /* header / title / footer slot */
   row-gap: 3px;
@@ -2942,7 +2967,7 @@ kbd {
   border-radius: 7px;
   background: white;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
-  transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  transition: width 150ms ease, opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
   overflow: hidden;
   cursor: pointer;
 }
@@ -2987,16 +3012,30 @@ kbd {
   }
 }
 
-.event-card:hover {
-  /* No transform — cards must not pop up under the cursor (calmer feel). */
+.event-card:hover,
+.event-card:focus-visible {
+  /* No transform — cards must not pop up under the cursor (calmer feel).
+     Expand rightward to reveal the full title row; raise above neighbours so
+     the widened card is never clipped by a later sibling. */
+  width: max(var(--card-w), var(--card-w-expanded));
+  z-index: 7;
   border-color: var(--line-strong);
-  box-shadow: 0 4px 12px rgba(20, 25, 36, 0.06);
+  box-shadow: 0 6px 16px rgba(20, 25, 36, 0.09);
+}
+
+/* When expanded (hover / selected), let the title use the extra width: it
+   reads on one calm line up to the wider bound instead of truncating early. */
+.event-card:hover .event-card-title,
+.event-card:focus-visible .event-card-title,
+.event-card.focus-selected .event-card-title {
+  white-space: nowrap;
 }
 
 .event-card.focus-selected {
+  width: max(var(--card-w), var(--card-w-expanded));
   border-color: var(--purple);
   box-shadow: 0 0 0 1px var(--purple);
-  z-index: 3;
+  z-index: 6;
 }
 
 .event-card.focus-related {
@@ -5162,6 +5201,52 @@ hr {
 .start-summary-footer svg {
   flex-shrink: 0;
   margin-top: 1px;
+}
+
+/* 새 세션 wizard — method choice, import entry, summary create action. */
+.start-method-grid {
+  margin-bottom: 10px;
+}
+
+.start-import-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.start-import-note {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* The single create action lives under the session summary, in the sticky
+   right rail, so it is always reachable as the user fills the steps. */
+.start-summary-action {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.start-summary-action .btn,
+.start-summary-action button {
+  width: 100%;
+  justify-content: center;
+}
+
+/* A completed wizard step swaps its number for a calm green check. */
+.setup-block.is-complete header > span {
+  background: var(--green-50, #e7f6ec);
+  color: var(--green, #1f9254);
+}
+
+.summary-row b.muted {
+  color: var(--muted-2);
+  font-weight: 500;
 }
 
 .page-tight {
@@ -11750,6 +11835,128 @@ pre {
   line-height: 1.5;
 }
 
+/* ── Notification drawer — right-docked, full-height, non-blocking ──────────── */
+.noti-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 18980;
+  /* No dim: the canvas stays fully visible. This only catches click-outside,
+     keeping the drawer a glance surface, not a modal. */
+  background: transparent;
+}
+
+.noti-drawer {
+  position: fixed;
+  top: 0;
+  /* `left` is set inline to the sidebar's right edge so the drawer opens flush
+     beside the bell — the trigger lives on the left, so the panel does too. */
+  left: var(--mori-sidebar-w, 256px);
+  height: 100vh;
+  width: min(400px, 92vw);
+  z-index: 18990;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--line-strong);
+  box-shadow: 20px 0 60px rgba(24, 28, 42, 0.18);
+  outline: none;
+  animation: noti-drawer-in 180ms ease-out;
+}
+
+@keyframes noti-drawer-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.noti-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 12px 12px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.noti-drawer-icon {
+  display: flex;
+  align-items: center;
+  color: var(--purple);
+}
+
+.noti-drawer-head h2 {
+  margin: 0;
+  margin-right: auto;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.noti-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.noti-drawer-close:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.noti-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px 4px;
+}
+
+.noti-drawer-empty {
+  padding: 18px 4px;
+  margin: 0;
+  font-size: var(--mori-font-size-sm);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* In the drawer the feed is full-bleed (no card chrome); groups stay tight. */
+.noti-drawer .noti-groups {
+  gap: var(--mori-space-4);
+}
+
+.noti-drawer .noti-feed {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.noti-drawer .noti-feed > li + li .noti-row {
+  border-top: 1px solid var(--line);
+}
+
+.noti-drawer .noti-row {
+  padding: 11px 6px;
+}
+
+.noti-drawer-privacy {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--line);
+  font-size: var(--mori-font-size-xs);
+  color: var(--muted-2);
+  line-height: 1.4;
+}
+
 .attention-panel-signals {
   list-style: none;
   margin: 0;
@@ -17817,6 +18024,35 @@ button.settings-option {
   color: #3a25c6;
 }
 
+/* Category label takes the remaining width; the per-lane event count sits at
+   the right as a plain tabular number. */
+.filter-pop-label {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-pop-count {
+  margin-left: auto;
+  min-width: 18px;
+  text-align: right;
+  color: var(--muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.filter-pop-count.is-zero {
+  opacity: 0.45;
+  font-weight: 500;
+}
+
+.filter-pop-item.active .filter-pop-count {
+  color: #3a25c6;
+}
+
 .filter-popover footer {
   margin-top: 2px;
   padding-top: 8px;
@@ -20990,7 +21226,6 @@ button.settings-option {
 
 /* ── InfoHint — icon + hover/focus tooltip (copy-diet primitive) ────────── */
 .info-hint {
-  position: relative;
   display: inline-flex;
   vertical-align: middle;
 }
@@ -21017,10 +21252,13 @@ button.settings-option {
   outline: none;
 }
 
+/* Bubble is portaled to <body> and fixed-positioned from JS (inline top/left),
+   so it floats above everything (drawers included), is never clipped by an
+   overflow ancestor, and never takes layout space. Placement classes only set
+   the transform that anchors it above or below the icon. */
 .info-hint-bubble {
-  position: absolute;
-  top: calc(100% + 7px);
-  z-index: 60;
+  position: fixed;
+  z-index: 2000;
   width: max-content;
   max-width: 280px;
   padding: 9px 11px;
@@ -21035,38 +21273,26 @@ button.settings-option {
   text-transform: none;
   white-space: normal;
   overflow-wrap: anywhere;
-  box-shadow: 0 8px 24px rgba(20, 20, 35, 0.22);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-3px);
-  transition: opacity 0.13s ease, transform 0.13s ease, visibility 0.13s;
+  box-shadow: 0 10px 30px rgba(20, 20, 35, 0.26);
   pointer-events: none;
+  animation: info-hint-in 0.12s ease both;
 }
 
-.info-hint-start .info-hint-bubble {
-  left: 0;
+.info-hint-bubble.is-top {
+  transform: translate(-50%, -100%);
 }
 
-.info-hint-end .info-hint-bubble {
-  right: 0;
-}
-
-.info-hint-center .info-hint-bubble {
-  left: 50%;
-  transform: translate(-50%, -3px);
-}
-
-.info-hint:hover .info-hint-bubble,
-.info-hint-trigger:focus-visible + .info-hint-bubble {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.info-hint-center:hover .info-hint-bubble,
-.info-hint-center .info-hint-trigger:focus-visible + .info-hint-bubble {
+.info-hint-bubble.is-bottom {
   transform: translate(-50%, 0);
+}
+
+@keyframes info-hint-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Status legend — coloured dots, not a row of heavy pills. */

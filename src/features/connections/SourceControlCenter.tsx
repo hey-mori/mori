@@ -62,20 +62,6 @@ const FAMILY_ICON: Record<CaptureSurfaceToolFamily, LucideIcon> = {
   analysis: Bot,
 };
 
-/** One-line description per family — sets context once a category is opened. */
-const FAMILY_BLURB: Record<CaptureSurfaceToolFamily, string> = {
-  claude: "Claude Code · Desktop · Web 대화를 가져옵니다.",
-  codex: "Codex CLI 실행과 내보내기를 가져옵니다.",
-  opencode: "OpenCode CLI 실행을 가져옵니다.",
-  git: "diff · 커밋 변경을 증거로 가져옵니다.",
-  terminal: "명령 요약을 명시적으로 캡처합니다.",
-  manual: "메모와 URL을 직접 기록합니다.",
-  document: "선택한 파일/문서를 가져옵니다.",
-  ide: "에디터 활동을 캡처합니다.",
-  browser: "선택한 페이지를 추가합니다.",
-  analysis: "가져온 증거를 분석합니다.",
-};
-
 const AVAILABILITY_PRIORITY: ControlCenterAvailability[] = [
   "available",
   "needsSetup",
@@ -161,14 +147,12 @@ export function SourceControlCenter({
 
       <CategoryCluster
         title="AI 에이전트"
-        hint="작업 세션 시작 · 이어가기"
         groups={agentGroups}
         selectedFamily={selectedFamily}
         onSelect={setActiveFamily}
       />
       <CategoryCluster
         title="자료"
-        hint="세션에 붙이는 소스"
         groups={evidenceGroups}
         selectedFamily={selectedFamily}
         onSelect={setActiveFamily}
@@ -183,7 +167,6 @@ export function SourceControlCenter({
         >
           <div className="source-cc-panel-head">
             <strong>{selectedGroup.label}</strong>
-            <span>{FAMILY_BLURB[selectedGroup.family]}</span>
           </div>
           <div className="source-cc-panel-list" role="list">
             {selectedGroup.surfaces.map((surface) => (
@@ -234,14 +217,12 @@ function ReadinessSummary({
  */
 function CategoryCluster({
   title,
-  hint,
   groups,
   selectedFamily,
   onSelect,
   muted,
 }: {
   title: string;
-  hint: string;
   groups: ControlCenterGroup[];
   selectedFamily: CaptureSurfaceToolFamily | null;
   onSelect: (family: CaptureSurfaceToolFamily) => void;
@@ -252,7 +233,6 @@ function CategoryCluster({
     <div className={`source-cc-cluster${muted ? " is-muted" : ""}`}>
       <div className="source-cc-cluster-head">
         <strong>{title}</strong>
-        <span>{hint}</span>
       </div>
       <div className="source-cc-categories" role="tablist" aria-label={title}>
         {groups.map((group) => (
