@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   createUserProject,
+  editUserProject,
   loadUserProjects,
   removeUserProject,
   renameUserProject,
@@ -21,9 +22,11 @@ export type MoriProjectState = {
   projects: UserProject[];
   hydrate: () => void;
   /** Create an empty project; returns the new key, or null on duplicate/empty. */
-  createProject: (input: { key: string; name?: string }) => string | null;
+  createProject: (input: { key: string; name?: string; description?: string }) => string | null;
   /** Set or clear a project's display-name override (created or derived). */
   renameProject: (key: string, name: string) => void;
+  /** Edit a project's display-name and description overrides. */
+  editProject: (key: string, input: { name?: string; description?: string }) => void;
   /** Delete a created project record (derived projects are kept). */
   deleteProject: (key: string) => void;
 };
@@ -35,8 +38,8 @@ export const useMoriProjectStore = create<MoriProjectState>((set, get) => ({
     if (get().initialized) return;
     set({ projects: loadUserProjects(), initialized: true });
   },
-  createProject: ({ key, name }) => {
-    const { projects, created } = createUserProject(get().projects, { key, name });
+  createProject: ({ key, name, description }) => {
+    const { projects, created } = createUserProject(get().projects, { key, name, description });
     if (!created) return null;
     saveUserProjects(projects);
     set({ projects });
@@ -44,6 +47,11 @@ export const useMoriProjectStore = create<MoriProjectState>((set, get) => ({
   },
   renameProject: (key, name) => {
     const projects = renameUserProject(get().projects, key, name);
+    saveUserProjects(projects);
+    set({ projects });
+  },
+  editProject: (key, input) => {
+    const projects = editUserProject(get().projects, key, input);
     saveUserProjects(projects);
     set({ projects });
   },

@@ -1,19 +1,16 @@
 import {
   ArrowRight,
   BookCheck,
-  Check,
   ClipboardCheck,
   Database,
   FileText,
   FolderGit2,
   FolderKanban,
-  FolderPlus,
   Layers,
   Pencil,
   Plus,
   ScrollText,
   Trash2,
-  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -44,6 +41,7 @@ import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMe
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import { useMoriProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
+import { ProjectFormModal } from "./ProjectFormModal";
 import { spanLabel } from "../../lib/session/workContext";
 
 /**
@@ -66,16 +64,15 @@ import { spanLabel } from "../../lib/session/workContext";
 export function ProjectView() {
   const projectKey = useMoriAppStore((state) => state.currentProjectKey);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
-  const openProject = useMoriAppStore((state) => state.openProject);
   const openSession = useMoriAppStore((state) => state.openSession);
   const setMemoryTab = useMoriAppStore((state) => state.setMemoryTab);
 
   const userProjects = useMoriProjectStore((state) => state.projects);
   const hydrateProjects = useMoriProjectStore((state) => state.hydrate);
   const projectsInitialized = useMoriProjectStore((state) => state.initialized);
-  const createUserProjectRecord = useMoriProjectStore((state) => state.createProject);
-  const renameUserProjectRecord = useMoriProjectStore((state) => state.renameProject);
+  const editUserProjectRecord = useMoriProjectStore((state) => state.editProject);
   const deleteUserProjectRecord = useMoriProjectStore((state) => state.deleteProject);
+  const [editing, setEditing] = useState(false);
   const source = useMoriSessionStore(selectSessionSource);
   const loadBrowserSession = useMoriSessionStore(
     (state) => state.loadBrowserSession,
@@ -124,11 +121,6 @@ export function ProjectView() {
   // (only when it exists). No consolidation navigate-away; reviewing proposals
   // into durable memory is handled in-context, not by leaving the page.
   const [memories, setMemories] = useState<StoredAcceptedProjectMemory[]>([]);
-  const [creatingProject, setCreatingProject] = useState(false);
-  const [projectDraft, setProjectDraft] = useState("");
-  const [renamingProject, setRenamingProject] = useState(false);
-  const [renameDraft, setRenameDraft] = useState("");
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (!projectId) {
@@ -154,41 +146,32 @@ export function ProjectView() {
     if (!projectsInitialized) hydrateProjects();
   }, [projectsInitialized, hydrateProjects]);
 
-  // Display name honours a user override; whether the project is explicitly
-  // created decides if it can be deleted (a session-derived project cannot).
+  // Display name + description honour a user override; whether the project is
+  // explicitly created decides if it can be deleted (a session-derived project
+  // cannot).
+  const projectRecord = userProjects.find((entry) => entry.key === projectKey);
   const displayName = projectKey
     ? projectDisplayName(projectKey, userProjects)
     : "";
-  const isCreatedProject = userProjects.some(
-    (entry) => entry.key === projectKey && entry.created,
-  );
+  const description = projectRecord?.description?.trim() ?? "";
+  const isCreatedProject = projectRecord?.created ?? false;
 
-  function handleCreateProject() {
-    const key = projectDraft.trim();
-    if (!key) return;
-    const createdKey = createUserProjectRecord({ key });
-    if (!createdKey) return;
-    setProjectDraft("");
-    setCreatingProject(false);
-    openProject(createdKey);
-  }
-
-  function beginRenameProject() {
-    setRenameDraft(displayName);
-    setRenamingProject(true);
-    setConfirmingDelete(false);
-  }
-
-  function handleRenameProject() {
+  function handleSaveEdit(values: { name: string; description: string }) {
     if (!projectKey) return;
-    renameUserProjectRecord(projectKey, renameDraft);
-    setRenamingProject(false);
+    editUserProjectRecord(projectKey, {
+      name: values.name,
+      description: values.description,
+    });
+    setEditing(false);
   }
 
   function handleDeleteProject() {
     if (!projectKey || !isCreatedProject) return;
+    const ok = window.confirm(
+      `'${displayName}' 프로젝트를 목록에서 제거할까요? 세션은 삭제되지 않습니다.`,
+    );
+    if (!ok) return;
     deleteUserProjectRecord(projectKey);
-    setConfirmingDelete(false);
     setCurrentView("workspace");
   }
 
@@ -239,28 +222,11 @@ export function ProjectView() {
           title="프로젝트를 선택하세요"
           description="좌측 사이드바의 프로젝트 폴더 이름을 누르면 그 프로젝트의 전체 세션과 메모리가 한 페이지에 보입니다."
           actions={
-            <>
-              <Button variant="primary" icon={Plus} onClick={() => setCreatingProject(true)}>
-                새 프로젝트
-              </Button>
-              <Button variant="ghost" onClick={() => setCurrentView("workspace")}>
-                전체 세션 보기
-              </Button>
-            </>
+            <Button variant="primary" onClick={() => setCurrentView("workspace")}>
+              전체 프로젝트 보기
+            </Button>
           }
         />
-        {creatingProject ? (
-          <ProjectNameForm
-            value={projectDraft}
-            onChange={setProjectDraft}
-            onSubmit={handleCreateProject}
-            onCancel={() => {
-              setCreatingProject(false);
-              setProjectDraft("");
-            }}
-            submitLabel="만들기"
-          />
-        ) : null}
       </PageShell>
     );
   }
@@ -277,44 +243,34 @@ export function ProjectView() {
             <span>프로젝트</span>
           </div>
           <h1>{displayName || overview.shortName}</h1>
-          <p className="project-hero-path" title={overview.fullPath}>
-            {overview.fullPath}
-          </p>
+          {overview.fullPath && overview.fullPath !== (displayName || overview.shortName) ? (
+            <p className="project-hero-path" title={overview.fullPath}>
+              {overview.fullPath}
+            </p>
+          ) : null}
+          {description ? (
+            <p className="project-hero-path">{description}</p>
+          ) : null}
         </div>
         <div className="project-hero-actions">
           <Button
             variant="ghost"
             icon={Pencil}
-            onClick={beginRenameProject}
-            title="이 프로젝트의 표시 이름을 바꿉니다 (세션은 그대로)."
+            onClick={() => setEditing(true)}
+            title="프로젝트 이름과 설명을 수정합니다 (세션은 그대로)."
           >
-            이름 변경
+            수정
           </Button>
           {isCreatedProject ? (
             <Button
               variant="ghost"
               icon={Trash2}
-              onClick={() => {
-                setConfirmingDelete(true);
-                setRenamingProject(false);
-              }}
+              onClick={handleDeleteProject}
               title="이 프로젝트를 목록에서 제거합니다. 세션은 삭제되지 않습니다."
             >
               삭제
             </Button>
           ) : null}
-          <Button
-            variant="ghost"
-            icon={FolderPlus}
-            onClick={() => {
-              setCreatingProject(true);
-              setRenamingProject(false);
-              setConfirmingDelete(false);
-            }}
-            title="새 프로젝트를 만들어 바로 엽니다."
-          >
-            새 프로젝트
-          </Button>
           <Button
             variant="primary"
             icon={Plus}
@@ -326,42 +282,14 @@ export function ProjectView() {
         </div>
       </header>
 
-      {creatingProject ? (
-        <ProjectNameForm
-          value={projectDraft}
-          onChange={setProjectDraft}
-          onSubmit={handleCreateProject}
-          onCancel={() => {
-            setCreatingProject(false);
-            setProjectDraft("");
-          }}
-          submitLabel="만들기"
+      {editing ? (
+        <ProjectFormModal
+          mode="edit"
+          initialName={displayName}
+          initialDescription={description}
+          onSubmit={handleSaveEdit}
+          onClose={() => setEditing(false)}
         />
-      ) : null}
-      {renamingProject ? (
-        <ProjectNameForm
-          value={renameDraft}
-          onChange={setRenameDraft}
-          onSubmit={handleRenameProject}
-          onCancel={() => setRenamingProject(false)}
-          submitLabel="저장"
-        />
-      ) : null}
-      {confirmingDelete ? (
-        <div className="project-inline-form project-inline-form-danger">
-          <div>
-            <strong>{displayName}</strong>
-            <p>프로젝트 목록에서만 제거합니다. 세션은 삭제되지 않습니다.</p>
-          </div>
-          <div className="project-inline-form-actions">
-            <Button variant="ghost" icon={X} onClick={() => setConfirmingDelete(false)}>
-              취소
-            </Button>
-            <Button variant="primary" icon={Trash2} onClick={handleDeleteProject}>
-              삭제
-            </Button>
-          </div>
-        </div>
       ) : null}
 
       <MoriMetricStrip
@@ -447,48 +375,6 @@ export function ProjectView() {
 
       <ProjectMemoryList memories={memories} />
     </PageShell>
-  );
-}
-
-function ProjectNameForm({
-  value,
-  onChange,
-  onSubmit,
-  onCancel,
-  submitLabel,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-  onCancel: () => void;
-  submitLabel: string;
-}) {
-  return (
-    <form
-      className="project-inline-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit();
-      }}
-    >
-      <label>
-        <span>프로젝트 이름</span>
-        <input
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="예: C:/dev/mori 또는 Mori 앱"
-          autoFocus
-        />
-      </label>
-      <div className="project-inline-form-actions">
-        <Button variant="ghost" icon={X} onClick={onCancel}>
-          취소
-        </Button>
-        <Button variant="primary" icon={Check} type="submit" disabled={!value.trim()}>
-          {submitLabel}
-        </Button>
-      </div>
-    </form>
   );
 }
 

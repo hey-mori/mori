@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
-  Check,
   FolderGit2,
   FolderKanban,
   FolderPlus,
   PlugZap,
   Search,
-  X,
 } from "lucide-react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -28,6 +26,7 @@ import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { useMoriProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
+import { ProjectFormModal } from "../project/ProjectFormModal";
 import {
   buildSessionsBrowserModel,
   type SessionRow,
@@ -66,7 +65,6 @@ export function WorkspaceView() {
     (state) => state.createProject,
   );
   const [creatingProject, setCreatingProject] = useState(false);
-  const [projectDraft, setProjectDraft] = useState("");
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -76,12 +74,23 @@ export function WorkspaceView() {
     if (!projectsInitialized) hydrateProjects();
   }, [projectsInitialized, hydrateProjects]);
 
-  function handleCreateProject() {
-    const key = projectDraft.trim();
+  function handleCreateProject({
+    name,
+    description,
+  }: {
+    name: string;
+    description: string;
+  }) {
+    // The name is the project's identity: it becomes the grouping key (the
+    // sourceLabel its future sessions share) and the display name.
+    const key = name.trim();
     if (!key) return;
-    const createdKey = createUserProjectRecord({ key });
+    const createdKey = createUserProjectRecord({
+      key,
+      name: key,
+      description: description.trim() || undefined,
+    });
     if (!createdKey) return;
-    setProjectDraft("");
     setCreatingProject(false);
     openProject(createdKey);
   }
@@ -169,13 +178,13 @@ export function WorkspaceView() {
       maxWidth="wide"
       actionBar={
         <ActionBar
-          label="세션 검색"
+          label="검색"
           start={
             <ToolbarSearch
               value={query}
               onChange={setQuery}
               placeholder="검색"
-              ariaLabel="세션 검색"
+              ariaLabel="검색"
             />
           }
           end={
@@ -192,15 +201,10 @@ export function WorkspaceView() {
       }
     >
       {creatingProject ? (
-        <ProjectNameForm
-          value={projectDraft}
-          onChange={setProjectDraft}
+        <ProjectFormModal
+          mode="create"
           onSubmit={handleCreateProject}
-          onCancel={() => {
-            setCreatingProject(false);
-            setProjectDraft("");
-          }}
-          submitLabel="만들기"
+          onClose={() => setCreatingProject(false)}
         />
       ) : null}
       {!hasResults ? (
@@ -341,53 +345,6 @@ function WorkspaceSummaryStrip({
 }
 
 // ─── Rows ───────────────────────────────────────────────────────────────────
-
-function ProjectNameForm({
-  value,
-  onChange,
-  onSubmit,
-  onCancel,
-  submitLabel,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-  onCancel: () => void;
-  submitLabel: string;
-}) {
-  return (
-    <form
-      className="project-inline-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit();
-      }}
-    >
-      <label>
-        <span>프로젝트 이름</span>
-        <input
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="예: C:/dev/mori 또는 Mori 앱"
-          autoFocus
-        />
-      </label>
-      <div className="project-inline-form-actions">
-        <Button variant="ghost" icon={X} onClick={onCancel}>
-          취소
-        </Button>
-        <Button
-          variant="primary"
-          icon={Check}
-          type="submit"
-          disabled={!value.trim()}
-        >
-          {submitLabel}
-        </Button>
-      </div>
-    </form>
-  );
-}
 
 function ProjectRowItem({
   project,

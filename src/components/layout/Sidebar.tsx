@@ -79,27 +79,15 @@ import type { SessionTab } from "../../app/store";
  *  those up instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: moriViewIcon.home ?? House },
-  { key: "workspace", label: "프로젝트", icon: moriViewIcon.workspace ?? Layers },
+  {
+    key: "workspace",
+    label: "프로젝트",
+    icon: moriViewIcon.workspace ?? Layers,
+  },
   // 메모리 is no longer a standing tab: durable project memory lives on each
   // project page (ProjectView). The memory overview / consolidation review stay
   // routable through a project's "메모리 통합" action and the command palette.
 ];
-
-/** Views that belong *under* the 프로젝트 destination — the session detail's own
- *  tabs route to these keys, so they should still light up "프로젝트". The
- *  shortcut-button destinations (start / connections) are deliberately NOT
- *  in this set — they have their own active indicator on the shortcut. */
-const SESSION_VIEWS = new Set<ViewKey>([
-  "workspace",
-  "session",
-  "timeline",
-  "flow",
-  "evidence",
-  "review",
-  "companion",
-]);
-
-const MEMORY_VIEWS = new Set<ViewKey>(["memory", "consolidation", "reports"]);
 
 /** Views whose subject is a *specific* session — only on these should the
  *  matching session row light up as active. On home / project / workspace /
@@ -112,6 +100,7 @@ const SESSION_SUBJECT_VIEWS = new Set<ViewKey>([
   "evidence",
   "review",
   "companion",
+  "reports",
 ]);
 
 export function Sidebar({
@@ -139,8 +128,12 @@ export function Sidebar({
     : null;
   const source = useMoriSessionStore(selectSessionSource);
   const dataResetNonce = useMoriSessionStore((state) => state.dataResetNonce);
-  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
-  const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
+  const loadBrowserSession = useMoriSessionStore(
+    (state) => state.loadBrowserSession,
+  );
+  const loadDesktopSession = useMoriSessionStore(
+    (state) => state.loadDesktopSession,
+  );
   const renameSession = useMoriSessionStore((state) => state.renameSession);
   const openSession = useMoriAppStore((state) => state.openSession);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
@@ -185,7 +178,10 @@ export function Sidebar({
     [summaries],
   );
 
-  const filtered = useMemo(() => filterSidebarRows(allRows, query), [allRows, query]);
+  const filtered = useMemo(
+    () => filterSidebarRows(allRows, query),
+    [allRows, query],
+  );
   const groups = useMemo(
     () => groupSidebarRows(filtered, Date.now(), groupingMode),
     [filtered, groupingMode],
@@ -209,15 +205,27 @@ export function Sidebar({
         openSession(tab);
       }
     },
-    [activeSessionId, isDesktop, loadBrowserSession, loadDesktopSession, openSession],
+    [
+      activeSessionId,
+      isDesktop,
+      loadBrowserSession,
+      loadDesktopSession,
+      openSession,
+    ],
   );
 
   const isActive = (key: ViewKey) => {
     if (key === "home") return currentView === "home";
-    // 메모리 folded into 프로젝트: project, session, and memory / consolidation /
-    // reports surfaces all light up the single 프로젝트 destination.
+    // 프로젝트 means the "all projects" browser (workspace). An *individual*
+    // project page is a drill-down, not that destination, so it must not light
+    // up 프로젝트 — otherwise selecting one project reads as selecting the whole
+    // browser. Memory / consolidation still fold under it.
     if (key === "workspace") {
-      return SESSION_VIEWS.has(currentView) || MEMORY_VIEWS.has(currentView);
+      return (
+        currentView === "workspace" ||
+        currentView === "memory" ||
+        currentView === "consolidation"
+      );
     }
     return key === currentView;
   };
@@ -297,8 +305,8 @@ export function Sidebar({
           className="sidebar-search"
           value={query}
           onChange={setQuery}
-          placeholder="세션 검색"
-          ariaLabel="세션 검색"
+          placeholder="검색"
+          ariaLabel="검색"
         />
         <button
           type="button"
@@ -451,7 +459,9 @@ function ProjectFolder({
           onClick={onToggle}
           aria-expanded={isOpen}
           aria-controls={`sidebar-folder-${encodeURIComponent(group.label)}`}
-          aria-label={isOpen ? `${displayLabel} 접기` : `${displayLabel} 펼치기`}
+          aria-label={
+            isOpen ? `${displayLabel} 접기` : `${displayLabel} 펼치기`
+          }
         >
           {isOpen ? (
             <ChevronDown size={12} aria-hidden="true" />
@@ -464,7 +474,9 @@ function ProjectFolder({
           className="sidebar-folder-name-btn"
           onClick={onOpenProject ?? onToggle}
           aria-current={isCurrentProject ? "page" : undefined}
-          title={onOpenProject ? `${fullLabel} · 프로젝트 페이지 열기` : fullLabel}
+          title={
+            onOpenProject ? `${fullLabel} · 프로젝트 페이지 열기` : fullLabel
+          }
         >
           <FolderGit2 size={12} aria-hidden="true" />
           <span className="sidebar-folder-name">{displayLabel}</span>
@@ -522,7 +534,9 @@ function SessionGroup({
             onSelect={() => onSelect(row.sessionId)}
             onOpenTab={(tab) => onOpenTab(row.sessionId, tab)}
             onOpenProject={
-              row.sourceLabel ? () => onOpenProject(row.sourceLabel as string) : undefined
+              row.sourceLabel
+                ? () => onOpenProject(row.sourceLabel as string)
+                : undefined
             }
             onRename={() => onRename(row)}
           />
@@ -612,11 +626,36 @@ function buildSidebarSessionMenuItems({
 }): MoriMenuItemSpec[] {
   const items: MoriMenuItemSpec[] = [
     { id: "open", label: "세션 열기", icon: ChevronRight, onSelect: onOpen },
-    { id: "open-overview", label: "개요 열기", icon: LayoutDashboard, onSelect: () => onOpenTab("overview") },
-    { id: "open-flow", label: "흐름 열기", icon: GanttChartSquare, onSelect: () => onOpenTab("flow") },
-    { id: "open-evidence", label: "증거 열기", icon: FileText, onSelect: () => onOpenTab("evidence") },
-    { id: "open-review", label: "검토 열기", icon: Clipboard, onSelect: () => onOpenTab("insights") },
-    { id: "open-report", label: "리포트 열기", icon: ScrollText, onSelect: () => onOpenTab("report") },
+    {
+      id: "open-overview",
+      label: "개요 열기",
+      icon: LayoutDashboard,
+      onSelect: () => onOpenTab("overview"),
+    },
+    {
+      id: "open-flow",
+      label: "흐름 열기",
+      icon: GanttChartSquare,
+      onSelect: () => onOpenTab("flow"),
+    },
+    {
+      id: "open-evidence",
+      label: "증거 열기",
+      icon: FileText,
+      onSelect: () => onOpenTab("evidence"),
+    },
+    {
+      id: "open-review",
+      label: "검토 열기",
+      icon: Clipboard,
+      onSelect: () => onOpenTab("insights"),
+    },
+    {
+      id: "open-report",
+      label: "리포트 열기",
+      icon: ScrollText,
+      onSelect: () => onOpenTab("report"),
+    },
   ];
   if (onOpenProject) {
     items.push({

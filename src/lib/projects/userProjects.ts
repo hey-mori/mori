@@ -22,6 +22,8 @@ export type UserProject = {
   key: string;
   /** Optional display-name override. Falls back to the trailing key segment. */
   name?: string;
+  /** Optional description override. */
+  description?: string;
   /** True when the user created this project explicitly (vs. a name override on
    *  a session-derived project). Only created projects are deletable. */
   created: boolean;
@@ -58,7 +60,7 @@ export function projectDisplayName(
  */
 export function createUserProject(
   projects: ReadonlyArray<UserProject>,
-  input: { key: string; name?: string; now?: string },
+  input: { key: string; name?: string; description?: string; now?: string },
 ): { projects: UserProject[]; created: UserProject | null } {
   const key = normalizeProjectKey(input.key);
   if (!key) return { projects: [...projects], created: null };
@@ -68,6 +70,7 @@ export function createUserProject(
   const record: UserProject = {
     key,
     name: input.name?.trim() || undefined,
+    description: input.description?.trim() || undefined,
     created: true,
     createdAt: input.now ?? new Date().toISOString(),
   };
@@ -94,6 +97,44 @@ export function renameUserProject(
   }
   // Name override for a derived project — record it without marking created.
   return [{ key: normalizedKey, name: nextName, created: false, createdAt: now }, ...projects];
+}
+
+/**
+ * Edit a project's display-name and description overrides.
+ */
+export function editUserProject(
+  projects: ReadonlyArray<UserProject>,
+  key: string,
+  input: { name?: string; description?: string },
+  now: string = new Date().toISOString(),
+): UserProject[] {
+  const normalizedKey = normalizeProjectKey(key);
+  const nextName = input.name !== undefined ? (input.name.trim() || undefined) : undefined;
+  const nextDescription = input.description !== undefined ? (input.description.trim() || undefined) : undefined;
+  
+  const existing = projects.find((entry) => entry.key === normalizedKey);
+  if (existing) {
+    return projects.map((entry) =>
+      entry.key === normalizedKey
+        ? {
+            ...entry,
+            name: input.name !== undefined ? nextName : entry.name,
+            description: input.description !== undefined ? nextDescription : entry.description,
+          }
+        : entry,
+    );
+  }
+  // If not existing, create a name/description override record for a derived project
+  return [
+    {
+      key: normalizedKey,
+      name: nextName,
+      description: nextDescription,
+      created: false,
+      createdAt: now,
+    },
+    ...projects,
+  ];
 }
 
 /** Remove a created project record. Derived projects (created: false) are kept. */
@@ -133,6 +174,7 @@ function isUserProject(value: unknown): value is UserProject {
     typeof record.key === "string" &&
     typeof record.created === "boolean" &&
     typeof record.createdAt === "string" &&
-    (record.name === undefined || typeof record.name === "string")
+    (record.name === undefined || typeof record.name === "string") &&
+    (record.description === undefined || typeof record.description === "string")
   );
 }
