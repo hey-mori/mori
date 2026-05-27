@@ -61,7 +61,7 @@ import type { SessionTab } from "../../app/store";
  * Mori has no top chrome bar: the workspace runs full height and the sidebar
  * owns everything we used to spread across a header. From top to bottom:
  *
- *   1. Quick actions — icon-only 새 세션 / 가져오기 shortcuts.
+ *   1. Quick actions · icon-only 새 세션 / 가져오기 shortcuts.
  *   2. Product nav — 홈 / 프로젝트 / 메모리, the three top-level destinations.
  *   3. Session search input.
  *   4. The session conversation list, grouped by recency.
@@ -251,7 +251,7 @@ export function Sidebar({
           onClick={() => setCurrentView("start")}
           aria-label="새 세션"
           aria-current={currentView === "start" ? "page" : undefined}
-          title="새 세션 — 새 대화를 시작하거나 기존 대화를 가져옵니다."
+          title="새 세션 · 대화를 가져오거나 빈 세션을 만듭니다."
         >
           <Plus size={15} aria-hidden="true" />
         </button>

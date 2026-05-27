@@ -6,6 +6,7 @@ import type {
   IssueStatus,
   MoriMockSession,
   NextAction,
+  RecordingMode,
   RelationshipType,
   TimelineEvent,
 } from "../domain/types";
@@ -164,6 +165,7 @@ export type MoriSessionState = {
     startedAt: string;
     endedAt: string;
     projectLabel?: string;
+    recordingMode?: RecordingMode;
   }) => { sessionId: string; candidate: NormalizedImportCandidate };
   /**
    * Mark the pending new session (created by `importAsNewSession`) as
@@ -481,7 +483,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       sessionTitle: params.title.trim() || "제목 없는 Claude 대화",
       projectName,
       selectedSources: [],
-      recordingMode: previous?.session.recordingMode ?? "summary",
+      recordingMode: params.recordingMode ?? previous?.session.recordingMode ?? "summary",
       llmProvider: previous?.session.llmProvider ?? "ollama",
       llmModel: previous?.session.llmModel ?? "llama3.1:8b",
       storageLocation: previous?.session.storageLocation ?? "browser:localStorage",

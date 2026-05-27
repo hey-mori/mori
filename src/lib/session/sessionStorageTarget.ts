@@ -47,10 +47,10 @@ export function describeSessionStorageTarget(options: {
 export function describeRetentionFootprint(mode: RecordingMode): string {
   switch (mode) {
     case "summary":
-      return "요약 중심 — 원본은 짧게만 보관";
+      return "요약 중심 · 원본은 짧게만 보관";
     case "full":
-      return "원본 전체 보관 — 가장 많은 공간 사용";
+      return "원본 전체 보관 · 가장 많은 공간 사용";
     case "ephemeral":
-      return "리포트만 보관 — 원본 자동 삭제";
+      return "리포트만 보관 · 원본 자동 삭제";
   }
 }
