@@ -1,294 +1,242 @@
 import { useMemo } from "react";
-import { ArrowRight, Compass, ExternalLink, Inbox, ShieldCheck } from "lucide-react";
+import { ArrowRight, Bell, CheckCheck } from "lucide-react";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
 import { useMoriAppStore } from "../../app/store";
-import type { ViewKey } from "../../domain/types";
+import { useMoriSessionStore } from "../../app/sessionStore";
+import { useNotificationReadStore } from "../../app/notificationReadStore";
+import type {
+  MoriNotification,
+  MoriNotificationActionTarget,
+} from "../../lib/notifications/notification";
 import {
-  companionSeverityTone,
-  describeCompanionBasis,
-  describeCompanionSeverity,
-  getCompanionSignalActionTarget,
-  groupCompanionSignalsByAction,
-  type CompanionSignal,
-  type CompanionSignalGroup,
-} from "../../lib/companion/companionSignals";
-import {
-  buildStaleMemoryChips,
-  type StaleMemoryChip,
-} from "../../lib/companion/staleMemoryChips";
-import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
-import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
-import { getProductMemoryStatusLabel } from "../../lib/product-state/productState";
-import { useCompanionSignals } from "./useCompanionSignals";
+  formatNotificationTime,
+  notificationIcon,
+  notificationProjectLabel,
+} from "../../lib/notifications/notificationPresentation";
+import { useMoriNotifications } from "./useMoriNotifications";
 
 /**
- * Companion Inbox — the Companion Layer's dedicated surface.
+ * 알림 — the full-page notification feed.
  *
- * The calm `CompanionCard` / `CompanionStrip` show a capped few signals
- * inline on work surfaces; this page is the full feed, organised by what
- * the user would *do* with each signal — review, risk, resume, report,
- * suggestion, reference — not by raw severity. Severity stays on each row
- * as a badge. Every signal is derived from data the user already imported
- * and reviewed; the inbox never watches anything and never writes memory.
+ * The bell popover is for a quick glance at what just landed; this page is the
+ * same chronological cross-session feed with room to breathe, grouped by when
+ * things happened (오늘 / 이번 주 / 이전). It is a *stream*, not a triage board:
+ * no action-category buckets, no severity dashboard, no left colour bars — just
+ * "what happened, where, when", newest first. Clicking a row opens the thing it
+ * is about and marks it read.
  */
-export function CompanionInboxView() {
-  const { feed, isDemo, acceptedMemories } = useCompanionSignals();
-  // `navigate` normalises legacy session-surface destinations (evidence /
-  // review) into the unified Session Detail workspace on the matching tab.
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
-  const openAcceptedMemory = useMoriAppStore((state) => state.openAcceptedMemory);
 
-  const groups = useMemo(() => groupCompanionSignalsByAction(feed), [feed]);
-  const topSignal = feed[0] ?? null;
+type TimeBucket = "today" | "week" | "earlier";
+
+const BUCKET_ORDER: TimeBucket[] = ["today", "week", "earlier"];
+
+const BUCKET_LABEL: Record<TimeBucket, string> = {
+  today: "오늘",
+  week: "이번 주",
+  earlier: "이전",
+};
+
+export function CompanionInboxView() {
+  const { notifications, isDemo } = useMoriNotifications();
+  const navigate = useMoriAppStore((state) => state.navigate);
+  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
+  const openSession = useMoriAppStore((state) => state.openSession);
+  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
+
+  const readIds = useNotificationReadStore((state) => state.readIds);
+  const markRead = useNotificationReadStore((state) => state.markRead);
+  const markAllRead = useNotificationReadStore((state) => state.markAllRead);
+
+  const unreadCount = useMemo(
+    () => notifications.reduce((n, item) => (readIds.has(item.id) ? n : n + 1), 0),
+    [notifications, readIds],
+  );
+
+  const groups = useMemo(() => groupByTime(notifications), [notifications]);
+
+  function dispatch(target: MoriNotificationActionTarget, id: string): void {
+    markRead(id);
+    if (!target) return;
+    if (target.kind === "view") navigate(target.view);
+    else if (target.kind === "review") openReviewItem(target.selection);
+    else if (target.kind === "session") {
+      loadBrowserSession(target.sessionId);
+      openSession("flow");
+    }
+  }
 
   return (
-    <PageShell
-      className="companion-inbox"
-      header={<PageHeader compact title="Mori 노트" />}
-      aside={<CompanionInboxRail groups={groups} total={feed.length} isDemo={isDemo} />}
-    >
-      {topSignal ? (
-        <CompanionInboxFocus
-          signal={topSignal}
-          onNavigate={setCurrentView}
-          onOpenReviewItem={openReviewItem}
-        />
-      ) : null}
-      {groups.length === 0 ? (
-        <EmptyState
-          icon={Inbox}
-          title="살펴볼 신호가 없습니다"
-          description="새 소스를 가져오거나 Quick Pass를 실행하면 Mori가 다시 짚어 드립니다."
-          actions={
+    <PageShell className="noti-page" header={<PageHeader compact title="알림" />}>
+      <div className="noti-toolbar">
+        <p className="noti-toolbar-status">
+          {unreadCount > 0 ? (
             <>
-              <Button variant="primary" onClick={() => setCurrentView("evidence")}>
-                증거에서 가져오기
-              </Button>
-              <Button variant="secondary" onClick={() => setCurrentView("review")}>
-                검토 화면으로 이동
-              </Button>
+              안 읽음 <strong>{unreadCount}</strong>건 · 전체 {notifications.length}건
             </>
+          ) : (
+            <>전체 {notifications.length}건 · 모두 확인함</>
+          )}
+        </p>
+        {unreadCount > 0 ? (
+          <button
+            type="button"
+            className="noti-markall"
+            onClick={() => markAllRead(notifications.map((n) => n.id))}
+          >
+            <CheckCheck size={14} aria-hidden="true" />
+            모두 읽음
+          </button>
+        ) : null}
+      </div>
+
+      {notifications.length === 0 ? (
+        <EmptyState
+          icon={Bell}
+          title="아직 알림이 없습니다"
+          description="세션을 가져오거나 분석을 실행하면, 어떤 프로젝트의 어떤 세션에서 무슨 일이 있었는지 여기에 시간순으로 쌓입니다."
+          actions={
+            <Button variant="primary" onClick={() => navigate("connections")}>
+              세션 가져오기
+            </Button>
           }
         />
       ) : (
-        groups.map((group) => (
-          <CompanionInboxSection
-            key={group.category}
-            group={group}
-            acceptedMemories={acceptedMemories}
-            onNavigate={setCurrentView}
-            onOpenReviewItem={openReviewItem}
-            onOpenAcceptedMemory={openAcceptedMemory}
-          />
-        ))
+        <div className="noti-groups">
+          {groups.map((group) => (
+            <section key={group.bucket} className="noti-group" aria-label={BUCKET_LABEL[group.bucket]}>
+              <h2 className="noti-group-head">{BUCKET_LABEL[group.bucket]}</h2>
+              <ul className="noti-feed">
+                {group.notifications.map((notification) => (
+                  <NotificationRow
+                    key={notification.id}
+                    notification={notification}
+                    read={readIds.has(notification.id)}
+                    onDispatch={dispatch}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
+
+      <p className="noti-privacy">
+        {isDemo
+          ? "데모 데이터 기준입니다. 실제 세션에서는 가져온 소스와 검토 상태에서만 알림이 만들어집니다."
+          : "알림은 가져온 소스와 검토 상태에서만 만들어집니다. Mori가 배경에서 무언가를 감시하지 않습니다."}
+      </p>
     </PageShell>
   );
 }
 
-function CompanionInboxFocus({
-  signal,
-  onNavigate,
-  onOpenReviewItem,
+// ─── Row ──────────────────────────────────────────────────────────────────────
+
+function NotificationRow({
+  notification,
+  read,
+  onDispatch,
 }: {
-  signal: CompanionSignal;
-  onNavigate: (view: ViewKey) => void;
-  onOpenReviewItem: (selection: ReviewSelection) => void;
+  notification: MoriNotification;
+  read: boolean;
+  onDispatch: (target: MoriNotificationActionTarget, id: string) => void;
 }) {
-  const target = getCompanionSignalActionTarget(signal);
-  const action =
-    target?.kind === "review"
-      ? () => onOpenReviewItem(target.selection)
-      : target?.kind === "view"
-        ? () => onNavigate(target.view)
-        : null;
+  const Icon = notificationIcon(notification.kind);
+  const project = notificationProjectLabel(notification);
+  const time = formatNotificationTime(notification.createdAt);
+  const actionable = notification.actionTarget !== null;
 
   return (
-    <section
-      className="companion-inbox-focus"
-      data-mori-tone={companionSeverityTone(signal.severity)}
-      aria-label="추천 다음 행동"
-    >
-      <div className="companion-inbox-focus-copy">
-        <span className="companion-inbox-focus-kicker">추천 다음 행동</span>
-        <h2>{signal.title}</h2>
-        <p>{signal.message}</p>
-        <div className="companion-inbox-focus-meta">
-          <span>{describeCompanionSeverity(signal.severity)}</span>
-          <span>{describeCompanionBasis(signal.basis)}</span>
-        </div>
-      </div>
-      {action ? (
-        <Button variant="primary" onClick={action}>
-          {signal.actionLabel}
-        </Button>
-      ) : null}
-    </section>
-  );
-}
-
-function CompanionInboxSection({
-  group,
-  acceptedMemories,
-  onNavigate,
-  onOpenReviewItem,
-  onOpenAcceptedMemory,
-}: {
-  group: CompanionSignalGroup;
-  acceptedMemories: StoredAcceptedProjectMemory[];
-  onNavigate: (view: ViewKey) => void;
-  onOpenReviewItem: (selection: ReviewSelection) => void;
-  onOpenAcceptedMemory: (memoryId: string) => void;
-}) {
-  return (
-    <section className="companion-inbox-section" aria-label={group.label}>
-      <header className="companion-inbox-section-head">
-        <h2>{group.label}</h2>
-        <span className="companion-inbox-section-count">{group.signals.length}</span>
-        <p>{group.hint}</p>
-      </header>
-      <ul className="companion-inbox-list">
-        {group.signals.map((signal) => (
-          <CompanionSignalRow
-            key={signal.id}
-            signal={signal}
-            acceptedMemories={acceptedMemories}
-            onNavigate={onNavigate}
-            onOpenReviewItem={onOpenReviewItem}
-            onOpenAcceptedMemory={onOpenAcceptedMemory}
-          />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function CompanionSignalRow({
-  signal,
-  acceptedMemories,
-  onNavigate,
-  onOpenReviewItem,
-  onOpenAcceptedMemory,
-}: {
-  signal: CompanionSignal;
-  acceptedMemories: StoredAcceptedProjectMemory[];
-  onNavigate: (view: ViewKey) => void;
-  onOpenReviewItem: (selection: ReviewSelection) => void;
-  onOpenAcceptedMemory: (memoryId: string) => void;
-}) {
-  // When the signal is about a specific Review item, the action opens that
-  // exact item; otherwise it navigates to the signal's surface. Either way
-  // the action only navigates — it never applies or writes anything.
-  const target = getCompanionSignalActionTarget(signal);
-  const action =
-    target?.kind === "review"
-      ? () => onOpenReviewItem(target.selection)
-      : target?.kind === "view"
-        ? () => onNavigate(target.view)
-        : null;
-
-  // Stale-memory signals carry the affected accepted-memory ids — render
-  // them as chips so the user can open one memory's provenance drawer
-  // directly without first opening the bulk Consolidation Review surface.
-  const memoryChips: StaleMemoryChip[] =
-    signal.type === "stale_memory"
-      ? buildStaleMemoryChips(signal.linkedItemIds, acceptedMemories)
-      : [];
-
-  // Severity is already the section header (검토 필요 / 다시 시작 가능 / …),
-  // so we don't repeat it as a chip. Basis (추론됨 / 검증됨 / …) is moved
-  // into a hover tooltip on the title to keep the row line clean.
-  const basisLabel = describeCompanionBasis(signal.basis);
-  return (
-    <li
-      className="companion-signal companion-inbox-row"
-      data-mori-tone={companionSeverityTone(signal.severity)}
-    >
-      <span className="companion-signal-dot" aria-hidden="true" />
-      <div className="companion-signal-body">
-        <div className="companion-signal-head">
-          <strong title={`${signal.title} — ${basisLabel}`}>{signal.title}</strong>
-        </div>
-        <p>{signal.message}</p>
-        {memoryChips.length > 0 ? (
-          <ul className="companion-signal-chips" aria-label="Affected accepted memories">
-            {memoryChips.map((chip) => (
-              <li key={chip.memoryId}>
-                <button
-                  type="button"
-                  className="companion-signal-chip"
-                  onClick={() => onOpenAcceptedMemory(chip.memoryId)}
-                  title={`${chip.title} — 메모리 자세히 보기`}
-                >
-                  <span className={`companion-signal-chip-dot status-${chip.status}`} aria-hidden="true" />
-                  <span className="companion-signal-chip-title">{chip.title}</span>
-                  <span className="companion-signal-chip-status">{getProductMemoryStatusLabel(chip.status)}</span>
-                  <ExternalLink size={11} aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
+    <li>
+      <button
+        type="button"
+        className={`noti-row${read ? " is-read" : ""}`}
+        onClick={() => onDispatch(notification.actionTarget, notification.id)}
+        disabled={!actionable}
+      >
+        <span className="noti-row-unread" aria-hidden="true" />
+        <span className="noti-row-icon" aria-hidden="true">
+          <Icon size={16} />
+        </span>
+        <span className="noti-row-body">
+          <span className="noti-row-titleline">
+            <strong className="noti-row-title">{notification.title}</strong>
+            <span className="noti-row-time">{time}</span>
+          </span>
+          <span className="noti-row-message">{notification.message}</span>
+          {project ? (
+            <span className="noti-row-source">
+              <FolderTag />
+              {project}
+            </span>
+          ) : null}
+        </span>
+        {actionable ? (
+          <ArrowRight size={14} aria-hidden="true" className="noti-row-arrow" />
         ) : null}
-      </div>
-      {action ? <Button onClick={action}>{signal.actionLabel}</Button> : null}
+      </button>
     </li>
   );
 }
 
-function CompanionInboxRail({
-  groups,
-  total,
-  isDemo,
-}: {
-  groups: CompanionSignalGroup[];
-  total: number;
-  isDemo: boolean;
-}) {
+function FolderTag() {
   return (
-    <aside className="companion-inbox-rail" aria-label="Mori 노트 요약">
-      <section className="companion-inbox-rail-card">
-        <header>
-          <span className="companion-card-mark" aria-hidden="true">
-            <Compass size={15} />
-          </span>
-          <h3>알림 요약</h3>
-        </header>
-        {groups.length === 0 ? (
-          <p className="companion-inbox-rail-total">살펴볼 알림이 없습니다.</p>
-        ) : (
-          <>
-            <dl className="companion-inbox-rail-counts">
-              {groups.map((group) => (
-                <div key={group.category}>
-                  <dt>{group.label}</dt>
-                  <dd>{group.signals.length}</dd>
-                </div>
-              ))}
-            </dl>
-            <p className="companion-inbox-rail-total">
-              살펴볼 알림 <strong>{total}</strong>건
-            </p>
-          </>
-        )}
-      </section>
-
-      <section className="companion-inbox-rail-note">
-        <ShieldCheck size={14} aria-hidden="true" />
-        <p>
-          {isDemo
-            ? "데모 데이터 기준입니다. Mori는 가져온 소스만 사용하고 백그라운드로 감시하지 않습니다."
-            : "Mori는 명시적으로 가져온 소스만 사용합니다. 메모리는 검토 후에만 저장됩니다."}
-        </p>
-      </section>
-
-      <p className="companion-inbox-rail-hint">
-        알림은 제안일 뿐 사실이 아닙니다 <ArrowRight size={11} aria-hidden="true" /> 각 항목을
-        직접 확인하세요.
-      </p>
-    </aside>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
+}
+
+// ─── Time grouping ──────────────────────────────────────────────────────────
+
+type NotificationTimeGroup = {
+  bucket: TimeBucket;
+  notifications: MoriNotification[];
+};
+
+function groupByTime(
+  notifications: MoriNotification[],
+  now: number = Date.now(),
+): NotificationTimeGroup[] {
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const weekAgo = now - 7 * 86_400_000;
+
+  const buckets: Record<TimeBucket, MoriNotification[]> = {
+    today: [],
+    week: [],
+    earlier: [],
+  };
+
+  for (const notification of notifications) {
+    buckets[bucketOf(notification.createdAt, startOfToday.getTime(), weekAgo)].push(
+      notification,
+    );
+  }
+
+  return BUCKET_ORDER.filter((bucket) => buckets[bucket].length > 0).map((bucket) => ({
+    bucket,
+    notifications: buckets[bucket],
+  }));
+}
+
+function bucketOf(
+  createdAt: string | undefined,
+  startOfTodayMs: number,
+  weekAgoMs: number,
+): TimeBucket {
+  // Live triage notices (no timestamp) describe the session right now → 오늘.
+  if (!createdAt) return "today";
+  const time = new Date(createdAt).getTime();
+  if (Number.isNaN(time)) return "today";
+  if (time >= startOfTodayMs) return "today";
+  if (time >= weekAgoMs) return "week";
+  return "earlier";
 }

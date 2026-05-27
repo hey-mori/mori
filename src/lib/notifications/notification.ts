@@ -73,6 +73,9 @@ export type MoriNotificationBasis = CompanionSignalBasis;
 export type MoriNotificationActionTarget =
   | { kind: "view"; view: ViewKey }
   | { kind: "review"; selection: ReviewSelection }
+  // Open a specific session in the unified workspace (feed items about a
+  // particular session deep-link straight to it rather than the browser).
+  | { kind: "session"; sessionId: string }
   | null;
 
 export type MoriNotification = {
@@ -96,6 +99,19 @@ export type MoriNotification = {
    * import-finished notice) set it so the renderer can age them out.
    */
   createdAt?: string;
+  /**
+   * Where the notification came from — surfaced as the feed's "프로젝트 · 세션"
+   * meta line so a cross-session feed reads as "what happened where". Optional:
+   * current-session triage notices may omit it.
+   */
+  source?: {
+    /** Short project name (trailing path segment), e.g. "ng-gw". */
+    projectLabel?: string;
+    /** The session the event is about. */
+    sessionTitle?: string;
+    /** Session id, for deep-linking. */
+    sessionId?: string;
+  };
 };
 
 /**

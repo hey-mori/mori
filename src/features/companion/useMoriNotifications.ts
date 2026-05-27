@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   composeNotifications,
-  companionSignalToNotification,
   type MoriNotification,
-  type MoriNotificationActionTarget,
 } from "../../lib/notifications/notification";
 import { buildImportFinishedNotifications } from "../../lib/notifications/importFinishedNotifications";
 import { buildMemoryHealthNotifications } from "../../lib/notifications/memoryHealthNotifications";
 import { buildPackageExportNotifications } from "../../lib/notifications/packageExportNotifications";
+import { buildSessionFeedNotifications } from "../../lib/notifications/notificationFeed";
 import {
-  getCompanionSignalActionTarget,
-  type CompanionSignal,
-} from "../../lib/companion/companionSignals";
-import { useMoriSessionStore } from "../../app/sessionStore";
+  loadStoredSessionSummaries,
+  useMoriSessionStore,
+} from "../../app/sessionStore";
+import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import type { StoredMoriPackageDraft } from "../../lib/storage/storageTypes";
+import type {
+  StoredMoriPackageDraft,
+  StoredSessionSummary,
+} from "../../lib/storage/storageTypes";
 import { useCompanionSignals } from "./useCompanionSignals";
 
 /**
@@ -30,20 +32,33 @@ import { useCompanionSignals } from "./useCompanionSignals";
  * `lib/notifications/notification.ts` live in production code, not just in
  * tests, so future producers slot in without a surface rewrite.
  *
- * Companion signals are translated into notifications with their original
- * navigation target preserved (`view` / `review` selection), so a click on
- * a "결정 6건 확인 필요" notification still opens the insights tab on the
- * right item.
+ * The feed is an *event* stream — things that happened across sessions
+ * (captured / analyzed / imported / memory went stale / exported). It is
+ * deliberately NOT the Companion's current-session triage ("결정 N건 확인 필요"):
+ * that is standing state, not an event, and it already has a home on the
+ * dashboard and the session's 검토 tab — surfacing it here too is what made the
+ * notification panel read as a triage dashboard instead of a feed.
  */
 export function useMoriNotifications(): {
   notifications: MoriNotification[];
   isDemo: boolean;
 } {
-  const { feed, isDemo, acceptedMemories } = useCompanionSignals();
+  const { isDemo, acceptedMemories } = useCompanionSignals();
   const imports = useMoriSessionStore((state) => state.imports);
   const activeSessionId = useMoriSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
+  const dataResetNonce = useMoriSessionStore((state) => state.dataResetNonce);
+
+  // Cross-session feed source: every stored session becomes a timestamped
+  // event. Re-read when work changes (active session / new import / reset) so
+  // the feed stays live without a background watcher.
+  const [summaries, setSummaries] = useState<StoredSessionSummary[]>(() =>
+    safeListSummaries(),
+  );
+  useEffect(() => {
+    setSummaries(safeListSummaries());
+  }, [activeSessionId, imports.length, dataResetNonce]);
   // Recent .mori package drafts — re-read whenever the active session
   // changes (a reasonable proxy for "the user did something Reports-y").
   // The dedupe in `composeNotifications` keeps the row to a single entry
@@ -55,15 +70,7 @@ export function useMoriNotifications(): {
     setPackageDrafts(safeListDrafts());
   }, [activeSessionId, imports.length]);
 
-  const companionNotifications = useMemo<MoriNotification[]>(
-    () =>
-      feed.map((signal) =>
-        companionSignalToNotification(signal, resolveTarget(signal)),
-      ),
-    [feed],
-  );
-
-  // Second producer: "가져오기 완료" pulse for sources added within the last
+  // First producer: "가져오기 완료" pulse for sources added within the last
   // 24 hours. The compose dedupes by id so a single batch is never doubled.
   const importFinishedNotifications = useMemo<MoriNotification[]>(
     () => buildImportFinishedNotifications({ imports }),
@@ -85,23 +92,32 @@ export function useMoriNotifications(): {
     [packageDrafts],
   );
 
-  // Order = priority for the compose-time dedupe — memory-health and fresh
-  // imports/exports lead the Companion suggestions because they describe
-  // state the user probably wants to clear first. Future producers slot in
-  // here.
+  // Fifth producer: the cross-session feed — one timestamped event per stored
+  // session. This is what turns the surface from active-session triage into a
+  // real activity stream ("이 세션이 정리됐어요 · 프로젝트 · 2시간 전").
+  const sessionFeedNotifications = useMemo<MoriNotification[]>(
+    () => buildSessionFeedNotifications(mergeDemoSessionSummaries(summaries)),
+    [summaries],
+  );
+
+  // Compose order = compose-time dedupe priority (a notification raised by two
+  // producers in one tick appears once, taking the earlier producer's copy).
+  // The *display* order is recency — set below — so the feed reads as a stream.
   const notifications = useMemo(
     () =>
-      composeNotifications([
-        memoryHealthNotifications,
-        importFinishedNotifications,
-        packageExportNotifications,
-        companionNotifications,
-      ]),
+      sortNotificationsByRecency(
+        composeNotifications([
+          memoryHealthNotifications,
+          importFinishedNotifications,
+          packageExportNotifications,
+          sessionFeedNotifications,
+        ]),
+      ),
     [
-      companionNotifications,
       importFinishedNotifications,
       memoryHealthNotifications,
       packageExportNotifications,
+      sessionFeedNotifications,
     ],
   );
 
@@ -109,17 +125,25 @@ export function useMoriNotifications(): {
 }
 
 /**
- * Translate a Companion signal's action into the producer-neutral target
- * shape MoriNotification carries. Centralised so any producer can reuse the
- * same translation without re-implementing the Companion's quirks.
+ * Display order for the feed: newest first. A notice without `createdAt` (e.g.
+ * a freshly detected memory-health issue) sorts to the very top as "방금".
  */
-function resolveTarget(signal: CompanionSignal): MoriNotificationActionTarget {
-  const target = getCompanionSignalActionTarget(signal);
-  if (!target) return null;
-  if (target.kind === "review") {
-    return { kind: "review", selection: target.selection };
+function sortNotificationsByRecency(list: MoriNotification[]): MoriNotification[] {
+  return [...list].sort((left, right) => recency(right) - recency(left));
+}
+
+function recency(notification: MoriNotification): number {
+  if (!notification.createdAt) return Number.POSITIVE_INFINITY;
+  const time = new Date(notification.createdAt).getTime();
+  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+}
+
+function safeListSummaries(): StoredSessionSummary[] {
+  try {
+    return loadStoredSessionSummaries();
+  } catch {
+    return [];
   }
-  return { kind: "view", view: target.view };
 }
 
 function safeListDrafts(): StoredMoriPackageDraft[] {
