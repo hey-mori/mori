@@ -35,6 +35,15 @@ import {
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
+import {
+  getAcceptedMemoryRepository,
+  type AcceptedMemoryStorageSource,
+} from "../../lib/project-memory/acceptedMemoryRepository";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../../lib/storage/storageTypes";
+import { AcceptedMemoriesCard } from "../memory/AcceptedMemoriesCard";
 
 /**
  * Project workspace — the unit-of-work page.
@@ -75,15 +84,69 @@ export function ProjectView() {
     setSummaries(safeListSessions());
   }, [projectKey, activeSessionId]);
 
+  const storedSessions = useMemo(
+    () => mergeDemoSessionSummaries(summaries),
+    [summaries],
+  );
+
   const overview = useMemo(() => {
     if (!projectKey) return null;
-    const storedSessions = mergeDemoSessionSummaries(summaries);
     return buildProjectOverview({
       projectKey,
       sessions: storedSessions,
       sessionInsights: gatherProjectSessionInsights(storedSessions, repository),
     });
-  }, [projectKey, repository, summaries]);
+  }, [projectKey, repository, storedSessions]);
+
+  // Durable memory is keyed by `projectId`, but the project page is opened by
+  // `sourceLabel`. Resolve one to the other from the project's own sessions so
+  // the page can show "what this project remembers" without the active session
+  // having to be one of them.
+  const projectId = useMemo(() => {
+    if (!projectKey) return null;
+    const key = projectKey.trim().toLowerCase();
+    const match = storedSessions.find(
+      (entry) => (entry.sourceLabel ?? "").trim().toLowerCase() === key,
+    );
+    return match?.projectId ?? null;
+  }, [projectKey, storedSessions]);
+
+  const [memories, setMemories] = useState<StoredAcceptedProjectMemory[]>([]);
+  const [reviewActions, setReviewActions] = useState<StoredMemoryReviewAction[]>([]);
+  const [memoriesLoading, setMemoriesLoading] = useState(true);
+  const [memoryStorageSource, setMemoryStorageSource] =
+    useState<AcceptedMemoryStorageSource>("browser-local-storage");
+  const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
+
+  useEffect(() => {
+    if (!projectId) {
+      setMemories([]);
+      setReviewActions([]);
+      setMemoriesLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setMemoriesLoading(true);
+    const memoryRepository = getAcceptedMemoryRepository();
+    void Promise.all([
+      memoryRepository.listAcceptedProjectMemories(projectId),
+      memoryRepository.listMemoryReviewActions(projectId),
+    ])
+      .then(([memoriesResult, actionsResult]) => {
+        if (cancelled) return;
+        setMemories(memoriesResult.data);
+        setReviewActions(actionsResult.data);
+        const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
+        setMemoryStorageFellBack(fellBack);
+        setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
+      })
+      .finally(() => {
+        if (!cancelled) setMemoriesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   const isDesktop = source === "desktop-sqlite";
   const openSessionId = (sessionId: string, tab: Parameters<typeof openSession>[0] = "flow") => {
@@ -222,6 +285,18 @@ export function ProjectView() {
           ))}
         </ul>
       </MoriSection>
+
+      <AcceptedMemoriesCard
+        memories={memories}
+        reviewActionCount={reviewActions.length}
+        storageSource={memoryStorageSource}
+        storageFellBack={memoryStorageFellBack}
+        loading={memoriesLoading}
+        onOpenConsolidation={() => {
+          setMemoryTab("consolidation");
+          setCurrentView("memory");
+        }}
+      />
 
       <MoriSection
         className="project-sessions"
