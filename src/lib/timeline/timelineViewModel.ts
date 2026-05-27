@@ -47,12 +47,19 @@ export type TimelineEmptyVariant =
 
 export type LaneRenderModel = {
   type: ActivityLaneId;
-  /** Number of events in the visible filter set on this lane. */
+  /** Number of events in the visible (search) set on this lane. */
   eventCount: number;
   /** Number of display items (post-bundling) on this lane. */
   itemCount: number;
   /** Display items rendered into this lane. */
   items: TimelineDisplayItem[];
+  /**
+   * True when a category filter is active and this lane is NOT one of the
+   * selected categories. The lane (and its events) stay rendered but read
+   * de-emphasised — the category filter highlights/dims, it never hides, so
+   * the swimlane structure is always complete.
+   */
+  dimmed: boolean;
 };
 
 export type TimelineRenderModel = {
@@ -154,10 +161,14 @@ export function buildTimelineRenderModel(
     end: input.view.session.endedAt,
   });
 
-  // 3. Visible events after filter + search.
+  // 3. Visible events after search. The category (lane) filter no longer
+  //    *hides* events — it highlights/dims lanes (see `buildLaneRenderModels`),
+  //    so every lane and its events stay on screen and the structure never
+  //    collapses when a category is toggled. Only the search query narrows the
+  //    rendered set.
   const visibleEvents = filterEvents({
     events: input.view.events,
-    activeFilters: input.activeFilters,
+    activeFilters: [],
     searchQuery: input.searchQuery,
     sources: sourceIndex,
   });
@@ -223,21 +234,24 @@ export function buildTimelineRenderModel(
   const ticks = computeAxisTicks(range, { maxTicks: 6 });
   const timeGapMarkers = buildTimelineGapMarkers(visibleEvents, input.density);
 
-  // 9. Per-lane breakdown.
+  // 9. Per-lane breakdown — carries each lane's event count and whether the
+  //    active category filter dims it.
   const lanes = buildLaneRenderModels({
     laneOrder,
     visibleEvents,
     visibleDisplayItems,
     sourceIndex,
+    activeFilters: input.activeFilters,
   });
 
-  // Real data exists but the filter + search hid everything → not a data-empty
-  // state, but the canvas would render blank. Surface it as a no-results state.
+  // Real data exists but the *search* hid everything → not a data-empty state,
+  // but the canvas would render blank, so show a no-results affordance. The
+  // category filter can no longer cause this (it dims, never hides).
   const filteredEmpty =
     emptyVariant === null &&
     input.view.events.length > 0 &&
     visibleDisplayItems.length === 0 &&
-    (input.activeFilters.length > 0 || input.searchQuery.trim().length > 0);
+    input.searchQuery.trim().length > 0;
 
   return {
     emptyVariant,
@@ -435,11 +449,15 @@ function resolveSelectedItem(args: {
   selectedEventId: string | null;
 }): TimelineDisplayItem | null {
   if (!args.items.length) return null;
-  if (!args.selectedEventId) return args.items[0]!;
+  // Open neutral: nothing is auto-selected. A card is selected only when the
+  // user picks one (or a deep link names a real event id). An empty or
+  // unmatched id resolves to null rather than silently selecting the first
+  // card — entering the timeline should not pre-expand / pre-highlight a card.
+  if (!args.selectedEventId) return null;
   return (
     args.items.find((item) => item.id === args.selectedEventId) ??
     args.items.find((item) => item.memberEventIds.includes(args.selectedEventId!)) ??
-    args.items[0]!
+    null
   );
 }
 
@@ -474,6 +492,7 @@ function buildLaneRenderModels(args: {
   visibleEvents: TimelineEvent[];
   visibleDisplayItems: TimelineDisplayItem[];
   sourceIndex: ReadonlyMap<string, MoriMockSession["sources"][number]>;
+  activeFilters: ActivityLaneId[];
 }): LaneRenderModel[] {
   const eventCounts = new Map<ActivityLaneId, number>();
   for (const event of args.visibleEvents) {
@@ -487,6 +506,7 @@ function buildLaneRenderModels(args: {
     if (bucket) bucket.push(item);
     else laneItems.set(item.laneType, [item]);
   }
+  const filterActive = args.activeFilters.length > 0;
   return args.laneOrder.map((type) => {
     const items = laneItems.get(type) ?? [];
     return {
@@ -494,6 +514,7 @@ function buildLaneRenderModels(args: {
       eventCount: eventCounts.get(type) ?? 0,
       itemCount: items.length,
       items,
+      dimmed: filterActive && !args.activeFilters.includes(type),
     };
   });
 }

@@ -464,11 +464,10 @@ function ProjectFolder({
           className="sidebar-folder-name-btn"
           onClick={onOpenProject ?? onToggle}
           aria-current={isCurrentProject ? "page" : undefined}
-          title={onOpenProject ? `${fullLabel} — 프로젝트 페이지 열기` : fullLabel}
+          title={onOpenProject ? `${fullLabel} · 프로젝트 페이지 열기` : fullLabel}
         >
           <FolderGit2 size={12} aria-hidden="true" />
           <span className="sidebar-folder-name">{displayLabel}</span>
-          <span className="sidebar-folder-count">{group.rows.length}</span>
         </button>
       </div>
       {isOpen ? (

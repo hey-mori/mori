@@ -1,7 +1,7 @@
 import {
   ArrowRight,
   BookCheck,
-  CalendarClock,
+  Check,
   ClipboardCheck,
   Database,
   FileText,
@@ -13,6 +13,7 @@ import {
   Plus,
   ScrollText,
   Trash2,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -43,6 +44,7 @@ import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMe
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import { useMoriProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
+import { spanLabel } from "../../lib/session/workContext";
 
 /**
  * Project workspace — the unit-of-work page.
@@ -55,7 +57,7 @@ import { projectDisplayName } from "../../lib/projects/userProjects";
  * It is intentionally a calm, dense single column:
  *   - hero with project name, full path, and a small action cluster
  *   - a four-stat strip (sessions / active / archived / events)
- *   - sessions grouped by recency (today / 이번 주 / 이전)
+ *   - sessions in the same compact row format used by Home recent sessions
  *   - quiet empty state when there is no project selected
  *
  * The page never renders project content it does not have. Everything is
@@ -122,6 +124,11 @@ export function ProjectView() {
   // (only when it exists). No consolidation navigate-away; reviewing proposals
   // into durable memory is handled in-context, not by leaving the page.
   const [memories, setMemories] = useState<StoredAcceptedProjectMemory[]>([]);
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [projectDraft, setProjectDraft] = useState("");
+  const [renamingProject, setRenamingProject] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (!projectId) {
@@ -157,29 +164,31 @@ export function ProjectView() {
   );
 
   function handleCreateProject() {
-    const input = window.prompt(
-      "새 프로젝트 이름 (경로를 적으면 그 경로로 그룹화됩니다)",
-    );
-    const key = input?.trim();
+    const key = projectDraft.trim();
     if (!key) return;
     const createdKey = createUserProjectRecord({ key });
-    if (createdKey) openProject(createdKey);
+    if (!createdKey) return;
+    setProjectDraft("");
+    setCreatingProject(false);
+    openProject(createdKey);
+  }
+
+  function beginRenameProject() {
+    setRenameDraft(displayName);
+    setRenamingProject(true);
+    setConfirmingDelete(false);
   }
 
   function handleRenameProject() {
     if (!projectKey) return;
-    const next = window.prompt("프로젝트 표시 이름", displayName);
-    if (next === null) return;
-    renameUserProjectRecord(projectKey, next);
+    renameUserProjectRecord(projectKey, renameDraft);
+    setRenamingProject(false);
   }
 
   function handleDeleteProject() {
     if (!projectKey || !isCreatedProject) return;
-    const ok = window.confirm(
-      `'${displayName}' 프로젝트를 목록에서 제거할까요? 세션은 삭제되지 않습니다.`,
-    );
-    if (!ok) return;
     deleteUserProjectRecord(projectKey);
+    setConfirmingDelete(false);
     setCurrentView("workspace");
   }
 
@@ -231,7 +240,7 @@ export function ProjectView() {
           description="좌측 사이드바의 프로젝트 폴더 이름을 누르면 그 프로젝트의 전체 세션과 메모리가 한 페이지에 보입니다."
           actions={
             <>
-              <Button variant="primary" icon={Plus} onClick={handleCreateProject}>
+              <Button variant="primary" icon={Plus} onClick={() => setCreatingProject(true)}>
                 새 프로젝트
               </Button>
               <Button variant="ghost" onClick={() => setCurrentView("workspace")}>
@@ -240,9 +249,24 @@ export function ProjectView() {
             </>
           }
         />
+        {creatingProject ? (
+          <ProjectNameForm
+            value={projectDraft}
+            onChange={setProjectDraft}
+            onSubmit={handleCreateProject}
+            onCancel={() => {
+              setCreatingProject(false);
+              setProjectDraft("");
+            }}
+            submitLabel="만들기"
+          />
+        ) : null}
       </PageShell>
     );
   }
+
+  const sessionRows = overview.groups.flatMap((group) => group.rows);
+  const projectSessionLabel = displayName || overview.shortName;
 
   return (
     <PageShell className="project-page" maxWidth="wide">
@@ -261,7 +285,7 @@ export function ProjectView() {
           <Button
             variant="ghost"
             icon={Pencil}
-            onClick={handleRenameProject}
+            onClick={beginRenameProject}
             title="이 프로젝트의 표시 이름을 바꿉니다 (세션은 그대로)."
           >
             이름 변경
@@ -270,7 +294,10 @@ export function ProjectView() {
             <Button
               variant="ghost"
               icon={Trash2}
-              onClick={handleDeleteProject}
+              onClick={() => {
+                setConfirmingDelete(true);
+                setRenamingProject(false);
+              }}
               title="이 프로젝트를 목록에서 제거합니다. 세션은 삭제되지 않습니다."
             >
               삭제
@@ -279,7 +306,11 @@ export function ProjectView() {
           <Button
             variant="ghost"
             icon={FolderPlus}
-            onClick={handleCreateProject}
+            onClick={() => {
+              setCreatingProject(true);
+              setRenamingProject(false);
+              setConfirmingDelete(false);
+            }}
             title="새 프로젝트를 만들어 바로 엽니다."
           >
             새 프로젝트
@@ -294,6 +325,44 @@ export function ProjectView() {
           </Button>
         </div>
       </header>
+
+      {creatingProject ? (
+        <ProjectNameForm
+          value={projectDraft}
+          onChange={setProjectDraft}
+          onSubmit={handleCreateProject}
+          onCancel={() => {
+            setCreatingProject(false);
+            setProjectDraft("");
+          }}
+          submitLabel="만들기"
+        />
+      ) : null}
+      {renamingProject ? (
+        <ProjectNameForm
+          value={renameDraft}
+          onChange={setRenameDraft}
+          onSubmit={handleRenameProject}
+          onCancel={() => setRenamingProject(false)}
+          submitLabel="저장"
+        />
+      ) : null}
+      {confirmingDelete ? (
+        <div className="project-inline-form project-inline-form-danger">
+          <div>
+            <strong>{displayName}</strong>
+            <p>프로젝트 목록에서만 제거합니다. 세션은 삭제되지 않습니다.</p>
+          </div>
+          <div className="project-inline-form-actions">
+            <Button variant="ghost" icon={X} onClick={() => setConfirmingDelete(false)}>
+              취소
+            </Button>
+            <Button variant="primary" icon={Trash2} onClick={handleDeleteProject}>
+              삭제
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <MoriMetricStrip
         className="project-stats"
@@ -347,13 +416,12 @@ export function ProjectView() {
         title="세션"
         actions={
           <span className="project-section-count">
-            <CalendarClock size={13} aria-hidden="true" />
             {overview.stats.activeSessions}건
           </span>
         }
         ariaLabel="프로젝트 세션"
       >
-        {overview.groups.length === 0 ? (
+        {sessionRows.length === 0 ? (
           <EmptyState
             compact
             icon={Layers}
@@ -364,27 +432,63 @@ export function ProjectView() {
             }
           />
         ) : (
-          <div className="project-session-groups">
-            {overview.groups.map((group) => (
-              <div key={group.bucket} className="project-session-group">
-                <p className="project-session-group-label">{group.label}</p>
-                <ul>
-                  {group.rows.map((row) => (
-                    <ProjectSessionRowItem
-                      key={row.sessionId}
-                      row={row}
-                      onOpen={() => openSessionId(row.sessionId)}
-                    />
-                  ))}
-                </ul>
-              </div>
+          <ul className="project-session-list">
+            {sessionRows.map((row) => (
+              <ProjectSessionRowItem
+                key={row.sessionId}
+                row={row}
+                projectLabel={projectSessionLabel}
+                onOpen={() => openSessionId(row.sessionId)}
+              />
             ))}
-          </div>
+          </ul>
         )}
       </MoriSection>
 
       <ProjectMemoryList memories={memories} />
     </PageShell>
+  );
+}
+
+function ProjectNameForm({
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+  submitLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  submitLabel: string;
+}) {
+  return (
+    <form
+      className="project-inline-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <label>
+        <span>프로젝트 이름</span>
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="예: C:/dev/mori 또는 Mori 앱"
+          autoFocus
+        />
+      </label>
+      <div className="project-inline-form-actions">
+        <Button variant="ghost" icon={X} onClick={onCancel}>
+          취소
+        </Button>
+        <Button variant="primary" icon={Check} type="submit" disabled={!value.trim()}>
+          {submitLabel}
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -426,27 +530,24 @@ function ProjectMemoryList({ memories }: { memories: StoredAcceptedProjectMemory
 
 function ProjectSessionRowItem({
   row,
+  projectLabel,
   onOpen,
 }: {
   row: ProjectSessionRow;
+  projectLabel: string;
   onOpen: () => void;
 }) {
-  // No per-row timestamp: the session group header (오늘 / 이번 주 / 이전) already
-  // states recency, so repeating a relative date on every row was a second date.
-  // No process badge (진행 중 / 분석 중) either — that is pipeline state the user
-  // does not act on from a list.
-  const meta = [
-    row.eventCount ? `이벤트 ${row.eventCount}건` : null,
-    row.sourceCount ? `소스 ${row.sourceCount}개` : null,
-    row.reviewCount ? `검토 ${row.reviewCount}건` : null,
-  ].filter((label): label is string => Boolean(label));
-
   return (
     <li>
       <MoriObjectRow
         leading={<FolderKanban size={15} />}
         title={row.title}
-        meta={<MoriMetadataLine items={meta} />}
+        className="session-list-row"
+        meta={
+          <MoriMetadataLine
+            items={[projectLabel, spanLabel(row.timestamp, undefined)]}
+          />
+        }
         onClick={onOpen}
         ariaLabel={row.title}
         density="compact"

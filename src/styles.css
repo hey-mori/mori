@@ -20840,8 +20840,66 @@ button.settings-option {
   flex-shrink: 0;
 }
 
+.project-inline-form {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--mori-space-4);
+  padding: var(--mori-space-4);
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
+}
+
+.project-inline-form label {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.project-inline-form label span {
+  color: var(--mori-text-muted);
+  font-size: var(--mori-font-size-xs);
+  font-weight: 650;
+}
+
+.project-inline-form input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--mori-border);
+  border-radius: var(--mori-radius-sm);
+  background: var(--mori-surface-subtle);
+  color: var(--mori-text);
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.project-inline-form input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--mori-accent) 50%, var(--mori-border));
+  box-shadow: 0 0 0 3px var(--mori-accent-soft);
+}
+
+.project-inline-form p {
+  margin: 3px 0 0;
+  color: var(--mori-text-muted);
+  font-size: var(--mori-font-size-xs);
+}
+
+.project-inline-form-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.project-inline-form-danger {
+  border-color: color-mix(in srgb, var(--mori-danger, #dc2626) 35%, var(--mori-border));
+}
+
 .project-stats {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: var(--mori-space-6) 0 0;
 }
 
@@ -20959,12 +21017,7 @@ button.settings-option {
   color: var(--muted);
 }
 
-.project-session-groups {
-  display: grid;
-  gap: var(--mori-space-5);
-}
-
-.project-session-group ul {
+.project-session-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -20975,17 +21028,8 @@ button.settings-option {
   overflow: hidden;
 }
 
-.project-session-group ul > li + li {
+.project-session-list > li + li {
   border-top: 1px solid var(--mori-border);
-}
-
-.project-session-group-label {
-  margin: 0 0 6px 2px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--muted-2);
-  text-transform: none;
 }
 
 /* ─── MoriListRow ─────────────────────────────────────────────────────────── */
@@ -21250,6 +21294,15 @@ button.settings-option {
   color: var(--muted-2);
 }
 
+.session-list-row {
+  align-items: center;
+}
+
+.session-list-row .mori-object-row-aside {
+  align-self: stretch;
+  justify-content: center;
+}
+
 @media (max-width: 700px) {
   .mori-object-row {
     align-items: flex-start;
@@ -21262,6 +21315,15 @@ button.settings-option {
 
   .mori-object-row-timestamp {
     white-space: normal;
+  }
+
+  .session-list-row {
+    align-items: center;
+  }
+
+  .session-list-row .mori-object-row-aside {
+    align-items: flex-end;
+    margin-left: auto;
   }
 }
 

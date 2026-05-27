@@ -9,6 +9,7 @@ function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState
   return {
     initialized: true,
     draft: null,
+    demoSessionId: null,
     pendingNewSession: null,
     imports: [],
     analysis: null,

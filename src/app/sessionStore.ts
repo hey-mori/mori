@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { moriMockSession } from "../domain/mock-data";
+import { buildDemoSessionContent } from "../lib/demo/demoSessionContent";
+import { isDemoSessionId } from "../lib/demo/demoSessionFixtures";
 import type {
   IssueStatus,
   MoriMockSession,
@@ -83,6 +85,16 @@ export type SessionViewModel = MoriMockSession & {
 export type MoriSessionState = {
   initialized: boolean;
   draft: StoredSessionDraft | null;
+  /**
+   * Which bundled demo session is currently open, when no real `draft` is
+   * active. `null` means the canonical bundled demo (`moriMockSession`).
+   * Set when a demo summary row is opened (`loadBrowserSession` falls back to
+   * the demo content builder for `demo-` ids); ignored whenever a real draft
+   * is present, since a draft always wins in `selectSessionView`. This is how
+   * clicking a specific demo session shows *that* session instead of always
+   * the same "Mori 앱 기획" stand-in.
+   */
+  demoSessionId: string | null;
   /**
    * Bookkeeping for a session created via `importAsNewSession` whose Import
    * Review is still open. Lets a cancelled review discard the empty session
@@ -313,6 +325,7 @@ export function setSessionPersistenceServiceForSessionStore(service: SessionPers
 export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   initialized: false,
   draft: null,
+  demoSessionId: null,
   pendingNewSession: null,
   imports: [],
   analysis: null,
@@ -345,6 +358,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       set({
         initialized: true,
         draft: localDraft,
+        demoSessionId: null,
         imports: localImports,
         analysis: localAnalysisRecord?.result ?? null,
         analysisStatus: localAnalysisRecord ? "succeeded" : "idle",
@@ -401,6 +415,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     set({
       initialized: true,
       draft,
+      demoSessionId: null,
       imports,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
@@ -419,6 +434,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     // source is reported as browser-draft until an explicit save runs.
     set({
       draft,
+      demoSessionId: null,
       imports,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
@@ -493,6 +509,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
 
     set({
       draft: stored,
+      demoSessionId: null,
       imports: repository.listSessionImports(stored.session.id),
       analysis: null,
       analysisStatus: "idle",
@@ -537,6 +554,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
         const restoredAnalysis = repository.loadSessionAnalysis(restored.session.id);
         set({
           draft: restored,
+          demoSessionId: null,
           imports: restoredImports,
           analysis: restoredAnalysis?.result ?? null,
           analysisStatus: restoredAnalysis ? "succeeded" : "idle",
@@ -553,6 +571,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     repository.clearCurrentSessionDraft();
     set({
       draft: null,
+      demoSessionId: null,
       imports: [],
       analysis: null,
       analysisStatus: "idle",
@@ -576,6 +595,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     repository.clearCurrentSessionDraft();
     set({
       draft: null,
+      demoSessionId: null,
       imports: [],
       analysis: null,
       analysisStatus: "idle",
@@ -612,6 +632,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       analysisFallbackUsed: false,
       source: "demo",
       pendingNewSession: null,
+      demoSessionId: null,
       dataResetNonce: get().dataResetNonce + 1,
     });
   },
@@ -959,15 +980,39 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
   },
   loadBrowserSession: (sessionId) => {
     if (get().draft?.session.id === sessionId) return true;
+    // Already showing this demo session — nothing further to load.
+    if (!get().draft && get().demoSessionId === sessionId) return true;
     const repository = getRepository();
     const draft = repository.setCurrentSession(sessionId);
-    if (!draft) return false;
+    if (!draft) {
+      // No stored draft for this id. Bundled demo sessions carry no persisted
+      // body, so open their generated read-only content instead — this is what
+      // lets a demo row show *that* session rather than the canonical stand-in.
+      if (isDemoSessionId(sessionId) && buildDemoSessionContent(sessionId)) {
+        set({
+          draft: null,
+          demoSessionId: sessionId,
+          imports: [],
+          analysis: null,
+          analysisStatus: "idle",
+          analysisError: null,
+          analysisProviderLabel: null,
+          analysisFallbackUsed: false,
+          initialized: true,
+          source: "demo",
+          pendingNewSession: null,
+        });
+        return true;
+      }
+      return false;
+    }
 
     const imports = repository.listSessionImports(sessionId);
     const analysisRecord = repository.loadSessionAnalysis(sessionId);
 
     set({
       draft,
+      demoSessionId: null,
       imports,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
@@ -1014,6 +1059,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
 
     set({
       draft: storedDraft,
+      demoSessionId: null,
       imports: refreshedImports,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
@@ -1091,9 +1137,21 @@ type ViewCache = {
 };
 
 let viewCache: ViewCache | null = null;
+// Demo views are built once per id and cached so the selector returns a stable
+// reference (zustand re-runs selectors every render; a fresh object each call
+// would loop). Keyed by the open demo session id.
+let demoViewCache: { id: string; view: SessionViewModel } | null = null;
 
 export function selectSessionView(state: MoriSessionState): SessionViewModel {
-  if (!state.draft) return demoView;
+  if (!state.draft) {
+    const id = state.demoSessionId;
+    if (!id) return demoView;
+    if (demoViewCache && demoViewCache.id === id) return demoViewCache.view;
+    const content = buildDemoSessionContent(id);
+    const view: SessionViewModel = content ? { ...content, isDemo: true } : demoView;
+    demoViewCache = { id, view };
+    return view;
+  }
   if (
     viewCache &&
     viewCache.draft === state.draft &&

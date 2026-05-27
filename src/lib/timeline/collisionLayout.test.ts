@@ -108,9 +108,9 @@ describe("computeTimelineLayout", () => {
     expect(placed[1]!.x).toBeGreaterThanOrEqual(placed[0]!.x + placed[0]!.width);
   });
 
-  it("renders every content lane at one uniform height", () => {
-    // A busy lane and a quiet lane must share a height; empty lanes collapse
-    // to a slimmer band so the timeline is not a jagged stack of sizes.
+  it("renders every lane at one uniform height, empty lanes included", () => {
+    // Busy, quiet, and empty lanes must all share one band height so the
+    // swimlane reads as an even grid rather than a jagged stack of sizes.
     const items = [
       eventItem("u1", "conversation", "2026-05-14T10:00:00Z"),
       eventItem("u2", "conversation", "2026-05-14T10:01:00Z"),
@@ -121,14 +121,13 @@ describe("computeTimelineLayout", () => {
       density: "comfortable",
       laneOrder,
     });
-    const contentHeights = new Set(
-      layout.lanes.filter((lane) => lane.rowCount > 0).map((lane) => lane.height),
-    );
-    expect(contentHeights.size).toBe(1);
+    const allHeights = new Set(layout.lanes.map((lane) => lane.height));
+    expect(allHeights.size).toBe(1);
+    // Empty lanes still report rowCount 0, but render at the full band height.
     const emptyLanes = layout.lanes.filter((lane) => lane.rowCount === 0);
     expect(emptyLanes.length).toBeGreaterThan(0);
     for (const empty of emptyLanes) {
-      expect(empty.height).toBeLessThan([...contentHeights][0]!);
+      expect(empty.height).toBe([...allHeights][0]!);
     }
   });
 

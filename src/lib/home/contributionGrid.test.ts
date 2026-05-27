@@ -55,11 +55,15 @@ describe("buildContributionGrid", () => {
     expect(grid.total).toBe(0);
   });
 
-  it("labels the first column and each month change", () => {
+  it("labels each month change and keeps labels from crowding", () => {
     const grid = buildContributionGrid({ timestamps: [], now: NOW, weeks: 17 });
     expect(grid.months.length).toBeGreaterThan(0);
-    expect(grid.months[0].col).toBe(0);
     expect(grid.months.every((m) => /^\d{1,2}월$/.test(m.label))).toBe(true);
+    // No two adjacent month labels sit closer than the minimum gap (a crowded
+    // leading sliver is dropped), so the axis never reads "1월2월".
+    for (let i = 1; i < grid.months.length; i += 1) {
+      expect(grid.months[i].col - grid.months[i - 1].col).toBeGreaterThanOrEqual(3);
+    }
   });
 
   describe("weighted samples + relative quantile bucketing", () => {

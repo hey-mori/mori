@@ -1,34 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
-  Clipboard,
-  ClipboardCopy,
-  FileText,
+  Check,
   FolderGit2,
   FolderKanban,
-  GanttChartSquare,
-  LayoutDashboard,
-  Pencil,
+  FolderPlus,
   PlugZap,
-  ScrollText,
   Search,
+  X,
 } from "lucide-react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
-import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
-import {
-  MoriContextMenu,
-  MoriOverflowMenu,
-  useContextMenuPosition,
-  type MoriMenuItemSpec,
-} from "../../components/ui/MoriActionMenu";
-import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -37,16 +24,12 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import { describeWorkspaceSessionStatus } from "../../lib/workspace/workspaceSummary";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
+import { shortProjectLabel } from "../../lib/sidebar/sessionList";
+import { useMoriProjectStore } from "../../app/projectStore";
+import { projectDisplayName } from "../../lib/projects/userProjects";
 import {
-  formatSidebarRelative,
-  shortProjectLabel,
-} from "../../lib/sidebar/sessionList";
-import {
-  DEFAULT_SESSIONS_BROWSER_FILTERS,
   buildSessionsBrowserModel,
-  describeSessionOrigin,
   type SessionRow,
   type SessionsBrowserFilters,
 } from "../../lib/workspace/sessionsBrowser";
@@ -69,22 +52,46 @@ export function WorkspaceView() {
   const draft = useMoriSessionStore((state) => state.draft);
   const hydrate = useMoriSessionStore((state) => state.hydrate);
   const initialized = useMoriSessionStore((state) => state.initialized);
-  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
-  const renameSession = useMoriSessionStore((state) => state.renameSession);
+  const loadBrowserSession = useMoriSessionStore(
+    (state) => state.loadBrowserSession,
+  );
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSessionDetail = useMoriAppStore((state) => state.openSession);
   const openProject = useMoriAppStore((state) => state.openProject);
+
+  const projectsInitialized = useMoriProjectStore((state) => state.initialized);
+  const userProjects = useMoriProjectStore((state) => state.projects);
+  const hydrateProjects = useMoriProjectStore((state) => state.hydrate);
+  const createUserProjectRecord = useMoriProjectStore(
+    (state) => state.createProject,
+  );
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [projectDraft, setProjectDraft] = useState("");
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const repository = useMemo(() => createBrowserDraftRepository(), []);
-  // Increments after a row-level lifecycle write so the sessions list re-reads.
-  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (!projectsInitialized) hydrateProjects();
+  }, [projectsInitialized, hydrateProjects]);
 
-  const [filters, setFilters] = useState<SessionsBrowserFilters>(
-    DEFAULT_SESSIONS_BROWSER_FILTERS,
+  function handleCreateProject() {
+    const key = projectDraft.trim();
+    if (!key) return;
+    const createdKey = createUserProjectRecord({ key });
+    if (!createdKey) return;
+    setProjectDraft("");
+    setCreatingProject(false);
+    openProject(createdKey);
+  }
+
+  const repository = useMemo(() => createBrowserDraftRepository(), []);
+
+  const [query, setQuery] = useState("");
+  const filters = useMemo<SessionsBrowserFilters>(
+    () => ({ query, origin: "all", sort: "recent" }),
+    [query],
   );
 
   const activeSessionId = draft?.session.id ?? view.session.id;
@@ -102,18 +109,21 @@ export function WorkspaceView() {
           isDemo: mode === "demo",
           isStored: Boolean(draft),
         },
-        storedSessions: mergeDemoSessionSummaries(repository.listStoredSessions()),
+        storedSessions: mergeDemoSessionSummaries(
+          repository.listStoredSessions(),
+        ),
         filters,
       }),
     // `view`/`draft`/`mode` cover active-session changes; the row list is
-    // re-derived whenever any of those change. `revision` ticks after a
-    // row-level lifecycle write so the list refreshes
-    // without a store subscription on every saved row.
+    // re-derived whenever any of those change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeSessionId, view, mode, draft, repository, filters, revision],
+    [activeSessionId, view, mode, draft, repository, filters],
   );
 
-  const openSession = (row: SessionRow, tab: Parameters<typeof openSessionDetail>[0] = "flow") => {
+  const openSession = (
+    row: SessionRow,
+    tab: Parameters<typeof openSessionDetail>[0] = "flow",
+  ) => {
     if (row.isActive) {
       openSessionDetail(tab);
       return;
@@ -123,15 +133,31 @@ export function WorkspaceView() {
     }
   };
 
-  const renameRow = (row: SessionRow) => {
-    const title = window.prompt("세션 이름", row.title);
-    if (!title) return;
-    if (renameSession(row.sessionId, title)) {
-      setRevision((value) => value + 1);
-    }
-  };
-
-  const hasResults = model.visibleCount > 0;
+  const createdProjectRows = useMemo<WorkspaceProjectRow[]>(() => {
+    const needle = query.trim().toLowerCase();
+    const sessionProjectKeys = new Set(
+      model.groups
+        .filter((group) => !group.isUnsourced)
+        .map((group) => group.key),
+    );
+    const rows = userProjects
+      .filter(
+        (project) => project.created && !sessionProjectKeys.has(project.key),
+      )
+      .map((project) => ({
+        key: project.key,
+        name: projectDisplayName(project.key, userProjects),
+        path: project.key,
+      }));
+    if (!needle) return rows;
+    return rows.filter((project) =>
+      `${project.name} ${project.path}`.toLowerCase().includes(needle),
+    );
+  }, [model.groups, query, userProjects]);
+  const visibleProjectCount =
+    model.groups.filter((group) => !group.isUnsourced).length +
+    createdProjectRows.length;
+  const hasResults = model.visibleCount > 0 || createdProjectRows.length > 0;
   // "Empty" honestly means the user has no real sessions yet — only the
   // bundled demo exists. That is when the Connections call-to-action is the
   // right nudge; a filtered-to-nothing list shows a lighter empty hint.
@@ -143,43 +169,42 @@ export function WorkspaceView() {
       maxWidth="wide"
       actionBar={
         <ActionBar
-          label="세션 필터"
+          label="세션 검색"
           start={
-            <>
-              <ToolbarSearch
-                value={filters.query}
-                onChange={(query) => setFilters((prev) => ({ ...prev, query }))}
-                placeholder="제목 또는 프로젝트로 검색"
-                ariaLabel="세션 검색"
-              />
-              <SegmentedControl
-                ariaLabel="출처 필터"
-                value={filters.origin}
-                onChange={(origin) => setFilters((prev) => ({ ...prev, origin }))}
-                options={[
-                  { id: "all", label: "전체" },
-                  { id: "imported", label: "가져오기" },
-                  { id: "manual", label: "수동" },
-                ]}
-              />
-            </>
+            <ToolbarSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="검색"
+              ariaLabel="세션 검색"
+            />
           }
           end={
-            <SegmentedControl
-              ariaLabel="정렬"
-              value={filters.sort}
-              onChange={(sort) => setFilters((prev) => ({ ...prev, sort }))}
-              options={[
-                { id: "recent", label: "최근순" },
-                { id: "title", label: "이름순" },
-              ]}
-            />
+            <Button
+              variant="secondary"
+              icon={FolderPlus}
+              onClick={() => setCreatingProject(true)}
+              title="새 프로젝트를 만들어 바로 엽니다."
+            >
+              새 프로젝트
+            </Button>
           }
         />
       }
     >
+      {creatingProject ? (
+        <ProjectNameForm
+          value={projectDraft}
+          onChange={setProjectDraft}
+          onSubmit={handleCreateProject}
+          onCancel={() => {
+            setCreatingProject(false);
+            setProjectDraft("");
+          }}
+          submitLabel="만들기"
+        />
+      ) : null}
       {!hasResults ? (
-        onlyDemo && filters.origin !== "imported" && !filters.query.trim() ? (
+        onlyDemo && !query.trim() ? (
           <EmptyState
             icon={FolderKanban}
             title="아직 세션이 없습니다"
@@ -199,47 +224,64 @@ export function WorkspaceView() {
             compact
             icon={Search}
             title="조건에 맞는 세션이 없습니다"
-            description="검색어나 필터를 조정해 보세요."
+            description="검색어를 조정해 보세요."
           />
         )
       ) : (
         <div className="workspace-browser">
-          {onlyDemo ? (
-            <NoticeBanner
-              tone="info"
-              actions={
-                <Button
-                  variant="secondary"
-                  icon={PlugZap}
-                  onClick={() => setCurrentView("connections")}
-                >
-                  연결로 이동
-                </Button>
-              }
-            >
-              데모 세션입니다. 가져오기로 실제 세션이 들어오면 프로젝트별로 정리됩니다.
-            </NoticeBanner>
-          ) : null}
           <WorkspaceSummaryStrip
-            projectCount={model.groups.filter((group) => !group.isUnsourced).length}
+            projectCount={visibleProjectCount}
             visibleCount={model.visibleCount}
             totalCount={model.totalCount}
             realSessionCount={model.realSessionCount}
             filtered={model.visibleCount !== model.totalCount}
           />
           <div className="workspace-groups">
+            {createdProjectRows.length > 0 ? (
+              <section className="workspace-group" aria-label="생성한 프로젝트">
+                <header className="workspace-group-head">
+                  <span className="workspace-group-title">
+                    <FolderGit2 size={13} aria-hidden="true" />
+                    <span className="workspace-group-name">
+                      생성한 프로젝트
+                    </span>
+                    <span className="workspace-group-path">세션 없음</span>
+                  </span>
+                  <Badge tone="gray">{createdProjectRows.length}개</Badge>
+                </header>
+                <ul className="workspace-rows">
+                  {createdProjectRows.map((project) => (
+                    <ProjectRowItem
+                      key={project.key}
+                      project={project}
+                      onOpen={() => openProject(project.key)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ) : null}
             {model.groups.map((group) => (
-              <section key={group.key} className="workspace-group" aria-label={group.label}>
+              <section
+                key={group.key}
+                className="workspace-group"
+                aria-label={group.isUnsourced ? "프로젝트 없음" : group.label}
+              >
                 <header className="workspace-group-head">
                   <span
                     className="workspace-group-title"
-                    title={group.label}
+                    title={group.isUnsourced ? "프로젝트 없음" : group.label}
                   >
                     <FolderGit2 size={13} aria-hidden="true" />
                     <span className="workspace-group-name">
-                      {shortProjectLabel(group.label)}
+                      {group.isUnsourced
+                        ? "프로젝트 없음"
+                        : shortProjectLabel(group.label)}
                     </span>
-                    <span className="workspace-group-path">{group.label}</span>
+                    {group.isUnsourced ? null : (
+                      <span className="workspace-group-path">
+                        {group.label}
+                      </span>
+                    )}
                   </span>
                   <Badge tone="gray">{group.sessions.length}개</Badge>
                 </header>
@@ -249,11 +291,6 @@ export function WorkspaceView() {
                       key={row.sessionId}
                       row={row}
                       onOpen={() => openSession(row)}
-                      onOpenTab={(tab) => openSession(row, tab)}
-                      onOpenProject={
-                        row.sourceLabel ? () => openProject(row.sourceLabel as string) : undefined
-                      }
-                      onRename={() => renameRow(row)}
                     />
                   ))}
                 </ul>
@@ -265,6 +302,12 @@ export function WorkspaceView() {
     </PageShell>
   );
 }
+
+type WorkspaceProjectRow = {
+  key: string;
+  name: string;
+  path: string;
+};
 
 function WorkspaceSummaryStrip({
   projectCount,
@@ -297,150 +340,117 @@ function WorkspaceSummaryStrip({
   );
 }
 
-// ─── Session row ────────────────────────────────────────────────────────────
+// ─── Rows ───────────────────────────────────────────────────────────────────
 
-function SessionRowItem({
-  row,
-  onOpen,
-  onOpenTab,
-  onOpenProject,
-  onRename,
+function ProjectNameForm({
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+  submitLabel,
 }: {
-  row: SessionRow;
-  onOpen: () => void;
-  onOpenTab: (tab: "overview" | "flow" | "evidence" | "insights" | "report") => void;
-  onOpenProject?: () => void;
-  onRename: () => void;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  submitLabel: string;
 }) {
-  const menu = useContextMenuPosition();
-  const origin = describeSessionOrigin(row.origin);
-  // Status badge only surfaces meaningful state. "complete" is the default for
-  // every imported session (which is trivially "already-finished past work"),
-  // so it would just paint a green pill on every row. The demo session is a
-  // static fixture, not a live recording, so its "recording" status is
-  // misleading. We keep the badge for genuine in-flight state — `analyzing`
-  // on any session, and `recording` on a real (non-demo) manual draft.
-  const showStatusBadge =
-    row.status !== "complete" && !(row.origin === "demo" && row.status === "recording");
-  const status = showStatusBadge ? describeWorkspaceSessionStatus(row.status) : null;
-  const relative = row.startedAt || row.savedAt
-    ? formatSidebarRelative(row.startedAt ?? row.savedAt ?? "")
-    : null;
-  const menuItems = buildSessionMenuItems({
-    row,
-    onOpen,
-    onOpenTab,
-    onOpenProject,
-    onRename,
-  });
+  return (
+    <form
+      className="project-inline-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <label>
+        <span>프로젝트 이름</span>
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="예: C:/dev/mori 또는 Mori 앱"
+          autoFocus
+        />
+      </label>
+      <div className="project-inline-form-actions">
+        <Button variant="ghost" icon={X} onClick={onCancel}>
+          취소
+        </Button>
+        <Button
+          variant="primary"
+          icon={Check}
+          type="submit"
+          disabled={!value.trim()}
+        >
+          {submitLabel}
+        </Button>
+      </div>
+    </form>
+  );
+}
 
+function ProjectRowItem({
+  project,
+  onOpen,
+}: {
+  project: WorkspaceProjectRow;
+  onOpen: () => void;
+}) {
   return (
     <li>
       <MoriObjectRow
-        leading={<FolderKanban size={15} />}
+        leading={<FolderGit2 size={15} />}
         onClick={onOpen}
-        onActionMenu={menu.openAt}
-        ariaLabel={row.title}
-        title={row.title}
+        ariaLabel={project.name}
+        title={project.name}
+        className="session-list-row"
         meta={
           <MoriMetadataLine
             items={[
-              <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>,
-              row.spanLabel,
+              <span title={project.path}>
+                {shortProjectLabel(project.path)}
+              </span>,
+              "세션 없음",
             ]}
           />
         }
-        timestamp={relative}
-        status={status ? <MoriStatusBadge tone={status.tone}>{status.label}</MoriStatusBadge> : null}
-        trailing={
-          <span className="workspace-row-trailing-actions">
-            <MoriOverflowMenu items={menuItems} label={`${row.title} 작업`} />
-            <ArrowRight size={13} aria-hidden="true" />
-          </span>
-        }
+        trailing={<ArrowRight size={13} aria-hidden="true" />}
         density="compact"
-      />
-      <MoriContextMenu
-        open={menu.open}
-        position={menu.position}
-        items={menuItems}
-        onClose={menu.close}
-        label={`${row.title} 작업`}
       />
     </li>
   );
 }
 
-function buildSessionMenuItems({
+function SessionRowItem({
   row,
   onOpen,
-  onOpenTab,
-  onOpenProject,
-  onRename,
 }: {
   row: SessionRow;
   onOpen: () => void;
-  onOpenTab: (tab: "overview" | "flow" | "evidence" | "insights" | "report") => void;
-  onOpenProject?: () => void;
-  onRename: () => void;
-}): MoriMenuItemSpec[] {
-  const items: MoriMenuItemSpec[] = [
-    { id: "open", label: "세션 열기", icon: ArrowRight, onSelect: onOpen },
-    { id: "open-overview", label: "개요 열기", icon: LayoutDashboard, onSelect: () => onOpenTab("overview") },
-    { id: "open-flow", label: "흐름 열기", icon: GanttChartSquare, onSelect: () => onOpenTab("flow") },
-    { id: "open-evidence", label: "증거 열기", icon: FileText, onSelect: () => onOpenTab("evidence") },
-    { id: "open-review", label: "검토 열기", icon: Clipboard, onSelect: () => onOpenTab("insights") },
-    { id: "open-report", label: "리포트 열기", icon: ScrollText, onSelect: () => onOpenTab("report") },
-  ];
-  if (onOpenProject) {
-    items.push({
-      id: "open-project",
-      label: "프로젝트 열기",
-      icon: FolderGit2,
-      onSelect: onOpenProject,
-    });
-  }
-  items.push(
-    { type: "separator", id: "manage-separator" },
-    {
-      id: "rename",
-      label: "이름 변경",
-      icon: Pencil,
-      onSelect: onRename,
-      disabled: row.origin === "demo",
-      title: row.origin === "demo" ? "데모 세션은 이름을 바꿀 수 없습니다." : undefined,
-    },
-    { type: "separator", id: "copy-separator" },
-    {
-      id: "copy-title",
-      label: "제목 복사",
-      icon: ClipboardCopy,
-      onSelect: () => copyText(row.title),
-    },
-    {
-      id: "copy-id",
-      label: "세션 ID 복사",
-      icon: ClipboardCopy,
-      onSelect: () => copyText(row.sessionId),
-    },
+}) {
+  return (
+    <li>
+      <MoriObjectRow
+        leading={<FolderKanban size={15} />}
+        onClick={onOpen}
+        ariaLabel={row.title}
+        title={row.title}
+        className="session-list-row"
+        meta={
+          <MoriMetadataLine
+            items={[
+              row.sourceLabel ? (
+                <span title={row.sourceLabel}>
+                  {shortProjectLabel(row.sourceLabel)}
+                </span>
+              ) : null,
+              row.spanLabel,
+            ]}
+          />
+        }
+        trailing={<ArrowRight size={13} aria-hidden="true" />}
+        density="compact"
+      />
+    </li>
   );
-  if (row.sourceLabel) {
-    items.push({
-      id: "copy-project",
-      label: "프로젝트 경로 복사",
-      icon: ClipboardCopy,
-      onSelect: () => copyText(row.sourceLabel ?? ""),
-    });
-  }
-  return items;
-}
-
-function copyText(text: string) {
-  if (typeof navigator !== "undefined" && navigator.clipboard) {
-    try {
-      void navigator.clipboard.writeText(text).catch(() => {});
-    } catch {
-      // Clipboard access is permission-gated in some browser shells.
-    }
-  }
 }

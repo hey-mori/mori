@@ -24,6 +24,7 @@ export function TimelineLane({
   laneLabelWidthPx,
   items,
   eventCount,
+  dimmed = false,
   layouts,
   density,
   selectedItemId,
@@ -40,6 +41,8 @@ export function TimelineLane({
   laneLabelWidthPx: number;
   items: TimelineDisplayItem[];
   eventCount: number;
+  /** De-emphasise the lane when a category filter excludes it (never hidden). */
+  dimmed?: boolean;
   layouts: Map<string, LaidOutTimelineItem>;
   density: TimelineDensity;
   selectedItemId: string | null;
@@ -51,12 +54,12 @@ export function TimelineLane({
 }) {
   const colorClass = `lane-tone-${tone}`;
   const isEmpty = items.length === 0;
-  // Empty lanes stay visible as a slim, de-emphasised band so the canonical
-  // lane structure is always readable — the user can see every category even
-  // before it carries an event. The band height comes from the layout.
+  // Every lane stays visible at one uniform height. An empty lane shows just
+  // its label + a 0 count; a filtered-out lane reads de-emphasised (`is-dimmed`)
+  // but is never removed — the category filter highlights, it does not hide.
   return (
     <div
-      className={`lane ${colorClass}${isEmpty ? " is-empty" : ""}`}
+      className={`lane ${colorClass}${isEmpty ? " is-empty" : ""}${dimmed ? " is-dimmed" : ""}`}
       style={{ top: `${lane.top}px`, height: `${lane.height}px` }}
     >
       <div className="lane-label" style={{ width: `${laneLabelWidthPx}px` }}>
@@ -64,7 +67,9 @@ export function TimelineLane({
           <Icon size={14} aria-hidden="true" />
         </span>
         <strong>{label}</strong>
-        {eventCount > 0 ? <span className="lane-label-count">{eventCount}</span> : null}
+        <span className={`lane-label-count${eventCount === 0 ? " is-zero" : ""}`}>
+          {eventCount}
+        </span>
       </div>
       {items.map((item) => {
         const layout = layouts.get(item.id);

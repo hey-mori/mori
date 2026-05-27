@@ -1,7 +1,6 @@
 import {
   Filter,
   MessageSquare,
-  PanelRight,
   Rows3,
   Search,
   X,
@@ -17,11 +16,10 @@ export type TimelineReadingMode = "swimlane" | "flow";
 
 export type TimelineToolbarProps = {
   activeFilters: ActivityLaneId[];
+  /** Per-lane event count, shown as a plain number next to each category. */
+  laneCounts?: Partial<Record<ActivityLaneId, number>>;
   onToggleFilter: (lane: ActivityLaneId) => void;
   onClearFilters: () => void;
-  inspectorCollapsed: boolean;
-  onToggleInspector: () => void;
-  inspectorToggleDisabled: boolean;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   readingMode: TimelineReadingMode;
@@ -30,18 +28,17 @@ export type TimelineToolbarProps = {
 
 /**
  * Timeline toolbar. Deliberately spare: a reading-mode switch (conversation
- * thread ↔ swimlane), one search field, the category filter, and the
- * inspector toggle. The old session/day/week range dropdown and the C/M/D
+ * thread ↔ swimlane), one search field, and the category filter. There is no
+ * inspector toggle — the inspector opens when an item is selected and closes
+ * from its own X. The old session/day/week range dropdown and the C/M/D
  * density switch were removed — the range is always the full session span and
  * the density is fixed, so neither earned a control.
  */
 export function TimelineToolbar({
   activeFilters,
+  laneCounts,
   onToggleFilter,
   onClearFilters,
-  inspectorCollapsed,
-  onToggleInspector,
-  inspectorToggleDisabled,
   searchQuery,
   onSearchChange,
   readingMode,
@@ -139,6 +136,7 @@ export function TimelineToolbar({
                 {CANONICAL_TIMELINE_LANES.map((lane) => {
                   const visuals = getActivityLaneVisuals(lane);
                   const active = activeFilters.includes(lane);
+                  const count = laneCounts?.[lane] ?? 0;
                   return (
                     <li key={lane}>
                       <button
@@ -148,36 +146,22 @@ export function TimelineToolbar({
                         onClick={() => onToggleFilter(lane)}
                       >
                         <span className={`legend-dot tone-${visuals.tone}`} />
-                        {visuals.label}
+                        <span className="filter-pop-label">{visuals.label}</span>
+                        <span className={`filter-pop-count${count === 0 ? " is-zero" : ""}`}>
+                          {count}
+                        </span>
                       </button>
                     </li>
                   );
                 })}
               </ul>
               <footer>
-                <small>필터는 세션 데이터를 바꾸지 않고 보이는 이벤트만 좁힙니다.</small>
+                <small>선택한 카테고리를 강조하고 나머지는 흐리게 표시합니다. 이벤트는 숨겨지지 않습니다.</small>
               </footer>
             </div>
           ) : null}
         </div>
 
-        <button
-          type="button"
-          className={`toolbar-toggle ${!inspectorCollapsed && !inspectorToggleDisabled ? "is-active" : ""}`}
-          onClick={onToggleInspector}
-          disabled={inspectorToggleDisabled}
-          aria-pressed={!inspectorCollapsed && !inspectorToggleDisabled}
-          title={
-            inspectorToggleDisabled
-              ? "좁은 화면에서는 인스펙터가 자동으로 숨겨집니다."
-              : inspectorCollapsed
-                ? "인스펙터 열기"
-                : "인스펙터 닫기"
-          }
-        >
-          <PanelRight size={14} aria-hidden="true" />
-          인스펙터
-        </button>
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import {
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 
 /**
- * Mori 노트 — the Companion Layer card.
+ * 알림 — the Companion Layer card.
  *
  * A calm, serious in-app panel that surfaces a few prioritised, evidence-based
  * signals derived from the current session. It is deliberately not a chatbot
@@ -31,13 +31,13 @@ export function CompanionCard({
   onOpenReviewItem: (selection: ReviewSelection) => void;
 }) {
   return (
-    <section className="companion-card" aria-label="Mori 노트">
+    <section className="companion-card" aria-label="알림">
       <header className="companion-card-head">
         <span className="companion-card-mark" aria-hidden="true">
           <Compass size={15} />
         </span>
         <div className="companion-card-titles">
-          <h3>Mori 노트</h3>
+          <h3>알림</h3>
           <p>이번 세션에서 살펴볼 만한 것</p>
         </div>
         <Badge tone={signals.length > 0 ? "purple" : "gray"}>{signals.length}</Badge>
@@ -92,7 +92,7 @@ export function CompanionCard({
           className="companion-card-seeall"
           onClick={() => onNavigate("companion")}
         >
-          Mori 노트 전체 보기 <ArrowRight size={12} aria-hidden="true" />
+          알림 전체 보기 <ArrowRight size={12} aria-hidden="true" />
         </button>
       </div>
 

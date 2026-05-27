@@ -125,7 +125,6 @@ export const CANONICAL_TIMELINE_LANES: ActivityLaneId[] = [
   "conversation",
   "command",
   "files",
-  "git",
   "research",
   "tracker",
   "review",
@@ -210,7 +209,7 @@ const ACTIVITY_VISUALS: Record<ActivityKind, ActivityVisuals> = {
 const LANE_VISUALS: Record<ActivityLaneId, ActivityVisuals> = {
   conversation: { label: "대화", shortLabel: "대화", tone: "purple", description: "사람·AI·토론 발언" },
   command: { label: "명령", shortLabel: "명령", tone: "gray", description: "터미널 또는 도구 명령" },
-  files: { label: "파일", shortLabel: "파일", tone: "blue", description: "파일 및 코드 변경" },
+  files: { label: "코드·파일", shortLabel: "코드", tone: "blue", description: "파일·코드 변경, Git diff·커밋" },
   git: { label: "Git", shortLabel: "Git", tone: "green", description: "Diff·커밋·저장소 맥락" },
   design: { label: "디자인", shortLabel: "디자인", tone: "cyan", description: "디자인 산출물 및 프레임 변경" },
   tracker: { label: "이슈", shortLabel: "이슈", tone: "orange", description: "이슈·티켓·트래커 업데이트" },
@@ -388,10 +387,13 @@ export function getTimelineLaneForEvent(args: {
     case "command":
       return "command";
     case "fileChange":
-      return "files";
     case "commit":
     case "diff":
-      return "git";
+      // Git diff / commit activity folds into the unified 코드·파일 lane —
+      // it stays distinguishable via the event's activity badge (Diff / 커밋),
+      // but vibe coders read one "what changed" lane rather than a separate Git
+      // swimlane.
+      return "files";
     case "designChange":
       return "design";
     case "issueUpdate":

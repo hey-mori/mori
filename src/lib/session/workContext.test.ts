@@ -34,6 +34,15 @@ describe("buildWorkContext", () => {
     expect(ctx.timeDescriptor).toBe("2시간 30분");
   });
 
+  it("keeps a demo session's sourceLabel for the session breadcrumb", () => {
+    const ctx = buildWorkContext({
+      draft: null,
+      demoSession: makeSession({ ...demoSession, sourceLabel: "C:/dev/ng-gw" }),
+      analysisStatus: "idle",
+    });
+    expect(ctx.projectLabel).toBe("C:/dev/ng-gw");
+  });
+
   it("classifies a session with a sourceLabel as imported with an evidence span", () => {
     const session = makeSession({
       title: "충돌 해결하고 머지해줘",

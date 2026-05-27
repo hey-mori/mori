@@ -211,6 +211,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
                 laneLabelWidthPx={layout.laneLabelWidthPx}
                 items={lane.items}
                 eventCount={lane.eventCount}
+                dimmed={lane.dimmed}
                 layouts={layoutIndex}
                 density={density}
                 selectedItemId={model.selectedItem?.id ?? null}

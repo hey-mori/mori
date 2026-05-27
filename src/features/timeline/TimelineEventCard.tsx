@@ -55,6 +55,10 @@ export function TimelineEventCard({
       style={{
         left: `${layout.x}px`,
         top: `${layout.y}px`,
+        // Fixed laid-out width. Cards are positioned on a time axis with only a
+        // small gap between neighbours, so a card must NEVER resize on hover or
+        // selection — growing rightward would cover the next card. Detail on
+        // demand happens in the inspector / tooltip, not by stretching the card.
         width: `${layout.width}px`,
         height: `${layout.height}px`,
       }}

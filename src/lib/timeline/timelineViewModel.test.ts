@@ -134,15 +134,19 @@ describe("buildTimelineRenderModel", () => {
     ]);
   });
 
-  it("filters events to a lane when activeFilters is set", () => {
+  it("dims unselected lanes instead of hiding events when activeFilters is set", () => {
+    const all = buildModel(moriMockSession);
     const model = buildModel(moriMockSession, { activeFilters: ["conversation"] });
-    expect(model.visibleEvents.length).toBeGreaterThan(0);
-    expect(
-      model.visibleEvents.every(
-        (event) =>
-          getTimelineLaneForEvent({ event, sources: moriMockSession.sources }) === "conversation",
-      ),
-    ).toBe(true);
+    // The category filter highlights/dims — it never hides — so every event
+    // stays visible regardless of which categories are selected.
+    expect(model.visibleEvents.length).toBe(all.visibleEvents.length);
+    // The selected lane is emphasised; every other (populated or empty) lane
+    // is flagged dimmed for the renderer.
+    const conversation = model.lanes.find((lane) => lane.type === "conversation")!;
+    expect(conversation.dimmed).toBe(false);
+    expect(model.lanes.filter((lane) => lane.type !== "conversation").every((lane) => lane.dimmed)).toBe(true);
+    // No active filter → nothing is dimmed.
+    expect(all.lanes.every((lane) => lane.dimmed === false)).toBe(true);
   });
 
   it("flags filteredEmpty when a search hides every event", () => {
@@ -169,9 +173,12 @@ describe("buildTimelineRenderModel", () => {
     expect(model.selectedItem?.memberEventIds).toContain(target.id);
   });
 
-  it("falls back to the first display item when selectedEventId is not present", () => {
-    const model = buildModel(moriMockSession, { selectedEventId: "does-not-exist" });
-    expect(model.selectedItem).toBe(model.visibleDisplayItems[0]);
+  it("selects nothing when selectedEventId is empty or unmatched", () => {
+    // Entering the timeline must not auto-select the first card.
+    const none = buildModel(moriMockSession, { selectedEventId: null });
+    expect(none.selectedItem).toBeNull();
+    const unmatched = buildModel(moriMockSession, { selectedEventId: "does-not-exist" });
+    expect(unmatched.selectedItem).toBeNull();
   });
 
   it("seeds focusedSet from the selected item in timeline mode (depth 1)", () => {

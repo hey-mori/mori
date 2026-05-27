@@ -184,6 +184,9 @@ export function buildContributionGrid(input: BuildContributionGridInput): Contri
 
   const weeks: ContributionDay[][] = [];
   const months: ContributionMonthLabel[] = [];
+  // Minimum column gap between two adjacent month labels before the earlier
+  // one is treated as a crowded leading sliver and dropped.
+  const MIN_MONTH_LABEL_GAP = 3;
   let total = 0;
   let activeDays = 0;
   let prevMonth = -1;
@@ -211,6 +214,12 @@ export function buildContributionGrid(input: BuildContributionGridInput): Contri
       }
     }
     weeks.push(week);
+  }
+
+  // A partial leading month (often only a week or two wide) would crowd the
+  // next month's label, so drop it when the first two labels sit too close.
+  if (months.length >= 2 && months[1]!.col - months[0]!.col < MIN_MONTH_LABEL_GAP) {
+    months.shift();
   }
 
   return { weeks, total, activeDays, maxCount, months, weekCount, metric };

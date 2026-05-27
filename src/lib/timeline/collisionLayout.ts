@@ -82,14 +82,6 @@ const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
 const DEFAULT_CARD_GAP = 12;
 const LANE_VERTICAL_PADDING = 7;
-/**
- * Lanes with no items render as a slim, de-emphasised band — never a full
- * content-height row of dead space, but never hidden either. The canonical
- * lane set is always present so the timeline reads as one stable structure;
- * an empty lane just shows its label so the user can see the category exists
- * and could carry events.
- */
-const EMPTY_LANE_HEIGHT = 34;
 
 export function computeTimelineLayout(
   items: TimelineDisplayItem[],
@@ -123,9 +115,10 @@ export function computeTimelineLayout(
     laneItems.sort((left, right) => new Date(left.start).getTime() - new Date(right.start).getTime());
   }
 
-  // Every lane is a single row. Content lanes share one uniform height;
-  // empty lanes collapse to a slim band so the timeline carries no tall
-  // stretches of dead space.
+  // Every lane is a single row of one uniform height — empty lanes included.
+  // A consistent band height makes the swimlane read as one even grid (the
+  // user explicitly wants equal-height lanes); an empty lane shows just its
+  // label in a full-height, de-emphasised band rather than a slim sliver.
   const laneHeight = LANE_VERTICAL_PADDING * 2 + cardHeight;
 
   const placed: LaidOutTimelineItem[] = [];
@@ -135,7 +128,7 @@ export function computeTimelineLayout(
     const laneItems = grouped.get(type) ?? [];
     const laneTop = cursorY;
     const hasItems = laneItems.length > 0;
-    const thisLaneHeight = hasItems ? laneHeight : EMPTY_LANE_HEIGHT;
+    const thisLaneHeight = laneHeight;
     const y = laneTop + LANE_VERTICAL_PADDING;
     const placements = layoutLaneRow(
       laneItems,

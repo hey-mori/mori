@@ -58,11 +58,14 @@ export function buildWorkContext(input: DeriveSessionTimingInput): WorkContext {
   const session = input.draft?.session ?? null;
 
   if (!session) {
+    const demoSourceLabel = input.demoSession.sourceLabel?.trim()
+      ? input.demoSession.sourceLabel.trim()
+      : null;
     return {
       origin: "demo",
       originLabel: "데모",
       tone: "purple",
-      projectLabel: null,
+      projectLabel: demoSourceLabel,
       sessionTitle: input.demoSession.title,
       timeDescriptor: spanLabel(input.demoSession.startedAt, input.demoSession.endedAt),
       timeCaption: "분량",

@@ -14,7 +14,7 @@ import {
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
-import { resolveTimelineLaneOrder } from "../../lib/timeline/activityModel";
+import { resolveTimelineLaneOrder, type ActivityLaneId } from "../../lib/timeline/activityModel";
 import type { TimelineEvent } from "../../domain/types";
 import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 import { EventInspector } from "./EventInspector";
@@ -87,6 +87,17 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const inspectorCollapsed = useMoriAppStore((state) => state.inspectorCollapsed);
   const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
   const setSessionTab = useMoriAppStore((state) => state.setSessionTab);
+
+  // Selecting an item opens the inspector (it is a detail panel for the
+  // selection); the in-panel X closes it. There is no standing toolbar toggle —
+  // an "open but empty" inspector was just wasted whitespace.
+  const selectAndShowInspector = useCallback(
+    (id: string) => {
+      setSelectedEventId(id);
+      setInspectorCollapsed(false);
+    },
+    [setSelectedEventId, setInspectorCollapsed],
+  );
 
   // The Timeline ↔ Flow Focus switch is internal state seeded from the prop;
   // there is no separate flow route — both modes live inside the 흐름 tab.
@@ -175,6 +186,15 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     ],
   );
 
+  // Per-lane event counts for the toolbar's category filter (shown as a plain
+  // number next to each category) — derived from the same lane model the
+  // canvas renders, so the filter list and the swimlane never disagree.
+  const laneCounts = useMemo<Partial<Record<ActivityLaneId, number>>>(() => {
+    const counts: Partial<Record<ActivityLaneId, number>> = {};
+    for (const lane of model.lanes) counts[lane.type] = lane.eventCount;
+    return counts;
+  }, [model.lanes]);
+
   const handleFrameWidth = useCallback((width: number) => {
     setFrameWidth((current) => (current === width ? current : width));
   }, []);
@@ -249,6 +269,11 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   // too narrow for a side column. Flow Focus keeps its Trace panel.
   const inspectorNarrow = viewportWidth <= TIMELINE_INSPECTOR_NARROW_MAX_PX;
   const inspectorHidden = shouldHideInspector({ mode, inspectorCollapsed, viewportWidth });
+  // The inspector is a detail panel for the *selected* item — there is nothing
+  // to inspect with no selection, so the column is only reserved when something
+  // is selected. Otherwise an "open" inspector with no selection is just an
+  // empty band of whitespace.
+  const inspectorVisible = !inspectorHidden && Boolean(selectedItem);
   // Narrow widths swap the horizontally-scrolling swimlane canvas for a flat
   // vertical chronological list — readable without a wide frame.
   const useChronoList = inspectorNarrow && mode === "timeline";
@@ -331,7 +356,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     <div
       className={`content-grid content-grid-embedded ${
         mode === "flow" ? "flow-grid" : ""
-      } ${inspectorHidden ? "inspector-collapsed" : ""}`}
+      } ${inspectorVisible ? "" : "inspector-collapsed"}`}
     >
       <section className="timeline-main">
         {mode === "flow" ? (
@@ -343,11 +368,9 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
         ) : (
           <TimelineToolbar
             activeFilters={activeFilters}
+            laneCounts={laneCounts}
             onToggleFilter={toggleFilter}
             onClearFilters={clearFilters}
-            inspectorCollapsed={inspectorCollapsed}
-            onToggleInspector={() => setInspectorCollapsed(!inspectorCollapsed)}
-            inspectorToggleDisabled={inspectorNarrow}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             readingMode={readingMode}
@@ -365,7 +388,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           <TimelineChronoList
             model={model}
             selectedItemId={selectedItem?.id ?? null}
-            onSelect={setSelectedEventId}
+            onSelect={selectAndShowInspector}
             density={density}
             eventMenuItems={buildEventMenuItems}
           />
@@ -373,7 +396,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           <ConversationFlowView
             model={model}
             selectedItemId={selectedItem?.id ?? null}
-            onSelect={setSelectedEventId}
+            onSelect={selectAndShowInspector}
             density={density}
             eventMenuItems={buildEventMenuItems}
           />
@@ -386,7 +409,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
               density={density}
               onFrameWidth={handleFrameWidth}
               onViewportChange={setMinimapViewport}
-              onSelect={setSelectedEventId}
+              onSelect={selectAndShowInspector}
               onHover={setHoveredEventId}
               eventMenuItems={(item) => buildEventMenuItems(item.event)}
             />
@@ -405,11 +428,12 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           </>
         )}
       </section>
-      {inspectorHidden ? null : selectedItem && selectedItem.kind === "bundle" ? (
+      {!inspectorVisible ? null : selectedItem && selectedItem.kind === "bundle" ? (
         <TimelineBundleInspector
           bundle={selectedItem}
           session={view}
           onTrace={() => goToMode("flow")}
+          onClose={() => setInspectorCollapsed(true)}
         />
       ) : mode === "flow" && selectedItem && selectedItem.kind === "event" ? (
         <TracePanel
@@ -444,6 +468,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           session={view}
           onTrace={() => goToMode("flow")}
           onOpenReviewItem={openReviewItem}
+          onClose={() => setInspectorCollapsed(true)}
           canWrite={sessionMode === "draft" && hasAnalysis}
           onEditEvent={(edits) => updateSessionEvent(selectedItem.event.id, edits)}
           onSplitEvent={() => splitSessionEvent(selectedItem.event.id)}
