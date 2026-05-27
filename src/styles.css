@@ -22481,3 +22481,98 @@ button.settings-option {
   margin-top: 8px;
 }
 
+/* Project create / edit modal — a compact card that reuses the settings sheet's
+   scrim + headed bar (.settings-sheet-layer / -scrim / -head / -close) so it
+   matches that surface, with its own body + divided footer. */
+.project-modal {
+  position: relative;
+  width: min(440px, calc(100vw - 52px));
+  max-height: calc(100vh - 52px);
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 26px 70px rgba(20, 25, 45, 0.26);
+  outline: none;
+  overflow: hidden;
+}
+
+.project-modal-body {
+  display: grid;
+  gap: 14px;
+  padding: 18px 18px 16px;
+  overflow: auto;
+}
+
+.project-modal-field {
+  display: grid;
+  gap: 6px;
+}
+
+.project-modal-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.project-modal-field > span em {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.project-modal-field > span em.is-required {
+  color: var(--purple);
+  background: var(--purple-50);
+}
+
+.project-modal-field > span em.is-optional {
+  color: var(--muted);
+  background: var(--gray-50);
+}
+
+.project-modal-field input,
+.project-modal-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: white;
+  resize: vertical;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.project-modal-field input:focus,
+.project-modal-field textarea:focus {
+  outline: none;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-50);
+}
+
+.project-modal-field input::placeholder,
+.project-modal-field textarea::placeholder {
+  color: var(--muted-2);
+}
+
+.project-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 13px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-soft, #fafbfd);
+}
+

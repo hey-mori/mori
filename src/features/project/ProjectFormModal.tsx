@@ -6,9 +6,10 @@ import { trapTabKey } from "../../components/ui/focusTrap";
 export type ProjectFormValues = { name: string; description: string };
 
 /**
- * Create / edit a project in a centered modal that mirrors the settings sheet's
- * shape (scrim + headed card + Esc / scrim-to-close + focus trap). Reuses the
- * shared `.mori-modal` styling so no new CSS is introduced.
+ * Create / edit a project. Mirrors the settings sheet's modal shape exactly —
+ * it reuses the same scrim, headed bar (title + round close), Esc / scrim
+ * close, and focus trap — so it reads as part of the same surface family. Only
+ * the compact card body + footer are new.
  *
  * The project *name* is required (it is the project's identity); description is
  * optional. The submit verb is "생성" when creating and "저장" when editing.
@@ -62,50 +63,62 @@ export function ProjectFormModal({
   }
 
   return (
-    <div
-      className="mori-modal"
-      role="presentation"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <div className="settings-sheet-layer" role="presentation">
+      <div className="settings-sheet-scrim" onClick={onClose} aria-hidden="true" />
       <div
         ref={dialogRef}
-        className="mori-modal-body"
+        className="project-modal"
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
       >
-        <header>
-          <h3>{title}</h3>
-          <Button icon={X} variant="ghost" onClick={onClose} aria-label="닫기" title="닫기 (Esc)" />
+        <header className="settings-sheet-head">
+          <div className="settings-sheet-title">
+            <strong>{title}</strong>
+          </div>
+          <button
+            type="button"
+            className="settings-sheet-close"
+            onClick={onClose}
+            aria-label="닫기"
+            title="닫기 (Esc)"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
         </header>
-        <label>
-          <span>이름 (필수)</span>
-          <input
-            autoFocus
-            value={name}
-            maxLength={80}
-            placeholder="예: Mori 앱"
-            onChange={(event) => setName(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                submit();
-              }
-            }}
-          />
-        </label>
-        <label>
-          <span>설명 (선택)</span>
-          <textarea
-            value={description}
-            rows={3}
-            placeholder="이 프로젝트가 어떤 작업인지 적어두면 나중에 한눈에 알아볼 수 있어요."
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </label>
-        <footer>
+        <div className="project-modal-body">
+          <label className="project-modal-field">
+            <span>
+              이름 <em className="is-required">필수</em>
+            </span>
+            <input
+              autoFocus
+              value={name}
+              maxLength={80}
+              placeholder="예: Mori 앱"
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  submit();
+                }
+              }}
+            />
+          </label>
+          <label className="project-modal-field">
+            <span>
+              설명 <em className="is-optional">선택</em>
+            </span>
+            <textarea
+              value={description}
+              rows={3}
+              placeholder="이 프로젝트가 어떤 작업인지 적어두면 나중에 한눈에 알아볼 수 있어요."
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+        </div>
+        <footer className="project-modal-foot">
           <Button variant="ghost" onClick={onClose}>
             취소
           </Button>
