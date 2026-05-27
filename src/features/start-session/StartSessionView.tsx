@@ -2,15 +2,12 @@ import {
   AlertCircle,
   ArrowRight,
   Braces,
-  Check,
   ClipboardPaste,
   Code2,
   FilePlus2,
   FolderGit2,
-  Globe,
+  History,
   Lock,
-  Plug,
-  Radar,
   RefreshCw,
   Settings2,
   Sparkles,
@@ -61,22 +58,24 @@ import { buildImportCandidateFromClaudeCodeSession } from "../../lib/claude/clau
 import type { ClaudeCodeSessionMeta } from "../../lib/claude/types";
 
 /**
- * A Mori session *is* one AI-agent conversation (the spine); the surrounding
- * Git / terminal / notes are evidence (ribs). So the only question this screen
- * really asks is: **where does this session's conversation come from?** That
- * single "시작점" decision replaces the old agent × method matrix. Three
- * source-of-conversation paths, all resolved inline on this one page:
+ * 새 세션 — create one session, the way you'd provision one real thing.
  *
- *   1. 감지된 작업 세션  · desktop auto-association from Claude Code records (추천)
- *   2. 대화 붙여넣기      · universal fallback for agents Mori cannot detect
- *                          (ChatGPT / Codex / OpenCode / Claude Desktop · Web)
- *   3. 빈 세션 먼저       · anchor first; Mori never drives the agent, the user
- *                          works in the agent and the conversation arrives later
+ * A Mori session is one AI-agent work conversation (the spine); Git / terminal
+ * / notes hang off it as evidence (ribs). The screen reads as deliberate setup,
+ * top to bottom, all visible on one page:
  *
- * Planned import surfaces (Desktop / Web export, Codex detection, MCP) appear
- * as honest inspect-only cards that never open a flow. Engine selection lives
- * in settings, not here. Picking an LLM before a conversation exists is
- * premature; the summary shows the default and links to settings.
+ *   1. 에이전트  — which AI did (or will do) the work. Agent-first because the
+ *                  roster is the thing that grows (Claude · Codex · OpenCode · …)
+ *                  and it decides which import methods are even possible.
+ *   2. 대화      — how this session's conversation arrives: 기록에서 불러오기
+ *                  (the agent's own work records, auto-detected), 붙여넣기, or
+ *                  빈 세션으로 시작 (anchor first; Mori never drives the agent).
+ *   3. 세션 정보 — project, name, retention.
+ *
+ * Import-method availability is agent-scoped and honest: record detection is
+ * real for Claude today and shown as 곧 for agents that do not have it yet, so
+ * the screen never hardcodes "Claude Code" as the only source. Engine choice
+ * lives in settings; the summary shows the default with a 변경 link.
  */
 
 type AgentOption = {
@@ -85,22 +84,32 @@ type AgentOption = {
   detail: string;
   icon: LucideIcon;
   platform: AiTranscriptPlatform;
+  /** Whether Mori can auto-detect this agent's work records today. */
+  detect: boolean;
 };
 
-/** Agents that can anchor a brand-new (empty) session. */
 const AGENT_OPTIONS: AgentOption[] = [
-  { id: "opt-claude", name: "Claude", detail: "Claude Code · Desktop · Web", icon: Sparkles, platform: "claude" },
-  { id: "opt-codex", name: "Codex", detail: "Codex CLI", icon: Code2, platform: "codex" },
-  { id: "opt-opencode", name: "OpenCode", detail: "OpenCode CLI", icon: Braces, platform: "other" },
+  {
+    id: "opt-claude",
+    name: "Claude",
+    detail: "Claude Code · Desktop · Web",
+    icon: Sparkles,
+    platform: "claude",
+    detect: true,
+  },
+  { id: "opt-codex", name: "Codex", detail: "Codex CLI", icon: Code2, platform: "codex", detect: false },
+  {
+    id: "opt-opencode",
+    name: "OpenCode",
+    detail: "OpenCode CLI",
+    icon: Braces,
+    platform: "other",
+    detect: false,
+  },
 ];
 
-type PastePlatform = { value: AiTranscriptPlatform; label: string };
-const PASTE_PLATFORMS: PastePlatform[] = [
-  { value: "claude", label: "Claude" },
-  { value: "chatgpt", label: "ChatGPT" },
-  { value: "codex", label: "Codex" },
-  { value: "other", label: "기타 (OpenCode 등)" },
-];
+type ImportMethod = "records" | "paste" | "fresh";
+const NEW_PROJECT_VALUE = "__new__";
 
 type RetentionOption = { mode: RecordingMode; label: string; detail: string };
 const RETENTION_OPTIONS: RetentionOption[] = [
@@ -108,16 +117,6 @@ const RETENTION_OPTIONS: RetentionOption[] = [
   { mode: "full", label: "전체 보관", detail: "원본 전체 · 공간 많이" },
   { mode: "ephemeral", label: "리포트만", detail: "임시 · 원본 자동 삭제" },
 ];
-
-type PlannedSurface = { icon: LucideIcon; title: string; detail: string };
-const PLANNED_SURFACES: PlannedSurface[] = [
-  { icon: Globe, title: "Claude Desktop · Web 내보내기", detail: "내보낸 대화 파일을 세션으로" },
-  { icon: Code2, title: "Codex 작업 세션 감지", detail: "Codex CLI 기록 자동 연결" },
-  { icon: Plug, title: "MCP 컨텍스트 연결", detail: "에이전트가 Mori를 직접 호출" },
-];
-
-type StartPoint = "detected" | "paste" | "empty";
-const NEW_PROJECT_VALUE = "__new__";
 
 function agentSourceOption(agent: AgentOption): SourceOption {
   return {
@@ -132,15 +131,11 @@ function agentSourceOption(agent: AgentOption): SourceOption {
   };
 }
 
-function startPointLabel(startPoint: StartPoint | null): string {
-  if (startPoint === "detected") return "감지된 작업 세션";
-  if (startPoint === "paste") return "대화 붙여넣기";
-  if (startPoint === "empty") return "빈 세션 먼저";
+function methodLabel(method: ImportMethod | null): string {
+  if (method === "records") return "기록에서 불러오기";
+  if (method === "paste") return "붙여넣기";
+  if (method === "fresh") return "빈 세션으로 시작";
   return "미선택";
-}
-
-function pastePlatformLabel(platform: AiTranscriptPlatform): string {
-  return PASTE_PLATFORMS.find((p) => p.value === platform)?.label ?? "AI";
 }
 
 export function StartSessionView() {
@@ -154,10 +149,9 @@ export function StartSessionView() {
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
 
-  const [startPoint, setStartPoint] = useState<StartPoint | null>(null);
-  const [emptyAgentId, setEmptyAgentId] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [method, setMethod] = useState<ImportMethod | null>(null);
   const [selectedDetected, setSelectedDetected] = useState<ClaudeCodeSessionMeta | null>(null);
-  const [pastePlatform, setPastePlatform] = useState<AiTranscriptPlatform>("claude");
   const [pasteText, setPasteText] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
   const [retention, setRetention] = useState<RecordingMode>("summary");
@@ -177,40 +171,46 @@ export function StartSessionView() {
   const [newProjectName, setNewProjectName] = useState("");
   const projectName = projectChoice === NEW_PROJECT_VALUE ? newProjectName : projectChoice;
 
-  const selectedEmptyAgent = AGENT_OPTIONS.find((agent) => agent.id === emptyAgentId) ?? null;
+  const selectedAgent = AGENT_OPTIONS.find((agent) => agent.id === selectedAgentId) ?? null;
+  const pastePlatform: AiTranscriptPlatform = selectedAgent?.platform ?? "claude";
 
-  // The single create action covers every path. It enables once the chosen
-  // start-point has the input it needs: a picked conversation, pasted text, or
-  // an anchor agent.
+  // The single create action covers every method. It enables once the chosen
+  // method has the input it needs.
   const canCreate =
-    (startPoint === "detected" && Boolean(selectedDetected)) ||
-    (startPoint === "paste" && pasteText.trim().length > 0) ||
-    (startPoint === "empty" && Boolean(selectedEmptyAgent));
+    Boolean(selectedAgent) &&
+    ((method === "records" && Boolean(selectedDetected)) ||
+      (method === "paste" && pasteText.trim().length > 0) ||
+      method === "fresh");
 
-  function chooseStartPoint(next: StartPoint) {
-    setStartPoint((current) => (current === next ? null : next));
-    // Switching start-points clears the previous path's sub-selections so the
-    // summary + create action never reflect a path the user moved away from.
+  function chooseAgent(id: string) {
+    setSelectedAgentId((current) => (current === id ? null : id));
+    // A different agent changes which methods are possible, so clear the
+    // method and its sub-state rather than leave a stale selection.
+    setMethod(null);
     setSelectedDetected(null);
-    setEmptyAgentId(null);
+    setPasteText("");
+  }
+
+  function chooseMethod(next: ImportMethod) {
+    setMethod((current) => (current === next ? null : next));
+    setSelectedDetected(null);
     setPasteText("");
   }
 
   function selectDetected(meta: ClaudeCodeSessionMeta) {
     setSelectedDetected((current) => (current?.filePath === meta.filePath ? null : meta));
-    // Filing the import under the conversation's own project keeps the work
-    // where it belongs; the user can still change it.
+    // File the import under the conversation's own project; user can change it.
     if (existingProjects.includes(meta.projectName)) setProjectChoice(meta.projectName);
   }
 
   async function handleCreate() {
-    if (creating || !canCreate) return;
+    if (creating || !canCreate || !selectedAgent) return;
 
-    if (startPoint === "empty" && selectedEmptyAgent) {
+    if (method === "fresh") {
       const draft = createSessionDraft({
         sessionTitle: sessionTitle || "제목 없는 세션",
         projectName: projectName || "제목 없는 프로젝트",
-        selectedSources: [agentSourceOption(selectedEmptyAgent)],
+        selectedSources: [agentSourceOption(selectedAgent)],
         recordingMode: retention,
         llmProvider: selectedEngine.provider,
         llmModel: selectedEngine.model,
@@ -222,7 +222,7 @@ export function StartSessionView() {
       return;
     }
 
-    if (startPoint === "detected" && selectedDetected) {
+    if (method === "records" && selectedDetected) {
       setCreating(true);
       try {
         const detail = await getClaudeCodeSession(selectedDetected.filePath);
@@ -249,7 +249,7 @@ export function StartSessionView() {
       return;
     }
 
-    if (startPoint === "paste" && pasteText.trim()) {
+    if (method === "paste" && pasteText.trim()) {
       setCreating(true);
       try {
         const capturedAt = new Date().toISOString();
@@ -290,33 +290,35 @@ export function StartSessionView() {
 
   const hasActiveSession = mode === "draft" && storeDraft !== null;
 
-  const spineLabel =
-    startPoint === "detected"
+  const sourceValue =
+    method === "records"
       ? selectedDetected
-        ? `Claude · ${shortProjectLabel(selectedDetected.projectName)}`
-        : "Claude Code 세션 선택 필요"
-      : startPoint === "paste"
-        ? `${pastePlatformLabel(pastePlatform)} 붙여넣기${pasteText.trim() ? "" : " · 내용 필요"}`
-        : startPoint === "empty"
-          ? selectedEmptyAgent
-            ? `${selectedEmptyAgent.name} · 빈 세션`
-            : "에이전트 선택 필요"
+        ? `${shortProjectLabel(selectedDetected.projectName)} · ${selectedDetected.title}`
+        : "대화 선택 필요"
+      : method === "paste"
+        ? pasteText.trim()
+          ? "붙여넣은 대화"
+          : "내용 필요"
+        : method === "fresh"
+          ? "새 작업 (대화는 이후 가져오기)"
           : "미선택";
 
   const resolvedName =
-    startPoint === "detected"
+    method === "records"
       ? selectedDetected?.title ?? "대화 선택 필요"
       : sessionTitle.trim() || "무제 Mori 세션";
 
   const createTitle = canCreate
     ? undefined
-    : !startPoint
-      ? "시작점을 먼저 선택하세요."
-      : startPoint === "detected"
-        ? "가져올 작업 세션을 선택하세요."
-        : startPoint === "paste"
-          ? "붙여넣을 대화 내용을 입력하세요."
-          : "에이전트를 선택하세요.";
+    : !selectedAgent
+      ? "AI 에이전트를 먼저 선택하세요."
+      : !method
+        ? "대화를 가져올 방법을 선택하세요."
+        : method === "records"
+          ? "불러올 대화를 선택하세요."
+          : method === "paste"
+            ? "붙여넣을 대화 내용을 입력하세요."
+            : undefined;
 
   return (
     <PageShell
@@ -340,8 +342,9 @@ export function StartSessionView() {
       aside={
         <SessionSummary
           savedDraft={storeDraft}
-          startPoint={startPoint}
-          spineLabel={spineLabel}
+          agent={selectedAgent}
+          method={method}
+          sourceValue={sourceValue}
           sessionName={resolvedName}
           projectName={projectName}
           retention={retention}
@@ -378,92 +381,93 @@ export function StartSessionView() {
         </NoticeBanner>
       ) : null}
 
-      <FieldBlock number="1" title="시작점" subtitle="이 세션의 대화를 어디서 가져올지 정합니다.">
-        <div className="startpoint-grid">
-          <StartPointCard
-            icon={Radar}
-            title="감지된 작업 세션"
-            detail="Claude Code 기록에서 자동 연결"
-            badge="추천"
-            selected={startPoint === "detected"}
-            onSelect={() => chooseStartPoint("detected")}
-          />
-          <StartPointCard
-            icon={ClipboardPaste}
-            title="대화 붙여넣기"
-            detail="ChatGPT · Codex · Desktop 등 감지 밖 대화"
-            selected={startPoint === "paste"}
-            onSelect={() => chooseStartPoint("paste")}
-          />
-          <StartPointCard
-            icon={FilePlus2}
-            title="빈 세션 먼저"
-            detail="대화 전에 앵커만 만들어 둡니다"
-            selected={startPoint === "empty"}
-            onSelect={() => chooseStartPoint("empty")}
-          />
-        </div>
-
-        {startPoint === "detected" ? (
-          <DetectedSessionPicker
-            selectedFilePath={selectedDetected?.filePath ?? null}
-            onSelect={selectDetected}
-          />
-        ) : null}
-
-        {startPoint === "paste" ? (
-          <div className="startpoint-detail start-paste">
-            <label className="start-paste-platform">
-              플랫폼
-              <select
-                value={pastePlatform}
-                onChange={(event) => setPastePlatform(event.target.value as AiTranscriptPlatform)}
-              >
-                {PASTE_PLATFORMS.map((platform) => (
-                  <option key={platform.value} value={platform.value}>
-                    {platform.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <textarea
-              className="start-paste-text"
-              value={pasteText}
-              placeholder="대화 내용을 붙여넣으세요. User: / Assistant: 형식이면 턴을 자동으로 나눕니다."
-              onChange={(event) => setPasteText(event.target.value)}
+      <FieldBlock number="1" title="에이전트" subtitle="어떤 AI 에이전트로 한 작업인가요?">
+        <div className="pick-grid">
+          {AGENT_OPTIONS.map((agent) => (
+            <PickTile
+              key={agent.id}
+              icon={agent.icon}
+              title={agent.name}
+              detail={agent.detail}
+              selected={selectedAgentId === agent.id}
+              onSelect={() => chooseAgent(agent.id)}
             />
-            <p className="start-import-note">
-              수동 붙여넣기 전용. Claude · ChatGPT · Codex 직접 연동은 계획 단계입니다. Mori는
-              브라우저 탭이나 앱을 자동으로 스캔하지 않습니다.
-            </p>
-          </div>
-        ) : null}
-
-        {startPoint === "empty" ? (
-          <div className="startpoint-detail">
-            <p className="start-import-note">
-              Mori는 대화를 대신 시작하지 않습니다. 빈 세션을 만들어 두면, 선택한 에이전트에서
-              작업한 뒤 캡처 훅이나 가져오기로 그 대화를 증거 탭에 채울 수 있습니다.
-            </p>
-            <div className="agent-grid">
-              {AGENT_OPTIONS.map((agent) => (
-                <PickCard
-                  key={agent.id}
-                  icon={agent.icon}
-                  title={agent.name}
-                  detail={agent.detail}
-                  selected={emptyAgentId === agent.id}
-                  onSelect={() =>
-                    setEmptyAgentId((current) => (current === agent.id ? null : agent.id))
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        ) : null}
+          ))}
+        </div>
       </FieldBlock>
 
-      <FieldBlock number="2" title="세션 정보">
+      <FieldBlock number="2" title="대화" subtitle="이 세션의 대화를 어떻게 준비할까요?">
+        {selectedAgent ? (
+          <>
+            <div className="pick-grid">
+              <PickTile
+                icon={History}
+                title="기록에서 불러오기"
+                detail={
+                  selectedAgent.detect
+                    ? "에이전트 작업 기록에서 자동으로 찾습니다"
+                    : `${selectedAgent.name} 기록 자동 감지는 준비 중입니다`
+                }
+                recommended={selectedAgent.detect}
+                disabled={!selectedAgent.detect}
+                status={selectedAgent.detect ? undefined : "곧"}
+                selected={method === "records"}
+                onSelect={() => chooseMethod("records")}
+              />
+              <PickTile
+                icon={ClipboardPaste}
+                title="붙여넣기"
+                detail="대화를 복사해 직접 붙여넣습니다"
+                selected={method === "paste"}
+                onSelect={() => chooseMethod("paste")}
+              />
+              <PickTile
+                icon={FilePlus2}
+                title="빈 세션으로 시작"
+                detail="지금부터 할 작업을 위한 세션"
+                selected={method === "fresh"}
+                onSelect={() => chooseMethod("fresh")}
+              />
+            </div>
+
+            {method === "records" ? (
+              <DetectedSessionPicker
+                agentName={selectedAgent.name}
+                supported={selectedAgent.detect}
+                selectedFilePath={selectedDetected?.filePath ?? null}
+                onSelect={selectDetected}
+              />
+            ) : null}
+
+            {method === "paste" ? (
+              <div className="method-detail">
+                <textarea
+                  className="start-paste-text"
+                  value={pasteText}
+                  placeholder={`${selectedAgent.name} 대화를 붙여넣으세요. User: / Assistant: 형식이면 턴을 자동으로 나눕니다.`}
+                  onChange={(event) => setPasteText(event.target.value)}
+                />
+                <p className="start-import-note">
+                  수동 붙여넣기 전용입니다. Mori는 브라우저 탭이나 앱을 자동으로 스캔하지 않습니다.
+                </p>
+              </div>
+            ) : null}
+
+            {method === "fresh" ? (
+              <div className="method-detail">
+                <p className="start-import-note">
+                  Mori는 대화를 대신 시작하지 않습니다. 빈 세션을 만들어 두면, {selectedAgent.name}
+                  에서 작업한 뒤 캡처 훅이나 가져오기로 그 대화를 증거 탭에 채울 수 있습니다.
+                </p>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <p className="start-import-note">위에서 AI 에이전트를 먼저 선택하세요.</p>
+        )}
+      </FieldBlock>
+
+      <FieldBlock number="3" title="세션 정보" subtitle="프로젝트와 보관 방식을 정합니다.">
         <div className="form-row">
           <label>
             프로젝트
@@ -489,7 +493,7 @@ export function StartSessionView() {
           </label>
           <label>
             세션 이름
-            {startPoint === "detected" ? (
+            {method === "records" ? (
               <input
                 value={selectedDetected?.title ?? ""}
                 placeholder="대화 제목에서 자동"
@@ -498,8 +502,8 @@ export function StartSessionView() {
             ) : (
               <input
                 value={sessionTitle}
-                placeholder={startPoint ? "예: Mori 앱 기획" : "시작점을 먼저 선택하세요"}
-                disabled={!startPoint}
+                placeholder={method ? "예: Mori 앱 기획" : "방법을 먼저 선택하세요"}
+                disabled={!method}
                 onChange={(event) => setSessionTitle(event.target.value)}
               />
             )}
@@ -522,7 +526,7 @@ export function StartSessionView() {
               </button>
             ))}
           </div>
-          {startPoint === "detected" || startPoint === "paste" ? (
+          {method === "records" || method === "paste" ? (
             <p className="start-import-note">
               가져온 대화 원본 전체는 저장되지 않고 요약과 메타데이터만 남습니다. 보관 정책은 이후
               세션에 붙는 증거에 적용됩니다.
@@ -530,38 +534,25 @@ export function StartSessionView() {
           ) : null}
         </div>
       </FieldBlock>
-
-      <FieldBlock
-        number="3"
-        title="곧 지원"
-        subtitle="아직 연결되지 않은 가져오기 경로입니다. 살펴보기 전용."
-      >
-        <div className="startpoint-grid is-planned">
-          {PLANNED_SURFACES.map((surface) => (
-            <PlannedCard
-              key={surface.title}
-              icon={surface.icon}
-              title={surface.title}
-              detail={surface.detail}
-            />
-          ))}
-        </div>
-      </FieldBlock>
     </PageShell>
   );
 }
 
 /**
- * Inline picker for a detected Claude Code work session, grouped by project
- * then session. Detection is desktop-only and Claude-only today (the
- * `~/.claude` records bridge); in browser mode this renders an honest note
- * rather than a fake list. Selecting a row lifts the choice up; the actual
- * create happens through the right-rail "세션 생성" action.
+ * Inline picker for an agent's detected work sessions, grouped by project then
+ * session. Detection is desktop-only and real for Claude today; for an agent
+ * without detection, or in browser mode, this renders an honest note instead
+ * of a fake list. Selecting a row lifts the choice up; the actual create
+ * happens through the right-rail "세션 생성" action.
  */
 function DetectedSessionPicker({
+  agentName,
+  supported,
   selectedFilePath,
   onSelect,
 }: {
+  agentName: string;
+  supported: boolean;
   selectedFilePath: string | null;
   onSelect: (meta: ClaudeCodeSessionMeta) => void;
 }) {
@@ -570,7 +561,7 @@ function DetectedSessionPicker({
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
   const load = useCallback(async () => {
-    if (!bridge) return;
+    if (!bridge || !supported) return;
     setStatus("loading");
     try {
       setSessions(await discoverClaudeCodeSessions());
@@ -578,7 +569,7 @@ function DetectedSessionPicker({
     } catch {
       setStatus("error");
     }
-  }, [bridge]);
+  }, [bridge, supported]);
 
   useEffect(() => {
     void load();
@@ -594,10 +585,15 @@ function DetectedSessionPicker({
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [sessions]);
 
+  if (!supported) {
+    return (
+      <p className="start-import-note">{agentName} 작업 기록 자동 감지는 준비 중입니다.</p>
+    );
+  }
   if (!bridge) {
     return (
       <p className="start-import-note">
-        데스크톱 앱에서 Claude 작업 세션을 자동으로 감지합니다. 브라우저에서는 대화 붙여넣기를
+        데스크톱 앱에서 {agentName} 작업 기록을 자동으로 감지합니다. 브라우저에서는 붙여넣기를
         사용하세요.
       </p>
     );
@@ -605,23 +601,23 @@ function DetectedSessionPicker({
   if (status === "loading" || status === "idle") {
     return (
       <p className="start-import-note">
-        <RefreshCw size={14} aria-hidden="true" className="start-import-spin" /> 작업 세션을 불러오는 중...
+        <RefreshCw size={14} aria-hidden="true" className="start-import-spin" /> 작업 기록을 불러오는 중...
       </p>
     );
   }
   if (status === "error") {
     return (
       <p className="start-import-note">
-        <AlertCircle size={14} aria-hidden="true" /> 작업 세션을 읽지 못했습니다.
+        <AlertCircle size={14} aria-hidden="true" /> 작업 기록을 읽지 못했습니다.
       </p>
     );
   }
   if (sessions.length === 0) {
-    return <p className="start-import-note">감지된 작업 세션이 없습니다.</p>;
+    return <p className="start-import-note">감지된 대화가 없습니다.</p>;
   }
 
   return (
-    <div className="start-detected" role="radiogroup" aria-label="가져올 작업 세션">
+    <div className="start-detected" role="radiogroup" aria-label="불러올 대화">
       {grouped.map(([project, projectSessions]) => (
         <section key={project} className="start-detected-group">
           <header className="start-detected-group-head">
@@ -647,11 +643,10 @@ function DetectedSessionPicker({
                         메시지 {session.messageCount} · {formatClaudeRelativeKo(session.startedAt)}
                       </span>
                     </span>
-                    {selected ? (
-                      <Check size={16} aria-hidden="true" className="start-detected-check" />
-                    ) : (
-                      <span className="checkbox" aria-hidden="true" />
-                    )}
+                    <span
+                      className={`pick-mark${selected ? " is-selected" : ""}`}
+                      aria-hidden="true"
+                    />
                   </button>
                 </li>
               );
@@ -688,101 +683,63 @@ function FieldBlock({
   );
 }
 
-/** A start-point card: the primary "where does the conversation come from" pick. */
-function StartPointCard({
+/**
+ * A selectable tile for an agent or an import method. Neutral by default; the
+ * selected state carries the brand's lavender fill + purple ring (the same
+ * accent the active nav uses), and a filled radio dot rather than a checkmark.
+ * A planned method renders disabled with a neutral 곧 badge.
+ */
+function PickTile({
   icon: Icon,
   title,
   detail,
-  badge,
   selected,
+  recommended,
+  disabled,
+  status,
   onSelect,
 }: {
   icon: LucideIcon;
   title: string;
   detail: string;
-  badge?: string;
   selected: boolean;
+  recommended?: boolean;
+  disabled?: boolean;
+  status?: string;
   onSelect: () => void;
 }) {
   return (
     <button
-      className={`source-card ${selected ? "selected" : ""}`}
       type="button"
+      className={`pick-tile${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}`}
       aria-pressed={selected}
+      disabled={disabled}
       onClick={onSelect}
     >
-      <Icon size={18} aria-hidden="true" />
-      <div>
-        <strong>{title}</strong>
+      <span className="pick-tile-icon" aria-hidden="true">
+        <Icon size={18} />
+      </span>
+      <span className="pick-tile-body">
+        <strong>
+          {title}
+          {recommended ? <em className="pick-tile-rec">추천</em> : null}
+        </strong>
         <span>{detail}</span>
-      </div>
-      {selected ? (
-        <Check size={17} />
-      ) : badge ? (
-        <Badge tone="purple">{badge}</Badge>
+      </span>
+      {status ? (
+        <Badge tone="gray">{status}</Badge>
       ) : (
-        <span className="checkbox" />
+        <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
       )}
     </button>
   );
 }
 
-function PickCard({
-  icon: Icon,
-  title,
-  detail,
-  selected,
-  onSelect,
-}: {
-  icon: LucideIcon;
-  title: string;
-  detail: string;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      className={`source-card ${selected ? "selected" : ""}`}
-      type="button"
-      aria-pressed={selected}
-      onClick={onSelect}
-    >
-      <Icon size={18} aria-hidden="true" />
-      <div>
-        <strong>{title}</strong>
-        <span>{detail}</span>
-      </div>
-      {selected ? <Check size={17} /> : <span className="checkbox" />}
-    </button>
-  );
-}
-
-/** Inspect-only card for a planned import surface. Never opens a flow. */
-function PlannedCard({
-  icon: Icon,
-  title,
-  detail,
-}: {
-  icon: LucideIcon;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <div className="planned-card" aria-disabled="true">
-      <Icon size={18} aria-hidden="true" />
-      <div>
-        <strong>{title}</strong>
-        <span>{detail}</span>
-      </div>
-      <Badge tone="gray">곧</Badge>
-    </div>
-  );
-}
-
 function SessionSummary({
   savedDraft,
-  startPoint,
-  spineLabel,
+  agent,
+  method,
+  sourceValue,
   sessionName,
   projectName,
   retention,
@@ -792,8 +749,9 @@ function SessionSummary({
   createAction,
 }: {
   savedDraft: StoredSessionDraft | null;
-  startPoint: StartPoint | null;
-  spineLabel: string;
+  agent: AgentOption | null;
+  method: ImportMethod | null;
+  sourceValue: string;
   sessionName: string;
   projectName: string;
   retention: RecordingMode;
@@ -819,8 +777,9 @@ function SessionSummary({
         </div>
       }
     >
-      <SummaryRow label="시작점" value={startPointLabel(startPoint)} muted={!startPoint} />
-      <SummaryRow label="대화 출처" value={spineLabel} muted={!startPoint} />
+      <SummaryRow label="에이전트" value={agent?.name ?? "미선택"} muted={!agent} />
+      <SummaryRow label="가져오기 방식" value={methodLabel(method)} muted={!method} />
+      <SummaryRow label="대화 출처" value={sourceValue} muted={!method} />
       <SummaryRow label="세션 이름" value={sessionName} />
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
       <hr />
