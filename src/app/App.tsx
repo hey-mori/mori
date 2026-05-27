@@ -29,9 +29,9 @@ const CompanionInboxView = lazy(() =>
     default: m.CompanionInboxView,
   })),
 );
-const ConnectionsView = lazy(() =>
-  import("../features/connections/ConnectionsView").then((m) => ({
-    default: m.ConnectionsView,
+const SourcesView = lazy(() =>
+  import("../features/sources/SourcesView").then((m) => ({
+    default: m.SourcesView,
   })),
 );
 const WorkspaceView = lazy(() =>
@@ -99,7 +99,7 @@ export default function App() {
           {/* Memory is cross-session; consolidation is its 통합 segment. */}
           {currentView === "memory" || currentView === "consolidation" ? <MemoryView /> : null}
           {currentView === "companion" ? <CompanionInboxView /> : null}
-          {currentView === "connections" ? <ConnectionsView /> : null}
+          {currentView === "connections" ? <SourcesView /> : null}
           {currentView === "workspace" ? <WorkspaceView /> : null}
           {currentView === "project" ? <ProjectView /> : null}
         </Suspense>

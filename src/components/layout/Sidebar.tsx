@@ -10,6 +10,7 @@ import {
   House,
   Layers,
   LayoutDashboard,
+  Link2,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
@@ -79,6 +80,11 @@ import type { SessionTab } from "../../app/store";
  *  those up instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: moriViewIcon.home ?? House },
+  {
+    key: "connections",
+    label: "소스",
+    icon: moriViewIcon.connections ?? Link2,
+  },
   {
     key: "workspace",
     label: "프로젝트",
@@ -247,7 +253,7 @@ export function Sidebar({
       <div className="sidebar-head" role="group" aria-label="빠른 작업">
         <button
           type="button"
-          className={`sidebar-head-action${currentView === "start" || currentView === "connections" ? " is-active" : ""}`}
+          className={`sidebar-head-action${currentView === "start" ? " is-active" : ""}`}
           onClick={() => setCurrentView("start")}
           aria-label="새 세션"
           aria-current={currentView === "start" ? "page" : undefined}

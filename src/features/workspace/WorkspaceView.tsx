@@ -212,14 +212,14 @@ export function WorkspaceView() {
           <EmptyState
             icon={FolderKanban}
             title="아직 세션이 없습니다"
-            description="연결에서 Claude 대화를 가져오거나 새 세션을 시작하면 여기에 프로젝트별로 쌓입니다."
+            description="소스에서 Claude 대화를 가져오거나 새 세션을 시작하면 여기에 프로젝트별로 쌓입니다."
             actions={
               <Button
                 variant="primary"
                 icon={PlugZap}
                 onClick={() => setCurrentView("connections")}
               >
-                연결로 이동
+                소스로 이동
               </Button>
             }
           />

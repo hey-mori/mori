@@ -928,7 +928,7 @@ function importNextAction(): HomeNextAction {
     kind: "import",
     title: "Claude 작업 가져오기",
     description:
-      "연결에서 Claude 대화를 가져오면 작업이 세션으로 쌓이고, 여기에서 무엇을 했고 다음에 무엇을 하면 좋을지 한눈에 보입니다.",
+      "소스에서 Claude 대화를 가져오면 작업이 세션으로 쌓이고, 여기에서 무엇을 했고 다음에 무엇을 하면 좋을지 한눈에 보입니다.",
     actionLabel: "가져오기",
     destination: "connections",
     targetSessionId: null,

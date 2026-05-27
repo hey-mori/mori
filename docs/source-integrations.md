@@ -22,6 +22,11 @@ Hub never advertises internals as standalone import paths). "Planned
 connectors" cards must be `planned` — Mori does not invent connectors that
 have no registry entry.
 
+The top-level **소스** workspace is backed by
+[`src/lib/sources/sourceWorkspace.ts`](../src/lib/sources/sourceWorkspace.ts)
+and the detailed source acquisition backlog lives in
+[`source-connection-backlog.md`](source-connection-backlog.md).
+
 ## Overview
 
 Mori reconstructs work sessions from **explicitly imported sources**. Every source has:

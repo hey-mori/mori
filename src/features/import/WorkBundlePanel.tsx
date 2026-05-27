@@ -148,7 +148,7 @@ export function WorkBundlePanel() {
 
   function handleApply() {
     if (!hasSession) {
-      return setStatus({ tone: "error", message: "적용하려면 먼저 세션을 시작하거나 연결에서 대화를 가져오세요." });
+      return setStatus({ tone: "error", message: "적용하려면 먼저 세션을 시작하거나 소스에서 대화를 가져오세요." });
     }
     if (items.length === 0) {
       return setStatus({ tone: "error", message: "번들에 소스가 없습니다." });

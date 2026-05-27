@@ -48,7 +48,7 @@ export const moriViewIcon = {
   memory: Layers, // accumulated, structured project memory
   consolidation: BookMarked, // consolidation review of memory proposals
   companion: Compass, // companion guidance
-  connections: Link2, // Claude Desktop / Code conversation bridge
+  connections: Link2, // source catalogue / acquisition workspace
   workspace: FolderKanban, // projects
   settings: Settings,
 } satisfies Partial<Record<ViewKey, LucideIcon>>;

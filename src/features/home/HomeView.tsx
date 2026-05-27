@@ -62,7 +62,7 @@ import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
  * Honest by construction: every number and row comes from
  * `loadStoredSessionSummaries` plus the cheap per-session memory bodies — no
  * fabricated data, no fake widgets. When the user has only the bundled demo,
- * the surface shows an honest empty state that nudges toward 연결 (import).
+ * the surface shows an honest empty state that nudges toward 소스 (import).
  * The derivation lives in `lib/home/homeOverview.ts`; this view only gathers
  * the inputs and renders.
  */
@@ -160,7 +160,7 @@ export function HomeView() {
         <EmptyState
           icon={Layers}
           title="아직 작업 기억이 없습니다"
-          description="연결에서 작업 세션을 가져오면 최근 흐름과 다음 작업이 여기에 정리됩니다."
+          description="소스에서 작업 세션을 가져오면 최근 흐름과 다음 작업이 여기에 정리됩니다."
           actions={
             <>
               <Button
@@ -168,7 +168,7 @@ export function HomeView() {
                 icon={PlugZap}
                 onClick={() => setCurrentView("connections")}
               >
-                연결에서 작업 가져오기
+                소스에서 작업 가져오기
               </Button>
               <Button
                 variant="ghost"
@@ -254,7 +254,7 @@ export function HomeView() {
                     compact
                     icon={FolderKanban}
                     title="표시할 최근 세션이 없습니다"
-                    description="연결에서 Claude 작업을 가져오면 여기에 쌓입니다."
+                    description="소스에서 Claude 작업을 가져오면 여기에 쌓입니다."
                   />
                 )}
               </MoriSection>
