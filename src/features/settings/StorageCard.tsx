@@ -2,6 +2,7 @@ import { FileText, Plug, RefreshCw, Save } from "lucide-react";
 import { moriConceptIcon } from "../../components/brand/moriIcons";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { InfoHint } from "../../components/ui/InfoHint";
 import type { DatabaseStatus, PersistSessionSnapshotOutput, SqliteSessionListEntry } from "../../lib/sqlite/repositoryContracts";
 import { getStorageStatusRows, type RuntimeMode, type StorageStatusRow } from "../../lib/settings/settingsStatus";
 import {
@@ -73,7 +74,6 @@ export function StorageCard({
   return (
     <SettingsSection
       title="저장소와 백업"
-      eyebrow="Local data"
       description="현재 저장 경로와 내보내기 옵션입니다. SQLite는 Tauri 데스크톱 앱에서만 활성화됩니다."
       action={
         <SettingsInlineAction onClick={onOpenReports}>
@@ -102,6 +102,11 @@ export function StorageCard({
           <header>
             <h4>
               <moriConceptIcon.desktopSqlite size={14} aria-hidden="true" /> 데스크톱 SQLite
+              <InfoHint label="SQLite 마이그레이션 상세">
+                적용된 마이그레이션 {sqliteStatus?.appliedMigrations.join(", ") || "없음"} · 대기 중{" "}
+                {sqliteStatus?.pendingMigrations.join(", ") || "없음"} · 테이블{" "}
+                {sqliteStatus?.tables?.length ?? 0}개
+              </InfoHint>
             </h4>
             <Badge
               tone={
@@ -120,23 +125,8 @@ export function StorageCard({
           <div className="settings-row-list">
             <SettingsRow
               compact
-              label="적용된 마이그레이션"
-              meta={<span>{sqliteStatus?.appliedMigrations.join(", ") || "(없음)"}</span>}
-            />
-            <SettingsRow
-              compact
-              label="대기 중 마이그레이션"
-              meta={<span>{sqliteStatus?.pendingMigrations.join(", ") || "(없음)"}</span>}
-            />
-            <SettingsRow
-              compact
-              label="테이블"
-              meta={<span>{sqliteStatus?.tables?.length ?? 0}</span>}
-            />
-            <SettingsRow
-              compact
               label="저장된 세션"
-              meta={<span>{sqliteSessions.length}</span>}
+              meta={<span>{sqliteSessions.length}개</span>}
             />
           </div>
           <div className="settings-sqlite-actions">

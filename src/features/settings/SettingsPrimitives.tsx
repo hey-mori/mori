@@ -1,12 +1,12 @@
 import type { ButtonHTMLAttributes, KeyboardEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
+import { InfoHint } from "../../components/ui/InfoHint";
 import { Toggle } from "../../components/ui/Toggle";
 
 export type SettingsRailItem = {
   id: string;
   label: string;
-  description: string;
   icon: LucideIcon;
   badge?: string;
   disabled?: boolean;
@@ -57,10 +57,7 @@ export function SettingsRail({
             onClick={() => onSelect(item.id)}
           >
             <Icon size={16} aria-hidden="true" />
-            <span>
-              <strong>{item.label}</strong>
-              <small>{item.description}</small>
-            </span>
+            <span className="settings-rail-label">{item.label}</span>
             {item.badge ? <Badge tone="gray">{item.badge}</Badge> : null}
           </button>
         );
@@ -72,23 +69,22 @@ export function SettingsRail({
 export function SettingsSection({
   title,
   description,
-  eyebrow,
   action,
   children,
 }: {
   title: string;
   description?: string;
-  eyebrow?: string;
   action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <section className="settings-section" aria-label={title}>
       <header className="settings-section-head">
-        <div>
-          {eyebrow ? <span className="settings-section-eyebrow">{eyebrow}</span> : null}
+        <div className="settings-section-heading">
           <h3>{title}</h3>
-          {description ? <p>{description}</p> : null}
+          {description ? (
+            <InfoHint label={`${title} 설명`}>{description}</InfoHint>
+          ) : null}
         </div>
         {action ? <div className="settings-section-action">{action}</div> : null}
       </header>

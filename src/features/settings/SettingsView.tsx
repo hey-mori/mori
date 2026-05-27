@@ -9,6 +9,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { InfoHint } from "../../components/ui/InfoHint";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -110,27 +111,28 @@ export function SettingsView() {
   return (
     <div className="settings-content-stack settings-page">
       <div className="settings-pane-head">
-        <div>
-          <span className="settings-section-eyebrow">{sectionEyebrow(activeTab)}</span>
+        <div className="settings-pane-heading">
           <h2>{SETTINGS_TAB_DEFS.find((entry) => entry.id === activeTab)?.label ?? "설정"}</h2>
-          <p>{sectionDescription(activeTab)}</p>
+          <InfoHint label="이 화면 설명">{sectionDescription(activeTab)}</InfoHint>
         </div>
         <StatusPill tone={mode === "tauri-desktop" ? "green" : "blue"}>
           {mode === "tauri-desktop" ? "데스크톱 런타임" : "브라우저 런타임"}
         </StatusPill>
       </div>
-      <StatusStrip
-        mode={mode}
-        sqliteKind={sqliteKind}
-        sqliteSessionCount={sqliteSessions.length}
-        repositoryCount={repositorySettings.repositories.length}
-        sourceCount={sessionView.sources.length}
-        providerLabel={providerLabel}
-        hasAnalysis={hasAnalysis}
-        importsCount={imports.length}
-      />
 
       <div className="settings-main">
+        {activeTab === "storage" ? (
+          <StatusStrip
+            mode={mode}
+            sqliteKind={sqliteKind}
+            sqliteSessionCount={sqliteSessions.length}
+            repositoryCount={repositorySettings.repositories.length}
+            sourceCount={sessionView.sources.length}
+            providerLabel={providerLabel}
+            hasAnalysis={hasAnalysis}
+            importsCount={imports.length}
+          />
+        ) : null}
         {activeTab === "localAi" ? (
           <LocalAiCard
             settings={settings}
@@ -193,25 +195,6 @@ export function SettingsView() {
 
     </div>
   );
-}
-
-function sectionEyebrow(tab: SettingsTab): string {
-  switch (tab) {
-    case "localAi":
-      return "Quick Pass";
-    case "privacy":
-      return "Privacy";
-    case "storage":
-      return "Local data";
-    case "repositories":
-      return "Projects";
-    case "appearance":
-      return "Display";
-    case "notifications":
-      return "Signals";
-    case "profile":
-      return "Profile";
-  }
 }
 
 function sectionDescription(tab: SettingsTab): string {

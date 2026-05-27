@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Lock, RotateCcw, Sparkles, UserRound } from "lucide-react";
+import { Lock, RotateCcw } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useMoriProfileStore } from "../../app/profileStore";
 import {
@@ -45,7 +45,6 @@ export function AccountProfileView() {
     <div className="settings-content-stack account-profile">
       <SettingsSection
         title="로컬 프로필"
-        eyebrow="Profile"
         description="이름과 이니셜은 이 기기에서 Mori를 표시하는 데만 사용됩니다."
         action={<StatusPill tone="green">로컬 전용</StatusPill>}
       >
@@ -100,30 +99,25 @@ export function AccountProfileView() {
       <SettingsSection
         title="계정과 동기화"
         description="Mori Account는 아직 구현되지 않았습니다. 이 화면은 로컬 모드의 경계를 명확히 보여줍니다."
-        action={<StatusPill tone="gray">연결 없음</StatusPill>}
+        action={<StatusPill tone="green">로그인 없이 열림</StatusPill>}
       >
         <div className="settings-row-list">
           <SettingsRow
+            compact
             label="Mori Account"
-            description="로그인, 플랜, 결제, 팀 권한은 아직 없습니다."
             meta={<StatusPill tone="gray">예정</StatusPill>}
             disabled
           />
           <SettingsRow
+            compact
             label="동기화"
-            description="프로필과 작업 데이터는 이 기기에 남습니다. 향후에도 명시적 opt-in이어야 합니다."
             meta={<StatusPill tone="gray">비활성</StatusPill>}
             disabled
           />
         </div>
-        <SettingsNotice icon={Lock} title="로컬 신원">
-          표시 이름은 서버 신원 증명에 쓰이지 않습니다.
-        </SettingsNotice>
-        <SettingsNotice icon={Sparkles} title="향후 계정 작업">
-          동기화가 추가되면, 전송 대상과 데이터를 먼저 보여준 뒤 사용자가 켜야 합니다.
-        </SettingsNotice>
-        <SettingsNotice icon={UserRound} title="로그인 벽 없음" tone="success">
-          Mori는 계정 없이 바로 열리고, 로컬 모드가 기본입니다.
+        <SettingsNotice icon={Lock} title="동기화가 생겨도 먼저 보여주고 켭니다" tone="success">
+          지금은 로그인·플랜·결제·팀 권한이 없고, 프로필과 작업 데이터는 이 기기에만 남습니다.
+          동기화가 추가되면 전송 대상과 데이터를 먼저 보여준 뒤 사용자가 직접 켜는 명시적 opt-in으로만 동작합니다.
         </SettingsNotice>
       </SettingsSection>
     </div>

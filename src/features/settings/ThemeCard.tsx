@@ -56,7 +56,6 @@ export function ThemeCard() {
   return (
     <SettingsSection
       title="화면 표시"
-      eyebrow="Display"
       description="테마는 이 기기에만 저장됩니다. 캡처, 분석, 메모리 동작에는 영향을 주지 않습니다."
       action={<Palette size={16} aria-hidden="true" />}
     >

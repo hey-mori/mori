@@ -90,7 +90,6 @@ export function RepositoriesCard({
   return (
     <SettingsSection
       title="리포지토리와 프로젝트"
-      eyebrow="Explicit paths"
       description="Mori는 사용자가 추가한 경로만 기억합니다. 검증 또는 Git diff 캡처를 실행할 때만 해당 경로를 읽습니다."
       action={
         <div className="settings-repo-summary">
