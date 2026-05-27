@@ -187,6 +187,31 @@ export function ProjectView() {
     openSessionId(targetSessionId, item.destination);
   };
 
+  // Memory and consolidation are scoped to the active session's project, but
+  // this page views a project by `sourceLabel`. Before routing to the memory
+  // surface, make the viewed project active by loading its most recent session
+  // so the memory / consolidation context matches what the user is looking at.
+  const openProjectMemory = (tab: "overview" | "consolidation") => {
+    const targetSessionId = overview?.groups[0]?.rows[0]?.sessionId ?? null;
+    const go = () => {
+      setMemoryTab(tab);
+      setCurrentView("memory");
+    };
+    if (!targetSessionId || targetSessionId === activeSessionId) {
+      go();
+      return;
+    }
+    if (isDesktop) {
+      void loadDesktopSession(targetSessionId).then((ok) => {
+        if (!ok) loadBrowserSession(targetSessionId);
+        go();
+      });
+      return;
+    }
+    loadBrowserSession(targetSessionId);
+    go();
+  };
+
   if (!projectKey || !overview) {
     return (
       <PageShell className="project-page" maxWidth="wide">
@@ -282,10 +307,7 @@ export function ProjectView() {
         storageSource={memoryStorageSource}
         storageFellBack={memoryStorageFellBack}
         loading={memoriesLoading}
-        onOpenConsolidation={() => {
-          setMemoryTab("consolidation");
-          setCurrentView("memory");
-        }}
+        onOpenConsolidation={() => openProjectMemory("consolidation")}
       />
 
       <MoriSection
