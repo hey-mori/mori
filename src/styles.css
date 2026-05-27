@@ -10293,6 +10293,96 @@ pre {
   color: var(--muted);
 }
 
+/* 개요 "확인이 필요한 항목" — a compact, clickable preview of the top
+   unresolved review items, so the overview answers what needs attention. */
+.overview-attention {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel, white);
+}
+
+.overview-attention-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overview-attention-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.overview-attention-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.overview-attention-list button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.overview-attention-list button:hover {
+  background: var(--gray-50, #f5f6fa);
+}
+
+.overview-attention-kind {
+  flex-shrink: 0;
+  min-width: 52px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.overview-attention-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-attention-reason {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+.overview-attention-list button svg {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+
+.overview-attention-more {
+  justify-self: start;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 @media (max-width: 1100px) {
   .overview-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -11988,7 +12078,7 @@ pre {
   flex-direction: column;
   background: var(--panel);
   border-right: 1px solid var(--line-strong);
-  box-shadow: 20px 0 60px rgba(24, 28, 42, 0.18);
+  box-shadow: 8px 0 32px rgba(24, 28, 42, 0.06);
   outline: none;
   animation: noti-drawer-in 180ms ease-out;
 }
@@ -22319,3 +22409,75 @@ button.settings-option {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Mori General Modal — Premium Centered Popups ────────────────────────── */
+.mori-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 40, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 20000;
+}
+
+.mori-modal-body {
+  display: grid;
+  gap: 14px;
+  width: min(540px, 100%);
+  padding: 22px 22px 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e6e3f1;
+  box-shadow: 0 20px 50px rgba(24, 28, 42, 0.15);
+}
+
+.mori-modal-body header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.mori-modal-body header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mori-modal-body label {
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4b4470;
+}
+
+.mori-modal-body input,
+.mori-modal-body textarea {
+  padding: 10px 12px;
+  border: 1px solid #d9d0ff;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #2c2549;
+  background: #fdfcff;
+  transition: border-color 0.12s ease;
+}
+
+.mori-modal-body input:focus,
+.mori-modal-body textarea:focus {
+  outline: none;
+  border-color: var(--purple);
+}
+
+.mori-modal-body footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, type ComponentType } from "react";
 import {
+  ArrowRight,
   ClipboardCheck,
   FileText,
   GanttChartSquare,
@@ -17,6 +18,11 @@ import { useMoriAppStore } from "../../app/store";
 import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
 import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
+import {
+  getUnresolvedItems,
+  UNRESOLVED_REASON_LABEL,
+  type UnresolvedItem,
+} from "../../lib/review-workspace/reviewWorkspace";
 
 /**
  * Session 개요 — the at-a-glance landing tab for one session.
@@ -36,6 +42,7 @@ export function OverviewView() {
   const analysis = useMoriSessionStore((state) => state.analysis);
   const imports = useMoriSessionStore((state) => state.imports);
   const setSessionTab = useMoriAppStore((state) => state.setSessionTab);
+  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -81,6 +88,22 @@ export function OverviewView() {
     view.decisions.filter((decision) => !decision.confirmed).length +
     view.nextActions.filter((action) => !isNextActionCompleted(action)).length;
 
+  const unresolved = useMemo(
+    () =>
+      getUnresolvedItems({
+        issues: view.issues,
+        decisions: view.decisions,
+        nextActions: view.nextActions,
+      }),
+    [view.issues, view.decisions, view.nextActions],
+  );
+
+  function openUnresolved(item: UnresolvedItem) {
+    if (item.kind === "issue") openReviewItem({ kind: "issue", issueId: item.issue.id });
+    else if (item.kind === "decision") openReviewItem({ kind: "decision", decisionId: item.decision.id });
+    else openReviewItem({ kind: "nextAction", nextActionId: item.nextAction.id });
+  }
+
   return (
     <div className="session-tab-pane session-tab-overview">
       <div className="session-tab-split is-collapsed">
@@ -110,6 +133,38 @@ export function OverviewView() {
             <OverviewMetric label="결정" value={String(decisionCount)} />
             <OverviewMetric label="다음 액션" value={String(nextActionCount)} />
           </dl>
+
+          {unresolved.length > 0 ? (
+            <section className="overview-attention" aria-label="확인이 필요한 항목">
+              <header className="overview-attention-head">
+                <h2>확인이 필요한 항목</h2>
+                <Badge tone="orange">{unresolved.length}</Badge>
+              </header>
+              <ul className="overview-attention-list">
+                {unresolved.slice(0, 4).map((item) => (
+                  <li key={`${item.kind}:${unresolvedItemId(item)}`}>
+                    <button type="button" onClick={() => openUnresolved(item)}>
+                      <span className="overview-attention-kind">{unresolvedKindLabel(item)}</span>
+                      <span className="overview-attention-title">{unresolvedItemTitle(item)}</span>
+                      <span className="overview-attention-reason">
+                        {UNRESOLVED_REASON_LABEL[item.reason]}
+                      </span>
+                      <ArrowRight size={13} aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {unresolved.length > 4 ? (
+                <button
+                  type="button"
+                  className="overview-attention-more"
+                  onClick={() => setSessionTab("insights")}
+                >
+                  검토에서 {unresolved.length - 4}건 더 보기
+                </button>
+              ) : null}
+            </section>
+          ) : null}
 
           <nav className="overview-nav-cards" aria-label="세션 탭 바로가기">
             <OverviewNavCard
@@ -190,11 +245,29 @@ function OverviewNavCard({
   );
 }
 
+function unresolvedItemId(item: UnresolvedItem): string {
+  if (item.kind === "issue") return item.issue.id;
+  if (item.kind === "decision") return item.decision.id;
+  return item.nextAction.id;
+}
+
+function unresolvedItemTitle(item: UnresolvedItem): string {
+  if (item.kind === "issue") return item.issue.title;
+  if (item.kind === "decision") return item.decision.title;
+  return item.nextAction.title;
+}
+
+function unresolvedKindLabel(item: UnresolvedItem): string {
+  if (item.kind === "issue") return "이슈";
+  if (item.kind === "decision") return "결정";
+  return "다음 액션";
+}
+
 function formatDuration(start: string, end: string): string {
   const startTime = new Date(start).getTime();
   const endTime = new Date(end).getTime();
   if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime) {
-    return "—";
+    return "-";
   }
   const minutes = Math.floor((endTime - startTime) / 60000);
   if (minutes < 60) return `${minutes}분`;
