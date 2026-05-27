@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { moriMockSession } from "../../domain/mock-data";
 import type { MoriMockSession, Relationship, TimelineEvent } from "../../domain/types";
+import { getTimelineLaneForEvent } from "./activityModel";
 import {
   buildInspectorViewModel,
   buildTimelineGapMarkers,
@@ -45,13 +46,20 @@ describe("filterEvents", () => {
     expect(filterEvents({ events, activeFilters: [], searchQuery: "" })).toBe(events);
   });
 
-  it("filters by event type", () => {
+  it("filters by lane", () => {
     const filtered = filterEvents({
       events,
-      activeFilters: ["decision"],
+      activeFilters: ["conversation"],
       searchQuery: "",
+      sources: moriMockSession.sources,
     });
-    expect(filtered.every((event) => event.type === "decision")).toBe(true);
+    expect(filtered.length).toBeGreaterThan(0);
+    expect(
+      filtered.every(
+        (event) =>
+          getTimelineLaneForEvent({ event, sources: moriMockSession.sources }) === "conversation",
+      ),
+    ).toBe(true);
   });
 
   it("filters by search query against title + summary", () => {
@@ -67,8 +75,9 @@ describe("filterEvents", () => {
   it("intersects filter + search", () => {
     const filtered = filterEvents({
       events,
-      activeFilters: ["aiConversation"],
+      activeFilters: ["conversation"],
       searchQuery: "x-9-not-a-real-match",
+      sources: moriMockSession.sources,
     });
     expect(filtered).toEqual([]);
   });
@@ -125,9 +134,15 @@ describe("buildTimelineRenderModel", () => {
     ]);
   });
 
-  it("filters events when activeFilters is set", () => {
-    const model = buildModel(moriMockSession, { activeFilters: ["decision"] });
-    expect(model.visibleEvents.every((event) => event.type === "decision")).toBe(true);
+  it("filters events to a lane when activeFilters is set", () => {
+    const model = buildModel(moriMockSession, { activeFilters: ["conversation"] });
+    expect(model.visibleEvents.length).toBeGreaterThan(0);
+    expect(
+      model.visibleEvents.every(
+        (event) =>
+          getTimelineLaneForEvent({ event, sources: moriMockSession.sources }) === "conversation",
+      ),
+    ).toBe(true);
   });
 
   it("flags filteredEmpty when a search hides every event", () => {

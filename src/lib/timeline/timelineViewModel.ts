@@ -9,10 +9,10 @@
  */
 import type {
   Decision,
-  EventType,
   Issue,
   MoriMockSession,
   Relationship,
+  SourceRef,
   TimelineEvent,
 } from "../../domain/types";
 import {
@@ -119,7 +119,8 @@ export type BuildTimelineRenderModelInput = {
   density: TimelineDensity;
   selectedEventId: string | null;
   hoveredEventId: string | null;
-  activeFilters: EventType[];
+  /** Active category filter, keyed by timeline lane. */
+  activeFilters: ActivityLaneId[];
   searchQuery: string;
   frameWidth: number;
   laneOrder?: ActivityLaneId[];
@@ -158,6 +159,7 @@ export function buildTimelineRenderModel(
     events: input.view.events,
     activeFilters: input.activeFilters,
     searchQuery: input.searchQuery,
+    sources: sourceIndex,
   });
 
   // 4. Display items — bundles preserved as before. Bundle aggressiveness is
@@ -393,13 +395,19 @@ function chooseEmptyVariant(args: {
 
 export function filterEvents(args: {
   events: TimelineEvent[];
-  activeFilters: EventType[];
+  activeFilters: ActivityLaneId[];
   searchQuery: string;
+  sources?: readonly SourceRef[] | ReadonlyMap<string, SourceRef>;
 }): TimelineEvent[] {
   const normalizedSearch = args.searchQuery.trim().toLocaleLowerCase();
   if (!args.activeFilters.length && !normalizedSearch) return args.events;
   return args.events.filter((event) => {
-    if (args.activeFilters.length && !args.activeFilters.includes(event.type)) return false;
+    if (
+      args.activeFilters.length &&
+      !args.activeFilters.includes(getTimelineLaneForEvent({ event, sources: args.sources }))
+    ) {
+      return false;
+    }
     if (!normalizedSearch) return true;
     return `${event.title} ${event.summary}`
       .toLocaleLowerCase()

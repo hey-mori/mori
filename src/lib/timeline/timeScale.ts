@@ -65,25 +65,11 @@ export function summarizeTimelineRange(range: TimelineRange): RangeSummary {
     Number.isFinite(end) &&
     new Date(start).toDateString() === new Date(end).toDateString();
   return {
-    startLabel: Number.isFinite(start)
-      ? new Date(start).toLocaleString([], {
-          year: "numeric",
-          month: "short",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : range.start,
+    startLabel: Number.isFinite(start) ? AXIS_RANGE_DATETIME_FORMAT.format(start) : range.start,
     endLabel: Number.isFinite(end)
       ? sameDay
-        ? new Date(end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        : new Date(end).toLocaleString([], {
-            year: "numeric",
-            month: "short",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
+        ? AXIS_TIME_FORMAT.format(end)
+        : AXIS_RANGE_DATETIME_FORMAT.format(end)
       : range.end,
     durationLabel: formatDuration(Math.max(0, end - start)),
   };
@@ -115,13 +101,37 @@ function pickStep(spanMs: number, maxTicks: number): number {
   return candidates[candidates.length - 1];
 }
 
+// 24-hour, Korean / Asia-Seoul convention so the axis reads "13:00" — never
+// the locale-default "오후 1:00". A reader tells morning from afternoon from
+// the number itself, so the 오전/오후 prefix is just noise on a time ruler.
+const AXIS_TIME_FORMAT = new Intl.DateTimeFormat("ko-KR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Seoul",
+});
+const AXIS_DATETIME_FORMAT = new Intl.DateTimeFormat("ko-KR", {
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Seoul",
+});
+const AXIS_RANGE_DATETIME_FORMAT = new Intl.DateTimeFormat("ko-KR", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "Asia/Seoul",
+});
+
 function formatLabel(timestamp: number, rangeStart: number, rangeEnd: number): string {
   const date = new Date(timestamp);
   const sameDay = new Date(rangeStart).toDateString() === new Date(rangeEnd).toDateString();
-  if (sameDay) {
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-  return date.toLocaleString([], { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return sameDay ? AXIS_TIME_FORMAT.format(date) : AXIS_DATETIME_FORMAT.format(date);
 }
 
 function formatDuration(ms: number): string {

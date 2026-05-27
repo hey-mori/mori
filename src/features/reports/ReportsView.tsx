@@ -36,10 +36,8 @@ import type {
   StoredMemoryReviewAction,
 } from "../../lib/storage/storageTypes";
 import { buildMoriPackageExportPlan } from "../../lib/report/moriPackageExportPlan";
-import {
-  buildHandoffReadiness,
-  type HandoffReadinessActionId,
-} from "../../lib/report/handoffReadiness";
+import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
+import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
 import {
   buildSessionWrapUp,
   type SessionWrapUpActionId,
@@ -62,9 +60,7 @@ import { deriveSessionStatus } from "../../lib/session/sessionStatus";
 import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import { ResumePromptCard, type ResumePromptOrigin } from "./ResumePromptCard";
 import { SessionSummaryStrip } from "./SessionSummaryStrip";
-import { WorkContinuationCards } from "./WorkContinuationCards";
 import { ReportBuilderPanel } from "./ReportBuilderPanel";
-import { HandoffReadinessPanel } from "./HandoffReadinessPanel";
 
 export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
   // `navigate` routes legacy session-surface keys (timeline / evidence) into
@@ -231,38 +227,28 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
       }),
     [view, acceptedMemories, reviewActions],
   );
-  const handoffReadiness = useMemo(
+  const originSummary = useMemo(
     () =>
-      buildHandoffReadiness({
-        sourceCount: view.sources.length,
-        eventCount: view.events.length,
-        issueCount: view.issues.length,
-        decisionCount: view.decisions.length,
-        nextActionCount: view.nextActions.length,
-        hasAnalysis,
-        analysisRunning: analysisStatus === "running",
-        canRunQuickPass,
-        acceptedMemoryCount: acceptedMemories.length,
-        staleMemoryCount: memoryHealth.stale,
-        contradictedMemoryCount: memoryHealth.contradicted,
-        resumePromptReady: resumePromptText.trim().length > 0,
-        exportPlan,
+      buildSessionOriginSummary({
+        session: view.session,
+        sources: view.sources,
+        events: view.events,
+        importCount: isDemo ? 0 : imports.length,
+        isDemo,
       }),
-    [
-      view.sources.length,
-      view.events.length,
-      view.issues.length,
-      view.decisions.length,
-      view.nextActions.length,
-      hasAnalysis,
-      analysisStatus,
-      canRunQuickPass,
-      acceptedMemories.length,
-      memoryHealth,
-      resumePromptText,
-      exportPlan,
-    ],
+    [view.session, view.sources, view.events, imports.length, isDemo],
   );
+  const projectHint = useMemo(
+    () =>
+      deriveProjectIdentityHint({
+        session: view.session,
+        sources: view.sources,
+        events: view.events,
+      }),
+    [view.session, view.sources, view.events],
+  );
+  const overviewSummaryText =
+    (hasAnalysis && analysis ? analysis.summary.sessionSummary : view.summary.sessionSummary) || null;
 
   function handleWrapUpAction(actionId: SessionWrapUpActionId) {
     switch (actionId) {
@@ -301,38 +287,6 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
       case "nextAction":
         openReviewItem({ kind: "nextAction", nextActionId: item.id });
         return;
-      default:
-        return;
-    }
-  }
-
-  function handleHandoffAction(actionId: HandoffReadinessActionId) {
-    switch (actionId) {
-      case "addEvidence":
-        setCurrentView("evidence");
-        return;
-      case "runQuickPass":
-        if (canRunQuickPass) void runQuickPass();
-        return;
-      case "reviewMemory":
-        setCurrentView("memory");
-        return;
-      case "reviewMemoryHealth":
-        setCurrentView("consolidation");
-        return;
-      case "openReportBuilder":
-        document.getElementById("reports-builder")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-        return;
-      case "openPackageExport":
-        document.getElementById("reports-package-export")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-        return;
-      case "copyResume":
       default:
         return;
     }
@@ -402,6 +356,12 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
       />
 
       <div className="reports-main">
+        <SessionOverviewHero
+          originSummary={originSummary}
+          projectLabel={projectHint.projectLabel}
+          summaryText={overviewSummaryText}
+        />
+
         <SessionSummaryStrip
           dataBasis={evidenceSummary.dataBasis}
           dataBasisTone={status.dataBasisTone}
@@ -417,12 +377,6 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
           onOpenAttentionMemory={openAcceptedMemory}
         />
 
-        <HandoffReadinessPanel
-          model={handoffReadiness}
-          resumePrompt={resumePromptText}
-          onAction={handleHandoffAction}
-        />
-
         <div id="reports-handoff" className="reports-handoff-group">
           <ResumePromptCard
             prompt={resumePromptText}
@@ -433,8 +387,6 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
                 : "Quick Pass를 실행하면 분석 기반 프롬프트가 표시됩니다."
             }
           />
-
-          <WorkContinuationCards view={view} onOpenTimeline={() => setCurrentView("timeline")} />
 
           <MoriPackageStrip
             view={view}
@@ -468,7 +420,7 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
       <div className="session-tab-pane reports-embedded">
         <div className="session-tab-actionbar">
           <ActionBar
-            label="보고서 세션 상태"
+            label="세션 개요"
             start={statusBadges}
             end={
               <>
@@ -492,11 +444,40 @@ export function ReportsView({ embedded = false }: { embedded?: boolean } = {}) {
     <PageShell
       className="reports-page"
       header={<PageHeader compact title="리포트" right={quickPassButton} />}
-      actionBar={<ActionBar label="보고서 세션 상태" start={statusBadges} end={actionCounts} />}
+      actionBar={<ActionBar label="세션 개요" start={statusBadges} end={actionCounts} />}
       aside={asideNode}
     >
       {bodyNode}
     </PageShell>
+  );
+}
+
+/**
+ * Session-at-a-glance hero. Carries the work-unit identity that used to live in
+ * the cramped session-detail origin strip (boundary type · source mix ·
+ * project context) plus a one-line "what this session was" summary, so the 개요
+ * tab opens by telling the user what they are looking at before the metrics.
+ */
+function SessionOverviewHero({
+  originSummary,
+  projectLabel,
+  summaryText,
+}: {
+  originSummary: ReturnType<typeof buildSessionOriginSummary>;
+  projectLabel: string;
+  summaryText: string | null;
+}) {
+  return (
+    <section className="session-overview-hero" aria-label="세션 개요">
+      <div className="session-overview-origin">
+        <Badge tone="purple">{originSummary.boundaryLabel}</Badge>
+        <span className="session-overview-mix">{originSummary.sourceMixLabel}</span>
+        {projectLabel ? (
+          <span className="session-overview-context">맥락 · {projectLabel}</span>
+        ) : null}
+      </div>
+      {summaryText ? <p className="session-overview-summary">{summaryText}</p> : null}
+    </section>
   );
 }
 

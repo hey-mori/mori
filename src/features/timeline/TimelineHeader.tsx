@@ -1,38 +1,23 @@
 import {
-  Calendar,
-  Check,
-  ChevronDown,
   Filter,
   MessageSquare,
   PanelRight,
   Rows3,
   Search,
-  SlidersHorizontal,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { eventTypeLabels, eventTypeTone, laneOrder } from "../../domain/constants";
-import type { EventType } from "../../domain/types";
-import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
-import { getPlannedHint } from "../../lib/timeline/timelineControls";
+import {
+  CANONICAL_TIMELINE_LANES,
+  getActivityLaneVisuals,
+  type ActivityLaneId,
+} from "../../lib/timeline/activityModel";
 
 export type TimelineReadingMode = "swimlane" | "flow";
 
-type TimelineRangeId = "day" | "week" | "session";
-
-const DENSITY_OPTIONS: Array<{
-  id: TimelineDensity;
-  shortLabel: string;
-  title: string;
-}> = [
-  { id: "comfortable", shortLabel: "C", title: "여유 밀도" },
-  { id: "compact", shortLabel: "M", title: "기본 밀도" },
-  { id: "dense", shortLabel: "D", title: "고밀도 추적 보기" },
-];
-
 export type TimelineToolbarProps = {
-  activeFilters: EventType[];
-  onToggleFilter: (eventType: EventType) => void;
+  activeFilters: ActivityLaneId[];
+  onToggleFilter: (lane: ActivityLaneId) => void;
   onClearFilters: () => void;
   inspectorCollapsed: boolean;
   onToggleInspector: () => void;
@@ -41,10 +26,15 @@ export type TimelineToolbarProps = {
   onSearchChange: (query: string) => void;
   readingMode: TimelineReadingMode;
   onReadingModeChange: (mode: TimelineReadingMode) => void;
-  density: TimelineDensity;
-  onDensityChange: (density: TimelineDensity) => void;
 };
 
+/**
+ * Timeline toolbar. Deliberately spare: a reading-mode switch (conversation
+ * thread ↔ swimlane), one search field, the category filter, and the
+ * inspector toggle. The old session/day/week range dropdown and the C/M/D
+ * density switch were removed — the range is always the full session span and
+ * the density is fixed, so neither earned a control.
+ */
 export function TimelineToolbar({
   activeFilters,
   onToggleFilter,
@@ -56,120 +46,45 @@ export function TimelineToolbar({
   onSearchChange,
   readingMode,
   onReadingModeChange,
-  density,
-  onDensityChange,
 }: TimelineToolbarProps) {
-  const [rangeOpen, setRangeOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const rangePopRef = useRef<HTMLDivElement | null>(null);
   const filterPopRef = useRef<HTMLDivElement | null>(null);
 
-  useClickOutside(rangePopRef, rangeOpen, () => setRangeOpen(false));
   useClickOutside(filterPopRef, filterOpen, () => setFilterOpen(false));
 
-  const rangeItems: Array<{ id: TimelineRangeId; label: string; hint?: string }> = [
-    { id: "session", label: "세션" },
-    { id: "day", label: "일", hint: getPlannedHint("rangeDay") },
-    { id: "week", label: "주", hint: getPlannedHint("rangeWeek") },
-  ];
-
   return (
-    <div className="timeline-toolbar" role="toolbar" aria-label="Timeline controls">
+    <div className="timeline-toolbar" role="toolbar" aria-label="타임라인 컨트롤">
       <div className="timeline-toolbar-left">
-        <div className="toolbar-pop-wrap" ref={rangePopRef}>
-          <button
-            type="button"
-            className="toolbar-select"
-            onClick={() => setRangeOpen((open) => !open)}
-            aria-expanded={rangeOpen}
-            aria-controls="timeline-range-menu"
-            title="타임라인 표시 범위"
-          >
-            <Calendar size={14} aria-hidden="true" />
-            <span>세션</span>
-            <ChevronDown size={13} aria-hidden="true" className="toolbar-select-caret" />
-          </button>
-          {rangeOpen ? (
-            <div
-              className="toolbar-menu"
-              id="timeline-range-menu"
-              role="menu"
-              aria-label="타임라인 표시 범위"
-            >
-              {rangeItems.map((item) => {
-                const planned = item.id !== "session";
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={item.id === "session"}
-                    className={`toolbar-menu-item ${planned ? "is-planned" : ""}`}
-                    disabled={planned}
-                    title={item.hint}
-                    onClick={() => setRangeOpen(false)}
-                  >
-                    <span className="toolbar-menu-check">
-                      {item.id === "session" ? <Check size={13} aria-hidden="true" /> : null}
-                    </span>
-                    <span>{item.label}</span>
-                    {planned ? <span className="toolbar-menu-tag">예정</span> : null}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-
         <div className="timeline-mode-switch" role="group" aria-label="타임라인 보기 방식">
           <button
             type="button"
             className={`timeline-mode-option ${readingMode === "flow" ? "is-active" : ""}`}
             aria-pressed={readingMode === "flow"}
             onClick={() => onReadingModeChange("flow")}
-            title="흐름 보기: 턴과 출처 활동을 시간순으로 읽기"
+            title="대화 스레드: 턴과 출처 활동을 시간순으로 읽기"
           >
             <MessageSquare size={14} aria-hidden="true" />
-            흐름
+            대화
           </button>
           <button
             type="button"
             className={`timeline-mode-option ${readingMode === "swimlane" ? "is-active" : ""}`}
             aria-pressed={readingMode === "swimlane"}
             onClick={() => onReadingModeChange("swimlane")}
-            title="타임라인 보기: 이벤트 레인별로 활동 훑어보기"
+            title="타임라인: 카테고리 레인별로 활동 훑어보기"
           >
             <Rows3 size={14} aria-hidden="true" />
             타임라인
           </button>
         </div>
-
-        <div className="timeline-density-switch" role="group" aria-label="타임라인 밀도">
-          <span className="timeline-density-label">
-            <SlidersHorizontal size={13} aria-hidden="true" />
-            밀도
-          </span>
-          {DENSITY_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className={`timeline-density-option ${density === option.id ? "is-active" : ""}`}
-              aria-pressed={density === option.id}
-              onClick={() => onDensityChange(option.id)}
-              title={option.title}
-            >
-              {option.shortLabel}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="timeline-toolbar-search" role="search" aria-label="타임라인 이벤트 검색">
-        <Search size={13} aria-hidden="true" className="timeline-search-icon" />
+        <Search size={14} aria-hidden="true" className="timeline-search-icon" />
         <input
           type="search"
           className="timeline-search-input"
-          placeholder="이벤트 검색..."
+          placeholder="이벤트 검색"
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
           aria-label="타임라인 이벤트 검색"
@@ -181,7 +96,7 @@ export function TimelineToolbar({
             onClick={() => onSearchChange("")}
             aria-label="검색어 지우기"
           >
-            <X size={12} aria-hidden="true" />
+            <X size={13} aria-hidden="true" />
           </button>
         ) : null}
       </div>
@@ -194,7 +109,7 @@ export function TimelineToolbar({
             onClick={() => setFilterOpen((open) => !open)}
             aria-expanded={filterOpen}
             aria-controls="timeline-filter-popover"
-            title="타임라인 카테고리 필터"
+            title="카테고리 필터"
           >
             <Filter size={14} aria-hidden="true" />
             {activeFilters.length ? `필터 · ${activeFilters.length}` : "필터"}
@@ -221,27 +136,26 @@ export function TimelineToolbar({
                 </button>
               </header>
               <ul>
-                {laneOrder.map((type) => {
-                  const active = activeFilters.includes(type);
+                {CANONICAL_TIMELINE_LANES.map((lane) => {
+                  const visuals = getActivityLaneVisuals(lane);
+                  const active = activeFilters.includes(lane);
                   return (
-                    <li key={type}>
+                    <li key={lane}>
                       <button
                         type="button"
-                        className={`filter-pop-item tone-${eventTypeTone[type]} ${active ? "active" : ""}`}
+                        className={`filter-pop-item tone-${visuals.tone} ${active ? "active" : ""}`}
                         aria-pressed={active}
-                        onClick={() => onToggleFilter(type)}
+                        onClick={() => onToggleFilter(lane)}
                       >
-                        <span className={`legend-dot tone-${eventTypeTone[type]}`} />
-                        {eventTypeLabels[type]}
+                        <span className={`legend-dot tone-${visuals.tone}`} />
+                        {visuals.label}
                       </button>
                     </li>
                   );
                 })}
               </ul>
               <footer>
-                <small>
-                  필터는 세션 데이터를 바꾸지 않고 보이는 이벤트만 좁힙니다.
-                </small>
+                <small>필터는 세션 데이터를 바꾸지 않고 보이는 이벤트만 좁힙니다.</small>
               </footer>
             </div>
           ) : null}

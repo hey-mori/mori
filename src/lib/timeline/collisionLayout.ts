@@ -82,13 +82,14 @@ const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
 const DEFAULT_CARD_GAP = 12;
 const LANE_VERTICAL_PADDING = 7;
-/** Lanes with no items render as a slim, de-emphasised band — not a full
- *  content-height row of dead space. */
-// Empty lanes collapse to zero height so they vanish from the canvas rather
-// than reserving a dead band. The lane still exists in the lanes[] array
-// (callers that snapshot lane shape stay stable), but it consumes no row in
-// the laid-out timeline.
-const EMPTY_LANE_HEIGHT = 0;
+/**
+ * Lanes with no items render as a slim, de-emphasised band — never a full
+ * content-height row of dead space, but never hidden either. The canonical
+ * lane set is always present so the timeline reads as one stable structure;
+ * an empty lane just shows its label so the user can see the category exists
+ * and could carry events.
+ */
+const EMPTY_LANE_HEIGHT = 34;
 
 export function computeTimelineLayout(
   items: TimelineDisplayItem[],

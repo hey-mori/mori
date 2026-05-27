@@ -132,7 +132,7 @@ describe("buildTimelineBundleViewModel", () => {
   it("ranks the type mix label by count desc", () => {
     const vm = buildTimelineBundleViewModel(bundle);
     // aiConversation (2) should come before decision (1).
-    const aiIndex = vm.typeMixLabel.indexOf("AI 대화");
+    const aiIndex = vm.typeMixLabel.indexOf("대화");
     const decIndex = vm.typeMixLabel.indexOf("결정");
     expect(aiIndex).toBeGreaterThanOrEqual(0);
     expect(decIndex).toBeGreaterThan(aiIndex);

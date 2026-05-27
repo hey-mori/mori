@@ -4,8 +4,8 @@ import {
   FileText,
   FolderGit2,
   GanttChartSquare,
+  LayoutDashboard,
   Layers,
-  ScrollText,
   Sparkles,
 } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
@@ -16,8 +16,6 @@ import {
   useMoriSessionStore,
 } from "../../app/sessionStore";
 import { moriMockSession } from "../../domain/mock-data";
-import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
-import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
 import { buildWorkContext } from "../../lib/session/workContext";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
@@ -34,10 +32,10 @@ import { ReportsView } from "../reports/ReportsView";
  * subtle inline label, then the tab strip with count badges in place of the
  * old "이벤트 24 · 소스 5 · 결정 7 …" metric strip. Tabs:
  *
+ *   - **개요**    — session at a glance + resume prompt + .mori export
  *   - **흐름**    — Timeline + conversation thread
  *   - **증거**    — imported sources / evidence
  *   - **검토**    — issues / decisions / next actions to confirm
- *   - **리포트**  — per-session report + resume builder
  */
 export function SessionDetailView() {
   const hydrate = useMoriSessionStore((state) => state.hydrate);
@@ -54,7 +52,6 @@ export function SessionDetailView() {
     <PageShell className="session-detail-page" maxWidth="full">
       <div className="session-detail-bar">
         <SessionTitleInline />
-        <SessionOriginInline />
         <SessionTabBar activeTab={sessionTab} onChange={setSessionTab} />
       </div>
       <SessionTabContent tab={sessionTab} />
@@ -65,7 +62,7 @@ export function SessionDetailView() {
 /**
  * Slim inline title with a breadcrumb up to the project and workspace.
  * Reads as a real location indicator (←ish chevrons walking from
- * 세션 워크스페이스 → project → current session) so the user can always
+ * 프로젝트 (browser) → project → current session) so the user can always
  * tell how deep they are; the project crumb is clickable to jump up.
  * No banner, no chips, no metric strip.
  */
@@ -90,10 +87,10 @@ function SessionTitleInline() {
         type="button"
         className="session-detail-crumb is-back"
         onClick={() => setCurrentView("workspace")}
-        title="세션 워크스페이스로 돌아가기"
+        title="프로젝트로 돌아가기"
       >
         <Layers size={12} aria-hidden="true" />
-        <span>세션</span>
+        <span>프로젝트</span>
       </button>
       {projectLabel ? (
         <>
@@ -122,51 +119,6 @@ function SessionTitleInline() {
 
 // ─── Tab bar ──────────────────────────────────────────────────────────────────
 
-function SessionOriginInline() {
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const summary = useMemo(
-    () =>
-      buildSessionOriginSummary({
-        session: view.session,
-        sources: view.sources,
-        events: view.events,
-        importCount: mode === "demo" ? 0 : imports.length,
-        isDemo: mode === "demo",
-      }),
-    [view.session, view.sources, view.events, imports.length, mode],
-  );
-  const projectHint = useMemo(
-    () =>
-      deriveProjectIdentityHint({
-        session: view.session,
-        sources: view.sources,
-        events: view.events,
-      }),
-    [view.session, view.sources, view.events],
-  );
-
-  return (
-    <div
-      className="session-origin-strip"
-      aria-label="작업 단위 출처 요약"
-      title={
-        summary.projectHint
-          ? `${summary.boundaryLabel} · ${summary.projectHint}`
-          : summary.boundaryLabel
-      }
-    >
-      <span className="session-origin-chip is-primary">{summary.boundaryLabel}</span>
-      <span className="session-origin-chip">{summary.sourceMixLabel}</span>
-      <span className="session-origin-meta">맥락 {projectHint.projectLabel}</span>
-      <span className="session-origin-meta">{summary.sourceCountLabel}</span>
-      <span className="session-origin-meta">{summary.eventCountLabel}</span>
-      <span className="session-origin-meta">{summary.retentionLabel}</span>
-    </div>
-  );
-}
-
 type SessionTabSpec = {
   id: SessionTab;
   label: string;
@@ -174,18 +126,18 @@ type SessionTabSpec = {
 };
 
 const SESSION_TABS: SessionTabSpec[] = [
+  { id: "overview", label: "개요", icon: LayoutDashboard },
   { id: "flow", label: "흐름", icon: GanttChartSquare },
   { id: "evidence", label: "증거", icon: FileText },
   { id: "insights", label: "검토", icon: Sparkles },
-  { id: "report", label: "리포트", icon: ScrollText },
 ];
 
 /**
  * Tab strip with count badges in place of the deprecated metric strip.
+ *  - 개요:    no count (the at-a-glance summary, not a counted collection)
  *  - 흐름:    timeline event count
  *  - 증거:    imported source count
- *  - 검토: open issues + unconfirmed decisions + pending next actions
- *  - 리포트:  no count (it is an output, not a counted collection)
+ *  - 검토:    open issues + unconfirmed decisions + pending next actions
  *
  * A zero count is hidden rather than rendered as "(0)" so the bar stays calm
  * on a fresh session.
@@ -207,10 +159,10 @@ function SessionTabBar({
     const unconfirmedDecisions = view.decisions.filter((d) => !d.confirmed).length;
     const pendingNextActions = view.nextActions.filter((a) => !isNextActionCompleted(a)).length;
     return {
+      overview: null,
       flow: view.events.length,
       evidence: sources,
       insights: openIssues + unconfirmedDecisions + pendingNextActions,
-      report: null,
     };
   }, [view, imports, mode]);
 
@@ -262,8 +214,8 @@ function SessionTabBar({
 // ─── Tab content ────────────────────────────────────────────────────────────
 
 function SessionTabContent({ tab }: { tab: SessionTab }) {
+  if (tab === "overview") return <ReportsView embedded />;
   if (tab === "evidence") return <EvidenceView />;
   if (tab === "insights") return <ReviewView />;
-  if (tab === "report") return <ReportsView embedded />;
   return <TimelineView mode="timeline" />;
 }

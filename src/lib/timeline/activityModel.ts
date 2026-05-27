@@ -113,6 +113,52 @@ export const timelineActivityLaneOrder: ActivityLaneId[] = [
   "unknown",
 ];
 
+/**
+ * The stable, always-visible lane set for the Timeline. A session's lane
+ * structure should not jump around as events come and go — these lanes are
+ * always rendered (as a slim band when empty) so the user reads one consistent
+ * structure. Rarer activity (design / docs / build / deploy / automation /
+ * memory / unknown) only earns a lane when it actually has events; see
+ * `resolveTimelineLaneOrder`.
+ */
+export const CANONICAL_TIMELINE_LANES: ActivityLaneId[] = [
+  "conversation",
+  "command",
+  "files",
+  "git",
+  "research",
+  "tracker",
+  "review",
+  "handoff",
+  "notes",
+];
+
+/**
+ * The effective lane order to render for a given event set: every canonical
+ * lane (always, even empty) followed by any non-canonical lane that actually
+ * carries an event, kept in `timelineActivityLaneOrder` sequence. This is what
+ * the swimlane canvas and the category filter both key off, so the lanes the
+ * user sees and the categories they can filter are one and the same taxonomy.
+ */
+export function resolveTimelineLaneOrder(
+  events: readonly TimelineEvent[],
+  sources?: readonly SourceRef[] | ReadonlyMap<string, SourceRef>,
+): ActivityLaneId[] {
+  const sourceIndex = sources
+    ? Array.isArray(sources)
+      ? buildSourceIndex(sources)
+      : (sources as ReadonlyMap<string, SourceRef>)
+    : new Map<string, SourceRef>();
+  const populated = new Set<ActivityLaneId>();
+  for (const event of events) {
+    populated.add(getTimelineLaneForEvent({ event, sources: sourceIndex }));
+  }
+  const extras = timelineActivityLaneOrder.filter(
+    (lane) => !CANONICAL_TIMELINE_LANES.includes(lane) && populated.has(lane),
+  );
+  return [...CANONICAL_TIMELINE_LANES, ...extras];
+}
+
 // Korean-first labels. Mori is a Korean-first product; these visuals feed the
 // timeline lane headers, conversation-flow group headers, inspector badges,
 // card labels, the minimap, and aria-labels, so they must read as the rest of

@@ -51,13 +51,12 @@ export function TimelineLane({
 }) {
   const colorClass = `lane-tone-${tone}`;
   const isEmpty = items.length === 0;
-  // Skip empty lanes entirely — they used to render as a dim 64px band even
-  // when they had no events, which made the canvas look busier than it is.
-  // The lane still exists in the layout's lanes[] array for tests / callers.
-  if (isEmpty) return null;
+  // Empty lanes stay visible as a slim, de-emphasised band so the canonical
+  // lane structure is always readable — the user can see every category even
+  // before it carries an event. The band height comes from the layout.
   return (
     <div
-      className={`lane ${colorClass}`}
+      className={`lane ${colorClass}${isEmpty ? " is-empty" : ""}`}
       style={{ top: `${lane.top}px`, height: `${lane.height}px` }}
     >
       <div className="lane-label" style={{ width: `${laneLabelWidthPx}px` }}>

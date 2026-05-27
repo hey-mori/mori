@@ -14,7 +14,7 @@ import {
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
-import { timelineActivityLaneOrder } from "../../lib/timeline/activityModel";
+import { resolveTimelineLaneOrder } from "../../lib/timeline/activityModel";
 import type { TimelineEvent } from "../../domain/types";
 import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 import { EventInspector } from "./EventInspector";
@@ -32,11 +32,7 @@ import {
 } from "../../lib/timeline/minimapViewport";
 import { TimelineChronoList } from "./TimelineChronoList";
 import { ConversationFlowView } from "./ConversationFlowView";
-import { TimelineBasisCaption } from "./TimelineBasisCaption";
-import {
-  describeConversationContext,
-  isConversationSession,
-} from "../../lib/timeline/conversationFlow";
+import { isConversationSession } from "../../lib/timeline/conversationFlow";
 import { TimelineEmptyState, TimelineNoResultsState } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
@@ -97,7 +93,17 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const [mode, setMode] = useState<"timeline" | "flow">(modeProp);
   const goToMode = useCallback((next: "timeline" | "flow") => setMode(next), []);
 
-  const [density, setDensity] = useState<TimelineDensity>("compact");
+  // Density is fixed — the timeline reads at one calm scale; there is no
+  // user-facing density control.
+  const density: TimelineDensity = "compact";
+
+  // The always-visible canonical lane set plus any extra lane the session's
+  // events actually populate. Passed as the layout's lane order so the
+  // swimlane structure is stable and complete (empty lanes show as slim bands).
+  const laneOrder = useMemo(
+    () => resolveTimelineLaneOrder(view.events, view.sources),
+    [view.events, view.sources],
+  );
 
   const [frameWidth, setFrameWidth] = useState<number>(DEFAULT_FRAME_WIDTH);
   const [minimapViewport, setMinimapViewport] = useState<MinimapViewport>(
@@ -146,6 +152,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
         activeFilters,
         searchQuery,
         frameWidth: Math.round(frameWidth * zoomFactor),
+        laneOrder,
         laneLabelWidthPx: LANE_LABEL_WIDTH,
         sessionMode,
         importCount: imports.length,
@@ -161,6 +168,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
       searchQuery,
       frameWidth,
       zoomFactor,
+      laneOrder,
       sessionMode,
       imports.length,
       hasAnalysis,
@@ -203,10 +211,10 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           nextId = selectInLane(items, current, "prev");
           break;
         case "ArrowDown":
-          nextId = selectAcrossLane(items, current, "down", timelineActivityLaneOrder);
+          nextId = selectAcrossLane(items, current, "down", laneOrder);
           break;
         case "ArrowUp":
-          nextId = selectAcrossLane(items, current, "up", timelineActivityLaneOrder);
+          nextId = selectAcrossLane(items, current, "up", laneOrder);
           break;
         default:
           return;
@@ -218,7 +226,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, viewportWidth, readingMode, model.visibleDisplayItems, selectedEventId, setSelectedEventId]);
+  }, [mode, viewportWidth, readingMode, model.visibleDisplayItems, selectedEventId, setSelectedEventId, laneOrder]);
 
   if (model.emptyVariant) {
     // Inside the session 흐름 tab the shell content is full-bleed, so wrap the
@@ -344,18 +352,8 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
             onSearchChange={setSearchQuery}
             readingMode={readingMode}
             onReadingModeChange={setReadingModeOverride}
-            density={density}
-            onDensityChange={setDensity}
           />
         )}
-        {mode === "timeline" ? (
-          <TimelineBasisCaption
-            context={conversationSession ? describeConversationContext(view) : null}
-            isConversation={conversationSession}
-            start={model.range.start}
-            end={model.range.end}
-          />
-        ) : null}
         {mode === "timeline" && model.filteredEmpty ? (
           <TimelineNoResultsState
             onClear={() => {

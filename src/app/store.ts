@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { EventType, ViewKey } from "../domain/types";
+import type { ViewKey } from "../domain/types";
+import type { ActivityLaneId } from "../lib/timeline/activityModel";
 import type { ReviewSelection } from "../lib/review-workspace/reviewWorkspace";
 
 /** Active tab on the Review surface. Persisted so the user returns to the same tab. */
@@ -12,7 +13,7 @@ export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | 
  * issues / decisions / next actions. Stored so the user returns to the same
  * tab, and so other surfaces can deep-link a session straight to a tab.
  */
-export type SessionTab = "flow" | "evidence" | "insights" | "report";
+export type SessionTab = "overview" | "flow" | "evidence" | "insights";
 
 /**
  * Active page inside the settings sheet. "profile" is the local identity
@@ -52,7 +53,9 @@ type MoriAppState = {
   currentView: ViewKey;
   selectedEventId: string;
   hoveredEventId: string | null;
-  activeFilters: EventType[];
+  /** Active category filter — the timeline lane taxonomy (one set of
+   *  categories shared by the swimlanes and the filter popover). */
+  activeFilters: ActivityLaneId[];
   searchQuery: string;
   /** When true, the inspector is collapsed (used at narrow widths). */
   inspectorCollapsed: boolean;
@@ -118,7 +121,7 @@ type MoriAppState = {
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
-  toggleFilter: (eventType: EventType) => void;
+  toggleFilter: (lane: ActivityLaneId) => void;
   clearFilters: () => void;
   setSearchQuery: (query: string) => void;
   setInspectorCollapsed: (collapsed: boolean) => void;
@@ -185,7 +188,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   memoryFocus: null,
   evidenceImportRequest: null,
   reviewTab: "issues",
-  sessionTab: "flow",
+  sessionTab: "overview",
   settingsTab: "profile",
   memoryTab: "overview",
   settingsSheetOpen: false,
@@ -198,11 +201,11 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   setSelectedEventId: (selectedEventId) =>
     set({ selectedEventId, inspectorCollapsed: false }),
   setHoveredEventId: (hoveredEventId) => set({ hoveredEventId }),
-  toggleFilter: (eventType) =>
+  toggleFilter: (lane) =>
     set((state) => ({
-      activeFilters: state.activeFilters.includes(eventType)
-        ? state.activeFilters.filter((value) => value !== eventType)
-        : [...state.activeFilters, eventType],
+      activeFilters: state.activeFilters.includes(lane)
+        ? state.activeFilters.filter((value) => value !== lane)
+        : [...state.activeFilters, lane],
     })),
   clearFilters: () => set({ activeFilters: [] }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -237,8 +240,8 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
         case "review":
           return { currentView: "session", sessionTab: "insights" };
         case "reports":
-          // A report is per-session — open the session workspace on its report tab.
-          return { currentView: "session", sessionTab: "report" };
+          // The per-session report is now merged into the session 개요 tab.
+          return { currentView: "session", sessionTab: "overview" };
         case "consolidation":
           // Consolidation is cross-session — it lives in Memory's 통합 segment.
           return { currentView: "memory", memoryTab: "consolidation" };

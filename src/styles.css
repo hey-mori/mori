@@ -623,6 +623,11 @@ button {
 .sidebar.is-collapsed .sidebar-nav {
   margin: 0;
   padding: 6px 0;
+  /* The search row + list this separator bordered against are hidden when
+     collapsed, so the rule would otherwise sit a hairline directly above the
+     foot's own top border — a doubled line. Drop it; the foot keeps the one
+     separator the collapsed column needs. */
+  border-bottom: 0;
 }
 
 .sidebar.is-collapsed .sidebar-nav-item {
@@ -631,6 +636,12 @@ button {
   width: 32px;
   height: 28px;
   align-self: center;
+}
+
+/* The flex:1 session list normally pushes the foot to the bottom; it is hidden
+   when collapsed, so pin the foot explicitly to keep the user button anchored. */
+.sidebar.is-collapsed .sidebar-foot {
+  margin-top: auto;
 }
 
 .sidebar.is-collapsed .sidebar-user {
@@ -9931,6 +9942,42 @@ pre {
   display: grid;
   gap: var(--mori-space-7);
   min-width: 0;
+}
+
+/* Session overview hero — the 개요 tab's opening at-a-glance band: work-unit
+   identity (boundary · source mix · project context) and a one-line summary. */
+.session-overview-hero {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--mori-accent-soft, var(--purple-50));
+}
+
+.session-overview-origin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.session-overview-mix {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.session-overview-context {
+  font-size: 12px;
+  color: var(--muted-2);
+}
+
+.session-overview-summary {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
 }
 
 /* Session summary strip */
@@ -20433,12 +20480,14 @@ button.settings-option {
   color: var(--muted);
 }
 
-/* Selected family panel — the handful of sources in that family, as rows. */
+/* Selected family panel — the handful of sources in that family, as rows.
+   A clean white card with a soft header band, matching the elevated tiles. */
 .source-cc-panel {
   border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel-soft);
+  border-radius: 12px;
+  background: var(--panel);
   overflow: hidden;
+  box-shadow: 0 1px 2px rgba(20, 25, 40, 0.04);
 }
 
 .source-cc-panel-head {
@@ -20446,7 +20495,8 @@ button.settings-option {
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 10px 14px;
+  padding: 11px 14px;
+  background: var(--panel-soft);
   border-bottom: 1px solid var(--line);
 }
 

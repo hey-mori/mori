@@ -63,29 +63,29 @@ import type { SessionTab } from "../../app/store";
  * owns everything we used to spread across a header. From top to bottom:
  *
  *   1. Quick actions — icon-only 새 세션 / 가져오기 shortcuts.
- *   2. Product nav — 홈 / 세션 / 메모리, the three top-level destinations.
+ *   2. Product nav — 홈 / 프로젝트 / 메모리, the three top-level destinations.
  *   3. Session search input.
  *   4. The session conversation list, grouped by recency.
  *   5. Mori 노트 + the user button (opens the settings sheet).
  *
  * Drawing on the conversation-list paradigm from Claude / Codex desktop:
  * clicking a row loads that session into the workspace, and the product nav
- * lets the user switch between 홈 (dashboard), 세션 (the active session's
- * workspace), and 메모리 (cross-session memory).
+ * lets the user switch between 홈 (dashboard), 프로젝트 (the projects→sessions
+ * browser / active session's workspace), and 메모리 (cross-session memory).
  */
 
-/** Product-nav entries. Ordered top-to-bottom; "세션" lights up only for the
- *  session-detail and the workspace browser — NOT for new-session / import
- *  flows, which are reached via the head shortcut buttons and light those up
- *  instead so the user can always tell where they are. */
+/** Product-nav entries. Ordered top-to-bottom; "프로젝트" lights up only for the
+ *  session-detail and the projects→sessions browser — NOT for new-session /
+ *  import flows, which are reached via the head shortcut buttons and light
+ *  those up instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: moriViewIcon.home ?? House },
-  { key: "workspace", label: "세션", icon: moriViewIcon.workspace ?? Layers },
+  { key: "workspace", label: "프로젝트", icon: moriViewIcon.workspace ?? Layers },
   { key: "memory", label: "메모리", icon: moriViewIcon.memory ?? Layers },
 ];
 
-/** Views that belong *under* the 세션 destination — the session detail's own
- *  tabs route to these keys, so they should still light up "세션". The
+/** Views that belong *under* the 프로젝트 destination — the session detail's own
+ *  tabs route to these keys, so they should still light up "프로젝트". The
  *  shortcut-button destinations (start / connections) are deliberately NOT
  *  in this set — they have their own active indicator on the shortcut. */
 const SESSION_VIEWS = new Set<ViewKey>([
@@ -598,10 +598,10 @@ function buildSidebarSessionMenuItems({
 }): MoriMenuItemSpec[] {
   const items: MoriMenuItemSpec[] = [
     { id: "open", label: "세션 열기", icon: ChevronRight, onSelect: onOpen },
+    { id: "open-overview", label: "개요 열기", icon: ScrollText, onSelect: () => onOpenTab("overview") },
     { id: "open-flow", label: "흐름 열기", icon: GanttChartSquare, onSelect: () => onOpenTab("flow") },
     { id: "open-evidence", label: "증거 열기", icon: FileText, onSelect: () => onOpenTab("evidence") },
     { id: "open-review", label: "검토 열기", icon: Clipboard, onSelect: () => onOpenTab("insights") },
-    { id: "open-report", label: "리포트 열기", icon: ScrollText, onSelect: () => onOpenTab("report") },
   ];
   if (onOpenProject) {
     items.push({

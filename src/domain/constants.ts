@@ -2,7 +2,7 @@ import { Bell, CheckCircle2, Code2, FileText, MoreHorizontal, Sparkles, TreePine
 import type { EventType, IssueStatus, Priority, RecordingMode, TrustLevel } from "./types";
 
 export const eventTypeLabels: Record<EventType, string> = {
-  aiConversation: "AI 대화",
+  aiConversation: "대화",
   decision: "결정",
   issue: "이슈",
   fileCode: "파일",
