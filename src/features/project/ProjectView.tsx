@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  BookCheck,
   CalendarClock,
   ClipboardCheck,
   Database,
@@ -35,15 +36,8 @@ import {
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
-import {
-  getAcceptedMemoryRepository,
-  type AcceptedMemoryStorageSource,
-} from "../../lib/project-memory/acceptedMemoryRepository";
-import type {
-  StoredAcceptedProjectMemory,
-  StoredMemoryReviewAction,
-} from "../../lib/storage/storageTypes";
-import { AcceptedMemoriesCard } from "../memory/AcceptedMemoriesCard";
+import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
+import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 
 /**
  * Project workspace — the unit-of-work page.
@@ -111,37 +105,25 @@ export function ProjectView() {
     return match?.projectId ?? null;
   }, [projectKey, storedSessions]);
 
+  // Durable accepted memory for this project — surfaced inline and compactly
+  // (only when it exists). No consolidation navigate-away; reviewing proposals
+  // into durable memory is handled in-context, not by leaving the page.
   const [memories, setMemories] = useState<StoredAcceptedProjectMemory[]>([]);
-  const [reviewActions, setReviewActions] = useState<StoredMemoryReviewAction[]>([]);
-  const [memoriesLoading, setMemoriesLoading] = useState(true);
-  const [memoryStorageSource, setMemoryStorageSource] =
-    useState<AcceptedMemoryStorageSource>("browser-local-storage");
-  const [memoryStorageFellBack, setMemoryStorageFellBack] = useState(false);
 
   useEffect(() => {
     if (!projectId) {
       setMemories([]);
-      setReviewActions([]);
-      setMemoriesLoading(false);
       return;
     }
     let cancelled = false;
-    setMemoriesLoading(true);
     const memoryRepository = getAcceptedMemoryRepository();
-    void Promise.all([
-      memoryRepository.listAcceptedProjectMemories(projectId),
-      memoryRepository.listMemoryReviewActions(projectId),
-    ])
-      .then(([memoriesResult, actionsResult]) => {
-        if (cancelled) return;
-        setMemories(memoriesResult.data);
-        setReviewActions(actionsResult.data);
-        const fellBack = memoriesResult.fellBack || actionsResult.fellBack;
-        setMemoryStorageFellBack(fellBack);
-        setMemoryStorageSource(fellBack ? "browser-local-storage" : memoriesResult.source);
+    void memoryRepository
+      .listAcceptedProjectMemories(projectId)
+      .then((result) => {
+        if (!cancelled) setMemories(result.data);
       })
-      .finally(() => {
-        if (!cancelled) setMemoriesLoading(false);
+      .catch(() => {
+        if (!cancelled) setMemories([]);
       });
     return () => {
       cancelled = true;
@@ -185,31 +167,6 @@ export function ProjectView() {
       return;
     }
     openSessionId(targetSessionId, item.destination);
-  };
-
-  // Memory and consolidation are scoped to the active session's project, but
-  // this page views a project by `sourceLabel`. Before routing to the memory
-  // surface, make the viewed project active by loading its most recent session
-  // so the memory / consolidation context matches what the user is looking at.
-  const openProjectMemory = (tab: "overview" | "consolidation") => {
-    const targetSessionId = overview?.groups[0]?.rows[0]?.sessionId ?? null;
-    const go = () => {
-      setMemoryTab(tab);
-      setCurrentView("memory");
-    };
-    if (!targetSessionId || targetSessionId === activeSessionId) {
-      go();
-      return;
-    }
-    if (isDesktop) {
-      void loadDesktopSession(targetSessionId).then((ok) => {
-        if (!ok) loadBrowserSession(targetSessionId);
-        go();
-      });
-      return;
-    }
-    loadBrowserSession(targetSessionId);
-    go();
   };
 
   if (!projectKey || !overview) {
@@ -301,15 +258,6 @@ export function ProjectView() {
         </ul>
       </MoriSection>
 
-      <AcceptedMemoriesCard
-        memories={memories}
-        reviewActionCount={reviewActions.length}
-        storageSource={memoryStorageSource}
-        storageFellBack={memoryStorageFellBack}
-        loading={memoriesLoading}
-        onOpenConsolidation={() => openProjectMemory("consolidation")}
-      />
-
       <MoriSection
         className="project-sessions"
         title="세션"
@@ -350,7 +298,45 @@ export function ProjectView() {
           </div>
         )}
       </MoriSection>
+
+      <ProjectMemoryList memories={memories} />
     </PageShell>
+  );
+}
+
+/**
+ * Compact "what this project remembers" list. Durable accepted memory only —
+ * rendered inline, capped, and *only when it exists*, so an empty project shows
+ * nothing here instead of an onboarding card. No consolidation navigate-away.
+ */
+function ProjectMemoryList({ memories }: { memories: StoredAcceptedProjectMemory[] }) {
+  if (memories.length === 0) return null;
+  const top = memories.slice(0, 6);
+  return (
+    <MoriSection
+      className="project-memory"
+      title="이 프로젝트가 기억하는 것"
+      actions={<span className="project-section-count">{memories.length}건</span>}
+      ariaLabel="이 프로젝트가 기억하는 것"
+    >
+      <ul className="project-memory-list">
+        {top.map((memory) => (
+          <li key={memory.id}>
+            <MoriObjectRow
+              leading={<BookCheck size={15} />}
+              title={memory.title}
+              meta={
+                memory.summary ? (
+                  <MoriMetadataLine items={[memory.summary]} />
+                ) : undefined
+              }
+              density="compact"
+              ariaLabel={memory.title}
+            />
+          </li>
+        ))}
+      </ul>
+    </MoriSection>
   );
 }
 
