@@ -5590,8 +5590,79 @@ hr {
 /* Inline detected-conversation picker, grouped by project then session. */
 .start-detected {
   display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Search + refresh row — the entry point to a list that can hold hundreds of
+   conversations, so it stays usable at any scale. */
+.start-detected-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.start-detected-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--muted);
+}
+
+.start-detected-search:focus-within {
+  border-color: var(--purple);
+}
+
+.start-detected-search input {
+  flex: 1;
+  height: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.start-detected-search input:focus-visible {
+  outline: none;
+}
+
+.start-detected-refresh {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.start-detected-refresh:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+/* Bounded scroll so a long history never grows the page off-screen. */
+.start-detected-scroll {
+  display: grid;
   gap: 12px;
-  margin-top: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .start-detected-group {
@@ -5599,10 +5670,16 @@ hr {
   gap: 6px;
 }
 
+/* Sticky group header keeps the project visible while scrolling its sessions. */
 .start-detected-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 4px 0;
+  background: var(--mori-surface, #ffffff);
   color: var(--muted);
   font-size: 11.5px;
 }

@@ -11,6 +11,7 @@ import {
   History,
   Lock,
   RefreshCw,
+  Search,
   Settings2,
   Sparkles,
 } from "lucide-react";
@@ -500,11 +501,15 @@ export function StartSessionView() {
 }
 
 /**
- * Inline picker for an agent's detected work sessions, grouped by project then
- * session. Detection is desktop-only and real for Claude today; for an agent
- * without detection, or in browser mode, this renders an honest note instead
- * of a fake list. Selecting a row lifts the choice up; the actual create
- * happens through the right-rail "세션 생성" action.
+ * Inline picker for an agent's detected work sessions. Detection is
+ * desktop-only and real for Claude today; for an agent without detection, or
+ * in browser mode, this renders an honest note instead of a fake list.
+ *
+ * Built for scale: a real machine can hold hundreds of conversations across
+ * many projects, so the list is searchable, sorted most-recent-first, grouped
+ * by project (most recently active project first), and confined to a bounded
+ * scroll area rather than growing the page without limit. Selecting a row lifts
+ * the choice up; the actual create happens through the right-rail action.
  */
 function DetectedSessionPicker({
   agentName,
@@ -520,6 +525,7 @@ function DetectedSessionPicker({
   const bridge = isClaudeBridgeAvailable();
   const [sessions, setSessions] = useState<ClaudeCodeSessionMeta[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     if (!bridge || !supported) return;
@@ -536,15 +542,31 @@ function DetectedSessionPicker({
     void load();
   }, [load]);
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sessions;
+    return sessions.filter(
+      (session) =>
+        session.title.toLowerCase().includes(q) ||
+        session.projectName.toLowerCase().includes(q),
+    );
+  }, [sessions, query]);
+
   const grouped = useMemo(() => {
+    const time = (value?: string) => {
+      const parsed = value ? Date.parse(value) : Number.NaN;
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
     const map = new Map<string, ClaudeCodeSessionMeta[]>();
-    for (const session of sessions) {
+    for (const session of filtered) {
       const list = map.get(session.projectName) ?? [];
       list.push(session);
       map.set(session.projectName, list);
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [sessions]);
+    for (const list of map.values()) list.sort((a, b) => time(b.startedAt) - time(a.startedAt));
+    // Projects ordered by their most-recent conversation, so active work leads.
+    return [...map.entries()].sort((a, b) => time(b[1][0]?.startedAt) - time(a[1][0]?.startedAt));
+  }, [filtered]);
 
   if (!supported) {
     return (
@@ -578,43 +600,71 @@ function DetectedSessionPicker({
   }
 
   return (
-    <div className="start-detected" role="radiogroup" aria-label="불러올 대화">
-      {grouped.map(([project, projectSessions]) => (
-        <section key={project} className="start-detected-group">
-          <header className="start-detected-group-head">
-            <FolderGit2 size={13} aria-hidden="true" />
-            <strong title={project}>{shortProjectLabel(project)}</strong>
-            <span>{projectSessions.length}</span>
-          </header>
-          <ul>
-            {projectSessions.map((session) => {
-              const selected = selectedFilePath === session.filePath;
-              return (
-                <li key={session.filePath}>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    className={`start-detected-row${selected ? " is-selected" : ""}`}
-                    onClick={() => onSelect(session)}
-                  >
-                    <span className="start-detected-main">
-                      <strong>{session.title}</strong>
-                      <span className="start-detected-meta">
-                        메시지 {session.messageCount} · {formatClaudeRelativeKo(session.startedAt)}
-                      </span>
-                    </span>
-                    <span
-                      className={`pick-mark${selected ? " is-selected" : ""}`}
-                      aria-hidden="true"
-                    />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+    <div className="start-detected">
+      <div className="start-detected-toolbar">
+        <div className="start-detected-search">
+          <Search size={14} aria-hidden="true" />
+          <input
+            type="text"
+            value={query}
+            placeholder={`대화 검색 (${sessions.length}개)`}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="대화 검색"
+          />
+        </div>
+        <button
+          type="button"
+          className="start-detected-refresh"
+          onClick={() => void load()}
+          title="작업 기록 새로고침"
+          aria-label="작업 기록 새로고침"
+        >
+          <RefreshCw size={14} aria-hidden="true" />
+        </button>
+      </div>
+
+      {grouped.length === 0 ? (
+        <p className="start-import-note">검색 결과가 없습니다.</p>
+      ) : (
+        <div className="start-detected-scroll" role="radiogroup" aria-label="불러올 대화">
+          {grouped.map(([project, projectSessions]) => (
+            <section key={project} className="start-detected-group">
+              <header className="start-detected-group-head">
+                <FolderGit2 size={13} aria-hidden="true" />
+                <strong title={project}>{shortProjectLabel(project)}</strong>
+                <span>{projectSessions.length}</span>
+              </header>
+              <ul>
+                {projectSessions.map((session) => {
+                  const selected = selectedFilePath === session.filePath;
+                  return (
+                    <li key={session.filePath}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        className={`start-detected-row${selected ? " is-selected" : ""}`}
+                        onClick={() => onSelect(session)}
+                      >
+                        <span className="start-detected-main">
+                          <strong>{session.title}</strong>
+                          <span className="start-detected-meta">
+                            메시지 {session.messageCount} · {formatClaudeRelativeKo(session.startedAt)}
+                          </span>
+                        </span>
+                        <span
+                          className={`pick-mark${selected ? " is-selected" : ""}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
