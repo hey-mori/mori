@@ -13,7 +13,11 @@ import {
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
-import { resolveTimelineLaneOrder, type ActivityLaneId } from "../../lib/timeline/activityModel";
+import {
+  getTimelineLaneForEvent,
+  resolveTimelineLaneOrder,
+  type ActivityLaneId,
+} from "../../lib/timeline/activityModel";
 import type { TimelineEvent } from "../../domain/types";
 import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 import { EventInspector } from "./EventInspector";
@@ -181,14 +185,18 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     ],
   );
 
-  // Per-lane event counts for the toolbar's category filter (shown as a plain
-  // number next to each category) — derived from the same lane model the
-  // canvas renders, so the filter list and the swimlane never disagree.
+  // Per-lane event counts for the toolbar's category filter. Derived from ALL
+  // events (not the filtered model), so the popover keeps listing every
+  // category with its true count even while the filter shows only some lanes.
   const laneCounts = useMemo<Partial<Record<ActivityLaneId, number>>>(() => {
     const counts: Partial<Record<ActivityLaneId, number>> = {};
-    for (const lane of model.lanes) counts[lane.type] = lane.eventCount;
+    const sources = new Map(view.sources.map((source) => [source.id, source]));
+    for (const event of view.events) {
+      const lane = getTimelineLaneForEvent({ event, sources });
+      counts[lane] = (counts[lane] ?? 0) + 1;
+    }
     return counts;
-  }, [model.lanes]);
+  }, [view.events, view.sources]);
 
   const handleFrameWidth = useCallback((width: number) => {
     setFrameWidth((current) => (current === width ? current : width));

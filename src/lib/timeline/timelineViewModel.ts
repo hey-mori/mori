@@ -147,6 +147,15 @@ export function buildTimelineRenderModel(
   const laneOrder = input.laneOrder ?? timelineActivityLaneOrder;
   const sourceIndex = buildSourceIndex(input.view.sources);
 
+  // The category filter SHOWS ONLY the selected lanes (it used to dim the rest
+  // while keeping every lane on screen). When active, the swimlane renders just
+  // those lanes so they share the canvas height; the filter popover still lists
+  // every lane because its counts are derived separately from all events.
+  const filterActive = input.activeFilters.length > 0;
+  const visibleLaneOrder = filterActive
+    ? laneOrder.filter((lane) => input.activeFilters.includes(lane))
+    : laneOrder;
+
   // 1. Empty state — short-circuit before anything else.
   const emptyVariant = chooseEmptyVariant({
     eventCount: input.view.events.length,
@@ -161,21 +170,18 @@ export function buildTimelineRenderModel(
     end: input.view.session.endedAt,
   });
 
-  // 3. Visible events after search. The category (lane) filter no longer
-  //    *hides* events — it highlights/dims lanes (see `buildLaneRenderModels`),
-  //    so every lane and its events stay on screen and the structure never
-  //    collapses when a category is toggled. Only the search query narrows the
-  //    rendered set.
+  // 3. Visible events after search + the category filter. When a category is
+  //    selected, only that lane's events remain, so the swimlane collapses to
+  //    just the chosen lanes (which then share the canvas height).
   const visibleEvents = filterEvents({
     events: input.view.events,
-    activeFilters: [],
+    activeFilters: input.activeFilters,
     searchQuery: input.searchQuery,
     sources: sourceIndex,
   });
 
-  // 4. Display items — bundles preserved as before. Bundle aggressiveness is
-  // density-aware: a denser mode uses smaller cards, so a lane can show more
-  // individual events before clustering, and a tighter cluster window.
+  // 4. Display items. Bundles are now a high-threshold fallback; normal close
+  // events remain individual as compact one-row tokens.
   const bundleTuning = densityBundleTuning(input.density);
   const visibleDisplayItems = createTimelineDisplayItems(
     visibleEvents,
@@ -183,7 +189,7 @@ export function buildTimelineRenderModel(
     {
       sources: input.view.sources,
       timeWindowMinutes: bundleTuning.timeWindowMinutes,
-      minEventsForBundle: 3,
+      minEventsForBundle: bundleTuning.minEventsForBundle,
       preserveSelectedEventId: input.selectedEventId,
       preserveImportantEventIds: deriveImportantEventIds(visibleEvents, input.view.decisions),
       maxVisibleItemsPerLane: bundleTuning.maxVisibleItemsPerLane,
@@ -208,7 +214,7 @@ export function buildTimelineRenderModel(
   const layout = computeSingleRowLaneLayout(visibleDisplayItems, range, {
     frameWidth: input.frameWidth,
     density: input.density,
-    laneOrder,
+    laneOrder: visibleLaneOrder,
     laneLabelWidthPx: input.laneLabelWidthPx,
   });
   const layoutIndex = indexLayout(layout);
@@ -237,21 +243,21 @@ export function buildTimelineRenderModel(
   // 9. Per-lane breakdown — carries each lane's event count and whether the
   //    active category filter dims it.
   const lanes = buildLaneRenderModels({
-    laneOrder,
+    laneOrder: visibleLaneOrder,
     visibleEvents,
     visibleDisplayItems,
     sourceIndex,
     activeFilters: input.activeFilters,
   });
 
-  // Real data exists but the *search* hid everything → not a data-empty state,
-  // but the canvas would render blank, so show a no-results affordance. The
-  // category filter can no longer cause this (it dims, never hides).
+  // Real data exists but the search / category filter hid everything → not a
+  // data-empty state, but the canvas would render blank, so show a no-results
+  // affordance the user can clear.
   const filteredEmpty =
     emptyVariant === null &&
     input.view.events.length > 0 &&
     visibleDisplayItems.length === 0 &&
-    input.searchQuery.trim().length > 0;
+    (input.searchQuery.trim().length > 0 || filterActive);
 
   return {
     emptyVariant,
@@ -350,6 +356,7 @@ export function shouldHideInspector(args: {
  */
 export function densityBundleTuning(density: TimelineDensity): {
   timeWindowMinutes: number;
+  minEventsForBundle: number;
   maxVisibleItemsPerLane: number;
   /** Tighter window for the conversation lane — only rapid-fire turns cluster. */
   conversationTimeWindowMinutes: number;
@@ -361,35 +368,39 @@ export function densityBundleTuning(density: TimelineDensity): {
   switch (density) {
     case "comfortable":
       return {
-        timeWindowMinutes: 12,
-        maxVisibleItemsPerLane: 4,
-        conversationTimeWindowMinutes: 3,
-        conversationMinEventsForBundle: 6,
-        conversationMaxVisibleItemsPerLane: 14,
+        timeWindowMinutes: 4,
+        minEventsForBundle: 12,
+        maxVisibleItemsPerLane: 24,
+        conversationTimeWindowMinutes: 2,
+        conversationMinEventsForBundle: 18,
+        conversationMaxVisibleItemsPerLane: 32,
       };
     case "compact":
       return {
-        timeWindowMinutes: 10,
-        maxVisibleItemsPerLane: 5,
-        conversationTimeWindowMinutes: 3,
-        conversationMinEventsForBundle: 6,
-        conversationMaxVisibleItemsPerLane: 18,
+        timeWindowMinutes: 3,
+        minEventsForBundle: 14,
+        maxVisibleItemsPerLane: 28,
+        conversationTimeWindowMinutes: 2,
+        conversationMinEventsForBundle: 20,
+        conversationMaxVisibleItemsPerLane: 36,
       };
     case "dense":
       return {
-        timeWindowMinutes: 8,
-        maxVisibleItemsPerLane: 8,
-        conversationTimeWindowMinutes: 2,
-        conversationMinEventsForBundle: 8,
-        conversationMaxVisibleItemsPerLane: 24,
+        timeWindowMinutes: 2,
+        minEventsForBundle: 16,
+        maxVisibleItemsPerLane: 36,
+        conversationTimeWindowMinutes: 1,
+        conversationMinEventsForBundle: 24,
+        conversationMaxVisibleItemsPerLane: 44,
       };
     default:
       return {
-        timeWindowMinutes: 10,
-        maxVisibleItemsPerLane: 5,
-        conversationTimeWindowMinutes: 3,
-        conversationMinEventsForBundle: 6,
-        conversationMaxVisibleItemsPerLane: 18,
+        timeWindowMinutes: 3,
+        minEventsForBundle: 14,
+        maxVisibleItemsPerLane: 28,
+        conversationTimeWindowMinutes: 2,
+        conversationMinEventsForBundle: 20,
+        conversationMaxVisibleItemsPerLane: 36,
       };
   }
 }
@@ -506,7 +517,8 @@ function buildLaneRenderModels(args: {
     if (bucket) bucket.push(item);
     else laneItems.set(item.laneType, [item]);
   }
-  const filterActive = args.activeFilters.length > 0;
+  // `laneOrder` is already the visible (filtered) set, so every rendered lane
+  // is one the user wants — nothing is dimmed.
   return args.laneOrder.map((type) => {
     const items = laneItems.get(type) ?? [];
     return {
@@ -514,7 +526,7 @@ function buildLaneRenderModels(args: {
       eventCount: eventCounts.get(type) ?? 0,
       itemCount: items.length,
       items,
-      dimmed: filterActive && !args.activeFilters.includes(type),
+      dimmed: false,
     };
   });
 }

@@ -155,9 +155,6 @@ export function TimelineToolbar({
                   );
                 })}
               </ul>
-              <footer>
-                <small>선택한 카테고리를 강조하고 나머지는 흐리게 표시합니다. 이벤트는 숨겨지지 않습니다.</small>
-              </footer>
             </div>
           ) : null}
         </div>

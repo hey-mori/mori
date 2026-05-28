@@ -134,18 +134,16 @@ describe("buildTimelineRenderModel", () => {
     ]);
   });
 
-  it("dims unselected lanes instead of hiding events when activeFilters is set", () => {
+  it("shows only the selected lanes when activeFilters is set", () => {
     const all = buildModel(moriMockSession);
     const model = buildModel(moriMockSession, { activeFilters: ["conversation"] });
-    // The category filter highlights/dims — it never hides — so every event
-    // stays visible regardless of which categories are selected.
-    expect(model.visibleEvents.length).toBe(all.visibleEvents.length);
-    // The selected lane is emphasised; every other (populated or empty) lane
-    // is flagged dimmed for the renderer.
-    const conversation = model.lanes.find((lane) => lane.type === "conversation")!;
-    expect(conversation.dimmed).toBe(false);
-    expect(model.lanes.filter((lane) => lane.type !== "conversation").every((lane) => lane.dimmed)).toBe(true);
-    // No active filter → nothing is dimmed.
+    // The category filter now hides the rest: only the selected lane renders,
+    // so the visible set is smaller than the unfiltered model.
+    expect(model.visibleEvents.length).toBeLessThan(all.visibleEvents.length);
+    // The model carries only the selected lane(s) for the canvas to render.
+    expect(model.lanes.map((lane) => lane.type)).toEqual(["conversation"]);
+    // Nothing is dimmed any more — every rendered lane is one the user picked.
+    expect(model.lanes.every((lane) => lane.dimmed === false)).toBe(true);
     expect(all.lanes.every((lane) => lane.dimmed === false)).toBe(true);
   });
 
