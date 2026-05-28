@@ -190,6 +190,16 @@ that is called out.
   capture against an explicitly added repo path).
 - Manual Note import.
 - URL import (URL + optional excerpt; no automatic fetch).
+- Session creation flow (새 세션) that realizes "one AI-agent conversation =
+  one session". An agent-first screen (Claude / Codex / OpenCode) where the
+  conversation enters by one of three methods: 기록에서 불러오기 (a desktop-only,
+  Claude-today auto-detected work-record browse modal with a content preview;
+  other agents show 곧), 붙여넣기 (paste a transcript, platform follows the
+  agent), or 빈 세션으로 시작 (anchor first, since Mori never starts or drives
+  the agent). Retention is one unified rule (summary + metadata only, no
+  per-session toggle); detected / pasted imports route through Import Review
+  like every other import. Owned by `src/features/start-session/`
+  (`StartSessionView` + `DetectedConversationsModal`).
 - Repository settings with explicit user-added paths, optional
   on-demand `verify_repository_path` Tauri command, and verification
   freshness labels (no background re-verification).
@@ -425,10 +435,29 @@ that is called out.
   `CompanionCard` ("Mori 노트") surfaces the top signals on the
   Reports page. The Companion Layer never watches the user, never
   writes memory automatically, and never copies raw source /
-  transcript text into a signal — it only re-surfaces data the
-  user has already imported and reviewed. OS-level notifications
-  and an in-app notification center are planned, not implemented;
-  a chatbot / avatar is a non-goal.
+  transcript text into a signal. It only re-surfaces data the
+  user has already imported and reviewed.
+- Notification Center (in-app). A producer-neutral notification
+  seam (`src/lib/notifications/`) renders one calm cross-session
+  feed in two places: the sidebar bell, which opens a right-side
+  drawer anchored to the sidebar edge, and the 알림 page, a
+  time-grouped inbox (오늘 / 이번 주 / 이전). `MoriNotification` is
+  the shared record and `composeNotifications` merges ordered
+  producers (deduplicated by id), so adding a producer is a
+  one-line registration rather than a fan-out across consumers.
+  Producers today: the Companion adapter
+  (`companionSignalToNotification`, active-session triage), the
+  cross-session feed (`buildSessionFeedNotifications`, one
+  timestamped event per stored session), plus import-finished,
+  package-export, and memory-health producers. Read state lives in
+  `useNotificationReadStore` (localStorage
+  `mori.notifications.read.v1`), so the bell badge is an honest
+  unread count capped at `9+` and "모두 읽음" clears it. Every
+  notification still obeys the Companion rules: derived from
+  already-reviewed data, an honest `basis`, no raw source text, and
+  an `evidenceRefs` trace when one exists. OS-native notifications
+  (an OS-level ping) remain planned; a chatbot / avatar is a
+  non-goal.
 
 **Home and Project Workspace**
 
@@ -698,11 +727,20 @@ Mori is a calm productivity app. The product feel target:
 - **No game-like UI for core work surfaces.** Activity surfaces
   (contribution heatmap, streak stats) are calm, informational context
   for the user's own review, not gamified badges, achievement trophies,
-  or attention-seeking notifications. No push notifications competing
-  for attention.
+  or attention-seeking notifications. The in-app Notification Center
+  stays a quiet glance, one cross-session feed behind the sidebar bell
+  and the 알림 page with an honest unread count, never push toasts
+  competing for attention.
 - **Korean-first copy** in user-facing strings where the existing
   surfaces are Korean; new surfaces should match the surrounding
   copy.
+- **Source overview is provider-level.** The 소스 page is a calm provider
+  overview (one tile per Claude / ChatGPT / Codex / OpenCode and per Git /
+  터미널 / 메모 / URL evidence source), with every import method, access
+  detail, and action in the right inspector. It is never a flat list or
+  table of import methods, and it carries no developer-facing data (file
+  paths, backlog ids). See `docs/source-connection-backlog.md` for the full
+  presentation contract.
 
 ## 11. Engineering Working Rules
 
