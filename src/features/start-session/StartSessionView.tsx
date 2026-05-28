@@ -454,7 +454,7 @@ export function StartSessionView() {
                     onClick={() => setBrowseOpen(true)}
                   >
                     <History size={16} aria-hidden="true" />
-                    <span>감지된 대화 둘러보기</span>
+                    <span>대화 고르기</span>
                   </button>
                 )}
               </div>

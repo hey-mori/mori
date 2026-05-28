@@ -178,10 +178,7 @@ export function DetectedConversationsModal({
         aria-label={`${agentName} 작업 대화 둘러보기`}
       >
         <header className="detected-modal-head">
-          <div>
-            <h2>작업 대화 둘러보기</h2>
-            <p>{agentName} 기록에서 가져올 대화를 고르세요.</p>
-          </div>
+          <h2>기록에서 불러오기</h2>
           <button type="button" className="detected-modal-close" onClick={onClose} aria-label="닫기">
             <X size={18} aria-hidden="true" />
           </button>
@@ -195,7 +192,7 @@ export function DetectedConversationsModal({
                 <input
                   type="text"
                   value={query}
-                  placeholder={`대화 검색 (${sessions.length}개)`}
+                  placeholder=""
                   onChange={(event) => setQuery(event.target.value)}
                   aria-label="대화 검색"
                 />
@@ -236,17 +233,12 @@ export function DetectedConversationsModal({
         </div>
 
         <footer className="detected-modal-foot">
-          <span className="detected-modal-foot-hint">
-            {activeMeta ? activeMeta.title : "대화를 선택하면 미리볼 수 있어요."}
-          </span>
-          <div className="detected-modal-foot-actions">
-            <Button variant="secondary" onClick={onClose}>
-              취소
-            </Button>
-            <Button variant="primary" disabled={!activeMeta} onClick={confirm}>
-              이 대화로 진행
-            </Button>
-          </div>
+          <Button variant="secondary" onClick={onClose}>
+            취소
+          </Button>
+          <Button variant="primary" disabled={!activeMeta} onClick={confirm}>
+            이 대화로 진행
+          </Button>
         </footer>
       </div>
     </div>,
@@ -362,7 +354,6 @@ function ConversationPreview({
     return (
       <div className="detected-preview-empty">
         <MessageSquare size={24} aria-hidden="true" />
-        <p>왼쪽에서 대화를 선택하면 내용을 미리 볼 수 있어요.</p>
       </div>
     );
   }
