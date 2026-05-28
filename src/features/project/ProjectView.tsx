@@ -14,7 +14,6 @@ import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
-import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 import { MoriSection } from "../../components/ui/MoriSection";
 import { useMoriAppStore } from "../../app/store";
 import {
@@ -28,7 +27,6 @@ import {
   type ProjectSessionRow,
   type ProjectSessionInsightSnapshot,
 } from "../../lib/project/projectOverview";
-import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
@@ -209,50 +207,57 @@ export function ProjectView() {
 
   return (
     <PageShell className="project-page" maxWidth="wide">
-      <header className="project-hero">
-        <div className="project-hero-titles">
-          <div className="project-hero-badge">
-            <FolderGit2 size={14} aria-hidden="true" />
-            <span>프로젝트</span>
+      <header
+        className="project-hero"
+        style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 14 }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 16,
+          }}
+        >
+          <div className="project-hero-titles">
+            <h1>{displayName || overview.shortName}</h1>
+            {overview.fullPath && overview.fullPath !== (displayName || overview.shortName) ? (
+              <p className="project-hero-path" title={overview.fullPath}>
+                {overview.fullPath}
+              </p>
+            ) : null}
+            {description ? <p className="project-hero-path">{description}</p> : null}
           </div>
-          <h1>{displayName || overview.shortName}</h1>
-          {overview.fullPath && overview.fullPath !== (displayName || overview.shortName) ? (
-            <p className="project-hero-path" title={overview.fullPath}>
-              {overview.fullPath}
-            </p>
-          ) : null}
-          {description ? (
-            <p className="project-hero-path">{description}</p>
-          ) : null}
-        </div>
-        <div className="project-hero-actions">
-          <Button
-            variant="ghost"
-            icon={Pencil}
-            onClick={() => setEditing(true)}
-            title="프로젝트 이름과 설명을 수정합니다 (세션은 그대로)."
-          >
-            수정
-          </Button>
-          {isCreatedProject ? (
+          <div className="project-hero-actions">
             <Button
               variant="ghost"
-              icon={Trash2}
-              onClick={handleDeleteProject}
-              title="이 프로젝트를 목록에서 제거합니다. 세션은 삭제되지 않습니다."
+              icon={Pencil}
+              onClick={() => setEditing(true)}
+              title="프로젝트 이름과 설명을 수정합니다 (세션은 그대로)."
             >
-              삭제
+              수정
             </Button>
-          ) : null}
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={() => setCurrentView("start")}
-            title="이 프로젝트에 새 세션을 시작합니다 — 새 대화 또는 기존 대화 가져오기."
-          >
-            새 세션
-          </Button>
+            {isCreatedProject ? (
+              <Button
+                variant="ghost"
+                icon={Trash2}
+                onClick={handleDeleteProject}
+                title="이 프로젝트를 목록에서 제거합니다. 세션은 삭제되지 않습니다."
+              >
+                삭제
+              </Button>
+            ) : null}
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={() => setCurrentView("start")}
+              title="이 프로젝트에 새 세션을 시작합니다 — 새 대화 또는 기존 대화 가져오기."
+            >
+              새 세션
+            </Button>
+          </div>
         </div>
+        <ProjectActivityStrip timestamps={sessionRows.map((row) => row.timestamp)} />
       </header>
 
       {editing ? (
@@ -265,72 +270,51 @@ export function ProjectView() {
         />
       ) : null}
 
-      <ProjectActivityStrip
-        timestamps={sessionRows.map((row) => row.timestamp)}
-      />
-
-      <MoriMetricStrip
-        className="project-stats"
-        items={[
-          {
-            key: "sessions",
-            label: "세션",
-            value: overview.stats.sessions,
-            hint: overview.stats.lastActivity
-              ? `최근 활동 ${formatSidebarRelative(overview.stats.lastActivity)}`
-              : "최근 활동 기록 없음",
-          },
-          {
-            key: "review",
-            label: "검토 항목",
-            value: overview.stats.reviewItems,
-          },
-          {
-            key: "memory",
-            label: "확정 메모리",
-            value: memories.length,
-          },
-        ]}
-      />
-
-      <ProjectSynthesisSection
-        sessions={sessionRows}
-        onOpenSession={(sessionId) => openSessionId(sessionId)}
-      />
-
-      <MoriSection
-        className="project-sessions"
-        title="세션"
-        actions={
-          <span className="project-section-count">
-            {overview.stats.activeSessions}건
-          </span>
-        }
-        ariaLabel="프로젝트 세션"
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+          gap: 16,
+          alignItems: "start",
+        }}
       >
-        {sessionRows.length === 0 ? (
-          <EmptyState
-            compact
-            icon={Layers}
-            title="이 프로젝트에 활성 세션이 없습니다"
-            description="새 세션을 시작하거나 소스에서 가져오면 여기에 쌓입니다."
-            actions={
-              <Button onClick={() => setCurrentView("connections")}>소스 열기</Button>
-            }
-          />
-        ) : (
-          <ul className="project-session-list">
-            {sessionRows.map((row) => (
-              <ProjectSessionRowItem
-                key={row.sessionId}
-                row={row}
-                projectLabel={projectSessionLabel}
-                onOpen={() => openSessionId(row.sessionId)}
-              />
-            ))}
-          </ul>
-        )}
-      </MoriSection>
+        <ProjectSynthesisSection
+          sessions={sessionRows}
+          onOpenSession={(sessionId) => openSessionId(sessionId)}
+        />
+
+        <MoriSection
+          className="project-sessions"
+          title="세션"
+          actions={
+            <span className="project-section-count">{sessionRows.length}건</span>
+          }
+          ariaLabel="프로젝트 세션"
+        >
+          {sessionRows.length === 0 ? (
+            <EmptyState
+              compact
+              icon={Layers}
+              title="이 프로젝트에 활성 세션이 없습니다"
+              description="새 세션을 시작하거나 소스에서 가져오면 여기에 쌓입니다."
+              actions={
+                <Button onClick={() => setCurrentView("connections")}>소스 열기</Button>
+              }
+            />
+          ) : (
+            <ul className="project-session-list">
+              {sessionRows.map((row) => (
+                <ProjectSessionRowItem
+                  key={row.sessionId}
+                  row={row}
+                  projectLabel={projectSessionLabel}
+                  onOpen={() => openSessionId(row.sessionId)}
+                />
+              ))}
+            </ul>
+          )}
+        </MoriSection>
+      </div>
 
       <ProjectMemoryList memories={memories} />
     </PageShell>
