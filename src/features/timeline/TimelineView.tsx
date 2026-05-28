@@ -30,7 +30,6 @@ import {
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
 import { TimelineChronoList } from "./TimelineChronoList";
-import { isConversationSession } from "../../lib/timeline/conversationFlow";
 import { TimelineEmptyState, TimelineNoResultsState } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
@@ -127,20 +126,14 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const [zoomFactor, setZoomFactor] = useState<number>(1);
   const canvasRef = useRef<TimelineCanvasHandle>(null);
 
-  // A single Claude conversation reads far better as a time-ordered thread
-  // than as a one-lane swimlane, so the timeline offers two reading modes:
-  // "swimlane" (the canvas) and "flow" (the conversation thread). For a
-  // conversation-dominant session we default to flow; the user can still
-  // switch to the swimlane. `null` means "follow the session default".
-  const conversationSession = useMemo(
-    () => isConversationSession(view.events),
-    [view.events],
-  );
+  // The 흐름 tab opens on the 목록 (content list) reading mode by default: it
+  // reads cleanly and shows what happened without the swimlane's hover-card
+  // clipping / alignment edges. The user switches to the 타임라인 swimlane (the
+  // time-axis canvas) from the toolbar. `null` means "follow the default".
   const [readingModeOverride, setReadingModeOverride] = useState<
     "swimlane" | "flow" | null
   >(null);
-  const readingMode: "swimlane" | "flow" =
-    readingModeOverride ?? (conversationSession ? "flow" : "swimlane");
+  const readingMode: "swimlane" | "flow" = readingModeOverride ?? "flow";
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.
