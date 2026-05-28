@@ -168,9 +168,13 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
           physically pinned to the left (never scrolls with the content), shows
           one consistent edge shadow, and has no time axis above it. Labels are
           positioned to mirror the frame's lane rows (axis height + lane top). */}
+      {/* Width only — no fixed height. The `.timeline-2col` flex row stretches
+          this column to match the scroller, whose height includes the
+          horizontal scrollbar, so the rail and canvas bottoms always align
+          (a fixed frameHeight here left the rail ~12px short of the scroller). */}
       <div
         className="timeline-axis-col"
-        style={{ width: `${layout.contentLeftPx}px`, height: `${layout.frameHeight}px` }}
+        style={{ width: `${layout.contentLeftPx}px` }}
       >
         <div className="timeline-axis-col-corner" style={{ height: `${layout.laneOffsetPx}px` }} />
         {lanes.map((lane) => {
