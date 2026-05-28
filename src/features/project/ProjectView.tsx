@@ -220,7 +220,15 @@ export function ProjectView() {
 
   return (
     <PageShell className="project-page" maxWidth="wide">
-      <header className="project-hero">
+      <header
+        className="project-hero"
+        style={{
+          padding: "18px 20px",
+          borderRadius: 12,
+          background: "var(--mori-surface)",
+          boxShadow: "none",
+        }}
+      >
         <div className="project-hero-titles">
           <h1>{displayName || overview.shortName}</h1>
           {overview.fullPath && overview.fullPath !== (displayName || overview.shortName) ? (

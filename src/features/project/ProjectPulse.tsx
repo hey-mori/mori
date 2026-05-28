@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { buildContributionGrid } from "../../lib/home/contributionGrid";
 import { buildProjectActivityStats } from "../../lib/project/projectActivityStats";
 import type { ProjectSynthesis } from "../../lib/project/projectSynthesis";
@@ -6,25 +6,51 @@ import { ContributionHeatmap } from "../../components/activity/ContributionHeatm
 import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 
 /**
- * "프로젝트 개요" — the project page's summarised, at-a-glance band.
- *
- * Two complementary summaries sit side by side:
+ * The project page's two summary cards, scoped to a single project:
  *   - 작업 활동: the shared contribution heatmap (the "잔디", same component as
- *     Home) plus a stat strip (세션 / 현재 연속 / 최장 연속 / 최근 활동), scoped to
- *     this one project — the *cadence* of the work.
- *   - 작업 종합: colour-coded magnitude bars for decisions / open issues /
+ *     Home) plus a 세션 / 현재 연속 / 최장 연속 / 최근 활동 stat strip — the
+ *     *cadence* of the work.
+ *   - 작업 종합: soft, colour-coded magnitude bars for decisions / open issues /
  *     pending next actions — the *shape* of the accumulated work.
  *
- * Everything derives from session timestamps and the already-computed
- * synthesis, so it adds a chart without loading anything new. Status colours
- * stay semantic; the heatmap keeps its own green data-viz ramp.
+ * They are two separate cards (not one band) sharing the page's card chrome and
+ * the standard section-title type, so they line up with the hero and the
+ * 종합 / 세션 sections below. Everything derives from session timestamps and the
+ * already-computed synthesis, so no session bodies are loaded here.
  */
 
+// Softened semantic fills — the full-strength tokens read too hot as wide bars,
+// so each is mixed toward white. Tracks stay on the existing soft tints.
 const BARS = [
-  { key: "decisions", label: "결정", fill: "var(--green)", track: "var(--green-50)" },
-  { key: "openIssues", label: "미해결", fill: "var(--red)", track: "var(--red-50)" },
-  { key: "pendingNextActions", label: "다음 할 일", fill: "var(--blue)", track: "var(--blue-50)" },
+  {
+    key: "decisions",
+    label: "결정",
+    fill: "color-mix(in srgb, var(--green) 62%, white)",
+    track: "color-mix(in srgb, var(--green) 12%, white)",
+  },
+  {
+    key: "openIssues",
+    label: "미해결",
+    fill: "color-mix(in srgb, var(--red) 60%, white)",
+    track: "color-mix(in srgb, var(--red) 12%, white)",
+  },
+  {
+    key: "pendingNextActions",
+    label: "다음 할 일",
+    fill: "color-mix(in srgb, var(--blue) 58%, white)",
+    track: "color-mix(in srgb, var(--blue) 12%, white)",
+  },
 ] as const;
+
+const CARD_STYLE = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+  padding: "16px 20px",
+  border: "1px solid var(--line)",
+  borderRadius: 12,
+  background: "var(--mori-surface)",
+} as const;
 
 export function ProjectPulse({
   timestamps,
@@ -63,54 +89,33 @@ export function ProjectPulse({
     { key: "recent", label: "최근 활동", value: shortDate(stats.lastActive), hint: "마지막 세션 날짜" },
   ];
 
+  const twoUp = hasActivity && hasWork;
+
   return (
-    <section
-      aria-label="프로젝트 개요"
+    <div
       style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 32,
-        alignItems: "stretch",
-        padding: "16px 18px",
-        border: "1px solid var(--line)",
-        borderRadius: 12,
-        background: "var(--mori-surface)",
+        display: "grid",
+        gridTemplateColumns: twoUp ? "minmax(0, 1.7fr) minmax(220px, 1fr)" : "1fr",
+        gap: 16,
+        alignItems: "start",
       }}
     >
       {hasActivity ? (
-        <div
-          style={{
-            flex: "2 1 440px",
-            minWidth: 280,
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
-          <Eyebrow>작업 활동</Eyebrow>
+        <PulseCard title="작업 활동">
           <ContributionHeatmap grid={grid} />
           <MoriMetricStrip items={statItems} />
-        </div>
+        </PulseCard>
       ) : null}
 
       {hasWork ? (
-        <div
-          style={{
-            flex: "1 1 230px",
-            minWidth: 210,
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-          }}
-        >
-          <Eyebrow>작업 종합</Eyebrow>
-          <div style={{ display: "grid", gap: 11, alignContent: "center", flex: 1 }}>
+        <PulseCard title="작업 종합">
+          <div style={{ display: "grid", gap: 12 }}>
             {bars.map((bar) => (
               <div
                 key={bar.key}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "70px 1fr auto",
+                  gridTemplateColumns: "66px 1fr auto",
                   alignItems: "center",
                   gap: 10,
                 }}
@@ -140,10 +145,10 @@ export function ProjectPulse({
                 </span>
                 <span
                   style={{
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: 700,
                     color: "var(--text)",
-                    minWidth: 22,
+                    minWidth: 20,
                     textAlign: "right",
                   }}
                 >
@@ -152,25 +157,18 @@ export function ProjectPulse({
               </div>
             ))}
           </div>
-        </div>
+        </PulseCard>
       ) : null}
-    </section>
+    </div>
   );
 }
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
+function PulseCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <span
-      style={{
-        fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: "0.05em",
-        textTransform: "uppercase",
-        color: "var(--muted-2)",
-      }}
-    >
+    <section aria-label={title} style={CARD_STYLE}>
+      <h3 className="mori-section-title">{title}</h3>
       {children}
-    </span>
+    </section>
   );
 }
 
