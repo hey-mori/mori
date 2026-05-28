@@ -129,9 +129,19 @@ Behavior:
   `dense`) on purpose: each tier is a genuinely distinct card geometry
   tuned for a different scan distance, so it is a discrete segmented
   choice, not a continuous slider that would imply fake granularity.
-- The popover is the **only** place where the eight event-type filters
-  render. Lane labels carry the primary categorical structure; the popover
-  is a focused control, not a permanent legend.
+- The canonical lane set is eight always-visible lanes: 대화, 명령, 코드·파일,
+  리서치, 이슈, 검토, 핸드오프, 노트. Git diff / commit activity folds into the
+  코드·파일 lane (there is no separate Git lane); diff vs commit stays a card
+  badge, not its own swimlane, so a vibe coder reads one "what changed" lane.
+- Every lane label shows its event count as a plain number, including `0` for
+  an empty lane, and the filter popover lists the same lanes with the same
+  counts. Lane labels carry the primary categorical structure; the popover is
+  a focused control, not a permanent legend.
+- The category filter **highlights, it never hides.** Selecting one or more
+  lanes dims the rest at the lane level; every lane and event stays rendered
+  and selectable, so the swimlane structure never collapses when a category
+  is toggled. Only the search query narrows the rendered set, so a "no
+  results" state can come from search alone, never from the category filter.
 - `Day / Week / Zoom in / Zoom out` ship disabled today with explanatory
   tooltips from `timelineControls.ts`. The disabled time-range segments
   stay visible (not hidden) so the control honestly shows what is planned.
@@ -186,6 +196,16 @@ rules:
   the same height per density mode (`68px` comfortable, `54px` compact).
   Lane rows therefore stay the same height regardless of the lane's
   event/bundle mix.
+- **Uniform lane height, empty lanes included.** Every lane renders at one
+  band height. An empty lane shows just its label in a de-emphasised
+  full-height band (not a slim sliver), so the swimlane reads as an even grid
+  rather than a jagged stack of sizes.
+- **Cards never resize.** A card keeps its laid-out width on hover and on
+  selection. Cards are positioned on the time axis with only a small gap
+  between neighbours, so growing a card rightward would cover the next one.
+  Hover changes only border tone and shadow (see No hover lift); selection
+  adds a ring and opens the inspector. Detail-on-demand lives in the inspector
+  and the tooltip, never in a widening card.
 - **Constant trust-badge width.** The trust badge in the card header is a
   single icon pill — the confidence percent lives only in the tooltip and
   the inspector. This keeps the header alignment identical across cards.
@@ -269,10 +289,16 @@ The Timeline has exactly three focus tiers:
 | related   | `focus-related`  | full opacity, same surface treatment |
 | context   | `focus-context`  | 55% opacity, hover restores full opacity |
 
+- **Entry selects nothing.** The Timeline opens neutral: no card is
+  auto-selected, auto-highlighted, or auto-expanded. `resolveSelectedItem`
+  returns `null` for an empty or unmatched `selectedEventId` rather than
+  defaulting to the first card, so a session that does not contain the
+  persisted id opens with a clean canvas.
 - **Hover** an event card → it becomes the focus pivot for as long as the
-  pointer stays on it.
+  pointer stays on it. Hover never resizes the card (see Card design rules).
 - **Click** an event card → pins the selection. The Inspector and the
-  relationship layer follow the pinned selection.
+  relationship layer follow the pinned selection; selection draws a ring and
+  opens the inspector, it does not widen the card.
 - In Timeline mode, once a selected item has connected neighbours, unrelated
   cards fade back. The selected item and directly related items stay fully
   legible; the rest remains present as context.
@@ -437,3 +463,7 @@ row instead of mixing planned buttons into the live row.
   buttons.
 - Active-lanes-only is a per-session UI toggle; the hidden-lane preference
   does not persist across reload yet.
+- The timeline is per-session today. A project-level aggregate timeline (all
+  sessions in a project merged onto one swimlane / flow) is planned, so a user
+  can read a whole project's activity over time rather than one session at a
+  time.

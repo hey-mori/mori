@@ -217,7 +217,7 @@ export type HomeUsagePanel = {
   key: "tokens" | "cadence" | "projects";
   /** Panel heading — leads with the thing, not a triage count. */
   label: string;
-  /** Big value ("8.0K" / "주당 2.5개"). */
+  /** Big value ("8.0K" / "매주 2.5개"). */
   value: string;
   /** One-line scope note — honest about how much data backs the figure. */
   context: string;

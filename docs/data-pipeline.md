@@ -91,11 +91,36 @@ Pipeline-layer helpers (all in `src/app/dataPipeline.ts`):
 
 ## Demo data isolation
 
-Demo and real data never mix. `selectSessionView` returns `demoView` (with
+Demo and real data never mix. `selectSessionView` returns a demo view (with
 `isDemo: true`) when no draft exists, and `composeSessionView` is called
 the moment a draft appears. The Sidebar session card, the Session Detail
 header, and the Settings storage card all read the discriminator and tag the
 data scope.
+
+The demo view is per-session, not a single stand-in:
+
+- `src/lib/demo/demoSessionFixtures.ts` holds the bundled demo session
+  *summaries* (`DEMO_SESSION_SUMMARIES`) that populate the sidebar, the Home
+  recent list, the Project workspace, and the command palette. Ids carry the
+  `demo-` prefix (`isDemoSessionId`); the set spans three projects, with
+  `ng-gw` (NG Gateway) as the heavily populated one.
+- `src/lib/demo/demoSessionContent.ts` expands each summary into a full,
+  read-only `MoriMockSession` (events, sources, issues, decisions,
+  relationships, artifacts, next actions) via `buildDemoSessionContent`. A
+  compact per-session blueprint supplies the themed beats; a shared builder
+  wires timestamps, evidence, links, and inferred relationships (one
+  conversation can surface several issues; a decision links to the discussion
+  it came out of and the code change that implements it).
+- Opening a demo row sets `demoSessionId` on the session store.
+  `loadBrowserSession` falls back to the demo builder for `demo-` ids, and
+  `selectSessionView` returns that session's content (memoised per id). So
+  clicking a demo session shows *that* session, not one fixed sample.
+- Demo sessions stay read-only: every write action (`renameSession`,
+  `runQuickPass`, issue / decision edits, …) is a no-op while `draft` is null,
+  and `selectSessionMode` reports `demo`.
+
+The canonical `moriMockSession` remains the default view when no specific
+demo session is open (`demoSessionId === null`).
 
 ## Adding a new connector to the pipeline
 

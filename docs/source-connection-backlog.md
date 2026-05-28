@@ -29,7 +29,7 @@ terminal scrollback, editor buffers, or hidden folders.
 | Connector JSONL import | Real and usable | Paste or Tauri inbox file selection | JSONL lines | connector JSONL pipeline | source package + events + reimport summary | JSONL 불러오기 | No inbox watcher, no polling | Import Review before Timeline | `src/lib/connectors/`, `ImportPanel` | Duplicate history + preview | Yes |
 | AI transcript import | Real and usable | Pasted transcript/export | Text or ChatGPT JSON | AI transcript normalizers | AI source + events | AI 대화 붙여넣기 | No account scraping | Import Review before Timeline | `src/lib/import/` | Role parser + fidelity | Yes |
 | Project-local capture scripts | Partially implemented | User-installed scripts/tasks | JSONL package | local-capture bridge | connector events | Run script/task explicitly | No daemon/watcher | Import Review before Timeline | `connectors/local-capture/`, `connectors/vscode-task/` | Template round-trip | Yes |
-| Source adapter registry | Partial | Registry/view-model only | Capture surface rows | `captureSurfaces`, `sourceWorkspace` | UI status/action model | Inspect source page | No fake connected states | N/A | `src/lib/connectors/`, `src/lib/sources/` | Status/action invariants | Yes |
+| Source adapter registry | Partial | Registry/view-model only | Capture surface rows | `captureSurfaces`, `sourceWorkspace`, `sourceProviderGroups` | UI status/action model + provider groups | Inspect source page | No fake connected states | N/A | `src/lib/connectors/`, `src/lib/sources/` | Status/action invariants + provider grouping | Yes |
 | Session/work-unit preview | Partial | Import Review / Work Bundle preview | normalized candidates | review/work-bundle helpers | candidate events and sources | Preview then apply | No durable memory write | Review-before-apply | `src/features/import/`, `src/lib/import/workBundle.ts` | Preview counts + dedupe | Yes |
 | IDE/editor activity | Planned | Explicit task/extension action | JSONL digest | future adapter | editor source + events | User triggers capture | No keylogging/buffer polling | Import Review before Timeline | `connectors/vscode-task/` | Permission model | Not yet |
 | Figma / Linear / Jira / Slack / Notion | Planned | Explicit export/import only | JSON/Markdown/export | future parsers | source/events/review candidates | User imports export | No OAuth/cloud sync unless approved | Review-before-apply | `src/lib/sources/sourceRegistry.ts` | Parser + privacy tests | Not yet |
@@ -45,4 +45,83 @@ terminal scrollback, editor buffers, or hidden folders.
 - hidden clipboard capture
 - account OAuth / cloud sync without explicit approval
 - automatic project-memory writes without review
+
+## 소스 Page Presentation Contract
+
+The 소스 workspace (the `connections` route, rendered by
+`src/features/sources/SourcesView.tsx`) is a calm **provider overview**, not a
+list or table of import methods. It answers one question at a glance: which
+provider can I bring work from. All depth lives in the right inspector for the
+selected provider.
+
+### Layout model
+
+- **Canvas = provider tiles.** One compact tile per provider (icon + name,
+  nothing else). Grouped into two role sections plus a planned row:
+  - **에이전트** · session anchors: Claude, ChatGPT, Codex, OpenCode.
+  - **자료** · evidence attached to a session: Git, 터미널, Connector JSONL,
+    메모, URL.
+  - **예정** · fully-planned providers (Slack, Notion, Figma, Jira, Linear,
+    MCP, IDE, 브라우저, 문서, build / deploy log) as quiet chips.
+- **Inspector = the selected provider's detail.** Selecting a tile shows that
+  provider's 연결 방법 (its individual import methods, each with a status chip
+  and the primary action), then 읽는 것 / 읽지 않는 것 / 지원 형식, and the
+  import / setup action. Choosing a method in the picker swaps the detail
+  shown below it.
+- **Headerless.** The sidebar already names the destination, so the page has no
+  title band; the ActionBar carries controls only (the shared search field).
+
+### Grouping data
+
+- Provider grouping is a pure, tested derivation: `buildSourceProviderGroups`
+  (`src/lib/sources/sourceProviderGroups.ts`) folds the flat
+  `buildSourceWorkspace` source list into `{ agents, evidence, planned }`
+  provider groups, drops redundant rows (e.g. the generic `aiConversation`
+  entry), and routes the universal paste surface under OpenCode. Agent
+  families anchor; every other family is evidence; a provider whose methods are
+  all planned collapses into the planned bucket.
+
+### UI terminology
+
+- Sections are **에이전트 / 자료 / 예정**. "자료" is the user-facing label for
+  evidence sources; the internal model still calls them evidence.
+- Inspector access labels drop the "Mori가" prefix: **읽는 것 / 읽지 않는 것**.
+- Retire the old jargon columns (가족, 획득 방식, 데이터 범위). Provider grouping
+  replaces "가족"; "연결 방법" replaces "획득 방식".
+
+### Do
+
+- Keep the canvas at the **provider level**. Push method-level detail, access
+  lists, and actions into the inspector.
+- Reuse the shared search component (`ToolbarSearch` / `SearchField`, the
+  `mori-search-field` shell) that other pages use. Search filters providers by
+  name / method / format; it is the only slice the page offers.
+- Reuse the shared layout primitives (`PageShell`, `ActionBar`, `Badge`,
+  `Button`) and the `--mori-*` tokens. Status uses semantic tones; purple is
+  accent / selection only.
+- Show a status chip on a method only when it needs attention (설정 필요 /
+  예정 / 데스크톱 필요). An available method reads as ready by the absence of a
+  chip.
+
+### Don't
+
+- Don't render import methods as a flat list, a grouped list, or a table of
+  rows on the canvas. Each was tried and rejected: it repeats providers,
+  inflates the page, and reads as clutter instead of an overview.
+- Don't surface developer / internal data in the user-facing UI (source file
+  paths, backlog ids, implementation notes). Those belong in this doc, never in
+  the inspector.
+- Don't add a status-filter control, a count strip, or a page title band to the
+  overview.
+- Don't give each provider its own bordered section with an inline method list.
+  Providers are tiles; their methods live in the inspector.
+- Don't reinvent a per-page search input or bolt custom styling onto it.
+
+### Key files
+
+- `src/features/sources/SourcesView.tsx` · the page (tiles + inspector).
+- `src/lib/sources/sourceProviderGroups.ts` (+ `.test.ts`) · provider grouping.
+- `src/lib/sources/sourceWorkspace.ts` · the flat source view-model it builds on.
+- `src/lib/connectors/connectorControlCenter.ts` · agent vs evidence role and
+  runtime availability.
 

@@ -36,6 +36,7 @@ exists to prevent.
 | Report | 보고서 | A generated summary of a session. |
 | Resume prompt | 재개 프롬프트 | Copyable context to continue work later. |
 | Handoff | 인계 | Sharing a session's outputs with someone else. |
+| Notification | 알림 | A calm cross-session feed item; derived from reviewed data, reviewable, never an autonomous action. See §5. |
 | Export | 내보내기 | Writing data out (a `.mori` package, a report). |
 | Local-first storage | 로컬 저장 / 로컬 전용 | Data stays on this device. |
 | AI inference | 추론 | An AI-derived item; always reviewable, never authoritative. |
@@ -93,6 +94,13 @@ own reasoning.
 이어가기 준비. A companion signal is always a reviewable suggestion, never an
 automatic action.
 
+**Notifications**: 알림 (the surface), with 모두 읽음 to clear the feed. The
+sidebar bell carries an honest unread count capped at `9+`. A feed item names
+what happened and where (프로젝트 · 세션 · relative time); it is derived from
+reviewed data and is always a reviewable glance, never an alert that acts on
+its own. The bell opens a right-side drawer; the 알림 page is the full
+time-grouped inbox (오늘 / 이번 주 / 이전).
+
 ## 6. Button / action vocabulary
 
 | Action | Label |
@@ -124,6 +132,12 @@ A button labels the **result of the action**, not the implementation.
   it is the established, precise Korean term and it is consistent across the
   app. **불러오기** is reserved for opening a *saved file* (a `.mori` package,
   the file picker). The two are not interchangeable.
+- **기록에서 불러오기 (decided):** the new-session entry that opens an AI
+  conversation Mori detected in the agent's own local history uses
+  **불러오기**, not 가져오기. It opens records already present on the device
+  (a file-pick-like gesture), so it reads as 불러오기 even though the loaded
+  conversation becomes the session spine. Reserve 가져오기 for pasting or
+  attaching *external* source data.
 - **Imported (status):** 가져오기 완료 (a finished action), 가져온 세션 (a
   session's origin), 가져온 소스 (provenance of data).
 - **Capture (수집):** explicit, user-triggered. Never imply background watching.
