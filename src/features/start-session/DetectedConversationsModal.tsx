@@ -1,5 +1,13 @@
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   AlertCircle,
   Clock,
@@ -54,10 +62,18 @@ function isReplyTurn(message: ClaudeMessage): boolean {
   return message.role === "assistant" && message.subkind !== "tool_use";
 }
 
-function oneLine(content: string, max: number): string {
-  const normalized = content.replace(/\s+/g, " ").trim();
-  return normalized.length > max ? `${normalized.slice(0, max - 1)}…` : normalized;
-}
+/** Centre a list-pane state (spinner / empty / error) both ways. */
+const LIST_STATE_STYLE: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  minHeight: 240,
+  height: "100%",
+  padding: 24,
+  textAlign: "center",
+};
 
 export function DetectedConversationsModal({
   agentName,
@@ -233,11 +249,8 @@ export function DetectedConversationsModal({
         </div>
 
         <footer className="detected-modal-foot">
-          <Button variant="secondary" onClick={onClose}>
-            취소
-          </Button>
           <Button variant="primary" disabled={!activeMeta} onClick={confirm}>
-            이 대화로 진행
+            선택
           </Button>
         </footer>
       </div>
@@ -263,38 +276,43 @@ function ConversationList({
   sessionCount: number;
   grouped: [string, ClaudeCodeSessionMeta[]][];
   activePath: string | null;
-  onActivate: (filePath: string) => void;
+  onActivate: (filePath: string | null) => void;
 }) {
+  // Non-list states (loading / empty / error / unsupported) render centred
+  // both ways inside the list pane. Inline-styled so they don't depend on a
+  // CSS file the autonomous loop is rewriting.
+  let state: ReactNode = null;
   if (!supported) {
-    return <p className="start-import-note">{agentName} 작업 기록 자동 감지는 준비 중입니다.</p>;
-  }
-  if (!bridge) {
-    return (
+    state = <p className="start-import-note">{agentName} 작업 기록 자동 감지는 준비 중입니다.</p>;
+  } else if (!bridge) {
+    state = (
       <p className="start-import-note">
         데스크톱 앱에서 {agentName} 작업 기록을 자동으로 감지합니다. 브라우저에서는 붙여넣기를
         사용하세요.
       </p>
     );
-  }
-  if (status === "loading" || status === "idle") {
-    return (
-      <p className="start-import-note">
-        <RefreshCw size={14} aria-hidden="true" className="start-import-spin" /> 작업 기록을 불러오는 중...
-      </p>
+  } else if (status === "loading" || status === "idle") {
+    state = (
+      <>
+        <RefreshCw size={22} aria-hidden="true" className="start-import-spin" />
+        <p className="start-import-note" style={{ margin: 0 }}>작업 기록을 불러오는 중...</p>
+      </>
     );
-  }
-  if (status === "error") {
-    return (
-      <p className="start-import-note">
-        <AlertCircle size={14} aria-hidden="true" /> 작업 기록을 읽지 못했습니다.
-      </p>
+  } else if (status === "error") {
+    state = (
+      <>
+        <AlertCircle size={20} aria-hidden="true" />
+        <p className="start-import-note" style={{ margin: 0 }}>작업 기록을 읽지 못했습니다.</p>
+      </>
     );
+  } else if (sessionCount === 0) {
+    state = <p className="start-import-note">감지된 대화가 없습니다.</p>;
+  } else if (grouped.length === 0) {
+    state = <p className="start-import-note">검색 결과가 없습니다.</p>;
   }
-  if (sessionCount === 0) {
-    return <p className="start-import-note">감지된 대화가 없습니다.</p>;
-  }
-  if (grouped.length === 0) {
-    return <p className="start-import-note">검색 결과가 없습니다.</p>;
+
+  if (state) {
+    return <div style={LIST_STATE_STYLE}>{state}</div>;
   }
 
   return (
@@ -316,7 +334,7 @@ function ConversationList({
                     role="radio"
                     aria-checked={selected}
                     className={`start-detected-row${selected ? " is-selected" : ""}`}
-                    onClick={() => onActivate(session.filePath)}
+                    onClick={() => onActivate(selected ? null : session.filePath)}
                   >
                     <span className="start-detected-main">
                       <strong>{session.title}</strong>
@@ -374,9 +392,7 @@ function ConversationPreview({
     );
   }
 
-  const firstAsk = detail.messages.find(isUserTurn)?.content ?? null;
   const turns = detail.messages.filter((message) => isUserTurn(message) || isReplyTurn(message));
-  const previewTurns = turns.slice(0, 6);
   const codeBlocks = detail.messages.filter((message) => message.content.includes("```")).length;
   const lastStamp = [...detail.messages].reverse().find((message) => message.createdAt)?.createdAt;
   const model = detail.tokenUsage?.model;
@@ -410,23 +426,21 @@ function ConversationPreview({
         ) : null}
       </div>
 
-      {firstAsk ? (
-        <section className="detected-preview-ask">
-          <h4>첫 요청</h4>
-          <p>{oneLine(firstAsk, 360)}</p>
-        </section>
-      ) : null}
-
-      {previewTurns.length > 0 ? (
+      {turns.length > 0 ? (
         <section className="detected-preview-thread">
-          <h4>대화 미리보기</h4>
+          <h4>
+            대화 전문{" "}
+            <span className="detected-preview-thread-count">{turns.length}턴</span>
+          </h4>
           <ul>
-            {previewTurns.map((message, index) => {
+            {turns.map((message, index) => {
               const mine = isUserTurn(message);
               return (
                 <li key={message.id || index} className={mine ? "is-user" : "is-reply"}>
                   <span className="detected-preview-role">{mine ? "나" : agentName}</span>
-                  <span className="detected-preview-text">{oneLine(message.content, 160)}</span>
+                  <span className="detected-preview-text" style={{ whiteSpace: "pre-wrap" }}>
+                    {message.content.trim()}
+                  </span>
                 </li>
               );
             })}
