@@ -35,7 +35,8 @@ import { useMoriProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { ProjectSynthesisSection } from "./ProjectSynthesisSection";
-import { ProjectActivityStrip } from "./ProjectActivityStrip";
+import { ProjectPulse } from "./ProjectPulse";
+import { useProjectSynthesis } from "./useProjectSynthesis";
 import { spanLabel } from "../../lib/session/workContext";
 
 /**
@@ -139,6 +140,19 @@ export function ProjectView() {
     if (!projectsInitialized) hydrateProjects();
   }, [projectsInitialized, hydrateProjects]);
 
+  // Sessions in display order, plus the timestamps and synthesis the overview
+  // band and the synthesis section share. Computed before the early return so
+  // the hooks stay unconditional.
+  const sessionRows = useMemo(
+    () => (overview ? overview.groups.flatMap((group) => group.rows) : []),
+    [overview],
+  );
+  const sessionTimestamps = useMemo(
+    () => sessionRows.map((row) => row.timestamp),
+    [sessionRows],
+  );
+  const synthesis = useProjectSynthesis(sessionRows);
+
   // Display name + description honour a user override; whether the project is
   // explicitly created decides if it can be deleted (a session-derived project
   // cannot).
@@ -202,63 +216,51 @@ export function ProjectView() {
     );
   }
 
-  const sessionRows = overview.groups.flatMap((group) => group.rows);
   const projectSessionLabel = displayName || overview.shortName;
 
   return (
     <PageShell className="project-page" maxWidth="wide">
-      <header
-        className="project-hero"
-        style={{ display: "flex", flexDirection: "column", alignItems: "stretch", gap: 14 }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 16,
-          }}
-        >
-          <div className="project-hero-titles">
-            <h1>{displayName || overview.shortName}</h1>
-            {overview.fullPath && overview.fullPath !== (displayName || overview.shortName) ? (
-              <p className="project-hero-path" title={overview.fullPath}>
-                {overview.fullPath}
-              </p>
-            ) : null}
-            {description ? <p className="project-hero-path">{description}</p> : null}
-          </div>
-          <div className="project-hero-actions">
+      <header className="project-hero">
+        <div className="project-hero-titles">
+          <h1>{displayName || overview.shortName}</h1>
+          {overview.fullPath && overview.fullPath !== (displayName || overview.shortName) ? (
+            <p className="project-hero-path" title={overview.fullPath}>
+              {overview.fullPath}
+            </p>
+          ) : null}
+          {description ? <p className="project-hero-path">{description}</p> : null}
+        </div>
+        <div className="project-hero-actions">
+          <Button
+            variant="ghost"
+            icon={Pencil}
+            onClick={() => setEditing(true)}
+            title="프로젝트 이름과 설명을 수정합니다 (세션은 그대로)."
+          >
+            수정
+          </Button>
+          {isCreatedProject ? (
             <Button
               variant="ghost"
-              icon={Pencil}
-              onClick={() => setEditing(true)}
-              title="프로젝트 이름과 설명을 수정합니다 (세션은 그대로)."
+              icon={Trash2}
+              onClick={handleDeleteProject}
+              title="이 프로젝트를 목록에서 제거합니다. 세션은 삭제되지 않습니다."
             >
-              수정
+              삭제
             </Button>
-            {isCreatedProject ? (
-              <Button
-                variant="ghost"
-                icon={Trash2}
-                onClick={handleDeleteProject}
-                title="이 프로젝트를 목록에서 제거합니다. 세션은 삭제되지 않습니다."
-              >
-                삭제
-              </Button>
-            ) : null}
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => setCurrentView("start")}
-              title="이 프로젝트에 새 세션을 시작합니다 — 새 대화 또는 기존 대화 가져오기."
-            >
-              새 세션
-            </Button>
-          </div>
+          ) : null}
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => setCurrentView("start")}
+            title="이 프로젝트에 새 세션을 시작합니다. 새 대화 또는 기존 대화 가져오기."
+          >
+            새 세션
+          </Button>
         </div>
-        <ProjectActivityStrip timestamps={sessionRows.map((row) => row.timestamp)} />
       </header>
+
+      <ProjectPulse timestamps={sessionTimestamps} synthesis={synthesis} />
 
       {editing ? (
         <ProjectFormModal
@@ -279,7 +281,7 @@ export function ProjectView() {
         }}
       >
         <ProjectSynthesisSection
-          sessions={sessionRows}
+          synthesis={synthesis}
           onOpenSession={(sessionId) => openSessionId(sessionId)}
         />
 

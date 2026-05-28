@@ -1,74 +1,31 @@
 import { ArrowRight, CheckCircle2, CircleAlert, ListTodo } from "lucide-react";
-import { useMemo } from "react";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
 import { MoriSection } from "../../components/ui/MoriSection";
-import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import { buildDemoSessionContent } from "../../lib/demo/demoSessionContent";
-import {
-  buildProjectSynthesis,
-  type ProjectSessionContent,
-  type SynthItem,
-} from "../../lib/project/projectSynthesis";
+import type { ProjectSynthesis, SynthItem } from "../../lib/project/projectSynthesis";
 
 /**
  * "이 프로젝트 종합" — a cross-session roll-up of what the project has actually
  * been working on (key decisions / open issues / pending next actions),
- * replacing the per-session zero-count board. Self-contained: it gathers each
- * session's content (a stored memory body, or a demo fixture) and feeds the
- * pure `buildProjectSynthesis` aggregator.
+ * replacing the per-session zero-count board.
+ *
+ * Presentational: it receives the already-computed synthesis (see
+ * `useProjectSynthesis`) so the magnitude band and this section share one pass
+ * over the project's sessions. The "how many" lives in the overview band; this
+ * section is the "what" — the items themselves.
  */
 export function ProjectSynthesisSection({
-  sessions,
+  synthesis,
   onOpenSession,
 }: {
-  sessions: ReadonlyArray<{ sessionId: string; title: string }>;
+  synthesis: ProjectSynthesis;
   onOpenSession?: (sessionId: string) => void;
 }) {
-  const repository = useMemo(() => createBrowserDraftRepository(), []);
-
-  const content = useMemo<ProjectSessionContent[]>(() => {
-    return sessions.map((entry) => {
-      let issues: ProjectSessionContent["issues"] = [];
-      let decisions: ProjectSessionContent["decisions"] = [];
-      let nextActions: ProjectSessionContent["nextActions"] = [];
-      try {
-        const body = repository.loadSessionMemoryBody(entry.sessionId);
-        if (body) {
-          issues = body.issues;
-          decisions = body.decisions;
-          nextActions = body.nextActions;
-        } else {
-          const demo = buildDemoSessionContent(entry.sessionId);
-          if (demo) {
-            issues = demo.issues ?? [];
-            decisions = demo.decisions ?? [];
-            nextActions = demo.nextActions ?? [];
-          }
-        }
-      } catch {
-        // Unreadable session — contributes nothing, never throws upward.
-      }
-      return { sessionId: entry.sessionId, title: entry.title, issues, decisions, nextActions };
-    });
-  }, [sessions, repository]);
-
-  const synthesis = useMemo(() => buildProjectSynthesis(content), [content]);
-
-  const summary = synthesis.hasContent
-    ? [
-        `결정 ${synthesis.totals.decisions}`,
-        `미해결 ${synthesis.totals.openIssues}`,
-        `다음 ${synthesis.totals.pendingNextActions}`,
-      ].join(" · ")
-    : null;
-
   return (
     <MoriSection
       className="project-synthesis"
       title="이 프로젝트 종합"
       ariaLabel="이 프로젝트 종합"
-      actions={summary ? <span className="project-section-count">{summary}</span> : null}
     >
       {!synthesis.hasContent ? (
         <p className="settings-empty">
