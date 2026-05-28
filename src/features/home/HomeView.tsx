@@ -402,7 +402,6 @@ function NextActionRow({
       <MoriObjectRow
         leading={<Icon size={15} />}
         title={action.title}
-        subtitle={action.description}
         trailing={<ArrowRight size={13} aria-hidden="true" />}
         onClick={onRun}
         ariaLabel={action.title}
