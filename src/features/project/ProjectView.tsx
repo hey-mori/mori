@@ -1,15 +1,11 @@
 import {
   ArrowRight,
   BookCheck,
-  ClipboardCheck,
-  Database,
-  FileText,
   FolderGit2,
   FolderKanban,
   Layers,
   Pencil,
   Plus,
-  ScrollText,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -20,7 +16,6 @@ import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
 import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 import { MoriSection } from "../../components/ui/MoriSection";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { useMoriAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
@@ -30,7 +25,6 @@ import {
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import {
   buildProjectOverview,
-  type ProjectFocusItem,
   type ProjectSessionRow,
   type ProjectSessionInsightSnapshot,
 } from "../../lib/project/projectOverview";
@@ -42,6 +36,7 @@ import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes
 import { useMoriProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
 import { ProjectFormModal } from "./ProjectFormModal";
+import { ProjectSynthesisSection } from "./ProjectSynthesisSection";
 import { spanLabel } from "../../lib/session/workContext";
 
 /**
@@ -65,7 +60,6 @@ export function ProjectView() {
   const projectKey = useMoriAppStore((state) => state.currentProjectKey);
   const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
   const openSession = useMoriAppStore((state) => state.openSession);
-  const setMemoryTab = useMoriAppStore((state) => state.setMemoryTab);
 
   const userProjects = useMoriProjectStore((state) => state.projects);
   const hydrateProjects = useMoriProjectStore((state) => state.hydrate);
@@ -192,28 +186,6 @@ export function ProjectView() {
     }
   };
 
-  const openFocusItem = (item: ProjectFocusItem) => {
-    const targetSessionId = item.targetSessionId;
-    if (!item.enabled || !targetSessionId) return;
-    if (item.destination === "memory") {
-      if (targetSessionId !== activeSessionId) {
-        if (isDesktop) {
-          void loadDesktopSession(targetSessionId).then((ok) => {
-            if (!ok) loadBrowserSession(targetSessionId);
-            setMemoryTab("overview");
-            setCurrentView("memory");
-          });
-          return;
-        }
-        loadBrowserSession(targetSessionId);
-      }
-      setMemoryTab("overview");
-      setCurrentView("memory");
-      return;
-    }
-    openSessionId(targetSessionId, item.destination);
-  };
-
   if (!projectKey || !overview) {
     return (
       <PageShell className="project-page" maxWidth="wide">
@@ -316,28 +288,10 @@ export function ProjectView() {
         ]}
       />
 
-      <MoriSection
-        className="project-focus"
-        title="작업 상태"
-        actions={
-          overview.stats.savedReports > 0 ? (
-            <MoriStatusBadge tone="success">
-              리포트 {overview.stats.savedReports}개
-            </MoriStatusBadge>
-          ) : null
-        }
-        ariaLabel="프로젝트 작업 상태"
-      >
-        <ul className="project-focus-list">
-          {overview.focusItems.map((item) => (
-            <ProjectFocusRow
-              key={item.key}
-              item={item}
-              onOpen={() => openFocusItem(item)}
-            />
-          ))}
-        </ul>
-      </MoriSection>
+      <ProjectSynthesisSection
+        sessions={sessionRows}
+        onOpenSession={(sessionId) => openSessionId(sessionId)}
+      />
 
       <MoriSection
         className="project-sessions"
@@ -438,37 +392,6 @@ function ProjectSessionRowItem({
         ariaLabel={row.title}
         density="compact"
         trailing={<ArrowRight size={13} aria-hidden="true" />}
-      />
-    </li>
-  );
-}
-
-function ProjectFocusRow({
-  item,
-  onOpen,
-}: {
-  item: ProjectFocusItem;
-  onOpen: () => void;
-}) {
-  const Icon =
-    item.destination === "insights"
-      ? ClipboardCheck
-      : item.destination === "evidence"
-        ? Database
-        : item.destination === "memory"
-          ? FileText
-          : ScrollText;
-  return (
-    <li>
-      <MoriObjectRow
-        leading={<Icon size={15} />}
-        title={item.title}
-        subtitle={item.detail}
-        status={<MoriStatusBadge tone={item.tone}>{item.statusLabel}</MoriStatusBadge>}
-        trailing={item.enabled ? <ArrowRight size={13} aria-hidden="true" /> : null}
-        onClick={item.enabled ? onOpen : undefined}
-        ariaLabel={item.title}
-        density="compact"
       />
     </li>
   );
