@@ -13,6 +13,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { focusFirstElement } from "./focusTrap";
+import { moriTooltipProps } from "./MoriTooltip";
 
 export type MoriMenuPosition = {
   x: number;
@@ -255,7 +256,7 @@ function MoriMenuLayer({
               .filter(Boolean)
               .join(" ")}
             disabled={item.disabled}
-            title={item.title}
+            {...moriTooltipProps(item.title, "control")}
             onClick={(event) => {
               event.stopPropagation();
               if (item.disabled) return;

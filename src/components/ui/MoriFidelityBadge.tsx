@@ -4,6 +4,7 @@ import {
   getCaptureFidelityDisplay,
 } from "../../lib/evidence/fidelityDisplay";
 import { MoriStatusBadge } from "./MoriStatusBadge";
+import { moriTooltipProps } from "./MoriTooltip";
 
 export type MoriFidelityBadgeProps = {
   fidelity?: CaptureFidelity;
@@ -21,7 +22,9 @@ export function MoriFidelityBadge({ fidelity }: MoriFidelityBadgeProps) {
   if (!display.shouldSurface) return null;
   return (
     <MoriStatusBadge tone={display.tone}>
-      <span title={describeCaptureFidelity(fidelity)}>{display.label}</span>
+      <span {...moriTooltipProps(describeCaptureFidelity(fidelity), "status")}>
+        {display.label}
+      </span>
     </MoriStatusBadge>
   );
 }

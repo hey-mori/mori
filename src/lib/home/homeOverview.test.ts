@@ -9,7 +9,9 @@ import {
 
 const NOW = Date.parse("2026-05-22T12:00:00+09:00");
 
-function stored(over: Partial<StoredSessionSummary> = {}): StoredSessionSummary {
+function stored(
+  over: Partial<StoredSessionSummary> = {},
+): StoredSessionSummary {
   return {
     sessionId: "s-1",
     projectId: "proj-1",
@@ -37,7 +39,9 @@ function input(over: Partial<HomeOverviewInput> = {}): HomeOverviewInput {
 describe("buildHomeOverview", () => {
   describe("empty / demo-only state", () => {
     it("leads with import and follows with calm demo / memory entry points so the column never reads as one floating CTA", () => {
-      const overview = buildHomeOverview(input({ storedSessions: [], realSessionCount: 0 }));
+      const overview = buildHomeOverview(
+        input({ storedSessions: [], realSessionCount: 0 }),
+      );
 
       expect(overview.isEmpty).toBe(true);
       expect(overview.onlyDemo).toBe(true);
@@ -56,7 +60,9 @@ describe("buildHomeOverview", () => {
     it("treats a demo-only store (sessions present but realSessionCount 0) as onlyDemo and offers just import", () => {
       const overview = buildHomeOverview(
         input({
-          storedSessions: [stored({ sessionId: "demo-1", sourceLabel: undefined })],
+          storedSessions: [
+            stored({ sessionId: "demo-1", sourceLabel: undefined }),
+          ],
           realSessionCount: 0,
           isDemo: true,
         }),
@@ -82,8 +88,16 @@ describe("buildHomeOverview", () => {
           realSessionCount: 2,
           isDemo: false,
           storedSessions: [
-            stored({ sessionId: "a", sourceLabel: "C:/dev/mori", startedAt: "2026-05-22T11:00:00+09:00" }),
-            stored({ sessionId: "b", sourceLabel: "C:/dev/other", startedAt: "2026-05-21T11:00:00+09:00" }),
+            stored({
+              sessionId: "a",
+              sourceLabel: "C:/dev/mori",
+              startedAt: "2026-05-22T11:00:00+09:00",
+            }),
+            stored({
+              sessionId: "b",
+              sourceLabel: "C:/dev/other",
+              startedAt: "2026-05-21T11:00:00+09:00",
+            }),
           ],
           sessionMetrics: [
             { sessionId: "a", events: 12 },
@@ -118,8 +132,16 @@ describe("buildHomeOverview", () => {
           realSessionCount: 3,
           isDemo: false,
           storedSessions: [
-            stored({ sessionId: "a", sourceLabel: "C:/dev/mori", projectId: "p1" }),
-            stored({ sessionId: "b", sourceLabel: "C:/dev/mori", projectId: "p1" }),
+            stored({
+              sessionId: "a",
+              sourceLabel: "C:/dev/mori",
+              projectId: "p1",
+            }),
+            stored({
+              sessionId: "b",
+              sourceLabel: "C:/dev/mori",
+              projectId: "p1",
+            }),
             stored({ sessionId: "c", sourceLabel: undefined, projectId: "p2" }),
           ],
         }),
@@ -175,12 +197,21 @@ describe("buildHomeOverview", () => {
         input({
           realSessionCount: 1,
           isDemo: false,
-          storedSessions: [stored({ sessionId: "old", startedAt: "2026-05-10T09:00:00+09:00" })],
+          storedSessions: [
+            stored({
+              sessionId: "old",
+              startedAt: "2026-05-10T09:00:00+09:00",
+            }),
+          ],
         }),
       );
-      expect(overview.metrics.some((m) => m.key === "streak-current")).toBe(false);
+      expect(overview.metrics.some((m) => m.key === "streak-current")).toBe(
+        false,
+      );
       // A lone day is not a "longest streak" worth a tile either.
-      expect(overview.metrics.some((m) => m.key === "streak-longest")).toBe(false);
+      expect(overview.metrics.some((m) => m.key === "streak-longest")).toBe(
+        false,
+      );
     });
   });
 
@@ -191,14 +222,27 @@ describe("buildHomeOverview", () => {
           realSessionCount: 3,
           isDemo: false,
           storedSessions: [
-            stored({ sessionId: "old", startedAt: "2026-05-20T08:00:00+09:00" }),
-            stored({ sessionId: "new", startedAt: "2026-05-22T08:00:00+09:00" }),
-            stored({ sessionId: "mid", startedAt: "2026-05-21T08:00:00+09:00" }),
+            stored({
+              sessionId: "old",
+              startedAt: "2026-05-20T08:00:00+09:00",
+            }),
+            stored({
+              sessionId: "new",
+              startedAt: "2026-05-22T08:00:00+09:00",
+            }),
+            stored({
+              sessionId: "mid",
+              startedAt: "2026-05-21T08:00:00+09:00",
+            }),
           ],
         }),
       );
 
-      expect(overview.recentSessions.map((s) => s.sessionId)).toEqual(["new", "mid", "old"]);
+      expect(overview.recentSessions.map((s) => s.sessionId)).toEqual([
+        "new",
+        "mid",
+        "old",
+      ]);
     });
 
     it("attaches a factual count summary only when there are reconstructed items", () => {
@@ -208,7 +252,10 @@ describe("buildHomeOverview", () => {
           isDemo: false,
           storedSessions: [
             stored({ sessionId: "rich" }),
-            stored({ sessionId: "bare", startedAt: "2026-05-21T08:00:00+09:00" }),
+            stored({
+              sessionId: "bare",
+              startedAt: "2026-05-21T08:00:00+09:00",
+            }),
           ],
           sessionMetrics: [
             { sessionId: "rich", events: 12, decisions: 3, issues: 2 },
@@ -230,21 +277,37 @@ describe("buildHomeOverview", () => {
           isDemo: false,
           storedSessions: [
             stored({ sessionId: "imp", sourceLabel: "C:/dev/mori" }),
-            stored({ sessionId: "man", sourceLabel: undefined, startedAt: "2026-05-21T08:00:00+09:00" }),
+            stored({
+              sessionId: "man",
+              sourceLabel: undefined,
+              startedAt: "2026-05-21T08:00:00+09:00",
+            }),
           ],
         }),
       );
 
-      expect(overview.recentSessions.find((s) => s.sessionId === "imp")!.origin).toBe("imported");
-      expect(overview.recentSessions.find((s) => s.sessionId === "man")!.origin).toBe("manual");
+      expect(
+        overview.recentSessions.find((s) => s.sessionId === "imp")!.origin,
+      ).toBe("imported");
+      expect(
+        overview.recentSessions.find((s) => s.sessionId === "man")!.origin,
+      ).toBe("manual");
     });
 
     it("respects the recent limit", () => {
       const many = Array.from({ length: 10 }, (_, i) =>
-        stored({ sessionId: `s-${i}`, startedAt: `2026-05-${10 + i}T08:00:00+09:00` }),
+        stored({
+          sessionId: `s-${i}`,
+          startedAt: `2026-05-${10 + i}T08:00:00+09:00`,
+        }),
       );
       const overview = buildHomeOverview(
-        input({ realSessionCount: 10, isDemo: false, storedSessions: many, recentLimit: 4 }),
+        input({
+          realSessionCount: 10,
+          isDemo: false,
+          storedSessions: many,
+          recentLimit: 4,
+        }),
       );
       expect(overview.recentSessions).toHaveLength(4);
     });
@@ -275,7 +338,9 @@ describe("buildHomeOverview", () => {
 
     it("frames decision review around the value of leaving them in project memory", () => {
       const overview = buildHomeOverview(realInput());
-      const review = overview.nextActions.find((a) => a.kind === "review_decisions");
+      const review = overview.nextActions.find(
+        (a) => a.kind === "review_decisions",
+      );
       expect(review).toBeDefined();
       expect(review!.title).toContain("메모리에 남기기");
       expect(review!.description).toContain("프로젝트 메모리에 남아");
@@ -288,7 +353,9 @@ describe("buildHomeOverview", () => {
       const kinds = overview.nextActions.map((a) => a.kind);
       expect(kinds[0]).toBe("review_decisions");
       // Resume must precede open issues and report by rank.
-      expect(kinds.indexOf("resume")).toBeLessThan(kinds.indexOf("open_issues"));
+      expect(kinds.indexOf("resume")).toBeLessThan(
+        kinds.indexOf("open_issues"),
+      );
     });
 
     it("offers resume framed as carrying context forward, targeting the most recent session", () => {
@@ -360,8 +427,18 @@ describe("잔디 metric lens", () => {
       realSessionCount: 2,
       isDemo: false,
       storedSessions: [
-        stored({ sessionId: "a", startedAt: "2026-05-22T08:00:00+09:00", eventCount: 12, tokenTotal: 5_000 }),
-        stored({ sessionId: "b", startedAt: "2026-05-21T08:00:00+09:00", eventCount: 8, tokenTotal: 3_000 }),
+        stored({
+          sessionId: "a",
+          startedAt: "2026-05-22T08:00:00+09:00",
+          eventCount: 12,
+          tokenTotal: 5_000,
+        }),
+        stored({
+          sessionId: "b",
+          startedAt: "2026-05-21T08:00:00+09:00",
+          eventCount: 8,
+          tokenTotal: 3_000,
+        }),
       ],
     });
   }
@@ -374,7 +451,10 @@ describe("잔디 metric lens", () => {
   });
 
   it("sums eventCount per day for the activity lens", () => {
-    const overview = buildHomeOverview({ ...withSessions(), metric: "activity" });
+    const overview = buildHomeOverview({
+      ...withSessions(),
+      metric: "activity",
+    });
     expect(overview.resolvedMetric).toBe("activity");
     expect(overview.contributionGrid.total).toBe(20); // 12 + 8
   });
@@ -387,7 +467,11 @@ describe("잔디 metric lens", () => {
 
   it("reports availability per lens from the derived totals", () => {
     const overview = buildHomeOverview(withSessions());
-    expect(overview.metricAvailability).toEqual({ sessions: true, activity: true, tokens: true });
+    expect(overview.metricAvailability).toEqual({
+      sessions: true,
+      activity: true,
+      tokens: true,
+    });
   });
 
   it("marks a lens unavailable when its total is zero and resolves back to sessions", () => {
@@ -416,9 +500,15 @@ describe("current / most-recent session strip", () => {
         isDemo: false,
         storedSessions: [
           stored({ sessionId: "old", startedAt: "2026-05-20T08:00:00+09:00" }),
-          stored({ sessionId: "active", startedAt: "2026-05-21T08:00:00+09:00", title: "활성 세션" }),
+          stored({
+            sessionId: "active",
+            startedAt: "2026-05-21T08:00:00+09:00",
+            title: "활성 세션",
+          }),
         ],
-        sessionMetrics: [{ sessionId: "active", events: 14, hasReconstructedWork: true }],
+        sessionMetrics: [
+          { sessionId: "active", events: 14, hasReconstructedWork: true },
+        ],
         activeSession: { sessionId: "active", eventCount: 14 },
       }),
     );
@@ -440,7 +530,11 @@ describe("current / most-recent session strip", () => {
         isDemo: false,
         storedSessions: [
           stored({ sessionId: "old", startedAt: "2026-05-20T08:00:00+09:00" }),
-          stored({ sessionId: "recent", startedAt: "2026-05-22T08:00:00+09:00", title: "최근 세션" }),
+          stored({
+            sessionId: "recent",
+            startedAt: "2026-05-22T08:00:00+09:00",
+            title: "최근 세션",
+          }),
         ],
         sessionMetrics: [{ sessionId: "recent", events: 9 }],
         activeSession: null,
@@ -477,7 +571,11 @@ describe("current / most-recent session strip", () => {
         realSessionCount: 3,
         isDemo: false,
         storedSessions: [
-          stored({ sessionId: "done", status: "complete", startedAt: "2026-05-22T08:00:00+09:00" }),
+          stored({
+            sessionId: "done",
+            status: "complete",
+            startedAt: "2026-05-22T08:00:00+09:00",
+          }),
         ],
         activeSession: null,
       }),
@@ -508,7 +606,9 @@ describe("current / most-recent session strip", () => {
   });
 
   it("emits no strip when there are no sessions", () => {
-    const overview = buildHomeOverview(input({ storedSessions: [], realSessionCount: 0 }));
+    const overview = buildHomeOverview(
+      input({ storedSessions: [], realSessionCount: 0 }),
+    );
     expect(overview.currentSessions).toEqual([]);
   });
 });
@@ -519,9 +619,27 @@ describe("usage section panels", () => {
       realSessionCount: 3,
       isDemo: false,
       storedSessions: [
-        stored({ sessionId: "a", sourceLabel: "C:/dev/mori", startedAt: "2026-05-22T08:00:00+09:00", tokenTotal: 5_000, tokenInput: 3_000, tokenOutput: 2_000 }),
-        stored({ sessionId: "b", sourceLabel: "C:/dev/mori", startedAt: "2026-05-15T08:00:00+09:00", tokenTotal: 3_000, tokenInput: 2_000, tokenOutput: 1_000 }),
-        stored({ sessionId: "c", sourceLabel: "C:/dev/other", startedAt: "2026-05-08T08:00:00+09:00" }),
+        stored({
+          sessionId: "a",
+          sourceLabel: "C:/dev/mori",
+          startedAt: "2026-05-22T08:00:00+09:00",
+          tokenTotal: 5_000,
+          tokenInput: 3_000,
+          tokenOutput: 2_000,
+        }),
+        stored({
+          sessionId: "b",
+          sourceLabel: "C:/dev/mori",
+          startedAt: "2026-05-15T08:00:00+09:00",
+          tokenTotal: 3_000,
+          tokenInput: 2_000,
+          tokenOutput: 1_000,
+        }),
+        stored({
+          sessionId: "c",
+          sourceLabel: "C:/dev/other",
+          startedAt: "2026-05-08T08:00:00+09:00",
+        }),
       ],
       ...over,
     });
@@ -553,7 +671,13 @@ describe("usage section panels", () => {
         realSessionCount: 1,
         isDemo: false,
         storedSessions: [
-          stored({ sessionId: "solo", startedAt: "2026-05-22T08:00:00+09:00", tokenTotal: 4_000, tokenInput: 3_000, tokenOutput: 1_000 }),
+          stored({
+            sessionId: "solo",
+            startedAt: "2026-05-22T08:00:00+09:00",
+            tokenTotal: 4_000,
+            tokenInput: 3_000,
+            tokenOutput: 1_000,
+          }),
         ],
       }),
     );
@@ -583,8 +707,20 @@ describe("usage section panels", () => {
         realSessionCount: 2,
         isDemo: false,
         storedSessions: [
-          stored({ sessionId: "a", startedAt: "2026-05-22T08:00:00+09:00", tokenTotal: 4_000, tokenInput: 3_000, tokenOutput: 1_000 }),
-          stored({ sessionId: "b", startedAt: "2026-05-15T08:00:00+09:00", tokenTotal: 2_000, tokenInput: 1_500, tokenOutput: 500 }),
+          stored({
+            sessionId: "a",
+            startedAt: "2026-05-22T08:00:00+09:00",
+            tokenTotal: 4_000,
+            tokenInput: 3_000,
+            tokenOutput: 1_000,
+          }),
+          stored({
+            sessionId: "b",
+            startedAt: "2026-05-15T08:00:00+09:00",
+            tokenTotal: 2_000,
+            tokenInput: 1_500,
+            tokenOutput: 500,
+          }),
         ],
       }),
     );
@@ -597,7 +733,7 @@ describe("usage section panels", () => {
     const cadence = overview.usagePanels.find((p) => p.key === "cadence")!;
     expect(cadence).toBeDefined();
     // 3 sessions over a 2-week span → ~1.5/week.
-    expect(cadence.value).toBe("주당 1.5개");
+    expect(cadence.value).toBe("매주 1.5개");
     expect(cadence.context).toBe("세션 3개 기준");
   });
 
@@ -627,8 +763,16 @@ describe("usage section panels", () => {
         realSessionCount: 2,
         isDemo: false,
         storedSessions: [
-          stored({ sessionId: "a", sourceLabel: "C:/dev/mori", startedAt: "2026-05-22T08:00:00+09:00" }),
-          stored({ sessionId: "b", sourceLabel: "C:/dev/mori", startedAt: "2026-05-15T08:00:00+09:00" }),
+          stored({
+            sessionId: "a",
+            sourceLabel: "C:/dev/mori",
+            startedAt: "2026-05-22T08:00:00+09:00",
+          }),
+          stored({
+            sessionId: "b",
+            sourceLabel: "C:/dev/mori",
+            startedAt: "2026-05-15T08:00:00+09:00",
+          }),
         ],
       }),
     );
@@ -640,7 +784,9 @@ describe("usage section panels", () => {
       input({
         realSessionCount: 1,
         isDemo: false,
-        storedSessions: [stored({ sessionId: "solo", sourceLabel: "C:/dev/mori" })],
+        storedSessions: [
+          stored({ sessionId: "solo", sourceLabel: "C:/dev/mori" }),
+        ],
       }),
     );
     // One session: no tokens, too thin for cadence, single project group.
@@ -650,14 +796,25 @@ describe("usage section panels", () => {
 
 describe("formatRelativeKo", () => {
   it("renders sub-minute, minute, hour, and day windows in Korean", () => {
-    expect(formatRelativeKo(new Date(NOW - 30_000).toISOString(), NOW)).toBe("방금");
-    expect(formatRelativeKo(new Date(NOW - 5 * 60_000).toISOString(), NOW)).toBe("5분 전");
-    expect(formatRelativeKo(new Date(NOW - 3 * 3_600_000).toISOString(), NOW)).toBe("3시간 전");
-    expect(formatRelativeKo(new Date(NOW - 2 * 86_400_000).toISOString(), NOW)).toBe("2일 전");
+    expect(formatRelativeKo(new Date(NOW - 30_000).toISOString(), NOW)).toBe(
+      "방금",
+    );
+    expect(
+      formatRelativeKo(new Date(NOW - 5 * 60_000).toISOString(), NOW),
+    ).toBe("5분 전");
+    expect(
+      formatRelativeKo(new Date(NOW - 3 * 3_600_000).toISOString(), NOW),
+    ).toBe("3시간 전");
+    expect(
+      formatRelativeKo(new Date(NOW - 2 * 86_400_000).toISOString(), NOW),
+    ).toBe("2일 전");
   });
 
   it("falls back to a date label beyond a week", () => {
-    const label = formatRelativeKo(new Date(NOW - 30 * 86_400_000).toISOString(), NOW);
+    const label = formatRelativeKo(
+      new Date(NOW - 30 * 86_400_000).toISOString(),
+      NOW,
+    );
     expect(label).toMatch(/월 .*일/);
   });
 });

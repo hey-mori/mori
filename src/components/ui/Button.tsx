@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { MoriTooltip } from "./MoriTooltip";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children?: ReactNode;
@@ -14,10 +15,11 @@ export function Button({
   variant = "secondary",
   size = "md",
   className = "",
+  title,
   ...props
 }: ButtonProps) {
   const iconOnly = Boolean(Icon) && !children;
-  return (
+  const button = (
     <button
       className={[
         "btn",
@@ -34,5 +36,11 @@ export function Button({
       {Icon ? <Icon size={size === "sm" ? 14 : 16} aria-hidden="true" /> : null}
       {children}
     </button>
+  );
+  if (!title) return button;
+  return (
+    <MoriTooltip content={title} kind="control">
+      {button}
+    </MoriTooltip>
   );
 }

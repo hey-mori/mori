@@ -1413,6 +1413,14 @@ p {
   cursor: not-allowed;
 }
 
+.segmented .mori-tooltip-anchor {
+  align-self: stretch;
+}
+
+.segmented .mori-tooltip-anchor > button {
+  height: 100%;
+}
+
 .btn {
   /* 30px to match the unified toolbar control height. Primary CTAs that
    * want extra prominence stay on the `.btn-primary` modifier which keeps
@@ -3047,9 +3055,9 @@ kbd {
   width: max-content;
   min-width: 220px;
   max-width: min(320px, 72vw);
-  padding: 10px 11px 11px;
+  padding: 10px 12px 11px;
   border: 1px solid rgba(204, 210, 225, 0.95);
-  border-radius: 10px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.985);
   box-shadow: 0 18px 40px rgba(20, 25, 36, 0.16), 0 4px 12px rgba(20, 25, 36, 0.08);
   color: var(--text);
@@ -3058,15 +3066,15 @@ kbd {
   white-space: normal;
   opacity: 0;
   pointer-events: none;
-  transform: translate(0, 4px) scale(0.985);
+  transform: translate(0, 6px) scale(0.98);
   transform-origin: top left;
-  transition: opacity 130ms ease, transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 130ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .timeline-hovercard::before {
   content: "";
   position: absolute;
-  left: 28px;
+  left: var(--hover-arrow-left, 28px);
   top: -5px;
   width: 9px;
   height: 9px;
@@ -3111,6 +3119,19 @@ kbd {
   transform: translate(0, 0) scale(1);
 }
 
+.timeline-hovercard-floating {
+  position: fixed;
+  z-index: 1000;
+  max-height: min(220px, calc(100vh - 24px));
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.timeline-hovercard-floating.is-visible {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+}
+
 .event-card.focus-selected {
   /* Selection = a ring + the inspector, never a resize. */
   border-color: var(--purple);
@@ -3123,11 +3144,17 @@ kbd {
 }
 
 .event-card.focus-context {
-  opacity: 0.9;
+  opacity: 1;
 }
 
-.event-card.focus-context:hover {
+.timeline-frame.is-focus-active .event-card.focus-context {
+  opacity: 0.34;
+  filter: saturate(0.78);
+}
+
+.timeline-frame.is-focus-active .event-card.focus-context:hover {
   opacity: 1;
+  filter: none;
 }
 
 .event-card-row {
@@ -3354,11 +3381,17 @@ kbd {
 }
 
 .timeline-bundle-card.focus-context {
-  opacity: 0.9;
+  opacity: 1;
 }
 
-.timeline-bundle-card.focus-context:hover {
+.timeline-frame.is-focus-active .timeline-bundle-card.focus-context {
+  opacity: 0.34;
+  filter: saturate(0.78);
+}
+
+.timeline-frame.is-focus-active .timeline-bundle-card.focus-context:hover {
   opacity: 1;
+  filter: none;
 }
 
 .timeline-bundle-card-header {
@@ -3664,7 +3697,11 @@ kbd {
 }
 
 .mini-dot.focus-context {
-  opacity: 0.55;
+  opacity: 1;
+}
+
+.mini-map.is-focus-active .mini-dot.focus-context {
+  opacity: 0.32;
 }
 
 .mini-map-marker {
@@ -4355,9 +4392,7 @@ kbd {
 }
 
 .timeline-evidence-chip small {
-  color: var(--muted-2);
-  font-size: 9.5px;
-  text-transform: uppercase;
+  display: none;
 }
 
 .inspector-source-list {
@@ -5714,8 +5749,10 @@ hr {
 .detected-modal {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  width: min(920px, 100%);
-  max-height: min(680px, 90vh);
+  /* Match the settings sheet's footprint — the previous size was too cramped
+     to read a full conversation. */
+  width: min(1120px, calc(100vw - 52px));
+  height: min(780px, calc(100vh - 52px));
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--mori-surface, #fff);
@@ -5922,7 +5959,7 @@ hr {
 .detected-modal-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   padding: 14px 20px;
   border-top: 1px solid var(--line);
@@ -6107,19 +6144,49 @@ hr {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 0;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: var(--mori-surface, #ffffff);
   color: var(--muted);
   font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.start-detected-group-head:hover {
+  background: var(--mori-surface-subtle, var(--panel-soft));
+  border-color: var(--line);
+}
+
+.start-detected-group-head:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.start-detected-group-toggle {
+  flex-shrink: 0;
+  color: var(--muted-2);
 }
 
 .start-detected-group-head strong {
   color: var(--text);
   font-weight: 650;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.start-detected-group-head span {
+.start-detected-group-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
   margin-left: auto;
+  flex-shrink: 0;
+  color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -7156,6 +7223,7 @@ hr {
   gap: 0;
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
   overflow: hidden;
 }
 
@@ -19437,6 +19505,7 @@ button.settings-option {
   max-height: calc(100vh - 76px);
   overflow-y: auto;
   scrollbar-gutter: stable;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 .inspector-hidden-note {
@@ -21344,6 +21413,7 @@ button.settings-option {
   gap: 0;
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
   overflow: hidden;
 }
 
@@ -22064,6 +22134,7 @@ button.settings-option {
   gap: 0;
   border: 1px solid var(--mori-border);
   border-radius: var(--mori-radius-md);
+  background: var(--mori-surface);
   overflow: hidden;
 }
 
@@ -22092,7 +22163,7 @@ button.settings-option {
 }
 
 .mori-list-row.is-interactive:hover {
-  background: var(--gray-50);
+  background: var(--mori-surface-subtle);
 }
 
 .mori-list-row.is-interactive:focus-visible {
@@ -22179,7 +22250,7 @@ button.settings-option {
 }
 
 .mori-object-row.is-interactive:hover {
-  background: var(--gray-50);
+  background: var(--mori-surface-subtle);
 }
 
 .mori-object-row.is-interactive:focus-visible {
@@ -23373,6 +23444,63 @@ button.settings-option {
 
 .info-hint-bubble.is-bottom {
   transform: translate(-50%, 0);
+}
+
+.mori-tooltip-anchor {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: inherit;
+}
+
+.mori-tooltip-anchor > .btn,
+.mori-tooltip-anchor > .mori-planned-action {
+  width: 100%;
+}
+
+.mori-tooltip-bubble {
+  position: fixed;
+  z-index: 2100;
+  width: max-content;
+  max-width: 300px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #252530;
+  color: #f4f4f7;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: 0 10px 30px rgba(20, 20, 35, 0.26);
+  pointer-events: none;
+  animation: info-hint-in 0.12s ease both;
+}
+
+.mori-tooltip-bubble.is-top {
+  transform: translate(-50%, -100%);
+}
+
+.mori-tooltip-bubble.is-bottom {
+  transform: translate(-50%, 0);
+}
+
+.mori-tooltip-bubble[data-mori-tooltip-kind="control"] {
+  background: #1f2430;
+}
+
+.mori-tooltip-bubble[data-mori-tooltip-kind="status"],
+.mori-tooltip-bubble[data-mori-tooltip-kind="metric"] {
+  background: #242836;
+}
+
+.mori-tooltip-bubble[data-mori-tooltip-kind="timeline"] {
+  max-width: 340px;
+  background: #232330;
+  border-color: rgba(196, 181, 253, 0.22);
 }
 
 @keyframes info-hint-in {

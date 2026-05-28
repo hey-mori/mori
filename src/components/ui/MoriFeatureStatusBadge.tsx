@@ -4,6 +4,7 @@ import {
   getProductAvailabilityTone,
   productAvailabilityFromFeatureStatus,
 } from "../../lib/product-state/productState";
+import { moriTooltipProps } from "./MoriTooltip";
 
 export type MoriFeatureStatusBadgeProps = {
   /** Either a `FeatureId` (looked up in the registry) or a `FeatureStatus`. */
@@ -54,7 +55,7 @@ export function MoriFeatureStatusBadge({
       className="mori-feature-status-chip"
       data-mori-tone={tone}
       data-mori-status={resolvedStatus}
-      title={title}
+      {...moriTooltipProps(title, "status")}
     >
       {resolvedLabel}
     </span>

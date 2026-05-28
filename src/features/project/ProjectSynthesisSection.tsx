@@ -81,6 +81,7 @@ function SynthGroup({
         className="project-synth-group-label"
         style={{
           display: "flex",
+          justifyContent: "space-between",
           alignItems: "baseline",
           gap: 6,
           margin: "0 0 8px",
@@ -89,8 +90,8 @@ function SynthGroup({
           color: "var(--muted)",
         }}
       >
-        {label}
-        <span style={{ color: "var(--muted-2)", fontVariantNumeric: "tabular-nums" }}>{total}</span>
+        <span>{label}</span>
+        <span style={{ color: "var(--muted-2)", fontVariantNumeric: "tabular-nums" }}>{total}건</span>
       </p>
       <ul className="project-session-list">
         {items.map((item, index) => (

@@ -89,7 +89,7 @@ export function QueryableMemoryCard({
             className="memory-search-input"
             value={query}
             onChange={setQuery}
-            placeholder="제목 / 요약 / 근거에서 검색"
+            placeholder=""
             ariaLabel="프로젝트 메모리 검색"
           />
 

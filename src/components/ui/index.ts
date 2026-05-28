@@ -46,6 +46,12 @@ export {
 } from "./MoriActionMenu";
 export { MoriMetadataLine, type MoriMetadataLineProps } from "./MoriMetadataLine";
 export { MoriActionCluster, type MoriActionClusterProps } from "./MoriActionCluster";
+export {
+  MoriTooltip,
+  MoriTooltipProvider,
+  moriTooltipProps,
+  type MoriTooltipKind,
+} from "./MoriTooltip";
 export { SearchField, type SearchFieldProps } from "./SearchField";
 export { ToolbarSearch, type ToolbarSearchProps } from "./ToolbarSearch";
 export { MoriSectionHeader, type MoriSectionHeaderProps } from "./MoriSectionHeader";

@@ -1,0 +1,245 @@
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
+
+export type MoriTooltipKind = "control" | "info" | "metric" | "status" | "text" | "timeline";
+
+type Coords = { top: number; left: number; placement: "top" | "bottom" };
+
+const MAX_W = 300;
+const GAP = 8;
+
+export function moriTooltipProps(
+  content: string | null | undefined,
+  kind: MoriTooltipKind = "text",
+): HTMLAttributes<HTMLElement> {
+  if (!content) return {};
+  return {
+    "data-mori-tooltip": content,
+    "data-mori-tooltip-kind": kind,
+  } as HTMLAttributes<HTMLElement>;
+}
+
+export function MoriTooltip({
+  children,
+  content,
+  kind = "text",
+  as = "span",
+  className = "",
+}: {
+  children: ReactNode;
+  content?: string | null;
+  kind?: MoriTooltipKind;
+  as?: "span" | "div";
+  className?: string;
+}) {
+  const Element = as;
+  return (
+    <Element
+      className={`mori-tooltip-anchor ${className}`.trim()}
+      {...moriTooltipProps(content, kind)}
+    >
+      {children}
+    </Element>
+  );
+}
+
+export function MoriTooltipProvider({ children }: { children: ReactNode }) {
+  const tooltipId = useId();
+  const activeRef = useRef<HTMLElement | null>(null);
+  const [tooltip, setTooltip] = useState<{
+    content: string;
+    kind: MoriTooltipKind;
+    coords: Coords;
+  } | null>(null);
+
+  const close = useCallback(() => {
+    if (activeRef.current?.getAttribute("aria-describedby") === tooltipId) {
+      activeRef.current.removeAttribute("aria-describedby");
+    }
+    activeRef.current = null;
+    setTooltip(null);
+  }, [tooltipId]);
+
+  const open = useCallback(
+    (target: HTMLElement) => {
+      normalizeNativeTitle(target);
+      const content = target.getAttribute("data-mori-tooltip")?.trim();
+      if (!content) {
+        close();
+        return;
+      }
+
+      const rect = target.getBoundingClientRect();
+      const placement: Coords["placement"] = rect.top >= 120 ? "top" : "bottom";
+      const half = MAX_W / 2;
+      const left = Math.min(
+        Math.max(rect.left + rect.width / 2, half + GAP),
+        window.innerWidth - half - GAP,
+      );
+      const top = placement === "top" ? rect.top - GAP : rect.bottom + GAP;
+      const kind = getTooltipKind(target);
+
+      activeRef.current?.removeAttribute("aria-describedby");
+      target.setAttribute("aria-describedby", tooltipId);
+      activeRef.current = target;
+      setTooltip({ content, kind, coords: { top, left, placement } });
+    },
+    [close, tooltipId],
+  );
+
+  useEffect(() => {
+    normalizeNativeTitles(document.body);
+
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type === "attributes" && record.target instanceof HTMLElement) {
+          normalizeNativeTitle(record.target);
+          continue;
+        }
+        for (const node of record.addedNodes) {
+          if (node instanceof HTMLElement) normalizeNativeTitles(node);
+        }
+      }
+    });
+
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["title"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    function tooltipTarget(node: EventTarget | null): HTMLElement | null {
+      if (!(node instanceof Element)) return null;
+      normalizeNativeTitles(node);
+      return node.closest<HTMLElement>("[data-mori-tooltip]");
+    }
+
+    function onPointerOver(event: PointerEvent) {
+      const target = tooltipTarget(event.target);
+      if (target) open(target);
+    }
+
+    function onPointerOut(event: PointerEvent) {
+      const target = tooltipTarget(event.target);
+      if (!target || !activeRef.current) return;
+      if (target !== activeRef.current) return;
+      if (event.relatedTarget instanceof Node && target.contains(event.relatedTarget)) return;
+      close();
+    }
+
+    function onMouseOver(event: MouseEvent) {
+      const target = tooltipTarget(event.target);
+      if (target) open(target);
+    }
+
+    function onMouseOut(event: MouseEvent) {
+      const target = tooltipTarget(event.target);
+      if (!target || !activeRef.current) return;
+      if (target !== activeRef.current) return;
+      if (event.relatedTarget instanceof Node && target.contains(event.relatedTarget)) return;
+      close();
+    }
+
+    function onFocusIn(event: FocusEvent) {
+      const target = tooltipTarget(event.target);
+      if (target) open(target);
+    }
+
+    function onFocusOut(event: FocusEvent) {
+      if (event.target === activeRef.current) close();
+    }
+
+    document.addEventListener("pointerover", onPointerOver, true);
+    document.addEventListener("pointerout", onPointerOut, true);
+    document.addEventListener("mouseover", onMouseOver, true);
+    document.addEventListener("mouseout", onMouseOut, true);
+    document.addEventListener("focusin", onFocusIn, true);
+    document.addEventListener("focusout", onFocusOut, true);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerover", onPointerOver, true);
+      document.removeEventListener("pointerout", onPointerOut, true);
+      document.removeEventListener("mouseover", onMouseOver, true);
+      document.removeEventListener("mouseout", onMouseOut, true);
+      document.removeEventListener("focusin", onFocusIn, true);
+      document.removeEventListener("focusout", onFocusOut, true);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [close, open]);
+
+  return (
+    <>
+      {children}
+      {tooltip && typeof document !== "undefined"
+        ? createPortal(
+            <span
+              id={tooltipId}
+              className={`mori-tooltip-bubble is-${tooltip.coords.placement}`}
+              data-mori-tooltip-kind={tooltip.kind}
+              role="tooltip"
+              style={{ top: tooltip.coords.top, left: tooltip.coords.left }}
+            >
+              {tooltip.content}
+            </span>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+function normalizeNativeTitles(root: Element | DocumentFragment) {
+  if (root instanceof HTMLElement) normalizeNativeTitle(root);
+  root.querySelectorAll<HTMLElement>("[title]").forEach(normalizeNativeTitle);
+}
+
+function normalizeNativeTitle(el: HTMLElement) {
+  const title = el.getAttribute("title");
+  if (title === null) return;
+  const trimmed = title.trim();
+  el.removeAttribute("title");
+  if (!trimmed || el.hasAttribute("data-mori-tooltip")) return;
+  el.setAttribute("data-mori-tooltip", trimmed);
+  if (!el.hasAttribute("data-mori-tooltip-kind")) {
+    el.setAttribute("data-mori-tooltip-kind", inferTooltipKind(el));
+  }
+}
+
+function getTooltipKind(el: HTMLElement): MoriTooltipKind {
+  const kind = el.getAttribute("data-mori-tooltip-kind");
+  if (
+    kind === "control" ||
+    kind === "info" ||
+    kind === "metric" ||
+    kind === "status" ||
+    kind === "timeline"
+  ) {
+    return kind;
+  }
+  return "text";
+}
+
+function inferTooltipKind(el: HTMLElement): MoriTooltipKind {
+  if (el.closest(".timeline-page, .timeline-shell, .timeline-panel, .event-inspector")) {
+    return "timeline";
+  }
+  if (el.closest(".mori-metric-strip, .overview-metrics")) return "metric";
+  if (el.closest(".pill, .mori-status-badge, .mori-feature-status-chip")) return "status";
+  if (el.matches("button, [role='button'], [role='menuitem']")) return "control";
+  return "text";
+}

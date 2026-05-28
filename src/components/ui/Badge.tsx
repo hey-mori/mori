@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { moriTooltipProps } from "./MoriTooltip";
 
 export function Badge({
   children,
@@ -7,11 +8,11 @@ export function Badge({
 }: {
   children: ReactNode;
   tone?: string;
-  /** Optional native tooltip — used to surface an explanation on hover. */
+  /** Optional custom tooltip used to surface an explanation on hover. */
   title?: string;
 }) {
   return (
-    <span className={`pill tone-${tone}`} title={title}>
+    <span className={`pill tone-${tone}`} {...moriTooltipProps(title, "status")}>
       {children}
     </span>
   );

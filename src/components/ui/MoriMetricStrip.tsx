@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { moriTooltipProps } from "./MoriTooltip";
 
 export type MoriMetricItem = {
   key: string;
@@ -24,7 +25,7 @@ export function MoriMetricStrip({ items, className = "" }: MoriMetricStripProps)
       {items.map((item) => (
         <div className="mori-metric-item" key={item.key}>
           <dt>{item.label}</dt>
-          <dd title={item.hint}>{item.value}</dd>
+          <dd {...moriTooltipProps(item.hint, "metric")}>{item.value}</dd>
         </div>
       ))}
     </dl>

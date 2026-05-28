@@ -183,7 +183,7 @@ export function WorkspaceView() {
             <ToolbarSearch
               value={query}
               onChange={setQuery}
-              placeholder="검색"
+              placeholder=""
               ariaLabel="검색"
             />
           }
@@ -281,7 +281,7 @@ export function WorkspaceView() {
                       type="button"
                       className="workspace-group-title workspace-group-open"
                       onClick={() => openProject(group.label)}
-                      title={`${group.label} — 프로젝트 페이지 열기`}
+                      title={`${group.label} · 프로젝트 페이지 열기`}
                     >
                       <FolderGit2 size={13} aria-hidden="true" />
                       <span className="workspace-group-name">
@@ -291,7 +291,7 @@ export function WorkspaceView() {
                       <ArrowRight size={12} aria-hidden="true" />
                     </button>
                   )}
-                  <Badge tone="gray">{group.sessions.length}개</Badge>
+                  <Badge tone="gray">{group.sessions.length}건</Badge>
                 </header>
                 <ul className="workspace-rows">
                   {group.sessions.map((row) => (

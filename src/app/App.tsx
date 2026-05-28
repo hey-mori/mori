@@ -6,6 +6,7 @@ import { useMoriSessionStore } from "./sessionStore";
 import { useMoriRepositoryStore } from "./repositoryStore";
 import { useMoriProfileStore } from "./profileStore";
 import { useMoriThemeStore } from "./themeStore";
+import { MoriTooltipProvider } from "../components/ui/MoriTooltip";
 // HomeView is the landing surface — stay eager so first paint never waits
 // on a chunk fetch. Every other surface is loaded on demand; Vite emits a
 // separate chunk per dynamic import, shrinking the entry bundle.
@@ -78,33 +79,35 @@ export default function App() {
   // sheet instead of changing `currentView`, so the workspace stays on the
   // user's last real surface.
   return (
-    <AppShell>
-      <ErrorBoundary resetKey={currentView}>
-        <Suspense fallback={<RouteFallback />}>
-          {currentView === "home" ? <HomeView /> : null}
-          {currentView === "start" ? <StartSessionView /> : null}
-          {/* The unified session workspace. The legacy timeline / flow / evidence /
-              review keys map here too so no deep link dead-ends — they all open
-              the one tabbed Session Detail rather than a standalone page. A
-              report is per-session, so `reports` opens the session workspace on
-              its 리포트 tab. */}
-          {currentView === "session" ||
-          currentView === "timeline" ||
-          currentView === "flow" ||
-          currentView === "evidence" ||
-          currentView === "review" ||
-          currentView === "reports" ? (
-            <SessionDetailView />
-          ) : null}
-          {/* Memory is cross-session; consolidation is its 통합 segment. */}
-          {currentView === "memory" || currentView === "consolidation" ? <MemoryView /> : null}
-          {currentView === "companion" ? <CompanionInboxView /> : null}
-          {currentView === "connections" ? <SourcesView /> : null}
-          {currentView === "workspace" ? <WorkspaceView /> : null}
-          {currentView === "project" ? <ProjectView /> : null}
-        </Suspense>
-      </ErrorBoundary>
-    </AppShell>
+    <MoriTooltipProvider>
+      <AppShell>
+        <ErrorBoundary resetKey={currentView}>
+          <Suspense fallback={<RouteFallback />}>
+            {currentView === "home" ? <HomeView /> : null}
+            {currentView === "start" ? <StartSessionView /> : null}
+            {/* The unified session workspace. The legacy timeline / flow / evidence /
+                review keys map here too so no deep link dead-ends — they all open
+                the one tabbed Session Detail rather than a standalone page. A
+                report is per-session, so `reports` opens the session workspace on
+                its 리포트 tab. */}
+            {currentView === "session" ||
+            currentView === "timeline" ||
+            currentView === "flow" ||
+            currentView === "evidence" ||
+            currentView === "review" ||
+            currentView === "reports" ? (
+              <SessionDetailView />
+            ) : null}
+            {/* Memory is cross-session; consolidation is its 통합 segment. */}
+            {currentView === "memory" || currentView === "consolidation" ? <MemoryView /> : null}
+            {currentView === "companion" ? <CompanionInboxView /> : null}
+            {currentView === "connections" ? <SourcesView /> : null}
+            {currentView === "workspace" ? <WorkspaceView /> : null}
+            {currentView === "project" ? <ProjectView /> : null}
+          </Suspense>
+        </ErrorBoundary>
+      </AppShell>
+    </MoriTooltipProvider>
   );
 }
 

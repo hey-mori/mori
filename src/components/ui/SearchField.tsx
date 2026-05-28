@@ -1,5 +1,6 @@
 import { Search, X } from "lucide-react";
 import { useRef } from "react";
+import { moriTooltipProps } from "./MoriTooltip";
 
 export type SearchFieldProps = {
   value: string;
@@ -51,7 +52,7 @@ export function SearchField({
           className="mori-search-clear"
           onClick={() => onChange("")}
           aria-label={clearLabel}
-          title={clearLabel}
+          {...moriTooltipProps(clearLabel, "control")}
         >
           <X size={12} aria-hidden="true" />
         </button>

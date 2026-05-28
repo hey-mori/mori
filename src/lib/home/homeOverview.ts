@@ -549,7 +549,7 @@ function buildTokenColumns(
  * Sessions-per-week from session anchor dates. The span is the calendar gap
  * between the oldest and newest anchor (at least one week), so a single
  * session — or a too-thin sample — yields no panel rather than a misleading
- * "주당 N개".
+ * "매주 N개".
  */
 function buildCadencePanel(active: StoredSessionSummary[], now: number): HomeUsagePanel | null {
   if (active.length < MIN_SESSIONS_FOR_CADENCE) return null;
@@ -569,7 +569,7 @@ function buildCadencePanel(active: StoredSessionSummary[], now: number): HomeUsa
   return {
     key: "cadence",
     label: "작업 빈도",
-    value: `주당 ${value}개`,
+    value: `매주 ${value}개`,
     context: `세션 ${active.length}개 기준`,
   };
 }

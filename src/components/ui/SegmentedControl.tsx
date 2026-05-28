@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { MoriTooltip } from "./MoriTooltip";
 
 /**
  * One option in a `SegmentedControl`.
@@ -10,7 +11,7 @@ import type { ReactNode } from "react";
 export type SegmentedControlOption<T extends string> = {
   id: T;
   label: ReactNode;
-  /** Native tooltip; also the place to explain why a segment is disabled. */
+  /** Tooltip copy; also the place to explain why a segment is disabled. */
   title?: string;
   disabled?: boolean;
 };
@@ -53,20 +54,25 @@ export function SegmentedControl<T extends string>({
     <div className="segmented" role={role} aria-label={ariaLabel}>
       {options.map((option) => {
         const selected = option.id === value;
-        return (
+        const button = (
           <button
             key={option.id}
             type="button"
             className={selected ? "active" : ""}
             aria-pressed={selected}
             disabled={option.disabled}
-            title={option.title}
             onClick={() => {
               if (!option.disabled) onChange?.(option.id);
             }}
           >
             {option.label}
           </button>
+        );
+        if (!option.title) return button;
+        return (
+          <MoriTooltip key={option.id} content={option.title} kind="control">
+            {button}
+          </MoriTooltip>
         );
       })}
     </div>

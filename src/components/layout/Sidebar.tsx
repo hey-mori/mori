@@ -311,7 +311,7 @@ export function Sidebar({
           className="sidebar-search"
           value={query}
           onChange={setQuery}
-          placeholder="검색"
+          placeholder=""
           ariaLabel="검색"
         />
         <button
