@@ -250,7 +250,7 @@ export function DetectedConversationsModal({
 
         <footer className="detected-modal-foot">
           <Button variant="primary" disabled={!activeMeta} onClick={confirm}>
-            선택
+            불러오기
           </Button>
         </footer>
       </div>
