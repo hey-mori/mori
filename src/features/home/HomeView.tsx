@@ -15,7 +15,6 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
 import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
-import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
 import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
 import { MoriSection } from "../../components/ui/MoriSection";
@@ -41,7 +40,7 @@ import {
   type HomeUsagePanel,
 } from "../../lib/home/homeOverview";
 import type { ContributionMetric } from "../../lib/home/contributionGrid";
-import { ContributionHeatmap } from "../../components/activity/ContributionHeatmap";
+import { WorkActivityCard } from "../../components/activity/WorkActivityCard";
 import {
   loadHomeMetricPreference,
   saveHomeMetricPreference,
@@ -197,33 +196,23 @@ export function HomeView() {
 
           <div className="home-top-grid">
             <div className="home-main-stack">
-              <section className="home-activity" aria-label="작업 활동">
-                <header className="home-activity-head">
-                  <h2>작업 활동</h2>
-                  <div className="home-activity-controls">
-                    <MetricToggle
-                      metric={overview.resolvedMetric}
-                      availability={overview.metricAvailability}
-                      onSelect={selectMetric}
-                    />
-                    <span className="home-activity-sub">
-                      최근 {overview.contributionGrid.weekCount}주 · 활동 {overview.contributionGrid.activeDays}일
-                    </span>
-                  </div>
-                </header>
-                <ContributionHeatmap grid={overview.contributionGrid} />
-                {overview.metrics.length > 0 ? (
-                  <MoriMetricStrip
-                    className="home-activity-stats"
-                    items={overview.metrics.map((m) => ({
-                      key: m.key,
-                      label: m.label,
-                      value: m.value,
-                      hint: m.hint,
-                    }))}
+              <WorkActivityCard
+                grid={overview.contributionGrid}
+                controls={
+                  <MetricToggle
+                    metric={overview.resolvedMetric}
+                    availability={overview.metricAvailability}
+                    onSelect={selectMetric}
                   />
-                ) : null}
-              </section>
+                }
+                sub={`최근 ${overview.contributionGrid.weekCount}주 · 활동 ${overview.contributionGrid.activeDays}일`}
+                stats={overview.metrics.map((m) => ({
+                  key: m.key,
+                  label: m.label,
+                  value: m.value,
+                  hint: m.hint,
+                }))}
+              />
 
               <MoriSection
                 className="home-section home-recent"

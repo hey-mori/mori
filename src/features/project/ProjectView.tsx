@@ -223,8 +223,8 @@ export function ProjectView() {
       <header
         className="project-hero"
         style={{
-          padding: "18px 20px",
-          borderRadius: 12,
+          padding: "14px var(--mori-space-5)",
+          borderRadius: "var(--mori-radius-lg)",
           background: "var(--mori-surface)",
           boxShadow: "none",
         }}
@@ -268,8 +268,6 @@ export function ProjectView() {
         </div>
       </header>
 
-      <ProjectPulse timestamps={sessionTimestamps} synthesis={synthesis} />
-
       {editing ? (
         <ProjectFormModal
           mode="edit"
@@ -280,18 +278,23 @@ export function ProjectView() {
         />
       ) : null}
 
+      {/* Home-like split: a main column (활동 + 종합) beside a 세션 rail, so the
+          activity card keeps Home's proportions instead of stretching full-bleed. */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+          gridTemplateColumns: "minmax(0, 1.6fr) minmax(300px, 1fr)",
           gap: 16,
           alignItems: "start",
         }}
       >
-        <ProjectSynthesisSection
-          synthesis={synthesis}
-          onOpenSession={(sessionId) => openSessionId(sessionId)}
-        />
+        <div style={{ display: "grid", gap: 16, minWidth: 0 }}>
+          <ProjectPulse timestamps={sessionTimestamps} />
+          <ProjectSynthesisSection
+            synthesis={synthesis}
+            onOpenSession={(sessionId) => openSessionId(sessionId)}
+          />
+        </div>
 
         <MoriSection
           className="project-sessions"

@@ -36,18 +36,21 @@ export function ProjectSynthesisSection({
         <div className="project-synth-groups" style={{ display: "grid", gap: 18 }}>
           <SynthGroup
             label="결정"
+            total={synthesis.totals.decisions}
             icon={<CheckCircle2 size={15} />}
             items={synthesis.decisions}
             onOpenSession={onOpenSession}
           />
           <SynthGroup
             label="미해결"
+            total={synthesis.totals.openIssues}
             icon={<CircleAlert size={15} />}
             items={synthesis.openIssues}
             onOpenSession={onOpenSession}
           />
           <SynthGroup
             label="다음 할 일"
+            total={synthesis.totals.pendingNextActions}
             icon={<ListTodo size={15} />}
             items={synthesis.pendingNextActions}
             onOpenSession={onOpenSession}
@@ -60,11 +63,13 @@ export function ProjectSynthesisSection({
 
 function SynthGroup({
   label,
+  total,
   icon,
   items,
   onOpenSession,
 }: {
   label: string;
+  total: number;
   icon: React.ReactNode;
   items: SynthItem[];
   onOpenSession?: (sessionId: string) => void;
@@ -75,6 +80,9 @@ function SynthGroup({
       <p
         className="project-synth-group-label"
         style={{
+          display: "flex",
+          alignItems: "baseline",
+          gap: 6,
           margin: "0 0 8px",
           fontSize: 12,
           fontWeight: 600,
@@ -82,6 +90,7 @@ function SynthGroup({
         }}
       >
         {label}
+        <span style={{ color: "var(--muted-2)", fontVariantNumeric: "tabular-nums" }}>{total}</span>
       </p>
       <ul className="project-session-list">
         {items.map((item, index) => (
