@@ -58,10 +58,10 @@ export function TimelineToolbar({
             className={`timeline-mode-option ${readingMode === "flow" ? "is-active" : ""}`}
             aria-pressed={readingMode === "flow"}
             onClick={() => onReadingModeChange("flow")}
-            title="대화 스레드: 턴과 출처 활동을 시간순으로 읽기"
+            title="피드: 모든 활동(대화·코드·이슈 등)을 시간순으로 읽기"
           >
             <MessageSquare size={14} aria-hidden="true" />
-            대화
+            피드
           </button>
           <button
             type="button"
@@ -81,7 +81,7 @@ export function TimelineToolbar({
         <input
           type="search"
           className="timeline-search-input"
-          placeholder="이벤트 검색"
+          placeholder=""
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
           aria-label="타임라인 이벤트 검색"

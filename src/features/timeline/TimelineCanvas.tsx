@@ -22,7 +22,6 @@ import { TimelineAxis } from "./TimelineAxis";
 import { TimelineGridLines } from "./TimelineGridLines";
 import { TimelineLane } from "./TimelineLane";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
-import { TimelineTimeMarkers } from "./TimelineTimeMarkers";
 import type { Relationship } from "../../domain/types";
 import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 import { activityLaneIcons } from "./lib/activityIcons";
@@ -164,73 +163,99 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
   }
 
   return (
-    <div className="timeline-scroller" ref={scrollerRef}>
+    <div className="timeline-2col">
+      {/* Fixed lane-label column — rendered OUTSIDE the scroller, so it is
+          physically pinned to the left (never scrolls with the content), shows
+          one consistent edge shadow, and has no time axis above it. Labels are
+          positioned to mirror the frame's lane rows (axis height + lane top). */}
       <div
-        className={`timeline-frame ${model.mode === "flow" ? "compact" : ""}`}
-        style={{
-          width: `${Math.max(layout.frameWidth, frameWidth)}px`,
-          minHeight: `${layout.frameHeight}px`,
-        }}
+        className="timeline-axis-col"
+        style={{ width: `${layout.contentLeftPx}px`, height: `${layout.frameHeight}px` }}
       >
-        <TimelineAxis
-          ticks={ticks}
-          frameWidth={layout.frameWidth}
-          contentLeftPx={layout.contentLeftPx}
-          contentWidthPx={layout.contentWidthPx}
-        />
-        <RelationshipLineLayer
-          itemLayouts={layoutIndex}
-          eventAnchorLayouts={eventAnchorIndex}
-          relationships={relationships}
-          focusedSet={model.focusedSet}
-          focusActive={model.focusActive}
-          mode={model.mode}
-          frameWidth={layout.frameWidth}
-          frameHeight={layout.frameHeight}
-        />
-        <TimelineTimeMarkers
-          markers={model.timeGapMarkers}
-          range={model.range}
-          contentLeftPx={layout.contentLeftPx}
-          contentWidthPx={layout.contentWidthPx}
-          topPx={layout.laneOffsetPx}
-          heightPx={Math.max(layout.frameHeight - layout.laneOffsetPx, 0)}
-        />
-        <div className="lanes" style={laneRowsStyle}>
-          {lanes.map((lane) => {
-            const laneLayout = layout.lanes.find((entry) => entry.type === lane.type);
-            if (!laneLayout) return null;
-            return (
-              // Lanes are derived from normalized activity, not persisted event type.
-              <TimelineLane
-                key={lane.type}
-                icon={activityLaneIcons[lane.type]}
-                label={getActivityLaneVisuals(lane.type).label}
-                tone={getActivityLaneVisuals(lane.type).tone}
-                lane={laneLayout}
-                laneLabelWidthPx={layout.laneLabelWidthPx}
-                items={lane.items}
-                eventCount={lane.eventCount}
-                dimmed={lane.dimmed}
-                layouts={layoutIndex}
-                density={density}
-                selectedItemId={model.selectedItem?.id ?? null}
-                focusedSet={model.focusedSet}
-                onSelect={onSelect}
-                onHover={onHover}
-                eventMenuItems={eventMenuItems}
-                sourceIndex={model.sourceIndex}
-              />
-            );
-          })}
+        <div className="timeline-axis-col-corner" style={{ height: `${layout.laneOffsetPx}px` }} />
+        {lanes.map((lane) => {
+          const laneLayout = layout.lanes.find((entry) => entry.type === lane.type);
+          if (!laneLayout) return null;
+          const Icon = activityLaneIcons[lane.type];
+          const visuals = getActivityLaneVisuals(lane.type);
+          return (
+            <div
+              key={lane.type}
+              className={`lane-axis-label lane-tone-${visuals.tone}${lane.eventCount === 0 ? " is-empty" : ""}`}
+              style={{ top: `${laneLayout.top}px`, height: `${laneLayout.height}px` }}
+            >
+              <span className="lane-axis-icon" aria-hidden="true">
+                <Icon size={14} />
+              </span>
+              <strong>{visuals.label}</strong>
+              <span className={`lane-axis-count${lane.eventCount === 0 ? " is-zero" : ""}`}>
+                {lane.eventCount}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Scroller — ONLY the time content. The frame keeps its original
+          coordinates (cards offset by contentLeftPx); a negative left margin
+          pulls the now-empty label gutter off-screen so the first card sits at
+          the scroller's left edge and the horizontal scrollbar covers content. */}
+      <div className="timeline-scroller" ref={scrollerRef}>
+        <div
+          className={`timeline-frame ${model.mode === "flow" ? "compact" : ""}`}
+          style={{
+            width: `${Math.max(layout.frameWidth, frameWidth + layout.contentLeftPx)}px`,
+            height: `${layout.frameHeight}px`,
+            marginLeft: `-${layout.contentLeftPx}px`,
+          }}
+        >
+          <TimelineAxis
+            ticks={ticks}
+            frameWidth={layout.frameWidth}
+            contentLeftPx={layout.contentLeftPx}
+            contentWidthPx={layout.contentWidthPx}
+          />
+          <RelationshipLineLayer
+            itemLayouts={layoutIndex}
+            eventAnchorLayouts={eventAnchorIndex}
+            relationships={relationships}
+            focusedSet={model.focusedSet}
+            focusActive={model.focusActive}
+            mode={model.mode}
+            frameWidth={layout.frameWidth}
+            frameHeight={layout.frameHeight}
+          />
+          <div className="lanes" style={laneRowsStyle}>
+            {lanes.map((lane) => {
+              const laneLayout = layout.lanes.find((entry) => entry.type === lane.type);
+              if (!laneLayout) return null;
+              return (
+                <TimelineLane
+                  key={lane.type}
+                  tone={getActivityLaneVisuals(lane.type).tone}
+                  lane={laneLayout}
+                  items={lane.items}
+                  dimmed={lane.dimmed}
+                  layouts={layoutIndex}
+                  density={density}
+                  selectedItemId={model.selectedItem?.id ?? null}
+                  focusedSet={model.focusedSet}
+                  onSelect={onSelect}
+                  onHover={onHover}
+                  eventMenuItems={eventMenuItems}
+                  sourceIndex={model.sourceIndex}
+                />
+              );
+            })}
+          </div>
+          <TimelineGridLines
+            ticks={ticks}
+            contentLeftPx={layout.contentLeftPx}
+            contentWidthPx={layout.contentWidthPx}
+            topPx={layout.laneOffsetPx}
+            heightPx={Math.max(layout.frameHeight - layout.laneOffsetPx, 0)}
+          />
         </div>
-        <TimelineGridLines
-          ticks={ticks}
-          contentLeftPx={layout.contentLeftPx}
-          contentWidthPx={layout.contentWidthPx}
-          topPx={layout.laneOffsetPx}
-          heightPx={Math.max(layout.frameHeight - layout.laneOffsetPx, 0)}
-        />
       </div>
     </div>
   );

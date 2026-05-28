@@ -10,7 +10,6 @@ import { useMoriAppStore } from "../../app/store";
 import {
   buildTimelineRenderModel,
   shouldHideInspector,
-  TIMELINE_INSPECTOR_NARROW_MAX_PX,
 } from "../../lib/timeline/timelineViewModel";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { selectAcrossLane, selectInLane } from "../../lib/timeline/keyboardNavigation";
@@ -30,7 +29,6 @@ import {
   FULL_MINIMAP_VIEWPORT,
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
-import { TimelineChronoList } from "./TimelineChronoList";
 import { ConversationFlowView } from "./ConversationFlowView";
 import { isConversationSession } from "../../lib/timeline/conversationFlow";
 import { TimelineEmptyState, TimelineNoResultsState } from "./TimelineEmptyState";
@@ -88,15 +86,19 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
   const setSessionTab = useMoriAppStore((state) => state.setSessionTab);
 
-  // Selecting an item opens the inspector (it is a detail panel for the
-  // selection); the in-panel X closes it. There is no standing toolbar toggle —
-  // an "open but empty" inspector was just wasted whitespace.
+  // Selecting an item opens the inspector; clicking the same item again clears
+  // the selection and folds the inspector away.
   const selectAndShowInspector = useCallback(
     (id: string) => {
+      if (selectedEventId === id && !inspectorCollapsed) {
+        setSelectedEventId("");
+        setInspectorCollapsed(true);
+        return;
+      }
       setSelectedEventId(id);
       setInspectorCollapsed(false);
     },
-    [setSelectedEventId, setInspectorCollapsed],
+    [inspectorCollapsed, selectedEventId, setSelectedEventId, setInspectorCollapsed],
   );
 
   // The Timeline ↔ Flow Focus switch is internal state seeded from the prop;
@@ -205,8 +207,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   // in Flow Focus, the narrow chrono list, the conversation thread, and while
   // the user is typing in an input.
   useEffect(() => {
-    const narrow = viewportWidth <= TIMELINE_INSPECTOR_NARROW_MAX_PX;
-    const swimlaneActive = mode === "timeline" && !narrow && readingMode !== "flow";
+    const swimlaneActive = mode === "timeline" && readingMode !== "flow";
     if (!swimlaneActive) return;
     function onKey(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
@@ -265,23 +266,16 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   }
 
   const selectedItem = model.selectedItem;
-  // The inspector hides when the user collapses it or when the viewport is
-  // too narrow for a side column. Flow Focus keeps its Trace panel.
-  const inspectorNarrow = viewportWidth <= TIMELINE_INSPECTOR_NARROW_MAX_PX;
   const inspectorHidden = shouldHideInspector({ mode, inspectorCollapsed, viewportWidth });
   // The inspector is a detail panel for the *selected* item — there is nothing
   // to inspect with no selection, so the column is only reserved when something
   // is selected. Otherwise an "open" inspector with no selection is just an
   // empty band of whitespace.
   const inspectorVisible = !inspectorHidden && Boolean(selectedItem);
-  // Narrow widths swap the horizontally-scrolling swimlane canvas for a flat
-  // vertical chronological list — readable without a wide frame.
-  const useChronoList = inspectorNarrow && mode === "timeline";
-  // At comfortable widths, a conversation session reads as a vertical thread
-  // (the flow view) unless the user switched to the swimlane. The narrow
-  // chrono list takes precedence — it is the readable narrow fallback.
-  const useConversationFlow =
-    !useChronoList && mode === "timeline" && readingMode === "flow";
+  // Timeline mode ALWAYS renders the swimlane canvas — it scrolls horizontally
+  // on narrow screens and never auto-degrades to a flat list. The vertical 피드
+  // view appears only when the user explicitly selects the 피드 reading mode.
+  const useConversationFlow = mode === "timeline" && readingMode === "flow";
   const buildEventMenuItems = useCallback(
     (event: TimelineEvent): MoriMenuItemSpec[] => {
       const issueCreated = analysis ? isEventPromotedToIssue(analysis, event.id) : false;
@@ -383,14 +377,6 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
               clearFilters();
               setSearchQuery("");
             }}
-          />
-        ) : useChronoList ? (
-          <TimelineChronoList
-            model={model}
-            selectedItemId={selectedItem?.id ?? null}
-            onSelect={selectAndShowInspector}
-            density={density}
-            eventMenuItems={buildEventMenuItems}
           />
         ) : useConversationFlow ? (
           <ConversationFlowView

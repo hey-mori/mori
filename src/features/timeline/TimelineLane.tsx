@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import { TimelineEventCard } from "./TimelineEventCard";
 import { TimelineBundleCard } from "./TimelineBundleCard";
 import type { SourceRef } from "../../domain/types";
@@ -8,22 +7,15 @@ import { getEventFocusState } from "../../lib/timeline/focusState";
 import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
 
 /**
- * One lane row.
- *
- * The lane label is `position: sticky; left: 0` (driven by CSS) so it stays
- * pinned to the left edge of the scrolling frame during horizontal scroll.
- * The label's parent (the lane row itself) is `position: absolute`, which
- * is fine — `position: sticky` honours its nearest scrolling ancestor, not
- * its positioned ancestor.
+ * One lane row — renders only the event / bundle cards. The lane *label* no
+ * longer lives here: it is rendered in the fixed left axis column
+ * (`TimelineCanvas`), which sits OUTSIDE the horizontal scroller so it is
+ * physically pinned and never scrolls with the content.
  */
 export function TimelineLane({
-  icon: Icon,
-  label,
   tone,
   lane,
-  laneLabelWidthPx,
   items,
-  eventCount,
   dimmed = false,
   layouts,
   density,
@@ -34,13 +26,9 @@ export function TimelineLane({
   eventMenuItems,
   sourceIndex,
 }: {
-  icon: LucideIcon;
-  label: string;
   tone: string;
   lane: LaneLayout;
-  laneLabelWidthPx: number;
   items: TimelineDisplayItem[];
-  eventCount: number;
   /** De-emphasise the lane when a category filter excludes it (never hidden). */
   dimmed?: boolean;
   layouts: Map<string, LaidOutTimelineItem>;
@@ -62,15 +50,6 @@ export function TimelineLane({
       className={`lane ${colorClass}${isEmpty ? " is-empty" : ""}${dimmed ? " is-dimmed" : ""}`}
       style={{ top: `${lane.top}px`, height: `${lane.height}px` }}
     >
-      <div className="lane-label" style={{ width: `${laneLabelWidthPx}px` }}>
-        <span className="lane-label-icon">
-          <Icon size={14} aria-hidden="true" />
-        </span>
-        <strong>{label}</strong>
-        <span className={`lane-label-count${eventCount === 0 ? " is-zero" : ""}`}>
-          {eventCount}
-        </span>
-      </div>
       {items.map((item) => {
         const layout = layouts.get(item.id);
         if (!layout) return null;
