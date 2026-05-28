@@ -40,10 +40,8 @@ import {
   computeConversationStats,
   formatTokenCount,
 } from "../../lib/claude/conversationStats";
-import type {
-  ClaudeCodeSessionDetail,
-  ClaudeMessage,
-} from "../../lib/claude/types";
+import type { ClaudeMessage } from "../../lib/claude/types";
+import type { AgentWorkSessionDetail } from "../../lib/agents/workSessions";
 import { computeVisibleRange, offsetForIndex } from "./conversationWindow";
 
 /**
@@ -65,7 +63,7 @@ const OVERSCAN = 8;
 
 export type ConversationViewerProps = {
   open: boolean;
-  detail: ClaudeCodeSessionDetail | null;
+  detail: AgentWorkSessionDetail | null;
   onClose: () => void;
   /**
    * Default CTA — create a new Mori session for this conversation and open
@@ -131,7 +129,7 @@ export function ConversationViewer({
     setMeasureTick((tick) => tick + 1);
     setScrollTop(0);
     listRef.current?.scrollTo({ top: 0 });
-  }, [open, detail?.sessionId]);
+  }, [open, detail?.filePath]);
 
   // Debounce the search query so the full-content scan below runs at most once
   // per ~180ms of typing rather than on every keystroke.
@@ -264,7 +262,7 @@ export function ConversationViewer({
             </button>
           </div>
           <p className="conversation-viewer-subtitle">
-            Claude (Desktop · Code) · {detail.projectName || "프로젝트 미지정"}
+            {detail.agentName} · {detail.projectName || "프로젝트 미지정"}
           </p>
           <ul className="conversation-viewer-stats" aria-label="대화 통계">
             <li>
@@ -277,7 +275,7 @@ export function ConversationViewer({
             </li>
             <li>
               <strong>{stats.assistantMessages}</strong>
-              <small>Claude 응답</small>
+              <small>{detail.agentName} 응답</small>
             </li>
             <li>
               <strong>{stats.toolUses}</strong>
@@ -455,9 +453,9 @@ function MessageBubble({ index, message, matched, hasQuery, onMeasure }: Message
   const roleLabel = isToolResult
     ? "사용자 (도구 결과)"
     : isToolUse
-      ? "Claude (도구 호출)"
+      ? "AI (도구 호출)"
       : isAssistant
-        ? "Claude"
+        ? "AI"
         : "사용자";
 
   const timestamp = message.createdAt ? formatClaudeTimestamp(message.createdAt) : null;

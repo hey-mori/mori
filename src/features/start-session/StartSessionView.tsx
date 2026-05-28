@@ -54,10 +54,14 @@ import { useMoriReviewStore } from "../../app/reviewStore";
 import { useMoriAppStore } from "../../app/store";
 import {
   formatClaudeRelativeKo,
-  getClaudeCodeSession,
 } from "../../lib/claude/claudeTauri";
-import { buildImportCandidateFromClaudeCodeSession } from "../../lib/claude/claudeImport";
-import type { ClaudeCodeSessionMeta } from "../../lib/claude/types";
+import {
+  buildPrimaryImportCandidateFromAgentWorkSession,
+  getAgentWorkSession,
+  reviewOriginForAgentWorkSession,
+  type AgentWorkAgentId,
+  type AgentWorkSessionMeta,
+} from "../../lib/agents/workSessions";
 import { DetectedConversationsModal } from "./DetectedConversationsModal";
 
 /**
@@ -89,6 +93,7 @@ type AgentOption = {
   detail: string;
   icon: LucideIcon;
   platform: AiTranscriptPlatform;
+  agentId: AgentWorkAgentId;
   /** Whether Mori can auto-detect this agent's work records today. */
   detect: boolean;
 };
@@ -100,16 +105,26 @@ const AGENT_OPTIONS: AgentOption[] = [
     detail: "Claude Code · Desktop · Web",
     icon: Sparkles,
     platform: "claude",
+    agentId: "claude",
     detect: true,
   },
-  { id: "opt-codex", name: "Codex", detail: "Codex CLI", icon: Code2, platform: "codex", detect: false },
+  {
+    id: "opt-codex",
+    name: "Codex",
+    detail: "Codex CLI",
+    icon: Code2,
+    platform: "codex",
+    agentId: "codex",
+    detect: true,
+  },
   {
     id: "opt-opencode",
     name: "OpenCode",
     detail: "OpenCode CLI",
     icon: Braces,
     platform: "other",
-    detect: false,
+    agentId: "opencode",
+    detect: true,
   },
 ];
 
@@ -142,7 +157,6 @@ export function StartSessionView() {
   const view = useMoriSessionStore(selectSessionView);
   const importAsNewSession = useMoriSessionStore((state) => state.importAsNewSession);
   const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
-  const resetSessionToDemo = useMoriSessionStore((state) => state.resetToDemo);
   const startReview = useMoriReviewStore((state) => state.startReview);
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
@@ -151,7 +165,7 @@ export function StartSessionView() {
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [method, setMethod] = useState<ImportMethod | null>(null);
-  const [selectedDetected, setSelectedDetected] = useState<ClaudeCodeSessionMeta | null>(null);
+  const [selectedDetected, setSelectedDetected] = useState<AgentWorkSessionMeta | null>(null);
   const [pasteText, setPasteText] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
   const [creating, setCreating] = useState(false);
@@ -212,7 +226,7 @@ export function StartSessionView() {
     setBrowseOpen(true);
   }
 
-  function pickDetected(meta: ClaudeCodeSessionMeta) {
+  function pickDetected(meta: AgentWorkSessionMeta) {
     setSelectedDetected(meta);
     // File the import under the conversation's own project; user can change it.
     if (existingProjects.includes(meta.projectName)) setProjectChoice(meta.projectName);
@@ -253,9 +267,9 @@ export function StartSessionView() {
     if (method === "records" && selectedDetected) {
       setCreating(true);
       try {
-        const detail = await getClaudeCodeSession(selectedDetected.filePath);
+        const detail = await getAgentWorkSession(selectedDetected);
         const capturedAt = new Date().toISOString();
-        const candidate = buildImportCandidateFromClaudeCodeSession(detail, {
+        const candidate = buildPrimaryImportCandidateFromAgentWorkSession(detail, {
           projectId: view.project.id,
           sessionId: view.session.id,
           capturedAt,
@@ -269,7 +283,7 @@ export function StartSessionView() {
           projectLabel: projectName || detail.projectName || undefined,
           recordingMode: "summary",
         });
-        startReview(rebound, "ai-transcript");
+        startReview(rebound, reviewOriginForAgentWorkSession(detail));
         setCurrentView("evidence");
       } catch {
         setCreating(false);
@@ -308,10 +322,6 @@ export function StartSessionView() {
     }
   }
 
-  function handleResetToDemo() {
-    resetSessionToDemo();
-    setCurrentView("timeline");
-  }
   function handleContinueSession() {
     setCurrentView("evidence");
   }
@@ -346,11 +356,7 @@ export function StartSessionView() {
               <Button variant="secondary" icon={ArrowRight} onClick={handleContinueSession}>
                 현재 세션 계속
               </Button>
-            ) : (
-              <Button variant="secondary" icon={Sparkles} onClick={handleResetToDemo}>
-                데모로 되돌리기
-              </Button>
-            )
+            ) : undefined
           }
         />
       }
@@ -541,6 +547,7 @@ export function StartSessionView() {
       {browseOpen && selectedAgent ? (
         <DetectedConversationsModal
           agentName={selectedAgent.name}
+          agentId={selectedAgent.agentId}
           supported={selectedAgent.detect}
           initialSelectedFilePath={selectedDetected?.filePath ?? null}
           onPick={pickDetected}

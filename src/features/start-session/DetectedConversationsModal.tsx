@@ -13,6 +13,8 @@ import {
   Clock,
   Code2,
   Cpu,
+  ChevronDown,
+  ChevronRight,
   FolderGit2,
   MessageSquare,
   RefreshCw,
@@ -22,16 +24,17 @@ import {
 import { Button } from "../../components/ui/Button";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import {
-  discoverClaudeCodeSessions,
   formatClaudeRelativeKo,
-  getClaudeCodeSession,
   isClaudeBridgeAvailable,
 } from "../../lib/claude/claudeTauri";
-import type {
-  ClaudeCodeSessionDetail,
-  ClaudeCodeSessionMeta,
-  ClaudeMessage,
-} from "../../lib/claude/types";
+import type { ClaudeMessage } from "../../lib/claude/types";
+import {
+  getAgentWorkSession,
+  listAgentWorkSessions,
+  type AgentWorkAgentId,
+  type AgentWorkSessionDetail,
+  type AgentWorkSessionMeta,
+} from "../../lib/agents/workSessions";
 
 /**
  * 작업 대화 둘러보기 — a two-pane modal for browsing an agent's detected work
@@ -77,23 +80,25 @@ const LIST_STATE_STYLE: CSSProperties = {
 
 export function DetectedConversationsModal({
   agentName,
+  agentId,
   supported,
   initialSelectedFilePath,
   onPick,
   onClose,
 }: {
   agentName: string;
+  agentId: AgentWorkAgentId;
   supported: boolean;
   initialSelectedFilePath: string | null;
-  onPick: (meta: ClaudeCodeSessionMeta) => void;
+  onPick: (meta: AgentWorkSessionMeta) => void;
   onClose: () => void;
 }) {
   const bridge = isClaudeBridgeAvailable();
-  const [sessions, setSessions] = useState<ClaudeCodeSessionMeta[]>([]);
+  const [sessions, setSessions] = useState<AgentWorkSessionMeta[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [query, setQuery] = useState("");
   const [activePath, setActivePath] = useState<string | null>(initialSelectedFilePath);
-  const [detail, setDetail] = useState<ClaudeCodeSessionDetail | null>(null);
+  const [detail, setDetail] = useState<AgentWorkSessionDetail | null>(null);
   const [detailStatus, setDetailStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -105,12 +110,12 @@ export function DetectedConversationsModal({
     }
     setStatus("loading");
     try {
-      setSessions(await discoverClaudeCodeSessions());
+      setSessions(await listAgentWorkSessions(agentId));
       setStatus("ready");
     } catch {
       setStatus("error");
     }
-  }, [bridge, supported]);
+  }, [agentId, bridge, supported]);
 
   useEffect(() => {
     void load();
@@ -134,7 +139,13 @@ export function DetectedConversationsModal({
     }
     let cancelled = false;
     setDetailStatus("loading");
-    getClaudeCodeSession(activePath)
+    const activeMeta = sessions.find((session) => session.filePath === activePath);
+    if (!activeMeta) {
+      setDetail(null);
+      setDetailStatus("idle");
+      return;
+    }
+    getAgentWorkSession(activeMeta)
       .then((loaded) => {
         if (cancelled) return;
         setDetail(loaded);
@@ -148,7 +159,7 @@ export function DetectedConversationsModal({
     return () => {
       cancelled = true;
     };
-  }, [activePath]);
+  }, [activePath, sessions]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -161,7 +172,7 @@ export function DetectedConversationsModal({
   }, [sessions, query]);
 
   const grouped = useMemo(() => {
-    const map = new Map<string, ClaudeCodeSessionMeta[]>();
+    const map = new Map<string, AgentWorkSessionMeta[]>();
     for (const session of filtered) {
       const list = map.get(session.projectName) ?? [];
       list.push(session);
@@ -232,6 +243,7 @@ export function DetectedConversationsModal({
                 status={status}
                 sessionCount={sessions.length}
                 grouped={grouped}
+                searchActive={query.trim().length > 0}
                 activePath={activePath}
                 onActivate={setActivePath}
               />
@@ -266,6 +278,7 @@ function ConversationList({
   status,
   sessionCount,
   grouped,
+  searchActive,
   activePath,
   onActivate,
 }: {
@@ -274,10 +287,41 @@ function ConversationList({
   bridge: boolean;
   status: "idle" | "loading" | "ready" | "error";
   sessionCount: number;
-  grouped: [string, ClaudeCodeSessionMeta[]][];
+  grouped: [string, AgentWorkSessionMeta[]][];
+  searchActive: boolean;
   activePath: string | null;
   onActivate: (filePath: string | null) => void;
 }) {
+  const [openProjects, setOpenProjects] = useState<Set<string>>(() => new Set());
+  const activeProject = useMemo(() => {
+    if (!activePath) return null;
+    return grouped.find(([, sessions]) =>
+      sessions.some((session) => session.filePath === activePath),
+    )?.[0] ?? null;
+  }, [activePath, grouped]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    setOpenProjects((current) => {
+      if (current.has(activeProject)) return current;
+      const next = new Set(current);
+      next.add(activeProject);
+      return next;
+    });
+  }, [activeProject]);
+
+  function toggleProject(project: string) {
+    setOpenProjects((current) => {
+      const next = new Set(current);
+      if (next.has(project)) {
+        next.delete(project);
+      } else {
+        next.add(project);
+      }
+      return next;
+    });
+  }
+
   // Non-list states (loading / empty / error / unsupported) render centred
   // both ways inside the list pane. Inline-styled so they don't depend on a
   // CSS file the autonomous loop is rewriting.
@@ -317,42 +361,58 @@ function ConversationList({
 
   return (
     <div className="start-detected" role="radiogroup" aria-label="불러올 대화">
-      {grouped.map(([project, projectSessions]) => (
-        <section key={project} className="start-detected-group">
-          <header className="start-detected-group-head">
-            <FolderGit2 size={13} aria-hidden="true" />
-            <strong title={project}>{shortProjectLabel(project)}</strong>
-            <span>{projectSessions.length}</span>
-          </header>
-          <ul>
-            {projectSessions.map((session) => {
-              const selected = activePath === session.filePath;
-              return (
-                <li key={session.filePath}>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    className={`start-detected-row${selected ? " is-selected" : ""}`}
-                    onClick={() => onActivate(selected ? null : session.filePath)}
-                  >
-                    <span className="start-detected-main">
-                      <strong>{session.title}</strong>
-                      <span className="start-detected-meta">
-                        메시지 {session.messageCount} · {formatClaudeRelativeKo(session.startedAt)}
-                      </span>
-                    </span>
-                    <span
-                      className={`pick-mark${selected ? " is-selected" : ""}`}
-                      aria-hidden="true"
-                    />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+      {grouped.map(([project, projectSessions]) => {
+        const open = searchActive || openProjects.has(project) || activeProject === project;
+        const ToggleIcon = open ? ChevronDown : ChevronRight;
+        const latest = projectSessions[0]?.startedAt;
+        return (
+          <section key={project} className={`start-detected-group${open ? " is-open" : ""}`}>
+            <button
+              type="button"
+              className="start-detected-group-head"
+              aria-expanded={open}
+              onClick={() => toggleProject(project)}
+            >
+              <ToggleIcon className="start-detected-group-toggle" size={13} aria-hidden="true" />
+              <FolderGit2 size={13} aria-hidden="true" />
+              <strong title={project}>{shortProjectLabel(project)}</strong>
+              <span className="start-detected-group-meta">
+                <span>{projectSessions.length}건</span>
+                {latest ? <span>{formatClaudeRelativeKo(latest)}</span> : null}
+              </span>
+            </button>
+            {open ? (
+              <ul>
+                {projectSessions.map((session) => {
+                  const selected = activePath === session.filePath;
+                  return (
+                    <li key={session.filePath}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        className={`start-detected-row${selected ? " is-selected" : ""}`}
+                        onClick={() => onActivate(selected ? null : session.filePath)}
+                      >
+                        <span className="start-detected-main">
+                          <strong>{session.title}</strong>
+                          <span className="start-detected-meta">
+                            메시지 {session.messageCount} · {formatClaudeRelativeKo(session.startedAt)}
+                          </span>
+                        </span>
+                        <span
+                          className={`pick-mark${selected ? " is-selected" : ""}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -366,7 +426,7 @@ function ConversationPreview({
   agentName: string;
   hasSelection: boolean;
   status: "idle" | "loading" | "ready" | "error";
-  detail: ClaudeCodeSessionDetail | null;
+  detail: AgentWorkSessionDetail | null;
 }) {
   if (!hasSelection) {
     return (

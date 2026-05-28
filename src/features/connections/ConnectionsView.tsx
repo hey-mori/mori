@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Bot,
   Boxes,
+  Braces,
   ChevronDown,
   Chrome,
   Code2,
@@ -32,13 +33,10 @@ import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
 import { useMoriReviewStore } from "../../app/reviewStore";
 import {
-  discoverClaudeCodeSessions,
   formatClaudeRelativeKo,
-  getClaudeCodeSession,
   isClaudeBridgeAvailable,
   shortMessagePreview,
 } from "../../lib/claude/claudeTauri";
-import { buildImportCandidateFromClaudeCodeSession } from "../../lib/claude/claudeImport";
 import {
   computeConversationStats,
   formatTokenCount,
@@ -51,10 +49,14 @@ import {
   type DetectedTool,
   type LocalAiToolReport,
 } from "../../lib/claude/installations";
-import type {
-  ClaudeCodeSessionDetail,
-  ClaudeCodeSessionMeta,
-} from "../../lib/claude/types";
+import {
+  buildPrimaryImportCandidateFromAgentWorkSession,
+  getAgentWorkSession,
+  listAllAgentWorkSessions,
+  reviewOriginForAgentWorkSession,
+  type AgentWorkSessionDetail,
+  type AgentWorkSessionMeta,
+} from "../../lib/agents/workSessions";
 import { isTauriRuntime } from "../../lib/desktop";
 import { ConversationViewer } from "./ConversationViewer";
 import { SourceControlCenter } from "./SourceControlCenter";
@@ -62,7 +64,7 @@ import { WorkBundlePanel } from "../import/WorkBundlePanel";
 
 type SessionsState = {
   status: "idle" | "loading" | "ready" | "error";
-  sessions: ClaudeCodeSessionMeta[];
+  sessions: AgentWorkSessionMeta[];
   error: string | null;
 };
 
@@ -74,7 +76,7 @@ type ToolsState = {
 
 type Selection = {
   filePath: string;
-  detail: ClaudeCodeSessionDetail | null;
+  detail: AgentWorkSessionDetail | null;
   loading: boolean;
   error: string | null;
 } | null;
@@ -111,6 +113,7 @@ const TOOL_ICONS: Record<string, LucideIcon> = {
   "claude-cli-nodejs": Terminal,
   "claude-roaming": HardDrive,
   "codex-cli": Code2,
+  "opencode-cli": Braces,
   "openai-cli": KeyRound,
 };
 
@@ -157,7 +160,7 @@ export function ConnectionsView() {
     if (!bridgeAvailable) return;
     setSessions((prev) => ({ ...prev, status: "loading", error: null }));
     try {
-      const list = await discoverClaudeCodeSessions();
+      const list = await listAllAgentWorkSessions();
       setSessions({ status: "ready", sessions: list, error: null });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -178,7 +181,7 @@ export function ConnectionsView() {
     setImportStatus(null);
   }
 
-  function handleSelectSession(meta: ClaudeCodeSessionMeta) {
+  function handleSelectSession(meta: AgentWorkSessionMeta) {
     setSelection({
       filePath: meta.filePath,
       detail: null,
@@ -187,7 +190,7 @@ export function ConnectionsView() {
     });
     setImportStatus(null);
     setViewerOpen(false);
-    getClaudeCodeSession(meta.filePath)
+    getAgentWorkSession(meta)
       .then((detail) => {
         setSelection({
           filePath: meta.filePath,
@@ -214,7 +217,7 @@ export function ConnectionsView() {
       const capturedAt = new Date().toISOString();
       // Build against the demo/placeholder ids first; importAsNewSession
       // mints the real session and re-binds the candidate to it.
-      const candidate = buildImportCandidateFromClaudeCodeSession(detail, {
+      const candidate = buildPrimaryImportCandidateFromAgentWorkSession(detail, {
         projectId,
         sessionId,
         capturedAt,
@@ -227,7 +230,7 @@ export function ConnectionsView() {
         endedAt,
         projectLabel: detail.projectName || undefined,
       });
-      startReview(reboundCandidate, "ai-transcript");
+      startReview(reboundCandidate, reviewOriginForAgentWorkSession(detail));
       setImportStatus({
         tone: "ok",
         message:
@@ -253,7 +256,7 @@ export function ConnectionsView() {
     }
     try {
       const capturedAt = new Date().toISOString();
-      const candidate = buildImportCandidateFromClaudeCodeSession(selection.detail, {
+      const candidate = buildPrimaryImportCandidateFromAgentWorkSession(selection.detail, {
         projectId,
         sessionId,
         capturedAt,
@@ -261,7 +264,7 @@ export function ConnectionsView() {
       // The import is committed by Import Review's Apply (the review's
       // commit callback calls addImport with the accepted subset), so we
       // only open the review here — no eager write to the session.
-      startReview(candidate, "ai-transcript");
+      startReview(candidate, reviewOriginForAgentWorkSession(selection.detail));
       setImportStatus({
         tone: "ok",
         message: "현재 세션의 Import Review로 이동했습니다. 적용하면 타임라인에 추가됩니다.",
@@ -288,7 +291,7 @@ export function ConnectionsView() {
   }, [query, sessions.sessions]);
 
   const grouped = useMemo(() => {
-    const map = new Map<string, ClaudeCodeSessionMeta[]>();
+    const map = new Map<string, AgentWorkSessionMeta[]>();
     for (const session of filteredSessions) {
       const list = map.get(session.projectName) ?? [];
       list.push(session);
@@ -395,7 +398,7 @@ export function ConnectionsView() {
             value={query}
             onChange={setQuery}
             placeholder="제목 또는 프로젝트 경로로 검색"
-            ariaLabel="Claude 세션 검색"
+            ariaLabel="AI 작업 세션 검색"
             className="connections-search"
           />
           {query && filteredSessions.length < sessions.sessions.length ? (
@@ -454,7 +457,7 @@ export function ConnectionsView() {
  * always valid even for sparse / tool-only sessions.
  */
 function deriveConversationWindow(
-  detail: ClaudeCodeSessionDetail,
+  detail: AgentWorkSessionDetail,
   capturedAt: string,
 ): { startedAt: string; endedAt: string } {
   const startedAt = detail.startedAt?.trim() || capturedAt;
@@ -615,18 +618,18 @@ function SessionFeed({
   onOpenViewer,
 }: {
   state: SessionsState;
-  grouped: Array<[string, ClaudeCodeSessionMeta[]]>;
+  grouped: Array<[string, AgentWorkSessionMeta[]]>;
   hasQuery: boolean;
   filteredCount: number;
   selection: Selection;
   hasActiveSession: boolean;
-  onSelect: (meta: ClaudeCodeSessionMeta) => void;
+  onSelect: (meta: AgentWorkSessionMeta) => void;
   onImportAsNewSession: () => void;
   onImportIntoCurrentSession: () => void;
   onOpenViewer: () => void;
 }) {
   if (state.status === "loading" || state.status === "idle") {
-    return <ListSkeleton label="Claude 세션을 검색하는 중..." />;
+    return <ListSkeleton label="AI 작업 세션을 검색하는 중..." />;
   }
   if (state.status === "error") {
     return (
@@ -644,8 +647,8 @@ function SessionFeed({
       <EmptyState
         compact
         icon={Terminal}
-        title="Claude 세션이 없습니다"
-        description="Claude Desktop 또는 Claude Code를 한 번 이상 사용하면 ~/.claude/projects 아래에 세션 파일이 생성됩니다."
+        title="가져올 AI 작업 세션이 없습니다"
+        description="Claude 기록은 ~/.claude/projects에서, Codex/OpenCode 기록은 ~/.mori/connectors 아래의 hook/wrapper JSONL에서 읽습니다."
       />
     );
   }
@@ -706,7 +709,7 @@ function SessionCard({
   onImportIntoCurrentSession,
   onOpenViewer,
 }: {
-  session: ClaudeCodeSessionMeta;
+  session: AgentWorkSessionMeta;
   selection: Selection;
   hasActiveSession: boolean;
   onSelect: () => void;
@@ -738,7 +741,7 @@ function SessionCard({
         <span className="connections-session-card-meta">
           <span className="connections-list-agent">
             <Sparkles size={11} aria-hidden="true" />
-            Claude
+            {session.agentName}
           </span>
           <span>{session.messageCount}개 메시지</span>
           {session.tokenUsage && session.tokenUsage.totalTokens > 0 ? (
@@ -791,7 +794,7 @@ function SessionCardDetail({
   onImportIntoCurrentSession,
   onOpenViewer,
 }: {
-  detail: ClaudeCodeSessionDetail;
+  detail: AgentWorkSessionDetail;
   stats: ConversationStats;
   hasActiveSession: boolean;
   onImportAsNewSession: () => void;
@@ -813,7 +816,7 @@ function SessionCardDetail({
         </li>
         <li>
           <strong>{stats.assistantMessages}</strong>
-          <small>Claude</small>
+          <small>{detail.agentName}</small>
         </li>
         <li>
           <strong>{stats.toolUses}</strong>
@@ -847,7 +850,7 @@ function SessionCardDetail({
                 {message.role === "human"
                   ? "사용자"
                   : message.role === "assistant"
-                    ? "Claude"
+                    ? detail.agentName
                     : message.role}
               </span>
               <p>{shortMessagePreview(message.content, 200)}</p>
@@ -884,7 +887,7 @@ function SessionCardDetail({
       </div>
 
       <HelpDisclosure label="가져오기 동작" ariaLabel="가져오기 동작 설명">
-        <p>기본 동작은 대화마다 새 작업 세션을 만드는 것입니다 — Claude 대화 1개 = Mori 작업 세션 1개.</p>
+        <p>기본 동작은 대화마다 새 작업 세션을 만드는 것입니다 — AI 작업 기록 1개 = Mori 작업 세션 1개.</p>
         <p>
           가져온 항목은 Import Review에서 검토한 뒤 적용되고, 같은 세션에 Git · 터미널 · 파일
           자료를 더 붙일 수 있습니다.
