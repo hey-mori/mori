@@ -146,6 +146,8 @@ export function StartSessionView() {
   const startReview = useMoriReviewStore((state) => state.startReview);
   const setCurrentView = useMoriAppStore((state) => state.navigate);
   const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
+  const startRecordsRequest = useMoriAppStore((state) => state.startRecordsRequest);
+  const clearStartRecordsRequest = useMoriAppStore((state) => state.clearStartRecordsRequest);
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [method, setMethod] = useState<ImportMethod | null>(null);
@@ -215,6 +217,19 @@ export function StartSessionView() {
     // File the import under the conversation's own project; user can change it.
     if (existingProjects.includes(meta.projectName)) setProjectChoice(meta.projectName);
   }
+
+  // Honour a 기록에서 불러오기 request routed from the 소스 hub: default to the
+  // first detection-capable agent (Claude) and open the browse modal, then
+  // clear the one-shot so it fires exactly once.
+  useEffect(() => {
+    if (!startRecordsRequest) return;
+    const agent = AGENT_OPTIONS.find((option) => option.detect) ?? AGENT_OPTIONS[0] ?? null;
+    if (agent) setSelectedAgentId(agent.id);
+    setMethod("records");
+    setBrowseOpen(true);
+    clearStartRecordsRequest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startRecordsRequest]);
 
   async function handleCreate() {
     if (creating || !canCreate || !selectedAgent) return;
@@ -454,7 +469,7 @@ export function StartSessionView() {
                     onClick={() => setBrowseOpen(true)}
                   >
                     <History size={16} aria-hidden="true" />
-                    <span>대화 고르기</span>
+                    <span>기록에서 불러오기</span>
                   </button>
                 )}
               </div>

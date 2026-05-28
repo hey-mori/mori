@@ -118,6 +118,12 @@ type MoriAppState = {
    * route into the same surface without each having to thread state down.
    */
   currentProjectKey: string | null;
+  /**
+   * One-shot: open the new-session 기록에서 불러오기 browser when the start view
+   * mounts. Set by the 소스 hub's "기록에서 불러오기" entry; StartSessionView
+   * consumes and clears it so it fires once per request.
+   */
+  startRecordsRequest: boolean;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -172,6 +178,9 @@ type MoriAppState = {
    * route through the same action so the surface only has one front door.
    */
   openProject: (projectKey: string) => void;
+  /** From the 소스 hub: route to the new-session flow with the 기록에서 불러오기 browser armed. */
+  requestStartRecords: () => void;
+  clearStartRecordsRequest: () => void;
 };
 
 export const useMoriAppStore = create<MoriAppState>((set) => ({
@@ -194,6 +203,7 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
   settingsSheetOpen: false,
   commandPaletteOpen: false,
   currentProjectKey: null,
+  startRecordsRequest: false,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -267,4 +277,6 @@ export const useMoriAppStore = create<MoriAppState>((set) => ({
     set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
   openProject: (projectKey) =>
     set({ currentView: "project", currentProjectKey: projectKey }),
+  requestStartRecords: () => set({ currentView: "start", startRecordsRequest: true }),
+  clearStartRecordsRequest: () => set({ startRecordsRequest: false }),
 }));

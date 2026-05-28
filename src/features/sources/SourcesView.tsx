@@ -8,11 +8,12 @@ import {
   FolderOpen,
   GitBranch,
   Globe,
-  HardDrive,
-  Link2,
+  History,
   Lock,
+  MessageSquare,
   Package,
-  ShieldCheck,
+  Plug,
+  Sparkles,
   Terminal,
   Upload,
   type LucideIcon,
@@ -23,20 +24,46 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { SearchField } from "../../components/ui/SearchField";
-import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
+import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
+import { useMoriSessionStore } from "../../app/sessionStore";
 import { useMoriAppStore } from "../../app/store";
-import { useMoriRepositoryStore } from "../../app/repositoryStore";
 import { isTauriRuntime } from "../../lib/desktop";
 import { formatDateTime } from "../../lib/formatting/time";
 import {
   buildSourceWorkspace,
-  findSourceWorkspaceSource,
   type SourceWorkspaceCategory,
   type SourceWorkspaceSource,
-  type SourceWorkspaceStatus,
 } from "../../lib/sources/sourceWorkspace";
+import {
+  buildSourceProviderGroups,
+  type SourceProvider,
+  type SourceProviderMethod,
+} from "../../lib/sources/sourceProviderGroups";
 import type { StoredSessionImport } from "../../lib/storage/storageTypes";
+
+/**
+ * 소스 — the connect-your-work overview.
+ *
+ * The canvas is a calm grid of *providers* (Claude / ChatGPT / Codex /
+ * OpenCode anchor sessions; Git / 터미널 / 메모 / URL attach evidence). It
+ * answers "what can I connect" at a glance and nothing more — every detail
+ * (the ways in, what Mori reads, the import action) lives in the right
+ * inspector for the selected provider, so the overview never turns into a
+ * wall of rows.
+ */
+
+const CATEGORY_LABEL: Record<SourceWorkspaceCategory, string> = {
+  AI: "AI 에이전트",
+  Code: "코드 에이전트",
+  Git: "Git",
+  Terminal: "터미널",
+  Docs: "문서",
+  Design: "디자인",
+  "Issue Tracker": "이슈",
+  Manual: "직접 입력",
+  URL: "URL",
+  Future: "지원 예정",
+};
 
 const CATEGORY_ICON: Record<SourceWorkspaceCategory, LucideIcon> = {
   AI: Bot,
@@ -51,58 +78,55 @@ const CATEGORY_ICON: Record<SourceWorkspaceCategory, LucideIcon> = {
   Future: Package,
 };
 
-const CATEGORY_LABEL: Record<SourceWorkspaceCategory, string> = {
-  AI: "AI",
-  Code: "코드",
-  Git: "Git",
-  Terminal: "터미널",
-  Docs: "문서",
-  Design: "디자인",
-  "Issue Tracker": "이슈",
-  Manual: "수동",
-  URL: "URL",
-  Future: "예정",
+/** Provider-specific glyphs win over the generic category icon when known. */
+const PROVIDER_ICON: Record<string, LucideIcon> = {
+  claude: Sparkles,
+  chatgpt: MessageSquare,
+  codex: Code2,
+  opencode: Braces,
+  git: GitBranch,
+  terminal: Terminal,
+  note: FileText,
+  url: Globe,
+  connector: Package,
+  document: FileText,
+  ide: Code2,
+  browser: Globe,
+  mcp: Plug,
 };
 
-const STATUS_FILTERS: Array<{ id: "all" | SourceWorkspaceStatus; label: string }> = [
-  { id: "all", label: "전체" },
-  { id: "available", label: "사용 가능" },
-  { id: "needsSetup", label: "설정 필요" },
-  { id: "planned", label: "지원 예정" },
-];
+function providerIcon(provider: SourceProvider): LucideIcon {
+  return PROVIDER_ICON[provider.id] ?? CATEGORY_ICON[provider.category];
+}
 
-const FORMAT_PREVIEWS = [
-  {
-    id: "jsonl",
-    label: "JSONL event",
-    code:
-      '{"type":"message","id":"msg_01","timestamp":"2026-05-27T09:41:12.123Z","role":"user","content":"리팩터링 방향 제안해줘","meta":{"model":"gpt-4.1","cwd":"/Users/isaac/dev/project","session_id":"sess_01"}}',
-  },
-  {
-    id: "transcript",
-    label: "Transcript",
-    code: "User: 로그인 플로우를 정리해줘\nAssistant: 현재 흐름은 세 단계로 나뉩니다...",
-  },
-  {
-    id: "git",
-    label: "Git diff summary",
-    code: "repo: /Users/isaac/dev/mori\nrange: main..feature\nfiles: 4\nshortstat: 4 files changed, 120 insertions, 32 deletions",
-  },
-  {
-    id: "normalized",
-    label: "Normalized event",
-    code:
-      '{"type":"aiConversation","title":"리팩터링 방향 논의","trustLevel":"observed","sourceRefs":["src-codex"],"createdBy":"import"}',
-  },
-];
+function providerMatchesQuery(provider: SourceProvider, needle: string): boolean {
+  if (!needle) return true;
+  if (provider.name.toLowerCase().includes(needle)) return true;
+  return provider.methods.some((method) => {
+    const source = method.source;
+    return [
+      method.methodLabel,
+      method.connectLabel,
+      source.name,
+      source.acceptedFormats.join(" "),
+      source.privacyNote,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(needle);
+  });
+}
+
+function flattenProviders(groups: ReturnType<typeof buildSourceProviderGroups>): SourceProvider[] {
+  return [...groups.agents, ...groups.evidence, ...groups.planned];
+}
 
 export function SourcesView() {
   const draft = useMoriSessionStore((state) => state.draft);
   const imports = useMoriSessionStore((state) => state.imports);
-  const view = useMoriSessionStore(selectSessionView);
   const requestEvidenceImport = useMoriAppStore((state) => state.requestEvidenceImport);
   const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
-  const repositories = useMoriRepositoryStore((state) => state.settings.repositories);
+  const requestStartRecords = useMoriAppStore((state) => state.requestStartRecords);
   const desktop = isTauriRuntime();
   const hasActiveSession = Boolean(draft);
 
@@ -110,32 +134,41 @@ export function SourcesView() {
     () => buildSourceWorkspace({ isDesktop: desktop, hasActiveSession }),
     [desktop, hasActiveSession],
   );
-  const [selectedId, setSelectedId] = useState("connectorJsonl");
+  const groups = useMemo(() => buildSourceProviderGroups(workspace), [workspace]);
+  const allProviders = useMemo(() => flattenProviders(groups), [groups]);
+  const allMethods = useMemo(
+    () => allProviders.flatMap((provider) => provider.methods),
+    [allProviders],
+  );
+
+  const defaultSelectedId =
+    groups.agents[0]?.methods[0]?.source.id ??
+    allMethods[0]?.source.id ??
+    "";
+  const [selectedId, setSelectedId] = useState(defaultSelectedId);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
-  const filteredSources = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return workspace.sources.filter((source) => {
-      if (statusFilter !== "all" && source.status !== statusFilter) return false;
-      if (!needle) return true;
-      const haystack = [
-        source.name,
-        source.category,
-        source.familyLabel,
-        source.acquisitionMethod,
-        source.acceptedFormats.join(" "),
-        source.privacyNote,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(needle);
-    });
-  }, [query, statusFilter, workspace.sources]);
-  const selected =
-    filteredSources.find((source) => source.id === selectedId) ??
-    filteredSources[0] ??
-    findSourceWorkspaceSource(workspace, selectedId) ??
-    workspace.sources[0]!;
+
+  const needle = query.trim().toLowerCase();
+  const filtered = useMemo(
+    () => ({
+      agents: groups.agents.filter((p) => providerMatchesQuery(p, needle)),
+      evidence: groups.evidence.filter((p) => providerMatchesQuery(p, needle)),
+      planned: groups.planned.filter((p) => providerMatchesQuery(p, needle)),
+    }),
+    [groups, needle],
+  );
+
+  // The inspector follows the selected method across the full (unfiltered) set
+  // so a search that hides the selected tile never blanks the rail.
+  const selectedMethod =
+    allMethods.find((method) => method.source.id === selectedId) ?? allMethods[0];
+  const selectedProvider =
+    allProviders.find((provider) =>
+      provider.methods.some((method) => method.source.id === selectedMethod?.source.id),
+    ) ?? allProviders[0];
+
+  const hasResults =
+    filtered.agents.length + filtered.evidence.length + filtered.planned.length > 0;
 
   function runSourceAction(source: SourceWorkspaceSource) {
     if (source.action.kind === "import") {
@@ -155,209 +188,170 @@ export function SourcesView() {
         <ActionBar
           label="소스"
           start={
-            <div className="sources-titlebar">
-              <div>
-                <h1>소스</h1>
-                <p>외부 작업 데이터가 Mori 세션과 근거로 들어오는 방식을 확인합니다.</p>
-              </div>
-              <SourceCountStrip counts={workspace.counts} />
-            </div>
+            <ToolbarSearch
+              value={query}
+              onChange={setQuery}
+              placeholder=""
+              ariaLabel="소스 검색"
+            />
           }
         />
       }
       aside={
-        <SourceInspector
-          source={selected}
-          repositoryCount={repositories.length}
-          hasActiveSession={hasActiveSession}
-          onAction={() => runSourceAction(selected)}
-        />
+        selectedProvider && selectedMethod ? (
+          <SourceInspector
+            provider={selectedProvider}
+            method={selectedMethod}
+            onSelectMethod={setSelectedId}
+            onAction={() => runSourceAction(selectedMethod.source)}
+            onBrowseRecords={
+              selectedProvider.category === "AI" ? requestStartRecords : undefined
+            }
+          />
+        ) : null
       }
     >
-      <section className="sources-overview" aria-label="소스 개요">
-        <div className="sources-toolbar">
-          <SearchField
-            className="sources-search"
-            value={query}
-            onChange={setQuery}
-            placeholder="소스, 형식, 방식 검색"
-            ariaLabel="소스 검색"
+      {hasResults ? (
+        <>
+          <RoleGroup
+            title="에이전트"
+            providers={filtered.agents}
+            selectedId={selectedMethod?.source.id ?? ""}
+            onSelect={setSelectedId}
           />
-          <div className="sources-filter" role="tablist" aria-label="소스 상태 필터">
-            {STATUS_FILTERS.map((filter) => (
-              <button
-                key={filter.id}
-                type="button"
-                className={filter.id === statusFilter ? "is-active" : ""}
-                onClick={() => setStatusFilter(filter.id)}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="sources-table" role="list">
-          <div className="sources-table-head" aria-hidden="true">
-            <span>소스</span>
-            <span>가족</span>
-            <span>획득 방식</span>
-            <span>데이터 범위</span>
-            <span>상태</span>
-            <span>작업</span>
-          </div>
-          {filteredSources.map((source) => (
-            <SourceRow
-              key={source.id}
-              source={source}
-              selected={source.id === selected.id}
-              onSelect={() => setSelectedId(source.id)}
-              onAction={() => runSourceAction(source)}
-            />
-          ))}
-          {filteredSources.length === 0 ? (
-            <p className="sources-empty">조건에 맞는 소스가 없습니다.</p>
-          ) : null}
-        </div>
-      </section>
+          <RoleGroup
+            title="자료"
+            providers={filtered.evidence}
+            selectedId={selectedMethod?.source.id ?? ""}
+            onSelect={setSelectedId}
+          />
+          <PlannedRow
+            providers={filtered.planned}
+            selectedId={selectedMethod?.source.id ?? ""}
+            onSelect={setSelectedId}
+          />
+        </>
+      ) : (
+        <p className="sources-empty">검색 결과가 없습니다.</p>
+      )}
 
-      <section className="sources-pipeline" aria-label="소스 처리 흐름">
-        <header className="sources-section-head">
-          <h2>소스 → Mori 처리 흐름</h2>
-        </header>
-        <ol className="sources-pipeline-steps">
-          {workspace.pipeline.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-      </section>
-
-      <div className="sources-lower-grid">
-        <RecentImports imports={imports} sessionTitle={view.session.title} />
-        <FormatPreview />
-      </div>
-
-      <section className="sources-privacy" aria-label="개인정보와 로컬 데이터">
-        <header className="sources-section-head">
-          <h2>개인정보 / Raw Data 정책</h2>
-        </header>
-        <ul>
-          {workspace.privacySummary.map((line) => (
-            <li key={line}>
-              <ShieldCheck size={14} aria-hidden="true" />
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {imports.length > 0 ? <RecentImports imports={imports} /> : null}
     </PageShell>
   );
 }
 
-function SourceCountStrip({ counts }: { counts: ReturnType<typeof buildSourceWorkspace>["counts"] }) {
-  return (
-    <dl className="sources-count-strip" aria-label="소스 상태 요약">
-      <div>
-        <dt>사용 가능</dt>
-        <dd>{counts.available}</dd>
-      </div>
-      <div>
-        <dt>설정 필요</dt>
-        <dd>{counts.needsSetup}</dd>
-      </div>
-      <div>
-        <dt>지원 예정</dt>
-        <dd>{counts.planned}</dd>
-      </div>
-      <div>
-        <dt>로컬 전용</dt>
-        <dd>{counts.localOnly}</dd>
-      </div>
-    </dl>
-  );
-}
-
-function SourceRow({
-  source,
-  selected,
+function RoleGroup({
+  title,
+  providers,
+  selectedId,
   onSelect,
-  onAction,
 }: {
-  source: SourceWorkspaceSource;
-  selected: boolean;
-  onSelect: () => void;
-  onAction: () => void;
+  title: string;
+  providers: SourceProvider[];
+  selectedId: string;
+  onSelect: (id: string) => void;
 }) {
-  const Icon = CATEGORY_ICON[source.category];
+  if (providers.length === 0) return null;
   return (
-    <article
-      className={`sources-row${selected ? " is-selected" : ""}`}
-      role="listitem"
-      onClick={onSelect}
-    >
-      <button type="button" className="sources-row-main" onClick={onSelect}>
-        <span className="sources-row-source">
-          <span className="sources-row-icon">
-            <Icon size={15} aria-hidden="true" />
-          </span>
-          <span>
-            <strong>{source.name}</strong>
-            <small>{CATEGORY_LABEL[source.category]}</small>
-          </span>
-        </span>
-        <span>{source.familyLabel}</span>
-        <span>{compactMethod(source.acquisitionMethod)}</span>
-        <span>{source.localOnly ? "로컬 / 명시 선택" : "명시 입력"}</span>
-        <span>
-          <Badge tone={source.statusTone}>{source.statusLabel}</Badge>
-        </span>
-      </button>
-      <div className="sources-row-action">
-        <SourceActionButton source={source} onAction={onAction} />
+    <section className="sources-group" aria-label={title}>
+      <header className="sources-group-head">
+        <h2>{title}</h2>
+      </header>
+      <div className="sources-tiles">
+        {providers.map((provider) => (
+          <ProviderTile
+            key={provider.id}
+            provider={provider}
+            active={provider.methods.some((method) => method.source.id === selectedId)}
+            onSelect={() => {
+              const first = provider.methods[0];
+              if (first) onSelect(first.source.id);
+            }}
+          />
+        ))}
       </div>
-    </article>
+    </section>
   );
 }
 
-function SourceActionButton({
-  source,
-  onAction,
+function ProviderTile({
+  provider,
+  active,
+  onSelect,
 }: {
-  source: SourceWorkspaceSource;
-  onAction: () => void;
+  provider: SourceProvider;
+  active: boolean;
+  onSelect: () => void;
 }) {
-  if (source.action.kind === "none") {
-    return <span className="sources-action-inert">{source.action.label}</span>;
-  }
-  const icon = source.action.kind === "settings" ? FolderOpen : Upload;
+  const Icon = providerIcon(provider);
   return (
-    <Button
-      size="sm"
-      variant={source.action.enabled ? "secondary" : "ghost"}
-      icon={icon}
-      disabled={!source.action.enabled}
-      title={source.action.disabledReason ?? source.action.label}
-      onClick={(event) => {
-        event.stopPropagation();
-        onAction();
-      }}
+    <button
+      type="button"
+      className={`sources-tile${active ? " is-active" : ""}`}
+      onClick={onSelect}
+      aria-pressed={active}
     >
-      {shortActionLabel(source.action.label)}
-    </Button>
+      <span className="sources-tile-icon">
+        <Icon size={18} aria-hidden="true" />
+      </span>
+      <strong className="sources-tile-name">{provider.name}</strong>
+    </button>
+  );
+}
+
+function PlannedRow({
+  providers,
+  selectedId,
+  onSelect,
+}: {
+  providers: SourceProvider[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  if (providers.length === 0) return null;
+  return (
+    <section className="sources-group" aria-label="지원 예정">
+      <header className="sources-group-head">
+        <h2>예정</h2>
+      </header>
+      <div className="sources-planned-chips">
+        {providers.map((provider) => {
+          const Icon = providerIcon(provider);
+          const firstId = provider.methods[0]?.source.id;
+          const active = provider.methods.some((method) => method.source.id === selectedId);
+          return (
+            <button
+              key={provider.id}
+              type="button"
+              className={`sources-planned-chip${active ? " is-selected" : ""}`}
+              onClick={() => firstId && onSelect(firstId)}
+            >
+              <Icon size={13} aria-hidden="true" />
+              <span>{provider.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
 function SourceInspector({
-  source,
-  repositoryCount,
-  hasActiveSession,
+  provider,
+  method,
+  onSelectMethod,
   onAction,
+  onBrowseRecords,
 }: {
-  source: SourceWorkspaceSource;
-  repositoryCount: number;
-  hasActiveSession: boolean;
+  provider: SourceProvider;
+  method: SourceProviderMethod;
+  onSelectMethod: (id: string) => void;
   onAction: () => void;
+  /** When set, show a "기록에서 불러오기" entry that opens the work-history browser. */
+  onBrowseRecords?: () => void;
 }) {
-  const Icon = CATEGORY_ICON[source.category];
+  const source = method.source;
+  const Icon = providerIcon(provider);
   return (
     <aside className="sources-inspector" aria-label="선택한 소스">
       <header className="sources-inspector-head">
@@ -365,67 +359,55 @@ function SourceInspector({
           <Icon size={20} aria-hidden="true" />
         </span>
         <div>
-          <h2>{source.name}</h2>
-          <p>
-            {CATEGORY_LABEL[source.category]} · {source.familyLabel}
-          </p>
+          <h2>{provider.name}</h2>
+          <p>{CATEGORY_LABEL[provider.category]}</p>
         </div>
-        <Badge tone={source.statusTone}>{source.statusLabel}</Badge>
       </header>
 
-      <InspectorBlock title="Mori가 접근하는 것" icon={Database}>
+      <InspectorBlock title="연결 방법" icon={Plug}>
+        <ul className="sources-method-picker">
+          {provider.methods.map((entry) => {
+            const selected = entry.source.id === source.id;
+            const showStatus = entry.source.status !== "available";
+            return (
+              <li key={entry.source.id}>
+                <button
+                  type="button"
+                  className={`sources-method-pick${selected ? " is-active" : ""}`}
+                  onClick={() => onSelectMethod(entry.source.id)}
+                  aria-pressed={selected}
+                >
+                  <span className="sources-method-pick-label">{entry.methodLabel}</span>
+                  {showStatus ? (
+                    <Badge tone={entry.source.statusTone}>{entry.source.statusLabel}</Badge>
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </InspectorBlock>
+
+      <InspectorBlock title="읽는 것" icon={Database}>
         <CheckList items={source.whatMoriCanAccess} tone="ok" />
       </InspectorBlock>
 
-      <InspectorBlock title="Mori가 접근하지 않는 것" icon={Lock}>
+      <InspectorBlock title="읽지 않는 것" icon={Lock}>
         <CheckList items={source.whatMoriCannotAccess} tone="no" />
       </InspectorBlock>
 
-      <InspectorBlock title="지원 입력 형식" icon={FileText}>
+      <InspectorBlock title="지원 형식" icon={FileText}>
         <ChipList items={source.acceptedFormats} />
       </InspectorBlock>
 
-      <InspectorBlock title="경로 / 설정" icon={HardDrive}>
-        <dl className="sources-inspector-meta">
-          <div>
-            <dt>상태</dt>
-            <dd>{source.pathStateLabel}</dd>
-          </div>
-          <div>
-            <dt>저장된 repo</dt>
-            <dd>{repositoryCount}개</dd>
-          </div>
-          <div>
-            <dt>세션</dt>
-            <dd>{hasActiveSession ? "활성 세션 있음" : "활성 세션 없음"}</dd>
-          </div>
-        </dl>
-        <p>{source.setupMethod}</p>
-      </InspectorBlock>
-
-      <InspectorBlock title="가져오면 생성되는 항목" icon={Package}>
-        <CheckList items={source.creates} tone="ok" />
-        <p>{source.reviewBehavior}</p>
-      </InspectorBlock>
-
-      <InspectorBlock title="구현 백로그" icon={Link2}>
-        <dl className="sources-inspector-meta">
-          <div>
-            <dt>안전성</dt>
-            <dd>{source.safeToImplementNow ? "지금 확장 가능" : "설계/권한 모델 필요"}</dd>
-          </div>
-          <div>
-            <dt>Raw data</dt>
-            <dd>{rawDataLabel(source.rawDataPolicy)}</dd>
-          </div>
-        </dl>
-        <small className="sources-inspector-files">{source.likelyFiles.join(" · ")}</small>
-      </InspectorBlock>
-
       <div className="sources-inspector-actions">
-        {source.action.kind === "none" ? (
-          <span className="sources-action-inert">{source.action.label}</span>
-        ) : (
+        <p className="sources-inspector-note">{source.reviewBehavior}</p>
+        {onBrowseRecords ? (
+          <Button variant="secondary" icon={History} onClick={onBrowseRecords}>
+            기록에서 불러오기
+          </Button>
+        ) : null}
+        {source.action.kind === "none" ? null : (
           <Button
             variant="primary"
             icon={source.action.kind === "settings" ? FolderOpen : Upload}
@@ -481,94 +463,23 @@ function ChipList({ items }: { items: string[] }) {
   );
 }
 
-function RecentImports({
-  imports,
-  sessionTitle,
-}: {
-  imports: StoredSessionImport[];
-  sessionTitle: string;
-}) {
+function RecentImports({ imports }: { imports: StoredSessionImport[] }) {
   return (
     <section className="sources-panel" aria-label="최근 불러온 소스">
-      <header className="sources-section-head">
+      <header className="sources-group-head">
         <h2>최근 불러온 소스</h2>
         <span>{imports.length}건</span>
       </header>
-      {imports.length ? (
-        <ul className="sources-recent-list">
-          {imports.slice(0, 5).map((entry) => (
-            <li key={entry.id}>
-              <strong>{entry.source.title}</strong>
-              <span>
-                {entry.source.kind} · 이벤트 {entry.events.length}개 · {formatDateTime(entry.savedAt)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="sources-panel-empty">
-          <p>아직 불러온 소스가 없습니다.</p>
-          <small>{sessionTitle ? `${sessionTitle} 세션에 소스를 추가하면 여기에 표시됩니다.` : "지원 형식을 확인한 뒤 명시적으로 불러오세요."}</small>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function FormatPreview() {
-  const [active, setActive] = useState(FORMAT_PREVIEWS[0]!.id);
-  const current = FORMAT_PREVIEWS.find((item) => item.id === active) ?? FORMAT_PREVIEWS[0]!;
-  return (
-    <section className="sources-panel" aria-label="지원 형식 미리보기">
-      <header className="sources-section-head">
-        <h2>지원 형식 미리보기</h2>
-      </header>
-      <div className="sources-format-tabs" role="tablist" aria-label="지원 형식">
-        {FORMAT_PREVIEWS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={item.id === active ? "is-active" : ""}
-            onClick={() => setActive(item.id)}
-          >
-            {item.label}
-          </button>
+      <ul className="sources-recent-list">
+        {imports.slice(0, 5).map((entry) => (
+          <li key={entry.id}>
+            <strong>{entry.source.title}</strong>
+            <span>
+              {entry.source.kind} · 이벤트 {entry.events.length}개 · {formatDateTime(entry.savedAt)}
+            </span>
+          </li>
         ))}
-      </div>
-      <pre className="sources-code-preview">
-        <code>{current.code}</code>
-      </pre>
-      <small>미리보기는 예시입니다. 실제 적용은 검토 후 반영 흐름을 거칩니다.</small>
+      </ul>
     </section>
   );
-}
-
-function compactMethod(value: string): string {
-  const cleaned = value.replace(/^증거 탭 →\s*/, "").replace(/^사용자가\s*/, "");
-  return cleaned.length > 42 ? `${cleaned.slice(0, 39)}...` : cleaned;
-}
-
-function shortActionLabel(value: string): string {
-  if (value.includes("JSONL")) return "JSONL";
-  if (value.includes("diff")) return "Diff";
-  if (value.includes("메모")) return "작성";
-  if (value.includes("URL")) return "추가";
-  if (value.includes("설정")) return "설정";
-  if (value.includes("AI")) return "붙여넣기";
-  return value.replace(" 가져오기", "");
-}
-
-function rawDataLabel(policy: SourceWorkspaceSource["rawDataPolicy"]): string {
-  switch (policy) {
-    case "retained":
-      return "원문 보관";
-    case "summaryOnly":
-      return "요약 / 메타데이터";
-    case "redacted":
-      return "마스킹됨";
-    case "notCaptured":
-      return "원문 없음";
-    case "referenceOnly":
-      return "참조만";
-  }
 }
