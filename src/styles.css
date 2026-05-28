@@ -6689,6 +6689,9 @@ hr {
   min-height: 0;
   background: none;
   padding: 0 var(--page-shell-inset) var(--mori-space-6);
+  /* Top-align the columns so opening the inspector never stretches the
+     timeline column to the inspector's (taller) height. */
+  align-items: start;
 }
 
 .content-grid.content-grid-embedded .timeline-main {
@@ -6701,9 +6704,13 @@ hr {
    than against a page-level topbar, so relax the viewport-anchored max-height
    that assumed a 76px header. */
 .content-grid.content-grid-embedded > .inspector {
-  position: sticky;
-  top: 56px;
-  max-height: calc(100vh - 210px);
+  /* Flow with the page instead of pinning to a capped, internally-scrolled
+     panel — the page scrolls to reveal the whole inspector, so it never feels
+     clipped or "stuck" to a fixed height. */
+  position: static;
+  max-height: none;
+  overflow: visible;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Home ───────────────────────────────────────────────────────────────── */
