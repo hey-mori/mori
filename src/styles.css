@@ -5587,6 +5587,319 @@ hr {
   font-weight: 500;
 }
 
+/* 작업 대화 둘러보기 모달 — browse a detected conversation and preview its
+   content before turning it into a session. */
+.detected-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(20, 25, 40, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.detected-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(920px, 100%);
+  max-height: min(680px, 90vh);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--mori-surface, #fff);
+  box-shadow: 0 24px 64px rgba(20, 30, 45, 0.28);
+  overflow: hidden;
+}
+
+.detected-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.detected-modal-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.detected-modal-head p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.detected-modal-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.detected-modal-close:hover {
+  background: var(--panel-soft, #f4f4f7);
+  color: var(--text);
+}
+
+.detected-modal-body {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.detected-modal-list {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+  padding: 14px;
+  border-right: 1px solid var(--line);
+}
+
+.detected-modal-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detected-modal-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.detected-modal-scroll .start-detected {
+  margin-top: 0;
+}
+
+.detected-modal-preview {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px;
+}
+
+.detected-preview-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  height: 100%;
+  min-height: 240px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.detected-preview-empty svg {
+  color: var(--muted-2, var(--muted));
+}
+
+.detected-preview-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.detected-preview-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  word-break: keep-all;
+}
+
+.detected-preview-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.detected-preview-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 14px 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.detected-preview-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.detected-preview-stats svg {
+  color: var(--muted-2, var(--muted));
+}
+
+.detected-preview-ask {
+  margin-bottom: 16px;
+}
+
+.detected-preview-ask h4,
+.detected-preview-thread h4 {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.detected-preview-ask p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  word-break: keep-all;
+}
+
+.detected-preview-thread ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.detected-preview-thread li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.detected-preview-role {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--purple);
+  word-break: keep-all;
+}
+
+.detected-preview-thread li.is-reply .detected-preview-role {
+  color: var(--muted);
+}
+
+.detected-preview-text {
+  min-width: 0;
+  color: var(--text);
+  word-break: keep-all;
+}
+
+.detected-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.detected-modal-foot-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.detected-modal-foot-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 새 세션 records summary + browse trigger (the modal replaces the inline list). */
+.records-browse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: 1px dashed var(--line-strong, var(--line));
+  border-radius: 10px;
+  background: var(--panel-soft, #fafafa);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.records-browse-btn:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.records-browse-btn svg {
+  color: var(--purple);
+}
+
+.records-chosen {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--purple);
+  border-radius: 12px;
+  background: var(--mori-accent-soft, var(--purple-50));
+}
+
+.records-chosen-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--purple);
+}
+
+.records-chosen-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.records-chosen-main strong {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-chosen-main span {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Inline detected-conversation picker, grouped by project then session. */
 .start-detected {
   display: grid;

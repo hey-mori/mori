@@ -1,5 +1,4 @@
 import {
-  AlertCircle,
   ArrowRight,
   Braces,
   Check,
@@ -7,18 +6,14 @@ import {
   ClipboardPaste,
   Code2,
   FilePlus2,
-  FolderGit2,
   History,
   Lock,
-  RefreshCw,
-  Search,
   Settings2,
   Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
-  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -58,13 +53,12 @@ import {
 import { useMoriReviewStore } from "../../app/reviewStore";
 import { useMoriAppStore } from "../../app/store";
 import {
-  discoverClaudeCodeSessions,
   formatClaudeRelativeKo,
   getClaudeCodeSession,
-  isClaudeBridgeAvailable,
 } from "../../lib/claude/claudeTauri";
 import { buildImportCandidateFromClaudeCodeSession } from "../../lib/claude/claudeImport";
 import type { ClaudeCodeSessionMeta } from "../../lib/claude/types";
+import { DetectedConversationsModal } from "./DetectedConversationsModal";
 
 /**
  * 새 세션 — create one session, the way you'd provision one real thing.
@@ -159,6 +153,7 @@ export function StartSessionView() {
   const [pasteText, setPasteText] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
   const [creating, setCreating] = useState(false);
+  const [browseOpen, setBrowseOpen] = useState(false);
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const storageTarget = useMemo<SessionStorageTarget>(
@@ -207,8 +202,16 @@ export function StartSessionView() {
     setPasteText("");
   }
 
-  function selectDetected(meta: ClaudeCodeSessionMeta) {
-    setSelectedDetected((current) => (current?.filePath === meta.filePath ? null : meta));
+  // 기록에서 불러오기 opens the browse modal directly (the inline list is gone);
+  // selecting it keeps any prior pick so re-opening shows it highlighted.
+  function openRecords() {
+    setMethod("records");
+    setPasteText("");
+    setBrowseOpen(true);
+  }
+
+  function pickDetected(meta: ClaudeCodeSessionMeta) {
+    setSelectedDetected(meta);
     // File the import under the conversation's own project; user can change it.
     if (existingProjects.includes(meta.projectName)) setProjectChoice(meta.projectName);
   }
@@ -407,7 +410,7 @@ export function StartSessionView() {
                 disabled={!selectedAgent.detect}
                 status={selectedAgent.detect ? undefined : "곧"}
                 selected={method === "records"}
-                onSelect={() => chooseMethod("records")}
+                onSelect={openRecords}
               />
               <PickTile
                 icon={ClipboardPaste}
@@ -426,12 +429,35 @@ export function StartSessionView() {
             </div>
 
             {method === "records" ? (
-              <DetectedSessionPicker
-                agentName={selectedAgent.name}
-                supported={selectedAgent.detect}
-                selectedFilePath={selectedDetected?.filePath ?? null}
-                onSelect={selectDetected}
-              />
+              <div className="method-detail">
+                {selectedDetected ? (
+                  <div className="records-chosen">
+                    <span className="records-chosen-icon" aria-hidden="true">
+                      <History size={16} />
+                    </span>
+                    <span className="records-chosen-main">
+                      <strong>{selectedDetected.title}</strong>
+                      <span>
+                        {shortProjectLabel(selectedDetected.projectName)} · 메시지{" "}
+                        {selectedDetected.messageCount} ·{" "}
+                        {formatClaudeRelativeKo(selectedDetected.startedAt)}
+                      </span>
+                    </span>
+                    <Button variant="secondary" onClick={() => setBrowseOpen(true)}>
+                      다시 고르기
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="records-browse-btn"
+                    onClick={() => setBrowseOpen(true)}
+                  >
+                    <History size={16} aria-hidden="true" />
+                    <span>감지된 대화 둘러보기</span>
+                  </button>
+                )}
+              </div>
             ) : null}
 
             {method === "paste" ? (
@@ -496,176 +522,17 @@ export function StartSessionView() {
           요약과 메타데이터만 이 기기에 저장합니다. 원본 대화 전체는 보관하지 않습니다.
         </p>
       </FieldBlock>
+
+      {browseOpen && selectedAgent ? (
+        <DetectedConversationsModal
+          agentName={selectedAgent.name}
+          supported={selectedAgent.detect}
+          initialSelectedFilePath={selectedDetected?.filePath ?? null}
+          onPick={pickDetected}
+          onClose={() => setBrowseOpen(false)}
+        />
+      ) : null}
     </PageShell>
-  );
-}
-
-/**
- * Inline picker for an agent's detected work sessions. Detection is
- * desktop-only and real for Claude today; for an agent without detection, or
- * in browser mode, this renders an honest note instead of a fake list.
- *
- * Built for scale: a real machine can hold hundreds of conversations across
- * many projects, so the list is searchable, sorted most-recent-first, grouped
- * by project (most recently active project first), and confined to a bounded
- * scroll area rather than growing the page without limit. Selecting a row lifts
- * the choice up; the actual create happens through the right-rail action.
- */
-function DetectedSessionPicker({
-  agentName,
-  supported,
-  selectedFilePath,
-  onSelect,
-}: {
-  agentName: string;
-  supported: boolean;
-  selectedFilePath: string | null;
-  onSelect: (meta: ClaudeCodeSessionMeta) => void;
-}) {
-  const bridge = isClaudeBridgeAvailable();
-  const [sessions, setSessions] = useState<ClaudeCodeSessionMeta[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [query, setQuery] = useState("");
-
-  const load = useCallback(async () => {
-    if (!bridge || !supported) return;
-    setStatus("loading");
-    try {
-      setSessions(await discoverClaudeCodeSessions());
-      setStatus("ready");
-    } catch {
-      setStatus("error");
-    }
-  }, [bridge, supported]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return sessions;
-    return sessions.filter(
-      (session) =>
-        session.title.toLowerCase().includes(q) ||
-        session.projectName.toLowerCase().includes(q),
-    );
-  }, [sessions, query]);
-
-  const grouped = useMemo(() => {
-    const time = (value?: string) => {
-      const parsed = value ? Date.parse(value) : Number.NaN;
-      return Number.isFinite(parsed) ? parsed : 0;
-    };
-    const map = new Map<string, ClaudeCodeSessionMeta[]>();
-    for (const session of filtered) {
-      const list = map.get(session.projectName) ?? [];
-      list.push(session);
-      map.set(session.projectName, list);
-    }
-    for (const list of map.values()) list.sort((a, b) => time(b.startedAt) - time(a.startedAt));
-    // Projects ordered by their most-recent conversation, so active work leads.
-    return [...map.entries()].sort((a, b) => time(b[1][0]?.startedAt) - time(a[1][0]?.startedAt));
-  }, [filtered]);
-
-  if (!supported) {
-    return (
-      <p className="start-import-note">{agentName} 작업 기록 자동 감지는 준비 중입니다.</p>
-    );
-  }
-  if (!bridge) {
-    return (
-      <p className="start-import-note">
-        데스크톱 앱에서 {agentName} 작업 기록을 자동으로 감지합니다. 브라우저에서는 붙여넣기를
-        사용하세요.
-      </p>
-    );
-  }
-  if (status === "loading" || status === "idle") {
-    return (
-      <p className="start-import-note">
-        <RefreshCw size={14} aria-hidden="true" className="start-import-spin" /> 작업 기록을 불러오는 중...
-      </p>
-    );
-  }
-  if (status === "error") {
-    return (
-      <p className="start-import-note">
-        <AlertCircle size={14} aria-hidden="true" /> 작업 기록을 읽지 못했습니다.
-      </p>
-    );
-  }
-  if (sessions.length === 0) {
-    return <p className="start-import-note">감지된 대화가 없습니다.</p>;
-  }
-
-  return (
-    <div className="start-detected">
-      <div className="start-detected-toolbar">
-        <div className="start-detected-search">
-          <Search size={14} aria-hidden="true" />
-          <input
-            type="text"
-            value={query}
-            placeholder={`대화 검색 (${sessions.length}개)`}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="대화 검색"
-          />
-        </div>
-        <button
-          type="button"
-          className="start-detected-refresh"
-          onClick={() => void load()}
-          title="작업 기록 새로고침"
-          aria-label="작업 기록 새로고침"
-        >
-          <RefreshCw size={14} aria-hidden="true" />
-        </button>
-      </div>
-
-      {grouped.length === 0 ? (
-        <p className="start-import-note">검색 결과가 없습니다.</p>
-      ) : (
-        <div className="start-detected-scroll" role="radiogroup" aria-label="불러올 대화">
-          {grouped.map(([project, projectSessions]) => (
-            <section key={project} className="start-detected-group">
-              <header className="start-detected-group-head">
-                <FolderGit2 size={13} aria-hidden="true" />
-                <strong title={project}>{shortProjectLabel(project)}</strong>
-                <span>{projectSessions.length}</span>
-              </header>
-              <ul>
-                {projectSessions.map((session) => {
-                  const selected = selectedFilePath === session.filePath;
-                  return (
-                    <li key={session.filePath}>
-                      <button
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        className={`start-detected-row${selected ? " is-selected" : ""}`}
-                        onClick={() => onSelect(session)}
-                      >
-                        <span className="start-detected-main">
-                          <strong>{session.title}</strong>
-                          <span className="start-detected-meta">
-                            메시지 {session.messageCount} · {formatClaudeRelativeKo(session.startedAt)}
-                          </span>
-                        </span>
-                        <span
-                          className={`pick-mark${selected ? " is-selected" : ""}`}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
