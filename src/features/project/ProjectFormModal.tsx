@@ -94,6 +94,9 @@ export function ProjectFormModal({
             </span>
             <input
               autoFocus
+              // Reset the global control margin so the label→field gap is even
+              // across both fields (the textarea otherwise inherits a margin).
+              style={{ margin: 0 }}
               value={name}
               maxLength={80}
               placeholder="예: Mori 앱"
@@ -111,6 +114,7 @@ export function ProjectFormModal({
               설명 <em className="is-optional">선택</em>
             </span>
             <textarea
+              style={{ margin: 0 }}
               value={description}
               rows={3}
               placeholder="어떤 작업인지 간단히"
