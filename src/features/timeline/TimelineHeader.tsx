@@ -1,6 +1,6 @@
 import {
   Filter,
-  MessageSquare,
+  List,
   Rows3,
   Search,
   X,
@@ -52,26 +52,26 @@ export function TimelineToolbar({
   return (
     <div className="timeline-toolbar" role="toolbar" aria-label="타임라인 컨트롤">
       <div className="timeline-toolbar-left">
-        <div className="timeline-mode-switch" role="group" aria-label="타임라인 보기 방식">
-          <button
-            type="button"
-            className={`timeline-mode-option ${readingMode === "flow" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "flow"}
-            onClick={() => onReadingModeChange("flow")}
-            title="피드: 모든 활동(대화·코드·이슈 등)을 시간순으로 읽기"
-          >
-            <MessageSquare size={14} aria-hidden="true" />
-            피드
-          </button>
+        <div className="timeline-mode-switch" role="group" aria-label="흐름 보기 방식">
           <button
             type="button"
             className={`timeline-mode-option ${readingMode === "swimlane" ? "is-active" : ""}`}
             aria-pressed={readingMode === "swimlane"}
             onClick={() => onReadingModeChange("swimlane")}
-            title="타임라인: 카테고리 레인별로 활동 훑어보기"
+            title="타임라인: 시간 축에서 카테고리별로 언제·무엇이 겹쳤는지 훑어보기"
           >
             <Rows3 size={14} aria-hidden="true" />
             타임라인
+          </button>
+          <button
+            type="button"
+            className={`timeline-mode-option ${readingMode === "flow" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "flow"}
+            onClick={() => onReadingModeChange("flow")}
+            title="목록: 모든 활동을 시간순으로, 내용 미리보기와 함께 읽기"
+          >
+            <List size={14} aria-hidden="true" />
+            목록
           </button>
         </div>
       </div>

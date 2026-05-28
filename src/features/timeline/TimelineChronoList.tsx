@@ -16,14 +16,14 @@ import {
 } from "../../components/ui/MoriActionMenu";
 
 /**
- * Narrow-width Timeline fallback.
+ * 목록 (content list) — the reading mode that answers *what happened*.
  *
- * The swimlane canvas needs a wide frame and only scrolls horizontally. On
- * tablet / narrow widths that is awkward, so the Timeline renders this flat
- * vertical chronological list instead — every event and bundle in one
- * readable column, ordered by start time. Selecting a row drives the same
- * `selectedEventId` the canvas uses, so widening the window restores the
- * swimlane with the selection intact.
+ * The swimlane positions events on a time axis but reads as bare chips; this
+ * view stacks the same events as a single time-ordered column where each row
+ * carries a one-line content preview (the event's summary) so the work is
+ * scannable without opening the inspector. Selecting a row discloses the full
+ * summary + its trust / linked-item counts inline, and drives the same
+ * `selectedEventId` the swimlane uses, so switching views keeps the selection.
  */
 export function TimelineChronoList({
   model,
@@ -42,7 +42,7 @@ export function TimelineChronoList({
   if (items.length === 0) return null;
 
   return (
-    <ol className={`timeline-chrono-list is-${density}`} aria-label="Timeline chronological list">
+    <ol className={`timeline-chrono-list is-${density}`} aria-label="활동 목록">
       {items.map((item) => {
         const selected =
           item.id === selectedItemId ||
@@ -50,6 +50,10 @@ export function TimelineChronoList({
 
         if (item.kind === "bundle") {
           const vm = buildTimelineBundleViewModel(item);
+          const memberList = item.members
+            .slice(0, 5)
+            .map((member) => member.title)
+            .join(", ");
           return (
             <li key={item.id}>
               <button
@@ -64,16 +68,19 @@ export function TimelineChronoList({
                 </span>
                 <span className="timeline-chrono-body">
                   <strong>{vm.title}</strong>
-                  <small>{vm.typeMixLabel}</small>
+                  {item.summary ? (
+                    <span className="timeline-chrono-snippet">{oneLine(item.summary)}</span>
+                  ) : null}
+                  <small>
+                    {vm.typeMixLabel} · {item.count}개 이벤트
+                  </small>
                 </span>
-                <span className="timeline-chrono-meta">{item.count}개 이벤트</span>
               </button>
               {selected ? (
                 <div className="timeline-chrono-detail" role="region">
                   <p>{item.summary}</p>
                   <small>
-                    포함된 이벤트:{" "}
-                    {item.members.slice(0, 5).map((member) => member.title).join(", ")}
+                    포함된 이벤트: {memberList}
                     {item.members.length > 5 ? ` 외 ${item.members.length - 5}건` : ""}
                   </small>
                 </div>
@@ -113,6 +120,7 @@ function TimelineChronoEventRow({
   const menu = useContextMenuPosition();
   const vm = buildTimelineEventCardViewModel(event, sourceIndex ?? []);
   const Icon = activityKindIcons[vm.activityKind] ?? activityKindIcons.unknown;
+  const snippet = oneLine(event.summary);
   return (
     <li>
       <button
@@ -129,13 +137,12 @@ function TimelineChronoEventRow({
         </span>
         <span className="timeline-chrono-body">
           <strong>{vm.title}</strong>
+          {snippet ? <span className="timeline-chrono-snippet">{snippet}</span> : null}
           <small>
             {vm.categoryLabel} · {vm.trust.label}
+            {vm.primaryMeta ? ` · ${vm.primaryMeta}` : ""}
           </small>
         </span>
-        {vm.primaryMeta ? (
-          <span className="timeline-chrono-meta">{vm.primaryMeta}</span>
-        ) : null}
       </button>
       {selected ? (
         <div className="timeline-chrono-detail" role="region">
@@ -156,10 +163,15 @@ function TimelineChronoEventRow({
   );
 }
 
+/** Collapse a summary to a single readable preview line for a list row. */
+function oneLine(text: string | undefined, max = 120): string {
+  const normalized = (text ?? "").replace(/\s+/g, " ").trim();
+  return normalized.length > max ? `${normalized.slice(0, max - 1)}…` : normalized;
+}
+
 /**
- * One calm detail line for a selected chronological-list row. At narrow
- * widths there is no side inspector, so the selected row discloses its
- * trust + linked-item counts inline — progressive disclosure on selection.
+ * One calm detail line for a selected row: trust + linked-item counts, the
+ * progressive disclosure the side inspector would otherwise carry.
  */
 function eventDetailMeta(event: TimelineEvent): string {
   const parts = [buildTrustGlyph(event.trustLevel, event.confidence).label];

@@ -29,7 +29,7 @@ import {
   FULL_MINIMAP_VIEWPORT,
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
-import { ConversationFlowView } from "./ConversationFlowView";
+import { TimelineChronoList } from "./TimelineChronoList";
 import { isConversationSession } from "../../lib/timeline/conversationFlow";
 import { TimelineEmptyState, TimelineNoResultsState } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
@@ -272,10 +272,11 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   // is selected. Otherwise an "open" inspector with no selection is just an
   // empty band of whitespace.
   const inspectorVisible = !inspectorHidden && Boolean(selectedItem);
-  // Timeline mode ALWAYS renders the swimlane canvas — it scrolls horizontally
-  // on narrow screens and never auto-degrades to a flat list. The vertical 피드
-  // view appears only when the user explicitly selects the 피드 reading mode.
-  const useConversationFlow = mode === "timeline" && readingMode === "flow";
+  // The 흐름 tab offers two reading modes: the swimlane canvas (시간 축) and a
+  // content-rich chronological 목록. The swimlane never auto-degrades to a list
+  // on narrow screens; the 목록 appears only when the user picks it (or when a
+  // conversation-dominant session defaults to it).
+  const useListView = mode === "timeline" && readingMode === "flow";
   const buildEventMenuItems = useCallback(
     (event: TimelineEvent): MoriMenuItemSpec[] => {
       const issueCreated = analysis ? isEventPromotedToIssue(analysis, event.id) : false;
@@ -378,8 +379,8 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
               setSearchQuery("");
             }}
           />
-        ) : useConversationFlow ? (
-          <ConversationFlowView
+        ) : useListView ? (
+          <TimelineChronoList
             model={model}
             selectedItemId={selectedItem?.id ?? null}
             onSelect={selectAndShowInspector}
