@@ -430,6 +430,47 @@ that is called out.
   and an in-app notification center are planned, not implemented;
   a chatbot / avatar is a non-goal.
 
+**Home and Project Workspace**
+
+- Home overview (`HomeView`) with a contribution heatmap, metric lens
+  toggle (세션 / 결정 / 미해결 / 다음 할 일), and an activity stat strip
+  (세션 / 프로젝트 / 현재 연속 / 최장 연속 / 최근 활동). Recent sessions
+  list and companion signals card.
+- Shared `WorkActivityCard` (`src/components/activity/WorkActivityCard.tsx`)
+  owns the full activity panel (header, `ContributionHeatmap`, stat
+  strip) under the `.home-activity` CSS classes. Both Home and the
+  project page render through this component so typography is identical.
+  Home passes five metrics + the lens toggle; the project page passes
+  four (no 프로젝트) and no toggle.
+- Shared `ContributionHeatmap`
+  (`src/components/activity/ContributionHeatmap.tsx`) renders the
+  heatmap grid from `buildContributionGrid`. Callers differ only in
+  timestamps and metric.
+- Project Workspace page (`ProjectView`, `ViewKey: "project"`) with a
+  hero (project name, full path, description), 2-column layout (left:
+  activity card + synthesis section; right: sessions rail), and an
+  inline accepted-memory list capped at six rows.
+- Project management: user-created projects with create / edit / delete
+  via `useMoriProjectStore`. Session-derived projects (discovered from
+  `sourceLabel`) support rename + description but not delete.
+  `projectDisplayName` resolves the display name from a user override
+  or the raw key.
+- Project activity stats (`buildProjectActivityStats`) computing
+  sessions, currentStreak, longestStreak, lastActive from session
+  timestamps. Colocated tests.
+- Project synthesis (`buildProjectSynthesis` +
+  `useProjectSynthesis` hook) producing a cross-session roll-up of
+  decisions, open issues, and pending next actions. The synthesis
+  section renders each group as boxed `MoriObjectRow` items in the same
+  compact row format as the sessions rail. Per-group counts are inline
+  labels, not a separate band or chart.
+- Workspace browser (`WorkspaceView`, `ViewKey: "workspace"`) listing
+  all projects, session counts, and a "new project" action.
+- Primary navigation reduced to 홈 / 소스 / 프로젝트. 메모리 is no longer
+  a standing sidebar tab; durable project memory lives on each project
+  page. The memory overview and consolidation review remain routable
+  through a project's action and the command palette.
+
 If something in this list does not match repo reality, treat the
 mismatch as a documentation bug and update this section rather than
 silently relying on memory.
@@ -578,23 +619,27 @@ confidence labels, and explicit sensitivity tags. An append-only
 transition.
 
 **Memory Audit Trail.** Every accept / edit / discard / keep-watching
-/ defer / apply / undo produces a `ReviewAction`. A future UI will
-expose a filterable audit log; Undo Apply will create a new audit row
-with `actionType: "revert"` (history preserved, never deleted).
+/ defer / apply / undo produces a `ReviewAction`. The filterable audit
+log UI is shipped (`MemoryAuditTrailCard`). Revert is shipped:
+`planMemoryReviewRevert` gates eligibility, `applyMemoryRevertProposal`
+restores status and writes a `revert` `StoredMemoryReviewAction`
+(history preserved, never deleted).
 
-**Stale / contradiction review (planned).** The proposal helper will
-detect pruned-source references and conflicting accepted decisions
-and emit `staleMemory` / `contradiction` proposals. The Consolidation
-Review Surface presents the detection as a review task, not as an AI
-verdict.
+**Stale / contradiction review.** `buildStaleMemoryProposals` and
+`buildContradictionProposals` emit `staleMemory` / `contradiction`
+proposals. The Consolidation Review Surface presents these as review
+tasks, not as AI verdicts. Accepting a proposal transitions the
+referenced memory to `stale` or `contradicted` status. See Section 4
+for implementation details.
 
-**Resume / Reports integration (planned).** The Resume Prompt and
-Reports builders will consume `AcceptedProjectMemory[]` under a
-conservative inclusion policy: only `accepted` (and not stale /
-contradicted / superseded / retired), `resumeEligible: true`,
-sensitivity-compatible memories appear as current guidance. Stale /
-contradicted memories appear only under a clearly labelled
-"Limitations / unresolved memory" section.
+**Resume / Reports integration.** The Resume Prompt and Reports
+builders consume `AcceptedProjectMemory[]` under a conservative
+inclusion policy: only `accepted` (and not stale / contradicted /
+superseded / retired), `resumeEligible: true`, sensitivity-compatible
+memories appear as current guidance. Stale / contradicted memories
+appear only under a clearly labelled "Limitations / unresolved memory"
+section. See Section 4 for the `isResumeGuidanceMemory` and
+`isReportGuidanceMemory` implementations.
 
 ## 9. Data and Storage Strategy
 
@@ -650,8 +695,11 @@ Mori is a calm productivity app. The product feel target:
 - **No fake connected states.** A connector that needs the desktop
   app shows "requires the Tauri app" and the action stays disabled
   in browser mode.
-- **No game-like UI for core work surfaces.** No streaks, no badges
-  for usage frequency, no notifications competing for attention.
+- **No game-like UI for core work surfaces.** Activity surfaces
+  (contribution heatmap, streak stats) are calm, informational context
+  for the user's own review, not gamified badges, achievement trophies,
+  or attention-seeking notifications. No push notifications competing
+  for attention.
 - **Korean-first copy** in user-facing strings where the existing
   surfaces are Korean; new surfaces should match the surrounding
   copy.
@@ -692,6 +740,22 @@ guardrails, not preferences.
   is not authorization to `git push`.
 - **Do not start new milestones without approval.** Propose the
   next step and wait.
+- **Concurrent autonomous loop awareness.** The Mori dev loop
+  (`docs/mori-autonomous-loop.md`) edits the repo mid-session. HEAD
+  moves under you. Stage only your own files by name (`git add
+  <path>`), never `git add -A` or `git add .`. Verify
+  `git diff --cached --name-status` before committing. If loop-edited
+  files fail typecheck, verify your files are clean in isolation and
+  commit only yours.
+- **Shared CSS conventions.** `styles.css` is loop-hot (the
+  autonomous loop edits it frequently). Avoid unnecessary changes
+  there. The `.home-activity` class cascade owns activity-panel
+  typography for both Home and Project; do not duplicate those rules
+  or create per-surface overrides. New presentational components
+  should reuse existing design-token classes before adding new ones.
+- **Dead code.** `src/lib/project/projectActivity.ts` (the old
+  sparkline helper) is dead code, imported only by its own test.
+  It can be removed in a cleanup pass.
 
 ## 12. Validation Policy
 
@@ -719,51 +783,34 @@ Capability-based buckets. Order is suggested; the user has the final
 say. Each bucket should be verified against the current repo state
 before starting.
 
+**Shipped (verified in Section 4):**
+
+- ~~Resume and Report Memory Integration~~. Shipped.
+- ~~SQLite Accepted Memory Storage~~. Shipped (V003, V004).
+- ~~Memory Audit Trail UI~~. Shipped (filterable log + revert flow).
+- ~~Stale Memory Review~~. Shipped (`buildStaleMemoryProposals`).
+- ~~Contradiction Review~~. Shipped (`buildContradictionProposals`).
+- ~~.mori Package Accepted Memory Export~~. Shipped
+  (`consolidatedMemories` + `auditTrail` slices, zip round-trip,
+  review-on-import).
+- ~~Queryable Memory~~. Shipped (`searchAcceptedMemories`,
+  `QueryableMemoryCard`, related-references search).
+
+**Remaining:**
+
 1. **Local Connector Capture Bridge.** Make the Claude Code hook,
    Codex CLI wrapper, terminal connector, and Git connector
    templates reliable on a real user workflow. Document setup,
    verify JSONL output round-trips through Import Review, and add
    fixture tests so regressions surface.
-2. **Resume and Report Memory Integration.** Wire
-   `StoredAcceptedProjectMemory` into the Resume Prompt builder
-   (`projectMemoryResumePrompt.ts`) and the Reports builder under
-   the inclusion policy: only `accepted` / current /
-   sensitivity-compatible memories appear as guidance; stale and
-   contradicted memories surface only under a clearly labelled
-   limitations section.
-3. **SQLite Accepted Memory Storage.** Add a migration
-   (`V003__consolidated_memories.sql`) for
-   `consolidated_memories` + `consolidated_memory_audit`, add the
-   Rust command surface, and update `SessionPersistenceService` to
-   prefer SQLite-backed accepted memory in desktop mode.
-4. **Memory Audit Trail UI.** Filterable audit log surface (action /
-   actor / timestamp / target memory / proposal) reachable from the
-   Memory page. Add an Undo Apply action that writes a new
-   `ReviewAction` with `actionType: "revert"`.
-5. **Stale Memory Review.** Extend the Consolidation Proposal
-   Preview helper to emit `staleMemory` proposals from pruned-source
-   references, expired `reevaluationTriggers`, and status
-   transitions detected by the cross-session aggregator.
-6. **Contradiction Review.** Extend the helper to emit
-   `contradiction` proposals when two accepted decisions disagree on
-   a normalised title. Surface them as review tasks in the
-   Consolidation Review Surface.
-7. **.mori Package Accepted Memory Export.** Add a
-   `consolidatedMemories[]` + `auditTrail[]` slice to `MoriPackageV0`
-   with a schema bump. Import path re-enters memories as `proposed`
-   so they pass through review again.
-8. **CLI Wrapper for Claude / Codex workflows.** A small `mori` CLI
+2. **CLI Wrapper for Claude / Codex workflows.** A small `mori` CLI
    that wraps `claude` / `codex` invocations and writes canonical
    Connector JSONL, removing the need to install template scripts
    manually.
-9. **IDE / Terminal Integration.** VS Code / Cursor extension
+3. **IDE / Terminal Integration.** VS Code / Cursor extension
    sending workspace events to a local Mori endpoint with explicit
    opt-in and scoping. Terminal integration: a shell-history
    connector with redaction.
-10. **Queryable Memory.** Local natural-language query over accepted
-    memory + evidence, with citations into Mori sessions. Pure local
-    derivation first; optional LLM-assisted synthesis only against a
-    user-chosen local endpoint.
 
 Before starting any milestone, the agent must verify the bucket is
 still the smallest valuable next step and get user approval.
