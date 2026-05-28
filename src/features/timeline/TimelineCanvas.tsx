@@ -111,7 +111,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
     const update = () => {
       const width = element.clientWidth;
       if (!width) return;
-      const next = Math.min(MAX_FRAME_WIDTH, Math.max(MIN_FRAME_WIDTH, width));
+      const next = Math.min(MAX_FRAME_WIDTH, Math.max(MIN_FRAME_WIDTH, width + LANE_LABEL_WIDTH));
       setFrameWidth(next);
       onFrameWidth?.(next);
       emitViewport();
@@ -206,9 +206,9 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
           the scroller's left edge and the horizontal scrollbar covers content. */}
       <div className="timeline-scroller" ref={scrollerRef}>
         <div
-          className={`timeline-frame ${model.mode === "flow" ? "compact" : ""}`}
+          className={`timeline-frame ${model.mode === "flow" ? "compact" : ""}${model.focusActive ? " is-focus-active" : ""}`}
           style={{
-            width: `${Math.max(layout.frameWidth, frameWidth + layout.contentLeftPx)}px`,
+            width: `${Math.max(layout.frameWidth, frameWidth)}px`,
             height: `${layout.frameHeight}px`,
             marginLeft: `-${layout.contentLeftPx}px`,
           }}

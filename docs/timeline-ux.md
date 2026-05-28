@@ -190,15 +190,23 @@ rules:
   single icon pill — the confidence percent lives only in the tooltip and
   the inspector. This keeps the header alignment identical across cards.
 
-## Single-row lane model
+## Split Lane Header And Plot
 
-The base Timeline stays lane-based and mostly single-row. Mori should feel
-close to the reference: stable lanes, readable cards, secondary
-relationships, and a right inspector that does the explanatory work.
+The base Timeline stays lane-based, but each row has two separate regions:
 
-Dense periods are not solved with unlimited lane stacking, and they are
-not solved with a generic `+N more` cluster. Dense moments must be
-represented as meaningful **work-flow bundles**.
+- the left lane header shows only the lane icon, label, and count;
+- the right plot area owns the time axis, grid lines, event tokens, hover
+  previews, and relationship anchors.
+
+Mori should preserve the time axis first: a 10:06 event must stay visually
+near 10:06, but the row should not grow into a transcript when many events
+arrive in the same lane.
+
+Dense periods are handled in two tiers:
+
+- nearby events stay individual as compact one-row tokens in the plot area;
+- bundles are a fallback for genuinely overfull secondary context, not the
+  default answer for small bursts.
 
 A display item is therefore one of:
 
@@ -206,6 +214,28 @@ A display item is therefore one of:
 - `bundle` — a dense work moment summarized into one intentional card.
 
 The layout engine operates on display items, not directly on raw events.
+
+## Interval Events
+
+Timeline events are intervals, not just dots:
+
+- conversation events represent the time from the relevant turn/work unit's
+  start to its observed end;
+- code/file events represent the editing or command span when the source
+  provides both endpoints;
+- review/decision/research/note events follow the same `start` / `end`
+  contract when the capture path can infer it.
+
+The canvas treats card width as a duration hint. Width is clamped by density so
+a long event does not swallow the whole lane, and an event with no known end
+collapses to the minimum compact token. The exact start/end remains available
+in the hover preview and inspector.
+
+This is intentional: if events are close together, Mori must not invent a later
+timestamp merely to avoid overlap. The time position stays honest; when there
+is too much detail to read in one lane, the user should use hover, selection
+focus, zoom/minimap, or the chronological list. Vertical stacking and bundling
+remain fallback strategies, not the default reading model.
 
 ## Work-flow bundle model
 
@@ -218,16 +248,16 @@ The layout engine operates on display items, not directly on raw events.
    - decision events
    - events linked to decisions
    - events with stronger evidence density
-4. Bundle low-importance secondary context when those events would make the
-   lane unreadable.
+4. Keep normal bursts individual; compact tokens and hover previews absorb
+   close timestamps without growing the lane.
 5. Generate a title and summary from the dominant lane/type mix instead of
    collapsing to a generic count.
 6. If a lane still becomes too dense, merge only secondary neighbors while
    keeping preserved items individual.
 
-Bundle cards prioritise: time range, event count, a meaningful title, the
-dominant type mix, and evidence/decision/issue counts. Long summary copy
-lives in the inspector, not inside the lane card.
+Bundle cards prioritise: time range, event count, a meaningful title, and the
+dominant type mix. Long summary copy lives in the hover preview and inspector,
+not inside the lane card.
 
 ## Focus interaction model
 
@@ -243,6 +273,9 @@ The Timeline has exactly three focus tiers:
   pointer stays on it.
 - **Click** an event card → pins the selection. The Inspector and the
   relationship layer follow the pinned selection.
+- In Timeline mode, once a selected item has connected neighbours, unrelated
+  cards fade back. The selected item and directly related items stay fully
+  legible; the rest remains present as context.
 - **Hover / click a bundle** → Mori focuses the bundle's member events and
   any directly related downstream/upstream entities.
 - **Clear focus** on Flow Focus moves the selection back to the first event

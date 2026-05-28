@@ -48,33 +48,42 @@ describe("timeline stress fixture", () => {
     expect(lanes.size).toBeGreaterThanOrEqual(6);
   });
 
-  it("keeps every lane on a single row even under bursts", () => {
-    // Clustering merges day-scale bursts into bundles upstream, so no lane
-    // ever needs more than its single row.
+  it("keeps bursts on a single lane rail", () => {
     const model = stressModel();
-    for (const lane of model.layout.lanes) {
-      expect(lane.rowCount).toBeLessThanOrEqual(1);
-    }
+    expect(model.layout.lanes.every((lane) => lane.rowCount <= 1)).toBe(true);
   });
 
-  it("clusters the morning AI-conversation burst into at least one bundle", () => {
+  it("keeps the morning AI-conversation burst as individual events", () => {
     const model = stressModel();
     const aiLane = model.lanes.find((lane) => lane.type === "conversation");
     expect(aiLane).toBeDefined();
-    const bundles = aiLane!.items.filter((item) => item.kind === "bundle");
-    expect(bundles.length).toBeGreaterThanOrEqual(1);
+    const morningBurst = aiLane!.items.filter(
+      (item) => item.kind === "event" && item.event.connectorEventId?.startsWith("claude-code::"),
+    );
+    expect(morningBurst.length).toBeGreaterThanOrEqual(6);
   });
 
-  it("flags the connector-imported morning burst as a same-source bundle", () => {
+  it("keeps connector identity on each individual morning burst event", () => {
     const model = stressModel();
     const aiLane = model.lanes.find((lane) => lane.type === "conversation");
-    const sameSourceBundle = aiLane!.items.find(
-      (item) => item.kind === "bundle" && item.sameConnectorSource !== null,
-    );
-    expect(sameSourceBundle).toBeDefined();
+    const connectorIds = aiLane!.items
+      .filter((item) => item.kind === "event" && item.event.connectorEventId?.startsWith("claude-code::"))
+      .map((item) => (item.kind === "event" ? item.event.connectorEventId : null));
+    expect(connectorIds.length).toBeGreaterThanOrEqual(6);
     expect(
-      sameSourceBundle?.kind === "bundle" ? sameSourceBundle.sameConnectorSource : null,
-    ).toBe("claude-code");
+      connectorIds.every((connectorEventId) => connectorEventId?.startsWith("claude-code::")),
+    ).toBe(true);
+  });
+
+  it("keeps the connector-imported morning burst on one row", () => {
+    const model = stressModel();
+    const burstLayouts = model.layout.items.filter((item) =>
+      item.memberEventIds.some((eventId) => {
+        const event = stressEvents.find((candidate) => candidate.id === eventId);
+        return event?.connectorEventId?.startsWith("claude-code::");
+      }),
+    );
+    expect(new Set(burstLayouts.map((item) => item.rowIndex))).toEqual(new Set([0]));
   });
 
   it("renders a long ranged event wider than an instantaneous one", () => {

@@ -13,6 +13,7 @@ function laidOutItem(overrides: Partial<LaidOutTimelineItem> & { itemId: string 
     kind: overrides.kind ?? "event",
     laneType: overrides.laneType ?? "conversation",
     memberEventIds: overrides.memberEventIds ?? [overrides.itemId],
+    rowIndex: overrides.rowIndex ?? 0,
     x: overrides.x ?? 0,
     y: overrides.y ?? 0,
     width: overrides.width ?? 180,

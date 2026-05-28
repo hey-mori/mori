@@ -34,7 +34,7 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { buildInspectorViewModel } from "../../lib/timeline/timelineViewModel";
-import { deriveSourceFamily, getImportanceLabel } from "../../lib/timeline/activityModel";
+import { deriveSourceFamily } from "../../lib/timeline/activityModel";
 import { sourceFamilyIcons } from "./lib/activityIcons";
 
 export function EventInspector({
@@ -77,9 +77,7 @@ export function EventInspector({
     event: selectedEvent,
     view: session,
   });
-  const trust = describeTrustLevel(selectedEvent.trustLevel);
   const activity = inspector.activity;
-  const projectHint = inspector.projectHint;
 
   function handleCopy() {
     const text = `${formatTimeRange(selectedEvent.start, selectedEvent.end)}\n${selectedEvent.title}\n\n${selectedEvent.summary}`;
@@ -112,10 +110,7 @@ export function EventInspector({
           <h3 className="inspector-title">{selectedEvent.title}</h3>
         )}
         <p className="inspector-time">{formatTimeRange(selectedEvent.start, selectedEvent.end)}</p>
-        <p className="inspector-work-context">
-          {projectHint.projectLabel} / {activity.sourceVisuals.label} / 중요도 {getImportanceLabel(activity.importance)}
-        </p>
-        <InspectorMetaStrip event={selectedEvent} />
+        <p className="inspector-work-context">{activity.sourceVisuals.label}</p>
       </header>
 
       <section className="inspector-section">
@@ -144,16 +139,7 @@ export function EventInspector({
           title="근거 / 신뢰도"
           hint={`${inspector.sources.length}개 출처`}
         />
-        <div className="inspector-trust-card">
-          <strong>{trust.label}</strong>
-          <span>{trustCopy(selectedEvent.trustLevel)}</span>
-          <small>
-            작성 주체: {selectedEvent.createdBy}
-            {selectedEvent.userModified ? " · 사용자 수정함" : ""}
-          </small>
-        </div>
         <EventEvidenceChips sources={inspector.sources} />
-        <SourcesList sources={inspector.sources} />
       </section>
 
       <section className="inspector-section">
@@ -192,7 +178,7 @@ export function EventInspector({
       ) : null}
 
       <section className="inspector-section">
-        <SectionHeader title="액션" hint="구현됨" />
+        <SectionHeader title="액션" />
         <div className="inspector-actions-row">
           <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
             흐름 추적
@@ -201,7 +187,7 @@ export function EventInspector({
             요약 복사
           </Button>
         </div>
-        {onEditEvent || onCreateIssue || onSplitEvent || onMergeEvent ? (
+        {canWrite && (onEditEvent || onCreateIssue || onSplitEvent || onMergeEvent) ? (
           <div className="inspector-actions-row">
             {onEditEvent ? (
               <Button
@@ -269,6 +255,7 @@ export function EventInspector({
         ) : null}
       </section>
 
+      {selectedEvent.userNote || (canWrite && onEditEvent) ? (
       <section className="inspector-section">
         <SectionHeader title="메모" />
         {noteEditing && onEditEvent ? (
@@ -316,6 +303,7 @@ export function EventInspector({
           </>
         )}
       </section>
+      ) : null}
     </aside>
   );
 }
@@ -417,7 +405,12 @@ function LinkedRows({
   // Each linked record carries its own Review target — a click deep-links to
   // that exact issue / decision / next action, not just the first of a group.
   // Artifacts have no Review home, so they render as plain context.
-  const groups = getTimelineInspectorReviewLinks({ issues, decisions, nextActions, artifacts });
+  const groups = getTimelineInspectorReviewLinks({ issues, decisions, nextActions, artifacts }).filter(
+    (group) => group.items.length > 0,
+  );
+  if (groups.length === 0) {
+    return <p className="inspector-empty">연결된 항목이 없습니다.</p>;
+  }
   return (
     <ul className="inspector-linked-rows">
       {groups.map((group) => {

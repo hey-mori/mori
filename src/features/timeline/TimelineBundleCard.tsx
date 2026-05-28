@@ -1,17 +1,15 @@
+import { useCallback, useState, type FocusEvent, type MouseEvent } from "react";
 import { Layers3 } from "lucide-react";
 import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { TimelineDisplayBundle } from "../../lib/timeline/displayItems";
 import { buildTimelineBundleViewModel } from "./lib/timelineCards";
-import { densityClassName } from "./TimelineEventCard";
+import {
+  densityClassName,
+  FloatingTimelineHoverCard,
+  type TimelineHoverPreview,
+} from "./TimelineEventCard";
 
-/**
- * Bundle card.
- *
- * Reads from `TimelineBundleViewModel` (built once per bundle) so the JSX
- * only handles layout + class names. The view model carries the time range,
- * tone, type-mix label, footer parts, aria label, and tooltip.
- */
 export function TimelineBundleCard({
   bundle,
   layout,
@@ -28,50 +26,58 @@ export function TimelineBundleCard({
   onHover: (itemId: string | null) => void;
 }) {
   const vm = buildTimelineBundleViewModel(bundle);
-  const showFooter = density === "comfortable";
-  const hasDensity = vm.densityProfile.some((value) => value > 0);
+  const [hoverAnchor, setHoverAnchor] = useState<DOMRect | null>(null);
+  const preview: TimelineHoverPreview = {
+    meta: [vm.timeLabel, `${bundle.count}개 이벤트`, vm.typeMixLabel].filter((item): item is string =>
+      Boolean(item),
+    ),
+    title: vm.title,
+    summary: bundle.summary,
+  };
+
+  const showHover = useCallback(
+    (target: HTMLElement) => {
+      setHoverAnchor(target.getBoundingClientRect());
+      onHover(bundle.id);
+    },
+    [bundle.id, onHover],
+  );
+
+  const hideHover = useCallback(() => {
+    setHoverAnchor(null);
+    onHover(null);
+  }, [onHover]);
 
   return (
-    <button
-      className={`timeline-bundle-card card-${vm.tone} ${focusStateClassName(focusState)} ${densityClassName(density)}`}
-      onClick={() => onSelect(bundle.id)}
-      onMouseEnter={() => onHover(bundle.id)}
-      onMouseLeave={() => onHover(null)}
-      style={{
-        left: `${layout.x}px`,
-        top: `${layout.y}px`,
-        width: `${layout.width}px`,
-        height: `${layout.height}px`,
-      }}
-      type="button"
-      aria-pressed={focusState === "selected"}
-      aria-label={vm.ariaLabel}
-      title={vm.buttonTitle}
-    >
-      <header className="timeline-bundle-card-header">
-        <span className={`event-card-time tone-${vm.tone}`}>
-          <Layers3 size={11} aria-hidden="true" />
-          {vm.timeLabel}
+    <>
+      <button
+        className={`timeline-bundle-card card-${vm.tone} ${focusStateClassName(focusState)} ${densityClassName(density)}`}
+        onClick={() => onSelect(bundle.id)}
+        onMouseEnter={(e: MouseEvent<HTMLButtonElement>) => showHover(e.currentTarget)}
+        onMouseLeave={hideHover}
+        onFocus={(e: FocusEvent<HTMLButtonElement>) => showHover(e.currentTarget)}
+        onBlur={hideHover}
+        style={{
+          left: `${layout.x}px`,
+          top: `${layout.y}px`,
+          width: `${layout.width}px`,
+          height: `${layout.height}px`,
+        }}
+        type="button"
+        aria-pressed={focusState === "selected"}
+        aria-label={vm.ariaLabel}
+        data-preview={`${vm.timeLabel} · ${bundle.count}개 이벤트\n${vm.title}\n${bundle.summary}`}
+      >
+        <span className="event-card-row">
+          <span className={`event-card-source-mark tone-${vm.tone} mark-bundle`} aria-hidden="true">
+            <Layers3 size={12} strokeWidth={2.2} />
+          </span>
+          <span className="event-card-time">{vm.timeLabel}</span>
+          <span className="timeline-bundle-count">{bundle.count}</span>
+          <strong className="timeline-bundle-title">{vm.title}</strong>
         </span>
-        <span className="timeline-bundle-count">{bundle.count}개 이벤트</span>
-      </header>
-      <strong className="timeline-bundle-title">{vm.title}</strong>
-      {showFooter && (vm.typeMixLabel || hasDensity) ? (
-        <footer className="timeline-bundle-footer">
-          {vm.typeMixLabel ? <span>{vm.typeMixLabel}</span> : null}
-          {hasDensity ? (
-            <span
-              className={`timeline-bundle-density tone-${vm.tone}`}
-              aria-hidden="true"
-              title="이 묶음의 시간대별 활동 밀도"
-            >
-              {vm.densityProfile.map((value, index) => (
-                <span key={index} style={{ height: `${Math.max(16, Math.round(value * 100))}%` }} />
-              ))}
-            </span>
-          ) : null}
-        </footer>
-      ) : null}
-    </button>
+      </button>
+      <FloatingTimelineHoverCard anchor={hoverAnchor} preview={preview} />
+    </>
   );
 }

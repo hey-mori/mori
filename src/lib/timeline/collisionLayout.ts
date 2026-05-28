@@ -19,6 +19,7 @@ export type LaidOutTimelineItem = {
   kind: TimelineDisplayItem["kind"];
   laneType: ActivityLaneId;
   memberEventIds: string[];
+  rowIndex: number;
   x: number;
   y: number;
   width: number;
@@ -53,14 +54,12 @@ export type TimelineLayout = {
 };
 
 // Event cards and bundle cards share one height per density mode, so the lane
-// row height stays constant regardless of which items the lane carries. Card
-// *width* is no longer fixed — it is duration-aware (`DENSITY_WIDTH_BOUNDS` +
-// `computeItemWidth`). The dense tier (38px) fits icon + time + one truncated
-// title row with no footer, tuned for day-scale (30-100+ event) scanning.
+// row height stays constant regardless of which items the lane carries. Compact
+// cards are one-line time tokens; prose lives in the hover preview.
 const DENSITY_CARD_HEIGHT: Record<TimelineDensity, number> = {
   comfortable: 68,
-  compact: 54,
-  dense: 38,
+  compact: 34,
+  dense: 28,
 };
 
 // Duration-aware card width. A card's width is the pixel span of its
@@ -73,8 +72,8 @@ const DENSITY_WIDTH_BOUNDS: Record<
   { eventMin: number; eventMax: number; bundleMin: number; bundleMax: number }
 > = {
   comfortable: { eventMin: 120, eventMax: 300, bundleMin: 168, bundleMax: 324 },
-  compact: { eventMin: 108, eventMax: 252, bundleMin: 150, bundleMax: 272 },
-  dense: { eventMin: 96, eventMax: 200, bundleMin: 128, bundleMax: 216 },
+  compact: { eventMin: 74, eventMax: 168, bundleMin: 92, bundleMax: 190 },
+  dense: { eventMin: 58, eventMax: 124, bundleMin: 74, bundleMax: 140 },
 };
 
 const DEFAULT_LANE_OFFSET = 38;
@@ -119,7 +118,7 @@ export function computeTimelineLayout(
   // A consistent band height makes the swimlane read as one even grid (the
   // user explicitly wants equal-height lanes); an empty lane shows just its
   // label in a full-height, de-emphasised band rather than a slim sliver.
-  const laneHeight = LANE_VERTICAL_PADDING * 2 + cardHeight;
+  const baseLaneHeight = LANE_VERTICAL_PADDING * 2 + cardHeight;
 
   const placed: LaidOutTimelineItem[] = [];
   const lanes: LaneLayout[] = [];
@@ -127,9 +126,6 @@ export function computeTimelineLayout(
   for (const type of options.laneOrder) {
     const laneItems = grouped.get(type) ?? [];
     const laneTop = cursorY;
-    const hasItems = laneItems.length > 0;
-    const thisLaneHeight = laneHeight;
-    const y = laneTop + LANE_VERTICAL_PADDING;
     const placements = layoutLaneRow(
       laneItems,
       range,
@@ -138,12 +134,17 @@ export function computeTimelineLayout(
       contentWidthPx,
       cardGap,
     );
+    const hasItems = placements.length > 0;
+    const rowCount = hasItems ? 1 : 0;
+    const thisLaneHeight = baseLaneHeight;
     for (const placement of placements) {
+      const y = laneTop + LANE_VERTICAL_PADDING;
       placed.push({
         itemId: placement.item.id,
         kind: placement.item.kind,
         laneType: type,
         memberEventIds: placement.item.memberEventIds,
+        rowIndex: 0,
         x: placement.x,
         y,
         width: placement.width,
@@ -155,7 +156,7 @@ export function computeTimelineLayout(
         anchorCenter: { x: placement.x + placement.width / 2, y: y + cardHeight / 2 },
       });
     }
-    lanes.push({ type, top: laneTop, height: thisLaneHeight, rowCount: hasItems ? 1 : 0 });
+    lanes.push({ type, top: laneTop, height: thisLaneHeight, rowCount });
     cursorY += thisLaneHeight;
   }
 
@@ -195,17 +196,15 @@ type RowPlacement = {
   item: TimelineDisplayItem;
   x: number;
   width: number;
+  rowIndex: number;
 };
 
 /**
- * Lay out one lane on a single row.
+ * Lay out one lane as a single compact rail.
  *
- * Each card starts at its true time position. A minimal left-to-right
- * declutter then slides a card right only far enough to clear its
- * neighbour — never a whole card width. Dense bursts are merged into
- * bundles upstream (see `bundleEvents.ts`, which keeps lanes single-row),
- * so residual nudges stay small. A trailing pass pulls the row back in if
- * the last card would run past the content edge.
+ * The Timeline is a scanning map, not a transcript. Cards keep the x-position
+ * implied by their timestamp and remain on one row; dense detail is exposed in
+ * the hover preview / conversation view instead of growing the swimlane.
  */
 function layoutLaneRow(
   items: TimelineDisplayItem[],
@@ -217,37 +216,13 @@ function layoutLaneRow(
 ): RowPlacement[] {
   if (items.length === 0) return [];
 
-  const placements: RowPlacement[] = items.map((item) => {
+  const initial = items.map((item) => {
     const width = computeItemWidth(item, range, contentWidthPx, density);
     const x = computeItemLeft(item.start, range, contentLeftPx, contentWidthPx, width);
     return { item, x, width };
   });
 
-  // Forward declutter: nudge each card just clear of its predecessor.
-  for (let index = 1; index < placements.length; index += 1) {
-    const previous = placements[index - 1]!;
-    const current = placements[index]!;
-    const minX = previous.x + previous.width + cardGap;
-    if (current.x < minX) current.x = minX;
-  }
-
-  // Backward overflow pass: if the row now spills past the content edge,
-  // pull the trailing cards left as far as their neighbours allow.
-  const maxRight = contentLeftPx + contentWidthPx;
-  const last = placements[placements.length - 1]!;
-  let overflow = last.x + last.width - maxRight;
-  for (let index = placements.length - 1; index >= 0 && overflow > 0; index -= 1) {
-    const current = placements[index]!;
-    const minLeft =
-      index === 0
-        ? contentLeftPx
-        : placements[index - 1]!.x + placements[index - 1]!.width + cardGap;
-    const shift = Math.min(overflow, current.x - minLeft);
-    current.x -= shift;
-    overflow -= shift;
-  }
-
-  return placements;
+  return initial.map((placement) => ({ ...placement, rowIndex: 0 }));
 }
 
 /**

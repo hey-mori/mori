@@ -26,6 +26,7 @@ export function TimelineMiniMap({
   ticks,
   selectedItemId,
   focusedSet,
+  focusActive,
   viewport = FULL_MINIMAP_VIEWPORT,
   onSeek,
   onZoom,
@@ -35,6 +36,7 @@ export function TimelineMiniMap({
   ticks: AxisTick[];
   selectedItemId: string | null;
   focusedSet: Set<string>;
+  focusActive: boolean;
   /** Visible horizontal slice of the canvas, drawn as the viewport rect. */
   viewport?: MinimapViewport;
   /** Pan the canvas — receives the 0–1 fraction the viewport should centre on. */
@@ -56,7 +58,6 @@ export function TimelineMiniMap({
   if (placed.length === 0) return null;
 
   const totalLanes = timelineActivityLaneOrder.length;
-  const selectedDot = placed.find((dot) => dot.item.id === selectedItemId);
   const interactive = Boolean(onSeek);
 
   /** 0–1 position of a clientX along the minimap track. */
@@ -124,7 +125,7 @@ export function TimelineMiniMap({
   }
 
   return (
-    <div className="mini-map" aria-label="Timeline overview">
+    <div className={`mini-map${focusActive ? " is-focus-active" : ""}`} aria-label="Timeline overview">
       <div className="mini-map-axis" aria-hidden="true">
         {ticks.map((tick) => {
           const atStart = tick.xPercent <= 4;
@@ -202,17 +203,10 @@ export function TimelineMiniMap({
                 left: `${xPercent}%`,
                 top: `${topPercent}%`,
               }}
-              title={item.kind === "bundle" ? item.title : item.event.title}
+              aria-label={item.kind === "bundle" ? item.title : item.event.title}
             />
           );
         })}
-        {selectedDot ? (
-          <span
-            className="mini-map-marker"
-            style={{ left: `${selectedDot.xPercent}%` }}
-            aria-hidden="true"
-          />
-        ) : null}
       </div>
     </div>
   );

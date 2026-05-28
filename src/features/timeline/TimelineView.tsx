@@ -95,14 +95,21 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     (id: string) => {
       if (selectedEventId === id && !inspectorCollapsed) {
         setSelectedEventId("");
+        setHoveredEventId(null);
         setInspectorCollapsed(true);
         return;
       }
       setSelectedEventId(id);
       setInspectorCollapsed(false);
     },
-    [inspectorCollapsed, selectedEventId, setSelectedEventId, setInspectorCollapsed],
+    [inspectorCollapsed, selectedEventId, setHoveredEventId, setSelectedEventId, setInspectorCollapsed],
   );
+
+  const closeInspector = useCallback(() => {
+    setSelectedEventId("");
+    setHoveredEventId(null);
+    setInspectorCollapsed(true);
+  }, [setHoveredEventId, setSelectedEventId, setInspectorCollapsed]);
 
   // The Timeline ↔ Flow Focus switch is internal state seeded from the prop;
   // there is no separate flow route — both modes live inside the 흐름 tab.
@@ -130,14 +137,13 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const [zoomFactor, setZoomFactor] = useState<number>(1);
   const canvasRef = useRef<TimelineCanvasHandle>(null);
 
-  // The 흐름 tab opens on the 목록 (content list) reading mode by default: it
-  // reads cleanly and shows what happened without the swimlane's hover-card
-  // clipping / alignment edges. The user switches to the 타임라인 swimlane (the
-  // time-axis canvas) from the toolbar. `null` means "follow the default".
+  // The 흐름 tab opens on the timeline canvas by default. The overview tab is
+  // still the first session page; once the user enters 흐름, the time map should
+  // be the primary view and 목록 is an alternate reading mode.
   const [readingModeOverride, setReadingModeOverride] = useState<
     "swimlane" | "flow" | null
   >(null);
-  const readingMode: "swimlane" | "flow" = readingModeOverride ?? "flow";
+  const readingMode: "swimlane" | "flow" = readingModeOverride ?? "swimlane";
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.
@@ -408,6 +414,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
                 ticks={model.ticks}
                 selectedItemId={selectedItem?.id ?? null}
                 focusedSet={model.focusedSet}
+                focusActive={model.focusActive}
                 viewport={minimapViewport}
                 onSeek={(fraction) => canvasRef.current?.scrollToFraction(fraction)}
                 onZoom={setZoomFactor}
@@ -421,7 +428,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           bundle={selectedItem}
           session={view}
           onTrace={() => goToMode("flow")}
-          onClose={() => setInspectorCollapsed(true)}
+          onClose={closeInspector}
         />
       ) : mode === "flow" && selectedItem && selectedItem.kind === "event" ? (
         <TracePanel
@@ -456,7 +463,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           session={view}
           onTrace={() => goToMode("flow")}
           onOpenReviewItem={openReviewItem}
-          onClose={() => setInspectorCollapsed(true)}
+          onClose={closeInspector}
           canWrite={sessionMode === "draft" && hasAnalysis}
           onEditEvent={(edits) => updateSessionEvent(selectedItem.event.id, edits)}
           onSplitEvent={() => splitSessionEvent(selectedItem.event.id)}

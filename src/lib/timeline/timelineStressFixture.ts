@@ -9,7 +9,7 @@
  *  - every lane populated (AI conversation / decision / issue / file-code /
  *    web research / document-note / artifact),
  *  - overlapping bursts — several events crammed into a < 12 minute window
- *    in the same lane (must cluster into a bundle, never explode the lane),
+ *    in the same lane (must stay at their real timestamps on one compact rail),
  *  - same-time clusters — events sharing a start minute,
  *  - short and long events — instantaneous events alongside 45 / 90 minute
  *    ranged events (must exercise duration-aware card width),
@@ -51,8 +51,7 @@ type EventSpec = {
 // 36 events across a 09:00–18:00 working day.
 const SPECS: EventSpec[] = [
   // AI conversation — a tight morning burst (6 events in 11 minutes) that
-  // must collapse to a bundle. Every burst event is imported from the same
-  // `claude-code` connector, so the bundle is a same-source rapid group.
+  // must remain individually inspectable while sharing the same lane.
   { type: "aiConversation", start: [9, 30], title: "Claude: 제품 방향 정리", trust: "verified", sources: 1, connector: "claude-code" },
   { type: "aiConversation", start: [9, 32], title: "Claude: 경쟁 제품 비교 질문", trust: "observed", connector: "claude-code" },
   { type: "aiConversation", start: [9, 34], title: "Claude: 메모리 모델 토론", trust: "observed", connector: "claude-code" },
