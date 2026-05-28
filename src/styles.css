@@ -1672,6 +1672,9 @@ kbd {
 .content-grid {
   display: grid;
   grid-template-columns: minmax(680px, 1fr) var(--mori-rail);
+  /* Columns keep their own height: a tall inspector must NOT stretch the
+     timeline column, which would balloon the canvas card with empty space. */
+  align-items: start;
   min-height: calc(100vh - 76px);
   background:
     linear-gradient(180deg, rgba(98, 70, 245, 0.02) 0%, transparent 30%),
