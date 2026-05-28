@@ -10,9 +10,10 @@ import type { ProjectSynthesis, SynthItem } from "../../lib/project/projectSynth
  * replacing the per-session zero-count board.
  *
  * Presentational: it receives the already-computed synthesis (see
- * `useProjectSynthesis`) so the magnitude band and this section share one pass
- * over the project's sessions. The "how many" lives in the overview band; this
- * section is the "what" — the items themselves.
+ * `useProjectSynthesis`) so the overview band and this section share one pass
+ * over the project's sessions. The "how many" lives in the band's magnitude
+ * bars; this section is the "what" — the items, rendered in the same boxed row
+ * format as the 세션 list so the two columns read as one design.
  */
 export function ProjectSynthesisSection({
   synthesis,
@@ -32,7 +33,7 @@ export function ProjectSynthesisSection({
           세션을 분석하면 핵심 결정·미해결·다음 할 일이 이 프로젝트 전체에서 여기로 모입니다.
         </p>
       ) : (
-        <div className="project-session-groups">
+        <div className="project-synth-groups" style={{ display: "grid", gap: 18 }}>
           <SynthGroup
             label="결정"
             icon={<CheckCircle2 size={15} />}
@@ -70,12 +71,23 @@ function SynthGroup({
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="project-session-group">
-      <p className="project-session-group-label">{label}</p>
-      <ul>
+    <div className="project-synth-group">
+      <p
+        className="project-synth-group-label"
+        style={{
+          margin: "0 0 8px",
+          fontSize: 12,
+          fontWeight: 600,
+          color: "var(--muted)",
+        }}
+      >
+        {label}
+      </p>
+      <ul className="project-session-list">
         {items.map((item, index) => (
           <li key={`${item.sessionId}-${index}`}>
             <MoriObjectRow
+              className="session-list-row"
               leading={icon}
               title={item.text}
               meta={<MoriMetadataLine items={[item.sessionTitle]} />}

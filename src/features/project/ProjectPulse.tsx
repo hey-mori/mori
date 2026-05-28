@@ -1,20 +1,23 @@
 import { useMemo } from "react";
-import { buildProjectActivity } from "../../lib/project/projectActivity";
+import { buildContributionGrid } from "../../lib/home/contributionGrid";
+import { buildProjectActivityStats } from "../../lib/project/projectActivityStats";
 import type { ProjectSynthesis } from "../../lib/project/projectSynthesis";
+import { ContributionHeatmap } from "../../components/activity/ContributionHeatmap";
+import { MoriMetricStrip } from "../../components/ui/MoriMetricStrip";
 
 /**
  * "프로젝트 개요" — the project page's summarised, at-a-glance band.
  *
- * The page used to lead with stacked lists; this gives it a visual top line
- * instead. Two complementary summaries sit side by side:
- *   - 활동: a session-count sparkline over the project's life (the *trend*),
+ * Two complementary summaries sit side by side:
+ *   - 작업 활동: the shared contribution heatmap (the "잔디", same component as
+ *     Home) plus a stat strip (세션 / 현재 연속 / 최장 연속 / 최근 활동), scoped to
+ *     this one project — the *cadence* of the work.
  *   - 작업 종합: colour-coded magnitude bars for decisions / open issues /
- *     pending next actions (the *shape* of the accumulated work).
+ *     pending next actions — the *shape* of the accumulated work.
  *
- * It derives everything from session timestamps and the already-computed
+ * Everything derives from session timestamps and the already-computed
  * synthesis, so it adds a chart without loading anything new. Status colours
- * stay semantic (decisions green, open issues red, next actions blue); brand
- * purple is reserved for the activity sparkline as the signature visual.
+ * stay semantic; the heatmap keeps its own green data-viz ramp.
  */
 
 const BARS = [
@@ -30,14 +33,35 @@ export function ProjectPulse({
   timestamps: ReadonlyArray<string>;
   synthesis: ProjectSynthesis;
 }) {
-  const activity = useMemo(() => buildProjectActivity(timestamps), [timestamps]);
+  const grid = useMemo(
+    () => buildContributionGrid({ timestamps: [...timestamps], metric: "sessions" }),
+    [timestamps],
+  );
+  const stats = useMemo(() => buildProjectActivityStats(timestamps), [timestamps]);
 
   const bars = BARS.map((bar) => ({ ...bar, count: synthesis.totals[bar.key] }));
   const maxCount = Math.max(1, ...bars.map((bar) => bar.count));
-  const hasActivity = activity.total > 0;
+  const hasActivity = stats.sessions > 0;
   const hasWork = bars.some((bar) => bar.count > 0);
 
   if (!hasActivity && !hasWork) return null;
+
+  const statItems = [
+    { key: "sessions", label: "세션", value: String(stats.sessions), hint: "이 프로젝트의 작업 실행" },
+    {
+      key: "streak-current",
+      label: "현재 연속",
+      value: `${stats.currentStreak}일`,
+      hint: "연속으로 작업한 날",
+    },
+    {
+      key: "streak-longest",
+      label: "최장 연속",
+      value: `${stats.longestStreak}일`,
+      hint: "가장 길게 이어간 흐름",
+    },
+    { key: "recent", label: "최근 활동", value: shortDate(stats.lastActive), hint: "마지막 세션 날짜" },
+  ];
 
   return (
     <section
@@ -50,60 +74,37 @@ export function ProjectPulse({
         padding: "16px 18px",
         border: "1px solid var(--line)",
         borderRadius: 12,
-        background: "var(--panel-soft)",
+        background: "var(--mori-surface)",
       }}
     >
       {hasActivity ? (
         <div
           style={{
-            flex: "1 1 320px",
-            minWidth: 240,
+            flex: "2 1 440px",
+            minWidth: 280,
             display: "flex",
             flexDirection: "column",
-            gap: 10,
+            gap: 14,
           }}
         >
-          <Eyebrow>활동</Eyebrow>
-          <div
-            aria-hidden="true"
-            style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 54 }}
-          >
-            {activity.buckets.map((bucket, index) => (
-              <div
-                key={index}
-                title={`${shortDate(bucket.start)} · ${bucket.count}회`}
-                style={{
-                  flex: "1 1 0",
-                  minWidth: 3,
-                  maxWidth: 16,
-                  height:
-                    bucket.count > 0
-                      ? `${Math.max(32, (bucket.count / activity.maxCount) * 100)}%`
-                      : "10%",
-                  background: bucket.count > 0 ? "var(--purple)" : "var(--line)",
-                  borderRadius: 3,
-                }}
-              />
-            ))}
-          </div>
-          <span style={{ fontSize: 12.5, color: "var(--muted)", fontWeight: 600 }}>
-            {shortDate(activity.firstAt)} – {shortDate(activity.lastAt)} · 세션 {activity.total}개
-          </span>
+          <Eyebrow>작업 활동</Eyebrow>
+          <ContributionHeatmap grid={grid} />
+          <MoriMetricStrip items={statItems} />
         </div>
       ) : null}
 
       {hasWork ? (
         <div
           style={{
-            flex: "1 1 280px",
-            minWidth: 240,
+            flex: "1 1 230px",
+            minWidth: 210,
             display: "flex",
             flexDirection: "column",
-            gap: 10,
+            gap: 12,
           }}
         >
           <Eyebrow>작업 종합</Eyebrow>
-          <div style={{ display: "grid", gap: 9, alignContent: "center", flex: 1 }}>
+          <div style={{ display: "grid", gap: 11, alignContent: "center", flex: 1 }}>
             {bars.map((bar) => (
               <div
                 key={bar.key}
