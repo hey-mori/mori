@@ -13,7 +13,7 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 | Screen | Status | Reference | Prompt/spec |
 | --- | --- | --- | --- |
-| [Start Session / Session Setup](#start-session-session-setup) | Partial | [start-session-reference.png](assets/screenshots/start-session-reference.png) | [product-screen-prompts.md](product-screen-prompts.md) |
+| [Start Session / Session Setup](#start-session-session-setup) | Implemented · agent-first reframe (diverged from reference image) | [start-session-reference.png](assets/screenshots/start-session-reference.png) | [product-screen-prompts.md](product-screen-prompts.md) |
 | [Evidence Hub](#evidence-hub) | Implemented | [evidence-hub-reference.png](assets/screenshots/evidence-hub-reference.png) | [product-screen-prompts.md#1-evidence-hub](product-screen-prompts.md#1-evidence-hub) |
 | [AI Transcript Import](#ai-transcript-import) | Partial | [ai-transcript-import-reference.png](assets/screenshots/ai-transcript-import-reference.png) | [product-screen-prompts.md#2-ai-transcript-import](product-screen-prompts.md#2-ai-transcript-import) |
 | [Git Diff Import](#git-diff-import) | Partial | [git-diff-import-reference.png](assets/screenshots/git-diff-import-reference.png) | [product-screen-prompts.md#3-git-diff-import](product-screen-prompts.md#3-git-diff-import) |
@@ -37,16 +37,24 @@ These screenshots are product and UX references for Mori. They are not all imple
 
 ![Start Session / Session Setup reference](assets/screenshots/start-session-reference.png)
 
-- **Status:** Partial — Honesty strip added above the source-tile grid that reads the live counts from `getImplementedCaptureSurfaces()` / `getPlannedCaptureSurfaces()` so the screen cannot over-promise. Source tile copy is unchanged; tiles still represent the **future** capture set, not a live integration list.
-- **Product purpose:** Define a deliberate recording boundary before any work memory exists.
-- **Primary user job:** Start a scoped Mori session with clear sources, mode, project, local AI, and storage expectations.
-- **Key UI elements:** Session name, project picker, capture-surface honesty strip, source tiles (Claude Code, Codex CLI, Cursor, VS Code, Terminal, Chrome tabs, Finder, Git diff, manual notes), recording mode cards, local AI engine choices, privacy/storage summary.
-- **Main actions:** Start Mori, cancel, choose sources/mode/engine, review session summary.
-- **Data shown:** Project, selected source types, recording mode, AI engine, save location, estimated storage, live counts of implemented vs. planned capture surfaces.
-- **Source/provenance expectations:** All future evidence must come from selected or explicitly imported sources.
-- **Privacy expectations:** User-controlled session start; no ambient recording. The honesty strip explicitly states that Claude Code hook, Codex CLI wrapper, terminal, IDE, and browser surfaces are docs-template-only or planned.
-- **Persistence expectations:** Session metadata is saved to browser localStorage today and routed through SQLite + `.mori v0` JSON as the persistence path completes.
-- **Implementation notes:** Owned by `src/features/start-session/StartSessionView.tsx`. The honesty strip reads from `src/lib/connectors/captureSurfaces.ts`. Source tile selection state is mock-backed today (`sourceOptions`); selection persistence is part of the Start Session persistence milestone.
+> The reference image predates the **agent-first reframe**. The live screen no
+> longer uses the source-tile grid / recording-mode cards / honesty strip shown
+> in the image; treat the bullets below as the current source of truth.
+
+- **Status:** Implemented. A real, wired creation flow, agent-first, with every section visible on one page (no step-by-step wizard, no navigation away to import).
+- **Product purpose:** Establish one AI-agent work conversation as the session spine before any evidence accumulates ("one conversation = one session").
+- **Primary user job:** Pick the agent, choose how its conversation enters Mori, then create the session.
+- **Information architecture (current):** three numbered blocks on one page:
+  1. **에이전트**: Claude / Codex / OpenCode. Agent-first because the roster is the thing that grows and it decides which import methods are possible.
+  2. **대화**, how the conversation arrives: **기록에서 불러오기** (auto-detected agent work records; opens the 작업 대화 둘러보기 modal), **붙여넣기** (paste a transcript; the platform follows the chosen agent), or **빈 세션으로 시작** (anchor first; Mori never drives the agent).
+  3. **세션 정보**: project (a styled `MoriSelect` dropdown: existing projects + 새 프로젝트) and session name (auto-filled from a detected / pasted conversation, editable otherwise).
+- **기록에서 불러오기 modal (`DetectedConversationsModal`):** two panes, a searchable, recency-sorted, project-grouped list (left) and a content preview (right: opening request, first turns, message / code-block counts, time window, model), loaded on demand. Detection is desktop-only and real for Claude today; Codex / OpenCode show **곧** (planned), and in the browser the list states the desktop requirement instead of faking data.
+- **Retention:** one unified rule, stated as a fact rather than a per-session toggle. Mori keeps the summary + metadata locally and never stores the full raw transcript (a pasted / detected transcript is summary-only regardless).
+- **Analysis engine:** the Quick Pass engine default is shown in the summary with a 변경 link to settings; it is not chosen during creation.
+- **Main actions:** choose agent → choose method → (browse + pick a detected conversation / paste / leave empty) → a single **세션 생성** action in the right-rail summary, which routes the chosen import through Import Review.
+- **Privacy expectations:** explicit import only; Mori never starts or drives the agent conversation; detection is an explicit, desktop-only read of Claude work records, never a background scan.
+- **Do not:** present this as a multi-source "Work Bundle" builder (that is the manual fallback, not the model); re-introduce per-session retention toggles; let detection imply background watching; or surface planned import surfaces as if wired (keep them honest / 곧).
+- **Implementation notes:** `src/features/start-session/StartSessionView.tsx` + `src/features/start-session/DetectedConversationsModal.tsx`. Detection bridge: `src/lib/claude/claudeTauri.ts`; transcript paste: `normalizeAiTranscript`; session creation: `useMoriSessionStore.importAsNewSession` (records / paste) and `createSessionDraft` (empty).
 - **Prompt/spec source:** [product-screen-prompts.md](product-screen-prompts.md)
 
 <a id="evidence-hub"></a>
@@ -136,13 +144,17 @@ These screenshots are product and UX references for Mori. They are not all imple
 - **Status:** Partial — Timeline layout contract, view model, session timing, control honesty, sticky behavior, and relationship policy are now implemented; cross-session aggregation, manual relationship edits, event split/merge, manual issue creation, inline bundle expansion, mini-map viewport navigation, Day / Week / Zoom controls, and event-correction persistence remain Planned.
 - **Product purpose:** Primary chronological reconstruction of how work happened.
 - **Primary user job:** Scan a session as structured lanes, inspect evidence, and understand major work moments.
-- **Key UI elements:** Rendered as the **흐름** tab inside the Session Detail workspace (the SessionDetailHeader + tab bar own the chrome; no per-page header banner). The tab carries a compact one-row toolbar (`Filter` popover, search, reading-mode toggle), sticky time ruler, sticky lane labels, lane grid with single-row event/bundle cards, relationship layer (focused-only in Timeline mode, full subgraph in Flow Focus), right inspector with hidden-relationship hint and a separate Planned actions row, mini-map.
-- **Main actions:** Search/filter, select event/bundle, toggle active-lanes-only, toggle density, open Flow Focus, inspect evidence, copy summary.
+- **Key UI elements:** Rendered as the **흐름** tab inside the Session Detail workspace (the SessionDetailHeader + tab bar own the chrome; no per-page header banner). The tab carries a compact one-row toolbar with a **reading-mode toggle (타임라인 / 목록)**, a search field, and a category **Filter** popover. Two reading modes:
+  - **타임라인** (swimlane): the time-axis canvas with a sticky time ruler, a lane rail, a lane grid of single-row event / bundle cards, a relationship layer, and a mini-map. The left lane rail flexes to the scroller height so the rail and canvas bottoms align.
+  - **목록** (content list, `TimelineChronoList`): a single time-ordered column where each row shows the event's title plus a one-line content preview and meta. This is the **default** reading mode (it reads cleanly without the swimlane's hover-card and alignment edge cases).
+- **Category filter:** the Filter popover lists every lane with its count and **shows only the selected lanes** (it no longer dims-and-keeps the rest). Popover counts are derived from all events, so hidden categories stay listable. Density is fixed (no C/M/D control) and the range is always the full session span.
+- **Inspector layout:** the embedded inspector flows with the page (it is not pinned to a capped, internally-scrolled height), so opening it never stretches the timeline column and it is never clipped to a fixed height.
+- **Main actions:** Switch reading mode (타임라인 / 목록), search, filter to specific categories, select an event / bundle, inspect evidence, copy summary.
 - **Data shown:** Events, bundles, trust/confidence, evidence counts, related issues/decisions, source links, hidden-relationship counts.
 - **Source/provenance expectations:** Cards and bundles remain evidence-backed and inspectable. The inspector reuses `getSourceDisplayStatus()` plus the new `buildInspectorViewModel` helper so capture method, raw-retention policy, and trust badges stay accurate.
 - **Privacy expectations:** Timeline shows provenance rather than implying omniscient capture. No background capture, no terminal scraping, no browser-tab scanning.
 - **Persistence expectations:** Timeline items come from stored sources/events/analysis results.
-- **Implementation notes:** Owned by `src/features/timeline/`. Pure logic lives in `src/lib/timeline/`: `timelineViewModel.ts`, `relationshipPolicy.ts`, `timelineControls.ts`, `bundleEvents.ts`, `collisionLayout.ts`, `timeScale.ts`. Session timing is centralized in `src/lib/session/sessionTiming.ts`. Day / Week / Zoom buttons render disabled with explanatory tooltips sourced from `TIMELINE_CONTROLS`; the Inspector's Planned actions row uses the same registry.
+- **Implementation notes:** Owned by `src/features/timeline/`. Pure logic lives in `src/lib/timeline/`: `timelineViewModel.ts`, `relationshipPolicy.ts`, `timelineControls.ts`, `bundleEvents.ts`, `collisionLayout.ts`, `timeScale.ts`. The two reading modes are `TimelineCanvas` (타임라인 / swimlane) and `TimelineChronoList` (목록 / content list), selected by `readingMode` in `TimelineView.tsx` (default `flow` → 목록). The category filter resolves a `visibleLaneOrder` in `buildTimelineRenderModel` so only selected lanes lay out and render; the toolbar's popover counts are computed separately from all events. Session timing is centralized in `src/lib/session/sessionTiming.ts`.
 - **Prompt/spec source:** [product-screen-prompts.md#5-narrative-timeline](product-screen-prompts.md#5-narrative-timeline)
 
 <a id="flow-focus-trace-view"></a>
