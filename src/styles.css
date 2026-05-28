@@ -4154,7 +4154,7 @@ kbd {
 
 .inspector {
   min-width: 0;
-  padding: 18px 20px 22px;
+  padding: 14px 16px 16px;
   background: rgba(255, 255, 255, 0.98);
   border-left: 1px solid var(--line);
   overflow-y: auto;
@@ -4165,8 +4165,8 @@ kbd {
   position: relative;
   display: grid;
   gap: 6px;
-  margin-bottom: 18px;
-  padding-bottom: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
   padding-right: 28px;
   border-bottom: 1px solid var(--line);
 }
