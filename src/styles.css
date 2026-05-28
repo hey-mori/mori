@@ -20780,6 +20780,28 @@ button.settings-option {
   transform: translateY(2px);
 }
 
+/* The project header is a button that opens that project's page. Reset the
+   button chrome and add a quiet hover so it reads as openable. */
+.workspace-group-open {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 3px 7px;
+  margin: -3px -7px;
+  border-radius: 7px;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+
+.workspace-group-open:hover {
+  background: var(--gray-50);
+}
+
+.workspace-group-open:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
 .workspace-group-name {
   font-size: 13px;
   font-weight: 700;

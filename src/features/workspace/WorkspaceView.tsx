@@ -271,22 +271,26 @@ export function WorkspaceView() {
                 aria-label={group.isUnsourced ? "프로젝트 없음" : group.label}
               >
                 <header className="workspace-group-head">
-                  <span
-                    className="workspace-group-title"
-                    title={group.isUnsourced ? "프로젝트 없음" : group.label}
-                  >
-                    <FolderGit2 size={13} aria-hidden="true" />
-                    <span className="workspace-group-name">
-                      {group.isUnsourced
-                        ? "프로젝트 없음"
-                        : shortProjectLabel(group.label)}
+                  {group.isUnsourced ? (
+                    <span className="workspace-group-title" title="프로젝트 없음">
+                      <FolderGit2 size={13} aria-hidden="true" />
+                      <span className="workspace-group-name">프로젝트 없음</span>
                     </span>
-                    {group.isUnsourced ? null : (
-                      <span className="workspace-group-path">
-                        {group.label}
+                  ) : (
+                    <button
+                      type="button"
+                      className="workspace-group-title workspace-group-open"
+                      onClick={() => openProject(group.label)}
+                      title={`${group.label} — 프로젝트 페이지 열기`}
+                    >
+                      <FolderGit2 size={13} aria-hidden="true" />
+                      <span className="workspace-group-name">
+                        {projectDisplayName(group.label, userProjects)}
                       </span>
-                    )}
-                  </span>
+                      <span className="workspace-group-path">{group.label}</span>
+                      <ArrowRight size={12} aria-hidden="true" />
+                    </button>
+                  )}
                   <Badge tone="gray">{group.sessions.length}개</Badge>
                 </header>
                 <ul className="workspace-rows">
