@@ -37,6 +37,7 @@ import { useMoriProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { ProjectSynthesisSection } from "./ProjectSynthesisSection";
+import { ProjectActivityStrip } from "./ProjectActivityStrip";
 import { spanLabel } from "../../lib/session/workContext";
 
 /**
@@ -263,6 +264,10 @@ export function ProjectView() {
           onClose={() => setEditing(false)}
         />
       ) : null}
+
+      <ProjectActivityStrip
+        timestamps={sessionRows.map((row) => row.timestamp)}
+      />
 
       <MoriMetricStrip
         className="project-stats"
