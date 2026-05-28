@@ -34,6 +34,7 @@ import type {
   ClaudeDesktopDiscovery,
 } from "../claude/types";
 import type { LocalAiToolReport } from "../claude/installations";
+import type { CodexSessionDetail, CodexSessionMeta } from "../codex/types";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
 import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./repositoryCommands";
@@ -75,6 +76,8 @@ export type TauriCommandName =
   | "discover_claude_code_sessions"
   | "get_claude_code_session"
   | "discover_local_ai_tools"
+  | "discover_codex_sessions"
+  | "get_codex_session"
   | "analyze_session_quick_pass"
   | "generate_report";
 
@@ -197,6 +200,11 @@ export type TauriCommandMap = {
     output: ClaudeCodeSessionDetail;
   };
   discover_local_ai_tools: { input: undefined; output: LocalAiToolReport };
+  discover_codex_sessions: { input: undefined; output: CodexSessionMeta[] };
+  get_codex_session: {
+    input: { sessionPath: string };
+    output: CodexSessionDetail;
+  };
   analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
   generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };
 };

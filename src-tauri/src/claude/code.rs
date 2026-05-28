@@ -138,7 +138,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_default();
-        let project_name = decode_project_name(&encoded_name);
+        let decoded_project_name = decode_project_name(&encoded_name);
 
         let session_files = match fs::read_dir(&project_path) {
             Ok(iter) => iter,
@@ -176,21 +176,26 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             // message for the title. We never load the whole file into
             // memory beyond what we need to show in the list.
             let preview = preview_session(&session_path).unwrap_or_default();
+            let project_label = if preview.cwd.trim().is_empty() {
+                decoded_project_name.clone()
+            } else {
+                preview.cwd.clone()
+            };
             let started_at = if preview.first_timestamp.is_empty() {
                 modified_at.clone()
             } else {
                 preview.first_timestamp
             };
             let title = if preview.first_user_text.trim().is_empty() {
-                format!("Claude Code · {}", project_name)
+                format!("Claude Code · {}", project_label)
             } else {
                 truncate(&preview.first_user_text, 90)
             };
 
             out.push(ClaudeCodeSessionMeta {
                 session_id,
-                project_path: encoded_name.clone(),
-                project_name: project_name.clone(),
+                project_path: project_label.clone(),
+                project_name: project_label,
                 file_path: session_path.to_string_lossy().to_string(),
                 started_at,
                 message_count: preview.message_count,
@@ -239,7 +244,12 @@ pub(crate) fn read_session_at(
         .and_then(|parent| parent.file_name())
         .map(|name| name.to_string_lossy().to_string())
         .unwrap_or_default();
-    let project_name = decode_project_name(&encoded_name);
+    let decoded_project_name = decode_project_name(&encoded_name);
+    let project_name = if parsed.cwd.trim().is_empty() {
+        decoded_project_name
+    } else {
+        parsed.cwd.clone()
+    };
     let session_id = canonical
         .file_stem()
         .map(|stem| stem.to_string_lossy().to_string())
@@ -265,7 +275,7 @@ pub(crate) fn read_session_at(
 
     Ok(ClaudeCodeSessionDetail {
         session_id,
-        project_path: encoded_name,
+        project_path: project_name.clone(),
         project_name,
         file_path: canonical.to_string_lossy().to_string(),
         started_at,
@@ -281,6 +291,7 @@ struct SessionPreview {
     message_count: usize,
     first_user_text: String,
     first_timestamp: String,
+    cwd: String,
     token_usage: ClaudeTokenUsage,
 }
 
@@ -311,6 +322,11 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
                 preview.first_timestamp = ts;
             }
         }
+        if preview.cwd.is_empty() {
+            if let Some(cwd) = extract_cwd(&value) {
+                preview.cwd = cwd;
+            }
+        }
         if role == "human" || role == "assistant" {
             preview.message_count += 1;
         }
@@ -322,6 +338,7 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
 struct ParsedSession {
     messages: Vec<ClaudeCodeMessage>,
     title: String,
+    cwd: String,
     token_usage: ClaudeTokenUsage,
 }
 
@@ -373,6 +390,7 @@ impl TokenAccumulator {
 fn parse_jsonl(text: &str) -> ParsedSession {
     let mut messages: Vec<ClaudeCodeMessage> = Vec::new();
     let mut title = String::new();
+    let mut cwd = String::new();
     let mut tokens = TokenAccumulator::default();
     for (index, line) in text.lines().enumerate() {
         let trimmed = line.trim();
@@ -386,6 +404,11 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         // streaming chunks that carry no displayable content), independent
         // of whether the message survives the content filter below.
         tokens.observe(&value);
+        if cwd.is_empty() {
+            if let Some(found) = extract_cwd(&value) {
+                cwd = found;
+            }
+        }
         let role = detect_role(&value);
         if role != "human" && role != "assistant" {
             continue;
@@ -416,6 +439,7 @@ fn parse_jsonl(text: &str) -> ParsedSession {
     ParsedSession {
         messages,
         title,
+        cwd,
         token_usage: tokens.usage,
     }
 }
@@ -668,6 +692,15 @@ fn extract_timestamp(value: &Value) -> Option<String> {
     None
 }
 
+fn extract_cwd(value: &Value) -> Option<String> {
+    value
+        .get("cwd")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|cwd| !cwd.is_empty())
+        .map(str::to_string)
+}
+
 fn is_jsonl(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
@@ -770,6 +803,39 @@ mod tests {
         assert_eq!(detail.messages[0].content, "Hello");
         assert_eq!(detail.messages[1].role, "assistant");
         assert!(detail.messages[1].content.contains("Hi."));
+    }
+
+    #[test]
+    fn list_prefers_jsonl_cwd_so_hyphenated_folder_names_survive() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("C--dev-ng-gw");
+        write_session(
+            &project,
+            "session-hyphen.jsonl",
+            "{\"type\":\"user\",\"cwd\":\"C:\\\\dev\\\\ng-gw\",\"message\":{\"role\":\"user\",\"content\":\"Check gateway\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n",
+        );
+
+        let listing = list_sessions_at(temp.path()).unwrap();
+
+        assert_eq!(listing.len(), 1);
+        assert_eq!(listing[0].project_name, "C:\\dev\\ng-gw");
+        assert_eq!(listing[0].project_path, "C:\\dev\\ng-gw");
+    }
+
+    #[test]
+    fn read_prefers_jsonl_cwd_so_hyphenated_folder_names_survive() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("C--dev-ng-gw");
+        let path = write_session(
+            &project,
+            "session-hyphen-detail.jsonl",
+            "{\"type\":\"user\",\"cwd\":\"C:\\\\dev\\\\ng-gw\",\"message\":{\"role\":\"user\",\"content\":\"Check gateway\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n",
+        );
+
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+
+        assert_eq!(detail.project_name, "C:\\dev\\ng-gw");
+        assert_eq!(detail.project_path, "C:\\dev\\ng-gw");
     }
 
     #[test]

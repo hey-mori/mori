@@ -1,4 +1,5 @@
 mod claude;
+mod codex;
 mod commands;
 mod connectors;
 mod db;
@@ -46,6 +47,8 @@ fn main() {
             claude::code::discover_claude_code_sessions,
             claude::code::get_claude_code_session,
             claude::installations::discover_local_ai_tools,
+            codex::sessions::discover_codex_sessions,
+            codex::sessions::get_codex_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

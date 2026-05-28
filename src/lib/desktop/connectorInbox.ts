@@ -134,6 +134,8 @@ export function formatConnectorFamily(family: string): string {
       return "Claude Code";
     case "codex-cli":
       return "Codex CLI";
+    case "opencode-cli":
+      return "OpenCode CLI";
     case "terminal":
       return "Terminal";
     case "git":

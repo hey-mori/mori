@@ -259,10 +259,17 @@ pub(crate) fn probe_with_env(env: &ProbeEnv) -> LocalAiToolReport {
 
     // ── 7. Codex CLI (~/.codex/) ───────────────────────────────────────────
     let codex = env.home.as_ref().map(|h| h.join(".codex"));
+    let codex_sessions = codex.as_ref().map(|p| p.join("sessions"));
     if let Some(p) = &codex {
         searched.push(p.clone());
     }
-    let codex_status = if codex.as_deref().map(Path::is_dir).unwrap_or(false) {
+    if let Some(p) = &codex_sessions {
+        searched.push(p.clone());
+    }
+    let codex_session_count = codex_sessions.as_deref().and_then(count_jsonl_files);
+    let codex_status = if codex_session_count.unwrap_or(0) > 0 {
+        "data-found"
+    } else if codex.as_deref().map(Path::is_dir).unwrap_or(false) {
         if directory_has_any_entries(codex.as_deref().unwrap_or(Path::new(""))) {
             "data-found"
         } else {
@@ -279,13 +286,41 @@ pub(crate) fn probe_with_env(env: &ProbeEnv) -> LocalAiToolReport {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default(),
         status: codex_status.to_string(),
-        // Reading Codex sessions is a later pass — surface "detected" only.
-        can_import: false,
-        session_count: None,
-        notes: "감지만 표시합니다. 세션 가져오기는 이번 패스에서 제공되지 않습니다.".to_string(),
+        can_import: codex_session_count.unwrap_or(0) > 0,
+        session_count: codex_session_count,
+        notes: "Codex 로컬 JSONL 세션은 ~/.codex/sessions에서 읽고, wrapper 결과는 ~/.mori/connectors/codex-cli에서 읽습니다.".to_string(),
     });
 
-    // ── 8. OpenAI CLI / tooling (~/.openai/) ───────────────────────────────
+    // ── 8. OpenCode connector inbox (~/.mori/connectors/opencode-cli/) ─────
+    let opencode_connector = env
+        .home
+        .as_ref()
+        .map(|h| h.join(".mori").join("connectors").join("opencode-cli"));
+    if let Some(p) = &opencode_connector {
+        searched.push(p.clone());
+    }
+    let opencode_count = opencode_connector.as_deref().and_then(count_jsonl_files);
+    let opencode_status = if opencode_count.unwrap_or(0) > 0 {
+        "data-found"
+    } else if opencode_connector.as_deref().map(Path::is_dir).unwrap_or(false) {
+        "empty"
+    } else {
+        "not-found"
+    };
+    tools.push(DetectedTool {
+        id: "opencode-cli".to_string(),
+        label: "OpenCode CLI".to_string(),
+        description: "OpenCode wrapper/hook JSONL이 있는지 확인합니다.".to_string(),
+        path: opencode_connector
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default(),
+        status: opencode_status.to_string(),
+        can_import: opencode_count.unwrap_or(0) > 0,
+        session_count: opencode_count,
+        notes: "OpenCode는 ~/.mori/connectors/opencode-cli 아래의 wrapper/hook JSONL을 작업 세션으로 가져옵니다.".to_string(),
+    });
+
+    // ── 9. OpenAI CLI / tooling (~/.openai/) ───────────────────────────────
     let openai = env.home.as_ref().map(|h| h.join(".openai"));
     if let Some(p) = &openai {
         searched.push(p.clone());
@@ -343,6 +378,33 @@ fn directory_has_any_entries(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+fn count_jsonl_files(path: &Path) -> Option<u32> {
+    if !path.is_dir() {
+        return None;
+    }
+    fn walk(path: &Path, count: &mut u32) {
+        let Ok(entries) = fs::read_dir(path) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, count);
+            } else if path
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| ext.eq_ignore_ascii_case("jsonl"))
+                .unwrap_or(false)
+            {
+                *count += 1;
+            }
+        }
+    }
+    let mut count = 0;
+    walk(path, &mut count);
+    Some(count)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -384,6 +446,7 @@ mod tests {
             "claude-cli-nodejs",
             "claude-roaming",
             "codex-cli",
+            "opencode-cli",
             "openai-cli",
         ] {
             assert!(ids.contains(&required), "missing tool {required}: {ids:?}");
@@ -453,12 +516,12 @@ mod tests {
     }
 
     #[test]
-    fn codex_directory_present_reports_data_found_but_not_importable() {
+    fn codex_sessions_report_data_found_and_importable() {
         let temp = TempDir::new().unwrap();
         let home = temp.path().to_path_buf();
-        let codex = home.join(".codex");
-        std::fs::create_dir_all(&codex).unwrap();
-        std::fs::write(codex.join("config.toml"), "model = 'gpt-5'\n").unwrap();
+        let sessions = home.join(".codex").join("sessions").join("2026").join("05").join("28");
+        std::fs::create_dir_all(&sessions).unwrap();
+        std::fs::write(sessions.join("session.jsonl"), "{}\n").unwrap();
         let env = ProbeEnv {
             home: Some(home),
             ..empty_env()
@@ -466,9 +529,8 @@ mod tests {
         let report = probe_with_env(&env);
         let codex_tool = tool_by_id(&report, "codex-cli");
         assert_eq!(codex_tool.status, "data-found");
-        // Import is intentionally disabled this pass — we surface detection only.
-        assert!(!codex_tool.can_import);
-        assert!(codex_tool.session_count.is_none());
+        assert!(codex_tool.can_import);
+        assert_eq!(codex_tool.session_count, Some(1));
     }
 
     #[test]
