@@ -52,7 +52,7 @@ import {
 type PanelMode = "conversation" | "timeline";
 type EdgeSide = "top" | "right" | "bottom" | "left";
 
-type Panel = { id: string; sessionId: string; mode: PanelMode };
+type Panel = { id: string; sessionId: string; mode: PanelMode; flex: number };
 type Column = { id: string; flex: number; panels: Panel[] };
 type WorkbenchPreset = { id: string; name: string; columns: Column[] };
 
@@ -215,6 +215,7 @@ export function WorkbenchView() {
             id: panelId,
             sessionId,
             mode: "conversation",
+            flex: 1,
           });
           return { ...col, panels };
         }),
@@ -229,7 +230,7 @@ export function WorkbenchView() {
         arr.splice(Math.max(0, Math.min(at, arr.length)), 0, {
           id: columnId,
           flex: 1,
-          panels: [{ id: panelId, sessionId, mode: "conversation" }],
+          panels: [{ id: panelId, sessionId, mode: "conversation", flex: 1 }],
         });
         return arr;
       });
@@ -313,6 +314,42 @@ export function WorkbenchView() {
     window.addEventListener("mouseup", onUp);
     document.body.style.cursor = "col-resize";
   };
+
+  // Resize two vertically-stacked panels within a column.
+  const startVResize =
+    (columnId: string, panelIndex: number) => (event: React.MouseEvent) => {
+      event.preventDefault();
+      const startY = event.clientY;
+      const colEl = (event.currentTarget as HTMLElement).parentElement;
+      const height = colEl?.getBoundingClientRect().height ?? 1;
+      const col = columns.find((entry) => entry.id === columnId);
+      if (!col) return;
+      const startFlex = col.panels.map((panel) => panel.flex);
+      const sumFlex = startFlex.reduce((sum, value) => sum + value, 0) || 1;
+      const onMove = (moveEvent: MouseEvent) => {
+        const deltaFlex = ((moveEvent.clientY - startY) / height) * sumFlex;
+        setColumns((cols) =>
+          cols.map((entry) => {
+            if (entry.id !== columnId || panelIndex + 1 >= entry.panels.length) return entry;
+            const pair = startFlex[panelIndex]! + startFlex[panelIndex + 1]!;
+            let top = startFlex[panelIndex]! + deltaFlex;
+            top = Math.max(MIN_FLEX, Math.min(pair - MIN_FLEX, top));
+            const panels = entry.panels.map((panel) => ({ ...panel }));
+            panels[panelIndex] = { ...panels[panelIndex]!, flex: top };
+            panels[panelIndex + 1] = { ...panels[panelIndex + 1]!, flex: pair - top };
+            return { ...entry, panels };
+          }),
+        );
+      };
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        document.body.style.cursor = "";
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+      document.body.style.cursor = "row-resize";
+    };
 
   const openInWorkspace = (sessionId: string, isActive: boolean) => {
     if (isActive || loadBrowserSession(sessionId)) openSession("flow");
@@ -444,23 +481,33 @@ export function WorkbenchView() {
                   {col.panels.map((panel, panelIndex) => {
                     const meta = sessionsById.get(panel.sessionId) ?? null;
                     return (
-                      <SessionPanel
-                        key={panel.id}
-                        panel={panel}
-                        meta={meta}
-                        repository={repository}
-                        focused={panel.id === focusedPanelId}
-                        onFocus={() => setFocusedPanelId(panel.id)}
-                        onDragStart={() => setDragPanelId(panel.id)}
-                        onDragEnd={() => setDragPanelId(null)}
-                        onEdgeAdd={(side) =>
-                          setLauncher(edgeTarget(side, col.id, colIndex, panelIndex))
-                        }
-                        onMode={(panelMode) => setPanelMode(panel.id, panelMode)}
-                        onReplace={() => setLauncher({ kind: "replace", panelId: panel.id })}
-                        onClose={() => removePanel(panel.id)}
-                        onOpen={() => meta && openInWorkspace(meta.sessionId, meta.isActive)}
-                      />
+                      <Fragment key={panel.id}>
+                        <SessionPanel
+                          panel={panel}
+                          meta={meta}
+                          repository={repository}
+                          flex={panel.flex}
+                          focused={panel.id === focusedPanelId}
+                          onFocus={() => setFocusedPanelId(panel.id)}
+                          onDragStart={() => setDragPanelId(panel.id)}
+                          onDragEnd={() => setDragPanelId(null)}
+                          onEdgeAdd={(side) =>
+                            setLauncher(edgeTarget(side, col.id, colIndex, panelIndex))
+                          }
+                          onMode={(panelMode) => setPanelMode(panel.id, panelMode)}
+                          onReplace={() => setLauncher({ kind: "replace", panelId: panel.id })}
+                          onClose={() => removePanel(panel.id)}
+                          onOpen={() => meta && openInWorkspace(meta.sessionId, meta.isActive)}
+                        />
+                        {panelIndex < col.panels.length - 1 ? (
+                          <div
+                            className="workbench-vgutter"
+                            role="separator"
+                            aria-orientation="horizontal"
+                            onMouseDown={startVResize(col.id, panelIndex)}
+                          />
+                        ) : null}
+                      </Fragment>
                     );
                   })}
                 </div>
@@ -700,6 +747,7 @@ function SessionPanel({
   panel,
   meta,
   repository,
+  flex,
   focused,
   onFocus,
   onDragStart,
@@ -713,6 +761,7 @@ function SessionPanel({
   panel: Panel;
   meta: SessionMeta | null;
   repository: ReturnType<typeof createBrowserDraftRepository>;
+  flex: number;
   focused: boolean;
   onFocus: () => void;
   onDragStart: () => void;
@@ -730,7 +779,7 @@ function SessionPanel({
 
   if (!meta) {
     return (
-      <article className="workbench-panel is-missing">
+      <article className="workbench-panel is-missing" style={{ flexGrow: flex, flexBasis: 0 }}>
         <p>세션을 찾을 수 없습니다.</p>
         <Button size="sm" variant="secondary" onClick={onReplace}>
           다른 세션 선택
@@ -742,6 +791,7 @@ function SessionPanel({
   return (
     <article
       className={`workbench-panel${focused ? " is-focused" : ""}`}
+      style={{ flexGrow: flex, flexBasis: 0 }}
       aria-label={meta.title}
       onMouseDownCapture={onFocus}
     >
@@ -995,6 +1045,7 @@ function parseColumns(value: unknown): Column[] {
         id: p.id,
         sessionId: p.sessionId,
         mode: p.mode === "timeline" ? "timeline" : "conversation",
+        flex: typeof p.flex === "number" && p.flex > 0 ? p.flex : 1,
       });
     }
     if (panels.length === 0) continue;
