@@ -108,6 +108,7 @@ export function WorkbenchView() {
   const [focusedPanelId, setFocusedPanelId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [dragPanelId, setDragPanelId] = useState<string | null>(null);
+  const [dropHint, setDropHint] = useState<string | null>(null);
   const [presets, setPresets] = useState<WorkbenchPreset[]>(() => loadPresets());
   const [manageOpen, setManageOpen] = useState(false);
   const idRef = useRef(0);
@@ -256,6 +257,43 @@ export function WorkbenchView() {
     );
   };
 
+  const endDrag = () => {
+    setDragPanelId(null);
+    setDropHint(null);
+  };
+
+  // Drop a dragged panel at a precise position within a column (reorder/insert).
+  const dropPanelAt = (panelId: string, columnId: string, index: number) => {
+    setColumns((cols) => {
+      let moved: Panel | null = null;
+      let srcIndex = -1;
+      let sameColumn = false;
+      for (const col of cols) {
+        const pi = col.panels.findIndex((panel) => panel.id === panelId);
+        if (pi >= 0) {
+          moved = col.panels[pi]!;
+          srcIndex = pi;
+          sameColumn = col.id === columnId;
+        }
+      }
+      if (!moved) return cols;
+      const adjusted = sameColumn && index > srcIndex ? index - 1 : index;
+      const removed = cols.map((col) => ({
+        ...col,
+        panels: col.panels.filter((panel) => panel.id !== panelId),
+      }));
+      const inserted = removed.map((col) => {
+        if (col.id !== columnId) return col;
+        const panels = [...col.panels];
+        panels.splice(Math.max(0, Math.min(adjusted, panels.length)), 0, moved!);
+        return { ...col, panels };
+      });
+      return inserted.filter((col) => col.panels.length > 0);
+    });
+    setFocusedPanelId(panelId);
+    endDrag();
+  };
+
   // Drag a panel into another column (stack) or out to a new column (split).
   const relocatePanel = (
     panelId: string,
@@ -283,7 +321,7 @@ export function WorkbenchView() {
       return stripped;
     });
     setFocusedPanelId(panelId);
-    setDragPanelId(null);
+    endDrag();
   };
 
   const startResize = (index: number) => (event: React.MouseEvent) => {
@@ -384,6 +422,8 @@ export function WorkbenchView() {
     if (!focusedMeta) return;
     setDrafts((current) => ({ ...current, [focusedMeta.sessionId]: value }));
   };
+  const hotClass = (key: string) => (dropHint === key ? " is-hot" : "");
+  const readDragId = (event: React.DragEvent) => event.dataTransfer.getData("text/plain");
 
   return (
     <PageShell
@@ -465,6 +505,21 @@ export function WorkbenchView() {
             className={`workbench-canvas${dragPanelId ? " is-dragging" : ""}`}
             ref={canvasRef}
           >
+            <div
+              className={`workbench-col-drop is-lead${hotClass("col:0")}`}
+              aria-hidden={!dragPanelId}
+              onDragOver={(event) => {
+                if (!dragPanelId) return;
+                event.preventDefault();
+                setDropHint("col:0");
+              }}
+              onDrop={(event) => {
+                const id = readDragId(event);
+                if (id) relocatePanel(id, { kind: "newColumn", index: 0 });
+              }}
+            >
+              <Plus size={14} aria-hidden="true" />
+            </div>
             {columns.map((col, colIndex) => (
               <Fragment key={col.id}>
                 <div
@@ -490,7 +545,7 @@ export function WorkbenchView() {
                           focused={panel.id === focusedPanelId}
                           onFocus={() => setFocusedPanelId(panel.id)}
                           onDragStart={() => setDragPanelId(panel.id)}
-                          onDragEnd={() => setDragPanelId(null)}
+                          onDragEnd={endDrag}
                           onEdgeAdd={(side) =>
                             setLauncher(edgeTarget(side, col.id, colIndex, panelIndex))
                           }
@@ -501,10 +556,21 @@ export function WorkbenchView() {
                         />
                         {panelIndex < col.panels.length - 1 ? (
                           <div
-                            className="workbench-vgutter"
+                            className={`workbench-vgutter${hotClass("vg:" + col.id + ":" + (panelIndex + 1))}`}
                             role="separator"
                             aria-orientation="horizontal"
                             onMouseDown={startVResize(col.id, panelIndex)}
+                            onDragOver={(event) => {
+                              if (!dragPanelId) return;
+                              event.preventDefault();
+                              event.stopPropagation();
+                              setDropHint("vg:" + col.id + ":" + (panelIndex + 1));
+                            }}
+                            onDrop={(event) => {
+                              event.stopPropagation();
+                              const id = readDragId(event);
+                              if (id) dropPanelAt(id, col.id, panelIndex + 1);
+                            }}
                           />
                         ) : null}
                       </Fragment>
@@ -513,23 +579,34 @@ export function WorkbenchView() {
                 </div>
                 {colIndex < columns.length - 1 ? (
                   <div
-                    className="workbench-gutter"
+                    className={`workbench-gutter${hotClass("col:" + (colIndex + 1))}`}
                     role="separator"
                     aria-orientation="vertical"
                     onMouseDown={startResize(colIndex)}
+                    onDragOver={(event) => {
+                      if (!dragPanelId) return;
+                      event.preventDefault();
+                      setDropHint("col:" + (colIndex + 1));
+                    }}
+                    onDrop={(event) => {
+                      const id = readDragId(event);
+                      if (id) relocatePanel(id, { kind: "newColumn", index: colIndex + 1 });
+                    }}
                   />
                 ) : null}
               </Fragment>
             ))}
-            {/* New-column drop target, shown only while dragging a panel. */}
+            {/* Trailing new-column drop target, shown only while dragging a panel. */}
             <div
-              className="workbench-col-drop"
+              className={`workbench-col-drop${hotClass("col:" + columns.length)}`}
               aria-hidden={!dragPanelId}
               onDragOver={(event) => {
-                if (dragPanelId) event.preventDefault();
+                if (!dragPanelId) return;
+                event.preventDefault();
+                setDropHint("col:" + columns.length);
               }}
               onDrop={(event) => {
-                const id = event.dataTransfer.getData("text/plain");
+                const id = readDragId(event);
                 if (id) relocatePanel(id, { kind: "newColumn", index: columns.length });
               }}
             >

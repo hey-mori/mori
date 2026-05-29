@@ -681,10 +681,52 @@
   background: var(--base-accent-soft);
 }
 
+.workbench-canvas.is-dragging .workbench-col-drop.is-lead {
+  margin: 0 var(--base-space-2) 0 0;
+}
+
+.workbench-col-drop.is-hot {
+  border-style: solid;
+  box-shadow: 0 0 0 3px var(--base-accent-soft);
+}
+
 .workbench-canvas.is-dragging .workbench-col {
   outline: 1px dashed var(--base-border);
   outline-offset: -1px;
   border-radius: var(--base-radius-md);
+}
+
+/* During a drag, the resize gutters double as precise drop slots. */
+.workbench-canvas.is-dragging .workbench-gutter {
+  flex-basis: 16px;
+  cursor: copy;
+}
+
+.workbench-canvas.is-dragging .workbench-gutter::after {
+  inset: 6px 5px;
+  border: 1px dashed var(--base-border);
+}
+
+.workbench-gutter.is-hot::after {
+  border-style: solid;
+  border-color: var(--base-accent);
+  background: var(--base-accent-soft);
+}
+
+.workbench-canvas.is-dragging .workbench-vgutter {
+  flex-basis: 14px;
+  cursor: copy;
+}
+
+.workbench-canvas.is-dragging .workbench-vgutter::after {
+  inset: 4px 12px;
+  border: 1px dashed var(--base-border);
+}
+
+.workbench-vgutter.is-hot::after {
+  border-style: solid;
+  border-color: var(--base-accent);
+  background: var(--base-accent-soft);
 }
 
 .workbench-panel {
