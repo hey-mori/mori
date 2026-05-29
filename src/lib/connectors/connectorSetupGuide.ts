@@ -36,18 +36,26 @@ const GUIDES: Partial<Record<CaptureSurfaceId, ConnectorSetupGuide>> = {
     templateDir: "connectors/claude-code/",
     steps: [
       {
-        text: "훅 스크립트를 실행 가능한 위치에 복사합니다.",
-        command: "cp connectors/claude-code/mori-claude-hook.sh ~/.local/bin/",
+        text: "Claude Code 설정 파일을 엽니다. 모든 프로젝트를 캡처하려면 전역 파일, 한 레포만 캡처하려면 그 레포의 .claude/settings.json을 씁니다.",
+        command: "~/.claude/settings.json",
       },
       {
-        text: "Claude Code 설정의 hooks에 스크립트를 등록합니다 (connectors/claude-code/mori-claude-hook.example.json 참고).",
+        text: "connectors/claude-code/mori-claude-hook.example.json의 hooks 블록을 합칩니다 (SessionStart · UserPromptSubmit · PostToolUse · SessionEnd). command 경로만 OS에 맞게 넣습니다.",
       },
       {
-        text: "Claude Code를 평소처럼 사용하면 요약 이벤트가 로컬 JSONL로 쌓입니다.",
-        command: "~/.mori/connectors/claude-code/",
+        text: "macOS / Linux: .sh 런처 절대경로를 command로 사용합니다.",
+        command: "/ABSOLUTE/PATH/connectors/claude-code/mori-claude-hook.sh",
+      },
+      {
+        text: "Windows: .ps1 실행정책 문제를 피하려고 python으로 .py를 직접 호출합니다.",
+        command: 'python "C:\\PATH\\TO\\connectors\\claude-code\\mori-claude-hook.py"',
+      },
+      {
+        text: "Claude Code를 평소처럼 사용하면 요약 이벤트가 Claude 세션별 JSONL로 쌓입니다 (동시 세션도 파일이 분리됩니다).",
+        command: "~/.mori/connectors/claude-code/<날짜>-<세션id>.jsonl",
       },
     ],
-    importNote: "쌓인 JSONL을 이 행의 'Connector JSONL 가져오기'로 가져오면 검토를 거쳐 타임라인에 들어갑니다.",
+    importNote: "쌓인 JSONL을 이 행의 'Connector JSONL 가져오기'로 가져오면 검토를 거쳐 타임라인에 들어갑니다. 프롬프트·툴 본문은 저장하지 않고 요약만 남습니다.",
   },
   codexCliWrapper: {
     surfaceId: "codexCliWrapper",
