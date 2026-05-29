@@ -1,0 +1,262 @@
+/* ─── Project page ──────────────────────────────────────────────────────
+   Project workspace — single-column dense page. Hero, four-stat strip
+   framed with hairlines (matches the memory hero pattern), sessions
+   grouped by recency. Sized to match the home page's breathing room so
+   the sidebar / memory / project surfaces feel like one family. */
+
+.project-page .page-shell-content {
+  padding-top: var(--base-space-7);
+  padding-bottom: var(--base-space-9);
+}
+
+.project-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--base-space-7);
+  padding-bottom: var(--base-space-6);
+  border-bottom: 1px solid var(--line);
+}
+
+.project-hero-titles {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.project-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 2px 8px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: var(--purple-50);
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.project-hero-badge svg {
+  opacity: 0.8;
+}
+
+.project-hero h1 {
+  margin: 0;
+  font-size: var(--base-font-size-2xl);
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.project-hero-path {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-hero-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.project-inline-form {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--base-space-4);
+  padding: var(--base-space-4);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+}
+
+.project-inline-form label {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.project-inline-form label span {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  font-weight: 650;
+}
+
+.project-inline-form input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--base-text);
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.project-inline-form input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--base-accent) 50%, var(--base-border));
+  box-shadow: 0 0 0 3px var(--base-accent-soft);
+}
+
+.project-inline-form p {
+  margin: 3px 0 0;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+}
+
+.project-inline-form-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.project-inline-form-danger {
+  border-color: color-mix(in srgb, var(--base-danger, #dc2626) 35%, var(--base-border));
+}
+
+.project-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: var(--base-space-6) 0 0;
+}
+
+@media (max-width: 760px) {
+  .project-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.project-stat {
+  display: grid;
+  gap: 2px;
+  padding: var(--base-space-4) var(--base-space-5);
+  background: var(--panel);
+}
+
+.project-stat dd {
+  margin: 0;
+}
+
+.project-stat strong {
+  font-size: var(--base-font-size-3xl);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.project-stat dt {
+  display: grid;
+  gap: 2px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.project-stat dt small {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--muted-2);
+  line-height: 1.4;
+}
+
+.project-focus {
+  margin-top: var(--base-space-6);
+}
+
+.project-focus-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  overflow: hidden;
+  background: var(--base-surface);
+}
+
+.project-focus-list > li {
+  min-width: 0;
+}
+
+.project-focus-list > li:nth-child(2n) {
+  border-left: 1px solid var(--base-border);
+}
+
+.project-focus-list > li:nth-child(n + 3) {
+  border-top: 1px solid var(--base-border);
+}
+
+@media (max-width: 820px) {
+  .project-focus-list {
+    grid-template-columns: 1fr;
+  }
+
+  .project-focus-list > li:nth-child(2n) {
+    border-left: 0;
+  }
+
+  .project-focus-list > li + li {
+    border-top: 1px solid var(--base-border);
+  }
+}
+
+.project-sessions {
+  margin-top: var(--base-space-7);
+}
+
+.project-section-head {
+  align-items: flex-end;
+  margin-bottom: var(--base-space-4);
+}
+
+.project-section-head h2 {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.project-section-head p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.project-section-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.project-session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  overflow: hidden;
+}
+
+.project-session-list > li + li {
+  border-top: 1px solid var(--base-border);
+}
+

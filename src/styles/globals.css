@@ -9,4 +9,16 @@
 @import "../components/ui/base-objects.css";
 @import "../components/ui/layout-components.css";
 @import "../components/ui/Modal.css";
-@import "../styles.css";
+@import "./features/timeline.css";
+@import "./features/start-session.css";
+@import "./features/session-shell.css";
+@import "./features/home.css";
+@import "./features/review-evidence.css";
+@import "./features/notifications.css";
+@import "./features/memory-settings.css";
+@import "./features/settings-tools.css";
+@import "./features/timeline-responsive.css";
+@import "./features/connections.css";
+@import "./features/command-palette.css";
+@import "./features/project-page.css";
+@import "./features/sources.css";

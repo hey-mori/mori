@@ -1,0 +1,1774 @@
+/* ── Connections (local AI tool discovery + Claude session import) ──── */
+
+/* Connections sections are heading groups, not cards. Stripping the outer
+   border / background / shadow stops the "card inside a card" feel — the
+   tool grid below is the only card layer. */
+.connections-section {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+.connections-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0 2px;
+}
+
+.connections-section-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.connections-section-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 640px;
+}
+
+/* ── Sessions-first layout (new) ─────────────────────────────────────── */
+
+.connections-sessions-section {
+  display: grid;
+  gap: var(--base-space-5);
+  margin-bottom: var(--base-space-8);
+}
+
+.connections-sessions-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.connections-sessions-head h2 {
+  margin: 0 0 4px;
+  font-size: var(--base-font-size-xl);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.connections-sessions-head p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 640px;
+}
+
+/* ── Work-session feed ────────────────────────────────────────────────────
+   Single-column feed of resumable AI work sessions, grouped by project. Each
+   card expands inline; no separate inspector pane. */
+.connections-session-feed {
+  display: grid;
+  gap: var(--base-space-5);
+}
+
+.connections-feed-group {
+  display: grid;
+  gap: 8px;
+}
+
+.connections-feed-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+  font-size: 11px;
+}
+
+.connections-feed-group-head svg {
+  flex: none;
+  color: var(--muted-2);
+}
+
+.connections-feed-group-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.connections-feed-group-head > span {
+  flex: none;
+  color: var(--muted-2);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.connections-feed-group > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.connections-session-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, white);
+  overflow: hidden;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.connections-session-card:hover {
+  border-color: var(--muted-2);
+}
+
+.connections-session-card.is-open {
+  border-color: var(--purple);
+  box-shadow: inset 0 0 0 1px var(--purple);
+}
+
+.connections-session-card-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.connections-session-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connections-session-card-meta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.connections-session-card-caret {
+  flex: none;
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+}
+
+.connections-session-card.is-open .connections-session-card-caret {
+  transform: rotate(180deg);
+}
+
+.connections-session-card-detail {
+  display: grid;
+  gap: 14px;
+  padding: 0 14px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.connections-session-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connections-session-stats li {
+  display: grid;
+  gap: 1px;
+}
+
+.connections-session-stats strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.connections-session-stats small {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.connections-session-messages {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connections-session-messages li {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.connections-session-messages li.role-assistant {
+  background: var(--purple-50);
+}
+
+.connections-session-role {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+}
+
+.connections-session-messages p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.connections-session-empty-copy {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.connections-session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Tool inventory disclosure — sits below the sessions block now that
+ * sessions lead the page. Default-closed so it doesn't dominate. */
+.connections-tools-disclosure {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  padding: 0 14px;
+}
+
+.connections-tools-disclosure[open] {
+  padding: 0 14px 14px;
+}
+
+.connections-tools-disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.connections-tools-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.connections-tools-disclosure > summary::before {
+  content: "▶";
+  font-size: 9px;
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+  transform: translateY(-1px);
+}
+
+.connections-tools-disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.connections-tools-disclosure > summary small {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.connections-tools-disclosure-body {
+  display: grid;
+  gap: 10px;
+}
+
+/* Advanced manual-bundle disclosure — same calm chrome as the tools list, so
+ * the demoted Work Bundle reads as a fallback rather than a primary action. */
+.connections-advanced-disclosure {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-soft);
+  padding: 0 14px;
+  margin-bottom: var(--base-space-6);
+}
+
+.connections-advanced-disclosure[open] {
+  padding: 0 14px 14px;
+}
+
+.connections-advanced-disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.connections-advanced-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.connections-advanced-disclosure > summary::before {
+  content: "▶";
+  font-size: 9px;
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+  transform: translateY(-1px);
+}
+
+.connections-advanced-disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.connections-advanced-disclosure > summary small {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* The bundle panel already carries its own section margins; neutralise them
+ * inside the disclosure so it sits flush in the folded body. */
+.connections-advanced-disclosure-body .work-bundle-panel {
+  margin: 0;
+}
+
+/* Browser-mode desktop note — a calm one-line footnote under the source
+ * hub. The Source Control Center is now the canonical source inventory, so
+ * the old hero + tool cards + three-step flow are gone; this only states
+ * what the desktop app adds and where to import in the browser. */
+.connections-desktop-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-soft);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.connections-desktop-note > svg {
+  color: var(--muted-2);
+  flex: none;
+  margin-top: 1px;
+}
+
+.connections-desktop-note code {
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+/* ── Detected-tools grid ─────────────────────────────────────────────── */
+
+.connections-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 8px;
+}
+
+.connections-tools-grid.is-reference {
+  margin-top: 10px;
+  opacity: 0.85;
+}
+
+.connections-tools-reference {
+  margin-top: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: var(--gray-50);
+}
+
+.connections-tools-reference[open] {
+  padding: 0 12px 12px;
+}
+
+.connections-tools-reference > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.connections-tools-reference > summary::-webkit-details-marker {
+  display: none;
+}
+
+.connections-tools-reference > summary::before {
+  content: "▶";
+  font-size: 9px;
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+}
+
+.connections-tools-reference[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.connections-tools-reference > summary small {
+  font-weight: 500;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
+.connections-tool-card {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: white;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.connections-tool-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: 0 2px 8px rgba(20, 25, 36, 0.04);
+}
+
+.connections-tool-card.is-undetected {
+  background: var(--base-surface-subtle);
+  border-style: dashed;
+  border-color: var(--line);
+  opacity: 0.78;
+}
+
+.connections-tool-card.is-undetected:hover {
+  transform: none;
+}
+
+.connections-tool-card-skeleton {
+  pointer-events: none;
+}
+
+.connections-tool-card-skeleton .connections-tool-icon {
+  background: var(--gray-50);
+}
+
+.connections-tool-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.connections-tool-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Browser-preview empty state: a static tool grid + note. Keeps the page
+   layout consistent with the desktop view so the user sees what Mori will
+   detect once they install the desktop app. */
+.connections-browser-preview {
+  padding: 12px 0 0;
+}
+
+.connections-browser-note {
+  margin: 0 2px 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 720px;
+}
+
+.connections-tool-icon-green {
+  background: var(--green-50);
+  color: var(--green);
+}
+
+.connections-tool-icon-amber {
+  background: var(--orange-50);
+  color: #b46100;
+}
+
+.connections-tool-icon-gray,
+.connections-tool-icon-muted {
+  background: var(--gray-50);
+  color: var(--muted);
+}
+
+.connections-tool-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.connections-tool-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.connections-tool-head strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connections-tool-status {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--gray-50);
+  color: var(--muted);
+}
+
+.connections-tool-status-green {
+  background: var(--green-50);
+  color: var(--green);
+}
+
+.connections-tool-status-amber {
+  background: var(--orange-50);
+  color: #b46100;
+}
+
+.connections-tool-status-gray {
+  background: var(--gray-50);
+  color: #647084;
+}
+
+.connections-tool-status-muted {
+  background: transparent;
+  color: var(--muted-2);
+  border: 1px dashed var(--line-strong);
+}
+
+.connections-tool-footer {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Tool detail moved into the InfoHint bubble — description, detected path,
+   and the honesty note stack vertically inside the tooltip. */
+.connections-tool-hint {
+  display: grid;
+  gap: 5px;
+}
+
+.connections-tool-hint code {
+  font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
+  font-size: 10.5px;
+  color: #c9c9d6;
+  overflow-wrap: anywhere;
+}
+
+.connections-tool-skel-line {
+  height: 8px;
+  background: var(--gray-50);
+  border-radius: 4px;
+  width: 80%;
+}
+
+.connections-tool-skel-line.is-short {
+  width: 55%;
+}
+
+/* ── Sessions toolbar / layout ────────────────────────────────────────── */
+
+.connections-sessions-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.connections-search {
+  flex: 1;
+}
+
+.connections-search input::placeholder {
+  color: var(--muted-2);
+}
+
+.connections-search-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── Session meta chips (used by the work-session feed) ───────────────── */
+
+/* Agent chip — names the AI agent that anchors this work session. */
+.connections-list-agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--purple);
+  background: var(--purple-50);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.connections-list-agent svg {
+  flex: none;
+}
+
+.connections-list-tokens {
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.connections-list-tokens::before {
+  content: "·";
+  margin-right: 8px;
+  color: var(--line-strong, var(--line));
+}
+
+/* ── Shared empty / error blocks ──────────────────────────────────────── */
+
+.connections-empty {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--panel-soft);
+}
+
+.connections-empty h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.connections-empty h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.connections-empty-inline {
+  padding: 16px;
+  border: 0;
+  background: transparent;
+}
+
+.connections-spin {
+  animation: connections-spin 1.2s linear infinite;
+}
+
+@keyframes connections-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * ConversationViewer — full-screen Claude conversation drawer
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/* The drawer panel is widened for reading; BaseDrawer's default 560px is
+ * too narrow for chat-bubble flow. */
+.base-drawer-panel:has(.conversation-viewer) {
+  width: min(880px, 100vw);
+}
+
+.conversation-viewer {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  height: 100vh;
+}
+
+.conversation-viewer-header {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--line);
+  background: white;
+  display: grid;
+  gap: 10px;
+}
+
+.conversation-viewer-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.conversation-viewer-title-row h2 {
+  margin: 0;
+  font-size: var(--base-font-size-2xl);
+  color: var(--text);
+  line-height: 1.35;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-viewer-close {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.conversation-viewer-close:hover {
+  background: var(--panel-soft);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.conversation-viewer-close:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.conversation-viewer-subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.conversation-viewer-stats {
+  list-style: none;
+  margin: 0;
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.conversation-viewer-stats li {
+  display: grid;
+  gap: 2px;
+}
+
+.conversation-viewer-stats strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.conversation-viewer-stats small {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-2);
+}
+
+.conversation-viewer-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 8px;
+}
+
+.conversation-viewer-tokens-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-2);
+  margin-right: 2px;
+}
+
+.conversation-viewer-token-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft, var(--muted-2));
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+}
+
+.conversation-viewer-token-chip.is-muted {
+  color: var(--muted-2);
+  font-weight: 500;
+}
+
+.conversation-viewer-token-chip.is-total {
+  color: var(--purple-700, #6d28d9);
+  background: var(--purple-50, #f5f3ff);
+  border-color: var(--purple-200, #ddd6fe);
+}
+
+.conversation-viewer-token-model {
+  font-size: 10px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.conversation-viewer-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.conversation-viewer-search-input {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 220px;
+  color: var(--muted);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.conversation-viewer-search-input:focus-within {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.12);
+}
+
+.conversation-viewer-search-input input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.conversation-viewer-search-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.conversation-viewer-body {
+  padding: 20px 22px 24px;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #fbfbfd, white 80px);
+}
+
+.conversation-viewer-empty {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+  padding: 30px 0;
+  text-align: center;
+}
+
+.conversation-viewer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+/*
+ * Virtualised mode: the ol is sized to the whole conversation (so the
+ * scrollbar reflects every message) and acts as a positioning context, while
+ * the inner window holds only the mounted slice. The window keeps the grid +
+ * gap so bubble alignment and spacing are unchanged from the non-virtual list.
+ */
+.conversation-viewer-list.is-virtualized {
+  display: block;
+  position: relative;
+}
+
+.conversation-viewer-window {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  display: grid;
+  gap: 12px;
+  will-change: transform;
+}
+
+.conversation-message {
+  display: grid;
+  gap: 4px;
+  max-width: 78%;
+  transition: opacity 120ms ease;
+}
+
+.conversation-message.align-left {
+  justify-self: start;
+}
+
+.conversation-message.align-right {
+  justify-self: end;
+  text-align: right;
+}
+
+.conversation-message.is-dimmed {
+  opacity: 0.35;
+}
+
+.conversation-message.is-matched .conversation-message-bubble {
+  box-shadow: 0 0 0 2px rgba(98, 70, 245, 0.45);
+}
+
+.conversation-message-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-2);
+}
+
+.conversation-message.align-right .conversation-message-meta {
+  justify-content: flex-end;
+}
+
+.conversation-message-role {
+  font-weight: 700;
+}
+
+.conversation-message-time {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.conversation-message-bubble {
+  display: grid;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: white;
+  text-align: left;
+}
+
+.conversation-message.align-right .conversation-message-bubble {
+  border-top-right-radius: 4px;
+}
+
+.conversation-message.align-left .conversation-message-bubble {
+  border-top-left-radius: 4px;
+}
+
+.conversation-message.flavour-human .conversation-message-bubble {
+  background: var(--panel-soft);
+}
+
+.conversation-message.flavour-assistant .conversation-message-bubble {
+  background: var(--purple-50);
+  border-color: rgba(98, 70, 245, 0.18);
+}
+
+.conversation-message.flavour-tool-use .conversation-message-bubble {
+  background: #f6f3ff;
+  border-color: rgba(98, 70, 245, 0.28);
+  border-style: dashed;
+}
+
+.conversation-message.flavour-tool-result .conversation-message-bubble {
+  background: #fbfbfd;
+  border-color: var(--line);
+  border-style: dashed;
+}
+
+.conversation-message-tool-prefix {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-2);
+}
+
+.conversation-message-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.conversation-message-tool-use-text {
+  font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
+  font-size: 12px;
+  color: var(--purple);
+}
+
+.conversation-message-tool-details {
+  margin: 0;
+}
+
+.conversation-message-tool-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11px;
+  list-style: none;
+}
+
+.conversation-message-tool-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.conversation-message-tool-details summary::before {
+  content: "▸ ";
+  color: var(--muted-2);
+}
+
+.conversation-message-tool-details[open] summary::before {
+  content: "▾ ";
+}
+
+.conversation-message-tool-details pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono, ui-monospace, "Cascadia Code", monospace);
+  font-size: 11px;
+  color: var(--muted);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.conversation-viewer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--line);
+  background: white;
+  position: sticky;
+  bottom: 0;
+}
+
+.conversation-viewer-footer-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.conversation-viewer-footer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-viewer-footer-hint svg {
+  color: var(--purple);
+  flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .conversation-message {
+    max-width: 100%;
+  }
+
+  .conversation-message.align-right {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .conversation-message.align-right .conversation-message-meta {
+    justify-content: flex-start;
+  }
+
+  .conversation-viewer-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Import Review — Claude bulk accept callout + confirm modal
+ * ──────────────────────────────────────────────────────────────────────── */
+
+.review-bulk-accept {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f7f4ff, #f1ecff);
+  border: 1px solid rgba(98, 70, 245, 0.25);
+  margin: 12px 0;
+}
+
+.review-bulk-accept-copy {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.review-bulk-accept-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--purple);
+}
+
+.review-bulk-accept-copy strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.review-bulk-accept-copy p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .review-bulk-accept {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.review-confirm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.review-confirm-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 25, 36, 0.34);
+  animation: base-drawer-fade 140ms ease;
+}
+
+.review-confirm-panel {
+  position: relative;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  padding: 22px 24px;
+  width: min(440px, 100%);
+  box-shadow: 0 24px 60px rgba(20, 25, 36, 0.18);
+  display: grid;
+  gap: 12px;
+  animation: base-drawer-slide 180ms ease;
+}
+
+.review-confirm-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.review-confirm-head h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.review-confirm-close {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.review-confirm-close:hover {
+  background: var(--panel-soft);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.review-confirm-close:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.review-confirm-panel p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.review-confirm-secondary {
+  color: var(--muted) !important;
+  font-size: 12px !important;
+}
+
+.review-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Workspace — sessions browser
+ *
+ * The "projects → sessions" first-class view. A grouped, dense session list
+ * on the left (one row per session, scannable columns) and the shared
+ * InspectorPanel on the right. Purple stays accent / identity only — origin
+ * and status chips carry semantic tone; the active row uses the brand purple
+ * left border as the single accent.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.workspace-page .action-bar {
+  flex-wrap: wrap;
+}
+
+.workspace-search {
+  min-width: 200px;
+}
+
+.workspace-browser {
+  display: grid;
+  gap: var(--base-space-5);
+}
+
+.workspace-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-border);
+}
+
+.workspace-summary-strip div {
+  display: grid;
+  gap: 2px;
+  padding: var(--base-space-3) var(--base-space-5);
+  background: var(--base-surface);
+}
+
+.workspace-summary-strip dt {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+}
+
+.workspace-summary-strip dd {
+  margin: 0;
+  color: var(--base-text);
+  font-size: var(--base-font-size-xl);
+  font-weight: 720;
+  line-height: var(--base-line-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Archive toggle — single pill the toolbar promotes only when there is
+   archived content to surface. Keeps the bar quiet for fresh installs. */
+.workspace-archive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--base-border);
+  border-radius: 8px;
+  background: var(--base-surface);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.workspace-archive-toggle:hover {
+  border-color: var(--base-border-strong);
+  color: var(--base-text);
+}
+
+.workspace-archive-toggle.is-active {
+  background: var(--base-accent-soft);
+  color: var(--base-accent);
+  border-color: transparent;
+}
+
+/* ── Project groups ───────────────────────────────────────────────────── */
+
+.workspace-groups {
+  display: grid;
+  gap: var(--base-space-6);
+}
+
+.workspace-group {
+  display: grid;
+  gap: 6px;
+}
+
+.workspace-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--base-space-3);
+  padding: 2px 2px 4px;
+  margin-bottom: 0;
+}
+
+.workspace-group-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+}
+
+.workspace-group-title svg {
+  flex-shrink: 0;
+  color: var(--muted);
+  transform: translateY(2px);
+}
+
+/* The project header is a button that opens that project's page. Reset the
+   button chrome and add a quiet hover so it reads as openable. */
+.workspace-group-open {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 3px 7px;
+  margin: -3px -7px;
+  border-radius: 7px;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+
+.workspace-group-open:hover {
+  background: var(--gray-50);
+}
+
+.workspace-group-open:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.workspace-group-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-group-path {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* ── Session rows ─────────────────────────────────────────────────────── */
+
+.workspace-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  overflow: hidden;
+}
+
+.workspace-rows > li + li {
+  border-top: 1px solid var(--base-border);
+}
+
+.workspace-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 40px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 0;
+  background: var(--base-surface);
+  cursor: pointer;
+  transition: background-color var(--base-transition-fast);
+}
+
+.workspace-row:hover {
+  background: var(--base-surface-subtle);
+}
+
+.workspace-row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--base-accent-soft);
+}
+
+.workspace-row.is-selected {
+  background: var(--base-surface-subtle);
+}
+
+.workspace-row-trailing-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Active session row — soft lavender fill. */
+.workspace-row.is-active {
+  background: var(--purple-50);
+}
+
+.workspace-row.is-active .workspace-row-title {
+  font-weight: 650;
+}
+
+.workspace-row.is-archived {
+  background: var(--base-surface-subtle);
+}
+
+.workspace-row.is-archived .workspace-row-title {
+  color: var(--base-text-muted);
+}
+
+.workspace-row-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.workspace-row-title {
+  font-size: var(--base-font-size-md);
+  font-weight: 600;
+  color: var(--base-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workspace-row-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  flex-wrap: wrap;
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted);
+}
+
+.workspace-row-span {
+  color: var(--base-text-muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-row-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-2);
+  flex-shrink: 0;
+}
+
+.workspace-row-archived-tag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--base-text-muted-2);
+}
+
+/* Hover-revealed row action — archive / restore. Hidden by default so the
+   row line stays calm; appears on hover / focus so the affordance is one
+   click without an inspector or a kebab menu. */
+.workspace-row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateX(-2px);
+  transition: opacity 120ms ease, transform 120ms ease,
+    background-color 120ms ease, color 120ms ease;
+}
+
+.workspace-row:hover .workspace-row-action,
+.workspace-row:focus-within .workspace-row-action,
+.workspace-row-action:focus-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.workspace-row-action:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+/* Archived rows surface the unarchive affordance permanently so the user
+   isn't fishing for a way to bring the row back. */
+.workspace-row.is-archived .workspace-row-action {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--base-text-muted);
+}
+
+/* ── Inspector body ───────────────────────────────────────────────────── */
+
+.workspace-inspector-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--base-space-3);
+}
+
+.workspace-inspector-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.workspace-rename {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-2);
+  flex-wrap: wrap;
+  padding: var(--base-space-3);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface-subtle);
+}
+
+.workspace-rename input {
+  flex: 1;
+  min-width: 140px;
+  padding: 7px 10px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface);
+  font: inherit;
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text);
+}
+
+.workspace-rename input:focus {
+  outline: none;
+  border-color: var(--base-border-focus);
+  box-shadow: 0 0 0 3px var(--base-accent-soft);
+}
+
+.workspace-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--base-space-5) var(--base-space-6);
+  margin: 0;
+}
+
+.workspace-detail-grid div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.workspace-detail-grid dt {
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--base-text-muted-2);
+}
+
+.workspace-detail-grid dd {
+  margin: 0;
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text);
+  word-break: break-word;
+}
+
+.workspace-detail-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--base-space-2);
+  margin: 0;
+  padding: var(--base-space-4);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface-subtle);
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text-muted);
+  line-height: var(--base-line-normal);
+}
+
+.workspace-detail-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--base-text-muted-2);
+}
+
+/* ── Reconstructed counts ─────────────────────────────────────────────── */
+
+.workspace-counts {
+  display: grid;
+  gap: var(--base-space-3);
+}
+
+.workspace-counts h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-2);
+  margin: 0;
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--base-text-muted-2);
+}
+
+.workspace-counts ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--base-space-2);
+}
+
+.workspace-counts li {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  padding: var(--base-space-3) var(--base-space-4);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text-muted);
+}
+
+.workspace-counts li span:not(.workspace-count-icon) {
+  flex: 1;
+  min-width: 0;
+}
+
+.workspace-counts li b {
+  font-size: var(--base-font-size-lg);
+  font-weight: 700;
+  color: var(--base-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-count-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--base-text-muted);
+  flex-shrink: 0;
+}
+
+.workspace-counts-note {
+  margin: 0;
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted-2);
+  line-height: var(--base-line-normal);
+}
+
+@media (max-width: 768px) {
+  .workspace-detail-grid,
+  .workspace-inspector-actions {
+    grid-template-columns: 1fr;
+  }
+}
+

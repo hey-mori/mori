@@ -1,0 +1,565 @@
+/* ── Two-column timeline: fixed lane-label axis + scrollable content ──────────
+   The label column lives OUTSIDE the scroller, so it is physically pinned (it
+   never scrolls with the content), carries one consistent edge shadow, and has
+   no time axis above it. */
+.timeline-2col {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  /* Bound the row so the scroller shrinks to the available width instead of
+     growing to fit its content (which would push the whole row — labels and
+     all — past the viewport and create an OUTER scrollbar). */
+  min-width: 0;
+  max-width: 100%;
+}
+
+.timeline-axis-col {
+  position: relative;
+  flex: 0 0 auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-right: 1px solid var(--line-strong);
+  border-radius: 12px 0 0 12px;
+  box-shadow: 4px 0 10px -5px rgba(20, 25, 36, 0.14);
+  z-index: 2;
+  overflow: hidden;
+}
+
+/* Blank top-left corner — the time axis lives only over the content, never here. */
+.timeline-axis-col-corner {
+  border-bottom: 1px solid var(--line);
+}
+
+.lane-axis-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px 0 16px;
+  color: #1c2638;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.lane-axis-label.is-empty {
+  opacity: 0.45;
+}
+
+.lane-axis-icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--muted-2);
+}
+
+.lane-axis-label.lane-tone-purple .lane-axis-icon { color: var(--purple); }
+.lane-axis-label.lane-tone-green  .lane-axis-icon { color: var(--green); }
+.lane-axis-label.lane-tone-red    .lane-axis-icon { color: var(--red); }
+.lane-axis-label.lane-tone-blue   .lane-axis-icon { color: var(--blue); }
+.lane-axis-label.lane-tone-cyan   .lane-axis-icon { color: var(--cyan); }
+.lane-axis-label.lane-tone-orange .lane-axis-icon { color: #b46100; }
+.lane-axis-label.lane-tone-gray   .lane-axis-icon { color: var(--muted-2); }
+
+.lane-axis-label strong {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lane-axis-count {
+  margin-left: auto;
+  min-width: 16px;
+  text-align: right;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lane-axis-count.is-zero {
+  color: var(--line-strong);
+}
+
+/* In the two-column layout the scroller is the right pane: square off its left
+   side (the axis column owns the left rounding) and drop its left border so the
+   axis column's right edge is the single divider. */
+.timeline-2col .timeline-scroller {
+  /* flex-basis 0 so the scroller takes the leftover width and never sizes to
+     its (wide) content — that is what keeps the horizontal scroll inside the
+     content pane instead of overflowing the whole row. */
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 0 12px 12px 0;
+  border-left: 0;
+}
+
+/* Lane background — subtle alternating stripes for rhythm without padding. */
+.lane:nth-child(even) {
+  background: rgba(247, 248, 251, 0.38);
+}
+
+.lane.is-empty {
+  background: transparent;
+  opacity: 0.4;
+}
+
+/* An empty lane is a slim band, so center its label instead of using the
+   first-card-row top padding that taller content lanes rely on. */
+.lane.is-empty .lane-label {
+  padding-top: 0;
+  align-items: center;
+}
+
+/* Sticky inspector — pinned to the top of the session scroll area. */
+.inspector {
+  position: sticky;
+  top: 76px;
+  align-self: start;
+  max-height: calc(100vh - 76px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.inspector-hidden-note {
+  margin: 6px 0 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--orange-50);
+  color: #8a5a08;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.inspector-hidden-note strong {
+  color: #6e3e00;
+}
+
+/* Planned inspector actions collapse to one calm muted line instead of a
+   grid of disabled buttons — honest about what's coming without clutter. */
+.inspector-planned-note {
+  margin: 0;
+  font-size: var(--base-font-size-xs);
+  line-height: 1.5;
+  color: var(--base-text-muted-2);
+}
+
+.inspector-planned-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px dashed rgba(193, 197, 209, 0.85);
+  border-radius: 7px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+/* Event card: trust glyph + cleaner footer.
+ *
+ * The slot grid is defined once at the base rule (line ~781) so this
+ * overlay does NOT redeclare grid-template-rows. The fixed slot heights
+ * keep the card tidy: header / title / footer always pin to the same
+ * y-positions regardless of which optional elements are present. */
+.event-card-header {
+  align-items: center;
+  align-self: start;
+  min-width: 0;
+}
+
+/* Trust level is no longer stamped on every card — it is inspector detail.
+ * Cards stay scannable: time, title, one calm meta signal. */
+
+.event-card-summary {
+  display: none; /* The inspector owns prose; cards stay scannable. */
+}
+
+.event-card-footer {
+  /* The footer always occupies the same slot at the bottom of the card.
+   * Whether or not the JSX emits meta content, the slot height is fixed
+   * by `.event-card { grid-template-rows: ... 12px }`. */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: end;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.event-card-meta {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-card-title {
+  align-self: center; /* center vertically inside its 1fr slot */
+}
+
+/* Bundle card footer in line with the new event card style. */
+.timeline-bundle-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: end;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.timeline-bundle-footer > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Bundle density micro-bar — a calm, subordinate sparkline of when the
+ * clustered members occurred across the bundle's span. Sits at the right of
+ * the footer; bar tone matches the lane. Decorative (aria-hidden); the
+ * "N개 이벤트" count carries the magnitude for assistive tech. */
+.timeline-bundle-density {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  height: 8px;
+  overflow: visible;
+  opacity: 0.5;
+}
+
+.timeline-bundle-density > span {
+  width: 2px;
+  min-height: 1px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.timeline-bundle-density.tone-purple { color: var(--purple); }
+.timeline-bundle-density.tone-green  { color: var(--green); }
+.timeline-bundle-density.tone-red    { color: var(--red); }
+.timeline-bundle-density.tone-blue   { color: var(--blue); }
+.timeline-bundle-density.tone-cyan   { color: var(--cyan); }
+.timeline-bundle-density.tone-orange { color: #b46100; }
+.timeline-bundle-density.tone-gray   { color: #5b6477; }
+
+.timeline-bundle-title {
+  align-self: center;
+}
+
+.timeline-bundle-card-header {
+  align-self: start;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Sidebar session card — live timer rhythm. */
+.session-card time.is-live {
+  color: var(--green);
+}
+
+.session-card time.is-live::after {
+  content: "";
+  display: inline-block;
+  margin-left: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  vertical-align: middle;
+  animation: base-live-pulse 1.6s ease-in-out infinite;
+}
+
+/* Responsive contract.
+ *   - 1180px → inspector stacks below; toolbar still single-row.
+ *   - 1380px → toolbar gap tightens.
+ *   - 1600px → roomier padding.
+ */
+@media (max-width: 1180px) {
+  .timeline-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-toolbar-right {
+    justify-self: start;
+  }
+
+  .inspector {
+    position: static;
+    max-height: none;
+    border-left: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 1380px) {
+  .timeline-toolbar {
+    padding: 8px 12px;
+  }
+
+  .timeline-toolbar-left,
+  .timeline-toolbar-right {
+    gap: 6px;
+  }
+
+  .toolbar-toggle,
+  .toolbar-select {
+    padding: 0 10px;
+    font-size: 11.5px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .timeline-main {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+/* Start Session honesty strip. */
+.capture-surface-strip {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  align-items: start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(214, 219, 232, 0.85);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.capture-surface-strip strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Stack the Start Session summary panel cleanly on narrower desktops. */
+@media (max-width: 1340px) {
+  .setup-grid .summary-panel {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 1180px) {
+  .summary-panel .summary-source-list {
+    columns: 2;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+ * Mori UI primitives — semantic surface + planned-action styles
+ *
+ * These rules back the `BaseCard`, `BasePlannedAction`, and `BaseScrollArea`
+ * components. They prefer the new `--base-*` semantic tokens from
+ * `styles/theme.css` so a future theme switch only has to remap one layer.
+ * ─────────────────────────────────────────────────────────────────────── */
+
+.base-card {
+  display: block;
+  padding: 16px 18px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface);
+  box-shadow: var(--base-shadow-card);
+  color: var(--base-text);
+}
+
+.base-card-subtle {
+  background: var(--base-surface-subtle);
+  box-shadow: none;
+}
+
+.base-card-accent {
+  border-color: rgba(98, 70, 245, 0.18);
+  background: linear-gradient(180deg, var(--base-surface) 0%, var(--base-accent-soft) 140%);
+}
+
+.base-card-outline {
+  background: transparent;
+  box-shadow: none;
+  border-color: var(--base-border-strong);
+}
+
+.base-planned-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px dashed rgba(193, 197, 209, 0.85);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--base-text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.base-planned-action[data-base-status="unavailable"] {
+  opacity: 0.8;
+}
+
+.base-scroll-horizontal {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.base-scroll-both {
+  overflow: auto;
+}
+
+/* ====================================================================
+   Responsive foundation — canonical breakpoints 1280 / 1024 / 768 / 560.
+   Appended last on purpose: these rules must win over the duplicate
+   `.timeline-toolbar` / `.lane-label` blocks earlier in this file.
+   ==================================================================== */
+
+/* The hamburger + scrim only exist in the off-canvas (<=768px) mode. */
+.sidebar-toggle,
+.sidebar-scrim {
+  display: none;
+}
+
+/* --- Narrow widths: the sidebar becomes an off-canvas drawer. -------
+   At ≤768px the workspace claims the full row, and the sidebar lifts out of
+   the grid and slides over the workspace on demand. The floating toggle in
+   the top-left corner of the workspace opens it; the workspace reserves
+   matching top padding so the toggle never overlays content. */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "workspace";
+  }
+  .workspace {
+    padding-top: 56px;
+  }
+  .sidebar {
+    grid-area: unset;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 256px;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 200ms ease;
+    box-shadow: var(--base-shadow-overlay);
+  }
+  .app-shell.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+  .sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 55;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    color: var(--text);
+  }
+  .app-shell.sidebar-open .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(20, 25, 36, 0.34);
+  }
+  /* Narrow widths use a tighter page inset; the header breakout follows
+     it automatically through --page-inset. */
+  .page {
+    --page-inset: var(--base-space-6);
+  }
+  /* Clear room for the floating sidebar toggle in the page chrome. */
+  .page .page-header {
+    padding-left: calc(var(--page-inset) + 50px);
+  }
+  /* Step the two display tiers down a notch on small viewports. */
+  :root {
+    --base-font-size-2xl: 16px;
+    --base-font-size-3xl: 17.5px;
+  }
+}
+
+/* --- Stat / metric strips: reflow fixed-count grids. ---------------- */
+@media (max-width: 768px) {
+  /* On narrow screens the sidebar is off-canvas. Position the attention
+     panel against the screen edge so it doesn't clip when the sidebar
+     drawer slides in. */
+  .attention-panel {
+    left: 16px;
+    right: 16px;
+    bottom: 12px;
+    width: auto;
+  }
+
+  .attention-toast {
+    left: 14px;
+    right: 14px;
+    width: auto;
+  }
+
+  .timeline-header-metrics,
+  .issue-board,
+  .resume-metrics,
+  .evidence-grid,
+  .review-event-card-meta,
+  .review-issue-board-columns,
+  .session-summary-metrics,
+  .memory-hero-stats,
+  .settings-sqlite-meta,
+  .report-format-list,
+  .format-grid,
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .timeline-header-metrics,
+  .issue-board,
+  .resume-metrics,
+  .evidence-grid,
+  .review-event-card-meta,
+  .review-issue-board-columns,
+  .session-summary-metrics,
+  .memory-hero-stats,
+  .settings-sqlite-meta,
+  .report-format-list,
+  .format-grid,
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

@@ -1,0 +1,500 @@
+/* ════════════════════════════════════════════════════════════════════════
+ * Shared layout primitives — PageShell / PageHeader / ActionBar /
+ * InspectorPanel / EmptyState / NoticeBanner / HelpDisclosure.
+ *
+ * The goal: every screen shares one skeleton so the common chrome can't
+ * drift with content. The PageShell pins the header + action bar and gives
+ * the content its own scroll region; widths, rails, empties, banners, and
+ * disclosures all read from the same tokens.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* When a workspace hosts a PageShell, lock it to the viewport so the shell
+   owns the scroll boundary. Legacy `.page` views are untouched — they keep
+   scrolling with the document. */
+.workspace:has(.page-shell) {
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.page-shell {
+  --page-shell-inset: var(--base-space-9);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+/* Pinned header band: header + optional action bar never scroll away. */
+/* The pinned top region blends into the page background instead of reading as
+   a separate white header bar — controls (tabs, segmented switch, actions)
+   float on the page. It sits outside the scroll region, so content never
+   bleeds under it and no divider is needed. */
+.page-shell-top {
+  position: relative;
+  z-index: 2;
+  background: var(--base-bg);
+}
+
+/* The single scroll region. Everything below the header lives here. */
+.page-shell-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.page-shell-content {
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--base-space-7) var(--page-shell-inset) var(--base-space-9);
+  /* Stacked sections share one vertical rhythm so the column reads as a
+     single calm flow instead of each section choosing its own margin. */
+  display: grid;
+  gap: var(--base-space-7);
+  align-content: start;
+}
+
+.page-shell-content.is-default,
+.page-shell-content.is-standard {
+  max-width: 1180px;
+}
+
+.page-shell-content.is-wide {
+  max-width: 1400px;
+}
+
+.page-shell-content.is-detail {
+  max-width: 1520px;
+}
+
+.page-shell-content.is-reading {
+  max-width: 880px;
+}
+
+.page-shell-content.is-full {
+  max-width: none;
+}
+
+/* Two-column body when an aside (inspector) is present. */
+.page-shell-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--base-rail);
+  gap: var(--base-space-7);
+  align-items: start;
+}
+
+.page-shell-main {
+  display: grid;
+  gap: var(--base-space-7);
+  min-width: 0;
+}
+
+/* Right rails inside a shell stick to the top of the *scroll region*, not a
+   page-level topbar — so reset legacy sticky offsets that assumed a 76–88px
+   header outside the scroll container. The shell's header is pinned above
+   the scroll region, so 0 is correct here. */
+.page-shell-split > .inspector-panel,
+.page-shell-split > .base-inspector-panel,
+.page-shell-split > .evidence-detail,
+.page-shell-split > .review-detail,
+.page-shell-split > .settings-trust,
+.page-shell-split > .companion-inbox-rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: calc(100vh - 148px);
+  overflow-y: auto;
+}
+
+@media (max-width: 1180px) {
+  .page-shell-split > .inspector-panel,
+  .page-shell-split > .evidence-detail,
+  .page-shell-split > .review-detail,
+  .page-shell-split > .settings-trust,
+  .page-shell-split > .companion-inbox-rail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Header band inside the shell is flush — the `.page-shell-top` owns the
+   border / blur, so the header itself just lays out title + actions. */
+.page-shell-top .page-header {
+  background: transparent;
+  border-bottom: 0;
+  backdrop-filter: none;
+  padding: var(--base-space-7) var(--page-shell-inset) var(--base-space-6);
+}
+
+.page-shell-top .action-bar {
+  padding-left: var(--page-shell-inset);
+  padding-right: var(--page-shell-inset);
+}
+
+/* Headerless surfaces: the sidebar names the destination, so there is no
+   duplicate title band. The action bar becomes the thin pinned top band and
+   carries a touch more vertical breathing room since nothing sits above it. */
+.page-shell.is-headerless .page-shell-top .action-bar {
+  min-height: 56px;
+  padding-top: var(--base-space-5);
+  padding-bottom: var(--base-space-5);
+}
+
+/* ── PageHeader ─────────────────────────────────────────────────────────── */
+
+.page-header-titles {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.page-header-titles h1 {
+  margin: 0;
+  font-size: var(--base-font-size-2xl);
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.page-header-titles p {
+  margin: 0;
+  color: var(--base-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  /* Subtitle is clamped to two lines so a long blurb never grows the band. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 720px;
+}
+
+.page-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  flex-shrink: 0;
+}
+
+.page-header-compact {
+  min-height: 60px;
+  padding-top: var(--base-space-5);
+  padding-bottom: var(--base-space-4);
+}
+
+.page-shell-top .page-header-compact {
+  padding-top: var(--base-space-5);
+  padding-bottom: var(--base-space-4);
+}
+
+.page-header-compact .page-header-titles h1 {
+  font-size: var(--base-font-size-xl);
+}
+
+/* ── ActionBar ──────────────────────────────────────────────────────────── */
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--base-space-4);
+  min-height: 52px;
+  padding: var(--base-space-3) 0 var(--base-space-4);
+}
+
+.action-bar-start {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.action-bar-end {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  flex-shrink: 0;
+}
+
+/* In-bar context label for off-nav surfaces (연결 · 증거 허브 · Mori 노트 …).
+   The sidebar names the five primary destinations; surfaces reached *through*
+   them carry this quiet label instead of a duplicate page-title band. */
+.action-bar-context {
+  font-size: var(--base-font-size-md);
+  font-weight: 650;
+  color: var(--base-text);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+/* ── Session Detail (unified tabbed workspace) ──────────────────────────────
+   Opening a session lands here: one calm context header + a tab bar (흐름 /
+   증거 / 인사이트), and the active tab's view rendered inline (embedded — it
+   never owns its own shell). The header is a dense desktop-app context strip,
+   NOT a big title band (P1). The tabs reuse the calm pill treatment. */
+
+.session-detail-page .page-shell-content {
+  /* The embedded tabs manage their own width + internal padding, so the shell
+     content column is full-bleed with no extra gap stacking. */
+  padding: 0;
+  gap: 0;
+}
+
+/* Session detail bar — a single tight row carrying the inline session title
+   on the left and the tab strip on the right. Sits flush on the page
+   background so it never reads as a separate white "header" band; the
+   only divider is the page rhythm + the tab pill's own surface. */
+.session-detail-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: var(--base-space-5) var(--page-shell-inset) var(--base-space-4);
+  background: var(--base-bg);
+  border-bottom: 1px solid var(--base-border);
+  flex-wrap: wrap;
+}
+
+/* Session detail breadcrumb — 세션 ▸ project ▸ session-title. The
+ * first two crumbs are clickable (back to workspace / project page),
+ * the last one is the current location. Reads as a real location
+ * indicator so the user always knows how deep into a session they are. */
+.session-detail-breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.session-detail-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--base-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-detail-crumb:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--base-text);
+}
+
+.session-detail-crumb svg {
+  color: currentColor;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.session-detail-crumb.is-back {
+  color: var(--base-text-muted-2);
+}
+
+.session-detail-crumb.is-current {
+  background: transparent;
+  color: var(--base-text);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  cursor: default;
+  pointer-events: none;
+}
+
+.session-detail-crumb-sep {
+  color: var(--base-text-muted-2);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.session-origin-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: min(620px, 100%);
+  padding: 2px;
+  color: var(--base-text-muted);
+  font-size: 11.5px;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.session-origin-chip,
+.session-origin-meta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface);
+  white-space: nowrap;
+}
+
+.session-origin-chip {
+  max-width: 180px;
+  color: var(--base-text);
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-origin-chip.is-primary {
+  border-color: transparent;
+  background: var(--base-accent-soft);
+  color: var(--base-accent);
+}
+
+.session-origin-meta {
+  color: var(--base-text-muted);
+}
+
+.session-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.session-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--base-radius-pill);
+  background: transparent;
+  color: var(--base-text-muted);
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.session-tab:hover {
+  color: var(--base-text);
+  background: var(--base-surface-subtle);
+}
+
+.session-tab.is-active {
+  background: var(--base-accent-soft);
+  color: var(--base-accent);
+}
+
+.session-tab svg {
+  flex-shrink: 0;
+}
+
+/* ── Embedded tab panes ─────────────────────────────────────────────────────
+   Each tab view renders here in `embedded` mode: a thin action-bar row, then a
+   main + inspector split that mirrors `page-shell-split`. The Session Detail
+   owns the single shell, so these never re-add a header. */
+.session-tab-pane {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+}
+
+.session-tab-actionbar {
+  padding: 0 var(--page-shell-inset);
+  background: var(--base-bg);
+  border-bottom: 1px solid var(--base-border);
+}
+
+.session-tab-actionbar .action-bar {
+  min-height: 52px;
+}
+
+.session-tab-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--base-rail);
+  gap: var(--base-space-6);
+  align-items: start;
+  padding: var(--base-space-5) var(--page-shell-inset) var(--base-space-9);
+  min-width: 0;
+}
+
+/* On-demand inspector: when nothing is selected, the aside is dropped and the
+   main column claims the full width so the board / list reads at a glance. */
+.session-tab-split.is-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.session-tab-main {
+  display: grid;
+  gap: var(--base-space-7);
+  min-width: 0;
+}
+
+/* The inspector rail sticks within the shell scroll region, like other rails. */
+.session-tab-split > .evidence-detail,
+.session-tab-split > .review-detail {
+  position: sticky;
+  top: 56px;
+  align-self: start;
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
+}
+
+@media (max-width: 1180px) {
+  .session-tab-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .session-tab-split > .evidence-detail,
+  .session-tab-split > .review-detail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+.session-tab-flow-empty {
+  padding: var(--base-space-8) var(--page-shell-inset) var(--base-space-9);
+}
+
+/* The 흐름 tab hosts the Timeline, which renders its own `content-grid` with
+   its own inspector column. Embedded it must not claim full viewport height
+   (it lives inside the shell scroll region) and it carries the shell inset. */
+.content-grid.content-grid-embedded {
+  min-height: 0;
+  background: none;
+  padding: 0 var(--page-shell-inset) var(--base-space-6);
+  /* Top-align the columns so opening the inspector never stretches the
+     timeline column to the inspector's (taller) height. */
+  align-items: start;
+}
+
+.content-grid.content-grid-embedded .timeline-main {
+  padding-left: 0;
+  padding-right: var(--base-space-6);
+}
+
+/* The Timeline inspector / Trace panel (`.inspector` / `.inspector.trace`)
+   inside the embedded 흐름 tab scrolls inside the shell scroll region rather
+   than against a page-level topbar, so relax the viewport-anchored max-height
+   that assumed a 76px header. */
+.content-grid.content-grid-embedded > .inspector {
+  /* Flow with the page instead of pinning to a capped, internally-scrolled
+     panel — the page scrolls to reveal the whole inspector, so it never feels
+     clipped or "stuck" to a fixed height. */
+  position: static;
+  max-height: none;
+  overflow: visible;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+

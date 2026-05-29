@@ -1,0 +1,159 @@
+/* ─── Command palette ───────────────────────────────────────────────────
+   Cmd+K / Ctrl+K modal. Sits above the workspace and the settings sheet,
+   with a slightly tighter scrim so the dialog reads as the focal layer.
+   Borrows the settings-sheet's restrained backdrop blur for cohesion. */
+
+.command-palette-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 92px;
+}
+
+.command-palette-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 18, 28, 0.32);
+  backdrop-filter: blur(2px);
+}
+
+.command-palette {
+  position: relative;
+  width: min(620px, calc(100vw - 64px));
+  max-height: calc(100vh - 160px);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(20, 25, 45, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.command-palette-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.command-palette-input svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.command-palette-input input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.command-palette-input input::placeholder {
+  color: var(--muted-2);
+}
+
+.command-palette-hint {
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted-2);
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--gray-50);
+}
+
+.command-palette-list {
+  padding: 6px 6px 8px;
+  overflow: auto;
+  max-height: 480px;
+}
+
+.command-palette-list section + section {
+  margin-top: 4px;
+}
+
+.command-palette-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.command-palette-section {
+  margin: 4px 8px 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.command-palette-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.1s ease;
+}
+
+.command-palette-row svg {
+  color: var(--muted);
+}
+
+.command-palette-row.is-active {
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.command-palette-row.is-active svg {
+  color: var(--purple);
+}
+
+.command-palette-row-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette-row-hint {
+  color: var(--muted-2);
+  font-size: 11.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.command-palette-row-enter {
+  opacity: 0.7;
+}
+
+.command-palette-empty {
+  margin: 16px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: center;
+}
+

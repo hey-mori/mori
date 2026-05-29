@@ -1,0 +1,1451 @@
+/* ─── Active Session Banner (Start Session view) ───────────────────── */
+
+.active-session-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--base-surface-raised);
+  border: 1px solid var(--base-border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 22px;
+}
+
+.active-session-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.active-session-banner-info > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.active-session-banner-info strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--base-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-session-banner-info span {
+  font-size: 12px;
+  color: var(--base-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Setup Grid ────────────────────────────────────────────────────── */
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 22px;
+  align-items: start;
+}
+
+.setup-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.start-entry-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: var(--base-space-3);
+}
+
+.start-entry-card {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--base-space-3);
+  min-width: 0;
+  min-height: 58px;
+  padding: var(--base-space-3) var(--base-space-4);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  color: inherit;
+  text-align: left;
+}
+
+button.start-entry-card {
+  cursor: pointer;
+}
+
+button.start-entry-card:hover {
+  border-color: var(--base-border-strong);
+  background: var(--base-surface-subtle);
+}
+
+.start-entry-card.is-primary {
+  border-color: rgba(35, 105, 246, 0.24);
+  background: var(--base-status-info-soft);
+}
+
+.start-entry-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--base-surface);
+  color: var(--base-accent);
+}
+
+.start-entry-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.start-entry-copy strong {
+  color: var(--base-text);
+  font-size: var(--base-font-size-md);
+  font-weight: 720;
+}
+
+.start-entry-copy small {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  line-height: var(--base-line-snug);
+}
+
+@media (max-width: 760px) {
+  .start-entry-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .start-session-page .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.setup-block,
+.summary-panel,
+.resume-card,
+.flow-summary,
+.report-builder,
+.issue-sidebar,
+.decision-log,
+.source-principles,
+.project-hero,
+.project-list,
+.settings-grid section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Start Session steps read as heading groups, not stacked cards. The shared
+   .setup-block,.summary-panel,… rule above adds a border / bg / shadow that
+   makes the 3 numbered steps feel like card-on-card; reset that for the
+   step blocks specifically and give the numbered indicator a quiet pill. */
+.setup-block {
+  padding: 4px 2px 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.setup-block + .setup-block {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.setup-block header {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: center;
+}
+
+.setup-block header > span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: var(--purple);
+  border-radius: 999px;
+  background: var(--purple-50);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.setup-block h2 {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: 16px;
+  align-items: end;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  color: #485366;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input,
+.select-like {
+  height: 46px;
+  padding: 0 14px;
+  color: #161e2d;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.select-like {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.select-like svg:last-child {
+  margin-left: auto;
+}
+
+.source-grid,
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.source-card,
+.engine-card {
+  min-width: 0;
+  border: 1px solid var(--base-border, var(--line));
+  border-radius: var(--base-radius-md, 8px);
+  background: var(--base-surface, #ffffff);
+  color: var(--base-text, var(--text));
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.source-card {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--base-space-3);
+  min-height: 54px;
+  padding: var(--base-space-3);
+  text-align: left;
+}
+
+.source-card:hover,
+.engine-card:hover {
+  border-color: var(--base-border-strong, var(--line-strong));
+  background: var(--base-surface-subtle, var(--panel-soft));
+}
+
+.source-card:focus-visible,
+.engine-card:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.source-card.selected,
+.engine-card.selected,
+.report-type-grid .selected,
+.format-grid .selected,
+.theme-options .selected {
+  border-color: var(--purple);
+  background: linear-gradient(180deg, #fff, #faf8ff);
+}
+
+.source-card div,
+.engine-card div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.source-card span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  min-width: 0;
+}
+
+.source-card strong,
+.engine-card strong,
+.source-card span,
+.engine-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-card span i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #b9c1d2;
+  border-radius: 4px;
+}
+
+/* Start Session source group — the available imports the user can select. */
+.source-group {
+  display: grid;
+  gap: 10px;
+}
+
+.source-group + .source-group {
+  margin-top: 18px;
+}
+
+.source-group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.source-group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.source-group-hint {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.privacy-note {
+  margin-top: 16px;
+  padding: 12px 14px;
+  color: var(--purple);
+  border-radius: 8px;
+  background: var(--purple-50);
+  font-size: 13px;
+}
+
+.privacy-note > summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.privacy-note > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Chevron affordance — rotates down when the disclosure is open. */
+.privacy-note > summary::after {
+  content: "";
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--base-transition, 140ms ease);
+}
+
+.privacy-note[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
+.privacy-note-detail {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.engine-grid,
+.report-type-grid,
+.format-grid,
+.theme-options {
+  display: grid;
+  gap: 14px;
+}
+
+.engine-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.engine-card {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--base-space-3);
+  min-height: 58px;
+  padding: var(--base-space-3);
+  text-align: left;
+}
+
+.setup-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.setup-actions .btn-primary {
+  min-width: 284px;
+}
+
+.summary-panel {
+  position: sticky;
+  top: 24px;
+  padding: 28px;
+}
+
+.summary-panel h2 {
+  margin-bottom: 24px;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: 22px auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 38px;
+}
+
+/* Label (2nd cell) stays on one line; the value truncates instead, so a long
+   conversation title can never collapse the label into stacked characters. */
+.summary-row > span:nth-child(2) {
+  white-space: nowrap;
+}
+
+.summary-row b {
+  font-size: 14px;
+  min-width: 0;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The engine value carries an inline 변경 button, so it lays out as a flex row
+   whose label truncates while the button never clips. */
+.summary-row-engine {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  overflow: visible;
+  white-space: normal;
+}
+
+.summary-row-engine-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accent {
+  color: var(--purple);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 18px 0;
+}
+
+.summary-source-list {
+  display: grid;
+  gap: 9px;
+  margin: 8px 0 0 32px;
+  padding: 0;
+  color: #344056;
+  list-style: none;
+}
+
+.summary-source-empty {
+  color: #8b85a3;
+  font-style: italic;
+}
+
+.local-first-note {
+  display: grid;
+  gap: 8px;
+  margin-top: 28px;
+  padding: 18px;
+  color: #4734bb;
+  border-radius: 8px;
+  background: var(--purple-50);
+}
+
+.draft-status-panel {
+  display: grid;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 14px;
+  color: #253352;
+  border: 1px solid #d9d0ff;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff, #fbf9ff);
+}
+
+.draft-status-panel span {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* ─── Start Session (PageShell) ─────────────────────────────────────────
+ * The session-summary now lives inside a shared InspectorPanel aside rather
+ * than the legacy sticky `.summary-panel` card, so the source list aligns to
+ * the inspector body padding and the privacy line sits in the pinned footer. */
+.start-session-page .summary-source-list {
+  margin: 4px 0 0;
+}
+
+.start-session-page .form-row {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--base-space-4);
+}
+
+.start-summary-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--purple);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.start-summary-footer svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* 새 세션 — agent-first session setup. Each numbered block reads as a soft
+   card (crafted setup, not a flat form), with neutral pick tiles that adopt
+   the brand lavender only in their selected state. */
+.start-session-page .setup-block {
+  padding: 18px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 249, 255, 0.72));
+  box-shadow: var(--shadow-soft);
+}
+
+.start-session-page .setup-block + .setup-block {
+  margin-top: 16px;
+}
+
+.setup-block-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+/* A selectable agent / method tile. */
+.pick-tile {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--base-surface, #ffffff);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 130ms ease,
+    background 130ms ease,
+    box-shadow 130ms ease,
+    transform 130ms ease;
+}
+
+.pick-tile:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+.pick-tile:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.pick-tile.is-selected {
+  border-color: var(--purple);
+  background: var(--base-accent-soft, var(--purple-50));
+  box-shadow: 0 0 0 1px var(--purple) inset;
+}
+
+.pick-tile.is-disabled {
+  cursor: default;
+  border-style: dashed;
+  background: var(--panel-soft, #fafafa);
+  box-shadow: none;
+  opacity: 0.78;
+}
+
+.pick-tile.is-disabled:hover {
+  transform: none;
+  border-color: var(--line);
+}
+
+/* Icon chip — neutral slate by default, brand purple only when selected. */
+.pick-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  color: var(--muted);
+  background: var(--panel-soft, #f4f4f7);
+}
+
+.pick-tile.is-selected .pick-tile-icon {
+  color: var(--purple);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.pick-tile-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* Korean titles must wrap at word boundaries (keep-all), never mid-syllable,
+   so a tight tile shows "기록에서 / 불러오기" instead of "기록에 / 서 불러 / 오기". */
+.pick-tile-body strong {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text);
+  word-break: keep-all;
+}
+
+.pick-tile-body > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted);
+  word-break: keep-all;
+}
+
+.pick-tile-rec {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--base-accent-soft, var(--purple-50));
+  color: var(--purple);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Selection mark — a radio dot, filled when selected (never a checkmark). */
+.pick-mark {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line-strong, #c7cdd9);
+  border-radius: 999px;
+  background: transparent;
+}
+
+.pick-mark.is-selected {
+  border-color: var(--purple);
+  background:
+    radial-gradient(circle at center, var(--purple) 0 4px, transparent 5px);
+}
+
+.method-detail {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.start-paste-text {
+  width: 100%;
+  min-height: 132px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.start-paste-text:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 1px;
+}
+
+/* Retention is one unified rule, stated as a calm fact rather than a toggle. */
+.start-retention-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.start-retention-note svg {
+  flex-shrink: 0;
+  color: var(--muted-2, var(--muted));
+}
+
+/* Project field as a div (not a <label>) so clicking the caption never toggles
+   the custom dropdown. Mirrors the form <label> typography. */
+.form-field {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.form-field-label {
+  color: #485366;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Custom single-select — Mori's own surface instead of the OS-painted popup. */
+.base-select {
+  position: relative;
+}
+
+.base-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 46px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: #161e2d;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.base-select-trigger:hover {
+  border-color: var(--line-strong);
+}
+
+.base-select-trigger:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 1px;
+}
+
+.base-select.is-open .base-select-trigger {
+  border-color: var(--purple);
+}
+
+.base-select-trigger > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.base-select-trigger svg {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 130ms ease;
+}
+
+.base-select.is-open .base-select-trigger svg {
+  transform: rotate(180deg);
+}
+
+.base-select-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: var(--shadow-pop, 0 12px 32px rgba(20, 30, 45, 0.16));
+}
+
+.base-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.base-select-option > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.base-select-option:hover {
+  background: var(--panel-soft, #f4f4f7);
+}
+
+.base-select-option.is-selected {
+  background: var(--base-accent-soft, var(--purple-50));
+  color: var(--purple);
+  font-weight: 650;
+}
+
+.base-select-option svg {
+  flex-shrink: 0;
+  color: var(--purple);
+}
+
+.start-import-note {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* The single create action lives under the session summary, in the sticky
+   right rail, so it is always reachable as the user fills the steps. */
+.start-summary-action {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.start-summary-action .btn,
+.start-summary-action button {
+  width: 100%;
+  justify-content: center;
+}
+
+.summary-row b.muted {
+  color: var(--muted-2);
+  font-weight: 500;
+}
+
+/* 작업 대화 둘러보기 모달 — browse a detected conversation and preview its
+   content before turning it into a session. */
+.detected-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(20, 25, 40, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.detected-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* Match the settings sheet's footprint — the previous size was too cramped
+     to read a full conversation. */
+  width: min(1120px, calc(100vw - 52px));
+  height: min(780px, calc(100vh - 52px));
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--base-surface, #fff);
+  box-shadow: 0 24px 64px rgba(20, 30, 45, 0.28);
+  overflow: hidden;
+}
+
+.detected-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.detected-modal-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.detected-modal-head p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.detected-modal-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.detected-modal-close:hover {
+  background: var(--panel-soft, #f4f4f7);
+  color: var(--text);
+}
+
+.detected-modal-body {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  min-height: 0;
+}
+
+.detected-modal-list {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+  padding: 14px;
+  border-right: 1px solid var(--line);
+}
+
+.detected-modal-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detected-modal-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.detected-modal-scroll .start-detected {
+  margin-top: 0;
+}
+
+.detected-modal-preview {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px;
+}
+
+.detected-preview-empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  height: 100%;
+  min-height: 240px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.detected-preview-empty svg {
+  color: var(--muted-2, var(--muted));
+}
+
+.detected-preview-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.detected-preview-head h3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  /* Titles can be stack traces / code, so break long unspaced runs too. */
+  overflow-wrap: anywhere;
+}
+
+.detected-preview-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.detected-preview-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 14px 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.detected-preview-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.detected-preview-stats svg {
+  color: var(--muted-2, var(--muted));
+}
+
+.detected-preview-ask {
+  margin-bottom: 16px;
+}
+
+.detected-preview-ask h4,
+.detected-preview-thread h4 {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.detected-preview-ask p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.detected-preview-thread ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.detected-preview-thread li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.detected-preview-role {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--purple);
+  word-break: keep-all;
+}
+
+.detected-preview-thread li.is-reply .detected-preview-role {
+  color: var(--muted);
+}
+
+.detected-preview-text {
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.detected-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.detected-modal-foot-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.detected-modal-foot-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 새 세션 records summary + browse trigger (the modal replaces the inline list). */
+.records-browse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: 1px dashed var(--line-strong, var(--line));
+  border-radius: 10px;
+  background: var(--panel-soft, #fafafa);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.records-browse-btn:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.records-browse-btn svg {
+  color: var(--purple);
+}
+
+.records-chosen {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--purple);
+  border-radius: 12px;
+  background: var(--base-accent-soft, var(--purple-50));
+}
+
+.records-chosen-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--purple);
+}
+
+.records-chosen-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.records-chosen-main strong {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.records-chosen-main span {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inline detected-conversation picker, grouped by project then session. */
+.start-detected {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Search + refresh row — the entry point to a list that can hold hundreds of
+   conversations, so it stays usable at any scale. */
+.start-detected-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.start-detected-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--muted);
+}
+
+.start-detected-search:focus-within {
+  border-color: var(--purple);
+}
+
+.start-detected-search input {
+  flex: 1;
+  height: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.start-detected-search input:focus-visible {
+  outline: none;
+}
+
+.start-detected-refresh {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.start-detected-refresh:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+/* Bounded scroll so a long history never grows the page off-screen. */
+.start-detected-scroll {
+  display: grid;
+  gap: 12px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.start-detected-group {
+  display: grid;
+  gap: 6px;
+}
+
+/* Sticky group header keeps the project visible while scrolling its sessions. */
+.start-detected-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--base-surface, #ffffff);
+  color: var(--muted);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.start-detected-group-head:hover {
+  background: var(--base-surface-subtle, var(--panel-soft));
+  border-color: var(--line);
+}
+
+.start-detected-group-head:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.start-detected-group-toggle {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+
+.start-detected-group-head strong {
+  color: var(--text);
+  font-weight: 650;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.start-detected-group-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.start-detected-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.start-detected-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, white);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.start-detected-row:hover {
+  border-color: var(--line-strong);
+}
+
+.start-detected-row.is-selected {
+  border-color: var(--purple);
+  background: var(--base-accent-soft, var(--purple-50));
+}
+
+.start-detected-check {
+  color: var(--purple);
+  flex-shrink: 0;
+}
+
+.start-detected-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.start-detected-main strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.start-detected-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.start-import-spin {
+  animation: connections-spin 0.9s linear infinite;
+  vertical-align: -2px;
+}
+
+/* "변경" link to engine settings, inline in the summary engine row. */
+.start-engine-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--purple);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.start-engine-change:hover {
+  text-decoration: underline;
+}
+
+.start-new-project-input {
+  margin-top: 6px;
+}
+
+.page-tight {
+  padding-bottom: 20px;
+}
+

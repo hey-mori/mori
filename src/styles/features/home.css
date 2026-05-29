@@ -1,0 +1,561 @@
+/* ── Home ───────────────────────────────────────────────────────────────── */
+
+/* The session-centric landing dashboard. Calm by design: an activity heatmap
+   hero, a wide recent-session list, and a compact next-step rail. No fabricated
+   widgets — every cell and number traces to a stored session. */
+.home-dashboard {
+  display: grid;
+  gap: var(--base-space-5);
+}
+
+.home-demo-note {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  margin: 0;
+  padding: var(--base-space-2) var(--base-space-4);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface-subtle);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-sm);
+  line-height: var(--base-line-normal);
+}
+
+.home-demo-note svg {
+  flex-shrink: 0;
+  color: var(--base-accent);
+}
+
+.home-top-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--base-space-5);
+  align-items: start;
+}
+
+.home-main-stack {
+  display: grid;
+  gap: var(--base-space-5);
+  min-width: 0;
+}
+
+/* Current / most-recent session strip — a thin band on the surface, not a
+   stacked card. Mori captures runs, so the status word is calm ("최근 작업" /
+   "분석 완료"), never a live "녹화 중" ticker. A list so a future "multiple
+   tracked sessions" feature only grows the list, never rewrites the strip. */
+.home-current-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--base-space-3);
+}
+
+.home-current {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-5);
+  padding: var(--base-space-4) var(--base-space-5);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface-subtle);
+}
+
+.home-current-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--base-accent-soft);
+  color: var(--base-accent);
+}
+
+.home-current-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-current-titlerow {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  min-width: 0;
+}
+
+.home-current-title {
+  font-size: var(--base-font-size-md);
+  font-weight: 650;
+  color: var(--base-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-current-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted);
+  min-width: 0;
+}
+
+.home-current-project {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.home-current-span,
+.home-current-events,
+.home-current-time {
+  flex-shrink: 0;
+  color: var(--base-text-muted-2);
+}
+
+.home-current-span::before,
+.home-current-events::before,
+.home-current-time::before {
+  content: "·";
+  margin-right: var(--base-space-3);
+  color: var(--base-text-muted-2);
+}
+
+.home-current .btn {
+  flex-shrink: 0;
+}
+
+/* Activity hero — the signature "잔디". One calm card: a contribution heatmap
+   over the recent window plus a compact real-data stat strip. Tighter padding
+   so the card doesn't read as mostly whitespace around a small heatmap. */
+.home-activity {
+  display: grid;
+  gap: var(--base-space-3);
+  padding: var(--base-space-4) var(--base-space-5);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface);
+}
+
+.home-activity-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--base-space-4);
+}
+
+.home-activity-head h2 {
+  margin: 0;
+  font-size: var(--base-font-size-lg);
+  font-weight: 650;
+  color: var(--base-text);
+}
+
+.home-activity-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-4);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.home-activity-sub {
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted);
+  white-space: nowrap;
+}
+
+/* 잔디 lens toggle — a small segmented control (세션 · 활동 · 토큰). Identity
+   purple marks the active lens; an unavailable lens (no data) reads disabled
+   rather than rendering an empty grid. */
+.home-metric-toggle {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface-subtle);
+}
+
+.home-metric-pill {
+  border: 0;
+  border-radius: calc(var(--base-radius-md) - 2px);
+  padding: 4px 12px;
+  background: transparent;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.home-metric-pill:hover:not(:disabled):not([aria-pressed="true"]) {
+  color: var(--base-text);
+}
+
+.home-metric-pill[aria-pressed="true"] {
+  background: var(--base-surface);
+  color: var(--base-accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.home-metric-pill:disabled {
+  color: var(--base-text-muted-2);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Home activity metric strip (세션 · 프로젝트 · 연속 · 최근 활동). It renders via
+   BaseMetricStrip, so the markup is `.base-metric-strip.home-activity-stats`
+   with `.base-metric-item` children. These selectors are scoped under
+   `.home-activity` so they outrank the global `.base-metric-strip` /
+   `.base-metric-item` rules (which would otherwise zero the top padding and
+   render the value at a heavy 20px/700). The result is calmer: a hairline
+   divider with room above the numbers, and a value only a step larger than the
+   14px section title rather than dominating it. */
+.home-activity .home-activity-stats {
+  margin-top: var(--base-space-1);
+  padding-top: var(--base-space-4);
+  border-top: 1px solid var(--base-border);
+}
+
+.home-activity .base-metric-item dt {
+  font-size: var(--base-font-size-xs);
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--base-text-muted);
+  white-space: nowrap;
+}
+
+.home-activity .base-metric-item dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--base-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Contribution heatmap. Sizes live in local custom properties so the month
+   axis, weekday axis, and cell grid stay aligned at any width. */
+.contrib {
+  --contrib-cell: 11px;
+  --contrib-gap: 3px;
+  --contrib-wkcol: 16px;
+  --contrib-bodygap: 6px;
+  display: grid;
+  gap: var(--base-space-4);
+}
+
+.contrib-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.contrib-plot {
+  display: inline-grid;
+  gap: 4px;
+}
+
+.contrib-months {
+  display: flex;
+  gap: var(--contrib-gap);
+  padding-left: calc(var(--contrib-wkcol) + var(--contrib-bodygap));
+}
+
+.contrib-month {
+  flex: none;
+  width: var(--contrib-cell);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--base-text-muted);
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.contrib-body {
+  display: flex;
+  gap: var(--contrib-bodygap);
+}
+
+.contrib-weekdays {
+  display: flex;
+  flex-direction: column;
+  gap: var(--contrib-gap);
+  width: var(--contrib-wkcol);
+}
+
+.contrib-weekdays span {
+  height: var(--contrib-cell);
+  font-size: 9px;
+  line-height: var(--contrib-cell);
+  color: var(--base-text-muted-2);
+}
+
+.contrib-weeks {
+  display: flex;
+  gap: var(--contrib-gap);
+}
+
+.contrib-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--contrib-gap);
+}
+
+.contrib-cell {
+  width: var(--contrib-cell);
+  height: var(--contrib-cell);
+  border-radius: 2px;
+  background: var(--base-surface-subtle);
+}
+
+.contrib-cell.is-pad {
+  background: transparent;
+}
+
+/* Activity intensity ramp — a green data-viz scale ("work done"), kept distinct
+   from brand purple per the colour contract. */
+.contrib-cell.lvl-0 {
+  background: var(--base-surface-subtle);
+  box-shadow: inset 0 0 0 1px var(--base-border);
+}
+.contrib-cell.lvl-1 { background: #bde7c9; }
+.contrib-cell.lvl-2 { background: #7bc99a; }
+.contrib-cell.lvl-3 { background: #41a96b; }
+.contrib-cell.lvl-4 { background: #2a7d4f; }
+
+.contrib-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--base-text-muted);
+}
+
+.contrib-legend .contrib-cell {
+  width: 10px;
+  height: 10px;
+}
+
+/* Two-column body: recent sessions (wide main) + next actions (rail).
+   Narrow rail (280px) since 다음 단계 is usually a single nudge, not a
+   list — leaves more horizontal room for session row meta. */
+.home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--base-space-5);
+  align-items: start;
+}
+
+.home-section {
+  display: grid;
+  gap: var(--base-space-4);
+  min-width: 0;
+}
+
+/* Home lists use single-purpose rows (icon, text, one trailing arrow), so the
+   arrow should sit at the vertical centre. The shared row top-aligns for the
+   multi-line / timestamp layouts these rows do not use. */
+.home-session-list .base-object-row,
+.home-next-list .base-object-row {
+  align-items: center;
+}
+
+/* Keep the section action ("전체 프로젝트") on the title's centre line rather
+   than floating to the top of the header. */
+.home-section .base-section-head {
+  align-items: center;
+}
+
+.home-next {
+  align-content: start;
+}
+
+.home-next-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+}
+
+.home-next-list > li + li {
+  border-top: 1px solid var(--base-border);
+}
+
+.home-usage-rail {
+  display: grid;
+  gap: var(--base-space-3);
+  margin-top: var(--base-space-3);
+  padding-top: var(--base-space-4);
+  border-top: 1px solid var(--base-border);
+}
+
+.home-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--base-space-4);
+}
+
+.home-section-head h2 {
+  margin: 0;
+  font-size: var(--base-font-size-lg);
+  font-weight: 650;
+  color: var(--base-text);
+}
+
+.home-section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-sm);
+}
+
+.home-section-link:hover {
+  color: var(--base-accent);
+}
+
+.home-session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  overflow: hidden;
+}
+
+.home-session-list > li + li {
+  border-top: 1px solid var(--base-border);
+}
+
+
+/* Usage section — 2–3 mini-panels in ONE bordered container so they read as a
+   single honest section. Each panel states its own scope; an absent panel is
+   simply omitted (the whole band hides when nothing is derivable). No inner
+   borders on the panels — hierarchy comes from whitespace + the type tokens. */
+.home-usage-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--base-space-5);
+  padding: var(--base-space-4) var(--base-space-5);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface);
+}
+
+.home-usage-rail .home-usage-panels {
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--base-radius-md);
+}
+
+.home-usage-rail .home-usage-panel {
+  padding: var(--base-space-3) var(--base-space-4);
+}
+
+.home-usage-rail .home-usage-panel + .home-usage-panel {
+  border-top: 1px solid var(--base-border);
+}
+
+.home-usage-panel {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  align-content: start;
+}
+
+.home-usage-label {
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  color: var(--base-text-muted);
+}
+
+.home-usage-value {
+  font-size: var(--base-font-size-2xl);
+  font-weight: 680;
+  line-height: var(--base-line-tight);
+  color: var(--base-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-usage-context {
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted-2);
+  line-height: var(--base-line-snug);
+}
+
+/* Per-session token column chart. Fixed-width columns (so the chart reads the
+   same regardless of how many sessions are plotted); height encodes the
+   session's token total against the busiest plotted session. Accent fill — the
+   AI-usage figure is the panel's identity metric — over a subtle empty track. */
+.home-usage-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 40px;
+  margin-top: 4px;
+}
+
+.home-usage-col {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 2px;
+  background: var(--base-surface-subtle);
+  box-shadow: inset 0 0 0 1px var(--base-border);
+}
+
+.home-usage-col-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 2px;
+  background: var(--base-accent);
+}
+
+/* Below ~960px the rail can no longer sit comfortably beside the list, so it
+   stacks under it. Keeps 768 overflow-free. */
+@media (max-width: 960px) {
+  .home-top-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--base-space-8);
+  }
+
+  /* The strip's action drops below the body so the long title never collides
+     with the button at narrow widths. */
+  .home-current {
+    flex-wrap: wrap;
+  }
+
+  .home-current .btn {
+    margin-left: calc(32px + var(--base-space-5));
+  }
+}
+

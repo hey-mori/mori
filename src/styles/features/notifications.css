@@ -1,0 +1,1272 @@
+/* ── Global Attention Layer (P4) ─────────────────────────────────────────────
+   The persistent Mori Notes indicator sits in the sidebar between the nav
+   and the session card. Clicking it opens a compact fixed-position popover
+   to the right of the sidebar.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Default indicator — full pill with label + badge. Used in any legacy
+   placement; the sidebar now opts into the compact icon-only variant. */
+.attention-indicator {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 13px;
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--muted);
+  font-size: var(--base-font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.attention-indicator:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.attention-indicator[aria-expanded="true"] {
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.attention-indicator.has-signals {
+  color: var(--text);
+}
+
+/* Compact variant — icon-only quick-action button matching .sidebar-head-action.
+   The count badge sits as a small dot above the icon. */
+.attention-indicator.is-compact {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  gap: 0;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.attention-indicator.is-compact:hover {
+  background: var(--gray-50);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.attention-indicator.is-compact[aria-expanded="true"] {
+  background: var(--purple-50);
+  border-color: transparent;
+  color: var(--purple);
+}
+
+.attention-indicator.is-compact .attention-indicator-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 14px;
+  border: 1.5px solid white;
+}
+
+.attention-indicator-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.attention-indicator-label {
+  flex: 1;
+}
+
+.attention-indicator-badge {
+  min-width: 18px;
+  padding: 1px 6px;
+  background: var(--purple);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Scrim — invisible click-outside handler. Does not dim the screen. */
+.attention-panel-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 18980;
+}
+
+/* Panel — floats just to the right of the sidebar, anchored to the top
+   (since the trigger now lives in the sidebar head). */
+.attention-panel {
+  position: fixed;
+  left: calc(var(--base-sidebar-w, 256px) + 8px);
+  top: 12px;
+  width: 372px;
+  max-height: min(520px, calc(100vh - 24px));
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  box-shadow: 0 22px 70px rgba(24, 28, 42, 0.22);
+  z-index: 18990;
+  overflow: hidden;
+  outline: none;
+}
+
+.attention-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 14px 11px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.attention-panel-icon {
+  display: flex;
+  align-items: center;
+  color: var(--purple);
+  flex-shrink: 0;
+}
+
+.attention-panel-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.attention-panel-titles h3 {
+  margin: 0;
+  font-size: var(--base-font-size-sm);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.attention-panel-titles p {
+  margin: 0;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.attention-panel-count {
+  min-width: 22px;
+  padding: 2px 7px;
+  background: var(--purple-50);
+  color: var(--purple);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.attention-panel-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--line);
+}
+
+.attention-panel-summary div {
+  display: grid;
+  gap: 2px;
+  padding: 9px 12px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--base-surface-subtle));
+}
+
+.attention-panel-summary dt {
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.attention-panel-summary dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.attention-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.attention-panel-empty {
+  padding: 16px 14px;
+  margin: 0;
+  font-size: var(--base-font-size-sm);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Notification feed (popover + page share the row anatomy) ───────────────
+   A real chronological stream: an unread dot, a kind icon, the event title,
+   and a muted "프로젝트 · 시간" meta. No left colour bars, no severity buckets. */
+
+.attention-panel-head h3 {
+  margin: 0;
+  font-size: var(--base-font-size-sm);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.attention-panel-markall {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.attention-panel-markall:hover {
+  color: var(--purple);
+  background: var(--purple-50);
+}
+
+.attention-feed {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.attention-feed-row {
+  display: grid;
+  grid-template-columns: 7px 22px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 9px;
+  width: 100%;
+  padding: 9px 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.attention-feed-row:hover {
+  background: var(--base-surface-subtle);
+}
+
+.attention-feed-unread {
+  margin-top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--purple);
+}
+
+.attention-feed-row.is-read .attention-feed-unread {
+  background: transparent;
+}
+
+.attention-feed-row.is-read .attention-feed-title {
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.attention-feed-icon {
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.attention-feed-body {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.attention-feed-title {
+  font-size: var(--base-font-size-sm);
+  font-weight: 650;
+  color: var(--text);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attention-feed-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+  min-width: 0;
+}
+
+.attention-feed-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attention-feed-meta > span + span::before {
+  content: "·";
+  margin-right: 6px;
+  color: var(--line-strong);
+}
+
+/* ── Notification page (the full 알림 feed) ─────────────────────────────────── */
+
+.noti-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--base-space-4);
+}
+
+.noti-toolbar-status {
+  margin: 0;
+  font-size: var(--base-font-size-sm);
+  color: var(--muted);
+}
+
+.noti-toolbar-status strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.noti-markall {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.noti-markall:hover {
+  color: var(--purple);
+  border-color: var(--purple-50);
+  background: var(--purple-50);
+}
+
+.noti-groups {
+  display: grid;
+  gap: var(--base-space-6);
+}
+
+.noti-group-head {
+  margin: 0 0 var(--base-space-3);
+  font-size: var(--base-font-size-xs);
+  font-weight: 700;
+  color: var(--muted-2);
+}
+
+.noti-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--base-radius-lg, 12px);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.noti-feed > li + li .noti-row {
+  border-top: 1px solid var(--line);
+}
+
+.noti-row {
+  display: grid;
+  grid-template-columns: 7px 24px minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 11px;
+  width: 100%;
+  padding: 13px 16px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.noti-row:hover {
+  background: var(--base-surface-subtle);
+}
+
+.noti-row:disabled {
+  cursor: default;
+}
+
+.noti-row-unread {
+  margin-top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--purple);
+}
+
+.noti-row.is-read .noti-row-unread {
+  background: transparent;
+}
+
+.noti-row.is-read .noti-row-title {
+  color: var(--muted);
+  font-weight: 550;
+}
+
+.noti-row-icon {
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.noti-row-body {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.noti-row-titleline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.noti-row-title {
+  font-size: var(--base-font-size-sm);
+  font-weight: 650;
+  color: var(--text);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.noti-row-time {
+  flex-shrink: 0;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.noti-row-message {
+  font-size: var(--base-font-size-sm);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.noti-row-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+}
+
+.noti-row-arrow {
+  margin-top: 3px;
+  color: var(--line-strong);
+  flex-shrink: 0;
+}
+
+.noti-row:hover .noti-row-arrow {
+  color: var(--purple);
+}
+
+.noti-privacy {
+  margin: var(--base-space-6) 0 0;
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+  line-height: 1.5;
+}
+
+/* ── Notification drawer — right-docked, full-height, non-blocking ──────────── */
+.noti-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 18980;
+  /* No dim: the canvas stays fully visible. This only catches click-outside,
+     keeping the drawer a glance surface, not a modal. */
+  background: transparent;
+}
+
+.noti-drawer {
+  position: fixed;
+  top: 0;
+  /* `left` is set inline to the sidebar's right edge so the drawer opens flush
+     beside the bell — the trigger lives on the left, so the panel does too. */
+  left: var(--base-sidebar-w, 256px);
+  height: 100vh;
+  width: min(400px, 92vw);
+  z-index: 18990;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--line-strong);
+  box-shadow: 8px 0 32px rgba(24, 28, 42, 0.06);
+  outline: none;
+  animation: noti-drawer-in 180ms ease-out;
+}
+
+@keyframes noti-drawer-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.noti-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 12px 12px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.noti-drawer-icon {
+  display: flex;
+  align-items: center;
+  color: var(--purple);
+}
+
+.noti-drawer-head h2 {
+  margin: 0;
+  margin-right: auto;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.noti-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.noti-drawer-close:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.noti-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px 4px;
+}
+
+.noti-drawer-empty {
+  padding: 18px 4px;
+  margin: 0;
+  font-size: var(--base-font-size-sm);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* In the drawer the feed is full-bleed (no card chrome); groups stay tight. */
+.noti-drawer .noti-groups {
+  gap: var(--base-space-4);
+}
+
+.noti-drawer .noti-feed {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.noti-drawer .noti-feed > li + li .noti-row {
+  border-top: 1px solid var(--line);
+}
+
+.noti-drawer .noti-row {
+  padding: 11px 6px;
+}
+
+.noti-drawer-privacy {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--line);
+  font-size: var(--base-font-size-xs);
+  color: var(--muted-2);
+  line-height: 1.4;
+}
+
+.attention-panel-signals {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.attention-panel-signals li {
+  margin: 0;
+}
+
+/* Signal row — whole-row clickable notification. Title-led, with the message
+   muted below in a single clamped line. Hover reveals an arrow indicator. */
+.attention-signal {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.attention-signal:hover {
+  background: var(--base-surface-subtle);
+}
+
+.attention-signal:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.attention-signal:not(:last-child) {
+  border-bottom: 1px solid var(--line);
+}
+
+.attention-signal .companion-signal-dot {
+  margin-top: 6px;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.attention-signal[data-base-tone="danger"]  .companion-signal-dot { background: var(--red); }
+.attention-signal[data-base-tone="warning"] .companion-signal-dot { background: #d8923f; }
+.attention-signal[data-base-tone="info"]    .companion-signal-dot { background: var(--blue); }
+.attention-signal[data-base-tone="neutral"] .companion-signal-dot { background: var(--muted-2); }
+
+.attention-signal-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.attention-signal-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attention-signal p {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attention-signal-arrow {
+  margin-top: 5px;
+  color: var(--muted-2);
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.attention-signal:hover .attention-signal-arrow {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--purple);
+}
+
+/* Panel footer */
+.attention-panel-foot {
+  display: grid;
+  gap: 6px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.attention-panel-viewall {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--purple);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.attention-panel-viewall:hover {
+  text-decoration: underline;
+}
+
+.attention-panel-privacy {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--muted-2);
+  line-height: 1.4;
+}
+
+.attention-toast {
+  position: fixed;
+  top: 14px;
+  left: calc(var(--base-sidebar-w, 256px) + 14px);
+  width: min(360px, calc(100vw - var(--base-sidebar-w, 256px) - 28px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: stretch;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: 0 18px 52px rgba(24, 28, 42, 0.2);
+  overflow: hidden;
+  z-index: 19000;
+  animation: base-toast-in 160ms ease-out;
+}
+
+.attention-toast-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: var(--text);
+}
+
+.attention-toast-main:disabled {
+  cursor: default;
+}
+
+.attention-toast-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--purple-50);
+  color: var(--purple);
+  flex: 0 0 auto;
+}
+
+.attention-toast-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.attention-toast-kicker {
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.attention-toast-copy strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attention-toast-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.attention-toast-close:hover {
+  background: var(--base-surface-subtle);
+  color: var(--text);
+}
+
+@keyframes base-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Companion Inbox — the Companion Layer's dedicated surface.
+   The page now sits in a shared PageShell: the signal feed stacks in
+   `.page-shell-main` and the summary rail is the shell's aside, so the old
+   `.companion-inbox-grid` / `.companion-inbox-main` wrappers are gone. */
+
+.companion-inbox-focus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--base-surface-raised, #ffffff);
+  box-shadow: var(--shadow-soft);
+}
+
+.notification-focus {
+  position: relative;
+  overflow: hidden;
+  border-left: 3px solid var(--purple);
+}
+
+.notification-focus[data-base-tone="danger"] { border-left-color: var(--red); }
+.notification-focus[data-base-tone="warning"] { border-left-color: #d8923f; }
+.notification-focus[data-base-tone="info"] { border-left-color: var(--blue); }
+.notification-focus[data-base-tone="neutral"] { border-left-color: var(--muted-2); }
+
+.notification-focus-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--purple-50);
+  color: var(--purple);
+  flex: 0 0 auto;
+}
+
+.companion-inbox-focus-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.companion-inbox-focus-kicker {
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.companion-inbox-focus h2 {
+  margin: 0;
+  font-size: var(--base-font-size-2xl);
+  line-height: 1.25;
+}
+
+.companion-inbox-focus p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.companion-inbox-focus-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.companion-inbox-focus-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.companion-inbox-section {
+  display: grid;
+  gap: 8px;
+}
+
+.companion-inbox-section-head {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.companion-inbox-section-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.companion-inbox-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--purple-50);
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.companion-inbox-section-head p {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.companion-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.companion-inbox-row {
+  align-items: center;
+}
+
+.companion-inbox-row-severity {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.notification-list {
+  gap: 7px;
+}
+
+.notification-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--muted-2);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow-soft);
+}
+
+.notification-row[data-base-tone="danger"] { border-left-color: var(--red); }
+.notification-row[data-base-tone="warning"] { border-left-color: #d8923f; }
+.notification-row[data-base-tone="info"] { border-left-color: var(--blue); }
+.notification-row[data-base-tone="neutral"] { border-left-color: var(--muted-2); }
+
+.notification-row-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--base-surface-subtle);
+  color: var(--muted);
+}
+
+.notification-row[data-base-tone="danger"] .notification-row-icon { color: var(--red); background: #fff4f2; }
+.notification-row[data-base-tone="warning"] .notification-row-icon { color: #b46100; background: var(--orange-50); }
+.notification-row[data-base-tone="info"] .notification-row-icon { color: var(--blue); background: var(--blue-50); }
+
+.notification-row-body {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.notification-row-title {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.notification-row-title strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.notification-row-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.notification-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.notification-meta.is-compact {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.notification-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 19px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.companion-inbox-rail {
+  display: grid;
+  gap: 12px;
+}
+
+.companion-inbox-rail-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.companion-inbox-rail-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.companion-inbox-rail-card header h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.companion-inbox-rail-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+}
+
+.companion-inbox-rail-counts div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+}
+
+.companion-inbox-rail-counts dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.companion-inbox-rail-counts dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.companion-inbox-rail-counts div[data-base-tone="danger"] dd { color: var(--red); }
+.companion-inbox-rail-counts div[data-base-tone="warning"] dd { color: #b46100; }
+
+.companion-inbox-rail-total {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.companion-inbox-rail-note {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--purple-50);
+  color: #4734bb;
+}
+
+.notification-rail-context {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.notification-rail-context-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--base-surface-subtle);
+  color: var(--muted);
+}
+
+.notification-rail-context h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.notification-rail-context p {
+  margin: 2px 0 9px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.notification-rail-context dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 0;
+}
+
+.notification-rail-context dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: var(--base-surface-subtle);
+}
+
+.notification-rail-context dt,
+.notification-rail-context dd {
+  margin: 0;
+  font-size: 10.5px;
+}
+
+.notification-rail-context dt {
+  color: var(--muted);
+}
+
+.notification-rail-context dd {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.companion-inbox-rail-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.companion-inbox-rail-note p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.companion-inbox-rail-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .companion-inbox-focus {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .notification-row {
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .notification-row > .button,
+  .notification-row > button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .notification-row-title {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Profile */
+
