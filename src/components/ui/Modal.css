@@ -1,0 +1,172 @@
+/* ── Mori General Modal — Premium Centered Popups ────────────────────────── */
+.base-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 40, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 20000;
+}
+
+.base-modal-body {
+  display: grid;
+  gap: 14px;
+  width: min(540px, 100%);
+  padding: 22px 22px 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e6e3f1;
+  box-shadow: 0 20px 50px rgba(24, 28, 42, 0.15);
+}
+
+.base-modal-body header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.base-modal-body header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.base-modal-body label {
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4b4470;
+}
+
+.base-modal-body input,
+.base-modal-body textarea {
+  padding: 10px 12px;
+  border: 1px solid #d9d0ff;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: #2c2549;
+  background: #fdfcff;
+  transition: border-color 0.12s ease;
+}
+
+.base-modal-body input:focus,
+.base-modal-body textarea:focus {
+  outline: none;
+  border-color: var(--purple);
+}
+
+.base-modal-body footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Project create / edit modal — a compact card that reuses the settings sheet's
+   scrim + headed bar (.settings-sheet-layer / -scrim / -head / -close) so it
+   matches that surface, with its own body + divided footer. */
+.project-modal {
+  position: relative;
+  width: min(440px, calc(100vw - 52px));
+  max-height: calc(100vh - 52px);
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 26px 70px rgba(20, 25, 45, 0.26);
+  outline: none;
+  overflow: hidden;
+}
+
+.project-modal .settings-sheet-head {
+  /* The shared header padding is tuned for the wide settings sheet; align it
+     to this modal's body padding so the title's left edge and the close
+     button's right edge line up with the form fields. */
+  padding: 12px 20px;
+}
+
+.project-modal-body {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px;
+  overflow: auto;
+}
+
+.project-modal-field {
+  display: grid;
+  gap: 6px;
+}
+
+.project-modal-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.project-modal-field > span em {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.project-modal-field > span em.is-required {
+  color: var(--purple);
+  background: var(--purple-50);
+}
+
+.project-modal-field > span em.is-optional {
+  color: var(--muted);
+  background: var(--gray-50);
+}
+
+.project-modal-field input,
+.project-modal-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: white;
+  resize: vertical;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.project-modal-field input:focus,
+.project-modal-field textarea:focus {
+  outline: none;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-50);
+}
+
+.project-modal-field input::placeholder,
+.project-modal-field textarea::placeholder {
+  color: var(--muted-2);
+}
+
+.project-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--panel-soft, #fafbfd);
+}

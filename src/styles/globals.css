@@ -7,4 +7,6 @@
 @import "../components/ui/InfoHint.css";
 @import "../components/ui/BaseTooltip.css";
 @import "../components/ui/base-objects.css";
+@import "../components/ui/layout-components.css";
+@import "../components/ui/Modal.css";
 @import "../styles.css";
