@@ -4,12 +4,12 @@ Canonical, honest overview of **how Mori connects to AI coding agents** and
 turns their work into reviewable evidence. Read this before changing the
 capture layer. It is the architectural companion to:
 
-- [capture-surface-matrix.md](./capture-surface-matrix.md) — the per-surface
+- [capture-surface-matrix.md](./capture-surface-matrix.md), the per-surface
   status table (what works today, surface by surface).
-- [connector-event-format.md](./connector-event-format.md) — the
+- [connector-event-format.md](./connector-event-format.md), the
   `ConnectorEvent` JSONL schema.
 - [claude-code-hook.md](./claude-code-hook.md) /
-  [codex-cli-wrapper.md](./codex-cli-wrapper.md) — per-tool setup.
+  [codex-cli-wrapper.md](./codex-cli-wrapper.md), per-tool setup.
 
 It does not repeat those; it explains the model they all fit into.
 
@@ -30,8 +30,8 @@ local**; neither watches the machine.
 2. **session-discovery (read history).** The agent already writes its own
    session transcripts to a known local directory; Mori reads them read-only
    when the user opens "기록에서 불러오기". No hook install needed.
-   - Claude Code discovery — `~/.claude/projects/<encoded>/<session>.jsonl`.
-   - Codex discovery — `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`.
+   - Claude Code discovery, `~/.claude/projects/<encoded>/<session>.jsonl`.
+   - Codex discovery, `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`.
 
 Both models feed the **same downstream gate**: parse/preview, then
 **Import Review** (explicit per-event accept/apply). No model bypasses review
@@ -51,7 +51,7 @@ agent work
 Mori reads **file-based transcripts the agent itself writes**. It must
 **never** read an agent's **internal database** (SQLite / protobuf), browser
 storage, or account. This is the line between "the user's own readable work
-logs" and "scraping a third-party app's private store" — the latter is a
+logs" and "scraping a third-party app's private store", the latter is a
 hard non-goal (see [mori-autonomous-loop.md](../mori-autonomous-loop.md) §4).
 
 Concretely:
@@ -74,7 +74,7 @@ Verified against a real machine (2026-05). Status is honest, not aspirational.
 | **Antigravity** | session-discovery | `~/.gemini/antigravity/brain/*/.system_generated/logs/transcript.jsonl` | discovery **planned, partial** (see §6) |
 
 "Codex Desktop" sessions also land in `~/.codex/sessions` (observed
-`originator: "Codex Desktop"`), so discovery covers the desktop app too — a
+`originator: "Codex Desktop"`), so discovery covers the desktop app too, a
 wrapper is not required for Codex to be captured.
 
 ## 4. Connection-detection layer
@@ -84,12 +84,12 @@ whether capture is wired up. It exists so the Connections hub can show an
 honest status and (later) offer one-click install, and so adding a new agent
 is a registry entry, not a fan-out.
 
-- **Pure adapter** — [`src/lib/connectors/installers/connectorInstaller.ts`](../../src/lib/connectors/installers/connectorInstaller.ts):
+- **Pure adapter**, [`src/lib/connectors/installers/connectorInstaller.ts`](../../src/lib/connectors/installers/connectorInstaller.ts):
   a registry of connectors with a `captureModel` (`config-hook` /
   `session-discovery`), plus `buildConnectorStatusViewModels` mapping raw
   detection facts to the product-state availability vocabulary. Browser mode
   reports `desktopOnly` rather than inventing a connected state.
-- **Desktop detection** — [`src-tauri/src/connectors/installer.rs`](../../src-tauri/src/connectors/installer.rs),
+- **Desktop detection**, [`src-tauri/src/connectors/installer.rs`](../../src-tauri/src/connectors/installer.rs),
   command `detect_connector_status`: read-only, env-injected for tests. For a
   config-hook connector it checks the tool dir and scans `settings.json`
   hooks for the `mori-claude-hook` reference; for a session-discovery
@@ -98,6 +98,19 @@ is a registry entry, not a fan-out.
 
 Adding a connector: add a registry entry + a `captureModel` branch in the
 adapter, and a detection branch in the Rust command. No UI fan-out.
+
+**One-click connect (turnkey install).** For the one config-hook connector
+(Claude), `install_claude_hook` / `uninstall_claude_hook`
+([`installer.rs`](../../src-tauri/src/connectors/installer.rs)) safely merge or
+remove the hook in `settings.json`: existing settings and non-Mori hooks are
+preserved, install is idempotent, a malformed file is never overwritten, and
+uninstall removes only Mori entries. The TS side computes the OS-aware command
+(`buildClaudeHookCommand`) from the bundled hook-script path (`connectClaudeHook`
+resolves it via Tauri resources). The **Connect modal** (소스 → 연결 설정,
+[`ConnectorInstallModal.tsx`](../../src/features/sources/ConnectorInstallModal.tsx))
+detects each agent and drives connect / disconnect; session-discovery agents
+(Codex, Antigravity) show their auto-detected status with no action. Desktop
+only; browser mode shows the honest desktop-only state.
 
 ## 5. Hardening notes (cross-OS)
 
@@ -126,7 +139,7 @@ lives in one place. Real-world fixes that must not regress:
 Both agents store sessions locally, but both push on the §2 boundary, so the
 approach is deliberate, not symmetric with Codex.
 
-### OpenCode — keep the wrapper path; defer native discovery
+### OpenCode: keep the wrapper path; defer native discovery
 
 OpenCode stores file-based session data under
 `~/.local/share/opencode/storage/` (`session/`, `message/<sid>/`, `part/`)
@@ -135,7 +148,7 @@ OpenCode stores file-based session data under
 - **Do not read `opencode.db`** (internal SQLite, §2 non-goal).
 - **Defer file-JSON discovery.** Reconstructing a transcript needs
   multi-file assembly (`message` + `part`), and as of v1.2.27 the authoritative
-  store appears to be migrating to `opencode.db` — so the JSON files risk
+  store appears to be migrating to `opencode.db`, so the JSON files risk
   being incomplete. Shipping a parser that silently captures partial data
   conflicts with "evidence is the source of truth" and "honest status".
 - **OpenCode is already captured** via the shipped wrapper + connector inbox
@@ -143,7 +156,7 @@ OpenCode stores file-based session data under
   mission-aligned. Revisit native discovery only if OpenCode's file store is
   confirmed authoritative and stable.
 
-### Antigravity — add discovery, honestly partial
+### Antigravity: add discovery, honestly partial
 
 Antigravity (`~/.gemini/antigravity/`) stores authoritative conversations as
 `conversations/<id>.pb` (protobuf) and, for **some** sessions, a readable
@@ -167,6 +180,26 @@ Antigravity (`~/.gemini/antigravity/`) stores authoritative conversations as
 - Connector installer adapter layer + `detect_connector_status` command and
   bridge (`feat: add connector installer status adapter layer`,
   `feat: add detect_connector_status desktop command and bridge`).
+- Antigravity session discovery + agent tile (`feat: add antigravity session
+  discovery (partial, read-only)`, `feat: surface antigravity sessions in
+  agent work discovery`, `feat: list antigravity as an agent and tidy
+  connection status`).
+- OS-aware in-app Claude hook setup guide (`fix: make the claude hook setup
+  guide os-aware`).
+- Safe `install_claude_hook` / `uninstall_claude_hook` engine + TS bridge +
+  the one-click Connect modal (`feat: add safe claude hook install/uninstall
+  commands`, `feat: expose claude hook install/uninstall to typescript`,
+  `feat: add one-click agent connect modal on the sources page`).
+- The standalone connection-status panel was tried then retired (`refactor:
+  retire the connector status panel from the sources page`); the detection
+  adapter it used is kept and now backs the Connect modal.
+
+Validation status: TS suite green (1801 tests) and `tsc` clean across the
+repo; the Rust install/uninstall + discovery parsers are unit-tested. The one
+unverified path is the desktop runtime end-to-end (the modal's real
+`settings.json` write + resource-path resolve, and discovery reading
+`~/.codex` / `~/.gemini` through the running Tauri app), which needs a
+`tauri dev` run to confirm.
 
 Keep the autonomous-loop backlog ([mori-autonomous-loop.md](../mori-autonomous-loop.md)
 §7) in sync when these capabilities change.
