@@ -3,6 +3,7 @@
 @import "./theme.css";
 @import "./reset.css";
 @import "./app-shell.css";
+@import "../components/ui/Button.css";
 @import "../components/ui/InfoHint.css";
 @import "../components/ui/BaseTooltip.css";
 @import "../styles.css";
