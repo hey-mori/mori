@@ -230,13 +230,10 @@ export function ProjectView() {
         }}
       >
         <div className="project-hero-titles">
-          <h1>{displayName || overview.shortName}</h1>
-          {overview.fullPath && overview.fullPath !== (displayName || overview.shortName) ? (
-            <p className="project-hero-path" title={overview.fullPath}>
-              {overview.fullPath}
-            </p>
-          ) : null}
-          {description ? <p className="project-hero-path">{description}</p> : null}
+          <h1 title={overview.fullPath || undefined}>
+            {displayName || overview.shortName}
+          </h1>
+          {description ? <p className="project-hero-desc">{description}</p> : null}
         </div>
         <div className="project-hero-actions">
           <Button
