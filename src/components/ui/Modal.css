@@ -170,3 +170,101 @@
   border-top: 1px solid var(--line);
   background: var(--panel-soft, #fafbfd);
 }
+
+/* Agent connect modal: detect agents and wire the Claude hook in one click.
+   Reuses the settings-sheet scrim + head, with its own row list body. */
+.connector-install-modal {
+  position: relative;
+  width: min(480px, calc(100vw - 52px));
+  max-height: calc(100vh - 52px);
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 26px 70px rgba(20, 25, 45, 0.26);
+  outline: none;
+  overflow: hidden;
+}
+
+.connector-install-modal .settings-sheet-head {
+  padding: 12px 20px;
+}
+
+.connector-install-modal-body {
+  display: grid;
+  gap: 0;
+  padding: 6px 20px 16px;
+  overflow: auto;
+}
+
+.connector-install-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+
+.connector-install-row:first-child {
+  border-top: 0;
+}
+
+.connector-install-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.connector-install-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 2px;
+}
+
+.connector-install-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.connector-install-detail {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.connector-install-action {
+  flex: none;
+}
+
+.connector-install-auto {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+.connector-install-note {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.connector-install-error {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--red, #c0392b);
+}

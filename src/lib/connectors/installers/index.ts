@@ -13,6 +13,7 @@ export {
   type ConnectorStatusViewModel,
 } from "./connectorInstaller";
 export {
+  connectClaudeHook,
   detectConnectorStatus,
   installClaudeHook,
   isConnectorStatusDetectionAvailable,

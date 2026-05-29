@@ -42,6 +42,7 @@ import {
   type SourceProviderMethod,
 } from "../../lib/sources/sourceProviderGroups";
 import type { StoredSessionImport } from "../../lib/storage/storageTypes";
+import { ConnectorInstallModal } from "./ConnectorInstallModal";
 
 /**
  * 소스 — the connect-your-work overview.
@@ -148,6 +149,7 @@ export function SourcesView() {
     groups.agents[0]?.methods[0]?.source.id ??
     allMethods[0]?.source.id ??
     "";
+  const [connectOpen, setConnectOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(defaultSelectedId);
   // Anchor agents open on their canonical way-in (기록에서 불러오기); every other
   // provider, and ChatGPT, opens on its first import method.
@@ -216,6 +218,11 @@ export function SourcesView() {
               ariaLabel="소스 검색"
             />
           }
+          end={
+            <Button variant="secondary" icon={Plug} onClick={() => setConnectOpen(true)}>
+              연결 설정
+            </Button>
+          }
         />
       }
       aside={
@@ -260,6 +267,8 @@ export function SourcesView() {
       )}
 
       {imports.length > 0 ? <RecentImports imports={imports} /> : null}
+
+      {connectOpen ? <ConnectorInstallModal onClose={() => setConnectOpen(false)} /> : null}
     </PageShell>
   );
 }

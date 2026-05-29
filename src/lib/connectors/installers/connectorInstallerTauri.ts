@@ -6,9 +6,11 @@
  * prototype cannot read `~/.claude` / `~/.codex`, so `loadConnectorStatus`
  * returns the honest desktop-only status model instead of throwing.
  */
+import { resolveResource } from "@tauri-apps/api/path";
 import { isTauriRuntime } from "../../desktop/environment";
 import { invokeTauriCommand } from "../../desktop/tauriCommands";
 import {
+  buildClaudeHookCommand,
   buildConnectorStatusViewModels,
   type ClaudeHookInstallResult,
   type ClaudeHookUninstallResult,
@@ -93,4 +95,18 @@ export async function uninstallClaudeHook(
     scope: target.scope,
     projectPath: target.scope === "project" ? target.projectPath : undefined,
   });
+}
+
+/**
+ * One-click connect: resolve the bundled hook-script directory, build the
+ * OS-aware command (platform inferred from the resolved path separators), and
+ * install it. Desktop only; the modal drives this.
+ */
+export async function connectClaudeHook(
+  target: ClaudeHookScope,
+): Promise<ClaudeHookInstallResult> {
+  requireDesktop();
+  const dir = await resolveResource("connectors/claude-code");
+  const platform = /^[a-zA-Z]:[\\/]/.test(dir) || dir.includes("\\") ? "win32" : "posix";
+  return installClaudeHook(target, buildClaudeHookCommand(dir, platform));
 }
