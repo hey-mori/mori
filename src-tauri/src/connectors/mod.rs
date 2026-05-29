@@ -29,3 +29,4 @@
 //! `normalizeConnectorEventBatch`. We only deliver bytes and metadata.
 
 pub mod inbox;
+pub mod installer;

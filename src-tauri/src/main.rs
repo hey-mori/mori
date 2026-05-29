@@ -41,6 +41,7 @@ fn main() {
             repositories::picker::pick_repository_directory,
             connectors::inbox::list_connector_jsonl_inbox,
             connectors::inbox::read_connector_jsonl_file,
+            connectors::installer::detect_connector_status,
             claude::desktop::discover_claude_desktop,
             claude::desktop::list_claude_desktop_conversations,
             claude::desktop::get_claude_desktop_conversation,

@@ -35,6 +35,7 @@ import type {
 } from "../claude/types";
 import type { LocalAiToolReport } from "../claude/installations";
 import type { CodexSessionDetail, CodexSessionMeta } from "../codex/types";
+import type { ConnectorDetectionResult } from "../connectors/installers/connectorInstaller";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
 import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./repositoryCommands";
@@ -70,6 +71,7 @@ export type TauriCommandName =
   | "verify_repository_path"
   | "list_connector_jsonl_inbox"
   | "read_connector_jsonl_file"
+  | "detect_connector_status"
   | "discover_claude_desktop"
   | "list_claude_desktop_conversations"
   | "get_claude_desktop_conversation"
@@ -188,6 +190,7 @@ export type TauriCommandMap = {
   verify_repository_path: { input: { request: VerifyRepositoryRequest }; output: RepositoryVerificationResult };
   list_connector_jsonl_inbox: { input: undefined; output: ConnectorInboxListing };
   read_connector_jsonl_file: { input: { input: { path: string } }; output: ConnectorJsonlFile };
+  detect_connector_status: { input: undefined; output: ConnectorDetectionResult[] };
   discover_claude_desktop: { input: undefined; output: ClaudeDesktopDiscovery };
   list_claude_desktop_conversations: { input: undefined; output: ClaudeConversationMeta[] };
   get_claude_desktop_conversation: {
