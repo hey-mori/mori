@@ -207,7 +207,7 @@ export const PRODUCT_SURFACES: Record<ProductSurfaceId, ProductSurfaceDescriptor
   },
   evidenceHub: {
     id: "evidenceHub",
-    label: "자료 (Evidence)",
+    label: "Evidence",
     description: "Available + Planned 통합 카드 + 가져온 소스 + Quick Pass.",
     ownedFeatureIds: [
       "evidence.addSource.manualNote",
