@@ -40,19 +40,23 @@ pub fn detect_connector_status() -> Result<Vec<ConnectorDetection>, String> {
     Ok(detect_with_env(&env))
 }
 
-/// Captured environment — exposed for tests so the probe can target a temp
-/// directory tree without touching the user's real home directory.
+/// Captured environment: the *resolved* data roots for each agent (env
+/// overrides already applied via `agent_paths`), so detection honors the same
+/// `CLAUDE_CONFIG_DIR` / `CODEX_HOME` relocations that discovery does. Exposed
+/// for tests so the probe can target a temp directory tree.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct DetectEnv {
-    pub home: Option<PathBuf>,
+    pub claude_dir: Option<PathBuf>,
+    pub codex_dir: Option<PathBuf>,
+    pub antigravity_brain_dir: Option<PathBuf>,
 }
 
 impl DetectEnv {
     fn from_real_env() -> Self {
         Self {
-            home: std::env::var_os("USERPROFILE")
-                .or_else(|| std::env::var_os("HOME"))
-                .map(PathBuf::from),
+            claude_dir: crate::agent_paths::claude_dir(),
+            codex_dir: crate::agent_paths::codex_dir(),
+            antigravity_brain_dir: crate::agent_paths::antigravity_brain_dir(),
         }
     }
 }
@@ -62,7 +66,7 @@ pub(crate) fn detect_with_env(env: &DetectEnv) -> Vec<ConnectorDetection> {
 }
 
 fn detect_claude(env: &DetectEnv) -> ConnectorDetection {
-    let claude_dir = env.home.as_ref().map(|h| h.join(".claude"));
+    let claude_dir = env.claude_dir.clone();
     let tool_installed = claude_dir.as_deref().map(Path::is_dir).unwrap_or(false);
     let hook_installed = if tool_installed {
         let settings = claude_dir.as_ref().map(|d| d.join("settings.json"));
@@ -112,7 +116,7 @@ fn json_mentions_mori_hook(value: &Value) -> bool {
 }
 
 fn detect_codex(env: &DetectEnv) -> ConnectorDetection {
-    let codex_dir = env.home.as_ref().map(|h| h.join(".codex"));
+    let codex_dir = env.codex_dir.clone();
     let tool_installed = codex_dir.as_deref().map(Path::is_dir).unwrap_or(false);
     let discovered_session_count = if tool_installed {
         let sessions = codex_dir.as_ref().map(|d| d.join("sessions"));
@@ -131,10 +135,7 @@ fn detect_codex(env: &DetectEnv) -> ConnectorDetection {
 }
 
 fn detect_antigravity(env: &DetectEnv) -> ConnectorDetection {
-    let brain = env
-        .home
-        .as_ref()
-        .map(|h| h.join(".gemini").join("antigravity").join("brain"));
+    let brain = env.antigravity_brain_dir.clone();
     let tool_installed = brain.as_deref().map(Path::is_dir).unwrap_or(false);
     let discovered_session_count = if tool_installed {
         Some(brain.as_deref().map(count_antigravity_transcripts).unwrap_or(0))
@@ -259,11 +260,13 @@ fn settings_path_for(
 ) -> Result<PathBuf, String> {
     match scope {
         "global" => {
-            let home = env
-                .home
+            // Honors $CLAUDE_CONFIG_DIR via the resolved claude_dir, so the
+            // hook is installed where Claude Code actually reads it.
+            let dir = env
+                .claude_dir
                 .as_ref()
-                .ok_or_else(|| "Home directory is not set.".to_string())?;
-            Ok(home.join(".claude").join("settings.json"))
+                .ok_or_else(|| "Claude config directory is not set.".to_string())?;
+            Ok(dir.join("settings.json"))
         }
         "project" => {
             let path = project_path
@@ -443,7 +446,7 @@ mod tests {
 
     #[test]
     fn no_home_reports_nothing_installed() {
-        let results = detect_with_env(&DetectEnv { home: None });
+        let results = detect_with_env(&DetectEnv::default());
         let claude = find(&results, "claude-code");
         let codex = find(&results, "codex-cli");
         assert!(!claude.tool_installed);
@@ -462,7 +465,11 @@ mod tests {
         )
         .unwrap();
         let results = detect_with_env(&DetectEnv {
-            home: Some(temp.path().to_path_buf()),
+            claude_dir: Some(temp.path().join(".claude")),
+            codex_dir: Some(temp.path().join(".codex")),
+            antigravity_brain_dir: Some(
+                temp.path().join(".gemini").join("antigravity").join("brain"),
+            ),
         });
         let claude = find(&results, "claude-code");
         assert!(claude.tool_installed);
@@ -480,7 +487,11 @@ mod tests {
         )
         .unwrap();
         let results = detect_with_env(&DetectEnv {
-            home: Some(temp.path().to_path_buf()),
+            claude_dir: Some(temp.path().join(".claude")),
+            codex_dir: Some(temp.path().join(".codex")),
+            antigravity_brain_dir: Some(
+                temp.path().join(".gemini").join("antigravity").join("brain"),
+            ),
         });
         let claude = find(&results, "claude-code");
         assert!(claude.tool_installed);
@@ -498,7 +509,11 @@ mod tests {
         )
         .unwrap();
         let results = detect_with_env(&DetectEnv {
-            home: Some(temp.path().to_path_buf()),
+            claude_dir: Some(temp.path().join(".claude")),
+            codex_dir: Some(temp.path().join(".codex")),
+            antigravity_brain_dir: Some(
+                temp.path().join(".gemini").join("antigravity").join("brain"),
+            ),
         });
         assert_eq!(find(&results, "claude-code").hook_installed, Some(false));
     }
@@ -518,7 +533,11 @@ mod tests {
         std::fs::write(day.join("rollout-b.jsonl"), "{}\n").unwrap();
         std::fs::write(day.join("notes.txt"), "ignored").unwrap();
         let results = detect_with_env(&DetectEnv {
-            home: Some(temp.path().to_path_buf()),
+            claude_dir: Some(temp.path().join(".claude")),
+            codex_dir: Some(temp.path().join(".codex")),
+            antigravity_brain_dir: Some(
+                temp.path().join(".gemini").join("antigravity").join("brain"),
+            ),
         });
         let codex = find(&results, "codex-cli");
         assert!(codex.tool_installed);
@@ -530,7 +549,11 @@ mod tests {
         let temp = TempDir::new().unwrap();
         std::fs::create_dir_all(temp.path().join(".codex")).unwrap();
         let results = detect_with_env(&DetectEnv {
-            home: Some(temp.path().to_path_buf()),
+            claude_dir: Some(temp.path().join(".claude")),
+            codex_dir: Some(temp.path().join(".codex")),
+            antigravity_brain_dir: Some(
+                temp.path().join(".gemini").join("antigravity").join("brain"),
+            ),
         });
         assert_eq!(find(&results, "codex-cli").discovered_session_count, Some(0));
     }
@@ -547,7 +570,11 @@ mod tests {
         std::fs::write(brain.join("conv-bbb").join("conv.pb"), b"\x00").unwrap();
 
         let results = detect_with_env(&DetectEnv {
-            home: Some(temp.path().to_path_buf()),
+            claude_dir: Some(temp.path().join(".claude")),
+            codex_dir: Some(temp.path().join(".codex")),
+            antigravity_brain_dir: Some(
+                temp.path().join(".gemini").join("antigravity").join("brain"),
+            ),
         });
         let ag = find(&results, "antigravity");
         assert!(ag.tool_installed);
@@ -558,7 +585,11 @@ mod tests {
 
     fn global_env(temp: &TempDir) -> DetectEnv {
         DetectEnv {
-            home: Some(temp.path().to_path_buf()),
+            claude_dir: Some(temp.path().join(".claude")),
+            codex_dir: Some(temp.path().join(".codex")),
+            antigravity_brain_dir: Some(
+                temp.path().join(".gemini").join("antigravity").join("brain"),
+            ),
         }
     }
 
@@ -650,5 +681,35 @@ mod tests {
         let blob = settings_text(&temp);
         assert!(blob.contains("keep-me.sh"), "non-Mori hook must survive");
         assert!(!blob.contains("mori-claude-hook"), "Mori hooks must be gone");
+    }
+
+    #[test]
+    fn honors_a_relocated_claude_dir_for_detection_and_install() {
+        // A relocated claude_dir simulates $CLAUDE_CONFIG_DIR pointing somewhere
+        // other than ~/.claude. Both detection and install must follow it.
+        let temp = TempDir::new().unwrap();
+        let relocated = temp.path().join("xdg").join("claude");
+        std::fs::create_dir_all(&relocated).unwrap();
+        let env = DetectEnv {
+            claude_dir: Some(relocated.clone()),
+            codex_dir: None,
+            antigravity_brain_dir: None,
+        };
+
+        // Detection sees the relocated dir, not ~/.claude.
+        let before = detect_with_env(&env);
+        let claude = find(&before, "claude-code");
+        assert!(claude.tool_installed);
+        assert_eq!(claude.hook_installed, Some(false));
+
+        // Install writes into the relocated dir.
+        install_claude_hook_at(&env, "global", CMD, None).unwrap();
+        let text = std::fs::read_to_string(relocated.join("settings.json")).unwrap();
+        assert!(text.contains("mori-claude-hook"));
+        // ...and detection now reports it connected.
+        let after_results = detect_with_env(&env);
+        let after = find(&after_results, "claude-code");
+        assert_eq!(after.hook_installed, Some(true));
+        assert_eq!(after.hook_scope.as_deref(), Some("global"));
     }
 }
