@@ -265,6 +265,21 @@ only — no phase numbers.
   the issue's suggested action, priority, related issue id, and source
   event ids; duplicate promotions select the existing action instead of
   creating another row.
+- Windows connector-capture hardening — the Claude hook now decodes stdin
+  as UTF-8 (cp949 was silently dropping Korean prompts) and writes a
+  per-session file `<date>-<session-id>.jsonl` (concurrent Claude processes
+  were corrupting one shared file); the Codex/OpenCode PowerShell wrappers
+  write BOM-free UTF-8, build the `·` separator from its code point, and
+  guard the git step against `ErrorActionPreference=Stop`.
+- Connector installer status layer — a pure `connectorInstaller` adapter
+  (config-hook vs session-discovery capture models + `buildConnectorStatusViewModels`)
+  and a read-only `detect_connector_status` Tauri command + bridge that
+  report per-connector tool presence, claude hook wiring, and codex session
+  count, with an honest desktop-only model in browser mode.
+- Connection-architecture doc — `docs/connectors/connection-architecture.md`
+  records the two capture models, the file-vs-internal-DB boundary, per-agent
+  reality, the installer layer, and the OpenCode (keep wrapper) / Antigravity
+  (partial discovery) decisions.
 
 **Open priority (highest first):**
 
