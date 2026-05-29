@@ -35,6 +35,7 @@ import {
   type SourceWorkspaceSource,
 } from "../../lib/sources/sourceWorkspace";
 import {
+  ANCHOR_AGENT_IDS,
   buildSourceProviderGroups,
   type SourceProvider,
   type SourceProviderMethod,
@@ -120,14 +121,6 @@ function providerMatchesQuery(provider: SourceProvider, needle: string): boolean
 function flattenProviders(groups: ReturnType<typeof buildSourceProviderGroups>): SourceProvider[] {
   return [...groups.agents, ...groups.evidence, ...groups.planned];
 }
-
-/**
- * Anchor agents whose local work records Mori can auto-detect, so they carry the
- * 기록에서 불러오기 way-in. ChatGPT is an agent in the grouping but is a pasted
- * transcript, not an anchor: it has no local records and Mori is forbidden to
- * read its storage, so it is intentionally absent here.
- */
-const ANCHOR_AGENT_IDS = new Set(["claude", "codex", "opencode"]);
 
 export function SourcesView() {
   const draft = useSessionStore((state) => state.draft);
@@ -405,6 +398,12 @@ function SourceInspector({
   const source = method.source;
   const Icon = providerIcon(provider);
   const detail = recordsSelected ? recordsDetail(provider.name) : null;
+  // An AI-category provider that attaches as evidence (ChatGPT, future pasted
+  // transcripts) is not an agent; label it as a pasted conversation, not "AI 에이전트".
+  const subtitle =
+    provider.role === "evidence" && provider.category === "AI"
+      ? "붙여넣은 AI 대화"
+      : CATEGORY_LABEL[provider.category];
   return (
     <aside className="sources-inspector" aria-label="선택한 소스">
       <header className="sources-inspector-head">
@@ -413,7 +412,7 @@ function SourceInspector({
         </span>
         <div>
           <h2>{provider.name}</h2>
-          <p>{CATEGORY_LABEL[provider.category]}</p>
+          <p>{subtitle}</p>
         </div>
       </header>
 
