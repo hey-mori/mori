@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowRight, CheckCircle2, CircleAlert, ListTodo } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, ListTodo } from "lucide-react";
 import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
 import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 import { BaseSection } from "../../components/ui/BaseSection";
@@ -8,14 +8,14 @@ import type { ProjectSynthesis, SynthItem } from "../../lib/project/projectSynth
 
 /**
  * "이 프로젝트 종합" — a cross-session roll-up shown as three summary cards
- * (미해결 · 다음 할 일 · 결정), not three always-open lists.
+ * (미해결 · 다음 할 일 · 결정).
  *
- * The cards carry the project-wide magnitude at a glance and stay compact, so
- * the page fits the viewport regardless of how many items a project has.
- * Clicking a card expands that category's items inline in a single bounded,
- * internally-scrolling list; clicking the active card collapses it again. Each
- * item still opens its source session. The cards are a selector, never a flat
- * board — only one category is open at a time and its list never grows the page.
+ * The cards carry the project-wide magnitude at a glance. Clicking a card
+ * drills into a focused list of that category: the cards are replaced by a back
+ * header and the full, internally-scrolling list, and each item opens its
+ * source session. This keeps the synthesis actionable (every entry is a real
+ * item you can jump to) and scales to large counts without an inline list ever
+ * growing the page. Quantitative trends belong on the dashboard, not here.
  *
  * Presentational: it receives the already-computed synthesis (see
  * `useProjectSynthesis`) so the activity card and this section share one pass
@@ -63,15 +63,14 @@ export function ProjectSynthesisSection({
     },
   ];
 
-  // The section opens collapsed (just the count cards) so it stays compact; the
-  // user expands a category on demand. Reset when the project's shape changes.
-  const [active, setActive] = useState<CardKey | null>(null);
+  // Drill into one category at a time; reset when the project's shape changes.
+  const [focused, setFocused] = useState<CardKey | null>(null);
   const signature = `${synthesis.totals.openIssues}-${synthesis.totals.pendingNextActions}-${synthesis.totals.decisions}`;
   useEffect(() => {
-    setActive(null);
+    setFocused(null);
   }, [signature]);
 
-  const activeCard = cards.find((card) => card.key === active) ?? null;
+  const focusedCard = cards.find((card) => card.key === focused) ?? null;
 
   return (
     <BaseSection
@@ -83,60 +82,73 @@ export function ProjectSynthesisSection({
         <p className="settings-empty">
           세션을 분석하면 핵심 결정·미해결·다음 할 일이 여기에 정리됩니다.
         </p>
-      ) : (
-        <>
-          <div className="project-synth-cards">
-            {cards.map((card) => {
-              const isActive = active === card.key;
-              const disabled = card.total === 0;
-              return (
-                <button
-                  key={card.key}
-                  type="button"
-                  className={`project-synth-card${isActive ? " is-active" : ""}`}
-                  disabled={disabled}
-                  aria-pressed={isActive}
-                  aria-label={`${card.label} ${card.total}건`}
-                  onClick={() => setActive(isActive ? null : card.key)}
-                >
-                  <span className="project-synth-card-top">
-                    <span className="project-synth-card-icon" aria-hidden="true">
-                      {card.icon}
-                    </span>
-                    <span className="project-synth-card-label">{card.label}</span>
-                  </span>
-                  <span className="project-synth-card-count">{card.total}</span>
-                </button>
-              );
-            })}
+      ) : focusedCard ? (
+        <div className="project-synth-focus">
+          <div className="project-synth-focus-head">
+            <button
+              type="button"
+              className="project-synth-back"
+              onClick={() => setFocused(null)}
+            >
+              <ArrowLeft size={14} aria-hidden="true" />
+              <span>종합</span>
+            </button>
+            <span className="project-synth-focus-title">
+              <span className="project-synth-card-icon" aria-hidden="true">
+                {focusedCard.icon}
+              </span>
+              {focusedCard.label}
+            </span>
+            <span className="project-synth-focus-count">{focusedCard.total}건</span>
           </div>
-
-          {activeCard && activeCard.items.length > 0 ? (
-            <ul className="project-session-list project-synth-list base-scroll">
-              {activeCard.items.map((item, index) => (
-                <li key={`${item.sessionId}-${index}`}>
-                  <BaseObjectRow
-                    className="session-list-row"
-                    leading={activeCard.icon}
-                    title={item.text}
-                    meta={
-                      <BaseMetadataLine
-                        items={[
-                          item.sessionTitle,
-                          item.timestamp ? formatSidebarRelative(item.timestamp) : null,
-                        ]}
-                      />
-                    }
-                    onClick={onOpenSession ? () => onOpenSession(item.sessionId) : undefined}
-                    trailing={onOpenSession ? <ArrowRight size={13} aria-hidden="true" /> : undefined}
-                    density="compact"
-                    ariaLabel={item.text}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </>
+          <ul className="project-session-list project-synth-list base-scroll">
+            {focusedCard.items.map((item, index) => (
+              <li key={`${item.sessionId}-${index}`}>
+                <BaseObjectRow
+                  className="session-list-row"
+                  leading={focusedCard.icon}
+                  title={item.text}
+                  meta={
+                    <BaseMetadataLine
+                      items={[
+                        item.sessionTitle,
+                        item.timestamp ? formatSidebarRelative(item.timestamp) : null,
+                      ]}
+                    />
+                  }
+                  onClick={onOpenSession ? () => onOpenSession(item.sessionId) : undefined}
+                  trailing={onOpenSession ? <ArrowRight size={13} aria-hidden="true" /> : undefined}
+                  density="compact"
+                  ariaLabel={item.text}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="project-synth-cards">
+          {cards.map((card) => {
+            const disabled = card.total === 0;
+            return (
+              <button
+                key={card.key}
+                type="button"
+                className="project-synth-card"
+                disabled={disabled}
+                aria-label={`${card.label} ${card.total}건 열기`}
+                onClick={() => setFocused(card.key)}
+              >
+                <span className="project-synth-card-top">
+                  <span className="project-synth-card-icon" aria-hidden="true">
+                    {card.icon}
+                  </span>
+                  <span className="project-synth-card-label">{card.label}</span>
+                </span>
+                <span className="project-synth-card-count">{card.total}</span>
+              </button>
+            );
+          })}
+        </div>
       )}
     </BaseSection>
   );

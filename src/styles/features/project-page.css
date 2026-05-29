@@ -347,8 +347,8 @@
 
 /* ─── Project synthesis (이 프로젝트 종합) ────────────────────────────────
    Three summary cards (미해결 · 다음 할 일 · 결정) carry the project-wide
-   magnitude at a glance. Clicking a card expands that category inline in a
-   single bounded, internally-scrolling list — a selector, not a flat board. */
+   magnitude at a glance. Clicking a card drills into a focused, scrolling list
+   of that category, keeping the synthesis actionable rather than a flat board. */
 
 .project-synth-cards {
   display: grid;
@@ -372,14 +372,14 @@
     border-color 120ms ease;
 }
 
-.project-synth-card:hover:not(:disabled):not(.is-active) {
+.project-synth-card:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--base-text) 18%, var(--base-border));
   background: var(--panel);
 }
 
-.project-synth-card.is-active {
-  border-color: color-mix(in srgb, var(--purple) 45%, var(--base-border));
-  background: var(--purple-50);
+.project-synth-card:focus-visible {
+  outline: 2px solid var(--base-accent-soft);
+  outline-offset: 2px;
 }
 
 .project-synth-card:disabled {
@@ -401,10 +401,6 @@
   color: var(--muted-2);
 }
 
-.project-synth-card.is-active .project-synth-card-icon {
-  color: var(--purple);
-}
-
 .project-synth-card-label {
   min-width: 0;
   overflow: hidden;
@@ -420,11 +416,64 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The expanded category list: bounded so it never grows the page; scrolls
-   inside its own region while the cards and heatmap stay put above it. */
+/* Focused category view: a back header above the full list, which scrolls in
+   its own bounded region so the drilled-in list never grows the page. */
+.project-synth-focus {
+  display: grid;
+  gap: 10px;
+}
+
+.project-synth-focus-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.project-synth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 4px;
+  border: 0;
+  border-radius: var(--base-radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.project-synth-back:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.project-synth-back:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.project-synth-focus-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.project-synth-focus-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The drilled-in list: bounded so it never grows the page; scrolls in its own
+   region with the shared `base-scroll` styling. */
 .project-synth-list {
-  margin-top: 10px;
-  max-height: min(320px, 40vh);
+  max-height: min(360px, 45vh);
   overflow-y: auto;
 }
 
