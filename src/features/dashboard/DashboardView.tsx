@@ -356,7 +356,7 @@ function TokenDistribution({ projects, total }: { projects: ProjectStatus[]; tot
     <div className="dashboard-bars">
       {rows.map((row) => (
         <div className="dashboard-bar" key={row.key}>
-          <span title={row.name}>{row.name}</span>
+          <span>{row.name}</span>
           <span className="dashboard-bar-track" aria-hidden="true">
             <i style={{ width: `${Math.max(fraction(row.value, max) * 100, 4)}%` }} />
           </span>
