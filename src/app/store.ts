@@ -13,7 +13,13 @@ export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | 
  * issues / decisions / next actions. Stored so the user returns to the same
  * tab, and so other surfaces can deep-link a session straight to a tab.
  */
-export type SessionTab = "overview" | "flow" | "evidence" | "insights" | "report";
+export type SessionTab =
+  | "overview"
+  | "flow"
+  | "reconstruct"
+  | "evidence"
+  | "insights"
+  | "report";
 
 /**
  * Active page inside the settings sheet. "profile" is the local identity
