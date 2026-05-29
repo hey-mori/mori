@@ -111,6 +111,9 @@ export function WorkbenchView() {
   const [dropHint, setDropHint] = useState<string | null>(null);
   const [presets, setPresets] = useState<WorkbenchPreset[]>(() => loadPresets());
   const [manageOpen, setManageOpen] = useState(false);
+  const [nameModal, setNameModal] = useState<
+    { mode: "save" } | { mode: "rename"; id: string; current: string } | null
+  >(null);
   const idRef = useRef(0);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nextId = (prefix: string) =>
@@ -394,17 +397,20 @@ export function WorkbenchView() {
   };
 
   // ─── Presets ──────────────────────────────────────────────────────────────
-  const saveCurrentPreset = () => {
-    const name = window.prompt("배치 이름")?.trim();
-    if (!name) return;
-    const snapshot = cloneColumns(columns);
-    setPresets((prev) => [...prev, { id: nextId("preset"), name, columns: snapshot }]);
-  };
   const applyPreset = (preset: WorkbenchPreset) => setColumns(cloneColumns(preset.columns));
   const deletePreset = (id: string) =>
     setPresets((prev) => prev.filter((preset) => preset.id !== id));
   const renamePreset = (id: string, name: string) =>
     setPresets((prev) => prev.map((preset) => (preset.id === id ? { ...preset, name } : preset)));
+  const confirmName = (name: string) => {
+    if (!nameModal) return;
+    if (nameModal.mode === "save") {
+      setPresets((prev) => [...prev, { id: nextId("preset"), name, columns: cloneColumns(columns) }]);
+    } else {
+      renamePreset(nameModal.id, name);
+    }
+    setNameModal(null);
+  };
 
   const hasSessions = sessions.length > 0;
   const hasLayout = columns.length > 0;
@@ -443,7 +449,7 @@ export function WorkbenchView() {
                 <Button variant="ghost" icon={Trash2} onClick={() => setColumns([])}>
                   비우기
                 </Button>
-                <Button variant="ghost" icon={Bookmark} onClick={saveCurrentPreset}>
+                <Button variant="ghost" icon={Bookmark} onClick={() => setNameModal({ mode: "save" })}>
                   배치 저장
                 </Button>
                 <Button
@@ -542,6 +548,7 @@ export function WorkbenchView() {
                           repository={repository}
                           flex={panel.flex}
                           focused={panel.id === focusedPanelId}
+                          dragging={panel.id === dragPanelId}
                           onFocus={() => setFocusedPanelId(panel.id)}
                           onDragStart={() => setDragPanelId(panel.id)}
                           onDragEnd={endDrag}
@@ -627,9 +634,19 @@ export function WorkbenchView() {
             applyPreset(preset);
             setManageOpen(false);
           }}
-          onRename={renamePreset}
+          onRequestRename={(preset) => setNameModal({ mode: "rename", id: preset.id, current: preset.name })}
           onDelete={deletePreset}
           onClose={() => setManageOpen(false)}
+        />
+      ) : null}
+
+      {nameModal ? (
+        <PromptModal
+          title={nameModal.mode === "save" ? "배치 저장" : "배치 이름 변경"}
+          initialValue={nameModal.mode === "rename" ? nameModal.current : ""}
+          confirmLabel={nameModal.mode === "save" ? "저장" : "변경"}
+          onConfirm={confirmName}
+          onClose={() => setNameModal(null)}
         />
       ) : null}
     </PageShell>
@@ -765,13 +782,13 @@ function PresetBar({
 function PresetManager({
   presets,
   onApply,
-  onRename,
+  onRequestRename,
   onDelete,
   onClose,
 }: {
   presets: WorkbenchPreset[];
   onApply: (preset: WorkbenchPreset) => void;
-  onRename: (id: string, name: string) => void;
+  onRequestRename: (preset: WorkbenchPreset) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
 }) {
@@ -782,11 +799,6 @@ function PresetManager({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-
-  const rename = (preset: WorkbenchPreset) => {
-    const name = window.prompt("배치 이름", preset.name)?.trim();
-    if (name) onRename(preset.id, name);
-  };
 
   return (
     <div className="workbench-modal-layer" role="presentation">
@@ -806,11 +818,78 @@ function PresetManager({
                   <span>{preset.name}</span>
                   <small>{preset.columns.reduce((sum, col) => sum + col.panels.length, 0)}개 패널</small>
                 </button>
-                <IconAction icon={Pencil} label="이름 변경" onClick={() => rename(preset)} />
+                <IconAction icon={Pencil} label="이름 변경" onClick={() => onRequestRename(preset)} />
                 <IconAction icon={Trash2} label="삭제" onClick={() => onDelete(preset.id)} />
               </div>
             ))
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PromptModal({
+  title,
+  initialValue,
+  confirmLabel,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  initialValue: string;
+  confirmLabel: string;
+  onConfirm: (value: string) => void;
+  onClose: () => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const submit = () => {
+    const trimmed = value.trim();
+    if (trimmed) onConfirm(trimmed);
+  };
+  return (
+    <div className="workbench-modal-layer" role="presentation">
+      <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
+      <div className="workbench-modal is-narrow" role="dialog" aria-modal="true" aria-label={title}>
+        <header className="workbench-modal-head">
+          <strong>{title}</strong>
+          <Button size="sm" variant="ghost" icon={X} title="닫기" onClick={onClose} />
+        </header>
+        <div className="workbench-prompt">
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                submit();
+              }
+            }}
+            aria-label={title}
+            placeholder=""
+          />
+          <div className="workbench-prompt-actions">
+            <Button size="sm" variant="ghost" onClick={onClose}>
+              취소
+            </Button>
+            <Button size="sm" variant="primary" onClick={submit} disabled={!value.trim()}>
+              {confirmLabel}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -825,6 +904,7 @@ function SessionPanel({
   repository,
   flex,
   focused,
+  dragging,
   onFocus,
   onDragStart,
   onDragEnd,
@@ -839,6 +919,7 @@ function SessionPanel({
   repository: ReturnType<typeof createBrowserDraftRepository>;
   flex: number;
   focused: boolean;
+  dragging: boolean;
   onFocus: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -866,7 +947,7 @@ function SessionPanel({
 
   return (
     <article
-      className={`workbench-panel${focused ? " is-focused" : ""}`}
+      className={`workbench-panel${focused ? " is-focused" : ""}${dragging ? " is-dragging-self" : ""}`}
       style={{ flexGrow: flex, flexBasis: 0 }}
       aria-label={meta.title}
       onMouseDownCapture={onFocus}
