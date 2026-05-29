@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   RefreshCcw,
+  Search,
   Send,
   SlidersHorizontal,
   Trash2,
@@ -20,7 +21,6 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
-import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { useAppStore } from "../../app/store";
 import {
   selectSessionMode,
@@ -241,6 +241,15 @@ export function WorkbenchView() {
       setFocusedPanelId(panelId);
     }
     setLauncher(null);
+  };
+
+  const addSessionToNewColumn = (sessionId: string) => {
+    const panelId = nextId("panel");
+    setColumns((cols) => [
+      ...cols,
+      { id: nextId("col"), flex: 1, panels: [{ id: panelId, sessionId, mode: "conversation", flex: 1 }] },
+    ]);
+    setFocusedPanelId(panelId);
   };
 
   const setPanelMode = (panelId: string, panelMode: PanelMode) => {
@@ -478,29 +487,58 @@ export function WorkbenchView() {
         />
       ) : !hasLayout ? (
         <div className="workbench-blank">
-          <div className="workbench-blank-card">
-            <span className="workbench-blank-icon" aria-hidden="true">
-              <LayoutGrid size={24} />
-            </span>
-            <strong>워크벤치를 구성하세요</strong>
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => setLauncher({ kind: "newColumn", index: 0 })}
-            >
-              세션 추가
-            </Button>
+          <div className="workbench-launchpad">
+            <header className="workbench-launchpad-head">
+              <span className="workbench-blank-icon" aria-hidden="true">
+                <LayoutGrid size={22} />
+              </span>
+              <strong>워크벤치를 구성하세요</strong>
+            </header>
+
+            <section className="workbench-launchpad-section">
+              <header>
+                <span>최근 세션</span>
+                <button type="button" onClick={() => setLauncher({ kind: "newColumn", index: 0 })}>
+                  모든 세션
+                  <ArrowUpRight size={12} aria-hidden="true" />
+                </button>
+              </header>
+              <div className="workbench-launchpad-grid">
+                {sessions.slice(0, 6).map((session) => (
+                  <button
+                    type="button"
+                    key={session.sessionId}
+                    className="workbench-launchpad-card"
+                    onClick={() => addSessionToNewColumn(session.sessionId)}
+                  >
+                    <strong>{session.title}</strong>
+                    <small>
+                      {session.sourceLabel ? shortProjectLabel(session.sourceLabel) : "수동 세션"}
+                      {session.savedAt ?? session.startedAt
+                        ? ` · ${formatRelative(session.savedAt ?? session.startedAt!)}`
+                        : ""}
+                    </small>
+                  </button>
+                ))}
+              </div>
+            </section>
+
             {presets.length > 0 ? (
-              <div className="workbench-blank-presets">
-                <span>저장된 배치</span>
-                <div>
+              <section className="workbench-launchpad-section">
+                <header>
+                  <span>저장된 배치</span>
+                  <button type="button" onClick={() => setManageOpen(true)}>
+                    관리
+                  </button>
+                </header>
+                <div className="workbench-launchpad-chips">
                   {presets.map((preset) => (
                     <button key={preset.id} type="button" onClick={() => applyPreset(preset)}>
                       {preset.name}
                     </button>
                   ))}
                 </div>
-              </div>
+              </section>
             ) : null}
           </div>
         </div>
@@ -683,14 +721,39 @@ function SessionPicker({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const needle = query.trim().toLowerCase();
-  const filtered = needle
-    ? sessions.filter((session) =>
-        `${session.title} ${session.sourceLabel ?? ""}`.toLowerCase().includes(needle),
-      )
-    : sessions;
-  const groups = useMemo(() => groupSessions(filtered), [filtered]);
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
 
+  const needle = query.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      needle
+        ? sessions.filter((session) =>
+            `${session.title} ${session.sourceLabel ?? ""}`.toLowerCase().includes(needle),
+          )
+        : sessions,
+    [sessions, needle],
+  );
+  const groups = useMemo(() => groupSessions(filtered), [filtered]);
+  const flat = useMemo(() => groups.flatMap((group) => group.sessions), [groups]);
+  const indexById = useMemo(
+    () => new Map(flat.map((session, index) => [session.sessionId, index])),
+    [flat],
+  );
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    setActive(0);
+  }, [needle]);
+  useEffect(() => {
+    if (active >= flat.length) setActive(Math.max(0, flat.length - 1));
+  }, [flat.length, active]);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+  }, [active]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -699,16 +762,42 @@ function SessionPicker({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const onInputKey = (event: React.KeyboardEvent) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActive((index) => Math.min(index + 1, flat.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive((index) => Math.max(index - 1, 0));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const session = flat[active];
+      if (session) onPick(session.sessionId);
+    }
+  };
+
   return (
     <div className="workbench-modal-layer" role="presentation">
       <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
-      <div className="workbench-modal" role="dialog" aria-modal="true" aria-label="세션 선택">
+      <div className="workbench-modal is-picker" role="dialog" aria-modal="true" aria-label="세션 선택">
         <header className="workbench-modal-head">
-          <ToolbarSearch value={query} onChange={setQuery} ariaLabel="프로젝트·세션 검색" />
+          <div className="workbench-search">
+            <Search size={14} aria-hidden="true" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={onInputKey}
+              aria-label="프로젝트·세션 검색"
+              placeholder=""
+            />
+            <span className="workbench-search-count">{flat.length}</span>
+          </div>
           <Button size="sm" variant="ghost" icon={X} title="닫기" onClick={onClose} />
         </header>
         <div className="workbench-picker-list base-scroll">
-          {groups.length === 0 ? (
+          {flat.length === 0 ? (
             <div className="workbench-picker-empty">일치하는 세션이 없습니다</div>
           ) : (
             groups.map((group) => (
@@ -719,13 +808,17 @@ function SessionPicker({
                   <i>{group.sessions.length}</i>
                 </header>
                 {group.sessions.map((session) => {
+                  const index = indexById.get(session.sessionId) ?? -1;
+                  const isActive = index === active;
                   const attention =
                     session.openIssues + session.unconfirmedDecisions + session.pendingNextActions;
                   return (
                     <button
                       type="button"
                       key={session.sessionId}
-                      className="workbench-picker-row"
+                      ref={isActive ? activeRef : undefined}
+                      className={`workbench-picker-row${isActive ? " is-active" : ""}`}
+                      onMouseMove={() => setActive(index)}
                       onClick={() => onPick(session.sessionId)}
                     >
                       <span className="workbench-picker-title">{session.title}</span>
@@ -744,6 +837,18 @@ function SessionPicker({
             ))
           )}
         </div>
+        <footer className="workbench-picker-foot">
+          <span>
+            <kbd>↑</kbd>
+            <kbd>↓</kbd> 이동
+          </span>
+          <span>
+            <kbd>Enter</kbd> 추가
+          </span>
+          <span>
+            <kbd>Esc</kbd> 닫기
+          </span>
+        </footer>
       </div>
     </div>
   );
