@@ -297,35 +297,39 @@
 .project-body {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Top band: the activity heatmap with the synthesis info cards beside it. */
+.project-top {
+  display: flex;
   gap: 16px;
   align-items: stretch;
 }
 
-.project-overview-col {
+.project-top > .home-activity {
+  flex: 1;
   min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-right: 2px;
 }
 
-/* 세션 rail: header pinned, the list scrolls inside the rail and fills the
-   column height so the page never grows with the session count. */
+.project-top > .project-synth-cards {
+  flex: 0 0 clamp(200px, 22%, 280px);
+}
+
+/* 세션 list sits full-width below the band, fills the remaining height, and
+   scrolls internally so the page never grows with the session count. */
 .project-sessions {
   margin-top: 0;
   min-height: 0;
-  max-height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
 
 /* `.base-section-body` is a grid by default; that stretched the session list
-   to fill the rail and divided the height across rows. Make it a plain flex
+   to fill the section and divided the height across rows. Make it a plain flex
    column so the list itself becomes the bounded scroller (below), keeping the
    bordered list box static while its rows scroll inside it. */
 .project-sessions .base-section-body {
@@ -336,55 +340,39 @@
 }
 
 /* The list sizes to its content (only as tall as the sessions it holds) but is
-   capped at the rail height: each row keeps a fixed height, and once the
-   sessions overflow the rail the list scrolls with the shared `base-scroll`
-   styling. It never stretches to fill the rail when there are only a few. */
+   capped at the section height: each row keeps a fixed height, and once the
+   sessions overflow the list scrolls with the shared `base-scroll` styling. */
 .project-sessions .project-session-list {
   min-height: 0;
   max-height: 100%;
   overflow-y: auto;
 }
 
-/* ─── Project synthesis (이 프로젝트 종합) ────────────────────────────────
-   Three summary cards (미해결 · 다음 할 일 · 결정) carry the project-wide
-   magnitude at a glance. Clicking a card drills into a focused, scrolling list
-   of that category, keeping the synthesis actionable rather than a flat board. */
+/* Durable memory sits at its natural height below the sessions. */
+.project-memory {
+  flex: 0 0 auto;
+}
+
+/* ─── Project synthesis info cards ───────────────────────────────────────
+   미해결 · 다음 할 일 · 결정 counts shown beside the activity heatmap. Purely
+   informational, stacked to fill the band height; the items live in sessions. */
 
 .project-synth-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
   gap: 8px;
+  margin: 0;
 }
 
 .project-synth-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  text-align: left;
-  font: inherit;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 14px;
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-md);
   background: var(--base-surface);
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease;
-}
-
-.project-synth-card:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--base-text) 18%, var(--base-border));
-  background: var(--panel);
-}
-
-.project-synth-card:focus-visible {
-  outline: 2px solid var(--base-accent-soft);
-  outline-offset: 2px;
-}
-
-.project-synth-card:disabled {
-  opacity: 0.55;
-  cursor: default;
 }
 
 .project-synth-card-top {
@@ -409,6 +397,7 @@
 }
 
 .project-synth-card-count {
+  margin: 0;
   font-size: var(--base-font-size-2xl);
   font-weight: 700;
   line-height: 1;
@@ -416,70 +405,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Focused category view: a back header above the full list, which scrolls in
-   its own bounded region so the drilled-in list never grows the page. */
-.project-synth-focus {
-  display: grid;
-  gap: 10px;
-}
-
-.project-synth-focus-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.project-synth-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px 2px 4px;
-  border: 0;
-  border-radius: var(--base-radius-sm);
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.project-synth-back:hover {
-  background: var(--gray-50);
-  color: var(--text);
-}
-
-.project-synth-back:focus-visible {
-  outline: 2px solid var(--purple);
-  outline-offset: 2px;
-}
-
-.project-synth-focus-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.project-synth-focus-count {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted-2);
-  font-variant-numeric: tabular-nums;
-}
-
-/* The drilled-in list: bounded so it never grows the page; scrolls in its own
-   region with the shared `base-scroll` styling. */
-.project-synth-list {
-  max-height: min(360px, 45vh);
-  overflow-y: auto;
-}
-
 /* ─── Narrow screens ─────────────────────────────────────────────────────
-   Below the split breakpoint the columns stack and the page falls back to a
-   single natural scroll, so the surface stays usable when it cannot fit. */
+   Stack the band and fall back to a single natural page scroll. */
 @media (max-width: 860px) {
   .page-shell.project-page {
     grid-template-rows: auto minmax(0, 1fr);
@@ -495,24 +422,25 @@
 
   .project-body {
     flex: 0 0 auto;
-    grid-template-columns: 1fr;
   }
 
-  .project-overview-col {
-    overflow: visible;
+  .project-top {
+    flex-direction: column;
+  }
+
+  .project-top > .project-synth-cards {
+    flex: none;
+    grid-auto-rows: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .project-sessions {
-    max-height: none;
+    flex: 0 0 auto;
   }
 
   .project-sessions .project-session-list {
     max-height: none;
     overflow: visible;
-  }
-
-  .project-synth-list {
-    max-height: none;
   }
 }
 

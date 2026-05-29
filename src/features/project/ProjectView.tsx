@@ -273,18 +273,14 @@ export function ProjectView() {
         />
       ) : null}
 
-      {/* Home-like split sized to fill the viewport: the overview column
-          (활동 + 종합 + 기억) beside a 세션 rail. The whole page no longer grows
-          with content — the rail scrolls internally and the overview column
-          stays compact, so the surface fits the screen and shrinks gracefully. */}
+      {/* Sized to fill the viewport: a top band (활동 heatmap with the synthesis
+          info cards beside it) over a full-width 세션 list that fills the
+          remaining height and scrolls internally, so the page never grows with
+          the session count. */}
       <div className="project-body">
-        <div className="project-overview-col base-scroll">
+        <div className="project-top">
           <ProjectPulse timestamps={sessionTimestamps} />
-          <ProjectSynthesisSection
-            synthesis={synthesis}
-            onOpenSession={(sessionId) => openSessionId(sessionId)}
-          />
-          <ProjectMemoryList memories={memories} />
+          <ProjectSynthesisSection synthesis={synthesis} />
         </div>
 
         <BaseSection
@@ -318,6 +314,8 @@ export function ProjectView() {
             </ul>
           )}
         </BaseSection>
+
+        <ProjectMemoryList memories={memories} />
       </div>
     </PageShell>
   );
