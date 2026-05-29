@@ -10,3 +10,5 @@ src-tauri/Cargo.lock
 .claude/
 .omo/run-continuation/
 *.log
+__pycache__/
+*.pyc
