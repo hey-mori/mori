@@ -338,12 +338,13 @@
   flex-direction: column;
 }
 
-/* The list is the scroll region: it fills the rail, keeps each row a fixed
-   height (never dividing the space), and scrolls with the shared `base-scroll`
-   styling once the sessions overflow. */
+/* The list sizes to its content (only as tall as the sessions it holds) but is
+   capped at the rail height: each row keeps a fixed height, and once the
+   sessions overflow the rail the list scrolls with the shared `base-scroll`
+   styling. It never stretches to fill the rail when there are only a few. */
 .project-sessions .project-session-list {
-  flex: 1;
   min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
 }
 
@@ -460,7 +461,7 @@
   }
 
   .project-sessions .project-session-list {
-    flex: 0 0 auto;
+    max-height: none;
     overflow: visible;
   }
 
