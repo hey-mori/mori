@@ -15,6 +15,11 @@ import {
 } from "../codex/codexTauri";
 import type { CodexSessionMeta } from "../codex/types";
 import {
+  discoverAntigravitySessions,
+  getAntigravitySession,
+} from "../antigravity/antigravityTauri";
+import type { AntigravitySessionMeta } from "../antigravity/types";
+import {
   normalizeConnectorEventBatch,
   parseConnectorJsonl,
   type ConnectorEvent,
@@ -26,9 +31,13 @@ import {
 } from "../desktop/connectorInbox";
 import { normalizeAiTranscript, type NormalizedImportCandidate } from "../import";
 
-export type AgentWorkAgentId = "claude" | "codex" | "opencode";
+export type AgentWorkAgentId = "claude" | "codex" | "opencode" | "antigravity";
 
-export type AgentWorkImportKind = "claude-code" | "codex-session" | "connector-jsonl";
+export type AgentWorkImportKind =
+  | "claude-code"
+  | "codex-session"
+  | "antigravity-session"
+  | "connector-jsonl";
 
 export type AgentWorkSessionMeta = {
   agentId: AgentWorkAgentId;
@@ -68,7 +77,10 @@ type AgentConnectorConfig = {
   connectorIds: string[];
 };
 
-const CONNECTOR_CONFIG: Record<Exclude<AgentWorkAgentId, "claude">, AgentConnectorConfig> = {
+const CONNECTOR_CONFIG: Record<
+  Exclude<AgentWorkAgentId, "claude" | "antigravity">,
+  AgentConnectorConfig
+> = {
   codex: {
     agentId: "codex",
     agentName: "Codex",
@@ -99,7 +111,15 @@ export async function listAgentWorkSessions(
       (a, b) => time(b.startedAt) - time(a.startedAt),
     );
   }
-  return listConnectorBackedSessions(CONNECTOR_CONFIG[agentId]);
+  if (agentId === "antigravity") {
+    const direct = await discoverAntigravitySessions().catch(
+      () => [] as AntigravitySessionMeta[],
+    );
+    return direct
+      .map(mapAntigravityMeta)
+      .sort((a, b) => time(b.startedAt) - time(a.startedAt));
+  }
+  return listConnectorBackedSessions(CONNECTOR_CONFIG.opencode);
 }
 
 export async function listAllAgentWorkSessions(): Promise<AgentWorkSessionMeta[]> {
@@ -107,6 +127,7 @@ export async function listAllAgentWorkSessions(): Promise<AgentWorkSessionMeta[]
     listAgentWorkSessions("claude"),
     listAgentWorkSessions("codex"),
     listAgentWorkSessions("opencode"),
+    listAgentWorkSessions("antigravity"),
   ]);
   return lists.flat().sort((a, b) => time(b.startedAt) - time(a.startedAt));
 }
@@ -126,6 +147,13 @@ export async function getAgentWorkSession(
     const detail = await getCodexSession(meta.sourceFilePath);
     return {
       ...mapCodexMeta(detail),
+      messages: detail.messages,
+    };
+  }
+  if (meta.importKind === "antigravity-session") {
+    const detail = await getAntigravitySession(meta.sourceFilePath);
+    return {
+      ...mapAntigravityMeta(detail),
       messages: detail.messages,
     };
   }
@@ -163,6 +191,18 @@ export function buildImportCandidatesFromAgentWorkSession(
         sessionId: input.sessionId,
         capturedAt: input.capturedAt,
         platform: "codex",
+        title: detail.title,
+        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
+      }),
+    ];
+  }
+  if (detail.importKind === "antigravity-session") {
+    return [
+      normalizeAiTranscript({
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        capturedAt: input.capturedAt,
+        platform: "other",
         title: detail.title,
         text: renderMessagesAsTranscript(detail.messages, detail.agentName),
       }),
@@ -223,6 +263,24 @@ function mapCodexMeta(session: CodexSessionMeta): AgentWorkSessionMeta {
     agentId: "codex",
     agentName: "Codex",
     importKind: "codex-session",
+    id: session.sessionId,
+    sessionId: session.sessionId,
+    projectPath: session.projectPath,
+    projectName: session.projectName,
+    filePath: session.filePath,
+    sourceFilePath: session.filePath,
+    startedAt: session.startedAt,
+    updatedAt: session.updatedAt,
+    messageCount: session.messageCount,
+    title: session.title,
+  };
+}
+
+function mapAntigravityMeta(session: AntigravitySessionMeta): AgentWorkSessionMeta {
+  return {
+    agentId: "antigravity",
+    agentName: "Antigravity",
+    importKind: "antigravity-session",
     id: session.sessionId,
     sessionId: session.sessionId,
     projectPath: session.projectPath,
