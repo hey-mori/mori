@@ -2,14 +2,22 @@
 
 Mori's frontend should stay semantic and local-first: UI code should describe
 product concepts, while tokens and small CSS files carry the visual decisions.
-This document is the migration plan away from the current single large
-`src/styles.css` file.
+This document records the migration away from the former single large
+`src/styles.css` file, which has now been fully dissolved.
 
-Current status: global reset/base rules live in `src/styles/reset.css`, the
-application shell/sidebar/settings-sheet styles live in
-`src/styles/app-shell.css`, and a reusable component layer now lives under
-`src/components/ui/*.css` (see below). The remaining `src/styles.css` file holds
-the feature-screen CSS and should continue to shrink by feature ownership.
+Current status: the monolith is gone. Global reset/base rules live in
+`src/styles/reset.css`, the application shell/sidebar/settings-sheet styles live
+in `src/styles/app-shell.css`, a reusable component layer lives under
+`src/components/ui/*.css`, and the feature-screen CSS lives in
+`src/styles/features/*.css`. `globals.css` is the single import entry that
+orders all of these.
+
+The feature sheets were carved out by a byte-identical, brace-depth-zero split,
+so they preserve the original cascade exactly but are not yet feature-pure: some
+sheets still contain secondary, interleaved rules (e.g. `memory-settings.css`
+holds account/settings/memory/consolidation). The next refinement is to migrate
+stray rules toward their owning sheet, one move at a time, under the
+cascade-order discipline below.
 
 ### Realized component layer
 
@@ -97,7 +105,7 @@ src/features/reports/
 - `npm run format` intentionally formats only tooling config files. A
   repository-wide Prettier baseline should be a separate explicit commit.
 - `npm run style:check` validates CSS syntax and relaxed maintainability rules.
-  It should become stricter after `src/styles.css` is split.
+  Now that the monolith is split, it can be tightened sheet by sheet.
 - `npm run unused` runs Knip in advisory mode. Treat output as a backlog, not an
   automatic deletion list.
 
@@ -109,12 +117,14 @@ src/features/reports/
    `.settings-sheet-*`. Done.
 3. Component layer in `components/ui/*.css`: tooltips, buttons, base rows,
    layout components, modal. Done (see Realized component layer above).
-4. Remaining feature CSS in `styles.css`: `timeline`, `start-session`, `home`,
-   `session-detail`, `notifications`, `reports`, `evidence`, `review`,
-   `memory`, `sources`. Not yet split.
+4. Feature CSS split into `src/styles/features/*.css`: `timeline`,
+   `start-session`, `session-shell`, `home`, `review-evidence`,
+   `notifications`, `memory-settings`, `settings-tools`, `timeline-responsive`,
+   `connections`, `command-palette`, `project-page`, `sources`. Done by a
+   byte-identical split.
 
-The feature CSS is the hard part: the selectors are interleaved across the file
-rather than grouped, so a clean per-feature split is not a mechanical cut. It is
-an iterative effort, one feature at a time, each move gated by the cascade-order
-discipline above and verified in the browser. Do not attempt a single bulk
-reorder.
+The next step is feature purity: the sheets were cut on position, not ownership,
+because the selectors were interleaved across the original file. Migrate stray
+rules toward their owning sheet one move at a time, each gated by the
+cascade-order discipline above and verified in the browser. Do not attempt a
+single bulk reorder.
