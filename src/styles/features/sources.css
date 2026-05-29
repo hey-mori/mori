@@ -760,7 +760,9 @@
   }
 }
 
-/* Connection status — compact per-agent status rows on the 소스 overview. */
+/* Connection status: compact per-agent status rows. Retired from the 소스
+   overview (the visual panel is intentionally not shown); the styling is kept
+   so the panel can be re-wired without restyling. */
 .sources-connection-status ul {
   list-style: none;
   margin: 0;

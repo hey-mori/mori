@@ -19,10 +19,16 @@ type PanelState =
 
 /**
  * Connection status panel for the 소스 overview. Renders the read-only status
- * the installer adapter derives from `detect_connector_status` — which agent
+ * the installer adapter derives from `detect_connector_status`: which agent
  * is present, whether its capture is wired, and how much it can read. In
  * browser mode the adapter returns the honest desktop-only model, so the panel
  * never invents a connected state.
+ *
+ * Retired: intentionally not rendered today, since showing connection status
+ * to the user was judged unnecessary. The component, its styling
+ * (`.sources-connection-status`), and the detection backend
+ * (`detect_connector_status` + the installer adapter) are kept intact so the
+ * panel can be re-wired into a view with a single render line if needed.
  */
 export function ConnectorStatusPanel() {
   const [state, setState] = useState<PanelState>({ status: "loading" });

@@ -42,7 +42,6 @@ import {
   type SourceProviderMethod,
 } from "../../lib/sources/sourceProviderGroups";
 import type { StoredSessionImport } from "../../lib/storage/storageTypes";
-import { ConnectorStatusPanel } from "./ConnectorStatusPanel";
 
 /**
  * 소스 — the connect-your-work overview.
@@ -259,8 +258,6 @@ export function SourcesView() {
       ) : (
         <p className="sources-empty">검색 결과가 없습니다.</p>
       )}
-
-      <ConnectorStatusPanel />
 
       {imports.length > 0 ? <RecentImports imports={imports} /> : null}
     </PageShell>
