@@ -473,29 +473,27 @@ function ProjectRow({
         {drillable ? <ArrowUpRight size={13} className="dashboard-row-go" aria-hidden="true" /> : null}
       </span>
 
-      <span className="dashboard-cell">
-        <span className="dashboard-cell-num">{project.sessionCount}</span>
-        <span className="dashboard-micro" aria-hidden="true">
-          <i style={{ width: `${Math.round(project.coverageScore * 100)}%` }} />
-        </span>
-      </span>
-
-      <Bar
+      <MetricCell value={project.sessionCount} fraction={project.coverageScore} tone="info" />
+      <MetricCell
         value={formatCount(project.tokenTotal)}
         fraction={fraction(project.tokenTotal, maxTokenTotal)}
         tone="accent"
       />
-      <Bar
+      <MetricCell
         value={project.attentionScore}
         fraction={fraction(project.attentionScore, maxAttention)}
         tone={project.attentionScore > 0 ? "warning" : "success"}
       />
-      <Bar value={project.eventCount} fraction={fraction(project.eventCount, maxEventCount)} tone="info" />
+      <MetricCell
+        value={project.eventCount}
+        fraction={fraction(project.eventCount, maxEventCount)}
+        tone="info"
+      />
     </button>
   );
 }
 
-function Bar({
+function MetricCell({
   value,
   fraction: amount,
   tone,
@@ -505,9 +503,11 @@ function Bar({
   tone: "accent" | "warning" | "success" | "info";
 }) {
   return (
-    <span className={`dashboard-cell-bar tone-${tone}`}>
-      <i style={{ width: `${Math.max(amount * 100, amount > 0 ? 6 : 0)}%` }} aria-hidden="true" />
-      <strong>{value}</strong>
+    <span className="dashboard-cell">
+      <span className="dashboard-cell-num">{value}</span>
+      <span className={`dashboard-micro tone-${tone}`} aria-hidden="true">
+        <i style={{ width: `${Math.max(amount * 100, amount > 0 ? 6 : 0)}%` }} />
+      </span>
     </span>
   );
 }
