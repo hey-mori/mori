@@ -8,23 +8,29 @@
    they are owned by the shared WorkActivityCard / MetricToggle components rather
    than by either screen. */
 
-/* ── Landing column — hero + continuation, centred on a calm reading width ─── */
+/* ── Landing column — hero + focal card + a 2-up body, centred ─────────────── */
 .home-landing {
   display: grid;
   gap: var(--base-space-5);
   width: 100%;
   max-width: 940px;
   margin-inline: auto;
-  padding-block: clamp(24px, 5vh, 56px);
+  /* No extra top padding: the shell already insets the content, so adding more
+     here left a large empty band above the hero on short / narrow viewports. */
+  padding-bottom: var(--base-space-6);
 }
 
-/* Body — the continuation column (wider) beside the memory rail. Collapses to a
+/* Body — the secondary resumable list beside the memory rail. Collapses to a
    single column when the canvas is too narrow to hold both comfortably. */
 .home-body {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: var(--base-space-5);
   align-items: start;
+}
+
+.home-body.is-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 @media (max-width: 880px) {
@@ -37,23 +43,24 @@
    prefers-reduced-motion so it never moves for users who opt out. */
 @media (prefers-reduced-motion: no-preference) {
   .home-hero,
-  .home-continue-head,
-  .home-continue-card,
-  .home-continue-others > li,
+  .home-focal,
+  .home-resume-head,
+  .home-resume-list > li,
   .home-memory-head,
   .home-memory-list,
   .home-memory-empty {
     animation: home-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .home-hero { animation-delay: 40ms; }
-  .home-continue-head { animation-delay: 120ms; }
-  .home-continue-card { animation-delay: 170ms; }
-  .home-continue-others > li:nth-child(1) { animation-delay: 240ms; }
-  .home-continue-others > li:nth-child(2) { animation-delay: 300ms; }
-  .home-continue-others > li:nth-child(3) { animation-delay: 360ms; }
-  .home-memory-head { animation-delay: 150ms; }
+  .home-focal { animation-delay: 120ms; }
+  .home-resume-head { animation-delay: 200ms; }
+  .home-resume-list > li:nth-child(1) { animation-delay: 250ms; }
+  .home-resume-list > li:nth-child(2) { animation-delay: 290ms; }
+  .home-resume-list > li:nth-child(3) { animation-delay: 330ms; }
+  .home-resume-list > li:nth-child(4) { animation-delay: 370ms; }
+  .home-memory-head { animation-delay: 200ms; }
   .home-memory-list,
-  .home-memory-empty { animation-delay: 210ms; }
+  .home-memory-empty { animation-delay: 250ms; }
 }
 
 @keyframes home-rise {
@@ -116,29 +123,46 @@
   pointer-events: none;
 }
 
-/* ── Continuation — the focal "이어갈 작업" card + lighter resumable rows ────── */
-.home-continue {
+/* ── Focal card — the full-width continuation centrepiece ──────────────────── */
+.home-focal {
   display: grid;
-  gap: var(--base-space-3);
+  gap: var(--base-space-4);
+  padding: var(--base-space-6);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-xl);
+  background: var(--base-surface);
+  box-shadow: var(--base-shadow-card);
 }
 
-.home-continue-head h2 {
+.home-focal-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--base-space-5);
+}
+
+.home-focal-lead {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.home-focal-eyebrow {
+  font-size: var(--base-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--base-accent);
+}
+
+.home-focal-title {
   margin: 0;
-  font-size: var(--base-font-size-md);
-  font-weight: 650;
+  font-size: var(--base-font-size-2xl);
+  font-weight: 700;
+  line-height: var(--base-line-tight);
   color: var(--base-text);
 }
 
-.home-continue-card {
-  display: grid;
-  gap: var(--base-space-3);
-  padding: var(--base-space-5);
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-lg);
-  background: var(--base-surface);
-}
-
-.home-continue-meta {
+.home-focal-meta {
   display: flex;
   align-items: center;
   gap: var(--base-space-3);
@@ -147,113 +171,32 @@
   min-width: 0;
 }
 
-.home-continue-meta > span {
+.home-focal-meta > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.home-continue-meta > span + span::before {
+.home-focal-meta > span + span::before {
   content: "·";
   margin-right: var(--base-space-3);
   color: var(--base-text-muted-2);
 }
 
-.home-continue-status {
+.home-focal-status {
   flex-shrink: 0;
   font-weight: 600;
 }
-.home-continue-status.tone-success { color: var(--green); }
-.home-continue-status.tone-info { color: var(--blue); }
-.home-continue-status.tone-neutral { color: var(--base-text-muted); }
+.home-focal-status.tone-success { color: var(--green); }
+.home-focal-status.tone-info { color: var(--blue); }
+.home-focal-status.tone-neutral { color: var(--base-text-muted); }
 
-.home-continue-title {
-  margin: 0;
-  font-size: var(--base-font-size-lg);
-  font-weight: 680;
-  line-height: var(--base-line-tight);
-  color: var(--base-text);
-}
-
-/* Carry-forward list — the concrete work the next run inherits, by title. A
-   kind-coloured dot (할 일 green · 결정 blue · 이슈 amber, per the semantic colour
-   contract) leads each line; the muted kind label trails. Honest by absence:
-   only real pending items appear, capped, with "+N개 더" for the remainder. */
-.home-continue-carry {
-  display: grid;
-  gap: var(--base-space-2);
-  padding-top: var(--base-space-1);
-  border-top: 1px solid var(--base-border);
-}
-
-.home-continue-carry-label {
-  font-size: var(--base-font-size-xs);
-  font-weight: 600;
-  color: var(--base-text-muted-2);
-}
-
-.home-continue-carry-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 1px;
-}
-
-.home-continue-carry-item {
-  display: grid;
-  grid-template-columns: 7px minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: var(--base-space-3);
-  padding: 4px 0;
-}
-
-.home-continue-carry-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--base-text-muted-2);
-}
-
-.home-continue-carry-item.kind-next .home-continue-carry-dot { background: var(--green); }
-.home-continue-carry-item.kind-decision .home-continue-carry-dot { background: var(--blue); }
-.home-continue-carry-item.kind-issue .home-continue-carry-dot { background: #d8923f; }
-
-.home-continue-carry-text {
-  min-width: 0;
-  font-size: var(--base-font-size-sm);
-  color: var(--base-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-continue-carry-kind {
+.home-focal-cta {
   flex-shrink: 0;
-  font-size: var(--base-font-size-xs);
-  color: var(--base-text-muted-2);
-}
-
-.home-continue-carry-more {
-  padding-top: 2px;
-  font-size: var(--base-font-size-xs);
-  color: var(--base-text-muted-2);
-}
-
-.home-continue-empty {
-  margin: 0;
-  font-size: var(--base-font-size-sm);
-  color: var(--base-text-muted);
-  line-height: var(--base-line-snug);
-}
-
-.home-continue-cta {
-  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: var(--base-space-1);
-  padding: 8px 16px;
+  padding: 9px 18px;
   border: 0;
   border-radius: var(--base-radius-md);
   background: var(--base-accent);
@@ -264,12 +207,99 @@
   transition: filter 0.12s ease;
 }
 
-.home-continue-cta:hover {
+.home-focal-cta:hover {
   filter: brightness(1.06);
 }
 
-/* Other resumable sessions — lighter, compact rows in one bordered group. */
-.home-continue-others {
+/* Carry-forward list — the concrete work the next run inherits, by title, in a
+   2-up grid that fills the card width (wrapping to one column when narrow). A
+   kind-coloured dot (할 일 green · 결정 blue · 이슈 amber, per the semantic colour
+   contract) leads each line; the muted kind label trails. */
+.home-focal-carry {
+  display: grid;
+  gap: var(--base-space-3);
+  padding-top: var(--base-space-4);
+  border-top: 1px solid var(--base-border);
+}
+
+.home-focal-carry-label {
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  color: var(--base-text-muted-2);
+}
+
+.home-focal-carry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2px var(--base-space-5);
+}
+
+.home-focal-carry-item {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--base-space-3);
+  padding: 5px 0;
+}
+
+.home-focal-carry-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--base-text-muted-2);
+}
+
+.home-focal-carry-item.kind-next .home-focal-carry-dot { background: var(--green); }
+.home-focal-carry-item.kind-decision .home-focal-carry-dot { background: var(--blue); }
+.home-focal-carry-item.kind-issue .home-focal-carry-dot { background: #d8923f; }
+
+.home-focal-carry-text {
+  min-width: 0;
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-focal-carry-kind {
+  flex-shrink: 0;
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted-2);
+}
+
+.home-focal-carry-more {
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted-2);
+}
+
+.home-focal-empty {
+  margin: 0;
+  padding-top: var(--base-space-4);
+  border-top: 1px solid var(--base-border);
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text-muted);
+  line-height: var(--base-line-snug);
+}
+
+/* ── Resume list — "이어갈 다른 작업" rows beside the memory rail ─────────────── */
+.home-resume {
+  display: grid;
+  gap: var(--base-space-3);
+  align-content: start;
+}
+
+.home-resume-head h2 {
+  margin: 0;
+  font-size: var(--base-font-size-md);
+  font-weight: 650;
+  color: var(--base-text);
+}
+
+.home-resume-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -281,11 +311,11 @@
   overflow: hidden;
 }
 
-.home-continue-others > li + li .home-continue-other {
+.home-resume-list > li + li .home-resume-row {
   border-top: 1px solid var(--base-border);
 }
 
-.home-continue-other {
+.home-resume-row {
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr) auto auto;
   align-items: center;
@@ -299,18 +329,18 @@
   transition: background 0.1s ease;
 }
 
-.home-continue-other:hover {
+.home-resume-row:hover {
   background: var(--base-surface-subtle);
 }
 
-.home-continue-other-icon {
+.home-resume-row-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--base-text-muted-2);
 }
 
-.home-continue-other-title {
+.home-resume-row-title {
   min-width: 0;
   font-size: var(--base-font-size-sm);
   font-weight: 550;
@@ -320,7 +350,7 @@
   text-overflow: ellipsis;
 }
 
-.home-continue-other-meta {
+.home-resume-row-meta {
   display: flex;
   align-items: center;
   gap: var(--base-space-3);
@@ -329,19 +359,19 @@
   min-width: 0;
 }
 
-.home-continue-other-meta > span {
+.home-resume-row-meta > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.home-continue-other-meta > span + span::before {
+.home-resume-row-meta > span + span::before {
   content: "·";
   margin-right: var(--base-space-3);
   color: var(--base-text-muted-2);
 }
 
-.home-continue-other-arrow {
+.home-resume-row-arrow {
   color: var(--base-text-muted-2);
   flex-shrink: 0;
   opacity: 0;
@@ -349,7 +379,7 @@
   transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
-.home-continue-other:hover .home-continue-other-arrow {
+.home-resume-row:hover .home-resume-row-arrow {
   opacity: 1;
   transform: translateX(0);
   color: var(--base-accent);

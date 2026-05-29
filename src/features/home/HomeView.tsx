@@ -19,11 +19,12 @@ import {
   buildHomeOverview,
   type HomeSessionMetricSnapshot,
 } from "../../lib/home/homeOverview";
-import { HomeContinuation, type HomeCarryEntry } from "./HomeContinuation";
+import { HomeFocalCard, type HomeCarryEntry } from "./HomeFocalCard";
+import { HomeResumeList } from "./HomeResumeList";
 import { HomeDecisions, type HomeDecisionItem } from "./HomeDecisions";
 
-/** How many extra "이어갈 다른 작업" rows to surface beneath the focal card. */
-const HOME_OTHER_LIMIT = 3;
+/** How many extra "이어갈 다른 작업" rows to surface beside the memory rail. */
+const HOME_OTHER_LIMIT = 4;
 
 /** How many concrete carry-forward items to list on the focal card. */
 const HOME_CARRY_LIMIT = 4;
@@ -135,16 +136,23 @@ export function HomeView() {
             <MoriLogo variant="mark" tone="mono" size={156} className="home-hero-mark" />
           </header>
 
-          <div className="home-body">
-            <HomeContinuation
-              focal={focal}
-              carry={carry}
-              carryMore={carryMore}
-              others={others}
-              onResume={resume}
-            />
-            <HomeDecisions decisions={decisions} onOpen={(id) => resume(id, "open")} />
-          </div>
+          <HomeFocalCard
+            focal={focal}
+            carry={carry}
+            carryMore={carryMore}
+            onResume={resume}
+          />
+
+          {others.length > 0 || decisions.length > 0 ? (
+            <div className={`home-body${others.length > 0 && decisions.length > 0 ? "" : " is-single"}`}>
+              {others.length > 0 ? (
+                <HomeResumeList sessions={others} onOpen={(id) => resume(id, "open")} />
+              ) : null}
+              {decisions.length > 0 ? (
+                <HomeDecisions decisions={decisions} onOpen={(id) => resume(id, "open")} />
+              ) : null}
+            </div>
+          ) : null}
         </div>
       )}
     </PageShell>
