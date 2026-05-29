@@ -270,7 +270,7 @@ export function SettingsCard({
   return <div className={`settings-inline-card ${className}`.trim()}>{children}</div>;
 }
 
-export function SettingsStatusPill({
+export function StatusPill({
   tone = "gray",
   children,
 }: {
@@ -279,8 +279,6 @@ export function SettingsStatusPill({
 }) {
   return <span className={`settings-status-pill tone-${tone}`}>{children}</span>;
 }
-
-export const StatusPill = SettingsStatusPill;
 
 export function SettingsInlineAction({
   children,
@@ -316,7 +314,7 @@ export function PreferenceToggle({
   );
 }
 
-export function SettingsNotice({
+function NoticeBase({
   icon: Icon,
   title,
   tone = "info",
@@ -338,4 +336,20 @@ export function SettingsNotice({
   );
 }
 
-export const LocalOnlyNotice = SettingsNotice;
+export function SettingsNotice(props: {
+  icon: LucideIcon;
+  title: string;
+  tone?: "info" | "success" | "warning" | "danger";
+  children: ReactNode;
+}) {
+  return <NoticeBase {...props} />;
+}
+
+export function LocalOnlyNotice(props: {
+  icon: LucideIcon;
+  title: string;
+  tone?: "info" | "success" | "warning" | "danger";
+  children: ReactNode;
+}) {
+  return <NoticeBase {...props} />;
+}
