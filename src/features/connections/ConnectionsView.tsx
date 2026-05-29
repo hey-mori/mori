@@ -397,7 +397,7 @@ export function ConnectionsView() {
           <ToolbarSearch
             value={query}
             onChange={setQuery}
-            placeholder="제목 또는 프로젝트 경로로 검색"
+            placeholder=""
             ariaLabel="AI 작업 세션 검색"
             className="connections-search"
           />

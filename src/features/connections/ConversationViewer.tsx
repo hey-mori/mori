@@ -326,7 +326,7 @@ export function ConversationViewer({
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="메시지 내용 검색"
+                placeholder=""
                 aria-label="대화 내용 검색"
               />
             </label>

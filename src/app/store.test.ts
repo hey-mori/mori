@@ -57,7 +57,7 @@ describe("app store — session-centric routing", () => {
   });
 
   it("navigate() passes non-session destinations through unchanged", () => {
-    for (const view of ["home", "memory", "connections", "start"] as const) {
+    for (const view of ["home", "memory", "connections", "workspace", "dashboard", "workbench", "start"] as const) {
       useAppStore.getState().navigate(view);
       expect(useAppStore.getState().currentView).toBe(view);
     }

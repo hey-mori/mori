@@ -200,7 +200,7 @@ export function CommandPalette({
           <input
             ref={inputRef}
             type="text"
-            placeholder="검색, 이동, 설정… (Cmd+K)"
+            placeholder=""
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             aria-label="명령 검색"

@@ -11,6 +11,7 @@ import {
   Layers,
   LayoutDashboard,
   Link2,
+  Network,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
@@ -88,7 +89,17 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   {
     key: "workspace",
     label: "프로젝트",
-    icon: viewIcon.workspace ?? Layers,
+    icon: viewIcon.workspace ?? FolderGit2,
+  },
+  {
+    key: "dashboard",
+    label: "대시보드",
+    icon: viewIcon.dashboard ?? LayoutDashboard,
+  },
+  {
+    key: "workbench",
+    label: "워크벤치",
+    icon: viewIcon.workbench ?? Layers,
   },
   // 메모리 is no longer a standing tab: durable project memory lives on each
   // project page (ProjectView). The memory overview / consolidation review stay
@@ -222,17 +233,8 @@ export function Sidebar({
 
   const isActive = (key: ViewKey) => {
     if (key === "home") return currentView === "home";
-    // 프로젝트 means the "all projects" browser (workspace). An *individual*
-    // project page is a drill-down, not that destination, so it must not light
-    // up 프로젝트 — otherwise selecting one project reads as selecting the whole
-    // browser. Memory / consolidation still fold under it.
-    if (key === "workspace") {
-      return (
-        currentView === "workspace" ||
-        currentView === "memory" ||
-        currentView === "consolidation"
-      );
-    }
+    if (key === "dashboard") return currentView === "dashboard";
+    if (key === "workbench") return currentView === "workbench";
     return key === currentView;
   };
 
@@ -259,6 +261,18 @@ export function Sidebar({
           aria-current={currentView === "start" ? "page" : undefined}
         >
           <Plus size={15} aria-hidden="true" />
+        </button>
+        {/* Work graph — an experimental overview of projects + sessions. Sits
+            between 새 세션 and 알림 as a quick action; the full surface is also
+            reachable from the command palette. */}
+        <button
+          type="button"
+          className={`sidebar-head-action${currentView === "graph" ? " is-active" : ""}`}
+          onClick={() => setCurrentView("graph")}
+          aria-label="작업 그래프"
+          aria-current={currentView === "graph" ? "page" : undefined}
+        >
+          <Network size={15} aria-hidden="true" />
         </button>
         {/* Mori 노트 — promoted to the head so it sits with the other quick
             actions instead of buried in the foot. Compact icon + count

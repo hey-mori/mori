@@ -15,7 +15,7 @@ export type ToolbarSearchProps = {
 export function ToolbarSearch({
   value,
   onChange,
-  placeholder = "검색",
+  placeholder = "",
   ariaLabel,
   className = "",
 }: ToolbarSearchProps) {

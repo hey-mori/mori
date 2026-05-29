@@ -35,6 +35,7 @@ import {
 import { isTauriRuntime } from "../../lib/desktop";
 import { formatDateTime } from "../../lib/formatting/time";
 import {
+  buildStartSessionEngineOptions,
   getDefaultStartSessionEngineOption,
   type StartSessionEngineOption,
 } from "../../lib/session/startSessionEngineOptions";
@@ -42,9 +43,8 @@ import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdap
 import { loadStoredSessionSummaries } from "../../app/sessionStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
-import type { StoredSessionDraft } from "../../lib/storage/storageTypes";
 import { normalizeAiTranscript, type AiTranscriptPlatform } from "../../lib/import";
-import type { SourceOption } from "../../domain/types";
+import type { LlmProvider, SourceOption } from "../../domain/types";
 import {
   selectSessionMode,
   selectSessionView,
@@ -131,6 +131,13 @@ const AGENT_OPTIONS: AgentOption[] = [
 type ImportMethod = "records" | "paste" | "fresh";
 const NEW_PROJECT_VALUE = "__new__";
 
+type SelectOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+  title?: string;
+};
+
 function agentSourceOption(agent: AgentOption): SourceOption {
   return {
     id: agent.id,
@@ -176,7 +183,19 @@ export function StartSessionView() {
     () => describeSessionStorageTarget({ isDesktop: isTauriRuntime() }),
     [],
   );
-  const selectedEngine = useMemo(() => getDefaultStartSessionEngineOption(), []);
+  const engineOptions = useMemo(() => buildStartSessionEngineOptions(), []);
+  const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider>(
+    () => getDefaultStartSessionEngineOption().provider,
+  );
+  const selectedEngine = useMemo(
+    () =>
+      engineOptions.find(
+        (option) => option.provider === selectedEngineProvider && option.selectable,
+      ) ??
+      engineOptions.find((option) => option.selectable) ??
+      getDefaultStartSessionEngineOption(),
+    [engineOptions, selectedEngineProvider],
+  );
 
   const existingProjects = useMemo(() => gatherExistingProjects(), []);
   const projectOptions = useMemo(
@@ -218,14 +237,6 @@ export function StartSessionView() {
     setPasteText("");
   }
 
-  // 기록에서 불러오기 opens the browse modal directly (the inline list is gone);
-  // selecting it keeps any prior pick so re-opening shows it highlighted.
-  function openRecords() {
-    setMethod("records");
-    setPasteText("");
-    setBrowseOpen(true);
-  }
-
   function pickDetected(meta: AgentWorkSessionMeta) {
     setSelectedDetected(meta);
     // File the import under the conversation's own project; user can change it.
@@ -233,14 +244,13 @@ export function StartSessionView() {
   }
 
   // Honour a 기록에서 불러오기 request routed from the 소스 hub: default to the
-  // first detection-capable agent (Claude) and open the browse modal, then
-  // clear the one-shot so it fires exactly once.
+  // first detection-capable agent (Claude), choose the method, and let the
+  // inline browse button open the modal only when the user asks for it.
   useEffect(() => {
     if (!startRecordsRequest) return;
     const agent = AGENT_OPTIONS.find((option) => option.detect) ?? AGENT_OPTIONS[0] ?? null;
     if (agent) setSelectedAgentId(agent.id);
     setMethod("records");
-    setBrowseOpen(true);
     clearStartRecordsRequest();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startRecordsRequest]);
@@ -362,13 +372,14 @@ export function StartSessionView() {
       }
       aside={
         <SessionSummary
-          savedDraft={storeDraft}
           agent={selectedAgent}
           method={method}
           sessionName={resolvedName}
           projectName={projectName}
           engine={selectedEngine}
+          engineOptions={engineOptions}
           storageTarget={storageTarget}
+          onSelectEngine={setSelectedEngineProvider}
           onChangeEngine={() => openSettingsSheet("localAi")}
           createAction={
             <Button
@@ -431,7 +442,7 @@ export function StartSessionView() {
                 disabled={!selectedAgent.detect}
                 status={selectedAgent.detect ? undefined : "곧"}
                 selected={method === "records"}
-                onSelect={openRecords}
+                onSelect={() => chooseMethod("records")}
               />
               <PickTile
                 icon={ClipboardPaste}
@@ -647,7 +658,7 @@ function BaseSelect({
   onChange,
 }: {
   value: string;
-  options: { value: string; label: string }[];
+  options: SelectOption[];
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -734,7 +745,10 @@ function BaseSelect({
                 <button
                   type="button"
                   className={`base-select-option${selected ? " is-selected" : ""}`}
+                  disabled={option.disabled}
+                  title={option.title}
                   onClick={() => {
+                    if (option.disabled) return;
                     onChange(option.value);
                     close(true);
                   }}
@@ -752,36 +766,39 @@ function BaseSelect({
 }
 
 function SessionSummary({
-  savedDraft,
   agent,
   method,
   sessionName,
   projectName,
   engine,
+  engineOptions,
   storageTarget,
+  onSelectEngine,
   onChangeEngine,
   createAction,
 }: {
-  savedDraft: StoredSessionDraft | null;
   agent: AgentOption | null;
   method: ImportMethod | null;
   sessionName: string;
   projectName: string;
   engine: StartSessionEngineOption;
+  engineOptions: StartSessionEngineOption[];
   storageTarget: SessionStorageTarget;
+  onSelectEngine: (provider: LlmProvider) => void;
   onChangeEngine: () => void;
   createAction: ReactNode;
 }) {
+  const engineSelectOptions = engineOptions.map((option) => ({
+    value: option.provider,
+    label: engineSummaryLabel(option),
+    disabled: !option.selectable,
+    title: option.disabledReason,
+  }));
+
   return (
     <InspectorPanel
       ariaLabel="세션 요약"
       title="세션 요약"
-      subtitle="선택한 내용을 기반으로 이렇게 만들어집니다."
-      headerExtras={
-        <Badge tone={savedDraft ? "green" : "gray"}>
-          {savedDraft ? "드래프트 저장됨" : "미저장"}
-        </Badge>
-      }
       footer={
         <div className="start-summary-footer">
           <Lock size={15} aria-hidden="true" />
@@ -789,22 +806,25 @@ function SessionSummary({
         </div>
       }
     >
+      <SummarySectionTitle>세션 구성</SummarySectionTitle>
       <SummaryRow label="에이전트" value={agent?.name ?? "미선택"} muted={!agent} />
       <SummaryRow label="가져오기 방식" value={methodLabel(method)} muted={!method} />
       <SummaryRow label="세션 이름" value={sessionName} />
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
       <hr />
-      <div className="summary-row">
-        <span />
+      <SummarySectionTitle>분석 및 보관</SummarySectionTitle>
+      <div className="summary-row summary-row-control">
         <span>분석 엔진</span>
-        <b className="accent summary-row-engine">
-          <span className="summary-row-engine-label" title={engine.label}>
-            {engine.model ? `${engine.label} (${engine.model})` : engine.label}
-          </span>
+        <div className="summary-row-engine">
+          <BaseSelect
+            value={engine.provider}
+            options={engineSelectOptions}
+            onChange={(provider) => onSelectEngine(provider as LlmProvider)}
+          />
           <button type="button" className="start-engine-change" onClick={onChangeEngine}>
-            <Settings2 size={12} aria-hidden="true" /> 변경
+            <Settings2 size={12} aria-hidden="true" /> 설정
           </button>
-        </b>
+        </div>
       </div>
       <SummaryRow label="보관 위치" value={storageTarget.label} />
       <div className="start-summary-action">{createAction}</div>
@@ -825,13 +845,20 @@ function SummaryRow({
 }) {
   return (
     <div className="summary-row">
-      <span />
       <span>{label}</span>
       <b className={accent ? "accent" : muted ? "muted" : ""} title={value}>
         {value}
       </b>
     </div>
   );
+}
+
+function SummarySectionTitle({ children }: { children: ReactNode }) {
+  return <div className="summary-section-title">{children}</div>;
+}
+
+function engineSummaryLabel(engine: StartSessionEngineOption): string {
+  return engine.model ? `${engine.label} (${engine.model})` : engine.label;
 }
 
 /** Distinct existing project labels, derived from stored + demo sessions. */

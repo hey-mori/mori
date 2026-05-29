@@ -1,0 +1,147 @@
+/* ── Graph view (experimental) ──────────────────────────────────────────────
+   A full-bleed, Obsidian-style force graph. Calm light surface with a faint dot
+   grid; nodes settle under the simulation and light up their neighbourhood on
+   hover. Drag a node to move it, drag the background to pan, wheel to zoom. */
+
+/* Full-height shell: the canvas owns the whole area, no page padding. Scoped to
+   `.page-shell.graph-page` so it wins regardless of feature-sheet load order. */
+.page-shell.graph-page {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.graph-page .page-shell-scroll {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.graph-page .page-shell-content {
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+}
+
+.graph-canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--base-surface);
+  background-image: radial-gradient(
+    var(--base-border) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .graph-canvas-wrap {
+    animation: graph-fade 360ms ease-out both;
+  }
+}
+
+@keyframes graph-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.graph-canvas {
+  display: block;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.graph-canvas:active {
+  cursor: grabbing;
+}
+
+/* ── Edges ──────────────────────────────────────────────────────────────── */
+.graph-edge {
+  stroke: var(--base-text-muted-2);
+  stroke-width: 1;
+  opacity: 0.26;
+  transition: stroke 0.16s ease, opacity 0.16s ease, stroke-width 0.16s ease;
+}
+
+.graph-edge.is-spoke {
+  opacity: 0.34;
+}
+
+.graph-edge.is-active {
+  stroke: var(--base-accent);
+  stroke-width: 1.6;
+  opacity: 0.85;
+}
+
+.graph-edge.is-dim {
+  opacity: 0.06;
+}
+
+/* ── Hub ────────────────────────────────────────────────────────────────── */
+.graph-hub {
+  fill: var(--base-accent);
+  stroke: var(--base-surface);
+  stroke-width: 3;
+}
+
+/* ── Nodes ──────────────────────────────────────────────────────────────── */
+.graph-node {
+  cursor: pointer;
+  transition: opacity 0.16s ease;
+}
+
+.graph-node.is-dim {
+  opacity: 0.22;
+}
+
+.graph-project-dot {
+  fill: var(--base-accent-soft);
+  stroke: var(--base-accent);
+  stroke-width: 2;
+  transition: fill 0.16s ease, stroke-width 0.16s ease;
+}
+
+.graph-node.is-hover .graph-project-dot {
+  fill: var(--base-accent);
+  stroke-width: 3;
+}
+
+.graph-session-dot {
+  fill: var(--base-surface);
+  stroke: var(--base-text-muted-2);
+  stroke-width: 1.5;
+  transition: fill 0.16s ease, stroke 0.16s ease;
+}
+
+.graph-node.is-hover .graph-session-dot {
+  fill: var(--base-accent);
+  stroke: var(--base-accent);
+}
+
+/* ── Labels ─────────────────────────────────────────────────────────────── */
+.graph-project-label {
+  fill: var(--base-text);
+  font-weight: 650;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.graph-node.is-hover .graph-project-label {
+  fill: var(--base-accent);
+}
+
+.graph-session-label {
+  fill: var(--base-text);
+  font-weight: 550;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--base-surface);
+}

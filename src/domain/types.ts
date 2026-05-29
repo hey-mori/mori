@@ -13,9 +13,13 @@ export type ViewKey =
   | "consolidation"
   | "companion"
   | "connections"
+  | "dashboard"
+  | "workbench"
   | "workspace"
   /** Project workspace — aggregates every session that shares a sourceLabel. */
   | "project"
+  /** Experimental work-graph overview, reached from the command palette. */
+  | "graph"
   | "profile"
   | "login"
   | "security"

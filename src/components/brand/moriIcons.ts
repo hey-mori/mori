@@ -16,6 +16,8 @@ import {
   Lightbulb,
   Link2,
   Lock,
+  LayoutDashboard,
+  Network,
   Package,
   Play,
   ScrollText,
@@ -49,6 +51,9 @@ export const viewIcon = {
   consolidation: BookMarked, // consolidation review of memory proposals
   companion: Compass, // companion guidance
   connections: Link2, // source catalogue / acquisition workspace
+  dashboard: LayoutDashboard, // project-axis status and comparison
+  workbench: GanttChartSquare, // multi-session review surface
+  graph: Network, // experimental work-graph overview
   workspace: FolderKanban, // projects
   settings: Settings,
 } satisfies Partial<Record<ViewKey, LucideIcon>>;

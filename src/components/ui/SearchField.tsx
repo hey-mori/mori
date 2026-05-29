@@ -19,7 +19,7 @@ export type SearchFieldProps = {
 export function SearchField({
   value,
   onChange,
-  placeholder = "검색",
+  placeholder = "",
   ariaLabel,
   className = "",
   clearLabel = "검색 지우기",
@@ -43,7 +43,7 @@ export function SearchField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        aria-label={ariaLabel ?? placeholder}
+        aria-label={ariaLabel ?? "검색"}
         autoFocus={autoFocus}
       />
       {value ? (

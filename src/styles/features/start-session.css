@@ -446,15 +446,15 @@ input,
 
 .summary-row {
   display: grid;
-  grid-template-columns: 22px auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   min-height: 38px;
 }
 
-/* Label (2nd cell) stays on one line; the value truncates instead, so a long
+/* Label stays on one line; the value truncates instead, so a long
    conversation title can never collapse the label into stacked characters. */
-.summary-row > span:nth-child(2) {
+.summary-row > span:first-child {
   white-space: nowrap;
 }
 
@@ -467,8 +467,20 @@ input,
   white-space: nowrap;
 }
 
-/* The engine value carries an inline 변경 button, so it lays out as a flex row
-   whose label truncates while the button never clips. */
+.summary-section-title {
+  margin: 2px 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.summary-row-control {
+  align-items: start;
+}
+
+/* The engine value carries an inline selector and settings button, so it lays
+   out as a flex row whose selector truncates while the button never clips. */
 .summary-row-engine {
   display: flex;
   align-items: center;
@@ -478,11 +490,26 @@ input,
   white-space: normal;
 }
 
-.summary-row-engine-label {
+.summary-row-engine .base-select {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
+}
+
+.summary-row-engine .base-select-trigger {
+  height: 32px;
+  padding: 0 8px 0 10px;
+  font-size: 12.5px;
+}
+
+.summary-row-engine .base-select-menu {
+  left: auto;
+  width: min(260px, 72vw);
+}
+
+.summary-row-engine .base-select-option:disabled {
+  cursor: not-allowed;
+  color: var(--muted-2);
+  background: transparent;
 }
 
 .accent {
@@ -864,6 +891,12 @@ hr {
   background: var(--panel-soft, #f4f4f7);
 }
 
+.base-select-option:disabled {
+  cursor: not-allowed;
+  color: var(--muted-2);
+  background: transparent;
+}
+
 .base-select-option.is-selected {
   background: var(--base-accent-soft, var(--purple-50));
   color: var(--purple);
@@ -895,6 +928,10 @@ hr {
 .start-summary-action button {
   width: 100%;
   justify-content: center;
+}
+
+.start-summary-action .base-tooltip-anchor {
+  width: 100%;
 }
 
 .summary-row b.muted {

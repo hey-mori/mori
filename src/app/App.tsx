@@ -35,6 +35,16 @@ const SourcesView = lazy(() =>
     default: m.SourcesView,
   })),
 );
+const DashboardView = lazy(() =>
+  import("../features/dashboard/DashboardView").then((m) => ({
+    default: m.DashboardView,
+  })),
+);
+const WorkbenchView = lazy(() =>
+  import("../features/workbench/WorkbenchView").then((m) => ({
+    default: m.WorkbenchView,
+  })),
+);
 const WorkspaceView = lazy(() =>
   import("../features/workspace/WorkspaceView").then((m) => ({
     default: m.WorkspaceView,
@@ -43,6 +53,11 @@ const WorkspaceView = lazy(() =>
 const ProjectView = lazy(() =>
   import("../features/project/ProjectView").then((m) => ({
     default: m.ProjectView,
+  })),
+);
+const GraphView = lazy(() =>
+  import("../features/graph/GraphView").then((m) => ({
+    default: m.GraphView,
   })),
 );
 
@@ -102,8 +117,11 @@ export default function App() {
             {currentView === "memory" || currentView === "consolidation" ? <MemoryView /> : null}
             {currentView === "companion" ? <CompanionInboxView /> : null}
             {currentView === "connections" ? <SourcesView /> : null}
+            {currentView === "dashboard" ? <DashboardView /> : null}
+            {currentView === "workbench" ? <WorkbenchView /> : null}
             {currentView === "workspace" ? <WorkspaceView /> : null}
             {currentView === "project" ? <ProjectView /> : null}
+            {currentView === "graph" ? <GraphView /> : null}
           </Suspense>
         </ErrorBoundary>
       </AppShell>

@@ -14,18 +14,21 @@ describe("NAV_GROUPS entry model", () => {
     expect(NAV_GROUPS[0]?.items[0]?.key).toBe("home");
   });
 
-  it("exposes exactly the two primary destinations", () => {
+  it("exposes exactly the five primary destinations", () => {
     expect(navKeys()).toEqual([
       "home",
+      "connections",
       "workspace",
+      "dashboard",
+      "workbench",
     ]);
   });
 
-  it("reuses the workspace route for the 프로젝트 label", () => {
-    const projectsItem = NAV_GROUPS.flatMap((group) => group.items).find(
-      (item) => item.key === "workspace",
-    );
-    expect(projectsItem?.label).toBe("프로젝트");
+  it("names the project, analysis, and session axes", () => {
+    const items = NAV_GROUPS.flatMap((group) => group.items);
+    expect(items.find((item) => item.key === "workspace")?.label).toBe("프로젝트");
+    expect(items.find((item) => item.key === "dashboard")?.label).toBe("대시보드");
+    expect(items.find((item) => item.key === "workbench")?.label).toBe("워크벤치");
   });
 
   it("drops the narrower working surfaces from the standing nav", () => {
@@ -35,7 +38,6 @@ describe("NAV_GROUPS entry model", () => {
     // settings sheet is a modal opened from the user button — it does not
     // appear as a standing nav entry.
     for (const offNav of [
-      "connections",
       "session",
       "timeline",
       "evidence",
@@ -47,6 +49,7 @@ describe("NAV_GROUPS entry model", () => {
       "consolidation",
       "settings",
       "profile",
+      "project",
     ]) {
       expect(keys).not.toContain(offNav);
     }
