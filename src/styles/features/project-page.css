@@ -328,6 +328,13 @@
   flex-direction: column;
 }
 
+/* Match the "세션" heading to the adjacent "작업 활동" heading (14px / 650)
+   so it stops reading larger and heavier than the rest of the page. */
+.project-sessions .base-section-title {
+  font-size: var(--base-font-size-lg);
+  font-weight: 650;
+}
+
 /* `.base-section-body` is a grid by default; that stretched the session list
    to fill the section and divided the height across rows. Make it a plain flex
    column so the list itself becomes the bounded scroller (below), keeping the
