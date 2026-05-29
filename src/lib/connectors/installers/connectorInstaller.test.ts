@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildClaudeHookCommand,
   buildConnectorStatusViewModels,
   getConnectorInstallerMeta,
   listConnectorInstallers,
@@ -37,7 +38,7 @@ describe("connector installer registry", () => {
   });
 });
 
-describe("buildConnectorStatusViewModels — browser mode", () => {
+describe("buildConnectorStatusViewModels:browser mode", () => {
   it("marks every connector desktop-only when detection is unsupported", () => {
     const models = buildConnectorStatusViewModels({
       runtimeSupportsDetection: false,
@@ -52,7 +53,7 @@ describe("buildConnectorStatusViewModels — browser mode", () => {
   });
 });
 
-describe("buildConnectorStatusViewModels — Antigravity partial-capture note", () => {
+describe("buildConnectorStatusViewModels:Antigravity partial-capture note", () => {
   it("appends the partial-capture caveat when sessions are discovered", () => {
     const model = find(
       buildConnectorStatusViewModels({
@@ -78,7 +79,30 @@ describe("buildConnectorStatusViewModels — Antigravity partial-capture note", 
   });
 });
 
-describe("buildConnectorStatusViewModels — config-hook (Claude Code)", () => {
+describe("buildClaudeHookCommand", () => {
+  it("invokes the .py via python on Windows", () => {
+    expect(buildClaudeHookCommand("C:\\app\\connectors\\claude-code", "win32")).toBe(
+      'python "C:\\app\\connectors\\claude-code\\mori-claude-hook.py"',
+    );
+  });
+
+  it("uses the .sh launcher on POSIX", () => {
+    expect(buildClaudeHookCommand("/opt/app/connectors/claude-code", "posix")).toBe(
+      "/opt/app/connectors/claude-code/mori-claude-hook.sh",
+    );
+  });
+
+  it("trims a trailing separator from the script dir", () => {
+    expect(buildClaudeHookCommand("/opt/app/cc/", "posix")).toBe(
+      "/opt/app/cc/mori-claude-hook.sh",
+    );
+    expect(buildClaudeHookCommand("C:\\app\\cc\\", "win32")).toBe(
+      'python "C:\\app\\cc\\mori-claude-hook.py"',
+    );
+  });
+});
+
+describe("buildConnectorStatusViewModels:config-hook (Claude Code)", () => {
   function claude(result: Partial<ConnectorDetectionResult>) {
     return find(
       buildConnectorStatusViewModels({
@@ -119,7 +143,7 @@ describe("buildConnectorStatusViewModels — config-hook (Claude Code)", () => {
   });
 });
 
-describe("buildConnectorStatusViewModels — session-discovery (Codex)", () => {
+describe("buildConnectorStatusViewModels:session-discovery (Codex)", () => {
   function codex(result: Partial<ConnectorDetectionResult>) {
     return find(
       buildConnectorStatusViewModels({

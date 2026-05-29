@@ -10,9 +10,15 @@ import { isTauriRuntime } from "../../desktop/environment";
 import { invokeTauriCommand } from "../../desktop/tauriCommands";
 import {
   buildConnectorStatusViewModels,
+  type ClaudeHookInstallResult,
+  type ClaudeHookUninstallResult,
   type ConnectorDetectionResult,
   type ConnectorStatusViewModel,
 } from "./connectorInstaller";
+
+export type ClaudeHookScope =
+  | { scope: "global" }
+  | { scope: "project"; projectPath: string };
 
 export function isConnectorStatusDetectionAvailable(): boolean {
   return isTauriRuntime();
@@ -20,7 +26,7 @@ export function isConnectorStatusDetectionAvailable(): boolean {
 
 /**
  * Raw detection from the desktop side. Throws via the shared
- * desktop-unavailable error in browser mode — callers that want the honest
+ * desktop-unavailable error in browser mode; callers that want the honest
  * fallback model should use `loadConnectorStatus` instead.
  */
 export async function detectConnectorStatus(): Promise<ConnectorDetectionResult[]> {
@@ -51,4 +57,40 @@ export async function loadConnectorStatus(): Promise<ConnectorStatusViewModel[]>
       results: [],
     });
   }
+}
+
+function requireDesktop(): void {
+  if (!isTauriRuntime()) {
+    throw new Error(
+      "Claude 훅 연결은 Mori 데스크톱 앱에서만 가능합니다 (settings.json을 직접 수정합니다).",
+    );
+  }
+}
+
+/**
+ * Wire the Mori hook into Claude Code's settings.json. `command` is the
+ * OS-aware command string (see `buildClaudeHookCommand`). Throws in browser
+ * mode; the safe merge / idempotency live in the Rust command.
+ */
+export async function installClaudeHook(
+  target: ClaudeHookScope,
+  command: string,
+): Promise<ClaudeHookInstallResult> {
+  requireDesktop();
+  return invokeTauriCommand("install_claude_hook", {
+    scope: target.scope,
+    command,
+    projectPath: target.scope === "project" ? target.projectPath : undefined,
+  });
+}
+
+/** Remove the Mori hook from Claude Code's settings.json (other hooks survive). */
+export async function uninstallClaudeHook(
+  target: ClaudeHookScope,
+): Promise<ClaudeHookUninstallResult> {
+  requireDesktop();
+  return invokeTauriCommand("uninstall_claude_hook", {
+    scope: target.scope,
+    projectPath: target.scope === "project" ? target.projectPath : undefined,
+  });
 }

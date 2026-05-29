@@ -95,8 +95,39 @@ export type ConnectorStatusViewModel = {
   canInstall: boolean;
 };
 
+/** Result of the `install_claude_hook` command. */
+export type ClaudeHookInstallResult = {
+  settingsPath: string;
+  installed: boolean;
+  alreadyPresent: boolean;
+};
+
+/** Result of the `uninstall_claude_hook` command. */
+export type ClaudeHookUninstallResult = {
+  settingsPath: string;
+  removed: number;
+};
+
+/**
+ * Build the OS-aware command string Mori writes into Claude Code's
+ * `settings.json` hooks. Windows invokes the `.py` mapper through `python`
+ * directly (the `.ps1` launcher trips execution-policy prompts); POSIX uses
+ * the `.sh` launcher. `scriptDir` is the absolute directory holding the hook
+ * scripts, resolved at runtime from the app's bundled resources.
+ */
+export function buildClaudeHookCommand(
+  scriptDir: string,
+  platform: "win32" | "posix",
+): string {
+  const dir = scriptDir.replace(/[\\/]+$/, "");
+  if (platform === "win32") {
+    return `python "${dir}\\mori-claude-hook.py"`;
+  }
+  return `${dir}/mori-claude-hook.sh`;
+}
+
 export type BuildConnectorStatusInput = {
-  /** False in browser mode — detection requires the desktop app. */
+  /** False in browser mode, where detection requires the desktop app. */
   runtimeSupportsDetection: boolean;
   results: ConnectorDetectionResult[];
 };

@@ -36,7 +36,11 @@ import type {
 import type { LocalAiToolReport } from "../claude/installations";
 import type { CodexSessionDetail, CodexSessionMeta } from "../codex/types";
 import type { AntigravitySessionDetail, AntigravitySessionMeta } from "../antigravity/types";
-import type { ConnectorDetectionResult } from "../connectors/installers/connectorInstaller";
+import type {
+  ClaudeHookInstallResult,
+  ClaudeHookUninstallResult,
+  ConnectorDetectionResult,
+} from "../connectors/installers/connectorInstaller";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
 import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
 import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./repositoryCommands";
@@ -73,6 +77,8 @@ export type TauriCommandName =
   | "list_connector_jsonl_inbox"
   | "read_connector_jsonl_file"
   | "detect_connector_status"
+  | "install_claude_hook"
+  | "uninstall_claude_hook"
   | "discover_claude_desktop"
   | "list_claude_desktop_conversations"
   | "get_claude_desktop_conversation"
@@ -194,6 +200,14 @@ export type TauriCommandMap = {
   list_connector_jsonl_inbox: { input: undefined; output: ConnectorInboxListing };
   read_connector_jsonl_file: { input: { input: { path: string } }; output: ConnectorJsonlFile };
   detect_connector_status: { input: undefined; output: ConnectorDetectionResult[] };
+  install_claude_hook: {
+    input: { scope: "global" | "project"; command: string; projectPath?: string };
+    output: ClaudeHookInstallResult;
+  };
+  uninstall_claude_hook: {
+    input: { scope: "global" | "project"; projectPath?: string };
+    output: ClaudeHookUninstallResult;
+  };
   discover_claude_desktop: { input: undefined; output: ClaudeDesktopDiscovery };
   list_claude_desktop_conversations: { input: undefined; output: ClaudeConversationMeta[] };
   get_claude_desktop_conversation: {
