@@ -121,6 +121,14 @@ function flattenProviders(groups: ReturnType<typeof buildSourceProviderGroups>):
   return [...groups.agents, ...groups.evidence, ...groups.planned];
 }
 
+/**
+ * Anchor agents whose local work records Mori can auto-detect, so they carry the
+ * 기록에서 불러오기 way-in. ChatGPT is an agent in the grouping but is a pasted
+ * transcript, not an anchor: it has no local records and Mori is forbidden to
+ * read its storage, so it is intentionally absent here.
+ */
+const ANCHOR_AGENT_IDS = new Set(["claude", "codex", "opencode"]);
+
 export function SourcesView() {
   const draft = useMoriSessionStore((state) => state.draft);
   const imports = useMoriSessionStore((state) => state.imports);
@@ -146,6 +154,11 @@ export function SourcesView() {
     allMethods[0]?.source.id ??
     "";
   const [selectedId, setSelectedId] = useState(defaultSelectedId);
+  // Anchor agents open on their canonical way-in (기록에서 불러오기); every other
+  // provider, and ChatGPT, opens on its first import method.
+  const [recordsMode, setRecordsMode] = useState(() =>
+    ANCHOR_AGENT_IDS.has(groups.agents[0]?.id ?? ""),
+  );
   const [query, setQuery] = useState("");
 
   const needle = query.trim().toLowerCase();
@@ -169,6 +182,19 @@ export function SourcesView() {
 
   const hasResults =
     filtered.agents.length + filtered.evidence.length + filtered.planned.length > 0;
+
+  const providerIsAnchor = ANCHOR_AGENT_IDS.has(selectedProvider?.id ?? "");
+  const recordsSelected = recordsMode && providerIsAnchor;
+
+  // Selecting a provider tile resets to its canonical way-in: records for an
+  // anchor agent, the first import method otherwise.
+  function selectProvider(sourceId: string) {
+    setSelectedId(sourceId);
+    const provider = allProviders.find((p) =>
+      p.methods.some((m) => m.source.id === sourceId),
+    );
+    setRecordsMode(provider ? ANCHOR_AGENT_IDS.has(provider.id) : false);
+  }
 
   function runSourceAction(source: SourceWorkspaceSource) {
     if (source.action.kind === "import") {
@@ -202,11 +228,14 @@ export function SourcesView() {
           <SourceInspector
             provider={selectedProvider}
             method={selectedMethod}
-            onSelectMethod={setSelectedId}
+            recordsSelected={recordsSelected}
+            onSelectMethod={(id) => {
+              setSelectedId(id);
+              setRecordsMode(false);
+            }}
+            onSelectRecords={providerIsAnchor ? () => setRecordsMode(true) : undefined}
             onAction={() => runSourceAction(selectedMethod.source)}
-            onBrowseRecords={
-              selectedProvider.category === "AI" ? requestStartRecords : undefined
-            }
+            onBrowseRecords={providerIsAnchor ? requestStartRecords : undefined}
           />
         ) : null
       }
@@ -217,18 +246,18 @@ export function SourcesView() {
             title="에이전트"
             providers={filtered.agents}
             selectedId={selectedMethod?.source.id ?? ""}
-            onSelect={setSelectedId}
+            onSelect={selectProvider}
           />
           <RoleGroup
             title="자료"
             providers={filtered.evidence}
             selectedId={selectedMethod?.source.id ?? ""}
-            onSelect={setSelectedId}
+            onSelect={selectProvider}
           />
           <PlannedRow
             providers={filtered.planned}
             selectedId={selectedMethod?.source.id ?? ""}
-            onSelect={setSelectedId}
+            onSelect={selectProvider}
           />
         </>
       ) : (
@@ -336,22 +365,46 @@ function PlannedRow({
   );
 }
 
+/**
+ * Inspector copy for the 기록에서 불러오기 way-in: an anchor agent's detected
+ * local work records. It reads the same conversation content as a pasted
+ * transcript, behind the same Import Review gate, only the acquisition differs.
+ */
+function recordsDetail(agentName: string) {
+  return {
+    canAccess: [
+      "감지된 작업 대화 (제목 · 프로젝트 · 시각)",
+      "대화 미리보기 (턴 · 코드블록 · 모델)",
+      "요약과 메타데이터",
+    ],
+    cannotAccess: ["계정 · API 접근", "백그라운드 감시 · 자동 수집", "원본 대화 전체 보관"],
+    formats: ["데스크톱 자동 감지 (로컬 작업 기록)"],
+    note: `감지한 ${agentName} 대화는 세션 생성 후 Import Review를 거쳐 타임라인에 반영됩니다.`,
+  };
+}
+
 function SourceInspector({
   provider,
   method,
+  recordsSelected,
   onSelectMethod,
+  onSelectRecords,
   onAction,
   onBrowseRecords,
 }: {
   provider: SourceProvider;
   method: SourceProviderMethod;
+  recordsSelected: boolean;
   onSelectMethod: (id: string) => void;
+  /** Select the 기록에서 불러오기 way-in (anchor agents only). */
+  onSelectRecords?: () => void;
   onAction: () => void;
-  /** When set, show a "기록에서 불러오기" entry that opens the work-history browser. */
+  /** Run the work-record browser for the selected anchor agent. */
   onBrowseRecords?: () => void;
 }) {
   const source = method.source;
   const Icon = providerIcon(provider);
+  const detail = recordsSelected ? recordsDetail(provider.name) : null;
   return (
     <aside className="sources-inspector" aria-label="선택한 소스">
       <header className="sources-inspector-head">
@@ -366,8 +419,20 @@ function SourceInspector({
 
       <InspectorBlock title="연결 방법" icon={Plug}>
         <ul className="sources-method-picker">
+          {onSelectRecords ? (
+            <li>
+              <button
+                type="button"
+                className={`sources-method-pick${recordsSelected ? " is-active" : ""}`}
+                onClick={onSelectRecords}
+                aria-pressed={recordsSelected}
+              >
+                <span className="sources-method-pick-label">기록에서 불러오기</span>
+              </button>
+            </li>
+          ) : null}
           {provider.methods.map((entry) => {
-            const selected = entry.source.id === source.id;
+            const selected = !recordsSelected && entry.source.id === source.id;
             const showStatus = entry.source.status !== "available";
             return (
               <li key={entry.source.id}>
@@ -389,25 +454,24 @@ function SourceInspector({
       </InspectorBlock>
 
       <InspectorBlock title="읽는 것" icon={Database}>
-        <CheckList items={source.whatMoriCanAccess} tone="ok" />
+        <CheckList items={detail ? detail.canAccess : source.whatMoriCanAccess} tone="ok" />
       </InspectorBlock>
 
       <InspectorBlock title="읽지 않는 것" icon={Lock}>
-        <CheckList items={source.whatMoriCannotAccess} tone="no" />
+        <CheckList items={detail ? detail.cannotAccess : source.whatMoriCannotAccess} tone="no" />
       </InspectorBlock>
 
       <InspectorBlock title="지원 형식" icon={FileText}>
-        <ChipList items={source.acceptedFormats} />
+        <ChipList items={detail ? detail.formats : source.acceptedFormats} />
       </InspectorBlock>
 
       <div className="sources-inspector-actions">
-        <p className="sources-inspector-note">{source.reviewBehavior}</p>
-        {onBrowseRecords ? (
-          <Button variant="secondary" icon={History} onClick={onBrowseRecords}>
+        <p className="sources-inspector-note">{detail ? detail.note : source.reviewBehavior}</p>
+        {recordsSelected ? (
+          <Button variant="primary" icon={History} onClick={onBrowseRecords}>
             기록에서 불러오기
           </Button>
-        ) : null}
-        {source.action.kind === "none" ? null : (
+        ) : source.action.kind === "none" ? null : (
           <Button
             variant="primary"
             icon={source.action.kind === "settings" ? FolderOpen : Upload}

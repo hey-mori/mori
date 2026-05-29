@@ -46,6 +46,94 @@ terminal scrollback, editor buffers, or hidden folders.
 - account OAuth / cloud sync without explicit approval
 - automatic project-memory writes without review
 
+## Direction · source classification and session model (2026-05)
+
+This section is the governing intent the presentation contract below follows
+from. It refines, and is consistent with,
+[`design/mori-redesign-session-centric.md`](design/mori-redesign-session-centric.md)
+and [`mori-project-goal.md`](mori-project-goal.md) §1. Update it when a
+decision actually changes.
+
+### What 소스 is for
+
+The 소스 workspace is **data-inspection-first**. It answers "what can each
+source give me, what does Mori read and not read, and what is the canonical
+structure of that data" before it answers "start importing". Configuration
+lives here too (including developer-facing structure verification while the
+service is being built, some of which may never ship to end users). Its centre
+of gravity is *understand and verify the data*, not *manually compose a
+session*. Session creation lives in the session flow; 소스 links into that flow
+rather than hosting it.
+
+### Classification axis · capture capability, not "agent vs evidence"
+
+The honest axis is whether Mori can capture and associate a source's work,
+not whether it is "an AI". Three kinds:
+
+1. **Anchorable agents** · local agents a connector / hook can capture, so they
+   can be a session **spine**: **Claude · Codex · OpenCode**. These, and only
+   these, appear in the 새 세션 agent picker.
+2. **Pasted AI transcripts** · no local capture is possible, so they are
+   hand-imported text and behave as **evidence, not anchors**: ChatGPT export,
+   Gemini, any pasted conversation. Generalize these to one "pasted AI
+   transcript" source rather than presenting each as a peer agent.
+3. **Auto-associated evidence** · Git diffs, terminal runs, files, and URLs the
+   agent touched while doing the work. Captured by an explicit connector, then
+   **auto-associated** onto the matching session spine.
+
+### ChatGPT is a transcript source, not a peer agent
+
+ChatGPT cannot anchor a session: you do not run it locally as a coding agent,
+and reading its storage is a forbidden non-goal. It is "a pasted AI
+transcript". The 소스 page must not present it as an equal anchor beside
+Claude / Codex / OpenCode, because that invites the false expectation that you
+can start a session from it.
+
+### Extensibility · adapter to canonical, not core rules or auto-sniffing
+
+Agent conversation structures, file formats, and folder locations vary per
+user and environment and drift over time. Two tempting approaches both fail:
+hard-coding per-agent rules in the core (brittle when a format changes) and
+auto-detecting arbitrary structures (unreliable guessing). The robust path,
+already Mori's connector model, is to push volatility to the **edge adapter**
+(connector / hook), which translates the native shape into the canonical
+Connector JSONL the core consumes. A new agent or a changed format is a new or
+updated adapter; the core is untouched. Paste parsers are a best-effort
+fallback, never the main path.
+
+### Evidence is auto-associated, not user-assembled
+
+Per [`mori-project-goal.md`](mori-project-goal.md) §1: **capture is explicit**
+(a connector ran), **association is automatic** (Mori groups already-captured
+evidence onto the session spine). Hand-adding Git / terminal / URL into a
+session by hand (the Work Bundle path) is the rare manual fallback, not the
+model. Mori never watches the agent; it only associates what an explicit
+connector already captured. The current manual evidence-import drawer is the
+surface that diverges from this and should be demoted toward the
+auto-association model over time.
+
+### Consequences and open items
+
+- **Fixed:** "기록에서 불러오기" is an anchor-agent capability tied to local
+  work-record detection, which today covers all three anchor agents (Claude via
+  Claude Code discovery, Codex via Codex CLI discovery, OpenCode via the
+  connector inbox · see `src/lib/agents/workSessions.ts`). It must never appear
+  on a pasted transcript source like ChatGPT, which has no local records and
+  whose storage Mori is forbidden to read. The inspector now gates this entry on
+  `ANCHOR_AGENT_IDS` (claude / codex / opencode), not on the broad
+  `category === "AI"` test that wrongly included ChatGPT and excluded
+  Codex / OpenCode. (The "Claude-today" note in
+  [`mori-project-goal.md`](mori-project-goal.md) §4 is stale and should be
+  refreshed to "anchor agents".)
+- **Fixed:** the inspector presents every way-in coherently. 기록에서 불러오기
+  is the first 연결 방법 entry for an anchor agent and the canonical default
+  selection; selecting any method drives a single contextual action button. The
+  earlier split, passive method labels above an orphan 기록에서 불러오기 button
+  stacked over the import action, is gone.
+- **Deferred:** move ChatGPT out of the 에이전트 group into a pasted-transcript
+  grouping. This is the larger taxonomy migration and touches
+  `sourceProviderGroups` / `sourceWorkspace` categories.
+
 ## 소스 Page Presentation Contract
 
 The 소스 workspace (the `connections` route, rendered by

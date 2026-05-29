@@ -192,9 +192,11 @@ that is called out.
 - URL import (URL + optional excerpt; no automatic fetch).
 - Session creation flow (새 세션) that realizes "one AI-agent conversation =
   one session". An agent-first screen (Claude / Codex / OpenCode) where the
-  conversation enters by one of three methods: 기록에서 불러오기 (a desktop-only,
-  Claude-today auto-detected work-record browse modal with a content preview;
-  other agents show 곧), 붙여넣기 (paste a transcript, platform follows the
+  conversation enters by one of three methods: 기록에서 불러오기 (a desktop-only
+  auto-detected work-record browse modal with a content preview, covering all
+  three anchor agents · Claude via Claude Code discovery, Codex via Codex CLI
+  discovery, OpenCode via the connector inbox · see
+  `src/lib/agents/workSessions.ts`), 붙여넣기 (paste a transcript, platform follows the
   agent), or 빈 세션으로 시작 (anchor first, since Mori never starts or drives
   the agent). Retention is one unified rule (summary + metadata only, no
   per-session toggle); detected / pasted imports route through Import Review
