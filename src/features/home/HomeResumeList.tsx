@@ -1,12 +1,14 @@
 import { ArrowRight, FolderGit2 } from "lucide-react";
+import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
+import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 import type { HomeRecentSession } from "../../lib/home/homeOverview";
 
 /**
  * "이어갈 다른 작업" — the secondary resumable sessions beside the memory rail.
  *
- * Lighter, compact rows for the next sessions worth picking back up after the
- * focal card. Continuation-framed (opening a row resumes that session), so it
- * never reads as a duplicate of the sidebar's raw session list.
+ * Rendered with the shared `BaseObjectRow` so the row format is identical to the
+ * memory rail and the rest of the app's object lists (icon · title · "프로젝트 ·
+ * 시간" · arrow). Continuation-framed: opening a row resumes that session.
  */
 export function HomeResumeList({
   sessions,
@@ -20,24 +22,22 @@ export function HomeResumeList({
       <header className="home-resume-head">
         <h2>이어갈 다른 작업</h2>
       </header>
-      <ul className="home-resume-list">
+      <ul className="home-rail-list">
         {sessions.map((session) => (
           <li key={session.sessionId}>
-            <button
-              type="button"
-              className="home-resume-row"
+            <BaseObjectRow
+              density="compact"
+              leading={<FolderGit2 size={15} aria-hidden="true" />}
+              title={session.title}
+              meta={
+                <BaseMetadataLine
+                  items={[session.projectLabel, session.relativeTime]}
+                />
+              }
+              trailing={<ArrowRight size={14} aria-hidden="true" />}
               onClick={() => onOpen(session.sessionId)}
-            >
-              <span className="home-resume-row-icon" aria-hidden="true">
-                <FolderGit2 size={15} />
-              </span>
-              <span className="home-resume-row-title">{session.title}</span>
-              <span className="home-resume-row-meta">
-                {session.projectLabel ? <span>{session.projectLabel}</span> : null}
-                <span>{session.relativeTime}</span>
-              </span>
-              <ArrowRight size={14} aria-hidden="true" className="home-resume-row-arrow" />
-            </button>
+              ariaLabel={session.title}
+            />
           </li>
         ))}
       </ul>

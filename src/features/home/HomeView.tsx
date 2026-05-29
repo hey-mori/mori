@@ -17,6 +17,7 @@ import { buildDemoSessionContent } from "../../lib/demo/demoSessionContent";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
   buildHomeOverview,
+  formatRelativeKo,
   type HomeSessionMetricSnapshot,
 } from "../../lib/home/homeOverview";
 import { HomeFocalCard, type HomeCarryEntry } from "./HomeFocalCard";
@@ -264,7 +265,7 @@ function gatherRecentDecisions(
         title: decision.title,
         projectLabel,
         sessionId: session.sessionId,
-        pending: decision.confirmed !== true,
+        timeLabel: formatRelativeKo(decision.createdAt),
         createdAt: decision.createdAt,
       });
     }

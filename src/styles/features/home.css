@@ -45,22 +45,22 @@
   .home-hero,
   .home-focal,
   .home-resume-head,
-  .home-resume-list > li,
   .home-memory-head,
-  .home-memory-list,
-  .home-memory-empty {
+  .home-rail-list > li,
+  .home-rail-empty {
     animation: home-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .home-hero { animation-delay: 40ms; }
   .home-focal { animation-delay: 120ms; }
-  .home-resume-head { animation-delay: 200ms; }
-  .home-resume-list > li:nth-child(1) { animation-delay: 250ms; }
-  .home-resume-list > li:nth-child(2) { animation-delay: 290ms; }
-  .home-resume-list > li:nth-child(3) { animation-delay: 330ms; }
-  .home-resume-list > li:nth-child(4) { animation-delay: 370ms; }
+  .home-resume-head,
   .home-memory-head { animation-delay: 200ms; }
-  .home-memory-list,
-  .home-memory-empty { animation-delay: 250ms; }
+  .home-rail-empty { animation-delay: 250ms; }
+  .home-rail-list > li:nth-child(1) { animation-delay: 250ms; }
+  .home-rail-list > li:nth-child(2) { animation-delay: 285ms; }
+  .home-rail-list > li:nth-child(3) { animation-delay: 320ms; }
+  .home-rail-list > li:nth-child(4) { animation-delay: 355ms; }
+  .home-rail-list > li:nth-child(5) { animation-delay: 390ms; }
+  .home-rail-list > li:nth-child(6) { animation-delay: 425ms; }
 }
 
 @keyframes home-rise {
@@ -150,7 +150,7 @@
 
 .home-focal-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--base-space-5);
 }
@@ -199,7 +199,7 @@
 
 .home-focal-arrow {
   flex-shrink: 0;
-  margin-top: 2px;
+  align-self: center;
   color: var(--base-text-muted-2);
   transition: color 0.12s ease, transform 0.12s ease;
 }
@@ -252,117 +252,24 @@
 }
 
 .home-focal-carry-more {
+  grid-column: 1 / -1;
+  padding-top: 4px;
   font-size: var(--base-font-size-xs);
   color: var(--base-text-muted-2);
 }
 
-/* ── Resume list — "이어갈 다른 작업" rows beside the memory rail ─────────────── */
-.home-resume {
-  display: grid;
-  gap: var(--base-space-3);
-  align-content: start;
-}
-
-.home-resume-head h2 {
-  margin: 0;
-  font-size: var(--base-font-size-md);
-  font-weight: 650;
-  color: var(--base-text);
-}
-
-.home-resume-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0;
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-lg);
-  background: var(--base-surface);
-  overflow: hidden;
-}
-
-.home-resume-list > li + li .home-resume-row {
-  border-top: 1px solid var(--base-border);
-}
-
-.home-resume-row {
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto auto;
-  align-items: center;
-  column-gap: var(--base-space-3);
-  width: 100%;
-  padding: var(--base-space-3) var(--base-space-4);
-  border: 0;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.1s ease;
-}
-
-.home-resume-row:hover {
-  background: var(--base-surface-subtle);
-}
-
-.home-resume-row-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--base-text-muted-2);
-}
-
-.home-resume-row-title {
-  min-width: 0;
-  font-size: var(--base-font-size-sm);
-  font-weight: 550;
-  color: var(--base-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-resume-row-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--base-space-3);
-  font-size: var(--base-font-size-xs);
-  color: var(--base-text-muted-2);
-  min-width: 0;
-}
-
-.home-resume-row-meta > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home-resume-row-meta > span + span::before {
-  content: "·";
-  margin-right: var(--base-space-3);
-  color: var(--base-text-muted-2);
-}
-
-.home-resume-row-arrow {
-  color: var(--base-text-muted-2);
-  flex-shrink: 0;
-  opacity: 0;
-  transform: translateX(-3px);
-  transition: opacity 0.12s ease, transform 0.12s ease;
-}
-
-.home-resume-row:hover .home-resume-row-arrow {
-  opacity: 1;
-  transform: translateX(0);
-  color: var(--base-accent);
-}
-
-/* ── Memory rail — "최근 결정" beside the continuation column ───────────────── */
+/* ── Rails — "이어갈 다른 작업" + "최근 결정" share one row format ──────────────
+   Both rails render shared `BaseObjectRow`s inside a bordered card, so the row
+   anatomy (icon · title · "프로젝트 · 시간" · arrow) matches every other object
+   list in the app. No bespoke per-rail row CSS. */
+.home-resume,
 .home-memory {
   display: grid;
   gap: var(--base-space-3);
   align-content: start;
 }
 
+.home-resume-head h2,
 .home-memory-head h2 {
   margin: 0;
   font-size: var(--base-font-size-md);
@@ -370,7 +277,7 @@
   color: var(--base-text);
 }
 
-.home-memory-list {
+.home-rail-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -382,81 +289,11 @@
   overflow: hidden;
 }
 
-.home-memory-list > li + li .home-memory-row {
+.home-rail-list > li + li {
   border-top: 1px solid var(--base-border);
 }
 
-.home-memory-row {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  align-items: start;
-  column-gap: var(--base-space-3);
-  width: 100%;
-  padding: var(--base-space-3) var(--base-space-4);
-  border: 0;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.1s ease;
-}
-
-.home-memory-row:hover {
-  background: var(--base-surface-subtle);
-}
-
-.home-memory-row-icon {
-  margin-top: 1px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--blue);
-}
-
-.home-memory-row-body {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.home-memory-row-title {
-  min-width: 0;
-  font-size: var(--base-font-size-sm);
-  font-weight: 550;
-  color: var(--base-text);
-  line-height: var(--base-line-snug);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-memory-row-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--base-space-3);
-  font-size: var(--base-font-size-xs);
-  color: var(--base-text-muted-2);
-  min-width: 0;
-}
-
-.home-memory-row-meta > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home-memory-row-meta > span + span::before {
-  content: "·";
-  margin-right: var(--base-space-3);
-  color: var(--base-text-muted-2);
-}
-
-.home-memory-row-pending {
-  flex-shrink: 0;
-  color: #b46100;
-  font-weight: 600;
-}
-
-.home-memory-empty {
+.home-rail-empty {
   margin: 0;
   padding: var(--base-space-4) var(--base-space-5);
   border: 1px solid var(--base-border);

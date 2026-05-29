@@ -1,4 +1,6 @@
-import { GitBranch } from "lucide-react";
+import { GitBranch, ArrowRight } from "lucide-react";
+import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
+import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 
 /** One remembered decision shown in the right rail. */
 export type HomeDecisionItem = {
@@ -6,17 +8,18 @@ export type HomeDecisionItem = {
   title: string;
   projectLabel: string | null;
   sessionId: string;
-  /** Unconfirmed decisions still want a review pass — flagged subtly. */
-  pending: boolean;
+  /** Relative-time label for the decision ("3시간 전" / "5월 21일"). */
+  timeLabel: string;
 };
 
 /**
  * "최근 결정" — the memory rail beside the continuation column.
  *
  * Decisions are Mori's durable value ("what was decided, and why it mattered"),
- * so the landing shows the most recent ones across sessions as a calm, compact
- * list. Distinct from the continuation column (which resumes work) and from the
- * sidebar (sessions) / 대시보드 (numbers). Opening a row jumps to that session.
+ * so the landing shows the most recent ones across sessions. Rendered with the
+ * shared `BaseObjectRow` so the row format matches every other object list in
+ * the app (icon · title · "프로젝트 · 시간" · arrow). Opening a row jumps to its
+ * session.
  */
 export function HomeDecisions({
   decisions,
@@ -32,32 +35,27 @@ export function HomeDecisions({
       </header>
 
       {decisions.length > 0 ? (
-        <ul className="home-memory-list">
+        <ul className="home-rail-list">
           {decisions.map((decision) => (
             <li key={decision.id}>
-              <button
-                type="button"
-                className="home-memory-row"
+              <BaseObjectRow
+                density="compact"
+                leading={<GitBranch size={15} aria-hidden="true" />}
+                title={decision.title}
+                meta={
+                  <BaseMetadataLine
+                    items={[decision.projectLabel, decision.timeLabel]}
+                  />
+                }
+                trailing={<ArrowRight size={14} aria-hidden="true" />}
                 onClick={() => onOpen(decision.sessionId)}
-              >
-                <span className="home-memory-row-icon" aria-hidden="true">
-                  <GitBranch size={14} />
-                </span>
-                <span className="home-memory-row-body">
-                  <span className="home-memory-row-title">{decision.title}</span>
-                  <span className="home-memory-row-meta">
-                    {decision.projectLabel ? <span>{decision.projectLabel}</span> : null}
-                    {decision.pending ? (
-                      <span className="home-memory-row-pending">검토 대기</span>
-                    ) : null}
-                  </span>
-                </span>
-              </button>
+                ariaLabel={decision.title}
+              />
             </li>
           ))}
         </ul>
       ) : (
-        <p className="home-memory-empty">
+        <p className="home-rail-empty">
           분석을 실행하면 세션에서 정리된 결정이 여기에 쌓입니다.
         </p>
       )}
