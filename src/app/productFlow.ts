@@ -207,7 +207,7 @@ export const PRODUCT_SURFACES: Record<ProductSurfaceId, ProductSurfaceDescriptor
   },
   evidenceHub: {
     id: "evidenceHub",
-    label: "증거 (Evidence)",
+    label: "자료 (Evidence)",
     description: "Available + Planned 통합 카드 + 가져온 소스 + Quick Pass.",
     ownedFeatureIds: [
       "evidence.addSource.manualNote",
@@ -527,7 +527,7 @@ export function getRecommendedNextStep(args: {
       return {
         stage: "capture",
         feature: FEATURE_REGISTRY["evidence.addSource.aiTranscriptPaste"],
-        message: "세션의 증거 탭에서 첫 소스를 가져오세요.",
+        message: "세션의 자료 탭에서 가져오기를 시작하세요.",
       };
     }
     if (!args.hasAnalysis) {

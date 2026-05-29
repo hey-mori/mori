@@ -49,7 +49,7 @@ export function RecentSessionsList({
         </Button>
       </header>
       {sessions.length === 0 ? (
-        <p className="memory-empty">아직 저장된 세션이 없습니다. 소스에서 가져오거나 새 세션을 만들면 여기 목록이 채워집니다.</p>
+        <p className="memory-empty">아직 저장된 세션이 없습니다. 연결에서 가져오거나 새 세션을 만들면 여기 목록이 채워집니다.</p>
       ) : (
         <ul className="memory-session-list">
           {sessions.map((entry) => (

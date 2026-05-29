@@ -159,7 +159,7 @@ export function HomeView() {
         <EmptyState
           icon={Layers}
           title="아직 작업 기억이 없습니다"
-          description="소스에서 작업 세션을 가져오면 최근 흐름과 다음 작업이 여기에 정리됩니다."
+          description="연결에서 작업 세션을 가져오면 최근 흐름과 다음 작업이 여기에 정리됩니다."
           actions={
             <>
               <Button
@@ -167,13 +167,12 @@ export function HomeView() {
                 icon={PlugZap}
                 onClick={() => setCurrentView("connections")}
               >
-                소스에서 작업 가져오기
+                연결에서 작업 가져오기
               </Button>
               <Button
                 variant="ghost"
                 icon={Sparkles}
                 onClick={() => openSession("flow")}
-                title="실제 데이터 없이 Mori를 둘러볼 수 있는 데모 세션을 열어봅니다."
               >
                 체험용 데모 세션 살펴보기
               </Button>
@@ -243,7 +242,7 @@ export function HomeView() {
                     compact
                     icon={FolderKanban}
                     title="표시할 최근 세션이 없습니다"
-                    description="소스에서 Claude 작업을 가져오면 여기에 쌓입니다."
+                    description="연결에서 Claude 작업을 가져오면 여기에 쌓입니다."
                   />
                 )}
               </BaseSection>
@@ -350,7 +349,7 @@ function RecentSessionRow({
                 <BaseStatusBadge tone={origin.tone}>{origin.label}</BaseStatusBadge>
               ) : null,
               session.projectLabel ? (
-                <span title={session.projectLabel}>{session.projectLabel}</span>
+                <span>{session.projectLabel}</span>
               ) : null,
               session.spanLabel,
               session.countSummary,

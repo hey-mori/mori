@@ -214,7 +214,7 @@ function buildFocusItems(
     },
     {
       key: "evidence",
-      title: "연결된 증거",
+      title: "연결된 자료",
       detail:
         stats.totalSources > 0
           ? "가져온 소스가 이 프로젝트의 흐름을 받칩니다."
@@ -222,7 +222,7 @@ function buildFocusItems(
       count: stats.totalSources,
       statusLabel: `${stats.totalSources}건`,
       tone: stats.totalSources > 0 ? "info" : "neutral",
-      actionLabel: "증거",
+      actionLabel: "자료",
       destination: "evidence",
       targetSessionId: evidenceTarget,
       enabled: Boolean(evidenceTarget) && stats.totalSources > 0,

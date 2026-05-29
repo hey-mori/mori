@@ -22,7 +22,7 @@ export function TimelineEmptyState({
       <EmptyState
         icon={Sparkles}
         title="데모 세션에는 이벤트가 없습니다"
-        description="소스에서 Claude 대화를 가져오거나 새 세션을 만들면 메모·URL·AI 대화·Git diff가 소스로 모입니다."
+        description="연결에서 Claude 대화를 가져오거나 새 세션을 만들면 메모·URL·AI 대화·Git diff가 자료로 모입니다."
         actions={
           <Button variant="primary" icon={Play} onClick={onStartSession}>
             새 세션
@@ -36,10 +36,10 @@ export function TimelineEmptyState({
       <EmptyState
         icon={ListPlus}
         title="이 세션에는 아직 가져온 소스가 없습니다"
-        description="가져온 근거만 표시됩니다. 증거 탭에서 메모·URL·AI 대화·Git diff를 추가하세요."
+        description="가져온 근거만 표시됩니다. 자료 탭에서 메모·URL·AI 대화·Git diff를 추가하세요."
         actions={
           <Button variant="primary" icon={ListPlus} onClick={onOpenSources}>
-            증거 추가
+            자료 추가
           </Button>
         }
       />

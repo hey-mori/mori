@@ -205,7 +205,7 @@ export function SourcesView() {
       maxWidth="detail"
       actionBar={
         <ActionBar
-          label="소스"
+          label="연결"
           start={
             <ToolbarSearch
               value={query}

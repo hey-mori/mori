@@ -73,7 +73,7 @@ export function LocalAiCard({
   return (
     <SettingsSection
       title="AI 제공자"
-      description="Quick Pass가 가져온 증거를 이슈, 결정, 다음 행동으로 정리할 때 사용할 제공자입니다."
+      description="Quick Pass가 가져온 자료를 이슈, 결정, 다음 행동으로 정리할 때 사용할 제공자입니다."
     >
       <SettingsOptionGroup label="Quick Pass 제공자" columns="single">
         {selectableRows.map((row) => {

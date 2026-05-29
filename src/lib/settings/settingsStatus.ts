@@ -434,7 +434,7 @@ export function getRecommendedSetupStep({
   providerKind: QuickPassProviderKind;
 }): RecommendedSetupStep {
   if (importsCount === 0) {
-    return { id: "import-source", label: "세션의 증거 탭에서 첫 소스를 가져오세요." };
+    return { id: "import-source", label: "세션의 자료 탭에서 가져오기를 시작하세요." };
   }
   if (!hasAnalysis) {
     return { id: "run-quickpass", label: "Review 또는 Reports에서 Quick Pass를 실행하세요." };

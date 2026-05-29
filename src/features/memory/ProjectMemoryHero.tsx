@@ -66,7 +66,7 @@ export function ProjectMemoryHero({
         />
         <StatTile label="결정" value={stats.decisionCount} hint={`미확정 ${stats.unconfirmedDecisionCount}건`} />
         <StatTile label="이슈" value={stats.issueCount} hint={`미처리 ${stats.openIssueCount}건`} />
-        <StatTile label="증거 출처" value={stats.sourceCount} hint={stats.dataBasis} />
+        <StatTile label="자료" value={stats.sourceCount} hint={stats.dataBasis} />
         <StatTile label="보고서" value={stats.reportCount} hint={stats.reportCount === 0 ? ".mori 패키지 없음" : "저장된 패키지"} />
         <StatTile
           label="다음 액션"

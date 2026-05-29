@@ -117,7 +117,7 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
     <div className="page review-page">
       <header className="review-header">
         <Button icon={ArrowLeft} onClick={handleCancel}>
-          증거로 돌아가기
+          자료로 돌아가기
         </Button>
         <div className="review-header-title">
           <h1>가져오기 검토</h1>
@@ -398,7 +398,7 @@ function EmptyEventList() {
   return (
     <div className="review-events-empty">
       <h3>추출된 이벤트가 없습니다</h3>
-      <p>이 가져오기에서는 타임라인 이벤트가 생성되지 않았습니다. ‘증거로 돌아가기’를 눌러 다른 소스를 가져오세요.</p>
+      <p>이 가져오기에서는 타임라인 이벤트가 생성되지 않았습니다. ‘자료로 돌아가기’를 눌러 다른 자료를 가져오세요.</p>
     </div>
   );
 }

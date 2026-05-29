@@ -74,7 +74,7 @@ const KIND_ORDER: MemoryProposalKind[] = [
 const KIND_HINT: Record<MemoryProposalKind, string> = {
   promotedDecision: "세션 간 결정을 프로젝트 메모리로 승격합니다.",
   recurringIssue: "여러 세션에서 반복되는 이슈를 묶어 추적합니다.",
-  keyEvidence: "참조가 많은 핵심 증거 출처를 표시합니다.",
+  keyEvidence: "참조가 많은 핵심 자료를 표시합니다.",
   unresolvedRisk: "해소되지 않은 위험을 검토합니다.",
   contradiction: "충돌하는 결정 / 메모리를 검토합니다.",
   staleMemory: "오래된 메모리를 검토합니다.",

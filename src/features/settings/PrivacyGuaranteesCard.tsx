@@ -27,7 +27,7 @@ export function PrivacyGuaranteesCard() {
         ))}
       </ul>
       <SettingsNotice icon={ShieldCheck} title="제공자 요청">
-        Ollama를 선택한 경우에만 현재 세션 증거를 사용자가 입력한 endpoint로 보냅니다.
+        Ollama를 선택한 경우에만 현재 세션 자료를 사용자가 입력한 endpoint로 보냅니다.
       </SettingsNotice>
     </SettingsSection>
   );

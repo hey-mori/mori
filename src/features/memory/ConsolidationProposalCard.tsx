@@ -134,7 +134,7 @@ export function ConsolidationProposalCard({
             event.stopPropagation();
             onDiscard();
           }}
-          title="이 제안을 폐기합니다 — 동일한 증거 변경이 없으면 다시 제안되지 않습니다."
+          title="이 제안을 폐기합니다 — 동일한 자료 변경이 없으면 다시 제안되지 않습니다."
         >
           폐기
         </Button>

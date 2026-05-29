@@ -243,7 +243,6 @@ export function ProjectView() {
             variant="ghost"
             icon={Pencil}
             onClick={() => setEditing(true)}
-            title="프로젝트 이름과 설명을 수정합니다 (세션은 그대로)."
           >
             수정
           </Button>
@@ -261,7 +260,6 @@ export function ProjectView() {
             variant="primary"
             icon={Plus}
             onClick={() => setCurrentView("start")}
-            title="이 프로젝트에 새 세션을 시작합니다. 새 대화 또는 기존 대화 가져오기."
           >
             새 세션
           </Button>
@@ -309,9 +307,9 @@ export function ProjectView() {
               compact
               icon={Layers}
               title="이 프로젝트에 활성 세션이 없습니다"
-              description="새 세션을 시작하거나 소스에서 가져오면 여기에 쌓입니다."
+              description="새 세션을 시작하거나 연결에서 가져오면 여기에 쌓입니다."
               actions={
-                <Button onClick={() => setCurrentView("connections")}>소스 열기</Button>
+                <Button onClick={() => setCurrentView("connections")}>연결 열기</Button>
               }
             />
           ) : (

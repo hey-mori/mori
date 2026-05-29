@@ -135,7 +135,7 @@ export const SECTION_DEFINITIONS: Array<{
   { id: "timeline", label: "타임라인", description: "주요 이벤트 시간 순 정리" },
   { id: "decisions", label: "결정", description: "결정과 이유" },
   { id: "issues", label: "이슈", description: "미처리 / 진행 중 이슈" },
-  { id: "evidence", label: "증거", description: "소스 / 출처 / 신뢰도" },
+  { id: "evidence", label: "자료", description: "소스 / 출처 / 신뢰도" },
   { id: "nextActions", label: "다음 액션", description: "다음 액션 후보" },
 ];
 
@@ -289,7 +289,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   }
 
   if (sections.has("evidence")) {
-    lines.push("## 증거");
+    lines.push("## 자료");
     lines.push("");
     if (view.sources.length === 0) {
       lines.push("_가져온 소스가 없습니다._");

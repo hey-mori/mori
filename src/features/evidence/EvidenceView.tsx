@@ -154,13 +154,13 @@ export function EvidenceView() {
   const importedSourcesSection = (
     <BaseSection
       className="evidence-section evidence-imported-sources"
-      title="세션을 구성한 소스"
+      title="세션을 구성한 자료"
       actions={
         <Badge tone={importedSources.length ? "purple" : "gray"}>
           {importedSources.length}개
         </Badge>
       }
-      ariaLabel="세션을 구성한 소스"
+      ariaLabel="세션을 구성한 자료"
     >
       {importedSources.length === 0 ? (
         <EvidenceEmptyState isDemo={isDemoSession} />

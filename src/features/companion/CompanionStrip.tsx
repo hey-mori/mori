@@ -31,7 +31,6 @@ export function CompanionStrip({
       className="companion-strip"
       data-base-tone={companionSeverityTone(top.severity)}
       onClick={() => onNavigate("companion")}
-      title="알림 — 전체 신호 보기"
     >
       <span className="companion-strip-mark" aria-hidden="true">
         <Compass size={14} />

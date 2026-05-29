@@ -875,7 +875,7 @@ function SessionCardDetail({
           disabled={!hasActiveSession}
           title={
             hasActiveSession
-              ? "이 대화를 현재 작업 세션의 증거로 합칩니다 (Import Review를 거칩니다)."
+              ? "이 대화를 현재 작업 세션의 자료로 합칩니다 (Import Review를 거칩니다)."
               : "현재 활성 세션이 없습니다. 새 작업 세션으로 가져오거나 세션을 먼저 시작하세요."
           }
         >

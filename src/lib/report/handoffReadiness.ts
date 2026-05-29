@@ -142,7 +142,7 @@ function buildResumeItem(
       title: "Resume 프롬프트",
       status: "attention",
       statusLabel: "검토 필요",
-      detail: "Quick Pass를 실행하여 증거 기반 연속 프롬프트를 강화하세요.",
+      detail: "Quick Pass를 실행하여 자료 기반 연속 프롬프트를 강화하세요.",
       basis: [`출처 ${input.sourceCount}개와 이벤트 ${input.eventCount}개가 캡처되었습니다.`],
       action: { id: "runQuickPass", label: "Quick Pass 실행", enabled: input.canRunQuickPass },
     };
@@ -153,9 +153,9 @@ function buildResumeItem(
     title: "Resume 프롬프트",
     status: "waiting",
     statusLabel: "대기 중",
-    detail: "유용한 연속 컨텍스트를 생성하려면 명시적인 증거를 먼저 추가하세요.",
+    detail: "유용한 연속 컨텍스트를 생성하려면 명시적인 자료를 먼저 추가하세요.",
     basis: ["Mori는 숨겨진 모니터링으로 작업을 추론하지 않습니다."],
-    action: { id: "addEvidence", label: "증거 추가", enabled: true },
+    action: { id: "addEvidence", label: "자료 추가", enabled: true },
   };
 }
 
@@ -170,8 +170,8 @@ function buildReportItem(
       status: "waiting",
       statusLabel: "대기 중",
       detail: "보고서를 생성할 수 있지만, 빈 보고서는 유용한 인계 자료가 아닙니다.",
-      basis: ["보고서 섹션이 실제 증거를 인용할 수 있도록 먼저 소스를 추가하세요."],
-      action: { id: "addEvidence", label: "증거 추가", enabled: true },
+      basis: ["보고서 섹션이 인용할 자료를 먼저 추가하세요."],
+      action: { id: "addEvidence", label: "자료 추가", enabled: true },
     };
   }
 
@@ -231,9 +231,9 @@ function buildPackageItem(
       title: ".mori 패키지",
       status: "waiting",
       statusLabel: "대기 중",
-      detail: "패키지를 만들 수 있지만, 아직 유용한 증거가 포함되지 않습니다.",
-      basis: ["인계 패키지를 내보내기 전에 증거를 추가하세요."],
-      action: { id: "addEvidence", label: "증거 추가", enabled: true },
+      detail: "패키지를 만들 수 있지만, 아직 유용한 자료가 포함되지 않습니다.",
+      basis: ["인계 패키지를 내보내기 전에 자료를 추가하세요."],
+      action: { id: "addEvidence", label: "자료 추가", enabled: true },
     };
   }
 

@@ -94,7 +94,6 @@ function SessionTitleInline() {
             type="button"
             className="session-detail-crumb"
             onClick={() => openProject(projectLabel)}
-            title={`${projectLabel} 프로젝트 페이지로 이동`}
           >
             <FolderGit2 size={12} aria-hidden="true" />
             <span>{shortProjectLabel(projectLabel)}</span>
@@ -123,7 +122,7 @@ type SessionTabSpec = {
 const SESSION_TABS: SessionTabSpec[] = [
   { id: "overview", label: "개요", icon: LayoutDashboard },
   { id: "flow", label: "흐름", icon: GanttChartSquare },
-  { id: "evidence", label: "증거", icon: FileText },
+  { id: "evidence", label: "자료", icon: FileText },
   { id: "insights", label: "검토", icon: Sparkles },
   { id: "report", label: "리포트", icon: ScrollText },
 ];

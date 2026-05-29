@@ -163,7 +163,7 @@ export function ReportsView() {
               origin={promptOrigin}
               emptyHint={
                 imports.length === 0
-                  ? "아직 가져온 소스가 없습니다. 증거 탭에서 소스를 추가한 뒤 Quick Pass를 실행하면 분석 기반 컨텍스트가 표시됩니다."
+                  ? "아직 가져온 자료가 없습니다. 자료 탭에서 추가한 뒤 Quick Pass를 실행하면 분석 기반 컨텍스트가 표시됩니다."
                   : "Quick Pass를 실행하면 분석 기반 컨텍스트가 표시됩니다."
               }
             />
@@ -239,9 +239,9 @@ function ReportsAnalysisNotice({
       <NoticeBanner
         tone="info"
         title="아직 가져온 소스가 없습니다"
-        actions={<Button onClick={onGoToEvidence}>증거 탭으로 이동</Button>}
+        actions={<Button onClick={onGoToEvidence}>자료 탭으로 이동</Button>}
       >
-        증거 탭에서 소스를 추가하고 Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다.
+        자료 탭에서 추가하고 Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다.
       </NoticeBanner>
     );
   }

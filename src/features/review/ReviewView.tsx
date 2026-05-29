@@ -264,7 +264,7 @@ export function ReviewView() {
           description={
             imports.length > 0
               ? "가져온 소스와 타임라인 이벤트로 이슈 · 결정 · 다음 액션을 추출합니다."
-              : "먼저 증거 탭에서 소스를 가져온 뒤 분석을 실행하세요."
+              : "먼저 자료 탭에서 가져온 뒤 분석을 실행하세요."
           }
           actions={
             imports.length > 0 ? (
@@ -273,7 +273,7 @@ export function ReviewView() {
               </Button>
             ) : (
               <Button variant="primary" onClick={() => setCurrentView("evidence")}>
-                증거 탭으로 이동
+                자료 탭으로 이동
               </Button>
             )
           }
@@ -546,9 +546,9 @@ function ReviewAnalysisNotice({
       <NoticeBanner
         tone="info"
         title="아직 가져온 소스가 없습니다"
-        actions={<Button onClick={onGoToEvidence}>증거 탭으로 이동</Button>}
+        actions={<Button onClick={onGoToEvidence}>자료 탭으로 이동</Button>}
       >
-        증거 탭에서 소스를 추가하고 Quick Pass를 실행하면 이슈와 결정이 정리됩니다.
+        자료 탭에서 추가하고 Quick Pass를 실행하면 이슈와 결정이 정리됩니다.
       </NoticeBanner>
     );
   }

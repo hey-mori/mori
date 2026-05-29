@@ -120,14 +120,14 @@ export function OverviewView() {
               <p className="session-overview-summary">{summaryText}</p>
             ) : (
               <p className="session-overview-summary is-empty">
-                아직 요약이 없습니다. 증거 탭에서 Quick Pass를 실행하면 이 세션에서 한 작업이 요약됩니다.
+                아직 요약이 없습니다. 자료 탭에서 Quick Pass를 실행하면 이 세션에서 한 작업이 요약됩니다.
               </p>
             )}
           </section>
 
           <dl className="overview-metrics" aria-label="세션 규모">
             <OverviewMetric label="기간" value={duration} />
-            <OverviewMetric label="소스" value={String(sourceCount)} />
+            <OverviewMetric label="자료" value={String(sourceCount)} />
             <OverviewMetric label="이벤트" value={String(eventCount)} />
             <OverviewMetric label="이슈" value={String(issueCount)} />
             <OverviewMetric label="결정" value={String(decisionCount)} />
@@ -176,9 +176,9 @@ export function OverviewView() {
             />
             <OverviewNavCard
               icon={FileText}
-              label="증거"
+              label="자료"
               count={sourceCount}
-              description="이 세션을 구성한 소스"
+              description="이 세션을 구성한 자료"
               onOpen={() => setSessionTab("evidence")}
             />
             <OverviewNavCard

@@ -283,7 +283,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
       if (event.sourceRefs.length > 0) {
         items.push({
           id: "open-evidence",
-          label: "관련 증거 열기",
+          label: "관련 자료 열기",
           icon: FileText,
           onSelect: () => setSessionTab("evidence"),
         });

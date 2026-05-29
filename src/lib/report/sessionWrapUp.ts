@@ -98,12 +98,12 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
   const steps: SessionWrapUpStep[] = [
     {
       id: "capture",
-      label: "증거 캡처됨",
+      label: "자료 캡처됨",
       status: hasEvidence ? "done" : "attention",
-      statusLabel: hasEvidence ? "준비됨" : "소스 필요",
+      statusLabel: hasEvidence ? "준비됨" : "자료 필요",
       detail: hasEvidence
         ? `출처 ${input.sourceCount}개와 타임라인 이벤트 ${input.eventCount}개가 이 세션에 있습니다.`
-        : "지속 가능한 인계 자료를 만들려면 먼저 명시적인 소스를 추가하세요.",
+        : "지속 가능한 인계 자료를 만들려면 먼저 명시적인 자료를 추가하세요.",
     },
     {
       id: "review",
@@ -115,8 +115,8 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
         : hasReviewedWork
           ? `이슈 ${input.issueCount}개, 결정 ${input.decisionCount}개, 다음 액션 ${input.nextActionCount}개가 있습니다.`
           : hasEvidence
-            ? "캡처된 증거를 이슈·결정·다음 액션으로 변환하려면 Quick Pass를 실행하세요."
-            : "증거를 가져온 후 검토를 시작할 수 있습니다.",
+            ? "캡처된 자료를 이슈·결정·다음 액션으로 변환하려면 Quick Pass를 실행하세요."
+            : "자료를 가져온 후 검토를 시작할 수 있습니다.",
     },
     {
       id: "memory",
@@ -153,7 +153,7 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
       statusLabel: input.resumePromptReady ? "준비됨" : hasEvidence ? "검토 필요" : "대기 중",
       detail: input.resumePromptReady
         ? "Resume 프롬프트와 .mori 내보내기가 준비되었습니다."
-        : "유용한 인계 자료를 만들려면 증거와 Quick Pass 또는 데모 요약 데이터가 필요합니다.",
+        : "유용한 인계 자료를 만들려면 자료와 Quick Pass 또는 데모 요약 데이터가 필요합니다.",
     },
   ];
 
@@ -172,8 +172,8 @@ function choosePrimaryAction(
   if (!derived.hasEvidence) {
     return {
       id: "addEvidence",
-      label: "증거 추가",
-      detail: "소스 추적을 위해 먼저 명시적인 가져오기를 시작하세요.",
+      label: "자료 추가",
+      detail: "자료 추적을 위해 먼저 명시적인 가져오기를 시작하세요.",
       enabled: true,
     };
   }
@@ -181,7 +181,7 @@ function choosePrimaryAction(
     return {
       id: "waitForAnalysis",
       label: "Quick Pass 실행 중",
-      detail: "Mori가 캡처된 증거에서 검토 자료를 도출하는 중입니다.",
+      detail: "Mori가 캡처된 자료에서 검토 자료를 도출하는 중입니다.",
       enabled: false,
     };
   }

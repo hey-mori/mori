@@ -499,7 +499,7 @@ export function StartSessionView() {
               <div className="method-detail">
                 <p className="start-import-note">
                   대화는 {selectedAgent.name}에서 직접 하면 됩니다. 빈 세션을 만들어 두면, 작업한
-                  대화를 나중에 증거 탭에서 가져와 채울 수 있습니다.
+                  대화를 나중에 자료 탭에서 가져와 채울 수 있습니다.
                 </p>
               </div>
             ) : null}

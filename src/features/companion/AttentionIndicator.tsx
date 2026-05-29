@@ -145,7 +145,6 @@ export function AttentionIndicator({
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={unreadCount > 0 ? `알림 — 안 읽음 ${unreadCount}건` : "알림"}
-        title={unreadCount > 0 ? `알림 — 안 읽음 ${unreadCount}건` : "알림"}
       >
         <span className="attention-indicator-icon" aria-hidden="true">
           <Bell size={compact ? 15 : 16} />

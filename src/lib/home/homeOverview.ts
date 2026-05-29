@@ -622,7 +622,6 @@ function buildMetrics(
     key: "sessions",
     value: String(active.length),
     label: "세션",
-    hint: "가져온 작업 실행",
   });
 
   const projectCount = countProjects(active);
@@ -630,7 +629,6 @@ function buildMetrics(
     key: "projects",
     value: String(projectCount),
     label: "프로젝트",
-    hint: projectCount === 1 ? "현재 작업 중" : "작업이 걸쳐 있는",
   });
 
   // Activity streaks read off the same per-day cadence as the 잔디. A current
@@ -642,7 +640,6 @@ function buildMetrics(
       key: "streak-current",
       value: `${streaks.current}일`,
       label: "현재 연속",
-      hint: "연속으로 작업한 날",
     });
   }
   if (streaks.longest > 1) {
@@ -650,7 +647,6 @@ function buildMetrics(
       key: "streak-longest",
       value: `${streaks.longest}일`,
       label: "최장 연속",
-      hint: "가장 길게 이어간 흐름",
     });
   }
 
@@ -924,7 +920,7 @@ function importNextAction(): HomeNextAction {
     kind: "import",
     title: "Claude 작업 가져오기",
     description:
-      "소스에서 Claude 대화를 가져오면 작업이 세션으로 쌓이고, 여기에서 무엇을 했고 다음에 무엇을 하면 좋을지 한눈에 보입니다.",
+      "연결에서 Claude 대화를 가져오면 작업이 세션으로 쌓이고, 여기에서 무엇을 했고 다음에 무엇을 하면 좋을지 한눈에 보입니다.",
     actionLabel: "가져오기",
     destination: "connections",
     targetSessionId: null,

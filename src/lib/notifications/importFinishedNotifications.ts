@@ -81,11 +81,11 @@ function toNotification(entry: StoredSessionImport): CompanionNotification {
     title,
     message:
       entry.source.title?.trim() ||
-      "방금 추가된 소스입니다. 증거 탭에서 확인할 수 있습니다.",
+      "방금 추가된 자료입니다. 자료 탭에서 확인할 수 있습니다.",
     basis: "verified",
     linkedItemIds: [entry.source.id],
     evidenceRefs: entry.events.slice(0, 8).map((event) => event.id),
-    actionLabel: "증거 열기",
+    actionLabel: "자료 열기",
     actionTarget: { kind: "view", view: "evidence" },
     createdAt: entry.savedAt,
   };

@@ -189,7 +189,6 @@ export function WorkspaceView() {
               variant="secondary"
               icon={FolderPlus}
               onClick={() => setCreatingProject(true)}
-              title="새 프로젝트를 만들어 바로 엽니다."
             >
               새 프로젝트
             </Button>
@@ -209,14 +208,14 @@ export function WorkspaceView() {
           <EmptyState
             icon={FolderKanban}
             title="아직 세션이 없습니다"
-            description="소스에서 Claude 대화를 가져오거나 새 세션을 시작하면 여기에 프로젝트별로 쌓입니다."
+            description="연결에서 Claude 대화를 가져오거나 새 세션을 시작하면 여기에 프로젝트별로 쌓입니다."
             actions={
               <Button
                 variant="primary"
                 icon={PlugZap}
                 onClick={() => setCurrentView("connections")}
               >
-                소스로 이동
+                연결로 이동
               </Button>
             }
           />
@@ -278,7 +277,6 @@ export function WorkspaceView() {
                       type="button"
                       className="workspace-group-title workspace-group-open"
                       onClick={() => openProject(group.label)}
-                      title={`${group.label} · 프로젝트 페이지 열기`}
                     >
                       <FolderGit2 size={13} aria-hidden="true" />
                       <span className="workspace-group-name">

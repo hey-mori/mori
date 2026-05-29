@@ -28,7 +28,7 @@ const NOTIFICATION_ROWS: Array<{
   {
     id: "longRunningSessionUpdated",
     label: "긴 세션 업데이트",
-    description: "저장된 긴 세션에 새 증거 또는 분석이 추가되었을 때.",
+    description: "저장된 긴 세션에 새 자료 또는 분석이 추가되었을 때.",
   },
   {
     id: "reportReady",
@@ -58,7 +58,7 @@ const NOTIFICATION_ROWS: Array<{
   {
     id: "projectSummaryChanged",
     label: "프로젝트 요약 변경",
-    description: "프로젝트 요약이 새 증거를 바탕으로 의미 있게 바뀌었을 때.",
+    description: "프로젝트 요약이 새 자료를 바탕으로 의미 있게 바뀌었을 때.",
   },
 ];
 

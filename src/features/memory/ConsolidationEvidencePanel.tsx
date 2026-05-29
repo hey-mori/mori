@@ -31,9 +31,9 @@ export function ConsolidationEvidencePanel({
   if (!entry) {
     return (
       <aside className="consolidation-inspector" aria-label="Evidence inspector">
-        <BaseSection title="증거 / 세션 참조" ariaLabel="Evidence inspector empty">
+        <BaseSection title="자료 / 세션 참조" ariaLabel="Evidence inspector empty">
           <p className="consolidation-inspector-empty">
-            좌측에서 제안 카드를 선택하면 증거와 출처 세션 참조가 표시됩니다.
+            좌측에서 제안 카드를 선택하면 자료와 출처 세션 참조가 표시됩니다.
           </p>
         </BaseSection>
       </aside>
@@ -48,10 +48,10 @@ export function ConsolidationEvidencePanel({
   return (
     <aside className="consolidation-inspector" aria-label="Evidence inspector">
       <BaseSection
-        title="증거 / 세션 참조"
+        title="자료 / 세션 참조"
         hint={
           <span>
-            현재는 식별자 / 제목만 표시합니다. 세부 증거 deep-link는 별도 capability로 예정되어
+            현재는 식별자 / 제목만 표시합니다. 세부 자료 deep-link는 별도 capability로 예정되어
             있습니다.
           </span>
         }
@@ -81,7 +81,7 @@ export function ConsolidationEvidencePanel({
             <dd>{proposal.sourceSessionIds.length}</dd>
           </span>
           <span>
-            <dt>증거 참조</dt>
+            <dt>자료 참조</dt>
             <dd>{proposal.evidenceRefs.length}</dd>
           </span>
           <span>

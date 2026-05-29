@@ -82,7 +82,7 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: viewIcon.home ?? House },
   {
     key: "connections",
-    label: "소스",
+    label: "연결",
     icon: viewIcon.connections ?? Link2,
   },
   {
@@ -625,7 +625,7 @@ function buildSidebarSessionMenuItems({
     },
     {
       id: "open-evidence",
-      label: "증거 열기",
+      label: "자료 열기",
       icon: FileText,
       onSelect: () => onOpenTab("evidence"),
     },

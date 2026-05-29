@@ -163,6 +163,6 @@ export function QueryableMemoryCard({
 
 function referenceKindLabel(kind: "timelineEvent" | "evidenceSource" | "reviewAction"): string {
   if (kind === "timelineEvent") return "타임라인";
-  if (kind === "evidenceSource") return "증거";
+  if (kind === "evidenceSource") return "자료";
   return "검토";
 }

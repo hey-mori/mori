@@ -89,7 +89,7 @@ describe("buildReportMarkdown", () => {
     expect(payload.markdown).not.toContain("## 타임라인");
     expect(payload.markdown).not.toContain("## 결정");
     expect(payload.markdown).not.toContain("## 이슈");
-    expect(payload.markdown).not.toContain("## 증거");
+    expect(payload.markdown).not.toContain("## 자료");
     expect(payload.markdown).not.toContain("## 다음 액션");
   });
 
@@ -178,7 +178,7 @@ describe("buildReportMarkdown", () => {
       sections: new Set<ReportSectionId>(["evidence"]),
       privacy: privacy({ excludeSourceDetails: true }),
     });
-    expect(payload.markdown).toContain("## 증거");
+    expect(payload.markdown).toContain("## 자료");
     expect(payload.markdown).toContain("총 소스");
     expect(payload.markdown).not.toContain("**소스 목록**");
   });
