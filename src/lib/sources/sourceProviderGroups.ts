@@ -11,8 +11,9 @@ import type {
  * The flat source list (`buildSourceWorkspace`) answers "what can connect"
  * but scatters every Claude path (paste / hook / export) across the table and
  * repeats the same "붙여넣기" capability per platform. This pure helper folds
- * that list into **providers**: Claude / ChatGPT / Codex / OpenCode anchor a
- * session (agents); Git / 터미널 / 메모 / URL / 문서 attach evidence, and
+ * that list into **providers**: Claude / Codex / OpenCode anchor a session
+ * (agents); ChatGPT and other pasted AI transcripts, plus Git / 터미널 / 메모 /
+ * URL / 문서, attach as evidence, and
  * exposes each provider's individual *연결 방법* as sub-methods. Fully-planned
  * providers (Slack, Notion, MCP, …) collapse into a quiet chip list so a wall
  * of "예정" rows never buries the few that work today.
@@ -50,15 +51,29 @@ export type SourceProvider = {
 };
 
 export type SourceProviderGroups = {
-  /** Session anchors: Claude / ChatGPT / Codex / OpenCode. */
+  /** Session anchors: Claude / Codex / OpenCode. */
   agents: SourceProvider[];
-  /** Evidence attached to a session: Git / 터미널 / 메모 / URL / 문서 / 패키지. */
+  /** Evidence attached to a session: ChatGPT 등 붙여넣은 트랜스크립트, Git / 터미널 / 메모 / URL / 문서 / 패키지. */
   evidence: SourceProvider[];
   /** Fully-planned providers, rendered as quiet chips. */
   planned: SourceProvider[];
 };
 
-type ProviderSpec = { id: string; name: string; role: SourceProviderRole };
+type ProviderSpec = { id: string; name: string };
+
+/**
+ * Anchor agents: local agents a connector / hook can capture, so they can be a
+ * session spine and carry the 기록에서 불러오기 way-in. This is the single rule
+ * that decides agent vs evidence: a provider is an agent iff its id is here.
+ * Everything else, including ChatGPT and any future pasted AI transcript,
+ * attaches as evidence. Shared with the 소스 page so the page and the grouping
+ * never disagree on what can anchor.
+ */
+export const ANCHOR_AGENT_IDS = new Set(["claude", "codex", "opencode"]);
+
+function roleFor(providerId: string): SourceProviderRole {
+  return ANCHOR_AGENT_IDS.has(providerId) ? "agent" : "evidence";
+}
 
 /**
  * Redundant rows that duplicate a per-provider method. `aiConversation` is the
@@ -67,38 +82,44 @@ type ProviderSpec = { id: string; name: string; role: SourceProviderRole };
  */
 const DROP_IDS = new Set<string>(["aiConversation"]);
 
-/** Which provider (and role) each source row belongs to. */
+/**
+ * Which provider each source row maps to. Role (agent vs evidence) is not stored
+ * here, it is derived by `roleFor` from `ANCHOR_AGENT_IDS`, so the only agents
+ * are the local anchors below.
+ */
 const PROVIDER_SPEC_BY_ID: Record<string, ProviderSpec> = {
-  // ── Agents ──────────────────────────────────────────────────────────────
-  claudeTranscript: { id: "claude", name: "Claude", role: "agent" },
-  claudeCodeHook: { id: "claude", name: "Claude", role: "agent" },
-  claudeDesktopExport: { id: "claude", name: "Claude", role: "agent" },
-  claudeWebExport: { id: "claude", name: "Claude", role: "agent" },
-  chatgptTranscript: { id: "chatgpt", name: "ChatGPT", role: "agent" },
-  codexTranscript: { id: "codex", name: "Codex", role: "agent" },
-  codexCliWrapper: { id: "codex", name: "Codex", role: "agent" },
-  codexDesktopExport: { id: "codex", name: "Codex", role: "agent" },
-  codexWebGithub: { id: "codex", name: "Codex", role: "agent" },
-  openCodeCli: { id: "opencode", name: "OpenCode", role: "agent" },
+  // ── Anchor agents ─────────────────────────────────────────────────────────
+  claudeTranscript: { id: "claude", name: "Claude" },
+  claudeCodeHook: { id: "claude", name: "Claude" },
+  claudeDesktopExport: { id: "claude", name: "Claude" },
+  claudeWebExport: { id: "claude", name: "Claude" },
+  codexTranscript: { id: "codex", name: "Codex" },
+  codexCliWrapper: { id: "codex", name: "Codex" },
+  codexDesktopExport: { id: "codex", name: "Codex" },
+  codexWebGithub: { id: "codex", name: "Codex" },
+  openCodeCli: { id: "opencode", name: "OpenCode" },
   // The universal paste surface ("Claude / ChatGPT / Codex / Other") gives
-  // OpenCode and any unlisted agent a paste path; the named providers above
+  // OpenCode and any unlisted agent a paste path; the named anchors above
   // already carry their own transcript paste.
-  aiTranscriptPaste: { id: "opencode", name: "OpenCode", role: "agent" },
+  aiTranscriptPaste: { id: "opencode", name: "OpenCode" },
   // ── Evidence ────────────────────────────────────────────────────────────
-  connectorJsonl: { id: "connector", name: "Connector JSONL", role: "evidence" },
-  gitDiffPaste: { id: "git", name: "Git", role: "evidence" },
-  tauriGitDiff: { id: "git", name: "Git", role: "evidence" },
-  repositoryMetadata: { id: "git", name: "Git", role: "evidence" },
-  githubPrImport: { id: "git", name: "Git", role: "evidence" },
-  localCaptureBridge: { id: "terminal", name: "터미널", role: "evidence" },
-  terminalShellIntegration: { id: "terminal", name: "터미널", role: "evidence" },
-  manualNote: { id: "note", name: "메모", role: "evidence" },
-  urlImport: { id: "url", name: "URL", role: "evidence" },
-  fileDocumentImport: { id: "document", name: "문서 / 파일", role: "evidence" },
-  vscodeExtension: { id: "ide", name: "에디터 / IDE", role: "evidence" },
-  cursorExtension: { id: "ide", name: "에디터 / IDE", role: "evidence" },
-  browserExtension: { id: "browser", name: "브라우저", role: "evidence" },
-  mcpServer: { id: "mcp", name: "MCP", role: "evidence" },
+  // ChatGPT cannot anchor (no local capture, storage off-limits); it attaches
+  // as a pasted transcript, like any future Gemini / other transcript would.
+  chatgptTranscript: { id: "chatgpt", name: "ChatGPT" },
+  connectorJsonl: { id: "connector", name: "Connector JSONL" },
+  gitDiffPaste: { id: "git", name: "Git" },
+  tauriGitDiff: { id: "git", name: "Git" },
+  repositoryMetadata: { id: "git", name: "Git" },
+  githubPrImport: { id: "git", name: "Git" },
+  localCaptureBridge: { id: "terminal", name: "터미널" },
+  terminalShellIntegration: { id: "terminal", name: "터미널" },
+  manualNote: { id: "note", name: "메모" },
+  urlImport: { id: "url", name: "URL" },
+  fileDocumentImport: { id: "document", name: "문서 / 파일" },
+  vscodeExtension: { id: "ide", name: "에디터 / IDE" },
+  cursorExtension: { id: "ide", name: "에디터 / IDE" },
+  browserExtension: { id: "browser", name: "브라우저" },
+  mcpServer: { id: "mcp", name: "MCP" },
 };
 
 /** Per-method display copy. Falls back to the source name + a status chip. */
@@ -138,18 +159,18 @@ const STATUS_RANK: Record<SourceWorkspaceStatus, number> = {
   unsupported: 4,
 };
 
-const AGENT_ORDER = ["claude", "chatgpt", "codex", "opencode"];
-const EVIDENCE_ORDER = ["git", "terminal", "connector", "note", "url", "document"];
+const AGENT_ORDER = ["claude", "codex", "opencode"];
+const EVIDENCE_ORDER = ["git", "terminal", "connector", "note", "url", "chatgpt", "document"];
 
 function specFor(source: SourceWorkspaceSource): ProviderSpec {
   const known = PROVIDER_SPEC_BY_ID[source.id];
   if (known) return known;
   // Unlisted rows (future integrations like Slack / Notion / Figma) become
-  // their own single-method provider; AI-category rows anchor, the rest attach.
+  // their own single-method provider. Role is decided by roleFor at build time,
+  // so an unlisted source anchors only if its id is an ANCHOR_AGENT_IDS member.
   return {
     id: source.id,
     name: source.name,
-    role: source.category === "AI" ? "agent" : "evidence",
   };
 }
 
@@ -207,7 +228,7 @@ export function buildSourceProviderGroups(
     providers.push({
       id: spec.id,
       name: spec.name,
-      role: spec.role,
+      role: roleFor(spec.id),
       category: lead.category,
       status: lead.status,
       statusLabel: lead.statusLabel,

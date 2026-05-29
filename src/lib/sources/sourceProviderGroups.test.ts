@@ -17,13 +17,19 @@ describe("buildSourceProviderGroups", () => {
   const vm = buildSourceWorkspace({ isDesktop: false, hasActiveSession: true });
   const groups = buildSourceProviderGroups(vm);
 
-  it("lists the four AI agents as session anchors in a fixed order", () => {
+  it("lists the three anchor agents in a fixed order, without ChatGPT", () => {
     expect(groups.agents.map((provider) => provider.id)).toEqual([
       "claude",
-      "chatgpt",
       "codex",
       "opencode",
     ]);
+  });
+
+  it("classifies ChatGPT as evidence, not an anchor agent", () => {
+    const agentIds = groups.agents.map((provider) => provider.id);
+    const evidenceIds = groups.evidence.map((provider) => provider.id);
+    expect(agentIds).not.toContain("chatgpt");
+    expect(evidenceIds).toContain("chatgpt");
   });
 
   it("folds every Claude path into the single Claude provider", () => {
@@ -56,8 +62,9 @@ describe("buildSourceProviderGroups", () => {
     expect(evidenceIds).toContain("note");
     expect(evidenceIds).toContain("url");
     expect(evidenceIds).toContain("connector");
+    // No anchor agent ever lands in evidence. ChatGPT is evidence, not an anchor.
     for (const id of evidenceIds) {
-      expect(["claude", "chatgpt", "codex", "opencode"]).not.toContain(id);
+      expect(["claude", "codex", "opencode"]).not.toContain(id);
     }
   });
 

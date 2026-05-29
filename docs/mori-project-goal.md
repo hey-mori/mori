@@ -737,9 +737,10 @@ Mori is a calm productivity app. The product feel target:
   surfaces are Korean; new surfaces should match the surrounding
   copy.
 - **Source overview is provider-level.** The 소스 page is a calm provider
-  overview (one tile per Claude / ChatGPT / Codex / OpenCode and per Git /
-  터미널 / 메모 / URL evidence source), with every import method, access
-  detail, and action in the right inspector. It is never a flat list or
+  overview (one tile per Claude / Codex / OpenCode anchor agent and per
+  ChatGPT / Git / 터미널 / 메모 / URL evidence source), with every import
+  method, access detail, and action in the right inspector. It is never a
+  flat list or
   table of import methods, and it carries no developer-facing data (file
   paths, backlog ids). See `docs/source-connection-backlog.md` for the full
   presentation contract.

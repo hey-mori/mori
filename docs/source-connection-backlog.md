@@ -130,9 +130,13 @@ auto-association model over time.
   selection; selecting any method drives a single contextual action button. The
   earlier split, passive method labels above an orphan 기록에서 불러오기 button
   stacked over the import action, is gone.
-- **Deferred:** move ChatGPT out of the 에이전트 group into a pasted-transcript
-  grouping. This is the larger taxonomy migration and touches
-  `sourceProviderGroups` / `sourceWorkspace` categories.
+- **Fixed:** ChatGPT moved out of the 에이전트 group into 자료. The agent vs
+  evidence split is now one rule, `roleFor` over `ANCHOR_AGENT_IDS` in
+  `sourceProviderGroups`: a provider is an agent iff its id is an anchor
+  (claude / codex / opencode), so ChatGPT and any future pasted AI transcript
+  (Gemini, other) classify as evidence automatically, with no per-id role table
+  to keep in sync. The 소스 에이전트 list now matches the 새 세션 agent picker
+  exactly.
 
 ## 소스 Page Presentation Contract
 
@@ -146,9 +150,10 @@ selected provider.
 
 - **Canvas = provider tiles.** One compact tile per provider (icon + name,
   nothing else). Grouped into two role sections plus a planned row:
-  - **에이전트** · session anchors: Claude, ChatGPT, Codex, OpenCode.
+  - **에이전트** · session anchors: Claude, Codex, OpenCode.
   - **자료** · evidence attached to a session: Git, 터미널, Connector JSONL,
-    메모, URL.
+    메모, URL, plus ChatGPT and any other pasted AI transcript (it cannot anchor,
+    so it is evidence, not an agent).
   - **예정** · fully-planned providers (Slack, Notion, Figma, Jira, Linear,
     MCP, IDE, 브라우저, 문서, build / deploy log) as quiet chips.
 - **Inspector = the selected provider's detail.** Selecting a tile shows that
