@@ -933,37 +933,50 @@
 .workbench-conversation {
   display: grid;
   align-content: start;
-  gap: var(--base-space-2);
+  gap: var(--base-space-3);
 }
 
 .workbench-msg {
   display: grid;
   gap: 3px;
+  max-width: 88%;
+}
+
+.workbench-msg.is-user {
+  justify-self: end;
+  justify-items: end;
+}
+
+.workbench-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .workbench-msg-actor {
   color: var(--base-accent);
   font-size: var(--base-font-size-2xs);
   font-weight: 750;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-}
-
-.workbench-msg-bubble {
-  padding: var(--base-space-2) var(--base-space-3);
-  border-radius: var(--base-radius-sm);
-  background: var(--base-surface-subtle);
-}
-
-.workbench-msg.is-user {
-  justify-items: end;
 }
 
 .workbench-msg.is-user .workbench-msg-actor {
   color: var(--base-text-muted);
 }
 
+.workbench-msg-meta time {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+}
+
+.workbench-msg-bubble {
+  padding: var(--base-space-2) var(--base-space-3);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface-subtle);
+}
+
 .workbench-msg.is-user .workbench-msg-bubble {
-  max-width: 92%;
   background: var(--base-accent-soft);
 }
 

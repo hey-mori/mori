@@ -477,7 +477,6 @@ export function WorkbenchView() {
               <LayoutGrid size={24} />
             </span>
             <strong>워크벤치를 구성하세요</strong>
-            <p>세션을 열로 추가하고, 패널 가장자리의 +로 위·아래·옆에 더 펼치고, 경계를 끌어 크기를 맞춥니다.</p>
             <Button
               variant="primary"
               icon={Plus}
@@ -984,15 +983,21 @@ function ConversationFlow({ events }: { events: ConversationEvent[] }) {
   }
   return (
     <div className="workbench-conversation">
-      {events.map((event) => (
-        <div className={`workbench-msg${isUserActor(event.actor) ? " is-user" : ""}`} key={event.id}>
-          <span className="workbench-msg-actor">{event.actor}</span>
-          <div className="workbench-msg-bubble">
-            <strong>{event.title}</strong>
-            {event.summary ? <p>{event.summary}</p> : null}
+      {events.map((event) => {
+        const user = isUserActor(event.actor);
+        return (
+          <div className={`workbench-msg${user ? " is-user" : ""}`} key={event.id}>
+            <div className="workbench-msg-meta">
+              <span className="workbench-msg-actor">{user ? "나" : event.actor}</span>
+              {event.at ? <time>{formatRelative(event.at)}</time> : null}
+            </div>
+            <div className="workbench-msg-bubble">
+              <strong>{event.title}</strong>
+              {event.summary ? <p>{event.summary}</p> : null}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
