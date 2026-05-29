@@ -19,6 +19,8 @@ import { isNextActionCompleted } from "../session/nextActionCompletion";
 export type ProjectSessionContent = {
   sessionId: string;
   title: string;
+  /** ISO timestamp of the session, so items can carry temporal context. */
+  timestamp?: string;
   issues: ReadonlyArray<Issue>;
   decisions: ReadonlyArray<Decision>;
   nextActions: ReadonlyArray<NextAction>;
@@ -28,6 +30,8 @@ export type SynthItem = {
   text: string;
   sessionId: string;
   sessionTitle: string;
+  /** ISO timestamp inherited from the contributing session, when known. */
+  timestamp?: string;
 };
 
 export type ProjectSynthesis = {
@@ -77,11 +81,17 @@ export function buildProjectSynthesis(
       session.nextActions.length > 0;
     if (contributed) sessionsWithContent += 1;
 
+    const base = {
+      sessionId: session.sessionId,
+      sessionTitle: session.title,
+      timestamp: session.timestamp,
+    };
+
     for (const decision of session.decisions) {
       const text = clean(decision.title) ?? clean(decision.decision);
       if (!text) continue;
       decisionTotal += 1;
-      decisions.push({ text, sessionId: session.sessionId, sessionTitle: session.title });
+      decisions.push({ text, ...base });
     }
 
     for (const issue of session.issues) {
@@ -89,7 +99,7 @@ export function buildProjectSynthesis(
       const text = clean(issue.title) ?? clean(issue.description);
       if (!text) continue;
       openIssueTotal += 1;
-      openIssues.push({ text, sessionId: session.sessionId, sessionTitle: session.title });
+      openIssues.push({ text, ...base });
     }
 
     for (const action of session.nextActions) {
@@ -97,7 +107,7 @@ export function buildProjectSynthesis(
       const text = clean(action.title);
       if (!text) continue;
       pendingActionTotal += 1;
-      pendingNextActions.push({ text, sessionId: session.sessionId, sessionTitle: session.title });
+      pendingNextActions.push({ text, ...base });
     }
   }
 

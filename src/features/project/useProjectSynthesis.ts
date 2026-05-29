@@ -19,7 +19,7 @@ import {
  * or a demo fixture, and an unreadable session simply contributes nothing.
  */
 export function useProjectSynthesis(
-  sessions: ReadonlyArray<{ sessionId: string; title: string }>,
+  sessions: ReadonlyArray<{ sessionId: string; title: string; timestamp?: string }>,
 ): ProjectSynthesis {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
 
@@ -45,9 +45,19 @@ export function useProjectSynthesis(
       } catch {
         // Unreadable session — contributes nothing, never throws upward.
       }
-      return { sessionId: entry.sessionId, title: entry.title, issues, decisions, nextActions };
+      return {
+        sessionId: entry.sessionId,
+        title: entry.title,
+        timestamp: entry.timestamp,
+        issues,
+        decisions,
+        nextActions,
+      };
     });
   }, [sessions, repository]);
 
-  return useMemo(() => buildProjectSynthesis(content), [content]);
+  // The project page shows the magnitude on a card and expands the full list
+  // in a bounded, internally-scrolling region, so it does not need the small
+  // overview cap — a generous cap keeps the expanded list complete.
+  return useMemo(() => buildProjectSynthesis(content, { cap: 200 }), [content]);
 }

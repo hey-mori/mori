@@ -276,22 +276,18 @@ export function ProjectView() {
         />
       ) : null}
 
-      {/* Home-like split: a main column (활동 + 종합) beside a 세션 rail, so the
-          activity card keeps Home's proportions instead of stretching full-bleed. */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.6fr) minmax(300px, 1fr)",
-          gap: 16,
-          alignItems: "start",
-        }}
-      >
-        <div style={{ display: "grid", gap: 16, minWidth: 0 }}>
+      {/* Home-like split sized to fill the viewport: the overview column
+          (활동 + 종합 + 기억) beside a 세션 rail. The whole page no longer grows
+          with content — the rail scrolls internally and the overview column
+          stays compact, so the surface fits the screen and shrinks gracefully. */}
+      <div className="project-body">
+        <div className="project-overview-col base-scroll">
           <ProjectPulse timestamps={sessionTimestamps} />
           <ProjectSynthesisSection
             synthesis={synthesis}
             onOpenSession={(sessionId) => openSessionId(sessionId)}
           />
+          <ProjectMemoryList memories={memories} />
         </div>
 
         <BaseSection
@@ -326,8 +322,6 @@ export function ProjectView() {
           )}
         </BaseSection>
       </div>
-
-      <ProjectMemoryList memories={memories} />
     </PageShell>
   );
 }

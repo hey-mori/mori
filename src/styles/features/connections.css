@@ -1309,8 +1309,28 @@
   min-width: 200px;
 }
 
+/* Viewport-fit: like the project page, the workspace browser fills the shell
+   height and scrolls its project list internally instead of growing the page.
+   The toolbar (pinned by the shell) and the summary strip stay put; only the
+   groups list scrolls. Scoped to `.workspace-page` so other surfaces using the
+   shared shell are untouched. */
+.workspace-page .page-shell-scroll {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.workspace-page .page-shell-content {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .workspace-browser {
-  display: grid;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   gap: var(--base-space-5);
 }
 
@@ -1380,8 +1400,34 @@
 /* ── Project groups ───────────────────────────────────────────────────── */
 
 .workspace-groups {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
+  grid-auto-rows: min-content;
+  align-content: start;
   gap: var(--base-space-6);
+}
+
+/* Narrow screens: fall back to one natural page scroll so the browser stays
+   usable when the contained layout can no longer fit. */
+@media (max-width: 860px) {
+  .workspace-page .page-shell-scroll {
+    overflow-y: auto;
+  }
+
+  .workspace-page .page-shell-content {
+    height: auto;
+  }
+
+  .workspace-browser {
+    flex: 0 0 auto;
+  }
+
+  .workspace-groups {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
 }
 
 .workspace-group {

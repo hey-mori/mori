@@ -249,6 +249,8 @@
   margin: 0;
   padding: 0;
   display: grid;
+  grid-auto-rows: min-content;
+  align-content: start;
   gap: 0;
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-md);
@@ -258,5 +260,202 @@
 
 .project-session-list > li + li {
   border-top: 1px solid var(--base-border);
+}
+
+/* Every session row keeps the same height regardless of available space, so
+   the rail reads as a uniform list that scrolls, not rows that share height. */
+.project-session-list > li {
+  min-height: 52px;
+  display: flex;
+}
+
+.project-session-list > li > * {
+  width: 100%;
+}
+
+/* ─── Viewport-fit layout ────────────────────────────────────────────────
+   The project page fills the shell height and owns its own internal scroll
+   regions instead of growing the shared page scroll: the 세션 rail scrolls
+   on its own and the overview column stays compact, so 100 sessions never
+   stretch the page. Scoped with `.page-shell.project-page` so it wins over
+   the base shell rules regardless of feature-sheet load order. */
+
+.page-shell.project-page {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.project-page .page-shell-scroll {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.project-page .page-shell-content {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-space-6);
+}
+
+.project-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.project-overview-col {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 2px;
+}
+
+/* 세션 rail: header pinned, the list scrolls inside the rail and fills the
+   column height so the page never grows with the session count. */
+.project-sessions {
+  margin-top: 0;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-sessions .base-section-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  /* `.base-section-body` is a grid by default; that stretched the session
+     list to fill the rail and divided the height across rows (and clipped the
+     last row once it overflowed). A plain block keeps the list at its natural
+     height so every row stays a fixed height and the rail scrolls cleanly. */
+  display: block;
+}
+
+/* ─── Project synthesis (이 프로젝트 종합) ────────────────────────────────
+   Three summary cards (미해결 · 다음 할 일 · 결정) carry the project-wide
+   magnitude at a glance. Clicking a card expands that category inline in a
+   single bounded, internally-scrolling list — a selector, not a flat board. */
+
+.project-synth-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.project-synth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.project-synth-card:hover:not(:disabled):not(.is-active) {
+  border-color: color-mix(in srgb, var(--base-text) 18%, var(--base-border));
+  background: var(--panel);
+}
+
+.project-synth-card.is-active {
+  border-color: color-mix(in srgb, var(--purple) 45%, var(--base-border));
+  background: var(--purple-50);
+}
+
+.project-synth-card:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.project-synth-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.project-synth-card-icon {
+  display: inline-flex;
+  color: var(--muted-2);
+}
+
+.project-synth-card.is-active .project-synth-card-icon {
+  color: var(--purple);
+}
+
+.project-synth-card-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-synth-card-count {
+  font-size: var(--base-font-size-2xl);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The expanded category list: bounded so it never grows the page; scrolls
+   inside its own region while the cards and heatmap stay put above it. */
+.project-synth-list {
+  margin-top: 10px;
+  max-height: min(320px, 40vh);
+  overflow-y: auto;
+}
+
+/* ─── Narrow screens ─────────────────────────────────────────────────────
+   Below the split breakpoint the columns stack and the page falls back to a
+   single natural scroll, so the surface stays usable when it cannot fit. */
+@media (max-width: 860px) {
+  .page-shell.project-page {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .project-page .page-shell-scroll {
+    overflow-y: auto;
+  }
+
+  .project-page .page-shell-content {
+    height: auto;
+  }
+
+  .project-body {
+    flex: 0 0 auto;
+    grid-template-columns: 1fr;
+  }
+
+  .project-overview-col {
+    overflow: visible;
+  }
+
+  .project-sessions {
+    max-height: none;
+  }
+
+  .project-sessions .base-section-body {
+    overflow: visible;
+  }
+
+  .project-synth-list {
+    max-height: none;
+  }
 }
 
