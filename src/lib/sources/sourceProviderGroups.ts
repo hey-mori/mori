@@ -69,7 +69,7 @@ type ProviderSpec = { id: string; name: string };
  * attaches as evidence. Shared with the 소스 page so the page and the grouping
  * never disagree on what can anchor.
  */
-export const ANCHOR_AGENT_IDS = new Set(["claude", "codex", "opencode"]);
+export const ANCHOR_AGENT_IDS = new Set(["claude", "codex", "opencode", "antigravity"]);
 
 function roleFor(providerId: string): SourceProviderRole {
   return ANCHOR_AGENT_IDS.has(providerId) ? "agent" : "evidence";
@@ -98,6 +98,7 @@ const PROVIDER_SPEC_BY_ID: Record<string, ProviderSpec> = {
   codexDesktopExport: { id: "codex", name: "Codex" },
   codexWebGithub: { id: "codex", name: "Codex" },
   openCodeCli: { id: "opencode", name: "OpenCode" },
+  antigravityDiscovery: { id: "antigravity", name: "Antigravity" },
   // The universal paste surface ("Claude / ChatGPT / Codex / Other") gives
   // OpenCode and any unlisted agent a paste path; the named anchors above
   // already carry their own transcript paste.
@@ -134,6 +135,7 @@ const METHOD_BY_ID: Record<string, { methodLabel: string; connectLabel: string }
   codexDesktopExport: { methodLabel: "Desktop 내보내기", connectLabel: "내보내기" },
   codexWebGithub: { methodLabel: "Web · GitHub", connectLabel: "내보내기" },
   openCodeCli: { methodLabel: "CLI 래퍼", connectLabel: "CLI 래퍼" },
+  antigravityDiscovery: { methodLabel: "기록에서 불러오기", connectLabel: "데스크톱 감지" },
   aiTranscriptPaste: { methodLabel: "대화 붙여넣기", connectLabel: "붙여넣기" },
   connectorJsonl: { methodLabel: "JSONL 가져오기", connectLabel: "JSONL" },
   gitDiffPaste: { methodLabel: "diff 붙여넣기", connectLabel: "붙여넣기" },
@@ -159,7 +161,7 @@ const STATUS_RANK: Record<SourceWorkspaceStatus, number> = {
   unsupported: 4,
 };
 
-const AGENT_ORDER = ["claude", "codex", "opencode"];
+const AGENT_ORDER = ["claude", "codex", "opencode", "antigravity"];
 const EVIDENCE_ORDER = ["git", "terminal", "connector", "note", "url", "chatgpt", "document"];
 
 function specFor(source: SourceWorkspaceSource): ProviderSpec {

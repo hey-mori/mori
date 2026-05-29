@@ -410,6 +410,52 @@ function connectorJsonlSource(input: BuildControlCenterInput): SourceWorkspaceSo
   };
 }
 
+/**
+ * Antigravity is a session-discovery agent: Mori reads the readable
+ * `transcript.jsonl` logs the desktop app writes, never the authoritative
+ * protobuf store. It has no paste / wrapper way-in, so it is injected here as
+ * a single discovery source rather than derived from the connector surfaces.
+ * Capture is honestly partial (only conversations with a generated transcript).
+ */
+function antigravitySource(input: BuildControlCenterInput): SourceWorkspaceSource {
+  const status: SourceWorkspaceStatus = input.isDesktop ? "available" : "needsDesktopApp";
+  const display = statusLabel(status);
+  return {
+    id: "antigravityDiscovery",
+    name: "Antigravity",
+    category: "Code",
+    familyLabel: "Antigravity",
+    status,
+    statusLabel: display.label,
+    statusTone: display.tone,
+    acquisitionMethod: "데스크톱에서 Antigravity 작업 기록을 감지해 불러옵니다.",
+    acceptedFormats: ["Antigravity transcript.jsonl (로컬 작업 기록)"],
+    setupMethod: "설정 불필요. 데스크톱 앱이 ~/.gemini/antigravity의 생성된 트랜스크립트만 읽습니다.",
+    pathMode: "notNeeded",
+    pathStateLabel: "경로 설정 없음",
+    localOnly: true,
+    recommended: false,
+    privacyNote: "로컬 트랜스크립트만 읽습니다. 권위 저장소인 protobuf(.pb)는 읽지 않습니다.",
+    whatMoriCanAccess: [
+      "트랜스크립트가 생성된 대화 (제목 · 시각)",
+      "사용자 · 모델 · 도구 단계 미리보기",
+    ],
+    whatMoriCannotAccess: [
+      "protobuf(.pb) 권위 저장소",
+      "계정 · API 접근",
+      "백그라운드 감시",
+    ],
+    creates: ["AI 대화 소스", "타임라인 이벤트 후보", "검토 후보"],
+    reviewBehavior:
+      "감지한 Antigravity 대화는 세션 생성 후 Import Review를 거쳐 타임라인에 반영됩니다. 트랜스크립트가 있는 세션만 잡히는 부분 캡처입니다.",
+    rawDataPolicy: "summaryOnly",
+    action: { kind: "none", label: "기록에서 불러오기", enabled: false },
+    likelyFiles: ["src-tauri/src/antigravity/sessions.rs", "src/lib/antigravity/"],
+    testsNeeded: ["transcript parser", "partial-capture honesty"],
+    safeToImplementNow: true,
+  };
+}
+
 function fromFutureIntegration(integration: SourceIntegration): SourceWorkspaceSource {
   const status = statusFromIntegration(integration.status);
   const display = statusLabel(status);
@@ -539,7 +585,13 @@ export function buildSourceWorkspace(input: BuildControlCenterInput): SourceWork
     if (!integration || knownIds.has(id)) return [];
     return [fromFutureIntegration(integration)];
   });
-  const sources = [connectorJsonlSource(input), ...importSources, ...surfaceSources, ...futureSources].sort(sortSources);
+  const sources = [
+    connectorJsonlSource(input),
+    antigravitySource(input),
+    ...importSources,
+    ...surfaceSources,
+    ...futureSources,
+  ].sort(sortSources);
   const counts: SourceWorkspaceCounts = {
     available: sources.filter((source) => source.status === "available").length,
     needsSetup: sources.filter((source) => source.status === "needsSetup" || source.status === "needsDesktopApp").length,

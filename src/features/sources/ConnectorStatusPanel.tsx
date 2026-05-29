@@ -1,9 +1,17 @@
+import { Bot, Code2, Rocket, Sparkles, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import {
   loadConnectorStatus,
+  type ConnectorInstallerId,
   type ConnectorStatusViewModel,
 } from "../../lib/connectors/installers";
+
+const ICONS: Record<ConnectorInstallerId, LucideIcon> = {
+  "claude-code": Sparkles,
+  "codex-cli": Code2,
+  antigravity: Rocket,
+};
 
 type PanelState =
   | { status: "loading" }
@@ -14,8 +22,7 @@ type PanelState =
  * the installer adapter derives from `detect_connector_status` — which agent
  * is present, whether its capture is wired, and how much it can read. In
  * browser mode the adapter returns the honest desktop-only model, so the panel
- * never invents a connected state. Reuses the `sources-group` /
- * `sources-recent-list` styling so it adds no new stylesheet rules.
+ * never invents a connected state.
  */
 export function ConnectorStatusPanel() {
   const [state, setState] = useState<PanelState>({ status: "loading" });
@@ -33,22 +40,26 @@ export function ConnectorStatusPanel() {
   if (state.status === "loading") return null;
 
   return (
-    <section className="sources-panel" aria-label="연결 상태">
+    <section className="sources-panel sources-connection-status" aria-label="연결 상태">
       <header className="sources-group-head">
         <h2>연결 상태</h2>
       </header>
-      <ul className="sources-recent-list">
-        {state.models.map((model) => (
-          <li key={model.id}>
-            <strong>
-              {model.displayName}{" "}
+      <ul>
+        {state.models.map((model) => {
+          const Icon = ICONS[model.id] ?? Bot;
+          return (
+            <li key={model.id}>
+              <span className="scs-icon">
+                <Icon size={15} aria-hidden="true" />
+              </span>
+              <span className="scs-name">{model.displayName}</span>
               <BaseStatusBadge tone={model.display.tone}>
                 {model.display.label}
               </BaseStatusBadge>
-            </strong>
-            <span>{model.detail.join(" · ")}</span>
-          </li>
-        ))}
+              <span className="scs-detail">{model.detail.join(" · ")}</span>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

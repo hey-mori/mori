@@ -17,11 +17,12 @@ describe("buildSourceProviderGroups", () => {
   const vm = buildSourceWorkspace({ isDesktop: false, hasActiveSession: true });
   const groups = buildSourceProviderGroups(vm);
 
-  it("lists the three anchor agents in a fixed order, without ChatGPT", () => {
+  it("lists the anchor agents in a fixed order, without ChatGPT", () => {
     expect(groups.agents.map((provider) => provider.id)).toEqual([
       "claude",
       "codex",
       "opencode",
+      "antigravity",
     ]);
   });
 
@@ -75,7 +76,7 @@ describe("buildSourceProviderGroups", () => {
     expect(plannedIds).toContain("mcp");
     expect(plannedIds.length).toBeGreaterThan(0);
     // No live agent ever lands in the planned bucket.
-    for (const id of ["claude", "chatgpt", "codex", "opencode"]) {
+    for (const id of ["claude", "chatgpt", "codex", "opencode", "antigravity"]) {
       expect(plannedIds).not.toContain(id);
     }
   });
