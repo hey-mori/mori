@@ -123,9 +123,6 @@ export function WorkspaceView() {
         ),
         filters,
       }),
-    // `view`/`draft`/`mode` cover active-session changes; the row list is
-    // re-derived whenever any of those change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeSessionId, view, mode, draft, repository, filters],
   );
 

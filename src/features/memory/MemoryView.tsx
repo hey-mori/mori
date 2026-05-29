@@ -91,13 +91,17 @@ export function MemoryView() {
   }, [sqliteAvailable, sqliteKind, sqliteRefresh]);
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
+  const activeSessionId = view.session.id;
 
   // Cross-session data the new view-model consumes. We re-enumerate every
   // time the active session id changes so that newly-applied imports show
   // up in the rollup without forcing a full page reload.
   const browserSessionSummaries = useMemo<StoredSessionSummary[]>(
-    () => repository.listStoredSessions(),
-    [repository, view.session.id],
+    () => {
+      void activeSessionId;
+      return repository.listStoredSessions();
+    },
+    [repository, activeSessionId],
   );
   const importsBySessionId = useMemo<Record<string, StoredSessionImport[]>>(() => {
     const map: Record<string, StoredSessionImport[]> = {};
@@ -106,15 +110,15 @@ export function MemoryView() {
     }
     // Active session imports (may not have been saved as a stored session
     // draft yet) — read separately so the rollup includes today's work.
-    if (!map[view.session.id]) {
-      map[view.session.id] = repository.listSessionImports(view.session.id);
+    if (!map[activeSessionId]) {
+      map[activeSessionId] = repository.listSessionImports(activeSessionId);
     }
     return map;
-  }, [repository, browserSessionSummaries, view.session.id]);
+  }, [repository, browserSessionSummaries, activeSessionId]);
   const [packageDrafts, setPackageDrafts] = useState<StoredMoriPackageDraft[]>([]);
   useEffect(() => {
     setPackageDrafts(repository.listMoriPackageDrafts());
-  }, [repository, view.session.id]);
+  }, [repository, activeSessionId]);
 
   // Accepted Project Memory records — written by the Consolidation
   // Review Surface when the user clicks Apply. Re-read on view

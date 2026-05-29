@@ -79,7 +79,6 @@ const DENSITY_WIDTH_BOUNDS: Record<
 const DEFAULT_LANE_OFFSET = 38;
 const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
-const DEFAULT_CARD_GAP = 12;
 const LANE_VERTICAL_PADDING = 7;
 
 export function computeTimelineLayout(
@@ -92,7 +91,6 @@ export function computeTimelineLayout(
   // `cardWidth` is now the minimum (cardlet) width; actual widths vary by
   // event duration. Kept on the layout result as the content-area floor.
   const cardWidth = DENSITY_WIDTH_BOUNDS[density].eventMin;
-  const cardGap = options.cardGapPx ?? DEFAULT_CARD_GAP;
   const laneOffsetPx = options.laneOffsetPx ?? DEFAULT_LANE_OFFSET;
   const laneLabelWidthPx = options.laneLabelWidthPx ?? DEFAULT_LANE_LABEL_WIDTH;
   const contentRightPadding = options.contentRightPaddingPx ?? DEFAULT_CONTENT_RIGHT_PADDING;
@@ -132,7 +130,6 @@ export function computeTimelineLayout(
       density,
       contentLeftPx,
       contentWidthPx,
-      cardGap,
     );
     const hasItems = placements.length > 0;
     const rowCount = hasItems ? 1 : 0;
@@ -212,7 +209,6 @@ function layoutLaneRow(
   density: TimelineDensity,
   contentLeftPx: number,
   contentWidthPx: number,
-  cardGap: number,
 ): RowPlacement[] {
   if (items.length === 0) return [];
 

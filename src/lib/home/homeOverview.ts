@@ -791,16 +791,12 @@ function buildNextActions(params: {
 
   // Aggregate the per-session metric snapshots once.
   let unconfirmedDecisions = 0;
-  let importantDecisions = 0;
   let openIssues = 0;
-  let pendingNextActions = 0;
   for (const session of active) {
     const metric = metricsById.get(session.sessionId);
     if (!metric) continue;
     unconfirmedDecisions += metric.unconfirmedDecisions ?? 0;
-    importantDecisions += metric.importantDecisions ?? 0;
     openIssues += metric.openIssues ?? 0;
-    pendingNextActions += metric.pendingNextActions ?? 0;
   }
 
   // The most recent session is the natural "이어가기" target.

@@ -7,7 +7,7 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
@@ -92,6 +92,43 @@ export function CommandPalette({
     [sections],
   );
 
+  const runCommand = useCallback(
+    (entry: CommandEntry) => {
+      const target: CommandTarget = entry.target;
+      switch (target.kind) {
+        case "navigate":
+          navigate(target.view);
+          break;
+        case "openSession":
+          if (target.sessionId !== activeSessionId) {
+            loadBrowserSession(target.sessionId);
+          }
+          openSession(target.tab ?? "flow");
+          break;
+        case "openSettings":
+          openSettingsSheet(target.segment ?? "localAi");
+          break;
+        case "toggleSidebarCollapsed":
+          onToggleSidebarCollapsed?.();
+          break;
+        case "setTheme":
+          setTheme(target.theme);
+          break;
+      }
+      close();
+    },
+    [
+      activeSessionId,
+      close,
+      loadBrowserSession,
+      navigate,
+      onToggleSidebarCollapsed,
+      openSession,
+      openSettingsSheet,
+      setTheme,
+    ],
+  );
+
   // Keep the highlight inside the visible range when the filter shrinks.
   useEffect(() => {
     if (highlight >= flatVisible.length) setHighlight(0);
@@ -130,7 +167,7 @@ export function CommandPalette({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, flatVisible, highlight, close]);
+  }, [open, flatVisible, highlight, close, runCommand]);
 
   // Scroll the highlighted row into view as the user moves through it.
   useEffect(() => {
@@ -142,31 +179,6 @@ export function CommandPalette({
     );
     active?.scrollIntoView({ block: "nearest" });
   }, [highlight, open]);
-
-  function runCommand(entry: CommandEntry) {
-    const target: CommandTarget = entry.target;
-    switch (target.kind) {
-      case "navigate":
-        navigate(target.view);
-        break;
-      case "openSession":
-        if (target.sessionId !== activeSessionId) {
-          loadBrowserSession(target.sessionId);
-        }
-        openSession(target.tab ?? "flow");
-        break;
-      case "openSettings":
-        openSettingsSheet(target.segment ?? "localAi");
-        break;
-      case "toggleSidebarCollapsed":
-        onToggleSidebarCollapsed?.();
-        break;
-      case "setTheme":
-        setTheme(target.theme);
-        break;
-    }
-    close();
-  }
 
   if (!open) return null;
 

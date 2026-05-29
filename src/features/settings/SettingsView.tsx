@@ -12,7 +12,6 @@ import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import {
   selectHasRealAnalysis,
-  selectSessionMode,
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
@@ -51,7 +50,6 @@ export function SettingsView() {
   const settings = useSessionStore((state) => state.analysisSettings);
   const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
   const sessionView = useSessionStore(selectSessionView);
-  const sessionMode = useSessionStore(selectSessionMode);
   const sessionDraft = useSessionStore((state) => state.draft);
   const imports = useSessionStore((state) => state.imports);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);

@@ -113,9 +113,7 @@ export function ConversationViewer({
 
   const rowHeight = useCallback(
     (index: number) => measuredHeights.current.get(index) ?? ESTIMATED_ROW_HEIGHT,
-    // measureTick is read implicitly via the ref; listing it keeps the
-    // callback identity in sync with measurement updates for the range memo.
-    [measureTick],
+    [],
   );
 
   // Reset search, scroll, and all measurements whenever the drawer reopens
@@ -182,15 +180,17 @@ export function ConversationViewer({
 
   const itemCount = messages?.length ?? 0;
   const range = useMemo(
-    () =>
-      computeVisibleRange({
+    () => {
+      void measureTick;
+      return computeVisibleRange({
         itemCount,
         scrollTop,
         viewportHeight: viewportHeight || 1,
         rowHeight,
         overscan: OVERSCAN,
-      }),
-    [itemCount, scrollTop, viewportHeight, rowHeight],
+      });
+    },
+    [itemCount, measureTick, scrollTop, viewportHeight, rowHeight],
   );
 
   // When the (debounced) search yields a match, jump to it. The matched row

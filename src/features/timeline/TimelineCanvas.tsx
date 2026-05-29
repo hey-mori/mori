@@ -2,7 +2,6 @@ import { Search } from "lucide-react";
 import {
   forwardRef,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,

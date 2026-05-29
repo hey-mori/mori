@@ -1,7 +1,3 @@
-import {
-  Globe2,
-  MessageSquare,
-} from "lucide-react";
 import type {
   Artifact,
   Decision,

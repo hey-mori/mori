@@ -46,7 +46,7 @@ function getPlatformLabel(platform: AiTranscriptPlatform): string {
 /**
  * Parse transcript into turns with basic role detection
  */
-function parseTranscriptTurns(text: string, platform: AiTranscriptPlatform): AiTranscriptTurn[] {
+function parseTranscriptTurns(text: string): AiTranscriptTurn[] {
   const lines = text.split("\n");
   const turns: AiTranscriptTurn[] = [];
   let currentTurn: AiTranscriptTurn | null = null;
@@ -131,7 +131,7 @@ function resolveTranscriptTurns(text: string, platform: AiTranscriptPlatform): A
     const exported = parseChatGptExport(text);
     if (exported) return exported.turns.map(chatGptTurnToTranscriptTurn);
   }
-  return parseTranscriptTurns(text, platform);
+  return parseTranscriptTurns(text);
 }
 
 /**

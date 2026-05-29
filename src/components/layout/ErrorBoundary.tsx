@@ -32,7 +32,6 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // Console capture is the user's escape hatch — they can copy the
     // stack into a bug report. Avoid throwing again here.
-    // eslint-disable-next-line no-console
     console.error("[Mori] workspace render error", error, info.componentStack);
   }
 

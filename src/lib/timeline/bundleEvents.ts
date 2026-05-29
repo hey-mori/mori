@@ -227,9 +227,6 @@ function createBundle(
   const representedDecisionIds = unique(cluster.flatMap((event) => event.linkedDecisionIds));
   const bundleKind = inferBundleKind(first.type, representedIssueIds.length, representedDecisionIds.length);
   const trustLevel = inferBundleTrustLevel(cluster);
-  const relatedRelationships = relationships.filter((relationship) =>
-    cluster.some((event) => relationship.fromId === event.id || relationship.toId === event.id),
-  );
   const dominantEventNames = cluster.slice(0, 3).map((event) => event.title.replace(/\s*조사$/, ""));
 
   return {

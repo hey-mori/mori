@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SessionMode, SessionViewModel } from "../../app/sessionStore";
+import type { SessionViewModel } from "../../app/sessionStore";
 import { mockSession } from "../../domain/mock-data";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 import {

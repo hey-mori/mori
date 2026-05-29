@@ -807,6 +807,7 @@ function SessionSummary({
         </b>
       </div>
       <SummaryRow label="보관 위치" value={storageTarget.label} />
+      <div className="start-summary-action">{createAction}</div>
     </InspectorPanel>
   );
 }

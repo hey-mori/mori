@@ -16,7 +16,6 @@ import { Button } from "../../components/ui/Button";
 import {
   GitDiffParseError,
   isChatGptExport,
-  normalizeAiConversationText,
   normalizeAiTranscript,
   normalizeGitDiff,
   normalizeManualNote,
@@ -25,7 +24,6 @@ import {
   type NormalizedImportCandidate,
 } from "../../lib/import";
 import {
-  buildConnectorJsonlPreview,
   buildConnectorJsonlPreviewWithHistory,
   buildConnectorSourceImportSummary,
   describeConnectorSourceImportBadge,

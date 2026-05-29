@@ -105,24 +105,28 @@ export function ConsolidationReviewView({
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const sqliteSessions = useSqliteStore((state) => state.sessions);
   const repository = useMemo(() => createBrowserDraftRepository(), []);
+  const activeSessionId = view.session.id;
   const browserSessionSummaries = useMemo<StoredSessionSummary[]>(
-    () => repository.listStoredSessions(),
-    [repository, view.session.id],
+    () => {
+      void activeSessionId;
+      return repository.listStoredSessions();
+    },
+    [repository, activeSessionId],
   );
   const importsBySessionId = useMemo<Record<string, StoredSessionImport[]>>(() => {
     const map: Record<string, StoredSessionImport[]> = {};
     for (const summary of browserSessionSummaries) {
       map[summary.sessionId] = repository.listSessionImports(summary.sessionId);
     }
-    if (!map[view.session.id]) {
-      map[view.session.id] = repository.listSessionImports(view.session.id);
+    if (!map[activeSessionId]) {
+      map[activeSessionId] = repository.listSessionImports(activeSessionId);
     }
     return map;
-  }, [repository, browserSessionSummaries, view.session.id]);
+  }, [repository, browserSessionSummaries, activeSessionId]);
   const [packageDrafts, setPackageDrafts] = useState<StoredMoriPackageDraft[]>([]);
   useEffect(() => {
     setPackageDrafts(repository.listMoriPackageDrafts());
-  }, [repository, view.session.id]);
+  }, [repository, activeSessionId]);
 
   const viewModel = useMemo(
     () =>

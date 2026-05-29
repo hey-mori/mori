@@ -11,7 +11,6 @@ import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes
 import { buildMemoryClientSafeBreakdown } from "../../lib/mori-package";
 import {
   buildReportMarkdown,
-  DEFAULT_SECTIONS,
   REPORT_TYPE_DEFINITIONS,
   SECTION_DEFINITIONS,
   toggleSection,

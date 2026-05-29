@@ -27,8 +27,6 @@ import type {
   TimelineEvent,
 } from "../../domain/types";
 import { formatTime, formatTimeRange } from "../../lib/formatting/time";
-import { describeTrustLevel } from "../../lib/relationships/relationshipDisplay";
-import { getSourceDisplayStatus } from "../../lib/sources/traceability";
 import {
   getTimelineInspectorReviewLinks,
   type ReviewSelection,
@@ -308,64 +306,6 @@ export function EventInspector({
   );
 }
 
-function InspectorMetaStrip({ event }: { event: TimelineEvent }) {
-  const items = [
-    { label: "근거", value: event.sourceRefs.length },
-    { label: "결정", value: event.linkedDecisionIds.length },
-    { label: "이슈", value: event.linkedIssueIds.length },
-    { label: "산출", value: event.artifactIds?.length ?? 0 },
-  ];
-  const usage = event.tokenUsage;
-  return (
-    <div className="inspector-meta-strip" aria-label="Event metadata">
-      {items.map((item) => (
-        <span key={item.label} className={item.value > 0 ? "has-value" : ""}>
-          <strong>{item.value}</strong>
-          {item.label}
-        </span>
-      ))}
-      {usage ? (
-        <span className="has-value" title={usage.model}>
-          <strong>{formatTokenCount(usage.total)}</strong>
-          토큰
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-function formatTokenCount(total: number): string {
-  if (total < 1000) return String(total);
-  return `${(total / 1000).toFixed(1)}k`;
-}
-
-function SourcesList({ sources }: { sources: SourceRef[] }) {
-  if (sources.length === 0) {
-    return <p className="inspector-empty">연결된 출처가 없습니다.</p>;
-  }
-  return (
-    <ul className="inspector-source-list">
-      {sources.map((source) => {
-        const displayStatus = getSourceDisplayStatus(source);
-        return (
-          <li key={source.id}>
-            <div>
-              <strong>{source.title}</strong>
-              <small>
-                {displayStatus.integrationLabel} · {displayStatus.captureMethod} ·{" "}
-                {displayStatus.rawDataLabel}
-              </small>
-            </div>
-            <Badge tone={describeTrustLevel(source.trustLevel).tone}>
-              {describeTrustLevel(source.trustLevel).label}
-            </Badge>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 function EventEvidenceChips({ sources }: { sources: SourceRef[] }) {
   if (sources.length === 0) return null;
   return (
@@ -453,12 +393,6 @@ function LinkedRows({
       })}
     </ul>
   );
-}
-
-function trustCopy(trustLevel: TimelineEvent["trustLevel"]): string {
-  if (trustLevel === "verified") return "캡처된 원본 근거로 뒷받침되는 이벤트입니다.";
-  if (trustLevel === "observed") return "관찰된 작업 맥락에서 도출된 이벤트입니다.";
-  return "분석이 추론한 이벤트로, 사용자가 언제든 수정할 수 있습니다.";
 }
 
 export { formatTime };

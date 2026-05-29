@@ -13,7 +13,7 @@ import {
   discoverCodexSessions,
   getCodexSession,
 } from "../codex/codexTauri";
-import type { CodexSessionDetail, CodexSessionMeta } from "../codex/types";
+import type { CodexSessionMeta } from "../codex/types";
 import {
   normalizeConnectorEventBatch,
   parseConnectorJsonl,

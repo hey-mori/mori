@@ -1,4 +1,4 @@
-import type { SessionState, SessionMode, SessionSource } from "../../app/sessionStore";
+import type { SessionState } from "../../app/sessionStore";
 
 /**
  * Derives clear session status labels for consistent display across pages.

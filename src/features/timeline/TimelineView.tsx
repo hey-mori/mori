@@ -256,34 +256,6 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     return () => window.removeEventListener("keydown", onKey);
   }, [mode, viewportWidth, readingMode, model.visibleDisplayItems, selectedEventId, setSelectedEventId, laneOrder]);
 
-  if (model.emptyVariant) {
-    // Inside the session 흐름 tab the shell content is full-bleed, so wrap the
-    // empty state in a padded pane for breathing room.
-    return (
-      <div className="session-tab-pane session-tab-flow-empty">
-        <TimelineEmptyState
-          variant={model.emptyVariant}
-          onStartSession={() => setCurrentView("start")}
-          onOpenSources={() => setSessionTab("evidence")}
-          onRunQuickPass={() => runQuickPass()}
-          canRunQuickPass={analysisStatus !== "running"}
-        />
-      </div>
-    );
-  }
-
-  const selectedItem = model.selectedItem;
-  const inspectorHidden = shouldHideInspector({ mode, inspectorCollapsed, viewportWidth });
-  // The inspector is a detail panel for the *selected* item — there is nothing
-  // to inspect with no selection, so the column is only reserved when something
-  // is selected. Otherwise an "open" inspector with no selection is just an
-  // empty band of whitespace.
-  const inspectorVisible = !inspectorHidden && Boolean(selectedItem);
-  // The 흐름 tab offers two reading modes: the swimlane canvas (시간 축) and a
-  // content-rich chronological 목록. The swimlane never auto-degrades to a list
-  // on narrow screens; the 목록 appears only when the user picks it (or when a
-  // conversation-dominant session defaults to it).
-  const useListView = mode === "timeline" && readingMode === "flow";
   const buildEventMenuItems = useCallback(
     (event: TimelineEvent): BaseMenuItemSpec[] => {
       const issueCreated = analysis ? isEventPromotedToIssue(analysis, event.id) : false;
@@ -354,6 +326,34 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     ],
   );
 
+  if (model.emptyVariant) {
+    // Inside the session 흐름 tab the shell content is full-bleed, so wrap the
+    // empty state in a padded pane for breathing room.
+    return (
+      <div className="session-tab-pane session-tab-flow-empty">
+        <TimelineEmptyState
+          variant={model.emptyVariant}
+          onStartSession={() => setCurrentView("start")}
+          onOpenSources={() => setSessionTab("evidence")}
+          onRunQuickPass={() => runQuickPass()}
+          canRunQuickPass={analysisStatus !== "running"}
+        />
+      </div>
+    );
+  }
+
+  const selectedItem = model.selectedItem;
+  const inspectorHidden = shouldHideInspector({ mode, inspectorCollapsed, viewportWidth });
+  // The inspector is a detail panel for the *selected* item — there is nothing
+  // to inspect with no selection, so the column is only reserved when something
+  // is selected. Otherwise an "open" inspector with no selection is just an
+  // empty band of whitespace.
+  const inspectorVisible = !inspectorHidden && Boolean(selectedItem);
+  // The 흐름 tab offers two reading modes: the swimlane canvas (시간 축) and a
+  // content-rich chronological 목록. The swimlane never auto-degrades to a list
+  // on narrow screens; the 목록 appears only when the user picks it (or when a
+  // conversation-dominant session defaults to it).
+  const useListView = mode === "timeline" && readingMode === "flow";
   return (
     <div
       className={`content-grid content-grid-embedded ${
