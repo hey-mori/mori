@@ -186,8 +186,18 @@ def main() -> int:
     session = event.get("sessionId")
     safe = _safe_filename(session) if isinstance(session, str) and session else None
     out_file = os.path.join(out_dir, f"{date}-{safe}.jsonl" if safe else f"{date}.jsonl")
-    with open(out_file, "a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+    # Append in a single O_APPEND write: the OS seeks to EOF and writes the
+    # whole buffer in one syscall, so concurrent hook processes (parallel tool
+    # calls within one session, or the autonomous dev loop) cannot interleave a
+    # partial line. A buffered text write could split mid-line on Windows,
+    # where small-append atomicity is not guaranteed. The per-session filename
+    # already separates different sessions; this closes the within-session race.
+    line = (json.dumps(event, ensure_ascii=False) + "\n").encode("utf-8")
+    fd = os.open(out_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    try:
+        os.write(fd, line)
+    finally:
+        os.close(fd)
     return 0
 
 
