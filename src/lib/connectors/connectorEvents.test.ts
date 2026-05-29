@@ -46,10 +46,12 @@ describe("validateConnectorEvent", () => {
     expect(fields.has("provenance")).toBe(true);
   });
 
-  it("rejects unknown kinds", () => {
-    const result = validateConnectorEvent({ ...VALID_EVENT, kind: "bogus" });
-    if (!("errors" in result)) throw new Error("expected errors");
-    expect(result.errors.some((error) => error.field === "kind")).toBe(true);
+  it("accepts unknown kinds (tolerant reader, forward-compatible)", () => {
+    // A newer connector may emit a kind this version does not know. We keep it
+    // (the normalizer preserves it as a generic event) rather than rejecting.
+    const result = validateConnectorEvent({ ...VALID_EVENT, kind: "future_event" });
+    if (!("event" in result)) throw new Error("expected the event to be accepted");
+    expect(result.event.kind).toBe("future_event");
   });
 
   it("rejects invalid occurredAt timestamps", () => {
@@ -130,12 +132,17 @@ describe("parseConnectorJsonl", () => {
   });
 
   it("reports validation errors with line numbers", () => {
-    const jsonl = [JSON.stringify({ ...VALID_EVENT, kind: "bogus" }), JSON.stringify(VALID_EVENT)].join("\n");
+    // Use a genuinely-invalid line (missing required `summary`); an unknown
+    // kind is no longer an error (tolerant reader), so it cannot stand in here.
+    const jsonl = [
+      JSON.stringify({ ...VALID_EVENT, summary: undefined }),
+      JSON.stringify(VALID_EVENT),
+    ].join("\n");
     const outcome = parseConnectorJsonl(jsonl);
     expect(outcome.events).toHaveLength(1);
     expect(outcome.errors).toHaveLength(1);
     expect(outcome.errors[0].line).toBe(1);
-    expect(outcome.errors[0].field).toBe("kind");
+    expect(outcome.errors[0].field).toBe("summary");
   });
 });
 

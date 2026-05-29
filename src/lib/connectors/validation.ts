@@ -1,6 +1,5 @@
 import {
   CONNECTOR_CAPTURE_METHODS,
-  CONNECTOR_EVENT_KINDS,
   CONNECTOR_RAW_DATA_POLICIES,
   type ConnectorEvent,
   type ConnectorEventKind,
@@ -31,15 +30,14 @@ export function validateConnectorEvent(
   const connectorId = readString(value, "connectorId");
   if (!connectorId) errors.push({ ...context, field: "connectorId", message: "connectorId is required" });
 
+  // Tolerant reader: require a non-empty kind, but accept kinds this version
+  // does not recognise. A newer connector may emit a new kind; rather than
+  // reject (and lose) the line, keep it and let the normalizer preserve it as
+  // a generic event. The kind-specific cluster checks below still apply to the
+  // known kinds.
   const kindRaw = readString(value, "kind");
   if (!kindRaw) {
     errors.push({ ...context, field: "kind", message: "kind is required" });
-  } else if (!CONNECTOR_EVENT_KINDS.includes(kindRaw as ConnectorEventKind)) {
-    errors.push({
-      ...context,
-      field: "kind",
-      message: `kind must be one of ${CONNECTOR_EVENT_KINDS.join(", ")}`,
-    });
   }
 
   const occurredAt = readString(value, "occurredAt");

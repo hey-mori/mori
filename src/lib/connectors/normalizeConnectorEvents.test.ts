@@ -116,6 +116,20 @@ describe("normalizeConnectorEventBatch", () => {
     );
   });
 
+  it("preserves an unknown / future kind as a generic event instead of dropping it", () => {
+    // Forward compatibility: a kind this version does not recognise must still
+    // produce a timeline event (generic note), not vanish silently.
+    const candidates = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events: [event({ id: "u", kind: "future_event", summary: "a brand new kind" })],
+      applyRedaction: false,
+    });
+    const evts = candidates.flatMap((candidate) => candidate.events);
+    expect(evts).toHaveLength(1);
+    expect(evts[0].type).toBe("documentNote");
+  });
+
   it("preserves source provenance via sourceRefs", () => {
     const events = [event({ id: "a" }), event({ id: "b", kind: "assistant_message" })];
     const [candidate] = normalizeConnectorEventBatch({

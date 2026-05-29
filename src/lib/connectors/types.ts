@@ -55,7 +55,12 @@ export type ConnectorEventKind =
   | "git_diff_captured"
   | "commit_created"
   | "transcript_imported"
-  | "session_finished";
+  | "session_finished"
+  // Tolerant reader: a newer connector script may emit a kind this Mori
+  // version does not know yet. Accept it as a free-form string (preserved
+  // downstream as a generic event) rather than rejecting the line, mirroring
+  // how `ConnectorId` allows unknown ids.
+  | (string & {});
 
 export const CONNECTOR_EVENT_KINDS: readonly ConnectorEventKind[] = [
   "session_started",

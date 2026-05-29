@@ -236,7 +236,11 @@ function describeBucket(
     transcript_imported: 0,
     session_finished: 0,
   };
-  for (const event of events) totals[event.kind] += 1;
+  // Only count known kinds; an unknown / future kind has no slot here and is
+  // reflected in the `events.length` fallback below.
+  for (const event of events) {
+    if (event.kind in totals) totals[event.kind] += 1;
+  }
   const parts: string[] = [];
   if (totals.prompt_submitted) parts.push(`${totals.prompt_submitted} prompts`);
   if (totals.assistant_message) parts.push(`${totals.assistant_message} assistant`);
@@ -398,6 +402,10 @@ function mapConnectorKindToEventType(kind: ConnectorEventKind): EventType | null
       return "documentNote";
     case "session_started":
       return null;
+    default:
+      // Tolerant reader: an unknown / future kind is preserved as a generic
+      // note event rather than dropped.
+      return "documentNote";
   }
 }
 
