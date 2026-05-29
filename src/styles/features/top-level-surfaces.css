@@ -413,7 +413,7 @@
 }
 
 .dashboard-matrix-row:hover:not(.is-static) {
-  background: var(--base-accent-soft);
+  background: var(--base-surface-subtle);
 }
 
 .dashboard-row-name {
@@ -1510,7 +1510,7 @@
 
 .workbench-picker-row:hover {
   border-color: var(--base-border);
-  background: var(--base-accent-soft);
+  background: var(--base-surface-subtle);
 }
 
 .workbench-picker-row.is-active {
