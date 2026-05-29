@@ -1,0 +1,16 @@
+{
+  "entry": [
+    "src/main.tsx",
+    "vite.config.ts",
+    "scripts/*.cjs"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "scripts/*.cjs",
+    "vite.config.ts"
+  ],
+  "ignore": [
+    "dist/**",
+    "src-tauri/**"
+  ]
+}

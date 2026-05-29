@@ -1,10 +1,16 @@
-export type QuickPassProviderKind = "deterministic" | "ollama";
+import { z } from "zod";
+
+export type QuickPassProviderKind = "deterministic" | "ollama" | "openAiCompatible";
 
 export type QuickPassAnalysisSettings = {
   provider: QuickPassProviderKind;
   ollamaEndpoint: string;
   ollamaModel: string;
   ollamaTimeoutMs: number;
+  openAiBaseUrl: string;
+  openAiModel: string;
+  openAiApiKey: string;
+  openAiTimeoutMs: number;
   fallbackToDeterministic: boolean;
 };
 
@@ -13,49 +19,68 @@ export const DEFAULT_QUICK_PASS_SETTINGS: QuickPassAnalysisSettings = {
   ollamaEndpoint: "http://localhost:11434",
   ollamaModel: "llama3.1:8b",
   ollamaTimeoutMs: 60_000,
+  openAiBaseUrl: "http://localhost:1234/v1",
+  openAiModel: "local-model",
+  openAiApiKey: "",
+  openAiTimeoutMs: 60_000,
   fallbackToDeterministic: true,
 };
 
-const ALLOWED_PROVIDERS: QuickPassProviderKind[] = ["deterministic", "ollama"];
+const ALLOWED_PROVIDERS = [
+  "deterministic",
+  "ollama",
+  "openAiCompatible",
+] as const satisfies readonly [QuickPassProviderKind, ...QuickPassProviderKind[]];
+
+const QuickPassSettingsSchema = z.object({
+  provider: z.enum(ALLOWED_PROVIDERS).catch(DEFAULT_QUICK_PASS_SETTINGS.provider),
+  ollamaEndpoint: trimmedNonEmptyString(DEFAULT_QUICK_PASS_SETTINGS.ollamaEndpoint),
+  ollamaModel: trimmedNonEmptyString(DEFAULT_QUICK_PASS_SETTINGS.ollamaModel),
+  ollamaTimeoutMs: boundedNumber(
+    DEFAULT_QUICK_PASS_SETTINGS.ollamaTimeoutMs,
+    1_000,
+    300_000,
+  ),
+  openAiBaseUrl: trimmedNonEmptyString(DEFAULT_QUICK_PASS_SETTINGS.openAiBaseUrl),
+  openAiModel: trimmedNonEmptyString(DEFAULT_QUICK_PASS_SETTINGS.openAiModel),
+  openAiApiKey: trimmedString(DEFAULT_QUICK_PASS_SETTINGS.openAiApiKey),
+  openAiTimeoutMs: boundedNumber(
+    DEFAULT_QUICK_PASS_SETTINGS.openAiTimeoutMs,
+    1_000,
+    300_000,
+  ),
+  fallbackToDeterministic: z
+    .boolean()
+    .catch(DEFAULT_QUICK_PASS_SETTINGS.fallbackToDeterministic),
+});
 
 export function sanitizeQuickPassSettings(input: unknown): QuickPassAnalysisSettings {
-  if (!input || typeof input !== "object") return { ...DEFAULT_QUICK_PASS_SETTINGS };
-  const candidate = input as Partial<QuickPassAnalysisSettings>;
-
-  const provider: QuickPassProviderKind =
-    candidate.provider && ALLOWED_PROVIDERS.includes(candidate.provider)
-      ? candidate.provider
-      : DEFAULT_QUICK_PASS_SETTINGS.provider;
-
-  const endpoint =
-    typeof candidate.ollamaEndpoint === "string" && candidate.ollamaEndpoint.trim().length
-      ? candidate.ollamaEndpoint.trim()
-      : DEFAULT_QUICK_PASS_SETTINGS.ollamaEndpoint;
-
-  const model =
-    typeof candidate.ollamaModel === "string" && candidate.ollamaModel.trim().length
-      ? candidate.ollamaModel.trim()
-      : DEFAULT_QUICK_PASS_SETTINGS.ollamaModel;
-
-  const timeout =
-    typeof candidate.ollamaTimeoutMs === "number" && Number.isFinite(candidate.ollamaTimeoutMs)
-      ? clampNumber(candidate.ollamaTimeoutMs, 1_000, 300_000)
-      : DEFAULT_QUICK_PASS_SETTINGS.ollamaTimeoutMs;
-
-  const fallback =
-    typeof candidate.fallbackToDeterministic === "boolean"
-      ? candidate.fallbackToDeterministic
-      : DEFAULT_QUICK_PASS_SETTINGS.fallbackToDeterministic;
-
-  return {
-    provider,
-    ollamaEndpoint: endpoint,
-    ollamaModel: model,
-    ollamaTimeoutMs: timeout,
-    fallbackToDeterministic: fallback,
-  };
+  const parsed = QuickPassSettingsSchema.safeParse(input);
+  return parsed.success ? parsed.data : { ...DEFAULT_QUICK_PASS_SETTINGS };
 }
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function trimmedNonEmptyString(fallback: string) {
+  return z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    z.string().min(1).catch(fallback),
+  );
+}
+
+function trimmedString(fallback: string) {
+  return z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    z.string().catch(fallback),
+  );
+}
+
+function boundedNumber(fallback: number, min: number, max: number) {
+  return z
+    .number()
+    .finite()
+    .transform((value) => clampNumber(value, min, max))
+    .catch(fallback);
 }

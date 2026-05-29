@@ -23,7 +23,7 @@ function buildProvider(name: AnalysisProvider["name"], opts: { fail?: boolean; l
   return {
     name,
     label: opts.label ?? name,
-    requiresNetwork: name === "ollama-quick-pass-v1",
+    requiresNetwork: name !== "deterministic-heuristic-v1",
     async analyze(input): Promise<AnalysisResult> {
       if (opts.fail) throw new Error("provider boom");
       const runId = `run-${name}-${input.session.id}`;
@@ -185,6 +185,26 @@ describe("useSessionStore Quick Pass provider flow", () => {
     expect(state.analysisFallbackUsed).toBe(false);
     expect(state.analysis?.providerName).toBe("ollama-quick-pass-v1");
     expect(state.analysisProviderLabel).toBe("Ollama ok");
+  });
+
+  it("falls back to deterministic when an OpenAI-compatible provider fails and fallback is enabled", async () => {
+    seedDraftWithImport();
+    useSessionStore.getState().updateAnalysisSettings({
+      provider: "openAiCompatible",
+      fallbackToDeterministic: true,
+    });
+
+    const failingProvider = buildProvider("openai-compatible-quick-pass-v1", {
+      fail: true,
+      label: "OpenAI-compatible fail",
+    });
+    const result = await useSessionStore.getState().runQuickPass(failingProvider);
+
+    expect(result).not.toBeNull();
+    const state = useSessionStore.getState();
+    expect(state.analysisStatus).toBe("succeeded");
+    expect(state.analysisFallbackUsed).toBe(true);
+    expect(state.analysis?.providerName).toBe("deterministic-heuristic-v1");
   });
 });
 

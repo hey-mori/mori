@@ -19,6 +19,7 @@ contract is a hard rule.
 - **Subject line**
   - Starts with a `type:` prefix — one of `feat`, `fix`, `refactor`,
     `test`, `docs`, `chore`.
+  - Do not add a scope. Use `feat: ...`, never `feat(scope): ...`.
   - The summary is a lower-case, imperative-mood English phrase
     ("add …", "make …", "stop …"), no trailing period.
   - Keep it under ~70 characters.
@@ -33,6 +34,8 @@ contract is a hard rule.
 - **Never include**
   - emoji, an AI footer, `Co-Authored-By:` lines, "Generated with"
     lines, validation logs, or "no changes" filler.
+  - phase or section markers in the subject, such as `(P1)`,
+    `(P2.5)`, `[Phase 1]`, or similar milestone labels.
 
 ## Example
 

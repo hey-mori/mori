@@ -4,6 +4,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { BaseActionCluster } from "../../components/ui/BaseActionCluster";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { InfoHint } from "../../components/ui/InfoHint";
 import { Toggle } from "../../components/ui/Toggle";
 import type { MockSession } from "../../domain/types";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
@@ -200,12 +201,20 @@ export function ReportBuilderPanel({
       </section>
 
       <section className="report-builder-section">
-        <SectionHeader title="4. 개인정보 설정" hint="외부 공유 시 권장 옵션" />
+        <SectionHeader
+          title="4. 공유 안전"
+          hint="보고서에는 원문 대화 · 파일 경로 · 민감 속성을 직접 포함하지 않습니다."
+          right={
+            <InfoHint label="공유 안전 설명">
+              지금은 토글에 해당하는 섹션만 제외합니다. 개인 식별 정보 자동 마스킹은 다음 마일스톤입니다.
+            </InfoHint>
+          }
+        />
         <ul className="report-privacy-list">
           <li>
             <span>
-              <Lock size={12} aria-hidden="true" /> 클라이언트 안전 모드
-              <small>원본 텍스트 / 출처 상세 / 파일 경로 제외</small>
+              <Lock size={12} aria-hidden="true" /> 외부 공유용으로 정리
+              <small>원문 대화 · 출처 상세 · 파일 경로 제외</small>
               <ClientSafeBadge memories={acceptedMemories} />
             </span>
             <Toggle
@@ -213,30 +222,35 @@ export function ReportBuilderPanel({
               onClick={() => setPrivacyKey("clientSafe", !privacy.clientSafe)}
             />
           </li>
-          <li>
-            <span>
-              AI 대화 원문 제외
-              <small>요약과 메타데이터만 사용</small>
-            </span>
-            <Toggle
-              active={privacy.excludeRawTranscripts}
-              onClick={() => setPrivacyKey("excludeRawTranscripts", !privacy.excludeRawTranscripts)}
-            />
-          </li>
-          <li>
-            <span>
-              출처 상세 제외
-              <small>Evidence 섹션에서 소스 제목을 숨김</small>
-            </span>
-            <Toggle
-              active={privacy.excludeSourceDetails}
-              onClick={() => setPrivacyKey("excludeSourceDetails", !privacy.excludeSourceDetails)}
-            />
-          </li>
         </ul>
-        <p className="report-privacy-caveat">
-          현재 Privacy 모드는 토글에 해당하는 섹션만 제외합니다. 완전한 redaction(개인 식별 정보 자동 마스킹 등)은 다음 마일스톤입니다.
-        </p>
+        <details className="report-privacy-advanced base-disclosure">
+          <summary>
+            <span>세부 옵션</span>
+            <small>제외 범위를 직접 고르고 싶을 때</small>
+          </summary>
+          <ul className="report-privacy-list">
+            <li>
+              <span>
+                AI 대화 원문 제외
+                <small>요약과 메타데이터만 사용</small>
+              </span>
+              <Toggle
+                active={privacy.excludeRawTranscripts}
+                onClick={() => setPrivacyKey("excludeRawTranscripts", !privacy.excludeRawTranscripts)}
+              />
+            </li>
+            <li>
+              <span>
+                출처 상세 제외
+                <small>Evidence 섹션에서 소스 제목을 숨김</small>
+              </span>
+              <Toggle
+                active={privacy.excludeSourceDetails}
+                onClick={() => setPrivacyKey("excludeSourceDetails", !privacy.excludeSourceDetails)}
+              />
+            </li>
+          </ul>
+        </details>
       </section>
 
       <section className="report-builder-section">

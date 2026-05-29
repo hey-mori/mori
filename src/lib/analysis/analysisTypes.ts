@@ -13,7 +13,10 @@ import type {
   TrustLevel,
 } from "../../domain/types";
 
-export type AnalysisProviderName = "deterministic-heuristic-v1" | "ollama-quick-pass-v1";
+export type AnalysisProviderName =
+  | "deterministic-heuristic-v1"
+  | "ollama-quick-pass-v1"
+  | "openai-compatible-quick-pass-v1";
 
 export type AnalysisRunStatus = "idle" | "running" | "succeeded" | "failed";
 

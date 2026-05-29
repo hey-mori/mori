@@ -31,6 +31,13 @@ export {
   type OllamaProviderConfig,
 } from "./ollamaProvider";
 export {
+  createOpenAiCompatibleQuickPassProvider,
+  OpenAiCompatibleQuickPassProvider,
+  probeOpenAiCompatibleConnection,
+  type OpenAiCompatibleConnectionProbe,
+  type OpenAiCompatibleProviderConfig,
+} from "./openAiCompatibleProvider";
+export {
   describeAnalysisStatus,
   getAnalysisStatusTone,
   type AnalysisStatusTone,

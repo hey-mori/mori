@@ -5,8 +5,8 @@ sources and events into structured Mori records: session summary, issues,
 decisions, relationships, next actions, and a resume prompt.
 
 Quick Pass is intentionally pluggable through a typed provider boundary so the
-default deterministic heuristic, a real local LLM, and future cloud providers
-can all back the same UI flow.
+default deterministic heuristic, local LLMs, and explicit OpenAI-compatible
+endpoints can all back the same UI flow.
 
 ## What ships today
 
@@ -18,6 +18,11 @@ can all back the same UI flow.
   boundary, with strict JSON prompt templates in `promptTemplates.ts`, tolerant
   response parsing in `parseOllamaQuickPassJson`, and a `probeOllamaConnection`
   helper that calls `/api/tags` for a fast reachability check.
+- An `OpenAiCompatibleQuickPassProvider`
+  (`openai-compatible-quick-pass-v1`) for endpoints that implement
+  `/v1/chat/completions`, with optional bearer-token auth and a `/models`
+  reachability probe. This covers local OpenAI-compatible servers and explicit
+  cloud API base URLs.
 - Per-session persistence of analysis results through the existing
   `BrowserDraftRepository`
   (`saveSessionAnalysis` / `loadSessionAnalysis` / `clearSessionAnalysis`).
@@ -27,11 +32,12 @@ can all back the same UI flow.
 - `useMoriSessionStore.runQuickPass` chooses the provider from settings (or an
   explicit override), records `analysisProviderLabel` and
   `analysisFallbackUsed`, and runs the deterministic provider as a fallback
-  when Ollama fails *and* fallback is enabled.
+  when a configured LLM provider fails *and* fallback is enabled.
 - Issues / Decisions / Reports read analysis output for real sessions and fall
   back to the demo mock only when no draft is active.
-- Settings → Local AI exposes provider selection, endpoint/model/timeout,
-  fallback toggle, and an Ollama connection probe with honest status output.
+- Settings → Local AI exposes provider selection, endpoint/model/API-key/timeout
+  controls where relevant, fallback toggle, and connection probes with honest
+  status output.
 - The Quick Pass control on Sources shows a provider segmented selector, the
   active endpoint/model, a fallback checkbox, a "fallback" badge when a run
   used the deterministic fallback, and a label distinguishing
@@ -59,7 +65,7 @@ Every extracted record is marked `trustLevel: "inferred"` and `confirmed: false`
 The provider name and label are surfaced in the UI so users always know they
 are looking at heuristic output.
 
-## Ollama provider boundary
+## LLM provider boundaries
 
 `OllamaQuickPassProvider` is intentionally separated from the deterministic
 default. It takes a config (`endpoint`, `model`, `timeoutMs`) and:
@@ -73,6 +79,13 @@ default. It takes a config (`endpoint`, `model`, `timeoutMs`) and:
 - Coerces priorities and trust levels so unexpected model output cannot
   corrupt the Mori domain types.
 
+`OpenAiCompatibleQuickPassProvider` uses the same prompt and result mapping,
+but calls `{baseUrl}/chat/completions` with chat messages and optional
+`Authorization: Bearer <apiKey>`. Its probe calls `{baseUrl}/models`. If the
+base URL is a cloud API, Quick Pass sends the current session event/source
+digest to that configured external endpoint only when this provider is selected
+and the user runs Quick Pass.
+
 Configuration lives in `QuickPassAnalysisSettings`, shaped and sanitized in
 `src/lib/analysis/analysisSettings.ts`. Defaults:
 
@@ -80,20 +93,24 @@ Configuration lives in `QuickPassAnalysisSettings`, shaped and sanitized in
 - ollamaEndpoint: `http://localhost:11434`
 - ollamaModel: `llama3.1:8b`
 - ollamaTimeoutMs: `60000` (clamped 1000–300000 on save)
+- openAiBaseUrl: `http://localhost:1234/v1`
+- openAiModel: `local-model`
+- openAiApiKey: empty string
+- openAiTimeoutMs: `60000` (clamped 1000–300000 on save)
 - fallbackToDeterministic: `true`
 
-Tests do not require Ollama to be running — the deterministic provider remains
-the default. The Ollama path is exercised in tests through an injected provider
-double rather than a real network call.
+Tests do not require Ollama, LM Studio, or a cloud API to be running — the
+deterministic provider remains the default. Networked paths are exercised
+through injected provider/fetch doubles rather than real network calls.
 
 ### How fallback behaves
 
-When `provider = ollama` and `fallbackToDeterministic = true`, a failed Ollama
-run automatically re-runs through `DeterministicQuickPassProvider`. The stored
+When `provider` is an LLM-backed provider and `fallbackToDeterministic = true`,
+a failed run automatically re-runs through `DeterministicQuickPassProvider`. The stored
 result keeps `providerName = deterministic-heuristic-v1`, the store sets
 `analysisFallbackUsed = true`, and a leading note documents the swap:
 
-> Ollama provider (...) failed: <reason>. Fell back to Deterministic Quick Pass
+> <provider label> failed: <reason>. Fell back to Deterministic Quick Pass
 > (local heuristic).
 
 When fallback is disabled, the run is reported as `failed`, no analysis is
@@ -111,7 +128,8 @@ saved, and the UI surfaces the error verbatim. There is no fake success.
    failed run to surface the error instead of silently using the heuristic.
 
 Provider choice is also reflected on **Sources / Evidence** so Quick Pass can be
-flipped between heuristic and Ollama without leaving the run surface.
+flipped between heuristic, Ollama, and OpenAI-compatible endpoints without
+leaving the run surface.
 
 ## Persistence
 

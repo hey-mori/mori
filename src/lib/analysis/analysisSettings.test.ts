@@ -32,4 +32,19 @@ describe("sanitizeQuickPassSettings", () => {
     expect(sanitized.ollamaModel).toBe("qwen2.5-coder");
     expect(sanitized.fallbackToDeterministic).toBe(false);
   });
+
+  it("keeps OpenAI-compatible endpoint settings and clamps timeout", () => {
+    const sanitized = sanitizeQuickPassSettings({
+      provider: "openAiCompatible",
+      openAiBaseUrl: " https://api.example.test/v1 ",
+      openAiModel: "gpt-test",
+      openAiApiKey: " sk-test ",
+      openAiTimeoutMs: 999_999,
+    });
+    expect(sanitized.provider).toBe("openAiCompatible");
+    expect(sanitized.openAiBaseUrl).toBe("https://api.example.test/v1");
+    expect(sanitized.openAiModel).toBe("gpt-test");
+    expect(sanitized.openAiApiKey).toBe("sk-test");
+    expect(sanitized.openAiTimeoutMs).toBe(300_000);
+  });
 });

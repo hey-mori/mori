@@ -464,15 +464,13 @@ button {
   background: var(--gray-50);
 }
 
-/* Active row: a soft lavender fill — no left bar, no border accent.
-   The fill + heavier title weight is enough to mark the picked session. */
+/* Active row: a soft lavender fill — no left bar, no weight shift. */
 .sidebar-row.is-active {
   background: var(--purple-50);
 }
 
 .sidebar-row.is-active .sidebar-row-title {
   color: var(--text);
-  font-weight: 650;
 }
 
 .sidebar-row.is-active .sidebar-row-time,
@@ -14071,14 +14069,12 @@ pre {
   margin-top: 4px;
 }
 
-.report-privacy-caveat {
-  margin: 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--orange-50);
-  color: #8a4500;
-  font-size: 11px;
-  line-height: 1.55;
+.report-privacy-advanced {
+  margin-top: 12px;
+}
+
+.report-privacy-advanced .report-privacy-list {
+  margin-top: 10px;
 }
 
 .report-builder-actions {

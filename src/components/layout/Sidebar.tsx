@@ -257,7 +257,6 @@ export function Sidebar({
           onClick={() => setCurrentView("start")}
           aria-label="새 세션"
           aria-current={currentView === "start" ? "page" : undefined}
-          title="새 세션 · 대화를 가져오거나 빈 세션을 만듭니다."
         >
           <Plus size={15} aria-hidden="true" />
         </button>
@@ -272,11 +271,6 @@ export function Sidebar({
             onClick={onToggleCollapsed}
             aria-pressed={collapsed}
             aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
-            title={
-              collapsed
-                ? "사이드바를 펼쳐 세션 목록을 다시 표시"
-                : "사이드바를 접어 작업 영역을 넓힘"
-            }
           >
             {collapsed ? (
               <PanelLeftOpen size={14} aria-hidden="true" />
@@ -324,11 +318,6 @@ export function Sidebar({
             groupingMode === "recency"
               ? "프로젝트별로 묶기"
               : "최근 활동순으로 묶기"
-          }
-          title={
-            groupingMode === "recency"
-              ? "최근 활동순으로 묶음 — 누르면 프로젝트별로 전환"
-              : "프로젝트별로 묶음 — 누르면 최근 활동순으로 전환"
           }
         >
           {groupingMode === "recency" ? (
@@ -394,7 +383,6 @@ export function Sidebar({
           className="sidebar-user"
           onClick={() => openSettings()}
           aria-label={`${profile.displayName} — 프로필 및 설정 열기`}
-          title="프로필 및 설정"
         >
           <span className="sidebar-user-avatar" aria-hidden="true">
             {getProfileInitials(profile.displayName)}
@@ -480,9 +468,7 @@ function ProjectFolder({
           className="sidebar-folder-name-btn"
           onClick={onOpenProject ?? onToggle}
           aria-current={isCurrentProject ? "page" : undefined}
-          title={
-            onOpenProject ? `${fullLabel} · 프로젝트 페이지 열기` : fullLabel
-          }
+          aria-label={fullLabel}
         >
           <FolderGit2 size={12} aria-hidden="true" />
           <span className="sidebar-folder-name">{displayLabel}</span>
@@ -572,12 +558,6 @@ function SessionRow({
   hideSource?: boolean;
 }) {
   const menu = useContextMenuPosition();
-  // Tooltip carries the full title + project path so identical-title rows
-  // (multiple "Mori 앱 기획" duplicates from re-imports) can be told apart
-  // on hover without expanding the row visually.
-  const tooltip = row.sourceLabel
-    ? `${row.title}\n${row.sourceLabel}`
-    : row.title;
   const menuItems = buildSidebarSessionMenuItems({
     row,
     onOpen: onSelect,
@@ -594,7 +574,6 @@ function SessionRow({
         onContextMenu={menu.onContextMenu}
         onKeyDown={menu.onKeyDown}
         aria-current={active ? "true" : undefined}
-        title={tooltip}
       >
         <span className="sidebar-row-title">{row.title}</span>
         {row.sourceLabel && !hideSource ? (

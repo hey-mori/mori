@@ -100,6 +100,8 @@ export function SettingsView() {
   const providerLabel =
     settings.provider === "ollama"
       ? `Ollama · ${settings.ollamaModel}`
+      : settings.provider === "openAiCompatible"
+        ? `OpenAI 호환 · ${settings.openAiModel}`
       : "Deterministic Quick Pass";
 
   async function handlePickRepository() {

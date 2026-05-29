@@ -245,7 +245,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "settings.localAi.deterministic", label: "Deterministic Quick Pass", status: "implemented", description: "Local heuristic Quick Pass — no LLM." },
   { id: "settings.localAi.ollama", label: "Ollama (Local LLM)", status: "implemented", description: "Quick Pass via a user-run Ollama instance." },
   { id: "settings.localAi.lmStudio", label: "LM Studio", status: PLANNED, description: "OpenAI-compatible endpoint via LM Studio.", disabledReason: "LM Studio 제공자는 예정 마일스톤입니다." },
-  { id: "settings.localAi.openAiCompatible", label: "OpenAI-compatible endpoint", status: PLANNED, description: "Custom OpenAI-compatible local endpoint.", disabledReason: "커스텀 OpenAI 호환 제공자는 예정 마일스톤입니다." },
+  { id: "settings.localAi.openAiCompatible", label: "OpenAI-compatible endpoint", status: "implemented", description: "Custom /v1/chat/completions endpoint with optional API key." },
   { id: "settings.localAi.cloudApi", label: "Cloud API (opt-in)", status: PLANNED, description: "Explicit opt-in cloud API integration.", disabledReason: "Cloud API 연동은 명시적 옵트인이 필요한 예정 마일스톤입니다." },
   { id: "settings.storage.browserDraft", label: "Browser localStorage draft", status: "implemented", description: "Default storage for browser-mode sessions." },
   { id: "settings.storage.desktopSqlite", label: "Desktop SQLite", status: "implemented", description: "Persistent local SQLite store.", disabledReason: "데스크톱 런타임(Tauri)이 필요합니다." },

@@ -17,6 +17,14 @@ codebase keeps an honest single source of truth for which capabilities
 exist. The policy for that registry lives in
 [Feature Status](feature-status.md).
 
+Related directional notes:
+
+- [Top-Level Surface Direction Note](design/home-dashboard-workbench-direction.md)
+  records a non-binding direction for the standing navigation: a four-tab model
+  (홈 · 소스 · 대시보드 · 워크벤치) organized by axis rather than data type, with
+  the single-project page demoted to a drill-through and one consistent rule
+  for right-side inspector panels.
+
 ## Phase 0: UI Prototype
 
 Goal: establish the product experience and visual model.

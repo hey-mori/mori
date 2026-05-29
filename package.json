@@ -13,6 +13,12 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:changed": "vitest run --changed",
+    "lint": "eslint src",
+    "format:check": "prettier . --check",
+    "format": "prettier . --write",
+    "style:check": "stylelint \"src/**/*.css\"",
+    "unused": "knip",
+    "analyze": "vite build --mode analyze",
     "check:quick": "npm run check:types && npm run test:changed",
     "check:full": "npm run check:types && npm test",
     "check:release": "npm run check:types && npm test && npm run build",
@@ -32,12 +38,23 @@
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",
     "vite": "^7.2.6",
+    "zod": "^4.4.3",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tauri-apps/cli": "^2.11.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "eslint": "^10.4.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "knip": "^6.14.2",
+    "prettier": "^3.8.3",
+    "rollup-plugin-visualizer": "^7.0.1",
+    "stylelint": "^17.12.0",
+    "stylelint-config-standard": "^40.0.0",
+    "typescript-eslint": "^8.60.0",
     "vitest": "^4.1.6"
   }
 }

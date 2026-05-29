@@ -21,7 +21,6 @@ describe("Start Session engine options", () => {
     const options = buildStartSessionEngineOptions();
     for (const provider of [
       "lmStudio",
-      "openAiCompatible",
       "cloudApi",
     ] satisfies LlmProvider[]) {
       const option = options.find((candidate) => candidate.provider === provider);
@@ -41,8 +40,8 @@ describe("Start Session engine options", () => {
 
   it("coerces a planned provider back to the default selectable option", () => {
     expect(coerceStartSessionEngineProvider("lmStudio")).toBe("ollama");
-    expect(coerceStartSessionEngineProvider("openAiCompatible")).toBe("ollama");
     expect(coerceStartSessionEngineProvider("cloudApi")).toBe("ollama");
+    expect(coerceStartSessionEngineProvider("openAiCompatible")).toBe("openAiCompatible");
     expect(coerceStartSessionEngineProvider("ollama")).toBe("ollama");
   });
 });

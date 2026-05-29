@@ -83,14 +83,14 @@ export function getProviderRows(
     {
       id: "openAiCompatible",
       label: "OpenAI 호환 엔드포인트",
-      description: "vLLM / LocalAI 등 OpenAI 호환 로컬 엔드포인트.",
-      status: "planned",
-      isLocal: true,
-      privacyNote: "구현 시 사용자가 명시적으로 입력한 엔드포인트에만 요청합니다.",
-      receivesData: "(구현 시) 현재 세션의 이벤트 + 소스 텍스트",
-      setupRequirement: "다음 마일스톤",
-      selected: false,
-      canTest: false,
+      description: "LM Studio / vLLM / LocalAI / OpenAI API처럼 /v1/chat/completions를 지원하는 엔드포인트.",
+      status: "implemented",
+      isLocal: false,
+      privacyNote: "사용자가 입력한 base URL에만 요청합니다. Cloud URL을 넣으면 외부로 데이터가 전송됩니다.",
+      receivesData: "현재 세션의 이벤트 + 소스 텍스트 (요약 생성용)",
+      setupRequirement: "OpenAI 호환 base URL + 모델, 필요한 경우 API key",
+      selected: provider === "openAiCompatible",
+      canTest: true,
     },
     {
       id: "toolNativeApi",
@@ -448,7 +448,7 @@ export function getRecommendedSetupStep({
   if (providerKind === "deterministic") {
     return {
       id: "configure-ollama",
-      label: "더 풍부한 분석을 원하면 Ollama 등 로컬 LLM 제공자를 설정하세요.",
+      label: "더 풍부한 분석을 원하면 Ollama 또는 OpenAI 호환 제공자를 설정하세요.",
     };
   }
   return { id: "all-good", label: "설정이 모두 완료되었습니다. 다음 세션을 시작하세요." };

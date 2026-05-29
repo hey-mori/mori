@@ -166,7 +166,6 @@ function IssueDetail({
   const relatedDecisions = view.decisions.filter((decision) =>
     issue.relatedDecisionIds.includes(decision.id),
   );
-  const confidencePct = Math.round(issue.confidence * 100);
   const issueTrust = getTrustDisplay(issue.trustLevel);
   const canEditText = canEditStatus;
   const existingNextAction = view.nextActions.find((action) =>
@@ -180,9 +179,6 @@ function IssueDetail({
           <Badge tone={issueStatusTone(issue.status)}>{issueStatusLabels[issue.status]}</Badge>
           <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
           <Badge tone={issueTrust.tone} title={issueTrust.description}>{issueTrust.label}</Badge>
-          {issue.trustLevel === "inferred" ? (
-            <Badge tone={confidenceTone(confidencePct)}>{confidencePct}%</Badge>
-          ) : null}
           {issue.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
         </div>
         {isEditing ? (
@@ -742,11 +738,4 @@ function RelatedEventList({
       ) : null}
     </ul>
   );
-}
-
-function confidenceTone(pct: number): "green" | "blue" | "orange" | "red" {
-  if (pct >= 85) return "green";
-  if (pct >= 60) return "blue";
-  if (pct >= 40) return "orange";
-  return "red";
 }

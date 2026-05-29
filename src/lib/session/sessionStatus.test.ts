@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { deriveSessionStatus } from "./sessionStatus";
 import type { SessionState, SessionViewModel } from "../../app/sessionStore";
 import { createStaticMockDataSource } from "./timelineDataSource";
+import { DEFAULT_QUICK_PASS_SETTINGS } from "../analysis";
 
 const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   initialized: true,
@@ -14,13 +15,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   analysisError: null,
   analysisProviderLabel: null,
   analysisFallbackUsed: false,
-  analysisSettings: {
-    provider: "deterministic",
-    fallbackToDeterministic: true,
-    ollamaEndpoint: "http://localhost:11434",
-    ollamaModel: "llama3.1:8b",
-    ollamaTimeoutMs: 30000,
-  },
+  analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
   source: "demo",
   dataResetNonce: 0,
   dataSource: createStaticMockDataSource<SessionViewModel>({} as SessionViewModel),
@@ -37,7 +32,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   clearAllDataAndViewDemo: async () => {},
   runQuickPass: async () => null,
   clearAnalysis: () => {},
-  updateAnalysisSettings: () => ({ provider: "deterministic", fallbackToDeterministic: true, ollamaEndpoint: "", ollamaModel: "", ollamaTimeoutMs: 30000 }),
+  updateAnalysisSettings: () => ({ ...DEFAULT_QUICK_PASS_SETTINGS }),
   loadDesktopSession: async () => false,
   loadBrowserSession: () => false,
   renameSession: () => false,

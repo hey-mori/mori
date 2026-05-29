@@ -12,7 +12,6 @@ import type { SourceIntegration } from "../../lib/sources/sourceRegistry";
 import {
   getCaptureMethodLabel,
   getIntegrationStatusLabel,
-  getRawDataPolicyLabel,
 } from "../../lib/evidence/provenance";
 import { getTrustDisplay } from "../../lib/evidence/trust";
 import { formatDateTime } from "../../lib/formatting/time";
@@ -49,7 +48,7 @@ export function SourceDetailPanel({
         <header className="evidence-detail-header">
           <Badge tone="gray">선택된 항목 없음</Badge>
           <h3>근거 상세</h3>
-          <p>왼쪽에서 소스 카드를 선택하면 출처, 신뢰도, 원본 보존 정책이 여기 표시됩니다.</p>
+          <p>왼쪽에서 소스 카드를 선택하면 출처, 신뢰도, 관련 이벤트가 여기 표시됩니다.</p>
         </header>
         <section className="evidence-detail-section">
           <SectionHeader title="Mori가 약속하는 것" />
@@ -142,10 +141,6 @@ function SourceDetailView({
           <div>
             <dt>캡처 방식</dt>
             <dd>{display.captureMethod}</dd>
-          </div>
-          <div>
-            <dt>원본 데이터 정책</dt>
-            <dd>{display.rawDataLabel}</dd>
           </div>
           {fidelityDisplay && fidelityDisplay.shouldSurface ? (
             <div>
@@ -298,10 +293,6 @@ function IntegrationDetailView({
           <div>
             <dt>캡처 방식</dt>
             <dd>{getCaptureMethodLabel(integration.captureMode)}</dd>
-          </div>
-          <div>
-            <dt>원본 데이터 정책</dt>
-            <dd>{getRawDataPolicyLabel(integration.rawDataPolicy)}</dd>
           </div>
           <div>
             <dt>기본 신뢰도</dt>

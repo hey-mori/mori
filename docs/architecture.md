@@ -309,7 +309,7 @@ useMoriRepositoryStore (settings / verifyingId)
         getRecommendedSetupStep / statusLabelForIntegrationStatus)
   -> src/features/settings/
        SettingsView (5-tab nav + status strip + layout)
-       LocalAiCard (provider cards + Ollama probe + endpoint/model/timeout/fallback)
+       LocalAiCard (provider cards + Ollama/OpenAI-compatible probes + endpoint/model/API-key/timeout/fallback)
        PrivacyDefaultsCard (Enforced / Default on / Planned status cards — no fake toggles)
        StorageCard (browser draft + SQLite + .mori v0 + Markdown + zip-planned)
        RepositoriesCard (summary badges + verify / select / rename / remove)
@@ -321,9 +321,9 @@ useMoriRepositoryStore (settings / verifyingId)
 Every action the user can take ties back to an already-implemented store
 (`updateAnalysisSettings`, `verifyRepository`, `persistSqlite`, etc.) so
 no fake controls ship on this screen. Provider switching is restricted to
-the two implemented providers (Deterministic, Ollama); LM Studio /
-OpenAI-compatible / Cloud API render as Planned cards with disabled
-"Planned" buttons.
+the implemented providers (Deterministic, Ollama, OpenAI-compatible);
+LM Studio / Cloud API render as Planned cards with disabled "Planned"
+buttons.
 
 The recommended-next-step button on the Trust panel navigates the user
 through the seven-step setup chain (`import-source` → `run-quickpass` →

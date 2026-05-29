@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Project, Session, SourceRef, TimelineEvent } from "../../domain/types";
 import {
   createDeterministicQuickPassProvider,
+  createOpenAiCompatibleQuickPassProvider,
   extractFromInput,
   parseOllamaQuickPassJson,
 } from "./index";
@@ -223,5 +224,67 @@ describe("OllamaQuickPassProvider response parsing", () => {
 
   it("throws when the response is not a JSON object", () => {
     expect(() => parseOllamaQuickPassJson("not json at all")).toThrow();
+  });
+});
+
+describe("OpenAiCompatibleQuickPassProvider", () => {
+  it("calls /chat/completions with bearer auth and maps the JSON response", async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      calls.push({ url: String(input), init });
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  summary: {
+                    sessionSummary: "Provider integration done.",
+                    resumePrompt: "Continue testing the provider.",
+                    highlights: ["OpenAI-compatible provider returned JSON"],
+                  },
+                  issues: [{ title: "API key storage needs clear copy", priority: "medium" }],
+                  decisions: [{ title: "Use chat completions", decision: "Use /v1/chat/completions" }],
+                  nextActions: [{ title: "Run a live endpoint smoke test" }],
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    };
+
+    const provider = createOpenAiCompatibleQuickPassProvider({
+      baseUrl: "https://api.example.test/v1/",
+      model: "gpt-test",
+      apiKey: "sk-test",
+      fetchImpl,
+    });
+    const result = await provider.analyze({
+      project,
+      session,
+      sources: [source("src-openai", "manualNote", "Provider note", "evt-openai")],
+      events: [
+        event(
+          "evt-openai",
+          "documentNote",
+          "Provider note",
+          "결정: OpenAI 호환 endpoint를 Quick Pass 제공자로 연결한다.",
+          "src-openai",
+        ),
+      ],
+      now: "2026-05-12T14:00:00+09:00",
+    });
+
+    expect(calls[0]?.url).toBe("https://api.example.test/v1/chat/completions");
+    expect(calls[0]?.init?.headers).toMatchObject({
+      Authorization: "Bearer sk-test",
+      "Content-Type": "application/json",
+    });
+    expect(result.providerName).toBe("openai-compatible-quick-pass-v1");
+    expect(result.issues).toHaveLength(1);
+    expect(result.decisions).toHaveLength(1);
+    expect(result.nextActions).toHaveLength(1);
   });
 });

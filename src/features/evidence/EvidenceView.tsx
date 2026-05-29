@@ -44,7 +44,7 @@ import {
  * hang off it as evidence. So this surface does NOT offer a "add a source"
  * catalog — you cannot bolt arbitrary sources onto an agent session after the
  * fact. It is a calm, read-only ledger of what the session is built from: each
- * source with its icon, trust, capture method, and retention policy, plus the
+ * source with its icon, capture method, and related events, plus the
  * Quick Pass extraction control for a live draft. The review-before-apply
  * import gate (`ImportReviewView`) still renders here while a draft is pending.
  */
@@ -322,6 +322,8 @@ function QuickPassControl({
   const providerKindLabel =
     settings.provider === "ollama"
       ? `Ollama · ${settings.ollamaModel} (${settings.ollamaEndpoint})`
+      : settings.provider === "openAiCompatible"
+        ? `OpenAI 호환 · ${settings.openAiModel} (${settings.openAiBaseUrl})`
       : "결정론적 로컬 휴리스틱 (네트워크 없음)";
 
   return (
@@ -366,10 +368,11 @@ function QuickPassControl({
           options={[
             { id: "deterministic", label: "결정론적" },
             { id: "ollama", label: "Ollama (로컬 LLM)" },
+            { id: "openAiCompatible", label: "OpenAI 호환" },
           ]}
         />
         <small>{providerKindLabel}</small>
-        {settings.provider === "ollama" ? (
+        {settings.provider !== "deterministic" ? (
           <label className="analysis-panel-fallback">
             <input
               type="checkbox"
@@ -434,6 +437,7 @@ function QuickPassControl({
 
 function describeProviderName(name: string | null): string {
   if (name === "ollama-quick-pass-v1") return "실제 로컬 LLM";
+  if (name === "openai-compatible-quick-pass-v1") return "OpenAI 호환 LLM";
   if (name === "deterministic-heuristic-v1") return "휴리스틱 (LLM 미사용)";
   return "알 수 없는 제공자";
 }

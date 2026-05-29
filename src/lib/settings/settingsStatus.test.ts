@@ -24,23 +24,29 @@ describe("getProviderRows", () => {
     expect(rows.find((row) => row.id === "deterministic")?.selected).toBe(false);
   });
 
-  it("returns implemented status for deterministic + ollama, planned for the rest", () => {
+  it("returns implemented status for deterministic, ollama, and OpenAI-compatible", () => {
     const rows = getProviderRows(settings());
     const byId = Object.fromEntries(rows.map((row) => [row.id, row]));
     expect(byId.deterministic.status).toBe("implemented");
     expect(byId.ollama.status).toBe("implemented");
+    expect(byId.openAiCompatible.status).toBe("implemented");
     expect(byId.lmStudio.status).toBe("planned");
-    expect(byId.openAiCompatible.status).toBe("planned");
     expect(byId.toolNativeApi.status).toBe("planned");
     expect(byId.cloudApi.status).toBe("planned");
   });
 
-  it("only the Ollama row exposes canTest=true today", () => {
+  it("exposes connection tests for endpoint-backed providers", () => {
     const rows = getProviderRows(settings());
     expect(rows.find((row) => row.id === "ollama")?.canTest).toBe(true);
-    for (const row of rows.filter((row) => row.id !== "ollama")) {
+    expect(rows.find((row) => row.id === "openAiCompatible")?.canTest).toBe(true);
+    for (const row of rows.filter((row) => row.id !== "ollama" && row.id !== "openAiCompatible")) {
       expect(row.canTest).toBe(false);
     }
+  });
+
+  it("marks OpenAI-compatible as selected when configured", () => {
+    const rows = getProviderRows(settings({ provider: "openAiCompatible" }));
+    expect(rows.find((row) => row.id === "openAiCompatible")?.selected).toBe(true);
   });
 });
 
@@ -259,7 +265,7 @@ describe("getRecommendedSetupStep", () => {
         mode: "tauri-desktop",
         sqliteKind: "ok",
         hasUnsavedDraft: false,
-        providerKind: "ollama",
+        providerKind: "openAiCompatible",
       }).id,
     ).toBe("all-good");
   });

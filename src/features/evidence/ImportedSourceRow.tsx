@@ -64,15 +64,14 @@ export function ImportedSourceRow({
           <BaseMetadataLine
             items={[
               <Badge tone="purple">{display.integrationLabel}</Badge>,
-              <Badge tone={display.trustTone}>{display.trustLabel}</Badge>,
+              source.trustLevel === "inferred" ? (
+                <Badge tone={display.trustTone}>{display.trustLabel}</Badge>
+              ) : null,
               <BaseFidelityBadge fidelity={source.captureFidelity} />,
-              <Badge tone={display.rawDataTone}>{display.rawDataLabel}</Badge>,
               summaryBadge ? (
                 <Badge tone={summaryBadge.tone}>{summaryBadge.label}</Badge>
               ) : null,
-              <span>
-                {relatedEventCount} event{relatedEventCount === 1 ? "" : "s"}
-              </span>,
+              <span>관련 이벤트 {relatedEventCount}</span>,
             ]}
           />
         }

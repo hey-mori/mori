@@ -20,6 +20,7 @@ import {
   DEFAULT_QUICK_PASS_SETTINGS,
   createDeterministicQuickPassProvider,
   createOllamaQuickPassProvider,
+  createOpenAiCompatibleQuickPassProvider,
   sanitizeQuickPassSettings,
 } from "../lib/analysis";
 import type { NormalizedImportCandidate } from "../lib/import";
@@ -694,7 +695,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const primaryMessage = primaryError instanceof Error ? primaryError.message : "Quick Pass failed";
 
       if (
-        settings.provider === "ollama" &&
+        settings.provider !== "deterministic" &&
         settings.fallbackToDeterministic &&
         primary.name !== "deterministic-heuristic-v1"
       ) {
@@ -704,7 +705,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           const annotated: AnalysisResult = {
             ...fallbackResult,
             notes: [
-              `Ollama provider (${primary.label}) failed: ${primaryMessage}. Fell back to ${deterministic.label}.`,
+              `${primary.label} failed: ${primaryMessage}. Fell back to ${deterministic.label}.`,
               ...fallbackResult.notes,
             ],
           };
@@ -1126,6 +1127,14 @@ function resolveProviderFromSettings(settings: QuickPassAnalysisSettings): Analy
       endpoint: settings.ollamaEndpoint,
       model: settings.ollamaModel,
       timeoutMs: settings.ollamaTimeoutMs,
+    });
+  }
+  if (settings.provider === "openAiCompatible") {
+    return createOpenAiCompatibleQuickPassProvider({
+      baseUrl: settings.openAiBaseUrl,
+      model: settings.openAiModel,
+      apiKey: settings.openAiApiKey,
+      timeoutMs: settings.openAiTimeoutMs,
     });
   }
   return getDefaultProvider();

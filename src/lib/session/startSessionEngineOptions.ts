@@ -37,7 +37,7 @@ const ENGINE_ROWS: Array<
   {
     provider: "openAiCompatible",
     label: "OpenAI 호환 엔드포인트",
-    detail: "vLLM / LocalAI 등 직접 입력 endpoint",
+    detail: "Settings에서 base URL, 모델, API key를 구성",
     model: "local-model",
     featureId: "settings.localAi.openAiCompatible",
   },
@@ -52,7 +52,6 @@ const ENGINE_ROWS: Array<
 
 const START_SESSION_DISABLED_REASON: Partial<Record<LlmProvider, string>> = {
   lmStudio: "아직 연결되지 않았습니다.",
-  openAiCompatible: "사용자 endpoint 연결은 예정입니다.",
   cloudApi: "명시적 opt-in 설계가 필요합니다.",
 };
 

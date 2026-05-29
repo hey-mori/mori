@@ -254,7 +254,12 @@ function ReportsAnalysisNotice({
   }
 
   const providerCopy = providerLabel ?? "deterministic";
-  const providerKind = providerName === "ollama-quick-pass-v1" ? "로컬 LLM" : "휴리스틱";
+  const providerKind =
+    providerName === "ollama-quick-pass-v1"
+      ? "로컬 LLM"
+      : providerName === "openai-compatible-quick-pass-v1"
+        ? "OpenAI 호환 LLM"
+        : "휴리스틱";
   return (
     <NoticeBanner tone="success" icon={null}>
       <span className="reports-analysis-meta">
