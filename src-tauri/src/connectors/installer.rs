@@ -58,7 +58,7 @@ impl DetectEnv {
 }
 
 pub(crate) fn detect_with_env(env: &DetectEnv) -> Vec<ConnectorDetection> {
-    vec![detect_claude(env), detect_codex(env)]
+    vec![detect_claude(env), detect_codex(env), detect_antigravity(env)]
 }
 
 fn detect_claude(env: &DetectEnv) -> ConnectorDetection {
@@ -128,6 +128,49 @@ fn detect_codex(env: &DetectEnv) -> ConnectorDetection {
         hook_scope: None,
         discovered_session_count,
     }
+}
+
+fn detect_antigravity(env: &DetectEnv) -> ConnectorDetection {
+    let brain = env
+        .home
+        .as_ref()
+        .map(|h| h.join(".gemini").join("antigravity").join("brain"));
+    let tool_installed = brain.as_deref().map(Path::is_dir).unwrap_or(false);
+    let discovered_session_count = if tool_installed {
+        Some(brain.as_deref().map(count_antigravity_transcripts).unwrap_or(0))
+    } else {
+        None
+    };
+    ConnectorDetection {
+        id: "antigravity".to_string(),
+        tool_installed,
+        tool_version: None,
+        hook_installed: None,
+        hook_scope: None,
+        discovered_session_count,
+    }
+}
+
+/// Count conversations that have a readable transcript under
+/// `brain/<id>/.system_generated/logs/transcript.jsonl`. Conversations with
+/// only a protobuf store (no generated transcript) are not counted, matching
+/// the partial-capture reality.
+fn count_antigravity_transcripts(brain: &Path) -> u32 {
+    let Ok(entries) = fs::read_dir(brain) else {
+        return 0;
+    };
+    let mut count = 0;
+    for entry in entries.flatten() {
+        let transcript = entry
+            .path()
+            .join(".system_generated")
+            .join("logs")
+            .join("transcript.jsonl");
+        if transcript.is_file() {
+            count += 1;
+        }
+    }
+    count
 }
 
 fn count_jsonl_files(path: &Path) -> u32 {
@@ -261,5 +304,24 @@ mod tests {
             home: Some(temp.path().to_path_buf()),
         });
         assert_eq!(find(&results, "codex-cli").discovered_session_count, Some(0));
+    }
+
+    #[test]
+    fn antigravity_counts_only_conversations_with_a_transcript() {
+        let temp = TempDir::new().unwrap();
+        let brain = temp.path().join(".gemini").join("antigravity").join("brain");
+        // One conversation with a transcript, one with only a protobuf store.
+        let logs = brain.join("conv-aaa").join(".system_generated").join("logs");
+        std::fs::create_dir_all(&logs).unwrap();
+        std::fs::write(logs.join("transcript.jsonl"), "{}\n").unwrap();
+        std::fs::create_dir_all(brain.join("conv-bbb")).unwrap();
+        std::fs::write(brain.join("conv-bbb").join("conv.pb"), b"\x00").unwrap();
+
+        let results = detect_with_env(&DetectEnv {
+            home: Some(temp.path().to_path_buf()),
+        });
+        let ag = find(&results, "antigravity");
+        assert!(ag.tool_installed);
+        assert_eq!(ag.discovered_session_count, Some(1));
     }
 }

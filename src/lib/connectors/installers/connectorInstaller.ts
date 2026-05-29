@@ -22,7 +22,7 @@ import {
 } from "../../product-state/productState";
 
 /** Agents Mori can detect a capture connection for. */
-export type ConnectorInstallerId = "claude-code" | "codex-cli";
+export type ConnectorInstallerId = "claude-code" | "codex-cli" | "antigravity";
 
 /**
  * How a connector captures. `config-hook` installs into the tool's own
@@ -36,11 +36,19 @@ export type ConnectorInstallerMeta = {
   id: ConnectorInstallerId;
   displayName: string;
   captureModel: ConnectorCaptureModel;
+  /** Honest caveat appended to the status detail when the tool is present. */
+  captureNote?: string;
 };
 
 const REGISTRY: readonly ConnectorInstallerMeta[] = [
   { id: "claude-code", displayName: "Claude Code", captureModel: "config-hook" },
   { id: "codex-cli", displayName: "Codex CLI", captureModel: "session-discovery" },
+  {
+    id: "antigravity",
+    displayName: "Antigravity",
+    captureModel: "session-discovery",
+    captureNote: "부분 캡처 · 트랜스크립트가 있는 세션만 (protobuf 전용 대화는 제외).",
+  },
 ];
 
 export function listConnectorInstallers(): ConnectorInstallerMeta[] {
@@ -134,6 +142,7 @@ function buildOne(
   }
 
   const versionLine = result.toolVersion ? [`버전 ${result.toolVersion}`] : [];
+  const note = meta.captureNote ? [meta.captureNote] : [];
 
   if (meta.captureModel === "config-hook") {
     if (result.hookInstalled) {
@@ -142,7 +151,7 @@ function buildOne(
         ...base,
         availability: "available",
         display: getProductAvailabilityDisplay("available"),
-        detail: [...versionLine, `hook 연결됨 · ${scope}`],
+        detail: [...versionLine, `hook 연결됨 · ${scope}`, ...note],
         canInstall: false,
       };
     }
@@ -150,7 +159,7 @@ function buildOne(
       ...base,
       availability: "requiresSetup",
       display: getProductAvailabilityDisplay("requiresSetup"),
-      detail: [...versionLine, "설치됨. hook이 아직 연결되지 않았습니다."],
+      detail: [...versionLine, "설치됨. hook이 아직 연결되지 않았습니다.", ...note],
       canInstall: true,
     };
   }
@@ -162,7 +171,7 @@ function buildOne(
       ...base,
       availability: "available",
       display: getProductAvailabilityDisplay("available"),
-      detail: [...versionLine, `세션 ${count}개를 기록에서 불러올 수 있습니다.`],
+      detail: [...versionLine, `세션 ${count}개를 기록에서 불러올 수 있습니다.`, ...note],
       canInstall: false,
     };
   }
@@ -170,7 +179,7 @@ function buildOne(
     ...base,
     availability: "partial",
     display: getProductAvailabilityDisplay("partial"),
-    detail: [...versionLine, "설치됨. 불러올 세션 기록이 아직 없습니다."],
+    detail: [...versionLine, "설치됨. 불러올 세션 기록이 아직 없습니다.", ...note],
     canInstall: false,
   };
 }

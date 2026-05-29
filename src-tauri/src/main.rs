@@ -1,3 +1,4 @@
+mod antigravity;
 mod claude;
 mod codex;
 mod commands;
@@ -50,6 +51,8 @@ fn main() {
             claude::installations::discover_local_ai_tools,
             codex::sessions::discover_codex_sessions,
             codex::sessions::get_codex_session,
+            antigravity::sessions::discover_antigravity_sessions,
+            antigravity::sessions::get_antigravity_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

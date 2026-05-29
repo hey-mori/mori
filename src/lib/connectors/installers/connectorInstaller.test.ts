@@ -17,11 +17,16 @@ function find(
 }
 
 describe("connector installer registry", () => {
-  it("lists both connectors with their capture models", () => {
+  it("lists the connectors with their capture models", () => {
     const installers = listConnectorInstallers();
-    expect(installers.map((i) => i.id).sort()).toEqual(["claude-code", "codex-cli"]);
+    expect(installers.map((i) => i.id).sort()).toEqual([
+      "antigravity",
+      "claude-code",
+      "codex-cli",
+    ]);
     expect(getConnectorInstallerMeta("claude-code")?.captureModel).toBe("config-hook");
     expect(getConnectorInstallerMeta("codex-cli")?.captureModel).toBe("session-discovery");
+    expect(getConnectorInstallerMeta("antigravity")?.captureModel).toBe("session-discovery");
     expect(getConnectorInstallerMeta("unknown" as never)).toBeUndefined();
   });
 
@@ -38,12 +43,38 @@ describe("buildConnectorStatusViewModels — browser mode", () => {
       runtimeSupportsDetection: false,
       results: [],
     });
-    expect(models).toHaveLength(2);
+    expect(models).toHaveLength(3);
     for (const model of models) {
       expect(model.availability).toBe("desktopOnly");
       expect(model.canInstall).toBe(false);
       expect(model.detail.join(" ")).toContain("데스크톱");
     }
+  });
+});
+
+describe("buildConnectorStatusViewModels — Antigravity partial-capture note", () => {
+  it("appends the partial-capture caveat when sessions are discovered", () => {
+    const model = find(
+      buildConnectorStatusViewModels({
+        runtimeSupportsDetection: true,
+        results: [{ id: "antigravity", toolInstalled: true, discoveredSessionCount: 2 }],
+      }),
+      "antigravity",
+    );
+    expect(model.availability).toBe("available");
+    expect(model.canInstall).toBe(false);
+    expect(model.detail.join(" ")).toContain("부분 캡처");
+  });
+
+  it("is unavailable when Antigravity is not installed", () => {
+    const model = find(
+      buildConnectorStatusViewModels({
+        runtimeSupportsDetection: true,
+        results: [{ id: "antigravity", toolInstalled: false }],
+      }),
+      "antigravity",
+    );
+    expect(model.availability).toBe("unavailable");
   });
 });
 
