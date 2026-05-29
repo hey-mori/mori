@@ -6,7 +6,14 @@ const projects: WorkGraphProject[] = [
     key: "ng-gw",
     label: "ng-gw",
     sessions: [
-      { sessionId: "s1", title: "JWT" },
+      {
+        sessionId: "s1",
+        title: "JWT",
+        items: [
+          { id: "d1", kind: "decision", title: "게이트웨이에서 검증" },
+          { id: "i1", kind: "issue", title: "kid 미스" },
+        ],
+      },
       { sessionId: "s2", title: "라우팅" },
     ],
   },
@@ -37,13 +44,22 @@ describe("buildWorkGraph", () => {
     expect(graph.nodes.filter((n) => n.kind === "session")).toHaveLength(3);
   });
 
-  it("links the hub to each project (spoke) and each project to its sessions (twig)", () => {
+  it("links the hub to each project (spoke), projects to sessions, and sessions to items", () => {
     const graph = buildWorkGraph(projects);
     expect(graph.links.filter((l) => l.spoke)).toHaveLength(2);
-    expect(graph.links.filter((l) => !l.spoke)).toHaveLength(3);
+    // 3 project→session twigs + 2 session→item leaves.
+    expect(graph.links.filter((l) => !l.spoke)).toHaveLength(5);
     const spoke = graph.links.find((l) => l.spoke);
     expect(spoke?.source).toBe("hub");
     expect(spoke?.target).toBe("proj:ng-gw");
+  });
+
+  it("emits decision + issue item nodes linked to their session", () => {
+    const graph = buildWorkGraph(projects);
+    expect(graph.nodes.filter((n) => n.kind === "decision")).toHaveLength(1);
+    expect(graph.nodes.filter((n) => n.kind === "issue")).toHaveLength(1);
+    const leaf = graph.links.find((l) => l.id.startsWith("leaf:"));
+    expect(leaf?.source).toBe("sess:s1");
   });
 
   it("sizes project nodes by session count and carries the count label", () => {

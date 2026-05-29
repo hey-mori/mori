@@ -82,11 +82,14 @@
   opacity: 0.06;
 }
 
-/* ── Hub ────────────────────────────────────────────────────────────────── */
-.graph-hub {
+/* ── Hub — the Mori brand mark at the centre of the map ──────────────────── */
+.graph-hub-halo {
+  fill: var(--base-accent-soft);
+  opacity: 0.75;
+}
+
+.graph-hub-mark path {
   fill: var(--base-accent);
-  stroke: var(--base-surface);
-  stroke-width: 3;
 }
 
 /* ── Nodes ──────────────────────────────────────────────────────────────── */
@@ -123,6 +126,20 @@
   stroke: var(--base-accent);
 }
 
+/* Memory items — decisions (blue) and issues (amber), per the semantic colour
+   contract. A surface ring keeps them legible over the dotted background. */
+.graph-decision-dot {
+  fill: var(--blue);
+  stroke: var(--base-surface);
+  stroke-width: 1.5;
+}
+
+.graph-issue-dot {
+  fill: #d8923f;
+  stroke: var(--base-surface);
+  stroke-width: 1.5;
+}
+
 /* ── Labels ─────────────────────────────────────────────────────────────── */
 .graph-project-label {
   fill: var(--base-text);
@@ -136,7 +153,7 @@
   fill: var(--base-accent);
 }
 
-.graph-session-label {
+.graph-node-label {
   fill: var(--base-text);
   font-weight: 550;
   text-anchor: middle;
@@ -144,4 +161,41 @@
   pointer-events: none;
   paint-order: stroke;
   stroke: var(--base-surface);
+}
+
+/* ── Zoom controls — a quiet floating cluster, bottom-right ──────────────── */
+.graph-controls {
+  position: absolute;
+  right: var(--base-space-4);
+  bottom: var(--base-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  overflow: hidden;
+  box-shadow: var(--base-shadow-card);
+}
+
+.graph-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: var(--base-surface);
+  color: var(--base-text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.graph-controls button + button {
+  border-top: 1px solid var(--base-border);
+}
+
+.graph-controls button:hover {
+  background: var(--base-surface-subtle);
+  color: var(--base-accent);
 }

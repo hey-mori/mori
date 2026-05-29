@@ -1,21 +1,31 @@
 /**
  * Work graph topology — a pure derivation of nodes + links.
  *
- * An Obsidian-style "graph view" of the user's work: a central hub, one node
- * per project, and the project's recent sessions linked to it. This module is
- * pure and deterministic — it builds the *topology* (which nodes exist, how
- * they link, how big they are, and a stable seed position) but does NOT run the
- * physics. The view layer relaxes the seed with a force simulation, so the
- * layout animates without this module touching a clock or random source.
+ * An Obsidian-style "graph view" of the user's work: a central hub, project
+ * nodes, the sessions linked to them, and the concrete memory items (decisions,
+ * issues) hanging off each session. This module is pure and deterministic — it
+ * builds the *topology* (which nodes exist, how they link, their size, and a
+ * stable seed position) but does NOT run the physics. The view relaxes the seed
+ * with a force simulation, so the layout animates without a clock or randomness.
  *
- * Seeds are normalised to the unit square (0..1, centre 0.5/0.5) so the view
- * can map them onto any canvas size. Link `distance` is a fraction of the
- * canvas's smaller side, i.e. the desired edge length once relaxed.
+ * Seeds are normalised to the unit square (0..1, centre 0.5/0.5). Link
+ * `distance` is a fraction of the canvas's smaller side — the desired edge
+ * length once relaxed.
  */
+
+export type WorkGraphItemKind = "decision" | "issue";
+
+export type WorkGraphItem = {
+  id: string;
+  kind: WorkGraphItemKind;
+  title: string;
+};
 
 export type WorkGraphSession = {
   sessionId: string;
   title: string;
+  /** Reviewed memory items that hang off the session as leaf nodes. */
+  items?: WorkGraphItem[];
 };
 
 export type WorkGraphProject = {
@@ -24,7 +34,7 @@ export type WorkGraphProject = {
   sessions: WorkGraphSession[];
 };
 
-export type WorkGraphNodeKind = "hub" | "project" | "session";
+export type WorkGraphNodeKind = "hub" | "project" | "session" | WorkGraphItemKind;
 
 export type WorkGraphNode = {
   id: string;
@@ -35,9 +45,9 @@ export type WorkGraphNode = {
   /** Normalised seed position in the unit square (0..1). */
   seedX: number;
   seedY: number;
-  /** Project a node belongs to — set on project + session nodes. */
+  /** Project a node belongs to — set on project / session / item nodes. */
   projectKey?: string;
-  /** Session id (session nodes only) — the click target. */
+  /** Session id — set on session nodes and on item nodes (their owner). */
   sessionId?: string;
   /** Session count (project nodes only) — drives radius + a count label. */
   count?: number;
@@ -47,7 +57,7 @@ export type WorkGraphLink = {
   id: string;
   source: string;
   target: string;
-  /** Hub→project spoke (true) vs project→session twig (false). */
+  /** Hub→project spoke (true) vs every deeper link (false). */
   spoke: boolean;
   /** Desired relaxed length as a fraction of the canvas's smaller side. */
   distance: number;
@@ -61,11 +71,14 @@ export type WorkGraph = {
 export type BuildWorkGraphOptions = {
   /** Cap the sessions plotted per project so dense projects stay legible. */
   maxSessionsPerProject?: number;
+  /** Cap the items plotted per session. */
+  maxItemsPerSession?: number;
 };
 
 const DEG = Math.PI / 180;
 const SPOKE_DISTANCE = 0.26;
-const TWIG_DISTANCE = 0.1;
+const TWIG_DISTANCE = 0.11;
+const LEAF_DISTANCE = 0.05;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -73,14 +86,16 @@ function clamp(value: number, min: number, max: number): number {
 
 /**
  * Build the work-graph topology. Projects seed on a ring around the hub; each
- * project's sessions seed on a short arc along the project's outward radial.
- * Returns just the hub when there are no projects.
+ * project's sessions seed on a short arc along the project's outward radial; and
+ * each session's items seed in a small cluster just past it. Returns just the
+ * hub when there are no projects.
  */
 export function buildWorkGraph(
   projects: WorkGraphProject[],
   options: BuildWorkGraphOptions = {},
 ): WorkGraph {
   const maxSessions = options.maxSessionsPerProject ?? 8;
+  const maxItems = options.maxItemsPerSession ?? 4;
 
   const nodes: WorkGraphNode[] = [
     { id: "hub", kind: "hub", label: "", r: 11, seedX: 0.5, seedY: 0.5 },
@@ -91,7 +106,8 @@ export function buildWorkGraph(
   if (count === 0) return { nodes, links };
 
   const projectRing = count <= 2 ? 0.18 : 0.26;
-  const sessionRing = 0.13;
+  const sessionRing = 0.14;
+  const itemRing = 0.06;
 
   projects.forEach((project, index) => {
     const baseDeg = -90 + (360 / count) * index;
@@ -119,20 +135,20 @@ export function buildWorkGraph(
       distance: SPOKE_DISTANCE,
     });
 
-    const shown = project.sessions.slice(0, maxSessions);
-    const m = shown.length;
+    const shownSessions = project.sessions.slice(0, maxSessions);
+    const m = shownSessions.length;
     const arcDeg = m <= 1 ? 0 : Math.min(150, 26 * (m - 1));
-    shown.forEach((session, j) => {
-      const offset = m <= 1 ? 0 : (j - (m - 1) / 2) * (arcDeg / (m - 1));
-      const rad = (baseDeg + offset) * DEG;
-      const sx = px + sessionRing * Math.cos(rad);
-      const sy = py + sessionRing * Math.sin(rad);
+    shownSessions.forEach((session, j) => {
+      const sessionDeg = baseDeg + (m <= 1 ? 0 : (j - (m - 1) / 2) * (arcDeg / (m - 1)));
+      const sessionRad = sessionDeg * DEG;
+      const sx = px + sessionRing * Math.cos(sessionRad);
+      const sy = py + sessionRing * Math.sin(sessionRad);
       const sessionNodeId = `sess:${session.sessionId}`;
       nodes.push({
         id: sessionNodeId,
         kind: "session",
         label: session.title,
-        r: 6,
+        r: 7,
         seedX: clamp(sx, 0.04, 0.96),
         seedY: clamp(sy, 0.04, 0.96),
         projectKey: project.key,
@@ -144,6 +160,34 @@ export function buildWorkGraph(
         target: sessionNodeId,
         spoke: false,
         distance: TWIG_DISTANCE,
+      });
+
+      const items = (session.items ?? []).slice(0, maxItems);
+      const k = items.length;
+      const itemArc = k <= 1 ? 0 : Math.min(120, 34 * (k - 1));
+      items.forEach((item, t) => {
+        const itemDeg = sessionDeg + (k <= 1 ? 0 : (t - (k - 1) / 2) * (itemArc / (k - 1)));
+        const itemRad = itemDeg * DEG;
+        const ix = sx + itemRing * Math.cos(itemRad);
+        const iy = sy + itemRing * Math.sin(itemRad);
+        const itemNodeId = `${item.kind}:${item.id}`;
+        nodes.push({
+          id: itemNodeId,
+          kind: item.kind,
+          label: item.title,
+          r: 4.5,
+          seedX: clamp(ix, 0.03, 0.97),
+          seedY: clamp(iy, 0.03, 0.97),
+          projectKey: project.key,
+          sessionId: session.sessionId,
+        });
+        links.push({
+          id: `leaf:${session.sessionId}:${itemNodeId}`,
+          source: sessionNodeId,
+          target: itemNodeId,
+          spoke: false,
+          distance: LEAF_DISTANCE,
+        });
       });
     });
   });

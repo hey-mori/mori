@@ -8,6 +8,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import { Maximize2, Minus, Plus } from "lucide-react";
+import { MORI_STAR_PATH } from "../../components/brand/MoriLogo";
 import type { WorkGraphLink, WorkGraphNode } from "../../lib/graph/workGraph";
 
 /**
@@ -50,6 +52,13 @@ const MAX_ZOOM = 3;
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
+
+const DOT_CLASS: Record<string, string> = {
+  project: "graph-project-dot",
+  session: "graph-session-dot",
+  decision: "graph-decision-dot",
+  issue: "graph-issue-dot",
+};
 
 export function GraphCanvas({
   nodes,
@@ -130,6 +139,9 @@ export function GraphCanvas({
     }));
     simRef.current = sim;
     byIdRef.current = new Map(sim.map((n) => [n.id, n]));
+    // Paint the seed layout immediately so the graph is visible even before the
+    // first animation frame (rAF can be throttled when the tab is backgrounded).
+    setVersion((v) => (v + 1) % 1_000_000);
     reheat(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, size.w, size.h]);
@@ -169,9 +181,9 @@ export function GraphCanvas({
           d2 = dx * dx + dy * dy;
         }
         const d = Math.sqrt(d2);
-        const range = Math.max(a.r + b.r + 28, 168);
+        const range = Math.max(a.r + b.r + 26, 132);
         if (d < range) {
-          const force = (range - d) * 0.1;
+          const force = (range - d) * 0.07;
           const ux = dx / d;
           const uy = dy / d;
           a.fx += ux * force;
@@ -214,18 +226,18 @@ export function GraphCanvas({
         n.vy = 0;
         continue;
       }
-      n.vx = n.vx * 0.82 + n.fx * alpha;
-      n.vy = n.vy * 0.82 + n.fy * alpha;
+      n.vx = n.vx * 0.86 + n.fx * alpha;
+      n.vy = n.vy * 0.86 + n.fy * alpha;
       const speed = Math.hypot(n.vx, n.vy);
-      if (speed > 24) {
-        n.vx *= 24 / speed;
-        n.vy *= 24 / speed;
+      if (speed > 18) {
+        n.vx *= 18 / speed;
+        n.vy *= 18 / speed;
       }
       n.x = clamp(n.x + n.vx, n.r + 4, w - n.r - 4);
       n.y = clamp(n.y + n.vy, n.r + 4, h - n.r - 4);
     }
 
-    alphaRef.current = alpha * 0.97;
+    alphaRef.current = alpha * 0.985;
     setVersion((v) => (v + 1) % 1_000_000);
 
     if (alphaRef.current > 0.02 || dragRef.current) {
@@ -293,7 +305,7 @@ export function GraphCanvas({
       const drag = dragRef.current;
       if (drag && node && !drag.moved) {
         if (node.kind === "project" && node.projectKey) onOpenProject(node.projectKey);
-        else if (node.kind === "session" && node.sessionId) onOpenSession(node.sessionId);
+        else if (node.sessionId) onOpenSession(node.sessionId);
       }
       if (drag) {
         const n = byIdRef.current.get(drag.id);
@@ -329,9 +341,32 @@ export function GraphCanvas({
     });
   }, []);
 
+  // Zoom controls — scale around the canvas centre; reset re-frames + re-settles.
+  const zoomBy = useCallback(
+    (factor: number) => {
+      const cx = size.w / 2;
+      const cy = size.h / 2;
+      setTransform((t) => {
+        const k = clamp(t.k * factor, MIN_ZOOM, MAX_ZOOM);
+        return {
+          k,
+          tx: cx - ((cx - t.tx) / t.k) * k,
+          ty: cy - ((cy - t.ty) / t.k) * k,
+        };
+      });
+    },
+    [size.w, size.h],
+  );
+
+  const resetView = useCallback(() => {
+    setTransform({ k: 1, tx: 0, ty: 0 });
+    reheat(0.5);
+  }, [reheat]);
+
   const sim = simRef.current;
   const fontFor = (px: number) => px / transform.k;
   const showSessionLabels = transform.k >= 1.45;
+  const HUB_STAR = 34;
 
   const isActive = (nodeId: string): boolean => {
     if (!hovered) return true;
@@ -381,11 +416,21 @@ export function GraphCanvas({
 
           {sim.map((node) => {
             if (node.kind === "hub") {
-              return <circle key={node.id} className="graph-hub" cx={node.x} cy={node.y} r={node.r} />;
+              const s = HUB_STAR / 64;
+              return (
+                <g key={node.id} className="graph-hub-mark">
+                  <circle className="graph-hub-halo" cx={node.x} cy={node.y} r={HUB_STAR * 0.62} />
+                  <path
+                    d={MORI_STAR_PATH}
+                    transform={`translate(${node.x - 32 * s} ${node.y - 32 * s}) scale(${s})`}
+                  />
+                </g>
+              );
             }
             const active = isActive(node.id);
             const dim = hovered != null && !active;
             const isProject = node.kind === "project";
+            const showLabel = isProject || node.id === hovered || (showSessionLabels && active);
             return (
               <g
                 key={node.id}
@@ -398,36 +443,45 @@ export function GraphCanvas({
                 onPointerEnter={() => setHovered(node.id)}
                 onPointerLeave={() => setHovered(null)}
               >
-                <circle
-                  className={isProject ? "graph-project-dot" : "graph-session-dot"}
-                  cx={node.x}
-                  cy={node.y}
-                  r={node.r}
-                />
-                {isProject ? (
-                  <text
-                    className="graph-project-label"
-                    x={node.x}
-                    y={node.y + node.r + fontFor(15)}
-                    style={{ fontSize: fontFor(13) }}
-                  >
-                    {node.label}
-                  </text>
-                ) : node.id === hovered || (showSessionLabels && active) ? (
-                  <text
-                    className="graph-session-label"
-                    x={node.x}
-                    y={node.y - node.r - fontFor(7)}
-                    style={{ fontSize: fontFor(11.5), strokeWidth: fontFor(3.5) }}
-                  >
-                    {node.label}
-                  </text>
+                <circle className={DOT_CLASS[node.kind]} cx={node.x} cy={node.y} r={node.r} />
+                {showLabel ? (
+                  isProject ? (
+                    <text
+                      className="graph-project-label"
+                      x={node.x}
+                      y={node.y + node.r + fontFor(15)}
+                      style={{ fontSize: fontFor(13) }}
+                    >
+                      {node.label}
+                    </text>
+                  ) : (
+                    <text
+                      className="graph-node-label"
+                      x={node.x}
+                      y={node.y - node.r - fontFor(7)}
+                      style={{ fontSize: fontFor(11), strokeWidth: fontFor(3.5) }}
+                    >
+                      {node.label}
+                    </text>
+                  )
                 ) : null}
               </g>
             );
           })}
         </g>
       </svg>
+
+      <div className="graph-controls">
+        <button type="button" aria-label="확대" onClick={() => zoomBy(1.2)}>
+          <Plus size={15} aria-hidden="true" />
+        </button>
+        <button type="button" aria-label="축소" onClick={() => zoomBy(1 / 1.2)}>
+          <Minus size={15} aria-hidden="true" />
+        </button>
+        <button type="button" aria-label="처음 보기로" onClick={resetView}>
+          <Maximize2 size={14} aria-hidden="true" />
+        </button>
+      </div>
     </div>
   );
 }

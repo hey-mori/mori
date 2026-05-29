@@ -42,7 +42,9 @@ export function MoriLogo({
   );
 }
 
-const MORI_STAR_PATH =
+/** The brand mark's guiding-star path, on a 0 0 64 64 viewBox. Exported so other
+ *  surfaces (e.g. the work-graph hub) can render the mark inline as SVG. */
+export const MORI_STAR_PATH =
   "M32 14.125 C34.5 14.125 35.375 16.4375 36.5 21.0625 " +
   "C37.875 26.75 39.875 28.875 45.125 30.3125 " +
   "C49.1875 31.375 50.375 32.3125 50.375 33.5 " +

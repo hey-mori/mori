@@ -9,10 +9,22 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
+import {
+  mergeDemoSessionSummaries,
+  isDemoSessionId,
+} from "../../lib/demo/demoSessionFixtures";
+import { buildDemoSessionContent } from "../../lib/demo/demoSessionContent";
 import { buildSessionsBrowserModel } from "../../lib/workspace/sessionsBrowser";
-import { buildWorkGraph, type WorkGraphProject } from "../../lib/graph/workGraph";
+import {
+  buildWorkGraph,
+  type WorkGraphItem,
+  type WorkGraphProject,
+} from "../../lib/graph/workGraph";
 import { GraphCanvas } from "./GraphCanvas";
+
+/** Items hung off each session node — a few decisions then open issues. */
+const MAX_DECISIONS_PER_SESSION = 3;
+const MAX_ISSUES_PER_SESSION = 2;
 
 /**
  * Graph view (experimental) — a full-bleed, Obsidian-style map of the user's
@@ -64,6 +76,7 @@ export function GraphView() {
       sessions: group.sessions.map((session) => ({
         sessionId: session.sessionId,
         title: session.title,
+        items: gatherSessionItems(session.sessionId, repository),
       })),
     }));
     const unsourced = new Set(
@@ -106,4 +119,41 @@ function shortLabel(label: string): string {
   const parts = label.split(/[\\/]/).filter(Boolean);
   const tail = parts.length > 0 ? parts[parts.length - 1]! : label;
   return tail.length <= 18 ? tail : `${tail.slice(0, 17)}…`;
+}
+
+/**
+ * The memory items that hang off a session node: a few decisions then a couple
+ * of open issues. Reads the demo fixture for demo sessions and the stored
+ * memory body otherwise; a session with no reviewed work contributes nothing.
+ */
+function gatherSessionItems(
+  sessionId: string,
+  repository: ReturnType<typeof createBrowserDraftRepository>,
+): WorkGraphItem[] {
+  let decisions: { id: string; title: string }[] = [];
+  let issues: { id: string; title: string; status: string }[] = [];
+
+  if (isDemoSessionId(sessionId)) {
+    const demo = buildDemoSessionContent(sessionId);
+    decisions = demo?.decisions ?? [];
+    issues = demo?.issues ?? [];
+  } else {
+    try {
+      const body = repository.loadSessionMemoryBody(sessionId);
+      decisions = body?.decisions ?? [];
+      issues = body?.issues ?? [];
+    } catch {
+      decisions = [];
+      issues = [];
+    }
+  }
+
+  const items: WorkGraphItem[] = [];
+  for (const decision of decisions.slice(0, MAX_DECISIONS_PER_SESSION)) {
+    items.push({ id: decision.id, kind: "decision", title: decision.title });
+  }
+  for (const issue of issues.filter((i) => i.status === "open").slice(0, MAX_ISSUES_PER_SESSION)) {
+    items.push({ id: issue.id, kind: "issue", title: issue.title });
+  }
+  return items;
 }
