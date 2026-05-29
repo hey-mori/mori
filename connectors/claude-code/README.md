@@ -11,7 +11,11 @@ strictly opt-in.
 
 - Subscribes to Claude Code's hook system on your machine.
 - Maps each hook event to a **typed** Mori connector event (not an opaque
-  blob) and appends one JSON line to `~/.mori/connectors/claude-code/<date>.jsonl`.
+  blob) and appends one JSON line to
+  `~/.mori/connectors/claude-code/<date>-<session-id>.jsonl`. The file is
+  keyed by Claude session id so concurrent Claude Code processes (an
+  interactive session, the autonomous dev loop, another repo) write to
+  separate files instead of interleaving and corrupting one shared file.
 - Stores **summary metadata only** (`privacy.rawDataPolicy: "summary_only"`).
   The raw prompt text, tool input, and tool output are never written.
 
@@ -69,7 +73,8 @@ summaries.
    `.claude/settings.json` for one project), replacing `ABSOLUTE_PATH` with the
    real path to the launcher.
 3. Run any Claude Code session you want recorded. The hook appends one typed
-   JSON line per event to `~/.mori/connectors/claude-code/<date>.jsonl`.
+   JSON line per event to
+   `~/.mori/connectors/claude-code/<date>-<session-id>.jsonl`.
 4. In Mori, open **Evidence Hub → Connector JSONL**, click **Refresh inbox**
    (desktop) and pick the file, or paste its contents (browser). Mori
    normalizes the events through Import Review before they reach the session.
