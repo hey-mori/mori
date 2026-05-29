@@ -111,11 +111,11 @@ pub fn get_claude_code_session(session_path: String) -> Result<ClaudeCodeSession
 // ─── helpers ───────────────────────────────────────────────────────────────
 
 pub(crate) fn claude_code_projects_dir() -> Result<PathBuf, String> {
-    let home = std::env::var_os("USERPROFILE")
-        .or_else(|| std::env::var_os("HOME"))
-        .map(PathBuf::from)
-        .ok_or_else(|| "Home directory is not set; cannot locate Claude Code sessions.".to_string())?;
-    Ok(home.join(".claude").join("projects"))
+    // Honors $CLAUDE_CONFIG_DIR, else ~/.claude/projects (see agent_paths).
+    crate::agent_paths::require(
+        crate::agent_paths::claude_projects_dir(),
+        "Claude Code sessions",
+    )
 }
 
 pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>, String> {

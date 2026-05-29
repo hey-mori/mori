@@ -88,11 +88,10 @@ pub fn read_connector_jsonl_file(
 // ─── pure helpers (tested independently) ───────────────────────────────────
 
 fn resolve_inbox_root() -> Result<PathBuf, String> {
-    let home = std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
-        .map(PathBuf::from)
-        .ok_or_else(|| "Unable to determine home directory for Mori connector inbox.".to_string())?;
-    Ok(home.join(".mori").join("connectors"))
+    // Resolve via the shared, USERPROFILE-first home logic so the reader and
+    // the Python hook writer (which uses USERPROFILE on Windows) never look at
+    // different homes when HOME and USERPROFILE diverge (e.g. under git-bash).
+    crate::agent_paths::require(crate::agent_paths::mori_inbox_dir(), "Mori connector inbox")
 }
 
 pub(crate) fn list_inbox_at(root: &Path) -> Result<ConnectorInboxListing, String> {

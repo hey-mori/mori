@@ -86,11 +86,11 @@ pub fn get_antigravity_session(session_path: String) -> Result<AntigravitySessio
 }
 
 pub(crate) fn antigravity_brain_dir() -> Result<PathBuf, String> {
-    let home = std::env::var_os("USERPROFILE")
-        .or_else(|| std::env::var_os("HOME"))
-        .map(PathBuf::from)
-        .ok_or_else(|| "Home directory is not set; cannot locate Antigravity sessions.".to_string())?;
-    Ok(home.join(".gemini").join("antigravity").join("brain"))
+    // Honors $ANTIGRAVITY_HOME, else ~/.gemini/antigravity/brain (see agent_paths).
+    crate::agent_paths::require(
+        crate::agent_paths::antigravity_brain_dir(),
+        "Antigravity sessions",
+    )
 }
 
 pub(crate) fn list_sessions_at(brain_root: &Path) -> Result<Vec<AntigravitySessionMeta>, String> {

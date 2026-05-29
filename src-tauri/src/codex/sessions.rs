@@ -74,11 +74,8 @@ pub fn get_codex_session(session_path: String) -> Result<CodexSessionDetail, Str
 }
 
 pub(crate) fn codex_sessions_dir() -> Result<PathBuf, String> {
-    let home = std::env::var_os("USERPROFILE")
-        .or_else(|| std::env::var_os("HOME"))
-        .map(PathBuf::from)
-        .ok_or_else(|| "Home directory is not set; cannot locate Codex sessions.".to_string())?;
-    Ok(home.join(".codex").join("sessions"))
+    // Honors $CODEX_HOME, else ~/.codex/sessions (see agent_paths).
+    crate::agent_paths::require(crate::agent_paths::codex_sessions_dir(), "Codex sessions")
 }
 
 pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<CodexSessionMeta>, String> {

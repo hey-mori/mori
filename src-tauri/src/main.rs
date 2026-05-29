@@ -1,3 +1,4 @@
+mod agent_paths;
 mod antigravity;
 mod claude;
 mod codex;
