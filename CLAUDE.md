@@ -10,6 +10,8 @@ Read these before changing code or committing.
   the development loop runs.
 - Read [`docs/design/mori-brand-identity-reference.md`](docs/design/mori-brand-identity-reference.md)
   before any brand / icon / colour change.
+- Read [`docs/frontend-architecture.md`](docs/frontend-architecture.md) before
+  any CSS or styling change.
 
 ## Commit messages — non-negotiable
 
@@ -69,9 +71,29 @@ to every UI change (they come from repeated direct feedback):
   reads "3시간 전", not "3h ago"). The canonical status vocabulary in the
   product-state model is the only deliberate exception.
 
+## Frontend CSS
+
+CSS lives in a layered hierarchy, all ordered by `src/styles/globals.css`:
+tokens, theme, reset, app-shell, the component layer
+(`src/components/ui/*.css`), then the feature sheets
+(`src/styles/features/*.css`). See
+[`docs/frontend-architecture.md`](docs/frontend-architecture.md) for the full
+map and migration rules.
+
+- Do not recreate a single monolithic stylesheet. New reusable component CSS
+  goes in the component layer; new screen CSS goes in the owning feature sheet.
+- Source order is load-bearing. Before relocating a rule, confirm the move is
+  cascade-safe: the block is contiguous, and every external reference to its
+  selectors is either a higher-specificity override (wins regardless of order)
+  or absent. Verify with `npm run style:check`, `npm run build`, and a browser
+  check that the affected screens render unchanged.
+
 ## Do not
 
 - Push to the remote unless explicitly asked.
+- Delete a screen or surface when it stops being used. Prefer to retire it:
+  unwire it from navigation but keep the code reachable (a route or the command
+  palette). Only delete code that is provably dead, never a whole feature view.
 - Skip hooks (`--no-verify`) or bypass signing.
 - Use `git rebase -i` or other interactive git commands; the harness has
   no terminal.
