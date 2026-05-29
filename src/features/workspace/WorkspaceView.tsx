@@ -236,7 +236,7 @@ export function WorkspaceView() {
             realSessionCount={model.realSessionCount}
             filtered={model.visibleCount !== model.totalCount}
           />
-          <div className="workspace-groups">
+          <div className="workspace-groups base-scroll">
             {createdProjectRows.length > 0 ? (
               <section className="workspace-group" aria-label="생성한 프로젝트">
                 <header className="workspace-group-head">

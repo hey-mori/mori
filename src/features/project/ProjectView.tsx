@@ -309,7 +309,7 @@ export function ProjectView() {
               }
             />
           ) : (
-            <ul className="project-session-list">
+            <ul className="project-session-list base-scroll">
               {sessionRows.map((row) => (
                 <ProjectSessionRowItem
                   key={row.sessionId}

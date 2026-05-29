@@ -327,15 +327,24 @@
   flex-direction: column;
 }
 
+/* `.base-section-body` is a grid by default; that stretched the session list
+   to fill the rail and divided the height across rows. Make it a plain flex
+   column so the list itself becomes the bounded scroller (below), keeping the
+   bordered list box static while its rows scroll inside it. */
 .project-sessions .base-section-body {
   min-height: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The list is the scroll region: it fills the rail, keeps each row a fixed
+   height (never dividing the space), and scrolls with the shared `base-scroll`
+   styling once the sessions overflow. */
+.project-sessions .project-session-list {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  /* `.base-section-body` is a grid by default; that stretched the session
-     list to fill the rail and divided the height across rows (and clipped the
-     last row once it overflowed). A plain block keeps the list at its natural
-     height so every row stays a fixed height and the rail scrolls cleanly. */
-  display: block;
 }
 
 /* ─── Project synthesis (이 프로젝트 종합) ────────────────────────────────
@@ -450,7 +459,8 @@
     max-height: none;
   }
 
-  .project-sessions .base-section-body {
+  .project-sessions .project-session-list {
+    flex: 0 0 auto;
     overflow: visible;
   }
 

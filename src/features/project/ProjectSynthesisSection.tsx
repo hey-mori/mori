@@ -3,7 +3,6 @@ import { ArrowRight, CheckCircle2, CircleAlert, ListTodo } from "lucide-react";
 import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
 import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 import { BaseSection } from "../../components/ui/BaseSection";
-import { InfoHint } from "../../components/ui/InfoHint";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import type { ProjectSynthesis, SynthItem } from "../../lib/project/projectSynthesis";
 
@@ -78,19 +77,11 @@ export function ProjectSynthesisSection({
     <BaseSection
       className="project-synthesis"
       title="이 프로젝트 종합"
-      actions={
-        synthesis.hasContent ? (
-          <InfoHint label="종합 설명">
-            이 프로젝트의 모든 세션에서 미해결 이슈·다음 할 일·확정된 결정을 모았습니다.
-            카드를 누르면 그 분류의 항목이 펼쳐지고, 항목을 누르면 해당 세션으로 이동합니다.
-          </InfoHint>
-        ) : undefined
-      }
       ariaLabel="이 프로젝트 종합"
     >
       {!synthesis.hasContent ? (
         <p className="settings-empty">
-          세션을 분석하면 핵심 결정·미해결·다음 할 일이 이 프로젝트 전체에서 여기로 모입니다.
+          세션을 분석하면 핵심 결정·미해결·다음 할 일이 여기에 정리됩니다.
         </p>
       ) : (
         <>
