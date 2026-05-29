@@ -1,0 +1,39 @@
+:root {
+  /* Color + shadow tokens live in styles/tokens.css (light) and are
+   * remapped per-theme by styles/theme.css (forest, nightLake). Keeping
+   * the values out of this :root block fixes a cascade bug: when this
+   * file is imported after theme.css, a redeclared :root rule wins on
+   * equal specificity and silently strands the dark theme.
+   *
+   * Anything that belongs to every theme - typography defaults,
+   * font-rendering - still lives here. */
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  /* Explicit base size - without this the app inherited the browser
+     default 16px, which made every surface read oversized. */
+  font-size: var(--base-font-size-md);
+  line-height: var(--base-line-normal);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}

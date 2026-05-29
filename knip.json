@@ -1,16 +1,7 @@
 {
-  "entry": [
-    "src/main.tsx",
-    "vite.config.ts",
-    "scripts/*.cjs"
-  ],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    "scripts/*.cjs",
-    "vite.config.ts"
-  ],
-  "ignore": [
-    "dist/**",
-    "src-tauri/**"
-  ]
+  "entry": ["src/main.tsx", "vite.config.ts", "scripts/*.cjs"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/*.cjs", "vite.config.ts"],
+  "ignore": ["dist/**", "src-tauri/**"],
+  "ignoreDependencies": ["tailwindcss"],
+  "include": ["files", "dependencies", "devDependencies", "duplicates"]
 }

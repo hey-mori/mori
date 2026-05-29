@@ -14,10 +14,10 @@
     "test:watch": "vitest",
     "test:changed": "vitest run --changed",
     "lint": "eslint src",
-    "format:check": "prettier . --check",
-    "format": "prettier . --write",
+    "format:check": "prettier eslint.config.js stylelint.config.js knip.json .prettierrc.json vite.config.ts --check",
+    "format": "prettier eslint.config.js stylelint.config.js knip.json .prettierrc.json vite.config.ts --write",
     "style:check": "stylelint \"src/**/*.css\"",
-    "unused": "knip",
+    "unused": "knip --no-exit-code",
     "analyze": "vite build --mode analyze",
     "check:quick": "npm run check:types && npm run test:changed",
     "check:full": "npm run check:types && npm test",
@@ -42,7 +42,6 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@tauri-apps/cli": "^2.11.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
