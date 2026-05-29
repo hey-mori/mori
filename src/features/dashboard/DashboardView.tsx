@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { ArrowUpRight, BarChart3, FolderGit2, Search } from "lucide-react";
+import {
+  ArrowUpRight,
+  BarChart3,
+  CheckCircle2,
+  Clock3,
+  FolderGit2,
+  Layers,
+  Search,
+  TriangleAlert,
+  Zap,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
@@ -264,29 +275,38 @@ function KpiDeck({ status, totals }: { status: DashboardStatus; totals: Dashboar
         </div>
       </div>
 
-      <KpiTile label="프로젝트" value={String(totals.projectCount)} />
-      <KpiTile label="세션" value={String(totals.sessionCount)} sub={`분석 ${totals.analyzedSessions}`} />
+      <KpiTile icon={FolderGit2} label="프로젝트" value={String(totals.projectCount)} />
       <KpiTile
+        icon={Layers}
+        label="세션"
+        value={String(totals.sessionCount)}
+        sub={`분석 ${totals.analyzedSessions}`}
+      />
+      <KpiTile
+        icon={Zap}
         label="토큰"
         value={formatCount(totals.tokenTotal)}
         sub={totals.tokenTotal > 0 ? "입력+출력" : "기록 없음"}
       />
       <KpiTile
+        icon={status.attentionCount > 0 ? TriangleAlert : CheckCircle2}
         label="검토 대기"
         value={String(status.attentionCount)}
         tone={status.attentionCount > 0 ? "warning" : "success"}
       />
-      <KpiTile label="최근 7일" value={String(status.recentSessions)} sub="세션" />
+      <KpiTile icon={Clock3} label="최근 7일" value={String(status.recentSessions)} sub="세션" />
     </section>
   );
 }
 
 function KpiTile({
+  icon: Icon,
   label,
   value,
   sub,
   tone = "neutral",
 }: {
+  icon: LucideIcon;
   label: string;
   value: string;
   sub?: string;
@@ -294,6 +314,9 @@ function KpiTile({
 }) {
   return (
     <div className={`dashboard-kpi tone-${tone}`}>
+      <span className="dashboard-kpi-icon" aria-hidden="true">
+        <Icon size={15} />
+      </span>
       <span className="dashboard-kpi-label">{label}</span>
       <strong>{value}</strong>
       {sub ? <span className="dashboard-kpi-sub">{sub}</span> : null}
@@ -337,7 +360,10 @@ function TokenDistribution({ projects, total }: { projects: ProjectStatus[]; tot
           <span className="dashboard-bar-track" aria-hidden="true">
             <i style={{ width: `${Math.max(fraction(row.value, max) * 100, 4)}%` }} />
           </span>
-          <strong>{Math.round((row.value / total) * 100)}%</strong>
+          <span className="dashboard-bar-val">
+            <strong>{Math.round((row.value / total) * 100)}%</strong>
+            <em>{formatCount(row.value)}</em>
+          </span>
         </div>
       ))}
     </div>
@@ -352,14 +378,17 @@ function ActivityTrend({ series }: { series: number[] }) {
   return (
     <div className="dashboard-trend">
       <div className="dashboard-trend-cols" aria-hidden="true">
-        {series.map((value, index) => (
-          <span
-            key={index}
-            className={value > 0 ? "is-filled" : ""}
-            style={{ height: `${value > 0 ? Math.max((value / max) * 100, 8) : 2}%` }}
-            title={`${index === series.length - 1 ? "이번 주" : `${series.length - 1 - index}주 전`} · ${value}개`}
-          />
-        ))}
+        {series.map((value, index) => {
+          const now = index === series.length - 1;
+          return (
+            <span
+              key={index}
+              className={`${value > 0 ? "is-filled" : ""}${now ? " is-now" : ""}`.trim()}
+              style={{ height: `${value > 0 ? Math.max((value / max) * 100, 8) : 2}%` }}
+              title={`${now ? "이번 주" : `${series.length - 1 - index}주 전`} · ${value}개`}
+            />
+          );
+        })}
       </div>
       <div className="dashboard-trend-caption">
         <span>{series.length}주 전</span>
