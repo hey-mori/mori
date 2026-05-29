@@ -450,16 +450,6 @@
   white-space: nowrap;
 }
 
-.dashboard-row-go {
-  flex-shrink: 0;
-  color: var(--base-text-muted);
-  opacity: 0;
-}
-
-.dashboard-matrix-row:hover .dashboard-row-go {
-  opacity: 1;
-}
-
 .dashboard-cell {
   display: grid;
   gap: 4px;

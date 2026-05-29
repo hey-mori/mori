@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  ArrowUpRight,
   BarChart3,
   CheckCircle2,
   Clock3,
@@ -470,7 +469,6 @@ function ProjectRow({
           <strong>{project.name}</strong>
           <small>{project.lastActiveIso ? formatRelative(project.lastActiveIso) : "활동 없음"}</small>
         </span>
-        {drillable ? <ArrowUpRight size={13} className="dashboard-row-go" aria-hidden="true" /> : null}
       </span>
 
       <MetricCell value={project.sessionCount} fraction={project.coverageScore} tone="info" />
