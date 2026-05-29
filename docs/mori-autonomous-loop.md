@@ -280,6 +280,17 @@ only — no phase numbers.
   records the two capture models, the file-vs-internal-DB boundary, per-agent
   reality, the installer layer, and the OpenCode (keep wrapper) / Antigravity
   (partial discovery) decisions.
+- Agent-connection completion: Antigravity session discovery (partial,
+  read-only) plus its agent tile; an OS-aware in-app Claude hook setup guide; a
+  safe install/uninstall engine and a one-click Connect modal (소스 → 연결
+  설정). The standalone connection-status panel was retired in favor of the
+  modal (detection adapter kept).
+- Capture extensibility hardening: a central env-aware path resolver
+  (`agent_paths`, honoring CODEX_HOME / CLAUDE_CONFIG_DIR with a USERPROFILE-first
+  home), atomic single-syscall hook append, and tolerant-reader handling so an
+  unknown connector event kind is preserved as a generic event rather than
+  dropped. Detection and install honor the same overrides as discovery. Details
+  in `docs/connectors/connection-architecture.md` (§5, §7).
 
 **Open priority (highest first):**
 

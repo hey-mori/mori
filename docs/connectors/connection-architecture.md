@@ -127,6 +127,11 @@ lives in one place. Real-world fixes that must not regress:
   processes run concurrently (interactive session, the autonomous dev loop,
   other repos); a shared file interleaved appends and corrupted lines. One
   file per session id also matches the "one conversation = one session" model.
+- **Atomic append.** Each hook event is written with a single `O_APPEND`
+  `os.write`, not a buffered text write, so concurrent hook processes within
+  one session (parallel tool calls) cannot interleave a partial line. POSIX
+  gives small-append atomicity on its own; the single-syscall write makes it
+  hold on Windows too.
 - **BOM-free, ASCII-safe wrappers.** The Codex/OpenCode PowerShell wrappers
   write UTF-8 **without** a BOM (PS 5.1 `Add-Content -Encoding utf8` adds
   one, corrupting line 1 for strict readers) and build the `·` separator from
@@ -173,7 +178,34 @@ Antigravity (`~/.gemini/antigravity/`) stores authoritative conversations as
   parser must skip unparseable lines and never crash, and the UI must say the
   capture is partial.
 
-## 7. Shipped this pass (changelog pointer)
+## 7. Extensibility and robustness
+
+Formats, names, OS conventions, and filesystem layouts change. The capture
+layer is built to bend, not break, when they do. There is no off-the-shelf
+library for "tolerate an unknown agent's format drift"; the answer is two
+disciplines we apply ourselves.
+
+**Env-aware path resolution.** [`agent_paths.rs`](../../src-tauri/src/agent_paths.rs)
+resolves every agent's data root in one place: it honors the env override each
+tool supports (Codex `CODEX_HOME`, Claude `CLAUDE_CONFIG_DIR`), falls back to
+the conventional `~/.X` path, and uses a USERPROFILE-first home so the reader
+and the Python hook writer agree on Windows when `HOME` and `USERPROFILE`
+differ. Discovery, the connector inbox, and the installer (both detection and
+the install target) resolve through it, so a relocated or renamed root is a
+one-line change, not a hunt across modules. These agents do not use XDG /
+Known Folder conventions, so a generic dirs crate would point at the wrong
+place; the literal-path + env resolver is deliberate.
+
+**Tolerant reader (Postel's law).** Parsers are liberal in what they accept:
+fields are read by name with fallbacks (never positional), an unparseable line
+is skipped rather than failing the whole file, and missing fields default. The
+connector schema is an *open* model, so an event `kind` this version does not
+recognize is preserved as a generic note event rather than rejected, and a
+newer connector script does not lose events against an older Mori. The Codex
+and Antigravity transcript parsers are `serde_json::Value`-based and
+skip-on-error for the same reason.
+
+## 8. Shipped this pass (changelog pointer)
 
 - Claude hook UTF-8 + per-session-file fixes; Codex wrapper BOM/`·`/git
   fixes (`fix: harden windows connector capture for korean and concurrency`).
@@ -193,9 +225,19 @@ Antigravity (`~/.gemini/antigravity/`) stores authoritative conversations as
 - The standalone connection-status panel was tried then retired (`refactor:
   retire the connector status panel from the sources page`); the detection
   adapter it used is kept and now backs the Connect modal.
+- Atomic single-syscall hook append (`fix: append claude hook events
+  atomically to avoid line corruption`).
+- Centralized env-aware path resolution and detection/install honoring the
+  same overrides (`feat: centralize env-aware agent path resolution`,
+  `feat: make claude detection and install honor CLAUDE_CONFIG_DIR`).
+- Tolerant-reader handling of unknown connector event kinds (`feat: tolerate
+  unknown connector event kinds for forward compatibility`).
+- Ignore python bytecode from the connector scripts (`chore: ignore python
+  bytecode from the connector scripts`).
 
-Validation status: TS suite green (1801 tests) and `tsc` clean across the
-repo; the Rust install/uninstall + discovery parsers are unit-tested. The one
+Validation status: TS suite green (connector suite 211 tests) and `tsc` clean
+across the repo; the Rust side is green (115 tests) covering the path
+resolver, install/uninstall safe-merge, and the discovery parsers. The one
 unverified path is the desktop runtime end-to-end (the modal's real
 `settings.json` write + resource-path resolve, and discovery reading
 `~/.codex` / `~/.gemini` through the running Tauri app), which needs a
