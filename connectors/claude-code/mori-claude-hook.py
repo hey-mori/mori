@@ -57,6 +57,10 @@ def _basename(path: str) -> str:
     return os.path.basename(path.rstrip("/\\")) or path
 
 
+def _safe_filename(value: str) -> str:
+    return "".join(c if (c.isalnum() or c in "-_") else "_" for c in value)[:80]
+
+
 def map_payload(payload: dict, occurred_at: str) -> dict | None:
     """Translate a Claude Code hook payload into a Mori ConnectorEvent dict.
 
@@ -151,7 +155,11 @@ def main() -> int:
     parser.add_argument("--out", default=default_out, help="Output directory for dated JSONL files.")
     args, _ = parser.parse_known_args()
 
-    raw = sys.stdin.read()
+    # Claude Code emits UTF-8 JSON on stdin. Read raw bytes and decode
+    # UTF-8 explicitly so a non-ASCII payload (Korean prompts, paths) is not
+    # mangled by the OS locale codepage (e.g. cp949 on Korean Windows),
+    # which would otherwise make json.loads fail and drop the event silently.
+    raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
     if not raw.strip():
         return 0
     try:
@@ -167,7 +175,17 @@ def main() -> int:
 
     out_dir = os.path.expanduser(args.out)
     os.makedirs(out_dir, exist_ok=True)
-    out_file = os.path.join(out_dir, datetime.now(timezone.utc).strftime("%Y-%m-%d") + ".jsonl")
+    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # One file per Claude session id. Several Claude Code processes run
+    # concurrently (an interactive session, the autonomous dev loop, other
+    # repos) and each hook event is its own short-lived process; if they all
+    # appended to one shared dated file the lines would interleave and
+    # corrupt. Keying the file by session id gives each session its own file
+    # and matches Mori's "one conversation = one session" model. Mori's inbox
+    # reads every *.jsonl in the directory.
+    session = event.get("sessionId")
+    safe = _safe_filename(session) if isinstance(session, str) and session else None
+    out_file = os.path.join(out_dir, f"{date}-{safe}.jsonl" if safe else f"{date}.jsonl")
     with open(out_file, "a", encoding="utf-8") as handle:
         handle.write(json.dumps(event, ensure_ascii=False) + "\n")
     return 0
