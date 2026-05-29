@@ -1,7 +1,7 @@
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 import { buildStaleMemoryProposals } from "../project-memory/staleMemoryReview";
 import { buildContradictionProposals } from "../project-memory/contradictionReview";
-import type { MoriNotification } from "./notification";
+import type { CompanionNotification } from "./notification";
 
 /**
  * Surface memory-health proposals as Mori 노트 notifications.
@@ -28,13 +28,13 @@ export type BuildMemoryHealthNotificationsInput = {
 
 export function buildMemoryHealthNotifications(
   input: BuildMemoryHealthNotificationsInput,
-): MoriNotification[] {
+): CompanionNotification[] {
   const stale = buildStaleMemoryProposals(input.acceptedMemories, {
     now: input.now,
   });
   const contradictions = buildContradictionProposals(input.acceptedMemories);
 
-  const notifications: MoriNotification[] = [];
+  const notifications: CompanionNotification[] = [];
 
   if (stale.length > 0) {
     notifications.push({

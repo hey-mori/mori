@@ -5,13 +5,13 @@ import type {
   DatabaseStatus,
   ListSessionsOutput,
   LoadSessionSnapshotInput,
-  MoriSqliteRepository,
+  SqliteRepository,
   PersistSessionSnapshotInput,
   PersistSessionSnapshotOutput,
 } from "./repositoryContracts";
 import { validateSqlitePersistenceSnapshot } from "./snapshotValidation";
 
-export class DesktopSqliteRepository implements MoriSqliteRepository {
+export class DesktopSqliteRepository implements SqliteRepository {
   constructor(private readonly commands: TauriSqliteCommands = tauriCommands) {}
 
   initializeDatabase(): Promise<DatabaseStatus> {

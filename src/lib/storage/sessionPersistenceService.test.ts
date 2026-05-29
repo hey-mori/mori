@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import {
   SessionPersistenceService,
   type SqliteDesktopCommands,
@@ -44,7 +44,7 @@ function stubDesktopCommands(overrides: Partial<SqliteDesktopCommands> = {}): Sq
       issuesPersisted: snapshot.issues.length,
       decisionsPersisted: snapshot.decisions.length,
     }),
-    loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(moriMockSession),
+    loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(mockSession),
     clearAllSqliteData: async () => ({
       sessionsDeleted: 0,
       projectsDeleted: 0,
@@ -54,15 +54,15 @@ function stubDesktopCommands(overrides: Partial<SqliteDesktopCommands> = {}): Sq
     listSqliteSessions: async () => ({
       sessions: [
         {
-          sessionId: moriMockSession.session.id,
-          projectId: moriMockSession.project.id,
-          title: moriMockSession.session.title,
-          projectName: moriMockSession.project.name,
-          startedAt: moriMockSession.session.startedAt,
-          endedAt: moriMockSession.session.endedAt,
-          status: moriMockSession.session.status,
-          eventCount: moriMockSession.events.length,
-          sourceCount: moriMockSession.sources.length,
+          sessionId: mockSession.session.id,
+          projectId: mockSession.project.id,
+          title: mockSession.session.title,
+          projectName: mockSession.project.name,
+          startedAt: mockSession.session.startedAt,
+          endedAt: mockSession.session.endedAt,
+          status: mockSession.session.status,
+          eventCount: mockSession.events.length,
+          sourceCount: mockSession.sources.length,
         },
       ],
     }),
@@ -85,7 +85,7 @@ describe("SessionPersistenceService", () => {
     expect(status.sqliteAvailable).toBe(false);
 
     await expect(service.initializeDesktop()).rejects.toThrow("Tauri");
-    await expect(service.saveSessionToDesktop(moriMockSession)).rejects.toThrow("Tauri");
+    await expect(service.saveSessionToDesktop(mockSession)).rejects.toThrow("Tauri");
     await expect(service.listDesktopSessions()).rejects.toThrow("Tauri");
     await expect(service.loadSessionFromDesktop("sess-x")).rejects.toThrow("Tauri");
   });
@@ -111,17 +111,17 @@ describe("SessionPersistenceService", () => {
       commands,
     });
 
-    const persisted = await service.saveSessionToDesktop(moriMockSession);
-    expect(persisted.eventsPersisted).toBe(moriMockSession.events.length);
-    expect(calls).toEqual([moriMockSession.session.id]);
+    const persisted = await service.saveSessionToDesktop(mockSession);
+    expect(persisted.eventsPersisted).toBe(mockSession.events.length);
+    expect(calls).toEqual([mockSession.session.id]);
 
     const sessions = await service.listDesktopSessions();
-    expect(sessions[0]?.sessionId).toBe(moriMockSession.session.id);
-    expect(sessions[0]?.eventCount).toBe(moriMockSession.events.length);
+    expect(sessions[0]?.sessionId).toBe(mockSession.session.id);
+    expect(sessions[0]?.eventCount).toBe(mockSession.events.length);
 
-    const loaded = await service.loadSessionFromDesktop(moriMockSession.session.id);
-    expect(loaded.session.session.id).toBe(moriMockSession.session.id);
-    expect(loaded.imports.length).toBe(moriMockSession.sources.length);
+    const loaded = await service.loadSessionFromDesktop(mockSession.session.id);
+    expect(loaded.session.session.id).toBe(mockSession.session.id);
+    expect(loaded.imports.length).toBe(mockSession.sources.length);
     expect(loaded.imports[0]?.events.length).toBeGreaterThanOrEqual(0);
   });
 

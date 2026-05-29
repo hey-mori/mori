@@ -8,12 +8,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriThemeStore } from "../../app/themeStore";
+import { useThemeStore } from "../../app/themeStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import {
   buildCommands,
@@ -41,20 +41,20 @@ export function CommandPalette({
 }: {
   onToggleSidebarCollapsed?: () => void;
 }) {
-  const open = useMoriAppStore((state) => state.commandPaletteOpen);
-  const close = useMoriAppStore((state) => state.closeCommandPalette);
-  const currentView = useMoriAppStore((state) => state.currentView);
-  const navigate = useMoriAppStore((state) => state.navigate);
-  const openSession = useMoriAppStore((state) => state.openSession);
-  const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
-  const loadBrowserSession = useMoriSessionStore(
+  const open = useAppStore((state) => state.commandPaletteOpen);
+  const close = useAppStore((state) => state.closeCommandPalette);
+  const currentView = useAppStore((state) => state.currentView);
+  const navigate = useAppStore((state) => state.navigate);
+  const openSession = useAppStore((state) => state.openSession);
+  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
+  const loadBrowserSession = useSessionStore(
     (state) => state.loadBrowserSession,
   );
-  const activeSessionId = useMoriSessionStore(
+  const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
-  const currentTheme = useMoriThemeStore((state) => state.theme);
-  const setTheme = useMoriThemeStore((state) => state.setTheme);
+  const currentTheme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
 
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);

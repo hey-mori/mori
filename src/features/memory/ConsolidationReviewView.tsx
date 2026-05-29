@@ -2,16 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BrainCircuit, X } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseSection } from "../../components/ui/BaseSection";
 import { ActionBar } from "../../components/layout/ActionBar";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriSqliteStore } from "../../app/sqliteStore";
-import { useMoriAppStore } from "../../app/store";
+import { useSqliteStore } from "../../app/sqliteStore";
+import { useAppStore } from "../../app/store";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import type {
   StoredAcceptedProjectMemory,
@@ -97,13 +97,13 @@ export function ConsolidationReviewView({
   embedded = false,
   onBack,
 }: { embedded?: boolean; onBack?: () => void } = {}) {
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
+  const setCurrentView = useAppStore((state) => state.setCurrentView);
 
   // Mirror MemoryView's data pipeline. Pure derivation; cheap.
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const sqliteSessions = useMoriSqliteStore((state) => state.sessions);
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const sqliteSessions = useSqliteStore((state) => state.sessions);
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const browserSessionSummaries = useMemo<StoredSessionSummary[]>(
     () => repository.listStoredSessions(),
@@ -409,7 +409,7 @@ export function ConsolidationReviewView({
             const entries = grouped.get(kind) ?? [];
             if (entries.length === 0) return null;
             return (
-              <MoriSection
+              <BaseSection
                 key={kind}
                 title={
                   <span className="consolidation-group-title">
@@ -439,7 +439,7 @@ export function ConsolidationReviewView({
                     />
                   ))}
                 </div>
-              </MoriSection>
+              </BaseSection>
             );
           })}
           {/* When the page is empty the ConsolidationEmptyHero above

@@ -3,7 +3,7 @@ import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
 import {
   buildCompanionSignalFeed,
@@ -36,10 +36,10 @@ export function useCompanionSignals(): {
   isDemo: boolean;
   acceptedMemories: StoredAcceptedProjectMemory[];
 } {
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const imports = useMoriSessionStore((state) => state.imports);
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const imports = useSessionStore((state) => state.imports);
 
   const projectId = view.project.id || "default";
   const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);

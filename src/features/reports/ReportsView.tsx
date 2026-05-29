@@ -33,9 +33,9 @@ import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import { formatDateTime } from "../../lib/formatting/time";
 import { ResumePromptCard, type ResumePromptOrigin } from "./ResumePromptCard";
 import { ReportBuilderPanel } from "./ReportBuilderPanel";
@@ -43,18 +43,18 @@ import { ReportBuilderPanel } from "./ReportBuilderPanel";
 export function ReportsView() {
   // `navigate` routes legacy session-surface keys (timeline / evidence) into
   // the unified Session Detail workspace; other keys pass through unchanged.
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const analysis = useMoriSessionStore((state) => state.analysis);
-  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
-  const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
-  const analysisError = useMoriSessionStore((state) => state.analysisError);
-  const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
-  const imports = useMoriSessionStore((state) => state.imports);
+  const setCurrentView = useAppStore((state) => state.navigate);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const analysis = useSessionStore((state) => state.analysis);
+  const analysisStatus = useSessionStore((state) => state.analysisStatus);
+  const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
+  const analysisError = useSessionStore((state) => state.analysisError);
+  const runQuickPass = useSessionStore((state) => state.runQuickPass);
+  const imports = useSessionStore((state) => state.imports);
 
   useEffect(() => {
     if (!initialized) hydrate();

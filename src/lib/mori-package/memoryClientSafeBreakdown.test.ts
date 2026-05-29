@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 import {
   buildClientSafeMoriPackage,
@@ -102,7 +102,7 @@ describe("buildMemoryClientSafeBreakdown", () => {
       }),
     ];
     const breakdown = buildMemoryClientSafeBreakdown(memories);
-    const fullPkg = createMoriPackageFromSession(moriMockSession, {
+    const fullPkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: memories,
       auditTrail: [],
     });

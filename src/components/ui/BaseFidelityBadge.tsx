@@ -3,10 +3,10 @@ import {
   describeCaptureFidelity,
   getCaptureFidelityDisplay,
 } from "../../lib/evidence/fidelityDisplay";
-import { MoriStatusBadge } from "./MoriStatusBadge";
-import { moriTooltipProps } from "./MoriTooltip";
+import { BaseStatusBadge } from "./BaseStatusBadge";
+import { baseTooltipProps } from "./BaseTooltip";
 
-export type MoriFidelityBadgeProps = {
+export type BaseFidelityBadgeProps = {
   fidelity?: CaptureFidelity;
 };
 
@@ -16,15 +16,15 @@ export type MoriFidelityBadgeProps = {
  * fidelity renders nothing, so this is a quiet honesty signal rather than
  * chrome on every row. The reasons surface as a hover tooltip.
  */
-export function MoriFidelityBadge({ fidelity }: MoriFidelityBadgeProps) {
+export function BaseFidelityBadge({ fidelity }: BaseFidelityBadgeProps) {
   if (!fidelity) return null;
   const display = getCaptureFidelityDisplay(fidelity);
   if (!display.shouldSurface) return null;
   return (
-    <MoriStatusBadge tone={display.tone}>
-      <span {...moriTooltipProps(describeCaptureFidelity(fidelity), "status")}>
+    <BaseStatusBadge tone={display.tone}>
+      <span {...baseTooltipProps(describeCaptureFidelity(fidelity), "status")}>
         {display.label}
       </span>
-    </MoriStatusBadge>
+    </BaseStatusBadge>
   );
 }

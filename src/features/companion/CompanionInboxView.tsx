@@ -4,11 +4,11 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
-import { useMoriAppStore } from "../../app/store";
-import { useMoriSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
+import { useSessionStore } from "../../app/sessionStore";
 import { useNotificationReadStore } from "../../app/notificationReadStore";
-import type { MoriNotificationActionTarget } from "../../lib/notifications/notification";
-import { useMoriNotifications } from "./useMoriNotifications";
+import type { CompanionNotificationActionTarget } from "../../lib/notifications/notification";
+import { useNotifications } from "./useNotifications";
 import { NotificationFeedList } from "./NotificationFeedList";
 
 /**
@@ -21,11 +21,11 @@ import { NotificationFeedList } from "./NotificationFeedList";
  * shared `NotificationFeedList`, so this page and the drawer never drift.
  */
 export function CompanionInboxView() {
-  const { notifications, isDemo } = useMoriNotifications();
-  const navigate = useMoriAppStore((state) => state.navigate);
-  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
-  const openSession = useMoriAppStore((state) => state.openSession);
-  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
+  const { notifications, isDemo } = useNotifications();
+  const navigate = useAppStore((state) => state.navigate);
+  const openReviewItem = useAppStore((state) => state.openReviewItem);
+  const openSession = useAppStore((state) => state.openSession);
+  const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
 
   const readIds = useNotificationReadStore((state) => state.readIds);
   const markRead = useNotificationReadStore((state) => state.markRead);
@@ -36,7 +36,7 @@ export function CompanionInboxView() {
     [notifications, readIds],
   );
 
-  function dispatch(target: MoriNotificationActionTarget, id: string): void {
+  function dispatch(target: CompanionNotificationActionTarget, id: string): void {
     markRead(id);
     if (!target) return;
     if (target.kind === "view") navigate(target.view);

@@ -9,15 +9,15 @@
  * subscribe to one helper. Both legacy helpers remain importable and are
  * tested independently — this module composes them, it doesn't replace them.
  *
- * The snapshot intentionally does **not** import the React `useMoriSessionStore`
+ * The snapshot intentionally does **not** import the React `useSessionStore`
  * hook. Components hand in the relevant state slices so the helper can be
  * tested without React.
  */
-import type { MoriMockSession, Session } from "../domain/types";
+import type { MockSession, Session } from "../domain/types";
 import { deriveSessionTiming, type SessionTimingSnapshot } from "../lib/session/sessionTiming";
 import { deriveSessionStatus, type SessionStatusLabels } from "../lib/session/sessionStatus";
-import { moriMockSession } from "../domain/mock-data";
-import type { MoriSessionState } from "./sessionStore";
+import { mockSession } from "../domain/mock-data";
+import type { SessionState } from "./sessionStore";
 
 export type SessionStorageScope =
   | "demo"
@@ -61,15 +61,15 @@ const STORAGE_SCOPE_LABEL: Record<SessionStorageScope, string> = {
  * `demoSession` override so tests can use a deterministic baseline.
  */
 export function deriveSessionLifecycle(
-  state: MoriSessionState,
+  state: SessionState,
   options: {
-    view?: MoriMockSession;
+    view?: MockSession;
     demoSession?: Session;
     now?: number;
     viewCounts?: Parameters<typeof deriveSessionStatus>[1];
   } = {},
 ): SessionLifecycleSnapshot {
-  const demoSession = options.demoSession ?? moriMockSession.session;
+  const demoSession = options.demoSession ?? mockSession.session;
   const timing = deriveSessionTiming({
     draft: state.draft,
     demoSession,

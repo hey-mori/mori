@@ -25,8 +25,8 @@ import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
-import { useMoriSessionStore } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
+import { useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
 import { isTauriRuntime } from "../../lib/desktop";
 import { formatDateTime } from "../../lib/formatting/time";
 import {
@@ -130,11 +130,11 @@ function flattenProviders(groups: ReturnType<typeof buildSourceProviderGroups>):
 const ANCHOR_AGENT_IDS = new Set(["claude", "codex", "opencode"]);
 
 export function SourcesView() {
-  const draft = useMoriSessionStore((state) => state.draft);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const requestEvidenceImport = useMoriAppStore((state) => state.requestEvidenceImport);
-  const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
-  const requestStartRecords = useMoriAppStore((state) => state.requestStartRecords);
+  const draft = useSessionStore((state) => state.draft);
+  const imports = useSessionStore((state) => state.imports);
+  const requestEvidenceImport = useAppStore((state) => state.requestEvidenceImport);
+  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
+  const requestStartRecords = useAppStore((state) => state.requestStartRecords);
   const desktop = isTauriRuntime();
   const hasActiveSession = Boolean(draft);
 

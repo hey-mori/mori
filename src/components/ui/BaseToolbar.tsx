@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
-export type MoriToolbarProps = HTMLAttributes<HTMLDivElement> & {
+export type BaseToolbarProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
   /** Optional aria-label for the toolbar landmark. */
   label?: string;
@@ -10,7 +10,7 @@ export type MoriToolbarProps = HTMLAttributes<HTMLDivElement> & {
  * Calm horizontal toolbar. Adopters arrange their controls inside; the
  * primitive only handles spacing + the landmark role.
  */
-export function MoriToolbar({ children, label, className = "", ...rest }: MoriToolbarProps) {
+export function BaseToolbar({ children, label, className = "", ...rest }: BaseToolbarProps) {
   return (
     <div
       className={`mori-toolbar ${className}`.trim()}
@@ -24,8 +24,8 @@ export function MoriToolbar({ children, label, className = "", ...rest }: MoriTo
 }
 
 /**
- * Spacer that pushes neighbours apart inside a MoriToolbar.
+ * Spacer that pushes neighbours apart inside a BaseToolbar.
  */
-export function MoriToolbarSpacer() {
+export function BaseToolbarSpacer() {
   return <span className="mori-toolbar-spacer" aria-hidden="true" />;
 }

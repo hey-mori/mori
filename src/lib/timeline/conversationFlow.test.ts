@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MoriMockSession, TimelineEvent } from "../../domain/types";
+import type { MockSession, TimelineEvent } from "../../domain/types";
 import {
   conversationTurnSegments,
   describeConversationContext,
@@ -60,7 +60,7 @@ describe("isConversationSession", () => {
 });
 
 describe("describeConversationContext", () => {
-  function session(overrides: Partial<MoriMockSession["session"]> = {}): MoriMockSession {
+  function session(overrides: Partial<MockSession["session"]> = {}): MockSession {
     return {
       project: { id: "p1", name: "Mori", description: "", createdAt: "", updatedAt: "" },
       session: {

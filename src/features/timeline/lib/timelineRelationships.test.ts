@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../../domain/mock-data";
+import { mockSession } from "../../../domain/mock-data";
 import type { Relationship } from "../../../domain/types";
 import { buildTimelineRelationshipViewModels } from "./timelineRelationships";
 
 describe("buildTimelineRelationshipViewModels", () => {
   it("returns one entry per relationship touching the selected event", () => {
-    const target = moriMockSession.events[0]!;
-    const sibling = moriMockSession.events[1]!;
+    const target = mockSession.events[0]!;
+    const sibling = mockSession.events[1]!;
     const rel: Relationship = {
       id: "rel-test-1",
       fromId: target.id,
@@ -27,7 +27,7 @@ describe("buildTimelineRelationshipViewModels", () => {
   });
 
   it("marks the relationship as focused when the other endpoint is in the focus set", () => {
-    const target = moriMockSession.events[0]!;
+    const target = mockSession.events[0]!;
     const other = "evt-other";
     const rel: Relationship = {
       id: "rel-test-2",
@@ -48,7 +48,7 @@ describe("buildTimelineRelationshipViewModels", () => {
   });
 
   it("returns an empty list when no relationships touch the selected event", () => {
-    const target = moriMockSession.events[0]!;
+    const target = mockSession.events[0]!;
     const unrelated: Relationship = {
       id: "rel-unrelated",
       fromId: "x",

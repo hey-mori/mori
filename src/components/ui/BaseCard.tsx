@@ -1,12 +1,12 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
-export type MoriCardVariant = "default" | "subtle" | "accent" | "outline";
-export type MoriCardElement = "section" | "article" | "div" | "aside";
+export type BaseCardVariant = "default" | "subtle" | "accent" | "outline";
+export type BaseCardElement = "section" | "article" | "div" | "aside";
 
-export type MoriCardProps = HTMLAttributes<HTMLElement> & {
+export type BaseCardProps = HTMLAttributes<HTMLElement> & {
   children: ReactNode;
-  variant?: MoriCardVariant;
-  as?: MoriCardElement;
+  variant?: BaseCardVariant;
+  as?: BaseCardElement;
 };
 
 /**
@@ -14,13 +14,13 @@ export type MoriCardProps = HTMLAttributes<HTMLElement> & {
  * Reports each hand-rolled the same `border / radius / shadow` rules; this
  * primitive standardises them and routes the values through theme tokens.
  */
-export function MoriCard({
+export function BaseCard({
   children,
   variant = "default",
   as = "section",
   className = "",
   ...rest
-}: MoriCardProps) {
+}: BaseCardProps) {
   const merged = `mori-card mori-card-${variant} ${className}`.trim();
   if (as === "article") return <article className={merged} {...rest}>{children}</article>;
   if (as === "div") return <div className={merged} {...rest}>{children}</div>;

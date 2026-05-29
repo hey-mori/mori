@@ -1,15 +1,15 @@
 import type { ReactNode } from "react";
-import { moriTooltipProps } from "./MoriTooltip";
+import { baseTooltipProps } from "./BaseTooltip";
 
-export type MoriMetricItem = {
+export type BaseMetricItem = {
   key: string;
   label: ReactNode;
   value: ReactNode;
   hint?: string;
 };
 
-export type MoriMetricStripProps = {
-  items: MoriMetricItem[];
+export type BaseMetricStripProps = {
+  items: BaseMetricItem[];
   className?: string;
 };
 
@@ -18,14 +18,14 @@ export type MoriMetricStripProps = {
  * Project summary rows, and Memory hero stats. Renders as a `<dl>` for
  * correct semantic pairing of label and value.
  */
-export function MoriMetricStrip({ items, className = "" }: MoriMetricStripProps) {
+export function BaseMetricStrip({ items, className = "" }: BaseMetricStripProps) {
   if (items.length === 0) return null;
   return (
     <dl className={`mori-metric-strip ${className}`.trim()}>
       {items.map((item) => (
         <div className="mori-metric-item" key={item.key}>
           <dt>{item.label}</dt>
-          <dd {...moriTooltipProps(item.hint, "metric")}>{item.value}</dd>
+          <dd {...baseTooltipProps(item.hint, "metric")}>{item.value}</dd>
         </div>
       ))}
     </dl>

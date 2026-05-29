@@ -1,4 +1,4 @@
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import {
   buildClientSafeMoriPackage,
   createMoriPackageFromSession,
@@ -36,7 +36,7 @@ export function buildMoriPackageExportPlan({
   consolidatedMemories,
   auditTrail,
 }: {
-  view: MoriMockSession;
+  view: MockSession;
   consolidatedMemories: readonly StoredAcceptedProjectMemory[];
   auditTrail: readonly StoredMemoryReviewAction[];
 }): MoriPackageExportPlan {
@@ -67,7 +67,7 @@ export function buildMoriPackageExportPlan({
   };
 }
 
-function countPackageRecords(view: MoriMockSession): Omit<
+function countPackageRecords(view: MockSession): Omit<
   MoriPackageExportPlanCounts,
   "memories" | "auditRows"
 > {

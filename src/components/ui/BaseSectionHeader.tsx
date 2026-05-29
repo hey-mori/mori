@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type MoriSectionHeaderProps = {
+export type BaseSectionHeaderProps = {
   title: ReactNode;
   /** Optional action or link on the trailing side. */
   action?: ReactNode;
@@ -14,12 +14,12 @@ export type MoriSectionHeaderProps = {
  * Settings. Flat, no bottom border — relies on surrounding spacing.
  * Replaces the scattered `home-section-head mori-section-row` pattern.
  */
-export function MoriSectionHeader({
+export function BaseSectionHeader({
   title,
   action,
   eyebrow,
   className = "",
-}: MoriSectionHeaderProps) {
+}: BaseSectionHeaderProps) {
   return (
     <header className={`mori-section-header ${className}`.trim()}>
       <div className="mori-section-header-title">

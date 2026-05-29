@@ -1,5 +1,5 @@
 import type { StoredSessionSummary } from "../storage/storageTypes";
-import type { MoriNotification } from "./notification";
+import type { CompanionNotification } from "./notification";
 
 /**
  * Cross-session notification feed.
@@ -41,8 +41,8 @@ function anchorIso(session: StoredSessionSummary): string | undefined {
  */
 export function buildSessionFeedNotifications(
   sessions: StoredSessionSummary[],
-): MoriNotification[] {
-  const out: MoriNotification[] = [];
+): CompanionNotification[] {
+  const out: CompanionNotification[] = [];
   for (const session of sessions) {
     const createdAt = anchorIso(session);
     if (!createdAt) continue;
@@ -76,7 +76,7 @@ export function buildSessionFeedNotifications(
 
 function describeSessionEvent(status: StoredSessionSummary["status"]): {
   message: string;
-  severity: MoriNotification["severity"];
+  severity: CompanionNotification["severity"];
 } {
   switch (status) {
     case "complete":

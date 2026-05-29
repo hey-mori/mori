@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../../domain/mock-data";
+import { mockSession } from "../../../domain/mock-data";
 import { buildTimelineRenderModel } from "../../../lib/timeline/timelineViewModel";
 import {
   countEventsByLane,
@@ -9,7 +9,7 @@ import {
 } from "./timelineLanes";
 
 const model = buildTimelineRenderModel({
-  view: moriMockSession,
+  view: mockSession,
   mode: "timeline",
   density: "comfortable",
   selectedEventId: null,
@@ -58,8 +58,8 @@ describe("timelineLanes", () => {
   });
 
   it("countEventsByLane sums to the input length", () => {
-    const counts = countEventsByLane(moriMockSession.events);
+    const counts = countEventsByLane(mockSession.events);
     const sum = Object.values(counts).reduce((acc, value) => acc + value, 0);
-    expect(sum).toBe(moriMockSession.events.length);
+    expect(sum).toBe(mockSession.events.length);
   });
 });

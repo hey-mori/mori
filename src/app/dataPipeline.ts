@@ -23,12 +23,12 @@
 import type {
   Decision,
   Issue,
-  MoriMockSession,
+  MockSession,
   NextAction,
   SourceRef,
   TimelineEvent,
 } from "../domain/types";
-import type { MoriAnalysisResult } from "../lib/analysis";
+import type { AnalysisResult } from "../lib/analysis";
 import type { NormalizedImportCandidate } from "../lib/import";
 import type { ImportReviewDraft } from "../lib/review";
 import { createImportReviewDraft } from "../lib/review/reviewDraft";
@@ -87,14 +87,14 @@ export type ProvenanceRecord = {
 
 export type AppliedTimelineEvent = TimelineEvent;
 export type ReviewItem = Issue | Decision | NextAction;
-export type { ReportContext, ProjectMemorySnapshot, MoriAnalysisResult, ImportReviewDraft };
+export type { ReportContext, ProjectMemorySnapshot, AnalysisResult, ImportReviewDraft };
 
 // ─── Adapters ───────────────────────────────────────────────────────────────
 
 /**
  * The canonical list of SourceRefs for the current view, in capture order.
  */
-export function deriveEvidenceSources(view: MoriMockSession): SourceRef[] {
+export function deriveEvidenceSources(view: MockSession): SourceRef[] {
   return view.sources.slice().sort((left, right) => {
     return new Date(left.capturedAt).getTime() - new Date(right.capturedAt).getTime();
   });
@@ -134,7 +134,7 @@ export function deriveReviewContext(args: {
  */
 export function getProvenanceForEvent(
   event: TimelineEvent,
-  view: MoriMockSession,
+  view: MockSession,
 ): ProvenanceRecord {
   const sources = view.sources.filter((source) => event.sourceRefs.includes(source.id));
   const rawDataPolicy = unifyRawDataPolicy(sources);
@@ -152,7 +152,7 @@ export function getProvenanceForEvent(
 
 export function getProvenanceForIssue(
   issue: Issue,
-  view: MoriMockSession,
+  view: MockSession,
 ): ProvenanceRecord {
   const events = view.events.filter((event) => issue.sourceEventIds.includes(event.id));
   const sourceIds = new Set(events.flatMap((event) => event.sourceRefs));
@@ -171,7 +171,7 @@ export function getProvenanceForIssue(
 
 export function getProvenanceForDecision(
   decision: Decision,
-  view: MoriMockSession,
+  view: MockSession,
 ): ProvenanceRecord {
   const events = view.events.filter((event) => decision.sourceEventIds.includes(event.id));
   const indirect = new Set(events.flatMap((event) => event.sourceRefs));
@@ -246,7 +246,7 @@ export { deriveReportContext };
  * Thin re-export of `deriveProjectMemoryContext` under the pipeline's name.
  */
 export function deriveProjectMemorySnapshot(args: {
-  view: MoriMockSession;
+  view: MockSession;
   scope: ProjectMemoryDataScope;
   savedSessions: Parameters<typeof deriveProjectMemoryContext>[0]["savedSessions"];
   reportCount: number;
@@ -278,7 +278,7 @@ export type SessionPipelineOverview = {
  * consume without re-walking the view.
  */
 export function getSessionPipelineOverview(
-  view: MoriMockSession,
+  view: MockSession,
   hasAnalysis: boolean,
 ): SessionPipelineOverview {
   const evidence = getSessionEvidenceSummary(view);

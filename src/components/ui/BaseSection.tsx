@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type MoriSectionProps = {
+export type BaseSectionProps = {
   title?: ReactNode;
   /** Short hint shown next to the title. */
   hint?: ReactNode;
@@ -20,7 +20,7 @@ export type MoriSectionProps = {
 };
 
 /**
- * Page section primitive — a `MoriCard`-style surface with a header row.
+ * Page section primitive — a `BaseCard`-style surface with a header row.
  * Used to box up a feature surface's sub-section (e.g. "Available sources",
  * "Privacy policy", "Recent decisions") without each surface inventing its
  * own `<section className="evidence-section">` markup.
@@ -30,7 +30,7 @@ export type MoriSectionProps = {
  * class side-by-side (e.g. `.evidence-section`, `.settings-card`, …) during
  * a gradual migration.
  */
-export function MoriSection({
+export function BaseSection({
   title,
   hint,
   actions,
@@ -38,7 +38,7 @@ export function MoriSection({
   children,
   subtle = false,
   className = "",
-}: MoriSectionProps) {
+}: BaseSectionProps) {
   const classes = ["mori-section", subtle ? "is-subtle" : "", className]
     .filter(Boolean)
     .join(" ");

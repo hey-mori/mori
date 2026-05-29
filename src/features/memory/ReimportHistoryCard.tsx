@@ -1,6 +1,6 @@
 import { History, Layers, ShieldAlert } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseSection } from "../../components/ui/BaseSection";
 import {
   getReimportStatusTone,
   type ProjectMemoryReimportSummary,
@@ -29,7 +29,7 @@ export function ReimportHistoryCard({
 }) {
   const hasData = summary.totalReimports > 0;
   return (
-    <MoriSection
+    <BaseSection
       className="memory-reimport"
       ariaLabel="Connector re-import history"
       title={
@@ -119,7 +119,7 @@ export function ReimportHistoryCard({
           ) : null}
         </>
       )}
-    </MoriSection>
+    </BaseSection>
   );
 }
 

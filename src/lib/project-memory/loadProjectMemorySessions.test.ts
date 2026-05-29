@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import type { SqliteSessionListEntry } from "../sqlite/repositoryContracts";
 import type {
-  MoriDraftRepository,
+  DraftRepository,
   StoredSessionAnalysis,
   StoredSessionImport,
   StoredSessionSummary,
@@ -12,9 +12,9 @@ import {
   type ProjectMemoryDesktopLoader,
 } from "./loadProjectMemorySessions";
 
-function stubRepository(overrides: Partial<MoriDraftRepository> = {}): MoriDraftRepository {
-  const base: MoriDraftRepository = {
-    saveCurrentSessionDraft: vi.fn() as unknown as MoriDraftRepository["saveCurrentSessionDraft"],
+function stubRepository(overrides: Partial<DraftRepository> = {}): DraftRepository {
+  const base: DraftRepository = {
+    saveCurrentSessionDraft: vi.fn() as unknown as DraftRepository["saveCurrentSessionDraft"],
     loadCurrentSessionDraft: () => null,
     clearCurrentSessionDraft: vi.fn(),
     clearAllLocalData: vi.fn(),
@@ -22,31 +22,31 @@ function stubRepository(overrides: Partial<MoriDraftRepository> = {}): MoriDraft
     loadStoredSessionDraft: () => null,
     saveStoredSessionMetadata: () => null,
     listStoredSessions: () => [],
-    saveMoriPackageDraft: vi.fn() as unknown as MoriDraftRepository["saveMoriPackageDraft"],
+    saveMoriPackageDraft: vi.fn() as unknown as DraftRepository["saveMoriPackageDraft"],
     loadMoriPackageDraft: () => null,
     listMoriPackageDrafts: () => [],
     clearStoredSession: vi.fn(),
-    addSessionImport: vi.fn() as unknown as MoriDraftRepository["addSessionImport"],
+    addSessionImport: vi.fn() as unknown as DraftRepository["addSessionImport"],
     listSessionImports: () => [],
-    putSessionImports: vi.fn() as unknown as MoriDraftRepository["putSessionImports"],
+    putSessionImports: vi.fn() as unknown as DraftRepository["putSessionImports"],
     removeSessionImport: vi.fn(),
     clearSessionImports: vi.fn(),
-    saveSessionAnalysis: vi.fn() as unknown as MoriDraftRepository["saveSessionAnalysis"],
+    saveSessionAnalysis: vi.fn() as unknown as DraftRepository["saveSessionAnalysis"],
     loadSessionAnalysis: () => null,
     clearSessionAnalysis: vi.fn(),
-    saveSessionMemoryBody: vi.fn() as unknown as MoriDraftRepository["saveSessionMemoryBody"],
+    saveSessionMemoryBody: vi.fn() as unknown as DraftRepository["saveSessionMemoryBody"],
     loadSessionMemoryBody: () => null,
     clearSessionMemoryBody: vi.fn(),
-    saveQuickPassSettings: vi.fn() as unknown as MoriDraftRepository["saveQuickPassSettings"],
+    saveQuickPassSettings: vi.fn() as unknown as DraftRepository["saveQuickPassSettings"],
     loadQuickPassSettings: () => ({} as any),
-    saveRepositorySettings: vi.fn() as unknown as MoriDraftRepository["saveRepositorySettings"],
+    saveRepositorySettings: vi.fn() as unknown as DraftRepository["saveRepositorySettings"],
     loadRepositorySettings: () => ({} as any),
     listConnectorEventIdentitySnapshots: () => [],
-    saveAcceptedProjectMemory: vi.fn() as unknown as MoriDraftRepository["saveAcceptedProjectMemory"],
-    saveAcceptedProjectMemories: vi.fn() as unknown as MoriDraftRepository["saveAcceptedProjectMemories"],
+    saveAcceptedProjectMemory: vi.fn() as unknown as DraftRepository["saveAcceptedProjectMemory"],
+    saveAcceptedProjectMemories: vi.fn() as unknown as DraftRepository["saveAcceptedProjectMemories"],
     listAcceptedProjectMemories: () => [],
     getAcceptedProjectMemory: () => null,
-    appendMemoryReviewAction: vi.fn() as unknown as MoriDraftRepository["appendMemoryReviewAction"],
+    appendMemoryReviewAction: vi.fn() as unknown as DraftRepository["appendMemoryReviewAction"],
     listMemoryReviewActions: () => [],
     ...overrides,
   };
@@ -121,18 +121,18 @@ function fakeImport(id: string, sessionId: string): StoredSessionImport {
 describe("loadProjectMemorySessions", () => {
   it("always includes the active session as loaded when live", async () => {
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: true,
     });
     expect(result.length).toBe(1);
     expect(result[0].isActive).toBe(true);
     expect(result[0].loadStatus).toBe("loaded");
-    expect(result[0].decisions).toBe(moriMockSession.decisions);
+    expect(result[0].decisions).toBe(mockSession.decisions);
   });
 
   it("marks the active demo session as metadataOnly", async () => {
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: false,
     });
     expect(result[0].loadStatus).toBe("metadataOnly");
@@ -147,7 +147,7 @@ describe("loadProjectMemorySessions", () => {
       loadSessionAnalysis: (_sid: string) => null as unknown as StoredSessionAnalysis | null,
     });
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: true,
       repository,
       savedBrowserSessions: summaries,
@@ -215,7 +215,7 @@ describe("loadProjectMemorySessions", () => {
           : null,
     });
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: true,
       repository,
       savedBrowserSessions: summaries,
@@ -268,7 +268,7 @@ describe("loadProjectMemorySessions", () => {
       loadSessionMemoryBody: () => null,
     });
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: true,
       repository,
       savedBrowserSessions: summaries,
@@ -285,7 +285,7 @@ describe("loadProjectMemorySessions", () => {
       loadSessionMemoryBody: () => null,
     });
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: true,
       repository,
       savedBrowserSessions: summaries,
@@ -304,11 +304,11 @@ describe("loadProjectMemorySessions", () => {
         if (sessionId === "sq-fail") {
           throw new Error("snapshot missing");
         }
-        return { session: moriMockSession };
+        return { session: mockSession };
       },
     };
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: true,
       desktopLoader,
       savedSqliteSessions: [sqliteEntry("sq-ok"), sqliteEntry("sq-fail", "2026-05-09T11:00:00Z")],
@@ -322,7 +322,7 @@ describe("loadProjectMemorySessions", () => {
 
   it("collapses SQLite sessions to metadataOnly when no desktop loader is available", async () => {
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: true,
       savedSqliteSessions: [sqliteEntry("sq-1")],
     });
@@ -332,7 +332,7 @@ describe("loadProjectMemorySessions", () => {
   it("caps total saved sessions at the configured limit (SQLite-first)", async () => {
     const desktopLoader: ProjectMemoryDesktopLoader = {
       isDesktop: () => true,
-      loadSessionFromDesktop: async () => ({ session: moriMockSession }),
+      loadSessionFromDesktop: async () => ({ session: mockSession }),
     };
     const sqlite = Array.from({ length: 25 }, (_, i) =>
       sqliteEntry(`sq-${i}`, `2026-05-${String(10 + (i % 20)).padStart(2, "0")}T10:00:00Z`),
@@ -340,7 +340,7 @@ describe("loadProjectMemorySessions", () => {
     const browser = Array.from({ length: 10 }, (_, i) => browserSummary(`b-${i}`));
     const repository = stubRepository();
     const result = await loadProjectMemorySessions({
-      activeSession: moriMockSession,
+      activeSession: mockSession,
       activeIsLive: true,
       desktopLoader,
       savedSqliteSessions: sqlite,
@@ -362,7 +362,7 @@ describe("loadProjectMemorySessions", () => {
     };
     await expect(
       loadProjectMemorySessions({
-        activeSession: moriMockSession,
+        activeSession: mockSession,
         activeIsLive: true,
         desktopLoader,
         savedSqliteSessions: [sqliteEntry("sq-1")],

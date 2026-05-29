@@ -13,11 +13,11 @@ import type {
   TrustLevel,
 } from "../../domain/types";
 
-export type MoriAnalysisProviderName = "deterministic-heuristic-v1" | "ollama-quick-pass-v1";
+export type AnalysisProviderName = "deterministic-heuristic-v1" | "ollama-quick-pass-v1";
 
-export type MoriAnalysisStatus = "idle" | "running" | "succeeded" | "failed";
+export type AnalysisRunStatus = "idle" | "running" | "succeeded" | "failed";
 
-export type MoriAnalysisInput = {
+export type AnalysisInput = {
   project: Project;
   session: Session;
   sources: SourceRef[];
@@ -46,9 +46,9 @@ export type AnalysisSummary = {
   highlights: string[];
 };
 
-export type MoriAnalysisResult = {
+export type AnalysisResult = {
   runId: string;
-  providerName: MoriAnalysisProviderName;
+  providerName: AnalysisProviderName;
   providerLabel: string;
   sessionId: string;
   projectId: string;
@@ -68,11 +68,11 @@ export type MoriAnalysisResult = {
   notes: string[];
 };
 
-export type MoriAnalysisProvider = {
-  readonly name: MoriAnalysisProviderName;
+export type AnalysisProvider = {
+  readonly name: AnalysisProviderName;
   readonly label: string;
   readonly requiresNetwork: boolean;
-  analyze: (input: MoriAnalysisInput) => Promise<MoriAnalysisResult>;
+  analyze: (input: AnalysisInput) => Promise<AnalysisResult>;
 };
 
 export type AnalysisExtraction = {

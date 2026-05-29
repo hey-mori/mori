@@ -1,32 +1,32 @@
 import { describe, expect, it } from "vitest";
-import type { MoriAnalysisResult } from "../analysis";
-import { moriMockSession } from "../../domain/mock-data";
+import type { AnalysisResult } from "../analysis";
+import { mockSession } from "../../domain/mock-data";
 import {
   buildNextActionFromIssue,
   findNextActionForIssue,
   promoteIssueToNextAction,
 } from "./issuePromotion";
 
-function analysis(): MoriAnalysisResult {
+function analysis(): AnalysisResult {
   return {
     runId: "run-promote",
     providerName: "deterministic-heuristic-v1",
     providerLabel: "Deterministic",
-    sessionId: moriMockSession.session.id,
-    projectId: moriMockSession.project.id,
+    sessionId: mockSession.session.id,
+    projectId: mockSession.project.id,
     generatedAt: "2026-05-18T11:00:00.000Z",
     durationMs: 1,
     inputEventCount: 0,
     inputSourceCount: 0,
     summary: { sessionSummary: "summary", resumePrompt: "prompt", highlights: [] },
-    issues: [{ ...moriMockSession.issues[0]!, id: "iss-1" }],
+    issues: [{ ...mockSession.issues[0]!, id: "iss-1" }],
     decisions: [],
     relationships: [],
     nextActions: [],
     rendered: {
       summary: {
         id: "summary-run-promote",
-        sessionId: moriMockSession.session.id,
+        sessionId: mockSession.session.id,
         sessionSummary: "summary",
         resumePrompt: "prompt",
         reportMarkdown: "",
@@ -41,7 +41,7 @@ function analysis(): MoriAnalysisResult {
 
 describe("buildNextActionFromIssue", () => {
   it("creates a linked next action from the issue suggestion", () => {
-    const issue = { ...moriMockSession.issues[0]!, id: "iss-1" };
+    const issue = { ...mockSession.issues[0]!, id: "iss-1" };
     const action = buildNextActionFromIssue(issue);
 
     expect(action.id).toBe("nact-user-iss-1");
@@ -52,7 +52,7 @@ describe("buildNextActionFromIssue", () => {
   });
 
   it("falls back to the issue title when no suggestion exists", () => {
-    const issue = { ...moriMockSession.issues[0]!, id: "iss-1", suggestedNextAction: "" };
+    const issue = { ...mockSession.issues[0]!, id: "iss-1", suggestedNextAction: "" };
     expect(buildNextActionFromIssue(issue).title).toBe(`Resolve: ${issue.title}`);
   });
 });

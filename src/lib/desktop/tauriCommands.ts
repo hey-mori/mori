@@ -7,7 +7,7 @@ import type {
   QuickPassInput,
   QuickPassOutput,
 } from "../../domain/backend-contracts";
-import type { MoriMockSession, Session, SourceRef } from "../../domain/types";
+import type { MockSession, Session, SourceRef } from "../../domain/types";
 import type {
   ClearAllSqliteDataResult,
   DatabaseStatus,
@@ -336,7 +336,7 @@ export const tauriCommands = {
   },
 };
 
-export type DesktopLoadedSession = MoriMockSession;
+export type DesktopLoadedSession = MockSession;
 
 export type TauriSqliteCommands = Pick<
   typeof tauriCommands,

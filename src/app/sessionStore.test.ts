@@ -3,7 +3,7 @@ import {
   selectHasRealAnalysis,
   setSessionPersistenceServiceForSessionStore,
   setSessionRepositoryForTesting,
-  useMoriSessionStore,
+  useSessionStore,
 } from "./sessionStore";
 import { createSessionDraft } from "../lib/session/createSessionDraft";
 import { normalizeManualNote } from "../lib/import";
@@ -11,20 +11,20 @@ import { buildImportCandidateFromClaudeCodeSession } from "../lib/claude/claudeI
 import type { ClaudeCodeSessionDetail } from "../lib/claude/types";
 import { BrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import { MemoryKeyValueStorage } from "../lib/storage/memoryStorage";
-import type { MoriAnalysisProvider, MoriAnalysisResult } from "../lib/analysis";
+import type { AnalysisProvider, AnalysisResult } from "../lib/analysis";
 import { DEFAULT_QUICK_PASS_SETTINGS } from "../lib/analysis";
-import { moriMockSession } from "../domain/mock-data";
+import { mockSession } from "../domain/mock-data";
 import { SessionPersistenceService } from "../lib/storage/sessionPersistenceService";
 import { createSqlitePersistenceSnapshot } from "../lib/sqlite";
 
 const fixedNow = "2026-05-12T13:00:00+09:00";
 
-function buildProvider(name: MoriAnalysisProvider["name"], opts: { fail?: boolean; label?: string } = {}): MoriAnalysisProvider {
+function buildProvider(name: AnalysisProvider["name"], opts: { fail?: boolean; label?: string } = {}): AnalysisProvider {
   return {
     name,
     label: opts.label ?? name,
     requiresNetwork: name === "ollama-quick-pass-v1",
-    async analyze(input): Promise<MoriAnalysisResult> {
+    async analyze(input): Promise<AnalysisResult> {
       if (opts.fail) throw new Error("provider boom");
       const runId = `run-${name}-${input.session.id}`;
       return {
@@ -61,7 +61,7 @@ function buildProvider(name: MoriAnalysisProvider["name"], opts: { fail?: boolea
 }
 
 function resetStore() {
-  useMoriSessionStore.setState({
+  useSessionStore.setState({
     initialized: false,
     draft: null,
     pendingNewSession: null,
@@ -76,7 +76,7 @@ function resetStore() {
   });
 }
 
-describe("useMoriSessionStore Quick Pass provider flow", () => {
+describe("useSessionStore Quick Pass provider flow", () => {
   beforeEach(() => {
     const storage = new MemoryKeyValueStorage();
     const repository = new BrowserDraftRepository(storage);
@@ -94,7 +94,7 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
   });
 
   function seedDraftWithImport() {
-    const draft = useMoriSessionStore.getState();
+    const draft = useSessionStore.getState();
     const builtDraft = createSessionDraft({
       sessionTitle: "Quick Pass test",
       projectName: "QP Project",
@@ -119,11 +119,11 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
       note: "위험: token rotation 미정. TODO: rotate.",
       capturedAt: fixedNow,
     });
-    useMoriSessionStore.getState().addImport(note);
+    useSessionStore.getState().addImport(note);
   }
 
   it("persists provider settings through the repository boundary", async () => {
-    const next = useMoriSessionStore.getState().updateAnalysisSettings({
+    const next = useSessionStore.getState().updateAnalysisSettings({
       provider: "ollama",
       ollamaEndpoint: "http://localhost:9999",
       fallbackToDeterministic: false,
@@ -131,8 +131,8 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
     expect(next.provider).toBe("ollama");
 
     resetStore();
-    await useMoriSessionStore.getState().hydrate();
-    const hydrated = useMoriSessionStore.getState().analysisSettings;
+    await useSessionStore.getState().hydrate();
+    const hydrated = useSessionStore.getState().analysisSettings;
     expect(hydrated.provider).toBe("ollama");
     expect(hydrated.ollamaEndpoint).toBe("http://localhost:9999");
     expect(hydrated.fallbackToDeterministic).toBe(false);
@@ -140,17 +140,17 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
 
   it("falls back to deterministic when Ollama fails and fallback is enabled", async () => {
     seedDraftWithImport();
-    useMoriSessionStore.getState().updateAnalysisSettings({ provider: "ollama" });
+    useSessionStore.getState().updateAnalysisSettings({ provider: "ollama" });
 
     const failingOllama = buildProvider("ollama-quick-pass-v1", { fail: true, label: "Ollama fail" });
-    useMoriSessionStore.setState({ analysisSettings: { ...useMoriSessionStore.getState().analysisSettings, fallbackToDeterministic: true } });
+    useSessionStore.setState({ analysisSettings: { ...useSessionStore.getState().analysisSettings, fallbackToDeterministic: true } });
 
     // The store reads provider config from settings, not direct injection. To test
     // fallback we monkey-patch resolveProviderFromSettings via passing primary explicitly.
-    const result = await useMoriSessionStore.getState().runQuickPass(failingOllama);
+    const result = await useSessionStore.getState().runQuickPass(failingOllama);
 
     expect(result).not.toBeNull();
-    const state = useMoriSessionStore.getState();
+    const state = useSessionStore.getState();
     expect(state.analysisStatus).toBe("succeeded");
     expect(state.analysisFallbackUsed).toBe(true);
     expect(state.analysis?.providerName).toBe("deterministic-heuristic-v1");
@@ -159,13 +159,13 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
 
   it("surfaces the error and does not pretend success when fallback is disabled", async () => {
     seedDraftWithImport();
-    useMoriSessionStore.getState().updateAnalysisSettings({ provider: "ollama", fallbackToDeterministic: false });
+    useSessionStore.getState().updateAnalysisSettings({ provider: "ollama", fallbackToDeterministic: false });
 
     const failingOllama = buildProvider("ollama-quick-pass-v1", { fail: true, label: "Ollama fail" });
-    const result = await useMoriSessionStore.getState().runQuickPass(failingOllama);
+    const result = await useSessionStore.getState().runQuickPass(failingOllama);
 
     expect(result).toBeNull();
-    const state = useMoriSessionStore.getState();
+    const state = useSessionStore.getState();
     expect(state.analysisStatus).toBe("failed");
     expect(state.analysisFallbackUsed).toBe(false);
     expect(state.analysisError).toContain("provider boom");
@@ -174,13 +174,13 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
 
   it("succeeds without fallback when the chosen provider works", async () => {
     seedDraftWithImport();
-    useMoriSessionStore.getState().updateAnalysisSettings({ provider: "ollama" });
+    useSessionStore.getState().updateAnalysisSettings({ provider: "ollama" });
 
     const workingOllama = buildProvider("ollama-quick-pass-v1", { label: "Ollama ok" });
-    const result = await useMoriSessionStore.getState().runQuickPass(workingOllama);
+    const result = await useSessionStore.getState().runQuickPass(workingOllama);
 
     expect(result).not.toBeNull();
-    const state = useMoriSessionStore.getState();
+    const state = useSessionStore.getState();
     expect(state.analysisStatus).toBe("succeeded");
     expect(state.analysisFallbackUsed).toBe(false);
     expect(state.analysis?.providerName).toBe("ollama-quick-pass-v1");
@@ -188,7 +188,7 @@ describe("useMoriSessionStore Quick Pass provider flow", () => {
   });
 });
 
-describe("useMoriSessionStore desktop persistence", () => {
+describe("useSessionStore desktop persistence", () => {
   let desktopClearCalls = 0;
   beforeEach(() => {
     desktopClearCalls = 0;
@@ -227,7 +227,7 @@ describe("useMoriSessionStore desktop persistence", () => {
           issuesPersisted: snapshot.issues.length,
           decisionsPersisted: snapshot.decisions.length,
         }),
-        loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(moriMockSession),
+        loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(mockSession),
         listSqliteSessions: async () => ({ sessions: [] }),
         clearAllSqliteData: async () => {
           desktopClearCalls += 1;
@@ -251,38 +251,38 @@ describe("useMoriSessionStore desktop persistence", () => {
   });
 
   it("loads a saved SQLite session into the active session view", async () => {
-    const loaded = await useMoriSessionStore.getState().loadDesktopSession(moriMockSession.session.id);
+    const loaded = await useSessionStore.getState().loadDesktopSession(mockSession.session.id);
     expect(loaded).toBe(true);
 
-    const state = useMoriSessionStore.getState();
-    expect(state.draft?.session.id).toBe(moriMockSession.session.id);
-    expect(state.imports.length).toBe(moriMockSession.sources.length);
+    const state = useSessionStore.getState();
+    expect(state.draft?.session.id).toBe(mockSession.session.id);
+    expect(state.imports.length).toBe(mockSession.sources.length);
     expect(state.source).toBe("desktop-sqlite");
   });
 
   it("clearAllDataAndViewDemo wipes SQLite and returns to demo in desktop mode", async () => {
-    const before = useMoriSessionStore.getState().dataResetNonce;
-    await useMoriSessionStore.getState().clearAllDataAndViewDemo();
+    const before = useSessionStore.getState().dataResetNonce;
+    await useSessionStore.getState().clearAllDataAndViewDemo();
 
     expect(desktopClearCalls).toBe(1);
-    const state = useMoriSessionStore.getState();
+    const state = useSessionStore.getState();
     expect(state.draft).toBeNull();
     expect(state.source).toBe("demo");
     expect(state.dataResetNonce).toBe(before + 1);
   });
 
   it("marks the active session as desktop SQLite after an explicit persist", () => {
-    useMoriSessionStore.setState({
+    useSessionStore.setState({
       draft: {
-        project: moriMockSession.project,
-        session: moriMockSession.session,
+        project: mockSession.project,
+        session: mockSession.session,
         savedAt: fixedNow,
         adapter: "browser-local-storage",
       },
       source: "browser-draft",
     });
-    useMoriSessionStore.getState().markPersistedToDesktop();
-    expect(useMoriSessionStore.getState().source).toBe("desktop-sqlite");
+    useSessionStore.getState().markPersistedToDesktop();
+    expect(useSessionStore.getState().source).toBe("desktop-sqlite");
   });
 
   it("returns false from loadDesktopSession when running in browser mode", async () => {
@@ -291,13 +291,13 @@ describe("useMoriSessionStore desktop persistence", () => {
       repository: new BrowserDraftRepository(new MemoryKeyValueStorage()),
     });
     setSessionPersistenceServiceForSessionStore(browserService);
-    const loaded = await useMoriSessionStore.getState().loadDesktopSession("sess-anything");
+    const loaded = await useSessionStore.getState().loadDesktopSession("sess-anything");
     expect(loaded).toBe(false);
-    expect(useMoriSessionStore.getState().source).toBe("demo");
+    expect(useSessionStore.getState().source).toBe("demo");
   });
 });
 
-describe("useMoriSessionStore loadBrowserSession", () => {
+describe("useSessionStore loadBrowserSession", () => {
   let repository: BrowserDraftRepository;
 
   beforeEach(() => {
@@ -344,10 +344,10 @@ describe("useMoriSessionStore loadBrowserSession", () => {
     );
     seedSession("Later session", "2026-05-12T15:00:00+09:00");
 
-    const opened = useMoriSessionStore.getState().loadBrowserSession(earlier.session.id);
+    const opened = useSessionStore.getState().loadBrowserSession(earlier.session.id);
 
     expect(opened).toBe(true);
-    const state = useMoriSessionStore.getState();
+    const state = useSessionStore.getState();
     expect(state.draft?.session.id).toBe(earlier.session.id);
     expect(state.source).toBe("browser-draft");
     expect(state.imports).toHaveLength(1);
@@ -355,14 +355,14 @@ describe("useMoriSessionStore loadBrowserSession", () => {
   });
 
   it("returns false for an unknown session id and leaves the store untouched", () => {
-    const opened = useMoriSessionStore.getState().loadBrowserSession("missing-session");
+    const opened = useSessionStore.getState().loadBrowserSession("missing-session");
     expect(opened).toBe(false);
-    expect(useMoriSessionStore.getState().source).toBe("demo");
-    expect(useMoriSessionStore.getState().draft).toBeNull();
+    expect(useSessionStore.getState().source).toBe("demo");
+    expect(useSessionStore.getState().draft).toBeNull();
   });
 });
 
-describe("useMoriSessionStore session lifecycle (rename)", () => {
+describe("useSessionStore session lifecycle (rename)", () => {
   let repository: BrowserDraftRepository;
 
   beforeEach(() => {
@@ -397,47 +397,47 @@ describe("useMoriSessionStore session lifecycle (rename)", () => {
 
   it("renames the active session and updates the in-memory draft", () => {
     const seeded = seedSession("원래 제목", "2026-05-12T13:00:00+09:00");
-    useMoriSessionStore.getState().loadBrowserSession(seeded.session.id);
+    useSessionStore.getState().loadBrowserSession(seeded.session.id);
 
-    const ok = useMoriSessionStore.getState().renameSession(seeded.session.id, "  새 제목  ");
+    const ok = useSessionStore.getState().renameSession(seeded.session.id, "  새 제목  ");
     expect(ok).toBe(true);
-    expect(useMoriSessionStore.getState().draft?.session.title).toBe("새 제목");
+    expect(useSessionStore.getState().draft?.session.title).toBe("새 제목");
     expect(repository.loadStoredSessionDraft(seeded.session.id)?.session.title).toBe("새 제목");
   });
 
   it("renames a background session without activating it", () => {
     const background = seedSession("배경 세션", "2026-05-12T13:00:00+09:00");
     const active = seedSession("활성 세션", "2026-05-12T15:00:00+09:00");
-    useMoriSessionStore.getState().loadBrowserSession(active.session.id);
+    useSessionStore.getState().loadBrowserSession(active.session.id);
 
-    const ok = useMoriSessionStore.getState().renameSession(background.session.id, "바뀐 배경");
+    const ok = useSessionStore.getState().renameSession(background.session.id, "바뀐 배경");
     expect(ok).toBe(true);
     // Active draft is untouched; the current pointer stays on the active one.
-    expect(useMoriSessionStore.getState().draft?.session.id).toBe(active.session.id);
+    expect(useSessionStore.getState().draft?.session.id).toBe(active.session.id);
     expect(repository.loadStoredSessionDraft(background.session.id)?.session.title).toBe("바뀐 배경");
     expect(repository.loadCurrentSessionDraft()?.session.id).toBe(active.session.id);
   });
 
   it("returns false for a blank or unchanged rename", () => {
     const seeded = seedSession("그대로", "2026-05-12T13:00:00+09:00");
-    useMoriSessionStore.getState().loadBrowserSession(seeded.session.id);
-    expect(useMoriSessionStore.getState().renameSession(seeded.session.id, "   ")).toBe(false);
-    expect(useMoriSessionStore.getState().renameSession(seeded.session.id, "그대로")).toBe(false);
+    useSessionStore.getState().loadBrowserSession(seeded.session.id);
+    expect(useSessionStore.getState().renameSession(seeded.session.id, "   ")).toBe(false);
+    expect(useSessionStore.getState().renameSession(seeded.session.id, "그대로")).toBe(false);
   });
 
   it("does not restamp savedAt on a metadata edit", () => {
     const seeded = seedSession("타임스탬프", "2026-05-12T13:00:00+09:00");
     const savedAt = repository.loadStoredSessionDraft(seeded.session.id)?.savedAt;
-    useMoriSessionStore.getState().renameSession(seeded.session.id, "다른 제목");
+    useSessionStore.getState().renameSession(seeded.session.id, "다른 제목");
     expect(repository.loadStoredSessionDraft(seeded.session.id)?.savedAt).toBe(savedAt);
   });
 
   it("returns false for an unknown session id", () => {
-    expect(useMoriSessionStore.getState().renameSession("missing", "x")).toBe(false);
+    expect(useSessionStore.getState().renameSession("missing", "x")).toBe(false);
   });
 });
 
-describe("useMoriSessionStore importAsNewSession", () => {
+describe("useSessionStore importAsNewSession", () => {
   let repository: BrowserDraftRepository;
 
   beforeEach(() => {
@@ -481,7 +481,7 @@ describe("useMoriSessionStore importAsNewSession", () => {
 
   it("creates and switches to a fresh empty session carrying the source label", () => {
     const candidate = buildCandidate();
-    const { sessionId, candidate: rebound } = useMoriSessionStore.getState().importAsNewSession({
+    const { sessionId, candidate: rebound } = useSessionStore.getState().importAsNewSession({
       candidate,
       title: "Wire the Connections page",
       startedAt: "2026-05-20T12:00:00Z",
@@ -489,7 +489,7 @@ describe("useMoriSessionStore importAsNewSession", () => {
       projectLabel: "C:/dev/mori",
     });
 
-    const state = useMoriSessionStore.getState();
+    const state = useSessionStore.getState();
     expect(state.draft?.session.id).toBe(sessionId);
     expect(state.draft?.session.title).toBe("Wire the Connections page");
     expect(state.draft?.session.sourceLabel).toBe("C:/dev/mori");
@@ -521,21 +521,21 @@ describe("useMoriSessionStore importAsNewSession", () => {
         now: fixedNow,
       }),
     );
-    useMoriSessionStore.getState().loadBrowserSession(prior.session.id);
+    useSessionStore.getState().loadBrowserSession(prior.session.id);
 
-    const { sessionId } = useMoriSessionStore.getState().importAsNewSession({
+    const { sessionId } = useSessionStore.getState().importAsNewSession({
       candidate: buildCandidate(),
       title: "Wire the Connections page",
       startedAt: "2026-05-20T12:00:00Z",
       endedAt: "2026-05-20T12:30:00Z",
       projectLabel: "C:/dev/mori",
     });
-    expect(useMoriSessionStore.getState().draft?.session.id).toBe(sessionId);
+    expect(useSessionStore.getState().draft?.session.id).toBe(sessionId);
 
-    const discarded = useMoriSessionStore.getState().abandonPendingNewSessionIfEmpty();
+    const discarded = useSessionStore.getState().abandonPendingNewSessionIfEmpty();
 
     expect(discarded).toBe(true);
-    const state = useMoriSessionStore.getState();
+    const state = useSessionStore.getState();
     expect(state.draft?.session.id).toBe(prior.session.id);
     expect(state.pendingNewSession).toBeNull();
     // The empty session is gone from storage.
@@ -545,7 +545,7 @@ describe("useMoriSessionStore importAsNewSession", () => {
   });
 
   it("keeps the session and clears bookkeeping once an import is applied", () => {
-    const { sessionId, candidate: rebound } = useMoriSessionStore.getState().importAsNewSession({
+    const { sessionId, candidate: rebound } = useSessionStore.getState().importAsNewSession({
       candidate: buildCandidate(),
       title: "Wire the Connections page",
       startedAt: "2026-05-20T12:00:00Z",
@@ -554,37 +554,37 @@ describe("useMoriSessionStore importAsNewSession", () => {
     });
 
     // Simulate Import Review apply committing the accepted candidate.
-    useMoriSessionStore.getState().addImport(rebound);
-    useMoriSessionStore.getState().commitPendingNewSession();
+    useSessionStore.getState().addImport(rebound);
+    useSessionStore.getState().commitPendingNewSession();
 
-    expect(useMoriSessionStore.getState().pendingNewSession).toBeNull();
+    expect(useSessionStore.getState().pendingNewSession).toBeNull();
 
     // A late cancel must NOT delete a session that now holds applied work.
-    const discarded = useMoriSessionStore.getState().abandonPendingNewSessionIfEmpty();
+    const discarded = useSessionStore.getState().abandonPendingNewSessionIfEmpty();
     expect(discarded).toBe(false);
-    expect(useMoriSessionStore.getState().draft?.session.id).toBe(sessionId);
+    expect(useSessionStore.getState().draft?.session.id).toBe(sessionId);
     expect(
       repository.listStoredSessions().some((s) => s.sessionId === sessionId),
     ).toBe(true);
   });
 
   it("does not discard a pending session that already received an import", () => {
-    const { sessionId, candidate: rebound } = useMoriSessionStore.getState().importAsNewSession({
+    const { sessionId, candidate: rebound } = useSessionStore.getState().importAsNewSession({
       candidate: buildCandidate(),
       title: "Conversation",
       startedAt: "2026-05-20T12:00:00Z",
       endedAt: "2026-05-20T12:30:00Z",
     });
-    useMoriSessionStore.getState().addImport(rebound);
+    useSessionStore.getState().addImport(rebound);
 
     // Even without an explicit commit, a session with imports survives cancel.
-    const discarded = useMoriSessionStore.getState().abandonPendingNewSessionIfEmpty();
+    const discarded = useSessionStore.getState().abandonPendingNewSessionIfEmpty();
     expect(discarded).toBe(false);
-    expect(useMoriSessionStore.getState().draft?.session.id).toBe(sessionId);
+    expect(useSessionStore.getState().draft?.session.id).toBe(sessionId);
   });
 });
 
-describe("useMoriSessionStore setNextActionCompletion", () => {
+describe("useSessionStore setNextActionCompletion", () => {
   let repository: BrowserDraftRepository;
 
   beforeEach(() => {
@@ -614,9 +614,9 @@ describe("useMoriSessionStore setNextActionCompletion", () => {
       now: fixedNow,
     });
     const stored = { ...built, savedAt: fixedNow, adapter: "browser-local-storage" as const };
-    useMoriSessionStore.getState().setDraft(stored);
+    useSessionStore.getState().setDraft(stored);
 
-    const analysis: MoriAnalysisResult = {
+    const analysis: AnalysisResult = {
       runId: "run-na",
       providerName: "deterministic-heuristic-v1",
       providerLabel: "Deterministic",
@@ -654,16 +654,16 @@ describe("useMoriSessionStore setNextActionCompletion", () => {
       confidence: 0.5,
       notes: [],
     };
-    useMoriSessionStore.setState({ analysis, analysisStatus: "succeeded" });
+    useSessionStore.setState({ analysis, analysisStatus: "succeeded" });
     return stored;
   }
 
   it("marks a next action complete and persists it to the analysis store", () => {
     const stored = seedAnalysisWithNextAction();
-    const ok = useMoriSessionStore.getState().setNextActionCompletion("na-1", true);
+    const ok = useSessionStore.getState().setNextActionCompletion("na-1", true);
 
     expect(ok).toBe(true);
-    const action = useMoriSessionStore.getState().analysis!.nextActions[0]!;
+    const action = useSessionStore.getState().analysis!.nextActions[0]!;
     expect(action.done).toBe(true);
     expect(action.completedAt).toBeTruthy();
     expect(
@@ -673,27 +673,27 @@ describe("useMoriSessionStore setNextActionCompletion", () => {
 
   it("reopens a completed next action and clears completedAt", () => {
     seedAnalysisWithNextAction();
-    useMoriSessionStore.getState().setNextActionCompletion("na-1", true);
-    useMoriSessionStore.getState().setNextActionCompletion("na-1", false);
+    useSessionStore.getState().setNextActionCompletion("na-1", true);
+    useSessionStore.getState().setNextActionCompletion("na-1", false);
 
-    const action = useMoriSessionStore.getState().analysis!.nextActions[0]!;
+    const action = useSessionStore.getState().analysis!.nextActions[0]!;
     expect(action.done).toBe(false);
     expect(action.completedAt).toBeUndefined();
   });
 
   it("returns false with no draft or analysis", () => {
-    expect(useMoriSessionStore.getState().setNextActionCompletion("na-1", true)).toBe(false);
+    expect(useSessionStore.getState().setNextActionCompletion("na-1", true)).toBe(false);
   });
 
   it("returns false for an unknown next action id", () => {
     seedAnalysisWithNextAction();
     expect(
-      useMoriSessionStore.getState().setNextActionCompletion("missing", true),
+      useSessionStore.getState().setNextActionCompletion("missing", true),
     ).toBe(false);
   });
 });
 
-describe("useMoriSessionStore setIssueStatus", () => {
+describe("useSessionStore setIssueStatus", () => {
   let repository: BrowserDraftRepository;
 
   beforeEach(() => {
@@ -723,9 +723,9 @@ describe("useMoriSessionStore setIssueStatus", () => {
       now: fixedNow,
     });
     const stored = { ...built, savedAt: fixedNow, adapter: "browser-local-storage" as const };
-    useMoriSessionStore.getState().setDraft(stored);
+    useSessionStore.getState().setDraft(stored);
 
-    const analysis: MoriAnalysisResult = {
+    const analysis: AnalysisResult = {
       runId: "run-is",
       providerName: "deterministic-heuristic-v1",
       providerLabel: "Deterministic",
@@ -738,7 +738,7 @@ describe("useMoriSessionStore setIssueStatus", () => {
       summary: { sessionSummary: "s", resumePrompt: "p", highlights: [] },
       issues: [
         {
-          ...moriMockSession.issues[0]!,
+          ...mockSession.issues[0]!,
           id: "iss-1",
           sessionId: stored.session.id,
           status: "open",
@@ -761,16 +761,16 @@ describe("useMoriSessionStore setIssueStatus", () => {
       confidence: 0.5,
       notes: [],
     };
-    useMoriSessionStore.setState({ analysis, analysisStatus: "succeeded" });
+    useSessionStore.setState({ analysis, analysisStatus: "succeeded" });
     return stored;
   }
 
   it("changes an issue status and persists it to the analysis store", () => {
     const stored = seedAnalysisWithIssue();
-    const ok = useMoriSessionStore.getState().setIssueStatus("iss-1", "resolved");
+    const ok = useSessionStore.getState().setIssueStatus("iss-1", "resolved");
 
     expect(ok).toBe(true);
-    expect(useMoriSessionStore.getState().analysis!.issues[0]!.status).toBe("resolved");
+    expect(useSessionStore.getState().analysis!.issues[0]!.status).toBe("resolved");
     expect(
       repository.loadSessionAnalysis(stored.session.id)?.result.issues[0]?.status,
     ).toBe("resolved");
@@ -778,14 +778,14 @@ describe("useMoriSessionStore setIssueStatus", () => {
 
   it("edits an issue and persists it to analysis and memory body", () => {
     const stored = seedAnalysisWithIssue();
-    const before = useMoriSessionStore.getState().analysis!.issues[0]!;
-    const ok = useMoriSessionStore.getState().editIssue("iss-1", {
+    const before = useSessionStore.getState().analysis!.issues[0]!;
+    const ok = useSessionStore.getState().editIssue("iss-1", {
       title: "Corrected issue",
       description: "Corrected issue description",
     });
 
     expect(ok).toBe(true);
-    const issue = useMoriSessionStore.getState().analysis!.issues[0]!;
+    const issue = useSessionStore.getState().analysis!.issues[0]!;
     expect(issue.title).toBe("Corrected issue");
     expect(issue.description).toBe("Corrected issue description");
     expect(issue.editedByUser).toBe(true);
@@ -803,12 +803,12 @@ describe("useMoriSessionStore setIssueStatus", () => {
 
   it("promotes an issue to a next action and persists it to analysis and memory body", () => {
     const stored = seedAnalysisWithIssue();
-    const action = useMoriSessionStore.getState().promoteIssueToNextAction("iss-1");
+    const action = useSessionStore.getState().promoteIssueToNextAction("iss-1");
 
     expect(action).not.toBeNull();
     expect(action?.id).toBe("nact-user-iss-1");
     expect(action?.relatedIssueIds).toEqual(["iss-1"]);
-    expect(useMoriSessionStore.getState().analysis!.nextActions[0]?.id).toBe(
+    expect(useSessionStore.getState().analysis!.nextActions[0]?.id).toBe(
       "nact-user-iss-1",
     );
     expect(repository.loadSessionAnalysis(stored.session.id)?.result.nextActions[0]?.id).toBe(
@@ -821,20 +821,20 @@ describe("useMoriSessionStore setIssueStatus", () => {
 
   it("does not duplicate an already-promoted issue next action", () => {
     seedAnalysisWithIssue();
-    const first = useMoriSessionStore.getState().promoteIssueToNextAction("iss-1");
-    const second = useMoriSessionStore.getState().promoteIssueToNextAction("iss-1");
+    const first = useSessionStore.getState().promoteIssueToNextAction("iss-1");
+    const second = useSessionStore.getState().promoteIssueToNextAction("iss-1");
 
     expect(second?.id).toBe(first?.id);
-    expect(useMoriSessionStore.getState().analysis!.nextActions).toHaveLength(1);
+    expect(useSessionStore.getState().analysis!.nextActions).toHaveLength(1);
   });
 
   it("returns false with no draft or analysis", () => {
-    expect(useMoriSessionStore.getState().setIssueStatus("iss-1", "resolved")).toBe(false);
+    expect(useSessionStore.getState().setIssueStatus("iss-1", "resolved")).toBe(false);
   });
 
   it("returns false for an unknown issue id", () => {
     seedAnalysisWithIssue();
-    expect(useMoriSessionStore.getState().setIssueStatus("missing", "resolved")).toBe(
+    expect(useSessionStore.getState().setIssueStatus("missing", "resolved")).toBe(
       false,
     );
   });
@@ -842,17 +842,17 @@ describe("useMoriSessionStore setIssueStatus", () => {
   it("returns false when editing an unknown issue id", () => {
     seedAnalysisWithIssue();
     expect(
-      useMoriSessionStore.getState().editIssue("missing", { title: "Nope" }),
+      useSessionStore.getState().editIssue("missing", { title: "Nope" }),
     ).toBe(false);
   });
 
   it("returns null when promoting an unknown issue id", () => {
     seedAnalysisWithIssue();
-    expect(useMoriSessionStore.getState().promoteIssueToNextAction("missing")).toBeNull();
+    expect(useSessionStore.getState().promoteIssueToNextAction("missing")).toBeNull();
   });
 });
 
-describe("useMoriSessionStore setDecisionConfirmed", () => {
+describe("useSessionStore setDecisionConfirmed", () => {
   let repository: BrowserDraftRepository;
 
   beforeEach(() => {
@@ -882,9 +882,9 @@ describe("useMoriSessionStore setDecisionConfirmed", () => {
       now: fixedNow,
     });
     const stored = { ...built, savedAt: fixedNow, adapter: "browser-local-storage" as const };
-    useMoriSessionStore.getState().setDraft(stored);
+    useSessionStore.getState().setDraft(stored);
 
-    const analysis: MoriAnalysisResult = {
+    const analysis: AnalysisResult = {
       runId: "run-dc",
       providerName: "deterministic-heuristic-v1",
       providerLabel: "Deterministic",
@@ -898,7 +898,7 @@ describe("useMoriSessionStore setDecisionConfirmed", () => {
       issues: [],
       decisions: [
         {
-          ...moriMockSession.decisions[0]!,
+          ...mockSession.decisions[0]!,
           id: "dec-1",
           sessionId: stored.session.id,
           confirmed: false,
@@ -920,16 +920,16 @@ describe("useMoriSessionStore setDecisionConfirmed", () => {
       confidence: 0.5,
       notes: [],
     };
-    useMoriSessionStore.setState({ analysis, analysisStatus: "succeeded" });
+    useSessionStore.setState({ analysis, analysisStatus: "succeeded" });
     return stored;
   }
 
   it("confirms a decision and persists it to the analysis store", () => {
     const stored = seedAnalysisWithDecision();
-    const ok = useMoriSessionStore.getState().setDecisionConfirmed("dec-1", true);
+    const ok = useSessionStore.getState().setDecisionConfirmed("dec-1", true);
 
     expect(ok).toBe(true);
-    expect(useMoriSessionStore.getState().analysis!.decisions[0]!.confirmed).toBe(true);
+    expect(useSessionStore.getState().analysis!.decisions[0]!.confirmed).toBe(true);
     expect(
       repository.loadSessionAnalysis(stored.session.id)?.result.decisions[0]?.confirmed,
     ).toBe(true);
@@ -937,16 +937,16 @@ describe("useMoriSessionStore setDecisionConfirmed", () => {
 
   it("edits a decision and persists it to analysis and memory body", () => {
     const stored = seedAnalysisWithDecision();
-    useMoriSessionStore.getState().setDecisionConfirmed("dec-1", true);
-    const before = useMoriSessionStore.getState().analysis!.decisions[0]!;
-    const ok = useMoriSessionStore.getState().editDecision("dec-1", {
+    useSessionStore.getState().setDecisionConfirmed("dec-1", true);
+    const before = useSessionStore.getState().analysis!.decisions[0]!;
+    const ok = useSessionStore.getState().editDecision("dec-1", {
       title: "Corrected decision",
       decision: "Corrected decision text",
       rationale: "Corrected rationale",
     });
 
     expect(ok).toBe(true);
-    const decision = useMoriSessionStore.getState().analysis!.decisions[0]!;
+    const decision = useSessionStore.getState().analysis!.decisions[0]!;
     expect(decision.title).toBe("Corrected decision");
     expect(decision.decision).toBe("Corrected decision text");
     expect(decision.rationale).toBe("Corrected rationale");
@@ -965,18 +965,18 @@ describe("useMoriSessionStore setDecisionConfirmed", () => {
 
   it("rejects a previously confirmed decision", () => {
     seedAnalysisWithDecision();
-    useMoriSessionStore.getState().setDecisionConfirmed("dec-1", true);
-    useMoriSessionStore.getState().setDecisionConfirmed("dec-1", false);
-    expect(useMoriSessionStore.getState().analysis!.decisions[0]!.confirmed).toBe(false);
+    useSessionStore.getState().setDecisionConfirmed("dec-1", true);
+    useSessionStore.getState().setDecisionConfirmed("dec-1", false);
+    expect(useSessionStore.getState().analysis!.decisions[0]!.confirmed).toBe(false);
   });
 
   it("returns false with no draft or analysis", () => {
-    expect(useMoriSessionStore.getState().setDecisionConfirmed("dec-1", true)).toBe(false);
+    expect(useSessionStore.getState().setDecisionConfirmed("dec-1", true)).toBe(false);
   });
 
   it("returns false for an unknown decision id", () => {
     seedAnalysisWithDecision();
-    expect(useMoriSessionStore.getState().setDecisionConfirmed("missing", true)).toBe(
+    expect(useSessionStore.getState().setDecisionConfirmed("missing", true)).toBe(
       false,
     );
   });
@@ -984,15 +984,15 @@ describe("useMoriSessionStore setDecisionConfirmed", () => {
   it("returns false when editing an unknown decision id", () => {
     seedAnalysisWithDecision();
     expect(
-      useMoriSessionStore.getState().editDecision("missing", { title: "Nope" }),
+      useSessionStore.getState().editDecision("missing", { title: "Nope" }),
     ).toBe(false);
   });
 });
 
-describe("useMoriSessionStore import as new session", () => {
+describe("useSessionStore import as new session", () => {
   it("keeps an imported session reachable without a manual end-session step", () => {
     // The recorder model (endSession) was removed: a session is captured, not
     // user-started/ended. Imported sessions are reachable directly.
-    expect(typeof useMoriSessionStore.getState().importAsNewSession).toBe("function");
+    expect(typeof useSessionStore.getState().importAsNewSession).toBe("function");
   });
 });

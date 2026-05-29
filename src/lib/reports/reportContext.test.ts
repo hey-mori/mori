@@ -1,28 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import { deriveReportContext, getReportSelectionDefaults } from "./reportContext";
 
 describe("deriveReportContext", () => {
   it("returns the demo data basis when isDemoSession is true", () => {
-    const ctx = deriveReportContext({ view: moriMockSession, analysis: null, isDemoSession: true });
+    const ctx = deriveReportContext({ view: mockSession, analysis: null, isDemoSession: true });
     expect(ctx.dataBasis).toBe("demo");
     expect(ctx.dataBasisLabel).toBe("Demo data");
     expect(ctx.dataBasisTone).toBe("purple");
   });
 
   it("returns imports-only when sources exist but no analysis", () => {
-    const ctx = deriveReportContext({ view: moriMockSession, analysis: null, isDemoSession: false });
+    const ctx = deriveReportContext({ view: mockSession, analysis: null, isDemoSession: false });
     expect(ctx.dataBasis).toBe("imports-only");
     expect(ctx.dataBasisTone).toBe("blue");
   });
 
   it("returns imports-plus-analysis with provider label when analysis is present", () => {
-    const analysis: import("../analysis").MoriAnalysisResult = {
+    const analysis: import("../analysis").AnalysisResult = {
       runId: "run-1",
       providerName: "ollama-quick-pass-v1",
       providerLabel: "Ollama (llama3.1:8b)",
-      sessionId: moriMockSession.session.id,
-      projectId: moriMockSession.session.projectId,
+      sessionId: mockSession.session.id,
+      projectId: mockSession.session.projectId,
       generatedAt: "2026-05-14T10:00:00Z",
       durationMs: 1200,
       inputEventCount: 0,
@@ -39,7 +39,7 @@ describe("deriveReportContext", () => {
       rendered: {
         summary: {
           id: "summary-1",
-          sessionId: moriMockSession.session.id,
+          sessionId: mockSession.session.id,
           sessionSummary: "summary",
           resumePrompt: "resume",
           reportMarkdown: "",
@@ -51,7 +51,7 @@ describe("deriveReportContext", () => {
       notes: [],
     };
     const ctx = deriveReportContext({
-      view: moriMockSession,
+      view: mockSession,
       analysis,
       isDemoSession: false,
     });

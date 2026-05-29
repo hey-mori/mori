@@ -12,9 +12,9 @@ import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
 import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
@@ -34,15 +34,15 @@ import {
  * .mori export) live in the 리포트 tab, not here.
  */
 export function OverviewView() {
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const analysis = useMoriSessionStore((state) => state.analysis);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const setSessionTab = useMoriAppStore((state) => state.setSessionTab);
-  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const analysis = useSessionStore((state) => state.analysis);
+  const imports = useSessionStore((state) => state.imports);
+  const setSessionTab = useAppStore((state) => state.setSessionTab);
+  const openReviewItem = useAppStore((state) => state.openReviewItem);
 
   useEffect(() => {
     if (!initialized) hydrate();

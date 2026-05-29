@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import type {
   Decision,
   Issue,
-  MoriMockSession,
+  MockSession,
   SourceRef,
   TimelineEvent,
 } from "../../domain/types";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import {
   aggregateCounters,
   aggregateKeyDecisions,
@@ -108,7 +108,7 @@ function event(id: string, sourceIds: string[]): TimelineEvent {
 
 function loaded(
   id: string,
-  payload: Partial<MoriMockSession> & {
+  payload: Partial<MockSession> & {
     isActive?: boolean;
     title?: string;
     status?: ProjectMemoryLoadedSession["loadStatus"];
@@ -286,14 +286,14 @@ describe("loadedSessionHasBody", () => {
     expect(loadedSessionHasBody(empty)).toBe(false);
   });
   it("works with the mock session as a sanity check", () => {
-    // Convert moriMockSession to a loaded shape to confirm the helper
+    // Convert mockSession to a loaded shape to confirm the helper
     // tolerates real data without surprise.
     const real = loaded("mock", {
       isActive: true,
-      decisions: moriMockSession.decisions,
-      issues: moriMockSession.issues,
-      sources: moriMockSession.sources,
-      events: moriMockSession.events,
+      decisions: mockSession.decisions,
+      issues: mockSession.issues,
+      sources: mockSession.sources,
+      events: mockSession.events,
     });
     expect(loadedSessionHasBody(real)).toBe(true);
   });

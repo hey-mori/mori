@@ -1,7 +1,7 @@
 import { ArrowRight, BookCheck, ChevronRight, Clock4, Download, Eye, GitMerge, ListChecks } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
+import { BaseSection } from "../../components/ui/BaseSection";
 import { formatDateTime } from "../../lib/formatting/time";
 import {
   describeProposalKind,
@@ -35,7 +35,7 @@ import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes
  * Status, kind, and lifecycle tones all come from the shared
  * product-state model (`getProductMemoryStatusTone`,
  * `proposalKindTone`, `memoryLifecycleGroupTone`) so this card uses
- * the same tone scale as `MoriStatusBadge` everywhere else.
+ * the same tone scale as `BaseStatusBadge` everywhere else.
  */
 export function AcceptedMemoriesCard({
   memories,
@@ -68,7 +68,7 @@ export function AcceptedMemoriesCard({
   const recent = ordered.slice(0, 6);
   const lifecycle = summarizeMemoryLifecycle(memories.map((memory) => memory.status));
   return (
-    <MoriSection
+    <BaseSection
       className="memory-accepted"
       ariaLabel="확정된 프로젝트 메모리"
       title={
@@ -82,9 +82,9 @@ export function AcceptedMemoriesCard({
         </span>
       }
       actions={
-        <MoriStatusBadge tone={memories.length > 0 ? "success" : "neutral"}>
+        <BaseStatusBadge tone={memories.length > 0 ? "success" : "neutral"}>
           {memories.length}건
-        </MoriStatusBadge>
+        </BaseStatusBadge>
       }
     >
       {loading && memories.length === 0 ? (
@@ -108,12 +108,12 @@ export function AcceptedMemoriesCard({
                 <header>
                   <strong title={memory.title}>{memory.title}</strong>
                   <span className="memory-accepted-meta">
-                    <MoriStatusBadge tone={proposalKindTone(memory.kind)}>
+                    <BaseStatusBadge tone={proposalKindTone(memory.kind)}>
                       {describeProposalKind(memory.kind)}
-                    </MoriStatusBadge>
-                    <MoriStatusBadge tone={getProductMemoryStatusTone(memory.status)}>
+                    </BaseStatusBadge>
+                    <BaseStatusBadge tone={getProductMemoryStatusTone(memory.status)}>
                       {getProductMemoryStatusLabel(memory.status)}
-                    </MoriStatusBadge>
+                    </BaseStatusBadge>
                     {onSelectMemory ? (
                       <ChevronRight
                         size={14}
@@ -131,7 +131,7 @@ export function AcceptedMemoriesCard({
                   {" · "}
                   {memory.sourceSessionIds.length}개 세션
                   {" · "}
-                  <MoriStatusBadge tone="neutral">로컬 전용</MoriStatusBadge>
+                  <BaseStatusBadge tone="neutral">로컬 전용</BaseStatusBadge>
                 </small>
               </>
             );
@@ -162,15 +162,15 @@ export function AcceptedMemoriesCard({
       <footer className="memory-accepted-footer">
         <small>
           감사 로그 {reviewActionCount}건 기록됨 · 저장 위치:{" "}
-          <MoriStatusBadge tone={storageSource === "desktop-sqlite" ? "success" : "info"}>
+          <BaseStatusBadge tone={storageSource === "desktop-sqlite" ? "success" : "info"}>
             {describeAcceptedMemoryStorageSource(storageSource)}
-          </MoriStatusBadge>
+          </BaseStatusBadge>
           {storageFellBack
             ? " · 데스크톱 SQLite를 사용할 수 없어 localStorage로 안전하게 대체했습니다."
             : ""}
         </small>
       </footer>
-    </MoriSection>
+    </BaseSection>
   );
 }
 
@@ -244,9 +244,9 @@ function MemoryLifecycleStrip({
     <div className="memory-lifecycle-strip" role="group" aria-label="Accepted memory lifecycle health">
       {cells.map((cell) => (
         <div key={cell.group} className={`memory-lifecycle-cell lifecycle-${cell.group}`}>
-          <MoriStatusBadge tone={memoryLifecycleGroupTone(cell.group)}>
+          <BaseStatusBadge tone={memoryLifecycleGroupTone(cell.group)}>
             {cell.count}
-          </MoriStatusBadge>
+          </BaseStatusBadge>
           <span>{describeMemoryLifecycleGroup(cell.group)}</span>
         </div>
       ))}

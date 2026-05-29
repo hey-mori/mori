@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Clock4, History, StickyNote, Undo2 } from "lucide-react";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
+import { BaseSection } from "../../components/ui/BaseSection";
 import type { ProductStateTone } from "../../lib/product-state/productState";
 import {
   buildMemoryAuditTrailViewModel,
@@ -58,7 +58,7 @@ export function MemoryAuditTrailCard({
   );
 
   return (
-    <MoriSection
+    <BaseSection
       className="memory-audit"
       ariaLabel="Memory Audit Trail"
       title={
@@ -73,9 +73,9 @@ export function MemoryAuditTrailCard({
         </span>
       }
       actions={
-        <MoriStatusBadge tone={viewModel.totalCount > 0 ? "success" : "neutral"}>
+        <BaseStatusBadge tone={viewModel.totalCount > 0 ? "success" : "neutral"}>
           {viewModel.totalCount}건
-        </MoriStatusBadge>
+        </BaseStatusBadge>
       }
     >
       {viewModel.isEmpty ? (
@@ -114,9 +114,9 @@ export function MemoryAuditTrailCard({
                     {group.entries.map((entry) => (
                       <li key={entry.id} className="memory-audit-entry">
                         <header>
-                          <MoriStatusBadge tone={actionTone(entry.actionType)}>
+                          <BaseStatusBadge tone={actionTone(entry.actionType)}>
                             {entry.actionLabel}
-                          </MoriStatusBadge>
+                          </BaseStatusBadge>
                           <span className="memory-audit-meta">
                             <Clock4 size={11} aria-hidden="true" /> {entry.timeLabel} UTC
                             {" · "}
@@ -151,10 +151,10 @@ export function MemoryAuditTrailCard({
 
       <footer className="memory-audit-footer">
         <small>
-          <MoriStatusBadge tone="neutral">로컬 전용</MoriStatusBadge>{" "}
-          <MoriStatusBadge tone={storageSource === "desktop-sqlite" ? "success" : "info"}>
+          <BaseStatusBadge tone="neutral">로컬 전용</BaseStatusBadge>{" "}
+          <BaseStatusBadge tone={storageSource === "desktop-sqlite" ? "success" : "info"}>
             {describeAcceptedMemoryStorageSource(storageSource)}
-          </MoriStatusBadge>{" "}
+          </BaseStatusBadge>{" "}
           {storageFellBack
             ? "데스크톱 SQLite를 사용할 수 없어 localStorage로 대체했습니다. "
             : ""}
@@ -162,7 +162,7 @@ export function MemoryAuditTrailCard({
           되돌릴 수 있는 기록은 확인 후 revert할 수 있으며, revert 자체도 audit 기록으로 남습니다.
         </small>
       </footer>
-    </MoriSection>
+    </BaseSection>
   );
 }
 

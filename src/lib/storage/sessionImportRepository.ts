@@ -25,7 +25,7 @@ import {
 import { createBrowserDraftRepository } from "./localStorageAdapter";
 import type {
   ConnectorEventIdentitySnapshot,
-  MoriDraftRepository,
+  DraftRepository,
   StoredSessionImport,
 } from "./storageTypes";
 
@@ -94,15 +94,15 @@ export type SessionImportRepositoryOptions = {
   /** Defaults to `desktop` inside Tauri, `browser` otherwise. */
   runtime?: SessionImportRuntime;
   /** localStorage repository (browser path + desktop fallback). */
-  repository?: MoriDraftRepository;
+  repository?: DraftRepository;
   /** SQLite command bridge (desktop path). */
   commands?: SessionImportDesktopCommands;
 };
 
 export class SessionImportRepository {
   readonly runtime: SessionImportRuntime;
-  private readonly repositoryOverride: MoriDraftRepository | null;
-  private lazyRepository: MoriDraftRepository | null = null;
+  private readonly repositoryOverride: DraftRepository | null;
+  private lazyRepository: DraftRepository | null = null;
   private readonly commands: SessionImportDesktopCommands;
 
   constructor(options: SessionImportRepositoryOptions = {}) {
@@ -119,7 +119,7 @@ export class SessionImportRepository {
     return this.runtime === "desktop";
   }
 
-  private repository(): MoriDraftRepository {
+  private repository(): DraftRepository {
     if (this.repositoryOverride) return this.repositoryOverride;
     if (!this.lazyRepository) this.lazyRepository = createBrowserDraftRepository();
     return this.lazyRepository;

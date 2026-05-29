@@ -10,7 +10,7 @@ export {
   setSelectedRepository,
   updateRepositoryConfig,
   type AddRepositoryInput,
-  type MoriRepositoryConfig,
+  type RepositoryConfig,
   type RepositorySettings,
   type RepositoryVerificationMetadata,
   type RepositoryVerificationStatus,

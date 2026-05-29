@@ -24,7 +24,7 @@
  *     re-import rollup.
  *   - Demo mode collapses to a single banner and the active-session view.
  */
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import type {
   ConnectorEventKind,
   ConnectorId,
@@ -69,7 +69,7 @@ import {
 
 export type BuildProjectMemoryViewModelInput = {
   /** Always present — the live session. */
-  view: MoriMockSession;
+  view: MockSession;
   /** `"demo"` collapses to active-only state regardless of saved data. */
   mode: "demo" | "draft";
   /** Whether Quick Pass has produced an analysis result for the active session. */
@@ -228,7 +228,7 @@ export function buildProjectMemoryViewModel(
 // ─── recent sessions ───────────────────────────────────────────────────
 
 function buildRecentSessions(args: {
-  view: MoriMockSession;
+  view: MockSession;
   mode: "demo" | "draft";
   savedBrowserSessions: StoredSessionSummary[];
   savedSqliteSessions: SqliteSessionListEntry[];
@@ -564,7 +564,7 @@ function buildMoriPackageRows(packages: StoredMoriPackageDraft[]): ProjectMemory
 // ─── stats / data basis ────────────────────────────────────────────────
 
 function buildSummaryStats(args: {
-  view: MoriMockSession;
+  view: MockSession;
   recentSessions: ProjectMemorySessionSummary[];
   moriPackageCount: number;
   reimportSummary: ProjectMemoryReimportSummary;
@@ -657,7 +657,7 @@ function summarizeLoadStatus(loaded: ProjectMemoryLoadedSession[]): {
  * We synthesise a transient loaded row from the active view.
  */
 function activeSessionToImpliedLoadedRow(
-  view: MoriMockSession,
+  view: MockSession,
   mode: "demo" | "draft",
 ): ProjectMemoryLoadedSession {
   return {
@@ -681,7 +681,7 @@ function activeSessionToImpliedLoadedRow(
   };
 }
 
-function pickLatestImportantDecision(view: MoriMockSession) {
+function pickLatestImportantDecision(view: MockSession) {
   const high = view.decisions
     .filter((decision) => decision.importance === "high")
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

@@ -48,10 +48,10 @@ import type { SourceOption } from "../../domain/types";
 import {
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriReviewStore } from "../../app/reviewStore";
-import { useMoriAppStore } from "../../app/store";
+import { useReviewStore } from "../../app/reviewStore";
+import { useAppStore } from "../../app/store";
 import {
   formatClaudeRelativeKo,
 } from "../../lib/claude/claudeTauri";
@@ -152,16 +152,16 @@ function methodLabel(method: ImportMethod | null): string {
 }
 
 export function StartSessionView() {
-  const storeDraft = useMoriSessionStore((state) => state.draft);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const view = useMoriSessionStore(selectSessionView);
-  const importAsNewSession = useMoriSessionStore((state) => state.importAsNewSession);
-  const setSessionDraft = useMoriSessionStore((state) => state.setDraft);
-  const startReview = useMoriReviewStore((state) => state.startReview);
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
-  const startRecordsRequest = useMoriAppStore((state) => state.startRecordsRequest);
-  const clearStartRecordsRequest = useMoriAppStore((state) => state.clearStartRecordsRequest);
+  const storeDraft = useSessionStore((state) => state.draft);
+  const mode = useSessionStore(selectSessionMode);
+  const view = useSessionStore(selectSessionView);
+  const importAsNewSession = useSessionStore((state) => state.importAsNewSession);
+  const setSessionDraft = useSessionStore((state) => state.setDraft);
+  const startReview = useReviewStore((state) => state.startReview);
+  const setCurrentView = useAppStore((state) => state.navigate);
+  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
+  const startRecordsRequest = useAppStore((state) => state.startRecordsRequest);
+  const clearStartRecordsRequest = useAppStore((state) => state.clearStartRecordsRequest);
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [method, setMethod] = useState<ImportMethod | null>(null);
@@ -513,7 +513,7 @@ export function StartSessionView() {
         <div className="form-row">
           <div className="form-field">
             <span className="form-field-label">프로젝트</span>
-            <MoriSelect value={projectChoice} options={projectOptions} onChange={setProjectChoice} />
+            <BaseSelect value={projectChoice} options={projectOptions} onChange={setProjectChoice} />
             {projectChoice === NEW_PROJECT_VALUE ? (
               <input
                 className="start-new-project-input"
@@ -641,7 +641,7 @@ function PickTile({
  * Mori's own surface language (a button trigger + a lavender-highlighted
  * listbox), closing on outside-click or Escape.
  */
-function MoriSelect({
+function BaseSelect({
   value,
   options,
   onChange,

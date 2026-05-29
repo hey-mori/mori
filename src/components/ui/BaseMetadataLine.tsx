@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type MoriMetadataLineProps = {
+export type BaseMetadataLineProps = {
   items: Array<ReactNode | false | null | undefined>;
   className?: string;
   /** Keep metadata on one line when the surrounding row is very dense. */
@@ -14,11 +14,11 @@ export type MoriMetadataLineProps = {
  * sessions, sources, memories, reports, and settings rows do not each rebuild
  * the same "label · label · chip" pattern.
  */
-export function MoriMetadataLine({
+export function BaseMetadataLine({
   items,
   className = "",
   truncate = false,
-}: MoriMetadataLineProps) {
+}: BaseMetadataLineProps) {
   const visible = items.filter(Boolean);
   if (visible.length === 0) return null;
 

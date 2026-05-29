@@ -13,7 +13,7 @@ import { SettingsNotice, SettingsRow, SettingsSection, StatusPill } from "./Sett
 import {
   deriveLabelFromPath,
   getRepositoryVerificationFreshness,
-  type MoriRepositoryConfig,
+  type RepositoryConfig,
   type RepositoryVerificationMetadata,
 } from "../../lib/repositories";
 import { summarizeRepositories } from "../../lib/settings/settingsStatus";
@@ -32,7 +32,7 @@ export function RepositoriesCard({
   onClearVerification,
   onRemove,
 }: {
-  repositories: MoriRepositoryConfig[];
+  repositories: RepositoryConfig[];
   desktopRuntime: boolean;
   defaultRepositoryId: string | null;
   verifyingId: string | null;

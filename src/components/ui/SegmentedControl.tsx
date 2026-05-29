@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { MoriTooltip } from "./MoriTooltip";
+import { BaseTooltip } from "./BaseTooltip";
 
 /**
  * One option in a `SegmentedControl`.
@@ -70,9 +70,9 @@ export function SegmentedControl<T extends string>({
         );
         if (!option.title) return button;
         return (
-          <MoriTooltip key={option.id} content={option.title} kind="control">
+          <BaseTooltip key={option.id} content={option.title} kind="control">
             {button}
-          </MoriTooltip>
+          </BaseTooltip>
         );
       })}
     </div>

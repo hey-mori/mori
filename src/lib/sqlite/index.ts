@@ -52,7 +52,7 @@ export type {
   ListSessionsOutput,
   LoadSessionSnapshotInput,
   MigrationRecord,
-  MoriSqliteRepository,
+  SqliteRepository,
   PersistSessionSnapshotInput,
   PersistSessionSnapshotOutput,
   PersistSqliteSnapshotInput,

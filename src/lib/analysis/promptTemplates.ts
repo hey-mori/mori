@@ -1,4 +1,4 @@
-import type { MoriAnalysisInput } from "./analysisTypes";
+import type { AnalysisInput } from "./analysisTypes";
 
 export type QuickPassPromptParts = {
   systemPrompt: string;
@@ -20,7 +20,7 @@ Rules:
 - Mark generated issues and decisions as trustLevel "inferred" and confirmed false unless the source explicitly confirms them.
 - Output a single JSON object with no markdown fences and no commentary.`;
 
-export function buildQuickPassPrompt(input: MoriAnalysisInput): QuickPassPromptParts {
+export function buildQuickPassPrompt(input: AnalysisInput): QuickPassPromptParts {
   const eventDigest = input.events
     .map((event) => `- id=${event.id} type=${event.type} title=${event.title}\n  summary=${event.summary}`)
     .join("\n");

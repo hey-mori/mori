@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import {
   fromSqliteSessionImportRow,
   toSqliteSessionImportRow,
@@ -22,8 +22,8 @@ function sessionImport(
   return {
     id,
     sessionId,
-    source: { ...moriMockSession.sources[0]!, id: `src-${id}`, sessionId },
-    events: moriMockSession.events.slice(0, 1).map((event) => ({ ...event, sessionId })),
+    source: { ...mockSession.sources[0]!, id: `src-${id}`, sessionId },
+    events: mockSession.events.slice(0, 1).map((event) => ({ ...event, sessionId })),
     savedAt: "2026-05-16T09:00:00Z",
     adapter: "browser-local-storage",
     ...overrides,
@@ -139,7 +139,7 @@ function connectorImport(
 ): StoredSessionImport {
   return sessionImport(id, sessionId, {
     events: connectorEventIds.map((connectorEventId, index) => ({
-      ...moriMockSession.events[0]!,
+      ...mockSession.events[0]!,
       id: `${id}-evt-${index}`,
       sessionId,
       connectorEventId,

@@ -1,8 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import { getFeatureControlProps, type FeatureId } from "../../app/featureStatus";
-import { MoriTooltip } from "./MoriTooltip";
+import { BaseTooltip } from "./BaseTooltip";
 
-export type MoriPlannedActionProps = {
+export type BasePlannedActionProps = {
   /**
    * Feature id whose `disabledReason` drives the tooltip. Omit it for a
    * Planned capability that has no `featureStatus.ts` row yet — pass an
@@ -22,11 +22,11 @@ export type MoriPlannedActionProps = {
  * Planned capability without pretending it works. Centralising it kills
  * dozens of hand-rolled disabled tooltip buttons across feature folders.
  */
-export function MoriPlannedAction({ feature, label, title, icon: Icon }: MoriPlannedActionProps) {
+export function BasePlannedAction({ feature, label, title, icon: Icon }: BasePlannedActionProps) {
   const props = feature ? getFeatureControlProps(feature) : null;
   const tooltip = props ? props.title : title;
   return (
-    <MoriTooltip content={tooltip} kind="control">
+    <BaseTooltip content={tooltip} kind="control">
       <button
         type="button"
         className="mori-planned-action"
@@ -36,6 +36,6 @@ export function MoriPlannedAction({ feature, label, title, icon: Icon }: MoriPla
         {Icon ? <Icon size={13} aria-hidden="true" /> : null}
         <span>{label ?? feature ?? "예정"}</span>
       </button>
-    </MoriTooltip>
+    </BaseTooltip>
   );
 }

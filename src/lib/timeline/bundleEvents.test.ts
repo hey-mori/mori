@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import type { TimelineEvent } from "../../domain/types";
 import {
   createTimelineBundles,
@@ -10,13 +10,13 @@ import { isTimelineBundle } from "./displayItems";
 
 describe("timeline workflow bundles", () => {
   it("creates a research bundle for nearby low-importance events", () => {
-    const items = createTimelineBundles(moriMockSession.events, moriMockSession.relationships, {
+    const items = createTimelineBundles(mockSession.events, mockSession.relationships, {
       timeWindowMinutes: 12,
       minEventsForBundle: 3,
       preserveSelectedEventId: "evt-positioning",
       preserveImportantEventIds: ["evt-positioning", "evt-start-flow"],
       maxVisibleItemsPerLane: 4,
-      decisions: moriMockSession.decisions,
+      decisions: mockSession.decisions,
     });
 
     const researchBundle = items.find((item) => item.id.includes("bundle-research"));
@@ -26,12 +26,12 @@ describe("timeline workflow bundles", () => {
   });
 
   it("preserves the selected event as an individual card", () => {
-    const items = createTimelineBundles(moriMockSession.events, moriMockSession.relationships, {
+    const items = createTimelineBundles(mockSession.events, mockSession.relationships, {
       timeWindowMinutes: 12,
       minEventsForBundle: 2,
       preserveSelectedEventId: "evt-positioning",
       maxVisibleItemsPerLane: 4,
-      decisions: moriMockSession.decisions,
+      decisions: mockSession.decisions,
     });
 
     const selected = items.find((item) => item.id === "evt-positioning");
@@ -39,11 +39,11 @@ describe("timeline workflow bundles", () => {
   });
 
   it("keeps major decision events individual", () => {
-    const items = createTimelineBundles(moriMockSession.events, moriMockSession.relationships, {
+    const items = createTimelineBundles(mockSession.events, mockSession.relationships, {
       timeWindowMinutes: 20,
       minEventsForBundle: 2,
       maxVisibleItemsPerLane: 4,
-      decisions: moriMockSession.decisions,
+      decisions: mockSession.decisions,
     });
 
     expect(items.find((item) => item.id === "evt-start-flow")?.kind).toBe("event");
@@ -51,11 +51,11 @@ describe("timeline workflow bundles", () => {
   });
 
   it("does not bundle far-apart document notes", () => {
-    const items = createTimelineBundles(moriMockSession.events, moriMockSession.relationships, {
+    const items = createTimelineBundles(mockSession.events, mockSession.relationships, {
       timeWindowMinutes: 10,
       minEventsForBundle: 2,
       maxVisibleItemsPerLane: 5,
-      decisions: moriMockSession.decisions,
+      decisions: mockSession.decisions,
     });
 
     const noteBundles = items.filter((item) => item.kind === "bundle" && item.laneType === "docs");
@@ -63,12 +63,12 @@ describe("timeline workflow bundles", () => {
   });
 
   it("records meaningful bundle counts and member ids instead of generic hidden clusters", () => {
-    const items = createTimelineDisplayItems(moriMockSession.events, moriMockSession.relationships, {
+    const items = createTimelineDisplayItems(mockSession.events, mockSession.relationships, {
       timeWindowMinutes: 12,
       minEventsForBundle: 3,
       preserveSelectedEventId: "evt-positioning",
       maxVisibleItemsPerLane: 4,
-      decisions: moriMockSession.decisions,
+      decisions: mockSession.decisions,
     });
 
     const researchBundle = items.find((item) => item.id.includes("bundle-research"));

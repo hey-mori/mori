@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { MoriTooltip } from "./MoriTooltip";
+import { BaseTooltip } from "./BaseTooltip";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children?: ReactNode;
@@ -39,8 +39,8 @@ export function Button({
   );
   if (!title) return button;
   return (
-    <MoriTooltip content={title} kind="control">
+    <BaseTooltip content={title} kind="control">
       {button}
-    </MoriTooltip>
+    </BaseTooltip>
   );
 }

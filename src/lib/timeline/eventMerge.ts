@@ -12,7 +12,7 @@
  * event the helpers return their input by reference so callers skip the
  * persistence write.
  */
-import type { MoriAnalysisResult } from "../analysis";
+import type { AnalysisResult } from "../analysis";
 import type { TimelineEvent, TrustLevel } from "../../domain/types";
 import type { StoredSessionImport } from "../storage/storageTypes";
 
@@ -116,10 +116,10 @@ export function mergeEventWithNext(
  * no-op.
  */
 export function remapEventIdInAnalysis(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   fromId: string,
   toId: string,
-): MoriAnalysisResult {
+): AnalysisResult {
   if (fromId === toId) return analysis;
 
   const swap = (id: string) => (id === fromId ? toId : id);

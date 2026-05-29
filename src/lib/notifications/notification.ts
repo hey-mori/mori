@@ -18,7 +18,7 @@ import type { ReviewSelection } from "../review-workspace/reviewWorkspace";
  *
  * This module defines a **producer-neutral notification record** plus an
  * adapter from the existing `CompanionSignal`. Any future surface that needs
- * to raise a notice should emit `MoriNotification` — the rendering layer
+ * to raise a notice should emit `CompanionNotification` — the rendering layer
  * (AttentionIndicator / Companion Inbox) only needs to understand this shape.
  *
  * Hard rules carried over from the Companion layer:
@@ -40,7 +40,7 @@ import type { ReviewSelection } from "../review-workspace/reviewWorkspace";
  * meaning matches. Adding a new kind is a documentation step (extend this
  * union) and the renderer's icon / tone map.
  */
-export type MoriNotificationKind =
+export type CompanionNotificationKind =
   // Currently emitted via the Companion adapter.
   | "demo_mode_notice"
   | "real_session_gap"
@@ -60,8 +60,8 @@ export type MoriNotificationKind =
   | "import_finished"
   | "package_export_ready";
 
-export type MoriNotificationSeverity = CompanionSignalSeverity;
-export type MoriNotificationBasis = CompanionSignalBasis;
+export type CompanionNotificationSeverity = CompanionSignalSeverity;
+export type CompanionNotificationBasis = CompanionSignalBasis;
 
 /**
  * Producer-neutral action target. A notification can deep-link the renderer
@@ -70,7 +70,7 @@ export type MoriNotificationBasis = CompanionSignalBasis;
  *  - a `review` selection (a specific issue / decision / next action), or
  *  - `null` for an informational notice with no destination.
  */
-export type MoriNotificationActionTarget =
+export type CompanionNotificationActionTarget =
   | { kind: "view"; view: ViewKey }
   | { kind: "review"; selection: ReviewSelection }
   // Open a specific session in the unified workspace (feed items about a
@@ -78,13 +78,13 @@ export type MoriNotificationActionTarget =
   | { kind: "session"; sessionId: string }
   | null;
 
-export type MoriNotification = {
+export type CompanionNotification = {
   id: string;
-  kind: MoriNotificationKind;
-  severity: MoriNotificationSeverity;
+  kind: CompanionNotificationKind;
+  severity: CompanionNotificationSeverity;
   title: string;
   message: string;
-  basis: MoriNotificationBasis;
+  basis: CompanionNotificationBasis;
   /** Linked structured records (issue / decision / next-action / memory ids). */
   linkedItemIds: string[];
   /** Originating timeline event ids — empty for state-grounded notices. */
@@ -92,7 +92,7 @@ export type MoriNotification = {
   /** Calm verb framing the action ("검토", "이어가기"). */
   actionLabel: string;
   /** Destination when the action is taken; `null` for informational notes. */
-  actionTarget: MoriNotificationActionTarget;
+  actionTarget: CompanionNotificationActionTarget;
   /**
    * Optional creation timestamp. Companion-derived notifications omit this
    * because they are recomputed on every render; pushed notifications (e.g. an
@@ -123,11 +123,11 @@ export type MoriNotification = {
  */
 export function companionSignalToNotification(
   signal: CompanionSignal,
-  actionTarget: MoriNotificationActionTarget,
-): MoriNotification {
+  actionTarget: CompanionNotificationActionTarget,
+): CompanionNotification {
   return {
     id: signal.id,
-    // The companion signal type is a strict subset of MoriNotificationKind.
+    // The companion signal type is a strict subset of CompanionNotificationKind.
     kind: signal.type,
     severity: signal.severity,
     title: signal.title,
@@ -152,10 +152,10 @@ export function companionSignalToNotification(
  * across every consumer.
  */
 export function composeNotifications(
-  feeds: ReadonlyArray<ReadonlyArray<MoriNotification>>,
-): MoriNotification[] {
+  feeds: ReadonlyArray<ReadonlyArray<CompanionNotification>>,
+): CompanionNotification[] {
   const seen = new Set<string>();
-  const out: MoriNotification[] = [];
+  const out: CompanionNotification[] = [];
   for (const feed of feeds) {
     for (const notification of feed) {
       if (seen.has(notification.id)) continue;

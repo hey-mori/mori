@@ -12,7 +12,7 @@ import type {
   Decision,
   Issue,
   IssueStatus,
-  MoriMockSession,
+  MockSession,
   NextAction,
   Priority,
 } from "../../domain/types";
@@ -55,7 +55,7 @@ export function ReviewDetailPanel({
   canEditReview,
 }: {
   selection: ReviewSelection;
-  view: MoriMockSession;
+  view: MockSession;
   onShowTimeline: (eventId: string) => void;
   onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
   onSetIssueStatus: (issueId: string, status: IssueStatus) => void;
@@ -153,7 +153,7 @@ function IssueDetail({
   canEditStatus,
 }: {
   issue: Issue;
-  view: MoriMockSession;
+  view: MockSession;
   onShowTimeline: (eventId: string) => void;
   onSetStatus: (issueId: string, status: IssueStatus) => void;
   onEditIssue: (issueId: string, fields: IssueEditFields) => boolean;
@@ -340,7 +340,7 @@ function DecisionDetail({
   canEditConfirm,
 }: {
   decision: Decision;
-  view: MoriMockSession;
+  view: MockSession;
   onShowTimeline: (eventId: string) => void;
   onSetConfirmed: (decisionId: string, confirmed: boolean) => void;
   onEditDecision: (decisionId: string, fields: DecisionEditFields) => boolean;
@@ -529,7 +529,7 @@ function NextActionDetail({
   canEditCompletion,
 }: {
   nextAction: NextAction;
-  view: MoriMockSession;
+  view: MockSession;
   onShowTimeline: (eventId: string) => void;
   onToggleComplete: (nextActionId: string, completed: boolean) => void;
   onEditNextAction: (nextActionId: string, fields: NextActionEditFields) => boolean;
@@ -682,7 +682,7 @@ function NextActionDetail({
   );
 }
 
-function EvidenceList({ view, sourceIds }: { view: MoriMockSession; sourceIds: string[] }) {
+function EvidenceList({ view, sourceIds }: { view: MockSession; sourceIds: string[] }) {
   const sources = view.sources.filter((source) => sourceIds.includes(source.id));
   if (sources.length === 0) {
     return <p className="review-detail-empty">연결된 출처가 없습니다.</p>;

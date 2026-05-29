@@ -23,7 +23,7 @@ import { TimelineGridLines } from "./TimelineGridLines";
 import { TimelineLane } from "./TimelineLane";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
 import type { Relationship } from "../../domain/types";
-import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
+import type { BaseMenuItemSpec } from "../../components/ui/BaseActionMenu";
 import { activityLaneIcons } from "./lib/activityIcons";
 
 export type TimelineCanvasProps = {
@@ -39,7 +39,7 @@ export type TimelineCanvasProps = {
   onViewportChange?: (viewport: MinimapViewport) => void;
   onSelect: (itemId: string) => void;
   onHover: (itemId: string | null) => void;
-  eventMenuItems?: (event: TimelineRenderModel["visibleDisplayItems"][number] & { kind: "event" }) => MoriMenuItemSpec[];
+  eventMenuItems?: (event: TimelineRenderModel["visibleDisplayItems"][number] & { kind: "event" }) => BaseMenuItemSpec[];
 };
 
 /** Imperative handle so the minimap can pan the canvas. */

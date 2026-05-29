@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import { emptyConnectorSourceImportSummary } from "../connectors";
 import type { StoredSessionImport } from "../storage/storageTypes";
 import {
@@ -12,9 +12,9 @@ function sessionImport(
 ): StoredSessionImport {
   return {
     id: "import-1",
-    sessionId: moriMockSession.session.id,
-    source: moriMockSession.sources[0]!,
-    events: moriMockSession.events.slice(0, 2),
+    sessionId: mockSession.session.id,
+    source: mockSession.sources[0]!,
+    events: mockSession.events.slice(0, 2),
     savedAt: "2026-05-16T09:00:00Z",
     adapter: "browser-local-storage",
     ...overrides,
@@ -29,7 +29,7 @@ describe("SQLite session import row converters", () => {
 
     const restored = fromSqliteSessionImportRow(row);
     expect(restored.id).toBe("import-1");
-    expect(restored.sessionId).toBe(moriMockSession.session.id);
+    expect(restored.sessionId).toBe(mockSession.session.id);
     expect(restored.source).toEqual(original.source);
     expect(restored.events).toEqual(original.events);
     expect(restored.savedAt).toBe("2026-05-16T09:00:00Z");

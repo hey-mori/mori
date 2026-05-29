@@ -2,11 +2,11 @@ import { Link, PlusCircle, Sparkles, StickyNote } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
+import { BasePlannedAction } from "../../components/ui/BasePlannedAction";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { InlineEditForm } from "../review/InlineEditForm";
 import type {
-  MoriMockSession,
+  MockSession,
   RelationshipType,
   TimelineEvent,
 } from "../../domain/types";
@@ -32,7 +32,7 @@ export function TracePanel({
   onRemoveRelationship,
 }: {
   selectedEvent: TimelineEvent;
-  session: MoriMockSession;
+  session: MockSession;
   onClearFocus?: () => void;
   /** True when the active session can persist Timeline writes (real draft). */
   canWrite?: boolean;
@@ -226,7 +226,7 @@ export function TracePanel({
       <section className="panel-section">
         <SectionHeader title="예정된 액션" hint="예정" />
         <div className="trace-actions trace-actions-planned">
-          <MoriPlannedAction
+          <BasePlannedAction
             icon={Sparkles}
             label="재분석"
             title="흐름 추적에서의 재분석은 예정되어 있습니다."

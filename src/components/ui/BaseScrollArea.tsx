@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
-export type MoriScrollAreaProps = HTMLAttributes<HTMLDivElement> & {
+export type BaseScrollAreaProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
   /** Direction the area can scroll in. Defaults to vertical. */
   direction?: "vertical" | "horizontal" | "both";
@@ -12,12 +12,12 @@ export type MoriScrollAreaProps = HTMLAttributes<HTMLDivElement> & {
  * never get the harsh native bars on one panel and the styled ones on
  * another.
  */
-export function MoriScrollArea({
+export function BaseScrollArea({
   children,
   direction = "vertical",
   className = "",
   ...rest
-}: MoriScrollAreaProps) {
+}: BaseScrollAreaProps) {
   return (
     <div
       className={`mori-scroll mori-scroll-${direction} ${className}`.trim()}

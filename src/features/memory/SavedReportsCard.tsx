@@ -1,7 +1,7 @@
 import { Archive, FileText } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseSection } from "../../components/ui/BaseSection";
 import type { StoredMoriPackageDraft } from "../../lib/storage/storageTypes";
 import { formatDateTime } from "../../lib/formatting/time";
 
@@ -15,7 +15,7 @@ export function SavedReportsCard({
   onOpenReports: () => void;
 }) {
   return (
-    <MoriSection
+    <BaseSection
       className="memory-reports"
       ariaLabel="Saved reports"
       title="저장된 리포트 · .mori 패키지"
@@ -58,7 +58,7 @@ export function SavedReportsCard({
           })}
         </ul>
       )}
-    </MoriSection>
+    </BaseSection>
   );
 }
 

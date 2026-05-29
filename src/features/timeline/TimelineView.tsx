@@ -4,9 +4,9 @@ import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import {
   buildTimelineRenderModel,
   shouldHideInspector,
@@ -19,7 +19,7 @@ import {
   type ActivityLaneId,
 } from "../../lib/timeline/activityModel";
 import type { TimelineEvent } from "../../domain/types";
-import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
+import type { BaseMenuItemSpec } from "../../components/ui/BaseActionMenu";
 import { EventInspector } from "./EventInspector";
 import { eventIssueId, isEventPromotedToIssue } from "../../lib/timeline/eventToIssue";
 import { TimelineBundleInspector } from "./TimelineBundleInspector";
@@ -54,40 +54,40 @@ import { TracePanel } from "../flow-focus/TracePanel";
  * (no separate `flow` route, no double header).
  */
 export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) {
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const view = useMoriSessionStore(selectSessionView);
-  const sessionMode = useMoriSessionStore(selectSessionMode);
-  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const analysis = useMoriSessionStore((state) => state.analysis);
-  const createIssueFromEvent = useMoriSessionStore((state) => state.createIssueFromEvent);
-  const updateSessionEvent = useMoriSessionStore((state) => state.updateSessionEvent);
-  const splitSessionEvent = useMoriSessionStore((state) => state.splitSessionEvent);
-  const mergeSessionEvent = useMoriSessionStore((state) => state.mergeSessionEvent);
-  const addEventRelationship = useMoriSessionStore((state) => state.addEventRelationship);
-  const removeRelationship = useMoriSessionStore((state) => state.removeRelationship);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const view = useSessionStore(selectSessionView);
+  const sessionMode = useSessionStore(selectSessionMode);
+  const analysisStatus = useSessionStore((state) => state.analysisStatus);
+  const imports = useSessionStore((state) => state.imports);
+  const runQuickPass = useSessionStore((state) => state.runQuickPass);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const analysis = useSessionStore((state) => state.analysis);
+  const createIssueFromEvent = useSessionStore((state) => state.createIssueFromEvent);
+  const updateSessionEvent = useSessionStore((state) => state.updateSessionEvent);
+  const splitSessionEvent = useSessionStore((state) => state.splitSessionEvent);
+  const mergeSessionEvent = useSessionStore((state) => state.mergeSessionEvent);
+  const addEventRelationship = useSessionStore((state) => state.addEventRelationship);
+  const removeRelationship = useSessionStore((state) => state.removeRelationship);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const selectedEventId = useMoriAppStore((state) => state.selectedEventId);
-  const hoveredEventId = useMoriAppStore((state) => state.hoveredEventId);
-  const activeFilters = useMoriAppStore((state) => state.activeFilters);
-  const searchQuery = useMoriAppStore((state) => state.searchQuery);
-  const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
-  const setHoveredEventId = useMoriAppStore((state) => state.setHoveredEventId);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
-  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
-  const toggleFilter = useMoriAppStore((state) => state.toggleFilter);
-  const clearFilters = useMoriAppStore((state) => state.clearFilters);
-  const setSearchQuery = useMoriAppStore((state) => state.setSearchQuery);
-  const inspectorCollapsed = useMoriAppStore((state) => state.inspectorCollapsed);
-  const setInspectorCollapsed = useMoriAppStore((state) => state.setInspectorCollapsed);
-  const setSessionTab = useMoriAppStore((state) => state.setSessionTab);
+  const selectedEventId = useAppStore((state) => state.selectedEventId);
+  const hoveredEventId = useAppStore((state) => state.hoveredEventId);
+  const activeFilters = useAppStore((state) => state.activeFilters);
+  const searchQuery = useAppStore((state) => state.searchQuery);
+  const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
+  const setHoveredEventId = useAppStore((state) => state.setHoveredEventId);
+  const setCurrentView = useAppStore((state) => state.setCurrentView);
+  const openReviewItem = useAppStore((state) => state.openReviewItem);
+  const toggleFilter = useAppStore((state) => state.toggleFilter);
+  const clearFilters = useAppStore((state) => state.clearFilters);
+  const setSearchQuery = useAppStore((state) => state.setSearchQuery);
+  const inspectorCollapsed = useAppStore((state) => state.inspectorCollapsed);
+  const setInspectorCollapsed = useAppStore((state) => state.setInspectorCollapsed);
+  const setSessionTab = useAppStore((state) => state.setSessionTab);
 
   // Selecting an item opens the inspector; clicking the same item again clears
   // the selection and folds the inspector away.
@@ -285,9 +285,9 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   // conversation-dominant session defaults to it).
   const useListView = mode === "timeline" && readingMode === "flow";
   const buildEventMenuItems = useCallback(
-    (event: TimelineEvent): MoriMenuItemSpec[] => {
+    (event: TimelineEvent): BaseMenuItemSpec[] => {
       const issueCreated = analysis ? isEventPromotedToIssue(analysis, event.id) : false;
-      const items: MoriMenuItemSpec[] = [
+      const items: BaseMenuItemSpec[] = [
         {
           id: "open-details",
           label: "상세 열기",

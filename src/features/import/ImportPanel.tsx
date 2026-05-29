@@ -53,11 +53,11 @@ import { formatDateTime, formatTime } from "../../lib/formatting/time";
 import {
   loadConnectorImportHistorySavedSessionsAsync,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
-import { selectActiveRepository, useMoriRepositoryStore } from "../../app/repositoryStore";
-import { useMoriReviewStore } from "../../app/reviewStore";
+import { useAppStore } from "../../app/store";
+import { selectActiveRepository, useRepositoryStore } from "../../app/repositoryStore";
+import { useReviewStore } from "../../app/reviewStore";
 import type { ReviewOrigin } from "../../lib/review";
 import { isTauriRuntime, pickRepositoryDirectory, runGitDiff } from "../../lib/desktop";
 
@@ -89,14 +89,14 @@ export type ImportPanelProps = {
 
 export function ImportPanel(props: ImportPanelProps = {}) {
   const { initialKind, initialAiPlatform, variant = "standalone", onClose } = props;
-  const draft = useMoriSessionStore((state) => state.draft);
-  const sessionView = useMoriSessionStore(selectSessionView);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const addImport = useMoriSessionStore((state) => state.addImport);
-  const removeImport = useMoriSessionStore((state) => state.removeImport);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
-  const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
-  const startReview = useMoriReviewStore((state) => state.startReview);
+  const draft = useSessionStore((state) => state.draft);
+  const sessionView = useSessionStore(selectSessionView);
+  const imports = useSessionStore((state) => state.imports);
+  const addImport = useSessionStore((state) => state.addImport);
+  const removeImport = useSessionStore((state) => state.removeImport);
+  const setCurrentView = useAppStore((state) => state.setCurrentView);
+  const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
+  const startReview = useReviewStore((state) => state.startReview);
 
   const [kind, setKind] = useState<ImportKind>(initialKind ?? "note");
   const [title, setTitle] = useState("");
@@ -110,13 +110,13 @@ export function ImportPanel(props: ImportPanelProps = {}) {
   const [staged, setStaged] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [picking, setPicking] = useState(false);
-  const repositorySettings = useMoriRepositoryStore((state) => state.settings);
-  const selectRepository = useMoriRepositoryStore((state) => state.selectRepository);
-  const markRepositoryUsed = useMoriRepositoryStore((state) => state.markRepositoryUsed);
-  const refreshRepositoryMetadataAfterCapture = useMoriRepositoryStore(
+  const repositorySettings = useRepositoryStore((state) => state.settings);
+  const selectRepository = useRepositoryStore((state) => state.selectRepository);
+  const markRepositoryUsed = useRepositoryStore((state) => state.markRepositoryUsed);
+  const refreshRepositoryMetadataAfterCapture = useRepositoryStore(
     (state) => state.refreshRepositoryMetadataAfterCapture,
   );
-  const activeRepository = useMoriRepositoryStore(selectActiveRepository);
+  const activeRepository = useRepositoryStore(selectActiveRepository);
   const [selectedRepoId, setSelectedRepoId] = useState<string>(activeRepository?.id ?? "");
 
   /** Live preview snapshot for the Connector JSONL tab; null until the user clicks Parse. */
@@ -880,7 +880,7 @@ function KindTab({ active, icon: Icon, label, onClick }: { active: boolean; icon
   );
 }
 
-export function formatRepoOption(repo: import("../../lib/repositories").MoriRepositoryConfig): string {
+export function formatRepoOption(repo: import("../../lib/repositories").RepositoryConfig): string {
   const verification = repo.verification;
   if (!verification || verification.status === "unverified") {
     return `${repo.label} · 미검증 — ${repo.path}`;
@@ -897,7 +897,7 @@ export function formatRepoOption(repo: import("../../lib/repositories").MoriRepo
   return `${repo.label} · ${branch} ${sha}${dirty}${staleMarker}${age} — ${repo.path}`;
 }
 
-function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories").MoriRepositoryConfig | undefined }) {
+function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories").RepositoryConfig | undefined }) {
   if (!repo) return null;
   const verification = repo.verification;
   if (!verification || verification.status === "unverified") {

@@ -18,13 +18,13 @@ import {
   ScrollText,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
   selectSessionSource,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriProfileStore } from "../../app/profileStore";
+import { useProfileStore } from "../../app/profileStore";
 import {
   filterSidebarRows,
   groupSidebarRows,
@@ -45,13 +45,13 @@ import {
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { AttentionIndicator } from "../../features/companion/AttentionIndicator";
 import { getProfileInitials } from "../../lib/profile/localProfile";
-import { moriViewIcon } from "../brand/moriIcons";
+import { viewIcon } from "../brand/moriIcons";
 import { SearchField } from "../ui/SearchField";
 import {
-  MoriContextMenu,
+  BaseContextMenu,
   useContextMenuPosition,
-  type MoriMenuItemSpec,
-} from "../ui/MoriActionMenu";
+  type BaseMenuItemSpec,
+} from "../ui/BaseActionMenu";
 import type { LucideIcon } from "lucide-react";
 import type { ViewKey } from "../../domain/types";
 import type { SessionTab } from "../../app/store";
@@ -79,16 +79,16 @@ import type { SessionTab } from "../../app/store";
  *  import flows, which are reached via the head shortcut buttons and light
  *  those up instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
-  { key: "home", label: "홈", icon: moriViewIcon.home ?? House },
+  { key: "home", label: "홈", icon: viewIcon.home ?? House },
   {
     key: "connections",
     label: "소스",
-    icon: moriViewIcon.connections ?? Link2,
+    icon: viewIcon.connections ?? Link2,
   },
   {
     key: "workspace",
     label: "프로젝트",
-    icon: moriViewIcon.workspace ?? Layers,
+    icon: viewIcon.workspace ?? Layers,
   },
   // 메모리 is no longer a standing tab: durable project memory lives on each
   // project page (ProjectView). The memory overview / consolidation review stay
@@ -118,12 +118,12 @@ export function Sidebar({
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
 }) {
-  const currentView = useMoriAppStore((state) => state.currentView);
-  const currentProjectKey = useMoriAppStore((state) => state.currentProjectKey);
+  const currentView = useAppStore((state) => state.currentView);
+  const currentProjectKey = useAppStore((state) => state.currentProjectKey);
   // Highlight the open session's row. A real session is identified by its
   // draft; a bundled demo session has no draft, so fall back to demoSessionId
   // — that way clicking a demo row both opens it and lights it up.
-  const activeSessionId = useMoriSessionStore(
+  const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? state.demoSessionId ?? null,
   );
   // Only light up a session row when the user is actually viewing that session.
@@ -132,19 +132,19 @@ export function Sidebar({
   const highlightedSessionId = SESSION_SUBJECT_VIEWS.has(currentView)
     ? activeSessionId
     : null;
-  const source = useMoriSessionStore(selectSessionSource);
-  const dataResetNonce = useMoriSessionStore((state) => state.dataResetNonce);
-  const loadBrowserSession = useMoriSessionStore(
+  const source = useSessionStore(selectSessionSource);
+  const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
+  const loadBrowserSession = useSessionStore(
     (state) => state.loadBrowserSession,
   );
-  const loadDesktopSession = useMoriSessionStore(
+  const loadDesktopSession = useSessionStore(
     (state) => state.loadDesktopSession,
   );
-  const renameSession = useMoriSessionStore((state) => state.renameSession);
-  const openSession = useMoriAppStore((state) => state.openSession);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
-  const openSettings = useMoriAppStore((state) => state.openSettingsSheet);
-  const profile = useMoriProfileStore((state) => state.profile);
+  const renameSession = useSessionStore((state) => state.renameSession);
+  const openSession = useAppStore((state) => state.openSession);
+  const setCurrentView = useAppStore((state) => state.setCurrentView);
+  const openSettings = useAppStore((state) => state.openSettingsSheet);
+  const profile = useProfileStore((state) => state.profile);
 
   const [summaries, setSummaries] = useState(() => safeListSessions());
   const [query, setQuery] = useState("");
@@ -155,7 +155,7 @@ export function Sidebar({
     setGroupingModeState(mode);
     saveGroupingPreference(mode);
   };
-  const openProject = useMoriAppStore((state) => state.openProject);
+  const openProject = useAppStore((state) => state.openProject);
   // Per-project collapse state for the project-tree mode. Stored as a set
   // of collapsed labels so the default ("everything expanded") needs no
   // persistence — we only remember explicit closes.
@@ -606,7 +606,7 @@ function SessionRow({
           </span>
         ) : null}
       </button>
-      <MoriContextMenu
+      <BaseContextMenu
         open={menu.open}
         position={menu.position}
         items={menuItems}
@@ -629,8 +629,8 @@ function buildSidebarSessionMenuItems({
   onOpenTab: (tab: SessionTab) => void;
   onOpenProject?: () => void;
   onRename: () => void;
-}): MoriMenuItemSpec[] {
-  const items: MoriMenuItemSpec[] = [
+}): BaseMenuItemSpec[] {
+  const items: BaseMenuItemSpec[] = [
     { id: "open", label: "세션 열기", icon: ChevronRight, onSelect: onOpen },
     {
       id: "open-overview",

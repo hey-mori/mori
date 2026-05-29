@@ -12,7 +12,7 @@
 import type {
   Decision,
   Issue,
-  MoriMockSession,
+  MockSession,
   SourceRef,
   TimelineEvent,
   TrustLevel,
@@ -163,7 +163,7 @@ export type SessionEvidenceSummary = {
  * (`getReportEvidenceSummary`) is kept as a re-export in
  * `sources/traceability.ts`; new code should call this.
  */
-export function getSessionEvidenceSummary(sessionView: MoriMockSession): SessionEvidenceSummary {
+export function getSessionEvidenceSummary(sessionView: MockSession): SessionEvidenceSummary {
   const sources = sessionView.sources;
   const events = sessionView.events;
   const issues = sessionView.issues;

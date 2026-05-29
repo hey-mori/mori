@@ -13,14 +13,14 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { focusFirstElement } from "./focusTrap";
-import { moriTooltipProps } from "./MoriTooltip";
+import { baseTooltipProps } from "./BaseTooltip";
 
-export type MoriMenuPosition = {
+export type BaseMenuPosition = {
   x: number;
   y: number;
 };
 
-export type MoriMenuItemSpec =
+export type BaseMenuItemSpec =
   | {
       type?: "item";
       id: string;
@@ -37,8 +37,8 @@ export type MoriMenuItemSpec =
     };
 
 export function useContextMenuPosition() {
-  const [position, setPosition] = useState<MoriMenuPosition | null>(null);
-  const openAt = (next: MoriMenuPosition) => setPosition(next);
+  const [position, setPosition] = useState<BaseMenuPosition | null>(null);
+  const openAt = (next: BaseMenuPosition) => setPosition(next);
   const close = () => setPosition(null);
 
   const onContextMenu = (event: MouseEvent<HTMLElement>) => {
@@ -63,7 +63,7 @@ export function useContextMenuPosition() {
   };
 }
 
-export function MoriContextMenu({
+export function BaseContextMenu({
   open,
   position,
   items,
@@ -71,14 +71,14 @@ export function MoriContextMenu({
   label,
 }: {
   open: boolean;
-  position: MoriMenuPosition | null;
-  items: MoriMenuItemSpec[];
+  position: BaseMenuPosition | null;
+  items: BaseMenuItemSpec[];
   onClose: () => void;
   label: string;
 }) {
   if (!open || !position) return null;
   return (
-    <MoriMenuLayer
+    <BaseMenuLayer
       position={position}
       items={items}
       onClose={onClose}
@@ -87,17 +87,17 @@ export function MoriContextMenu({
   );
 }
 
-export function MoriOverflowMenu({
+export function BaseOverflowMenu({
   items,
   label,
   className = "",
 }: {
-  items: MoriMenuItemSpec[];
+  items: BaseMenuItemSpec[];
   label: string;
   className?: string;
 }) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [position, setPosition] = useState<MoriMenuPosition | null>(null);
+  const [position, setPosition] = useState<BaseMenuPosition | null>(null);
   const open = position !== null;
 
   function closeMenu() {
@@ -136,7 +136,7 @@ export function MoriOverflowMenu({
         <MoreHorizontal size={14} aria-hidden="true" />
       </button>
       {open ? (
-        <MoriMenuLayer
+        <BaseMenuLayer
           position={position}
           items={items}
           onClose={closeMenu}
@@ -148,15 +148,15 @@ export function MoriOverflowMenu({
   );
 }
 
-function MoriMenuLayer({
+function BaseMenuLayer({
   position,
   items,
   onClose,
   label,
   align = "start",
 }: {
-  position: MoriMenuPosition;
-  items: MoriMenuItemSpec[];
+  position: BaseMenuPosition;
+  items: BaseMenuItemSpec[];
   onClose: () => void;
   label: string;
   align?: "start" | "end";
@@ -256,7 +256,7 @@ function MoriMenuLayer({
               .filter(Boolean)
               .join(" ")}
             disabled={item.disabled}
-            {...moriTooltipProps(item.title, "control")}
+            {...baseTooltipProps(item.title, "control")}
             onClick={(event) => {
               event.stopPropagation();
               if (item.disabled) return;

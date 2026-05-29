@@ -12,19 +12,19 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
-import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
+import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
+import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import {
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
-import { useMoriProjectStore } from "../../app/projectStore";
+import { useProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
 import { ProjectFormModal } from "../project/ProjectFormModal";
 import {
@@ -46,22 +46,22 @@ import {
  * reconstruction counts.
  */
 export function WorkspaceView() {
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const draft = useMoriSessionStore((state) => state.draft);
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const loadBrowserSession = useMoriSessionStore(
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const draft = useSessionStore((state) => state.draft);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const loadBrowserSession = useSessionStore(
     (state) => state.loadBrowserSession,
   );
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const openSessionDetail = useMoriAppStore((state) => state.openSession);
-  const openProject = useMoriAppStore((state) => state.openProject);
+  const setCurrentView = useAppStore((state) => state.navigate);
+  const openSessionDetail = useAppStore((state) => state.openSession);
+  const openProject = useAppStore((state) => state.openProject);
 
-  const projectsInitialized = useMoriProjectStore((state) => state.initialized);
-  const userProjects = useMoriProjectStore((state) => state.projects);
-  const hydrateProjects = useMoriProjectStore((state) => state.hydrate);
-  const createUserProjectRecord = useMoriProjectStore(
+  const projectsInitialized = useProjectStore((state) => state.initialized);
+  const userProjects = useProjectStore((state) => state.projects);
+  const hydrateProjects = useProjectStore((state) => state.hydrate);
+  const createUserProjectRecord = useProjectStore(
     (state) => state.createProject,
   );
   const [creatingProject, setCreatingProject] = useState(false);
@@ -359,14 +359,14 @@ function ProjectRowItem({
 }) {
   return (
     <li>
-      <MoriObjectRow
+      <BaseObjectRow
         leading={<FolderGit2 size={15} />}
         onClick={onOpen}
         ariaLabel={project.name}
         title={project.name}
         className="session-list-row"
         meta={
-          <MoriMetadataLine
+          <BaseMetadataLine
             items={[
               <span title={project.path}>
                 {shortProjectLabel(project.path)}
@@ -391,14 +391,14 @@ function SessionRowItem({
 }) {
   return (
     <li>
-      <MoriObjectRow
+      <BaseObjectRow
         leading={<FolderKanban size={15} />}
         onClick={onOpen}
         ariaLabel={row.title}
         title={row.title}
         className="session-list-row"
         meta={
-          <MoriMetadataLine
+          <BaseMetadataLine
             items={[
               row.sourceLabel ? (
                 <span title={row.sourceLabel}>

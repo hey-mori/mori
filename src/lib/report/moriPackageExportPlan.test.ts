@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import type {
   StoredAcceptedProjectMemory,
   StoredMemoryReviewAction,
@@ -61,7 +61,7 @@ function action(
 describe("buildMoriPackageExportPlan", () => {
   it("counts the full package records and accepted-memory slices", () => {
     const plan = buildMoriPackageExportPlan({
-      view: moriMockSession,
+      view: mockSession,
       consolidatedMemories: [
         memory("a", { reportEligibility: "clientSafe" }),
         memory("b", { sensitivity: "sensitive" }),
@@ -69,11 +69,11 @@ describe("buildMoriPackageExportPlan", () => {
       auditTrail: [action("a", ["a"]), action("b", ["b"])],
     });
 
-    expect(plan.full.sources).toBe(moriMockSession.sources.length);
-    expect(plan.full.events).toBe(moriMockSession.events.length);
-    expect(plan.full.issues).toBe(moriMockSession.issues.length);
-    expect(plan.full.decisions).toBe(moriMockSession.decisions.length);
-    expect(plan.full.nextActions).toBe(moriMockSession.nextActions.length);
+    expect(plan.full.sources).toBe(mockSession.sources.length);
+    expect(plan.full.events).toBe(mockSession.events.length);
+    expect(plan.full.issues).toBe(mockSession.issues.length);
+    expect(plan.full.decisions).toBe(mockSession.decisions.length);
+    expect(plan.full.nextActions).toBe(mockSession.nextActions.length);
     expect(plan.full.memories).toBe(2);
     expect(plan.full.auditRows).toBe(2);
     expect(plan.full.sensitiveMemories).toBe(1);
@@ -81,7 +81,7 @@ describe("buildMoriPackageExportPlan", () => {
 
   it("shows the client-safe memory and audit rows that survive filtering", () => {
     const plan = buildMoriPackageExportPlan({
-      view: moriMockSession,
+      view: mockSession,
       consolidatedMemories: [
         memory("keep", { reportEligibility: "clientSafe", sensitivity: "normal" }),
         memory("drop-team", { reportEligibility: "team", sensitivity: "normal" }),

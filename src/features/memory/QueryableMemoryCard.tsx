@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Eye, Layers, Link2, Search } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseSection } from "../../components/ui/BaseSection";
 import { SearchField } from "../../components/ui/SearchField";
 import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
 import { getProductMemoryStatusLabel } from "../../lib/product-state/productState";
@@ -58,7 +58,7 @@ export function QueryableMemoryCard({
   const trimmedQuery = query.trim();
 
   return (
-    <MoriSection
+    <BaseSection
       className="memory-search"
       ariaLabel="Queryable Memory"
       title={
@@ -157,7 +157,7 @@ export function QueryableMemoryCard({
           timeline / evidence와 검토 액션 노트를 대상으로 합니다.
         </small>
       </footer>
-    </MoriSection>
+    </BaseSection>
   );
 }
 

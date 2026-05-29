@@ -9,7 +9,7 @@ import {
   selectSessionView,
   setSessionPersistenceServiceForSessionStore,
   setSessionRepositoryForTesting,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
 import { BrowserDraftRepository } from "../storage/localStorageAdapter";
 import { MemoryKeyValueStorage } from "../storage/memoryStorage";
@@ -107,7 +107,7 @@ describe("session store opens demo sessions", () => {
     setSessionPersistenceServiceForSessionStore(
       new SessionPersistenceService({ runtime: "browser", repository }),
     );
-    useMoriSessionStore.setState({
+    useSessionStore.setState({
       initialized: true,
       draft: null,
       demoSessionId: null,
@@ -125,10 +125,10 @@ describe("session store opens demo sessions", () => {
 
   it("loadBrowserSession opens a demo session's own view (read-only)", () => {
     const id = "demo-ng-gw-jwt-auth";
-    const opened = useMoriSessionStore.getState().loadBrowserSession(id);
+    const opened = useSessionStore.getState().loadBrowserSession(id);
     expect(opened).toBe(true);
 
-    const state = useMoriSessionStore.getState();
+    const state = useSessionStore.getState();
     expect(state.demoSessionId).toBe(id);
     expect(state.draft).toBeNull();
     expect(selectSessionMode(state)).toBe("demo");
@@ -139,24 +139,24 @@ describe("session store opens demo sessions", () => {
     expect(view.session.title).toBe("JWT 인증 미들웨어 도입");
 
     // Demo sessions stay read-only — write actions are no-ops.
-    expect(useMoriSessionStore.getState().renameSession(id, "다른 제목")).toBe(false);
+    expect(useSessionStore.getState().renameSession(id, "다른 제목")).toBe(false);
   });
 
   it("switching between two demo sessions swaps the view", () => {
-    const store = useMoriSessionStore.getState();
+    const store = useSessionStore.getState();
     store.loadBrowserSession("demo-ng-gw-jwt-auth");
-    expect(selectSessionView(useMoriSessionStore.getState()).session.title).toBe(
+    expect(selectSessionView(useSessionStore.getState()).session.title).toBe(
       "JWT 인증 미들웨어 도입",
     );
 
     store.loadBrowserSession("demo-ng-gw-rate-limiter");
-    expect(selectSessionView(useMoriSessionStore.getState()).session.title).toBe(
+    expect(selectSessionView(useSessionStore.getState()).session.title).toBe(
       "레이트 리미터 토큰 버킷 구현",
     );
   });
 
   it("still returns false for an unknown non-demo session id", () => {
-    expect(useMoriSessionStore.getState().loadBrowserSession("missing-session")).toBe(false);
-    expect(useMoriSessionStore.getState().demoSessionId).toBeNull();
+    expect(useSessionStore.getState().loadBrowserSession("missing-session")).toBe(false);
+    expect(useSessionStore.getState().demoSessionId).toBeNull();
   });
 });

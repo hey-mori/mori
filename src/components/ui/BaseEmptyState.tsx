@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-export type MoriEmptyStateProps = {
+export type BaseEmptyStateProps = {
   icon?: LucideIcon;
   title: ReactNode;
   description?: ReactNode;
@@ -13,12 +13,12 @@ export type MoriEmptyStateProps = {
  * remains for legacy callers; this version reads from the `--mori-*`
  * tokens so it switches with the theme.
  */
-export function MoriEmptyState({
+export function BaseEmptyState({
   icon: Icon,
   title,
   description,
   actions,
-}: MoriEmptyStateProps) {
+}: BaseEmptyStateProps) {
   return (
     <div className="mori-empty-state" role="status">
       {Icon ? (

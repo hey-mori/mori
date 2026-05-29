@@ -33,7 +33,7 @@ import {
 
 /**
  * One saved session entry as seen by the history builder. The full
- * `MoriMockSession` is intentionally NOT required — the history only needs
+ * `MockSession` is intentionally NOT required — the history only needs
  * a session id (for the "where was this last imported" hint) and a list of
  * events. Adapters can provide either real `TimelineEvent`s or trimmed
  * shapes that only carry `connectorEventId`.

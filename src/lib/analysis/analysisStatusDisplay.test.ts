@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { MoriAnalysisStatus } from "./analysisTypes";
+import type { AnalysisRunStatus } from "./analysisTypes";
 import {
   describeAnalysisStatus,
   getAnalysisStatusTone,
 } from "./analysisStatusDisplay";
 
-const ALL_STATUSES: MoriAnalysisStatus[] = [
+const ALL_STATUSES: AnalysisRunStatus[] = [
   "idle",
   "running",
   "succeeded",

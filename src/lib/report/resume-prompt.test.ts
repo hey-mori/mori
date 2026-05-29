@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import { buildResumePrompt } from "./resume-prompt";
 
 describe("resume prompt", () => {
   it("includes Mori identity, decisions, issues, files, and next actions", () => {
-    const prompt = buildResumePrompt(moriMockSession);
+    const prompt = buildResumePrompt(mockSession);
 
     expect(prompt).toContain("Mori remembers how the work happened");
     expect(prompt).toContain("Last decisions");
@@ -15,9 +15,9 @@ describe("resume prompt", () => {
   });
 
   it("excludes completed next actions from the resume prompt", () => {
-    const [first, ...rest] = moriMockSession.nextActions;
+    const [first, ...rest] = mockSession.nextActions;
     const prompt = buildResumePrompt({
-      ...moriMockSession,
+      ...mockSession,
       nextActions: [
         { ...first!, done: true, completedAt: "2026-05-18T09:00:00Z" },
         ...rest,

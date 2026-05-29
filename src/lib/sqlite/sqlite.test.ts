@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import {
   checksumMigrationSql,
   createDesktopSqliteRepository,
@@ -85,34 +85,34 @@ describe("SQLite persistence foundation", () => {
   });
 
   it("maps a Mori session into SQLite row snapshots", () => {
-    const snapshot = createSqlitePersistenceSnapshot(moriMockSession);
+    const snapshot = createSqlitePersistenceSnapshot(mockSession);
 
     expect(snapshot.projects).toHaveLength(1);
     expect(snapshot.sessions).toHaveLength(1);
-    expect(snapshot.events).toHaveLength(moriMockSession.events.length);
-    expect(snapshot.sources).toHaveLength(moriMockSession.sources.length);
-    expect(snapshot.issues).toHaveLength(moriMockSession.issues.length);
-    expect(snapshot.decisions).toHaveLength(moriMockSession.decisions.length);
-    expect(snapshot.relationships).toHaveLength(moriMockSession.relationships.length);
+    expect(snapshot.events).toHaveLength(mockSession.events.length);
+    expect(snapshot.sources).toHaveLength(mockSession.sources.length);
+    expect(snapshot.issues).toHaveLength(mockSession.issues.length);
+    expect(snapshot.decisions).toHaveLength(mockSession.decisions.length);
+    expect(snapshot.relationships).toHaveLength(mockSession.relationships.length);
     expect(snapshot.events[0]?.source_refs_json).toMatch(/^\[/);
   });
 
   it("round-trips a Mori session through snapshot and reconstruct", () => {
-    const snapshot = createSqlitePersistenceSnapshot(moriMockSession);
+    const snapshot = createSqlitePersistenceSnapshot(mockSession);
     const rebuilt = reconstructMoriSession(snapshot);
 
-    expect(rebuilt.project.id).toBe(moriMockSession.project.id);
-    expect(rebuilt.session.id).toBe(moriMockSession.session.id);
-    expect(rebuilt.events).toHaveLength(moriMockSession.events.length);
-    expect(rebuilt.events[0]?.sourceRefs).toEqual(moriMockSession.events[0]?.sourceRefs);
-    expect(rebuilt.sources).toHaveLength(moriMockSession.sources.length);
-    expect(rebuilt.decisions[0]?.rejectedOptions).toEqual(moriMockSession.decisions[0]?.rejectedOptions);
+    expect(rebuilt.project.id).toBe(mockSession.project.id);
+    expect(rebuilt.session.id).toBe(mockSession.session.id);
+    expect(rebuilt.events).toHaveLength(mockSession.events.length);
+    expect(rebuilt.events[0]?.sourceRefs).toEqual(mockSession.events[0]?.sourceRefs);
+    expect(rebuilt.sources).toHaveLength(mockSession.sources.length);
+    expect(rebuilt.decisions[0]?.rejectedOptions).toEqual(mockSession.decisions[0]?.rejectedOptions);
   });
 
   it("round-trips a source's capture fidelity through snapshot and reconstruct", () => {
-    const [firstSource, ...restSources] = moriMockSession.sources;
+    const [firstSource, ...restSources] = mockSession.sources;
     const session = {
-      ...moriMockSession,
+      ...mockSession,
       sources: [
         { ...firstSource!, captureFidelity: { level: "partial" as const, reasons: ["truncationMarker"] } },
         ...restSources,
@@ -133,7 +133,7 @@ describe("SQLite persistence foundation", () => {
   });
 
   it("validates snapshot foreign keys and JSON array columns before persistence", () => {
-    const snapshot = createSqlitePersistenceSnapshot(moriMockSession);
+    const snapshot = createSqlitePersistenceSnapshot(mockSession);
 
     expect(validateSqlitePersistenceSnapshot(snapshot)).toEqual({ valid: true, issues: [] });
 
@@ -180,32 +180,32 @@ describe("SQLite persistence foundation", () => {
           decisionsPersisted: snapshot.decisions.length,
         };
       },
-      loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(moriMockSession),
+      loadSqliteSessionSnapshot: async () => createSqlitePersistenceSnapshot(mockSession),
       listSqliteSessions: async () => ({
         sessions: [
           {
-            sessionId: moriMockSession.session.id,
-            projectId: moriMockSession.project.id,
-            title: moriMockSession.session.title,
-            projectName: moriMockSession.project.name,
-            startedAt: moriMockSession.session.startedAt,
-            endedAt: moriMockSession.session.endedAt,
-            status: moriMockSession.session.status,
-            eventCount: moriMockSession.events.length,
-            sourceCount: moriMockSession.sources.length,
+            sessionId: mockSession.session.id,
+            projectId: mockSession.project.id,
+            title: mockSession.session.title,
+            projectName: mockSession.project.name,
+            startedAt: mockSession.session.startedAt,
+            endedAt: mockSession.session.endedAt,
+            status: mockSession.session.status,
+            eventCount: mockSession.events.length,
+            sourceCount: mockSession.sources.length,
           },
         ],
       }),
     });
 
     const status = await repository.initializeDatabase();
-    const persisted = await repository.persistSessionSnapshot({ session: moriMockSession });
+    const persisted = await repository.persistSessionSnapshot({ session: mockSession });
     const listed = await repository.listSessions();
 
     expect(status.initialized).toBe(true);
-    expect(calls).toEqual([moriMockSession.session.id]);
-    expect(persisted.eventsPersisted).toBe(moriMockSession.events.length);
-    expect(listed.sessions[0].sessionId).toBe(moriMockSession.session.id);
-    expect(listed.sessions[0].eventCount).toBe(moriMockSession.events.length);
+    expect(calls).toEqual([mockSession.session.id]);
+    expect(persisted.eventsPersisted).toBe(mockSession.events.length);
+    expect(listed.sessions[0].sessionId).toBe(mockSession.session.id);
+    expect(listed.sessions[0].eventCount).toBe(mockSession.events.length);
   });
 });

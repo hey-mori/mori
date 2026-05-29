@@ -459,7 +459,7 @@
 }
 
 /**
- * MoriToolbar — a horizontal flex strip with calm spacing tokens. Adopters
+ * BaseToolbar — a horizontal flex strip with calm spacing tokens. Adopters
  * compose their controls inside; we only style the container.
  */
 .mori-toolbar {
@@ -553,7 +553,7 @@
 }
 
 /**
- * MoriEmptyState — a calm empty surface used by Timeline / Evidence / Memory
+ * BaseEmptyState — a calm empty surface used by Timeline / Evidence / Memory
  * when there is no data to show.
  */
 .mori-empty-state {
@@ -595,7 +595,7 @@
 }
 
 /**
- * Reports capability strip — adopter of MoriStatCard + MoriFeatureStatusBadge.
+ * Reports capability strip — adopter of BaseStatCard + BaseFeatureStatusBadge.
  */
 .reports-capability-strip {
   display: grid;
@@ -647,7 +647,7 @@
 }
 
 /**
- * MoriSection — page-level boxed section. Wraps `MoriCard` semantics with a
+ * BaseSection — page-level boxed section. Wraps `BaseCard` semantics with a
  * tighter header row so feature surfaces can stop inventing their own
  * `<section className="evidence-section">` markup.
  */

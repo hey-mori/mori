@@ -39,7 +39,7 @@ import type {
   SourceRef,
   TimelineEvent,
 } from "../../domain/types";
-import type { MoriAnalysisResult } from "../analysis";
+import type { AnalysisResult } from "../analysis";
 import type { StoredSessionImport } from "../storage/storageTypes";
 
 /**
@@ -490,7 +490,7 @@ export type ProjectMemoryLoadedSession = {
   decisions: Decision[];
   nextActions: NextAction[];
   imports: StoredSessionImport[];
-  analysis: MoriAnalysisResult | null;
+  analysis: AnalysisResult | null;
 };
 
 export function isLoadedProjectMemorySession(

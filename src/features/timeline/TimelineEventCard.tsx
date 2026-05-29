@@ -8,10 +8,10 @@ import { buildTimelineEventCardViewModel } from "./lib/timelineCards";
 import { activityKindIcons, sourceFamilyIcons } from "./lib/activityIcons";
 import type { TimelineSourceFamily } from "../../lib/timeline/activityModel";
 import {
-  MoriContextMenu,
+  BaseContextMenu,
   useContextMenuPosition,
-  type MoriMenuItemSpec,
-} from "../../components/ui/MoriActionMenu";
+  type BaseMenuItemSpec,
+} from "../../components/ui/BaseActionMenu";
 
 export function TimelineEventCard({
   event,
@@ -29,7 +29,7 @@ export function TimelineEventCard({
   density: TimelineDensity;
   onSelect: (eventId: string) => void;
   onHover: (eventId: string | null) => void;
-  menuItems?: MoriMenuItemSpec[];
+  menuItems?: BaseMenuItemSpec[];
   sourceIndex?: ReadonlyMap<string, SourceRef>;
 }) {
   const menu = useContextMenuPosition();
@@ -92,7 +92,7 @@ export function TimelineEventCard({
           <strong className="event-card-title">{vm.title}</strong>
         </span>
         {menuItems ? (
-          <MoriContextMenu
+          <BaseContextMenu
             open={menu.open}
             position={menu.position}
             items={menuItems}

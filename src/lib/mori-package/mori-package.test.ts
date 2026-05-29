@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import { unzipSync, zipSync } from "fflate";
 import {
   buildClientSafeMoriPackage,
@@ -75,16 +75,16 @@ function reviewAction(
 
 describe(".mori package v0", () => {
   it("creates a valid package from a Mori session", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const validation = validateMoriPackage(pkg);
 
     expect(validation.valid).toBe(true);
     expect(pkg.manifest.formatVersion).toBe("0.1.0");
-    expect(pkg.sessions[0]?.id).toBe(moriMockSession.session.id);
+    expect(pkg.sessions[0]?.id).toBe(mockSession.session.id);
   });
 
   it("round-trips through JSON serialization", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const serialized = serializeMoriPackage(pkg);
     const deserialized = deserializeMoriPackage(serialized);
 
@@ -93,7 +93,7 @@ describe(".mori package v0", () => {
   });
 
   it("can expose events as JSONL for the future zip-like package", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const jsonl = serializeEventsJsonl(pkg);
 
     expect(jsonl.split("\n").length).toBe(pkg.events.length);
@@ -103,7 +103,7 @@ describe(".mori package v0", () => {
 
 describe(".mori package v0 — accepted memory slice", () => {
   it("defaults consolidatedMemories to an empty array", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     expect(pkg.consolidatedMemories).toEqual([]);
     expect(validateMoriPackage(pkg).valid).toBe(true);
   });
@@ -113,7 +113,7 @@ describe(".mori package v0 — accepted memory slice", () => {
       acceptedMemory({ id: "mem-a" }),
       acceptedMemory({ id: "mem-b", title: "Adopt SQLite for desktop persistence" }),
     ];
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: memories,
     });
     expect(pkg.consolidatedMemories).toHaveLength(2);
@@ -127,7 +127,7 @@ describe(".mori package v0 — accepted memory slice", () => {
   });
 
   it("treats a package exported before the field existed as empty", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     // Simulate an older package: drop the field entirely.
     const legacy = { ...pkg };
     delete (legacy as { consolidatedMemories?: unknown }).consolidatedMemories;
@@ -139,7 +139,7 @@ describe(".mori package v0 — accepted memory slice", () => {
   });
 
   it("rejects a non-array consolidatedMemories value", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const broken = { ...pkg, consolidatedMemories: "not-an-array" };
     const result = validateMoriPackage(broken);
     expect(result.valid).toBe(false);
@@ -147,7 +147,7 @@ describe(".mori package v0 — accepted memory slice", () => {
   });
 
   it("does not auto-merge: serialize fails closed on an invalid memory-bearing package", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: [acceptedMemory()],
     });
     // A structurally invalid package must throw rather than silently ship.
@@ -158,7 +158,7 @@ describe(".mori package v0 — accepted memory slice", () => {
 
 describe(".mori package v0 — audit trail slice", () => {
   it("defaults auditTrail to an empty array", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     expect(pkg.auditTrail).toEqual([]);
     expect(validateMoriPackage(pkg).valid).toBe(true);
   });
@@ -168,7 +168,7 @@ describe(".mori package v0 — audit trail slice", () => {
       reviewAction({ id: "act-a", actionType: "accept" }),
       reviewAction({ id: "act-b", actionType: "apply", targetMemoryIds: ["mem-b"] }),
     ];
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       auditTrail: actions,
     });
     expect(pkg.auditTrail).toHaveLength(2);
@@ -180,7 +180,7 @@ describe(".mori package v0 — audit trail slice", () => {
   });
 
   it("treats a package exported before the field existed as empty", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const legacy = { ...pkg };
     delete (legacy as { auditTrail?: unknown }).auditTrail;
 
@@ -191,7 +191,7 @@ describe(".mori package v0 — audit trail slice", () => {
   });
 
   it("rejects a non-array auditTrail value", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const broken = { ...pkg, auditTrail: "not-an-array" };
     const result = validateMoriPackage(broken);
     expect(result.valid).toBe(false);
@@ -201,7 +201,7 @@ describe(".mori package v0 — audit trail slice", () => {
 
 describe(".mori package v0 — per-record validation", () => {
   it("rejects a record missing its id with a precise path", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const broken = {
       ...pkg,
       events: pkg.events.map((event, index) =>
@@ -214,7 +214,7 @@ describe(".mori package v0 — per-record validation", () => {
   });
 
   it("rejects an event missing its type", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const broken = {
       ...pkg,
       events: pkg.events.map((event, index) => {
@@ -229,7 +229,7 @@ describe(".mori package v0 — per-record validation", () => {
   });
 
   it("rejects a non-object record in a slice", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const broken = { ...pkg, projects: [null as unknown as (typeof pkg.projects)[number]] };
     const result = validateMoriPackage(broken);
     expect(result.valid).toBe(false);
@@ -237,7 +237,7 @@ describe(".mori package v0 — per-record validation", () => {
   });
 
   it("still validates a well-formed package clean", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: [acceptedMemory()],
       auditTrail: [reviewAction()],
     });
@@ -247,7 +247,7 @@ describe(".mori package v0 — per-record validation", () => {
 
 describe(".mori package v0 — zip-like file layout", () => {
   it("emits every documented file and each value parses", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const layout = buildMoriPackageFileLayout(pkg);
 
     expect(Object.keys(layout).sort()).toEqual([...MORI_PACKAGE_FILE_NAMES].sort());
@@ -259,14 +259,14 @@ describe(".mori package v0 — zip-like file layout", () => {
   });
 
   it("round-trips events.jsonl through serializeEventsJsonl", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const layout = buildMoriPackageFileLayout(pkg);
     expect(layout["events.jsonl"]).toBe(serializeEventsJsonl(pkg));
     expect(layout["events.jsonl"].split("\n").length).toBe(pkg.events.length);
   });
 
   it("normalises the optional slices to an empty array when absent", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const legacy = { ...pkg };
     delete (legacy as { consolidatedMemories?: unknown }).consolidatedMemories;
     delete (legacy as { auditTrail?: unknown }).auditTrail;
@@ -277,7 +277,7 @@ describe(".mori package v0 — zip-like file layout", () => {
   });
 
   it("carries the optional slices when the package holds them", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: [acceptedMemory({ id: "mem-x" })],
       auditTrail: [reviewAction({ id: "act-x" })],
     });
@@ -287,7 +287,7 @@ describe(".mori package v0 — zip-like file layout", () => {
   });
 
   it("round-trips a package through build / parse file layout", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: [acceptedMemory({ id: "mem-x" })],
       auditTrail: [reviewAction({ id: "act-x" })],
     });
@@ -301,7 +301,7 @@ describe(".mori package v0 — zip-like file layout", () => {
   });
 
   it("tolerates a trailing newline on events.jsonl", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const layout = buildMoriPackageFileLayout(pkg);
     const restored = parseMoriPackageFileLayout({
       ...layout,
@@ -311,7 +311,7 @@ describe(".mori package v0 — zip-like file layout", () => {
   });
 
   it("rejects a layout missing a required file", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const layout = buildMoriPackageFileLayout(pkg);
     const broken = { ...layout };
     delete (broken as Record<string, string>)["manifest.json"];
@@ -321,7 +321,7 @@ describe(".mori package v0 — zip-like file layout", () => {
 
 describe(".mori package v0 — real zip package", () => {
   it("round-trips a package through zip / unzip", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: [acceptedMemory({ id: "mem-x" })],
       auditTrail: [reviewAction({ id: "act-x" })],
     });
@@ -338,7 +338,7 @@ describe(".mori package v0 — real zip package", () => {
   });
 
   it("archives the canonical one-file-per-slice layout", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const unzipped = unzipSync(zipMoriPackage(pkg));
     expect(Object.keys(unzipped).sort()).toEqual([...MORI_PACKAGE_FILE_NAMES].sort());
   });
@@ -350,7 +350,7 @@ describe(".mori package v0 — real zip package", () => {
   });
 
   it("rejects a zip missing a required package file", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const layout = buildMoriPackageFileLayout(pkg);
     const entries: Record<string, Uint8Array> = {};
     for (const [name, content] of Object.entries(layout)) {
@@ -363,7 +363,7 @@ describe(".mori package v0 — real zip package", () => {
 
 describe(".mori package v0 — client-safe export filter", () => {
   it("keeps only clientSafe, non-sensitive memories", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: [
         acceptedMemory({ id: "keep", reportEligibility: "clientSafe", sensitivity: "normal" }),
         acceptedMemory({ id: "drop-team", reportEligibility: "team", sensitivity: "normal" }),
@@ -381,7 +381,7 @@ describe(".mori package v0 — client-safe export filter", () => {
   });
 
   it("keeps audit rows only for surviving memories", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: [
         acceptedMemory({ id: "keep", reportEligibility: "clientSafe", sensitivity: "normal" }),
         acceptedMemory({ id: "drop", reportEligibility: "team", sensitivity: "normal" }),
@@ -396,7 +396,7 @@ describe(".mori package v0 — client-safe export filter", () => {
   });
 
   it("marks the manifest client-safe and round-trips the marker", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     expect(getPackageIsClientSafe(pkg)).toBe(false);
 
     const safe = buildClientSafeMoriPackage(pkg);
@@ -408,7 +408,7 @@ describe(".mori package v0 — client-safe export filter", () => {
   });
 
   it("does not mutate the input package", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession, {
+    const pkg = createMoriPackageFromSession(mockSession, {
       consolidatedMemories: [
         acceptedMemory({ id: "drop", reportEligibility: "team", sensitivity: "normal" }),
       ],
@@ -421,7 +421,7 @@ describe(".mori package v0 — client-safe export filter", () => {
   });
 
   it("rejects a non-boolean clientSafeExport marker", () => {
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
     const broken = {
       ...pkg,
       manifest: { ...pkg.manifest, clientSafeExport: "yes" as unknown as boolean },

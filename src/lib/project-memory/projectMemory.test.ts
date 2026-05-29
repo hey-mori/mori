@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import {
   buildFollowUpPrompt,
   deriveProjectMemoryStats,
@@ -33,26 +33,26 @@ function fakeSavedSession(id: string, scope: ProjectMemoryDataScope, savedAt = "
 
 describe("deriveProjectMemoryStats", () => {
   it("aggregates the current session view + saved-session ids without double-counting", () => {
-    const saved = [fakeSavedSession(moriMockSession.session.id, "browser-draft"), fakeSavedSession("sess-x", "sqlite-saved")];
-    const stats = deriveProjectMemoryStats({ view: moriMockSession, savedSessions: saved, reportCount: 2 });
+    const saved = [fakeSavedSession(mockSession.session.id, "browser-draft"), fakeSavedSession("sess-x", "sqlite-saved")];
+    const stats = deriveProjectMemoryStats({ view: mockSession, savedSessions: saved, reportCount: 2 });
     expect(stats.sessionCount).toBe(2); // active + sess-x (the duplicate id is deduped)
     expect(stats.aggregatedSessionCount).toBe(1);
-    expect(stats.sourceCount).toBe(moriMockSession.sources.length);
-    expect(stats.eventCount).toBe(moriMockSession.events.length);
-    expect(stats.issueCount).toBe(moriMockSession.issues.length);
-    expect(stats.decisionCount).toBe(moriMockSession.decisions.length);
-    expect(stats.nextActionCount).toBe(moriMockSession.nextActions.length);
+    expect(stats.sourceCount).toBe(mockSession.sources.length);
+    expect(stats.eventCount).toBe(mockSession.events.length);
+    expect(stats.issueCount).toBe(mockSession.issues.length);
+    expect(stats.decisionCount).toBe(mockSession.decisions.length);
+    expect(stats.nextActionCount).toBe(mockSession.nextActions.length);
     expect(stats.reportCount).toBe(2);
     expect(stats.openIssueCount).toBe(
-      moriMockSession.issues.filter((issue) => issue.status !== "resolved").length,
+      mockSession.issues.filter((issue) => issue.status !== "resolved").length,
     );
     expect(stats.unconfirmedDecisionCount).toBe(
-      moriMockSession.decisions.filter((decision) => !decision.confirmed).length,
+      mockSession.decisions.filter((decision) => !decision.confirmed).length,
     );
   });
 
   it("counts at least one session (the active session) even with no saved entries", () => {
-    const stats = deriveProjectMemoryStats({ view: moriMockSession, savedSessions: [], reportCount: 0 });
+    const stats = deriveProjectMemoryStats({ view: mockSession, savedSessions: [], reportCount: 0 });
     expect(stats.sessionCount).toBe(1);
     expect(stats.aggregatedSessionCount).toBe(1);
     expect(stats.reportCount).toBe(0);
@@ -61,8 +61,8 @@ describe("deriveProjectMemoryStats", () => {
 
 describe("getRecentDecisions", () => {
   it("returns decisions sorted newest first", () => {
-    const recent = getRecentDecisions(moriMockSession, 3);
-    expect(recent).toHaveLength(Math.min(3, moriMockSession.decisions.length));
+    const recent = getRecentDecisions(mockSession, 3);
+    expect(recent).toHaveLength(Math.min(3, mockSession.decisions.length));
     for (let i = 1; i < recent.length; i += 1) {
       expect(new Date(recent[i - 1].createdAt).getTime()).toBeGreaterThanOrEqual(
         new Date(recent[i].createdAt).getTime(),
@@ -73,8 +73,8 @@ describe("getRecentDecisions", () => {
 
 describe("getDecisionTimeline", () => {
   it("returns chronological points oldest-first with importance + confirmed flags", () => {
-    const timeline = getDecisionTimeline(moriMockSession);
-    expect(timeline).toHaveLength(moriMockSession.decisions.length);
+    const timeline = getDecisionTimeline(mockSession);
+    expect(timeline).toHaveLength(mockSession.decisions.length);
     for (let i = 1; i < timeline.length; i += 1) {
       expect(new Date(timeline[i].createdAt).getTime()).toBeGreaterThanOrEqual(
         new Date(timeline[i - 1].createdAt).getTime(),
@@ -89,7 +89,7 @@ describe("getDecisionTimeline", () => {
 
 describe("getRecurringIssues", () => {
   it("scores high-priority and evidence-rich issues higher", () => {
-    const rows = getRecurringIssues(moriMockSession, "current-session", 3);
+    const rows = getRecurringIssues(mockSession, "current-session", 3);
     // Result is sorted by signalScore desc.
     for (let i = 1; i < rows.length; i += 1) {
       expect(rows[i - 1].signalScore).toBeGreaterThanOrEqual(rows[i].signalScore);
@@ -103,10 +103,10 @@ describe("getRecurringIssues", () => {
 
   it("includes high-priority issues even when their signal score is zero", () => {
     const minimalSession = {
-      ...moriMockSession,
+      ...mockSession,
       issues: [
         {
-          ...moriMockSession.issues[0],
+          ...mockSession.issues[0],
           id: "isolated-high",
           status: "open" as const,
           priority: "high" as const,
@@ -122,7 +122,7 @@ describe("getRecurringIssues", () => {
 
 describe("getKeyEvidence", () => {
   it("orders sources by linked-event count then captured time", () => {
-    const evidence = getKeyEvidence(moriMockSession, 4);
+    const evidence = getKeyEvidence(mockSession, 4);
     expect(evidence.length).toBeGreaterThan(0);
     for (let i = 1; i < evidence.length; i += 1) {
       const prev = evidence[i - 1];
@@ -137,7 +137,7 @@ describe("getKeyEvidence", () => {
   });
 
   it("returns an empty array when the session has no sources", () => {
-    const empty = { ...moriMockSession, sources: [], events: [], issues: [], decisions: [] };
+    const empty = { ...mockSession, sources: [], events: [], issues: [], decisions: [] };
     expect(getKeyEvidence(empty)).toEqual([]);
   });
 });
@@ -145,7 +145,7 @@ describe("getKeyEvidence", () => {
 describe("getProjectMemorySummary", () => {
   it("picks the most recent high-importance decision as the latest important decision", () => {
     const summary = getProjectMemorySummary({
-      view: moriMockSession,
+      view: mockSession,
       scope: "current-session",
       savedSessionCount: 0,
       reportCount: 0,
@@ -159,7 +159,7 @@ describe("getProjectMemorySummary", () => {
 
   it("describes unresolved risks as open + high priority or low-confidence inferred", () => {
     const summary = getProjectMemorySummary({
-      view: moriMockSession,
+      view: mockSession,
       scope: "current-session",
       savedSessionCount: 0,
       reportCount: 0,
@@ -175,7 +175,7 @@ describe("getProjectMemorySummary", () => {
 
   it("includes a scope caveat about Quick Pass when analysis has not run", () => {
     const summary = getProjectMemorySummary({
-      view: moriMockSession,
+      view: mockSession,
       scope: "current-session",
       savedSessionCount: 0,
       reportCount: 0,
@@ -186,7 +186,7 @@ describe("getProjectMemorySummary", () => {
 
   it("uses Demo-specific copy when scope is demo", () => {
     const summary = getProjectMemorySummary({
-      view: moriMockSession,
+      view: mockSession,
       scope: "demo",
       savedSessionCount: 0,
       reportCount: 0,
@@ -200,12 +200,12 @@ describe("getProjectMemorySummary", () => {
 describe("buildFollowUpPrompt", () => {
   it("includes project name, decisions, open issues, next actions, and key evidence", () => {
     const prompt = buildFollowUpPrompt({
-      view: moriMockSession,
+      view: mockSession,
       savedSessionCount: 1,
       reportCount: 0,
       hasAnalysis: true,
     });
-    expect(prompt).toContain(moriMockSession.project.name);
+    expect(prompt).toContain(mockSession.project.name);
     expect(prompt).toContain("Most recent decisions");
     expect(prompt).toContain("Open issues to address");
     expect(prompt).toContain("Next actions on the docket");
@@ -215,7 +215,7 @@ describe("buildFollowUpPrompt", () => {
 
   it("reports zero saved sessions and Quick-Pass-not-run honestly", () => {
     const prompt = buildFollowUpPrompt({
-      view: moriMockSession,
+      view: mockSession,
       savedSessionCount: 0,
       reportCount: 0,
       hasAnalysis: false,
@@ -227,14 +227,14 @@ describe("buildFollowUpPrompt", () => {
 
 describe("describeDecisionSource", () => {
   it("returns the bare title when no source event matches", () => {
-    const decision = { ...moriMockSession.decisions[0], sourceEventIds: ["does-not-exist"] };
-    expect(describeDecisionSource(decision, moriMockSession.events)).toBe(decision.title);
+    const decision = { ...mockSession.decisions[0], sourceEventIds: ["does-not-exist"] };
+    expect(describeDecisionSource(decision, mockSession.events)).toBe(decision.title);
   });
 
   it("appends the event-type label when the decision came from an event", () => {
-    const decision = moriMockSession.decisions.find((d) => d.sourceEventIds.length > 0);
+    const decision = mockSession.decisions.find((d) => d.sourceEventIds.length > 0);
     if (!decision) return;
-    const result = describeDecisionSource(decision, moriMockSession.events);
+    const result = describeDecisionSource(decision, mockSession.events);
     expect(result).toContain(decision.title);
     // contains a separator and a tag, so the rendered string is longer than the bare title.
     expect(result.length).toBeGreaterThan(decision.title.length);

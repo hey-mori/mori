@@ -1,5 +1,5 @@
 import type {
-  MoriRepositoryConfig,
+  RepositoryConfig,
   RepositoryVerificationMetadata,
 } from "./repositorySettings";
 
@@ -56,7 +56,7 @@ export function getRepositoryVerificationFreshness(
 }
 
 export function getRepositoryFreshness(
-  repository: MoriRepositoryConfig,
+  repository: RepositoryConfig,
   options?: VerificationFreshnessOptions,
 ): VerificationFreshness {
   return getRepositoryVerificationFreshness(repository.verification, options);

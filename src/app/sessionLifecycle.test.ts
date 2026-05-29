@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { deriveSessionLifecycle, formatSessionDuration, getSessionStorageScope } from "./sessionLifecycle";
-import type { MoriSessionState, SessionViewModel } from "./sessionStore";
+import type { SessionState, SessionViewModel } from "./sessionStore";
 import type { Session } from "../domain/types";
 import { DEFAULT_QUICK_PASS_SETTINGS } from "../lib/analysis";
 import { createStaticMockDataSource } from "../lib/session/timelineDataSource";
 
-function buildState(overrides: Partial<MoriSessionState> = {}): MoriSessionState {
+function buildState(overrides: Partial<SessionState> = {}): SessionState {
   return {
     initialized: true,
     draft: null,

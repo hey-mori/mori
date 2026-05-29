@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import type { StoredSessionImport } from "../storage/storageTypes";
-import type { MoriAnalysisResult } from "../analysis";
+import type { AnalysisResult } from "../analysis";
 import type { TimelineEvent } from "../../domain/types";
 import {
   findMergeTarget,
@@ -11,7 +11,7 @@ import {
 
 function event(id: string, start: string): TimelineEvent {
   return {
-    ...moriMockSession.events[0]!,
+    ...mockSession.events[0]!,
     id,
     start,
     end: undefined,
@@ -30,8 +30,8 @@ function imports(events: TimelineEvent[]): StoredSessionImport[] {
   return [
     {
       id: "imp-1",
-      sessionId: moriMockSession.session.id,
-      source: moriMockSession.sources[0]!,
+      sessionId: mockSession.session.id,
+      source: mockSession.sources[0]!,
       events: events.map((e) => ({ ...e })),
       savedAt: "2026-05-18T11:00:00.000Z",
       adapter: "browser-local-storage",
@@ -67,19 +67,19 @@ describe("mergeEventWithNext", () => {
 });
 
 describe("remapEventIdInAnalysis", () => {
-  function analysis(): MoriAnalysisResult {
+  function analysis(): AnalysisResult {
     return {
       runId: "run-merge",
       providerName: "deterministic-heuristic-v1",
       providerLabel: "Deterministic",
-      sessionId: moriMockSession.session.id,
-      projectId: moriMockSession.project.id,
+      sessionId: mockSession.session.id,
+      projectId: mockSession.project.id,
       generatedAt: "2026-05-18T11:00:00.000Z",
       durationMs: 1,
       inputEventCount: 0,
       inputSourceCount: 0,
       summary: { sessionSummary: "", resumePrompt: "", highlights: [] },
-      issues: [{ ...moriMockSession.issues[0]!, id: "iss-1", sourceEventIds: ["evt-b"] }],
+      issues: [{ ...mockSession.issues[0]!, id: "iss-1", sourceEventIds: ["evt-b"] }],
       decisions: [],
       relationships: [
         {
@@ -97,7 +97,7 @@ describe("remapEventIdInAnalysis", () => {
       rendered: {
         summary: {
           id: "s",
-          sessionId: moriMockSession.session.id,
+          sessionId: mockSession.session.id,
           sessionSummary: "",
           resumePrompt: "",
           reportMarkdown: "",

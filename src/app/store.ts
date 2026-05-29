@@ -49,7 +49,7 @@ export type EvidenceImportRequest = {
   platform?: "claude" | "chatgpt" | "codex" | "other";
 };
 
-type MoriAppState = {
+type AppState = {
   currentView: ViewKey;
   selectedEventId: string;
   hoveredEventId: string | null;
@@ -183,7 +183,7 @@ type MoriAppState = {
   clearStartRecordsRequest: () => void;
 };
 
-export const useMoriAppStore = create<MoriAppState>((set) => ({
+export const useAppStore = create<AppState>((set) => ({
   currentView: "home",
   selectedEventId: "evt-positioning",
   hoveredEventId: null,

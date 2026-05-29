@@ -1,9 +1,9 @@
 import type { KeyboardEvent, ReactNode } from "react";
-import type { MoriMenuPosition } from "./MoriActionMenu";
+import type { BaseMenuPosition } from "./BaseActionMenu";
 
-export type MoriObjectRowDensity = "comfortable" | "compact";
+export type BaseObjectRowDensity = "comfortable" | "compact";
 
-export type MoriObjectRowProps = {
+export type BaseObjectRowProps = {
   /** Leading slot: source icon, status dot, trust mark, avatar. */
   leading?: ReactNode;
   /** Primary label — required. */
@@ -21,12 +21,12 @@ export type MoriObjectRowProps = {
   /** Whether this row is currently selected/active. */
   selected?: boolean;
   /** Compact (32px min-height) vs comfortable (44px min-height). Default: comfortable. */
-  density?: MoriObjectRowDensity;
+  density?: BaseObjectRowDensity;
   /** Extra CSS classes forwarded to the root element. */
   className?: string;
   onClick?: () => void;
   onDoubleClick?: () => void;
-  onActionMenu?: (position: MoriMenuPosition) => void;
+  onActionMenu?: (position: BaseMenuPosition) => void;
   /** Forwarded to the root element as aria-label. */
   ariaLabel?: string;
   /** When true, renders as a plain div (non-interactive) regardless of onClick. */
@@ -37,7 +37,7 @@ export type MoriObjectRowProps = {
  * Product-level object row for Mori's session, source, issue, decision,
  * next-action, and memory rows.
  *
- * Stronger than `MoriListRow`: supports subtitle, metadata line, timestamp,
+ * Stronger than `BaseListRow`: supports subtitle, metadata line, timestamp,
  * status slot, and comfortable/compact density modes. Flat, no card wrapping.
  * Renders as a `div[role=button]` when `onClick` is provided (and `static`
  * is not set), otherwise a plain `div`. Consumers wrap in `<li>` as needed.
@@ -45,7 +45,7 @@ export type MoriObjectRowProps = {
  * Layout:
  *   [leading] [body: title / subtitle / meta]  [aside: timestamp / status / trailing]
  */
-export function MoriObjectRow({
+export function BaseObjectRow({
   leading,
   title,
   subtitle,
@@ -61,7 +61,7 @@ export function MoriObjectRow({
   onActionMenu,
   ariaLabel,
   static: isStatic = false,
-}: MoriObjectRowProps) {
+}: BaseObjectRowProps) {
   const interactive = Boolean(onClick) && !isStatic;
   const classes = [
     "mori-object-row",
@@ -135,7 +135,7 @@ export function MoriObjectRow({
 
 function handleActionMenuKey(
   event: KeyboardEvent<HTMLDivElement>,
-  onActionMenu: MoriObjectRowProps["onActionMenu"],
+  onActionMenu: BaseObjectRowProps["onActionMenu"],
 ): boolean {
   if (!onActionMenu) return false;
   if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) {

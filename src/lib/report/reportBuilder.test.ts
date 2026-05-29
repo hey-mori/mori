@@ -8,7 +8,7 @@ import {
   type ReportPrivacyOptions,
   type ReportSectionId,
 } from "./reportBuilder";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
 
 function privacy(overrides: Partial<ReportPrivacyOptions> = {}): ReportPrivacyOptions {
@@ -18,7 +18,7 @@ function privacy(overrides: Partial<ReportPrivacyOptions> = {}): ReportPrivacyOp
 describe("buildReportMarkdown", () => {
   it("always emits a header with the session title and report type", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: DEFAULT_SECTIONS,
       privacy: privacy(),
@@ -28,24 +28,24 @@ describe("buildReportMarkdown", () => {
 
   it("includes the data basis line and per-section counts in the header", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: DEFAULT_SECTIONS,
       privacy: privacy(),
     });
     expect(payload.markdown).toContain("데이터 기반:");
-    expect(payload.counts.events).toBe(moriMockSession.events.length);
-    expect(payload.counts.issues).toBe(moriMockSession.issues.length);
-    expect(payload.counts.decisions).toBe(moriMockSession.decisions.length);
-    expect(payload.counts.nextActions).toBe(moriMockSession.nextActions.length);
-    expect(payload.counts.sources).toBe(moriMockSession.sources.length);
+    expect(payload.counts.events).toBe(mockSession.events.length);
+    expect(payload.counts.issues).toBe(mockSession.issues.length);
+    expect(payload.counts.decisions).toBe(mockSession.decisions.length);
+    expect(payload.counts.nextActions).toBe(mockSession.nextActions.length);
+    expect(payload.counts.sources).toBe(mockSession.sources.length);
   });
 
   it("warns and tags the source list when a source is a partial capture", () => {
-    const [firstSource, ...restSources] = moriMockSession.sources;
+    const [firstSource, ...restSources] = mockSession.sources;
     const payload = buildReportMarkdown({
       view: {
-        ...moriMockSession,
+        ...mockSession,
         sources: [
           { ...firstSource!, captureFidelity: { level: "partial", reasons: ["truncatedHunk"] } },
           ...restSources,
@@ -60,10 +60,10 @@ describe("buildReportMarkdown", () => {
   });
 
   it("groups completed next actions under their own report sub-section", () => {
-    const [first, ...rest] = moriMockSession.nextActions;
+    const [first, ...rest] = mockSession.nextActions;
     const payload = buildReportMarkdown({
       view: {
-        ...moriMockSession,
+        ...mockSession,
         nextActions: [
           { ...first!, done: true, completedAt: "2026-05-18T09:00:00Z" },
           ...rest,
@@ -80,7 +80,7 @@ describe("buildReportMarkdown", () => {
   it("only renders sections present in the sections set", () => {
     const onlySummary = new Set<ReportSectionId>(["summary"]);
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: onlySummary,
       privacy: privacy(),
@@ -95,7 +95,7 @@ describe("buildReportMarkdown", () => {
 
   it("excludes the resume prompt section when the report type is client-safe", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "clientSafe",
       sections: DEFAULT_SECTIONS,
       privacy: privacy({ clientSafe: true }),
@@ -111,7 +111,7 @@ describe("buildReportMarkdown", () => {
 
   it("renders the resume prompt when override provided and not client-safe", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: DEFAULT_SECTIONS,
       privacy: privacy(),
@@ -123,14 +123,14 @@ describe("buildReportMarkdown", () => {
 
   it("client-safe mode strips event summaries, decision rationale, issue bodies, and source titles", () => {
     const safe = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "clientSafe",
       sections: DEFAULT_SECTIONS,
       privacy: privacy({ clientSafe: true }),
     });
-    const firstEventSummary = moriMockSession.events[0].summary;
-    const firstDecisionRationale = moriMockSession.decisions[0].rationale;
-    const firstIssueDescription = moriMockSession.issues[0].description;
+    const firstEventSummary = mockSession.events[0].summary;
+    const firstDecisionRationale = mockSession.decisions[0].rationale;
+    const firstIssueDescription = mockSession.issues[0].description;
     expect(safe.markdown).toContain("Privacy: 클라이언트 안전");
     expect(safe.markdown).not.toContain(firstEventSummary);
     expect(safe.markdown).not.toContain(firstDecisionRationale);
@@ -140,10 +140,10 @@ describe("buildReportMarkdown", () => {
   it("renders the current user-edited issue and decision text", () => {
     const payload = buildReportMarkdown({
       view: {
-        ...moriMockSession,
+        ...mockSession,
         issues: [
           {
-            ...moriMockSession.issues[0]!,
+            ...mockSession.issues[0]!,
             title: "Corrected issue title",
             description: "Corrected issue description",
             editedByUser: true,
@@ -152,7 +152,7 @@ describe("buildReportMarkdown", () => {
         ],
         decisions: [
           {
-            ...moriMockSession.decisions[0]!,
+            ...mockSession.decisions[0]!,
             title: "Corrected decision title",
             rationale: "Corrected decision rationale",
             editedByUser: true,
@@ -173,7 +173,7 @@ describe("buildReportMarkdown", () => {
 
   it("excludeSourceDetails hides the source list while keeping evidence counts", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: new Set<ReportSectionId>(["evidence"]),
       privacy: privacy({ excludeSourceDetails: true }),
@@ -185,7 +185,7 @@ describe("buildReportMarkdown", () => {
 
   it("emits a warning when the session has zero sources", () => {
     const view = {
-      ...moriMockSession,
+      ...mockSession,
       sources: [],
       events: [],
       issues: [],
@@ -204,7 +204,7 @@ describe("buildReportMarkdown", () => {
 
   it("collapses excessive blank lines and ends with a single trailing newline", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: DEFAULT_SECTIONS,
       privacy: privacy(),
@@ -309,7 +309,7 @@ const WITH_MEMORY = new Set<ReportSectionId>(["consolidatedMemory"]);
 describe("buildReportMarkdown — accepted memory section", () => {
   it("renders an Accepted Project Memory section for an eligible record", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: WITH_MEMORY,
       privacy: privacy(),
@@ -322,7 +322,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
 
   it("shows a placeholder when no accepted memories are passed", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: WITH_MEMORY,
       privacy: privacy(),
@@ -333,7 +333,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
 
   it("omits the section entirely when consolidatedMemory is not selected", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: new Set<ReportSectionId>(["summary"]),
       privacy: privacy(),
@@ -344,7 +344,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
 
   it("excludes a personal-tier memory from a team-tier report", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "teamUpdate",
       sections: WITH_MEMORY,
       privacy: privacy(),
@@ -356,7 +356,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
 
   it("includes a team-tier memory in a team-tier report", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "teamUpdate",
       sections: WITH_MEMORY,
       privacy: privacy(),
@@ -373,7 +373,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
       reportEligibility: "clientSafe",
     });
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "clientSafe",
       sections: WITH_MEMORY,
       privacy: privacy({ clientSafe: true }),
@@ -385,7 +385,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
 
   it("drops the summary detail under client-safe privacy", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "clientSafe",
       sections: WITH_MEMORY,
       privacy: privacy({ clientSafe: true }),
@@ -397,7 +397,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
 
   it("excludes stale / contradiction kinds and flags them for re-review", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: WITH_MEMORY,
       privacy: privacy(),
@@ -412,7 +412,7 @@ describe("buildReportMarkdown — accepted memory section", () => {
 
   it("excludes an explicitly excluded memory from every report", () => {
     const payload = buildReportMarkdown({
-      view: moriMockSession,
+      view: mockSession,
       type: "personalRetrospective",
       sections: WITH_MEMORY,
       privacy: privacy(),

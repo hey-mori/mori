@@ -17,7 +17,7 @@ import {
  * `sourceLabel`s; this store lets the user create an empty project and rename /
  * delete one without touching any session. Local-only, no server.
  */
-export type MoriProjectState = {
+export type ProjectState = {
   initialized: boolean;
   projects: UserProject[];
   hydrate: () => void;
@@ -31,7 +31,7 @@ export type MoriProjectState = {
   deleteProject: (key: string) => void;
 };
 
-export const useMoriProjectStore = create<MoriProjectState>((set, get) => ({
+export const useProjectStore = create<ProjectState>((set, get) => ({
   initialized: false,
   projects: [],
   hydrate: () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { laneOrder } from "../../domain/constants";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import { groupEventsByLane, timestampToXPercent } from "./layout";
 
 describe("timeline layout", () => {
@@ -16,7 +16,7 @@ describe("timeline layout", () => {
   });
 
   it("groups Mori events into lane buckets", () => {
-    const grouped = groupEventsByLane(moriMockSession.events, laneOrder);
+    const grouped = groupEventsByLane(mockSession.events, laneOrder);
 
     expect(grouped.aiConversation.length).toBeGreaterThan(0);
     expect(grouped.decision.length).toBeGreaterThan(0);

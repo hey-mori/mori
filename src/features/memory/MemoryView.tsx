@@ -4,15 +4,15 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
-import { MoriDrawer } from "../../components/ui/MoriDrawer";
+import { BaseDrawer } from "../../components/ui/BaseDrawer";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriSqliteStore } from "../../app/sqliteStore";
-import { useMoriAppStore } from "../../app/store";
+import { useSqliteStore } from "../../app/sqliteStore";
+import { useAppStore } from "../../app/store";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { getSessionPersistenceService } from "../../lib/storage/sessionPersistenceService";
 import type {
@@ -62,23 +62,23 @@ import { ConsolidationReviewView } from "./ConsolidationReviewView";
 export function MemoryView() {
   // `navigate` routes legacy session-surface keys (timeline) into the unified
   // Session Detail workspace; other keys (start) pass through unchanged.
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
-  const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
-  const memoryFocus = useMoriAppStore((state) => state.memoryFocus);
-  const clearMemoryFocus = useMoriAppStore((state) => state.clearMemoryFocus);
-  const memoryTab = useMoriAppStore((state) => state.memoryTab);
-  const setMemoryTab = useMoriAppStore((state) => state.setMemoryTab);
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
-  const sqliteSessions = useMoriSqliteStore((state) => state.sessions);
-  const sqliteKind = useMoriSqliteStore((state) => state.kind);
-  const sqliteRefresh = useMoriSqliteStore((state) => state.refresh);
-  const sqliteAvailable = useMoriSqliteStore((state) => state.available);
+  const setCurrentView = useAppStore((state) => state.navigate);
+  const openReviewItem = useAppStore((state) => state.openReviewItem);
+  const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
+  const memoryFocus = useAppStore((state) => state.memoryFocus);
+  const clearMemoryFocus = useAppStore((state) => state.clearMemoryFocus);
+  const memoryTab = useAppStore((state) => state.memoryTab);
+  const setMemoryTab = useAppStore((state) => state.setMemoryTab);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
+  const sqliteSessions = useSqliteStore((state) => state.sessions);
+  const sqliteKind = useSqliteStore((state) => state.kind);
+  const sqliteRefresh = useSqliteStore((state) => state.refresh);
+  const sqliteAvailable = useSqliteStore((state) => state.available);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -473,7 +473,7 @@ export function MemoryView() {
         </div>
       )}
 
-      <MoriDrawer
+      <BaseDrawer
         open={selectedMemoryId !== null}
         onClose={() => setSelectedMemoryId(null)}
         ariaLabel="Accepted memory provenance"
@@ -504,7 +504,7 @@ export function MemoryView() {
             />
           );
         })()}
-      </MoriDrawer>
+      </BaseDrawer>
     </PageShell>
   );
 }

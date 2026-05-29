@@ -12,14 +12,14 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
-import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
-import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
-import { MoriSection } from "../../components/ui/MoriSection";
-import { useMoriAppStore } from "../../app/store";
+import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
+import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
+import { BaseSection } from "../../components/ui/BaseSection";
+import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
   selectSessionSource,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import {
@@ -31,7 +31,7 @@ import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdap
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
-import { useMoriProjectStore } from "../../app/projectStore";
+import { useProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { ProjectSynthesisSection } from "./ProjectSynthesisSection";
@@ -57,24 +57,24 @@ import { spanLabel } from "../../lib/session/workContext";
  * derived from stored session summaries; nothing here writes.
  */
 export function ProjectView() {
-  const projectKey = useMoriAppStore((state) => state.currentProjectKey);
-  const setCurrentView = useMoriAppStore((state) => state.setCurrentView);
-  const openSession = useMoriAppStore((state) => state.openSession);
+  const projectKey = useAppStore((state) => state.currentProjectKey);
+  const setCurrentView = useAppStore((state) => state.setCurrentView);
+  const openSession = useAppStore((state) => state.openSession);
 
-  const userProjects = useMoriProjectStore((state) => state.projects);
-  const hydrateProjects = useMoriProjectStore((state) => state.hydrate);
-  const projectsInitialized = useMoriProjectStore((state) => state.initialized);
-  const editUserProjectRecord = useMoriProjectStore((state) => state.editProject);
-  const deleteUserProjectRecord = useMoriProjectStore((state) => state.deleteProject);
+  const userProjects = useProjectStore((state) => state.projects);
+  const hydrateProjects = useProjectStore((state) => state.hydrate);
+  const projectsInitialized = useProjectStore((state) => state.initialized);
+  const editUserProjectRecord = useProjectStore((state) => state.editProject);
+  const deleteUserProjectRecord = useProjectStore((state) => state.deleteProject);
   const [editing, setEditing] = useState(false);
-  const source = useMoriSessionStore(selectSessionSource);
-  const loadBrowserSession = useMoriSessionStore(
+  const source = useSessionStore(selectSessionSource);
+  const loadBrowserSession = useSessionStore(
     (state) => state.loadBrowserSession,
   );
-  const loadDesktopSession = useMoriSessionStore(
+  const loadDesktopSession = useSessionStore(
     (state) => state.loadDesktopSession,
   );
-  const activeSessionId = useMoriSessionStore(
+  const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
 
@@ -296,7 +296,7 @@ export function ProjectView() {
           />
         </div>
 
-        <MoriSection
+        <BaseSection
           className="project-sessions"
           title="세션"
           actions={
@@ -326,7 +326,7 @@ export function ProjectView() {
               ))}
             </ul>
           )}
-        </MoriSection>
+        </BaseSection>
       </div>
 
       <ProjectMemoryList memories={memories} />
@@ -343,7 +343,7 @@ function ProjectMemoryList({ memories }: { memories: StoredAcceptedProjectMemory
   if (memories.length === 0) return null;
   const top = memories.slice(0, 6);
   return (
-    <MoriSection
+    <BaseSection
       className="project-memory"
       title="이 프로젝트가 기억하는 것"
       actions={<span className="project-section-count">{memories.length}건</span>}
@@ -352,12 +352,12 @@ function ProjectMemoryList({ memories }: { memories: StoredAcceptedProjectMemory
       <ul className="project-memory-list">
         {top.map((memory) => (
           <li key={memory.id}>
-            <MoriObjectRow
+            <BaseObjectRow
               leading={<BookCheck size={15} />}
               title={memory.title}
               meta={
                 memory.summary ? (
-                  <MoriMetadataLine items={[memory.summary]} />
+                  <BaseMetadataLine items={[memory.summary]} />
                 ) : undefined
               }
               density="compact"
@@ -366,7 +366,7 @@ function ProjectMemoryList({ memories }: { memories: StoredAcceptedProjectMemory
           </li>
         ))}
       </ul>
-    </MoriSection>
+    </BaseSection>
   );
 }
 
@@ -381,12 +381,12 @@ function ProjectSessionRowItem({
 }) {
   return (
     <li>
-      <MoriObjectRow
+      <BaseObjectRow
         leading={<FolderKanban size={15} />}
         title={row.title}
         className="session-list-row"
         meta={
-          <MoriMetadataLine
+          <BaseMetadataLine
             items={[projectLabel, spanLabel(row.timestamp, undefined)]}
           />
         }

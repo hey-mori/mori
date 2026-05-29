@@ -18,8 +18,8 @@ import {
 } from "../../lib/import/workBundle";
 import { buildWorkBundleFixtureItems } from "../../lib/import/fixtures/workBundleFixture";
 import { normalizeConnectorEventBatch, parseConnectorJsonl } from "../../lib/connectors";
-import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
+import { selectSessionView, useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
 import { getTrustDisplay } from "../../lib/evidence/trust";
 import { formatDateTime } from "../../lib/formatting/time";
 
@@ -53,10 +53,10 @@ function nextItemId(): string {
  * import so per-source provenance survives into the Evidence Hub and Timeline.
  */
 export function WorkBundlePanel() {
-  const draft = useMoriSessionStore((state) => state.draft);
-  const view = useMoriSessionStore(selectSessionView);
-  const addImportBatch = useMoriSessionStore((state) => state.addImportBatch);
-  const navigate = useMoriAppStore((state) => state.navigate);
+  const draft = useSessionStore((state) => state.draft);
+  const view = useSessionStore(selectSessionView);
+  const addImportBatch = useSessionStore((state) => state.addImportBatch);
+  const navigate = useAppStore((state) => state.navigate);
 
   const projectId = draft?.project.id ?? view.project.id;
   const sessionId = draft?.session.id ?? view.session.id;

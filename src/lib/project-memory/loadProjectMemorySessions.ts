@@ -18,7 +18,7 @@
  * It DOES:
  *
  *   - call `BrowserDraftRepository` (sync, fast) for browser-saved
- *     sessions and reconstruct a partial MoriMockSession from
+ *     sessions and reconstruct a partial MockSession from
  *     `StoredSessionDraft` + persisted imports + analysis,
  *   - call `SessionPersistenceService.loadSessionFromDesktop` (async,
  *     IPC) for SQLite sessions, returning the full reconstructed
@@ -32,10 +32,10 @@
  *     view-model can render an honest "partial load" state instead of
  *     pretending the rollup is complete.
  */
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import type { SqliteSessionListEntry } from "../sqlite/repositoryContracts";
 import type {
-  MoriDraftRepository,
+  DraftRepository,
   StoredSessionImport,
   StoredSessionSummary,
 } from "../storage/storageTypes";
@@ -51,16 +51,16 @@ export const DEFAULT_SAVED_SESSION_CAP = 20;
  */
 export type ProjectMemoryDesktopLoader = {
   isDesktop: () => boolean;
-  loadSessionFromDesktop: (sessionId: string) => Promise<{ session: MoriMockSession }>;
+  loadSessionFromDesktop: (sessionId: string) => Promise<{ session: MockSession }>;
 };
 
 export type LoadProjectMemorySessionsInput = {
   /** Live session (always loaded). */
-  activeSession: MoriMockSession;
+  activeSession: MockSession;
   /** Set to `false` when the active session is a demo mock. */
   activeIsLive: boolean;
   /** Browser repository — required when `savedBrowserSessions` is non-empty. */
-  repository?: MoriDraftRepository | null;
+  repository?: DraftRepository | null;
   /** Browser-saved session metadata. */
   savedBrowserSessions?: StoredSessionSummary[];
   /** Desktop SQLite-saved session metadata. */
@@ -149,7 +149,7 @@ export async function loadProjectMemorySessions(
 
 // ─── active session adapters ─────────────────────────────────────────
 
-function activeSessionToLoaded(view: MoriMockSession): ProjectMemoryLoadedSession {
+function activeSessionToLoaded(view: MockSession): ProjectMemoryLoadedSession {
   return {
     sessionId: view.session.id,
     title: view.session.title,
@@ -171,7 +171,7 @@ function activeSessionToLoaded(view: MoriMockSession): ProjectMemoryLoadedSessio
   };
 }
 
-function activeDemoToMetadataOnly(view: MoriMockSession): ProjectMemoryLoadedSession {
+function activeDemoToMetadataOnly(view: MockSession): ProjectMemoryLoadedSession {
   return {
     sessionId: view.session.id,
     title: view.session.title,
@@ -264,7 +264,7 @@ function sqliteToFailed(
 
 function loadBrowserSessionBody(
   summary: StoredSessionSummary,
-  repository: MoriDraftRepository,
+  repository: DraftRepository,
 ): ProjectMemoryLoadedSession {
   const imports = repository.listSessionImports(summary.sessionId);
   const analysis = repository.loadSessionAnalysis(summary.sessionId);
@@ -272,7 +272,7 @@ function loadBrowserSessionBody(
 
   // Browser drafts persist three things per session:
   //   - `StoredSessionImport[]` → events + sources
-  //   - `StoredSessionAnalysis`  → the full MoriAnalysisResult
+  //   - `StoredSessionAnalysis`  → the full AnalysisResult
   //   - `StoredSessionMemoryBody` → durable issues/decisions/next-actions
   //                                  snapshot (this milestone)
   //

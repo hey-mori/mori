@@ -4,7 +4,7 @@ import {
   loadLocalProfile,
   normalizeDisplayName,
   saveLocalProfile,
-  type MoriLocalProfile,
+  type LocalProfile,
 } from "../lib/profile/localProfile";
 
 /**
@@ -13,14 +13,14 @@ import {
  * Holds Mori's default identity — a user-set display name persisted in
  * browser localStorage. No account, no server, no data access.
  */
-export type MoriProfileState = {
+export type ProfileState = {
   initialized: boolean;
-  profile: MoriLocalProfile;
+  profile: LocalProfile;
   hydrate: () => void;
   setDisplayName: (displayName: string) => void;
 };
 
-export const useMoriProfileStore = create<MoriProfileState>((set, get) => ({
+export const useProfileStore = create<ProfileState>((set, get) => ({
   initialized: false,
   profile: DEFAULT_LOCAL_PROFILE,
   hydrate: () => {
@@ -28,7 +28,7 @@ export const useMoriProfileStore = create<MoriProfileState>((set, get) => ({
     set({ profile: loadLocalProfile(), initialized: true });
   },
   setDisplayName: (displayName) => {
-    const next: MoriLocalProfile = {
+    const next: LocalProfile = {
       ...get().profile,
       displayName: normalizeDisplayName(displayName) || DEFAULT_LOCAL_PROFILE.displayName,
     };

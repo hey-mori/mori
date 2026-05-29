@@ -13,7 +13,7 @@ export type RepositoryVerificationMetadata = {
 
 export const UNVERIFIED_VERIFICATION: RepositoryVerificationMetadata = { status: "unverified" };
 
-export type MoriRepositoryConfig = {
+export type RepositoryConfig = {
   id: string;
   label: string;
   path: string;
@@ -23,7 +23,7 @@ export type MoriRepositoryConfig = {
 };
 
 export type RepositorySettings = {
-  repositories: MoriRepositoryConfig[];
+  repositories: RepositoryConfig[];
   selectedRepositoryId: string | null;
 };
 
@@ -42,7 +42,7 @@ export function sanitizeRepositorySettings(input: unknown): RepositorySettings {
   const candidate = input as Partial<RepositorySettings>;
   const raw = Array.isArray(candidate.repositories) ? candidate.repositories : [];
   const seenPaths = new Set<string>();
-  const repositories: MoriRepositoryConfig[] = [];
+  const repositories: RepositoryConfig[] = [];
 
   for (const entry of raw) {
     if (!entry || typeof entry !== "object") continue;
@@ -91,13 +91,13 @@ export type AddRepositoryInput = {
 export function addRepositoryConfig(
   settings: RepositorySettings,
   input: AddRepositoryInput,
-): { settings: RepositorySettings; repository: MoriRepositoryConfig } {
+): { settings: RepositorySettings; repository: RepositoryConfig } {
   const path = input.path.trim();
   if (!path) throw new Error("Repository path is required.");
 
   const existing = settings.repositories.find((entry) => entry.path === path);
   if (existing) {
-    const updated: MoriRepositoryConfig = {
+    const updated: RepositoryConfig = {
       ...existing,
       label: input.label?.trim() || existing.label,
     };
@@ -111,7 +111,7 @@ export function addRepositoryConfig(
   }
 
   const now = input.now ?? new Date().toISOString();
-  const repository: MoriRepositoryConfig = {
+  const repository: RepositoryConfig = {
     id: createRepositoryId(path),
     label: input.label?.trim() || deriveLabelFromPath(path),
     path,
@@ -141,7 +141,7 @@ export function removeRepositoryConfig(
 export function updateRepositoryConfig(
   settings: RepositorySettings,
   repositoryId: string,
-  patch: Partial<Pick<MoriRepositoryConfig, "label" | "lastUsedAt">>,
+  patch: Partial<Pick<RepositoryConfig, "label" | "lastUsedAt">>,
 ): RepositorySettings {
   return {
     ...settings,

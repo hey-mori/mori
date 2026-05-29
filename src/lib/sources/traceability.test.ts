@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Decision, Issue, MoriMockSession, SourceRef, TimelineEvent } from "../../domain/types";
+import type { Decision, Issue, MockSession, SourceRef, TimelineEvent } from "../../domain/types";
 import {
   getDecisionEvidenceSources,
   getEventEvidenceSources,
@@ -392,7 +392,7 @@ describe("traceability", () => {
 
   describe("getReportEvidenceSummary", () => {
     it("returns evidence summary for session with analysis", () => {
-      const sessionView: MoriMockSession = {
+      const sessionView: MockSession = {
         project: { id: "p1", name: "Project", description: "", createdAt: "", updatedAt: "" },
         session: {
           id: "s1",
@@ -464,7 +464,7 @@ describe("traceability", () => {
     });
 
     it("returns evidence summary for session without analysis", () => {
-      const sessionView: MoriMockSession = {
+      const sessionView: MockSession = {
         project: { id: "p1", name: "Project", description: "", createdAt: "", updatedAt: "" },
         session: {
           id: "s1",
@@ -518,7 +518,7 @@ describe("traceability", () => {
     });
 
     it("returns evidence summary for empty session", () => {
-      const sessionView: MoriMockSession = {
+      const sessionView: MockSession = {
         project: { id: "p1", name: "Project", description: "", createdAt: "", updatedAt: "" },
         session: {
           id: "s1",

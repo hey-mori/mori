@@ -4,9 +4,9 @@ import { Button } from "../../components/ui/Button";
 import {
   selectSessionMode,
   selectSessionSource,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriSqliteStore } from "../../app/sqliteStore";
+import { useSqliteStore } from "../../app/sqliteStore";
 import { SettingsRow, SettingsSection, StatusPill } from "./SettingsPrimitives";
 
 /**
@@ -31,14 +31,14 @@ export function DemoModeCard({
 }: {
   onGoToConnections: () => void;
 }) {
-  const mode = useMoriSessionStore(selectSessionMode);
-  const source = useMoriSessionStore(selectSessionSource);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const resetToDemo = useMoriSessionStore((state) => state.resetToDemo);
-  const clearAllDataAndViewDemo = useMoriSessionStore(
+  const mode = useSessionStore(selectSessionMode);
+  const source = useSessionStore(selectSessionSource);
+  const imports = useSessionStore((state) => state.imports);
+  const resetToDemo = useSessionStore((state) => state.resetToDemo);
+  const clearAllDataAndViewDemo = useSessionStore(
     (state) => state.clearAllDataAndViewDemo,
   );
-  const refreshSqlite = useMoriSqliteStore((state) => state.refresh);
+  const refreshSqlite = useSqliteStore((state) => state.refresh);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [resetting, setResetting] = useState(false);
 

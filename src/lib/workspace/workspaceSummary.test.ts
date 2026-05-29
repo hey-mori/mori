@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SessionMode, SessionViewModel } from "../../app/sessionStore";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 import {
   buildWorkspaceSummary,
@@ -9,15 +9,15 @@ import {
 } from "./workspaceSummary";
 
 function view(over: Partial<SessionViewModel> = {}): SessionViewModel {
-  return { ...moriMockSession, isDemo: true, ...over };
+  return { ...mockSession, isDemo: true, ...over };
 }
 
 function stored(over: Partial<StoredSessionSummary>): StoredSessionSummary {
   return {
     sessionId: "stored-1",
-    projectId: moriMockSession.project.id,
+    projectId: mockSession.project.id,
     title: "Stored session",
-    projectName: moriMockSession.project.name,
+    projectName: mockSession.project.name,
     savedAt: "2026-05-10T09:00:00+09:00",
     status: "complete",
     ...over,
@@ -32,17 +32,17 @@ describe("buildWorkspaceSummary", () => {
       storedSessions: [],
     });
 
-    expect(summary.projectId).toBe(moriMockSession.project.id);
-    expect(summary.projectName).toBe(moriMockSession.project.name);
+    expect(summary.projectId).toBe(mockSession.project.id);
+    expect(summary.projectName).toBe(mockSession.project.name);
     expect(summary.isDemoProject).toBe(true);
-    expect(summary.counts.events).toBe(moriMockSession.events.length);
-    expect(summary.counts.issues).toBe(moriMockSession.issues.length);
-    expect(summary.counts.decisions).toBe(moriMockSession.decisions.length);
-    expect(summary.counts.nextActions).toBe(moriMockSession.nextActions.length);
+    expect(summary.counts.events).toBe(mockSession.events.length);
+    expect(summary.counts.issues).toBe(mockSession.issues.length);
+    expect(summary.counts.decisions).toBe(mockSession.decisions.length);
+    expect(summary.counts.nextActions).toBe(mockSession.nextActions.length);
   });
 
   it("counts completed next actions as the work-progress signal", () => {
-    const base = moriMockSession.nextActions[0]!;
+    const base = mockSession.nextActions[0]!;
     const summary = buildWorkspaceSummary({
       view: view({
         nextActions: [
@@ -62,8 +62,8 @@ describe("buildWorkspaceSummary", () => {
     const summary = buildWorkspaceSummary({
       view: view({
         issues: [
-          { ...moriMockSession.issues[0]!, status: "resolved" },
-          { ...moriMockSession.issues[0]!, id: "iss-open", status: "open" },
+          { ...mockSession.issues[0]!, status: "resolved" },
+          { ...mockSession.issues[0]!, id: "iss-open", status: "open" },
         ],
       }),
       mode: "demo",
@@ -82,7 +82,7 @@ describe("buildWorkspaceSummary", () => {
     });
 
     expect(summary.sessionCount).toBe(1);
-    expect(summary.sessions[0].sessionId).toBe(moriMockSession.session.id);
+    expect(summary.sessions[0].sessionId).toBe(mockSession.session.id);
     expect(summary.sessions[0].isActive).toBe(true);
     expect(summary.sessions[0].savedAt).toBeNull();
     expect(summary.isDemoProject).toBe(false);
@@ -93,7 +93,7 @@ describe("buildWorkspaceSummary", () => {
       view: view(),
       mode: "draft",
       storedSessions: [
-        stored({ sessionId: moriMockSession.session.id, title: "Saved active" }),
+        stored({ sessionId: mockSession.session.id, title: "Saved active" }),
       ],
     });
 
@@ -128,7 +128,7 @@ describe("buildWorkspaceSummary", () => {
     });
 
     expect(summary.sessions.map((entry) => entry.sessionId)).toEqual([
-      moriMockSession.session.id,
+      mockSession.session.id,
       "new",
       "old",
     ]);
@@ -151,10 +151,10 @@ describe("buildWorkspaceSurfaceLinks", () => {
     const links = buildWorkspaceSurfaceLinks(view());
     const byView = Object.fromEntries(links.map((link) => [link.view, link.detail]));
 
-    expect(byView.timeline).toContain(String(moriMockSession.events.length));
-    expect(byView.evidence).toContain(String(moriMockSession.sources.length));
-    expect(byView.review).toContain(String(moriMockSession.decisions.length));
-    expect(byView.review).toContain(String(moriMockSession.issues.length));
+    expect(byView.timeline).toContain(String(mockSession.events.length));
+    expect(byView.evidence).toContain(String(mockSession.sources.length));
+    expect(byView.review).toContain(String(mockSession.decisions.length));
+    expect(byView.review).toContain(String(mockSession.issues.length));
   });
 
   it("reflects an emptied session without inventing content", () => {

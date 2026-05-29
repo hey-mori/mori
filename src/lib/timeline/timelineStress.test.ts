@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
-import type { MoriMockSession } from "../../domain/types";
+import { mockSession } from "../../domain/mock-data";
+import type { MockSession } from "../../domain/types";
 import { buildTimelineEventCardViewModel } from "../../features/timeline/lib/timelineCards";
 import { buildTimelineRenderModel } from "./timelineViewModel";
 import {
@@ -11,11 +11,11 @@ import {
 
 const stressEvents = buildTimelineStressEvents();
 
-function stressView(): MoriMockSession {
+function stressView(): MockSession {
   return {
-    ...moriMockSession,
+    ...mockSession,
     session: {
-      ...moriMockSession.session,
+      ...mockSession.session,
       startedAt: TIMELINE_STRESS_RANGE.start,
       endedAt: TIMELINE_STRESS_RANGE.end,
     },

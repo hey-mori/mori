@@ -1,5 +1,5 @@
 import type { Decision, Issue, NextAction, Priority } from "../../domain/types";
-import type { MoriAnalysisResult } from "../analysis";
+import type { AnalysisResult } from "../analysis";
 
 export type IssueEditFields = Partial<Pick<Issue, "title" | "description" | "priority">>;
 export type DecisionEditFields = Partial<Pick<Decision, "title" | "decision" | "rationale" | "importance">>;
@@ -69,11 +69,11 @@ export function setDecisionFields(
 }
 
 export function applyIssueEdit(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   issueId: string,
   fields: IssueEditFields,
   now: string,
-): MoriAnalysisResult {
+): AnalysisResult {
   let changed = false;
   const issues = analysis.issues.map((issue) => {
     if (issue.id !== issueId) return issue;
@@ -86,11 +86,11 @@ export function applyIssueEdit(
 }
 
 export function applyDecisionEdit(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   decisionId: string,
   fields: DecisionEditFields,
   now: string,
-): MoriAnalysisResult {
+): AnalysisResult {
   let changed = false;
   const decisions = analysis.decisions.map((decision) => {
     if (decision.id !== decisionId) return decision;
@@ -125,11 +125,11 @@ export function setNextActionFields(
 }
 
 export function applyNextActionEdit(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   nextActionId: string,
   fields: NextActionEditFields,
   now: string,
-): MoriAnalysisResult {
+): AnalysisResult {
   let changed = false;
   const nextActions = analysis.nextActions.map((action) => {
     if (action.id !== nextActionId) return action;

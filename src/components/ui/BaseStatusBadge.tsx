@@ -8,14 +8,14 @@ import {
 
 /**
  * Badge tone vocabulary. This is the shared product-state tone scale —
- * `MoriStatusBadge` does not own its own scale, it renders the one defined
+ * `BaseStatusBadge` does not own its own scale, it renders the one defined
  * in `src/lib/product-state/`.
  */
-export type MoriStatusBadgeTone = ProductStateTone;
+export type BaseStatusBadgeTone = ProductStateTone;
 
-export type MoriStatusBadgeProps = {
+export type BaseStatusBadgeProps = {
   children: ReactNode;
-  tone?: MoriStatusBadgeTone;
+  tone?: BaseStatusBadgeTone;
   /** Convenience: pass a FeatureStatus and the right tone is derived. */
   status?: FeatureStatus;
 };
@@ -28,8 +28,8 @@ export type MoriStatusBadgeProps = {
  * When a `FeatureStatus` is passed, the tone is derived through the shared
  * product-state model rather than a badge-local map.
  */
-export function MoriStatusBadge({ children, tone, status }: MoriStatusBadgeProps) {
-  const resolvedTone: MoriStatusBadgeTone =
+export function BaseStatusBadge({ children, tone, status }: BaseStatusBadgeProps) {
+  const resolvedTone: BaseStatusBadgeTone =
     tone ??
     (status
       ? getProductAvailabilityTone(productAvailabilityFromFeatureStatus(status))

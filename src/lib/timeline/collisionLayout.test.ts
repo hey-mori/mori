@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import { timelineActivityLaneOrder as laneOrder } from "./activityModel";
 import { createTimelineBundles } from "./bundleEvents";
 import {
@@ -10,17 +10,17 @@ import {
 import type { TimelineDisplayItem } from "./displayItems";
 
 const range = {
-  start: moriMockSession.session.startedAt,
-  end: moriMockSession.session.endedAt,
+  start: mockSession.session.startedAt,
+  end: mockSession.session.endedAt,
 };
 
-const displayItems = createTimelineBundles(moriMockSession.events, moriMockSession.relationships, {
+const displayItems = createTimelineBundles(mockSession.events, mockSession.relationships, {
   timeWindowMinutes: 12,
   minEventsForBundle: 3,
   preserveSelectedEventId: "evt-positioning",
   preserveImportantEventIds: ["evt-positioning", "evt-start-flow"],
   maxVisibleItemsPerLane: 4,
-  decisions: moriMockSession.decisions,
+  decisions: mockSession.decisions,
 });
 
 /** Minimal display item, enough for the layout engine. */

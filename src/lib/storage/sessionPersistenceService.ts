@@ -1,8 +1,8 @@
-import type { MoriMockSession, Session } from "../../domain/types";
+import type { MockSession, Session } from "../../domain/types";
 import { isTauriRuntime, tauriCommands } from "../desktop";
 import { createBrowserDraftRepository } from "./localStorageAdapter";
 import type {
-  MoriDraftRepository,
+  DraftRepository,
   StoredSessionDraft,
   StoredSessionImport,
 } from "./storageTypes";
@@ -33,14 +33,14 @@ export type SqliteDesktopCommands = {
 
 export type SessionPersistenceServiceOptions = {
   runtime?: PersistenceRuntime;
-  repository?: MoriDraftRepository;
+  repository?: DraftRepository;
   commands?: SqliteDesktopCommands;
 };
 
 export type LoadedDesktopSession = {
   draft: StoredSessionDraft;
   imports: StoredSessionImport[];
-  session: MoriMockSession;
+  session: MockSession;
 };
 
 export type PersistenceStatus = {
@@ -58,8 +58,8 @@ export type PersistenceStatus = {
  */
 export class SessionPersistenceService {
   readonly runtime: PersistenceRuntime;
-  private repositoryOverride: MoriDraftRepository | null;
-  private lazyRepository: MoriDraftRepository | null = null;
+  private repositoryOverride: DraftRepository | null;
+  private lazyRepository: DraftRepository | null = null;
   private readonly commands: SqliteDesktopCommands;
 
   constructor(options: SessionPersistenceServiceOptions = {}) {
@@ -72,7 +72,7 @@ export class SessionPersistenceService {
     return this.runtime === "desktop";
   }
 
-  getRepository(): MoriDraftRepository {
+  getRepository(): DraftRepository {
     if (this.repositoryOverride) return this.repositoryOverride;
     if (!this.lazyRepository) {
       this.lazyRepository = createBrowserDraftRepository();
@@ -121,7 +121,7 @@ export class SessionPersistenceService {
     return result.sessions;
   }
 
-  async saveSessionToDesktop(session: MoriMockSession): Promise<PersistSessionSnapshotOutput> {
+  async saveSessionToDesktop(session: MockSession): Promise<PersistSessionSnapshotOutput> {
     requireDesktop(this.runtime);
     const snapshot = createSqlitePersistenceSnapshot(session);
     const validation = validateSqlitePersistenceSnapshot(snapshot);
@@ -174,7 +174,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function toStoredDraft(project: MoriMockSession["project"], session: Session): StoredSessionDraft {
+function toStoredDraft(project: MockSession["project"], session: Session): StoredSessionDraft {
   return {
     project,
     session,
@@ -183,7 +183,7 @@ function toStoredDraft(project: MoriMockSession["project"], session: Session): S
   };
 }
 
-function toStoredImports(session: MoriMockSession): StoredSessionImport[] {
+function toStoredImports(session: MockSession): StoredSessionImport[] {
   return session.sources.map((source) => {
     const relatedEvents = session.events.filter((event) => source.relatedEventIds.includes(event.id));
     return {

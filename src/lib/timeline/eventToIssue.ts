@@ -8,7 +8,7 @@
  * can spawn at most one issue.
  */
 import type { Issue, TimelineEvent } from "../../domain/types";
-import type { MoriAnalysisResult } from "../analysis";
+import type { AnalysisResult } from "../analysis";
 
 /** Deterministic id for the issue promoted from a given event. */
 export function eventIssueId(eventId: string): string {
@@ -17,7 +17,7 @@ export function eventIssueId(eventId: string): string {
 
 /** True when the event has already been promoted to an issue. */
 export function isEventPromotedToIssue(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   eventId: string,
 ): boolean {
   const id = eventIssueId(eventId);
@@ -30,10 +30,10 @@ export function isEventPromotedToIssue(
  * skip persistence.
  */
 export function createIssueFromEvent(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   event: TimelineEvent,
   now: string,
-): { analysis: MoriAnalysisResult; changed: boolean } {
+): { analysis: AnalysisResult; changed: boolean } {
   if (isEventPromotedToIssue(analysis, event.id)) {
     return { analysis, changed: false };
   }

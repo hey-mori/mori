@@ -6,7 +6,7 @@ import type {
   Artifact,
   Decision,
   Issue,
-  MoriMockSession,
+  MockSession,
   NextAction,
   Project,
   Relationship,
@@ -211,7 +211,7 @@ Continue by turning the timeline and relationship model into a production-ready 
   generatedAt: "2026-05-12T18:00:00+09:00",
 };
 
-export const moriMockSession: MoriMockSession = {
+export const mockSession: MockSession = {
   project,
   session,
   sources,

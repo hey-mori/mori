@@ -4,9 +4,9 @@ import {
   getProductAvailabilityTone,
   productAvailabilityFromFeatureStatus,
 } from "../../lib/product-state/productState";
-import { moriTooltipProps } from "./MoriTooltip";
+import { baseTooltipProps } from "./BaseTooltip";
 
-export type MoriFeatureStatusBadgeProps = {
+export type BaseFeatureStatusBadgeProps = {
   /** Either a `FeatureId` (looked up in the registry) or a `FeatureStatus`. */
   feature?: FeatureId;
   status?: FeatureStatus;
@@ -22,14 +22,14 @@ export type MoriFeatureStatusBadgeProps = {
  * `.mori-feature-status-chip` CSS rules in `styles/theme.css`.
  *
  * The tone is derived through the shared product-state model rather than a
- * badge-local map, matching `MoriStatusBadge`.
+ * badge-local map, matching `BaseStatusBadge`.
  */
-export function MoriFeatureStatusBadge({
+export function BaseFeatureStatusBadge({
   feature,
   status,
   label,
   withTooltip = true,
-}: MoriFeatureStatusBadgeProps) {
+}: BaseFeatureStatusBadgeProps) {
   let resolvedStatus: FeatureStatus;
   let resolvedLabel: string;
   let title: string | undefined;
@@ -55,7 +55,7 @@ export function MoriFeatureStatusBadge({
       className="mori-feature-status-chip"
       data-mori-tone={tone}
       data-mori-status={resolvedStatus}
-      {...moriTooltipProps(title, "status")}
+      {...baseTooltipProps(title, "status")}
     >
       {resolvedLabel}
     </span>

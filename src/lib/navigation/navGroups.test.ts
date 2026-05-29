@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriViewIcon } from "../../components/brand/moriIcons";
+import { viewIcon } from "../../components/brand/moriIcons";
 import {
   NAV_GROUPS,
   navEntryKey,
@@ -54,7 +54,7 @@ describe("NAV_GROUPS entry model", () => {
 
   it("only references keys that have a shared icon", () => {
     for (const key of navKeys()) {
-      expect(moriViewIcon[key]).toBeDefined();
+      expect(viewIcon[key]).toBeDefined();
     }
   });
 

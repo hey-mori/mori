@@ -1,6 +1,6 @@
 import { Check, Palette } from "lucide-react";
-import { useMoriThemeStore } from "../../app/themeStore";
-import type { MoriThemeId } from "../../lib/settings/themePreference";
+import { useThemeStore } from "../../app/themeStore";
+import type { ThemeId } from "../../lib/settings/themePreference";
 import {
   PreferenceToggle,
   SettingsNotice,
@@ -22,7 +22,7 @@ import {
  */
 
 type ThemeOption = {
-  id: MoriThemeId;
+  id: ThemeId;
   label: string;
   sub: string;
   description: string;
@@ -50,8 +50,8 @@ const THEME_OPTIONS: ThemeOption[] = [
 ];
 
 export function ThemeCard() {
-  const theme = useMoriThemeStore((state) => state.theme);
-  const setTheme = useMoriThemeStore((state) => state.setTheme);
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
 
   return (
     <SettingsSection

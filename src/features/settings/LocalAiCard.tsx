@@ -1,8 +1,8 @@
 import { Bot, Cloud, Code2, Database, Plug, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/ui/Button";
-import { MoriPlannedAction } from "../../components/ui/MoriPlannedAction";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
+import { BasePlannedAction } from "../../components/ui/BasePlannedAction";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { probeOllamaConnection } from "../../lib/analysis";
 import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib/analysis";
 import { getProviderRows, type ProviderRow as ProviderRowModel } from "../../lib/settings/settingsStatus";
@@ -200,15 +200,15 @@ function ProviderOption({
   isCurrent: boolean;
   canSelect: boolean;
   availabilityLabel: string;
-  availabilityTone: Parameters<typeof MoriStatusBadge>[0]["tone"];
+  availabilityTone: Parameters<typeof BaseStatusBadge>[0]["tone"];
   onSelect: () => void;
   onTest?: () => void;
   testBusy: boolean;
 }) {
   const status = (
-    <MoriStatusBadge tone={availabilityTone}>
+    <BaseStatusBadge tone={availabilityTone}>
       {availabilityLabel}
-    </MoriStatusBadge>
+    </BaseStatusBadge>
   );
   const actions = canSelect ? (
     <>
@@ -232,7 +232,7 @@ function ProviderOption({
       ) : null}
     </>
   ) : (
-    <MoriPlannedAction
+    <BasePlannedAction
       label="예정"
       title="다음 마일스톤에서 활성화됩니다."
     />

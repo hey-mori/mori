@@ -1,7 +1,7 @@
-import type { MoriMockSession, SourceRef, Summary, TimelineEvent } from "../../domain/types";
+import type { MockSession, SourceRef, Summary, TimelineEvent } from "../../domain/types";
 import type { StoredSessionDraft, StoredSessionImport } from "../storage/storageTypes";
 
-export type ComposedSessionView = MoriMockSession & {
+export type ComposedSessionView = MockSession & {
   isDemo: boolean;
 };
 

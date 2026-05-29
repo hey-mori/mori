@@ -10,10 +10,10 @@ import {
 } from "./lib/timelineCards";
 import { activityKindIcons } from "./lib/activityIcons";
 import {
-  MoriContextMenu,
+  BaseContextMenu,
   useContextMenuPosition,
-  type MoriMenuItemSpec,
-} from "../../components/ui/MoriActionMenu";
+  type BaseMenuItemSpec,
+} from "../../components/ui/BaseActionMenu";
 
 /**
  * 목록 (content list) — the reading mode that answers *what happened*.
@@ -36,7 +36,7 @@ export function TimelineChronoList({
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
   density: TimelineDensity;
-  eventMenuItems?: (event: TimelineEvent) => MoriMenuItemSpec[];
+  eventMenuItems?: (event: TimelineEvent) => BaseMenuItemSpec[];
 }) {
   const items = sortDisplayItemsChronologically(model.visibleDisplayItems);
   if (items.length === 0) return null;
@@ -114,7 +114,7 @@ function TimelineChronoEventRow({
   event: TimelineEvent;
   selected: boolean;
   onSelect: () => void;
-  menuItems?: MoriMenuItemSpec[];
+  menuItems?: BaseMenuItemSpec[];
   sourceIndex?: ReadonlyMap<string, SourceRef>;
 }) {
   const menu = useContextMenuPosition();
@@ -151,7 +151,7 @@ function TimelineChronoEventRow({
         </div>
       ) : null}
       {menuItems ? (
-        <MoriContextMenu
+        <BaseContextMenu
           open={menu.open}
           position={menu.position}
           items={menuItems}

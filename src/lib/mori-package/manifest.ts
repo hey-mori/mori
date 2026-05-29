@@ -1,11 +1,11 @@
-import type { MoriMockSession, RecordingMode } from "../../domain/types";
+import type { MockSession, RecordingMode } from "../../domain/types";
 import type { MoriPackageManifestV0, MoriPackagePrivacyV0, MoriPackageThemeV0 } from "./types";
 
 export function createPackageId(projectId: string, sessionId: string): string {
   return `mori_${projectId}_${sessionId}`;
 }
 
-export function createManifestFromSession(data: MoriMockSession): MoriPackageManifestV0 {
+export function createManifestFromSession(data: MockSession): MoriPackageManifestV0 {
   const now = new Date().toISOString();
   return {
     appName: "Mori",

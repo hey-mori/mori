@@ -297,7 +297,7 @@ export function describeProposalKind(kind: MemoryProposalKind): string {
 /**
  * Semantic tone for a `MemoryProposalKind`, drawn from the shared
  * product-state tone vocabulary so a kind chip uses the same scale as
- * `MoriStatusBadge`. A decision is a settled outcome (success), a
+ * `BaseStatusBadge`. A decision is a settled outcome (success), a
  * recurring issue wants attention (warning), key evidence is a
  * provenance anchor (accent), an unresolved risk / contradiction is
  * the most severe (danger), a next-session recommendation is

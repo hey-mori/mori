@@ -1,7 +1,7 @@
 import { BrainCircuit, Layers } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseSection } from "../../components/ui/BaseSection";
 import {
   describeProjectMemoryDataBasis,
   getProjectMemoryDataBasisTone,
@@ -32,7 +32,7 @@ export function ConsolidationPreviewCard({
   const reviewable = state.proposalCount > 0;
 
   return (
-    <MoriSection
+    <BaseSection
       className="memory-consolidation"
       ariaLabel="프로젝트 메모리 통합 미리보기"
       title={
@@ -88,7 +88,7 @@ export function ConsolidationPreviewCard({
         </Button>
         <small>{state.nextStepLabel}</small>
       </footer>
-    </MoriSection>
+    </BaseSection>
   );
 }
 

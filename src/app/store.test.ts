@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useMoriAppStore } from "./store";
+import { useAppStore } from "./store";
 
 /**
  * Routing contract for the unified Session Detail workspace (P3).
@@ -11,7 +11,7 @@ import { useMoriAppStore } from "./store";
  */
 describe("app store — session-centric routing", () => {
   beforeEach(() => {
-    useMoriAppStore.setState({
+    useAppStore.setState({
       currentView: "home",
       sessionTab: "flow",
       reviewFocus: null,
@@ -19,17 +19,17 @@ describe("app store — session-centric routing", () => {
   });
 
   it("openSession() opens the session workspace, keeping the current tab", () => {
-    useMoriAppStore.setState({ sessionTab: "insights" });
-    useMoriAppStore.getState().openSession();
-    const state = useMoriAppStore.getState();
+    useAppStore.setState({ sessionTab: "insights" });
+    useAppStore.getState().openSession();
+    const state = useAppStore.getState();
     expect(state.currentView).toBe("session");
     expect(state.sessionTab).toBe("insights");
   });
 
   it("openSession(tab) opens the session workspace on the requested tab", () => {
-    useMoriAppStore.getState().openSession("evidence");
-    expect(useMoriAppStore.getState().currentView).toBe("session");
-    expect(useMoriAppStore.getState().sessionTab).toBe("evidence");
+    useAppStore.getState().openSession("evidence");
+    expect(useAppStore.getState().currentView).toBe("session");
+    expect(useAppStore.getState().sessionTab).toBe("evidence");
   });
 
   it("navigate() folds the legacy session surfaces into the matching tab", () => {
@@ -42,31 +42,31 @@ describe("app store — session-centric routing", () => {
       ["reports", "report"],
     ];
     for (const [view, tab] of expectations) {
-      useMoriAppStore.getState().navigate(view);
-      const state = useMoriAppStore.getState();
+      useAppStore.getState().navigate(view);
+      const state = useAppStore.getState();
       expect(state.currentView).toBe("session");
       expect(state.sessionTab).toBe(tab);
     }
   });
 
   it("navigate() folds consolidation into the Memory 통합 segment", () => {
-    useMoriAppStore.getState().navigate("consolidation");
-    const state = useMoriAppStore.getState();
+    useAppStore.getState().navigate("consolidation");
+    const state = useAppStore.getState();
     expect(state.currentView).toBe("memory");
     expect(state.memoryTab).toBe("consolidation");
   });
 
   it("navigate() passes non-session destinations through unchanged", () => {
     for (const view of ["home", "memory", "connections", "start"] as const) {
-      useMoriAppStore.getState().navigate(view);
-      expect(useMoriAppStore.getState().currentView).toBe(view);
+      useAppStore.getState().navigate(view);
+      expect(useAppStore.getState().currentView).toBe(view);
     }
   });
 
   it("navigate('settings') opens the settings sheet instead of routing", () => {
-    useMoriAppStore.setState({ currentView: "home", settingsSheetOpen: false });
-    useMoriAppStore.getState().navigate("settings");
-    const state = useMoriAppStore.getState();
+    useAppStore.setState({ currentView: "home", settingsSheetOpen: false });
+    useAppStore.getState().navigate("settings");
+    const state = useAppStore.getState();
     expect(state.settingsSheetOpen).toBe(true);
     expect(state.settingsTab).toBe("localAi");
     // The underlying view does not change — the user keeps their place.
@@ -74,45 +74,45 @@ describe("app store — session-centric routing", () => {
   });
 
   it("navigate('profile') opens the settings sheet on the profile tab", () => {
-    useMoriAppStore.setState({ currentView: "home", settingsSheetOpen: false });
-    useMoriAppStore.getState().navigate("profile");
-    const state = useMoriAppStore.getState();
+    useAppStore.setState({ currentView: "home", settingsSheetOpen: false });
+    useAppStore.getState().navigate("profile");
+    const state = useAppStore.getState();
     expect(state.settingsSheetOpen).toBe(true);
     expect(state.settingsTab).toBe("profile");
     expect(state.currentView).toBe("home");
   });
 
   it("openReviewItem() deep-links into the session insights tab", () => {
-    useMoriAppStore.getState().openReviewItem({ kind: "issue", issueId: "issue-1" });
-    const state = useMoriAppStore.getState();
+    useAppStore.getState().openReviewItem({ kind: "issue", issueId: "issue-1" });
+    const state = useAppStore.getState();
     expect(state.currentView).toBe("session");
     expect(state.sessionTab).toBe("insights");
     expect(state.reviewFocus).toEqual({ kind: "issue", issueId: "issue-1" });
   });
 
   it("setSessionTab() switches tabs without leaving the session workspace", () => {
-    useMoriAppStore.setState({ currentView: "session", sessionTab: "flow" });
-    useMoriAppStore.getState().setSessionTab("evidence");
-    expect(useMoriAppStore.getState().currentView).toBe("session");
-    expect(useMoriAppStore.getState().sessionTab).toBe("evidence");
+    useAppStore.setState({ currentView: "session", sessionTab: "flow" });
+    useAppStore.getState().setSessionTab("evidence");
+    expect(useAppStore.getState().currentView).toBe("session");
+    expect(useAppStore.getState().sessionTab).toBe("evidence");
   });
 
   it("requestEvidenceImport() routes to the 증거 tab and arms a one-shot", () => {
-    useMoriAppStore.setState({
+    useAppStore.setState({
       currentView: "connections",
       sessionTab: "flow",
       evidenceImportRequest: null,
     });
-    useMoriAppStore.getState().requestEvidenceImport("ai", "claude");
-    const state = useMoriAppStore.getState();
+    useAppStore.getState().requestEvidenceImport("ai", "claude");
+    const state = useAppStore.getState();
     expect(state.currentView).toBe("session");
     expect(state.sessionTab).toBe("evidence");
     expect(state.evidenceImportRequest).toEqual({ kind: "ai", platform: "claude" });
   });
 
   it("clearEvidenceImportRequest() consumes the one-shot", () => {
-    useMoriAppStore.setState({ evidenceImportRequest: { kind: "git" } });
-    useMoriAppStore.getState().clearEvidenceImportRequest();
-    expect(useMoriAppStore.getState().evidenceImportRequest).toBeNull();
+    useAppStore.setState({ evidenceImportRequest: { kind: "git" } });
+    useAppStore.getState().clearEvidenceImportRequest();
+    expect(useAppStore.getState().evidenceImportRequest).toBeNull();
   });
 });

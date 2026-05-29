@@ -2,9 +2,9 @@ import { ArrowLeft, CheckCheck, ListChecks, Sparkles, Trash2, X } from "lucide-r
 import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { useMoriSessionStore } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
-import { useMoriReviewStore, type ReviewDraftMeta } from "../../app/reviewStore";
+import { useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
+import { useReviewStore, type ReviewDraftMeta } from "../../app/reviewStore";
 import {
   describeConnectorSourceImportBadge,
   getConnectorSourceImportBadgeTone,
@@ -39,21 +39,21 @@ const ORIGIN_LABEL: Record<ReviewOrigin, string> = {
  * `.page review-page` block in both modes (it never used `PageShell`).
  */
 export function ImportReviewView(_props: { embedded?: boolean } = {}) {
-  const draft = useMoriReviewStore((state) => state.draft);
-  const draftMeta = useMoriReviewStore((state) => state.draftMeta);
-  const setItemStatus = useMoriReviewStore((state) => state.setItemStatus);
-  const setAllStatus = useMoriReviewStore((state) => state.setAllStatus);
-  const editEvent = useMoriReviewStore((state) => state.editEvent);
-  const apply = useMoriReviewStore((state) => state.apply);
-  const cancel = useMoriReviewStore((state) => state.cancel);
-  const addImport = useMoriSessionStore((state) => state.addImport);
-  const commitPendingNewSession = useMoriSessionStore(
+  const draft = useReviewStore((state) => state.draft);
+  const draftMeta = useReviewStore((state) => state.draftMeta);
+  const setItemStatus = useReviewStore((state) => state.setItemStatus);
+  const setAllStatus = useReviewStore((state) => state.setAllStatus);
+  const editEvent = useReviewStore((state) => state.editEvent);
+  const apply = useReviewStore((state) => state.apply);
+  const cancel = useReviewStore((state) => state.cancel);
+  const addImport = useSessionStore((state) => state.addImport);
+  const commitPendingNewSession = useSessionStore(
     (state) => state.commitPendingNewSession,
   );
-  const abandonPendingNewSessionIfEmpty = useMoriSessionStore(
+  const abandonPendingNewSessionIfEmpty = useSessionStore(
     (state) => state.abandonPendingNewSessionIfEmpty,
   );
-  const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
+  const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
 
   const [statusBanner, setStatusBanner] = useState<
     { tone: "error" | "info"; message: string } | null

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { ContributionGrid } from "../../lib/home/contributionGrid";
 import { ContributionHeatmap } from "./ContributionHeatmap";
-import { MoriMetricStrip, type MoriMetricItem } from "../ui/MoriMetricStrip";
+import { BaseMetricStrip, type BaseMetricItem } from "../ui/BaseMetricStrip";
 
 /**
  * "작업 활동" panel — the full activity card shared by Home and the project page.
@@ -21,7 +21,7 @@ export function WorkActivityCard({
   title = "작업 활동",
 }: {
   grid: ContributionGrid;
-  stats: MoriMetricItem[];
+  stats: BaseMetricItem[];
   /** Right-aligned header slot, e.g. the metric lens toggle. */
   controls?: ReactNode;
   /** Short header subtitle, e.g. "최근 18주 · 활동 14일". */
@@ -41,7 +41,7 @@ export function WorkActivityCard({
       </header>
       <ContributionHeatmap grid={grid} />
       {stats.length > 0 ? (
-        <MoriMetricStrip className="home-activity-stats" items={stats} />
+        <BaseMetricStrip className="home-activity-stats" items={stats} />
       ) : null}
     </section>
   );

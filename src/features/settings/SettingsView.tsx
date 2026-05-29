@@ -14,14 +14,14 @@ import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriSqliteStore } from "../../app/sqliteStore";
+import { useSqliteStore } from "../../app/sqliteStore";
 import {
   selectActiveRepository,
-  useMoriRepositoryStore,
+  useRepositoryStore,
 } from "../../app/repositoryStore";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import type { SettingsTab } from "../../app/store";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
@@ -46,41 +46,41 @@ export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: ty
 ];
 
 export function SettingsView() {
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const settings = useMoriSessionStore((state) => state.analysisSettings);
-  const updateAnalysisSettings = useMoriSessionStore((state) => state.updateAnalysisSettings);
-  const sessionView = useMoriSessionStore(selectSessionView);
-  const sessionMode = useMoriSessionStore(selectSessionMode);
-  const sessionDraft = useMoriSessionStore((state) => state.draft);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const loadDesktopSession = useMoriSessionStore((state) => state.loadDesktopSession);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const settings = useSessionStore((state) => state.analysisSettings);
+  const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
+  const sessionView = useSessionStore(selectSessionView);
+  const sessionMode = useSessionStore(selectSessionMode);
+  const sessionDraft = useSessionStore((state) => state.draft);
+  const imports = useSessionStore((state) => state.imports);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
 
-  const sqliteAvailable = useMoriSqliteStore((state) => state.available);
-  const sqliteStatus = useMoriSqliteStore((state) => state.status);
-  const sqliteSessions = useMoriSqliteStore((state) => state.sessions);
-  const sqliteKind = useMoriSqliteStore((state) => state.kind);
-  const sqliteError = useMoriSqliteStore((state) => state.error);
-  const lastPersist = useMoriSqliteStore((state) => state.lastPersist);
-  const refreshSqlite = useMoriSqliteStore((state) => state.refresh);
-  const initializeSqlite = useMoriSqliteStore((state) => state.initialize);
-  const persistSqlite = useMoriSqliteStore((state) => state.persist);
+  const sqliteAvailable = useSqliteStore((state) => state.available);
+  const sqliteStatus = useSqliteStore((state) => state.status);
+  const sqliteSessions = useSqliteStore((state) => state.sessions);
+  const sqliteKind = useSqliteStore((state) => state.kind);
+  const sqliteError = useSqliteStore((state) => state.error);
+  const lastPersist = useSqliteStore((state) => state.lastPersist);
+  const refreshSqlite = useSqliteStore((state) => state.refresh);
+  const initializeSqlite = useSqliteStore((state) => state.initialize);
+  const persistSqlite = useSqliteStore((state) => state.persist);
 
-  const repositorySettings = useMoriRepositoryStore((state) => state.settings);
-  const repositoriesInitialized = useMoriRepositoryStore((state) => state.initialized);
-  const hydrateRepositories = useMoriRepositoryStore((state) => state.hydrate);
-  const addRepository = useMoriRepositoryStore((state) => state.addRepository);
-  const removeRepository = useMoriRepositoryStore((state) => state.removeRepository);
-  const renameRepository = useMoriRepositoryStore((state) => state.renameRepository);
-  const selectRepository = useMoriRepositoryStore((state) => state.selectRepository);
-  const verifyRepository = useMoriRepositoryStore((state) => state.verifyRepository);
-  const clearRepositoryVerification = useMoriRepositoryStore((state) => state.clearRepositoryVerification);
-  const verifyingId = useMoriRepositoryStore((state) => state.verifyingId);
-  const activeRepository = useMoriRepositoryStore(selectActiveRepository);
+  const repositorySettings = useRepositoryStore((state) => state.settings);
+  const repositoriesInitialized = useRepositoryStore((state) => state.initialized);
+  const hydrateRepositories = useRepositoryStore((state) => state.hydrate);
+  const addRepository = useRepositoryStore((state) => state.addRepository);
+  const removeRepository = useRepositoryStore((state) => state.removeRepository);
+  const renameRepository = useRepositoryStore((state) => state.renameRepository);
+  const selectRepository = useRepositoryStore((state) => state.selectRepository);
+  const verifyRepository = useRepositoryStore((state) => state.verifyRepository);
+  const clearRepositoryVerification = useRepositoryStore((state) => state.clearRepositoryVerification);
+  const verifyingId = useRepositoryStore((state) => state.verifyingId);
+  const activeRepository = useRepositoryStore(selectActiveRepository);
 
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const activeTab = useMoriAppStore((state) => state.settingsTab);
+  const setCurrentView = useAppStore((state) => state.navigate);
+  const activeTab = useAppStore((state) => state.settingsTab);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -297,7 +297,7 @@ function SqliteLoadCard({
   sessions,
   onLoad,
 }: {
-  sessions: ReturnType<typeof useMoriSqliteStore.getState>["sessions"];
+  sessions: ReturnType<typeof useSqliteStore.getState>["sessions"];
   onLoad: (id: string) => Promise<boolean>;
 }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);

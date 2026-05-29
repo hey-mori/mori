@@ -1,19 +1,19 @@
 import { create } from "zustand";
-import { moriMockSession } from "../domain/mock-data";
+import { mockSession } from "../domain/mock-data";
 import { buildDemoSessionContent } from "../lib/demo/demoSessionContent";
 import { isDemoSessionId } from "../lib/demo/demoSessionFixtures";
 import type {
   IssueStatus,
-  MoriMockSession,
+  MockSession,
   NextAction,
   RecordingMode,
   RelationshipType,
   TimelineEvent,
 } from "../domain/types";
 import type {
-  MoriAnalysisProvider,
-  MoriAnalysisResult,
-  MoriAnalysisStatus,
+  AnalysisProvider,
+  AnalysisResult,
+  AnalysisRunStatus,
   QuickPassAnalysisSettings,
 } from "../lib/analysis";
 import {
@@ -63,7 +63,7 @@ import {
 } from "../lib/storage/sessionPersistenceService";
 import type {
   ConnectorEventIdentitySnapshot,
-  MoriDraftRepository,
+  DraftRepository,
   StoredSessionDraft,
   StoredSessionImport,
   StoredSessionSummary,
@@ -79,16 +79,16 @@ export type SessionMode = "demo" | "draft";
 
 export type SessionSource = "demo" | "browser-draft" | "desktop-sqlite";
 
-export type SessionViewModel = MoriMockSession & {
+export type SessionViewModel = MockSession & {
   isDemo: boolean;
 };
 
-export type MoriSessionState = {
+export type SessionState = {
   initialized: boolean;
   draft: StoredSessionDraft | null;
   /**
    * Which bundled demo session is currently open, when no real `draft` is
-   * active. `null` means the canonical bundled demo (`moriMockSession`).
+   * active. `null` means the canonical bundled demo (`mockSession`).
    * Set when a demo summary row is opened (`loadBrowserSession` falls back to
    * the demo content builder for `demo-` ids); ignored whenever a real draft
    * is present, since a draft always wins in `selectSessionView`. This is how
@@ -104,8 +104,8 @@ export type MoriSessionState = {
    */
   pendingNewSession: { sessionId: string; previousSessionId: string | null } | null;
   imports: StoredSessionImport[];
-  analysis: MoriAnalysisResult | null;
-  analysisStatus: MoriAnalysisStatus;
+  analysis: AnalysisResult | null;
+  analysisStatus: AnalysisRunStatus;
   analysisError: string | null;
   analysisProviderLabel: string | null;
   analysisFallbackUsed: boolean;
@@ -195,7 +195,7 @@ export type MoriSessionState = {
    * SQLite database (sessions the user registered there). Irreversible.
    */
   clearAllDataAndViewDemo: () => Promise<void>;
-  runQuickPass: (provider?: MoriAnalysisProvider) => Promise<MoriAnalysisResult | null>;
+  runQuickPass: (provider?: AnalysisProvider) => Promise<AnalysisResult | null>;
   clearAnalysis: () => void;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
@@ -287,20 +287,20 @@ export type MoriSessionState = {
   markPersistedToDesktop: () => void;
 };
 
-const demoView: SessionViewModel = { ...moriMockSession, isDemo: true };
+const demoView: SessionViewModel = { ...mockSession, isDemo: true };
 
-let lazyRepository: MoriDraftRepository | null = null;
-let lazyProvider: MoriAnalysisProvider | null = null;
+let lazyRepository: DraftRepository | null = null;
+let lazyProvider: AnalysisProvider | null = null;
 let lazyPersistenceService: SessionPersistenceService | null = null;
 
-function getRepository(): MoriDraftRepository {
+function getRepository(): DraftRepository {
   if (!lazyRepository) {
     lazyRepository = createBrowserDraftRepository();
   }
   return lazyRepository;
 }
 
-function getDefaultProvider(): MoriAnalysisProvider {
+function getDefaultProvider(): AnalysisProvider {
   if (!lazyProvider) {
     lazyProvider = createDeterministicQuickPassProvider();
   }
@@ -312,11 +312,11 @@ function getPersistenceService(): SessionPersistenceService {
   return lazyPersistenceService;
 }
 
-export function setSessionRepositoryForTesting(repository: MoriDraftRepository | null): void {
+export function setSessionRepositoryForTesting(repository: DraftRepository | null): void {
   lazyRepository = repository;
 }
 
-export function setDefaultQuickPassProviderForTesting(provider: MoriAnalysisProvider | null): void {
+export function setDefaultQuickPassProviderForTesting(provider: AnalysisProvider | null): void {
   lazyProvider = provider;
 }
 
@@ -324,7 +324,7 @@ export function setSessionPersistenceServiceForSessionStore(service: SessionPers
   lazyPersistenceService = service;
 }
 
-export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
+export const useSessionStore = create<SessionState>((set, get) => ({
   initialized: false,
   draft: null,
   demoSessionId: null,
@@ -701,7 +701,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
         const deterministic = getDefaultProvider();
         try {
           const fallbackResult = await deterministic.analyze(analysisInput);
-          const annotated: MoriAnalysisResult = {
+          const annotated: AnalysisResult = {
             ...fallbackResult,
             notes: [
               `Ollama provider (${primary.label}) failed: ${primaryMessage}. Fell back to ${deterministic.label}.`,
@@ -770,7 +770,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     }
 
     const now = new Date().toISOString();
-    const nextAnalysis: MoriAnalysisResult = {
+    const nextAnalysis: AnalysisResult = {
       ...analysis,
       nextActions: analysis.nextActions.map((action) =>
         action.id === nextActionId
@@ -790,7 +790,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
     if (!draft || !analysis) return false;
     if (!analysis.issues.some((issue) => issue.id === issueId)) return false;
 
-    const nextAnalysis: MoriAnalysisResult = {
+    const nextAnalysis: AnalysisResult = {
       ...analysis,
       issues: analysis.issues.map((issue) =>
         issue.id === issueId ? { ...issue, status } : issue,
@@ -925,7 +925,7 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
       return false;
     }
 
-    const nextAnalysis: MoriAnalysisResult = {
+    const nextAnalysis: AnalysisResult = {
       ...analysis,
       decisions: analysis.decisions.map((decision) =>
         decision.id === decisionId ? { ...decision, confirmed } : decision,
@@ -1095,8 +1095,8 @@ export const useMoriSessionStore = create<MoriSessionState>((set, get) => ({
  *     updated so the shell reflects the change immediately.
  */
 function applyStoredSessionEdit(
-  get: () => MoriSessionState,
-  set: (partial: Partial<MoriSessionState>) => void,
+  get: () => SessionState,
+  set: (partial: Partial<SessionState>) => void,
   sessionId: string,
   transform: (session: StoredSessionDraft["session"]) => StoredSessionDraft["session"],
 ): boolean {
@@ -1120,7 +1120,7 @@ function applyStoredSessionEdit(
   return true;
 }
 
-function resolveProviderFromSettings(settings: QuickPassAnalysisSettings): MoriAnalysisProvider {
+function resolveProviderFromSettings(settings: QuickPassAnalysisSettings): AnalysisProvider {
   if (settings.provider === "ollama") {
     return createOllamaQuickPassProvider({
       endpoint: settings.ollamaEndpoint,
@@ -1134,7 +1134,7 @@ function resolveProviderFromSettings(settings: QuickPassAnalysisSettings): MoriA
 type ViewCache = {
   draft: StoredSessionDraft | null;
   imports: StoredSessionImport[];
-  analysis: MoriAnalysisResult | null;
+  analysis: AnalysisResult | null;
   view: SessionViewModel;
 };
 
@@ -1144,7 +1144,7 @@ let viewCache: ViewCache | null = null;
 // would loop). Keyed by the open demo session id.
 let demoViewCache: { id: string; view: SessionViewModel } | null = null;
 
-export function selectSessionView(state: MoriSessionState): SessionViewModel {
+export function selectSessionView(state: SessionState): SessionViewModel {
   if (!state.draft) {
     const id = state.demoSessionId;
     if (!id) return demoView;
@@ -1169,15 +1169,15 @@ export function selectSessionView(state: MoriSessionState): SessionViewModel {
   return view;
 }
 
-export function selectSessionMode(state: MoriSessionState): SessionMode {
+export function selectSessionMode(state: SessionState): SessionMode {
   return state.draft ? "draft" : "demo";
 }
 
-export function selectSessionSource(state: MoriSessionState): SessionSource {
+export function selectSessionSource(state: SessionState): SessionSource {
   return state.source;
 }
 
-export function selectHasRealAnalysis(state: MoriSessionState): boolean {
+export function selectHasRealAnalysis(state: SessionState): boolean {
   return Boolean(state.draft && state.analysis);
 }
 
@@ -1240,9 +1240,9 @@ export async function loadConnectorImportHistorySavedSessionsAsync(options: {
  * They already live in `StoredSessionImport[]` for the session.
  */
 export function persistMemoryBodyFromAnalysis(
-  repository: MoriDraftRepository,
+  repository: DraftRepository,
   sessionId: string,
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
 ): void {
   repository.saveSessionMemoryBody(sessionId, {
     issues: analysis.issues,
@@ -1270,7 +1270,7 @@ function savedSessionFromSnapshot(
   };
 }
 
-function mergeAnalysisIntoView(view: SessionViewModel, analysis: MoriAnalysisResult): SessionViewModel {
+function mergeAnalysisIntoView(view: SessionViewModel, analysis: AnalysisResult): SessionViewModel {
   return {
     ...view,
     issues: analysis.issues,

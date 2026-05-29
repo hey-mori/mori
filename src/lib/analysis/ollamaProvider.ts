@@ -2,9 +2,9 @@ import type { Decision, Issue, NextAction, Priority, Relationship, TrustLevel } 
 import { createRunId } from "./analysisMapper";
 import type {
   AnalysisSummary,
-  MoriAnalysisInput,
-  MoriAnalysisProvider,
-  MoriAnalysisResult,
+  AnalysisInput,
+  AnalysisProvider,
+  AnalysisResult,
 } from "./analysisTypes";
 import { buildQuickPassPrompt } from "./promptTemplates";
 
@@ -18,7 +18,7 @@ export type OllamaProviderConfig = {
   fetchImpl?: typeof fetch;
 };
 
-export class OllamaQuickPassProvider implements MoriAnalysisProvider {
+export class OllamaQuickPassProvider implements AnalysisProvider {
   readonly name = PROVIDER_NAME;
   readonly label: string;
   readonly requiresNetwork = true;
@@ -27,7 +27,7 @@ export class OllamaQuickPassProvider implements MoriAnalysisProvider {
     this.label = config.label ?? `Ollama Quick Pass (${config.model})`;
   }
 
-  async analyze(input: MoriAnalysisInput): Promise<MoriAnalysisResult> {
+  async analyze(input: AnalysisInput): Promise<AnalysisResult> {
     const startedAt = Date.now();
     const generatedAt = input.now ?? new Date().toISOString();
     const runId = createRunId(input, generatedAt);

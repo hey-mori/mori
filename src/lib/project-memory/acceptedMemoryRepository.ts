@@ -20,7 +20,7 @@
 import { isTauriRuntime, tauriCommands } from "../desktop";
 import { createBrowserDraftRepository } from "../storage/localStorageAdapter";
 import type {
-  MoriDraftRepository,
+  DraftRepository,
   StoredAcceptedProjectMemory,
   StoredMemoryReviewAction,
 } from "../storage/storageTypes";
@@ -58,15 +58,15 @@ export type AcceptedMemoryRepositoryOptions = {
   /** Defaults to `desktop` inside Tauri, `browser` otherwise. */
   runtime?: AcceptedMemoryRuntime;
   /** localStorage repository (browser path + desktop fallback). */
-  repository?: MoriDraftRepository;
+  repository?: DraftRepository;
   /** SQLite command bridge (desktop path). */
   commands?: AcceptedMemoryDesktopCommands;
 };
 
 export class AcceptedMemoryRepository {
   readonly runtime: AcceptedMemoryRuntime;
-  private readonly repositoryOverride: MoriDraftRepository | null;
-  private lazyRepository: MoriDraftRepository | null = null;
+  private readonly repositoryOverride: DraftRepository | null;
+  private lazyRepository: DraftRepository | null = null;
   private readonly commands: AcceptedMemoryDesktopCommands;
 
   constructor(options: AcceptedMemoryRepositoryOptions = {}) {
@@ -84,7 +84,7 @@ export class AcceptedMemoryRepository {
     return this.runtime === "desktop";
   }
 
-  private repository(): MoriDraftRepository {
+  private repository(): DraftRepository {
     if (this.repositoryOverride) return this.repositoryOverride;
     if (!this.lazyRepository) this.lazyRepository = createBrowserDraftRepository();
     return this.lazyRepository;

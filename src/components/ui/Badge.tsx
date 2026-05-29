@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { moriTooltipProps } from "./MoriTooltip";
+import { baseTooltipProps } from "./BaseTooltip";
 
 export function Badge({
   children,
@@ -12,7 +12,7 @@ export function Badge({
   title?: string;
 }) {
   return (
-    <span className={`pill tone-${tone}`} {...moriTooltipProps(title, "status")}>
+    <span className={`pill tone-${tone}`} {...baseTooltipProps(title, "status")}>
       {children}
     </span>
   );

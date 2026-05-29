@@ -2,7 +2,7 @@ import type {
   Decision,
   Issue,
   IssueStatus,
-  MoriMockSession,
+  MockSession,
   Priority,
   SourceRef,
   TimelineEvent,
@@ -76,7 +76,7 @@ export function deriveProjectMemoryStats({
   savedSessions,
   reportCount,
 }: {
-  view: MoriMockSession;
+  view: MockSession;
   savedSessions: DerivedSession[];
   reportCount: number;
 }): ProjectMemoryStats {
@@ -104,7 +104,7 @@ export function deriveProjectMemoryStats({
  * Pick the top decisions ordered by createdAt desc. Used by the "decisions
  * over time" card so we don't need a real chart yet.
  */
-export function getRecentDecisions(view: MoriMockSession, limit = 8): Decision[] {
+export function getRecentDecisions(view: MockSession, limit = 8): Decision[] {
   return [...view.decisions]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, limit);
@@ -122,7 +122,7 @@ export type DecisionTimelinePoint = {
  * Build a chronological list (oldest → newest) for the decision-flow card so
  * the UI can render a simple vertical timeline without a chart library.
  */
-export function getDecisionTimeline(view: MoriMockSession): DecisionTimelinePoint[] {
+export function getDecisionTimeline(view: MockSession): DecisionTimelinePoint[] {
   return [...view.decisions]
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     .map((decision) => ({
@@ -152,7 +152,7 @@ export type RecurringIssueRow = {
 };
 
 export function getRecurringIssues(
-  view: MoriMockSession,
+  view: MockSession,
   scope: ProjectMemoryDataScope,
   limit = 5,
 ): RecurringIssueRow[] {
@@ -190,7 +190,7 @@ export type KeyEvidenceRow = {
   relatedDecisionCount: number;
 };
 
-export function getKeyEvidence(view: MoriMockSession, limit = 6): KeyEvidenceRow[] {
+export function getKeyEvidence(view: MockSession, limit = 6): KeyEvidenceRow[] {
   const sourceToEvents = new Map<string, TimelineEvent[]>();
   for (const event of view.events) {
     for (const sourceId of event.sourceRefs) {
@@ -249,7 +249,7 @@ export function getProjectMemorySummary({
   reportCount,
   hasAnalysis,
 }: {
-  view: MoriMockSession;
+  view: MockSession;
   scope: ProjectMemoryDataScope;
   savedSessionCount: number;
   reportCount: number;
@@ -277,7 +277,7 @@ export function getProjectMemorySummary({
   };
 }
 
-function pickNextSessionTopic(view: MoriMockSession, risks: Issue[]): string {
+function pickNextSessionTopic(view: MockSession, risks: Issue[]): string {
   if (risks.length > 0) {
     return `Open risk 해소: ${risks[0].title}`;
   }
@@ -335,7 +335,7 @@ export function buildFollowUpPrompt({
   reportCount,
   hasAnalysis,
 }: {
-  view: MoriMockSession;
+  view: MockSession;
   savedSessionCount: number;
   reportCount: number;
   hasAnalysis: boolean;

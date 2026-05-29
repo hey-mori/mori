@@ -2,7 +2,7 @@ import { FileText, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseSection } from "../../components/ui/BaseSection";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -11,10 +11,10 @@ import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
-import { useMoriReviewStore } from "../../app/reviewStore";
+import { useAppStore } from "../../app/store";
+import { useReviewStore } from "../../app/reviewStore";
 import {
   describeAnalysisStatus,
   getAnalysisStatusTone,
@@ -24,7 +24,7 @@ import {
   type ImportApplyCompletionActionId,
 } from "../../lib/review/importApplyCompletion";
 import type {
-  MoriAnalysisStatus,
+  AnalysisRunStatus,
   QuickPassAnalysisSettings,
   QuickPassProviderKind,
 } from "../../lib/analysis";
@@ -49,33 +49,33 @@ import {
  * import gate (`ImportReviewView`) still renders here while a draft is pending.
  */
 export function EvidenceView() {
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
-  const analysisError = useMoriSessionStore((state) => state.analysisError);
-  const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
-  const analysis = useMoriSessionStore((state) => state.analysis);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const analysisSettings = useMoriSessionStore((state) => state.analysisSettings);
-  const analysisFallbackUsed = useMoriSessionStore((state) => state.analysisFallbackUsed);
-  const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
-  const clearAnalysis = useMoriSessionStore((state) => state.clearAnalysis);
-  const updateAnalysisSettings = useMoriSessionStore((state) => state.updateAnalysisSettings);
-  const removeImport = useMoriSessionStore((state) => state.removeImport);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const analysisStatus = useSessionStore((state) => state.analysisStatus);
+  const analysisError = useSessionStore((state) => state.analysisError);
+  const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
+  const analysis = useSessionStore((state) => state.analysis);
+  const imports = useSessionStore((state) => state.imports);
+  const analysisSettings = useSessionStore((state) => state.analysisSettings);
+  const analysisFallbackUsed = useSessionStore((state) => state.analysisFallbackUsed);
+  const runQuickPass = useSessionStore((state) => state.runQuickPass);
+  const clearAnalysis = useSessionStore((state) => state.clearAnalysis);
+  const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
+  const removeImport = useSessionStore((state) => state.removeImport);
   // `navigate` routes legacy session-surface keys (timeline) into the unified
   // Session Detail workspace; other keys (memory / settings) pass through.
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
+  const setCurrentView = useAppStore((state) => state.navigate);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const reviewDraft = useMoriReviewStore((state) => state.draft);
-  const lastApplied = useMoriReviewStore((state) => state.lastApplied);
-  const clearLastApplied = useMoriReviewStore((state) => state.clearLastApplied);
+  const reviewDraft = useReviewStore((state) => state.draft);
+  const lastApplied = useReviewStore((state) => state.lastApplied);
+  const clearLastApplied = useReviewStore((state) => state.clearLastApplied);
 
   const integrationLookup = useMemo(() => {
     const map = new Map<string, (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY]>();
@@ -152,7 +152,7 @@ export function EvidenceView() {
   );
 
   const importedSourcesSection = (
-    <MoriSection
+    <BaseSection
       className="evidence-section evidence-imported-sources"
       title="세션을 구성한 소스"
       actions={
@@ -190,7 +190,7 @@ export function EvidenceView() {
           })}
         </div>
       )}
-    </MoriSection>
+    </BaseSection>
   );
 
   const quickPassSection =
@@ -299,7 +299,7 @@ function QuickPassControl({
   onRun,
   onClear,
 }: {
-  status: MoriAnalysisStatus;
+  status: AnalysisRunStatus;
   providerLabel: string | null;
   providerName: string | null;
   error: string | null;

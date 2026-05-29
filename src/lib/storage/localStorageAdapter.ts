@@ -1,4 +1,4 @@
-import type { MoriAnalysisResult, QuickPassAnalysisSettings } from "../analysis";
+import type { AnalysisResult, QuickPassAnalysisSettings } from "../analysis";
 import { DEFAULT_QUICK_PASS_SETTINGS, sanitizeQuickPassSettings } from "../analysis";
 import type { ConnectorSourceImportSummary } from "../connectors";
 import type { NormalizedImportCandidate } from "../import";
@@ -9,7 +9,7 @@ import { deriveSessionSummaryMetrics } from "./sessionSummaryMetrics";
 import type {
   ConnectorEventIdentitySnapshot,
   KeyValueStorage,
-  MoriDraftRepository,
+  DraftRepository,
   StoredAcceptedProjectMemory,
   StoredMemoryReviewAction,
   StoredMoriPackageDraft,
@@ -35,7 +35,7 @@ const MEMORY_BODY_SCHEMA_VERSION = 1 as const;
 const ACCEPTED_MEMORY_SCHEMA_VERSION = 1 as const;
 const REVIEW_ACTION_SCHEMA_VERSION = 1 as const;
 
-export class BrowserDraftRepository implements MoriDraftRepository {
+export class BrowserDraftRepository implements DraftRepository {
   constructor(private readonly storage: KeyValueStorage = window.localStorage) {}
 
   saveCurrentSessionDraft(draft: Omit<StoredSessionDraft, "savedAt" | "adapter">): StoredSessionDraft {
@@ -262,7 +262,7 @@ export class BrowserDraftRepository implements MoriDraftRepository {
     this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);
   }
 
-  saveSessionAnalysis(sessionId: string, result: MoriAnalysisResult): StoredSessionAnalysis {
+  saveSessionAnalysis(sessionId: string, result: AnalysisResult): StoredSessionAnalysis {
     const stored: StoredSessionAnalysis = {
       sessionId,
       result,

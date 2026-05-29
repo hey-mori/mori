@@ -3,7 +3,7 @@ import type { CompanionSignal } from "../companion/companionSignals";
 import {
   companionSignalToNotification,
   composeNotifications,
-  type MoriNotification,
+  type CompanionNotification,
 } from "./notification";
 
 function signal(partial: Partial<CompanionSignal>): CompanionSignal {
@@ -23,7 +23,7 @@ function signal(partial: Partial<CompanionSignal>): CompanionSignal {
   };
 }
 
-function notification(partial: Partial<MoriNotification>): MoriNotification {
+function notification(partial: Partial<CompanionNotification>): CompanionNotification {
   return {
     id: partial.id ?? "n-1",
     kind: partial.kind ?? "import_ready",

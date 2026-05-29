@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import type {
-  MoriNotification,
-  MoriNotificationActionTarget,
+  CompanionNotification,
+  CompanionNotificationActionTarget,
 } from "../../lib/notifications/notification";
 import {
   formatNotificationTime,
@@ -33,9 +33,9 @@ export function NotificationFeedList({
   onDispatch,
   now = Date.now(),
 }: {
-  notifications: MoriNotification[];
+  notifications: CompanionNotification[];
   readIds: Set<string>;
-  onDispatch: (target: MoriNotificationActionTarget, id: string) => void;
+  onDispatch: (target: CompanionNotificationActionTarget, id: string) => void;
   now?: number;
 }) {
   const groups = groupByTime(notifications, now);
@@ -69,9 +69,9 @@ function NotificationRow({
   read,
   onDispatch,
 }: {
-  notification: MoriNotification;
+  notification: CompanionNotification;
   read: boolean;
-  onDispatch: (target: MoriNotificationActionTarget, id: string) => void;
+  onDispatch: (target: CompanionNotificationActionTarget, id: string) => void;
 }) {
   const Icon = notificationIcon(notification.kind);
   const project = notificationProjectLabel(notification);
@@ -128,18 +128,18 @@ function FolderTag() {
 
 type NotificationTimeGroup = {
   bucket: TimeBucket;
-  notifications: MoriNotification[];
+  notifications: CompanionNotification[];
 };
 
 function groupByTime(
-  notifications: MoriNotification[],
+  notifications: CompanionNotification[],
   now: number,
 ): NotificationTimeGroup[] {
   const startOfToday = new Date(now);
   startOfToday.setHours(0, 0, 0, 0);
   const weekAgo = now - 7 * 86_400_000;
 
-  const buckets: Record<TimeBucket, MoriNotification[]> = {
+  const buckets: Record<TimeBucket, CompanionNotification[]> = {
     today: [],
     week: [],
     earlier: [],

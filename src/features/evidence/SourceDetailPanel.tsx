@@ -1,11 +1,11 @@
 import { CalendarClock, Lock, MapPin, ShieldCheck } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
-import { MoriTrustBadge } from "../../components/ui/MoriTrustBadge";
-import { MoriFidelityBadge } from "../../components/ui/MoriFidelityBadge";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
+import { BaseTrustBadge } from "../../components/ui/BaseTrustBadge";
+import { BaseFidelityBadge } from "../../components/ui/BaseFidelityBadge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels } from "../../domain/constants";
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import { getEventEvidenceSources, getSourceDisplayStatus } from "../../lib/sources/traceability";
 import { getCaptureFidelityDisplay } from "../../lib/evidence/fidelityDisplay";
 import type { SourceIntegration } from "../../lib/sources/sourceRegistry";
@@ -38,7 +38,7 @@ export function SourceDetailPanel({
   importSummary,
 }: {
   selection: EvidenceDetailSelection;
-  view: MoriMockSession;
+  view: MockSession;
   integrationLookup: Map<string, SourceIntegration>;
   /** Optional re-import summary for the selected source (connector imports only). */
   importSummary?: ConnectorSourceImportSummary;
@@ -90,7 +90,7 @@ function SourceDetailView({
   importSummary,
 }: {
   selection: { kind: "source"; sourceId: string };
-  view: MoriMockSession;
+  view: MockSession;
   integrationLookup: Map<string, SourceIntegration>;
   importSummary?: ConnectorSourceImportSummary;
 }) {
@@ -117,15 +117,15 @@ function SourceDetailView({
     <aside className="evidence-detail" aria-label="Source detail">
       <header className="evidence-detail-header">
         <div className="evidence-detail-badges">
-          <MoriTrustBadge level={source.trustLevel} />
-          <MoriFidelityBadge fidelity={source.captureFidelity} />
-          <MoriStatusBadge
+          <BaseTrustBadge level={source.trustLevel} />
+          <BaseFidelityBadge fidelity={source.captureFidelity} />
+          <BaseStatusBadge
             tone={getProductAvailabilityTone(
               productAvailabilityFromIntegrationStatus(display.status),
             )}
           >
             {display.statusLabel}
-          </MoriStatusBadge>
+          </BaseStatusBadge>
           <Badge tone="purple">{display.integrationLabel}</Badge>
         </div>
         <h3>{source.title}</h3>
@@ -275,13 +275,13 @@ function IntegrationDetailView({
     <aside className="evidence-detail" aria-label="Integration detail">
       <header className="evidence-detail-header">
         <div className="evidence-detail-badges">
-          <MoriStatusBadge
+          <BaseStatusBadge
             tone={getProductAvailabilityTone(
               productAvailabilityFromIntegrationStatus(integration.status),
             )}
           >
             {getIntegrationStatusLabel(integration.status)}
-          </MoriStatusBadge>
+          </BaseStatusBadge>
           <Badge tone="purple">{integration.id}</Badge>
         </div>
         <h3>{integration.label}</h3>
@@ -347,7 +347,7 @@ function RelatedRecordsSection({
   relatedEvents,
 }: {
   sourceId: string;
-  view: MoriMockSession;
+  view: MockSession;
   relatedEvents: ReturnType<typeof getEventEvidenceSources>["sources"] | typeof view.events;
 }) {
   const eventIds = new Set(relatedEvents.map((event) => ("id" in event ? event.id : "")));

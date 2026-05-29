@@ -9,11 +9,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
-import { useMoriAppStore, type SessionTab } from "../../app/store";
+import { useAppStore, type SessionTab } from "../../app/store";
 import {
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
 import { buildWorkContext } from "../../lib/session/workContext";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
@@ -39,15 +39,15 @@ import { OverviewView } from "./OverviewView";
  *   - **리포트**  — handoff outputs: continue-context, report, .mori export
  */
 export function SessionDetailView() {
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const sessionTab = useMoriAppStore((state) => state.sessionTab);
-  const setSessionTab = useMoriAppStore((state) => state.setSessionTab);
+  const sessionTab = useAppStore((state) => state.sessionTab);
+  const setSessionTab = useAppStore((state) => state.setSessionTab);
 
   return (
     <PageShell className="session-detail-page" maxWidth="full">
@@ -68,14 +68,14 @@ export function SessionDetailView() {
  * No banner, no chips, no metric strip.
  */
 function SessionTitleInline() {
-  const draft = useMoriSessionStore((state) => state.draft);
-  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
+  const draft = useSessionStore((state) => state.draft);
+  const analysisStatus = useSessionStore((state) => state.analysisStatus);
   // The demo branch of buildWorkContext reads `demoSession` for the title /
   // span. Feed it the *currently open* demo session (the per-session view)
   // rather than the canonical mock, so the breadcrumb names the session the
   // user actually clicked instead of always "Mori 앱 기획".
-  const demoSession = useMoriSessionStore(selectSessionView).session;
-  const openProject = useMoriAppStore((state) => state.openProject);
+  const demoSession = useSessionStore(selectSessionView).session;
+  const openProject = useAppStore((state) => state.openProject);
   const context = useMemo(
     () =>
       buildWorkContext({
@@ -146,9 +146,9 @@ function SessionTabBar({
   activeTab: SessionTab;
   onChange: (tab: SessionTab) => void;
 }) {
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const imports = useMoriSessionStore((state) => state.imports);
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const imports = useSessionStore((state) => state.imports);
 
   const counts: Record<SessionTab, number | null> = useMemo(() => {
     const sources = mode === "demo" ? view.sources.length : imports.length;

@@ -8,9 +8,9 @@
  * internal counts). This module returns one snapshot the Reports view
  * (and any future cross-session summarizer) can consume directly.
  */
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import { getSessionEvidenceSummary, type SessionEvidenceSummary } from "../evidence";
-import type { MoriAnalysisResult } from "../analysis";
+import type { AnalysisResult } from "../analysis";
 import {
   DEFAULT_PRIVACY,
   DEFAULT_SECTIONS,
@@ -45,8 +45,8 @@ export type ReportContext = {
  * provider label and resume prompt are accurate when analysis ran.
  */
 export function deriveReportContext(args: {
-  view: MoriMockSession;
-  analysis?: MoriAnalysisResult | null;
+  view: MockSession;
+  analysis?: AnalysisResult | null;
   isDemoSession: boolean;
 }): ReportContext {
   const evidence = getSessionEvidenceSummary(args.view);

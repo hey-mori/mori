@@ -2,7 +2,7 @@ import type {
   Artifact,
   Decision,
   Issue,
-  MoriMockSession,
+  MockSession,
   NextAction,
   Project,
   Relationship,
@@ -177,7 +177,7 @@ export type SqlitePersistenceSnapshot = {
   summaries: SummaryRow[];
 };
 
-export function createSqlitePersistenceSnapshot(data: MoriMockSession): SqlitePersistenceSnapshot {
+export function createSqlitePersistenceSnapshot(data: MockSession): SqlitePersistenceSnapshot {
   return {
     projects: [projectToRow(data.project)],
     sessions: [sessionToRow(data.session)],

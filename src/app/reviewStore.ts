@@ -78,7 +78,7 @@ export type ImportReviewState = {
   clearLastApplied: () => void;
 };
 
-export const useMoriReviewStore = create<ImportReviewState>((set, get) => ({
+export const useReviewStore = create<ImportReviewState>((set, get) => ({
   draft: null,
   draftMeta: null,
   lastApplied: null,

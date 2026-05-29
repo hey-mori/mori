@@ -4,7 +4,7 @@ import type {
   EventType,
   Issue,
   IssueStatus,
-  MoriMockSession,
+  MockSession,
   NextAction,
   Priority,
   Project,
@@ -18,7 +18,7 @@ import type {
 } from "../../domain/types";
 import type { SqlitePersistenceSnapshot } from "./records";
 
-export function reconstructMoriSession(snapshot: SqlitePersistenceSnapshot): MoriMockSession {
+export function reconstructMoriSession(snapshot: SqlitePersistenceSnapshot): MockSession {
   const project = snapshot.projects[0];
   const session = snapshot.sessions[0];
   if (!project) throw new Error("Snapshot has no project row");

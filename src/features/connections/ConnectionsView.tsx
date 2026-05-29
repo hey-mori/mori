@@ -29,9 +29,9 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
-import { selectSessionView, useMoriSessionStore } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
-import { useMoriReviewStore } from "../../app/reviewStore";
+import { selectSessionView, useSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
+import { useReviewStore } from "../../app/reviewStore";
 import {
   formatClaudeRelativeKo,
   isClaudeBridgeAvailable,
@@ -119,15 +119,15 @@ const TOOL_ICONS: Record<string, LucideIcon> = {
 
 export function ConnectionsView() {
   const bridgeAvailable = isClaudeBridgeAvailable();
-  const draft = useMoriSessionStore((state) => state.draft);
-  const view = useMoriSessionStore(selectSessionView);
-  const importAsNewSession = useMoriSessionStore((state) => state.importAsNewSession);
-  const startReview = useMoriReviewStore((state) => state.startReview);
+  const draft = useSessionStore((state) => state.draft);
+  const view = useSessionStore(selectSessionView);
+  const importAsNewSession = useSessionStore((state) => state.importAsNewSession);
+  const startReview = useReviewStore((state) => state.startReview);
   // `navigate` routes the post-import "evidence" landing into the unified
   // Session Detail workspace (its 증거 tab), where Import Review renders.
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const requestEvidenceImport = useMoriAppStore((state) => state.requestEvidenceImport);
-  const openSettingsSheet = useMoriAppStore((state) => state.openSettingsSheet);
+  const setCurrentView = useAppStore((state) => state.navigate);
+  const requestEvidenceImport = useAppStore((state) => state.requestEvidenceImport);
+  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const isDemoSession = !draft;
   const desktopRuntime = isTauriRuntime();
 

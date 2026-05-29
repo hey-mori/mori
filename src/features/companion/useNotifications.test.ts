@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   composeNotifications,
   companionSignalToNotification,
-  type MoriNotification,
+  type CompanionNotification,
 } from "../../lib/notifications/notification";
 import type { CompanionSignal } from "../../lib/companion/companionSignals";
 
@@ -11,7 +11,7 @@ import type { CompanionSignal } from "../../lib/companion/companionSignals";
  * lock down here is the contract it composes against — Companion signals
  * adapt cleanly through composeNotifications, and a second producer can
  * stack on top without losing the Companion order. This is the same compose
- * shape `useMoriNotifications` runs, so a regression in either layer surfaces
+ * shape `useNotifications` runs, so a regression in either layer surfaces
  * here.
  */
 
@@ -32,9 +32,9 @@ function signal(partial: Partial<CompanionSignal>): CompanionSignal {
   };
 }
 
-describe("useMoriNotifications compose contract", () => {
+describe("useNotifications compose contract", () => {
   it("preserves Companion feed order through the producer-neutral compose", () => {
-    const companion: MoriNotification[] = [
+    const companion: CompanionNotification[] = [
       signal({ id: "a", title: "결정 1건 확인 필요" }),
       signal({ id: "b", title: "열린 이슈 4건" }),
     ].map((s) => companionSignalToNotification(s, { kind: "view", view: "review" }));
@@ -47,10 +47,10 @@ describe("useMoriNotifications compose contract", () => {
   });
 
   it("lets a future producer fan in without rewriting the Companion path", () => {
-    const companion: MoriNotification[] = [
+    const companion: CompanionNotification[] = [
       companionSignalToNotification(signal({ id: "comp-1" }), null),
     ];
-    const futureProducer: MoriNotification[] = [
+    const futureProducer: CompanionNotification[] = [
       {
         id: "import-finished-batch-77",
         kind: "import_finished",
@@ -73,7 +73,7 @@ describe("useMoriNotifications compose contract", () => {
   });
 
   it("deduplicates by id when both producers raise the same notification", () => {
-    const duplicate: MoriNotification = {
+    const duplicate: CompanionNotification = {
       id: "shared-id",
       kind: "stale_memory",
       severity: "review",

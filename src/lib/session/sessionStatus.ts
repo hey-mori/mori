@@ -1,4 +1,4 @@
-import type { MoriSessionState, SessionMode, SessionSource } from "../../app/sessionStore";
+import type { SessionState, SessionMode, SessionSource } from "../../app/sessionStore";
 
 /**
  * Derives clear session status labels for consistent display across pages.
@@ -34,7 +34,7 @@ export type SessionStatusLabels = {
 };
 
 export function deriveSessionStatus(
-  state: MoriSessionState,
+  state: SessionState,
   viewCounts?: {
     sourceCount?: number;
     eventCount?: number;

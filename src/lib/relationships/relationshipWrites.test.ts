@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
-import type { MoriAnalysisResult } from "../analysis";
+import { mockSession } from "../../domain/mock-data";
+import type { AnalysisResult } from "../analysis";
 import {
   addEventRelationship,
   removeRelationshipFromAnalysis,
   userRelationshipId,
 } from "./relationshipWrites";
 
-function analysis(): MoriAnalysisResult {
+function analysis(): AnalysisResult {
   return {
     runId: "run-rel",
     providerName: "deterministic-heuristic-v1",
     providerLabel: "Deterministic",
-    sessionId: moriMockSession.session.id,
-    projectId: moriMockSession.project.id,
+    sessionId: mockSession.session.id,
+    projectId: mockSession.project.id,
     generatedAt: "2026-05-18T11:00:00.000Z",
     durationMs: 1,
     inputEventCount: 0,
@@ -37,7 +37,7 @@ function analysis(): MoriAnalysisResult {
     rendered: {
       summary: {
         id: "s",
-        sessionId: moriMockSession.session.id,
+        sessionId: mockSession.session.id,
         sessionSummary: "",
         resumePrompt: "",
         reportMarkdown: "",

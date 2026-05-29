@@ -1,7 +1,7 @@
 import { Archive, FileText, Play, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriFeatureStatusBadge } from "../../components/ui/MoriFeatureStatusBadge";
+import { BaseFeatureStatusBadge } from "../../components/ui/BaseFeatureStatusBadge";
 import type { SavedReportAvailability } from "../../lib/memory/projectMemoryContext";
 import type { ProjectMemoryDataScope, ProjectMemoryStats } from "../../lib/project-memory/projectMemory";
 
@@ -33,7 +33,7 @@ export function ProjectMemoryHero({
         <div>
           <div className="memory-hero-badge-row">
             <Badge tone={scope === "demo" ? "gray" : "green"}>{scopeLabel}</Badge>
-            <MoriFeatureStatusBadge feature="memory.crossSessionAggregation" />
+            <BaseFeatureStatusBadge feature="memory.crossSessionAggregation" />
             {savedReportAvailability ? (
               <Badge tone={savedReportAvailability.tone}>
                 {savedReportAvailability.label}

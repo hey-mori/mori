@@ -14,13 +14,13 @@ const PROFILE_KEY = "mori.localProfile";
 const PROFILE_SCHEMA_VERSION = 1 as const;
 const MAX_DISPLAY_NAME_LENGTH = 60;
 
-export type MoriLocalProfile = {
+export type LocalProfile = {
   schemaVersion: typeof PROFILE_SCHEMA_VERSION;
   /** User-set display name for the local profile. */
   displayName: string;
 };
 
-export const DEFAULT_LOCAL_PROFILE: MoriLocalProfile = {
+export const DEFAULT_LOCAL_PROFILE: LocalProfile = {
   schemaVersion: PROFILE_SCHEMA_VERSION,
   displayName: "Kim Mori",
 };
@@ -46,14 +46,14 @@ export function getProfileInitials(displayName: string): string {
 }
 
 /**
- * Parse a stored profile string into a valid `MoriLocalProfile`.
+ * Parse a stored profile string into a valid `LocalProfile`.
  * Unknown / malformed / wrong-version payloads fall back to the
  * default rather than corrupting the surface.
  */
-export function parseLocalProfile(raw: string | null): MoriLocalProfile {
+export function parseLocalProfile(raw: string | null): LocalProfile {
   if (!raw) return DEFAULT_LOCAL_PROFILE;
   try {
-    const parsed = JSON.parse(raw) as Partial<MoriLocalProfile>;
+    const parsed = JSON.parse(raw) as Partial<LocalProfile>;
     if (parsed.schemaVersion !== PROFILE_SCHEMA_VERSION) {
       return DEFAULT_LOCAL_PROFILE;
     }
@@ -71,12 +71,12 @@ export function parseLocalProfile(raw: string | null): MoriLocalProfile {
 }
 
 /** Serialize a profile for storage. */
-export function serializeLocalProfile(profile: MoriLocalProfile): string {
+export function serializeLocalProfile(profile: LocalProfile): string {
   return JSON.stringify(profile);
 }
 
 /** Read the local profile from browser localStorage. */
-export function loadLocalProfile(): MoriLocalProfile {
+export function loadLocalProfile(): LocalProfile {
   if (typeof window === "undefined") return DEFAULT_LOCAL_PROFILE;
   try {
     return parseLocalProfile(window.localStorage.getItem(PROFILE_KEY));
@@ -86,7 +86,7 @@ export function loadLocalProfile(): MoriLocalProfile {
 }
 
 /** Persist the local profile to browser localStorage. */
-export function saveLocalProfile(profile: MoriLocalProfile): void {
+export function saveLocalProfile(profile: LocalProfile): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(PROFILE_KEY, serializeLocalProfile(profile));

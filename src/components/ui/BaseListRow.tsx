@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type MoriListRowProps = {
+export type BaseListRowProps = {
   /** Leading slot: icon, avatar, or status dot. */
   leading?: ReactNode;
   /** Primary label — required. */
@@ -26,7 +26,7 @@ export type MoriListRowProps = {
  * Renders as a `div[role=button]` when `onClick` is provided, otherwise a
  * plain `div`. Consumers wrap in `<li>` as needed.
  */
-export function MoriListRow({
+export function BaseListRow({
   leading,
   title,
   meta,
@@ -36,7 +36,7 @@ export function MoriListRow({
   onClick,
   onDoubleClick,
   ariaLabel,
-}: MoriListRowProps) {
+}: BaseListRowProps) {
   const interactive = Boolean(onClick);
   const classes = [
     "mori-list-row",

@@ -1,15 +1,15 @@
 import { ClipboardCopy, ExternalLink, Trash2 } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
-import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
-import { MoriFidelityBadge } from "../../components/ui/MoriFidelityBadge";
+import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
+import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
+import { BaseFidelityBadge } from "../../components/ui/BaseFidelityBadge";
 import {
-  MoriContextMenu,
-  MoriOverflowMenu,
+  BaseContextMenu,
+  BaseOverflowMenu,
   useContextMenuPosition,
-  type MoriMenuItemSpec,
-} from "../../components/ui/MoriActionMenu";
+  type BaseMenuItemSpec,
+} from "../../components/ui/BaseActionMenu";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
 import {
@@ -52,7 +52,7 @@ export function ImportedSourceRow({
       className={`imported-source-row ${selected ? "is-selected" : ""}`}
       aria-current={selected ? "true" : undefined}
     >
-      <MoriObjectRow
+      <BaseObjectRow
         leading={
           <span className={`imported-source-icon tone-${display.trustTone}`}>
             <SourceIcon size={15} />
@@ -61,11 +61,11 @@ export function ImportedSourceRow({
         title={source.title}
         subtitle={source.detail}
         meta={
-          <MoriMetadataLine
+          <BaseMetadataLine
             items={[
               <Badge tone="purple">{display.integrationLabel}</Badge>,
               <Badge tone={display.trustTone}>{display.trustLabel}</Badge>,
-              <MoriFidelityBadge fidelity={source.captureFidelity} />,
+              <BaseFidelityBadge fidelity={source.captureFidelity} />,
               <Badge tone={display.rawDataTone}>{display.rawDataLabel}</Badge>,
               summaryBadge ? (
                 <Badge tone={summaryBadge.tone}>{summaryBadge.label}</Badge>
@@ -81,7 +81,7 @@ export function ImportedSourceRow({
         onActionMenu={menu.openAt}
         ariaLabel={source.title}
       />
-      <MoriOverflowMenu items={menuItems} label={`${source.title} 작업`} />
+      <BaseOverflowMenu items={menuItems} label={`${source.title} 작업`} />
       {onRemove ? (
         <Button
           icon={Trash2}
@@ -91,7 +91,7 @@ export function ImportedSourceRow({
           size="sm"
         />
       ) : null}
-      <MoriContextMenu
+      <BaseContextMenu
         open={menu.open}
         position={menu.position}
         items={menuItems}
@@ -110,8 +110,8 @@ function buildSourceMenuItems({
   source: SourceRef;
   onSelect: () => void;
   onRemove?: () => void;
-}): MoriMenuItemSpec[] {
-  const items: MoriMenuItemSpec[] = [
+}): BaseMenuItemSpec[] {
+  const items: BaseMenuItemSpec[] = [
     { id: "open", label: "소스 상세 열기", icon: ExternalLink, onSelect },
     { type: "separator", id: "copy-separator" },
     {

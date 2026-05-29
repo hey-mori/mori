@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../../domain/mock-data";
+import { mockSession } from "../../../domain/mock-data";
 import type { TimelineDisplayBundle } from "../../../lib/timeline/displayItems";
 import {
   buildTimelineBundleViewModel,
@@ -8,7 +8,7 @@ import {
 } from "./timelineCards";
 
 describe("buildTimelineEventCardViewModel", () => {
-  const event = moriMockSession.events[0]!;
+  const event = mockSession.events[0]!;
 
   it("returns the event id + title + tone + lane label", () => {
     const vm = buildTimelineEventCardViewModel(event);

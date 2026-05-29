@@ -1,4 +1,4 @@
-import type { MoriAnalysisStatus } from "./analysisTypes";
+import type { AnalysisRunStatus } from "./analysisTypes";
 
 /**
  * Display derivation for the Quick Pass analysis status.
@@ -6,21 +6,21 @@ import type { MoriAnalysisStatus } from "./analysisTypes";
  * The Evidence Hub used to colour its analysis-status badge with an inline
  * `status === "running" ? "purple" : …` ternary and carry its own Korean
  * label function. This module makes the badge tone and label a typed
- * function of the `MoriAnalysisStatus` enum so the status renders
+ * function of the `AnalysisRunStatus` enum so the status renders
  * consistently and can never be derived from a translated label.
  */
 
 /** Badge tone for a Quick Pass analysis status. */
 export type AnalysisStatusTone = "gray" | "orange" | "green" | "red";
 
-const ANALYSIS_STATUS_TONE: Record<MoriAnalysisStatus, AnalysisStatusTone> = {
+const ANALYSIS_STATUS_TONE: Record<AnalysisRunStatus, AnalysisStatusTone> = {
   idle: "gray",
   running: "orange",
   succeeded: "green",
   failed: "red",
 };
 
-const ANALYSIS_STATUS_LABEL: Record<MoriAnalysisStatus, string> = {
+const ANALYSIS_STATUS_LABEL: Record<AnalysisRunStatus, string> = {
   idle: "대기 중",
   running: "실행 중",
   succeeded: "완료",
@@ -28,11 +28,11 @@ const ANALYSIS_STATUS_LABEL: Record<MoriAnalysisStatus, string> = {
 };
 
 export function getAnalysisStatusTone(
-  status: MoriAnalysisStatus,
+  status: AnalysisRunStatus,
 ): AnalysisStatusTone {
   return ANALYSIS_STATUS_TONE[status];
 }
 
-export function describeAnalysisStatus(status: MoriAnalysisStatus): string {
+export function describeAnalysisStatus(status: AnalysisRunStatus): string {
   return ANALYSIS_STATUS_LABEL[status];
 }

@@ -13,9 +13,9 @@ import type {
   AnalysisNextActionCandidate,
   AnalysisRelationshipCandidate,
   AnalysisSummary,
-  MoriAnalysisInput,
-  MoriAnalysisProvider,
-  MoriAnalysisResult,
+  AnalysisInput,
+  AnalysisProvider,
+  AnalysisResult,
 } from "./analysisTypes";
 
 const PROVIDER_NAME = "deterministic-heuristic-v1" as const;
@@ -40,12 +40,12 @@ const DECISION_PATTERNS: RegExp[] = [
   /(decid(?:e|ed|ing)|agreed\s+on)/i,
 ];
 
-export class DeterministicQuickPassProvider implements MoriAnalysisProvider {
+export class DeterministicQuickPassProvider implements AnalysisProvider {
   readonly name = PROVIDER_NAME;
   readonly label = PROVIDER_LABEL;
   readonly requiresNetwork = false;
 
-  async analyze(input: MoriAnalysisInput): Promise<MoriAnalysisResult> {
+  async analyze(input: AnalysisInput): Promise<AnalysisResult> {
     const startedAt = Date.now();
     const generatedAt = input.now ?? new Date().toISOString();
     const runId = createRunId(input, generatedAt);
@@ -123,7 +123,7 @@ export function createDeterministicQuickPassProvider(): DeterministicQuickPassPr
   return new DeterministicQuickPassProvider();
 }
 
-export function extractFromInput(input: MoriAnalysisInput): AnalysisExtraction {
+export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
   const issueCandidates: AnalysisIssueCandidate[] = [];
   const decisionCandidates: AnalysisDecisionCandidate[] = [];
   const nextActionCandidates: AnalysisNextActionCandidate[] = [];
@@ -311,7 +311,7 @@ function buildDecisionEventRelationships(
 }
 
 function buildSummary(
-  input: MoriAnalysisInput,
+  input: AnalysisInput,
   issues: AnalysisIssueCandidate[],
   decisions: AnalysisDecisionCandidate[],
   highlights: string[],
@@ -333,7 +333,7 @@ function buildSummary(
 }
 
 function buildResumePromptText(
-  input: MoriAnalysisInput,
+  input: AnalysisInput,
   issues: AnalysisIssueCandidate[],
   decisions: AnalysisDecisionCandidate[],
   highlights: string[],

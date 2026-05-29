@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import {
   describeConfidence,
   getBundleEvidenceSummary,
@@ -45,13 +45,13 @@ describe("confidence helpers", () => {
 
 describe("provenance helpers", () => {
   it("getSourceDisplayName resolves through the integration registry", () => {
-    const source = moriMockSession.sources[0]!;
+    const source = mockSession.sources[0]!;
     const display = getProvenanceDisplay(source);
     expect(getSourceDisplayName(source)).toBe(display.integrationLabel);
   });
 
   it("getProvenanceSummary returns the joined fields we render in inspector rows", () => {
-    const source = moriMockSession.sources[0]!;
+    const source = mockSession.sources[0]!;
     const summary = getProvenanceSummary(source);
     expect(summary.sourceId).toBe(source.id);
     expect(summary.title).toBe(source.title);
@@ -64,28 +64,28 @@ describe("provenance helpers", () => {
 
 describe("source-links helpers", () => {
   it("getEvidenceCountForEvent matches the event's sourceRefs length", () => {
-    const event = moriMockSession.events[0]!;
+    const event = mockSession.events[0]!;
     expect(getEvidenceCountForEvent(event)).toBe(event.sourceRefs.length);
   });
 
   it("getEvidenceSourcesForEvent resolves SourceRefs from the session view", () => {
-    const event = moriMockSession.events[0]!;
-    const summary = getEvidenceSourcesForEvent(event, moriMockSession.sources);
+    const event = mockSession.events[0]!;
+    const summary = getEvidenceSourcesForEvent(event, mockSession.sources);
     expect(summary.sourceCount).toBe(event.sourceRefs.length);
     expect(summary.sources.every((source) => event.sourceRefs.includes(source.id))).toBe(true);
   });
 
   it("getIssueEvidenceSources joins through sourceEventIds", () => {
-    const issue = moriMockSession.issues[0];
+    const issue = mockSession.issues[0];
     if (!issue) return;
-    const summary = getIssueEvidenceSources(issue, moriMockSession.events, moriMockSession.sources);
+    const summary = getIssueEvidenceSources(issue, mockSession.events, mockSession.sources);
     expect(summary.eventCount).toBe(issue.sourceEventIds.length);
   });
 
   it("getDecisionEvidenceSources adds direct sources to the event-derived sources", () => {
-    const decision = moriMockSession.decisions[0];
+    const decision = mockSession.decisions[0];
     if (!decision) return;
-    const summary = getDecisionEvidenceSources(decision, moriMockSession.events, moriMockSession.sources);
+    const summary = getDecisionEvidenceSources(decision, mockSession.events, mockSession.sources);
     expect(summary.directSourceCount).toBe(decision.relatedSourceIds.length);
   });
 
@@ -95,15 +95,15 @@ describe("source-links helpers", () => {
       id: "evt-x",
       laneType: "review",
       start: "2026-01-01T00:00:00Z",
-      event: moriMockSession.events[0]!,
+      event: mockSession.events[0]!,
       memberEventIds: ["evt-x"],
     };
-    expect(getBundleEvidenceSummary(eventLike, moriMockSession.events, moriMockSession.sources)).toBeNull();
+    expect(getBundleEvidenceSummary(eventLike, mockSession.events, mockSession.sources)).toBeNull();
   });
 
   it("getSessionEvidenceSummary reports a non-empty data basis when sources exist", () => {
-    const summary = getSessionEvidenceSummary(moriMockSession);
-    expect(summary.sourceCount).toBe(moriMockSession.sources.length);
+    const summary = getSessionEvidenceSummary(mockSession);
+    expect(summary.sourceCount).toBe(mockSession.sources.length);
     expect(summary.dataBasis.length).toBeGreaterThan(0);
   });
 });
@@ -128,7 +128,7 @@ describe("raw-data policy tone", () => {
   });
 
   it("carries the policy tone on every provenance display row", () => {
-    for (const source of moriMockSession.sources) {
+    for (const source of mockSession.sources) {
       const display = getProvenanceDisplay(source);
       expect(["blue", "orange", "purple", "gray"]).toContain(display.rawDataTone);
     }

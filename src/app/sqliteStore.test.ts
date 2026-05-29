@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { useMoriSqliteStore } from "./sqliteStore";
+import { useSqliteStore } from "./sqliteStore";
 
 function resetStore() {
-  useMoriSqliteStore.setState({
+  useSqliteStore.setState({
     available: false,
     status: null,
     sessions: [],
@@ -12,7 +12,7 @@ function resetStore() {
   });
 }
 
-describe("useMoriSqliteStore (web fallback)", () => {
+describe("useSqliteStore (web fallback)", () => {
   beforeEach(() => {
     resetStore();
   });
@@ -22,8 +22,8 @@ describe("useMoriSqliteStore (web fallback)", () => {
   });
 
   it("reports unavailable in browser mode without throwing", async () => {
-    await useMoriSqliteStore.getState().refresh();
-    const state = useMoriSqliteStore.getState();
+    await useSqliteStore.getState().refresh();
+    const state = useSqliteStore.getState();
     expect(state.available).toBe(false);
     expect(state.kind).toBe("unavailable");
   });
@@ -61,9 +61,9 @@ describe("useMoriSqliteStore (web fallback)", () => {
         generatedAt: "x",
       },
     };
-    const result = await useMoriSqliteStore.getState().persist(session);
+    const result = await useSqliteStore.getState().persist(session);
     expect(result).toBeNull();
-    const state = useMoriSqliteStore.getState();
+    const state = useSqliteStore.getState();
     expect(state.kind).toBe("unavailable");
     expect(state.error).toContain("Tauri");
   });

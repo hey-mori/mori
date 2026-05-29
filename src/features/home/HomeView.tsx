@@ -13,18 +13,18 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
-import { MoriSectionHeader } from "../../components/ui/MoriSectionHeader";
-import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
-import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
+import { BaseSectionHeader } from "../../components/ui/BaseSectionHeader";
+import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
+import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
+import { BaseSection } from "../../components/ui/BaseSection";
 import { Button } from "../../components/ui/Button";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
 import type { ViewKey } from "../../domain/types";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
@@ -68,13 +68,13 @@ import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 export function HomeView() {
   // `navigate` routes session-surface keys (reports → session 리포트 tab, etc.)
   // through the unified workspace; plain keys pass through unchanged.
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const openSession = useMoriAppStore((state) => state.openSession);
-  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const view = useMoriSessionStore(selectSessionView);
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
+  const setCurrentView = useAppStore((state) => state.navigate);
+  const openSession = useAppStore((state) => state.openSession);
+  const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
+  const mode = useSessionStore(selectSessionMode);
+  const view = useSessionStore(selectSessionView);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -214,7 +214,7 @@ export function HomeView() {
                 }))}
               />
 
-              <MoriSection
+              <BaseSection
                 className="home-section home-recent"
                 ariaLabel="최근 세션"
                 title="최근 세션"
@@ -246,10 +246,10 @@ export function HomeView() {
                     description="소스에서 Claude 작업을 가져오면 여기에 쌓입니다."
                   />
                 )}
-              </MoriSection>
+              </BaseSection>
             </div>
 
-            <MoriSection
+            <BaseSection
               className="home-section home-next"
               title="다음 단계"
               ariaLabel="다음 단계"
@@ -265,7 +265,7 @@ export function HomeView() {
               </ul>
               {overview.usagePanels.length > 0 ? (
                 <div className="home-usage-rail" aria-label="사용 현황">
-                  <MoriSectionHeader title="사용 현황" />
+                  <BaseSectionHeader title="사용 현황" />
                   <div className="home-usage-panels">
                     {overview.usagePanels.map((panel) => (
                       <UsagePanel key={panel.key} panel={panel} />
@@ -273,7 +273,7 @@ export function HomeView() {
                   </div>
                 </div>
               ) : null}
-            </MoriSection>
+            </BaseSection>
           </div>
 
         </div>
@@ -340,14 +340,14 @@ function RecentSessionRow({
   const showOrigin = session.origin !== "imported";
   return (
     <li>
-      <MoriObjectRow
+      <BaseObjectRow
         leading={<FolderKanban size={15} />}
         title={session.title}
         meta={
-          <MoriMetadataLine
+          <BaseMetadataLine
             items={[
               showOrigin ? (
-                <MoriStatusBadge tone={origin.tone}>{origin.label}</MoriStatusBadge>
+                <BaseStatusBadge tone={origin.tone}>{origin.label}</BaseStatusBadge>
               ) : null,
               session.projectLabel ? (
                 <span title={session.projectLabel}>{session.projectLabel}</span>
@@ -388,7 +388,7 @@ function NextActionRow({
   const Icon = NEXT_ACTION_ICON[action.kind];
   return (
     <li className={`home-next-row tone-${action.tone}`}>
-      <MoriObjectRow
+      <BaseObjectRow
         leading={<Icon size={15} />}
         title={action.title}
         trailing={<ArrowRight size={13} aria-hidden="true" />}

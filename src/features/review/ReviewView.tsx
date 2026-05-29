@@ -5,17 +5,17 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
-import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
+import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
+import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 import { issueStatusLabels, priorityLabels } from "../../domain/constants";
 import type { Decision, Issue, IssueStatus, NextAction, Priority } from "../../domain/types";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import { getReportEvidenceSummary, getIssueEvidenceSources } from "../../lib/sources/traceability";
 import {
   isNextActionCompleted,
@@ -43,28 +43,28 @@ import { formatDate, formatDateTime } from "../../lib/formatting/time";
  * project memory.
  */
 export function ReviewView() {
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const view = useMoriSessionStore(selectSessionView);
-  const mode = useMoriSessionStore(selectSessionMode);
-  const hasAnalysis = useMoriSessionStore(selectHasRealAnalysis);
-  const analysisStatus = useMoriSessionStore((state) => state.analysisStatus);
-  const analysisError = useMoriSessionStore((state) => state.analysisError);
-  const analysisProviderLabel = useMoriSessionStore((state) => state.analysisProviderLabel);
-  const analysis = useMoriSessionStore((state) => state.analysis);
-  const runQuickPass = useMoriSessionStore((state) => state.runQuickPass);
-  const setNextActionCompletion = useMoriSessionStore((state) => state.setNextActionCompletion);
-  const promoteIssueToNextAction = useMoriSessionStore((state) => state.promoteIssueToNextAction);
-  const setIssueStatus = useMoriSessionStore((state) => state.setIssueStatus);
-  const editIssue = useMoriSessionStore((state) => state.editIssue);
-  const setDecisionConfirmed = useMoriSessionStore((state) => state.setDecisionConfirmed);
-  const editDecision = useMoriSessionStore((state) => state.editDecision);
-  const editNextAction = useMoriSessionStore((state) => state.editNextAction);
-  const imports = useMoriSessionStore((state) => state.imports);
-  const setCurrentView = useMoriAppStore((state) => state.navigate);
-  const setSelectedEventId = useMoriAppStore((state) => state.setSelectedEventId);
-  const reviewFocus = useMoriAppStore((state) => state.reviewFocus);
-  const clearReviewFocus = useMoriAppStore((state) => state.clearReviewFocus);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const view = useSessionStore(selectSessionView);
+  const mode = useSessionStore(selectSessionMode);
+  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const analysisStatus = useSessionStore((state) => state.analysisStatus);
+  const analysisError = useSessionStore((state) => state.analysisError);
+  const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
+  const analysis = useSessionStore((state) => state.analysis);
+  const runQuickPass = useSessionStore((state) => state.runQuickPass);
+  const setNextActionCompletion = useSessionStore((state) => state.setNextActionCompletion);
+  const promoteIssueToNextAction = useSessionStore((state) => state.promoteIssueToNextAction);
+  const setIssueStatus = useSessionStore((state) => state.setIssueStatus);
+  const editIssue = useSessionStore((state) => state.editIssue);
+  const setDecisionConfirmed = useSessionStore((state) => state.setDecisionConfirmed);
+  const editDecision = useSessionStore((state) => state.editDecision);
+  const editNextAction = useSessionStore((state) => state.editNextAction);
+  const imports = useSessionStore((state) => state.imports);
+  const setCurrentView = useAppStore((state) => state.navigate);
+  const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
+  const reviewFocus = useAppStore((state) => state.reviewFocus);
+  const clearReviewFocus = useAppStore((state) => state.clearReviewFocus);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -353,7 +353,7 @@ function ReviewBoardCard({
       className={`review-issue-card ${selected ? "is-selected" : ""}`}
       aria-current={selected ? "true" : undefined}
     >
-      <MoriObjectRow
+      <BaseObjectRow
         title={title}
         subtitle={subtitle}
         meta={meta}
@@ -383,7 +383,7 @@ function IssueBoardCard({
       title={issue.title}
       subtitle={issue.description}
       meta={
-        <MoriMetadataLine
+        <BaseMetadataLine
           items={[
             formatDate(issue.createdAt),
             <span title={`이벤트 ${evidence.eventCount}개 · 소스 ${evidence.sourceCount}개`}>
@@ -419,7 +419,7 @@ function DecisionBoardCard({
     <ReviewBoardCard
       title={decision.title}
       subtitle={decision.decision}
-      meta={<MoriMetadataLine items={[formatDate(decision.createdAt)]} />}
+      meta={<BaseMetadataLine items={[formatDate(decision.createdAt)]} />}
       badges={
         <>
           <Badge tone={decision.confirmed ? "green" : "orange"}>
@@ -450,7 +450,7 @@ function NextActionBoardCard({
       title={action.title}
       meta={
         done && action.completedAt
-          ? <MoriMetadataLine items={[`완료 ${formatDate(action.completedAt)}`]} />
+          ? <BaseMetadataLine items={[`완료 ${formatDate(action.completedAt)}`]} />
           : undefined
       }
       badges={

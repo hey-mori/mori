@@ -11,7 +11,7 @@ import {
   serializeMoriPackage,
   zipMoriPackage,
 } from "../mori-package";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 
 function memory(
   id: string,
@@ -149,7 +149,7 @@ describe("buildImportedMemoryProposals", () => {
 
 function packageJson(memories: StoredAcceptedProjectMemory[]): string {
   return serializeMoriPackage(
-    createMoriPackageFromSession(moriMockSession, { consolidatedMemories: memories }),
+    createMoriPackageFromSession(mockSession, { consolidatedMemories: memories }),
   );
 }
 
@@ -208,7 +208,7 @@ describe("parseImportedMemoryProposals", () => {
 
   it("reports a client-safe package as client-safe", () => {
     const safe = buildClientSafeMoriPackage(
-      createMoriPackageFromSession(moriMockSession, { consolidatedMemories: [] }),
+      createMoriPackageFromSession(mockSession, { consolidatedMemories: [] }),
     );
     const result = parseImportedMemoryProposals(serializeMoriPackage(safe), []);
     expect(result.ok).toBe(true);
@@ -219,7 +219,7 @@ describe("parseImportedMemoryProposals", () => {
 
 function packageZip(memories: StoredAcceptedProjectMemory[]): Uint8Array {
   return zipMoriPackage(
-    createMoriPackageFromSession(moriMockSession, { consolidatedMemories: memories }),
+    createMoriPackageFromSession(mockSession, { consolidatedMemories: memories }),
   );
 }
 
@@ -264,7 +264,7 @@ describe("parseImportedMemoryProposalsFromZip", () => {
 
   it("reports a client-safe zip package as client-safe", () => {
     const safe = buildClientSafeMoriPackage(
-      createMoriPackageFromSession(moriMockSession, { consolidatedMemories: [] }),
+      createMoriPackageFromSession(mockSession, { consolidatedMemories: [] }),
     );
     const result = parseImportedMemoryProposalsFromZip(zipMoriPackage(safe), []);
     expect(result.ok).toBe(true);

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import type { StoredSessionImport } from "../storage/storageTypes";
 import type { TimelineEvent } from "../../domain/types";
 import { canSplitEvent, splitEventAtMidpoint } from "./eventSplit";
 
 // Mock events are instantaneous (no end), so build a ranged event to split.
 const ranged: TimelineEvent = {
-  ...moriMockSession.events[0]!,
+  ...mockSession.events[0]!,
   id: "evt-ranged",
   start: "2026-05-12T13:00:00+09:00",
   end: "2026-05-12T14:00:00+09:00",
@@ -16,8 +16,8 @@ function imports(events: TimelineEvent[]): StoredSessionImport[] {
   return [
     {
       id: "imp-1",
-      sessionId: moriMockSession.session.id,
-      source: moriMockSession.sources[0]!,
+      sessionId: mockSession.session.id,
+      source: mockSession.sources[0]!,
       events: events.map((event) => ({ ...event })),
       savedAt: "2026-05-18T11:00:00.000Z",
       adapter: "browser-local-storage",

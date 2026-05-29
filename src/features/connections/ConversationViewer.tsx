@@ -33,7 +33,7 @@ import {
 } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { MoriDrawer } from "../../components/ui/MoriDrawer";
+import { BaseDrawer } from "../../components/ui/BaseDrawer";
 import { formatClaudeTimestamp } from "../../lib/claude/claudeTauri";
 import {
   classifyMessage,
@@ -243,11 +243,11 @@ export function ConversationViewer({
   }, []);
 
   if (!detail) {
-    return <MoriDrawer open={open} onClose={onClose} ariaLabel="대화 전체 보기">{null}</MoriDrawer>;
+    return <BaseDrawer open={open} onClose={onClose} ariaLabel="대화 전체 보기">{null}</BaseDrawer>;
   }
 
   return (
-    <MoriDrawer open={open} onClose={onClose} ariaLabel="대화 전체 보기">
+    <BaseDrawer open={open} onClose={onClose} ariaLabel="대화 전체 보기">
       <div className="conversation-viewer">
         <header className="conversation-viewer-header">
           <div className="conversation-viewer-title-row">
@@ -411,7 +411,7 @@ export function ConversationViewer({
           </div>
         </footer>
       </div>
-    </MoriDrawer>
+    </BaseDrawer>
   );
 }
 

@@ -1,9 +1,9 @@
 import type { TrustLevel } from "../../domain/types";
 import { getTrustDisplay } from "../../lib/evidence/trust";
-import { moriTrustIcon } from "../brand/moriIcons";
-import { MoriStatusBadge } from "./MoriStatusBadge";
+import { trustIcon } from "../brand/moriIcons";
+import { BaseStatusBadge } from "./BaseStatusBadge";
 
-export type MoriTrustBadgeProps = {
+export type BaseTrustBadgeProps = {
   level: TrustLevel;
   /** Optional override label (defaults to the canonical trust label). */
   label?: string;
@@ -14,16 +14,16 @@ export type MoriTrustBadgeProps = {
 /**
  * Trust display pill. Reads from the canonical
  * `src/lib/evidence/trust.ts` so the label and tone can never drift out
- * of sync between surfaces, and from `moriTrustIcon` so the verified /
+ * of sync between surfaces, and from `trustIcon` so the verified /
  * observed / inferred marks stay consistent everywhere.
  */
-export function MoriTrustBadge({ level, label, iconless = false }: MoriTrustBadgeProps) {
+export function BaseTrustBadge({ level, label, iconless = false }: BaseTrustBadgeProps) {
   const display = getTrustDisplay(level);
-  const Icon = moriTrustIcon[level];
+  const Icon = trustIcon[level];
   return (
-    <MoriStatusBadge tone={display.level}>
+    <BaseStatusBadge tone={display.level}>
       {iconless ? null : <Icon size={12} aria-hidden="true" />}
       {label ?? display.label}
-    </MoriStatusBadge>
+    </BaseStatusBadge>
   );
 }

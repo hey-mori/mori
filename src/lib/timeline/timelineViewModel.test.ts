@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
-import type { MoriMockSession, Relationship, TimelineEvent } from "../../domain/types";
+import { mockSession } from "../../domain/mock-data";
+import type { MockSession, Relationship, TimelineEvent } from "../../domain/types";
 import { getTimelineLaneForEvent } from "./activityModel";
 import {
   buildInspectorViewModel,
@@ -14,15 +14,15 @@ import {
   TIMELINE_INSPECTOR_NARROW_MAX_PX,
 } from "./timelineViewModel";
 
-function withEvents(events: TimelineEvent[], relationships: Relationship[] = []): MoriMockSession {
+function withEvents(events: TimelineEvent[], relationships: Relationship[] = []): MockSession {
   return {
-    ...moriMockSession,
+    ...mockSession,
     events,
     relationships,
   };
 }
 
-function buildModel(view: MoriMockSession, overrides: Partial<Parameters<typeof buildTimelineRenderModel>[0]> = {}) {
+function buildModel(view: MockSession, overrides: Partial<Parameters<typeof buildTimelineRenderModel>[0]> = {}) {
   return buildTimelineRenderModel({
     view,
     mode: "timeline",
@@ -40,7 +40,7 @@ function buildModel(view: MoriMockSession, overrides: Partial<Parameters<typeof 
 }
 
 describe("filterEvents", () => {
-  const events = moriMockSession.events;
+  const events = mockSession.events;
 
   it("returns the input array when no filter or search is active", () => {
     expect(filterEvents({ events, activeFilters: [], searchQuery: "" })).toBe(events);
@@ -51,13 +51,13 @@ describe("filterEvents", () => {
       events,
       activeFilters: ["conversation"],
       searchQuery: "",
-      sources: moriMockSession.sources,
+      sources: mockSession.sources,
     });
     expect(filtered.length).toBeGreaterThan(0);
     expect(
       filtered.every(
         (event) =>
-          getTimelineLaneForEvent({ event, sources: moriMockSession.sources }) === "conversation",
+          getTimelineLaneForEvent({ event, sources: mockSession.sources }) === "conversation",
       ),
     ).toBe(true);
   });
@@ -77,7 +77,7 @@ describe("filterEvents", () => {
       events,
       activeFilters: ["conversation"],
       searchQuery: "x-9-not-a-real-match",
-      sources: moriMockSession.sources,
+      sources: mockSession.sources,
     });
     expect(filtered).toEqual([]);
   });
@@ -108,12 +108,12 @@ describe("buildTimelineRenderModel", () => {
   });
 
   it("returns null emptyVariant when events exist", () => {
-    const model = buildModel(moriMockSession);
+    const model = buildModel(mockSession);
     expect(model.emptyVariant).toBeNull();
   });
 
   it("returns lanes in the configured order", () => {
-    const model = buildModel(moriMockSession);
+    const model = buildModel(mockSession);
     expect(model.lanes.map((lane) => lane.type)).toEqual([
       "conversation",
       "command",
@@ -135,8 +135,8 @@ describe("buildTimelineRenderModel", () => {
   });
 
   it("shows only the selected lanes when activeFilters is set", () => {
-    const all = buildModel(moriMockSession);
-    const model = buildModel(moriMockSession, { activeFilters: ["conversation"] });
+    const all = buildModel(mockSession);
+    const model = buildModel(mockSession, { activeFilters: ["conversation"] });
     // The category filter now hides the rest: only the selected lane renders,
     // so the visible set is smaller than the unfiltered model.
     expect(model.visibleEvents.length).toBeLessThan(all.visibleEvents.length);
@@ -148,52 +148,52 @@ describe("buildTimelineRenderModel", () => {
   });
 
   it("flags filteredEmpty when a search hides every event", () => {
-    const model = buildModel(moriMockSession, { searchQuery: "zzz-no-such-event-xyz" });
+    const model = buildModel(mockSession, { searchQuery: "zzz-no-such-event-xyz" });
     expect(model.emptyVariant).toBeNull();
     expect(model.visibleDisplayItems).toHaveLength(0);
     expect(model.filteredEmpty).toBe(true);
   });
 
   it("does not flag filteredEmpty when no filter or search is active", () => {
-    const model = buildModel(moriMockSession);
+    const model = buildModel(mockSession);
     expect(model.filteredEmpty).toBe(false);
   });
 
   it("does not treat a data-empty session as filteredEmpty", () => {
-    const emptyView = { ...moriMockSession, events: [] };
+    const emptyView = { ...mockSession, events: [] };
     const model = buildModel(emptyView, { searchQuery: "anything" });
     expect(model.filteredEmpty).toBe(false);
   });
 
   it("resolves the selected item from selectedEventId", () => {
-    const target = moriMockSession.events[2]!;
-    const model = buildModel(moriMockSession, { selectedEventId: target.id });
+    const target = mockSession.events[2]!;
+    const model = buildModel(mockSession, { selectedEventId: target.id });
     expect(model.selectedItem?.memberEventIds).toContain(target.id);
   });
 
   it("selects nothing when selectedEventId is empty or unmatched", () => {
     // Entering the timeline must not auto-select the first card.
-    const none = buildModel(moriMockSession, { selectedEventId: null });
+    const none = buildModel(mockSession, { selectedEventId: null });
     expect(none.selectedItem).toBeNull();
-    const unmatched = buildModel(moriMockSession, { selectedEventId: "does-not-exist" });
+    const unmatched = buildModel(mockSession, { selectedEventId: "does-not-exist" });
     expect(unmatched.selectedItem).toBeNull();
   });
 
   it("seeds focusedSet from the selected item in timeline mode (depth 1)", () => {
-    const target = moriMockSession.events.find((event) => event.type === "decision")!;
-    const model = buildModel(moriMockSession, { selectedEventId: target.id });
+    const target = mockSession.events.find((event) => event.type === "decision")!;
+    const model = buildModel(mockSession, { selectedEventId: target.id });
     expect(model.focusedSet.has(target.id)).toBe(true);
   });
 
   it("widens focusedSet to depth 2 in flow mode", () => {
-    const target = moriMockSession.events.find((event) => event.type === "decision")!;
-    const flowModel = buildModel(moriMockSession, { selectedEventId: target.id, mode: "flow" });
-    const timelineModel = buildModel(moriMockSession, { selectedEventId: target.id, mode: "timeline" });
+    const target = mockSession.events.find((event) => event.type === "decision")!;
+    const flowModel = buildModel(mockSession, { selectedEventId: target.id, mode: "flow" });
+    const timelineModel = buildModel(mockSession, { selectedEventId: target.id, mode: "timeline" });
     expect(flowModel.focusedSet.size).toBeGreaterThanOrEqual(timelineModel.focusedSet.size);
   });
 
   it("computes a layout that places at least one item on the right of the lane labels", () => {
-    const model = buildModel(moriMockSession);
+    const model = buildModel(mockSession);
     expect(model.layout.items.length).toBe(model.visibleDisplayItems.length);
     if (model.layout.items.length > 0) {
       expect(model.layout.items[0]!.x).toBeGreaterThanOrEqual(model.layout.contentLeftPx);
@@ -207,15 +207,15 @@ describe("getFocusedRelationships", () => {
     expect(
       getFocusedRelationships({
         focusedSet: model.focusedSet,
-        relationships: moriMockSession.relationships,
+        relationships: mockSession.relationships,
       }),
     ).toEqual([]);
   });
 
   it("returns only relationships where both endpoints are in the focused set", () => {
-    const sampleEvent = moriMockSession.events[0]!;
-    const sibling = moriMockSession.events[1]!;
-    const stranger = moriMockSession.events[2]!;
+    const sampleEvent = mockSession.events[0]!;
+    const sibling = mockSession.events[1]!;
+    const stranger = mockSession.events[2]!;
     // A direct relationship from the seed to its sibling — depth-1 focus
     // walks reach both endpoints, so this should remain visible.
     const directRelationship: Relationship = {
@@ -240,7 +240,7 @@ describe("getFocusedRelationships", () => {
       confidence: 0.6,
       reason: "test",
     };
-    const view = withEvents(moriMockSession.events, [directRelationship, distantRelationship]);
+    const view = withEvents(mockSession.events, [directRelationship, distantRelationship]);
     const model = buildModel(view, { selectedEventId: sampleEvent.id });
     const focused = getFocusedRelationships({
       focusedSet: model.focusedSet,
@@ -253,7 +253,7 @@ describe("getFocusedRelationships", () => {
 
 describe("countHiddenRelationships", () => {
   it("returns zero when the event has no relationships outside the focused set", () => {
-    const model = buildModel(moriMockSession);
+    const model = buildModel(mockSession);
     const count = countHiddenRelationships({
       focusedSet: model.focusedSet,
       relationships: [],
@@ -267,8 +267,8 @@ describe("countHiddenRelationships", () => {
     // walker can never reach it from the selected seed. The relationship still
     // touches the target event we're asking about, but the other endpoint is
     // unreachable from the seed.
-    const target = moriMockSession.events[3]!; // Use a non-seed target.
-    const seed = moriMockSession.events[0]!;
+    const target = mockSession.events[3]!; // Use a non-seed target.
+    const seed = mockSession.events[0]!;
     const hidden: Relationship = {
       id: "rel-hidden",
       fromId: target.id,
@@ -282,7 +282,7 @@ describe("countHiddenRelationships", () => {
     // Use an empty relationship array so the focus walker stays at depth 0
     // around the seed. Then we manually query for `target.id` to ensure the
     // hidden count is computed against the focused set, not the seed itself.
-    const view = withEvents(moriMockSession.events, [hidden]);
+    const view = withEvents(mockSession.events, [hidden]);
     const model = buildModel(view, { selectedEventId: seed.id });
     const count = countHiddenRelationships({
       focusedSet: model.focusedSet,
@@ -295,12 +295,12 @@ describe("countHiddenRelationships", () => {
 
 describe("buildInspectorViewModel", () => {
   it("derives sources, issues, decisions, and confidence pct for the selected event", () => {
-    const target = moriMockSession.events.find(
+    const target = mockSession.events.find(
       (event) => event.sourceRefs.length > 0,
     )!;
     const inspector = buildInspectorViewModel({
       event: target,
-      view: moriMockSession,
+      view: mockSession,
     });
     expect(inspector.event).toBe(target);
     expect(inspector.confidencePct).toBe(Math.round(target.confidence * 100));
@@ -347,7 +347,7 @@ describe("densityBundleTuning", () => {
 describe("buildTimelineGapMarkers", () => {
   function gapEvent(id: string, start: string, end?: string): TimelineEvent {
     return {
-      ...moriMockSession.events[0]!,
+      ...mockSession.events[0]!,
       id,
       start,
       ...(end ? { end } : {}),

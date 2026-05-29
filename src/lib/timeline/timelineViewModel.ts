@@ -10,7 +10,7 @@
 import type {
   Decision,
   Issue,
-  MoriMockSession,
+  MockSession,
   Relationship,
   SourceRef,
   TimelineEvent,
@@ -103,7 +103,7 @@ export type TimelineRenderModel = {
   /** Density passed through for components that still need it. */
   density: TimelineDensity;
   /** Source index used by card/list/inspector view-models. */
-  sourceIndex: Map<string, MoriMockSession["sources"][number]>;
+  sourceIndex: Map<string, MockSession["sources"][number]>;
 };
 
 export type TimelineGapMarker = {
@@ -121,7 +121,7 @@ export type TimelineGapMarker = {
 };
 
 export type BuildTimelineRenderModelInput = {
-  view: MoriMockSession;
+  view: MockSession;
   mode: TimelineMode;
   density: TimelineDensity;
   selectedEventId: string | null;
@@ -502,7 +502,7 @@ function buildLaneRenderModels(args: {
   laneOrder: ActivityLaneId[];
   visibleEvents: TimelineEvent[];
   visibleDisplayItems: TimelineDisplayItem[];
-  sourceIndex: ReadonlyMap<string, MoriMockSession["sources"][number]>;
+  sourceIndex: ReadonlyMap<string, MockSession["sources"][number]>;
   activeFilters: ActivityLaneId[];
 }): LaneRenderModel[] {
   const eventCounts = new Map<ActivityLaneId, number>();
@@ -587,11 +587,11 @@ export type InspectorViewModel = {
   event: TimelineEvent;
   trustLevel: TimelineEvent["trustLevel"];
   confidencePct: number;
-  sources: MoriMockSession["sources"];
+  sources: MockSession["sources"];
   issues: Issue[];
   decisions: Decision[];
-  artifacts: MoriMockSession["artifacts"];
-  nextActions: MoriMockSession["nextActions"];
+  artifacts: MockSession["artifacts"];
+  nextActions: MockSession["nextActions"];
   hiddenRelationshipCount: number;
   focusedRelationships: Relationship[];
   activity: EventActivityDescriptor;
@@ -604,7 +604,7 @@ export type InspectorViewModel = {
  */
 export function buildInspectorViewModel(args: {
   event: TimelineEvent;
-  view: MoriMockSession;
+  view: MockSession;
 }): InspectorViewModel {
   const { event, view } = args;
   const sources = view.sources.filter((source) => event.sourceRefs.includes(source.id));

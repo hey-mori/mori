@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { MoriAnalysisResult } from "../analysis";
-import { moriMockSession } from "../../domain/mock-data";
+import type { AnalysisResult } from "../analysis";
+import { mockSession } from "../../domain/mock-data";
 import {
   createIssueFromEvent,
   eventIssueId,
   isEventPromotedToIssue,
 } from "./eventToIssue";
 
-function analysis(): MoriAnalysisResult {
+function analysis(): AnalysisResult {
   return {
     runId: "run-evt-issue",
     providerName: "deterministic-heuristic-v1",
     providerLabel: "Deterministic",
-    sessionId: moriMockSession.session.id,
-    projectId: moriMockSession.project.id,
+    sessionId: mockSession.session.id,
+    projectId: mockSession.project.id,
     generatedAt: "2026-05-18T11:00:00.000Z",
     durationMs: 1,
     inputEventCount: 0,
@@ -26,7 +26,7 @@ function analysis(): MoriAnalysisResult {
     rendered: {
       summary: {
         id: "summary-run-evt-issue",
-        sessionId: moriMockSession.session.id,
+        sessionId: mockSession.session.id,
         sessionSummary: "summary",
         resumePrompt: "prompt",
         reportMarkdown: "",
@@ -39,7 +39,7 @@ function analysis(): MoriAnalysisResult {
   };
 }
 
-const event = moriMockSession.events[0]!;
+const event = mockSession.events[0]!;
 const now = "2026-05-18T12:00:00.000Z";
 
 describe("eventIssueId", () => {

@@ -16,7 +16,7 @@
  * No React, no domain mutation — just derivation, so it is unit-testable and
  * reused by both the toggle default logic and the flow rows.
  */
-import type { MoriMockSession, TimelineEvent } from "../../domain/types";
+import type { MockSession, TimelineEvent } from "../../domain/types";
 import { inferActorFallback } from "./buildTurns";
 
 /**
@@ -51,7 +51,7 @@ export type ConversationContext = {
  * at, from which project, and how many turns. Drives the "이 세션은 …" caption
  * so the user always knows what the timeline is showing.
  */
-export function describeConversationContext(view: MoriMockSession): ConversationContext {
+export function describeConversationContext(view: MockSession): ConversationContext {
   const turnCount = view.events.filter((event) => event.type === "aiConversation").length;
   const projectLabel =
     view.session.sourceLabel?.trim() || view.project?.name?.trim() || null;

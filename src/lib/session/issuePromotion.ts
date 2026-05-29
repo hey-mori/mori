@@ -1,5 +1,5 @@
 import type { Issue, NextAction } from "../../domain/types";
-import type { MoriAnalysisResult } from "../analysis";
+import type { AnalysisResult } from "../analysis";
 
 export function buildNextActionFromIssue(issue: Issue): NextAction {
   return {
@@ -20,9 +20,9 @@ export function findNextActionForIssue(
 }
 
 export function promoteIssueToNextAction(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   issueId: string,
-): { analysis: MoriAnalysisResult; nextAction: NextAction | null; changed: boolean } {
+): { analysis: AnalysisResult; nextAction: NextAction | null; changed: boolean } {
   const issue = analysis.issues.find((entry) => entry.id === issueId);
   if (!issue) return { analysis, nextAction: null, changed: false };
 

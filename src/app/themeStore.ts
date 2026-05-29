@@ -4,7 +4,7 @@ import {
   applyThemeToDocument,
   loadThemePreference,
   saveThemePreference,
-  type MoriThemeId,
+  type ThemeId,
 } from "../lib/settings/themePreference";
 
 /**
@@ -15,14 +15,14 @@ import {
  * applies, and updates state so every surface restyles immediately.
  * Local-only — no account, no sync.
  */
-export type MoriThemeState = {
+export type ThemeState = {
   initialized: boolean;
-  theme: MoriThemeId;
+  theme: ThemeId;
   hydrate: () => void;
-  setTheme: (theme: MoriThemeId) => void;
+  setTheme: (theme: ThemeId) => void;
 };
 
-export const useMoriThemeStore = create<MoriThemeState>((set, get) => ({
+export const useThemeStore = create<ThemeState>((set, get) => ({
   initialized: false,
   theme: DEFAULT_THEME_PREFERENCE.theme,
   hydrate: () => {

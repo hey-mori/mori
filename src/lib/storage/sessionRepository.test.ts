@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import { DEFAULT_QUICK_PASS_SETTINGS, createDeterministicQuickPassProvider } from "../analysis";
 import { normalizeAiConversationText, normalizeManualNote, normalizeUrlSource } from "../import";
 import { createMoriPackageFromSession } from "../mori-package";
@@ -31,7 +31,7 @@ describe("BrowserDraftRepository", () => {
 
   it("saves and loads Mori package drafts", () => {
     const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
-    const pkg = createMoriPackageFromSession(moriMockSession);
+    const pkg = createMoriPackageFromSession(mockSession);
 
     const saved = repository.saveMoriPackageDraft(pkg);
     const loaded = repository.loadMoriPackageDraft(pkg.manifest.packageId);
@@ -332,7 +332,7 @@ describe("BrowserDraftRepository", () => {
       decisions: [],
       nextActions: [],
     });
-    repository.saveMoriPackageDraft(createMoriPackageFromSession(moriMockSession));
+    repository.saveMoriPackageDraft(createMoriPackageFromSession(mockSession));
 
     // Configuration the reset must keep.
     repository.saveQuickPassSettings({ ...DEFAULT_QUICK_PASS_SETTINGS, provider: "ollama" });

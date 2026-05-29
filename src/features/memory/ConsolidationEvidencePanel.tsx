@@ -1,6 +1,6 @@
 import { FileText, Layers, ShieldAlert } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseSection } from "../../components/ui/BaseSection";
 import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
 import type { ConsolidationReviewEntry } from "../../lib/project-memory/consolidationReviewState";
 import type {
@@ -31,11 +31,11 @@ export function ConsolidationEvidencePanel({
   if (!entry) {
     return (
       <aside className="consolidation-inspector" aria-label="Evidence inspector">
-        <MoriSection title="증거 / 세션 참조" ariaLabel="Evidence inspector empty">
+        <BaseSection title="증거 / 세션 참조" ariaLabel="Evidence inspector empty">
           <p className="consolidation-inspector-empty">
             좌측에서 제안 카드를 선택하면 증거와 출처 세션 참조가 표시됩니다.
           </p>
-        </MoriSection>
+        </BaseSection>
       </aside>
     );
   }
@@ -47,7 +47,7 @@ export function ConsolidationEvidencePanel({
 
   return (
     <aside className="consolidation-inspector" aria-label="Evidence inspector">
-      <MoriSection
+      <BaseSection
         title="증거 / 세션 참조"
         hint={
           <span>
@@ -166,7 +166,7 @@ export function ConsolidationEvidencePanel({
             memory와 감사 로그로 로컬에 저장됩니다.
           </span>
         </footer>
-      </MoriSection>
+      </BaseSection>
     </aside>
   );
 }

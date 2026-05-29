@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import { sampleMoriPackageV0 } from "../mori-package/samplePackage";
 import type {
   ConnectorSourceImportStatus,
@@ -52,9 +52,9 @@ function browserSession(
 ): StoredSessionSummary {
   return {
     sessionId,
-    projectId: moriMockSession.project.id,
+    projectId: mockSession.project.id,
     title,
-    projectName: moriMockSession.project.name,
+    projectName: mockSession.project.name,
     savedAt,
     status: "complete",
   };
@@ -63,9 +63,9 @@ function browserSession(
 function sqliteSession(sessionId: string, eventCount = 12, sourceCount = 3): SqliteSessionListEntry {
   return {
     sessionId,
-    projectId: moriMockSession.project.id,
+    projectId: mockSession.project.id,
     title: `Desktop ${sessionId}`,
-    projectName: moriMockSession.project.name,
+    projectName: mockSession.project.name,
     startedAt: "2026-05-10T09:00:00Z",
     endedAt: "2026-05-10T11:30:00Z",
     status: "complete",
@@ -102,7 +102,7 @@ function storedImport(
     events: Array.from({ length: options.eventCount ?? 5 }, (_, i) => ({
       id: `${id}-evt-${i}`,
       sessionId,
-      projectId: moriMockSession.project.id,
+      projectId: mockSession.project.id,
       start: savedAt,
       type: "aiConversation",
       title: `Event ${i}`,
@@ -137,14 +137,14 @@ function moriPackageDraft(
 describe("buildProjectMemoryViewModel", () => {
   it("returns active-session-only when no saved data is provided", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
     });
     expect(vm.dataBasis).toBe("activeSessionOnly");
     expect(vm.summaryStats.sessionCount).toBe(1);
     expect(vm.summaryStats.activeSessionCount).toBe(1);
-    expect(vm.summaryStats.timelineEventCount).toBe(moriMockSession.events.length);
+    expect(vm.summaryStats.timelineEventCount).toBe(mockSession.events.length);
     expect(vm.reimportSummary.totalReimports).toBe(0);
     expect(vm.reimportSummary.importSummariesAvailable).toBe(false);
     expect(vm.warnings.find((w) => w.kind === "saved-session-bodies-not-loaded")).toBeUndefined();
@@ -152,7 +152,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("returns unavailable state for demo mode regardless of saved data", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "demo",
       hasAnalysis: true,
       savedBrowserSessions: [browserSession("s-1")],
@@ -165,7 +165,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("aggregates active + browser-saved sessions with import summaries", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: true,
       savedBrowserSessions: [browserSession("s-old", "Older session", "2026-04-01T10:00:00Z")],
@@ -187,7 +187,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("classifies a SQLite-only saved-session world as metadata-only", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
       savedSqliteSessions: [sqliteSession("sq-1"), sqliteSession("sq-2", 4, 2)],
@@ -201,7 +201,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("does not feed re-import rollup from imports without an importSummary", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
       savedBrowserSessions: [browserSession("s-old")],
@@ -222,7 +222,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("orders recent sessions with active first, then saved by savedAt desc", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
       savedBrowserSessions: [
@@ -239,7 +239,7 @@ describe("buildProjectMemoryViewModel", () => {
   it("rolls up matched saved sessions across multiple imports", () => {
     const matched = [{ sessionId: "s-match-a", title: "Matched A", savedAt: "2026-04-01T10:00:00Z" }];
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
       savedBrowserSessions: [browserSession("s-a"), browserSession("s-b")],
@@ -264,7 +264,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("counts duplicateOnly / partialReimport / historyUnavailable / invalidOnly / new separately", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
       savedBrowserSessions: [browserSession("s-1"), browserSession("s-2")],
@@ -290,7 +290,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("derives summary stats from the active session and rollup counters", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: true,
       savedBrowserSessions: [browserSession("s-1")],
@@ -299,10 +299,10 @@ describe("buildProjectMemoryViewModel", () => {
       },
       moriPackages: [moriPackageDraft("pkg-a"), moriPackageDraft("pkg-b")],
     });
-    expect(vm.summaryStats.timelineEventCount).toBe(moriMockSession.events.length);
-    expect(vm.summaryStats.evidenceSourceCount).toBe(moriMockSession.sources.length);
+    expect(vm.summaryStats.timelineEventCount).toBe(mockSession.events.length);
+    expect(vm.summaryStats.evidenceSourceCount).toBe(mockSession.sources.length);
     expect(vm.summaryStats.openIssueCount).toBe(
-      moriMockSession.issues.filter((issue) => issue.status !== "resolved").length,
+      mockSession.issues.filter((issue) => issue.status !== "resolved").length,
     );
     expect(vm.summaryStats.reportCount).toBe(2);
     expect(vm.summaryStats.packageCount).toBe(2);
@@ -311,7 +311,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("falls back to the empty view model when storage is unavailable", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
       storageAvailable: false,
@@ -321,14 +321,14 @@ describe("buildProjectMemoryViewModel", () => {
     expect(vm.warnings.some((w) => w.kind === "storage-unavailable")).toBe(true);
     // Still surfaces an active-session decision when one exists so the
     // right summary panel never collapses to nothing.
-    if (moriMockSession.decisions.length > 0) {
+    if (mockSession.decisions.length > 0) {
       expect(vm.latestImportantDecision).not.toBeNull();
     }
   });
 
   it("emits no fake decision/issue counts for metadata-only sessions", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
       savedSqliteSessions: [sqliteSession("sq-1")],
@@ -342,7 +342,7 @@ describe("buildProjectMemoryViewModel", () => {
 
   it("emits a recommended next session topic anchored on open risks first", () => {
     const vm = buildProjectMemoryViewModel({
-      view: moriMockSession,
+      view: mockSession,
       mode: "draft",
       hasAnalysis: false,
     });
@@ -358,19 +358,19 @@ describe("buildProjectMemoryViewModel", () => {
       return {
         sessionId: id,
         title: `Saved ${id}`,
-        projectId: moriMockSession.project.id,
-        projectName: moriMockSession.project.name,
+        projectId: mockSession.project.id,
+        projectName: mockSession.project.name,
         startedAt: "2026-04-01T10:00:00Z",
         endedAt: "2026-04-01T11:00:00Z",
         savedAt: "2026-04-01T11:00:00Z",
         source: "browserLocalStorage" as const,
         loadStatus: status,
         isActive: false,
-        events: status === "loaded" ? moriMockSession.events.slice(0, 1).map(reKey) : [],
-        sources: status === "loaded" ? moriMockSession.sources.slice(0, 1).map(reKey) : [],
-        issues: status === "loaded" ? moriMockSession.issues.slice(0, 1).map(reKey) : [],
-        decisions: status === "loaded" ? moriMockSession.decisions.slice(0, 1).map(reKey) : [],
-        nextActions: status === "loaded" ? moriMockSession.nextActions.slice(0, 1).map(reKey) : [],
+        events: status === "loaded" ? mockSession.events.slice(0, 1).map(reKey) : [],
+        sources: status === "loaded" ? mockSession.sources.slice(0, 1).map(reKey) : [],
+        issues: status === "loaded" ? mockSession.issues.slice(0, 1).map(reKey) : [],
+        decisions: status === "loaded" ? mockSession.decisions.slice(0, 1).map(reKey) : [],
+        nextActions: status === "loaded" ? mockSession.nextActions.slice(0, 1).map(reKey) : [],
         imports: [],
         analysis: null,
         failureReason: status === "failed" ? "loader rejected" : undefined,
@@ -379,21 +379,21 @@ describe("buildProjectMemoryViewModel", () => {
 
     function activeLoadedSession() {
       return {
-        sessionId: moriMockSession.session.id,
-        title: moriMockSession.session.title,
-        projectId: moriMockSession.project.id,
-        projectName: moriMockSession.project.name,
-        startedAt: moriMockSession.session.startedAt,
-        endedAt: moriMockSession.session.endedAt,
+        sessionId: mockSession.session.id,
+        title: mockSession.session.title,
+        projectId: mockSession.project.id,
+        projectName: mockSession.project.name,
+        startedAt: mockSession.session.startedAt,
+        endedAt: mockSession.session.endedAt,
         savedAt: null,
         source: "active" as const,
         loadStatus: "loaded" as const,
         isActive: true,
-        events: moriMockSession.events,
-        sources: moriMockSession.sources,
-        issues: moriMockSession.issues,
-        decisions: moriMockSession.decisions,
-        nextActions: moriMockSession.nextActions,
+        events: mockSession.events,
+        sources: mockSession.sources,
+        issues: mockSession.issues,
+        decisions: mockSession.decisions,
+        nextActions: mockSession.nextActions,
         imports: [],
         analysis: null,
       };
@@ -401,7 +401,7 @@ describe("buildProjectMemoryViewModel", () => {
 
     it("upgrades dataBasis to activePlusSavedSessions when all saved bodies loaded", () => {
       const vm = buildProjectMemoryViewModel({
-        view: moriMockSession,
+        view: mockSession,
         mode: "draft",
         hasAnalysis: false,
         savedBrowserSessions: [browserSession("s-1")],
@@ -414,7 +414,7 @@ describe("buildProjectMemoryViewModel", () => {
 
     it("uses partialSavedSessionLoad when some bodies failed", () => {
       const vm = buildProjectMemoryViewModel({
-        view: moriMockSession,
+        view: mockSession,
         mode: "draft",
         hasAnalysis: false,
         savedBrowserSessions: [browserSession("s-1"), browserSession("s-2")],
@@ -433,7 +433,7 @@ describe("buildProjectMemoryViewModel", () => {
 
     it("uses partialSavedSessionLoad when some bodies are metadata-only", () => {
       const vm = buildProjectMemoryViewModel({
-        view: moriMockSession,
+        view: mockSession,
         mode: "draft",
         hasAnalysis: false,
         savedSqliteSessions: [sqliteSession("sq-1"), sqliteSession("sq-2")],
@@ -454,7 +454,7 @@ describe("buildProjectMemoryViewModel", () => {
 
     it("aggregates decisions and issues across loaded sessions", () => {
       const vm = buildProjectMemoryViewModel({
-        view: moriMockSession,
+        view: mockSession,
         mode: "draft",
         hasAnalysis: false,
         savedBrowserSessions: [browserSession("s-1")],
@@ -470,7 +470,7 @@ describe("buildProjectMemoryViewModel", () => {
 
     it("metadata-only sessions never contribute decisions/issues", () => {
       const vm = buildProjectMemoryViewModel({
-        view: moriMockSession,
+        view: mockSession,
         mode: "draft",
         hasAnalysis: false,
         savedBrowserSessions: [browserSession("s-1")],
@@ -485,15 +485,15 @@ describe("buildProjectMemoryViewModel", () => {
 
     it("does not double-count the active session when it also appears as saved", () => {
       const vm = buildProjectMemoryViewModel({
-        view: moriMockSession,
+        view: mockSession,
         mode: "draft",
         hasAnalysis: false,
-        savedBrowserSessions: [browserSession(moriMockSession.session.id)],
+        savedBrowserSessions: [browserSession(mockSession.session.id)],
         loadedSessions: [activeLoadedSession()],
       });
       // Stats use de-duplicated counters; timelineEventCount should equal
       // the live view's count (not 2× of it).
-      expect(vm.summaryStats.timelineEventCount).toBe(moriMockSession.events.length);
+      expect(vm.summaryStats.timelineEventCount).toBe(mockSession.events.length);
     });
 
     it("recommended next session uses cross-session signal when recurring issues exist", () => {
@@ -501,11 +501,11 @@ describe("buildProjectMemoryViewModel", () => {
       const active = {
         ...activeLoadedSession(),
         issues: [
-          ...moriMockSession.issues,
+          ...mockSession.issues,
           {
             id: "i-active",
-            sessionId: moriMockSession.session.id,
-            projectId: moriMockSession.project.id,
+            sessionId: mockSession.session.id,
+            projectId: mockSession.project.id,
             title: recurringTitle,
             description: "",
             priority: "medium" as const,
@@ -527,7 +527,7 @@ describe("buildProjectMemoryViewModel", () => {
           {
             id: "i-saved",
             sessionId: "s-old",
-            projectId: moriMockSession.project.id,
+            projectId: mockSession.project.id,
             title: recurringTitle,
             description: "",
             priority: "medium" as const,
@@ -544,7 +544,7 @@ describe("buildProjectMemoryViewModel", () => {
         ],
       };
       const vm = buildProjectMemoryViewModel({
-        view: moriMockSession,
+        view: mockSession,
         mode: "draft",
         hasAnalysis: false,
         savedBrowserSessions: [browserSession("s-old")],

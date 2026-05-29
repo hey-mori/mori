@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../../domain/mock-data";
+import { mockSession } from "../../domain/mock-data";
 import {
   deriveProjectMemoryContext,
   deriveSavedReportAvailability,
@@ -8,7 +8,7 @@ import {
 describe("deriveProjectMemoryContext", () => {
   it("flags single-session scopes as not cross-session", () => {
     const snap = deriveProjectMemoryContext({
-      view: moriMockSession,
+      view: mockSession,
       savedSessions: [],
       reportCount: 0,
       scope: "current-session",
@@ -22,7 +22,7 @@ describe("deriveProjectMemoryContext", () => {
 
   it("uses the demo caveat when scope is demo", () => {
     const snap = deriveProjectMemoryContext({
-      view: moriMockSession,
+      view: mockSession,
       savedSessions: [],
       reportCount: 0,
       scope: "demo",
@@ -34,7 +34,7 @@ describe("deriveProjectMemoryContext", () => {
 
   it("includes saved-session and analysis caveats when relevant", () => {
     const snap = deriveProjectMemoryContext({
-      view: moriMockSession,
+      view: mockSession,
       savedSessions: [],
       reportCount: 0,
       scope: "current-session",
@@ -46,7 +46,7 @@ describe("deriveProjectMemoryContext", () => {
 
   it("exposes savedReportAvailability on the snapshot", () => {
     const empty = deriveProjectMemoryContext({
-      view: moriMockSession,
+      view: mockSession,
       savedSessions: [],
       reportCount: 0,
       scope: "current-session",
@@ -56,7 +56,7 @@ describe("deriveProjectMemoryContext", () => {
     expect(empty.savedReportAvailability.label).toBe("저장된 리포트 없음");
 
     const populated = deriveProjectMemoryContext({
-      view: moriMockSession,
+      view: mockSession,
       savedSessions: [],
       reportCount: 3,
       scope: "current-session",

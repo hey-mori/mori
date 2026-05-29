@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, Bell, CheckCheck, X } from "lucide-react";
-import { useMoriAppStore } from "../../app/store";
-import { useMoriSessionStore } from "../../app/sessionStore";
+import { useAppStore } from "../../app/store";
+import { useSessionStore } from "../../app/sessionStore";
 import { useNotificationReadStore } from "../../app/notificationReadStore";
 import type { ViewKey } from "../../domain/types";
 import type {
-  MoriNotification,
-  MoriNotificationActionTarget,
+  CompanionNotification,
+  CompanionNotificationActionTarget,
 } from "../../lib/notifications/notification";
 import { notificationIcon } from "../../lib/notifications/notificationPresentation";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
-import { useMoriNotifications } from "./useMoriNotifications";
+import { useNotifications } from "./useNotifications";
 import { NotificationFeedList } from "./NotificationFeedList";
 
 /**
@@ -19,7 +19,7 @@ import { NotificationFeedList } from "./NotificationFeedList";
  *
  * Clicking the bell slides a full-height drawer in from the right edge (a
  * non-blocking "notification center"), showing the producer-neutral
- * `MoriNotification[]` feed newest first, grouped by time. A drawer — not a
+ * `CompanionNotification[]` feed newest first, grouped by time. A drawer — not a
  * small popover or a centered modal — because the feed is a cross-session
  * stream that grows: it needs room and a scroll, but must never block the
  * canvas. The badge is an *unread* count, capped at 9+; a fresh arrival flashes
@@ -42,10 +42,10 @@ export function AttentionIndicator({
   /** Icon-only quick-action button (sidebar head) when true; labelled pill otherwise. */
   compact?: boolean;
 }) {
-  const { notifications, isDemo } = useMoriNotifications();
-  const openReviewItem = useMoriAppStore((state) => state.openReviewItem);
-  const openSession = useMoriAppStore((state) => state.openSession);
-  const loadBrowserSession = useMoriSessionStore((state) => state.loadBrowserSession);
+  const { notifications, isDemo } = useNotifications();
+  const openReviewItem = useAppStore((state) => state.openReviewItem);
+  const openSession = useAppStore((state) => state.openSession);
+  const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
 
   const readIds = useNotificationReadStore((state) => state.readIds);
   const markRead = useNotificationReadStore((state) => state.markRead);
@@ -55,7 +55,7 @@ export function AttentionIndicator({
   // The drawer docks to the sidebar's right edge so it opens *next to* the bell
   // (the trigger is on the left), not on the opposite side of the screen.
   const [anchorLeft, setAnchorLeft] = useState(0);
-  const [toast, setToast] = useState<MoriNotification | null>(null);
+  const [toast, setToast] = useState<CompanionNotification | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const knownNotificationIdsRef = useRef<Set<string> | null>(null);
@@ -120,7 +120,7 @@ export function AttentionIndicator({
   }
 
   function dispatchTarget(
-    target: MoriNotificationActionTarget,
+    target: CompanionNotificationActionTarget,
     notificationId?: string,
   ): void {
     setOpen(false);
@@ -269,10 +269,10 @@ export function AttentionIndicator({
   );
 }
 
-function ToastIcon({ notification }: { notification: MoriNotification }) {
+function ToastIcon({ notification }: { notification: CompanionNotification }) {
   const Icon = notificationIcon(notification.kind);
   return <Icon size={14} />;
 }
 
 /** Re-exported so callers that imported the type from this module keep working. */
-export type { MoriNotification, ReviewSelection };
+export type { CompanionNotification, ReviewSelection };

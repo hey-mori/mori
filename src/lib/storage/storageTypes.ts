@@ -8,7 +8,7 @@ import type {
   SourceRef,
   TimelineEvent,
 } from "../../domain/types";
-import type { MoriAnalysisResult, QuickPassAnalysisSettings } from "../analysis";
+import type { AnalysisResult, QuickPassAnalysisSettings } from "../analysis";
 import type { ConnectorSourceImportSummary } from "../connectors";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
@@ -114,7 +114,7 @@ export type ConnectorEventIdentitySnapshot = {
 
 export type StoredSessionAnalysis = {
   sessionId: string;
-  result: MoriAnalysisResult;
+  result: AnalysisResult;
   savedAt: string;
   adapter: "browser-local-storage";
 };
@@ -154,7 +154,7 @@ export type StoredSessionMemoryBody = {
   };
 };
 
-export type MoriDraftRepository = {
+export type DraftRepository = {
   saveCurrentSessionDraft: (draft: Omit<StoredSessionDraft, "savedAt" | "adapter">) => StoredSessionDraft;
   loadCurrentSessionDraft: () => StoredSessionDraft | null;
   clearCurrentSessionDraft: () => void;
@@ -225,7 +225,7 @@ export type MoriDraftRepository = {
   ) => StoredSessionImport[];
   removeSessionImport: (sessionId: string, importId: string) => void;
   clearSessionImports: (sessionId: string) => void;
-  saveSessionAnalysis: (sessionId: string, result: MoriAnalysisResult) => StoredSessionAnalysis;
+  saveSessionAnalysis: (sessionId: string, result: AnalysisResult) => StoredSessionAnalysis;
   loadSessionAnalysis: (sessionId: string) => StoredSessionAnalysis | null;
   clearSessionAnalysis: (sessionId: string) => void;
   /**

@@ -4,17 +4,17 @@ import {
   type PersistenceStatus,
   type SessionPersistenceService,
 } from "../lib/storage/sessionPersistenceService";
-import type { MoriMockSession } from "../domain/types";
+import type { MockSession } from "../domain/types";
 import type {
   DatabaseStatus,
   PersistSessionSnapshotOutput,
   SqliteSessionListEntry,
 } from "../lib/sqlite/repositoryContracts";
-import { useMoriSessionStore } from "./sessionStore";
+import { useSessionStore } from "./sessionStore";
 
 export type SqliteStatusKind = "unavailable" | "checking" | "ok" | "error";
 
-export type MoriSqliteState = {
+export type SqliteState = {
   available: boolean;
   status: DatabaseStatus | null;
   sessions: SqliteSessionListEntry[];
@@ -23,7 +23,7 @@ export type MoriSqliteState = {
   lastPersist: PersistSessionSnapshotOutput | null;
   refresh: () => Promise<void>;
   initialize: () => Promise<void>;
-  persist: (session: MoriMockSession) => Promise<PersistSessionSnapshotOutput | null>;
+  persist: (session: MockSession) => Promise<PersistSessionSnapshotOutput | null>;
 };
 
 let lazyService: SessionPersistenceService | null = null;
@@ -37,7 +37,7 @@ export function setSqliteStoreServiceForTesting(service: SessionPersistenceServi
   lazyService = service;
 }
 
-function deriveInitialState(): Pick<MoriSqliteState, "available" | "kind"> {
+function deriveInitialState(): Pick<SqliteState, "available" | "kind"> {
   const service = getService();
   return {
     available: service.isDesktop(),
@@ -45,7 +45,7 @@ function deriveInitialState(): Pick<MoriSqliteState, "available" | "kind"> {
   };
 }
 
-export const useMoriSqliteStore = create<MoriSqliteState>((set, get) => ({
+export const useSqliteStore = create<SqliteState>((set, get) => ({
   ...deriveInitialState(),
   status: null,
   sessions: [],
@@ -96,7 +96,7 @@ export const useMoriSqliteStore = create<MoriSqliteState>((set, get) => ({
     try {
       const result = await service.saveSessionToDesktop(session);
       set({ lastPersist: result, error: null });
-      useMoriSessionStore.getState().markPersistedToDesktop();
+      useSessionStore.getState().markPersistedToDesktop();
       await get().refresh();
       return result;
     } catch (error) {
@@ -107,7 +107,7 @@ export const useMoriSqliteStore = create<MoriSqliteState>((set, get) => ({
 }));
 
 function applyStatus(
-  set: (partial: Partial<MoriSqliteState>) => void,
+  set: (partial: Partial<SqliteState>) => void,
   status: PersistenceStatus,
 ): void {
   if (!status.sqliteAvailable) {

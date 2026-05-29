@@ -9,7 +9,7 @@
  * detailed derivations stay in `projectMemory.ts` for backward
  * compatibility.
  */
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import { getSessionEvidenceSummary } from "../evidence";
 import {
   deriveProjectMemoryStats,
@@ -60,7 +60,7 @@ export type ProjectMemorySnapshot = {
 };
 
 export function deriveProjectMemoryContext(args: {
-  view: MoriMockSession;
+  view: MockSession;
   savedSessions: DerivedSession[];
   reportCount: number;
   scope: ProjectMemoryDataScope;

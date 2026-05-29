@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moriMockSession } from "../domain/mock-data";
+import { mockSession } from "../domain/mock-data";
 import type { Decision, Issue, SourceRef, TimelineEvent } from "../domain/types";
 import {
   deriveEvidenceSources,
@@ -14,7 +14,7 @@ import {
 
 describe("deriveEvidenceSources", () => {
   it("returns sources ordered by captured time", () => {
-    const sources = deriveEvidenceSources(moriMockSession);
+    const sources = deriveEvidenceSources(mockSession);
     for (let i = 1; i < sources.length; i += 1) {
       expect(new Date(sources[i]!.capturedAt).getTime()).toBeGreaterThanOrEqual(
         new Date(sources[i - 1]!.capturedAt).getTime(),
@@ -23,9 +23,9 @@ describe("deriveEvidenceSources", () => {
   });
 
   it("doesn't mutate the input array", () => {
-    const before = moriMockSession.sources.map((source) => source.id);
-    deriveEvidenceSources(moriMockSession);
-    const after = moriMockSession.sources.map((source) => source.id);
+    const before = mockSession.sources.map((source) => source.id);
+    deriveEvidenceSources(mockSession);
+    const after = mockSession.sources.map((source) => source.id);
     expect(after).toEqual(before);
   });
 });
@@ -73,38 +73,38 @@ describe("deriveReviewContext", () => {
 
 describe("provenance helpers", () => {
   it("getProvenanceForEvent surfaces source ids + trust", () => {
-    const event = moriMockSession.events[0]!;
-    const record = getProvenanceForEvent(event, moriMockSession);
+    const event = mockSession.events[0]!;
+    const record = getProvenanceForEvent(event, mockSession);
     expect(record.itemKind).toBe("event");
     expect(record.sourceIds).toEqual(event.sourceRefs);
     expect(record.trustLevel).toBe(event.trustLevel);
   });
 
   it("getProvenanceForIssue is non-zero when the issue has source events", () => {
-    const issue = moriMockSession.issues[0];
+    const issue = mockSession.issues[0];
     if (!issue) return;
-    const record = getProvenanceForIssue(issue, moriMockSession);
+    const record = getProvenanceForIssue(issue, mockSession);
     expect(record.itemKind).toBe("issue");
     expect(record.trustLevel).toBe(issue.trustLevel);
   });
 
   it("getProvenanceForDecision combines events + relatedSourceIds", () => {
-    const decision = moriMockSession.decisions[0];
+    const decision = mockSession.decisions[0];
     if (!decision) return;
-    const record = getProvenanceForDecision(decision, moriMockSession);
+    const record = getProvenanceForDecision(decision, mockSession);
     expect(record.itemKind).toBe("decision");
     expect(record.sourceIds.length).toBeGreaterThanOrEqual(decision.relatedSourceIds.length);
   });
 
   it("getProvenanceForSource is user-correctable: false", () => {
-    const source = moriMockSession.sources[0]!;
+    const source = mockSession.sources[0]!;
     const record = getProvenanceForSource(source);
     expect(record.itemKind).toBe("source");
     expect(record.userCorrectable).toBe(false);
   });
 
   it("maps SourceRef.rawRetention='deleted' to 'notCaptured'", () => {
-    const source = { ...moriMockSession.sources[0]!, rawRetention: "deleted" as const };
+    const source = { ...mockSession.sources[0]!, rawRetention: "deleted" as const };
     const record = getProvenanceForSource(source);
     expect(record.rawDataPolicy).toBe("notCaptured");
   });
@@ -112,10 +112,10 @@ describe("provenance helpers", () => {
 
 describe("getSessionPipelineOverview", () => {
   it("returns counts matching the view", () => {
-    const overview = getSessionPipelineOverview(moriMockSession, true);
-    expect(overview.sourceCount).toBe(moriMockSession.sources.length);
-    expect(overview.eventCount).toBe(moriMockSession.events.length);
-    expect(overview.issueCount).toBe(moriMockSession.issues.length);
+    const overview = getSessionPipelineOverview(mockSession, true);
+    expect(overview.sourceCount).toBe(mockSession.sources.length);
+    expect(overview.eventCount).toBe(mockSession.events.length);
+    expect(overview.issueCount).toBe(mockSession.issues.length);
     expect(overview.hasAnalysis).toBe(true);
     expect(overview.dataBasis.length).toBeGreaterThan(0);
   });
@@ -123,14 +123,14 @@ describe("getSessionPipelineOverview", () => {
 
 describe("issue / decision references stay consistent with their domain rows", () => {
   it("Issue trust matches provenance trust", () => {
-    for (const issue of moriMockSession.issues.slice(0, 3) as Issue[]) {
-      expect(getProvenanceForIssue(issue, moriMockSession).trustLevel).toBe(issue.trustLevel);
+    for (const issue of mockSession.issues.slice(0, 3) as Issue[]) {
+      expect(getProvenanceForIssue(issue, mockSession).trustLevel).toBe(issue.trustLevel);
     }
   });
 
   it("Decision trust matches provenance trust", () => {
-    for (const decision of moriMockSession.decisions.slice(0, 3) as Decision[]) {
-      expect(getProvenanceForDecision(decision, moriMockSession).trustLevel).toBe(decision.trustLevel);
+    for (const decision of mockSession.decisions.slice(0, 3) as Decision[]) {
+      expect(getProvenanceForDecision(decision, mockSession).trustLevel).toBe(decision.trustLevel);
     }
   });
 });

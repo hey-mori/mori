@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setRepositoryStorageForTesting, useMoriRepositoryStore } from "./repositoryStore";
+import { setRepositoryStorageForTesting, useRepositoryStore } from "./repositoryStore";
 import { BrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import { MemoryKeyValueStorage } from "../lib/storage/memoryStorage";
 import { DEFAULT_REPOSITORY_SETTINGS } from "../lib/repositories";
@@ -12,14 +12,14 @@ function freshStorage() {
 }
 
 function resetStore() {
-  useMoriRepositoryStore.setState({
+  useRepositoryStore.setState({
     initialized: false,
     settings: { ...DEFAULT_REPOSITORY_SETTINGS },
     verifyingId: null,
   });
 }
 
-describe("useMoriRepositoryStore.refreshRepositoryMetadataAfterCapture", () => {
+describe("useRepositoryStore.refreshRepositoryMetadataAfterCapture", () => {
   beforeEach(() => {
     freshStorage();
     resetStore();
@@ -36,7 +36,7 @@ describe("useMoriRepositoryStore.refreshRepositoryMetadataAfterCapture", () => {
   });
 
   it("returns an explicit failure when the saved repo id is unknown", async () => {
-    const outcome = await useMoriRepositoryStore.getState().refreshRepositoryMetadataAfterCapture("missing-id");
+    const outcome = await useRepositoryStore.getState().refreshRepositoryMetadataAfterCapture("missing-id");
     expect(outcome.ok).toBe(false);
     if (!outcome.ok) {
       expect(outcome.error).toContain("missing-id");
@@ -44,7 +44,7 @@ describe("useMoriRepositoryStore.refreshRepositoryMetadataAfterCapture", () => {
   });
 });
 
-describe("useMoriRepositoryStore explicit-flow behavior", () => {
+describe("useRepositoryStore explicit-flow behavior", () => {
   beforeEach(() => {
     freshStorage();
     resetStore();
@@ -56,15 +56,15 @@ describe("useMoriRepositoryStore explicit-flow behavior", () => {
   });
 
   it("markRepositoryUsed records lastUsedAt without touching verification metadata", () => {
-    const added = useMoriRepositoryStore.getState().addRepository({
+    const added = useRepositoryStore.getState().addRepository({
       path: "C:/dev/mori",
       now: "2026-05-12T13:00:00+09:00",
     });
     expect(added).not.toBeNull();
     if (!added) return;
 
-    useMoriRepositoryStore.getState().markRepositoryUsed(added.id, "2026-05-12T14:00:00+09:00");
-    const repo = useMoriRepositoryStore
+    useRepositoryStore.getState().markRepositoryUsed(added.id, "2026-05-12T14:00:00+09:00");
+    const repo = useRepositoryStore
       .getState()
       .settings.repositories.find((entry) => entry.id === added.id);
     expect(repo?.lastUsedAt).toBe("2026-05-12T14:00:00+09:00");
@@ -72,7 +72,7 @@ describe("useMoriRepositoryStore explicit-flow behavior", () => {
   });
 
   it("preserves prior verified metadata when post-capture refresh fails", async () => {
-    const added = useMoriRepositoryStore.getState().addRepository({
+    const added = useRepositoryStore.getState().addRepository({
       path: "C:/dev/mori",
       now: "2026-05-12T13:00:00+09:00",
     });
@@ -87,7 +87,7 @@ describe("useMoriRepositoryStore explicit-flow behavior", () => {
       shortHeadCommit: "deadbee",
       isDirty: false,
     };
-    useMoriRepositoryStore.setState((state) => ({
+    useRepositoryStore.setState((state) => ({
       settings: {
         ...state.settings,
         repositories: state.settings.repositories.map((entry) =>
@@ -97,10 +97,10 @@ describe("useMoriRepositoryStore explicit-flow behavior", () => {
     }));
 
     // The bridge throws the standard "requires the Tauri app" error in the test runtime.
-    const outcome = await useMoriRepositoryStore.getState().refreshRepositoryMetadataAfterCapture(added.id);
+    const outcome = await useRepositoryStore.getState().refreshRepositoryMetadataAfterCapture(added.id);
     expect(outcome.ok).toBe(false);
 
-    const repo = useMoriRepositoryStore
+    const repo = useRepositoryStore
       .getState()
       .settings.repositories.find((entry) => entry.id === added.id);
     // Refresh failed, but the previously verified record must survive intact.
@@ -108,18 +108,18 @@ describe("useMoriRepositoryStore explicit-flow behavior", () => {
   });
 
   it("records a failed verification when there was no prior verified record", async () => {
-    const added = useMoriRepositoryStore.getState().addRepository({
+    const added = useRepositoryStore.getState().addRepository({
       path: "C:/dev/mori",
       now: "2026-05-12T13:00:00+09:00",
     });
     if (!added) return;
     expect(added.verification).toBeUndefined();
 
-    const outcome = await useMoriRepositoryStore.getState().refreshRepositoryMetadataAfterCapture(added.id);
+    const outcome = await useRepositoryStore.getState().refreshRepositoryMetadataAfterCapture(added.id);
     expect(outcome.ok).toBe(false);
     if (outcome.ok) return;
 
-    const repo = useMoriRepositoryStore
+    const repo = useRepositoryStore
       .getState()
       .settings.repositories.find((entry) => entry.id === added.id);
     expect(repo?.verification?.status).toBe("failed");
@@ -127,14 +127,14 @@ describe("useMoriRepositoryStore explicit-flow behavior", () => {
   });
 
   it("clearRepositoryVerification removes only the verification block", () => {
-    const added = useMoriRepositoryStore.getState().addRepository({
+    const added = useRepositoryStore.getState().addRepository({
       path: "C:/dev/mori",
       now: "2026-05-12T13:00:00+09:00",
     });
     if (!added) return;
 
     // Inject a verified record directly so we don't need the desktop bridge.
-    useMoriRepositoryStore.setState((state) => ({
+    useRepositoryStore.setState((state) => ({
       settings: {
         ...state.settings,
         repositories: state.settings.repositories.map((entry) =>
@@ -156,8 +156,8 @@ describe("useMoriRepositoryStore explicit-flow behavior", () => {
       },
     }));
 
-    useMoriRepositoryStore.getState().clearRepositoryVerification(added.id);
-    const repo = useMoriRepositoryStore
+    useRepositoryStore.getState().clearRepositoryVerification(added.id);
+    const repo = useRepositoryStore
       .getState()
       .settings.repositories.find((entry) => entry.id === added.id);
     expect(repo?.verification).toBeUndefined();

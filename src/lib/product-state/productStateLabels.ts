@@ -5,7 +5,7 @@
  * Before this module, "is this feature available?", "which storage backend
  * is live?", and "how trustworthy is this evidence?" were each answered by a
  * separate, hand-rolled label + tone map (`featureStatus.ts`,
- * `MoriStatusBadge`, `settingsStatus.ts`, `evidence/provenance.ts`,
+ * `BaseStatusBadge`, `settingsStatus.ts`, `evidence/provenance.ts`,
  * `LocalAiCard.tsx`, `IntegrationCard.tsx`). The vocabularies drifted.
  *
  * This file is the single data source for five product-state families:
@@ -30,7 +30,7 @@
  */
 
 /**
- * One semantic tone vocabulary, shared with `MoriStatusBadge` and the
+ * One semantic tone vocabulary, shared with `BaseStatusBadge` and the
  * `data-mori-tone` rules in `styles/theme.css`. Every product state maps to
  * exactly one of these.
  */
@@ -112,7 +112,7 @@ export type ProductStateDisplay = {
   label: string;
   /** One-line Korean explanation of the state. */
   description: string;
-  /** Semantic tone, shared with `MoriStatusBadge` / theme tokens. */
+  /** Semantic tone, shared with `BaseStatusBadge` / theme tokens. */
   tone: ProductStateTone;
   /** Optional extra UI hint (tooltip / sub-copy). */
   hint?: string;

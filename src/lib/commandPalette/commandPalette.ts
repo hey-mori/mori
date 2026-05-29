@@ -1,6 +1,6 @@
 import type { ViewKey } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
-import type { MoriThemeId } from "../settings/themePreference";
+import type { ThemeId } from "../settings/themePreference";
 
 /**
  * Command palette — pure helpers.
@@ -27,7 +27,7 @@ export type CommandTarget =
   | { kind: "openSession"; sessionId: string; tab?: "overview" | "flow" | "evidence" | "insights" | "report" }
   | { kind: "openSettings"; segment?: "profile" | "localAi" }
   | { kind: "toggleSidebarCollapsed" }
-  | { kind: "setTheme"; theme: MoriThemeId };
+  | { kind: "setTheme"; theme: ThemeId };
 
 export type CommandEntry = {
   /** Stable id so React keys + dedupe never depend on label collisions. */
@@ -80,7 +80,7 @@ const ACTION_COMMANDS: ReadonlyArray<{
 const THEME_COMMANDS: ReadonlyArray<{
   id: string;
   label: string;
-  theme: MoriThemeId;
+  theme: ThemeId;
   keywords?: string[];
 }> = [
   { id: "theme-formal", label: "라이트 (Formal)", theme: "formal", keywords: ["light", "default", "라이트"] },
@@ -93,7 +93,7 @@ export type BuildCommandsInput = {
   /** Hide rows for the current view so the palette never offers a no-op. */
   currentView?: ViewKey;
   /** Hide the row for the currently-applied theme — picking it would be a no-op. */
-  currentTheme?: MoriThemeId;
+  currentTheme?: ThemeId;
 };
 
 /**

@@ -7,18 +7,18 @@ import {
   OllamaQuickPassProvider,
   type OllamaProviderConfig,
 } from "./ollamaProvider";
-import type { MoriAnalysisProvider, MoriAnalysisProviderName } from "./analysisTypes";
+import type { AnalysisProvider, AnalysisProviderName } from "./analysisTypes";
 
 export type QuickPassProviderConfig =
   | { kind: "deterministic" }
   | { kind: "ollama"; config: OllamaProviderConfig };
 
-export function resolveQuickPassProvider(config: QuickPassProviderConfig): MoriAnalysisProvider {
+export function resolveQuickPassProvider(config: QuickPassProviderConfig): AnalysisProvider {
   if (config.kind === "ollama") return createOllamaQuickPassProvider(config.config);
   return createDeterministicQuickPassProvider();
 }
 
-export function providerNameLabel(name: MoriAnalysisProviderName): string {
+export function providerNameLabel(name: AnalysisProviderName): string {
   if (name === "ollama-quick-pass-v1") return "Ollama Quick Pass";
   return "Deterministic Quick Pass";
 }

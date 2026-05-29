@@ -4,7 +4,7 @@ import type {
   AnalysisIssueCandidate,
   AnalysisNextActionCandidate,
   AnalysisRelationshipCandidate,
-  MoriAnalysisInput,
+  AnalysisInput,
 } from "./analysisTypes";
 
 type IdContext = {
@@ -98,7 +98,7 @@ export function materializeNextAction(
   };
 }
 
-export function createRunId(input: MoriAnalysisInput, generatedAt: string): string {
+export function createRunId(input: AnalysisInput, generatedAt: string): string {
   const stamp = generatedAt.replace(/[^0-9]/g, "").slice(0, 14);
   return `run-${input.session.id}-${stamp}`;
 }

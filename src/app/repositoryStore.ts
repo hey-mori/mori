@@ -7,24 +7,24 @@ import {
   setSelectedRepository,
   updateRepositoryConfig,
   type AddRepositoryInput,
-  type MoriRepositoryConfig,
+  type RepositoryConfig,
   type RepositorySettings,
   type RepositoryVerificationMetadata,
 } from "../lib/repositories";
 import { createBrowserDraftRepository } from "../lib/storage/localStorageAdapter";
-import type { MoriDraftRepository } from "../lib/storage/storageTypes";
+import type { DraftRepository } from "../lib/storage/storageTypes";
 import { verifyRepositoryPath } from "../lib/desktop";
 
 export type RefreshMetadataOutcome =
   | { ok: true; verification: RepositoryVerificationMetadata }
   | { ok: false; error: string };
 
-export type MoriRepositoryState = {
+export type RepositoryState = {
   initialized: boolean;
   settings: RepositorySettings;
   verifyingId: string | null;
   hydrate: () => void;
-  addRepository: (input: AddRepositoryInput) => MoriRepositoryConfig | null;
+  addRepository: (input: AddRepositoryInput) => RepositoryConfig | null;
   removeRepository: (repositoryId: string) => void;
   renameRepository: (repositoryId: string, label: string) => void;
   selectRepository: (repositoryId: string | null) => void;
@@ -34,20 +34,20 @@ export type MoriRepositoryState = {
   clearRepositoryVerification: (repositoryId: string) => void;
 };
 
-let lazyRepository: MoriDraftRepository | null = null;
+let lazyRepository: DraftRepository | null = null;
 
-function getRepository(): MoriDraftRepository {
+function getRepository(): DraftRepository {
   if (!lazyRepository) {
     lazyRepository = createBrowserDraftRepository();
   }
   return lazyRepository;
 }
 
-export function setRepositoryStorageForTesting(repository: MoriDraftRepository | null): void {
+export function setRepositoryStorageForTesting(repository: DraftRepository | null): void {
   lazyRepository = repository;
 }
 
-export const useMoriRepositoryStore = create<MoriRepositoryState>((set, get) => ({
+export const useRepositoryStore = create<RepositoryState>((set, get) => ({
   initialized: false,
   settings: { ...DEFAULT_REPOSITORY_SETTINGS },
   verifyingId: null,
@@ -186,7 +186,7 @@ export const useMoriRepositoryStore = create<MoriRepositoryState>((set, get) => 
   },
 }));
 
-export function selectActiveRepository(state: MoriRepositoryState): MoriRepositoryConfig | null {
+export function selectActiveRepository(state: RepositoryState): RepositoryConfig | null {
   const { settings } = state;
   if (!settings.selectedRepositoryId) return null;
   return settings.repositories.find((entry) => entry.id === settings.selectedRepositoryId) ?? null;

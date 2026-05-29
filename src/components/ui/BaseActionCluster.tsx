@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type MoriActionClusterProps = {
+export type BaseActionClusterProps = {
   children: ReactNode;
   className?: string;
   align?: "start" | "end";
@@ -11,12 +11,12 @@ export type MoriActionClusterProps = {
  * Shared action grouping for toolbar ends, card footers, and row trailing
  * controls. Keeps spacing, wrapping, and right alignment consistent.
  */
-export function MoriActionCluster({
+export function BaseActionCluster({
   children,
   className = "",
   align = "end",
   wrap = true,
-}: MoriActionClusterProps) {
+}: BaseActionClusterProps) {
   return (
     <span
       className={[

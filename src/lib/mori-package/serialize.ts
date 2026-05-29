@@ -1,4 +1,4 @@
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import type {
   StoredAcceptedProjectMemory,
   StoredMemoryReviewAction,
@@ -23,7 +23,7 @@ export type CreateMoriPackageOptions = {
 };
 
 export function createMoriPackageFromSession(
-  data: MoriMockSession,
+  data: MockSession,
   options: CreateMoriPackageOptions = {},
 ): MoriPackageV0 {
   return {

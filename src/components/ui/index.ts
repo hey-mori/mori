@@ -1,9 +1,9 @@
 /**
- * Mori UI primitives.
+ * UI primitives.
  *
  * The original primitives (`Badge`, `Button`, `EmptyState`, `MetricCard`,
  * `Panel`, `SectionHeader`, `Toggle`) remain for compatibility. The newer
- * `Mori*` primitives are theme-token-driven and registry-aware — prefer
+ * `Base*` primitives are theme-token-driven and registry-aware, prefer
  * them in new code.
  */
 export { Badge } from "./Badge";
@@ -13,46 +13,46 @@ export { MetricCard } from "./MetricCard";
 export { Panel } from "./Panel";
 export { SectionHeader } from "./SectionHeader";
 export { Toggle } from "./Toggle";
-export { MoriCard, type MoriCardProps, type MoriCardVariant } from "./MoriCard";
-export { MoriDrawer, type MoriDrawerProps } from "./MoriDrawer";
+export { BaseCard, type BaseCardProps, type BaseCardVariant } from "./BaseCard";
+export { BaseDrawer, type BaseDrawerProps } from "./BaseDrawer";
 export {
-  MoriStatusBadge,
-  type MoriStatusBadgeProps,
-  type MoriStatusBadgeTone,
-} from "./MoriStatusBadge";
-export { MoriTrustBadge, type MoriTrustBadgeProps } from "./MoriTrustBadge";
-export { MoriPlannedAction, type MoriPlannedActionProps } from "./MoriPlannedAction";
-export { MoriScrollArea, type MoriScrollAreaProps } from "./MoriScrollArea";
+  BaseStatusBadge,
+  type BaseStatusBadgeProps,
+  type BaseStatusBadgeTone,
+} from "./BaseStatusBadge";
+export { BaseTrustBadge, type BaseTrustBadgeProps } from "./BaseTrustBadge";
+export { BasePlannedAction, type BasePlannedActionProps } from "./BasePlannedAction";
+export { BaseScrollArea, type BaseScrollAreaProps } from "./BaseScrollArea";
 export {
-  MoriFeatureStatusBadge,
-  type MoriFeatureStatusBadgeProps,
-} from "./MoriFeatureStatusBadge";
-export { MoriStatCard, type MoriStatCardProps, type MoriStatCardTone } from "./MoriStatCard";
+  BaseFeatureStatusBadge,
+  type BaseFeatureStatusBadgeProps,
+} from "./BaseFeatureStatusBadge";
+export { BaseStatCard, type BaseStatCardProps, type BaseStatCardTone } from "./BaseStatCard";
 export {
-  MoriToolbar,
-  MoriToolbarSpacer,
-  type MoriToolbarProps,
-} from "./MoriToolbar";
-export { MoriEmptyState, type MoriEmptyStateProps } from "./MoriEmptyState";
-export { MoriSection, type MoriSectionProps } from "./MoriSection";
-export { MoriListRow, type MoriListRowProps } from "./MoriListRow";
-export { MoriObjectRow, type MoriObjectRowProps, type MoriObjectRowDensity } from "./MoriObjectRow";
+  BaseToolbar,
+  BaseToolbarSpacer,
+  type BaseToolbarProps,
+} from "./BaseToolbar";
+export { BaseEmptyState, type BaseEmptyStateProps } from "./BaseEmptyState";
+export { BaseSection, type BaseSectionProps } from "./BaseSection";
+export { BaseListRow, type BaseListRowProps } from "./BaseListRow";
+export { BaseObjectRow, type BaseObjectRowProps, type BaseObjectRowDensity } from "./BaseObjectRow";
 export {
-  MoriContextMenu,
-  MoriOverflowMenu,
+  BaseContextMenu,
+  BaseOverflowMenu,
   useContextMenuPosition,
-  type MoriMenuItemSpec,
-  type MoriMenuPosition,
-} from "./MoriActionMenu";
-export { MoriMetadataLine, type MoriMetadataLineProps } from "./MoriMetadataLine";
-export { MoriActionCluster, type MoriActionClusterProps } from "./MoriActionCluster";
+  type BaseMenuItemSpec,
+  type BaseMenuPosition,
+} from "./BaseActionMenu";
+export { BaseMetadataLine, type BaseMetadataLineProps } from "./BaseMetadataLine";
+export { BaseActionCluster, type BaseActionClusterProps } from "./BaseActionCluster";
 export {
-  MoriTooltip,
-  MoriTooltipProvider,
-  moriTooltipProps,
-  type MoriTooltipKind,
-} from "./MoriTooltip";
+  BaseTooltip,
+  BaseTooltipProvider,
+  baseTooltipProps,
+  type BaseTooltipKind,
+} from "./BaseTooltip";
 export { SearchField, type SearchFieldProps } from "./SearchField";
 export { ToolbarSearch, type ToolbarSearchProps } from "./ToolbarSearch";
-export { MoriSectionHeader, type MoriSectionHeaderProps } from "./MoriSectionHeader";
-export { MoriMetricStrip, type MoriMetricStripProps, type MoriMetricItem } from "./MoriMetricStrip";
+export { BaseSectionHeader, type BaseSectionHeaderProps } from "./BaseSectionHeader";
+export { BaseMetricStrip, type BaseMetricStripProps, type BaseMetricItem } from "./BaseMetricStrip";

@@ -1,4 +1,4 @@
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import type { SqlitePersistenceSnapshot } from "./records";
 
 export type MigrationRecord = {
@@ -20,7 +20,7 @@ export type DatabaseStatus = {
 };
 
 export type PersistSessionSnapshotInput = {
-  session: MoriMockSession;
+  session: MockSession;
 };
 
 export type PersistSqliteSnapshotInput = {
@@ -64,7 +64,7 @@ export type ClearAllSqliteDataResult = {
   consolidatedMemoriesDeleted: number;
 };
 
-export type MoriSqliteRepository = {
+export type SqliteRepository = {
   initializeDatabase: () => Promise<DatabaseStatus>;
   persistSessionSnapshot: (input: PersistSessionSnapshotInput) => Promise<PersistSessionSnapshotOutput>;
   loadSessionSnapshot: (input: LoadSessionSnapshotInput) => Promise<SqlitePersistenceSnapshot>;

@@ -4,7 +4,7 @@ import type {
   EventType,
   Issue,
   IssueStatus,
-  MoriMockSession,
+  MockSession,
   NextAction,
   Priority,
   Project,
@@ -26,7 +26,7 @@ import type { StoredSessionSummary } from "../storage/storageTypes";
  *
  * The demo summaries in `demoSessionFixtures.ts` only populate *list* surfaces
  * (sidebar, home recent, project workspace). Opening one used to fall through
- * to the single bundled `moriMockSession` ("Mori 앱 기획"), so every demo row
+ * to the single bundled `mockSession` ("Mori 앱 기획"), so every demo row
  * — ng-gw routing, jinga invoice, … — showed the exact same reconstructed
  * session. That made the demo read as broken: the lists were varied but the
  * detail was fixed.
@@ -34,7 +34,7 @@ import type { StoredSessionSummary } from "../storage/storageTypes";
  * This module gives every demo summary its *own* reconstructed body. A compact
  * per-session **blueprint** (a handful of themed timeline beats plus the
  * session's decisions / issues / next actions) is expanded by a shared builder
- * into a full `MoriMockSession` — events spread across the session window,
+ * into a full `MockSession` — events spread across the session window,
  * sources wired to the events that cite them, decisions / issues / next actions
  * linked back to their anchor events, a few relationships for Flow Focus, and a
  * resume prompt. The result is honest demo content: clicking a session opens
@@ -92,15 +92,15 @@ type DemoBlueprint = {
 
 // ─── Public API ────────────────────────────────────────────────────────────────
 
-const viewCache = new Map<string, MoriMockSession>();
+const viewCache = new Map<string, MockSession>();
 
 /**
- * Build the full reconstructed `MoriMockSession` for a bundled demo session id,
+ * Build the full reconstructed `MockSession` for a bundled demo session id,
  * or `null` when the id is not a demo session with authored content. Cached by
  * id so repeated opens return a stable reference (the session-view selector
  * relies on reference stability to avoid render loops).
  */
-export function buildDemoSessionContent(sessionId: string): MoriMockSession | null {
+export function buildDemoSessionContent(sessionId: string): MockSession | null {
   if (!isDemoSessionId(sessionId)) return null;
   const cached = viewCache.get(sessionId);
   if (cached) return cached;
@@ -130,7 +130,7 @@ const HOUR_MS = 3_600_000;
 function expandBlueprint(
   summary: StoredSessionSummary,
   blueprint: DemoBlueprint,
-): MoriMockSession {
+): MockSession {
   const sid = summary.sessionId;
   const projectId = summary.projectId;
   const startedAt = summary.startedAt || summary.savedAt;

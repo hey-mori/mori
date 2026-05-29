@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { useMoriProfileStore } from "../../app/profileStore";
+import { useProfileStore } from "../../app/profileStore";
 import {
   getProfileInitials,
   normalizeDisplayName,
@@ -23,10 +23,10 @@ import {
  * to any server. See `docs/account-profile-settings-references.md` §2.
  */
 export function AccountProfileView() {
-  const initialized = useMoriProfileStore((state) => state.initialized);
-  const hydrate = useMoriProfileStore((state) => state.hydrate);
-  const profile = useMoriProfileStore((state) => state.profile);
-  const setDisplayName = useMoriProfileStore((state) => state.setDisplayName);
+  const initialized = useProfileStore((state) => state.initialized);
+  const hydrate = useProfileStore((state) => state.hydrate);
+  const profile = useProfileStore((state) => state.profile);
+  const setDisplayName = useProfileStore((state) => state.setDisplayName);
   const [draftName, setDraftName] = useState(profile.displayName);
 
   useEffect(() => {

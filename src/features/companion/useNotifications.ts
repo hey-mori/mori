@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   composeNotifications,
-  type MoriNotification,
+  type CompanionNotification,
 } from "../../lib/notifications/notification";
 import { buildImportFinishedNotifications } from "../../lib/notifications/importFinishedNotifications";
 import { buildMemoryHealthNotifications } from "../../lib/notifications/memoryHealthNotifications";
@@ -9,7 +9,7 @@ import { buildPackageExportNotifications } from "../../lib/notifications/package
 import { buildSessionFeedNotifications } from "../../lib/notifications/notificationFeed";
 import {
   loadStoredSessionSummaries,
-  useMoriSessionStore,
+  useSessionStore,
 } from "../../app/sessionStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
@@ -24,7 +24,7 @@ import { useCompanionSignals } from "./useCompanionSignals";
  *
  * The Mori 노트 panel today renders Companion signals directly. As more
  * producers come online (an import-finished pulse, a memory-stale detector,
- * a package-export-ready ping), each one will emit `MoriNotification[]`,
+ * a package-export-ready ping), each one will emit `CompanionNotification[]`,
  * and this hook composes them into the single feed the renderer consumes.
  *
  * Adding a producer is a one-line `composeNotifications` entry here — the
@@ -39,16 +39,16 @@ import { useCompanionSignals } from "./useCompanionSignals";
  * dashboard and the session's 검토 tab — surfacing it here too is what made the
  * notification panel read as a triage dashboard instead of a feed.
  */
-export function useMoriNotifications(): {
-  notifications: MoriNotification[];
+export function useNotifications(): {
+  notifications: CompanionNotification[];
   isDemo: boolean;
 } {
   const { isDemo, acceptedMemories } = useCompanionSignals();
-  const imports = useMoriSessionStore((state) => state.imports);
-  const activeSessionId = useMoriSessionStore(
+  const imports = useSessionStore((state) => state.imports);
+  const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
-  const dataResetNonce = useMoriSessionStore((state) => state.dataResetNonce);
+  const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
 
   // Cross-session feed source: every stored session becomes a timestamped
   // event. Re-read when work changes (active session / new import / reset) so
@@ -72,7 +72,7 @@ export function useMoriNotifications(): {
 
   // First producer: "가져오기 완료" pulse for sources added within the last
   // 24 hours. The compose dedupes by id so a single batch is never doubled.
-  const importFinishedNotifications = useMemo<MoriNotification[]>(
+  const importFinishedNotifications = useMemo<CompanionNotification[]>(
     () => buildImportFinishedNotifications({ imports }),
     [imports],
   );
@@ -80,14 +80,14 @@ export function useMoriNotifications(): {
   // Third producer: memory-health (stale / contradiction). One summary row
   // per category, deep-links into the 통합 surface where per-memory actions
   // already live.
-  const memoryHealthNotifications = useMemo<MoriNotification[]>(
+  const memoryHealthNotifications = useMemo<CompanionNotification[]>(
     () => buildMemoryHealthNotifications({ acceptedMemories }),
     [acceptedMemories],
   );
 
   // Fourth producer: "방금 내보냄" pulse for .mori packages saved within
   // the last 24h. Same recency / dedupe shape as import-finished.
-  const packageExportNotifications = useMemo<MoriNotification[]>(
+  const packageExportNotifications = useMemo<CompanionNotification[]>(
     () => buildPackageExportNotifications({ drafts: packageDrafts }),
     [packageDrafts],
   );
@@ -95,7 +95,7 @@ export function useMoriNotifications(): {
   // Fifth producer: the cross-session feed — one timestamped event per stored
   // session. This is what turns the surface from active-session triage into a
   // real activity stream ("이 세션이 정리됐어요 · 프로젝트 · 2시간 전").
-  const sessionFeedNotifications = useMemo<MoriNotification[]>(
+  const sessionFeedNotifications = useMemo<CompanionNotification[]>(
     () => buildSessionFeedNotifications(mergeDemoSessionSummaries(summaries)),
     [summaries],
   );
@@ -128,11 +128,11 @@ export function useMoriNotifications(): {
  * Display order for the feed: newest first. A notice without `createdAt` (e.g.
  * a freshly detected memory-health issue) sorts to the very top as "방금".
  */
-function sortNotificationsByRecency(list: MoriNotification[]): MoriNotification[] {
+function sortNotificationsByRecency(list: CompanionNotification[]): CompanionNotification[] {
   return [...list].sort((left, right) => recency(right) - recency(left));
 }
 
-function recency(notification: MoriNotification): number {
+function recency(notification: CompanionNotification): number {
   if (!notification.createdAt) return Number.POSITIVE_INFINITY;
   const time = new Date(notification.createdAt).getTime();
   return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;

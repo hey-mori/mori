@@ -1,8 +1,8 @@
 import { CalendarClock, FileText, Lock } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
-import { MoriTrustBadge } from "../../components/ui/MoriTrustBadge";
-import { MoriFidelityBadge } from "../../components/ui/MoriFidelityBadge";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
+import { BaseTrustBadge } from "../../components/ui/BaseTrustBadge";
+import { BaseFidelityBadge } from "../../components/ui/BaseFidelityBadge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import type { SourceRef } from "../../domain/types";
 import { getSourceDisplayStatus } from "../../lib/sources/traceability";
@@ -29,15 +29,15 @@ export function SourceSummaryCard({ source }: { source: SourceRef }) {
 
       <div className="review-source-card-badges">
         <Badge tone="purple">{display.integrationLabel}</Badge>
-        <MoriTrustBadge level={source.trustLevel} />
-        <MoriFidelityBadge fidelity={source.captureFidelity} />
-        <MoriStatusBadge
+        <BaseTrustBadge level={source.trustLevel} />
+        <BaseFidelityBadge fidelity={source.captureFidelity} />
+        <BaseStatusBadge
           tone={getProductAvailabilityTone(
             productAvailabilityFromIntegrationStatus(display.status),
           )}
         >
           {display.statusLabel}
-        </MoriStatusBadge>
+        </BaseStatusBadge>
       </div>
 
       <SectionHeader title="가져오기 정보" />

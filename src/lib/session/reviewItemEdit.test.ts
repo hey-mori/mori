@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { MoriAnalysisResult } from "../analysis";
-import { moriMockSession } from "../../domain/mock-data";
+import type { AnalysisResult } from "../analysis";
+import { mockSession } from "../../domain/mock-data";
 import {
   applyDecisionEdit,
   applyIssueEdit,
@@ -12,26 +12,26 @@ import {
 
 const editedAt = "2026-05-18T12:00:00.000Z";
 
-function analysis(): MoriAnalysisResult {
+function analysis(): AnalysisResult {
   return {
     runId: "run-edit",
     providerName: "deterministic-heuristic-v1",
     providerLabel: "Deterministic",
-    sessionId: moriMockSession.session.id,
-    projectId: moriMockSession.project.id,
+    sessionId: mockSession.session.id,
+    projectId: mockSession.project.id,
     generatedAt: "2026-05-18T11:00:00.000Z",
     durationMs: 1,
     inputEventCount: 0,
     inputSourceCount: 0,
     summary: { sessionSummary: "summary", resumePrompt: "prompt", highlights: [] },
-    issues: [{ ...moriMockSession.issues[0]!, status: "open" }],
-    decisions: [{ ...moriMockSession.decisions[0]!, confirmed: false }],
-    relationships: [...moriMockSession.relationships],
+    issues: [{ ...mockSession.issues[0]!, status: "open" }],
+    decisions: [{ ...mockSession.decisions[0]!, confirmed: false }],
+    relationships: [...mockSession.relationships],
     nextActions: [],
     rendered: {
       summary: {
         id: "summary-run-edit",
-        sessionId: moriMockSession.session.id,
+        sessionId: mockSession.session.id,
         sessionSummary: "summary",
         resumePrompt: "prompt",
         reportMarkdown: "",
@@ -46,7 +46,7 @@ function analysis(): MoriAnalysisResult {
 
 describe("setIssueFields", () => {
   it("updates editable issue fields and marks the user correction", () => {
-    const original = moriMockSession.issues[0]!;
+    const original = mockSession.issues[0]!;
     const next = setIssueFields(
       original,
       { title: "Corrected issue", description: "Corrected description" },
@@ -61,7 +61,7 @@ describe("setIssueFields", () => {
   });
 
   it("preserves status, evidence, related links, confidence, and trust", () => {
-    const original = moriMockSession.issues[0]!;
+    const original = mockSession.issues[0]!;
     const next = setIssueFields(original, { title: "Corrected issue" }, editedAt);
 
     expect(next.status).toBe(original.status);
@@ -73,20 +73,20 @@ describe("setIssueFields", () => {
   });
 
   it("leaves old issue records without edit metadata valid", () => {
-    const original = moriMockSession.issues[0]!;
+    const original = mockSession.issues[0]!;
     expect(original.editedByUser).toBeUndefined();
     expect(original.editedAt).toBeUndefined();
   });
 
   it("changes issue priority when a valid different priority is provided", () => {
-    const original = { ...moriMockSession.issues[0]!, priority: "high" as const };
+    const original = { ...mockSession.issues[0]!, priority: "high" as const };
     const next = setIssueFields(original, { priority: "low" }, editedAt);
     expect(next.priority).toBe("low");
     expect(next.editedByUser).toBe(true);
   });
 
   it("returns original issue when priority is unchanged", () => {
-    const original = { ...moriMockSession.issues[0]!, priority: "high" as const };
+    const original = { ...mockSession.issues[0]!, priority: "high" as const };
     const next = setIssueFields(original, { priority: "high" }, editedAt);
     expect(next).toBe(original);
   });
@@ -94,7 +94,7 @@ describe("setIssueFields", () => {
 
 describe("setDecisionFields", () => {
   it("updates editable decision fields and marks the user correction", () => {
-    const original = moriMockSession.decisions[0]!;
+    const original = mockSession.decisions[0]!;
     const next = setDecisionFields(
       original,
       {
@@ -113,7 +113,7 @@ describe("setDecisionFields", () => {
   });
 
   it("preserves confirmation, evidence, related links, importance, and trust", () => {
-    const original = { ...moriMockSession.decisions[0]!, confirmed: true };
+    const original = { ...mockSession.decisions[0]!, confirmed: true };
     const next = setDecisionFields(original, { rationale: "Corrected rationale" }, editedAt);
 
     expect(next.confirmed).toBe(true);
@@ -125,20 +125,20 @@ describe("setDecisionFields", () => {
   });
 
   it("leaves old decision records without edit metadata valid", () => {
-    const original = moriMockSession.decisions[0]!;
+    const original = mockSession.decisions[0]!;
     expect(original.editedByUser).toBeUndefined();
     expect(original.editedAt).toBeUndefined();
   });
 
   it("changes decision importance when a valid different importance is provided", () => {
-    const original = { ...moriMockSession.decisions[0]!, importance: "high" as const };
+    const original = { ...mockSession.decisions[0]!, importance: "high" as const };
     const next = setDecisionFields(original, { importance: "medium" }, editedAt);
     expect(next.importance).toBe("medium");
     expect(next.editedByUser).toBe(true);
   });
 
   it("returns original decision when importance is unchanged", () => {
-    const original = { ...moriMockSession.decisions[0]!, importance: "high" as const };
+    const original = { ...mockSession.decisions[0]!, importance: "high" as const };
     const next = setDecisionFields(original, { importance: "high" }, editedAt);
     expect(next).toBe(original);
   });
@@ -196,7 +196,7 @@ describe("applyIssueEdit / applyDecisionEdit", () => {
 });
 
 describe("setNextActionFields", () => {
-  const baseAction = moriMockSession.nextActions[0]!;
+  const baseAction = mockSession.nextActions[0]!;
 
   it("updates title and marks the user correction", () => {
     const next = setNextActionFields(
@@ -238,11 +238,11 @@ describe("setNextActionFields", () => {
 });
 
 describe("applyNextActionEdit", () => {
-  function analysisWithAction(): MoriAnalysisResult {
+  function analysisWithAction(): AnalysisResult {
     const base = analysis();
     return {
       ...base,
-      nextActions: [{ ...moriMockSession.nextActions[0]!, priority: "high" as const }],
+      nextActions: [{ ...mockSession.nextActions[0]!, priority: "high" as const }],
     };
   }
 

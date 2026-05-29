@@ -3,7 +3,7 @@ import type {
   Decision,
   Issue,
   LlmProvider,
-  MoriMockSession,
+  MockSession,
   NextAction,
   Project,
   RecordingMode,
@@ -15,7 +15,7 @@ import type {
   TimelineEvent,
 } from "./types";
 
-export type MoriCommand =
+export type BackendCommand =
   | "projects.list"
   | "projects.create"
   | "sessions.create"
@@ -130,12 +130,12 @@ export type LlmProviderStatus = {
   models: string[];
 };
 
-export type MoriCommandMap = {
+export type BackendCommandMap = {
   "projects.list": { input: undefined; output: Project[] };
   "projects.create": { input: CreateProjectInput; output: Project };
   "sessions.create": { input: CreateSessionInput; output: Session };
-  "sessions.stop": { input: { sessionId: string }; output: MoriMockSession };
-  "sessions.get": { input: { sessionId: string }; output: MoriMockSession };
+  "sessions.stop": { input: { sessionId: string }; output: MockSession };
+  "sessions.get": { input: { sessionId: string }; output: MockSession };
   "sources.import": { input: ImportSourceInput; output: SourceRef };
   "timeline.list": { input: { sessionId: string }; output: TimelineEvent[] };
   "issues.list": { input: { sessionId: string }; output: Issue[] };
@@ -147,5 +147,5 @@ export type MoriCommandMap = {
   "analysis.quickPass": { input: QuickPassInput; output: QuickPassOutput };
 };
 
-export type MoriCommandInput<TCommand extends MoriCommand> = MoriCommandMap[TCommand]["input"];
-export type MoriCommandOutput<TCommand extends MoriCommand> = MoriCommandMap[TCommand]["output"];
+export type BackendCommandInput<TCommand extends BackendCommand> = BackendCommandMap[TCommand]["input"];
+export type BackendCommandOutput<TCommand extends BackendCommand> = BackendCommandMap[TCommand]["output"];

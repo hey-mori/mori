@@ -2,7 +2,7 @@ import type {
   Decision,
   Issue,
   IssueStatus,
-  MoriMockSession,
+  MockSession,
   NextAction,
   Priority,
   TimelineEvent,
@@ -140,7 +140,7 @@ export const SECTION_DEFINITIONS: Array<{
 ];
 
 export type ReportInput = {
-  view: MoriMockSession;
+  view: MockSession;
   type: ReportType;
   sections: ReadonlySet<ReportSectionId>;
   privacy: ReportPrivacyOptions;
@@ -498,7 +498,7 @@ function renderIssue(issue: Issue, privacy: ReportPrivacyOptions): string {
 
 function renderNextAction(
   action: NextAction,
-  view: MoriMockSession,
+  view: MockSession,
   privacy: ReportPrivacyOptions,
 ): string {
   const doneTag = isNextActionCompleted(action) ? " _(완료)_" : "";

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { focusFirstElement, trapTabKey } from "./focusTrap";
 
-export type MoriDrawerProps = {
+export type BaseDrawerProps = {
   /** When false the drawer (and its children) are unmounted entirely. */
   open: boolean;
   /** Called on scrim click, Escape, or any child-driven dismiss. */
@@ -12,14 +12,14 @@ export type MoriDrawerProps = {
 };
 
 /**
- * MoriDrawer — a right-side overlay panel for focused tasks (importing a
+ * BaseDrawer — a right-side overlay panel for focused tasks (importing a
  * source, editing, confirming) so the surface behind it does not have to
  * reflow. The drawer owns the scrim, Escape-to-close, body scroll lock, and
  * initial focus; the caller owns the content (including its own header /
  * close button). Children unmount while closed so transient form state in
  * the drawer never lingers between openings.
  */
-export function MoriDrawer({ open, onClose, ariaLabel, children }: MoriDrawerProps) {
+export function BaseDrawer({ open, onClose, ariaLabel, children }: BaseDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 

@@ -1,5 +1,5 @@
 import { FileText, Plug, RefreshCw, Save } from "lucide-react";
-import { moriConceptIcon } from "../../components/brand/moriIcons";
+import { conceptIcon } from "../../components/brand/moriIcons";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
@@ -101,7 +101,7 @@ export function StorageCard({
         <div className="settings-sqlite-panel">
           <header>
             <h4>
-              <moriConceptIcon.desktopSqlite size={14} aria-hidden="true" /> 데스크톱 SQLite
+              <conceptIcon.desktopSqlite size={14} aria-hidden="true" /> 데스크톱 SQLite
               <InfoHint label="SQLite 마이그레이션 상세">
                 적용된 마이그레이션 {sqliteStatus?.appliedMigrations.join(", ") || "없음"} · 대기 중{" "}
                 {sqliteStatus?.pendingMigrations.join(", ") || "없음"} · 테이블{" "}

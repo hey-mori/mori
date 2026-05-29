@@ -21,7 +21,7 @@ import type {
   Artifact,
   Decision,
   Issue,
-  MoriMockSession,
+  MockSession,
   NextAction,
   SourceRef,
   TimelineEvent,
@@ -51,7 +51,7 @@ export function EventInspector({
   onClose,
 }: {
   selectedEvent: TimelineEvent;
-  session: MoriMockSession;
+  session: MockSession;
   onTrace: () => void;
   /** Deep-link a linked issue / decision / next action into the Review surface. */
   onOpenReviewItem?: (selection: ReviewSelection) => void;

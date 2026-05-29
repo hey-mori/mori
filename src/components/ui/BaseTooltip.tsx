@@ -9,16 +9,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-export type MoriTooltipKind = "control" | "info" | "metric" | "status" | "text" | "timeline";
+export type BaseTooltipKind = "control" | "info" | "metric" | "status" | "text" | "timeline";
 
 type Coords = { top: number; left: number; placement: "top" | "bottom" };
 
 const MAX_W = 300;
 const GAP = 8;
 
-export function moriTooltipProps(
+export function baseTooltipProps(
   content: string | null | undefined,
-  kind: MoriTooltipKind = "text",
+  kind: BaseTooltipKind = "text",
 ): HTMLAttributes<HTMLElement> {
   if (!content) return {};
   return {
@@ -27,7 +27,7 @@ export function moriTooltipProps(
   } as HTMLAttributes<HTMLElement>;
 }
 
-export function MoriTooltip({
+export function BaseTooltip({
   children,
   content,
   kind = "text",
@@ -36,7 +36,7 @@ export function MoriTooltip({
 }: {
   children: ReactNode;
   content?: string | null;
-  kind?: MoriTooltipKind;
+  kind?: BaseTooltipKind;
   as?: "span" | "div";
   className?: string;
 }) {
@@ -44,19 +44,19 @@ export function MoriTooltip({
   return (
     <Element
       className={`mori-tooltip-anchor ${className}`.trim()}
-      {...moriTooltipProps(content, kind)}
+      {...baseTooltipProps(content, kind)}
     >
       {children}
     </Element>
   );
 }
 
-export function MoriTooltipProvider({ children }: { children: ReactNode }) {
+export function BaseTooltipProvider({ children }: { children: ReactNode }) {
   const tooltipId = useId();
   const activeRef = useRef<HTMLElement | null>(null);
   const [tooltip, setTooltip] = useState<{
     content: string;
-    kind: MoriTooltipKind;
+    kind: BaseTooltipKind;
     coords: Coords;
   } | null>(null);
 
@@ -220,7 +220,7 @@ function normalizeNativeTitle(el: HTMLElement) {
   }
 }
 
-function getTooltipKind(el: HTMLElement): MoriTooltipKind {
+function getTooltipKind(el: HTMLElement): BaseTooltipKind {
   const kind = el.getAttribute("data-mori-tooltip-kind");
   if (
     kind === "control" ||
@@ -234,7 +234,7 @@ function getTooltipKind(el: HTMLElement): MoriTooltipKind {
   return "text";
 }
 
-function inferTooltipKind(el: HTMLElement): MoriTooltipKind {
+function inferTooltipKind(el: HTMLElement): BaseTooltipKind {
   if (el.closest(".timeline-page, .timeline-shell, .timeline-panel, .event-inspector")) {
     return "timeline";
   }

@@ -1,7 +1,7 @@
 import { ArrowRight, CheckCircle2, CircleAlert, ListTodo } from "lucide-react";
-import { MoriObjectRow } from "../../components/ui/MoriObjectRow";
-import { MoriMetadataLine } from "../../components/ui/MoriMetadataLine";
-import { MoriSection } from "../../components/ui/MoriSection";
+import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
+import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
+import { BaseSection } from "../../components/ui/BaseSection";
 import type { ProjectSynthesis, SynthItem } from "../../lib/project/projectSynthesis";
 
 /**
@@ -23,7 +23,7 @@ export function ProjectSynthesisSection({
   onOpenSession?: (sessionId: string) => void;
 }) {
   return (
-    <MoriSection
+    <BaseSection
       className="project-synthesis"
       title="이 프로젝트 종합"
       ariaLabel="이 프로젝트 종합"
@@ -57,7 +57,7 @@ export function ProjectSynthesisSection({
           />
         </div>
       )}
-    </MoriSection>
+    </BaseSection>
   );
 }
 
@@ -96,11 +96,11 @@ function SynthGroup({
       <ul className="project-session-list">
         {items.map((item, index) => (
           <li key={`${item.sessionId}-${index}`}>
-            <MoriObjectRow
+            <BaseObjectRow
               className="session-list-row"
               leading={icon}
               title={item.text}
-              meta={<MoriMetadataLine items={[item.sessionTitle]} />}
+              meta={<BaseMetadataLine items={[item.sessionTitle]} />}
               onClick={onOpenSession ? () => onOpenSession(item.sessionId) : undefined}
               trailing={onOpenSession ? <ArrowRight size={13} aria-hidden="true" /> : undefined}
               density="compact"

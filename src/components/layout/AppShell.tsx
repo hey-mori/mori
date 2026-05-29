@@ -3,7 +3,7 @@ import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { SettingsSheet } from "./SettingsSheet";
 import { CommandPalette } from "./CommandPalette";
-import { useMoriAppStore } from "../../app/store";
+import { useAppStore } from "../../app/store";
 import {
   loadCollapsePreference,
   saveCollapsePreference,
@@ -21,8 +21,8 @@ import type { ViewKey } from "../../domain/types";
  * corner opens it.
  */
 export function AppShell({ children }: { children: ReactNode }) {
-  const navigate = useMoriAppStore((state) => state.navigate);
-  const toggleCommandPalette = useMoriAppStore(
+  const navigate = useAppStore((state) => state.navigate);
+  const toggleCommandPalette = useAppStore(
     (state) => state.toggleCommandPalette,
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);

@@ -1,7 +1,7 @@
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import { isNextActionCompleted } from "../session/nextActionCompletion";
 
-export function buildResumePrompt(data: MoriMockSession): string {
+export function buildResumePrompt(data: MockSession): string {
   const lastDecisions = data.decisions
     .slice(0, 5)
     .map((decision) => `- ${decision.title}: ${decision.decision}`)

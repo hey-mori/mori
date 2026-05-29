@@ -20,29 +20,29 @@ const THEME_SCHEMA_VERSION = 1 as const;
 /** Runtime-selectable themes — all three are real token sets today. */
 export const SELECTABLE_THEMES = ["formal", "forest", "nightLake"] as const;
 
-export type MoriThemeId = (typeof SELECTABLE_THEMES)[number];
+export type ThemeId = (typeof SELECTABLE_THEMES)[number];
 
-export type MoriThemeColorScheme = "light" | "dark";
+export type ThemeColorScheme = "light" | "dark";
 
 /** Returns the color-scheme (light/dark) for a given theme. */
-export function getThemeColorScheme(theme: MoriThemeId): MoriThemeColorScheme {
+export function getThemeColorScheme(theme: ThemeId): ThemeColorScheme {
   return theme === "nightLake" ? "dark" : "light";
 }
 
-export const DEFAULT_THEME: MoriThemeId = "formal";
+export const DEFAULT_THEME: ThemeId = "formal";
 
-export type MoriThemePreference = {
+export type ThemePreference = {
   schemaVersion: typeof THEME_SCHEMA_VERSION;
-  theme: MoriThemeId;
+  theme: ThemeId;
 };
 
-export const DEFAULT_THEME_PREFERENCE: MoriThemePreference = {
+export const DEFAULT_THEME_PREFERENCE: ThemePreference = {
   schemaVersion: THEME_SCHEMA_VERSION,
   theme: DEFAULT_THEME,
 };
 
 /** Type guard: is `value` one of the runtime-selectable theme ids. */
-export function isSelectableTheme(value: unknown): value is MoriThemeId {
+export function isSelectableTheme(value: unknown): value is ThemeId {
   return (
     typeof value === "string" &&
     (SELECTABLE_THEMES as readonly string[]).includes(value)
@@ -50,14 +50,14 @@ export function isSelectableTheme(value: unknown): value is MoriThemeId {
 }
 
 /**
- * Parse a stored preference string into a valid `MoriThemePreference`.
+ * Parse a stored preference string into a valid `ThemePreference`.
  * Unknown / malformed / wrong-version / non-selectable payloads fall
  * back to the default rather than rendering an unknown theme.
  */
-export function parseThemePreference(raw: string | null): MoriThemePreference {
+export function parseThemePreference(raw: string | null): ThemePreference {
   if (!raw) return DEFAULT_THEME_PREFERENCE;
   try {
-    const parsed = JSON.parse(raw) as Partial<MoriThemePreference>;
+    const parsed = JSON.parse(raw) as Partial<ThemePreference>;
     if (parsed.schemaVersion !== THEME_SCHEMA_VERSION) {
       return DEFAULT_THEME_PREFERENCE;
     }
@@ -71,7 +71,7 @@ export function parseThemePreference(raw: string | null): MoriThemePreference {
 }
 
 /** Serialize a preference for storage. */
-export function serializeThemePreference(preference: MoriThemePreference): string {
+export function serializeThemePreference(preference: ThemePreference): string {
   return JSON.stringify(preference);
 }
 
@@ -87,7 +87,7 @@ function resolveStorage(storage?: KeyValueStorage): KeyValueStorage | null {
 }
 
 /** Read the theme preference from local storage. */
-export function loadThemePreference(storage?: KeyValueStorage): MoriThemePreference {
+export function loadThemePreference(storage?: KeyValueStorage): ThemePreference {
   const store = resolveStorage(storage);
   if (!store) return DEFAULT_THEME_PREFERENCE;
   try {
@@ -99,7 +99,7 @@ export function loadThemePreference(storage?: KeyValueStorage): MoriThemePrefere
 
 /** Persist the theme preference to local storage. */
 export function saveThemePreference(
-  preference: MoriThemePreference,
+  preference: ThemePreference,
   storage?: KeyValueStorage,
 ): void {
   const store = resolveStorage(storage);
@@ -118,7 +118,7 @@ export function saveThemePreference(
  * semantic tokens; setting the attribute on `<html>` cascades the
  * override to every surface.
  */
-export function applyThemeToDocument(theme: MoriThemeId): void {
+export function applyThemeToDocument(theme: ThemeId): void {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute("data-mori-theme", theme);
 }

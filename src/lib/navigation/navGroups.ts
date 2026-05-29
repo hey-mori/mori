@@ -1,5 +1,5 @@
 import type { ViewKey } from "../../domain/types";
-import { moriViewIcon } from "../../components/brand/moriIcons";
+import { viewIcon } from "../../components/brand/moriIcons";
 
 /**
  * Primary navigation as pure, testable data.
@@ -32,8 +32,8 @@ import { moriViewIcon } from "../../components/brand/moriIcons";
  * destinations appear, and that every key is a routable `ViewKey`.
  */
 
-/** Keys that have an icon in the shared `moriViewIcon` vocabulary. */
-export type NavKey = keyof typeof moriViewIcon;
+/** Keys that have an icon in the shared `viewIcon` vocabulary. */
+export type NavKey = keyof typeof viewIcon;
 
 export type NavItem = {
   key: NavKey;

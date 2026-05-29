@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { deriveSessionStatus } from "./sessionStatus";
-import type { MoriSessionState, SessionViewModel } from "../../app/sessionStore";
+import type { SessionState, SessionViewModel } from "../../app/sessionStore";
 import { createStaticMockDataSource } from "./timelineDataSource";
 
-const createMockState = (overrides?: Partial<MoriSessionState>): MoriSessionState => ({
+const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   initialized: true,
   draft: null,
   demoSessionId: null,

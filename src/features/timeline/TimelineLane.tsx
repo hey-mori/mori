@@ -4,7 +4,7 @@ import type { SourceRef } from "../../domain/types";
 import type { LaidOutTimelineItem, LaneLayout, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
 import { getEventFocusState } from "../../lib/timeline/focusState";
-import type { MoriMenuItemSpec } from "../../components/ui/MoriActionMenu";
+import type { BaseMenuItemSpec } from "../../components/ui/BaseActionMenu";
 
 /**
  * One lane row — renders only the event / bundle cards. The lane *label* no
@@ -37,7 +37,7 @@ export function TimelineLane({
   focusedSet: Set<string>;
   onSelect: (itemId: string) => void;
   onHover: (itemId: string | null) => void;
-  eventMenuItems?: (event: TimelineDisplayItem & { kind: "event" }) => MoriMenuItemSpec[];
+  eventMenuItems?: (event: TimelineDisplayItem & { kind: "event" }) => BaseMenuItemSpec[];
   sourceIndex?: ReadonlyMap<string, SourceRef>;
 }) {
   const colorClass = `lane-tone-${tone}`;

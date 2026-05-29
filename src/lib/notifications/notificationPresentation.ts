@@ -8,7 +8,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import type { MoriNotification, MoriNotificationKind } from "./notification";
+import type { CompanionNotification, CompanionNotificationKind } from "./notification";
 
 /**
  * Shared presentation helpers for the notification feed.
@@ -19,7 +19,7 @@ import type { MoriNotification, MoriNotificationKind } from "./notification";
  */
 
 /** Icon for a notification kind — by what it is *about*, not who raised it. */
-export function notificationIcon(kind: MoriNotificationKind): LucideIcon {
+export function notificationIcon(kind: CompanionNotificationKind): LucideIcon {
   switch (kind) {
     case "weak_evidence":
     case "memory_contradiction_detected":
@@ -75,6 +75,6 @@ export function formatNotificationTime(
  * meta line next to the relative time. Returns null when the notification has
  * no project context (a current-session triage notice).
  */
-export function notificationProjectLabel(notification: MoriNotification): string | null {
+export function notificationProjectLabel(notification: CompanionNotification): string | null {
   return notification.source?.projectLabel?.trim() || null;
 }

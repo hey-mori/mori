@@ -23,7 +23,7 @@ import {
   buildConnectorSourceImportSummary,
   parseConnectorJsonl,
 } from "./index";
-import type { MoriMockSession } from "../../domain/types";
+import type { MockSession } from "../../domain/types";
 import { normalizeConnectorEventBatch } from "./normalizeConnectorEvents";
 
 function loadFixture(): string {
@@ -91,7 +91,7 @@ describe("docs/fixtures/connector-sample-mori-session.jsonl", () => {
       events: outcome.events,
     });
     const persistedEvents = candidates.flatMap((candidate) => candidate.events);
-    const fakeSession: MoriMockSession = {
+    const fakeSession: MockSession = {
       project: {
         id: "p-sample",
         name: "Mori sample",

@@ -370,7 +370,7 @@ export type SourceOption = {
   icon: LucideIcon;
 };
 
-export type MoriMockSession = {
+export type MockSession = {
   project: Project;
   session: Session;
   sources: SourceRef[];

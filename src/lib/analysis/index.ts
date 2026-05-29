@@ -5,11 +5,11 @@ export type {
   AnalysisNextActionCandidate,
   AnalysisRelationshipCandidate,
   AnalysisSummary,
-  MoriAnalysisInput,
-  MoriAnalysisProvider,
-  MoriAnalysisProviderName,
-  MoriAnalysisResult,
-  MoriAnalysisStatus,
+  AnalysisInput,
+  AnalysisProvider,
+  AnalysisProviderName,
+  AnalysisResult,
+  AnalysisRunStatus,
 } from "./analysisTypes";
 export {
   DEFAULT_QUICK_PASS_SETTINGS,

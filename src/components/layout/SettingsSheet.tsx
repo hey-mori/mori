@@ -1,6 +1,6 @@
 import { UserRound, X } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useMoriAppStore, type SettingsTab } from "../../app/store";
+import { useAppStore, type SettingsTab } from "../../app/store";
 import { SETTINGS_TAB_DEFS, SettingsView } from "../../features/settings/SettingsView";
 import { AccountProfileView } from "../../features/account/AccountProfileView";
 import { SettingsRail, type SettingsRailItem } from "../../features/settings/SettingsPrimitives";
@@ -16,10 +16,10 @@ const RAIL_ITEMS: SettingsRailItem[] = [
 ];
 
 export function SettingsSheet() {
-  const open = useMoriAppStore((state) => state.settingsSheetOpen);
-  const close = useMoriAppStore((state) => state.closeSettingsSheet);
-  const activeTab = useMoriAppStore((state) => state.settingsTab);
-  const setActiveTab = useMoriAppStore((state) => state.setSettingsTab);
+  const open = useAppStore((state) => state.settingsSheetOpen);
+  const close = useAppStore((state) => state.closeSettingsSheet);
+  const activeTab = useAppStore((state) => state.settingsTab);
+  const setActiveTab = useAppStore((state) => state.setSettingsTab);
   const sheetRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 

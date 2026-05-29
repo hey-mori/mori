@@ -1,5 +1,5 @@
 import { ArchiveX, Check, Clock, Eye, Pencil, RotateCcw } from "lucide-react";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { Button } from "../../components/ui/Button";
 import type { ProductStateTone } from "../../lib/product-state/productState";
 import type { MemoryProposal } from "../../lib/project-memory/consolidationProposals";
@@ -157,9 +157,9 @@ export function ConsolidationProposalCard({
 
 function ConsolidationStatusBadge({ status }: { status: ConsolidationReviewStatus }) {
   return (
-    <MoriStatusBadge tone={reviewStatusTone(status)}>
+    <BaseStatusBadge tone={reviewStatusTone(status)}>
       {describeReviewStatus(status)}
-    </MoriStatusBadge>
+    </BaseStatusBadge>
   );
 }
 
@@ -214,7 +214,7 @@ const IMPORTANCE_LABELS: Record<MemoryProposal["importance"], string> = {
 function ImportanceBadge({ importance }: { importance: MemoryProposal["importance"] }) {
   const tone: ProductStateTone =
     importance === "high" ? "danger" : importance === "medium" ? "warning" : "info";
-  return <MoriStatusBadge tone={tone}>{IMPORTANCE_LABELS[importance] ?? importance}</MoriStatusBadge>;
+  return <BaseStatusBadge tone={tone}>{IMPORTANCE_LABELS[importance] ?? importance}</BaseStatusBadge>;
 }
 
 function describeConfidence(confidence: number): string {

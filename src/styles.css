@@ -6995,7 +6995,7 @@ hr {
 }
 
 /* Home activity metric strip (세션 · 프로젝트 · 연속 · 최근 활동). It renders via
-   MoriMetricStrip, so the markup is `.mori-metric-strip.home-activity-stats`
+   BaseMetricStrip, so the markup is `.mori-metric-strip.home-activity-stats`
    with `.mori-metric-item` children. These selectors are scoped under
    `.home-activity` so they outrank the global `.mori-metric-strip` /
    `.mori-metric-item` rules (which would otherwise zero the top padding and
@@ -8999,7 +8999,7 @@ pre {
 /* Import section inset card inside Evidence Hub */
 
 /* ============================
- * MoriDrawer — right-side focused-task overlay
+ * BaseDrawer — right-side focused-task overlay
  * ============================ */
 
 .mori-drawer {
@@ -19755,7 +19755,7 @@ button.settings-option {
 /* ───────────────────────────────────────────────────────────────────────
  * Mori UI primitives — semantic surface + planned-action styles
  *
- * These rules back the `MoriCard`, `MoriPlannedAction`, and `MoriScrollArea`
+ * These rules back the `BaseCard`, `BasePlannedAction`, and `BaseScrollArea`
  * components. They prefer the new `--mori-*` semantic tokens from
  * `styles/theme.css` so a future theme switch only has to remap one layer.
  * ─────────────────────────────────────────────────────────────────────── */
@@ -20670,7 +20670,7 @@ button.settings-option {
  * ConversationViewer — full-screen Claude conversation drawer
  * ──────────────────────────────────────────────────────────────────────── */
 
-/* The drawer panel is widened for reading; MoriDrawer's default 560px is
+/* The drawer panel is widened for reading; BaseDrawer's default 560px is
  * too narrow for chat-bubble flow. */
 .mori-drawer-panel:has(.conversation-viewer) {
   width: min(880px, 100vw);
@@ -22142,7 +22142,7 @@ button.settings-option {
   border-top: 1px solid var(--mori-border);
 }
 
-/* ─── MoriListRow ─────────────────────────────────────────────────────────── */
+/* ─── BaseListRow ─────────────────────────────────────────────────────────── */
 
 .mori-list-row {
   display: flex;
@@ -22217,7 +22217,7 @@ button.settings-option {
   color: var(--muted);
 }
 
-/* ─── MoriObjectRow ──────────────────────────────────────────────────────── */
+/* ─── BaseObjectRow ──────────────────────────────────────────────────────── */
 
 .mori-object-row {
   display: flex;
@@ -22513,7 +22513,7 @@ button.settings-option {
   color: var(--text);
 }
 
-/* ─── MoriSectionHeader ──────────────────────────────────────────────────── */
+/* ─── BaseSectionHeader ──────────────────────────────────────────────────── */
 
 .mori-section-header {
   display: flex;
@@ -22551,7 +22551,7 @@ button.settings-option {
   flex-shrink: 0;
 }
 
-/* ─── MoriMetricStrip ────────────────────────────────────────────────────── */
+/* ─── BaseMetricStrip ────────────────────────────────────────────────────── */
 
 .mori-metric-strip {
   display: flex;

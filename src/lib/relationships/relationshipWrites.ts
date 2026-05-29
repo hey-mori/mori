@@ -4,14 +4,14 @@
  * Relationships between Timeline events are AI-inferred — a proposal, not
  * truth. The trace panel lets the user remove a relationship the analysis
  * got wrong, or assert one it missed. Relationships live in
- * `MoriAnalysisResult.relationships`, and the focus graph derives from that
+ * `AnalysisResult.relationships`, and the focus graph derives from that
  * list, so editing the list is all that is needed.
  *
  * Honesty contract: an edit is never invented. When the id is unknown (or
  * an add would self-link / duplicate) the helper returns the same analysis
  * reference so callers skip the persistence write.
  */
-import type { MoriAnalysisResult } from "../analysis";
+import type { AnalysisResult } from "../analysis";
 import type { Relationship, RelationshipType } from "../../domain/types";
 
 /** Event-to-event relationship types a user can assert from the trace panel. */
@@ -27,9 +27,9 @@ export const USER_RELATIONSHIP_TYPES: RelationshipType[] = [
  * the original analysis when no relationship matches.
  */
 export function removeRelationshipFromAnalysis(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   relationshipId: string,
-): MoriAnalysisResult {
+): AnalysisResult {
   const next = analysis.relationships.filter(
     (relationship) => relationship.id !== relationshipId,
   );
@@ -56,11 +56,11 @@ export function userRelationshipId(
  * the exact same relationship already exists, so adds never duplicate.
  */
 export function addEventRelationship(
-  analysis: MoriAnalysisResult,
+  analysis: AnalysisResult,
   fromId: string,
   toId: string,
   type: RelationshipType,
-): MoriAnalysisResult {
+): AnalysisResult {
   if (fromId === toId) return analysis;
   const id = userRelationshipId(fromId, toId, type);
   if (analysis.relationships.some((relationship) => relationship.id === id)) {

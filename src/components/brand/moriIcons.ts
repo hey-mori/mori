@@ -37,7 +37,7 @@ import type { ViewKey } from "../../domain/types";
  */
 
 /** Icon for each navigable product surface. */
-export const moriViewIcon = {
+export const viewIcon = {
   home: House, // the work-memory landing surface
   start: Play, // begin a work session
   timeline: GanttChartSquare, // chronological session events
@@ -54,7 +54,7 @@ export const moriViewIcon = {
 } satisfies Partial<Record<ViewKey, LucideIcon>>;
 
 /** Icon for each trust level (verified / observed / inferred). */
-export const moriTrustIcon: Record<TrustLevel, LucideIcon> = {
+export const trustIcon: Record<TrustLevel, LucideIcon> = {
   verified: ShieldCheck, // confirmed against a source
   observed: Eye, // captured directly from work
   inferred: Lightbulb, // Mori's own reasoning
@@ -64,7 +64,7 @@ export const moriTrustIcon: Record<TrustLevel, LucideIcon> = {
  * Icons for recurring Mori concepts referenced across surfaces — storage
  * boundaries, work-item kinds, and trust/privacy.
  */
-export const moriConceptIcon = {
+export const conceptIcon = {
   localStorage: HardDrive,
   desktopSqlite: Database,
   moriPackage: Package,

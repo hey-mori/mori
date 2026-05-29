@@ -12,7 +12,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
-import { MoriStatusBadge } from "../../components/ui/MoriStatusBadge";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { formatDateTime } from "../../lib/formatting/time";
 import { describeMemoryAuditAction } from "../../lib/project-memory/memoryAuditTrail";
 import {
@@ -44,7 +44,7 @@ import type {
 } from "../../lib/storage/storageTypes";
 
 /**
- * Per-memory provenance drawer rendered inside `MoriDrawer` on the
+ * Per-memory provenance drawer rendered inside `BaseDrawer` on the
  * Project Memory page. Surfaces the structural answers to the user's
  * "why does this memory exist / what changed / can I undo this" questions
  * and exposes a confirm-gated revert for the most recent eligible change.
@@ -118,15 +118,15 @@ export function AcceptedMemoryDetailDrawer({
 
       <section className="accepted-memory-detail-state" aria-label="Lifecycle state">
         <div className="accepted-memory-detail-badges">
-          <MoriStatusBadge tone={memoryLifecycleGroupTone(provenance.lifecycleGroup)}>
+          <BaseStatusBadge tone={memoryLifecycleGroupTone(provenance.lifecycleGroup)}>
             {describeMemoryLifecycleGroup(provenance.lifecycleGroup)}
-          </MoriStatusBadge>
-          <MoriStatusBadge tone={getProductMemoryStatusTone(memory.status)}>
+          </BaseStatusBadge>
+          <BaseStatusBadge tone={getProductMemoryStatusTone(memory.status)}>
             {getProductMemoryStatusLabel(memory.status)}
-          </MoriStatusBadge>
-          <MoriStatusBadge tone={proposalKindTone(memory.kind)}>
+          </BaseStatusBadge>
+          <BaseStatusBadge tone={proposalKindTone(memory.kind)}>
             {describeProposalKind(memory.kind)}
-          </MoriStatusBadge>
+          </BaseStatusBadge>
         </div>
         <p className="accepted-memory-detail-meaning">
           {describeMemoryLifecycleMeaning(provenance.lifecycleGroup)}
@@ -159,14 +159,14 @@ export function AcceptedMemoryDetailDrawer({
           <ShieldCheck size={12} aria-hidden="true" />
           <span>
             이어가기 프롬프트{" "}
-            <MoriStatusBadge tone={provenance.resumeEligible ? "success" : "neutral"}>
+            <BaseStatusBadge tone={provenance.resumeEligible ? "success" : "neutral"}>
               {provenance.resumeEligible ? "포함" : "제외"}
-            </MoriStatusBadge>
+            </BaseStatusBadge>
           </span>
         </div>
         <div>
           <span>중요도</span>
-          <MoriStatusBadge
+          <BaseStatusBadge
             tone={
               memory.importance === "high"
                 ? "danger"
@@ -176,11 +176,11 @@ export function AcceptedMemoryDetailDrawer({
             }
           >
             {memory.importance}
-          </MoriStatusBadge>
+          </BaseStatusBadge>
         </div>
         <div>
           <span>신뢰도</span>
-          <MoriStatusBadge
+          <BaseStatusBadge
             tone={
               memory.confidence.label === "high"
                 ? "success"
@@ -190,7 +190,7 @@ export function AcceptedMemoryDetailDrawer({
             }
           >
             {memory.confidence.label}
-          </MoriStatusBadge>
+          </BaseStatusBadge>
         </div>
         <div>
           <FileText size={12} aria-hidden="true" />
@@ -290,7 +290,7 @@ export function AcceptedMemoryDetailDrawer({
           <h3>
             <Clock4 size={12} aria-hidden="true" /> 이 메모리의 변경 기록
           </h3>
-          <MoriStatusBadge tone="neutral">{provenance.auditEntries.length}건</MoriStatusBadge>
+          <BaseStatusBadge tone="neutral">{provenance.auditEntries.length}건</BaseStatusBadge>
         </header>
         {provenance.auditEntries.length === 0 ? (
           <p className="accepted-memory-detail-audit-empty">
@@ -302,12 +302,12 @@ export function AcceptedMemoryDetailDrawer({
             {provenance.auditEntries.slice(0, 8).map((entry) => (
               <li key={entry.action.id}>
                 <header>
-                  <MoriStatusBadge tone="neutral">
+                  <BaseStatusBadge tone="neutral">
                     {describeMemoryAuditAction(entry.action.actionType)}
-                  </MoriStatusBadge>
+                  </BaseStatusBadge>
                   <span>{formatShort(entry.action.timestamp)} UTC</span>
                   {entry.revertible ? (
-                    <MoriStatusBadge tone="info">되돌릴 수 있음</MoriStatusBadge>
+                    <BaseStatusBadge tone="info">되돌릴 수 있음</BaseStatusBadge>
                   ) : null}
                 </header>
                 {entry.action.note ? (

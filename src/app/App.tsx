@@ -1,12 +1,12 @@
 import { lazy, Suspense, useEffect } from "react";
 import { AppShell } from "../components/layout/AppShell";
 import { ErrorBoundary } from "../components/layout/ErrorBoundary";
-import { useMoriAppStore } from "./store";
-import { useMoriSessionStore } from "./sessionStore";
-import { useMoriRepositoryStore } from "./repositoryStore";
-import { useMoriProfileStore } from "./profileStore";
-import { useMoriThemeStore } from "./themeStore";
-import { MoriTooltipProvider } from "../components/ui/MoriTooltip";
+import { useAppStore } from "./store";
+import { useSessionStore } from "./sessionStore";
+import { useRepositoryStore } from "./repositoryStore";
+import { useProfileStore } from "./profileStore";
+import { useThemeStore } from "./themeStore";
+import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
 // HomeView is the landing surface — stay eager so first paint never waits
 // on a chunk fetch. Every other surface is loaded on demand; Vite emits a
 // separate chunk per dynamic import, shrinking the entry bundle.
@@ -47,15 +47,15 @@ const ProjectView = lazy(() =>
 );
 
 export default function App() {
-  const currentView = useMoriAppStore((state) => state.currentView);
-  const hydrate = useMoriSessionStore((state) => state.hydrate);
-  const initialized = useMoriSessionStore((state) => state.initialized);
-  const hydrateRepositories = useMoriRepositoryStore((state) => state.hydrate);
-  const repositoriesInitialized = useMoriRepositoryStore((state) => state.initialized);
-  const hydrateProfile = useMoriProfileStore((state) => state.hydrate);
-  const profileInitialized = useMoriProfileStore((state) => state.initialized);
-  const hydrateTheme = useMoriThemeStore((state) => state.hydrate);
-  const themeInitialized = useMoriThemeStore((state) => state.initialized);
+  const currentView = useAppStore((state) => state.currentView);
+  const hydrate = useSessionStore((state) => state.hydrate);
+  const initialized = useSessionStore((state) => state.initialized);
+  const hydrateRepositories = useRepositoryStore((state) => state.hydrate);
+  const repositoriesInitialized = useRepositoryStore((state) => state.initialized);
+  const hydrateProfile = useProfileStore((state) => state.hydrate);
+  const profileInitialized = useProfileStore((state) => state.initialized);
+  const hydrateTheme = useThemeStore((state) => state.hydrate);
+  const themeInitialized = useThemeStore((state) => state.initialized);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -79,7 +79,7 @@ export default function App() {
   // sheet instead of changing `currentView`, so the workspace stays on the
   // user's last real surface.
   return (
-    <MoriTooltipProvider>
+    <BaseTooltipProvider>
       <AppShell>
         <ErrorBoundary resetKey={currentView}>
           <Suspense fallback={<RouteFallback />}>
@@ -107,7 +107,7 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </AppShell>
-    </MoriTooltipProvider>
+    </BaseTooltipProvider>
   );
 }
 

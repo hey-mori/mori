@@ -1,6 +1,6 @@
 import type { StoredSessionImport } from "../storage/storageTypes";
 import type { SourceKind } from "../../domain/types";
-import type { MoriNotification } from "./notification";
+import type { CompanionNotification } from "./notification";
 
 /**
  * Build "가져오기 완료" notifications from the active session's recent imports.
@@ -11,7 +11,7 @@ import type { MoriNotification } from "./notification";
  * the session history, not "fresh" notifications.
  *
  * This is the second producer feeding `composeNotifications` from
- * `useMoriNotifications`; the Companion layer is the first. Future
+ * `useNotifications`; the Companion layer is the first. Future
  * producers (memory-stale detector, package-export pulse) plug in the same
  * way.
  */
@@ -47,7 +47,7 @@ export type BuildImportFinishedNotificationsInput = {
 
 export function buildImportFinishedNotifications(
   input: BuildImportFinishedNotificationsInput,
-): MoriNotification[] {
+): CompanionNotification[] {
   const now = input.now ?? Date.now();
   const recencyMs = input.recencyMs ?? DEFAULT_RECENCY_MS;
   const limit = input.limit ?? DEFAULT_LIMIT;
@@ -68,7 +68,7 @@ export function buildImportFinishedNotifications(
   return recent.map(toNotification);
 }
 
-function toNotification(entry: StoredSessionImport): MoriNotification {
+function toNotification(entry: StoredSessionImport): CompanionNotification {
   const kindLabel = IMPORT_LABEL[entry.source.kind] ?? "소스";
   const eventCount = entry.events.length;
   const title = eventCount > 0

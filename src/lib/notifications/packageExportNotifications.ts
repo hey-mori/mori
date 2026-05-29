@@ -1,6 +1,6 @@
 import type { StoredMoriPackageDraft } from "../storage/storageTypes";
 import { getPackageIsClientSafe } from "../mori-package";
-import type { MoriNotification } from "./notification";
+import type { CompanionNotification } from "./notification";
 
 /**
  * Build "방금 내보냄" notifications from recent .mori package drafts.
@@ -36,7 +36,7 @@ export type BuildPackageExportNotificationsInput = {
 
 export function buildPackageExportNotifications(
   input: BuildPackageExportNotificationsInput,
-): MoriNotification[] {
+): CompanionNotification[] {
   const now = input.now ?? Date.now();
   const recencyMs = input.recencyMs ?? DEFAULT_RECENCY_MS;
   const limit = input.limit ?? DEFAULT_LIMIT;
@@ -56,7 +56,7 @@ export function buildPackageExportNotifications(
   return recent.map(toNotification);
 }
 
-function toNotification(draft: StoredMoriPackageDraft): MoriNotification {
+function toNotification(draft: StoredMoriPackageDraft): CompanionNotification {
   const clientSafe = getPackageIsClientSafe(draft.package);
   const variant = clientSafe ? "클라이언트 공유용" : ".mori 패키지";
   return {

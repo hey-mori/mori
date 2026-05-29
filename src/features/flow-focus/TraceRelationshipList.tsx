@@ -1,5 +1,5 @@
 import { Badge } from "../../components/ui/Badge";
-import type { MoriMockSession, Relationship } from "../../domain/types";
+import type { MockSession, Relationship } from "../../domain/types";
 import { formatTime } from "../../lib/formatting/time";
 import {
   describeRelationshipConfidence,
@@ -16,7 +16,7 @@ export function TraceRelationshipList({
   title: string;
   emptyHint: string;
   relationships: Relationship[];
-  session: MoriMockSession;
+  session: MockSession;
   direction: "upstream" | "downstream";
 }) {
   if (!relationships.length) {
