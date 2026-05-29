@@ -32,7 +32,7 @@ export type PageShellProps = {
  * scroll boundary. The header (and an optional action bar) stay pinned; only
  * the content column scrolls, so the shared chrome never drifts as content
  * grows. When an `aside` is supplied the content area becomes a two-column
- * grid that reuses the `--mori-rail` width and the inspector's responsive
+ * grid that reuses the `--base-rail` width and the inspector's responsive
  * collapse, so right rails behave identically across screens.
  */
 export function PageShell({
@@ -67,7 +67,7 @@ export function PageShell({
           {actionBar}
         </div>
       ) : null}
-      <div className="page-shell-scroll mori-scroll">
+      <div className="page-shell-scroll base-scroll">
         <div className={`page-shell-content ${widthClass}`}>
           {hasAside ? (
             <div className="page-shell-split">

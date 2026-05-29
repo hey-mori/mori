@@ -51,7 +51,7 @@ export function ContributionHeatmap({ grid }: { grid: ContributionGrid }) {
       role="img"
       aria-label={`최근 ${grid.weekCount}주 작업 활동 · 활동 ${grid.activeDays}일 · ${describeTotal(metric, grid.total)}`}
     >
-      <div className="contrib-scroll mori-scroll">
+      <div className="contrib-scroll base-scroll">
         <div className="contrib-plot">
           <div className="contrib-months" aria-hidden="true">
             {grid.weeks.map((_, col) => (

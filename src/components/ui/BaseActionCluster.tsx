@@ -20,7 +20,7 @@ export function BaseActionCluster({
   return (
     <span
       className={[
-        "mori-action-cluster",
+        "base-action-cluster",
         `align-${align}`,
         wrap ? "can-wrap" : "no-wrap",
         className,

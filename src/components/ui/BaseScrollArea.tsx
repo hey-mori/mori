@@ -7,7 +7,7 @@ export type BaseScrollAreaProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 /**
- * Calm scroll area styled by `styles/theme.css` (.mori-scroll selector).
+ * Calm scroll area styled by `styles/theme.css` (.base-scroll selector).
  * The point is consistent subtle scrollbars across the whole product so we
  * never get the harsh native bars on one panel and the styled ones on
  * another.
@@ -20,7 +20,7 @@ export function BaseScrollArea({
 }: BaseScrollAreaProps) {
   return (
     <div
-      className={`mori-scroll mori-scroll-${direction} ${className}`.trim()}
+      className={`base-scroll base-scroll-${direction} ${className}`.trim()}
       {...rest}
     >
       {children}

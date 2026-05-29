@@ -29,9 +29,9 @@ export function BasePlannedAction({ feature, label, title, icon: Icon }: BasePla
     <BaseTooltip content={tooltip} kind="control">
       <button
         type="button"
-        className="mori-planned-action"
+        className="base-planned-action"
         disabled
-        data-mori-status={props ? props.status : "planned"}
+        data-base-status={props ? props.status : "planned"}
       >
         {Icon ? <Icon size={13} aria-hidden="true" /> : null}
         <span>{label ?? feature ?? "예정"}</span>

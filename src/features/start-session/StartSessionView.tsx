@@ -668,7 +668,7 @@ function BaseSelect({
   // over immediately and Escape returns focus to the trigger.
   useEffect(() => {
     if (!open) return;
-    const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>(".mori-select-option");
+    const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>(".base-select-option");
     if (!buttons?.length) return;
     const index = Math.max(0, options.findIndex((option) => option.value === value));
     buttons[index]?.focus();
@@ -692,7 +692,7 @@ function BaseSelect({
       close(true);
       return;
     }
-    const buttons = [...(listRef.current?.querySelectorAll<HTMLButtonElement>(".mori-select-option") ?? [])];
+    const buttons = [...(listRef.current?.querySelectorAll<HTMLButtonElement>(".base-select-option") ?? [])];
     const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -712,11 +712,11 @@ function BaseSelect({
   const current = options.find((option) => option.value === value);
 
   return (
-    <div className={`mori-select${open ? " is-open" : ""}`} ref={rootRef}>
+    <div className={`base-select${open ? " is-open" : ""}`} ref={rootRef}>
       <button
         ref={triggerRef}
         type="button"
-        className="mori-select-trigger"
+        className="base-select-trigger"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
@@ -726,14 +726,14 @@ function BaseSelect({
         <ChevronDown size={15} aria-hidden="true" />
       </button>
       {open ? (
-        <ul className="mori-select-menu" role="listbox" ref={listRef} onKeyDown={onMenuKeyDown}>
+        <ul className="base-select-menu" role="listbox" ref={listRef} onKeyDown={onMenuKeyDown}>
           {options.map((option) => {
             const selected = option.value === value;
             return (
               <li key={option.value} role="option" aria-selected={selected}>
                 <button
                   type="button"
-                  className={`mori-select-option${selected ? " is-selected" : ""}`}
+                  className={`base-select-option${selected ? " is-selected" : ""}`}
                   onClick={() => {
                     onChange(option.value);
                     close(true);

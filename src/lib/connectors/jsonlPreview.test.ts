@@ -36,7 +36,7 @@ const VALID_TERMINAL_EVENT = JSON.stringify({
   command: "npm test",
   summary: "npm test · exit 0",
   privacy: { captureMethod: "planned_extension", rawDataPolicy: "summary_only" },
-  provenance: { toolName: "mori-terminal", toolVersion: "0.0.0" },
+  provenance: { toolName: "base-terminal", toolVersion: "0.0.0" },
 });
 
 describe("buildConnectorJsonlPreview", () => {

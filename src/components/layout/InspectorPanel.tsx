@@ -52,7 +52,7 @@ export function InspectorPanel({
           ) : null}
         </header>
       ) : null}
-      <div className="inspector-panel-body mori-scroll">{children}</div>
+      <div className="inspector-panel-body base-scroll">{children}</div>
       {footer ? <footer className="inspector-panel-footer">{footer}</footer> : null}
     </aside>
   );

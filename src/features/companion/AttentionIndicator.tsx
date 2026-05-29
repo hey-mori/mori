@@ -238,7 +238,7 @@ export function AttentionIndicator({
                       </button>
                     </header>
 
-                    <div className="noti-drawer-body mori-scroll">
+                    <div className="noti-drawer-body base-scroll">
                       {notifications.length === 0 ? (
                         <p className="noti-drawer-empty">
                           아직 알림이 없습니다. 세션을 가져오거나 분석을 실행하면

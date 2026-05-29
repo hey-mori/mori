@@ -426,7 +426,7 @@ export function ConnectionsView() {
 
       {/* Tool inventory moved below sessions: it's reference material once
           the user is doing real work, so it folds away by default. */}
-      <details className="connections-tools-disclosure mori-disclosure">
+      <details className="connections-tools-disclosure base-disclosure">
         <summary>
           <span>감지된 AI 도구 {detectedCount}개</span>
           <small>
@@ -926,7 +926,7 @@ function ConnectionsBrowserHelp() {
  */
 function AdvancedBundleDisclosure() {
   return (
-    <details className="connections-advanced-disclosure mori-disclosure">
+    <details className="connections-advanced-disclosure base-disclosure">
       <summary>
         <span>고급 · 여러 소스를 직접 묶어 한 세션으로</span>
         <small>자동 감지된 대화가 없을 때 transcript · git · 터미널 · 메모를 손으로 붙여 가져오기</small>

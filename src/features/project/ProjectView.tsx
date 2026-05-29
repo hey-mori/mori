@@ -223,9 +223,9 @@ export function ProjectView() {
       <header
         className="project-hero"
         style={{
-          padding: "14px var(--mori-space-5)",
-          borderRadius: "var(--mori-radius-lg)",
-          background: "var(--mori-surface)",
+          padding: "14px var(--base-space-5)",
+          borderRadius: "var(--base-radius-lg)",
+          background: "var(--base-surface)",
           boxShadow: "none",
         }}
       >

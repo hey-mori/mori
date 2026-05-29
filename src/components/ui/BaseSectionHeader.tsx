@@ -12,7 +12,7 @@ export type BaseSectionHeaderProps = {
 /**
  * Compact section header row used across Home, Workspace, Memory, and
  * Settings. Flat, no bottom border — relies on surrounding spacing.
- * Replaces the scattered `home-section-head mori-section-row` pattern.
+ * Replaces the scattered `home-section-head base-section-row` pattern.
  */
 export function BaseSectionHeader({
   title,
@@ -21,12 +21,12 @@ export function BaseSectionHeader({
   className = "",
 }: BaseSectionHeaderProps) {
   return (
-    <header className={`mori-section-header ${className}`.trim()}>
-      <div className="mori-section-header-title">
-        {eyebrow ? <span className="mori-section-header-eyebrow">{eyebrow}</span> : null}
+    <header className={`base-section-header ${className}`.trim()}>
+      <div className="base-section-header-title">
+        {eyebrow ? <span className="base-section-header-eyebrow">{eyebrow}</span> : null}
         <h2>{title}</h2>
       </div>
-      {action ? <div className="mori-section-header-action">{action}</div> : null}
+      {action ? <div className="base-section-header-action">{action}</div> : null}
     </header>
   );
 }

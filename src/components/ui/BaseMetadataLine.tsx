@@ -25,7 +25,7 @@ export function BaseMetadataLine({
   return (
     <span
       className={[
-        "mori-metadata-line",
+        "base-metadata-line",
         truncate ? "is-truncated" : "",
         className,
       ]
@@ -33,7 +33,7 @@ export function BaseMetadataLine({
         .join(" ")}
     >
       {visible.map((item, index) => (
-        <span className="mori-metadata-item" key={index}>
+        <span className="base-metadata-item" key={index}>
           {item}
         </span>
       ))}

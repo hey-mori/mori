@@ -87,7 +87,7 @@ export function describeMemoryLifecycleGroup(group: MemoryLifecycleGroup): strin
 /**
  * Lifecycle-group tone, drawn from the shared product-state tone
  * vocabulary (`ProductStateTone`) so the Memory surface uses the same
- * scale as `BaseStatusBadge` and the `data-mori-tone` theme tokens.
+ * scale as `BaseStatusBadge` and the `data-base-tone` theme tokens.
  */
 export function memoryLifecycleGroupTone(
   group: MemoryLifecycleGroup,

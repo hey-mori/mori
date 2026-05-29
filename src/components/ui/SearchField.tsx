@@ -29,7 +29,7 @@ export function SearchField({
 
   return (
     <div
-      className={`mori-search-field ${className}`.trim()}
+      className={`base-search-field ${className}`.trim()}
       role="search"
       onMouseDown={(event) => {
         if ((event.target as HTMLElement).closest("button")) return;
@@ -49,7 +49,7 @@ export function SearchField({
       {value ? (
         <button
           type="button"
-          className="mori-search-clear"
+          className="base-search-clear"
           onClick={() => onChange("")}
           aria-label={clearLabel}
           {...baseTooltipProps(clearLabel, "control")}

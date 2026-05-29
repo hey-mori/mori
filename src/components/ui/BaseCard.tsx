@@ -21,7 +21,7 @@ export function BaseCard({
   className = "",
   ...rest
 }: BaseCardProps) {
-  const merged = `mori-card mori-card-${variant} ${className}`.trim();
+  const merged = `base-card base-card-${variant} ${className}`.trim();
   if (as === "article") return <article className={merged} {...rest}>{children}</article>;
   if (as === "div") return <div className={merged} {...rest}>{children}</div>;
   if (as === "aside") return <aside className={merged} {...rest}>{children}</aside>;

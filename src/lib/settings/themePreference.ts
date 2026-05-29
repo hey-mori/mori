@@ -114,11 +114,11 @@ export function saveThemePreference(
 
 /**
  * Reflect the selected theme on the document root. The
- * `[data-mori-theme="…"]` selectors in `theme.css` remap the Layer-2
+ * `[data-base-theme="…"]` selectors in `theme.css` remap the Layer-2
  * semantic tokens; setting the attribute on `<html>` cascades the
  * override to every surface.
  */
 export function applyThemeToDocument(theme: ThemeId): void {
   if (typeof document === "undefined") return;
-  document.documentElement.setAttribute("data-mori-theme", theme);
+  document.documentElement.setAttribute("data-base-theme", theme);
 }

@@ -10,7 +10,7 @@ export type ToolbarSearchProps = {
 
 /**
  * Shared search input for toolbars and action bars.
- * Wraps the icon + input in the standard `mori-search-field` label shell.
+ * Wraps the icon + input in the standard `base-search-field` label shell.
  */
 export function ToolbarSearch({
   value,

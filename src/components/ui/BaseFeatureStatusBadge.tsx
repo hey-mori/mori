@@ -19,7 +19,7 @@ export type BaseFeatureStatusBadgeProps = {
 /**
  * Status chip that surfaces a feature's `implemented / partial / planned /
  * unavailable` status using the canonical registry copy. Backed by the
- * `.mori-feature-status-chip` CSS rules in `styles/theme.css`.
+ * `.base-feature-status-chip` CSS rules in `styles/theme.css`.
  *
  * The tone is derived through the shared product-state model rather than a
  * badge-local map, matching `BaseStatusBadge`.
@@ -52,9 +52,9 @@ export function BaseFeatureStatusBadge({
   );
   return (
     <span
-      className="mori-feature-status-chip"
-      data-mori-tone={tone}
-      data-mori-status={resolvedStatus}
+      className="base-feature-status-chip"
+      data-base-tone={tone}
+      data-base-status={resolvedStatus}
       {...baseTooltipProps(title, "status")}
     >
       {resolvedLabel}

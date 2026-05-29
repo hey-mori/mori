@@ -13,7 +13,7 @@ export type BaseToolbarProps = HTMLAttributes<HTMLDivElement> & {
 export function BaseToolbar({ children, label, className = "", ...rest }: BaseToolbarProps) {
   return (
     <div
-      className={`mori-toolbar ${className}`.trim()}
+      className={`base-toolbar ${className}`.trim()}
       role="toolbar"
       aria-label={label}
       {...rest}
@@ -27,5 +27,5 @@ export function BaseToolbar({ children, label, className = "", ...rest }: BaseTo
  * Spacer that pushes neighbours apart inside a BaseToolbar.
  */
 export function BaseToolbarSpacer() {
-  return <span className="mori-toolbar-spacer" aria-hidden="true" />;
+  return <span className="base-toolbar-spacer" aria-hidden="true" />;
 }

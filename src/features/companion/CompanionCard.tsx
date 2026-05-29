@@ -65,7 +65,7 @@ export function CompanionCard({
               <li
                 key={signal.id}
                 className="companion-signal"
-                data-mori-tone={companionSeverityTone(signal.severity)}
+                data-base-tone={companionSeverityTone(signal.severity)}
               >
                 <span className="companion-signal-dot" aria-hidden="true" />
                 <div className="companion-signal-body">

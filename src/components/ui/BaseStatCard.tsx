@@ -21,10 +21,10 @@ export type BaseStatCardProps = {
  */
 export function BaseStatCard({ label, value, hint, tone = "default" }: BaseStatCardProps) {
   return (
-    <div className="mori-stat-card" data-mori-tone={tone === "default" ? undefined : tone}>
-      <span className="mori-stat-card-label">{label}</span>
-      <strong className="mori-stat-card-value">{value}</strong>
-      {hint ? <span className="mori-stat-card-hint">{hint}</span> : null}
+    <div className="base-stat-card" data-base-tone={tone === "default" ? undefined : tone}>
+      <span className="base-stat-card-label">{label}</span>
+      <strong className="base-stat-card-value">{value}</strong>
+      {hint ? <span className="base-stat-card-hint">{hint}</span> : null}
     </div>
   );
 }

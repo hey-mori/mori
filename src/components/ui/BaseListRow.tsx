@@ -39,7 +39,7 @@ export function BaseListRow({
 }: BaseListRowProps) {
   const interactive = Boolean(onClick);
   const classes = [
-    "mori-list-row",
+    "base-list-row",
     selected ? "is-selected" : "",
     interactive ? "is-interactive" : "",
     className,
@@ -68,15 +68,15 @@ export function BaseListRow({
       }
     >
       {leading ? (
-        <span className="mori-list-row-leading" aria-hidden="true">
+        <span className="base-list-row-leading" aria-hidden="true">
           {leading}
         </span>
       ) : null}
-      <span className="mori-list-row-body">
-        <span className="mori-list-row-title">{title}</span>
-        {meta ? <span className="mori-list-row-meta">{meta}</span> : null}
+      <span className="base-list-row-body">
+        <span className="base-list-row-title">{title}</span>
+        {meta ? <span className="base-list-row-meta">{meta}</span> : null}
       </span>
-      {trailing ? <span className="mori-list-row-trailing">{trailing}</span> : null}
+      {trailing ? <span className="base-list-row-trailing">{trailing}</span> : null}
     </div>
   );
 }

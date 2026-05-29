@@ -116,7 +116,7 @@ export function BaseOverflowMenu({
       <button
         ref={buttonRef}
         type="button"
-        className={`mori-overflow-menu-trigger ${className}`.trim()}
+        className={`base-overflow-menu-trigger ${className}`.trim()}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -234,14 +234,14 @@ function BaseMenuLayer({
   return createPortal(
     <div
       ref={ref}
-      className="mori-action-menu"
+      className="base-action-menu"
       role="menu"
       aria-label={label}
       style={{ left: `${placed.x}px`, top: `${placed.y}px` }}
     >
       {items.map((item) => {
         if (item.type === "separator") {
-          return <div key={item.id} className="mori-menu-separator" role="separator" />;
+          return <div key={item.id} className="base-menu-separator" role="separator" />;
         }
         const Icon = item.icon;
         return (
@@ -250,7 +250,7 @@ function BaseMenuLayer({
             type="button"
             role="menuitem"
             className={[
-              "mori-menu-item",
+              "base-menu-item",
               item.destructive ? "is-destructive" : "",
             ]
               .filter(Boolean)

@@ -341,7 +341,7 @@ export function ConversationViewer({
         </header>
 
         <div
-          className="conversation-viewer-body mori-scroll"
+          className="conversation-viewer-body base-scroll"
           ref={listRef}
           onScroll={handleScroll}
         >

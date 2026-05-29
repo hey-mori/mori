@@ -21,9 +21,9 @@ export type BaseMetricStripProps = {
 export function BaseMetricStrip({ items, className = "" }: BaseMetricStripProps) {
   if (items.length === 0) return null;
   return (
-    <dl className={`mori-metric-strip ${className}`.trim()}>
+    <dl className={`base-metric-strip ${className}`.trim()}>
       {items.map((item) => (
-        <div className="mori-metric-item" key={item.key}>
+        <div className="base-metric-item" key={item.key}>
           <dt>{item.label}</dt>
           <dd {...baseTooltipProps(item.hint, "metric")}>{item.value}</dd>
         </div>

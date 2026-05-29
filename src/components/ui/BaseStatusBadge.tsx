@@ -21,7 +21,7 @@ export type BaseStatusBadgeProps = {
 };
 
 /**
- * Calm, tone-driven status pill. Backed by the `.mori-status-badge`
+ * Calm, tone-driven status pill. Backed by the `.base-status-badge`
  * stylesheet rules in `styles/theme.css`. New code should prefer this over
  * the generic `Badge` so themes can rebind colors via one CSS variable.
  *
@@ -35,7 +35,7 @@ export function BaseStatusBadge({ children, tone, status }: BaseStatusBadgeProps
       ? getProductAvailabilityTone(productAvailabilityFromFeatureStatus(status))
       : "neutral");
   return (
-    <span className="mori-status-badge" data-mori-tone={resolvedTone}>
+    <span className="base-status-badge" data-base-tone={resolvedTone}>
       {children}
     </span>
   );

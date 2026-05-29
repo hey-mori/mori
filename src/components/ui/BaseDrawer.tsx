@@ -49,11 +49,11 @@ export function BaseDrawer({ open, onClose, ariaLabel, children }: BaseDrawerPro
   if (!open) return null;
 
   return (
-    <div className="mori-drawer">
-      <div className="mori-drawer-scrim" onClick={onClose} aria-hidden="true" />
+    <div className="base-drawer">
+      <div className="base-drawer-scrim" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
-        className="mori-drawer-panel mori-scroll"
+        className="base-drawer-panel base-scroll"
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}

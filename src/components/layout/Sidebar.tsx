@@ -339,7 +339,7 @@ export function Sidebar({
         </button>
       </div>
 
-      <div className="sidebar-list mori-scroll">
+      <div className="sidebar-list base-scroll">
         {allRows.length === 0 ? (
           <SidebarEmpty onImport={() => onNavigate("connections")} />
         ) : filtered.length === 0 ? (

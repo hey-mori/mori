@@ -64,8 +64,8 @@ export function BaseObjectRow({
 }: BaseObjectRowProps) {
   const interactive = Boolean(onClick) && !isStatic;
   const classes = [
-    "mori-object-row",
-    `mori-object-row--${density}`,
+    "base-object-row",
+    `base-object-row--${density}`,
     selected ? "is-selected" : "",
     interactive ? "is-interactive" : "",
     className,
@@ -105,27 +105,27 @@ export function BaseObjectRow({
       }
     >
       {leading ? (
-        <span className="mori-object-row-leading" aria-hidden="true">
+        <span className="base-object-row-leading" aria-hidden="true">
           {leading}
         </span>
       ) : null}
-      <span className="mori-object-row-body">
-        <span className="mori-object-row-title">{title}</span>
+      <span className="base-object-row-body">
+        <span className="base-object-row-title">{title}</span>
         {subtitle ? (
-          <span className="mori-object-row-subtitle">{subtitle}</span>
+          <span className="base-object-row-subtitle">{subtitle}</span>
         ) : null}
-        {meta ? <span className="mori-object-row-meta">{meta}</span> : null}
+        {meta ? <span className="base-object-row-meta">{meta}</span> : null}
       </span>
       {hasAside ? (
-        <span className="mori-object-row-aside">
+        <span className="base-object-row-aside">
           {timestamp ? (
-            <span className="mori-object-row-timestamp">{timestamp}</span>
+            <span className="base-object-row-timestamp">{timestamp}</span>
           ) : null}
           {status ? (
-            <span className="mori-object-row-status">{status}</span>
+            <span className="base-object-row-status">{status}</span>
           ) : null}
           {trailing ? (
-            <span className="mori-object-row-trailing">{trailing}</span>
+            <span className="base-object-row-trailing">{trailing}</span>
           ) : null}
         </span>
       ) : null}

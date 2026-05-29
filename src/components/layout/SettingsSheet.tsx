@@ -83,7 +83,7 @@ export function SettingsSheet() {
             activeId={activeTab}
             onSelect={(id) => setActiveTab(id as SettingsTab)}
           />
-          <main className="settings-sheet-content mori-scroll">
+          <main className="settings-sheet-content base-scroll">
             {activeTab === "profile" ? <AccountProfileView /> : <SettingsView />}
           </main>
         </div>

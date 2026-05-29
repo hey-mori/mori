@@ -195,7 +195,7 @@ export function CommandPalette({
           />
           <kbd className="command-palette-hint">ESC</kbd>
         </header>
-        <div className="command-palette-list mori-scroll" ref={listRef}>
+        <div className="command-palette-list base-scroll" ref={listRef}>
           {sections.length === 0 ? (
             <p className="command-palette-empty">일치하는 명령이 없습니다.</p>
           ) : (

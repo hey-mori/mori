@@ -31,7 +31,7 @@
 
 /**
  * One semantic tone vocabulary, shared with `BaseStatusBadge` and the
- * `data-mori-tone` rules in `styles/theme.css`. Every product state maps to
+ * `data-base-tone` rules in `styles/theme.css`. Every product state maps to
  * exactly one of these.
  */
 export type ProductStateTone =

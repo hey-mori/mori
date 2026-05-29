@@ -22,8 +22,8 @@ export function baseTooltipProps(
 ): HTMLAttributes<HTMLElement> {
   if (!content) return {};
   return {
-    "data-mori-tooltip": content,
-    "data-mori-tooltip-kind": kind,
+    "data-base-tooltip": content,
+    "data-base-tooltip-kind": kind,
   } as HTMLAttributes<HTMLElement>;
 }
 
@@ -43,7 +43,7 @@ export function BaseTooltip({
   const Element = as;
   return (
     <Element
-      className={`mori-tooltip-anchor ${className}`.trim()}
+      className={`base-tooltip-anchor ${className}`.trim()}
       {...baseTooltipProps(content, kind)}
     >
       {children}
@@ -71,7 +71,7 @@ export function BaseTooltipProvider({ children }: { children: ReactNode }) {
   const open = useCallback(
     (target: HTMLElement) => {
       normalizeNativeTitle(target);
-      const content = target.getAttribute("data-mori-tooltip")?.trim();
+      const content = target.getAttribute("data-base-tooltip")?.trim();
       if (!content) {
         close();
         return;
@@ -124,7 +124,7 @@ export function BaseTooltipProvider({ children }: { children: ReactNode }) {
     function tooltipTarget(node: EventTarget | null): HTMLElement | null {
       if (!(node instanceof Element)) return null;
       normalizeNativeTitles(node);
-      return node.closest<HTMLElement>("[data-mori-tooltip]");
+      return node.closest<HTMLElement>("[data-base-tooltip]");
     }
 
     function onPointerOver(event: PointerEvent) {
@@ -189,8 +189,8 @@ export function BaseTooltipProvider({ children }: { children: ReactNode }) {
         ? createPortal(
             <span
               id={tooltipId}
-              className={`mori-tooltip-bubble is-${tooltip.coords.placement}`}
-              data-mori-tooltip-kind={tooltip.kind}
+              className={`base-tooltip-bubble is-${tooltip.coords.placement}`}
+              data-base-tooltip-kind={tooltip.kind}
               role="tooltip"
               style={{ top: tooltip.coords.top, left: tooltip.coords.left }}
             >
@@ -213,15 +213,15 @@ function normalizeNativeTitle(el: HTMLElement) {
   if (title === null) return;
   const trimmed = title.trim();
   el.removeAttribute("title");
-  if (!trimmed || el.hasAttribute("data-mori-tooltip")) return;
-  el.setAttribute("data-mori-tooltip", trimmed);
-  if (!el.hasAttribute("data-mori-tooltip-kind")) {
-    el.setAttribute("data-mori-tooltip-kind", inferTooltipKind(el));
+  if (!trimmed || el.hasAttribute("data-base-tooltip")) return;
+  el.setAttribute("data-base-tooltip", trimmed);
+  if (!el.hasAttribute("data-base-tooltip-kind")) {
+    el.setAttribute("data-base-tooltip-kind", inferTooltipKind(el));
   }
 }
 
 function getTooltipKind(el: HTMLElement): BaseTooltipKind {
-  const kind = el.getAttribute("data-mori-tooltip-kind");
+  const kind = el.getAttribute("data-base-tooltip-kind");
   if (
     kind === "control" ||
     kind === "info" ||
@@ -238,8 +238,8 @@ function inferTooltipKind(el: HTMLElement): BaseTooltipKind {
   if (el.closest(".timeline-page, .timeline-shell, .timeline-panel, .event-inspector")) {
     return "timeline";
   }
-  if (el.closest(".mori-metric-strip, .overview-metrics")) return "metric";
-  if (el.closest(".pill, .mori-status-badge, .mori-feature-status-chip")) return "status";
+  if (el.closest(".base-metric-strip, .overview-metrics")) return "metric";
+  if (el.closest(".pill, .base-status-badge, .base-feature-status-chip")) return "status";
   if (el.matches("button, [role='button'], [role='menuitem']")) return "control";
   return "text";
 }

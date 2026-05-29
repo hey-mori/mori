@@ -159,7 +159,7 @@ export function describeCompanionBasis(basis: CompanionSignalBasis): string {
 /**
  * Semantic tone for a companion-signal severity, drawn from the shared
  * product-state companion vocabulary so the Companion surfaces use the
- * same tone scale as `BaseStatusBadge` and the `data-mori-tone` tokens.
+ * same tone scale as `BaseStatusBadge` and the `data-base-tone` tokens.
  */
 export function companionSeverityTone(
   severity: CompanionSignalSeverity,

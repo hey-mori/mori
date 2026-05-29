@@ -29,7 +29,7 @@ export function CompanionStrip({
     <button
       type="button"
       className="companion-strip"
-      data-mori-tone={companionSeverityTone(top.severity)}
+      data-base-tone={companionSeverityTone(top.severity)}
       onClick={() => onNavigate("companion")}
       title="알림 — 전체 신호 보기"
     >
