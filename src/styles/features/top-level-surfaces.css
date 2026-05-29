@@ -207,7 +207,7 @@
 
 .dashboard-bar {
   display: grid;
-  grid-template-columns: minmax(58px, 0.75fr) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(58px, 0.75fr) minmax(0, 1fr) 52px;
   gap: var(--base-space-2);
   align-items: center;
 }
@@ -239,10 +239,10 @@
 }
 
 .dashboard-bar-val {
-  display: inline-flex;
-  gap: 5px;
-  align-items: baseline;
-  justify-content: flex-end;
+  display: grid;
+  justify-items: end;
+  gap: 0;
+  line-height: 1.15;
 }
 
 .dashboard-bar-val strong {
@@ -452,7 +452,6 @@
 
 .dashboard-row-go {
   flex-shrink: 0;
-  margin-left: auto;
   color: var(--base-text-muted);
   opacity: 0;
 }
