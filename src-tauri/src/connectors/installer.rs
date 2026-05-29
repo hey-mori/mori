@@ -21,7 +21,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Map, Value};
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -200,6 +200,235 @@ fn count_jsonl_files(path: &Path) -> u32 {
     count
 }
 
+// ─── Claude hook install / uninstall ────────────────────────────────────────
+//
+// Writes are the only mutating part of this module. They are deliberately
+// conservative: existing settings keys and existing (non-Mori) hooks are
+// always preserved, a malformed settings.json is never overwritten, install is
+// idempotent (a second call is a no-op), and uninstall removes only entries
+// that reference the Mori hook. The TypeScript side computes the OS-aware
+// `command` string (python on Windows, the .sh launcher on POSIX); this code
+// only does the safe merge / removal.
+
+/// The four hook events Mori installs, with the optional PostToolUse matcher.
+const HOOK_EVENTS: &[(&str, Option<&str>)] = &[
+    ("SessionStart", None),
+    ("UserPromptSubmit", None),
+    ("PostToolUse", Some("Edit|Write|MultiEdit|NotebookEdit|Bash")),
+    ("SessionEnd", None),
+];
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HookInstallResult {
+    pub settings_path: String,
+    pub installed: bool,
+    pub already_present: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HookUninstallResult {
+    pub settings_path: String,
+    pub removed: usize,
+}
+
+#[tauri::command]
+pub fn install_claude_hook(
+    scope: String,
+    command: String,
+    project_path: Option<String>,
+) -> Result<HookInstallResult, String> {
+    let env = DetectEnv::from_real_env();
+    install_claude_hook_at(&env, &scope, &command, project_path.as_deref())
+}
+
+#[tauri::command]
+pub fn uninstall_claude_hook(
+    scope: String,
+    project_path: Option<String>,
+) -> Result<HookUninstallResult, String> {
+    let env = DetectEnv::from_real_env();
+    uninstall_claude_hook_at(&env, &scope, project_path.as_deref())
+}
+
+fn settings_path_for(
+    env: &DetectEnv,
+    scope: &str,
+    project_path: Option<&str>,
+) -> Result<PathBuf, String> {
+    match scope {
+        "global" => {
+            let home = env
+                .home
+                .as_ref()
+                .ok_or_else(|| "Home directory is not set.".to_string())?;
+            Ok(home.join(".claude").join("settings.json"))
+        }
+        "project" => {
+            let path = project_path
+                .filter(|p| !p.trim().is_empty())
+                .ok_or_else(|| "project scope requires a project path.".to_string())?;
+            Ok(PathBuf::from(path).join(".claude").join("settings.json"))
+        }
+        other => Err(format!("Unknown scope: {other}")),
+    }
+}
+
+/// Read settings.json into a JSON object. Missing / empty file is an empty
+/// object; an existing file that is not valid JSON, or not an object, is an
+/// error so we never overwrite the user's data.
+fn read_settings(path: &Path) -> Result<Value, String> {
+    if !path.exists() {
+        return Ok(Value::Object(Map::new()));
+    }
+    let text = fs::read_to_string(path)
+        .map_err(|error| format!("Failed to read {}: {error}", path.display()))?;
+    if text.trim().is_empty() {
+        return Ok(Value::Object(Map::new()));
+    }
+    let value: Value = serde_json::from_str(&text)
+        .map_err(|_| format!("{} is not valid JSON; refusing to overwrite.", path.display()))?;
+    if !value.is_object() {
+        return Err(format!(
+            "{} is not a JSON object; refusing to overwrite.",
+            path.display()
+        ));
+    }
+    Ok(value)
+}
+
+fn write_settings(path: &Path, value: &Value) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("Failed to create {}: {error}", parent.display()))?;
+    }
+    let text = serde_json::to_string_pretty(value)
+        .map_err(|error| format!("Failed to serialize settings: {error}"))?;
+    fs::write(path, format!("{text}\n"))
+        .map_err(|error| format!("Failed to write {}: {error}", path.display()))
+}
+
+fn hook_entry(command: &str, matcher: Option<&str>) -> Value {
+    let mut entry = Map::new();
+    if let Some(matcher) = matcher {
+        entry.insert("matcher".to_string(), json!(matcher));
+    }
+    entry.insert(
+        "hooks".to_string(),
+        json!([{ "type": "command", "command": command }]),
+    );
+    Value::Object(entry)
+}
+
+fn install_claude_hook_at(
+    env: &DetectEnv,
+    scope: &str,
+    command: &str,
+    project_path: Option<&str>,
+) -> Result<HookInstallResult, String> {
+    if command.trim().is_empty() {
+        return Err("hook command is required.".to_string());
+    }
+    let path = settings_path_for(env, scope, project_path)?;
+    let mut root = read_settings(&path)?;
+    let settings_path = path.to_string_lossy().to_string();
+
+    // Idempotent: a Mori hook already wired in means there is nothing to do.
+    let already = root
+        .as_object()
+        .and_then(|obj| obj.get("hooks"))
+        .map(json_mentions_mori_hook)
+        .unwrap_or(false);
+    if already {
+        return Ok(HookInstallResult {
+            settings_path,
+            installed: true,
+            already_present: true,
+        });
+    }
+
+    let obj = root
+        .as_object_mut()
+        .ok_or_else(|| "settings.json root is not an object.".to_string())?;
+    let hooks = obj
+        .entry("hooks".to_string())
+        .or_insert_with(|| Value::Object(Map::new()));
+    let hooks_obj = hooks
+        .as_object_mut()
+        .ok_or_else(|| "settings.json hooks is not an object.".to_string())?;
+    for (event, matcher) in HOOK_EVENTS {
+        let arr = hooks_obj
+            .entry((*event).to_string())
+            .or_insert_with(|| Value::Array(Vec::new()));
+        let list = arr
+            .as_array_mut()
+            .ok_or_else(|| format!("settings.json hooks.{event} is not an array."))?;
+        list.push(hook_entry(command, *matcher));
+    }
+
+    write_settings(&path, &root)?;
+    Ok(HookInstallResult {
+        settings_path,
+        installed: true,
+        already_present: false,
+    })
+}
+
+fn uninstall_claude_hook_at(
+    env: &DetectEnv,
+    scope: &str,
+    project_path: Option<&str>,
+) -> Result<HookUninstallResult, String> {
+    let path = settings_path_for(env, scope, project_path)?;
+    let settings_path = path.to_string_lossy().to_string();
+    if !path.exists() {
+        return Ok(HookUninstallResult {
+            settings_path,
+            removed: 0,
+        });
+    }
+    let mut root = read_settings(&path)?;
+    let mut removed = 0usize;
+
+    if let Some(hooks) = root
+        .as_object_mut()
+        .and_then(|obj| obj.get_mut("hooks"))
+        .and_then(|hooks| hooks.as_object_mut())
+    {
+        let events: Vec<String> = hooks.keys().cloned().collect();
+        for event in events {
+            if let Some(arr) = hooks.get_mut(&event).and_then(|value| value.as_array_mut()) {
+                let before = arr.len();
+                arr.retain(|entry| !json_mentions_mori_hook(entry));
+                removed += before - arr.len();
+                if arr.is_empty() {
+                    hooks.remove(&event);
+                }
+            }
+        }
+    }
+    // Drop an emptied hooks object so the file returns to its pre-install shape.
+    if let Some(obj) = root.as_object_mut() {
+        let empty = obj
+            .get("hooks")
+            .and_then(Value::as_object)
+            .map(Map::is_empty)
+            .unwrap_or(false);
+        if empty {
+            obj.remove("hooks");
+        }
+    }
+
+    if removed > 0 {
+        write_settings(&path, &root)?;
+    }
+    Ok(HookUninstallResult {
+        settings_path,
+        removed,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -323,5 +552,103 @@ mod tests {
         let ag = find(&results, "antigravity");
         assert!(ag.tool_installed);
         assert_eq!(ag.discovered_session_count, Some(1));
+    }
+
+    const CMD: &str = "python \"C:\\\\dev\\\\mori\\\\connectors\\\\claude-code\\\\mori-claude-hook.py\"";
+
+    fn global_env(temp: &TempDir) -> DetectEnv {
+        DetectEnv {
+            home: Some(temp.path().to_path_buf()),
+        }
+    }
+
+    fn settings_text(temp: &TempDir) -> String {
+        std::fs::read_to_string(temp.path().join(".claude").join("settings.json")).unwrap()
+    }
+
+    #[test]
+    fn install_creates_settings_with_all_four_events() {
+        let temp = TempDir::new().unwrap();
+        let result = install_claude_hook_at(&global_env(&temp), "global", CMD, None).unwrap();
+        assert!(result.installed);
+        assert!(!result.already_present);
+        let text = settings_text(&temp);
+        let value: Value = serde_json::from_str(&text).unwrap();
+        let hooks = value.get("hooks").and_then(Value::as_object).unwrap();
+        for event in ["SessionStart", "UserPromptSubmit", "PostToolUse", "SessionEnd"] {
+            assert!(hooks.contains_key(event), "missing {event}");
+        }
+        assert_eq!(text.matches("mori-claude-hook").count(), 4);
+    }
+
+    #[test]
+    fn install_preserves_existing_settings_and_hooks() {
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join(".claude");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("settings.json"),
+            "{\"permissions\":{\"defaultMode\":\"auto\"},\"hooks\":{\"SessionStart\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"other-tool.sh\"}]}]}}",
+        )
+        .unwrap();
+
+        install_claude_hook_at(&global_env(&temp), "global", CMD, None).unwrap();
+        let value: Value = serde_json::from_str(&settings_text(&temp)).unwrap();
+        // Unrelated key preserved.
+        assert_eq!(
+            value.pointer("/permissions/defaultMode").and_then(Value::as_str),
+            Some("auto")
+        );
+        // Existing non-Mori hook preserved alongside the new Mori entry.
+        let session_start = value.pointer("/hooks/SessionStart").and_then(Value::as_array).unwrap();
+        assert_eq!(session_start.len(), 2);
+        let blob = settings_text(&temp);
+        assert!(blob.contains("other-tool.sh"));
+        assert!(blob.contains("mori-claude-hook"));
+    }
+
+    #[test]
+    fn install_is_idempotent() {
+        let temp = TempDir::new().unwrap();
+        install_claude_hook_at(&global_env(&temp), "global", CMD, None).unwrap();
+        let first = settings_text(&temp);
+        let second_result = install_claude_hook_at(&global_env(&temp), "global", CMD, None).unwrap();
+        assert!(second_result.already_present);
+        let second = settings_text(&temp);
+        assert_eq!(first, second, "second install must not change the file");
+        assert_eq!(second.matches("mori-claude-hook").count(), 4, "no duplicate entries");
+    }
+
+    #[test]
+    fn install_refuses_to_overwrite_invalid_json() {
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join(".claude");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("settings.json"), "{ this is not json").unwrap();
+        let err = install_claude_hook_at(&global_env(&temp), "global", CMD, None).unwrap_err();
+        assert!(err.contains("not valid JSON"));
+        // The bad file is left untouched.
+        assert_eq!(settings_text(&temp), "{ this is not json");
+    }
+
+    #[test]
+    fn uninstall_removes_only_mori_hooks() {
+        let temp = TempDir::new().unwrap();
+        install_claude_hook_at(&global_env(&temp), "global", CMD, None).unwrap();
+        // Add a non-Mori hook that must survive uninstall.
+        let dir = temp.path().join(".claude");
+        let mut value: Value = serde_json::from_str(&settings_text(&temp)).unwrap();
+        value
+            .pointer_mut("/hooks/SessionStart")
+            .and_then(Value::as_array_mut)
+            .unwrap()
+            .push(json!({ "hooks": [{ "type": "command", "command": "keep-me.sh" }] }));
+        std::fs::write(dir.join("settings.json"), value.to_string()).unwrap();
+
+        let result = uninstall_claude_hook_at(&global_env(&temp), "global", None).unwrap();
+        assert_eq!(result.removed, 4);
+        let blob = settings_text(&temp);
+        assert!(blob.contains("keep-me.sh"), "non-Mori hook must survive");
+        assert!(!blob.contains("mori-claude-hook"), "Mori hooks must be gone");
     }
 }
