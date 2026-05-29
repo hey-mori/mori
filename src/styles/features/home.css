@@ -1,139 +1,475 @@
 /* ── Home ───────────────────────────────────────────────────────────────── */
 
-/* The session-centric landing dashboard. Calm by design: an activity heatmap
-   hero, a wide recent-session list, and a compact next-step rail. No fabricated
-   widgets — every cell and number traces to a stored session. */
-.home-dashboard {
+/* Home is the app's 간판: a premium brand hero over one focal "이어갈 작업"
+   continuation surface — the payoff of a work-memory app. It is NOT the
+   notification feed (the 알림 page), NOT the analytics dashboard (대시보드), and
+   NOT the raw session list (the sidebar). The activity heatmap (the "잔디") and
+   its lens toggle moved to 대시보드, but their styles still live here because
+   they are owned by the shared WorkActivityCard / MetricToggle components rather
+   than by either screen. */
+
+/* ── Landing column — hero + continuation, centred on a calm reading width ─── */
+.home-landing {
   display: grid;
   gap: var(--base-space-5);
+  width: 100%;
+  max-width: 940px;
+  margin-inline: auto;
+  padding-block: clamp(24px, 5vh, 56px);
 }
 
-.home-demo-note {
-  display: flex;
-  align-items: center;
-  gap: var(--base-space-3);
-  margin: 0;
-  padding: var(--base-space-2) var(--base-space-4);
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-md);
-  background: var(--base-surface-subtle);
-  color: var(--base-text-muted);
-  font-size: var(--base-font-size-sm);
-  line-height: var(--base-line-normal);
-}
-
-.home-demo-note svg {
-  flex-shrink: 0;
-  color: var(--base-accent);
-}
-
-.home-top-grid {
+/* Body — the continuation column (wider) beside the memory rail. Collapses to a
+   single column when the canvas is too narrow to hold both comfortably. */
+.home-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   gap: var(--base-space-5);
   align-items: start;
 }
 
-.home-main-stack {
+@media (max-width: 880px) {
+  .home-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Calm staggered entrance — each block rises + fades in turn. Gated on
+   prefers-reduced-motion so it never moves for users who opt out. */
+@media (prefers-reduced-motion: no-preference) {
+  .home-hero,
+  .home-continue-head,
+  .home-continue-card,
+  .home-continue-others > li,
+  .home-memory-head,
+  .home-memory-list,
+  .home-memory-empty {
+    animation: home-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .home-hero { animation-delay: 40ms; }
+  .home-continue-head { animation-delay: 120ms; }
+  .home-continue-card { animation-delay: 170ms; }
+  .home-continue-others > li:nth-child(1) { animation-delay: 240ms; }
+  .home-continue-others > li:nth-child(2) { animation-delay: 300ms; }
+  .home-continue-others > li:nth-child(3) { animation-delay: 360ms; }
+  .home-memory-head { animation-delay: 150ms; }
+  .home-memory-list,
+  .home-memory-empty { animation-delay: 210ms; }
+}
+
+@keyframes home-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hero — a lavender brand panel anchored by the Mori mark. Premium via
+   restraint: brand surface tint + a flat mark watermark + confident type. No
+   gradient (reserved for the app icon / sidebar) and no decorative sparkle. */
+.home-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-height: 116px;
+  padding: var(--base-space-5) var(--base-space-6);
+  border: 1px solid var(--base-accent-strong);
+  border-radius: var(--base-radius-xl);
+  background: var(--base-accent-soft);
+}
+
+.home-hero-content {
+  position: relative;
+  z-index: 1;
   display: grid;
-  gap: var(--base-space-5);
+  gap: 6px;
+}
+
+.home-hero-kicker {
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--base-accent);
+}
+
+.home-hero-title {
+  margin: 0;
+  font-size: var(--base-font-size-3xl);
+  font-weight: 720;
+  line-height: var(--base-line-tight);
+  letter-spacing: -0.01em;
+  color: var(--base-text);
+}
+
+/* The brand mark as a large, low-key watermark bleeding off the right edge — a
+   confident brand presence that fills the panel without extra ornament. */
+.home-hero-mark {
+  position: absolute;
+  right: -22px;
+  bottom: -34px;
+  color: var(--base-accent);
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+/* ── Continuation — the focal "이어갈 작업" card + lighter resumable rows ────── */
+.home-continue {
+  display: grid;
+  gap: var(--base-space-3);
+}
+
+.home-continue-head h2 {
+  margin: 0;
+  font-size: var(--base-font-size-md);
+  font-weight: 650;
+  color: var(--base-text);
+}
+
+.home-continue-card {
+  display: grid;
+  gap: var(--base-space-3);
+  padding: var(--base-space-5);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface);
+}
+
+.home-continue-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted-2);
   min-width: 0;
 }
 
-/* Current / most-recent session strip — a thin band on the surface, not a
-   stacked card. Mori captures runs, so the status word is calm ("최근 작업" /
-   "분석 완료"), never a live "녹화 중" ticker. A list so a future "multiple
-   tracked sessions" feature only grows the list, never rewrites the strip. */
-.home-current-list {
+.home-continue-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-continue-meta > span + span::before {
+  content: "·";
+  margin-right: var(--base-space-3);
+  color: var(--base-text-muted-2);
+}
+
+.home-continue-status {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.home-continue-status.tone-success { color: var(--green); }
+.home-continue-status.tone-info { color: var(--blue); }
+.home-continue-status.tone-neutral { color: var(--base-text-muted); }
+
+.home-continue-title {
+  margin: 0;
+  font-size: var(--base-font-size-lg);
+  font-weight: 680;
+  line-height: var(--base-line-tight);
+  color: var(--base-text);
+}
+
+/* Carry-forward list — the concrete work the next run inherits, by title. A
+   kind-coloured dot (할 일 green · 결정 blue · 이슈 amber, per the semantic colour
+   contract) leads each line; the muted kind label trails. Honest by absence:
+   only real pending items appear, capped, with "+N개 더" for the remainder. */
+.home-continue-carry {
+  display: grid;
+  gap: var(--base-space-2);
+  padding-top: var(--base-space-1);
+  border-top: 1px solid var(--base-border);
+}
+
+.home-continue-carry-label {
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  color: var(--base-text-muted-2);
+}
+
+.home-continue-carry-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--base-space-3);
+  gap: 1px;
 }
 
-.home-current {
-  display: flex;
-  align-items: center;
-  gap: var(--base-space-5);
-  padding: var(--base-space-4) var(--base-space-5);
-  border-radius: var(--base-radius-lg);
-  background: var(--base-surface-subtle);
-}
-
-.home-current-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border-radius: 8px;
-  background: var(--base-accent-soft);
-  color: var(--base-accent);
-}
-
-.home-current-body {
+.home-continue-carry-item {
   display: grid;
-  gap: 4px;
-  min-width: 0;
-  flex: 1;
-}
-
-.home-current-titlerow {
-  display: flex;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--base-space-3);
-  min-width: 0;
+  column-gap: var(--base-space-3);
+  padding: 4px 0;
 }
 
-.home-current-title {
-  font-size: var(--base-font-size-md);
-  font-weight: 650;
+.home-continue-carry-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--base-text-muted-2);
+}
+
+.home-continue-carry-item.kind-next .home-continue-carry-dot { background: var(--green); }
+.home-continue-carry-item.kind-decision .home-continue-carry-dot { background: var(--blue); }
+.home-continue-carry-item.kind-issue .home-continue-carry-dot { background: #d8923f; }
+
+.home-continue-carry-text {
+  min-width: 0;
+  font-size: var(--base-font-size-sm);
   color: var(--base-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.home-current-meta {
+.home-continue-carry-kind {
+  flex-shrink: 0;
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted-2);
+}
+
+.home-continue-carry-more {
+  padding-top: 2px;
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted-2);
+}
+
+.home-continue-empty {
+  margin: 0;
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text-muted);
+  line-height: var(--base-line-snug);
+}
+
+.home-continue-cta {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--base-space-1);
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--base-radius-md);
+  background: var(--base-accent);
+  color: #fff;
+  font-size: var(--base-font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+
+.home-continue-cta:hover {
+  filter: brightness(1.06);
+}
+
+/* Other resumable sessions — lighter, compact rows in one bordered group. */
+.home-continue-others {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface);
+  overflow: hidden;
+}
+
+.home-continue-others > li + li .home-continue-other {
+  border-top: 1px solid var(--base-border);
+}
+
+.home-continue-other {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--base-space-3);
+  width: 100%;
+  padding: var(--base-space-3) var(--base-space-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.home-continue-other:hover {
+  background: var(--base-surface-subtle);
+}
+
+.home-continue-other-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--base-text-muted-2);
+}
+
+.home-continue-other-title {
+  min-width: 0;
+  font-size: var(--base-font-size-sm);
+  font-weight: 550;
+  color: var(--base-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-continue-other-meta {
   display: flex;
   align-items: center;
   gap: var(--base-space-3);
   font-size: var(--base-font-size-xs);
-  color: var(--base-text-muted);
+  color: var(--base-text-muted-2);
   min-width: 0;
 }
 
-.home-current-project {
-  white-space: nowrap;
+.home-continue-other-meta > span {
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
+  white-space: nowrap;
 }
 
-.home-current-span,
-.home-current-events,
-.home-current-time {
-  flex-shrink: 0;
-  color: var(--base-text-muted-2);
-}
-
-.home-current-span::before,
-.home-current-events::before,
-.home-current-time::before {
+.home-continue-other-meta > span + span::before {
   content: "·";
   margin-right: var(--base-space-3);
   color: var(--base-text-muted-2);
 }
 
-.home-current .btn {
+.home-continue-other-arrow {
+  color: var(--base-text-muted-2);
   flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.home-continue-other:hover .home-continue-other-arrow {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--base-accent);
+}
+
+/* ── Memory rail — "최근 결정" beside the continuation column ───────────────── */
+.home-memory {
+  display: grid;
+  gap: var(--base-space-3);
+  align-content: start;
+}
+
+.home-memory-head h2 {
+  margin: 0;
+  font-size: var(--base-font-size-md);
+  font-weight: 650;
+  color: var(--base-text);
+}
+
+.home-memory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface);
+  overflow: hidden;
+}
+
+.home-memory-list > li + li .home-memory-row {
+  border-top: 1px solid var(--base-border);
+}
+
+.home-memory-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  column-gap: var(--base-space-3);
+  width: 100%;
+  padding: var(--base-space-3) var(--base-space-4);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.home-memory-row:hover {
+  background: var(--base-surface-subtle);
+}
+
+.home-memory-row-icon {
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue);
+}
+
+.home-memory-row-body {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.home-memory-row-title {
+  min-width: 0;
+  font-size: var(--base-font-size-sm);
+  font-weight: 550;
+  color: var(--base-text);
+  line-height: var(--base-line-snug);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-memory-row-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-3);
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted-2);
+  min-width: 0;
+}
+
+.home-memory-row-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-memory-row-meta > span + span::before {
+  content: "·";
+  margin-right: var(--base-space-3);
+  color: var(--base-text-muted-2);
+}
+
+.home-memory-row-pending {
+  flex-shrink: 0;
+  color: #b46100;
+  font-weight: 600;
+}
+
+.home-memory-empty {
+  margin: 0;
+  padding: var(--base-space-4) var(--base-space-5);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface);
+  font-size: var(--base-font-size-sm);
+  color: var(--base-text-muted);
+  line-height: var(--base-line-snug);
 }
 
 /* Activity hero — the signature "잔디". One calm card: a contribution heatmap
    over the recent window plus a compact real-data stat strip. Tighter padding
-   so the card doesn't read as mostly whitespace around a small heatmap. */
+   so the card doesn't read as mostly whitespace around a small heatmap. Shared
+   by the dashboard and the project page via WorkActivityCard. */
 .home-activity {
   display: grid;
   gap: var(--base-space-3);
@@ -346,216 +682,3 @@
   width: 10px;
   height: 10px;
 }
-
-/* Two-column body: recent sessions (wide main) + next actions (rail).
-   Narrow rail (280px) since 다음 단계 is usually a single nudge, not a
-   list — leaves more horizontal room for session row meta. */
-.home-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: var(--base-space-5);
-  align-items: start;
-}
-
-.home-section {
-  display: grid;
-  gap: var(--base-space-4);
-  min-width: 0;
-}
-
-/* Home lists use single-purpose rows (icon, text, one trailing arrow), so the
-   arrow should sit at the vertical centre. The shared row top-aligns for the
-   multi-line / timestamp layouts these rows do not use. */
-.home-session-list .base-object-row,
-.home-next-list .base-object-row {
-  align-items: center;
-}
-
-/* Keep the section action ("전체 프로젝트") on the title's centre line rather
-   than floating to the top of the header. */
-.home-section .base-section-head {
-  align-items: center;
-}
-
-.home-next {
-  align-content: start;
-}
-
-.home-next-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  list-style: none;
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-md);
-  background: var(--base-surface);
-}
-
-.home-next-list > li + li {
-  border-top: 1px solid var(--base-border);
-}
-
-.home-usage-rail {
-  display: grid;
-  gap: var(--base-space-3);
-  margin-top: var(--base-space-3);
-  padding-top: var(--base-space-4);
-  border-top: 1px solid var(--base-border);
-}
-
-.home-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--base-space-4);
-}
-
-.home-section-head h2 {
-  margin: 0;
-  font-size: var(--base-font-size-lg);
-  font-weight: 650;
-  color: var(--base-text);
-}
-
-.home-section-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 0;
-  background: transparent;
-  color: var(--base-text-muted);
-  font-size: var(--base-font-size-sm);
-}
-
-.home-section-link:hover {
-  color: var(--base-accent);
-}
-
-.home-session-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0;
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-md);
-  background: var(--base-surface);
-  overflow: hidden;
-}
-
-.home-session-list > li + li {
-  border-top: 1px solid var(--base-border);
-}
-
-
-/* Usage section — 2–3 mini-panels in ONE bordered container so they read as a
-   single honest section. Each panel states its own scope; an absent panel is
-   simply omitted (the whole band hides when nothing is derivable). No inner
-   borders on the panels — hierarchy comes from whitespace + the type tokens. */
-.home-usage-panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--base-space-5);
-  padding: var(--base-space-4) var(--base-space-5);
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-lg);
-  background: var(--base-surface);
-}
-
-.home-usage-rail .home-usage-panels {
-  grid-template-columns: 1fr;
-  gap: 0;
-  padding: 0;
-  border-radius: var(--base-radius-md);
-}
-
-.home-usage-rail .home-usage-panel {
-  padding: var(--base-space-3) var(--base-space-4);
-}
-
-.home-usage-rail .home-usage-panel + .home-usage-panel {
-  border-top: 1px solid var(--base-border);
-}
-
-.home-usage-panel {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  align-content: start;
-}
-
-.home-usage-label {
-  font-size: var(--base-font-size-xs);
-  font-weight: 600;
-  color: var(--base-text-muted);
-}
-
-.home-usage-value {
-  font-size: var(--base-font-size-2xl);
-  font-weight: 680;
-  line-height: var(--base-line-tight);
-  color: var(--base-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.home-usage-context {
-  font-size: var(--base-font-size-xs);
-  color: var(--base-text-muted-2);
-  line-height: var(--base-line-snug);
-}
-
-/* Per-session token column chart. Fixed-width columns (so the chart reads the
-   same regardless of how many sessions are plotted); height encodes the
-   session's token total against the busiest plotted session. Accent fill — the
-   AI-usage figure is the panel's identity metric — over a subtle empty track. */
-.home-usage-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 40px;
-  margin-top: 4px;
-}
-
-.home-usage-col {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  border-radius: 2px;
-  background: var(--base-surface-subtle);
-  box-shadow: inset 0 0 0 1px var(--base-border);
-}
-
-.home-usage-col-fill {
-  width: 100%;
-  min-height: 2px;
-  border-radius: 2px;
-  background: var(--base-accent);
-}
-
-/* Below ~960px the rail can no longer sit comfortably beside the list, so it
-   stacks under it. Keeps 768 overflow-free. */
-@media (max-width: 960px) {
-  .home-top-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .home-columns {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--base-space-8);
-  }
-
-  /* The strip's action drops below the body so the long title never collides
-     with the button at narrow widths. */
-  .home-current {
-    flex-wrap: wrap;
-  }
-
-  .home-current .btn {
-    margin-left: calc(32px + var(--base-space-5));
-  }
-}
-

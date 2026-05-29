@@ -1,24 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  ArrowRight,
-  CheckCircle2,
-  FileText,
-  FolderKanban,
-  Layers,
-  Lightbulb,
-  PlayCircle,
-  PlugZap,
-  Sparkles,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { Layers, PlugZap, Sparkles } from "lucide-react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
-import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
-import { BaseSectionHeader } from "../../components/ui/BaseSectionHeader";
-import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
-import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
-import { BaseSection } from "../../components/ui/BaseSection";
 import { Button } from "../../components/ui/Button";
+import { MoriLogo } from "../../components/brand/MoriLogo";
 import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
@@ -26,55 +11,48 @@ import {
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
-import type { ViewKey } from "../../domain/types";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
+import { mergeDemoSessionSummaries, isDemoSessionId } from "../../lib/demo/demoSessionFixtures";
+import { buildDemoSessionContent } from "../../lib/demo/demoSessionContent";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
   buildHomeOverview,
-  describeHomeSessionOrigin,
-  type HomeNextAction,
-  type HomeNextActionKind,
-  type HomeOverview,
-  type HomeRecentSession,
   type HomeSessionMetricSnapshot,
-  type HomeUsagePanel,
 } from "../../lib/home/homeOverview";
-import type { ContributionMetric } from "../../lib/home/contributionGrid";
-import { WorkActivityCard } from "../../components/activity/WorkActivityCard";
-import {
-  loadHomeMetricPreference,
-  saveHomeMetricPreference,
-} from "../../lib/home/homeMetricPreference";
-import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
+import { HomeContinuation, type HomeCarryEntry } from "./HomeContinuation";
+import { HomeDecisions, type HomeDecisionItem } from "./HomeDecisions";
+
+/** How many extra "이어갈 다른 작업" rows to surface beneath the focal card. */
+const HOME_OTHER_LIMIT = 3;
+
+/** How many concrete carry-forward items to list on the focal card. */
+const HOME_CARRY_LIMIT = 4;
+
+/** How many recent decisions to surface in the memory rail. */
+const HOME_DECISION_LIMIT = 6;
 
 /**
- * Home — the session-centric landing surface (P2).
+ * Home — the calm landing surface and the app's 간판.
  *
- * This is the dashboard that makes Mori legible the moment it opens. It
- * answers four questions calmly and at a glance:
- *   1. What have I worked on — recent captured sessions across projects.
- *   2. What needs my attention — framed as the value of acting, not a bare
- *      "검토 후보 N개": "결정을 확인하면 프로젝트 메모리에 남습니다".
- *   3. What's next — 가져오기 / 이어가기 / 리포트 as concrete next actions.
- *   4. How am I using AI — a calm strip of real metrics.
+ * Mori is a work-memory app: its payoff is *continuing* remembered work, so
+ * Home leads with exactly that. A premium brand hero (lavender panel + the Mori
+ * mark) states what Mori holds, then one focal "이어갈 작업" card resumes the most
+ * recent session with the context it carries forward (next actions, decisions to
+ * confirm, open issues), with a few lighter rows for the next resumable sessions.
  *
- * Honest by construction: every number and row comes from
- * `loadStoredSessionSummaries` plus the cheap per-session memory bodies — no
- * fabricated data, no fake widgets. When the user has only the bundled demo,
- * the surface shows an honest empty state that nudges toward 소스 (import).
- * The derivation lives in `lib/home/homeOverview.ts`; this view only gathers
- * the inputs and renders.
+ * It is deliberately NOT the notification feed (that is the 알림 page), NOT the
+ * analytics dashboard (대시보드), and NOT the raw session list (the sidebar).
+ * Everything is derived from already-stored sessions and their reviewed memory
+ * bodies — no fabricated data; a truly empty install shows the import nudge.
  */
 export function HomeView() {
-  // `navigate` routes session-surface keys (reports → session 리포트 tab, etc.)
-  // through the unified workspace; plain keys pass through unchanged.
-  const setCurrentView = useAppStore((state) => state.navigate);
+  const navigate = useAppStore((state) => state.navigate);
   const openSession = useAppStore((state) => state.openSession);
   const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
-  const mode = useSessionStore(selectSessionMode);
-  const view = useSessionStore(selectSessionView);
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
+  const mode = useSessionStore(selectSessionMode);
+  const view = useSessionStore(selectSessionView);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -83,408 +61,237 @@ export function HomeView() {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const activeSessionId = view.session.id;
 
-  // The 잔디 lens — persisted locally so the choice sticks across reloads.
-  const [metric, setMetric] = useState<ContributionMetric>(() => loadHomeMetricPreference().metric);
-
-  const selectMetric = (next: ContributionMetric) => {
-    setMetric(next);
-    saveHomeMetricPreference(next);
-  };
-
-  const overview = useMemo<HomeOverview>(() => {
+  const { overview, sessionCount, decisions } = useMemo(() => {
     let realSessions: ReturnType<typeof loadStoredSessionSummaries>;
     try {
       realSessions = loadStoredSessionSummaries();
     } catch {
-      // The landing must never break the shell — fail closed to empty.
       realSessions = [];
     }
-    const realSessionCount = realSessions.length;
-    // Fall through to the bundled demo summaries when the user has not
-    // captured any real work yet, so the dashboard reads as a working install
-    // (heatmap, recent rows, usage) instead of an honest-but-bare empty state.
     const storedSessions = mergeDemoSessionSummaries(realSessions);
-    const metrics = gatherSessionMetrics({
+    const sessionMetrics = gatherSessionMetrics(storedSessions, repository);
+    const built = buildHomeOverview({
       storedSessions,
-      repository,
-      activeSessionId,
-      activeEventCount: mode === "demo" ? 0 : view.events.length,
-      activeOpenIssues:
-        mode === "demo" ? 0 : view.issues.filter((issue) => issue.status === "open").length,
-      activeUnconfirmedDecisions:
-        mode === "demo" ? 0 : view.decisions.filter((decision) => !decision.confirmed).length,
-      activePendingNextActions:
-        mode === "demo" ? 0 : view.nextActions.filter((a) => !isNextActionCompleted(a)).length,
-    });
-
-    return buildHomeOverview({
-      storedSessions,
-      sessionMetrics: metrics,
-      realSessionCount,
+      sessionMetrics,
+      realSessionCount: realSessions.length,
       isDemo: mode === "demo",
-      // The loaded session is the strip's "active" candidate only when it is a
-      // real (non-demo) session — the demo never reads as live work.
-      activeSession:
-        mode === "demo" ? null : { sessionId: activeSessionId, eventCount: view.events.length },
-      metric,
+      metric: "sessions",
     });
-    // `view` / `mode` cover active-session changes; `initialized` re-reads
-    // after hydrate populates storage.
+    const recentDecisions = gatherRecentDecisions(storedSessions, repository);
+    return { overview: built, sessionCount: storedSessions.length, decisions: recentDecisions };
+    // `initialized` re-reads storage after hydrate; `mode` covers demo↔real.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repository, activeSessionId, mode, view, initialized, metric]);
+  }, [repository, mode, initialized]);
 
-  const openSessionFlow = (sessionId: string) => {
-    if (sessionId === activeSessionId || loadBrowserSession(sessionId)) {
-      // Recent sessions open the unified workspace on its 흐름 tab.
+  const focal = overview.currentSessions[0] ?? null;
+  const others = overview.recentSessions
+    .filter((session) => session.sessionId !== focal?.sessionId)
+    .slice(0, HOME_OTHER_LIMIT);
+
+  // The focal session's concrete carry-forward items (titles, not just counts),
+  // so the card shows what is genuinely waiting. Read once, keyed to the focal.
+  const { carry, carryMore } = useMemo(() => {
+    if (!focal) return { carry: [] as HomeCarryEntry[], carryMore: 0 };
+    return buildFocalCarry(focal.sessionId, repository);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focal?.sessionId, repository, initialized]);
+
+  const pulse = buildPulse(sessionCount);
+
+  function resume(sessionId: string, kind: "resume" | "open"): void {
+    const ready = sessionId === activeSessionId || loadBrowserSession(sessionId);
+    if (kind === "resume" && ready) {
+      navigate("reports");
+    } else {
       openSession("flow");
     }
-  };
-
-  const runNextAction = (action: HomeNextAction) => {
-    if (action.targetSessionId && action.targetSessionId !== activeSessionId) {
-      loadBrowserSession(action.targetSessionId);
-    }
-    // 검토(review) destinations now open the session 인사이트 tab; everything
-    // else (가져오기 / 이어가기 / 리포트) stays a top-level destination.
-    if (action.destination === "review") {
-      openSession("insights");
-    } else {
-      setCurrentView(action.destination as ViewKey);
-    }
-  };
+  }
 
   return (
     <PageShell className="home-page" maxWidth="wide">
-      {overview.isEmpty ? (
+      {overview.isEmpty || !focal ? (
         <EmptyState
           icon={Layers}
-          title="아직 작업 기억이 없습니다"
-          description="연결에서 작업 세션을 가져오면 최근 흐름과 다음 작업이 여기에 정리됩니다."
+          title="아직 기억된 작업이 없습니다"
+          description="연결에서 작업 세션을 가져오면, 무엇을 했고 다음에 무엇을 이어가면 좋을지 여기에 정리됩니다."
           actions={
             <>
-              <Button
-                variant="primary"
-                icon={PlugZap}
-                onClick={() => setCurrentView("connections")}
-              >
+              <Button variant="primary" icon={PlugZap} onClick={() => navigate("connections")}>
                 연결에서 작업 가져오기
               </Button>
-              <Button
-                variant="ghost"
-                icon={Sparkles}
-                onClick={() => openSession("flow")}
-              >
+              <Button variant="ghost" icon={Sparkles} onClick={() => openSession("flow")}>
                 체험용 데모 세션 살펴보기
               </Button>
             </>
           }
         />
       ) : (
-        <div className="home-dashboard">
-          {overview.onlyDemo ? (
-            <p className="home-demo-note">
-              <Sparkles size={14} aria-hidden="true" />
-              <span>데모 세션입니다. 가져오기로 실제 작업이 들어오면 자동으로 채워집니다.</span>
-            </p>
-          ) : null}
-
-          {/* The current-session strip used to sit here; with the new chrome
-              the primary sidebar already lists every session by recency, so
-              the duplicate strip on Home was redundant and pulled focus from
-              the activity heatmap. */}
-
-          <div className="home-top-grid">
-            <div className="home-main-stack">
-              <WorkActivityCard
-                grid={overview.contributionGrid}
-                controls={
-                  <MetricToggle
-                    metric={overview.resolvedMetric}
-                    availability={overview.metricAvailability}
-                    onSelect={selectMetric}
-                  />
-                }
-                sub={`최근 ${overview.contributionGrid.weekCount}주 · 활동 ${overview.contributionGrid.activeDays}일`}
-                stats={overview.metrics.map((m) => ({
-                  key: m.key,
-                  label: m.label,
-                  value: m.value,
-                  hint: m.hint,
-                }))}
-              />
-
-              <BaseSection
-                className="home-section home-recent"
-                ariaLabel="최근 세션"
-                title="최근 세션"
-                actions={
-                  <button
-                    type="button"
-                    className="home-section-link"
-                    onClick={() => setCurrentView("workspace")}
-                  >
-                    전체 프로젝트 <ArrowRight size={13} aria-hidden="true" />
-                  </button>
-                }
-              >
-                {overview.recentSessions.length > 0 ? (
-                  <ul className="home-session-list">
-                    {overview.recentSessions.map((session) => (
-                      <RecentSessionRow
-                        key={session.sessionId}
-                        session={session}
-                        onOpen={() => openSessionFlow(session.sessionId)}
-                      />
-                    ))}
-                  </ul>
-                ) : (
-                  <EmptyState
-                    compact
-                    icon={FolderKanban}
-                    title="표시할 최근 세션이 없습니다"
-                    description="연결에서 Claude 작업을 가져오면 여기에 쌓입니다."
-                  />
-                )}
-              </BaseSection>
+        <div className="home-landing">
+          <header className="home-hero">
+            <div className="home-hero-content">
+              <span className="home-hero-kicker">{pulse.kicker}</span>
+              <h1 className="home-hero-title">{pulse.headline}</h1>
             </div>
+            <MoriLogo variant="mark" tone="mono" size={156} className="home-hero-mark" />
+          </header>
 
-            <BaseSection
-              className="home-section home-next"
-              title="다음 단계"
-              ariaLabel="다음 단계"
-            >
-              <ul className="home-next-list">
-                {overview.nextActions.map((action) => (
-                  <NextActionRow
-                    key={action.key}
-                    action={action}
-                    onRun={() => runNextAction(action)}
-                  />
-                ))}
-              </ul>
-              {overview.usagePanels.length > 0 ? (
-                <div className="home-usage-rail" aria-label="사용 현황">
-                  <BaseSectionHeader title="사용 현황" />
-                  <div className="home-usage-panels">
-                    {overview.usagePanels.map((panel) => (
-                      <UsagePanel key={panel.key} panel={panel} />
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </BaseSection>
+          <div className="home-body">
+            <HomeContinuation
+              focal={focal}
+              carry={carry}
+              carryMore={carryMore}
+              others={others}
+              onResume={resume}
+            />
+            <HomeDecisions decisions={decisions} onOpen={(id) => resume(id, "open")} />
           </div>
-
         </div>
       )}
     </PageShell>
   );
 }
 
-// ─── Usage panel ──────────────────────────────────────────────────────────────
-
-function UsagePanel({ panel }: { panel: HomeUsagePanel }) {
-  return (
-    <div className="home-usage-panel">
-      <span className="home-usage-label">{panel.label}</span>
-      <span className="home-usage-value">{panel.value}</span>
-      {panel.columns && panel.columns.length > 0 ? (
-        <UsageColumnChart columns={panel.columns} />
-      ) : null}
-      <span className="home-usage-context">{panel.context}</span>
-    </div>
-  );
+/**
+ * A calm landing pulse: today's date + a one-line summary of how much work Mori
+ * is holding. Warm but never a name greeting, and never mentions demo state; the
+ * count is simply how many sessions the surface is showing.
+ */
+function buildPulse(
+  sessionCount: number,
+  now: number = Date.now(),
+): { kicker: string; headline: string } {
+  const date = new Date(now);
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+  const kicker = `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekday}요일`;
+  const headline = `${sessionCount}개의 작업을 기억하고 있어요`;
+  return { kicker, headline };
 }
 
 /**
- * Fixed-width per-session token column chart. Each column is the same width
- * regardless of how many sessions are plotted, so the chart reads consistently
- * in the narrow usage rail; height encodes the session's token total relative
- * to the busiest plotted session. Decorative — the per-column title carries the
- * session + token figure for hover, and the panel's value/context state the
- * honest totals for assistive tech.
+ * Build the focal card's concrete carry-forward list: the actual pending next
+ * actions, then decisions to confirm, then open issues — titles, not counts.
+ * Capped to `HOME_CARRY_LIMIT`, with the remainder reported as `carryMore`.
+ * Reads the demo fixture for demo sessions and the stored memory body otherwise.
  */
-function UsageColumnChart({
-  columns,
-}: {
-  columns: NonNullable<HomeUsagePanel["columns"]>;
-}) {
-  return (
-    <span className="home-usage-chart" aria-hidden="true">
-      {columns.map((column, index) => (
-        <span key={index} className="home-usage-col" title={column.label}>
-          <span
-            className="home-usage-col-fill"
-            style={{ height: `${Math.max(column.fraction * 100, 6)}%` }}
-          />
-        </span>
-      ))}
-    </span>
-  );
+function buildFocalCarry(
+  sessionId: string,
+  repository: ReturnType<typeof createBrowserDraftRepository>,
+): { carry: HomeCarryEntry[]; carryMore: number } {
+  const all: HomeCarryEntry[] = [];
+
+  const collect = (work: {
+    nextActions: { id: string; title: string }[];
+    decisions: { id: string; title: string }[];
+    issues: { id: string; title: string }[];
+  }) => {
+    for (const a of work.nextActions) all.push({ key: a.id, kind: "next", text: a.title });
+    for (const d of work.decisions) all.push({ key: d.id, kind: "decision", text: d.title });
+    for (const i of work.issues) all.push({ key: i.id, kind: "issue", text: i.title });
+  };
+
+  if (isDemoSessionId(sessionId)) {
+    const demo = buildDemoSessionContent(sessionId);
+    if (demo) {
+      collect({
+        nextActions: demo.nextActions.filter((a) => !isNextActionCompleted(a)),
+        decisions: demo.decisions.filter((d) => !d.confirmed),
+        issues: demo.issues.filter((i) => i.status === "open"),
+      });
+    }
+  } else {
+    let body;
+    try {
+      body = repository.loadSessionMemoryBody(sessionId);
+    } catch {
+      body = null;
+    }
+    if (body) {
+      collect({
+        nextActions: body.nextActions.filter((a) => !isNextActionCompleted(a)),
+        decisions: body.decisions.filter((d) => !d.confirmed),
+        issues: body.issues.filter((i) => i.status === "open"),
+      });
+    }
+  }
+
+  return { carry: all.slice(0, HOME_CARRY_LIMIT), carryMore: Math.max(all.length - HOME_CARRY_LIMIT, 0) };
 }
 
-// ─── Recent session row ───────────────────────────────────────────────────────
-
-function RecentSessionRow({
-  session,
-  onOpen,
-}: {
-  session: HomeRecentSession;
-  onOpen: () => void;
-}) {
-  const origin = describeHomeSessionOrigin(session.origin);
-  // The "가져온 세션" origin is the common, uninformative case — nearly every
-  // session is imported — so it is dropped as chrome. Only the distinctive
-  // origins (데모 / 수동) earn a chip.
-  const showOrigin = session.origin !== "imported";
-  return (
-    <li>
-      <BaseObjectRow
-        leading={<FolderKanban size={15} />}
-        title={session.title}
-        meta={
-          <BaseMetadataLine
-            items={[
-              showOrigin ? (
-                <BaseStatusBadge tone={origin.tone}>{origin.label}</BaseStatusBadge>
-              ) : null,
-              session.projectLabel ? (
-                <span>{session.projectLabel}</span>
-              ) : null,
-              session.spanLabel,
-              session.countSummary,
-            ]}
-          />
-        }
-        trailing={<ArrowRight size={13} aria-hidden="true" />}
-        onClick={onOpen}
-        ariaLabel={session.title}
-        density="compact"
-      />
-    </li>
-  );
+/** Trailing path segment of a source label, e.g. "C:/dev/ng-gw" → "ng-gw". */
+function shortProject(label: string | undefined): string | null {
+  const trimmed = label?.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split(/[\\/]/).filter(Boolean);
+  const tail = parts.length > 0 ? parts[parts.length - 1]! : trimmed;
+  return tail.length <= 20 ? tail : `${tail.slice(0, 19)}…`;
 }
-
-// ─── Next action card ─────────────────────────────────────────────────────────
-
-const NEXT_ACTION_ICON: Record<HomeNextActionKind, LucideIcon> = {
-  import: PlugZap,
-  resume: PlayCircle,
-  review_decisions: Lightbulb,
-  open_issues: CheckCircle2,
-  report: FileText,
-  explore_demo: Sparkles,
-  open_memory: Layers,
-};
-
-function NextActionRow({
-  action,
-  onRun,
-}: {
-  action: HomeNextAction;
-  onRun: () => void;
-}) {
-  const Icon = NEXT_ACTION_ICON[action.kind];
-  return (
-    <li className={`home-next-row tone-${action.tone}`}>
-      <BaseObjectRow
-        leading={<Icon size={15} />}
-        title={action.title}
-        trailing={<ArrowRight size={13} aria-hidden="true" />}
-        onClick={onRun}
-        ariaLabel={action.title}
-      />
-    </li>
-  );
-}
-
-// ─── 잔디 metric toggle ───────────────────────────────────────────────────────
-
-const METRIC_OPTIONS: { metric: ContributionMetric; label: string }[] = [
-  { metric: "sessions", label: "세션" },
-  { metric: "activity", label: "활동" },
-  { metric: "tokens", label: "토큰" },
-];
-
-// Why a lens is disabled — shown as the pill tooltip so the user understands
-// the gap rather than seeing an empty grid.
-const METRIC_UNAVAILABLE_HINT: Record<ContributionMetric, string> = {
-  sessions: "표시할 세션이 없습니다",
-  activity: "가져온 세션에 단계 정보가 없습니다",
-  tokens: "가져온 세션에 토큰 정보가 없습니다",
-};
-
-function MetricToggle({
-  metric,
-  availability,
-  onSelect,
-}: {
-  metric: ContributionMetric;
-  availability: HomeOverview["metricAvailability"];
-  onSelect: (next: ContributionMetric) => void;
-}) {
-  return (
-    <div className="home-metric-toggle" role="group" aria-label="잔디 지표 선택">
-      {METRIC_OPTIONS.map((option) => {
-        const available = availability[option.metric];
-        const active = option.metric === metric;
-        return (
-          <button
-            key={option.metric}
-            type="button"
-            className="home-metric-pill"
-            aria-pressed={active}
-            disabled={!available}
-            title={available ? undefined : METRIC_UNAVAILABLE_HINT[option.metric]}
-            onClick={() => onSelect(option.metric)}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Per-session metric gathering ─────────────────────────────────────────────
-
-type GatherInput = {
-  storedSessions: ReturnType<typeof loadStoredSessionSummaries>;
-  repository: ReturnType<typeof createBrowserDraftRepository>;
-  activeSessionId: string;
-  activeEventCount: number;
-  activeOpenIssues: number;
-  activeUnconfirmedDecisions: number;
-  activePendingNextActions: number;
-};
 
 /**
- * Gather the cheap per-session metric snapshots the overview needs. For the
- * *active* session we use the already-loaded view (it carries the real event
- * count). For every other session we read only the compact memory body —
- * issues / decisions / next-actions, never the full import event payload — so
- * the dashboard never pays a re-parse cost. Sessions without a memory body
- * simply contribute nothing.
+ * Gather the most recent decisions across every stored session — Mori's durable
+ * "what was decided" memory — for the right rail. Reads demo fixtures for demo
+ * sessions and stored memory bodies otherwise; sorts newest-first by the
+ * decision's own timestamp and caps to `HOME_DECISION_LIMIT`.
  */
-function gatherSessionMetrics({
-  storedSessions,
-  repository,
-  activeSessionId,
-  activeEventCount,
-  activeOpenIssues,
-  activeUnconfirmedDecisions,
-  activePendingNextActions,
-}: GatherInput): HomeSessionMetricSnapshot[] {
-  return storedSessions.map((session) => {
-    if (session.sessionId === activeSessionId && activeEventCount > 0) {
-      return {
+function gatherRecentDecisions(
+  storedSessions: ReturnType<typeof mergeDemoSessionSummaries>,
+  repository: ReturnType<typeof createBrowserDraftRepository>,
+): HomeDecisionItem[] {
+  const all: (HomeDecisionItem & { createdAt: string })[] = [];
+
+  for (const session of storedSessions) {
+    const projectLabel = shortProject(session.sourceLabel);
+    let decisions: { id: string; title: string; createdAt: string; confirmed?: boolean }[] = [];
+    if (isDemoSessionId(session.sessionId)) {
+      decisions = buildDemoSessionContent(session.sessionId)?.decisions ?? [];
+    } else {
+      try {
+        decisions = repository.loadSessionMemoryBody(session.sessionId)?.decisions ?? [];
+      } catch {
+        decisions = [];
+      }
+    }
+    for (const decision of decisions) {
+      all.push({
+        id: decision.id,
+        title: decision.title,
+        projectLabel,
         sessionId: session.sessionId,
-        events: activeEventCount,
-        hasReconstructedWork: true,
-        openIssues: activeOpenIssues,
-        unconfirmedDecisions: activeUnconfirmedDecisions,
-        pendingNextActions: activePendingNextActions,
-      };
+        pending: decision.confirmed !== true,
+        createdAt: decision.createdAt,
+      });
+    }
+  }
+
+  all.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  return all.slice(0, HOME_DECISION_LIMIT).map(({ createdAt: _createdAt, ...rest }) => rest);
+}
+
+/**
+ * Gather the cheap per-session carry-forward counts from each stored memory
+ * body (issues / decisions / next actions). Never re-parses raw imports; a
+ * session with no analysis simply contributes nothing.
+ */
+function gatherSessionMetrics(
+  storedSessions: ReturnType<typeof mergeDemoSessionSummaries>,
+  repository: ReturnType<typeof createBrowserDraftRepository>,
+): HomeSessionMetricSnapshot[] {
+  return storedSessions.map((session) => {
+    // Demo sessions carry their reviewed work in the bundled fixtures, not in
+    // localStorage, so read counts from there — otherwise a fresh (demo-only)
+    // install would show an empty continuation card despite "분석 완료".
+    if (isDemoSessionId(session.sessionId)) {
+      const demo = buildDemoSessionContent(session.sessionId);
+      if (demo) {
+        return {
+          sessionId: session.sessionId,
+          hasReconstructedWork: true,
+          issues: demo.issues.length,
+          openIssues: demo.issues.filter((issue) => issue.status === "open").length,
+          decisions: demo.decisions.length,
+          unconfirmedDecisions: demo.decisions.filter((d) => !d.confirmed).length,
+          pendingNextActions: demo.nextActions.filter((a) => !isNextActionCompleted(a)).length,
+        };
+      }
     }
 
     let body;
@@ -497,7 +304,6 @@ function gatherSessionMetrics({
 
     const openIssues = body.issues.filter((issue) => issue.status === "open").length;
     const unconfirmedDecisions = body.decisions.filter((d) => !d.confirmed).length;
-    const importantDecisions = body.decisions.filter((d) => d.importance === "high").length;
     const pendingNextActions = body.nextActions.filter((a) => !isNextActionCompleted(a)).length;
     const hasReconstructedWork =
       body.issues.length > 0 ||
@@ -512,7 +318,6 @@ function gatherSessionMetrics({
       openIssues,
       decisions: body.decisions.length,
       unconfirmedDecisions,
-      importantDecisions,
       pendingNextActions,
     };
   });
