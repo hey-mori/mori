@@ -53,36 +53,6 @@
   flex-wrap: wrap;
 }
 
-.account-reset {
-  font-size: 11.5px;
-  color: var(--muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.account-reset:hover {
-  text-decoration: underline;
-}
-
-.account-local-note {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  margin: 16px 0 0;
-  padding: 11px 12px;
-  font-size: 11px;
-  line-height: 1.55;
-  color: #4734bb;
-  background: var(--purple-50);
-  border-radius: 9px;
-}
-
-.account-local-note svg {
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
 /* Report builder panel */
 
 .report-builder-panel {
