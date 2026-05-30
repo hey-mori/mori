@@ -125,7 +125,7 @@ export function TimelineMiniMap({
   }
 
   return (
-    <div className={`mini-map${focusActive ? " is-focus-active" : ""}`} aria-label="Timeline overview">
+    <div className={`mini-map${focusActive ? " is-focus-active" : ""}`} aria-label="타임라인 개요">
       <div className="mini-map-axis" aria-hidden="true">
         {ticks.map((tick) => {
           const atStart = tick.xPercent <= 4;

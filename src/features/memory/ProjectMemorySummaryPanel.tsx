@@ -56,7 +56,7 @@ export function ProjectMemorySummaryPanel({
   }
 
   return (
-    <aside className="memory-summary" aria-label="Project memory summary">
+    <aside className="memory-summary" aria-label="프로젝트 메모리 요약">
       <header className="memory-summary-head">
         <Badge tone="purple">{summary.scopeLabel}</Badge>
         <h3>프로젝트 메모리 요약</h3>

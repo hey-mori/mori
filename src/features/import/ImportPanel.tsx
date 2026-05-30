@@ -945,7 +945,7 @@ function ConnectorJsonlInbox({
 }) {
   if (!available) {
     return (
-      <div className="connector-jsonl-inbox is-browser" role="region" aria-label="Connector inbox">
+      <div className="connector-jsonl-inbox is-browser" role="region" aria-label="Connector 수신함">
         <header>
           <strong>커넥터 Inbox</strong>
           <Badge tone="gray">데스크톱 전용</Badge>
@@ -959,7 +959,7 @@ function ConnectorJsonlInbox({
     );
   }
   return (
-    <div className="connector-jsonl-inbox" role="region" aria-label="Connector inbox">
+    <div className="connector-jsonl-inbox" role="region" aria-label="Connector 수신함">
       <header>
         <strong>커넥터 Inbox</strong>
         <span>
@@ -1030,7 +1030,7 @@ function ConnectorSourceImportSummaryBlock({
     <section
       className={`connector-jsonl-source-summary tone-${summary.status}`}
       role="status"
-      aria-label="Connector source import summary"
+      aria-label="Connector 자료 가져오기 요약"
     >
       <header className="connector-jsonl-source-summary-head">
         <Badge tone={tone}>{describeConnectorSourceImportBadge(summary)}</Badge>
@@ -1141,7 +1141,7 @@ function ConnectorJsonlPreviewCard({
   return (
     <section
       className={`connector-jsonl-preview tone-${preview.kind}`}
-      aria-label="Connector JSONL preview"
+      aria-label="Connector JSONL 미리보기"
     >
       <header>
         <strong>{preview.headline}</strong>

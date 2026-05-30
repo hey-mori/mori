@@ -85,7 +85,7 @@ export function EventInspector({
   }
 
   return (
-    <aside className="inspector" aria-label="Event inspector">
+    <aside className="inspector" aria-label="이벤트 인스펙터">
       <header className="inspector-header">
         {onClose ? (
           <button
@@ -309,7 +309,7 @@ export function EventInspector({
 function EventEvidenceChips({ sources }: { sources: SourceRef[] }) {
   if (sources.length === 0) return null;
   return (
-    <div className="timeline-evidence-chips" aria-label="Evidence sources">
+    <div className="timeline-evidence-chips" aria-label="자료 출처">
       {sources.slice(0, 4).map((source) => {
         const family = deriveSourceFamily(source.kind);
         const Icon = sourceFamilyIcons[family] ?? sourceFamilyIcons.unknown;

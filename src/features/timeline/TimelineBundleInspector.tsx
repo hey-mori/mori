@@ -39,7 +39,7 @@ export function TimelineBundleInspector({
   const decisions = session.decisions.filter((decision) => bundle.representedDecisionIds.includes(decision.id));
 
   return (
-    <aside className="inspector" aria-label="Bundle inspector">
+    <aside className="inspector" aria-label="번들 인스펙터">
       <header className="inspector-header">
         {onClose ? (
           <button
