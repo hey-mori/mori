@@ -45,6 +45,17 @@ export function PulseView({
         </InfoHint>
       </header>
 
+      <div className="lab-pulse-health" data-tone={pulse.health.tone} role="img"
+        aria-label={`근거 ${pulse.health.groundedPct}퍼센트, ${pulse.health.label}`}>
+        <div className="lab-pulse-health-row">
+          <span className="lab-pulse-health-label">{pulse.health.label}</span>
+          <span className="lab-pulse-health-pct">근거 {pulse.health.groundedPct}%</span>
+        </div>
+        <div className="lab-pulse-health-track">
+          <span className="lab-pulse-health-fill" style={{ width: `${pulse.health.groundedPct}%` }} />
+        </div>
+      </div>
+
       <div className="lab-pulse-stats">
         {pulse.stats.map((stat) => {
           const focusKind = STAT_FOCUS_KIND[stat.id];
@@ -63,6 +74,7 @@ export function PulseView({
                 type="button"
                 className="lab-pulse-stat is-focusable"
                 data-tone={stat.tone}
+                data-emphasis={stat.emphasis}
                 onClick={() => onFocusKind(focusKind)}
                 title={`${stat.label} ${stat.value}개를 서사에서 보기`}
               >
@@ -71,7 +83,7 @@ export function PulseView({
             );
           }
           return (
-            <div key={stat.id} className="lab-pulse-stat" data-tone={stat.tone}>
+            <div key={stat.id} className="lab-pulse-stat" data-tone={stat.tone} data-emphasis={stat.emphasis}>
               {inner}
             </div>
           );
@@ -85,7 +97,7 @@ export function PulseView({
         <Momentum pulse={pulse} />
       </div>
 
-      <Carry continuation={pulse.continuation} />
+      <Carry continuation={pulse.continuation} resumePrompt={pulse.resumePrompt} />
     </div>
   );
 }
@@ -244,8 +256,14 @@ function Momentum({ pulse }: { pulse: Pulse }) {
   );
 }
 
-function Carry({ continuation }: { continuation: Pulse["continuation"] }) {
-  const { openIssues, nextActions, resumePrompt } = continuation;
+function Carry({
+  continuation,
+  resumePrompt,
+}: {
+  continuation: Pulse["continuation"];
+  resumePrompt: string | null;
+}) {
+  const { openIssues, nextActions } = continuation;
   const isEmpty = openIssues.length === 0 && nextActions.length === 0 && !resumePrompt;
   if (isEmpty) return null;
   return (

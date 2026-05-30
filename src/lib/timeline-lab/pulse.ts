@@ -2,9 +2,10 @@ import type { MockSession, TrustLevel } from "../../domain/types";
 import type { ActivityTone } from "../timeline/activityModel";
 import { buildNarrative, type NarrativeContinuation } from "./narrative";
 import { buildPhases } from "./phases";
+import { buildResumePrompt } from "../report/resume-prompt";
 
 /**
- * Pulse reconstruction model — the session read as vital signs.
+ * Pulse reconstruction model · the session read as vital signs.
  *
  * Where 서사 / 국면 / 인과 each walk through the session's content, this model
  * steps back and answers "what kind of session was this?" in numbers: how many
@@ -33,6 +34,22 @@ export type PulseStat = {
   label: string;
   value: string;
   detail: string | null;
+  tone: ActivityTone;
+  /** "muted" when the items behind this number are mostly inferred, so the
+   *  figure does not overclaim. The precise value still shows; the emphasis
+   *  softens. */
+  emphasis: "full" | "muted";
+};
+
+/**
+ * One directional verdict: how much of the reconstruction rests on verified or
+ * observed evidence rather than inference. The at-a-glance "how grounded is
+ * this" before any row is read.
+ */
+export type PulseHealth = {
+  /** (verified + observed) / total events, 0–100. */
+  groundedPct: number;
+  label: string;
   tone: ActivityTone;
 };
 
@@ -76,9 +93,13 @@ export type Pulse = {
   trust: PulseTrustSlice[];
   momentum: PulseMomentumBucket[];
   issues: PulseIssueResolution;
+  health: PulseHealth;
   durationLabel: string | null;
   spanLabel: string | null;
   continuation: NarrativeContinuation;
+  /** Carry-forward prompt composed from the reviewed session, reusing the same
+   *  builder as Reports so the two never drift; null only when there is nothing. */
+  resumePrompt: string | null;
 };
 
 function clockLabel(ms: number): string {
@@ -186,6 +207,24 @@ export function buildPulse(view: MockSession): Pulse {
     };
   });
 
+  const grounded =
+    (trustCounts.get("verified") ?? 0) + (trustCounts.get("observed") ?? 0);
+  const groundedPct = eventTotal > 0 ? Math.round((grounded / eventTotal) * 100) : 0;
+  const health: PulseHealth =
+    groundedPct >= 70
+      ? { groundedPct, label: "근거 탄탄", tone: "green" }
+      : groundedPct >= 40
+        ? { groundedPct, label: "근거 보통", tone: "blue" }
+        : { groundedPct, label: "추론 비중 높음", tone: "purple" };
+
+  // A stat reads muted when most of the items behind it are inferred.
+  const majorityInferred = (items: { trustLevel: TrustLevel }[]): boolean =>
+    items.length > 0 &&
+    items.filter((item) => item.trustLevel === "inferred").length * 2 > items.length;
+  const momentsMuted = majorityInferred(view.events);
+  const decisionsMuted = majorityInferred(view.decisions);
+  const issuesMuted = majorityInferred(view.issues);
+
   const pivotalEventIds = new Set<string>();
   for (const moment of moments) {
     if (moment.decisions.length > 0 || moment.issues.length > 0) {
@@ -208,6 +247,7 @@ export function buildPulse(view: MockSession): Pulse {
       value: String(totalMoments),
       detail: phaseSlices.length > 0 ? `${phaseSlices.length}개 국면` : null,
       tone: "purple",
+      emphasis: momentsMuted ? "muted" : "full",
     },
     {
       id: "decisions",
@@ -215,6 +255,7 @@ export function buildPulse(view: MockSession): Pulse {
       value: String(decisionCount),
       detail: decisionCount > 0 ? "기록됨" : "없음",
       tone: "blue",
+      emphasis: decisionsMuted ? "muted" : "full",
     },
     {
       id: "issues",
@@ -222,15 +263,20 @@ export function buildPulse(view: MockSession): Pulse {
       value: String(totalIssues),
       detail: totalIssues > 0 ? `${resolved}건 해결` : "없음",
       tone: "red",
+      emphasis: issuesMuted ? "muted" : "full",
     },
     {
       id: "duration",
       label: "기간",
-      value: duration ?? "—",
+      value: duration ?? "·",
       detail: spanLabel,
       tone: "cyan",
+      emphasis: "full",
     },
   ];
+
+  const resumePrompt =
+    buildResumePrompt(view).trim() || view.summary?.resumePrompt?.trim() || null;
 
   return {
     totalMoments,
@@ -240,8 +286,10 @@ export function buildPulse(view: MockSession): Pulse {
     trust,
     momentum,
     issues,
+    health,
     durationLabel: duration,
     spanLabel,
     continuation,
+    resumePrompt,
   };
 }

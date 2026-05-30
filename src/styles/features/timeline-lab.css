@@ -941,6 +941,45 @@
   color: var(--text);
 }
 
+/* Health meter: one directional bar reading how grounded the session is. */
+.lab-pulse-health {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lab-pulse-health-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.lab-pulse-health-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lab-tone, var(--text));
+}
+
+.lab-pulse-health-pct {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-pulse-health-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--gray-50);
+  overflow: hidden;
+}
+
+.lab-pulse-health-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lab-tone, var(--muted-2));
+}
+
 .lab-pulse-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -956,6 +995,12 @@
   border: 1px solid var(--line);
   border-top: 2px solid var(--lab-tone, var(--muted-2));
   border-radius: var(--radius-md);
+}
+
+/* A mostly-inferred figure softens so it does not overclaim. */
+.lab-pulse-stat[data-emphasis="muted"] .lab-pulse-stat-value {
+  color: var(--muted);
+  font-weight: 560;
 }
 
 button.lab-pulse-stat {

@@ -24,7 +24,7 @@ describe("buildPulse headline stats", () => {
     const pulse = buildPulse(labSession({ events: [labEvent({ id: "e1", start: "bad" })] }));
     const duration = pulse.stats.find((s) => s.id === "duration");
     expect(pulse.durationLabel).toBeNull();
-    expect(duration?.value).toBe("—");
+    expect(duration?.value).toBe("·");
     expect(duration?.detail).toBeNull();
   });
 });
@@ -185,5 +185,79 @@ describe("buildPulse continuation", () => {
       }),
     );
     expect(pulse.continuation.openIssues.map((i) => i.id)).toEqual(["i1"]);
+  });
+});
+
+describe("buildPulse health meter", () => {
+  it("reads grounded when most events are verified or observed", () => {
+    const pulse = buildPulse(
+      labSession({
+        events: [
+          labEvent({ id: "e1", trustLevel: "verified" }),
+          labEvent({ id: "e2", trustLevel: "observed" }),
+          labEvent({ id: "e3", trustLevel: "verified" }),
+          labEvent({ id: "e4", trustLevel: "inferred" }),
+        ],
+      }),
+    );
+    expect(pulse.health.groundedPct).toBe(75);
+    expect(pulse.health.tone).toBe("green");
+  });
+
+  it("reads inference-heavy when most events are inferred", () => {
+    const pulse = buildPulse(
+      labSession({
+        events: [
+          labEvent({ id: "e1", trustLevel: "inferred" }),
+          labEvent({ id: "e2", trustLevel: "inferred" }),
+          labEvent({ id: "e3", trustLevel: "inferred" }),
+          labEvent({ id: "e4", trustLevel: "verified" }),
+        ],
+      }),
+    );
+    expect(pulse.health.groundedPct).toBe(25);
+    expect(pulse.health.tone).toBe("purple");
+  });
+});
+
+describe("buildPulse confidence-aware emphasis", () => {
+  it("mutes a stat when its items are mostly inferred", () => {
+    const pulse = buildPulse(
+      labSession({
+        decisions: [
+          labDecision({ id: "d1", trustLevel: "inferred" }),
+          labDecision({ id: "d2", trustLevel: "inferred" }),
+          labDecision({ id: "d3", trustLevel: "verified" }),
+        ],
+      }),
+    );
+    const decisions = pulse.stats.find((s) => s.id === "decisions");
+    expect(decisions?.emphasis).toBe("muted");
+  });
+
+  it("keeps a stat at full emphasis when its items are grounded", () => {
+    const pulse = buildPulse(
+      labSession({
+        decisions: [
+          labDecision({ id: "d1", trustLevel: "verified" }),
+          labDecision({ id: "d2", trustLevel: "observed" }),
+        ],
+      }),
+    );
+    const decisions = pulse.stats.find((s) => s.id === "decisions");
+    expect(decisions?.emphasis).toBe("full");
+    expect(pulse.stats.find((s) => s.id === "duration")?.emphasis).toBe("full");
+  });
+});
+
+describe("buildPulse carry-forward prompt", () => {
+  it("composes a resume prompt from the reviewed session", () => {
+    const pulse = buildPulse(
+      labSession({
+        decisions: [labDecision({ id: "d1", title: "토큰 버킷 채택" })],
+      }),
+    );
+    expect(typeof pulse.resumePrompt).toBe("string");
+    expect(pulse.resumePrompt).toContain("토큰 버킷 채택");
   });
 });
