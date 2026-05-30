@@ -116,6 +116,28 @@ describe("buildWorkBundlePreview", () => {
   });
 });
 
+describe("proposedNextStep guidance", () => {
+  it("suggests ready-to-apply for a clean spine-anchored bundle", () => {
+    const preview = buildWorkBundlePreview(fixtureItems());
+    expect(preview.proposedNextStep.reason).toBe("readyToApply");
+    expect(preview.proposedNextStep.message).toContain("적용");
+  });
+
+  it("escalates to spineMissing when the bundle is rib-only", () => {
+    const ribOnly = fixtureItems().filter(
+      (item) => item.origin !== "ai-transcript" && item.origin !== "connector-jsonl",
+    );
+    const preview = buildWorkBundlePreview(ribOnly);
+    expect(preview.proposedNextStep.reason).toBe("spineMissing");
+    expect(preview.proposedNextStep.message).toContain("AI 대화");
+  });
+
+  it("returns empty guidance for an empty bundle", () => {
+    const preview = buildWorkBundlePreview([]);
+    expect(preview.proposedNextStep.reason).toBe("empty");
+  });
+});
+
 describe("spine vs rib classification", () => {
   it("classifies AI-family sources as spine and the rest as ribs", () => {
     const items = fixtureItems();

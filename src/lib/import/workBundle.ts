@@ -94,6 +94,21 @@ export type WorkBundleFidelitySummary = {
   unknown: number;
 };
 
+/** Discrete reason for the next-step suggestion — UIs can branch on it. */
+export type WorkBundleNextStepReason =
+  | "empty"
+  | "noEvents"
+  | "spineMissing"
+  | "secretReview"
+  | "redactionPending"
+  | "readyToApply";
+
+export type WorkBundleNextStep = {
+  reason: WorkBundleNextStepReason;
+  /** Short Korean copy for the preview card / status line. */
+  message: string;
+};
+
 export type WorkBundlePreview = {
   isEmpty: boolean;
   sourceCount: number;
@@ -121,6 +136,12 @@ export type WorkBundlePreview = {
    * "1 AI conversation = 1 Mori session" entry point does.
    */
   spineMissing: boolean;
+  /**
+   * The single next step the preview would suggest right now — honest
+   * Korean guidance derived from the bundle state, not an AI claim. Falls
+   * back to a positive "ready to apply" hint when nothing else applies.
+   */
+  proposedNextStep: WorkBundleNextStep;
   /** Shared work area inferred from the files the sources touch (e.g. `src/sync`). */
   workContextHint: string | null;
   proposedTitle: string;
@@ -267,6 +288,10 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
       spineSourceCount: 0,
       ribSourceCount: 0,
       spineMissing: false,
+      proposedNextStep: {
+        reason: "empty",
+        message: "위에서 소스를 추가하거나 샘플 번들을 불러오세요.",
+      },
       workContextHint: null,
       proposedTitle: "작업 번들",
       detectedFiles: [],
@@ -367,6 +392,14 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
   const ribSourceCount = sources.length - spineSourceCount;
   const spineMissing = spineSourceCount === 0 && ribSourceCount > 0;
 
+  const proposedNextStep = deriveNextStep({
+    totalUniqueEvents,
+    spineMissing,
+    secretFlagged,
+    redactionPending,
+    sourceCount: items.length,
+  });
+
   return {
     isEmpty: false,
     sourceCount: items.length,
@@ -378,6 +411,7 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
     spineSourceCount,
     ribSourceCount,
     spineMissing,
+    proposedNextStep,
     workContextHint: deriveWorkContextHint(detectedFiles),
     proposedTitle: proposeWorkBundleTitle(items, familyLabels),
     detectedFiles,
@@ -392,5 +426,55 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
       eventCount: totalUniqueEvents,
       fileCount: detectedFiles.length,
     },
+  };
+}
+
+/**
+ * Pick the single next step the preview should suggest. Order is honest: a
+ * data problem (no events at all) is louder than a missing spine; a secret
+ * warning outranks "ready to apply"; redaction pending outranks ready; finally
+ * a positive ready hint when nothing else applies.
+ */
+function deriveNextStep(input: {
+  totalUniqueEvents: number;
+  spineMissing: boolean;
+  secretFlagged: boolean;
+  redactionPending: boolean;
+  sourceCount: number;
+}): WorkBundleNextStep {
+  if (input.sourceCount === 0) {
+    return {
+      reason: "empty",
+      message: "위에서 소스를 추가하거나 샘플 번들을 불러오세요.",
+    };
+  }
+  if (input.totalUniqueEvents === 0) {
+    return {
+      reason: "noEvents",
+      message: "유효한 이벤트가 없습니다. 소스를 확인하고 다시 추가하세요.",
+    };
+  }
+  if (input.secretFlagged) {
+    return {
+      reason: "secretReview",
+      message: "민감정보가 의심됩니다. 적용 전에 해당 소스를 검토하세요.",
+    };
+  }
+  if (input.spineMissing) {
+    return {
+      reason: "spineMissing",
+      message:
+        "AI 대화 (Claude · Codex · OpenCode · ChatGPT)를 함께 추가하면 작업의 중심을 만들 수 있습니다. 지금 그대로 적용해도 증거 단위로 보관됩니다.",
+    };
+  }
+  if (input.redactionPending) {
+    return {
+      reason: "redactionPending",
+      message: "레닥션 대기 중인 소스가 있습니다. 가능하면 적용 전에 정리하세요.",
+    };
+  }
+  return {
+    reason: "readyToApply",
+    message: "검토가 끝났으면 타임라인에 적용할 수 있습니다.",
   };
 }
