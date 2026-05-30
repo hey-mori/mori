@@ -141,6 +141,7 @@ export function WorkbenchView() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [nameModal, setNameModal] = useState<
     { mode: "save" } | { mode: "rename"; id: string; current: string } | null
@@ -533,6 +534,20 @@ export function WorkbenchView() {
     if (maximizedId && !panelIds.includes(maximizedId)) setMaximizedId(null);
   }, [panelIds, maximizedId]);
 
+  // Placed sessions (deduped, in layout order) for the side-by-side compare view.
+  const placedSessions = useMemo(() => {
+    const seen = new Set<string>();
+    const rows: { panelId: string; meta: SessionMeta }[] = [];
+    for (const panel of columns.flatMap((col) => col.panels)) {
+      if (seen.has(panel.sessionId)) continue;
+      const panelMeta = sessionsById.get(panel.sessionId);
+      if (!panelMeta) continue;
+      seen.add(panel.sessionId);
+      rows.push({ panelId: panel.id, meta: panelMeta });
+    }
+    return rows;
+  }, [columns, sessionsById]);
+
   // Focus a panel and bring it into view (used by the attention strip and the
   // keyboard shortcuts / command palette).
   const focusPanel = (panelId: string) => {
@@ -565,6 +580,7 @@ export function WorkbenchView() {
     Boolean(nameModal) ||
     paletteOpen ||
     helpOpen ||
+    compareOpen ||
     Boolean(maximizedId);
   useEffect(() => {
     if (!hasLayout) return;
@@ -650,6 +666,9 @@ export function WorkbenchView() {
     { id: "density", group: "보기", label: density === "dense" ? "편안한 밀도로" : "조밀한 밀도로", run: () => setDensity((value) => (value === "dense" ? "comfortable" : "dense")) },
     { id: "inspector", group: "보기", label: inspectorOpen ? "인스펙터 닫기" : "인스펙터 열기", run: () => setInspectorOpen((open) => !open) },
     { id: "help", group: "보기", label: "단축키 도움말", run: () => setHelpOpen(true) },
+    ...(placedSessions.length >= 2
+      ? [{ id: "compare", group: "보기", label: "세션 비교", run: () => setCompareOpen(true) }]
+      : []),
     ...(focusedPanelId
       ? [{ id: "maximize", group: "보기", label: "현재 패널 최대화", run: () => setMaximizedId(focusedPanelId) }]
       : []),
@@ -947,6 +966,17 @@ export function WorkbenchView() {
       ) : null}
 
       {helpOpen ? <WorkbenchHelp onClose={() => setHelpOpen(false)} /> : null}
+
+      {compareOpen ? (
+        <WorkbenchCompare
+          rows={placedSessions}
+          onJump={(panelId) => {
+            setCompareOpen(false);
+            focusPanel(panelId);
+          }}
+          onClose={() => setCompareOpen(false)}
+        />
+      ) : null}
 
       {maximizedPanel && maximizedMeta ? (
         <WorkbenchFocus
@@ -1285,6 +1315,77 @@ function WorkbenchFocus({
           ) : (
             <TimelineFlow events={matched} meta={meta} highlight={needle} />
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Compare (side-by-side) overlay ───────────────────────────────────────────
+
+/**
+ * Compare every placed session at a glance: a compact matrix of the honest
+ * signals (events, open issues, unconfirmed decisions, pending next actions).
+ * No fabricated diff, just the real counts side by side. Click a row to jump to
+ * that panel. This is the "review several sessions together" view at the numbers
+ * level, complementing the per-panel inspector.
+ */
+function WorkbenchCompare({
+  rows,
+  onJump,
+  onClose,
+}: {
+  rows: { panelId: string; meta: SessionMeta }[];
+  onJump: (panelId: string) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="workbench-modal-layer" role="presentation">
+      <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
+      <div className="workbench-modal is-compare" role="dialog" aria-modal="true" aria-label="세션 비교">
+        <header className="workbench-modal-head">
+          <strong className="workbench-help-title">세션 비교</strong>
+          <span className="workbench-search-count">{rows.length}</span>
+          <Button size="sm" variant="ghost" icon={X} title="닫기" onClick={onClose} />
+        </header>
+        <div className="workbench-compare-wrap base-scroll">
+          <table className="workbench-compare">
+            <thead>
+              <tr>
+                <th scope="col">세션</th>
+                <th scope="col">항목</th>
+                <th scope="col">이슈</th>
+                <th scope="col">결정</th>
+                <th scope="col">다음</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(({ panelId, meta }) => (
+                <tr key={panelId} onClick={() => onJump(panelId)} title={`${meta.title} 패널로 이동`}>
+                  <th scope="row">
+                    <span className="workbench-compare-title">{meta.title}</span>
+                    <small>{meta.sourceLabel ? shortProjectLabel(meta.sourceLabel) : "수동 세션"}</small>
+                  </th>
+                  <td>{meta.eventCount}</td>
+                  <td className={meta.openIssues > 0 ? "tone-issue" : ""}>{meta.openIssues}</td>
+                  <td className={meta.unconfirmedDecisions > 0 ? "tone-decision" : ""}>
+                    {meta.unconfirmedDecisions}
+                  </td>
+                  <td className={meta.pendingNextActions > 0 ? "tone-next" : ""}>
+                    {meta.pendingNextActions}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
