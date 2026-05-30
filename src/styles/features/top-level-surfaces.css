@@ -1338,6 +1338,35 @@
   font-weight: 650;
 }
 
+.workbench-command-cmd {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 4px;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color 100ms ease,
+    border-color 100ms ease,
+    background 100ms ease;
+}
+
+.workbench-command-cmd:hover {
+  border-color: var(--base-accent);
+  color: var(--base-accent);
+  background: var(--base-accent-soft);
+}
+
+.workbench-command-cmd kbd {
+  font: inherit;
+}
+
 /* Toolbar: quick-layout + density segmented controls. */
 .workbench-seg {
   display: inline-flex;
@@ -1627,6 +1656,89 @@
 
 .workbench-attention-tag.tone-decision {
   color: var(--base-status-info);
+}
+
+/* Toolbar: unified search + presets cluster. */
+.workbench-toolbar-start {
+  display: flex;
+  gap: var(--base-space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.workbench-toolbar-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 220px;
+  max-width: 32vw;
+  padding: 5px 10px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  color: var(--base-text-muted);
+}
+
+.workbench-toolbar-search:focus-within {
+  border-color: var(--base-border-focus);
+  box-shadow: 0 0 0 3px var(--base-accent-soft);
+}
+
+.workbench-toolbar-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--base-text);
+  font: inherit;
+  font-size: var(--base-font-size-sm);
+}
+
+.workbench-toolbar-search input:focus {
+  outline: none;
+}
+
+.workbench-toolbar-search button {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--base-text-muted);
+  cursor: pointer;
+}
+
+.workbench-toolbar-search button:hover {
+  color: var(--base-accent);
+}
+
+/* Per-panel search match count in the header. */
+.workbench-panel-match {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--base-accent-soft);
+  color: var(--base-accent);
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Panels with no match during a search recede but stay in place. */
+.workbench-panel.is-nomatch {
+  opacity: 0.45;
+}
+
+.workbench-panel.is-nomatch:hover,
+.workbench-panel.is-nomatch.is-focused {
+  opacity: 1;
+}
+
+/* Search match highlight inside panel bodies. */
+.workbench-mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: var(--base-status-warning-soft);
+  color: inherit;
 }
 
 /* ─── Modals: session picker + preset manager ───────────────────────────────── */

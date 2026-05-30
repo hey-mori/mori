@@ -1,18 +1,25 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUpRight,
   Bookmark,
+  ChevronDown,
+  ChevronUp,
+  Columns2,
+  Command,
   FolderKanban,
+  Gauge,
+  Grid2x2,
   GripVertical,
   LayoutGrid,
   ListTree,
   MessageSquare,
+  PanelRight,
   Pencil,
   Plus,
   RefreshCcw,
   Search,
-  Send,
   SlidersHorizontal,
+  Square,
   Trash2,
   X,
 } from "lucide-react";
@@ -28,12 +35,21 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
-import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
+import {
+  isDemoSessionId,
+  mergeDemoSessionSummaries,
+} from "../../lib/demo/demoSessionFixtures";
+import { buildDemoSessionContent } from "../../lib/demo/demoSessionContent";
+import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import {
   buildSessionsBrowserModel,
   type SessionRow,
 } from "../../lib/workspace/sessionsBrowser";
+import {
+  buildWorkbenchAttention,
+  type WorkbenchAttentionItem,
+} from "../../lib/workbench/attention";
 
 /**
  * Workbench — the session-axis surface of the four-tab IA.
@@ -52,7 +68,16 @@ import {
 type PanelMode = "conversation" | "timeline";
 type EdgeSide = "top" | "right" | "bottom" | "left";
 
-type Panel = { id: string; sessionId: string; mode: PanelMode; flex: number };
+type Panel = {
+  id: string;
+  sessionId: string;
+  mode: PanelMode;
+  flex: number;
+  collapsed?: boolean;
+};
+type Density = "comfortable" | "dense";
+type QuickLayout = "single" | "columns" | "grid";
+type CommandAction = { id: string; group: string; label: string; run: () => void };
 type Column = { id: string; flex: number; panels: Panel[] };
 type WorkbenchPreset = { id: string; name: string; columns: Column[] };
 
@@ -104,6 +129,8 @@ export function WorkbenchView() {
   const activeSessionId = draft?.session.id ?? view.session.id;
 
   const [columns, setColumns] = useState<Column[]>(() => loadLayout());
+  const [density, setDensity] = useState<Density>(() => loadDensity());
+  const [inspectorOpen, setInspectorOpen] = useState<boolean>(() => loadInspectorOpen());
   const [launcher, setLauncher] = useState<LauncherTarget | null>(null);
   const [focusedPanelId, setFocusedPanelId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -111,6 +138,8 @@ export function WorkbenchView() {
   const [dropHint, setDropHint] = useState<string | null>(null);
   const [presets, setPresets] = useState<WorkbenchPreset[]>(() => loadPresets());
   const [manageOpen, setManageOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const [nameModal, setNameModal] = useState<
     { mode: "save" } | { mode: "rename"; id: string; current: string } | null
   >(null);
@@ -126,6 +155,12 @@ export function WorkbenchView() {
   useEffect(() => {
     savePresets(presets);
   }, [presets]);
+  useEffect(() => {
+    saveDensity(density);
+  }, [density]);
+  useEffect(() => {
+    saveInspectorOpen(inspectorOpen);
+  }, [inspectorOpen]);
 
   const storedSessions = useMemo(
     () => mergeDemoSessionSummaries(repository.listStoredSessions()),
@@ -267,6 +302,42 @@ export function WorkbenchView() {
         .map((col) => ({ ...col, panels: col.panels.filter((panel) => panel.id !== panelId) }))
         .filter((col) => col.panels.length > 0),
     );
+  };
+
+  const toggleCollapse = (panelId: string) => {
+    setColumns((cols) =>
+      cols.map((col) => ({
+        ...col,
+        panels: col.panels.map((panel) =>
+          panel.id === panelId ? { ...panel, collapsed: !panel.collapsed } : panel,
+        ),
+      })),
+    );
+  };
+
+  // Reflow every placed panel into a canonical arrangement (single column, two
+  // columns, or a balanced grid), resetting sizes. A fast way to reset a layout
+  // that drifted during free composition.
+  const applyQuickLayout = (shape: QuickLayout) => {
+    setColumns((cols) => {
+      const panels = cols
+        .flatMap((col) => col.panels)
+        .map((panel) => ({ ...panel, flex: 1, collapsed: false }));
+      if (panels.length === 0) return cols;
+      const colCount =
+        shape === "single"
+          ? 1
+          : shape === "columns"
+            ? Math.min(panels.length, 3)
+            : Math.min(Math.ceil(Math.sqrt(panels.length)), 3);
+      const next: Column[] = Array.from({ length: colCount }, () => ({
+        id: nextId("col"),
+        flex: 1,
+        panels: [] as Panel[],
+      }));
+      panels.forEach((panel, index) => next[index % colCount]!.panels.push(panel));
+      return next.filter((col) => col.panels.length > 0);
+    });
   };
 
   const endDrag = () => {
@@ -440,6 +511,125 @@ export function WorkbenchView() {
   const hotClass = (key: string) => (dropHint === key ? " is-hot" : "");
   const readDragId = (event: React.DragEvent) => event.dataTransfer.getData("text/plain");
 
+  // Cross-session attention: only placed panels with a real open issue or
+  // unconfirmed decision, deduped by session and most urgent first.
+  const attention = useMemo(
+    () => buildWorkbenchAttention(columns.flatMap((col) => col.panels), sessionsById),
+    [columns, sessionsById],
+  );
+
+  // Focus a panel and bring it into view (used by the attention strip and the
+  // keyboard shortcuts / command palette).
+  const focusPanel = (panelId: string) => {
+    setFocusedPanelId(panelId);
+    if (typeof document === "undefined") return;
+    requestAnimationFrame(() => {
+      canvasRef.current
+        ?.querySelector(`[data-wb-panel="${panelId}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    });
+  };
+  const focusRelative = (dir: 1 | -1) => {
+    if (panelIds.length === 0) return;
+    const current = focusedPanelId ? panelIds.indexOf(focusedPanelId) : -1;
+    const next = (current + dir + panelIds.length) % panelIds.length;
+    focusPanel(panelIds[next]!);
+  };
+  const cycleFocusedMode = () => {
+    if (!focusedPanelId) return;
+    const panel = columns.flatMap((col) => col.panels).find((entry) => entry.id === focusedPanelId);
+    if (panel) setPanelMode(focusedPanelId, panel.mode === "conversation" ? "timeline" : "conversation");
+  };
+
+  // Keyboard control: ⌘K / Ctrl+K opens the command palette anywhere; the
+  // single-key shortcuts act on the focused panel and are suppressed while a
+  // field or modal has focus so they never hijack typing.
+  const modalOpen = Boolean(launcher) || manageOpen || Boolean(nameModal) || paletteOpen;
+  useEffect(() => {
+    if (!hasLayout) return;
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+        return;
+      }
+      if (modalOpen || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+      if (event.key >= "1" && event.key <= "9") {
+        const index = Number(event.key) - 1;
+        if (index < panelIds.length) {
+          event.preventDefault();
+          focusPanel(panelIds[index]!);
+        }
+        return;
+      }
+      switch (event.key) {
+        case "[":
+          event.preventDefault();
+          focusRelative(-1);
+          break;
+        case "]":
+          event.preventDefault();
+          focusRelative(1);
+          break;
+        case "m":
+          event.preventDefault();
+          cycleFocusedMode();
+          break;
+        case "c":
+          if (focusedPanelId) {
+            event.preventDefault();
+            toggleCollapse(focusedPanelId);
+          }
+          break;
+        case "x":
+          if (focusedPanelId) {
+            event.preventDefault();
+            removePanel(focusedPanelId);
+          }
+          break;
+        case "i":
+          event.preventDefault();
+          setInspectorOpen((open) => !open);
+          break;
+        case "/":
+          event.preventDefault();
+          (document.querySelector("[data-wb-search]") as HTMLInputElement | null)?.focus();
+          break;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLayout, modalOpen, panelIds, focusedPanelId, columns]);
+
+  // Actions offered by the ⌘K palette. Built fresh each render; the palette
+  // only mounts while open, so this stays cheap.
+  const paletteActions: CommandAction[] = [
+    { id: "add", group: "배치", label: "세션 추가", run: () => setLauncher({ kind: "newColumn", index: columns.length }) },
+    { id: "save", group: "배치", label: "배치 저장", run: () => setNameModal({ mode: "save" }) },
+    { id: "clear", group: "배치", label: "비우기", run: () => setColumns([]) },
+    { id: "layout-single", group: "레이아웃", label: "한 열로 정렬", run: () => applyQuickLayout("single") },
+    { id: "layout-columns", group: "레이아웃", label: "여러 열로 정렬", run: () => applyQuickLayout("columns") },
+    { id: "layout-grid", group: "레이아웃", label: "격자로 정렬", run: () => applyQuickLayout("grid") },
+    { id: "density", group: "보기", label: density === "dense" ? "편안한 밀도로" : "조밀한 밀도로", run: () => setDensity((value) => (value === "dense" ? "comfortable" : "dense")) },
+    { id: "inspector", group: "보기", label: inspectorOpen ? "인스펙터 닫기" : "인스펙터 열기", run: () => setInspectorOpen((open) => !open) },
+    ...columns
+      .flatMap((col) => col.panels)
+      .map((panel) => {
+        const panelMeta = sessionsById.get(panel.sessionId);
+        return {
+          id: `jump-${panel.id}`,
+          group: "패널 이동",
+          label: panelMeta?.title ?? "세션",
+          run: () => focusPanel(panel.id),
+        };
+      }),
+  ];
+
   return (
     <PageShell
       className="workbench-page"
@@ -448,13 +638,40 @@ export function WorkbenchView() {
         <ActionBar
           label="워크벤치 컨트롤"
           start={
-            presets.length > 0 ? (
-              <PresetBar presets={presets} onApply={applyPreset} onManage={() => setManageOpen(true)} />
+            hasLayout ? (
+              <div className="workbench-toolbar-start">
+                <WorkbenchSearch value={search} onChange={setSearch} />
+                {presets.length > 0 ? (
+                  <PresetBar presets={presets} onApply={applyPreset} onManage={() => setManageOpen(true)} />
+                ) : null}
+              </div>
             ) : undefined
           }
           end={
             hasLayout ? (
               <>
+                <span className="workbench-seg" role="group" aria-label="빠른 배치">
+                  <ModeButton icon={Square} label="한 열로" active={false} onClick={() => applyQuickLayout("single")} />
+                  <ModeButton icon={Columns2} label="여러 열로" active={false} onClick={() => applyQuickLayout("columns")} />
+                  <ModeButton icon={Grid2x2} label="격자로" active={false} onClick={() => applyQuickLayout("grid")} />
+                </span>
+                <span className="workbench-seg" role="group" aria-label="밀도">
+                  <ModeButton
+                    icon={Gauge}
+                    label={density === "dense" ? "편안한 밀도로" : "조밀한 밀도로"}
+                    active={density === "dense"}
+                    onClick={() => setDensity((value) => (value === "dense" ? "comfortable" : "dense"))}
+                  />
+                </span>
+                <span className="workbench-seg" role="group" aria-label="인스펙터">
+                  <ModeButton
+                    icon={PanelRight}
+                    label={inspectorOpen ? "인스펙터 닫기" : "인스펙터 열기"}
+                    active={inspectorOpen}
+                    onClick={() => setInspectorOpen((open) => !open)}
+                  />
+                </span>
+                <span className="workbench-seg-divider" aria-hidden="true" />
                 <Button variant="ghost" icon={Trash2} onClick={() => setColumns([])}>
                   비우기
                 </Button>
@@ -543,7 +760,11 @@ export function WorkbenchView() {
           </div>
         </div>
       ) : (
-        <div className="workbench-surface">
+        <div className={`workbench-surface${density === "dense" ? " is-dense" : ""}`}>
+          {attention.length > 0 ? (
+            <WorkbenchAttention items={attention} onJump={focusPanel} />
+          ) : null}
+          <div className="workbench-main">
           <div
             className={`workbench-canvas${dragPanelId ? " is-dragging" : ""}`}
             ref={canvasRef}
@@ -585,6 +806,7 @@ export function WorkbenchView() {
                           meta={meta}
                           repository={repository}
                           flex={panel.flex}
+                          search={search}
                           focused={panel.id === focusedPanelId}
                           dragging={panel.id === dragPanelId}
                           onFocus={() => setFocusedPanelId(panel.id)}
@@ -597,6 +819,7 @@ export function WorkbenchView() {
                           onReplace={() => setLauncher({ kind: "replace", panelId: panel.id })}
                           onClose={() => removePanel(panel.id)}
                           onOpen={() => meta && openInWorkspace(meta.sessionId, meta.isActive)}
+                          onToggleCollapse={() => toggleCollapse(panel.id)}
                         />
                         {panelIndex < col.panels.length - 1 ? (
                           <div
@@ -657,9 +880,34 @@ export function WorkbenchView() {
               <Plus size={15} aria-hidden="true" />
             </div>
           </div>
-          <CommandBar meta={focusedMeta} value={focusedDraft} onChange={setFocusedDraft} />
+            {inspectorOpen && focusedMeta ? (
+              <WorkbenchInspector
+                meta={focusedMeta}
+                repository={repository}
+                onOpen={() => openInWorkspace(focusedMeta.sessionId, focusedMeta.isActive)}
+                onClose={() => setInspectorOpen(false)}
+              />
+            ) : null}
+          </div>
+          <CommandBar
+            meta={focusedMeta}
+            value={focusedDraft}
+            onChange={setFocusedDraft}
+            onCommand={() => setPaletteOpen(true)}
+          />
         </div>
       )}
+
+      {paletteOpen ? (
+        <CommandPalette
+          actions={paletteActions}
+          onRun={(action) => {
+            setPaletteOpen(false);
+            action.run();
+          }}
+          onClose={() => setPaletteOpen(false)}
+        />
+      ) : null}
 
       {launcher ? (
         <SessionPicker sessions={sessions} onPick={placeSession} onClose={() => setLauncher(null)} />
@@ -854,7 +1102,46 @@ function SessionPicker({
   );
 }
 
-// ─── Preset bar + manager ─────────────────────────────────────────────────────
+// ─── Toolbar search + presets ─────────────────────────────────────────────────
+
+/**
+ * Unified search across every open panel. Typing filters each panel's events to
+ * the matches and dims panels with none, so several sessions can be scanned for
+ * the same term at once. Press "/" to focus it, Esc to clear.
+ */
+function WorkbenchSearch({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="workbench-toolbar-search">
+      <Search size={13} aria-hidden="true" />
+      <input
+        type="text"
+        value={value}
+        data-wb-search=""
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            if (value) onChange("");
+            else event.currentTarget.blur();
+          }
+        }}
+        aria-label="모든 패널에서 검색"
+        placeholder="모든 패널 검색"
+      />
+      {value ? (
+        <button type="button" aria-label="검색 지우기" onClick={() => onChange("")}>
+          <X size={12} aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 function PresetBar({
   presets,
@@ -1008,6 +1295,7 @@ function SessionPanel({
   meta,
   repository,
   flex,
+  search,
   focused,
   dragging,
   onFocus,
@@ -1018,11 +1306,13 @@ function SessionPanel({
   onReplace,
   onClose,
   onOpen,
+  onToggleCollapse,
 }: {
   panel: Panel;
   meta: SessionMeta | null;
   repository: ReturnType<typeof createBrowserDraftRepository>;
   flex: number;
+  search: string;
   focused: boolean;
   dragging: boolean;
   onFocus: () => void;
@@ -1033,11 +1323,24 @@ function SessionPanel({
   onReplace: () => void;
   onClose: () => void;
   onOpen: () => void;
+  onToggleCollapse: () => void;
 }) {
+  const collapsed = panel.collapsed ?? false;
   const events = useMemo(
     () => (meta ? loadConversation(repository, meta.sessionId) : []),
     [repository, meta],
   );
+  const needle = search.trim().toLowerCase();
+  const matched = useMemo(
+    () =>
+      needle
+        ? events.filter((event) =>
+            `${event.title} ${event.summary} ${event.actor}`.toLowerCase().includes(needle),
+          )
+        : events,
+    [events, needle],
+  );
+  const noMatch = needle.length > 0 && matched.length === 0;
 
   if (!meta) {
     return (
@@ -1052,8 +1355,9 @@ function SessionPanel({
 
   return (
     <article
-      className={`workbench-panel${focused ? " is-focused" : ""}${dragging ? " is-dragging-self" : ""}`}
-      style={{ flexGrow: flex, flexBasis: 0 }}
+      className={`workbench-panel${focused ? " is-focused" : ""}${dragging ? " is-dragging-self" : ""}${collapsed ? " is-collapsed" : ""}${noMatch ? " is-nomatch" : ""}`}
+      style={{ flexGrow: collapsed ? 0 : flex, flexBasis: collapsed ? "auto" : 0 }}
+      data-wb-panel={panel.id}
       aria-label={meta.title}
       onMouseDownCapture={onFocus}
     >
@@ -1079,62 +1383,80 @@ function SessionPanel({
             {meta.savedAt ?? meta.startedAt ? ` · ${formatRelative(meta.savedAt ?? meta.startedAt!)}` : ""}
           </span>
         </div>
-        <div className="workbench-panel-actions">
-          <span className="workbench-panel-modes" role="group" aria-label="보기 전환">
-            <ModeButton icon={MessageSquare} label="대화" active={panel.mode === "conversation"} onClick={() => onMode("conversation")} />
-            <ModeButton icon={ListTree} label="타임라인" active={panel.mode === "timeline"} onClick={() => onMode("timeline")} />
+        {needle ? (
+          <span className="workbench-panel-match" title={`검색 일치 ${matched.length}건`}>
+            {matched.length}
           </span>
+        ) : null}
+        <div className="workbench-panel-actions">
+          {collapsed ? null : (
+            <span className="workbench-panel-modes" role="group" aria-label="보기 전환">
+              <ModeButton icon={MessageSquare} label="대화" active={panel.mode === "conversation"} onClick={() => onMode("conversation")} />
+              <ModeButton icon={ListTree} label="타임라인" active={panel.mode === "timeline"} onClick={() => onMode("timeline")} />
+            </span>
+          )}
+          <IconAction
+            icon={collapsed ? ChevronDown : ChevronUp}
+            label={collapsed ? "패널 펼치기" : "패널 접기"}
+            onClick={onToggleCollapse}
+          />
           <IconAction icon={RefreshCcw} label="세션 교체" onClick={onReplace} />
           <IconAction icon={ArrowUpRight} label="작업 공간에서 열기" onClick={onOpen} />
           <IconAction icon={X} label="패널 닫기" onClick={onClose} />
         </div>
       </header>
 
-      <div className="workbench-panel-body base-scroll">
-        {panel.mode === "conversation" ? (
-          <ConversationFlow events={events} />
-        ) : (
-          <TimelineFlow events={events} meta={meta} />
-        )}
-      </div>
+      {collapsed ? null : (
+        <div className="workbench-panel-body base-scroll">
+          {panel.mode === "conversation" ? (
+            <ConversationFlow events={matched} highlight={needle} />
+          ) : (
+            <TimelineFlow events={matched} meta={meta} highlight={needle} />
+          )}
+        </div>
+      )}
 
-      {(["top", "right", "bottom", "left"] as const).map((side) => (
-        <button
-          key={side}
-          type="button"
-          className={`workbench-edge workbench-edge-${side}`}
-          aria-label={EDGE_LABEL[side]}
-          onClick={(event) => {
-            event.stopPropagation();
-            onEdgeAdd(side);
-          }}
-        >
-          <Plus size={13} aria-hidden="true" />
-        </button>
-      ))}
+      {collapsed
+        ? null
+        : (["top", "right", "bottom", "left"] as const).map((side) => (
+            <button
+              key={side}
+              type="button"
+              className={`workbench-edge workbench-edge-${side}`}
+              aria-label={EDGE_LABEL[side]}
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdgeAdd(side);
+              }}
+            >
+              <Plus size={13} aria-hidden="true" />
+            </button>
+          ))}
     </article>
   );
 }
 
 /**
- * A single command bar shared by the whole workbench, like a terminal prompt:
- * it targets the focused panel's session. Sending stays disabled until a real
- * agent connector exists, since Mori never drives an agent. The typed draft is
- * preserved per session so switching focus does not lose it.
+ * The shared bottom bar. It does not send to an agent (Mori never drives one),
+ * so it makes no such promise: it shows which panel is focused, keeps a local
+ * scratch note per session (preserved across focus changes, never transmitted),
+ * and launches the ⌘K command palette. Honest about being read-only.
  */
 function CommandBar({
   meta,
   value,
   onChange,
+  onCommand,
 }: {
   meta: SessionMeta | null;
   value: string;
   onChange: (value: string) => void;
+  onCommand: () => void;
 }) {
   return (
     <form className="workbench-command" onSubmit={(event) => event.preventDefault()}>
       <span className="workbench-command-target" title={meta?.title}>
-        <Send size={12} aria-hidden="true" />
+        <Pencil size={12} aria-hidden="true" />
         <span>{meta ? meta.title : "패널을 선택하세요"}</span>
       </span>
       <input
@@ -1143,27 +1465,305 @@ function CommandBar({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={!meta}
-        aria-label={meta ? `${meta.title} 요청 입력` : "요청 입력"}
-        placeholder={meta ? "요청을 입력하세요" : ""}
+        aria-label={meta ? `${meta.title} 임시 메모` : "임시 메모"}
+        placeholder={meta ? "이 세션 임시 메모 (로컬, 전송하지 않음)" : ""}
       />
-      <span className="workbench-command-hint">연결 대기</span>
-      <Button
-        size="sm"
-        variant="secondary"
-        icon={Send}
-        disabled
-        title="실제 에이전트 연결이 준비되면 선택한 세션으로 요청을 보낼 수 있습니다."
-      />
+      <button type="button" className="workbench-command-cmd" onClick={onCommand} aria-label="명령 팔레트 열기">
+        <Command size={12} aria-hidden="true" />
+        <kbd>K</kbd>
+      </button>
     </form>
   );
 }
 
-function ConversationFlow({ events }: { events: ConversationEvent[] }) {
+/**
+ * The ⌘K command palette: every workbench action (add / save / clear, layout,
+ * density, inspector) plus a jump-to-panel entry per open panel, all reachable
+ * from the keyboard. Mirrors the session picker's filter + arrow-key model.
+ */
+function CommandPalette({
+  actions,
+  onRun,
+  onClose,
+}: {
+  actions: CommandAction[];
+  onRun: (action: CommandAction) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  const needle = query.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      needle
+        ? actions.filter((action) => `${action.label} ${action.group}`.toLowerCase().includes(needle))
+        : actions,
+    [actions, needle],
+  );
+  const groups = useMemo(() => {
+    const order: string[] = [];
+    const map = new Map<string, CommandAction[]>();
+    for (const action of filtered) {
+      let bucket = map.get(action.group);
+      if (!bucket) {
+        bucket = [];
+        map.set(action.group, bucket);
+        order.push(action.group);
+      }
+      bucket.push(action);
+    }
+    return order.map((group) => ({ group, actions: map.get(group)! }));
+  }, [filtered]);
+  const indexById = useMemo(
+    () => new Map(filtered.map((action, index) => [action.id, index])),
+    [filtered],
+  );
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    setActive(0);
+  }, [needle]);
+  useEffect(() => {
+    if (active >= filtered.length) setActive(Math.max(0, filtered.length - 1));
+  }, [filtered.length, active]);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+  }, [active]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const onInputKey = (event: React.KeyboardEvent) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActive((index) => Math.min(index + 1, filtered.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive((index) => Math.max(index - 1, 0));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const action = filtered[active];
+      if (action) onRun(action);
+    }
+  };
+
+  return (
+    <div className="workbench-modal-layer" role="presentation">
+      <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
+      <div className="workbench-modal is-picker" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+        <header className="workbench-modal-head">
+          <div className="workbench-search">
+            <Command size={14} aria-hidden="true" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={onInputKey}
+              aria-label="명령 검색"
+              placeholder="명령 검색"
+            />
+            <span className="workbench-search-count">{filtered.length}</span>
+          </div>
+          <Button size="sm" variant="ghost" icon={X} title="닫기" onClick={onClose} />
+        </header>
+        <div className="workbench-picker-list base-scroll">
+          {filtered.length === 0 ? (
+            <div className="workbench-picker-empty">일치하는 명령이 없습니다</div>
+          ) : (
+            groups.map((group) => (
+              <section className="workbench-picker-group" key={group.group}>
+                <header>
+                  <span>{group.group}</span>
+                  <i>{group.actions.length}</i>
+                </header>
+                {group.actions.map((action) => {
+                  const index = indexById.get(action.id) ?? -1;
+                  const isActive = index === active;
+                  return (
+                    <button
+                      type="button"
+                      key={action.id}
+                      ref={isActive ? activeRef : undefined}
+                      className={`workbench-picker-row${isActive ? " is-active" : ""}`}
+                      onMouseMove={() => setActive(index)}
+                      onClick={() => onRun(action)}
+                    >
+                      <span className="workbench-picker-title">{action.label}</span>
+                    </button>
+                  );
+                })}
+              </section>
+            ))
+          )}
+        </div>
+        <footer className="workbench-picker-foot">
+          <span>
+            <kbd>↑</kbd>
+            <kbd>↓</kbd> 이동
+          </span>
+          <span>
+            <kbd>Enter</kbd> 실행
+          </span>
+          <span>
+            <kbd>Esc</kbd> 닫기
+          </span>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Cross-session attention strip in the canvas (never a right rail): a compact
+ * row of the placed sessions that carry an open issue or unconfirmed decision.
+ * Clicking a chip focuses that panel and scrolls it into view. It only renders
+ * when something genuinely needs attention, so a clean board shows nothing.
+ */
+function WorkbenchAttention({
+  items,
+  onJump,
+}: {
+  items: WorkbenchAttentionItem[];
+  onJump: (panelId: string) => void;
+}) {
+  return (
+    <div className="workbench-attention" role="group" aria-label="검토가 필요한 세션">
+      <span className="workbench-attention-label">검토 필요</span>
+      <div className="workbench-attention-items base-scroll">
+        {items.map((item) => (
+          <button
+            key={item.panelId}
+            type="button"
+            className="workbench-attention-chip"
+            title={item.title}
+            onClick={() => onJump(item.panelId)}
+          >
+            <span className="workbench-attention-title">{item.title}</span>
+            {item.openIssues > 0 ? (
+              <span className="workbench-attention-tag tone-issue">이슈 {item.openIssues}</span>
+            ) : null}
+            {item.unconfirmedDecisions > 0 ? (
+              <span className="workbench-attention-tag tone-decision">결정 {item.unconfirmedDecisions}</span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The selected-panel inspector (right). Per the surface doctrine it explains
+ * only the focused session, nothing page-level: provenance, the honest count
+ * strip, and the actual open issues / unconfirmed decisions / pending next
+ * actions read from saved memory. It never drives or promotes anything.
+ */
+function WorkbenchInspector({
+  meta,
+  repository,
+  onOpen,
+  onClose,
+}: {
+  meta: SessionMeta;
+  repository: ReturnType<typeof createBrowserDraftRepository>;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  const work = useMemo(
+    () => loadSessionWorkItems(repository, meta.sessionId),
+    [repository, meta.sessionId],
+  );
+  const when = meta.savedAt ?? meta.startedAt;
+
+  return (
+    <aside className="workbench-inspector base-scroll" aria-label="선택한 세션 상세">
+      <header className="workbench-inspector-head">
+        <div className="workbench-inspector-id">
+          <h2 title={meta.title}>{meta.title}</h2>
+          <span>
+            {meta.sourceLabel ? shortProjectLabel(meta.sourceLabel) : "수동 세션"}
+            {when ? ` · ${formatRelative(when)}` : ""}
+          </span>
+        </div>
+        <button type="button" className="workbench-panel-icon" aria-label="인스펙터 닫기" onClick={onClose}>
+          <X size={13} aria-hidden="true" />
+        </button>
+      </header>
+
+      <div className="workbench-timeline-stats">
+        <Stat label="항목" value={meta.eventCount} />
+        <Stat label="이슈" value={meta.openIssues} tone={meta.openIssues > 0 ? "warning" : "neutral"} />
+        <Stat label="결정" value={meta.unconfirmedDecisions} />
+        <Stat label="다음" value={meta.pendingNextActions} />
+      </div>
+
+      <InspectorList title="열린 이슈" tone="issue" items={work.openIssues} empty="열린 이슈가 없습니다" />
+      <InspectorList title="미확정 결정" tone="decision" items={work.unconfirmedDecisions} empty="미확정 결정이 없습니다" />
+      <InspectorList title="다음 단계" tone="next" items={work.pendingNextActions} empty="대기 중인 다음 단계가 없습니다" />
+
+      <Button variant="secondary" icon={ArrowUpRight} onClick={onOpen}>
+        작업 공간에서 열기
+      </Button>
+    </aside>
+  );
+}
+
+function InspectorList({
+  title,
+  tone,
+  items,
+  empty,
+}: {
+  title: string;
+  tone: "issue" | "decision" | "next";
+  items: string[];
+  empty: string;
+}) {
+  return (
+    <section className="workbench-inspector-section">
+      <header>
+        <span>{title}</span>
+        {items.length > 0 ? <strong>{items.length}</strong> : null}
+      </header>
+      {items.length === 0 ? (
+        <p className="workbench-inspector-empty">{empty}</p>
+      ) : (
+        <ul className={`workbench-inspector-list tone-${tone}`}>
+          {items.slice(0, 8).map((text, index) => (
+            <li key={index}>
+              <span className="workbench-inspector-dot" aria-hidden="true" />
+              <span>{text}</span>
+            </li>
+          ))}
+          {items.length > 8 ? <li className="workbench-inspector-more">외 {items.length - 8}개</li> : null}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function ConversationFlow({
+  events,
+  highlight = "",
+}: {
+  events: ConversationEvent[];
+  highlight?: string;
+}) {
   if (events.length === 0) {
     return (
       <div className="workbench-flow-empty">
         <MessageSquare size={15} aria-hidden="true" />
-        <span>대화 기록이 없습니다</span>
+        <span>{highlight ? "일치하는 대화가 없습니다" : "대화 기록이 없습니다"}</span>
       </div>
     );
   }
@@ -1178,8 +1778,14 @@ function ConversationFlow({ events }: { events: ConversationEvent[] }) {
               {event.at ? <time>{formatRelative(event.at)}</time> : null}
             </div>
             <div className="workbench-msg-bubble">
-              <strong>{event.title}</strong>
-              {event.summary ? <p>{event.summary}</p> : null}
+              <strong>
+                <Highlight text={event.title} needle={highlight} />
+              </strong>
+              {event.summary ? (
+                <p>
+                  <Highlight text={event.summary} needle={highlight} />
+                </p>
+              ) : null}
             </div>
           </div>
         );
@@ -1188,7 +1794,37 @@ function ConversationFlow({ events }: { events: ConversationEvent[] }) {
   );
 }
 
-function TimelineFlow({ events, meta }: { events: ConversationEvent[]; meta: SessionMeta }) {
+/** Wrap every case-insensitive occurrence of `needle` in `text` with a mark. */
+function Highlight({ text, needle }: { text: string; needle: string }) {
+  if (!needle) return <>{text}</>;
+  const lower = text.toLowerCase();
+  const parts: ReactNode[] = [];
+  let from = 0;
+  let key = 0;
+  for (;;) {
+    const at = lower.indexOf(needle, from);
+    if (at === -1) break;
+    if (at > from) parts.push(text.slice(from, at));
+    parts.push(
+      <mark key={key++} className="workbench-mark">
+        {text.slice(at, at + needle.length)}
+      </mark>,
+    );
+    from = at + needle.length;
+  }
+  if (from < text.length) parts.push(text.slice(from));
+  return <>{parts}</>;
+}
+
+function TimelineFlow({
+  events,
+  meta,
+  highlight = "",
+}: {
+  events: ConversationEvent[];
+  meta: SessionMeta;
+  highlight?: string;
+}) {
   return (
     <div className="workbench-timeline">
       <div className="workbench-timeline-stats">
@@ -1200,7 +1836,7 @@ function TimelineFlow({ events, meta }: { events: ConversationEvent[]; meta: Ses
       {events.length === 0 ? (
         <div className="workbench-flow-empty">
           <ListTree size={15} aria-hidden="true" />
-          <span>타임라인 이벤트가 없습니다</span>
+          <span>{highlight ? "일치하는 이벤트가 없습니다" : "타임라인 이벤트가 없습니다"}</span>
         </div>
       ) : (
         <ol className="workbench-timeline-list">
@@ -1208,9 +1844,11 @@ function TimelineFlow({ events, meta }: { events: ConversationEvent[]; meta: Ses
             <li key={event.id}>
               <span className="workbench-timeline-dot" aria-hidden="true" />
               <div>
-                <strong>{event.title}</strong>
+                <strong>
+                  <Highlight text={event.title} needle={highlight} />
+                </strong>
                 <small>
-                  {event.actor}
+                  <Highlight text={event.actor} needle={highlight} />
                   {event.at ? ` · ${formatRelative(event.at)}` : ""}
                 </small>
               </div>
@@ -1269,6 +1907,46 @@ function Stat({
 
 const LAYOUT_KEY = "mori.workbench.layout.v1";
 const PRESETS_KEY = "mori.workbench.presets.v1";
+const DENSITY_KEY = "mori.workbench.density.v1";
+const INSPECTOR_KEY = "mori.workbench.inspector.v1";
+
+/** Canvas density is a per-device UI preference, persisted like the layout. */
+function loadDensity(): Density {
+  if (typeof window === "undefined") return "comfortable";
+  try {
+    return window.localStorage.getItem(DENSITY_KEY) === "dense" ? "dense" : "comfortable";
+  } catch {
+    return "comfortable";
+  }
+}
+
+function saveDensity(density: Density): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DENSITY_KEY, density);
+  } catch {
+    // Best-effort.
+  }
+}
+
+/** Inspector visibility is a per-device UI preference, default open. */
+function loadInspectorOpen(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(INSPECTOR_KEY) !== "closed";
+  } catch {
+    return true;
+  }
+}
+
+function saveInspectorOpen(open: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(INSPECTOR_KEY, open ? "open" : "closed");
+  } catch {
+    // Best-effort.
+  }
+}
 
 function cloneColumns(columns: Column[]): Column[] {
   return columns.map((col) => ({ ...col, panels: col.panels.map((panel) => ({ ...panel })) }));
@@ -1314,6 +1992,7 @@ function parseColumns(value: unknown): Column[] {
         sessionId: p.sessionId,
         mode: p.mode === "timeline" ? "timeline" : "conversation",
         flex: typeof p.flex === "number" && p.flex > 0 ? p.flex : 1,
+        collapsed: p.collapsed === true,
       });
     }
     if (panels.length === 0) continue;
@@ -1392,22 +2071,88 @@ function buildSessionMeta({
   const byId = new Map(storedSessions.map((session) => [session.sessionId, session]));
   return rows.map((row) => {
     const stored = byId.get(row.sessionId);
-    const body = safeLoadMemoryBody(repository, row.sessionId);
+    const work = loadSessionWorkItems(repository, row.sessionId);
     return {
       ...row,
       eventCount: stored?.eventCount ?? 0,
       tokenTotal: stored?.tokenTotal ?? 0,
-      openIssues: body?.issues.filter((issue) => issue.status === "open").length ?? 0,
-      unconfirmedDecisions: body?.decisions.filter((decision) => !decision.confirmed).length ?? 0,
-      pendingNextActions: body?.nextActions.filter((action) => !action.done).length ?? 0,
+      openIssues: work.openIssues.length,
+      unconfirmedDecisions: work.unconfirmedDecisions.length,
+      pendingNextActions: work.pendingNextActions.length,
     };
   });
 }
+
+type SessionWorkItems = {
+  openIssues: string[];
+  unconfirmedDecisions: string[];
+  pendingNextActions: string[];
+};
+
+/**
+ * The session's pending work items (titles), read from the same source the
+ * rest of the app uses: a saved memory body for real sessions, the demo
+ * blueprint for demo sessions. Without the demo branch the workbench would
+ * read zeros for the sample data even though Home and the session view show it.
+ */
+function loadSessionWorkItems(
+  repository: ReturnType<typeof createBrowserDraftRepository>,
+  sessionId: string,
+): SessionWorkItems {
+  if (isDemoSessionId(sessionId)) {
+    const content = buildDemoSessionContent(sessionId);
+    if (!content) return { openIssues: [], unconfirmedDecisions: [], pendingNextActions: [] };
+    return {
+      openIssues: content.issues.filter((issue) => issue.status === "open").map((issue) => issue.title),
+      unconfirmedDecisions: content.decisions.filter((decision) => !decision.confirmed).map((decision) => decision.title),
+      pendingNextActions: content.nextActions
+        .filter((action) => !isNextActionCompleted(action))
+        .map((action) => action.title),
+    };
+  }
+  const body = safeLoadMemoryBody(repository, sessionId);
+  return {
+    openIssues: (body?.issues ?? []).filter((issue) => issue.status === "open").map((issue) => issue.title),
+    unconfirmedDecisions: (body?.decisions ?? []).filter((decision) => !decision.confirmed).map((decision) => decision.title),
+    pendingNextActions: (body?.nextActions ?? [])
+      .filter((action) => !isNextActionCompleted(action))
+      .map((action) => action.title),
+  };
+}
+
+const DEMO_ACTOR_LABEL: Record<string, string> = {
+  aiConversation: "AI",
+  decision: "결정",
+  issue: "이슈",
+  fileCode: "코드",
+  artifact: "산출물",
+  documentNote: "노트",
+  webResearch: "리서치",
+};
 
 function loadConversation(
   repository: ReturnType<typeof createBrowserDraftRepository>,
   sessionId: string,
 ): ConversationEvent[] {
+  // Demo sessions carry their timeline as blueprint beats, not imported records,
+  // so read them from the same builder Home and the session view use. Without
+  // this the workbench panels (and the unified search over them) stay empty for
+  // the sample data even though the rest of the app shows it.
+  if (isDemoSessionId(sessionId)) {
+    const content = buildDemoSessionContent(sessionId);
+    if (!content) return [];
+    return content.events
+      .slice()
+      .sort((a, b) => (a.start ?? "").localeCompare(b.start ?? ""))
+      .slice(0, 80)
+      .map((event) => ({
+        id: event.id,
+        actor: event.actor ?? DEMO_ACTOR_LABEL[event.type] ?? "기록",
+        title: event.title,
+        summary: event.summary,
+        at: event.start,
+      }));
+  }
   try {
     return repository
       .listSessionImports(sessionId)
