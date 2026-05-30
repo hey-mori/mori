@@ -896,6 +896,74 @@
   color: var(--muted);
 }
 
+/* ── 인과 · critical path (backbone), roots/outcomes, typed edges ────────── */
+
+.lab-causal-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--base-radius-pill, 999px);
+  background: var(--panel);
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+
+.lab-causal-toggle:hover {
+  color: var(--text);
+}
+
+.lab-causal-toggle.is-on {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: var(--gray-50);
+}
+
+/* The backbone (longest cause → effect chain): emphasized by weight + opacity,
+   never a glow or a new colour. */
+.lab-edge.is-backbone {
+  opacity: 0.92;
+}
+
+.lab-node.is-backbone {
+  border-color: var(--lab-tone, var(--line-strong));
+}
+
+.lab-node.is-backbone .lab-node-title {
+  font-weight: 680;
+}
+
+/* A contradiction edge reads as a tension, not a plain cause. */
+.lab-edge.is-tension {
+  opacity: 0.85;
+}
+
+/* Isolate mode dims everything off the backbone, like the trace dimming. */
+.lab-causal-canvas.is-isolating .lab-node.is-dim {
+  opacity: 0.26;
+}
+
+.lab-causal-canvas.is-isolating .lab-edge.is-dim {
+  opacity: 0.1;
+}
+
+/* Origins read as hollow, results as a softly ringed dot, so "where did this
+   start / what did it produce" is legible without colour. */
+.lab-node[data-role="root"] .lab-node-dot {
+  background: transparent;
+  border: 2px solid var(--lab-tone, var(--muted-2));
+}
+
+.lab-node[data-role="outcome"] .lab-node-dot {
+  box-shadow: 0 0 0 3px var(--lab-tone-soft, var(--gray-50));
+}
+
 /* ── 맥동 · session pulse / vital signs ─────────────────────────────────── */
 
 .lab-pulse {

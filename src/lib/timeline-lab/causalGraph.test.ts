@@ -239,6 +239,131 @@ describe("traceCausalChain", () => {
   });
 });
 
+describe("buildCausalGraph critical path", () => {
+  it("returns the full chain as the backbone of a linear graph", () => {
+    const view = labSession({
+      events: [
+        labEvent({ id: "a" }),
+        labEvent({ id: "b" }),
+        labEvent({ id: "c" }),
+        labEvent({ id: "d" }),
+      ],
+      relationships: [
+        labRelationship({ id: "r-ab", fromId: "a", toId: "b" }),
+        labRelationship({ id: "r-bc", fromId: "b", toId: "c" }),
+        labRelationship({ id: "r-cd", fromId: "c", toId: "d" }),
+      ],
+    });
+    const graph = buildCausalGraph(view);
+    expect(graph.criticalPath).toEqual(["a", "b", "c", "d"]);
+    expect(graph.roots).toEqual(["a"]);
+    expect(graph.outcomes).toEqual(["d"]);
+  });
+
+  it("picks the genuinely longest chain when branches differ in length", () => {
+    const view = labSession({
+      events: [
+        labEvent({ id: "a" }),
+        labEvent({ id: "b" }),
+        labEvent({ id: "c" }),
+        labEvent({ id: "short" }),
+      ],
+      relationships: [
+        labRelationship({ id: "r-ab", fromId: "a", toId: "b" }),
+        labRelationship({ id: "r-bc", fromId: "b", toId: "c" }),
+        labRelationship({ id: "r-ashort", fromId: "a", toId: "short" }),
+      ],
+    });
+    const graph = buildCausalGraph(view);
+    expect(graph.criticalPath).toEqual(["a", "b", "c"]);
+    expect(graph.outcomes.sort()).toEqual(["c", "short"]);
+  });
+
+  it("breaks backtrack ties by edge confidence", () => {
+    const view = labSession({
+      events: [labEvent({ id: "a" }), labEvent({ id: "x" }), labEvent({ id: "b" }), labEvent({ id: "c" })],
+      relationships: [
+        labRelationship({ id: "r-ab", fromId: "a", toId: "b", confidence: 0.5 }),
+        labRelationship({ id: "r-xb", fromId: "x", toId: "b", confidence: 0.9 }),
+        labRelationship({ id: "r-bc", fromId: "b", toId: "c" }),
+      ],
+    });
+    const graph = buildCausalGraph(view);
+    // b has two parents at layer 0; the higher-confidence x→b wins the chain.
+    expect(graph.criticalPath).toEqual(["x", "b", "c"]);
+  });
+
+  it("marks onCriticalPath on backbone edges only", () => {
+    const view = labSession({
+      events: [labEvent({ id: "a" }), labEvent({ id: "b" }), labEvent({ id: "side" })],
+      relationships: [
+        labRelationship({ id: "r-ab", fromId: "a", toId: "b" }),
+        labRelationship({ id: "r-aside", fromId: "a", toId: "side" }),
+      ],
+    });
+    const graph = buildCausalGraph(view);
+    const onPath = graph.edges.filter((e) => e.onCriticalPath).map((e) => e.id);
+    expect(onPath).toEqual(["r-ab"]);
+  });
+
+  it("classifies roots, outcomes, internal and isolated nodes", () => {
+    const view = labSession({
+      events: [
+        labEvent({ id: "root" }),
+        labEvent({ id: "mid" }),
+        labEvent({ id: "leaf" }),
+        labEvent({ id: "lonely" }),
+      ],
+      relationships: [
+        labRelationship({ id: "r-rm", fromId: "root", toId: "mid" }),
+        labRelationship({ id: "r-ml", fromId: "mid", toId: "leaf" }),
+      ],
+    });
+    const graph = buildCausalGraph(view);
+    const roleOf = (id: string) => graph.nodes.find((n) => n.id === id)?.role;
+    expect(roleOf("root")).toBe("root");
+    expect(roleOf("mid")).toBe("internal");
+    expect(roleOf("leaf")).toBe("outcome");
+    expect(roleOf("lonely")).toBe("isolated");
+  });
+
+  it("carries relationship confidence and flags contradiction as tension", () => {
+    const view = labSession({
+      events: [labEvent({ id: "a" }), labEvent({ id: "b" })],
+      relationships: [
+        labRelationship({ id: "r-ab", fromId: "a", toId: "b", type: "contradicted", confidence: 0.7 }),
+      ],
+    });
+    const edge = buildCausalGraph(view).edges[0];
+    expect(edge?.confidence).toBe(0.7);
+    expect(edge?.tension).toBe(true);
+  });
+
+  it("has no critical path, roots or outcomes when there are no edges", () => {
+    const graph = buildCausalGraph(
+      labSession({ events: [labEvent({ id: "a" }), labEvent({ id: "b" })] }),
+    );
+    expect(graph.criticalPath).toEqual([]);
+    expect(graph.roots).toEqual([]);
+    expect(graph.outcomes).toEqual([]);
+    expect(graph.nodes.every((n) => n.role === "isolated")).toBe(true);
+  });
+
+  it("computes a deterministic critical path across repeated builds", () => {
+    const make = () =>
+      buildCausalGraph(
+        labSession({
+          events: [labEvent({ id: "a" }), labEvent({ id: "b" }), labEvent({ id: "c" })],
+          relationships: [
+            labRelationship({ id: "r-ab", fromId: "a", toId: "b" }),
+            labRelationship({ id: "r-bc", fromId: "b", toId: "c" }),
+          ],
+        }),
+      );
+    expect(make().criticalPath).toEqual(make().criticalPath);
+  });
+});
+
 describe("buildCausalGraph legend", () => {
   it("lists each present relationship type once", () => {
     const graph = buildCausalGraph(

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { Route, X } from "lucide-react";
 import type { MockSession } from "../../domain/types";
 import {
   buildCausalGraph,
@@ -50,7 +50,9 @@ export function CausalMapView({ view }: { view: MockSession }) {
 
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [isolateBackbone, setIsolateBackbone] = useState(false);
   const activeId = hoverId ?? pinnedId;
+  const backbone = useMemo(() => new Set(graph.criticalPath), [graph]);
 
   // A node disappearing (session switch) must not leave a dangling pin.
   useEffect(() => {
@@ -88,6 +90,18 @@ export function CausalMapView({ view }: { view: MockSession }) {
           위치는 시간이 아니라 인과 깊이라서, 왼쪽에서 오른쪽으로 읽으면 원인에서
           결과로 이어집니다. 노드에 올리거나 클릭하면 그 인과 사슬만 강조됩니다.
         </InfoHint>
+        {backbone.size > 0 ? (
+          <button
+            type="button"
+            className={`lab-causal-toggle${isolateBackbone ? " is-on" : ""}`}
+            aria-pressed={isolateBackbone}
+            onClick={() => setIsolateBackbone((on) => !on)}
+            title="가장 긴 원인 → 결과 사슬만 강조"
+          >
+            <Route size={12} aria-hidden="true" />
+            핵심 경로
+          </button>
+        ) : null}
         {pinnedId ? (
           <button type="button" className="lab-causal-clear" onClick={clearPin}>
             <X size={12} aria-hidden="true" />
@@ -118,7 +132,9 @@ export function CausalMapView({ view }: { view: MockSession }) {
 
       <div className="lab-causal-scroll">
         <div
-          className={`lab-causal-canvas${trace ? " is-tracing" : ""}`}
+          className={`lab-causal-canvas${trace ? " is-tracing" : ""}${
+            !trace && isolateBackbone ? " is-isolating" : ""
+          }`}
           style={{ width: layout.width, height: layout.height }}
         >
           <svg
@@ -148,22 +164,35 @@ export function CausalMapView({ view }: { view: MockSession }) {
                 key={edge.id}
                 edge={edge}
                 placed={layout.byId}
-                dimmed={trace ? !trace.edges.has(edge.id) : false}
+                dimmed={
+                  trace
+                    ? !trace.edges.has(edge.id)
+                    : isolateBackbone
+                      ? !edge.onCriticalPath
+                      : false
+                }
+                emphasized={!trace && edge.onCriticalPath}
               />
             ))}
           </svg>
           {layout.placed.map(({ node, x, y }) => {
-            const dimmed = trace ? !trace.nodes.has(node.id) : false;
+            const dimmed = trace
+              ? !trace.nodes.has(node.id)
+              : isolateBackbone
+                ? !backbone.has(node.id)
+                : false;
             const focal = node.id === activeId;
+            const onBackbone = !trace && backbone.has(node.id);
             return (
               <button
                 type="button"
                 key={node.id}
                 className={`lab-node${dimmed ? " is-dim" : ""}${focal ? " is-focal" : ""}${
                   node.id === pinnedId ? " is-pinned" : ""
-                }`}
+                }${onBackbone ? " is-backbone" : ""}`}
                 data-tone={node.tone}
                 data-kind={node.kind}
+                data-role={node.role}
                 style={{ left: x, top: y, width: NODE_W, height: NODE_H }}
                 onMouseEnter={() => setHoverId(node.id)}
                 onMouseLeave={() => setHoverId((prev) => (prev === node.id ? null : prev))}
@@ -185,14 +214,22 @@ export function CausalMapView({ view }: { view: MockSession }) {
   );
 }
 
+/** Stroke weight by reviewed confidence; the backbone gets a heavier line. */
+function edgeWidth(confidence: number, onCriticalPath: boolean): number {
+  const base = confidence >= 0.8 ? 1.5 : confidence >= 0.5 ? 1.25 : 1;
+  return onCriticalPath ? base + 0.7 : base;
+}
+
 function EdgePath({
   edge,
   placed,
   dimmed,
+  emphasized,
 }: {
   edge: CausalEdge;
   placed: Map<string, Placed>;
   dimmed: boolean;
+  emphasized: boolean;
 }) {
   const from = placed.get(edge.fromId);
   const to = placed.get(edge.toId);
@@ -202,15 +239,19 @@ function EdgePath({
   const x2 = to.x;
   const y2 = to.y + NODE_H / 2;
   const cx = (x1 + x2) / 2;
-  const tone = TONE_STROKE[edge.tone] ? edge.tone : "gray";
+  // A contradiction is a tension: always read it as red and dashed, never as a plain cause.
+  const tone = edge.tension ? "red" : TONE_STROKE[edge.tone] ? edge.tone : "gray";
   const d = `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`;
   return (
     <path
-      className={`lab-edge${dimmed ? " is-dim" : ""}`}
+      className={`lab-edge${dimmed ? " is-dim" : ""}${emphasized ? " is-backbone" : ""}${
+        edge.tension ? " is-tension" : ""
+      }`}
       d={d}
       fill="none"
       stroke={TONE_STROKE[tone]}
-      strokeWidth={1.5}
+      strokeWidth={edgeWidth(edge.confidence, edge.onCriticalPath)}
+      strokeDasharray={edge.tension ? "5 3" : undefined}
       markerEnd={`url(#lab-arrow-${tone})`}
     />
   );
@@ -249,7 +290,11 @@ function placeNodes(graph: CausalGraph): {
   const width = PAD * 2 + graph.layerCount * NODE_W + Math.max(0, graph.layerCount - 1) * COL_GAP;
   const height = PAD * 2 + Math.max(1, maxRows) * NODE_H + Math.max(0, maxRows - 1) * ROW_GAP;
   const tones = [
-    ...new Set(graph.edges.map((edge) => (TONE_STROKE[edge.tone] ? edge.tone : "gray"))),
+    ...new Set(
+      graph.edges.map((edge) =>
+        edge.tension ? "red" : TONE_STROKE[edge.tone] ? edge.tone : "gray",
+      ),
+    ),
   ];
   return { placed, byId, width, height, tones };
 }

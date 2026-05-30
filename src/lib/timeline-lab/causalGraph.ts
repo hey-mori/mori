@@ -25,6 +25,15 @@ import { getRelationshipDisplay } from "../relationships/relationshipDisplay";
 
 export type CausalNodeKind = NarrativeMomentKind | "artifact";
 
+/**
+ * A node's place in the causal structure:
+ * - `root`: a cause with no incoming edge (a starting point).
+ * - `outcome`: an effect with no outgoing edge (a result).
+ * - `internal`: has both causes and effects.
+ * - `isolated`: no relationships touch it.
+ */
+export type CausalRole = "root" | "outcome" | "internal" | "isolated";
+
 export type CausalNode = {
   id: string;
   kind: CausalNodeKind;
@@ -35,6 +44,7 @@ export type CausalNode = {
   layer: number;
   /** Stable index within the layer for vertical placement. */
   order: number;
+  role: CausalRole;
 };
 
 export type CausalEdge = {
@@ -44,6 +54,12 @@ export type CausalEdge = {
   type: RelationshipType;
   label: string;
   tone: string;
+  /** Reviewed confidence of the relationship, 0–1; drives stroke weight. */
+  confidence: number;
+  /** Lies on the session's longest cause → effect chain (the backbone). */
+  onCriticalPath: boolean;
+  /** A `contradicted` link: a tension, never read as a plain cause. */
+  tension: boolean;
 };
 
 export type CausalGraph = {
@@ -52,6 +68,12 @@ export type CausalGraph = {
   layerCount: number;
   /** Distinct relationship types present, for the legend. */
   legend: { type: RelationshipType; label: string; tone: string }[];
+  /** The longest cause → effect chain (node ids, root to outcome). Empty when there are no edges. */
+  criticalPath: string[];
+  /** Node ids with no incoming edge but at least one outgoing (origins). */
+  roots: string[];
+  /** Node ids with no outgoing edge but at least one incoming (results). */
+  outcomes: string[];
 };
 
 function nodeKindForEvent(type: EventType): NarrativeMomentKind {
@@ -137,6 +159,7 @@ export function buildCausalGraph(view: MockSession): CausalGraph {
 
   // Edges: only relationships whose endpoints are both present as nodes.
   const edges: CausalEdge[] = [];
+  const edgeByPair = new Map<string, CausalEdge>();
   const incoming = new Map<string, string[]>();
   const outgoing = new Map<string, string[]>();
   const edgeSeen = new Set<string>();
@@ -147,14 +170,19 @@ export function buildCausalGraph(view: MockSession): CausalGraph {
     if (edgeSeen.has(key)) continue;
     edgeSeen.add(key);
     const display = getRelationshipDisplay(rel.type);
-    edges.push({
+    const edge: CausalEdge = {
       id: rel.id,
       fromId: rel.fromId,
       toId: rel.toId,
       type: rel.type,
       label: display.label,
       tone: display.tone,
-    });
+      confidence: rel.confidence,
+      onCriticalPath: false,
+      tension: rel.type === "contradicted",
+    };
+    edges.push(edge);
+    edgeByPair.set(key, edge);
     const parents = incoming.get(rel.toId);
     if (parents) parents.push(rel.fromId);
     else incoming.set(rel.toId, [rel.fromId]);
@@ -177,6 +205,13 @@ export function buildCausalGraph(view: MockSession): CausalGraph {
 
   const order = orderWithinLayers(layerGroups, incoming, outgoing);
 
+  const { roles, roots, outcomes } = computeRoles(raw, incoming, outgoing);
+  const criticalPath = computeCriticalPath(raw, incoming, layer, edgeByPair, edges.length > 0);
+  for (let i = 1; i < criticalPath.length; i += 1) {
+    const edge = edgeByPair.get(`${criticalPath[i - 1]}->${criticalPath[i]}`);
+    if (edge) edge.onCriticalPath = true;
+  }
+
   const nodes: CausalNode[] = [];
   for (const [l, group] of layerGroups) {
     for (const node of group) {
@@ -188,6 +223,7 @@ export function buildCausalGraph(view: MockSession): CausalGraph {
         sub: node.sub,
         layer: l,
         order: order.get(node.id) ?? 0,
+        role: roles.get(node.id) ?? "isolated",
       });
     }
   }
@@ -200,7 +236,106 @@ export function buildCausalGraph(view: MockSession): CausalGraph {
     edges,
     layerCount,
     legend: buildLegend(edges),
+    criticalPath,
+    roots,
+    outcomes,
   };
+}
+
+/**
+ * Classify every node by its place in the causal structure and collect the
+ * origins (roots) and results (outcomes). A node an edge never touches is
+ * `isolated`, never a root, so "where did this start" stays honest.
+ */
+function computeRoles(
+  raw: ReadonlyMap<string, RawNode>,
+  incoming: ReadonlyMap<string, string[]>,
+  outgoing: ReadonlyMap<string, string[]>,
+): { roles: Map<string, CausalRole>; roots: string[]; outcomes: string[] } {
+  const roles = new Map<string, CausalRole>();
+  const roots: string[] = [];
+  const outcomes: string[] = [];
+  for (const id of raw.keys()) {
+    const hasIn = (incoming.get(id)?.length ?? 0) > 0;
+    const hasOut = (outgoing.get(id)?.length ?? 0) > 0;
+    let role: CausalRole;
+    if (!hasIn && !hasOut) role = "isolated";
+    else if (!hasIn) {
+      role = "root";
+      roots.push(id);
+    } else if (!hasOut) {
+      role = "outcome";
+      outcomes.push(id);
+    } else role = "internal";
+    roles.set(id, role);
+  }
+  return { roles, roots, outcomes };
+}
+
+/**
+ * The session's backbone: the longest cause → effect chain. `layer` is already
+ * the longest distance from a root, so the deepest node anchors the chain; we
+ * backtrack along a true predecessor (one whose layer is exactly one less),
+ * breaking ties by edge confidence then a stable index, so the result is
+ * deterministic. Returns node ids root-to-outcome, or `[]` when there are no
+ * edges (no chain to draw).
+ */
+function computeCriticalPath(
+  raw: ReadonlyMap<string, RawNode>,
+  incoming: ReadonlyMap<string, string[]>,
+  layer: ReadonlyMap<string, number>,
+  edgeByPair: ReadonlyMap<string, CausalEdge>,
+  hasAnyEdge: boolean,
+): string[] {
+  if (!hasAnyEdge) return [];
+
+  let endId: string | null = null;
+  let endLayer = -1;
+  let endConf = -1;
+  let endIndex = Number.POSITIVE_INFINITY;
+  for (const [id, node] of raw) {
+    const l = layer.get(id) ?? 0;
+    const conf = (incoming.get(id) ?? []).reduce(
+      (sum, parent) => sum + (edgeByPair.get(`${parent}->${id}`)?.confidence ?? 0),
+      0,
+    );
+    if (
+      l > endLayer ||
+      (l === endLayer && conf > endConf) ||
+      (l === endLayer && conf === endConf && node.index < endIndex)
+    ) {
+      endId = id;
+      endLayer = l;
+      endConf = conf;
+      endIndex = node.index;
+    }
+  }
+  if (endId === null || endLayer === 0) return [];
+
+  const path = [endId];
+  const guard = new Set<string>([endId]);
+  let current = endId;
+  while ((layer.get(current) ?? 0) > 0) {
+    const target = (layer.get(current) ?? 0) - 1;
+    let pick: string | null = null;
+    let pickConf = -1;
+    let pickIndex = Number.POSITIVE_INFINITY;
+    for (const parent of incoming.get(current) ?? []) {
+      if ((layer.get(parent) ?? -1) !== target) continue;
+      const conf = edgeByPair.get(`${parent}->${current}`)?.confidence ?? 0;
+      const idx = raw.get(parent)?.index ?? Number.POSITIVE_INFINITY;
+      if (conf > pickConf || (conf === pickConf && idx < pickIndex)) {
+        pick = parent;
+        pickConf = conf;
+        pickIndex = idx;
+      }
+    }
+    if (pick === null || guard.has(pick)) break;
+    path.push(pick);
+    guard.add(pick);
+    current = pick;
+  }
+  return path.reverse();
 }
 
 function computeLayers(
