@@ -10,29 +10,6 @@
   margin-bottom: 20px;
 }
 
-.connections-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  padding: 0 2px;
-}
-
-.connections-section-header h2 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--text);
-}
-
-.connections-section-header p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-  max-width: 640px;
-}
-
 /* ── Sessions-first layout (new) ─────────────────────────────────────── */
 
 .connections-sessions-section {
@@ -501,13 +478,6 @@
 .connections-tool-icon svg {
   width: 15px;
   height: 15px;
-}
-
-/* Browser-preview empty state: a static tool grid + note. Keeps the page
-   layout consistent with the desktop view so the user sees what Mori will
-   detect once they install the desktop app. */
-.connections-browser-preview {
-  padding: 12px 0 0;
 }
 
 .connections-browser-note {
