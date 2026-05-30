@@ -517,7 +517,16 @@ function ImportPackagePanel({
         aria-label=".mori package JSON"
       />
       <div className="consolidation-review-import-actions">
-        <Button variant="primary" onClick={onLoad} disabled={text.trim().length === 0}>
+        <Button
+          variant="primary"
+          onClick={onLoad}
+          disabled={text.trim().length === 0}
+          title={
+            text.trim().length === 0
+              ? "붙여넣은 .mori 패키지 JSON이 없습니다."
+              : "붙여넣은 .mori v0 패키지를 검토 큐로 불러옵니다."
+          }
+        >
           패키지 불러오기
         </Button>
         {desktop ? (
@@ -615,6 +624,13 @@ function ApplyBoundaryBanner({
           variant="primary"
           disabled={!canApply || applyState.kind === "saving"}
           onClick={onApply}
+          title={
+            applyState.kind === "saving"
+              ? "저장 중입니다."
+              : canApply
+                ? "검토 결정을 로컬 저장소에 반영합니다."
+                : "수락 · 편집 · 관찰 · 연기로 표시한 제안이 없습니다."
+          }
         >
           {applyState.kind === "saving"
             ? "저장 중…"

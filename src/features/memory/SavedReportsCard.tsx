@@ -26,7 +26,16 @@ export function SavedReportsCard({
         </>
       }
       actions={
-        <Button icon={FileText} onClick={onOpenReports} disabled={!hasCurrentReportSurface}>
+        <Button
+          icon={FileText}
+          onClick={onOpenReports}
+          disabled={!hasCurrentReportSurface}
+          title={
+            hasCurrentReportSurface
+              ? "Reports 페이지를 엽니다."
+              : "Reports 페이지는 다음 마일스톤에서 제공됩니다."
+          }
+        >
           Reports 열기
         </Button>
       }
