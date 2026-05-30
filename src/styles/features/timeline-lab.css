@@ -53,112 +53,20 @@
 .lab-empty svg { color: var(--muted-2); }
 
 /* ── cross-lens filter bar ──────────────────────────────────────────────── */
+/* Search uses the shared `SearchField` (no placeholder, per house style) and
+   the kinds fold into the shared filter popover, so the toolbar matches 흐름. */
 
 .lab-filter {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--base-space-3);
   margin-left: auto;
-}
-
-.lab-filter-search {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--base-radius-pill);
-  transition: border-color 0.15s ease;
-}
-
-.lab-filter-search:focus-within {
-  border-color: var(--line-strong);
-}
-
-.lab-filter-search svg { color: var(--muted-2); flex: none; }
-
-.lab-filter-search input {
-  width: 140px;
-  border: none;
-  outline: none;
-  background: none;
-  font-size: 13px;
-  color: var(--text);
-}
-
-.lab-filter-search input::placeholder { color: var(--muted-2); }
-
-/* Hide the native search clear affordance; we provide our own. */
-.lab-filter-search input::-webkit-search-cancel-button { display: none; }
-
-.lab-filter-kinds {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.lab-filter-chip {
-  padding: 3px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--base-radius-pill);
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease;
-}
-
-.lab-filter-chip:hover {
-  color: var(--text);
-  border-color: var(--line-strong);
-}
-
-.lab-filter-chip.is-on {
-  color: var(--lab-tone, var(--text));
-  background: var(--lab-tone-soft, var(--gray-50));
-  border-color: color-mix(in srgb, var(--lab-tone, var(--muted-2)) 28%, transparent);
-}
-
-.lab-filter-tail {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .lab-filter-count {
   font-size: 12px;
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
-}
-
-.lab-filter-clear {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--muted);
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--base-radius-pill);
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background 0.15s ease;
-}
-
-.lab-filter-clear:hover {
-  color: var(--text);
-  border-color: var(--line-strong);
-  background: var(--panel-soft);
 }
 
 /* ── 서사 · narrative spine ─────────────────────────────────────────────── */
@@ -575,6 +483,10 @@
 }
 
 .lab-phase-cell {
+  /* Share the track width so the few phases fill the stage instead of clipping
+     at the edge; the track still scrolls if a narrow window cannot fit them. */
+  flex: 1 1 0;
+  min-width: 188px;
   display: flex;
   align-items: stretch;
   gap: 0;
@@ -588,8 +500,8 @@
 }
 
 .lab-phase {
-  flex: none;
-  width: 232px;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--line);

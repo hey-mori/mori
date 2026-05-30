@@ -8,7 +8,7 @@ import {
   isLabFilterActive,
   type LabFilter,
 } from "../../lib/timeline-lab/labFilter";
-import type { NarrativeMomentKind } from "../../lib/timeline-lab/narrative";
+import { momentKindForEvent, type NarrativeMomentKind } from "../../lib/timeline-lab/narrative";
 import { LabFilterBar } from "./LabFilterBar";
 import { NarrativeStoryView } from "./NarrativeStoryView";
 import { PhaseFlowView } from "./PhaseFlowView";
@@ -62,6 +62,17 @@ export function TimelineLabView() {
   const filterActive = isLabFilterActive(filter);
   const noMatches = filterActive && filtered.events.length === 0;
 
+  // Per-kind counts come from the unfiltered session so the popover numbers are
+  // a stable overview of what the session contains, not of the current filter.
+  const kindCounts = useMemo(() => {
+    const counts: Partial<Record<NarrativeMomentKind, number>> = {};
+    for (const event of view.events) {
+      const kind = momentKindForEvent(event.type);
+      counts[kind] = (counts[kind] ?? 0) + 1;
+    }
+    return counts;
+  }, [view.events]);
+
   const focusKind = (kind: NarrativeMomentKind) => {
     setFilter({ query: "", kinds: [kind] });
     setMode("narrative");
@@ -94,6 +105,7 @@ export function TimelineLabView() {
           onFilterChange={setFilter}
           matched={filtered.events.length}
           total={view.events.length}
+          kindCounts={kindCounts}
         />
       </div>
       <div className="timeline-lab-stage">

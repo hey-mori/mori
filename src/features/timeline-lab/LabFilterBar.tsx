@@ -1,6 +1,8 @@
-import { Search, X } from "lucide-react";
+import { useEffect, useRef, useState, type RefObject } from "react";
+import { Filter } from "lucide-react";
 import type { NarrativeMomentKind } from "../../lib/timeline-lab/narrative";
 import { isLabFilterActive, type LabFilter } from "../../lib/timeline-lab/labFilter";
+import { SearchField } from "../../components/ui/SearchField";
 
 const KIND_CHIPS: { kind: NarrativeMomentKind; label: string; tone: string }[] = [
   { kind: "conversation", label: "대화", tone: "purple" },
@@ -14,21 +16,27 @@ const KIND_CHIPS: { kind: NarrativeMomentKind; label: string; tone: string }[] =
 /**
  * The cross-lens filter control. It narrows the reconstructed session once,
  * upstream of whichever lens is showing, so search and kind toggles act on
- * 서사 / 국면 / 인과 / 맥동 identically. Kept calm: a single search field, a row
- * of toggle chips, and a live match count that only appears once a filter bites.
+ * 서사 / 국면 / 인과 / 맥동 identically. It follows the 흐름 toolbar conventions:
+ * the shared `SearchField` (no placeholder, per house style) and a single
+ * filter popover for the kinds, rather than a row of always-visible chips.
  */
 export function LabFilterBar({
   filter,
   onFilterChange,
   matched,
   total,
+  kindCounts,
 }: {
   filter: LabFilter;
   onFilterChange: (next: LabFilter) => void;
   matched: number;
   total: number;
+  kindCounts: Partial<Record<NarrativeMomentKind, number>>;
 }) {
   const active = isLabFilterActive(filter);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const popRef = useRef<HTMLDivElement | null>(null);
+  useClickOutside(popRef, filterOpen, () => setFilterOpen(false));
 
   const toggleKind = (kind: NarrativeMomentKind) => {
     const kinds = filter.kinds.includes(kind)
@@ -39,50 +47,89 @@ export function LabFilterBar({
 
   return (
     <div className="lab-filter">
-      <div className="lab-filter-search">
-        <Search size={14} aria-hidden="true" />
-        <input
-          type="search"
-          value={filter.query}
-          placeholder="순간 검색"
-          aria-label="순간 검색"
-          onChange={(event) => onFilterChange({ ...filter, query: event.target.value })}
-        />
-      </div>
+      <SearchField
+        value={filter.query}
+        onChange={(query) => onFilterChange({ ...filter, query })}
+        ariaLabel="순간 검색"
+      />
 
-      <div className="lab-filter-kinds" role="group" aria-label="종류로 거르기">
-        {KIND_CHIPS.map((chip) => {
-          const on = filter.kinds.includes(chip.kind);
-          return (
-            <button
-              key={chip.kind}
-              type="button"
-              className={`lab-filter-chip${on ? " is-on" : ""}`}
-              data-tone={chip.tone}
-              aria-pressed={on}
-              onClick={() => toggleKind(chip.kind)}
-            >
-              {chip.label}
-            </button>
-          );
-        })}
+      <div className="toolbar-pop-wrap" ref={popRef}>
+        <button
+          type="button"
+          className={`toolbar-toggle${filter.kinds.length ? " is-active" : ""}`}
+          onClick={() => setFilterOpen((open) => !open)}
+          aria-expanded={filterOpen}
+          aria-controls="lab-kind-filter-popover"
+          title="종류 필터"
+        >
+          <Filter size={14} aria-hidden="true" />
+          {filter.kinds.length ? `필터 · ${filter.kinds.length}` : "필터"}
+        </button>
+        {filterOpen ? (
+          <div
+            className="filter-popover"
+            id="lab-kind-filter-popover"
+            role="dialog"
+            aria-label="종류 필터"
+          >
+            <header>
+              <span>종류 필터</span>
+              <button
+                type="button"
+                className="filter-popover-clear"
+                onClick={() => onFilterChange({ ...filter, kinds: [] })}
+                disabled={filter.kinds.length === 0}
+              >
+                지우기
+              </button>
+            </header>
+            <ul>
+              {KIND_CHIPS.map((chip) => {
+                const on = filter.kinds.includes(chip.kind);
+                const count = kindCounts[chip.kind] ?? 0;
+                return (
+                  <li key={chip.kind}>
+                    <button
+                      type="button"
+                      className={`filter-pop-item${on ? " active" : ""}`}
+                      aria-pressed={on}
+                      onClick={() => toggleKind(chip.kind)}
+                    >
+                      <span className={`legend-dot tone-${chip.tone}`} aria-hidden="true" />
+                      <span className="filter-pop-label">{chip.label}</span>
+                      <span className={`filter-pop-count${count === 0 ? " is-zero" : ""}`}>
+                        {count}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
       </div>
 
       {active ? (
-        <div className="lab-filter-tail">
-          <span className="lab-filter-count" aria-live="polite">
-            {matched}/{total}
-          </span>
-          <button
-            type="button"
-            className="lab-filter-clear"
-            onClick={() => onFilterChange({ query: "", kinds: [] })}
-          >
-            <X size={12} aria-hidden="true" />
-            지우기
-          </button>
-        </div>
+        <span className="lab-filter-count" aria-live="polite">
+          {matched}/{total}
+        </span>
       ) : null}
     </div>
   );
+}
+
+function useClickOutside(
+  ref: RefObject<HTMLElement | null>,
+  open: boolean,
+  onClose: () => void,
+) {
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (!ref.current) return;
+      if (!ref.current.contains(event.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [ref, open, onClose]);
 }
