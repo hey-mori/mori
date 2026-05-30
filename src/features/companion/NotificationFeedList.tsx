@@ -85,6 +85,13 @@ function NotificationRow({
         className={`noti-row${read ? " is-read" : ""}`}
         onClick={() => onDispatch(notification.actionTarget, notification.id)}
         disabled={!actionable}
+        title={
+          actionable
+            ? notification.actionLabel
+              ? `${notification.actionLabel}로 이동`
+              : "알림 상세로 이동"
+            : "이 알림에는 연결된 작업이 없습니다."
+        }
       >
         <span className="noti-row-unread" aria-hidden="true" />
         <span className="noti-row-icon" aria-hidden="true">
