@@ -281,7 +281,7 @@ export function ReportBuilderPanel({
           </ul>
         ) : null}
         {previewVisible ? (
-          <pre className="report-preview" aria-label="Markdown preview">
+          <pre className="report-preview base-scroll" aria-label="Markdown preview">
             {payload.markdown}
           </pre>
         ) : null}
