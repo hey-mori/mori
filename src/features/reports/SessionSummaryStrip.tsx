@@ -89,6 +89,7 @@ export function SessionSummaryStrip({
               variant={wrapUp.primaryAction.enabled ? "primary" : "secondary"}
               disabled={!wrapUp.primaryAction.enabled}
               onClick={() => onWrapUpAction?.(wrapUp.primaryAction.id)}
+              title={wrapUp.primaryAction.detail}
             >
               {wrapUp.primaryAction.label}
             </Button>
