@@ -12,7 +12,7 @@ const STAT_FOCUS_KIND: Record<string, NarrativeMomentKind> = {
 };
 
 /**
- * 맥동 — the session read as vital signs.
+ * 맥동 · the session read as vital signs.
  *
  * The other three lenses walk through content; this one steps back and answers
  * "what kind of session was this?" before you read a word of it: how much
