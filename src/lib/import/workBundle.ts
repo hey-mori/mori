@@ -104,6 +104,23 @@ export type WorkBundlePreview = {
   detectedFamilies: TimelineSourceFamily[];
   familyLabels: string[];
   sources: WorkBundleSourcePreview[];
+  /**
+   * Sources Mori treats as an agent-conversation **spine** under the
+   * project-goal reframing (one AI-agent work session = one Claude / Codex /
+   * OpenCode conversation as the spine, everything else attaches as evidence
+   * ribs). Today this is the `ai` source family.
+   */
+  spineSourceCount: number;
+  /** Non-spine sources — the evidence ribs that hang off the spine. */
+  ribSourceCount: number;
+  /**
+   * True when the bundle has at least one rib but no spine — an honest
+   * warning that the user assembled evidence without an anchor conversation.
+   * The bundle can still apply (a manual fallback is allowed), but the
+   * resulting session will not have an agent spine the way the canonical
+   * "1 AI conversation = 1 Mori session" entry point does.
+   */
+  spineMissing: boolean;
   /** Shared work area inferred from the files the sources touch (e.g. `src/sync`). */
   workContextHint: string | null;
   proposedTitle: string;
@@ -247,6 +264,9 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
       detectedFamilies: [],
       familyLabels: [],
       sources: [],
+      spineSourceCount: 0,
+      ribSourceCount: 0,
+      spineMissing: false,
       workContextHint: null,
       proposedTitle: "작업 번들",
       detectedFiles: [],
@@ -339,6 +359,14 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
   const detectedFiles = dedupeFilePaths([...allFiles]).sort((a, b) => a.localeCompare(b));
   const familyLabels = familyOrder.map((family) => getSourceFamilyVisuals(family).label);
 
+  // Spine vs rib classification — the project goal frames a session as one
+  // AI-agent conversation (spine) plus the evidence it touched (ribs). Today
+  // the `ai` family covers Claude / ChatGPT / Codex / OpenCode / desktop
+  // transcript imports; everything else is a rib.
+  const spineSourceCount = sources.filter((source) => source.family === "ai").length;
+  const ribSourceCount = sources.length - spineSourceCount;
+  const spineMissing = spineSourceCount === 0 && ribSourceCount > 0;
+
   return {
     isEmpty: false,
     sourceCount: items.length,
@@ -347,6 +375,9 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
     detectedFamilies: familyOrder,
     familyLabels,
     sources,
+    spineSourceCount,
+    ribSourceCount,
+    spineMissing,
     workContextHint: deriveWorkContextHint(detectedFiles),
     proposedTitle: proposeWorkBundleTitle(items, familyLabels),
     detectedFiles,

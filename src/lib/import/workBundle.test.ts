@@ -116,6 +116,38 @@ describe("buildWorkBundlePreview", () => {
   });
 });
 
+describe("spine vs rib classification", () => {
+  it("classifies AI-family sources as spine and the rest as ribs", () => {
+    const items = fixtureItems();
+    const preview = buildWorkBundlePreview(items);
+
+    // Fixture: Claude transcript (spine) + Codex run (spine, ai family) +
+    // git diff + terminal + note (all ribs). That's 2 spine + 3 ribs.
+    expect(preview.spineSourceCount).toBe(2);
+    expect(preview.ribSourceCount).toBe(3);
+    expect(preview.spineMissing).toBe(false);
+    expect(preview.spineSourceCount + preview.ribSourceCount).toBe(preview.sourceCount);
+  });
+
+  it("flags spineMissing when a bundle has ribs but no agent conversation", () => {
+    const items = fixtureItems().filter(
+      (item) => item.origin !== "ai-transcript" && item.origin !== "connector-jsonl",
+    );
+    const preview = buildWorkBundlePreview(items);
+
+    expect(preview.spineSourceCount).toBe(0);
+    expect(preview.ribSourceCount).toBeGreaterThan(0);
+    expect(preview.spineMissing).toBe(true);
+  });
+
+  it("leaves spineMissing false for an empty bundle", () => {
+    const preview = buildWorkBundlePreview([]);
+    expect(preview.spineMissing).toBe(false);
+    expect(preview.spineSourceCount).toBe(0);
+    expect(preview.ribSourceCount).toBe(0);
+  });
+});
+
 describe("extractFilePaths", () => {
   it("extracts pathed, dotted, and known-extension files", () => {
     const files = extractFilePaths(
