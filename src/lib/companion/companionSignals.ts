@@ -32,6 +32,11 @@ import {
 } from "../product-state/productState";
 import type { ReviewSelection } from "../review-workspace/reviewWorkspace";
 import { isNextActionCompleted } from "../session/nextActionCompletion";
+import type {
+  HandoffReadinessItem,
+  HandoffReadinessItemId,
+  HandoffReadinessViewModel,
+} from "../report/handoffReadiness";
 
 export type CompanionSignalType =
   | "demo_mode_notice"
@@ -483,15 +488,15 @@ export function describeCompanionActionCategory(
 ): { label: string; hint: string } {
   switch (category) {
     case "review":
-      return { label: "검토 필요", hint: "확정하거나 정리할 항목이에요." };
+      return { label: "검토 필요", hint: "확정하거나 정리할 항목입니다." };
     case "risk":
-      return { label: "위험 · 불확실성", hint: "근거가 약해 확인이 필요해요." };
+      return { label: "위험 · 불확실성", hint: "근거가 약해 확인이 필요합니다." };
     case "resume":
-      return { label: "다시 시작 가능", hint: "다음 작업으로 이어갈 수 있어요." };
+      return { label: "다시 시작 가능", hint: "다음 작업으로 이어갈 수 있습니다." };
     case "report":
-      return { label: "보고서 준비", hint: "정리해 공유할 수 있어요." };
+      return { label: "보고서 준비", hint: "정리해 공유할 수 있습니다." };
     case "suggestion":
-      return { label: "제안", hint: "다음 단계로 권하는 작업이에요." };
+      return { label: "제안", hint: "다음 단계로 권하는 작업입니다." };
     case "reference":
       return { label: "참고", hint: "지금 행동은 필요 없는 정보예요." };
     default:

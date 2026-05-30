@@ -812,8 +812,8 @@ function buildNextActions(params: {
       title: `${truncateTitle(mostRecent.title)} 이어가기`,
       description:
         pending > 0
-          ? `이 세션의 흐름과 다음 작업 ${pending}개를 다음 실행에 컨텍스트로 가져갈 수 있어요.`
-          : "이 세션의 맥락을 Resume 프롬프트로 묶어 다음 실행에 그대로 이어갈 수 있어요.",
+          ? `이 세션의 흐름과 다음 작업 ${pending}개를 다음 실행에 컨텍스트로 가져갈 수 있습니다.`
+          : "이 세션의 맥락을 Resume 프롬프트로 묶어 다음 실행에 그대로 이어갈 수 있습니다.",
       actionLabel: "이어가기 준비",
       destination: "reports",
       targetSessionId: mostRecent.sessionId,
@@ -827,7 +827,7 @@ function buildNextActions(params: {
       key: "review-decisions",
       kind: "review_decisions",
       title: "결정을 확인해 메모리에 남기기",
-      description: `확인되지 않은 결정 ${unconfirmedDecisions}개가 있어요. 확인하면 프로젝트 메모리에 남아 다음 작업에서 다시 활용됩니다.`,
+      description: `확인되지 않은 결정 ${unconfirmedDecisions}개가 있습니다. 확인하면 프로젝트 메모리에 남아 다음 작업에서 다시 활용됩니다.`,
       actionLabel: "결정 검토",
       destination: "review",
       targetSessionId: pickSessionWith(active, metricsById, (m) => (m.unconfirmedDecisions ?? 0) > 0),
@@ -841,7 +841,7 @@ function buildNextActions(params: {
       key: "open-issues",
       kind: "open_issues",
       title: "열린 이슈 정리하기",
-      description: `아직 해결되지 않은 이슈 ${openIssues}개가 있어요. 다음 작업 전에 확인해 두면 같은 문제를 반복하지 않습니다.`,
+      description: `아직 해결되지 않은 이슈 ${openIssues}개가 있습니다. 다음 작업 전에 확인해 두면 같은 문제를 반복하지 않습니다.`,
       actionLabel: "이슈 보기",
       destination: "review",
       targetSessionId: pickSessionWith(active, metricsById, (m) => (m.openIssues ?? 0) > 0),
@@ -856,7 +856,7 @@ function buildNextActions(params: {
       kind: "report",
       title: "작업을 리포트로 정리하기",
       description:
-        "지금까지의 세션을 리포트로 묶으면 팀에 공유하거나 나중에 다시 돌아볼 수 있어요.",
+        "지금까지의 세션을 리포트로 묶으면 팀에 공유하거나 나중에 다시 돌아볼 수 있습니다.",
       actionLabel: "리포트 만들기",
       destination: "reports",
       targetSessionId: mostRecent.sessionId,
@@ -892,7 +892,7 @@ function exploreDemoAction(): HomeNextAction {
     kind: "explore_demo",
     title: "데모 세션 둘러보기",
     description:
-      "실제 작업을 가져오기 전에 Mori가 세션을 어떻게 정리하는지 데모 세션으로 미리 확인할 수 있어요.",
+      "실제 작업을 가져오기 전에 Mori가 세션을 어떻게 정리하는지 데모 세션으로 미리 확인할 수 있습니다.",
     actionLabel: "데모 열기",
     destination: "session",
     targetSessionId: null,
@@ -906,7 +906,7 @@ function openMemoryAction(): HomeNextAction {
     kind: "open_memory",
     title: "프로젝트 메모리 살펴보기",
     description:
-      "결정과 이슈가 어떻게 누적되어 다음 세션의 컨텍스트가 되는지 메모리 페이지에서 미리 볼 수 있어요.",
+      "결정과 이슈가 어떻게 누적되어 다음 세션의 컨텍스트가 되는지 메모리 페이지에서 미리 볼 수 있습니다.",
     actionLabel: "메모리 열기",
     destination: "memory",
     targetSessionId: null,

@@ -172,7 +172,7 @@ function buildPulse(
   const date = new Date(now);
   const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
   const kicker = `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekday}요일`;
-  const headline = `${sessionCount}개의 작업을 기억하고 있어요`;
+  const headline = `${sessionCount}개의 작업을 기억하고 있습니다`;
   return { kicker, headline };
 }
 

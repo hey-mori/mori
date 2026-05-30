@@ -94,7 +94,7 @@ export function useNotifications(): {
 
   // Fifth producer: the cross-session feed — one timestamped event per stored
   // session. This is what turns the surface from active-session triage into a
-  // real activity stream ("이 세션이 정리됐어요 · 프로젝트 · 2시간 전").
+  // real activity stream ("이 세션이 정리됐습니다 · 프로젝트 · 2시간 전").
   const sessionFeedNotifications = useMemo<CompanionNotification[]>(
     () => buildSessionFeedNotifications(mergeDemoSessionSummaries(summaries)),
     [summaries],

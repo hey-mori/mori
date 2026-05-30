@@ -10,7 +10,7 @@ import type { CompanionNotification } from "./notification";
  * across every session, accumulating as work lands.
  *
  * This module is that missing producer: it turns each stored session summary
- * into a timestamped notification ("이 세션이 정리됐어요 · 프로젝트 · 2시간 전"),
+ * into a timestamped notification ("이 세션이 정리됐습니다 · 프로젝트 · 2시간 전"),
  * so the bell and the 알림 page read as a real activity stream. It is pure and
  * honest by construction — every item traces to a real stored session; nothing
  * is invented, and a session with no anchor time is skipped rather than faked.
@@ -80,11 +80,11 @@ function describeSessionEvent(status: StoredSessionSummary["status"]): {
 } {
   switch (status) {
     case "complete":
-      return { message: "분석이 끝나 이슈·결정을 검토할 수 있어요.", severity: "review" };
+      return { message: "분석이 끝나 이슈·결정을 검토할 수 있습니다.", severity: "review" };
     case "analyzing":
-      return { message: "분석을 진행하고 있어요.", severity: "info" };
+      return { message: "분석을 진행하고 있습니다.", severity: "info" };
     case "recording":
     default:
-      return { message: "작업 세션이 추가됐어요.", severity: "info" };
+      return { message: "작업 세션이 추가됐습니다.", severity: "info" };
   }
 }
