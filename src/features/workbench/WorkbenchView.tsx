@@ -139,6 +139,7 @@ export function WorkbenchView() {
   const [presets, setPresets] = useState<WorkbenchPreset[]>(() => loadPresets());
   const [manageOpen, setManageOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [nameModal, setNameModal] = useState<
     { mode: "save" } | { mode: "rename"; id: string; current: string } | null
@@ -544,20 +545,26 @@ export function WorkbenchView() {
   // Keyboard control: ⌘K / Ctrl+K opens the command palette anywhere; the
   // single-key shortcuts act on the focused panel and are suppressed while a
   // field or modal has focus so they never hijack typing.
-  const modalOpen = Boolean(launcher) || manageOpen || Boolean(nameModal) || paletteOpen;
+  const modalOpen =
+    Boolean(launcher) || manageOpen || Boolean(nameModal) || paletteOpen || helpOpen;
   useEffect(() => {
     if (!hasLayout) return;
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = Boolean(
+        target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable),
+      );
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setPaletteOpen((open) => !open);
         return;
       }
-      if (modalOpen || event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      if (!typing && event.key === "?") {
+        event.preventDefault();
+        setHelpOpen((open) => !open);
         return;
       }
+      if (modalOpen || typing || event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key >= "1" && event.key <= "9") {
         const index = Number(event.key) - 1;
         if (index < panelIds.length) {
@@ -617,6 +624,7 @@ export function WorkbenchView() {
     { id: "layout-grid", group: "레이아웃", label: "격자로 정렬", run: () => applyQuickLayout("grid") },
     { id: "density", group: "보기", label: density === "dense" ? "편안한 밀도로" : "조밀한 밀도로", run: () => setDensity((value) => (value === "dense" ? "comfortable" : "dense")) },
     { id: "inspector", group: "보기", label: inspectorOpen ? "인스펙터 닫기" : "인스펙터 열기", run: () => setInspectorOpen((open) => !open) },
+    { id: "help", group: "보기", label: "단축키 도움말", run: () => setHelpOpen(true) },
     ...columns
       .flatMap((col) => col.panels)
       .map((panel) => {
@@ -909,6 +917,8 @@ export function WorkbenchView() {
         />
       ) : null}
 
+      {helpOpen ? <WorkbenchHelp onClose={() => setHelpOpen(false)} /> : null}
+
       {launcher ? (
         <SessionPicker sessions={sessions} onPick={placeSession} onClose={() => setLauncher(null)} />
       ) : null}
@@ -1097,6 +1107,62 @@ function SessionPicker({
             <kbd>Esc</kbd> 닫기
           </span>
         </footer>
+      </div>
+    </div>
+  );
+}
+
+// ─── Keyboard help ────────────────────────────────────────────────────────────
+
+const SHORTCUTS: { keys: string[]; desc: string }[] = [
+  { keys: ["⌘", "K"], desc: "명령 팔레트 열기" },
+  { keys: ["/"], desc: "모든 패널 검색" },
+  { keys: ["1", "–", "9"], desc: "n번째 패널 포커스" },
+  { keys: ["[", "]"], desc: "이전 / 다음 패널" },
+  { keys: ["m"], desc: "대화 / 타임라인 전환" },
+  { keys: ["c"], desc: "패널 접기 / 펼치기" },
+  { keys: ["x"], desc: "패널 닫기" },
+  { keys: ["i"], desc: "인스펙터 열기 / 닫기" },
+  { keys: ["?"], desc: "이 도움말 열기 / 닫기" },
+];
+
+/** A quiet keyboard cheatsheet so the workbench's power keys are discoverable. */
+function WorkbenchHelp({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="workbench-modal-layer" role="presentation">
+      <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
+      <div className="workbench-modal is-help" role="dialog" aria-modal="true" aria-label="단축키 도움말">
+        <header className="workbench-modal-head">
+          <strong className="workbench-help-title">단축키</strong>
+          <Button size="sm" variant="ghost" icon={X} title="닫기" onClick={onClose} />
+        </header>
+        <div className="workbench-help-list base-scroll">
+          {SHORTCUTS.map((shortcut) => (
+            <div className="workbench-help-row" key={shortcut.desc}>
+              <span className="workbench-help-keys">
+                {shortcut.keys.map((key, index) =>
+                  key === "–" ? (
+                    <span key={index} className="workbench-help-sep">
+                      –
+                    </span>
+                  ) : (
+                    <kbd key={index}>{key}</kbd>
+                  ),
+                )}
+              </span>
+              <span>{shortcut.desc}</span>
+            </div>
+          ))}
+        </div>
+        <footer className="workbench-help-foot">⌘ 대신 Ctrl도 됩니다 · 입력 중에는 단축키가 멈춥니다</footer>
       </div>
     </div>
   );
@@ -1872,7 +1938,7 @@ function ModeButton({
   onClick: () => void;
 }) {
   return (
-    <button type="button" className={active ? "is-active" : ""} aria-pressed={active} aria-label={label} onClick={onClick}>
+    <button type="button" className={active ? "is-active" : ""} aria-pressed={active} aria-label={label} title={label} onClick={onClick}>
       <Icon size={13} aria-hidden="true" />
     </button>
   );
@@ -1880,7 +1946,7 @@ function ModeButton({
 
 function IconAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
   return (
-    <button type="button" className="workbench-panel-icon" aria-label={label} onClick={onClick}>
+    <button type="button" className="workbench-panel-icon" aria-label={label} title={label} onClick={onClick}>
       <Icon size={13} aria-hidden="true" />
     </button>
   );

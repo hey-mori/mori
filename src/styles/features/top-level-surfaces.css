@@ -1741,6 +1741,73 @@
   color: inherit;
 }
 
+/* Keyboard cheatsheet modal. */
+.workbench-modal.is-help {
+  width: min(400px, 92vw);
+}
+
+.workbench-help-title {
+  color: var(--base-text);
+  font-size: var(--base-font-size-sm);
+  font-weight: 700;
+}
+
+.workbench-help-list {
+  display: grid;
+  gap: 2px;
+  padding: var(--base-space-2);
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.workbench-help-row {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: var(--base-space-3);
+  align-items: center;
+  padding: 6px var(--base-space-2);
+  border-radius: var(--base-radius-sm);
+  color: var(--base-text);
+  font-size: var(--base-font-size-xs);
+}
+
+.workbench-help-row:hover {
+  background: var(--base-surface-subtle);
+}
+
+.workbench-help-keys {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.workbench-help-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--base-text-muted);
+  font-family: inherit;
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
+}
+
+.workbench-help-sep {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+}
+
+.workbench-help-foot {
+  padding: var(--base-space-2) var(--base-space-3);
+  border-top: 1px solid var(--base-border);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+}
+
 /* ─── Modals: session picker + preset manager ───────────────────────────────── */
 
 .workbench-modal-layer {
