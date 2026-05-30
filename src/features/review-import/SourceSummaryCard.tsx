@@ -16,7 +16,7 @@ export function SourceSummaryCard({ source }: { source: SourceRef }) {
   const display = getSourceDisplayStatus(source);
 
   return (
-    <section className="review-source-card" aria-label="Reviewed source summary">
+    <section className="review-source-card" aria-label="검토된 자료 요약">
       <header className="review-source-card-head">
         <span className="review-source-card-icon">
           <FileText size={18} />

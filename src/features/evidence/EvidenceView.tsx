@@ -361,7 +361,7 @@ function QuickPassControl({
       </div>
       <div className="analysis-panel-provider">
         <SegmentedControl<QuickPassProviderKind>
-          ariaLabel="Quick Pass provider"
+          ariaLabel="Quick Pass 제공자"
           role="radiogroup"
           value={settings.provider}
           onChange={onProviderChange}

@@ -17,7 +17,7 @@ export function RecurringIssuesCard({
   scopeNote: string;
 }) {
   return (
-    <section className="memory-recurring" aria-label="Recurring issues">
+    <section className="memory-recurring" aria-label="반복 이슈">
       <header className="memory-section-head">
         <div>
           <h3>반복 이슈 Top {rows.length}</h3>

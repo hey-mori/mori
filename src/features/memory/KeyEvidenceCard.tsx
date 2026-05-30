@@ -5,7 +5,7 @@ import type { ProjectMemoryKeyEvidence } from "../../lib/project-memory/projectM
 
 export function KeyEvidenceCard({ rows }: { rows: ProjectMemoryKeyEvidence[] }) {
   return (
-    <section className="memory-evidence" aria-label="Key evidence">
+    <section className="memory-evidence" aria-label="핵심 자료">
       <header className="memory-section-head">
         <div>
           <h3>핵심 Evidence</h3>

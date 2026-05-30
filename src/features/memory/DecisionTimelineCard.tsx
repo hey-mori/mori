@@ -12,7 +12,7 @@ const TONE: Record<string, "red" | "orange" | "blue"> = {
 
 export function DecisionTimelineCard({ timeline }: { timeline: DecisionTimelinePoint[] }) {
   return (
-    <section className="memory-decisions" aria-label="Decisions over time">
+    <section className="memory-decisions" aria-label="결정 흐름">
       <header className="memory-section-head">
         <div>
           <h3>결정 흐름</h3>

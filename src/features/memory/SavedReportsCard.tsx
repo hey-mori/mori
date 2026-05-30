@@ -17,7 +17,7 @@ export function SavedReportsCard({
   return (
     <BaseSection
       className="memory-reports"
-      ariaLabel="Saved reports"
+      ariaLabel="저장된 리포트"
       title="저장된 리포트 · .mori 패키지"
       hint={
         <>

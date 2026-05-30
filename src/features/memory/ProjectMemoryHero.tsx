@@ -28,7 +28,7 @@ export function ProjectMemoryHero({
   savedReportAvailability?: SavedReportAvailability;
 }) {
   return (
-    <section className="memory-hero" aria-label="Project overview">
+    <section className="memory-hero" aria-label="프로젝트 개요">
       <header className="memory-hero-head">
         <div>
           <div className="memory-hero-badge-row">

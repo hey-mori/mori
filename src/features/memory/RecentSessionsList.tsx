@@ -38,7 +38,7 @@ export function RecentSessionsList({
   onStartNewSession: () => void;
 }) {
   return (
-    <section className="memory-sessions" aria-label="Recent sessions">
+    <section className="memory-sessions" aria-label="최근 세션">
       <header className="memory-section-head">
         <div>
           <h3>최근 세션</h3>

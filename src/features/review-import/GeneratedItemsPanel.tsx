@@ -20,7 +20,7 @@ export function GeneratedItemsPanel({ draft }: { draft: ImportReviewDraft }) {
   const allEmpty = issueCount === 0 && decisionCount === 0 && nextActionCount === 0;
 
   return (
-    <aside className="review-generated" aria-label="Generated items">
+    <aside className="review-generated" aria-label="생성된 항목">
       <header className="review-generated-head">
         <h3>생성된 항목</h3>
         <p>이슈 · 결정 · 다음 액션은 적용 후 Quick Pass에서 만들어집니다.</p>

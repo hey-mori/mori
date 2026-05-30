@@ -31,7 +31,7 @@ export function ReimportHistoryCard({
   return (
     <BaseSection
       className="memory-reimport"
-      ariaLabel="Connector re-import history"
+      ariaLabel="Connector 재가져오기 기록"
       title={
         <span className="memory-reimport-title">
           <History size={14} aria-hidden="true" /> 이번 프로젝트 재import
