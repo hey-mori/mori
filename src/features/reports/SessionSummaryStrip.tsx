@@ -188,7 +188,7 @@ function describeAttentionMemoryStatus(memory: SessionWrapUpAttentionMemory): st
   if (memory.status === "stale") {
     return "오래됨 — 최근 작업이 이 메모리를 대체했을 수 있습니다.";
   }
-  return "모순됨 — 최근 작업 내용이 이 메모리와 충돌합니다.";
+  return "상충 — 최근 작업 내용이 이 메모리와 충돌합니다.";
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
