@@ -41,7 +41,7 @@ export function SavedReportsCard({
       }
     >
       {packages.length === 0 ? (
-        <p className="memory-empty">아직 저장된 .mori 패키지가 없습니다. Reports에서 내보내면 여기 표시됩니다.</p>
+        <p className="memory-empty">아직 저장된 .mori 패키지가 없습니다. 리포트에서 내보내면 여기 표시됩니다.</p>
       ) : (
         <ul className="memory-reports-list">
           {packages.map((entry) => {

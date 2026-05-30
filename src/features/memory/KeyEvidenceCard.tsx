@@ -14,7 +14,7 @@ export function KeyEvidenceCard({ rows }: { rows: ProjectMemoryKeyEvidence[] }) 
         <Badge tone={rows.length ? "purple" : "gray"}>{rows.length}개 소스</Badge>
       </header>
       {rows.length === 0 ? (
-        <p className="memory-empty">아직 가져온 소스가 없습니다. Evidence에서 소스를 추가하세요.</p>
+        <p className="memory-empty">아직 가져온 소스가 없습니다. 증거에서 소스를 추가하세요.</p>
       ) : (
         <ul className="memory-evidence-list">
           {rows.map((row) => {
