@@ -105,18 +105,18 @@ export function AcceptedMemoryDetailDrawer({
     <article className="accepted-memory-detail" aria-labelledby="accepted-memory-detail-title">
       <header className="accepted-memory-detail-head">
         <div className="accepted-memory-detail-titles">
-          <p className="accepted-memory-detail-eyebrow">Accepted Project Memory</p>
+          <p className="accepted-memory-detail-eyebrow">수락된 프로젝트 메모리</p>
           <h2 id="accepted-memory-detail-title">{memory.title}</h2>
           {memory.summary ? (
             <p className="accepted-memory-detail-summary">{memory.summary}</p>
           ) : null}
         </div>
-        <Button onClick={onClose} aria-label="Close memory detail">
+        <Button onClick={onClose} aria-label="메모리 상세 닫기">
           닫기
         </Button>
       </header>
 
-      <section className="accepted-memory-detail-state" aria-label="Lifecycle state">
+      <section className="accepted-memory-detail-state" aria-label="생명주기 상태">
         <div className="accepted-memory-detail-badges">
           <BaseStatusBadge tone={memoryLifecycleGroupTone(provenance.lifecycleGroup)}>
             {describeMemoryLifecycleGroup(provenance.lifecycleGroup)}
@@ -139,7 +139,7 @@ export function AcceptedMemoryDetailDrawer({
         ) : null}
       </section>
 
-      <dl className="accepted-memory-detail-grid" aria-label="Provenance counts">
+      <dl className="accepted-memory-detail-grid" aria-label="출처 통계">
         <ProvenanceStat label="근거" value={provenance.evidenceCount} hint="evidenceRefs" />
         <ProvenanceStat label="세션" value={provenance.sessionCount} hint="sourceSessionIds" />
         <ProvenanceStat
@@ -199,14 +199,14 @@ export function AcceptedMemoryDetailDrawer({
       </section>
 
       {memory.reviewNote ? (
-        <section className="accepted-memory-detail-note" aria-label="Reviewer note">
+        <section className="accepted-memory-detail-note" aria-label="리뷰어 메모">
           <p className="accepted-memory-detail-note-label">리뷰어 메모</p>
           <p>{memory.reviewNote}</p>
         </section>
       ) : null}
 
       {hasAnyLinks || unlinkableEvidenceCount > 0 ? (
-        <section className="accepted-memory-detail-links" aria-label="Linked items">
+        <section className="accepted-memory-detail-links" aria-label="연결된 항목">
           <header>
             <h3>연결된 항목</h3>
             <p>이 메모리가 가리키는 활성 세션의 항목입니다. 클릭하면 해당 화면으로 이동합니다.</p>
@@ -285,7 +285,7 @@ export function AcceptedMemoryDetailDrawer({
         </section>
       ) : null}
 
-      <section className="accepted-memory-detail-audit" aria-label="Audit history">
+      <section className="accepted-memory-detail-audit" aria-label="변경 기록">
         <header>
           <h3>
             <Clock4 size={12} aria-hidden="true" /> 이 메모리의 변경 기록
@@ -322,7 +322,7 @@ export function AcceptedMemoryDetailDrawer({
         )}
       </section>
 
-      <section className="accepted-memory-detail-actions" aria-label="Safe actions">
+      <section className="accepted-memory-detail-actions" aria-label="안전한 조치">
         {provenance.lastRevertibleAction ? (
           <RevertPanel
             phase={revertPhase}

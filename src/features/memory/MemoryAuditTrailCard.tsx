@@ -60,10 +60,10 @@ export function MemoryAuditTrailCard({
   return (
     <BaseSection
       className="memory-audit"
-      ariaLabel="Memory Audit Trail"
+      ariaLabel="메모리 감사 기록"
       title={
         <span className="memory-audit-title">
-          <History size={14} aria-hidden="true" /> Memory Audit Trail
+          <History size={14} aria-hidden="true" /> 메모리 감사 기록
         </span>
       }
       hint={
@@ -85,7 +85,7 @@ export function MemoryAuditTrailCard({
         </p>
       ) : (
         <>
-          <div className="memory-audit-filters" role="group" aria-label="Filter by action type">
+          <div className="memory-audit-filters" role="group" aria-label="조치 유형별 필터">
             <FilterChip
               label="전체"
               count={viewModel.totalCount}
