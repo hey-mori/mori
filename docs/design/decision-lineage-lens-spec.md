@@ -3,7 +3,14 @@
 A buildable spec for the planned fifth lens of the 재구성 lab. It turns the
 session's decisions, the richest and most under-used data Mori owns, into a
 scannable, ADR/IBIS-shaped reading. Pure derivation from `MockSession`, zero
-coupling, fully testable. This is a design spec, not yet an implementation.
+coupling, fully testable.
+
+**Status: implemented.** Shipped as `buildDecisionLineage` + `DecisionLineageView`,
+wired as the fifth 재구성 lens. The card anatomy, rejected alternatives,
+motivations/consequences, and the predicted-vs-actual block all shipped. Deferred
+follow-ups: the left-to-right lineage chain rail for decision-to-decision edges
+(§3), and the peek/focus interactions (§5), which wait on the shared peek
+primitive.
 
 Parent: [`reconstruction-lab-vision.md`](reconstruction-lab-vision.md) (§4.5).
 Visual rules: [`visual-system-direction.md`](visual-system-direction.md).

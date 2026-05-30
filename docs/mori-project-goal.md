@@ -251,10 +251,12 @@ that is called out.
   reprojects a reviewed session into shapes the eye can read, leaving the
   흐름 swimlane untouched. Every lens is a pure derivation from the reviewed
   `MockSession` (`src/lib/timeline-lab/`, `src/features/timeline-lab/`).
-- Four lenses: 서사 (a single narrative spine with the causal reason threaded
+- Five lenses: 서사 (a single narrative spine with the causal reason threaded
   between moments, pivotal moments led and routine runs folded), 국면 (the work
   arc read as time-ordered chapters, a stage may recur so a back-and-forth
-  shows), 인과 (a cause → effect map laid out by causal depth), and 맥동 (the session
+  shows), 인과 (a cause → effect map laid out by causal depth), 계보 (the
+  decisions as ADR-style cards: rationale, rejected alternatives, impact, and a
+  예상 vs 실제 block when there is real downstream), and 맥동 (the session
   as vital signs: counts, phase mix, trust mix, issue resolution, activity
   momentum, and a carry-forward with a one-tap resume copy).
 - A cross-lens filter (`filterSession`) that narrows the session once,

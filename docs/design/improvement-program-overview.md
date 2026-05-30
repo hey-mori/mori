@@ -9,7 +9,8 @@ where to start.
 **Status.** The planning set is committed and build is underway. Shipped and
 browser-verified so far: the 인과 critical-path (Phase 3), the 흐름-aligned
 재구성 toolbar (shared search + filter popover), the temporal 국면 lens (Phase 4),
-and 서사 readability (tiering + folding; minimap pending). Items marked
+and 서사 readability (tiering + folding; minimap pending), and the 계보
+decision-lineage lens (Phase 4; chain rail and peek pending). Items marked
 **SHIPPED** are implemented; the rest are specs ready to build.
 
 ---
@@ -147,7 +148,8 @@ treatment + test plan, ready to implement against.
 
 **Phase 4 (new capabilities)**
 - [`decision-lineage-lens-spec.md`](decision-lineage-lens-spec.md) · the 계보
-  lens: ADR/IBIS cards, rejected-alternatives, predicted-vs-actual.
+  lens: ADR/IBIS cards, rejected-alternatives, predicted-vs-actual. **SHIPPED**
+  (chain rail and peek deferred).
 - [`phase-timeline-spec.md`](phase-timeline-spec.md) · 국면 re-founded as
   chapters over time with a grouped fallback. **SHIPPED.**
 - [`timeline-minimap-zoom-spec.md`](timeline-minimap-zoom-spec.md) · minimap

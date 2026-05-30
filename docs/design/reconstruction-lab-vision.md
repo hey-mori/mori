@@ -45,20 +45,24 @@ other surfaces.**
 
 ## 2. The lab today (honest gap analysis)
 
-The lab currently has four lenses, a cross-lens filter, and a 맥동→서사
-drill-down:
+The lab currently has five lenses, a cross-lens filter (shared search + a kind
+filter popover matching 흐름), and a 맥동→서사 drill-down. Several of the
+power-ups below have since shipped; the bullets reflect the current state:
 
-- **서사** (`NarrativeStoryView`) · a vertical story spine. Each moment shows
-  the causal reason that led into it, decisions/issues elevated inline, and
-  compact evidence chips. Closes with an 이어가기 block.
-- **국면** (`PhaseFlowView`) · a work-arc grouped into 탐색 → 결정 → 구현 →
-  점검 → 정리, with a composition ribbon.
+- **서사** (`NarrativeStoryView`) · a vertical story spine. Pivotal moments lead
+  as full cards with the causal reason threaded between them; routine runs fold
+  behind a quiet disclosure. Closes with an 이어가기 block.
+- **국면** (`PhaseFlowView`) · the work arc read as time-ordered chapters (a
+  stage may recur), each weighted by moment count and labeled with its clock
+  range, with a grouped fallback when timestamps are missing.
 - **인과** (`CausalMapView`) · a layered cause→effect DAG with hover/pin chain
-  tracing. Now also surfaces the causal backbone (longest chain), roots and
-  outcomes, typed and confidence-weighted edges, contradiction-as-tension, and a
-  핵심 경로 isolate toggle (the §4.1 power-up, shipped).
+  tracing, the causal backbone (longest chain), roots and outcomes, typed and
+  confidence-weighted edges, contradiction-as-tension, and a 핵심 경로 toggle.
 - **맥동** (`PulseView`) · a vital-signs dashboard: counts, phase mix, trust
   mix, issue resolution, activity momentum, carry-forward with resume copy.
+- **계보** (`DecisionLineageView`) · the decisions as ADR-style cards: rationale,
+  rejected alternatives, impact, motivations and consequences, and a 예상 vs 실제
+  block when a stated impact and real downstream both exist.
 
 What is genuinely strong: the pure-derivation architecture, the trust-tone
 contract, the cross-lens filter, and the fact that 맥동 already answers "what
@@ -210,7 +214,7 @@ for the as-built design.
   crossing reduction so layers order by the average position of their neighbors.
   Stable, deterministic, no physics jitter.
 
-### 4.2 국면 · re-found on a real time axis
+### 4.2 국면 · re-found on a real time axis · SHIPPED
 
 Turn the kind-buckets into the cheapest legibility win available.
 
@@ -255,7 +259,7 @@ It is already the best lens. Two restrained additions:
   inferred), suppress its emphasis (toward neutral) rather than showing a bold
   figure that overclaims. Keep the precise value in the tooltip.
 
-### 4.5 계보 · decision lineage (the one new lens)
+### 4.5 계보 · decision lineage (the one new lens) · SHIPPED
 
 The most on-thesis capability, and the one that finally uses
 `rejectedOptions` / `impact` / `confirmed`. A fifth lens, labeled **계보**.
