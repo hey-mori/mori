@@ -11,7 +11,12 @@ import {
   type CompanionSignal,
 } from "../../lib/companion/companionSignals";
 import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMemoryRepository";
-import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
+import { buildMoriPackageExportPlan } from "../../lib/report/moriPackageExportPlan";
+import { buildHandoffReadiness } from "../../lib/report/handoffReadiness";
+import type {
+  StoredAcceptedProjectMemory,
+  StoredMemoryReviewAction,
+} from "../../lib/storage/storageTypes";
 
 /**
  * Shared Companion Layer hook.
@@ -21,11 +26,14 @@ import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes
  * (Reports, Project Memory, Timeline) builds signals the same way instead
  * of each component re-wiring `buildCompanionSignals`.
  *
- * It also loads accepted project memory through the runtime-aware
- * repository so the signal set can flag memory that has gone stale or
- * contradicted — read-only, no writes. The full list is exposed so
- * surfaces like the Companion Inbox can resolve a signal's
- * `linkedItemIds` into titles without re-loading the memories.
+ * It also loads accepted project memory and the review-action audit trail
+ * through the runtime-aware repository so the signal set can:
+ *  - flag memory that has gone stale or contradicted (read-only, no writes),
+ *  - and route ready_to_report / ready_to_resume severity through the
+ *    finish-work readiness model — so when memory needs review or evidence
+ *    is missing, the continuation signals escalate to "review" with the
+ *    matching readiness item's detail as message, rather than calmly
+ *    suggesting a handoff that is not actually ready.
  *
  * Returns both the full `feed` (every signal, for the Companion inbox)
  * and the capped `signals` set (top few, for the calm card / strip).
@@ -43,10 +51,12 @@ export function useCompanionSignals(): {
 
   const projectId = view.project.id || "default";
   const [acceptedMemories, setAcceptedMemories] = useState<StoredAcceptedProjectMemory[]>([]);
+  const [reviewActions, setReviewActions] = useState<StoredMemoryReviewAction[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    void getAcceptedMemoryRepository()
+    const repository = getAcceptedMemoryRepository();
+    void repository
       .listAcceptedProjectMemories(projectId)
       .then((result) => {
         if (cancelled) return;
@@ -56,6 +66,15 @@ export function useCompanionSignals(): {
         // The repository falls back internally; a failed read just leaves
         // the memory-health signal off rather than blocking the others.
         if (!cancelled) setAcceptedMemories([]);
+      });
+    void repository
+      .listMemoryReviewActions(projectId)
+      .then((result) => {
+        if (cancelled) return;
+        setReviewActions(result.data);
+      })
+      .catch(() => {
+        if (!cancelled) setReviewActions([]);
       });
     return () => {
       cancelled = true;
@@ -72,6 +91,42 @@ export function useCompanionSignals(): {
     return { staleMemoryIds: stale, contradictedMemoryIds: contradicted };
   }, [acceptedMemories]);
 
+  const handoffReadiness = useMemo(() => {
+    // Skip the readiness model in demo mode — the demo session is synthetic
+    // and the continuation signals fall back to the legacy state gates,
+    // which already render an honest demo notice.
+    if (mode === "demo") return undefined;
+    const exportPlan = buildMoriPackageExportPlan({
+      view,
+      consolidatedMemories: acceptedMemories,
+      auditTrail: reviewActions,
+    });
+    return buildHandoffReadiness({
+      sourceCount: view.sources.length,
+      eventCount: view.events.length,
+      issueCount: view.issues.length,
+      decisionCount: view.decisions.length,
+      nextActionCount: view.nextActions.length,
+      hasAnalysis,
+      analysisRunning: false,
+      canRunQuickPass: imports.length > 0,
+      acceptedMemoryCount: acceptedMemories.length,
+      staleMemoryCount: staleMemoryIds.length,
+      contradictedMemoryCount: contradictedMemoryIds.length,
+      resumePromptReady: view.events.length > 0,
+      exportPlan,
+    });
+  }, [
+    mode,
+    view,
+    hasAnalysis,
+    imports.length,
+    acceptedMemories,
+    reviewActions,
+    staleMemoryIds.length,
+    contradictedMemoryIds.length,
+  ]);
+
   const feed = useMemo(
     () =>
       buildCompanionSignalFeed({
@@ -84,8 +139,9 @@ export function useCompanionSignals(): {
         importCount: imports.length,
         staleMemoryIds,
         contradictedMemoryIds,
+        handoffReadiness,
       }),
-    [mode, view, hasAnalysis, imports.length, staleMemoryIds, contradictedMemoryIds],
+    [mode, view, hasAnalysis, imports.length, staleMemoryIds, contradictedMemoryIds, handoffReadiness],
   );
 
   const signals = useMemo(
