@@ -1741,6 +1741,41 @@
   color: inherit;
 }
 
+/* Focus (maximize) overlay: one panel, full size, over the board. */
+.workbench-focus {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 92vw);
+  height: min(82vh, 900px);
+  overflow: hidden;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface);
+  box-shadow: var(--base-shadow-card-strong);
+  animation: wb-pop 150ms ease both;
+}
+
+.workbench-focus-head {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--base-space-2);
+  align-items: center;
+  padding: var(--base-space-3) var(--base-space-4);
+  border-bottom: 1px solid var(--base-border);
+}
+
+.workbench-focus-head .workbench-panel-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.workbench-focus-body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--base-space-4);
+  overflow: auto;
+}
+
 /* Keyboard cheatsheet modal. */
 .workbench-modal.is-help {
   width: min(400px, 92vw);

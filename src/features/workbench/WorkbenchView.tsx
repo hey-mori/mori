@@ -140,6 +140,7 @@ export function WorkbenchView() {
   const [manageOpen, setManageOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [maximizedId, setMaximizedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [nameModal, setNameModal] = useState<
     { mode: "save" } | { mode: "rename"; id: string; current: string } | null
@@ -519,6 +520,19 @@ export function WorkbenchView() {
     [columns, sessionsById],
   );
 
+  // Focus (maximize) mode: read the maximized panel and drop it if it is gone.
+  const maximizedPanel = useMemo(
+    () =>
+      maximizedId
+        ? columns.flatMap((col) => col.panels).find((panel) => panel.id === maximizedId) ?? null
+        : null,
+    [columns, maximizedId],
+  );
+  const maximizedMeta = maximizedPanel ? sessionsById.get(maximizedPanel.sessionId) ?? null : null;
+  useEffect(() => {
+    if (maximizedId && !panelIds.includes(maximizedId)) setMaximizedId(null);
+  }, [panelIds, maximizedId]);
+
   // Focus a panel and bring it into view (used by the attention strip and the
   // keyboard shortcuts / command palette).
   const focusPanel = (panelId: string) => {
@@ -546,7 +560,12 @@ export function WorkbenchView() {
   // single-key shortcuts act on the focused panel and are suppressed while a
   // field or modal has focus so they never hijack typing.
   const modalOpen =
-    Boolean(launcher) || manageOpen || Boolean(nameModal) || paletteOpen || helpOpen;
+    Boolean(launcher) ||
+    manageOpen ||
+    Boolean(nameModal) ||
+    paletteOpen ||
+    helpOpen ||
+    Boolean(maximizedId);
   useEffect(() => {
     if (!hasLayout) return;
     const onKey = (event: KeyboardEvent) => {
@@ -602,6 +621,12 @@ export function WorkbenchView() {
           event.preventDefault();
           setInspectorOpen((open) => !open);
           break;
+        case "f":
+          if (focusedPanelId) {
+            event.preventDefault();
+            setMaximizedId((id) => (id === focusedPanelId ? null : focusedPanelId));
+          }
+          break;
         case "/":
           event.preventDefault();
           (document.querySelector("[data-wb-search]") as HTMLInputElement | null)?.focus();
@@ -625,6 +650,9 @@ export function WorkbenchView() {
     { id: "density", group: "보기", label: density === "dense" ? "편안한 밀도로" : "조밀한 밀도로", run: () => setDensity((value) => (value === "dense" ? "comfortable" : "dense")) },
     { id: "inspector", group: "보기", label: inspectorOpen ? "인스펙터 닫기" : "인스펙터 열기", run: () => setInspectorOpen((open) => !open) },
     { id: "help", group: "보기", label: "단축키 도움말", run: () => setHelpOpen(true) },
+    ...(focusedPanelId
+      ? [{ id: "maximize", group: "보기", label: "현재 패널 최대화", run: () => setMaximizedId(focusedPanelId) }]
+      : []),
     ...columns
       .flatMap((col) => col.panels)
       .map((panel) => {
@@ -828,6 +856,7 @@ export function WorkbenchView() {
                           onClose={() => removePanel(panel.id)}
                           onOpen={() => meta && openInWorkspace(meta.sessionId, meta.isActive)}
                           onToggleCollapse={() => toggleCollapse(panel.id)}
+                          onMaximize={() => setMaximizedId(panel.id)}
                         />
                         {panelIndex < col.panels.length - 1 ? (
                           <div
@@ -918,6 +947,17 @@ export function WorkbenchView() {
       ) : null}
 
       {helpOpen ? <WorkbenchHelp onClose={() => setHelpOpen(false)} /> : null}
+
+      {maximizedPanel && maximizedMeta ? (
+        <WorkbenchFocus
+          panel={maximizedPanel}
+          meta={maximizedMeta}
+          repository={repository}
+          search={search}
+          onMode={(panelMode) => setPanelMode(maximizedPanel.id, panelMode)}
+          onClose={() => setMaximizedId(null)}
+        />
+      ) : null}
 
       {launcher ? (
         <SessionPicker sessions={sessions} onPick={placeSession} onClose={() => setLauncher(null)} />
@@ -1123,6 +1163,7 @@ const SHORTCUTS: { keys: string[]; desc: string }[] = [
   { keys: ["c"], desc: "패널 접기 / 펼치기" },
   { keys: ["x"], desc: "패널 닫기" },
   { keys: ["i"], desc: "인스펙터 열기 / 닫기" },
+  { keys: ["f"], desc: "패널 최대화 / 복귀" },
   { keys: ["?"], desc: "이 도움말 열기 / 닫기" },
 ];
 
@@ -1163,6 +1204,88 @@ function WorkbenchHelp({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <footer className="workbench-help-foot">⌘ 대신 Ctrl도 됩니다 · 입력 중에는 단축키가 멈춥니다</footer>
+      </div>
+    </div>
+  );
+}
+
+// ─── Focus (maximize) overlay ─────────────────────────────────────────────────
+
+/**
+ * Maximize one panel over the board for close reading, then drop back to the
+ * dense layout. Honors the active search highlight and the panel's view mode;
+ * Esc or "f" closes, "m" flips conversation / timeline.
+ */
+function WorkbenchFocus({
+  panel,
+  meta,
+  repository,
+  search,
+  onMode,
+  onClose,
+}: {
+  panel: Panel;
+  meta: SessionMeta;
+  repository: ReturnType<typeof createBrowserDraftRepository>;
+  search: string;
+  onMode: (mode: PanelMode) => void;
+  onClose: () => void;
+}) {
+  const events = useMemo(
+    () => loadConversation(repository, meta.sessionId),
+    [repository, meta.sessionId],
+  );
+  const needle = search.trim().toLowerCase();
+  const matched = useMemo(
+    () =>
+      needle
+        ? events.filter((event) =>
+            `${event.title} ${event.summary} ${event.actor}`.toLowerCase().includes(needle),
+          )
+        : events,
+    [events, needle],
+  );
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" || event.key === "f") {
+        event.preventDefault();
+        onClose();
+      } else if (event.key === "m") {
+        event.preventDefault();
+        onMode(panel.mode === "conversation" ? "timeline" : "conversation");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, onMode, panel.mode]);
+
+  const when = meta.savedAt ?? meta.startedAt;
+
+  return (
+    <div className="workbench-modal-layer" role="presentation">
+      <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
+      <div className="workbench-focus" role="dialog" aria-modal="true" aria-label={meta.title}>
+        <header className="workbench-focus-head">
+          <div className="workbench-panel-id">
+            <h2>{meta.title}</h2>
+            <span>
+              {meta.sourceLabel ? shortProjectLabel(meta.sourceLabel) : "수동 세션"}
+              {when ? ` · ${formatRelative(when)}` : ""}
+            </span>
+          </div>
+          <span className="workbench-panel-modes" role="group" aria-label="보기 전환">
+            <ModeButton icon={MessageSquare} label="대화" active={panel.mode === "conversation"} onClick={() => onMode("conversation")} />
+            <ModeButton icon={ListTree} label="타임라인" active={panel.mode === "timeline"} onClick={() => onMode("timeline")} />
+          </span>
+          <IconAction icon={X} label="최대화 닫기" onClick={onClose} />
+        </header>
+        <div className="workbench-focus-body base-scroll">
+          {panel.mode === "conversation" ? (
+            <ConversationFlow events={matched} highlight={needle} />
+          ) : (
+            <TimelineFlow events={matched} meta={meta} highlight={needle} />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1373,6 +1496,7 @@ function SessionPanel({
   onClose,
   onOpen,
   onToggleCollapse,
+  onMaximize,
 }: {
   panel: Panel;
   meta: SessionMeta | null;
@@ -1390,6 +1514,7 @@ function SessionPanel({
   onClose: () => void;
   onOpen: () => void;
   onToggleCollapse: () => void;
+  onMaximize: () => void;
 }) {
   const collapsed = panel.collapsed ?? false;
   const events = useMemo(
@@ -1442,8 +1567,12 @@ function SessionPanel({
         >
           <GripVertical size={14} aria-hidden="true" />
         </span>
-        <div className="workbench-panel-id">
-          <h2 title={meta.title}>{meta.title}</h2>
+        <div
+          className="workbench-panel-id"
+          onDoubleClick={onMaximize}
+          title="더블클릭하면 최대화 (f)"
+        >
+          <h2>{meta.title}</h2>
           <span>
             {meta.sourceLabel ? shortProjectLabel(meta.sourceLabel) : "수동 세션"}
             {meta.savedAt ?? meta.startedAt ? ` · ${formatRelative(meta.savedAt ?? meta.startedAt!)}` : ""}
