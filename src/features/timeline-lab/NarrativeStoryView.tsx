@@ -1,7 +1,9 @@
-import { CornerDownRight, Flag, ListChecks, TriangleAlert } from "lucide-react";
+import { ChevronRight, CornerDownRight, Flag, ListChecks, TriangleAlert } from "lucide-react";
 import type { MockSession } from "../../domain/types";
 import {
   buildNarrative,
+  momentTier,
+  type MomentTier,
   type NarrativeMoment,
   type NarrativeMomentKind,
 } from "../../lib/timeline-lab/narrative";
@@ -18,12 +20,13 @@ const KIND_LABEL: Record<NarrativeMomentKind, string> = {
 };
 
 /**
- * 서사 — the session rebuilt as a single vertical story.
+ * 서사 · the session rebuilt as a single vertical story.
  *
- * One spine the eye reads top to bottom. Each moment carries the causal reason
- * that led into it (rendered between nodes, so the list reads as a thread, not
- * a pile), with decisions and issues elevated inline. A closing "이어가기" block
- * collects what is still open so the story has an ending the user can act on.
+ * One spine the eye reads top to bottom. Pivotal and notable moments (a decision
+ * made, an issue surfaced, a high-importance step) read as full cards with the
+ * causal reason threaded between them; routine runs fold into a quiet disclosure
+ * so the story reads like a story, not a log, whether it has six moments or six
+ * hundred. A closing "이어가기" block collects what is still open.
  */
 export function NarrativeStoryView({ view }: { view: MockSession }) {
   const { moments, continuation } = buildNarrative(view);
@@ -35,22 +38,59 @@ export function NarrativeStoryView({ view }: { view: MockSession }) {
   return (
     <div className="lab-narrative">
       <ol className="lab-spine">
-        {moments.map((moment) => (
-          <MomentNode key={moment.id} moment={moment} />
-        ))}
+        {buildSegments(moments).map((segment) =>
+          segment.kind === "node" ? (
+            <MomentNode key={segment.moment.id} moment={segment.moment} tier={segment.tier} />
+          ) : segment.moments.length === 1 ? (
+            <CompactRow key={segment.moments[0]!.id} moment={segment.moments[0]!} />
+          ) : (
+            <RoutineFold key={segment.moments[0]!.id} moments={segment.moments} />
+          ),
+        )}
       </ol>
       <ContinuationBlock continuation={continuation} />
     </div>
   );
 }
 
-function MomentNode({ moment }: { moment: NarrativeMoment }) {
+type Segment =
+  | { kind: "node"; moment: NarrativeMoment; tier: MomentTier }
+  | { kind: "routine"; moments: NarrativeMoment[] };
+
+/**
+ * Walk the moments into segments: pivotal / notable moments stay individual
+ * nodes; contiguous runs of routine moments group so the view can fold them.
+ */
+function buildSegments(moments: NarrativeMoment[]): Segment[] {
+  const segments: Segment[] = [];
+  let run: NarrativeMoment[] = [];
+  const flushRun = () => {
+    if (run.length > 0) {
+      segments.push({ kind: "routine", moments: run });
+      run = [];
+    }
+  };
+  for (const moment of moments) {
+    const tier = momentTier(moment);
+    if (tier === "routine") {
+      run.push(moment);
+    } else {
+      flushRun();
+      segments.push({ kind: "node", moment, tier });
+    }
+  }
+  flushRun();
+  return segments;
+}
+
+function MomentNode({ moment, tier }: { moment: NarrativeMoment; tier: MomentTier }) {
   return (
     <li
       className="lab-moment"
       data-tone={moment.tone}
       data-kind={moment.kind}
       data-importance={moment.importance}
+      data-tier={tier}
     >
       {moment.connection ? (
         <p className="lab-connection">
@@ -97,6 +137,50 @@ function MomentNode({ moment }: { moment: NarrativeMoment }) {
             </div>
           ) : null}
         </div>
+      </div>
+    </li>
+  );
+}
+
+/** A single routine moment, rendered as one calm line on the spine. */
+function CompactRow({ moment }: { moment: NarrativeMoment }) {
+  return (
+    <li className="lab-moment is-compact" data-tone={moment.tone} data-tier="routine">
+      <div className="lab-moment-row">
+        <span className="lab-moment-rail" aria-hidden="true">
+          <span className="lab-moment-dot" />
+        </span>
+        <div className="lab-moment-compact">
+          {moment.timeLabel ? <span className="lab-moment-time">{moment.timeLabel}</span> : null}
+          <span className="lab-moment-compact-title">{moment.title}</span>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+/** A contiguous run of routine moments, folded behind a quiet disclosure. */
+function RoutineFold({ moments }: { moments: NarrativeMoment[] }) {
+  return (
+    <li className="lab-moment is-compact" data-tone="gray">
+      <div className="lab-moment-row">
+        <span className="lab-moment-rail" aria-hidden="true">
+          <span className="lab-moment-dot" />
+        </span>
+        <details className="lab-fold">
+          <summary className="lab-fold-summary">
+            <ChevronRight size={13} className="lab-fold-chevron" aria-hidden="true" />
+            작업 {moments.length}개 더
+          </summary>
+          <ul className="lab-fold-list">
+            {moments.map((moment) => (
+              <li key={moment.id} className="lab-fold-row">
+                {moment.timeLabel ? <span className="lab-fold-time">{moment.timeLabel}</span> : null}
+                <span className="lab-fold-row-title">{moment.title}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
       </div>
     </li>
   );

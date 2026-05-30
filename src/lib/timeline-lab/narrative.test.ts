@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildNarrative, momentKindForEvent, narrativeMomentTone } from "./narrative";
+import {
+  buildNarrative,
+  momentKindForEvent,
+  momentTier,
+  narrativeMomentTone,
+} from "./narrative";
 import {
   labDecision,
   labEvent,
@@ -117,6 +122,87 @@ describe("buildNarrative", () => {
     });
     const { moments } = buildNarrative(view);
     expect(moments[0]?.issues.map((i) => i.id)).toEqual(["iss-1"]);
+  });
+});
+
+describe("momentTier", () => {
+  const tierOf = (view: ReturnType<typeof labSession>, eventId: string) => {
+    const moment = buildNarrative(view).moments.find((m) => m.eventId === eventId);
+    if (!moment) throw new Error(`moment not found: ${eventId}`);
+    return momentTier(moment);
+  };
+
+  it("is pivotal when the moment carries a decision, even at low importance", () => {
+    const view = labSession({
+      events: [labEvent({ id: "evt-1" })],
+      decisions: [labDecision({ id: "dec-1", sourceEventIds: ["evt-1"] })],
+    });
+    const moment = buildNarrative(view).moments.find((m) => m.eventId === "evt-1");
+    expect(moment?.importance).toBe("low");
+    expect(moment?.decisions).toHaveLength(1);
+    expect(tierOf(view, "evt-1")).toBe("pivotal");
+  });
+
+  it("is pivotal when the moment carries an issue", () => {
+    const view = labSession({
+      events: [labEvent({ id: "evt-1" })],
+      issues: [labIssue({ id: "iss-1", sourceEventIds: ["evt-1"] })],
+    });
+    expect(tierOf(view, "evt-1")).toBe("pivotal");
+  });
+
+  it("is pivotal for a high-importance plain moment", () => {
+    const view = labSession({
+      events: [labEvent({ id: "evt-1", type: "decision" })],
+    });
+    const moment = buildNarrative(view).moments.find((m) => m.eventId === "evt-1");
+    expect(moment?.importance).toBe("high");
+    expect(moment?.decisions).toHaveLength(0);
+    expect(tierOf(view, "evt-1")).toBe("pivotal");
+  });
+
+  it("is notable for a medium-importance plain moment", () => {
+    const view = labSession({
+      events: [labEvent({ id: "evt-1", trustLevel: "inferred" })],
+    });
+    const moment = buildNarrative(view).moments.find((m) => m.eventId === "evt-1");
+    expect(moment?.importance).toBe("medium");
+    expect(moment?.decisions).toHaveLength(0);
+    expect(moment?.issues).toHaveLength(0);
+    expect(tierOf(view, "evt-1")).toBe("notable");
+  });
+
+  it("is notable when the moment only carries a causal connection", () => {
+    const view = labSession({
+      events: [
+        labEvent({ id: "evt-1", start: "2026-05-22T09:00:00Z" }),
+        labEvent({ id: "evt-2", start: "2026-05-22T09:30:00Z" }),
+      ],
+      relationships: [
+        labRelationship({
+          fromId: "evt-1",
+          toId: "evt-2",
+          toType: "event",
+          reason: "테스트가 실패해서",
+        }),
+      ],
+    });
+    const moment = buildNarrative(view).moments.find((m) => m.eventId === "evt-2");
+    expect(moment?.importance).toBe("low");
+    expect(moment?.connection).toBe("테스트가 실패해서");
+    expect(tierOf(view, "evt-2")).toBe("notable");
+  });
+
+  it("is routine for a low-importance moment with no decision, issue or connection", () => {
+    const view = labSession({
+      events: [labEvent({ id: "evt-1" })],
+    });
+    const moment = buildNarrative(view).moments.find((m) => m.eventId === "evt-1");
+    expect(moment?.importance).toBe("low");
+    expect(moment?.decisions).toHaveLength(0);
+    expect(moment?.issues).toHaveLength(0);
+    expect(moment?.connection).toBeNull();
+    expect(tierOf(view, "evt-1")).toBe("routine");
   });
 });
 

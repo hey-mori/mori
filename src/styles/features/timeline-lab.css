@@ -1,5 +1,5 @@
 /*
- * 재구성 (Timeline Lab) — an experimental second timeline.
+ * 재구성 (Timeline Lab) · an experimental second timeline.
  *
  * Three reconstructions of one reviewed session: 서사 (narrative spine),
  * 국면 (work-arc phases), 인과 (causal map). Calm and dense: tone is carried
@@ -32,7 +32,7 @@
   min-height: 0;
 }
 
-/* Tone resolution — one source of truth, used by every sub-view. */
+/* Tone resolution · one source of truth, used by every sub-view. */
 .timeline-lab [data-tone="purple"] { --lab-tone: var(--purple); --lab-tone-soft: var(--purple-50); }
 .timeline-lab [data-tone="blue"]   { --lab-tone: var(--blue);   --lab-tone-soft: var(--blue-50); }
 .timeline-lab [data-tone="red"]    { --lab-tone: var(--red);    --lab-tone-soft: var(--red-50); }
@@ -155,7 +155,7 @@
   min-width: 0;
 }
 
-/* Pivots in the story — a decision made, an issue surfaced — read as soft
+/* Pivots in the story (a decision made, an issue surfaced) read as soft
    tonal callouts hanging off the spine, so the eye lands on them first. */
 .lab-moment[data-kind="decision"] .lab-moment-body,
 .lab-moment[data-kind="issue"] .lab-moment-body {
@@ -276,7 +276,98 @@
 .lab-evidence[data-tone="blue"]  { color: var(--blue);  border-color: color-mix(in srgb, var(--blue) 18%, transparent);  background: var(--blue-50); }
 .lab-evidence[data-tone="purple"]{ color: var(--purple);border-color: color-mix(in srgb, var(--purple) 18%, transparent);background: var(--purple-50); }
 
-/* Carry-forward block — the story's ending. */
+/* Pivotal moments (a decision, an issue, a high-importance step) lead the eye
+   with a heavier title, even when their own importance is low. */
+.lab-moment[data-tier="pivotal"] .lab-moment-title {
+  font-weight: 680;
+}
+
+/* Routine moments read as one calm line; a quiet dot keeps them on the spine. */
+.lab-moment.is-compact .lab-moment-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  background: var(--panel);
+  border-color: var(--line-strong);
+}
+
+.lab-moment-compact {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding-bottom: var(--base-space-3);
+}
+
+.lab-moment-compact-title {
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Folded routine run: a native disclosure styled as one calm summary line. */
+.lab-fold {
+  padding-bottom: var(--base-space-3);
+}
+
+.lab-fold-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 2px 0;
+}
+
+.lab-fold-summary::-webkit-details-marker {
+  display: none;
+}
+
+.lab-fold-chevron {
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+}
+
+.lab-fold[open] .lab-fold-chevron {
+  transform: rotate(90deg);
+}
+
+.lab-fold-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lab-fold-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.lab-fold-time {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-fold-row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Carry-forward block · the story's ending. */
 .lab-carry {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);

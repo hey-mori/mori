@@ -130,6 +130,27 @@ export function narrativeMomentTone(kind: NarrativeMomentKind): ActivityTone {
   return KIND_TONE[kind];
 }
 
+/**
+ * How strongly the 서사 lens should weight a moment: pivotal moments are
+ * emphasized, routine ones can be folded. Pure and deterministic; it reads only
+ * the moment's own already-resolved fields.
+ */
+export type MomentTier = "pivotal" | "notable" | "routine";
+
+export function momentTier(moment: NarrativeMoment): MomentTier {
+  if (
+    moment.decisions.length > 0 ||
+    moment.issues.length > 0 ||
+    moment.importance === "high"
+  ) {
+    return "pivotal";
+  }
+  if (moment.importance === "medium" || (moment.connection?.trim().length ?? 0) > 0) {
+    return "notable";
+  }
+  return "routine";
+}
+
 function timeLabel(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
