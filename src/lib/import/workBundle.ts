@@ -113,6 +113,17 @@ export type WorkBundleFidelitySummary = {
   unknown: number;
 };
 
+/**
+ * Count of sources per {@link WorkBundleAlignment}. Lets a UI render a
+ * single "Spine N · Aligned N · Outside N" line without re-walking sources.
+ */
+export type WorkBundleAlignmentSummary = {
+  spine: number;
+  alignedWithSpine: number;
+  outsideSpine: number;
+  noSpine: number;
+};
+
 /** Discrete reason for the next-step suggestion — UIs can branch on it. */
 export type WorkBundleNextStepReason =
   | "empty"
@@ -155,6 +166,8 @@ export type WorkBundlePreview = {
    * "1 AI conversation = 1 Mori session" entry point does.
    */
   spineMissing: boolean;
+  /** Source counts per alignment bucket — for a calm bundle-level summary. */
+  alignmentSummary: WorkBundleAlignmentSummary;
   /**
    * The single next step the preview would suggest right now — honest
    * Korean guidance derived from the bundle state, not an AI claim. Falls
@@ -307,6 +320,7 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
       spineSourceCount: 0,
       ribSourceCount: 0,
       spineMissing: false,
+      alignmentSummary: { spine: 0, alignedWithSpine: 0, outsideSpine: 0, noSpine: 0 },
       proposedNextStep: {
         reason: "empty",
         message: "위에서 소스를 추가하거나 샘플 번들을 불러오세요.",
@@ -436,6 +450,16 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
     source.alignment = classifyAlignment(source, spineUnion);
   }
 
+  const alignmentSummary: WorkBundleAlignmentSummary = {
+    spine: 0,
+    alignedWithSpine: 0,
+    outsideSpine: 0,
+    noSpine: 0,
+  };
+  for (const source of sources) {
+    alignmentSummary[source.alignment] += 1;
+  }
+
   const proposedNextStep = deriveNextStep({
     totalUniqueEvents,
     spineMissing,
@@ -455,6 +479,7 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
     spineSourceCount,
     ribSourceCount,
     spineMissing,
+    alignmentSummary,
     proposedNextStep,
     workContextHint: deriveWorkContextHint(detectedFiles),
     proposedTitle: proposeWorkBundleTitle(items, familyLabels),

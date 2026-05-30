@@ -142,6 +142,30 @@ describe("temporal alignment with the spine", () => {
     expect(note?.alignment).toBe("outsideSpine");
   });
 
+  it("aggregates alignment counts in alignmentSummary", () => {
+    const preview = buildWorkBundlePreview(fixtureItems());
+    expect(preview.alignmentSummary).toEqual({
+      spine: 2,             // Claude transcript + Codex run
+      alignedWithSpine: 0,  // none of the ribs overlap the spine window
+      outsideSpine: 3,      // git diff + terminal + note all post-spine
+      noSpine: 0,
+    });
+    // Sum equals sourceCount.
+    const total =
+      preview.alignmentSummary.spine +
+      preview.alignmentSummary.alignedWithSpine +
+      preview.alignmentSummary.outsideSpine +
+      preview.alignmentSummary.noSpine;
+    expect(total).toBe(preview.sourceCount);
+  });
+
+  it("zeroes alignmentSummary for an empty bundle", () => {
+    const preview = buildWorkBundlePreview([]);
+    expect(preview.alignmentSummary).toEqual({
+      spine: 0, alignedWithSpine: 0, outsideSpine: 0, noSpine: 0,
+    });
+  });
+
   it("marks all sources as noSpine when the bundle has no AI source", () => {
     const ribOnly = fixtureItems().filter(
       (item) => item.origin !== "ai-transcript" && item.origin !== "connector-jsonl",
