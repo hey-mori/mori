@@ -480,7 +480,7 @@ export function MemoryView() {
       <BaseDrawer
         open={selectedMemoryId !== null}
         onClose={() => setSelectedMemoryId(null)}
-        ariaLabel="Accepted memory provenance"
+        ariaLabel="확정 메모리 출처"
       >
         {(() => {
           const memory = acceptedMemories.find((entry) => entry.id === selectedMemoryId);

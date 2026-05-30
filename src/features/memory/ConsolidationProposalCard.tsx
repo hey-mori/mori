@@ -94,7 +94,7 @@ export function ConsolidationProposalCard({
             onAccept();
           }}
           variant={status === "accepted" ? "primary" : undefined}
-          title="이 제안을 수락 예정으로 표시합니다. 메모리 적용을 누르기 전까지는 저장되지 않습니다."
+          title="이 제안을 수락 예정으로 표시합니다. 메모리 반영을 누르기 전까지는 저장되지 않습니다."
         >
           수락
         </Button>
@@ -205,7 +205,7 @@ export function describeReviewStatus(status: ConsolidationReviewStatus): string 
   }
 }
 
-const IMPORTANCE_LABELS: Record<MemoryProposal["importance"], string> = {
+export const IMPORTANCE_LABELS: Record<MemoryProposal["importance"], string> = {
   high: "높음",
   medium: "보통",
   low: "낮음",
@@ -223,7 +223,7 @@ function describeConfidence(confidence: number): string {
   return `낮음 (${Math.round(confidence * 100)}%)`;
 }
 
-function describeProposedAction(action: MemoryProposal["proposedAction"]): string {
+export function describeProposedAction(action: MemoryProposal["proposedAction"]): string {
   switch (action) {
     case "promote":
       return "승급";

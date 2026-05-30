@@ -592,7 +592,7 @@ function ApplyBoundaryBanner({
   return (
     <div className="consolidation-review-apply" role="status" aria-live="polite">
       <header>
-        <strong>메모리 적용</strong>
+        <strong>메모리 반영</strong>
         <Badge tone="purple">{describeAcceptedMemoryStorageSource(expectedSource)}</Badge>
       </header>
       <p>
@@ -618,7 +618,7 @@ function ApplyBoundaryBanner({
         >
           {applyState.kind === "saving"
             ? "저장 중…"
-            : `메모리 적용 (${applyCount})`}
+            : `메모리 반영 (${applyCount})`}
         </Button>
         <small>
           {canApply
@@ -742,7 +742,7 @@ function InlineEditor({
           >
             저장 (드래프트)
           </Button>
-          <small>편집은 메모리 적용을 누르기 전까지 이 검토 세션에만 유지됩니다.</small>
+          <small>편집은 메모리 반영을 누르기 전까지 이 검토 세션에만 유지됩니다.</small>
         </footer>
       </div>
     </div>

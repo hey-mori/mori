@@ -68,7 +68,7 @@ export function QueryableMemoryCard({
       }
       hint={
         <span>
-          Accepted memory를 로컬에서 구조적으로 검색합니다. 활성 세션의 timeline / evidence
+          확정 메모리를 로컬에서 구조적으로 검색합니다. 활성 세션의 timeline / evidence
           참조도 함께 찾으며, 원본 대화나 connector 로그는 검색하지 않습니다.
         </span>
       }

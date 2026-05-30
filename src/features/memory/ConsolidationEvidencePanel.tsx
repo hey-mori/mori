@@ -7,6 +7,7 @@ import type {
   MemoryEvidenceRef,
   MemoryProposal,
 } from "../../lib/project-memory/consolidationProposals";
+import { IMPORTANCE_LABELS, describeProposedAction } from "./ConsolidationProposalCard";
 
 /**
  * Right-side inspector for the Consolidation Review Surface.
@@ -66,7 +67,7 @@ export function ConsolidationEvidencePanel({
         <dl className="consolidation-inspector-meta">
           <span>
             <dt>중요도</dt>
-            <dd>{proposal.importance}</dd>
+            <dd>{IMPORTANCE_LABELS[proposal.importance] ?? proposal.importance}</dd>
           </span>
           <span>
             <dt>신뢰도</dt>
@@ -74,7 +75,7 @@ export function ConsolidationEvidencePanel({
           </span>
           <span>
             <dt>제안 액션</dt>
-            <dd>{proposal.proposedAction}</dd>
+            <dd>{describeProposedAction(proposal.proposedAction)}</dd>
           </span>
           <span>
             <dt>출처 세션 수</dt>
@@ -162,7 +163,7 @@ export function ConsolidationEvidencePanel({
           <ShieldAlert size={12} aria-hidden="true" />
           <span>
             로컬에 저장된 Mori 세션만 사용합니다. 클라우드 동기화 / 백그라운드 캡처 / 외부 계정
-            접근은 없습니다. 현재 검토 결정은 메모리 적용 전까지 드래프트이며, 적용 후 accepted
+            접근은 없습니다. 현재 검토 결정은 메모리 반영 전까지 드래프트이며, 적용 후 accepted
             memory와 감사 로그로 로컬에 저장됩니다.
           </span>
         </footer>

@@ -241,7 +241,7 @@ function MemoryLifecycleStrip({
     { group: "archived", count: archived },
   ];
   return (
-    <div className="memory-lifecycle-strip" role="group" aria-label="Accepted memory lifecycle health">
+    <div className="memory-lifecycle-strip" role="group" aria-label="확정 메모리 수명 주기 상태">
       {cells.map((cell) => (
         <div key={cell.group} className={`memory-lifecycle-cell lifecycle-${cell.group}`}>
           <BaseStatusBadge tone={memoryLifecycleGroupTone(cell.group)}>
