@@ -245,6 +245,30 @@ that is called out.
   `ollamaEndpoint`, `ollamaModel`, `ollamaTimeoutMs`,
   `fallbackToDeterministic`).
 
+**Reconstruction Lab (재구성)**
+
+- A second, read-only timeline (the 재구성 tab in Session Detail) that
+  reprojects a reviewed session into shapes the eye can read, leaving the
+  흐름 swimlane untouched. Every lens is a pure derivation from the reviewed
+  `MockSession` (`src/lib/timeline-lab/`, `src/features/timeline-lab/`).
+- Four lenses: 서사 (a single narrative spine with the causal reason threaded
+  between moments), 국면 (the work arc 탐색 → 결정 → 구현 → 점검 → 정리),
+  인과 (a cause → effect map laid out by causal depth), and 맥동 (the session
+  as vital signs: counts, phase mix, trust mix, issue resolution, activity
+  momentum, and a carry-forward with a one-tap resume copy).
+- A cross-lens filter (`filterSession`) that narrows the session once,
+  upstream of whichever lens is active, with referential pruning so no lens
+  is handed a dangling reference, plus a 맥동 → 서사 drill-down.
+- The 인과 lens surfaces the causal backbone (the longest cause → effect
+  chain), marks roots and outcomes, types and weights edges by relationship
+  and confidence, flags contradictions as tension, and offers a 핵심 경로
+  isolate toggle, all deferring to hover/pin chain tracing.
+- The forward plan (a 계보 decision-lineage lens, a temporal 국면, 서사
+  readability, a shared peek primitive, and more) is specified under
+  `docs/design/` (start at `design/improvement-program-overview.md`). The
+  lab's controls are not yet registered in `featureStatus.ts`; that is a known
+  follow-up.
+
 **Project Memory Consolidation**
 
 - Live Project Memory aggregation

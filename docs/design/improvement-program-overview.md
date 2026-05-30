@@ -4,7 +4,12 @@ The index and cross-cutting roadmap for the current planning set. Five design
 notes were written to think hard about what Mori can become, functionally and
 visually, without padding features or raising coupling. This document ties them
 together, sequences the work across them, and is the entry point for deciding
-where to start. Planning only; nothing here is committed to build.
+where to start.
+
+**Status.** The planning set is committed. Build has begun: the 인과
+critical-path (Phase 3, [`causal-critical-path-spec.md`](causal-critical-path-spec.md))
+is shipped and browser-verified. Everything else below remains planned. Items
+marked **SHIPPED** are implemented; the rest are specs ready to build.
 
 ---
 
@@ -76,6 +81,7 @@ re-verified against repo state before starting.
 
 **Phase 3 · Lens and timeline power-ups (the visible wins)**
 - 인과 critical path + roots/outcomes + typed/weighted edges (lab §4.1).
+  **SHIPPED.**
 - 서사 minimap + importance folding + sticky focus (lab §4.3).
 - Timeline: Flow Focus + keyboard discoverability + the 관계 보기 toggle
   (timeline §3.3, §3.4).
@@ -129,7 +135,7 @@ treatment + test plan, ready to implement against.
 
 **Phase 3 (lens / timeline power-ups)**
 - [`causal-critical-path-spec.md`](causal-critical-path-spec.md) · 인과
-  backbone, roots/outcomes, typed and weighted edges.
+  backbone, roots/outcomes, typed and weighted edges. **SHIPPED.**
 - [`narrative-readability-spec.md`](narrative-readability-spec.md) · 서사
   importance tiering, routine folding, shape minimap.
 - [`pulse-enrichment-spec.md`](pulse-enrichment-spec.md) · 맥동 health meter,

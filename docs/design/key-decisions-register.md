@@ -30,7 +30,7 @@ unblock.
 | 7 | 국면 temporal re-segmentation vs predictable kind-grouping | **R: Temporal chapters with look-ahead smoothing + a grouped fallback** when timestamps are missing. | phase-timeline-spec |
 | 8 | 국면 look-ahead window N | **R: 2** (smooth enough without blurring short stages). | phase-timeline-spec |
 | 9 | 서사 fold threshold / minimap side | **R: Fold runs >= 2; minimap on the right.** | narrative-readability-spec |
-| 10 | 인과 critical path: one chain or many; default emphasis | **R: One deterministic chain, subtle by default**, isolatable via toggle. | causal-critical-path-spec |
+| 10 | 인과 critical path: one chain or many; default emphasis | **Shipped: one deterministic chain, subtle by default**, isolatable via the 핵심 경로 toggle. | causal-critical-path-spec |
 | 11 | 맥동 primary health meter | **R: Grounded-vs-inferred** (trust is the spine); issue meter stays secondary. | pulse-enrichment-spec |
 
 ---

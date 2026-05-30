@@ -54,7 +54,9 @@ drill-down:
 - **국면** (`PhaseFlowView`) · a work-arc grouped into 탐색 → 결정 → 구현 →
   점검 → 정리, with a composition ribbon.
 - **인과** (`CausalMapView`) · a layered cause→effect DAG with hover/pin chain
-  tracing.
+  tracing. Now also surfaces the causal backbone (longest chain), roots and
+  outcomes, typed and confidence-weighted edges, contradiction-as-tension, and a
+  핵심 경로 isolate toggle (the §4.1 power-up, shipped).
 - **맥동** (`PulseView`) · a vital-signs dashboard: counts, phase mix, trust
   mix, issue resolution, activity momentum, carry-forward with resume copy.
 
@@ -184,9 +186,11 @@ into one place:
   *(This was floated earlier and deferred; the research makes a strong enough
   case that it is worth reconsidering as the backbone of everything else.)*
 
-### 4.1 인과 · the causal map becomes a real causal instrument
+### 4.1 인과 · the causal map becomes a real causal instrument · SHIPPED
 
 Highest visual payoff, and it finally uses the relationship vocabulary.
+Implemented; see [`causal-critical-path-spec.md`](causal-critical-path-spec.md)
+for the as-built design.
 
 - **핵심 경로 (critical path / backbone).** Compute the longest cause→effect
   chain from a root cause to an outcome (linear-time longest-path over the

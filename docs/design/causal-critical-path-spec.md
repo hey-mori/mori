@@ -1,10 +1,14 @@
 # 인과 · Critical Path and Typed Edges (spec)
 
-A buildable spec for the Phase 3 headline upgrade to the 인과 lens: surface the
-session's causal **backbone**, mark its origins and outcomes, and finally encode
-the relationship vocabulary the map currently flattens. It is the biggest visual
-payoff in the program and a clean extension of the existing
-`buildCausalGraph`. Design spec, not yet implemented.
+A spec for the Phase 3 headline upgrade to the 인과 lens: surface the session's
+causal **backbone**, mark its origins and outcomes, and finally encode the
+relationship vocabulary the map previously flattened. It is the biggest visual
+payoff in the program and a clean extension of the existing `buildCausalGraph`.
+
+**Status: implemented.** The model additions, the view treatment, the 핵심 경로
+isolate toggle, and the tests below all shipped; this doc now records the design
+as built. The two open questions in §8 about default emphasis and node-trust
+threading remain for a follow-up pass.
 
 Parent: [`reconstruction-lab-vision.md`](reconstruction-lab-vision.md) (§4.1),
 [`visual-system-direction.md`](visual-system-direction.md) (§4 encoding ladder).
