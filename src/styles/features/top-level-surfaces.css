@@ -53,6 +53,11 @@
   cursor: pointer;
 }
 
+.dashboard-sort button:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
 .dashboard-sort button.is-active {
   background: var(--base-surface);
   color: var(--base-accent);
@@ -1331,6 +1336,297 @@
   color: var(--base-text-muted);
   font-size: var(--base-font-size-2xs);
   font-weight: 650;
+}
+
+/* Toolbar: quick-layout + density segmented controls. */
+.workbench-seg {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+}
+
+.workbench-seg button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--base-radius-sm);
+  background: transparent;
+  color: var(--base-text-muted);
+  cursor: pointer;
+  transition:
+    color 100ms ease,
+    background 100ms ease;
+}
+
+.workbench-seg button:hover {
+  background: var(--base-accent-soft);
+  color: var(--base-accent);
+}
+
+.workbench-seg button.is-active {
+  background: var(--base-surface);
+  color: var(--base-accent);
+}
+
+.workbench-seg-divider {
+  align-self: center;
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: var(--base-border);
+}
+
+/* Collapsed panel: header only, shrinks to its own height. */
+.workbench-panel.is-collapsed {
+  grid-template-rows: auto;
+  gap: 0;
+  min-height: 0;
+}
+
+/* Dense canvas: tighter columns, padding, and bubbles fit more sessions. */
+.workbench-surface.is-dense .workbench-canvas {
+  padding: var(--base-space-2);
+}
+
+.workbench-surface.is-dense .workbench-col {
+  min-width: 232px;
+}
+
+.workbench-surface.is-dense .workbench-panel {
+  gap: 6px;
+  min-height: 116px;
+  padding: var(--base-space-2);
+}
+
+.workbench-surface.is-dense .workbench-conversation,
+.workbench-surface.is-dense .workbench-timeline {
+  gap: var(--base-space-2);
+}
+
+.workbench-surface.is-dense .workbench-msg-bubble {
+  padding: 5px 9px;
+}
+
+.workbench-surface.is-dense .workbench-msg-bubble p {
+  -webkit-line-clamp: 2;
+}
+
+.workbench-surface.is-dense .workbench-timeline-list {
+  gap: 6px;
+}
+
+/* Canvas + selected-session inspector sit side by side; command bar spans below. */
+.workbench-main {
+  display: flex;
+  flex: 1;
+  gap: var(--base-space-2);
+  min-height: 0;
+}
+
+.workbench-inspector {
+  display: flex;
+  flex: 0 0 300px;
+  flex-direction: column;
+  gap: var(--base-space-3);
+  min-height: 0;
+  padding: var(--base-space-3);
+  overflow: auto;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  animation: wb-rise 170ms ease both;
+}
+
+.workbench-surface.is-dense .workbench-inspector {
+  flex-basis: 252px;
+  gap: var(--base-space-2);
+  padding: var(--base-space-2);
+}
+
+.workbench-inspector-head {
+  display: flex;
+  gap: var(--base-space-2);
+  align-items: flex-start;
+}
+
+.workbench-inspector-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.workbench-inspector-id h2 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--base-text);
+  font-size: var(--base-font-size-sm);
+  line-height: var(--base-line-snug);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-inspector-id span {
+  display: block;
+  overflow: hidden;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-inspector-section {
+  display: grid;
+  gap: 6px;
+}
+
+.workbench-inspector-section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workbench-inspector-section > header span {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.workbench-inspector-section > header strong {
+  color: var(--base-text);
+  font-size: var(--base-font-size-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.workbench-inspector-empty {
+  margin: 0;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+}
+
+.workbench-inspector-list {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workbench-inspector-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--base-space-2);
+  align-items: start;
+  color: var(--base-text);
+  font-size: var(--base-font-size-xs);
+  line-height: var(--base-line-snug);
+}
+
+.workbench-inspector-dot {
+  width: 6px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--base-status-neutral);
+}
+
+.workbench-inspector-list.tone-issue .workbench-inspector-dot {
+  background: var(--base-status-warning);
+}
+
+.workbench-inspector-list.tone-decision .workbench-inspector-dot {
+  background: var(--base-status-info);
+}
+
+.workbench-inspector-list.tone-next .workbench-inspector-dot {
+  background: var(--base-status-success);
+}
+
+.workbench-inspector-more {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+}
+
+.workbench-inspector .btn {
+  margin-top: auto;
+  justify-content: center;
+}
+
+/* Cross-session attention strip: lives in the canvas, never the right rail.
+   Neutral surface so it reads as calm; the per-item tags carry the colour. */
+.workbench-attention {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--base-space-2);
+  align-items: center;
+  padding: 6px var(--base-space-3);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface-subtle);
+}
+
+.workbench-attention-label {
+  flex-shrink: 0;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.workbench-attention-items {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.workbench-attention-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 6px;
+  align-items: center;
+  max-width: 280px;
+  padding: 3px 10px;
+  border: 1px solid var(--base-border);
+  border-radius: 999px;
+  background: var(--base-surface);
+  cursor: pointer;
+  transition:
+    border-color 100ms ease,
+    background 100ms ease;
+}
+
+.workbench-attention-chip:hover {
+  border-color: var(--base-accent);
+  background: var(--base-accent-soft);
+}
+
+.workbench-attention-title {
+  overflow: hidden;
+  color: var(--base-text);
+  font-size: var(--base-font-size-xs);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-attention-tag {
+  flex-shrink: 0;
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
+}
+
+.workbench-attention-tag.tone-issue {
+  color: var(--base-status-warning);
+}
+
+.workbench-attention-tag.tone-decision {
+  color: var(--base-status-info);
 }
 
 /* ─── Modals: session picker + preset manager ───────────────────────────────── */

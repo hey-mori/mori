@@ -87,6 +87,11 @@ button.start-entry-card:hover {
   background: var(--base-surface-subtle);
 }
 
+button.start-entry-card:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
 .start-entry-card.is-primary {
   border-color: rgba(35, 105, 246, 0.24);
   background: var(--base-status-info-soft);
