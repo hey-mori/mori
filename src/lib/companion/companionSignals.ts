@@ -107,6 +107,15 @@ export type CompanionSignalInput = {
   staleMemoryIds?: string[];
   /** Ids of accepted memories whose lifecycle status is `contradicted`. */
   contradictedMemoryIds?: string[];
+  /**
+   * Optional handoff readiness view model. When provided, the
+   * `ready_to_report` and `ready_to_resume` signals honor the matching
+   * readiness item's status — `waiting` suppresses the signal, `attention`
+   * escalates severity to "review" with the readiness `detail` as message,
+   * and `ready` keeps the calm suggestion. Omit for the legacy state-based
+   * behavior.
+   */
+  handoffReadiness?: HandoffReadinessViewModel;
 };
 
 /** Inferred issues below this confidence are flagged as weak evidence. */
@@ -361,40 +370,112 @@ function collectCompanionSignals(input: CompanionSignalInput): CompanionSignal[]
   }
 
   // ── Continuation signals — only once there is something to continue ─────
-  if (input.events.length > 0 && input.hasAnalysis) {
-    signals.push({
+  const reportSignal = buildContinuationSignal({
+    handoffReadiness: input.handoffReadiness,
+    itemId: "report",
+    legacyEnabled: input.events.length > 0 && input.hasAnalysis,
+    base: {
       id: "companion-ready-to-report",
       type: "ready_to_report",
-      severity: "suggestion",
       title: "리포트 만들기 가능",
-      message: "분석이 끝났습니다. Markdown / .mori 패키지로 정리할 수 있습니다.",
-      sourceSurface: "reports",
-      linkedItemIds: [],
-      evidenceRefs: [],
-      basis: "state",
+      readyMessage: "분석이 끝났습니다. Markdown / .mori 패키지로 정리할 수 있습니다.",
       actionLabel: "보고서 만들기",
-      destination: "reports",
       audience: "real",
-    });
-  }
-  if (input.events.length > 0) {
-    signals.push({
+    },
+  });
+  if (reportSignal) signals.push(reportSignal);
+
+  const resumeSignal = buildContinuationSignal({
+    handoffReadiness: input.handoffReadiness,
+    itemId: "resume",
+    legacyEnabled: input.events.length > 0,
+    base: {
       id: "companion-ready-to-resume",
       type: "ready_to_resume",
-      severity: "info",
       title: "다음 세션 이어가기 가능",
-      message: "Resume 프롬프트를 만들어 다음 작업에 붙일 수 있습니다.",
-      sourceSurface: "reports",
-      linkedItemIds: [],
-      evidenceRefs: [],
-      basis: "state",
+      readyMessage: "Resume 프롬프트를 만들어 다음 작업에 붙일 수 있습니다.",
       actionLabel: "Resume 프롬프트",
-      destination: "reports",
       audience: "both",
-    });
-  }
+    },
+    readySeverity: "info",
+  });
+  if (resumeSignal) signals.push(resumeSignal);
 
   return signals;
+}
+
+/**
+ * Build a ready-to-report / ready-to-resume signal that honors the matching
+ * handoff readiness item when one is provided. The mapping is:
+ *  - `waiting` → suppress (returns null).
+ *  - `attention` → "review" severity, item.detail as the message — surfaces
+ *    why the handoff is not ready (e.g., "stale memory to review first").
+ *  - `ready` → the calm baseline severity (suggestion for report, info for
+ *    resume) with the legacy positive message.
+ *
+ * When no `handoffReadiness` is provided, falls back to `legacyEnabled` (the
+ * pre-readiness state gate). Suppresses the signal when the gate is false.
+ */
+function buildContinuationSignal(args: {
+  handoffReadiness: HandoffReadinessViewModel | undefined;
+  itemId: HandoffReadinessItemId;
+  legacyEnabled: boolean;
+  base: {
+    id: string;
+    type: CompanionSignalType;
+    title: string;
+    readyMessage: string;
+    actionLabel: string;
+    audience: CompanionSignal["audience"];
+  };
+  /** Severity to use when status is `ready`. Defaults to "suggestion". */
+  readySeverity?: CompanionSignalSeverity;
+}): CompanionSignal | null {
+  const readySeverity = args.readySeverity ?? "suggestion";
+
+  let severity: CompanionSignalSeverity;
+  let message: string;
+  let basis: CompanionSignalBasis = "state";
+
+  if (args.handoffReadiness) {
+    const item = findHandoffItem(args.handoffReadiness, args.itemId);
+    if (!item) return null;
+    if (item.status === "waiting") return null;
+    if (item.status === "attention") {
+      severity = "review";
+      message = item.detail;
+      basis = "mixed";
+    } else {
+      severity = readySeverity;
+      message = args.base.readyMessage;
+    }
+  } else {
+    if (!args.legacyEnabled) return null;
+    severity = readySeverity;
+    message = args.base.readyMessage;
+  }
+
+  return {
+    id: args.base.id,
+    type: args.base.type,
+    severity,
+    title: args.base.title,
+    message,
+    sourceSurface: "reports",
+    linkedItemIds: [],
+    evidenceRefs: [],
+    basis,
+    actionLabel: args.base.actionLabel,
+    destination: "reports",
+    audience: args.base.audience,
+  };
+}
+
+function findHandoffItem(
+  readiness: HandoffReadinessViewModel,
+  id: HandoffReadinessItemId,
+): HandoffReadinessItem | null {
+  return readiness.items.find((item) => item.id === id) ?? null;
 }
 
 /**

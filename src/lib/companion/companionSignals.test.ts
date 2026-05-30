@@ -477,3 +477,103 @@ describe("groupCompanionSignalsByAction", () => {
     expect(groupCompanionSignalsByAction([])).toEqual([]);
   });
 });
+
+describe("buildCompanionSignals — handoff readiness routing", () => {
+  function readiness(over: Partial<{
+    resumeStatus: "ready" | "attention" | "waiting";
+    reportStatus: "ready" | "attention" | "waiting";
+    resumeDetail: string;
+    reportDetail: string;
+  }> = {}) {
+    return {
+      headline: "test",
+      detail: "test",
+      items: [
+        {
+          id: "resume" as const,
+          title: "Resume",
+          status: over.resumeStatus ?? "ready",
+          statusLabel: "",
+          detail: over.resumeDetail ?? "기본 메시지",
+          basis: [],
+          action: { id: "copyResume" as const, label: "copy", enabled: true },
+        },
+        {
+          id: "report" as const,
+          title: "Report",
+          status: over.reportStatus ?? "ready",
+          statusLabel: "",
+          detail: over.reportDetail ?? "기본 메시지",
+          basis: [],
+          action: { id: "openReportBuilder" as const, label: "open", enabled: true },
+        },
+        {
+          id: "package" as const,
+          title: "Package",
+          status: "ready" as const,
+          statusLabel: "",
+          detail: "",
+          basis: [],
+          action: { id: "openPackageExport" as const, label: "export", enabled: true },
+        },
+      ],
+    };
+  }
+
+  it("escalates the ready_to_report signal to review when the report item is attention", () => {
+    const signals = buildCompanionSignals(
+      input({
+        events: [timelineEvent("e1")],
+        hasAnalysis: true,
+        handoffReadiness: readiness({
+          reportStatus: "attention",
+          reportDetail: "메모리 검토가 먼저 필요합니다.",
+        }),
+      }),
+    );
+    const report = signals.find((signal) => signal.type === "ready_to_report");
+    expect(report?.severity).toBe("review");
+    expect(report?.message).toBe("메모리 검토가 먼저 필요합니다.");
+    expect(report?.basis).toBe("mixed");
+  });
+
+  it("suppresses the ready_to_resume signal when the resume item is waiting", () => {
+    const signals = buildCompanionSignals(
+      input({
+        events: [timelineEvent("e1")],
+        hasAnalysis: true,
+        handoffReadiness: readiness({ resumeStatus: "waiting" }),
+      }),
+    );
+    expect(signals.some((signal) => signal.type === "ready_to_resume")).toBe(false);
+  });
+
+  it("keeps the calm suggestion / info severity when readiness items are ready", () => {
+    const signals = buildCompanionSignals(
+      input({
+        events: [timelineEvent("e1")],
+        hasAnalysis: true,
+        handoffReadiness: readiness(),
+      }),
+    );
+    const report = signals.find((signal) => signal.type === "ready_to_report");
+    const resume = signals.find((signal) => signal.type === "ready_to_resume");
+    expect(report?.severity).toBe("suggestion");
+    expect(resume?.severity).toBe("info");
+    // Falls back to the calm baseline messages.
+    expect(report?.message).toContain("분석이 끝났습니다");
+    expect(resume?.message).toContain("Resume 프롬프트");
+  });
+
+  it("falls back to the legacy state gates when no handoffReadiness is provided", () => {
+    const noEvents = buildCompanionSignals(input({ events: [], hasAnalysis: true }));
+    expect(noEvents.some((signal) => signal.type === "ready_to_report")).toBe(false);
+    expect(noEvents.some((signal) => signal.type === "ready_to_resume")).toBe(false);
+
+    const withEventsButNoAnalysis = buildCompanionSignals(
+      input({ events: [timelineEvent("e1")], hasAnalysis: false }),
+    );
+    expect(withEventsButNoAnalysis.some((s) => s.type === "ready_to_report")).toBe(false);
+    expect(withEventsButNoAnalysis.some((s) => s.type === "ready_to_resume")).toBe(true);
+  });
+});
