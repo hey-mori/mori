@@ -1204,6 +1204,7 @@ const SHORTCUTS: { keys: string[]; desc: string }[] = [
 
 /** A quiet keyboard cheatsheet so the workbench's power keys are discoverable. */
 function WorkbenchHelp({ onClose }: { onClose: () => void }) {
+  const dialogRef = useDialogFocus<HTMLDivElement>();
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -1215,7 +1216,14 @@ function WorkbenchHelp({ onClose }: { onClose: () => void }) {
   return (
     <div className="workbench-modal-layer" role="presentation">
       <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
-      <div className="workbench-modal is-help" role="dialog" aria-modal="true" aria-label="단축키 도움말">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="workbench-modal is-help"
+        role="dialog"
+        aria-modal="true"
+        aria-label="단축키 도움말"
+      >
         <header className="workbench-modal-head">
           <strong className="workbench-help-title">단축키</strong>
           <Button size="sm" variant="ghost" icon={X} title="닫기" onClick={onClose} />
@@ -1244,6 +1252,23 @@ function WorkbenchHelp({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Overlay focus management ─────────────────────────────────────────────────
+
+/**
+ * On open, move keyboard focus into the dialog; on close, return it to whatever
+ * was focused before (usually the control that opened it). Keeps the workbench
+ * navigable by keyboard without stranding focus behind a dismissed overlay.
+ */
+function useDialogFocus<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    return () => previous?.focus?.();
+  }, []);
+  return ref;
+}
+
 // ─── Focus (maximize) overlay ─────────────────────────────────────────────────
 
 /**
@@ -1266,6 +1291,7 @@ function WorkbenchFocus({
   onMode: (mode: PanelMode) => void;
   onClose: () => void;
 }) {
+  const dialogRef = useDialogFocus<HTMLDivElement>();
   const events = useMemo(
     () => loadConversation(repository, meta.sessionId),
     [repository, meta.sessionId],
@@ -1299,7 +1325,14 @@ function WorkbenchFocus({
   return (
     <div className="workbench-modal-layer" role="presentation">
       <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
-      <div className="workbench-focus" role="dialog" aria-modal="true" aria-label={meta.title}>
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="workbench-focus"
+        role="dialog"
+        aria-modal="true"
+        aria-label={meta.title}
+      >
         <header className="workbench-focus-head">
           <div className="workbench-panel-id">
             <h2>{meta.title}</h2>
@@ -1344,6 +1377,7 @@ function WorkbenchCompare({
   onJump: (panelId: string) => void;
   onClose: () => void;
 }) {
+  const dialogRef = useDialogFocus<HTMLDivElement>();
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -1355,7 +1389,14 @@ function WorkbenchCompare({
   return (
     <div className="workbench-modal-layer" role="presentation">
       <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
-      <div className="workbench-modal is-compare" role="dialog" aria-modal="true" aria-label="세션 비교">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="workbench-modal is-compare"
+        role="dialog"
+        aria-modal="true"
+        aria-label="세션 비교"
+      >
         <header className="workbench-modal-head">
           <strong className="workbench-help-title">세션 비교</strong>
           <span className="workbench-search-count">{rows.length}</span>
@@ -1791,6 +1832,7 @@ function CommandPalette({
   onRun: (action: CommandAction) => void;
   onClose: () => void;
 }) {
+  const dialogRef = useDialogFocus<HTMLDivElement>();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1860,7 +1902,14 @@ function CommandPalette({
   return (
     <div className="workbench-modal-layer" role="presentation">
       <button type="button" className="workbench-modal-scrim" aria-label="닫기" onClick={onClose} />
-      <div className="workbench-modal is-picker" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="workbench-modal is-picker"
+        role="dialog"
+        aria-modal="true"
+        aria-label="명령 팔레트"
+      >
         <header className="workbench-modal-head">
           <div className="workbench-search">
             <Command size={14} aria-hidden="true" />

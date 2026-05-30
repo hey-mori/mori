@@ -1741,6 +1741,12 @@
   color: inherit;
 }
 
+/* Programmatic focus moves into these dialog containers; suppress the ring. */
+.workbench-focus:focus,
+.workbench-modal:focus {
+  outline: none;
+}
+
 /* Focus (maximize) overlay: one panel, full size, over the board. */
 .workbench-focus {
   display: flex;
