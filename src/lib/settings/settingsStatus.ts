@@ -168,7 +168,7 @@ export function getPrivacyPolicy(): PrivacyPolicyRow[] {
     {
       id: "client-safe-report-mode",
       label: "Client-safe 리포트",
-      detail: "Reports에서 켜면 원문, 소스 세부 정보, 파일 경로를 내보내기에서 제외합니다.",
+      detail: "보고서에서 켜면 원문, 소스 세부 정보, 파일 경로를 내보내기에서 제외합니다.",
       state: "default",
     },
     {

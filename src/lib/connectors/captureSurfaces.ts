@@ -272,7 +272,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     privacyBoundary: "이미 import된 세션 데이터만 분석. 추가 데이터는 가져오지 않습니다.",
     whatMoriCanAccess: ["현재 세션의 이벤트 + 소스 텍스트 (deterministic 또는 사용자 설정 Ollama endpoint)"],
     whatMoriNeverAccesses: ["외부 API (cloud opt-in 없을 때)", "다른 세션", "다른 프로젝트"],
-    setupRequirement: "deterministic은 즉시 사용 가능. Ollama 등 로컬 LLM은 Settings에서 endpoint를 직접 입력.",
+    setupRequirement: "deterministic은 즉시 사용 가능. Ollama 등 로컬 LLM은 설정에서 endpoint를 직접 입력.",
     nextStep: "LM Studio / OpenAI-compatible local endpoint 지원 추가.",
     relatedIntegrationIds: ["quickPass"],
   },

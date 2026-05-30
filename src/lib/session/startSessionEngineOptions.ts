@@ -23,7 +23,7 @@ const ENGINE_ROWS: Array<
   {
     provider: "ollama",
     label: "Ollama",
-    detail: "Settings에서 endpoint와 모델을 구성",
+    detail: "설정에서 endpoint와 모델을 구성",
     model: "llama3.1:8b",
     featureId: "settings.localAi.ollama",
   },
@@ -37,7 +37,7 @@ const ENGINE_ROWS: Array<
   {
     provider: "openAiCompatible",
     label: "OpenAI 호환 엔드포인트",
-    detail: "Settings에서 base URL, 모델, API key를 구성",
+    detail: "설정에서 base URL, 모델, API key를 구성",
     model: "local-model",
     featureId: "settings.localAi.openAiCompatible",
   },
