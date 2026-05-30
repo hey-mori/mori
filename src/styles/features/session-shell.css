@@ -36,11 +36,16 @@
   background: var(--base-bg);
 }
 
-/* The single scroll region. Everything below the header lives here. */
+/* The single scroll region. Everything below the header lives here.
+ *
+ * `scrollbar-gutter: stable` reserves the scrollbar's space even on tabs whose
+ * content fits without one — so switching tabs (e.g. 개요 ↔ 흐름) never shifts
+ * the layout sideways as the scrollbar appears or disappears. */
 .page-shell-scroll {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 .page-shell-content {
