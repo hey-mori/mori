@@ -94,7 +94,7 @@ export function ExtractedEventCard({
           icon={Check}
           onClick={onAccept}
           disabled={isAccepted}
-          title={isAccepted ? "이미 수락한 항목입니다." : "적용 시점에 이 이벤트를 세션에 추가합니다."}
+          title={isAccepted ? "이미 수락한 항목입니다." : "반영 시점에 이 이벤트를 세션에 추가합니다."}
         >
           수락
         </Button>
@@ -102,7 +102,7 @@ export function ExtractedEventCard({
           icon={Trash2}
           onClick={onDiscard}
           disabled={isDiscarded}
-          title={isDiscarded ? "이미 폐기한 항목입니다." : "이 이벤트를 적용에서 제외합니다."}
+          title={isDiscarded ? "이미 폐기한 항목입니다." : "이 이벤트를 반영에서 제외합니다."}
         >
           폐기
         </Button>

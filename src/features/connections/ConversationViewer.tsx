@@ -383,7 +383,7 @@ export function ConversationViewer({
           <div className="conversation-viewer-footer-hint">
             <Sparkles size={14} aria-hidden="true" />
             <span>
-              가져오면 Import Review로 이동합니다. 수락한 이벤트만 Timeline에 적용됩니다.
+              가져오면 Import Review로 이동합니다. 수락한 이벤트만 Timeline에 반영됩니다.
             </span>
           </div>
           <div className="conversation-viewer-footer-actions">

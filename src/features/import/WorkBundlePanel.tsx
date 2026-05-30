@@ -91,7 +91,7 @@ export function WorkBundlePanel() {
     setItems(sample.map((item) => ({ ...item, id: nextItemId() })));
     setStatus({
       tone: "info",
-      message: `샘플 AI 코딩 작업 번들을 불러왔습니다 (${sample.length}개 소스). 미리보기를 확인한 뒤 적용하세요.`,
+      message: `샘플 AI 코딩 작업 번들을 불러왔습니다 (${sample.length}개 소스). 미리보기를 확인한 뒤 반영하세요.`,
     });
   }
 
@@ -148,18 +148,18 @@ export function WorkBundlePanel() {
 
   function handleApply() {
     if (!hasSession) {
-      return setStatus({ tone: "error", message: "적용하려면 먼저 세션을 시작하거나 소스에서 대화를 가져오세요." });
+      return setStatus({ tone: "error", message: "반영하려면 먼저 세션을 시작하거나 소스에서 대화를 가져오세요." });
     }
     if (items.length === 0) {
       return setStatus({ tone: "error", message: "번들에 소스가 없습니다." });
     }
     const stored = addImportBatch(items.map((item) => item.candidate));
     if (stored.length === 0) {
-      return setStatus({ tone: "error", message: "세션을 찾을 수 없어 적용하지 못했습니다." });
+      return setStatus({ tone: "error", message: "세션을 찾을 수 없어 반영하지 못했습니다." });
     }
     setStatus({
       tone: "ok",
-      message: `${stored.length}개 소스 · ${preview.totalEventCount}개 이벤트를 타임라인에 적용했습니다.`,
+      message: `${stored.length}개 소스 · ${preview.totalEventCount}개 이벤트를 타임라인에 반영했습니다.`,
     });
     setItems([]);
     navigate("timeline");
@@ -235,7 +235,7 @@ export function WorkBundlePanel() {
         </div>
         <p className="work-bundle-privacy" role="note">
           붙여넣거나 명시적으로 추가한 소스만 처리합니다. 폴더 감시·계정 스캔·자동 메모 작성은 없습니다.
-          적용하면 각 소스가 별도 자료로 저장되어 어떤 소스가 어떤 이벤트를 만들었는지 추적할 수 있습니다.
+          반영하면 각 소스가 별도 자료로 저장되어 어떤 소스가 어떤 이벤트를 만들었는지 추적할 수 있습니다.
         </p>
       </div>
 
@@ -244,11 +244,11 @@ export function WorkBundlePanel() {
       {preview.isEmpty ? null : (
         <div className="work-bundle-apply">
           <Button variant="primary" icon={FileStack} onClick={handleApply} disabled={!hasSession}>
-            타임라인에 적용 · {preview.willCreate.sourceCount}개 소스 / {preview.willCreate.eventCount}개 이벤트
+            타임라인에 반영 · {preview.willCreate.sourceCount}개 소스 / {preview.willCreate.eventCount}개 이벤트
           </Button>
           {!hasSession ? (
             <small className="work-bundle-apply-hint">
-              적용하려면 세션이 필요합니다. 위 미리보기는 세션 없이도 동작합니다.
+              반영하려면 세션이 필요합니다. 위 미리보기는 세션 없이도 동작합니다.
             </small>
           ) : null}
         </div>
@@ -328,7 +328,7 @@ function WorkBundlePreviewCard({
 
       {preview.secretFlagged || preview.redactionPending ? (
         <div className="work-bundle-warnings" role="status">
-          {preview.secretFlagged ? <Badge tone="red">민감정보 의심 — 적용 전 검토</Badge> : null}
+          {preview.secretFlagged ? <Badge tone="red">민감정보 의심 — 반영 전 검토</Badge> : null}
           {preview.redactionPending ? <Badge tone="orange">레닥션 대기 중인 소스 있음</Badge> : null}
         </div>
       ) : null}

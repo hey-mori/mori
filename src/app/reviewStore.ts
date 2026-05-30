@@ -107,7 +107,7 @@ export const useReviewStore = create<ImportReviewState>((set, get) => ({
     const draft = get().draft;
     if (!draft) return { ok: false, reason: "No active review draft." };
     if (!isReviewApplyable(draft)) {
-      return { ok: false, reason: "최소 1개 이상의 이벤트를 Accept해야 적용할 수 있습니다." };
+      return { ok: false, reason: "최소 1개 이상의 이벤트를 Accept해야 반영할 수 있습니다." };
     }
     const candidate = buildAcceptedCandidate(draft);
     if (!candidate) return { ok: false, reason: "Accepted events could not be built." };

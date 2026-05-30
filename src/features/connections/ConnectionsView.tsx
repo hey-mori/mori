@@ -234,7 +234,7 @@ export function ConnectionsView() {
       setImportStatus({
         tone: "ok",
         message:
-          "새 세션을 만들고 Import Review로 이동했습니다. 적용 전까지 세션은 비어 있으며, 취소하면 빈 세션은 자동으로 정리됩니다.",
+          "새 세션을 만들고 Import Review로 이동했습니다. 반영 전까지 세션은 비어 있으며, 취소하면 빈 세션은 자동으로 정리됩니다.",
       });
       setViewerOpen(false);
       setCurrentView("evidence");
@@ -267,7 +267,7 @@ export function ConnectionsView() {
       startReview(candidate, reviewOriginForAgentWorkSession(selection.detail));
       setImportStatus({
         tone: "ok",
-        message: "현재 세션의 Import Review로 이동했습니다. 적용하면 타임라인에 추가됩니다.",
+        message: "현재 세션의 Import Review로 이동했습니다. 반영하면 타임라인에 추가됩니다.",
       });
       setViewerOpen(false);
       setCurrentView("evidence");
@@ -889,7 +889,7 @@ function SessionCardDetail({
       <HelpDisclosure label="가져오기 동작" ariaLabel="가져오기 동작 설명">
         <p>기본 동작은 대화마다 새 작업 세션을 만드는 것입니다 — AI 작업 기록 1개 = Mori 작업 세션 1개.</p>
         <p>
-          가져온 항목은 Import Review에서 검토한 뒤 적용되고, 같은 세션에 Git · 터미널 · 파일
+          가져온 항목은 Import Review에서 검토한 뒤 반영되고, 같은 세션에 Git · 터미널 · 파일
           자료를 더 붙일 수 있습니다.
         </p>
       </HelpDisclosure>

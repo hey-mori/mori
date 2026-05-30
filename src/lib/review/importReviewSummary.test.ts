@@ -72,7 +72,7 @@ describe("buildImportReviewSummary", () => {
       pendingCount: 0,
     });
 
-    expect(model.headline).toBe("2개 이벤트가 적용 준비되었습니다");
+    expect(model.headline).toBe("2개 이벤트가 반영 준비되었습니다");
     expect(model.items.find((item) => item.id === "apply")?.detail).toContain(
       "수락된 2개 이벤트가 세션 Timeline에 추가됩니다",
     );

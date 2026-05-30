@@ -90,7 +90,7 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
     const outcome = apply((candidate) => {
       const stored = addImport(candidate, summary ? { importSummary: summary } : undefined);
       if (!stored) {
-        return { ok: false, reason: "세션을 찾을 수 없어 적용하지 못했습니다." };
+        return { ok: false, reason: "세션을 찾을 수 없어 반영하지 못했습니다." };
       }
       const firstEventId = stored.events[0]?.id;
       if (firstEventId) setSelectedEventId(firstEventId);
@@ -122,7 +122,7 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
         <div className="review-header-title">
           <h1>가져오기 검토</h1>
           <p>
-            추출한 항목을 적용 전에 수락 또는 폐기로 정리하세요. 적용 전까지 세션 메모리에는
+            추출한 항목을 반영 전에 수락 또는 폐기로 정리하세요. 반영 전까지 세션 메모리에는
             추가되지 않습니다.
           </p>
         </div>
@@ -153,7 +153,7 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
           <header className="review-events-head">
             <div>
               <h2>추출된 타임라인 이벤트</h2>
-              <p>각 항목은 적용 시 세션 타임라인에 추가되고, 폐기한 항목은 제외됩니다.</p>
+              <p>각 항목은 반영 시 세션 타임라인에 추가되고, 폐기한 항목은 제외됩니다.</p>
             </div>
             <div className="review-events-actions">
               <Button
@@ -232,7 +232,7 @@ function BulkAcceptCallout({
         <strong>{eventCount}개 이벤트를 한 번에 수락할 수 있습니다.</strong>
         <p>
           AI 대화에서 추출된 항목입니다. 한 항목씩 검토하는 대신 전체를 일괄 수락하고
-          적용한 뒤, Quick Pass로 이슈 · 결정 · 액션을 추출하는 것이 일반적인 흐름입니다.
+          반영한 뒤, Quick Pass로 이슈 · 결정 · 액션을 추출하는 것이 일반적인 흐름입니다.
         </p>
       </div>
       <Button variant="primary" icon={CheckCheck} onClick={onAccept}>
@@ -283,7 +283,7 @@ function BulkAcceptConfirm({
           데이터(observed)로 표시됩니다.
         </p>
         <p className="review-confirm-secondary">
-          적용한 뒤 Quick Pass를 실행하면 이슈 · 결정 · 다음 액션을 추출할 수 있습니다.
+          반영한 뒤 Quick Pass를 실행하면 이슈 · 결정 · 다음 액션을 추출할 수 있습니다.
         </p>
         <footer className="review-confirm-actions">
           <Button onClick={onCancel}>취소</Button>
@@ -305,7 +305,7 @@ function ImportReviewSummaryPanel({
     <section className="import-review-summary" aria-label="Import review summary">
       <header>
         <div>
-          <span className="import-review-summary-kicker">적용 전 검토</span>
+          <span className="import-review-summary-kicker">반영 전 검토</span>
           <h2>{summary.headline}</h2>
           <p>{summary.detail}</p>
         </div>
@@ -376,18 +376,18 @@ function ReviewFooter({
           disabled={!applyable}
           title={
             applyable
-              ? `${counts.accepted}개의 이벤트를 세션에 적용`
-              : "최소 1개 이상의 이벤트를 수락해야 적용할 수 있습니다."
+              ? `${counts.accepted}개의 이벤트를 세션에 반영`
+              : "최소 1개 이상의 이벤트를 수락해야 반영할 수 있습니다."
           }
         >
-          Timeline에 적용 ({counts.accepted})
+          Timeline에 반영 ({counts.accepted})
         </Button>
       </div>
       {!applyable ? (
         <p className="review-footer-hint">
           {draft.origin === "ai-transcript"
-            ? "AI Transcript는 1개의 요약 이벤트를 생성합니다. 수락을 누른 뒤 적용하세요."
-            : "적용하려면 적어도 1개의 추출 이벤트를 수락하세요."}
+            ? "AI Transcript는 1개의 요약 이벤트를 생성합니다. 수락을 누른 뒤 반영하세요."
+            : "반영하려면 적어도 1개의 추출 이벤트를 수락하세요."}
         </p>
       ) : null}
     </footer>

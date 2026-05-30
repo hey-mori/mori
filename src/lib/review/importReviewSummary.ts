@@ -58,14 +58,14 @@ export function buildImportReviewSummary(
   return {
     headline:
       acceptedCount > 0
-        ? `${acceptedCount}개 이벤트가 적용 준비되었습니다`
+        ? `${acceptedCount}개 이벤트가 반영 준비되었습니다`
         : pendingCount > 0
           ? `${pendingCount}개 이벤트가 검토 대기 중입니다`
           : "수락된 이벤트가 아직 없습니다",
     detail:
       duplicateCount > 0
-        ? "적용 전에 중복이 식별됩니다. 의도적으로 포함하거나 검토 후 결정하세요."
-        : "이벤트를 수락하고 적용하기 전까지 세션에 어떤 것도 기록되지 않습니다.",
+        ? "반영 전에 중복이 식별됩니다. 의도적으로 포함하거나 검토 후 결정하세요."
+        : "이벤트를 수락하고 반영하기 전까지 세션에 어떤 것도 기록되지 않습니다.",
     items,
   };
 }
@@ -197,7 +197,7 @@ function buildReviewItem(input: ImportReviewSummaryInput): ImportReviewSummaryIt
     title: "검토 진행",
     status: "waiting",
     statusLabel: "수락 없음",
-    detail: "Timeline에 적용하기 전에 적어도 1개의 이벤트를 수락하세요.",
+    detail: "Timeline에 반영하기 전에 적어도 1개의 이벤트를 수락하세요.",
   };
 }
 
@@ -205,15 +205,15 @@ function buildApplyItem(input: ImportReviewSummaryInput): ImportReviewSummaryIte
   if (input.acceptedCount === 0) {
     return {
       id: "apply",
-      title: "적용 효과",
+      title: "반영 효과",
       status: "waiting",
       statusLabel: "비활성",
-      detail: "적어도 1개의 이벤트를 수락해야 적용이 활성화됩니다.",
+      detail: "적어도 1개의 이벤트를 수락해야 반영이 활성화됩니다.",
     };
   }
   return {
     id: "apply",
-    title: "적용 효과",
+    title: "반영 효과",
     status: "ready",
     statusLabel: "기록 예정",
     detail: `수락된 ${input.acceptedCount}개 이벤트가 세션 Timeline에 추가됩니다. 이슈 · 결정 · 다음 액션은 이후 Quick Pass에서 도출됩니다.`,

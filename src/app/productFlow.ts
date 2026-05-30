@@ -224,7 +224,7 @@ export const PRODUCT_SURFACES: Record<ProductSurfaceId, ProductSurfaceDescriptor
   importReview: {
     id: "importReview",
     label: "Import Review",
-    description: "후보 이벤트 / 이슈 / 결정 검토 후 세션에 적용.",
+    description: "후보 이벤트 / 이슈 / 결정 검토 후 세션에 반영.",
     ownedFeatureIds: ["evidence.addSource.aiTranscriptPaste"],
     docsPath: "docs/product-screen-reference.md#import-review--evidence-mapping",
   },

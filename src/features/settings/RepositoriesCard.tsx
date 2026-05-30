@@ -147,7 +147,7 @@ export function RepositoriesCard({
         />
         <SettingsRow
           label="가져오기 범위"
-          description="수동 가져오기는 현재 세션에만 적용됩니다. Git 캡처는 선택된 리포지토리 경로만 사용합니다."
+          description="수동 가져오기는 현재 세션에만 반영됩니다. Git 캡처는 선택된 리포지토리 경로만 사용합니다."
           meta={<StatusPill tone="blue">명시적 실행</StatusPill>}
         />
         <SettingsRow

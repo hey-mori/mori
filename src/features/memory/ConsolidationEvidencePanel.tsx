@@ -163,7 +163,7 @@ export function ConsolidationEvidencePanel({
           <ShieldAlert size={12} aria-hidden="true" />
           <span>
             로컬에 저장된 Mori 세션만 사용합니다. 클라우드 동기화 / 백그라운드 캡처 / 외부 계정
-            접근은 없습니다. 현재 검토 결정은 메모리 반영 전까지 드래프트이며, 적용 후 accepted
+            접근은 없습니다. 현재 검토 결정은 메모리 반영 전까지 드래프트이며, 반영 후 accepted
             memory와 감사 로그로 로컬에 저장됩니다.
           </span>
         </footer>
