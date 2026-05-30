@@ -224,6 +224,39 @@ Component direction:
 - Reuse timeline view-model logic, but render a purpose-built compact mini
   timeline.
 
+### Shipped status (updated 2026-05-30)
+
+The Workbench has since grown past the first read-only slice. Implemented now,
+all over already-imported local data and still honestly read-only (no agent is
+ever driven):
+
+- **Free composition canvas** with resizable columns, stacked panels,
+  drag-to-reorder / relocate, and saved layout presets.
+- **Compact controls**: quick-layout presets (single / columns / grid), a
+  density toggle, and per-panel header collapse.
+- **Selected-session inspector** (right, collapsible): provenance, the honest
+  count strip, and the real open issues / unconfirmed decisions / pending next
+  actions. Lives in `WorkbenchView`, not a generic tile component.
+- **Cross-session attention strip** (canvas, not rail): the placed sessions
+  with an open issue or unconfirmed decision, derived by the pure
+  `buildWorkbenchAttention` (`src/lib/workbench/attention.ts`). Click to focus.
+- **Command palette (⌘K) and keyboard control**: panel focus (1–9, [ ]),
+  view mode (m), collapse (c), close (x), inspector (i), focus mode (f),
+  search (/), and a `?` cheatsheet overlay.
+- **Unified search** filters and highlights every open panel at once and dims
+  the ones with no match.
+- **Focus (maximize) mode** to read one panel full size, and a **compare
+  matrix** to scan every placed session's counts side by side.
+- **Honest bottom bar**: a local scratch note plus the palette launcher, no
+  fake send button.
+
+Panel work-item counts and timeline come from the same source the rest of the
+app uses (`loadSessionMemoryBody` for real sessions, `buildDemoSessionContent`
+for demo sessions), so the workbench is no longer empty on the sample data.
+
+Still deferred until a real live target exists: `SessionActionComposer`
+(sending a request to an agent). The layout already reserves room for it.
+
 ## 7. Retiring the Old Project Surfaces (Without Deleting)
 
 When a surface leaves the standing navigation, **unwire it, do not delete it.**
