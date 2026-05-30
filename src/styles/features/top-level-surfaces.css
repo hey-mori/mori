@@ -1776,6 +1776,44 @@
   overflow: auto;
 }
 
+/* Calm dot-status counts (launchpad cards). */
+.workbench-dots {
+  display: inline-flex;
+  gap: var(--base-space-2);
+  align-items: center;
+  margin-top: 3px;
+}
+
+.workbench-dots em {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.workbench-dots em i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--base-status-neutral);
+}
+
+.workbench-dots .tone-issue i {
+  background: var(--base-status-warning);
+}
+
+.workbench-dots .tone-decision i {
+  background: var(--base-status-info);
+}
+
+.workbench-dots .tone-next i {
+  background: var(--base-status-success);
+}
+
 /* Session compare matrix. */
 .workbench-modal.is-compare {
   width: min(680px, 94vw);

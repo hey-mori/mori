@@ -790,6 +790,11 @@ export function WorkbenchView() {
                         ? ` · ${formatRelative(session.savedAt ?? session.startedAt!)}`
                         : ""}
                     </small>
+                    <AttentionDots
+                      issues={session.openIssues}
+                      decisions={session.unconfirmedDecisions}
+                      next={session.pendingNextActions}
+                    />
                   </button>
                 ))}
               </div>
@@ -2196,6 +2201,33 @@ function Stat({
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+/** Calm dot-status counts for a session's open issues / decisions / next steps. */
+function AttentionDots({ issues, decisions, next }: { issues: number; decisions: number; next: number }) {
+  if (issues + decisions + next === 0) return null;
+  return (
+    <span className="workbench-dots">
+      {issues > 0 ? (
+        <em className="tone-issue" title={`열린 이슈 ${issues}`}>
+          <i aria-hidden="true" />
+          {issues}
+        </em>
+      ) : null}
+      {decisions > 0 ? (
+        <em className="tone-decision" title={`미확정 결정 ${decisions}`}>
+          <i aria-hidden="true" />
+          {decisions}
+        </em>
+      ) : null}
+      {next > 0 ? (
+        <em className="tone-next" title={`다음 단계 ${next}`}>
+          <i aria-hidden="true" />
+          {next}
+        </em>
+      ) : null}
+    </span>
   );
 }
 
