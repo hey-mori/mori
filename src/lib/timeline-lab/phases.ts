@@ -27,9 +27,9 @@ export type Phase = {
   issueCount: number;
 };
 
-const PHASE_ORDER: PhaseId[] = ["explore", "decide", "build", "verify", "wrapup"];
+export const PHASE_ORDER: PhaseId[] = ["explore", "decide", "build", "verify", "wrapup"];
 
-const PHASE_META: Record<PhaseId, { label: string; tone: ActivityTone }> = {
+export const PHASE_META: Record<PhaseId, { label: string; tone: ActivityTone }> = {
   explore: { label: "탐색·진단", tone: "purple" },
   decide: { label: "결정", tone: "blue" },
   build: { label: "구현", tone: "cyan" },
@@ -37,7 +37,7 @@ const PHASE_META: Record<PhaseId, { label: string; tone: ActivityTone }> = {
   wrapup: { label: "정리", tone: "gray" },
 };
 
-function phaseForKind(kind: NarrativeMomentKind): PhaseId {
+export function phaseForKind(kind: NarrativeMomentKind): PhaseId {
   switch (kind) {
     case "decision":
       return "decide";
