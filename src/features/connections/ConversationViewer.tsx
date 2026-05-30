@@ -496,7 +496,7 @@ function MessageBubble({ index, message, matched, hasQuery, onMeasure }: Message
             {toolHasMore ? (
               <details className="conversation-message-tool-details">
                 <summary>전체 결과 보기</summary>
-                <pre>{message.content.replace(/^↳ 도구 (결과|오류):\s*/, "")}</pre>
+                <pre className="conversation-tool-pre">{message.content.replace(/^↳ 도구 (결과|오류):\s*/, "")}</pre>
               </details>
             ) : null}
           </>

@@ -392,7 +392,10 @@ td a {
   border-top: 1px solid var(--line);
 }
 
-pre {
+/* Tool-result <pre> inside the ConversationViewer's expanded details — the
+ * only bare <pre> in the app, so the styling is scoped to it instead of
+ * leaking as a global rule that every other <pre> has to override. */
+.conversation-tool-pre {
   overflow: auto;
   margin: 0;
   padding: 20px;
