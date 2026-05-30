@@ -103,7 +103,11 @@ function parseTranscriptTurns(text: string): AiTranscriptTurn[] {
     turns.push(currentTurn);
   }
 
-  return turns;
+  // Normalise content once at the end: the in-loop concat (`content += "\n" + line`)
+  // and the role-prefix strip leave stray leading/trailing whitespace on every
+  // mid-stream turn, while only the final turn's emptiness was checked via
+  // `trim()`. Trim every turn so `turn.content` is always callable downstream.
+  return turns.map((turn) => ({ ...turn, content: turn.content.trim() }));
 }
 
 /** Convert a structured ChatGPT export turn into the generic transcript turn shape. */
