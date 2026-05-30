@@ -56,6 +56,24 @@ export type WorkBundleItem = {
   candidate: NormalizedImportCandidate;
 };
 
+/**
+ * Where a source sits relative to the bundle's agent spine:
+ * - `spine` — the source itself is an agent conversation (AI family).
+ * - `alignedWithSpine` — a rib whose [spanStart, spanEnd] overlaps the spine
+ *   sources' union span. The rib was captured during the conversation, so it
+ *   is the natural evidence the conversation acted on.
+ * - `outsideSpine` — a rib whose span is disjoint from the spine union. The
+ *   rib does not belong to the same period of work; the user explicitly
+ *   chose to pull it in.
+ * - `noSpine` — the bundle has no spine, so alignment is undefined for all
+ *   sources. The bundle is the manual fallback path.
+ */
+export type WorkBundleAlignment =
+  | "spine"
+  | "alignedWithSpine"
+  | "outsideSpine"
+  | "noSpine";
+
 export type WorkBundleSourcePreview = {
   itemId: string;
   origin: WorkBundleSourceOrigin;
@@ -79,6 +97,7 @@ export type WorkBundleSourcePreview = {
   fileRefs: string[];
   spanStart: string | null;
   spanEnd: string | null;
+  alignment: WorkBundleAlignment;
 };
 
 export type WorkBundleTrustSummary = {
@@ -378,6 +397,9 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
       fileRefs: dedupeFilePaths([...fileRefs]),
       spanStart: span.start,
       spanEnd: span.end,
+      // Filled in below once every source's span is known and the spine
+      // union can be computed.
+      alignment: "noSpine" as WorkBundleAlignment,
     };
   });
 
@@ -391,6 +413,28 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
   const spineSourceCount = sources.filter((source) => source.family === "ai").length;
   const ribSourceCount = sources.length - spineSourceCount;
   const spineMissing = spineSourceCount === 0 && ribSourceCount > 0;
+
+  // Temporal alignment — for each rib, does its [spanStart, spanEnd] overlap
+  // the spine sources' union span? An overlap means the rib was captured
+  // during the conversation, so it is the natural evidence the conversation
+  // acted on. Disjoint ribs were pulled in explicitly by the user.
+  const spineSources = sources.filter((source) => source.family === "ai");
+  const spineUnion =
+    spineSources.length > 0
+      ? {
+          start: spineSources.reduce<string | null>(
+            (acc, source) => minIso(acc, source.spanStart),
+            null,
+          ),
+          end: spineSources.reduce<string | null>(
+            (acc, source) => maxIso(acc, source.spanEnd ?? source.spanStart),
+            null,
+          ),
+        }
+      : null;
+  for (const source of sources) {
+    source.alignment = classifyAlignment(source, spineUnion);
+  }
 
   const proposedNextStep = deriveNextStep({
     totalUniqueEvents,
@@ -430,6 +474,29 @@ export function buildWorkBundlePreview(items: WorkBundleItem[]): WorkBundlePrevi
 }
 
 /**
+ * Compare each source's span to the spine sources' union span. Returns the
+ * source's alignment per {@link WorkBundleAlignment} semantics.
+ */
+function classifyAlignment(
+  source: WorkBundleSourcePreview,
+  spineUnion: { start: string | null; end: string | null } | null,
+): WorkBundleAlignment {
+  if (!spineUnion || spineUnion.start === null || spineUnion.end === null) {
+    return "noSpine";
+  }
+  if (source.family === "ai") return "spine";
+  if (source.spanStart === null) return "outsideSpine";
+
+  const sourceStart = new Date(source.spanStart).getTime();
+  const sourceEnd = new Date(source.spanEnd ?? source.spanStart).getTime();
+  const spineStart = new Date(spineUnion.start).getTime();
+  const spineEnd = new Date(spineUnion.end).getTime();
+  // Two ranges overlap iff each starts before the other ends.
+  const overlaps = sourceStart <= spineEnd && spineStart <= sourceEnd;
+  return overlaps ? "alignedWithSpine" : "outsideSpine";
+}
+
+/**
  * Pick the single next step the preview should suggest. Order is honest: a
  * data problem (no events at all) is louder than a missing spine; a secret
  * warning outranks "ready to apply"; redaction pending outranks ready; finally
@@ -457,24 +524,24 @@ function deriveNextStep(input: {
   if (input.secretFlagged) {
     return {
       reason: "secretReview",
-      message: "민감정보가 의심됩니다. 적용 전에 해당 소스를 검토하세요.",
+      message: "민감정보가 의심됩니다. 반영 전에 해당 소스를 검토하세요.",
     };
   }
   if (input.spineMissing) {
     return {
       reason: "spineMissing",
       message:
-        "AI 대화 (Claude · Codex · OpenCode · ChatGPT)를 함께 추가하면 작업의 중심을 만들 수 있습니다. 지금 그대로 적용해도 증거 단위로 보관됩니다.",
+        "AI 대화 (Claude · Codex · OpenCode · ChatGPT)를 함께 추가하면 작업의 중심을 만들 수 있습니다. 지금 그대로 반영해도 증거 단위로 보관됩니다.",
     };
   }
   if (input.redactionPending) {
     return {
       reason: "redactionPending",
-      message: "레닥션 대기 중인 소스가 있습니다. 가능하면 적용 전에 정리하세요.",
+      message: "레닥션 대기 중인 소스가 있습니다. 가능하면 반영 전에 정리하세요.",
     };
   }
   return {
     reason: "readyToApply",
-    message: "검토가 끝났으면 타임라인에 적용할 수 있습니다.",
+    message: "검토가 끝났으면 타임라인에 반영할 수 있습니다.",
   };
 }

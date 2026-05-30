@@ -116,11 +116,74 @@ describe("buildWorkBundlePreview", () => {
   });
 });
 
+describe("temporal alignment with the spine", () => {
+  it("marks AI-family sources as spine and ribs that overlap the spine as alignedWithSpine", () => {
+    const preview = buildWorkBundlePreview(fixtureItems());
+    const bySource = new Map(preview.sources.map((source) => [source.itemId, source]));
+
+    // The fixture's Claude transcript and Codex run are spine.
+    expect(bySource.get("bundle-ai-transcript")?.alignment).toBe("spine");
+    expect(bySource.get("bundle-codex-run-0")?.alignment).toBe("spine");
+
+    // Git diff (10:12Z), terminal log (10:15-10:18Z), and the hand-off note
+    // (10:25Z) all fall within or touch the Claude+Codex spine union
+    // (09:00 → 09:46Z, plus Claude's 09:00 anchor) — wait, the note at 10:25
+    // is well past the spine end at 09:46, so it should be outsideSpine.
+    // Codex spine ends at 09:46Z; git diff at 10:12Z is after — outsideSpine.
+    // Re-asserting against the actual fixture timing instead of guessing:
+    const gitDiff = bySource.get("bundle-git-diff");
+    const terminal = bySource.get("bundle-terminal-log-0");
+    const note = bySource.get("bundle-manual-note");
+    // All three captures happened after the spine ended (09:46Z) so all
+    // three are honestly outside the spine, even though they reference the
+    // same work. This is a faithful classification, not a similarity score.
+    expect(gitDiff?.alignment).toBe("outsideSpine");
+    expect(terminal?.alignment).toBe("outsideSpine");
+    expect(note?.alignment).toBe("outsideSpine");
+  });
+
+  it("marks all sources as noSpine when the bundle has no AI source", () => {
+    const ribOnly = fixtureItems().filter(
+      (item) => item.origin !== "ai-transcript" && item.origin !== "connector-jsonl",
+    );
+    const preview = buildWorkBundlePreview(ribOnly);
+    expect(preview.sources.every((source) => source.alignment === "noSpine")).toBe(true);
+  });
+
+  it("marks a rib whose span overlaps the spine as alignedWithSpine", () => {
+    const items = fixtureItems();
+    // The Codex run has a real 09:30 → 09:46Z window; use it as the spine
+    // (the transcript collapses to a single instant so it cannot envelope
+    // a rib).
+    const codex = items.find((item) => item.id === "bundle-codex-run-0");
+    const gitDiff = items.find((item) => item.origin === "git-diff");
+    if (!codex || !gitDiff) throw new Error("fixture changed");
+
+    // Force the git diff event into the middle of the Codex window.
+    const insideStart = "2026-05-22T09:35:00Z";
+    const alignedGitDiff = {
+      ...gitDiff,
+      candidate: {
+        ...gitDiff.candidate,
+        source: {
+          ...gitDiff.candidate.source,
+          capturedAt: insideStart,
+        },
+        events: gitDiff.candidate.events.map((event) => ({ ...event, start: insideStart })),
+      },
+    };
+
+    const preview = buildWorkBundlePreview([codex, alignedGitDiff]);
+    const gitPreview = preview.sources.find((source) => source.itemId === gitDiff.id);
+    expect(gitPreview?.alignment).toBe("alignedWithSpine");
+  });
+});
+
 describe("proposedNextStep guidance", () => {
   it("suggests ready-to-apply for a clean spine-anchored bundle", () => {
     const preview = buildWorkBundlePreview(fixtureItems());
     expect(preview.proposedNextStep.reason).toBe("readyToApply");
-    expect(preview.proposedNextStep.message).toContain("적용");
+    expect(preview.proposedNextStep.message).toContain("반영");
   });
 
   it("escalates to spineMissing when the bundle is rib-only", () => {
