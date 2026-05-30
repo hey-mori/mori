@@ -1186,3 +1186,216 @@ button.lab-pulse-stat {
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── 계보 · decision lineage ─────────────────────────────────────────────── */
+
+.lab-lineage {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-space-4);
+}
+
+.lab-lineage-headbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lab-lineage-headbar h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lab-lineage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-space-3);
+}
+
+/* Decision identity is blue; trust is carried by border style, status by the
+   dot, a tension by a red tag. No new hue, no left-accent bar. */
+.lab-lineage-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--blue);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  padding: var(--base-space-3) var(--base-space-4) var(--base-space-4);
+}
+
+.lab-lineage-card[data-trust="inferred"] {
+  border-style: dashed;
+}
+
+.lab-lineage-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lab-lineage-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--blue);
+  border: 2px solid var(--blue);
+}
+
+.lab-lineage-card[data-status="proposed"] .lab-lineage-dot {
+  background: var(--panel);
+}
+
+.lab-lineage-card[data-status="contradicted"] .lab-lineage-dot {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+.lab-lineage-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 680;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.lab-lineage-tension {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  background: var(--red-50);
+  border: 1px solid color-mix(in srgb, var(--red) 16%, transparent);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.lab-lineage-importance {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--gray-50);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.lab-lineage-key {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted-2);
+  margin-right: 6px;
+}
+
+.lab-lineage-context {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.lab-lineage-decision {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.lab-lineage-rationale {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.lab-lineage-rejected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.lab-lineage-reject {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 2px 9px;
+}
+
+.lab-lineage-reject-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted-2);
+}
+
+.lab-lineage-impact ul,
+.lab-lineage-pva ul {
+  list-style: none;
+  margin: 3px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lab-lineage-impact li,
+.lab-lineage-pva li {
+  position: relative;
+  padding-left: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.lab-lineage-impact li::before,
+.lab-lineage-pva li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+
+.lab-lineage-pva {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--base-space-3);
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+
+.lab-lineage-pva-col {
+  min-width: 0;
+}
+
+.lab-lineage-led {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
+.lab-lineage-led svg {
+  color: var(--muted-2);
+}

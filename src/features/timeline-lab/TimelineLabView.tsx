@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Milestone, ScrollText, SearchX, Workflow } from "lucide-react";
+import { Activity, GitBranch, Milestone, ScrollText, SearchX, Workflow } from "lucide-react";
 import { selectSessionView, useSessionStore } from "../../app/sessionStore";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import {
@@ -14,6 +14,7 @@ import { NarrativeStoryView } from "./NarrativeStoryView";
 import { PhaseFlowView } from "./PhaseFlowView";
 import { CausalMapView } from "./CausalMapView";
 import { PulseView } from "./PulseView";
+import { DecisionLineageView } from "./DecisionLineageView";
 
 /**
  * 재구성 — an experimental second timeline that rebuilds a reviewed session
@@ -24,16 +25,17 @@ import { PulseView } from "./PulseView";
  * the *flow* from the raw view." It offers three reconstructions of the same
  * reviewed data, switchable in place:
  *
- *   - 서사  — one vertical story, cause threaded between moments
- *   - 국면  — the work arc (탐색 → 결정 → 구현 → 점검 → 정리)
- *   - 인과  — a cause → effect map laid out by causal depth
- *   - 맥동  — the session as vital signs (counts, mix, momentum)
+ *   - 서사  · one vertical story, cause threaded between moments
+ *   - 국면  · the work arc read as time-ordered chapters
+ *   - 인과  · a cause to effect map laid out by causal depth
+ *   - 맥동  · the session as vital signs (counts, mix, momentum)
+ *   - 계보  · the decisions, with rationale, rejected alternatives, consequences
  *
- * All four derive purely from the already-reviewed session (see
+ * All five derive purely from the already-reviewed session (see
  * `src/lib/timeline-lab/*`); this component only picks the lens.
  */
 
-type LabMode = "narrative" | "phases" | "causal" | "pulse";
+type LabMode = "narrative" | "phases" | "causal" | "pulse" | "lineage";
 
 const MODE_OPTIONS: {
   id: LabMode;
@@ -45,6 +47,7 @@ const MODE_OPTIONS: {
   { id: "phases", label: "국면", icon: Milestone, title: "작업이 거친 단계로 묶어 보기" },
   { id: "causal", label: "인과", icon: Workflow, title: "원인에서 결과로 이어지는 지도" },
   { id: "pulse", label: "맥동", icon: Activity, title: "세션을 숫자로 한눈에 요약" },
+  { id: "lineage", label: "계보", icon: GitBranch, title: "결정의 근거·대안·결과 보기" },
 ];
 
 export function TimelineLabView() {
@@ -127,6 +130,7 @@ export function TimelineLabView() {
             {mode === "phases" ? <PhaseFlowView view={filtered} /> : null}
             {mode === "causal" ? <CausalMapView view={filtered} /> : null}
             {mode === "pulse" ? <PulseView view={filtered} onFocusKind={focusKind} /> : null}
+            {mode === "lineage" ? <DecisionLineageView view={filtered} /> : null}
           </>
         )}
       </div>
