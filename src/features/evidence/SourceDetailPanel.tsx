@@ -44,7 +44,7 @@ export function SourceDetailPanel({
 }) {
   if (selection.kind === "empty") {
     return (
-      <aside className="evidence-detail base-scroll" aria-label="Source detail">
+      <aside className="evidence-detail base-scroll" aria-label="자료 상세">
         <header className="evidence-detail-header">
           <Badge tone="gray">선택된 항목 없음</Badge>
           <h3>근거 상세</h3>
@@ -96,7 +96,7 @@ function SourceDetailView({
   const source = view.sources.find((entry) => entry.id === selection.sourceId);
   if (!source) {
     return (
-      <aside className="evidence-detail base-scroll" aria-label="Source detail">
+      <aside className="evidence-detail base-scroll" aria-label="자료 상세">
         <header className="evidence-detail-header">
           <Badge tone="gray">선택된 소스를 찾을 수 없음</Badge>
           <p>이 세션에는 이 ID에 해당하는 소스가 더 이상 없습니다.</p>
@@ -113,7 +113,7 @@ function SourceDetailView({
   const relatedEvents = view.events.filter((event) => event.sourceRefs.includes(source.id));
 
   return (
-    <aside className="evidence-detail base-scroll" aria-label="Source detail">
+    <aside className="evidence-detail base-scroll" aria-label="자료 상세">
       <header className="evidence-detail-header">
         <div className="evidence-detail-badges">
           <BaseTrustBadge level={source.trustLevel} />
@@ -254,7 +254,7 @@ function IntegrationDetailView({
   const integration = integrationLookup.get(selection.integrationId);
   if (!integration) {
     return (
-      <aside className="evidence-detail base-scroll" aria-label="Integration detail">
+      <aside className="evidence-detail base-scroll" aria-label="통합 상세">
         <header className="evidence-detail-header">
           <Badge tone="gray">알 수 없는 통합</Badge>
           <p>이 ID에 해당하는 소스 통합 정의가 없습니다.</p>
@@ -267,7 +267,7 @@ function IntegrationDetailView({
   const inaccessible = describeInaccessible(integration);
 
   return (
-    <aside className="evidence-detail base-scroll" aria-label="Integration detail">
+    <aside className="evidence-detail base-scroll" aria-label="통합 상세">
       <header className="evidence-detail-header">
         <div className="evidence-detail-badges">
           <BaseStatusBadge
