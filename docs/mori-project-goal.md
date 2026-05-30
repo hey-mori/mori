@@ -252,8 +252,9 @@ that is called out.
   흐름 swimlane untouched. Every lens is a pure derivation from the reviewed
   `MockSession` (`src/lib/timeline-lab/`, `src/features/timeline-lab/`).
 - Four lenses: 서사 (a single narrative spine with the causal reason threaded
-  between moments), 국면 (the work arc 탐색 → 결정 → 구현 → 점검 → 정리),
-  인과 (a cause → effect map laid out by causal depth), and 맥동 (the session
+  between moments, pivotal moments led and routine runs folded), 국면 (the work
+  arc read as time-ordered chapters, a stage may recur so a back-and-forth
+  shows), 인과 (a cause → effect map laid out by causal depth), and 맥동 (the session
   as vital signs: counts, phase mix, trust mix, issue resolution, activity
   momentum, and a carry-forward with a one-tap resume copy).
 - A cross-lens filter (`filterSession`) that narrows the session once,

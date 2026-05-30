@@ -6,10 +6,11 @@ visually, without padding features or raising coupling. This document ties them
 together, sequences the work across them, and is the entry point for deciding
 where to start.
 
-**Status.** The planning set is committed. Build has begun: the 인과
-critical-path (Phase 3, [`causal-critical-path-spec.md`](causal-critical-path-spec.md))
-is shipped and browser-verified. Everything else below remains planned. Items
-marked **SHIPPED** are implemented; the rest are specs ready to build.
+**Status.** The planning set is committed and build is underway. Shipped and
+browser-verified so far: the 인과 critical-path (Phase 3), the 흐름-aligned
+재구성 toolbar (shared search + filter popover), the temporal 국면 lens (Phase 4),
+and 서사 readability (tiering + folding; minimap pending). Items marked
+**SHIPPED** are implemented; the rest are specs ready to build.
 
 ---
 
@@ -137,7 +138,8 @@ treatment + test plan, ready to implement against.
 - [`causal-critical-path-spec.md`](causal-critical-path-spec.md) · 인과
   backbone, roots/outcomes, typed and weighted edges. **SHIPPED.**
 - [`narrative-readability-spec.md`](narrative-readability-spec.md) · 서사
-  importance tiering, routine folding, shape minimap.
+  importance tiering, routine folding, shape minimap. **SHIPPED** (tiering +
+  folding; minimap is a follow-up).
 - [`pulse-enrichment-spec.md`](pulse-enrichment-spec.md) · 맥동 health meter,
   confidence-aware stats, carry-forward reusing `buildResumePrompt`.
 - [`git-diff-viewer-spec.md`](git-diff-viewer-spec.md) · Evidence inline diff
@@ -147,7 +149,7 @@ treatment + test plan, ready to implement against.
 - [`decision-lineage-lens-spec.md`](decision-lineage-lens-spec.md) · the 계보
   lens: ADR/IBIS cards, rejected-alternatives, predicted-vs-actual.
 - [`phase-timeline-spec.md`](phase-timeline-spec.md) · 국면 re-founded as
-  chapters over time with a grouped fallback.
+  chapters over time with a grouped fallback. **SHIPPED.**
 - [`timeline-minimap-zoom-spec.md`](timeline-minimap-zoom-spec.md) · minimap
   made real + brushed zoom, retiring the disabled controls.
 

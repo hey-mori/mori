@@ -3,7 +3,11 @@
 A buildable spec for the Phase 3 readability upgrade to the 서사 lens: make a
 long session read like a story instead of a flat list, with a shape minimap, an
 importance hierarchy, and folding of routine runs. It directly answers the
-original pain ("I can't follow the flow"). Design spec, not yet implemented.
+original pain ("I can't follow the flow").
+
+**Status: partially implemented.** The importance tiering (`momentTier`) and the
+routine-run folding shipped in `NarrativeStoryView`. The shape minimap and the
+sticky phase header (§2.3, §3) remain a follow-up.
 
 Parent: [`reconstruction-lab-vision.md`](reconstruction-lab-vision.md) (§4.3),
 [`visual-system-direction.md`](visual-system-direction.md) (§4 encoding ladder).

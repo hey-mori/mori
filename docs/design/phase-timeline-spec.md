@@ -4,8 +4,15 @@ A buildable spec for the Phase 4 change that makes the 국면 lens actually
 temporal. Today it buckets moments by *kind* (every decision lands in 결정), so
 it is really 맥동's phase distribution redrawn and cannot show the arc over time
 or revisits. This is the riskiest lens change (boundary detection is heuristic),
-so the algorithm and its honest fallback are specced carefully. Design spec, not
-yet implemented.
+so the algorithm and its honest fallback are specced carefully.
+
+**Status: implemented.** Shipped as `buildPhaseTimeline` + `PhaseFlowView`. One
+deviation from the draft below: the look-ahead N=2 smoothing was dropped in
+favour of **simple maximal same-phase runs** (a new chapter on every phase
+change, no absorption). The draft's smoothing collapsed the common
+single-moment-per-phase arc (탐색→결정→구현→점검→정리) into one chapter, which was
+worse; maximal runs render the canonical arc as five chapters and still show
+revisits. The grouped fallback shipped as specced.
 
 Parent: [`reconstruction-lab-vision.md`](reconstruction-lab-vision.md) (§4.2),
 [`visual-system-direction.md`](visual-system-direction.md). Code:
