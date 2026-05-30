@@ -562,3 +562,79 @@ describe("Connector event identity preservation", () => {
     ]);
   });
 });
+
+describe("connector event summary enrichment", () => {
+  function normalizeSingle(input: Partial<ConnectorEvent>) {
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj",
+      sessionId: "sess",
+      events: [event(input)],
+      applyRedaction: true,
+    });
+    return candidate.events[0]!;
+  }
+
+  it("appends the command to command_finished summaries that do not already mention it", () => {
+    const evt = normalizeSingle({
+      kind: "command_finished",
+      summary: "Tests failing on the sync module.",
+      command: "npm test -- src/sync/queue.test.ts",
+    });
+    expect(evt.summary).toContain("Tests failing on the sync module.");
+    expect(evt.summary).toContain("$ npm test -- src/sync/queue.test.ts");
+  });
+
+  it("appends the filePath to file_changed summaries", () => {
+    const evt = normalizeSingle({
+      kind: "file_changed",
+      summary: "Added an IndexedDB queue.",
+      filePath: "src/sync/queue.ts",
+    });
+    expect(evt.summary).toContain("src/sync/queue.ts");
+  });
+
+  it("appends git.files paths to commit_created summaries", () => {
+    const evt = normalizeSingle({
+      kind: "commit_created",
+      summary: "Committed the offline sync work.",
+      git: {
+        repoPath: "~/code/acme",
+        branch: "feature/offline-sync",
+        files: [
+          { path: "src/sync/queue.ts", changeType: "added" },
+          { path: "src/sync/conflict.ts", changeType: "added" },
+        ],
+      },
+    });
+    expect(evt.summary).toContain("src/sync/queue.ts");
+    expect(evt.summary).toContain("src/sync/conflict.ts");
+  });
+
+  it("does not duplicate structured tokens already present in the summary", () => {
+    const evt = normalizeSingle({
+      kind: "command_finished",
+      summary: "ran npm test -- src/sync/queue.test.ts and it passed.",
+      command: "npm test -- src/sync/queue.test.ts",
+    });
+    // The base summary already mentions the command, so no second copy is appended.
+    expect(evt.summary).toBe("ran npm test -- src/sync/queue.test.ts and it passed.");
+  });
+
+  it("redacts secrets surfaced from the command field", () => {
+    const evt = normalizeSingle({
+      kind: "command_finished",
+      summary: "Pushed a deploy.",
+      command: "curl -H 'Authorization: Bearer sk-ant-abc123def456ghi789' https://example.com",
+    });
+    expect(evt.summary).not.toContain("sk-ant-abc123def456ghi789");
+    expect(evt.summary).toContain("REDACTED");
+  });
+
+  it("leaves events without structured fields unchanged", () => {
+    const evt = normalizeSingle({
+      kind: "assistant_message",
+      summary: "Claude proposed a plan.",
+    });
+    expect(evt.summary).toBe("Claude proposed a plan.");
+  });
+});

@@ -49,7 +49,7 @@ export function ResumePromptCard({
       <header className="resume-prompt-head">
         <div>
           <h2>다음 세션으로 이어가기</h2>
-          <p>이 세션에서 연결된 AI가 한 작업을 정리한 컨텍스트입니다. Claude / ChatGPT / Codex 다음 대화에 붙여넣으면 이어서 작업할 수 있습니다.</p>
+          <p>이 세션의 AI 작업을 정리한 컨텍스트입니다. Claude / ChatGPT / Codex 다음 대화에 붙여넣으면 이어서 작업할 수 있습니다.</p>
         </div>
         <div className="resume-prompt-meta">
           {originBadge}

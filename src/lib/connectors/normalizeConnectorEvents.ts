@@ -348,7 +348,16 @@ function mapConnectorEventToTimelineEvent({
   const type = mapConnectorKindToEventType(event.kind);
   if (!type) return null;
 
-  const summary = applyRedaction ? redactText(event.summary).redacted : event.summary;
+  // Append the connector event's structured fields (command / filePath /
+  // git.files paths) to the human summary when they are not already mentioned.
+  // The summary is the only string most downstream consumers see — without
+  // this enrichment a `command_finished` event whose summary reads "Tests
+  // failing" loses the command line ("npm test src/sync/queue.test.ts") that
+  // explains *what* failed, and a `file_changed` event loses the touched path
+  // entirely. Redaction still runs after enrichment so secrets surfaced from
+  // the structured fields get masked too.
+  const enriched = enrichConnectorSummary(event);
+  const summary = applyRedaction ? redactText(enriched).redacted : enriched;
   const titleBase = event.sourceTitle ?? event.summary;
   const eventTitle = truncate(titleBase, 80);
   const eventId = createImportId(
@@ -380,6 +389,49 @@ function mapConnectorEventToTimelineEvent({
     // duplicates without re-parsing the original connector event id.
     connectorEventId: getConnectorEventIdentity(event),
   };
+}
+
+/**
+ * Conditionally append structured fields to the human summary so downstream
+ * consumers (Timeline cards, evidence chips, Work Bundle file detection, the
+ * reconstruction-lab lenses) see what the event acted on, not only the
+ * connector tool's prose summary. Additive only — never replaces the base
+ * summary, never duplicates content the summary already mentions.
+ */
+export function enrichConnectorSummary(event: ConnectorEvent): string {
+  const base = event.summary ?? "";
+  const parts: string[] = [];
+
+  if (
+    (event.kind === "command_started" || event.kind === "command_finished") &&
+    event.command &&
+    !base.includes(event.command)
+  ) {
+    parts.push(`$ ${event.command}`);
+  }
+
+  if (
+    event.kind === "file_changed" &&
+    event.filePath &&
+    !base.includes(event.filePath)
+  ) {
+    parts.push(event.filePath);
+  }
+
+  if (
+    (event.kind === "commit_created" || event.kind === "git_diff_captured") &&
+    event.git?.files &&
+    event.git.files.length > 0
+  ) {
+    const fresh = event.git.files
+      .map((file) => file.path)
+      .filter((path): path is string => Boolean(path) && !base.includes(path))
+      .slice(0, 3);
+    if (fresh.length > 0) parts.push(fresh.join(", "));
+  }
+
+  if (parts.length === 0) return base;
+  return base ? `${base} · ${parts.join(" · ")}` : parts.join(" · ");
 }
 
 function mapConnectorKindToEventType(kind: ConnectorEventKind): EventType | null {
