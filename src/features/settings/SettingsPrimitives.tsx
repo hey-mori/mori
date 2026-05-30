@@ -42,7 +42,7 @@ export function SettingsRail({
   }
 
   return (
-    <nav className="settings-rail" aria-label="설정 카테고리" onKeyDown={handleKeyDown}>
+    <nav className="settings-rail base-scroll" aria-label="설정 카테고리" onKeyDown={handleKeyDown}>
       {items.map((item) => {
         const Icon = item.icon;
         const active = item.id === activeId;

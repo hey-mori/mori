@@ -69,7 +69,7 @@ export function ReviewDetailPanel({
 }) {
   if (selection.kind === "none") {
     return (
-      <aside className="review-detail" aria-label="Review detail">
+      <aside className="review-detail base-scroll" aria-label="Review detail">
         <header className="review-detail-header">
           <Badge tone="gray">선택된 항목 없음</Badge>
           <h3>검토 상세</h3>
@@ -134,7 +134,7 @@ export function ReviewDetailPanel({
 
 function MissingItem({ label }: { label: string }) {
   return (
-    <aside className="review-detail" aria-label="Review detail">
+    <aside className="review-detail base-scroll" aria-label="Review detail">
       <header className="review-detail-header">
         <Badge tone="gray">선택된 {label}을 찾을 수 없음</Badge>
         <p>이 세션에는 이 ID에 해당하는 {label}이 더 이상 없습니다.</p>
@@ -173,7 +173,7 @@ function IssueDetail({
   );
 
   return (
-    <aside className="review-detail" aria-label="Issue detail">
+    <aside className="review-detail base-scroll" aria-label="Issue detail">
       <header className="review-detail-header">
         <div className="review-detail-badges">
           <Badge tone={issueStatusTone(issue.status)}>{issueStatusLabels[issue.status]}</Badge>
@@ -352,7 +352,7 @@ function DecisionDetail({
   const canEditText = canEditConfirm;
 
   return (
-    <aside className="review-detail" aria-label="Decision detail">
+    <aside className="review-detail base-scroll" aria-label="Decision detail">
       <header className="review-detail-header">
         <div className="review-detail-badges">
           <Badge tone={decision.confirmed ? "green" : "orange"}>
@@ -540,7 +540,7 @@ function NextActionDetail({
   const canEditText = canEditCompletion;
 
   return (
-    <aside className="review-detail" aria-label="Next action detail">
+    <aside className="review-detail base-scroll" aria-label="Next action detail">
       <header className="review-detail-header">
         <div className="review-detail-badges">
           <Badge tone={priorityTone(nextAction.priority)}>{priorityLabels[nextAction.priority]}</Badge>
