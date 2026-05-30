@@ -236,10 +236,16 @@ function RevertControl({
     <div className="memory-audit-revert">
       {phase === "confirming" ? (
         <>
-          <span className="memory-audit-revert-prompt">이 기록을 되돌리시겠습니까?</span>
+          <span
+            id={`memory-audit-revert-prompt-${action.id}`}
+            className="memory-audit-revert-prompt"
+          >
+            이 기록을 되돌리시겠습니까?
+          </span>
           <button
             type="button"
             className="memory-audit-revert-confirm"
+            aria-describedby={`memory-audit-revert-prompt-${action.id}`}
             onClick={() => void confirmRevert()}
           >
             되돌리기 확인
@@ -247,6 +253,7 @@ function RevertControl({
           <button
             type="button"
             className="memory-audit-revert-cancel"
+            aria-describedby={`memory-audit-revert-prompt-${action.id}`}
             onClick={() => setPhase("idle")}
           >
             취소

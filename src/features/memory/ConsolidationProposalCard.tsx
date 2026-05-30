@@ -52,7 +52,12 @@ export function ConsolidationProposalCard({
       className={`consolidation-card status-${status} ${isSelected ? "is-selected" : ""}`}
       aria-current={isSelected ? "true" : undefined}
     >
-      <button type="button" className="consolidation-card-body" onClick={onSelect}>
+      <button
+        type="button"
+        className="consolidation-card-body"
+        aria-label={`${title} — 제안 선택`}
+        onClick={onSelect}
+      >
         <header>
           <strong title={title}>{title}</strong>
           <ConsolidationStatusBadge status={status} />
