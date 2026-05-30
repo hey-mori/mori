@@ -130,7 +130,7 @@ export function CausalMapView({ view }: { view: MockSession }) {
         </p>
       ) : null}
 
-      <div className="lab-causal-scroll">
+      <div className="lab-causal-scroll base-scroll">
         <div
           className={`lab-causal-canvas${trace ? " is-tracing" : ""}${
             !trace && isolateBackbone ? " is-isolating" : ""

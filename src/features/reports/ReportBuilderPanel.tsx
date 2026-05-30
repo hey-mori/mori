@@ -121,7 +121,7 @@ export function ReportBuilderPanel({
   }
 
   return (
-    <aside id={id} className="report-builder-panel" aria-label="Report builder">
+    <aside id={id} className="report-builder-panel base-scroll" aria-label="Report builder">
       <header className="report-builder-head">
         <div>
           <h2>리포트 생성기</h2>
