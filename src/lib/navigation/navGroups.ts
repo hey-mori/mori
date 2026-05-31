@@ -7,7 +7,7 @@ import { viewIcon } from "../../components/brand/moriIcons";
  * The standing navigation follows the four-axis model documented in
  * `docs/design/home-dashboard-workbench-direction.md`:
  *
- *   홈 (time) · 연결 (input) · 프로젝트 (project list/detail) ·
+ *   홈 (time) · 연동 (input) · 프로젝트 (project list/detail) ·
  *   대시보드 (analysis) · 워크벤치 (session canvas)
  *
  * Narrower surfaces such as Session Detail, Project Detail, Memory, Reports,
@@ -39,7 +39,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     items: [
       { key: "home", label: "홈" },
-      { key: "connections", label: "연결" },
+      { key: "connections", label: "연동" },
       { key: "workspace", label: "프로젝트" },
       { key: "dashboard", label: "대시보드" },
       { key: "workbench", label: "워크벤치" },

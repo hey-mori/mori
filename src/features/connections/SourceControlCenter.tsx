@@ -131,12 +131,12 @@ export function SourceControlCenter({
     groups.find((group) => group.family === selectedFamily) ?? groups[0] ?? null;
 
   return (
-    <section className="source-cc" aria-label="세션 연결">
+    <section className="source-cc" aria-label="세션 연동">
       <header className="source-cc-head">
         <div className="source-cc-head-text">
           <h2>
-            세션 연결
-            <InfoHint align="start" label="세션 연결 안내">
+            세션 연동
+            <InfoHint align="start" label="세션 연동 안내">
               AI 에이전트 하나가 작업 세션이 됩니다. 에이전트를 고르면 그 작업의 자료(Git · 터미널 ·
               파일)를 같은 세션에 붙입니다. 모든 가져오기는 검토를 거쳐 타임라인에 들어갑니다.
             </InfoHint>

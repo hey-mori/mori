@@ -157,7 +157,7 @@ function buildOne(
       ...base,
       availability: "desktopOnly",
       display: getProductAvailabilityDisplay("desktopOnly"),
-      detail: ["연결 상태 감지는 Mori 데스크톱 앱에서만 가능합니다."],
+      detail: ["연동 상태 감지는 Mori 데스크톱 앱에서만 가능합니다."],
       canInstall: false,
     };
   }

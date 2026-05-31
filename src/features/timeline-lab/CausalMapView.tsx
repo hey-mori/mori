@@ -43,7 +43,13 @@ type Placed = { node: CausalNode; x: number; y: number };
  * and descendants, and dims everything else, so a dense graph stays readable
  * and the user can answer "what did this lead to / come from" with one gesture.
  */
-export function CausalMapView({ view }: { view: MockSession }) {
+export function CausalMapView({
+  view,
+  title = "인과 지도",
+}: {
+  view: MockSession;
+  title?: string;
+}) {
   const graph = useMemo(() => buildCausalGraph(view), [view]);
   const layout = useMemo(() => placeNodes(graph), [graph]);
   const nodeIds = useMemo(() => new Set(graph.nodes.map((n) => n.id)), [graph]);
@@ -84,8 +90,8 @@ export function CausalMapView({ view }: { view: MockSession }) {
   return (
     <div className="lab-causal">
       <header className="lab-causal-head">
-        <h4>인과 지도</h4>
-        <InfoHint label="인과 지도 설명">
+        <h4>{title}</h4>
+        <InfoHint label={`${title} 설명`}>
           노드는 이벤트·결정·이슈·산출물이고, 화살표는 검토된 관계입니다. 가로
           위치는 시간이 아니라 인과 깊이라서, 왼쪽에서 오른쪽으로 읽으면 원인에서
           결과로 이어집니다. 노드에 올리거나 클릭하면 그 인과 사슬만 강조됩니다.

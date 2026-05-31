@@ -115,11 +115,11 @@ export function HomeView() {
         <EmptyState
           icon={Layers}
           title="아직 기억된 작업이 없습니다"
-          description="연결에서 작업 세션을 가져오면, 무엇을 했고 다음에 무엇을 이어가면 좋을지 여기에 정리됩니다."
+          description="연동에서 작업 세션을 가져오면, 무엇을 했고 다음에 무엇을 이어가면 좋을지 여기에 정리됩니다."
           actions={
             <>
               <Button variant="primary" icon={PlugZap} onClick={() => navigate("connections")}>
-                연결에서 작업 가져오기
+                연동에서 작업 가져오기
               </Button>
               <Button variant="ghost" icon={Sparkles} onClick={() => openSession("flow")}>
                 체험용 데모 세션 살펴보기

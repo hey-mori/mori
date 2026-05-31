@@ -768,10 +768,10 @@ export function WorkbenchView() {
         <EmptyState
           icon={FolderKanban}
           title="워크벤치에 올릴 세션이 없습니다"
-          description="연결에서 작업 기록을 가져오면 세션을 자유롭게 배치할 수 있습니다."
+          description="연동에서 작업 기록을 가져오면 세션을 자유롭게 배치할 수 있습니다."
           actions={
             <Button variant="primary" icon={ArrowUpRight} onClick={() => navigate("connections")}>
-              연결 열기
+              연동 열기
             </Button>
           }
         />

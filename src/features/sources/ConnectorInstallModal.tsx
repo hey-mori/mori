@@ -77,12 +77,12 @@ export function ConnectorInstallModal({ onClose }: { onClose: () => void }) {
         className="connector-install-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="에이전트 연결"
+        aria-label="에이전트 연동"
         tabIndex={-1}
       >
         <header className="settings-sheet-head">
           <div className="settings-sheet-title">
-            <strong>에이전트 연결</strong>
+            <strong>에이전트 연동</strong>
           </div>
           <button
             type="button"

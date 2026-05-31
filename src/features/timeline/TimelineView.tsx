@@ -39,6 +39,10 @@ import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
 import { FlowFocusHeader } from "../flow-focus/FlowFocusHeader";
 import { TracePanel } from "../flow-focus/TracePanel";
+import { CausalMapView } from "../timeline-lab/CausalMapView";
+import type { TimelineReadingMode } from "./TimelineHeader";
+
+const FILTERED_EMPTY_SETTLE_MS = 260;
 
 /**
  * Thin orchestrator. The product math has moved into
@@ -141,9 +145,9 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   // still the first session page; once the user enters 흐름, the time map should
   // be the primary view and 목록 is an alternate reading mode.
   const [readingModeOverride, setReadingModeOverride] = useState<
-    "swimlane" | "flow" | null
+    TimelineReadingMode | null
   >(null);
-  const readingMode: "swimlane" | "flow" = readingModeOverride ?? "swimlane";
+  const readingMode: TimelineReadingMode = readingModeOverride ?? "swimlane";
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.
@@ -190,6 +194,38 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
       hasAnalysis,
     ],
   );
+  const lastNonEmptyModelRef = useRef<typeof model | null>(null);
+  const [filteredEmptySettled, setFilteredEmptySettled] = useState(false);
+
+  useEffect(() => {
+    if (!model.filteredEmpty && model.visibleDisplayItems.length > 0) {
+      lastNonEmptyModelRef.current = model;
+    }
+  }, [model]);
+
+  useEffect(() => {
+    if (!model.filteredEmpty) {
+      setFilteredEmptySettled(false);
+      return;
+    }
+    if (!searchQuery.trim()) {
+      setFilteredEmptySettled(true);
+      return;
+    }
+    setFilteredEmptySettled(false);
+    const timer = window.setTimeout(
+      () => setFilteredEmptySettled(true),
+      FILTERED_EMPTY_SETTLE_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [model.filteredEmpty, searchQuery]);
+
+  const renderModel =
+    model.filteredEmpty && !filteredEmptySettled
+      ? lastNonEmptyModelRef.current ?? model
+      : model;
+  const showNoResults =
+    mode === "timeline" && model.filteredEmpty && filteredEmptySettled;
 
   // Per-lane event counts for the toolbar's category filter. Derived from ALL
   // events (not the filtered model), so the popover keeps listing every
@@ -211,10 +247,10 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   // Arrow-key navigation for the swimlane: ← → move within a lane by time,
   // ↑ ↓ jump to the nearest item in the adjacent non-empty lane. Defined
   // before the empty-state early return so hook order stays stable. Disabled
-  // in Flow Focus, the narrow chrono list, the conversation thread, and while
+  // in Flow Focus, the list / connection views, and while
   // the user is typing in an input.
   useEffect(() => {
-    const swimlaneActive = mode === "timeline" && readingMode !== "flow";
+    const swimlaneActive = mode === "timeline" && readingMode === "swimlane";
     if (!swimlaneActive) return;
     function onKey(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
@@ -227,7 +263,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
       ) {
         return;
       }
-      const items = model.visibleDisplayItems;
+      const items = renderModel.visibleDisplayItems;
       if (items.length === 0) return;
       const current = selectedEventId || null;
       let nextId: string | null = null;
@@ -254,7 +290,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, viewportWidth, readingMode, model.visibleDisplayItems, selectedEventId, setSelectedEventId, laneOrder]);
+  }, [mode, viewportWidth, readingMode, renderModel.visibleDisplayItems, selectedEventId, setSelectedEventId, laneOrder]);
 
   const buildEventMenuItems = useCallback(
     (event: TimelineEvent): BaseMenuItemSpec[] => {
@@ -342,18 +378,19 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     );
   }
 
-  const selectedItem = model.selectedItem;
+  const selectedItem = renderModel.selectedItem;
+  const useListView = mode === "timeline" && readingMode === "flow";
+  const useCausalView = mode === "timeline" && readingMode === "causal";
   const inspectorHidden = shouldHideInspector({ mode, inspectorCollapsed, viewportWidth });
   // The inspector is a detail panel for the *selected* item — there is nothing
   // to inspect with no selection, so the column is only reserved when something
   // is selected. Otherwise an "open" inspector with no selection is just an
   // empty band of whitespace.
-  const inspectorVisible = !inspectorHidden && Boolean(selectedItem);
+  const inspectorVisible = !useCausalView && !inspectorHidden && Boolean(selectedItem);
   // The 흐름 tab offers two reading modes: the swimlane canvas (시간 축) and a
   // content-rich chronological 목록. The swimlane never auto-degrades to a list
   // on narrow screens; the 목록 appears only when the user picks it (or when a
   // conversation-dominant session defaults to it).
-  const useListView = mode === "timeline" && readingMode === "flow";
   return (
     <div
       className={`content-grid content-grid-embedded ${
@@ -379,7 +416,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
             onReadingModeChange={setReadingModeOverride}
           />
         )}
-        {mode === "timeline" && model.filteredEmpty ? (
+        {showNoResults ? (
           <TimelineNoResultsState
             onClear={() => {
               clearFilters();
@@ -388,17 +425,21 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           />
         ) : useListView ? (
           <TimelineChronoList
-            model={model}
+            model={renderModel}
             selectedItemId={selectedItem?.id ?? null}
             onSelect={selectAndShowInspector}
             density={density}
             eventMenuItems={buildEventMenuItems}
           />
+        ) : useCausalView ? (
+          <div className="timeline-causal-mode timeline-lab">
+            <CausalMapView view={view} title="연결 흐름" />
+          </div>
         ) : (
           <>
             <TimelineCanvas
               ref={canvasRef}
-              model={model}
+              model={renderModel}
               relationships={view.relationships}
               density={density}
               onFrameWidth={handleFrameWidth}
@@ -409,12 +450,12 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
             />
             {mode === "timeline" ? (
               <TimelineMiniMap
-                items={model.visibleDisplayItems}
-                range={model.range}
-                ticks={model.ticks}
+                items={renderModel.visibleDisplayItems}
+                range={renderModel.range}
+                ticks={renderModel.ticks}
                 selectedItemId={selectedItem?.id ?? null}
-                focusedSet={model.focusedSet}
-                focusActive={model.focusActive}
+                focusedSet={renderModel.focusedSet}
+                focusActive={renderModel.focusActive}
                 viewport={minimapViewport}
                 onSeek={(fraction) => canvasRef.current?.scrollToFraction(fraction)}
                 onZoom={setZoomFactor}

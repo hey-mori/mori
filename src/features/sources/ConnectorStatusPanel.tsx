@@ -46,9 +46,9 @@ export function ConnectorStatusPanel() {
   if (state.status === "loading") return null;
 
   return (
-    <section className="sources-panel sources-connection-status" aria-label="연결 상태">
+    <section className="sources-panel sources-connection-status" aria-label="연동 상태">
       <header className="sources-group-head">
-        <h2>연결 상태</h2>
+        <h2>연동 상태</h2>
       </header>
       <ul>
         {state.models.map((model) => {

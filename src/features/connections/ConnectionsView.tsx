@@ -330,7 +330,7 @@ export function ConnectionsView() {
       maxWidth="detail"
       actionBar={
         <ActionBar
-          label="연결"
+          label="연동"
           start={
             <>
               {tools.report ? (

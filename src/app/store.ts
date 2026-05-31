@@ -45,7 +45,7 @@ export type MemoryTab = "overview" | "consolidation";
 
 /**
  * A one-shot request to open the Evidence import drawer on a specific tab.
- * Set when another surface (the Source Control Center on the 연결 page)
+ * Set when another surface (the Source Control Center on the 연동 page)
  * deep-links into an import flow. The Evidence Hub consumes and clears it once
  * the drawer opens. The platform hint is honoured only by the AI transcript
  * tab; other kinds ignore it.

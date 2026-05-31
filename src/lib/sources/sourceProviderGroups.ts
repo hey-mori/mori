@@ -14,7 +14,7 @@ import type {
  * that list into **providers**: Claude / Codex / OpenCode anchor a session
  * (agents); ChatGPT and other pasted AI transcripts, plus Git / 터미널 / 메모 /
  * URL / 문서, attach as evidence, and
- * exposes each provider's individual *연결 방법* as sub-methods. Fully-planned
+ * exposes each provider's individual *연동 방법* as sub-methods. Fully-planned
  * providers (Slack, Notion, MCP, …) collapse into a quiet chip list so a wall
  * of "예정" rows never buries the few that work today.
  *
@@ -31,7 +31,7 @@ export type SourceProviderMethod = {
   source: SourceWorkspaceSource;
   /** Short method title shown in the card, e.g. "Code 훅", "대화 붙여넣기". */
   methodLabel: string;
-  /** Compact "연결 방법" chip, e.g. "붙여넣기", "CLI 래퍼", "로컬 훅". */
+  /** Compact "연동 방법" chip, e.g. "붙여넣기", "CLI 래퍼", "로컬 훅". */
   connectLabel: string;
 };
 

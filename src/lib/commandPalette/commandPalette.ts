@@ -48,7 +48,7 @@ const NAVIGATE_COMMANDS: ReadonlyArray<{ id: string; label: string; view: ViewKe
   { id: "nav-session", label: "프로젝트", view: "workspace", keywords: ["projects", "sessions", "프로젝트", "세션", "워크스페이스"] },
   { id: "nav-memory", label: "메모리", view: "memory" },
   { id: "nav-consolidation", label: "메모리 통합 검토", view: "consolidation", keywords: ["consolidation"] },
-  { id: "nav-connections", label: "연결 열기", view: "connections", keywords: ["import", "connectors", "연결", "수집", "소스"] },
+  { id: "nav-connections", label: "연동 열기", view: "connections", keywords: ["import", "connectors", "연동", "연결", "수집", "소스"] },
   { id: "nav-start", label: "새 세션 시작", view: "start", keywords: ["new"] },
 ];
 

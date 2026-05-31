@@ -272,7 +272,7 @@ function EvidenceEmptyState({ isDemo }: { isDemo: boolean }) {
       description={
         isDemo
           ? "데모 세션은 미리 정의된 소스만 보여줍니다."
-          : "세션은 하나의 AI 작업에서 만들어집니다 — 연결 화면에서 AI 대화를 가져오면 그 대화와 함께 만들어진 Git diff·터미널·메모가 소스로 모입니다."
+          : "세션은 하나의 AI 작업에서 만들어집니다 — 연동 화면에서 AI 대화를 가져오면 그 대화와 함께 만들어진 Git diff·터미널·메모가 소스로 모입니다."
       }
     />
   );

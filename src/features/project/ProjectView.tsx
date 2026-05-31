@@ -296,9 +296,9 @@ export function ProjectView() {
               compact
               icon={Layers}
               title="이 프로젝트에 활성 세션이 없습니다"
-              description="새 세션을 시작하거나 연결에서 가져오면 여기에 쌓입니다."
+              description="새 세션을 시작하거나 연동에서 가져오면 여기에 쌓입니다."
               actions={
-                <Button onClick={() => setCurrentView("connections")}>연결 열기</Button>
+                <Button onClick={() => setCurrentView("connections")}>연동 열기</Button>
               }
             />
           ) : (

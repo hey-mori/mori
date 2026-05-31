@@ -83,7 +83,7 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: viewIcon.home ?? House },
   {
     key: "connections",
-    label: "연결",
+    label: "연동",
     icon: viewIcon.connections ?? Link2,
   },
   {

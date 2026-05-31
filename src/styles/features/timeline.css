@@ -731,6 +731,15 @@ kbd {
   max-width: 260px;
 }
 
+.timeline-causal-mode.timeline-lab {
+  padding: 0;
+}
+
+.timeline-causal-mode .lab-causal-scroll {
+  min-height: 430px;
+  max-height: calc(100vh - 214px);
+}
+
 .timeline-search-input {
   width: 100%;
   height: 30px;

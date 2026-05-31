@@ -1,6 +1,7 @@
 import {
   Filter,
   List,
+  Route,
   Rows3,
   Search,
   X,
@@ -12,7 +13,7 @@ import {
   type ActivityLaneId,
 } from "../../lib/timeline/activityModel";
 
-export type TimelineReadingMode = "swimlane" | "flow";
+export type TimelineReadingMode = "swimlane" | "flow" | "causal";
 
 export type TimelineToolbarProps = {
   activeFilters: ActivityLaneId[];
@@ -27,8 +28,8 @@ export type TimelineToolbarProps = {
 };
 
 /**
- * Timeline toolbar. Deliberately spare: a reading-mode switch (conversation
- * thread ↔ swimlane), one search field, and the category filter. There is no
+ * Timeline toolbar. Deliberately spare: a reading-mode switch (time map,
+ * list, connection map), one search field, and the category filter. There is no
  * inspector toggle — the inspector opens when an item is selected and closes
  * from its own X. The old session/day/week range dropdown and the C/M/D
  * density switch were removed — the range is always the full session span and
@@ -58,7 +59,6 @@ export function TimelineToolbar({
             className={`timeline-mode-option ${readingMode === "swimlane" ? "is-active" : ""}`}
             aria-pressed={readingMode === "swimlane"}
             onClick={() => onReadingModeChange("swimlane")}
-            title="타임라인: 시간 축에서 카테고리별로 언제·무엇이 겹쳤는지 훑어보기"
           >
             <Rows3 size={14} aria-hidden="true" />
             타임라인
@@ -68,10 +68,18 @@ export function TimelineToolbar({
             className={`timeline-mode-option ${readingMode === "flow" ? "is-active" : ""}`}
             aria-pressed={readingMode === "flow"}
             onClick={() => onReadingModeChange("flow")}
-            title="목록: 모든 활동을 시간순으로, 내용 미리보기와 함께 읽기"
           >
             <List size={14} aria-hidden="true" />
             목록
+          </button>
+          <button
+            type="button"
+            className={`timeline-mode-option ${readingMode === "causal" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "causal"}
+            onClick={() => onReadingModeChange("causal")}
+          >
+            <Route size={14} aria-hidden="true" />
+            연결
           </button>
         </div>
       </div>

@@ -1,10 +1,10 @@
 /**
  * Relationship visibility policy.
  *
- * Default Timeline mode: NO connectors render unless the user selects or
- * hovers an event. The selection lights up a small focused subgraph (1 hop
- * upstream + 1 hop downstream). Flow Focus widens to 2 hops and renders
- * thicker, more emphasised lines.
+ * Default Timeline mode: relationships render as quiet context lines. The
+ * selection lights up a small focused subgraph (1 hop upstream + 1 hop
+ * downstream). Flow Focus widens to 2 hops and renders thicker, more
+ * emphasised lines.
  *
  * Aggregation: multiple raw relationships that resolve to the same visible
  * (fromItem, toItem) pair collapse to one connector with `weight`. The layer
@@ -14,7 +14,7 @@
 import type { Relationship } from "../../domain/types";
 import type { LaidOutTimelineItem } from "./collisionLayout";
 
-export type RelationshipVisibility = "always-hidden" | "focused-only" | "graph";
+export type RelationshipVisibility = "overview" | "focused-only" | "graph";
 
 export type RelationshipPolicyInput = {
   mode: "timeline" | "flow";
@@ -42,7 +42,7 @@ export type VisibleConnector = {
 export function chooseRelationshipVisibility(input: RelationshipPolicyInput): RelationshipVisibility {
   if (input.mode === "flow") return "graph";
   if (input.focusActive && input.focusedSet.size > 1) return "focused-only";
-  return "always-hidden";
+  return "overview";
 }
 
 /**
@@ -60,12 +60,13 @@ export function buildVisibleConnectors(args: {
   maxConnectors?: number;
 }): VisibleConnector[] {
   const visibility = chooseRelationshipVisibility(args);
-  if (visibility === "always-hidden") return [];
-
-  const filtered = args.relationships.filter(
-    (relationship) =>
-      args.focusedSet.has(relationship.fromId) && args.focusedSet.has(relationship.toId),
-  );
+  const filtered =
+    visibility === "overview"
+      ? args.relationships
+      : args.relationships.filter(
+          (relationship) =>
+            args.focusedSet.has(relationship.fromId) && args.focusedSet.has(relationship.toId),
+        );
   if (filtered.length === 0) return [];
 
   const aggregated = new Map<string, VisibleConnector>();

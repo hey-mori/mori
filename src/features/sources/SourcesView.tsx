@@ -209,7 +209,7 @@ export function SourcesView() {
       maxWidth="detail"
       actionBar={
         <ActionBar
-          label="연결"
+          label="연동"
           start={
             <ToolbarSearch
               value={query}
@@ -220,7 +220,7 @@ export function SourcesView() {
           }
           end={
             <Button variant="secondary" icon={Plug} onClick={() => setConnectOpen(true)}>
-              연결 설정
+              연동 설정
             </Button>
           }
         />
@@ -427,7 +427,7 @@ function SourceInspector({
         </div>
       </header>
 
-      <InspectorBlock title="연결 방법" icon={Plug}>
+      <InspectorBlock title="연동 방법" icon={Plug}>
         <ul className="sources-method-picker">
           {onSelectRecords ? (
             <li>

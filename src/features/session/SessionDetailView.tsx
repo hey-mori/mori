@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   ScrollText,
   Sparkles,
-  Workflow,
 } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { useAppStore, type SessionTab } from "../../app/store";
@@ -20,7 +19,6 @@ import { buildWorkContext } from "../../lib/session/workContext";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { TimelineView } from "../timeline/TimelineView";
-import { TimelineLabView } from "../timeline-lab/TimelineLabView";
 import { EvidenceView } from "../evidence/EvidenceView";
 import { ReviewView } from "../review/ReviewView";
 import { ReportsView } from "../reports/ReportsView";
@@ -50,6 +48,10 @@ export function SessionDetailView() {
 
   const sessionTab = useAppStore((state) => state.sessionTab);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
+
+  useEffect(() => {
+    if (sessionTab === "reconstruct") setSessionTab("flow");
+  }, [sessionTab, setSessionTab]);
 
   return (
     <PageShell className="session-detail-page" maxWidth="full">
@@ -124,7 +126,6 @@ type SessionTabSpec = {
 const SESSION_TABS: SessionTabSpec[] = [
   { id: "overview", label: "개요", icon: LayoutDashboard },
   { id: "flow", label: "흐름", icon: GanttChartSquare },
-  { id: "reconstruct", label: "재구성", icon: Workflow },
   { id: "evidence", label: "자료", icon: FileText },
   { id: "insights", label: "검토", icon: Sparkles },
   { id: "report", label: "보고서", icon: ScrollText },
@@ -216,7 +217,7 @@ function SessionTabBar({
 
 function SessionTabContent({ tab }: { tab: SessionTab }) {
   if (tab === "overview") return <OverviewView />;
-  if (tab === "reconstruct") return <TimelineLabView />;
+  if (tab === "reconstruct") return <TimelineView mode="timeline" />;
   if (tab === "evidence") return <EvidenceView />;
   if (tab === "insights") return <ReviewView />;
   if (tab === "report") return <ReportsView />;

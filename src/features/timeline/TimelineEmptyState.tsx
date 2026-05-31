@@ -22,7 +22,7 @@ export function TimelineEmptyState({
       <EmptyState
         icon={Sparkles}
         title="데모 세션에는 이벤트가 없습니다"
-        description="연결에서 Claude 대화를 가져오거나 새 세션을 만들면 메모·URL·AI 대화·Git diff가 자료로 모입니다."
+        description="연동에서 Claude 대화를 가져오거나 새 세션을 만들면 메모·URL·AI 대화·Git diff가 자료로 모입니다."
         actions={
           <Button variant="primary" icon={Play} onClick={onStartSession}>
             새 세션

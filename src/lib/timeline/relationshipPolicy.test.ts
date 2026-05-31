@@ -40,14 +40,14 @@ function rel(id: string, from: string, to: string): Relationship {
 }
 
 describe("chooseRelationshipVisibility", () => {
-  it("hides all connectors in Timeline mode without focus", () => {
+  it("shows quiet overview connectors in Timeline mode without focus", () => {
     expect(
       chooseRelationshipVisibility({
         mode: "timeline",
         focusedSet: new Set(["a"]),
         focusActive: false,
       }),
-    ).toBe("always-hidden");
+    ).toBe("overview");
   });
 
   it("shows focused-only connectors when focus is active in Timeline mode", () => {
@@ -80,7 +80,7 @@ describe("buildVisibleConnectors", () => {
   ]);
   const focused = new Set(["a", "b", "c"]);
 
-  it("returns no connectors in default Timeline mode", () => {
+  it("renders overview connectors in default Timeline mode", () => {
     const out = buildVisibleConnectors({
       mode: "timeline",
       focusedSet: focused,
@@ -89,7 +89,8 @@ describe("buildVisibleConnectors", () => {
       eventAnchorIndex: anchors,
       toneOfLane: () => "purple",
     });
-    expect(out).toEqual([]);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.contributingIds).toEqual(["r1"]);
   });
 
   it("renders focused connectors when focus is active", () => {
