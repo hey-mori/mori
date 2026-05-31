@@ -37,19 +37,55 @@ export function NarrativeStoryView({ view }: { view: MockSession }) {
 
   return (
     <div className="lab-narrative">
-      <ol className="lab-spine">
-        {buildSegments(moments).map((segment) =>
-          segment.kind === "node" ? (
-            <MomentNode key={segment.moment.id} moment={segment.moment} tier={segment.tier} />
-          ) : segment.moments.length === 1 ? (
-            <CompactRow key={segment.moments[0]!.id} moment={segment.moments[0]!} />
-          ) : (
-            <RoutineFold key={segment.moments[0]!.id} moments={segment.moments} />
-          ),
-        )}
-      </ol>
-      <ContinuationBlock continuation={continuation} />
+      <div className="lab-narrative-main">
+        <ol className="lab-spine">
+          {buildSegments(moments).map((segment) =>
+            segment.kind === "node" ? (
+              <MomentNode key={segment.moment.id} moment={segment.moment} tier={segment.tier} />
+            ) : segment.moments.length === 1 ? (
+              <CompactRow key={segment.moments[0]!.id} moment={segment.moments[0]!} />
+            ) : (
+              <RoutineFold key={segment.moments[0]!.id} moments={segment.moments} />
+            ),
+          )}
+        </ol>
+        <ContinuationBlock continuation={continuation} />
+      </div>
+      {moments.length > 4 ? <NarrativeMinimap moments={moments} /> : null}
     </div>
+  );
+}
+
+/**
+ * A slim rail showing the whole story's shape: one tick per moment, colored by
+ * kind and sized by tier, so a long session is legible at a glance. Clicking a
+ * tick scrolls that moment into view, opening its fold if it is collapsed.
+ */
+function NarrativeMinimap({ moments }: { moments: NarrativeMoment[] }) {
+  const jump = (id: string) => {
+    const el = document.querySelector<HTMLElement>(
+      `.lab-narrative [data-moment-id="${CSS.escape(id)}"]`,
+    );
+    if (!el) return;
+    const fold = el.closest("details");
+    if (fold && !fold.open) fold.open = true;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+  return (
+    <aside className="lab-minimap" aria-label="본문 미니맵">
+      {moments.map((moment) => (
+        <button
+          key={moment.id}
+          type="button"
+          className="lab-minimap-tick"
+          data-tone={moment.tone}
+          data-tier={momentTier(moment)}
+          title={moment.title}
+          aria-label={moment.title}
+          onClick={() => jump(moment.id)}
+        />
+      ))}
+    </aside>
   );
 }
 
@@ -87,6 +123,7 @@ function MomentNode({ moment, tier }: { moment: NarrativeMoment; tier: MomentTie
   return (
     <li
       className="lab-moment"
+      data-moment-id={moment.id}
       data-tone={moment.tone}
       data-kind={moment.kind}
       data-importance={moment.importance}
@@ -145,7 +182,12 @@ function MomentNode({ moment, tier }: { moment: NarrativeMoment; tier: MomentTie
 /** A single routine moment, rendered as one calm line on the spine. */
 function CompactRow({ moment }: { moment: NarrativeMoment }) {
   return (
-    <li className="lab-moment is-compact" data-tone={moment.tone} data-tier="routine">
+    <li
+      className="lab-moment is-compact"
+      data-moment-id={moment.id}
+      data-tone={moment.tone}
+      data-tier="routine"
+    >
       <div className="lab-moment-row">
         <span className="lab-moment-rail" aria-hidden="true">
           <span className="lab-moment-dot" />
@@ -174,7 +216,7 @@ function RoutineFold({ moments }: { moments: NarrativeMoment[] }) {
           </summary>
           <ul className="lab-fold-list">
             {moments.map((moment) => (
-              <li key={moment.id} className="lab-fold-row">
+              <li key={moment.id} className="lab-fold-row" data-moment-id={moment.id}>
                 {moment.timeLabel ? <span className="lab-fold-time">{moment.timeLabel}</span> : null}
                 <span className="lab-fold-row-title">{moment.title}</span>
               </li>
