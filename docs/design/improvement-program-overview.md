@@ -139,8 +139,8 @@ treatment + test plan, ready to implement against.
 - [`causal-critical-path-spec.md`](causal-critical-path-spec.md) · 인과
   backbone, roots/outcomes, typed and weighted edges. **SHIPPED.**
 - [`narrative-readability-spec.md`](narrative-readability-spec.md) · 서사
-  importance tiering, routine folding, shape minimap. **SHIPPED** (tiering +
-  folding; minimap is a follow-up).
+  importance tiering, routine folding, shape minimap. **SHIPPED** (tiering,
+  folding, and the click-to-jump minimap; sticky phase header deferred).
 - [`pulse-enrichment-spec.md`](pulse-enrichment-spec.md) · 맥동 health meter,
   confidence-aware stats, carry-forward reusing `buildResumePrompt`.
 - [`git-diff-viewer-spec.md`](git-diff-viewer-spec.md) · Evidence inline diff

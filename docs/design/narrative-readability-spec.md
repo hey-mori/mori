@@ -5,9 +5,10 @@ long session read like a story instead of a flat list, with a shape minimap, an
 importance hierarchy, and folding of routine runs. It directly answers the
 original pain ("I can't follow the flow").
 
-**Status: partially implemented.** The importance tiering (`momentTier`) and the
-routine-run folding shipped in `NarrativeStoryView`. The shape minimap and the
-sticky phase header (§2.3, §3) remain a follow-up.
+**Status: implemented.** The importance tiering (`momentTier`), the routine-run
+folding, and the shape minimap (a sticky right rail with click-to-jump that opens
+a fold when needed) all shipped in `NarrativeStoryView`. The sticky phase header
+(§3) is the only deferred piece.
 
 Parent: [`reconstruction-lab-vision.md`](reconstruction-lab-vision.md) (§4.3),
 [`visual-system-direction.md`](visual-system-direction.md) (§4 encoding ladder).
