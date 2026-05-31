@@ -1633,6 +1633,7 @@
 /* Cross-session attention strip: lives in the canvas, never the right rail.
    Neutral surface so it reads as calm; the per-item tags carry the colour. */
 .workbench-attention {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   gap: var(--base-space-2);
@@ -1643,8 +1644,24 @@
   background: var(--base-surface-subtle);
 }
 
+/* Fade the right edge so a clipped chip reads as "scroll for more", not broken. */
+.workbench-attention::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 36px;
+  border-radius: 0 var(--base-radius-md) var(--base-radius-md) 0;
+  background: linear-gradient(to right, transparent, var(--base-surface-subtle));
+  pointer-events: none;
+}
+
 .workbench-attention-label {
+  display: inline-flex;
   flex-shrink: 0;
+  gap: 5px;
+  align-items: center;
   color: var(--base-text-muted);
   font-size: var(--base-font-size-2xs);
   font-weight: 750;
@@ -1652,11 +1669,32 @@
   text-transform: uppercase;
 }
 
+.workbench-attention-label i {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--base-surface);
+  color: var(--base-text);
+  font-size: var(--base-font-size-2xs);
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
 .workbench-attention-items {
   display: flex;
   gap: 6px;
   min-width: 0;
+  padding-right: 32px;
   overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.workbench-attention-items::-webkit-scrollbar {
+  display: none;
 }
 
 .workbench-attention-chip {

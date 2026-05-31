@@ -1988,8 +1988,17 @@ function WorkbenchAttention({
 }) {
   return (
     <div className="workbench-attention" role="group" aria-label="검토가 필요한 세션">
-      <span className="workbench-attention-label">검토 필요</span>
-      <div className="workbench-attention-items base-scroll">
+      <span className="workbench-attention-label">
+        검토 필요
+        <i>{items.length}</i>
+      </span>
+      <div
+        className="workbench-attention-items base-scroll"
+        onWheel={(event) => {
+          const el = event.currentTarget;
+          if (el.scrollWidth > el.clientWidth) el.scrollLeft += event.deltaY;
+        }}
+      >
         {items.map((item) => (
           <button
             key={item.panelId}
