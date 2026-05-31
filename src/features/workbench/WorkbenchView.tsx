@@ -7,20 +7,18 @@ import {
   Columns2,
   Command,
   FolderKanban,
-  Grid2x2,
   GripVertical,
   LayoutGrid,
   ListTree,
   Maximize2,
   MessageSquare,
   MoreHorizontal,
-  PanelRight,
   Pencil,
   Plus,
   RefreshCcw,
+  Rows2,
   Search,
   SlidersHorizontal,
-  Square,
   Trash2,
   X,
 } from "lucide-react";
@@ -77,7 +75,7 @@ type Panel = {
   collapsed?: boolean;
 };
 type Density = "comfortable" | "dense";
-type QuickLayout = "single" | "columns" | "grid";
+type QuickLayout = "single" | "columns";
 type CommandAction = { id: string; group: string; label: string; run: () => void };
 type Column = { id: string; flex: number; panels: Panel[] };
 type WorkbenchPreset = { id: string; name: string; columns: Column[] };
@@ -132,7 +130,6 @@ export function WorkbenchView() {
 
   const [columns, setColumns] = useState<Column[]>(() => loadLayout());
   const [density, setDensity] = useState<Density>(() => loadDensity());
-  const [inspectorOpen, setInspectorOpen] = useState<boolean>(() => loadInspectorOpen());
   const [launcher, setLauncher] = useState<LauncherTarget | null>(null);
   const [focusedPanelId, setFocusedPanelId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -163,9 +160,6 @@ export function WorkbenchView() {
   useEffect(() => {
     saveDensity(density);
   }, [density]);
-  useEffect(() => {
-    saveInspectorOpen(inspectorOpen);
-  }, [inspectorOpen]);
 
   const storedSessions = useMemo(
     () => mergeDemoSessionSummaries(repository.listStoredSessions()),
@@ -329,12 +323,7 @@ export function WorkbenchView() {
         .flatMap((col) => col.panels)
         .map((panel) => ({ ...panel, flex: 1, collapsed: false }));
       if (panels.length === 0) return cols;
-      const colCount =
-        shape === "single"
-          ? 1
-          : shape === "columns"
-            ? Math.min(panels.length, 3)
-            : Math.min(Math.ceil(Math.sqrt(panels.length)), 3);
+      const colCount = shape === "single" ? 1 : Math.min(panels.length, 3);
       const next: Column[] = Array.from({ length: colCount }, () => ({
         id: nextId("col"),
         flex: 1,
@@ -635,10 +624,6 @@ export function WorkbenchView() {
             removePanel(focusedPanelId);
           }
           break;
-        case "i":
-          event.preventDefault();
-          setInspectorOpen((open) => !open);
-          break;
         case "f":
           if (focusedPanelId) {
             event.preventDefault();
@@ -662,11 +647,9 @@ export function WorkbenchView() {
     { id: "add", group: "배치", label: "세션 추가", run: () => setLauncher({ kind: "newColumn", index: columns.length }) },
     { id: "save", group: "배치", label: "배치 저장", run: () => setNameModal({ mode: "save" }) },
     { id: "clear", group: "배치", label: "비우기", run: () => setColumns([]) },
-    { id: "layout-single", group: "레이아웃", label: "한 열로 정렬", run: () => applyQuickLayout("single") },
-    { id: "layout-columns", group: "레이아웃", label: "여러 열로 정렬", run: () => applyQuickLayout("columns") },
-    { id: "layout-grid", group: "레이아웃", label: "격자로 정렬", run: () => applyQuickLayout("grid") },
+    { id: "layout-single", group: "레이아웃", label: "아래로 쌓기", run: () => applyQuickLayout("single") },
+    { id: "layout-columns", group: "레이아웃", label: "옆으로 나란히", run: () => applyQuickLayout("columns") },
     { id: "density", group: "보기", label: density === "dense" ? "편안한 밀도로" : "조밀한 밀도로", run: () => setDensity((value) => (value === "dense" ? "comfortable" : "dense")) },
-    { id: "inspector", group: "보기", label: inspectorOpen ? "인스펙터 닫기" : "인스펙터 열기", run: () => setInspectorOpen((open) => !open) },
     { id: "help", group: "보기", label: "단축키 도움말", run: () => setHelpOpen(true) },
     ...(placedSessions.length >= 2
       ? [{ id: "compare", group: "보기", label: "세션 비교", run: () => setCompareOpen(true) }]
@@ -708,17 +691,8 @@ export function WorkbenchView() {
             hasLayout ? (
               <>
                 <span className="workbench-seg" role="group" aria-label="빠른 배치">
-                  <ModeButton icon={Square} label="한 열로" active={false} onClick={() => applyQuickLayout("single")} />
-                  <ModeButton icon={Columns2} label="여러 열로" active={false} onClick={() => applyQuickLayout("columns")} />
-                  <ModeButton icon={Grid2x2} label="격자로" active={false} onClick={() => applyQuickLayout("grid")} />
-                </span>
-                <span className="workbench-seg" role="group" aria-label="인스펙터">
-                  <ModeButton
-                    icon={PanelRight}
-                    label={inspectorOpen ? "인스펙터 닫기" : "인스펙터 열기"}
-                    active={inspectorOpen}
-                    onClick={() => setInspectorOpen((open) => !open)}
-                  />
+                  <ModeButton icon={Rows2} label="아래로 쌓기" active={false} onClick={() => applyQuickLayout("single")} />
+                  <ModeButton icon={Columns2} label="옆으로 나란히" active={false} onClick={() => applyQuickLayout("columns")} />
                 </span>
                 <span className="workbench-seg-divider" aria-hidden="true" />
                 <Button variant="ghost" icon={Trash2} onClick={() => setColumns([])}>
@@ -818,7 +792,6 @@ export function WorkbenchView() {
           {attention.length > 0 ? (
             <WorkbenchAttention items={attention} onJump={focusPanel} />
           ) : null}
-          <div className="workbench-main">
           <div
             className={`workbench-canvas${dragPanelId ? " is-dragging" : ""}`}
             ref={canvasRef}
@@ -934,15 +907,6 @@ export function WorkbenchView() {
             >
               <Plus size={15} aria-hidden="true" />
             </div>
-          </div>
-            {inspectorOpen && focusedMeta ? (
-              <WorkbenchInspector
-                meta={focusedMeta}
-                repository={repository}
-                onOpen={() => openInWorkspace(focusedMeta.sessionId, focusedMeta.isActive)}
-                onClose={() => setInspectorOpen(false)}
-              />
-            ) : null}
           </div>
           <CommandBar
             meta={focusedMeta}
@@ -1191,7 +1155,6 @@ const SHORTCUTS: { keys: string[]; desc: string }[] = [
   { keys: ["m"], desc: "대화 / 타임라인 전환" },
   { keys: ["c"], desc: "패널 접기 / 펼치기" },
   { keys: ["x"], desc: "패널 닫기" },
-  { keys: ["i"], desc: "인스펙터 열기 / 닫기" },
   { keys: ["f"], desc: "패널 최대화 / 복귀" },
   { keys: ["?"], desc: "이 도움말 열기 / 닫기" },
 ];
@@ -2041,91 +2004,6 @@ function WorkbenchAttention({
   );
 }
 
-/**
- * The selected-panel inspector (right). Per the surface doctrine it explains
- * only the focused session, nothing page-level: provenance, the honest count
- * strip, and the actual open issues / unconfirmed decisions / pending next
- * actions read from saved memory. It never drives or promotes anything.
- */
-function WorkbenchInspector({
-  meta,
-  repository,
-  onOpen,
-  onClose,
-}: {
-  meta: SessionMeta;
-  repository: ReturnType<typeof createBrowserDraftRepository>;
-  onOpen: () => void;
-  onClose: () => void;
-}) {
-  const work = useMemo(
-    () => loadSessionWorkItems(repository, meta.sessionId),
-    [repository, meta.sessionId],
-  );
-  const when = meta.savedAt ?? meta.startedAt;
-
-  return (
-    <aside className="workbench-inspector base-scroll" aria-label="선택한 세션 상세">
-      <header className="workbench-inspector-head">
-        <div className="workbench-inspector-id">
-          <h2 title={meta.title}>{meta.title}</h2>
-          <span>
-            {meta.sourceLabel ? shortProjectLabel(meta.sourceLabel) : "수동 세션"}
-            {when ? ` · ${formatRelative(when)}` : ""}
-          </span>
-        </div>
-        <button type="button" className="workbench-panel-icon" aria-label="인스펙터 닫기" onClick={onClose}>
-          <X size={13} aria-hidden="true" />
-        </button>
-      </header>
-
-      <StatLine meta={meta} />
-
-      <InspectorList title="열린 이슈" tone="issue" items={work.openIssues} empty="열린 이슈가 없습니다" />
-      <InspectorList title="미확정 결정" tone="decision" items={work.unconfirmedDecisions} empty="미확정 결정이 없습니다" />
-      <InspectorList title="다음 단계" tone="next" items={work.pendingNextActions} empty="대기 중인 다음 단계가 없습니다" />
-
-      <Button variant="secondary" icon={ArrowUpRight} onClick={onOpen}>
-        작업 공간에서 열기
-      </Button>
-    </aside>
-  );
-}
-
-function InspectorList({
-  title,
-  tone,
-  items,
-  empty,
-}: {
-  title: string;
-  tone: "issue" | "decision" | "next";
-  items: string[];
-  empty: string;
-}) {
-  return (
-    <section className="workbench-inspector-section">
-      <header>
-        <span>{title}</span>
-        {items.length > 0 ? <strong>{items.length}</strong> : null}
-      </header>
-      {items.length === 0 ? (
-        <p className="workbench-inspector-empty">{empty}</p>
-      ) : (
-        <ul className={`workbench-inspector-list tone-${tone}`}>
-          {items.slice(0, 8).map((text, index) => (
-            <li key={index}>
-              <span className="workbench-inspector-dot" aria-hidden="true" />
-              <span>{text}</span>
-            </li>
-          ))}
-          {items.length > 8 ? <li className="workbench-inspector-more">외 {items.length - 8}개</li> : null}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 function ConversationFlow({
   events,
   highlight = "",
@@ -2320,7 +2198,6 @@ function AttentionDots({ issues, decisions, next }: { issues: number; decisions:
 const LAYOUT_KEY = "mori.workbench.layout.v1";
 const PRESETS_KEY = "mori.workbench.presets.v1";
 const DENSITY_KEY = "mori.workbench.density.v1";
-const INSPECTOR_KEY = "mori.workbench.inspector.v1";
 
 /** Canvas density is a per-device UI preference, persisted like the layout. */
 function loadDensity(): Density {
@@ -2336,25 +2213,6 @@ function saveDensity(density: Density): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(DENSITY_KEY, density);
-  } catch {
-    // Best-effort.
-  }
-}
-
-/** Inspector visibility is a per-device UI preference, default open. */
-function loadInspectorOpen(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    return window.localStorage.getItem(INSPECTOR_KEY) !== "closed";
-  } catch {
-    return true;
-  }
-}
-
-function saveInspectorOpen(open: boolean): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(INSPECTOR_KEY, open ? "open" : "closed");
   } catch {
     // Best-effort.
   }
