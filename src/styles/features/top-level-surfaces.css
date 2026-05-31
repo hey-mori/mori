@@ -1125,7 +1125,7 @@
 .workbench-conversation {
   display: grid;
   align-content: start;
-  gap: var(--base-space-2);
+  gap: var(--base-space-3);
 }
 
 .workbench-msg {
@@ -1163,12 +1163,13 @@
 }
 
 .workbench-msg-bubble {
-  padding: var(--base-space-2) var(--base-space-3);
   border-radius: var(--base-radius-md);
-  background: var(--base-surface-subtle);
 }
 
+/* Only the user's own turn gets a tinted pill; AI / event messages stay as
+   clean text so the column reads like a document and breathes. */
 .workbench-msg.is-user .workbench-msg-bubble {
+  padding: var(--base-space-2) var(--base-space-3);
   background: var(--base-accent-soft);
 }
 
@@ -1436,8 +1437,12 @@
   gap: var(--base-space-2);
 }
 
-.workbench-surface.is-dense .workbench-msg-bubble {
+.workbench-surface.is-dense .workbench-msg.is-user .workbench-msg-bubble {
   padding: 5px 9px;
+}
+
+.workbench-surface.is-dense .workbench-conversation {
+  gap: var(--base-space-2);
 }
 
 .workbench-surface.is-dense .workbench-msg-bubble p {
