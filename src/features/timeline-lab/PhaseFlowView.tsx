@@ -4,7 +4,7 @@ import { buildPhaseTimeline, type PhaseChapter } from "../../lib/timeline-lab/ph
 import { InfoHint } from "../../components/ui/InfoHint";
 
 /**
- * 국면 — the session rebuilt as the work arc it moved through, in time order.
+ * 국면 · the session rebuilt as the work arc it moved through, in time order.
  *
  * Unlike a kind-bucketed view (which would just redraw 맥동's phase mix), this
  * reads the session as ordered *chapters*: contiguous stretches dominated by one
