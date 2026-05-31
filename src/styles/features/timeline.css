@@ -2864,23 +2864,32 @@ kbd {
   flex-wrap: wrap;
 }
 
+/* Universal section sub-header used by <SectionHeader> across Memory,
+   Reports, Settings, Timeline, Review, etc. Weight carries the emphasis
+   (visual-system §4 "encoding by weight before color"); rhythm is tight
+   so the section title sits close to its content. */
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .section-header h4 {
   margin: 0;
-  font-size: 14px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
 }
 
 .section-header-hint {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.4;
 }
 
 .section-header-right {
