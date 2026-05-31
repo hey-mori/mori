@@ -7,12 +7,13 @@ import {
   Columns2,
   Command,
   FolderKanban,
-  Gauge,
   Grid2x2,
   GripVertical,
   LayoutGrid,
   ListTree,
+  Maximize2,
   MessageSquare,
+  MoreHorizontal,
   PanelRight,
   Pencil,
   Plus,
@@ -710,14 +711,6 @@ export function WorkbenchView() {
                   <ModeButton icon={Square} label="한 열로" active={false} onClick={() => applyQuickLayout("single")} />
                   <ModeButton icon={Columns2} label="여러 열로" active={false} onClick={() => applyQuickLayout("columns")} />
                   <ModeButton icon={Grid2x2} label="격자로" active={false} onClick={() => applyQuickLayout("grid")} />
-                </span>
-                <span className="workbench-seg" role="group" aria-label="밀도">
-                  <ModeButton
-                    icon={Gauge}
-                    label={density === "dense" ? "편안한 밀도로" : "조밀한 밀도로"}
-                    active={density === "dense"}
-                    onClick={() => setDensity((value) => (value === "dense" ? "comfortable" : "dense"))}
-                  />
                 </span>
                 <span className="workbench-seg" role="group" aria-label="인스펙터">
                   <ModeButton
@@ -1665,6 +1658,7 @@ function SessionPanel({
   onMaximize: () => void;
 }) {
   const collapsed = panel.collapsed ?? false;
+  const [menuOpen, setMenuOpen] = useState(false);
   const events = useMemo(
     () => (meta ? loadConversation(repository, meta.sessionId) : []),
     [repository, meta],
@@ -1743,9 +1737,32 @@ function SessionPanel({
             label={collapsed ? "패널 펼치기" : "패널 접기"}
             onClick={onToggleCollapse}
           />
-          <span className="workbench-panel-actions-extra">
-            <IconAction icon={RefreshCcw} label="세션 교체" onClick={onReplace} />
-            <IconAction icon={ArrowUpRight} label="작업 공간에서 열기" onClick={onOpen} />
+          <span className="workbench-panel-more">
+            <IconAction icon={MoreHorizontal} label="더 보기" onClick={() => setMenuOpen((open) => !open)} />
+            {menuOpen ? (
+              <>
+                <button
+                  type="button"
+                  className="workbench-panel-menu-scrim"
+                  aria-label="메뉴 닫기"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="workbench-panel-menu" role="menu">
+                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onMaximize(); }}>
+                    <Maximize2 size={13} aria-hidden="true" />
+                    최대화
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onReplace(); }}>
+                    <RefreshCcw size={13} aria-hidden="true" />
+                    세션 교체
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onOpen(); }}>
+                    <ArrowUpRight size={13} aria-hidden="true" />
+                    작업 공간에서 열기
+                  </button>
+                </div>
+              </>
+            ) : null}
           </span>
           <IconAction icon={X} label="패널 닫기" onClick={onClose} />
         </div>

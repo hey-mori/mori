@@ -1086,17 +1086,66 @@
   align-items: center;
 }
 
-/* Secondary panel actions stay out of the way until the panel is focused or
-   hovered, so narrow panels keep room for the title. Focusing a panel by
-   keyboard (1–9) also reveals them. */
-.workbench-panel-actions-extra {
-  display: none;
-  gap: 2px;
+/* Secondary panel actions live in a steady "more" menu, so the header controls
+   never shift on hover or focus. */
+.workbench-panel-more {
+  position: relative;
+  display: inline-flex;
 }
 
-.workbench-panel:hover .workbench-panel-actions-extra,
-.workbench-panel.is-focused .workbench-panel-actions-extra {
-  display: inline-flex;
+.workbench-panel-menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+
+.workbench-panel-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 6;
+  display: grid;
+  gap: 1px;
+  min-width: 172px;
+  padding: 4px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  box-shadow: var(--base-shadow-card-strong);
+  animation: wb-pop 120ms ease both;
+}
+
+.workbench-panel-menu button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--base-radius-sm);
+  background: transparent;
+  color: var(--base-text);
+  font: inherit;
+  font-size: var(--base-font-size-xs);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.workbench-panel-menu button:hover {
+  background: var(--base-accent-soft);
+  color: var(--base-accent);
+}
+
+.workbench-panel-menu button svg {
+  flex-shrink: 0;
+  color: var(--base-text-muted);
+}
+
+.workbench-panel-menu button:hover svg {
+  color: var(--base-accent);
 }
 
 .workbench-panel-modes {
