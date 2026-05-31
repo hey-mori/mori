@@ -1222,38 +1222,6 @@
   gap: var(--base-space-3);
 }
 
-.workbench-timeline-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  overflow: hidden;
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-sm);
-  background: var(--base-border);
-}
-
-.workbench-stat {
-  display: grid;
-  gap: 1px;
-  padding: var(--base-space-2);
-  background: var(--base-surface-subtle);
-}
-
-.workbench-stat span {
-  color: var(--base-text-muted);
-  font-size: var(--base-font-size-2xs);
-}
-
-.workbench-stat strong {
-  color: var(--base-text);
-  font-size: var(--base-font-size-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-.workbench-stat.tone-warning strong {
-  color: var(--base-status-warning);
-}
-
 .workbench-timeline-list {
   display: grid;
   gap: var(--base-space-2);
@@ -1274,7 +1242,15 @@
   height: 8px;
   margin-top: 5px;
   border-radius: 999px;
-  background: var(--base-accent);
+  background: var(--base-status-neutral);
+}
+
+.workbench-timeline-dot.tone-issue {
+  background: var(--base-status-warning);
+}
+
+.workbench-timeline-dot.tone-decision {
+  background: var(--base-status-info);
 }
 
 .workbench-timeline-list strong {
@@ -1527,7 +1503,7 @@
   white-space: nowrap;
 }
 
-.workbench-inspector-stats {
+.workbench-statline {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--base-space-2);
@@ -1535,32 +1511,32 @@
   border-bottom: 1px solid var(--base-border);
 }
 
-.workbench-inspector-stats > div {
+.workbench-statline > div {
   display: grid;
   gap: 1px;
 }
 
-.workbench-inspector-stats span {
+.workbench-statline span {
   color: var(--base-text-muted);
   font-size: var(--base-font-size-2xs);
 }
 
-.workbench-inspector-stats strong {
+.workbench-statline strong {
   color: var(--base-text);
   font-size: var(--base-font-size-lg);
   font-variant-numeric: tabular-nums;
   line-height: 1.05;
 }
 
-.workbench-inspector-stats .tone-issue strong {
+.workbench-statline .tone-issue strong {
   color: var(--base-status-warning);
 }
 
-.workbench-inspector-stats .tone-decision strong {
+.workbench-statline .tone-decision strong {
   color: var(--base-status-info);
 }
 
-.workbench-inspector-stats .tone-next strong {
+.workbench-statline .tone-next strong {
   color: var(--base-status-success);
 }
 

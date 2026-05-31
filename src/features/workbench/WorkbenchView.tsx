@@ -97,6 +97,7 @@ type SessionMeta = SessionRow & {
 type ConversationEvent = {
   id: string;
   actor: string;
+  kind: string;
   title: string;
   summary: string;
   at: string;
@@ -2061,24 +2062,7 @@ function WorkbenchInspector({
         </button>
       </header>
 
-      <div className="workbench-inspector-stats">
-        <div>
-          <span>항목</span>
-          <strong>{meta.eventCount}</strong>
-        </div>
-        <div className={meta.openIssues > 0 ? "tone-issue" : ""}>
-          <span>이슈</span>
-          <strong>{meta.openIssues}</strong>
-        </div>
-        <div className={meta.unconfirmedDecisions > 0 ? "tone-decision" : ""}>
-          <span>결정</span>
-          <strong>{meta.unconfirmedDecisions}</strong>
-        </div>
-        <div className={meta.pendingNextActions > 0 ? "tone-next" : ""}>
-          <span>다음</span>
-          <strong>{meta.pendingNextActions}</strong>
-        </div>
-      </div>
+      <StatLine meta={meta} />
 
       <InspectorList title="열린 이슈" tone="issue" items={work.openIssues} empty="열린 이슈가 없습니다" />
       <InspectorList title="미확정 결정" tone="decision" items={work.unconfirmedDecisions} empty="미확정 결정이 없습니다" />
@@ -2200,12 +2184,7 @@ function TimelineFlow({
 }) {
   return (
     <div className="workbench-timeline">
-      <div className="workbench-timeline-stats">
-        <Stat label="항목" value={meta.eventCount} />
-        <Stat label="이슈" value={meta.openIssues} tone={meta.openIssues > 0 ? "warning" : "neutral"} />
-        <Stat label="결정" value={meta.unconfirmedDecisions} />
-        <Stat label="다음" value={meta.pendingNextActions} />
-      </div>
+      <StatLine meta={meta} />
       {events.length === 0 ? (
         <div className="workbench-flow-empty">
           <ListTree size={15} aria-hidden="true" />
@@ -2215,7 +2194,12 @@ function TimelineFlow({
         <ol className="workbench-timeline-list">
           {events.map((event) => (
             <li key={event.id}>
-              <span className="workbench-timeline-dot" aria-hidden="true" />
+              <span
+                className={`workbench-timeline-dot${
+                  event.kind === "issue" ? " tone-issue" : event.kind === "decision" ? " tone-decision" : ""
+                }`}
+                aria-hidden="true"
+              />
               <div>
                 <strong>
                   <Highlight text={event.title} needle={highlight} />
@@ -2259,19 +2243,30 @@ function IconAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: s
   );
 }
 
-function Stat({
-  label,
-  value,
-  tone = "neutral",
-}: {
-  label: string;
-  value: number;
-  tone?: "neutral" | "warning";
-}) {
+/**
+ * The shared count strip used by both the inspector and the panel timeline:
+ * a clean four-column row with the issue / decision / next counts coloured by
+ * semantic status, so the colour language stays consistent across the surface.
+ */
+function StatLine({ meta }: { meta: SessionMeta }) {
   return (
-    <div className={`workbench-stat tone-${tone}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="workbench-statline">
+      <div>
+        <span>항목</span>
+        <strong>{meta.eventCount}</strong>
+      </div>
+      <div className={meta.openIssues > 0 ? "tone-issue" : ""}>
+        <span>이슈</span>
+        <strong>{meta.openIssues}</strong>
+      </div>
+      <div className={meta.unconfirmedDecisions > 0 ? "tone-decision" : ""}>
+        <span>결정</span>
+        <strong>{meta.unconfirmedDecisions}</strong>
+      </div>
+      <div className={meta.pendingNextActions > 0 ? "tone-next" : ""}>
+        <span>다음</span>
+        <strong>{meta.pendingNextActions}</strong>
+      </div>
     </div>
   );
 }
@@ -2548,6 +2543,7 @@ function loadConversation(
       .map((event) => ({
         id: event.id,
         actor: event.actor ?? DEMO_ACTOR_LABEL[event.type] ?? "기록",
+        kind: event.type,
         title: event.title,
         summary: event.summary,
         at: event.start,
@@ -2563,6 +2559,7 @@ function loadConversation(
       .map((event) => ({
         id: event.id,
         actor: event.actor ?? event.type,
+        kind: event.type,
         title: event.title,
         summary: event.summary,
         at: event.start,
