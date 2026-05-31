@@ -598,7 +598,7 @@ function NextActionDetail({
                 type="button"
                 className="review-detail-event-link"
                 onClick={() => onShowTimeline(event.id)}
-                title="Timeline에서 이 이벤트 보기"
+                title="타임라인에서 이 이벤트 보기"
               >
                 {event.title}
               </button>
@@ -724,7 +724,7 @@ function RelatedEventList({
             type="button"
             className="review-detail-event-link"
             onClick={() => onShowTimeline(event.id)}
-            title="Timeline에서 이 이벤트 보기"
+            title="타임라인에서 이 이벤트 보기"
           >
             {event.title}
           </button>

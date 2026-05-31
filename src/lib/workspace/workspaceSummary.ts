@@ -170,7 +170,7 @@ export function buildWorkspaceSurfaceLinks(
   return [
     {
       view: "timeline",
-      label: "Timeline",
+      label: "타임라인",
       detail: `이벤트 ${view.events.length}개`,
     },
     {
