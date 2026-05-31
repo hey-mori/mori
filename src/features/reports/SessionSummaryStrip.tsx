@@ -151,7 +151,7 @@ function AttentionMemoryPreview({
 }) {
   if (attentionMemories.total === 0) return null;
   return (
-    <div className="session-wrap-up-attention-memory" aria-label="Memory needs review">
+    <div className="session-wrap-up-attention-memory" aria-label="검토 필요 메모리">
       <header>
         <strong>
           <BookMarked size={13} aria-hidden="true" /> 승인된 메모리 라이프사이클 검토 필요

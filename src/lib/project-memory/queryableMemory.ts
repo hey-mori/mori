@@ -93,10 +93,10 @@ const MATCH_TIER: Record<QueryableMemoryMatchField, number> = {
 };
 
 const MATCH_REASON: Record<QueryableMemoryMatchField, string> = {
-  title: "Title match",
-  summary: "Summary match",
-  evidenceRef: "Evidence reference match",
-  sourceSession: "Source session match",
+  title: "제목 일치",
+  summary: "요약 일치",
+  evidenceRef: "자료 참조 일치",
+  sourceSession: "출처 세션 일치",
 };
 
 export function searchAcceptedMemories(
@@ -368,10 +368,10 @@ function reviewActionReference(
   return {
     resultKind: "reviewAction",
     refId: action.id,
-    title: "Review note",
+    title: "검토 메모",
     snippet: excerptAround(note, text),
     matchedField: "note",
-    matchReason: "Review note match",
+    matchReason: "검토 메모 일치",
     contextLabel: describeMemoryAuditAction(action.actionType),
   };
 }

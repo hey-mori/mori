@@ -240,7 +240,7 @@ export function AcceptedMemoryDetailDrawer({
                 <LinkButton
                   key={selectionKey(target)}
                   title={target.title}
-                  hint="Review · 이슈"
+                  hint="검토 · 이슈"
                   onClick={() => {
                     if (target.kind !== "review") return;
                     onNavigateReviewItem(target.selection);
@@ -259,7 +259,7 @@ export function AcceptedMemoryDetailDrawer({
                 <LinkButton
                   key={selectionKey(target)}
                   title={target.title}
-                  hint="Review · 결정"
+                  hint="검토 · 결정"
                   onClick={() => {
                     if (target.kind !== "review") return;
                     onNavigateReviewItem(target.selection);

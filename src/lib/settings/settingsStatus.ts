@@ -437,7 +437,7 @@ export function getRecommendedSetupStep({
     return { id: "import-source", label: "세션의 자료 탭에서 가져오기를 시작하세요." };
   }
   if (!hasAnalysis) {
-    return { id: "run-quickpass", label: "Review 또는 Reports에서 Quick Pass를 실행하세요." };
+    return { id: "run-quickpass", label: "검토 또는 보고서에서 Quick Pass를 실행하세요." };
   }
   if (mode === "tauri-desktop" && sqliteKind === "ok" && hasUnsavedDraft) {
     return { id: "save-to-sqlite", label: "현재 세션을 SQLite에 저장하면 Project Memory가 영속됩니다." };

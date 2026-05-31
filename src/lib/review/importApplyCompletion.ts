@@ -21,7 +21,7 @@ export function buildImportApplyCompletion(
   input: ImportApplyCompletionInput,
 ): ImportApplyCompletionViewModel {
   const actions: ImportApplyCompletionAction[] = [
-    { id: "timeline", label: "Timeline 열기", primary: true },
+    { id: "timeline", label: "타임라인 열기", primary: true },
   ];
 
   if (!input.hasAnalysis) {

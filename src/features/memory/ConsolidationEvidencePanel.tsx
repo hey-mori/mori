@@ -31,8 +31,8 @@ export function ConsolidationEvidencePanel({
 }) {
   if (!entry) {
     return (
-      <aside className="consolidation-inspector" aria-label="Evidence inspector">
-        <BaseSection title="자료 / 세션 참조" ariaLabel="Evidence inspector empty">
+      <aside className="consolidation-inspector" aria-label="자료 검사기">
+        <BaseSection title="자료 / 세션 참조" ariaLabel="자료 검사기 — 비어 있음">
           <p className="consolidation-inspector-empty">
             좌측에서 제안 카드를 선택하면 자료와 출처 세션 참조가 표시됩니다.
           </p>
@@ -47,7 +47,7 @@ export function ConsolidationEvidencePanel({
   const sourceRefs = proposal.evidenceRefs.filter(isSourceRef);
 
   return (
-    <aside className="consolidation-inspector" aria-label="Evidence inspector">
+    <aside className="consolidation-inspector" aria-label="자료 검사기">
       <BaseSection
         title="자료 / 세션 참조"
         hint={
@@ -56,7 +56,7 @@ export function ConsolidationEvidencePanel({
             있습니다.
           </span>
         }
-        ariaLabel="Evidence inspector"
+        ariaLabel="자료 검사기"
         className="consolidation-inspector-section"
       >
         <header className="consolidation-inspector-head">
