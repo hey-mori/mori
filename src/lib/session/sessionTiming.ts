@@ -183,7 +183,7 @@ export function describeSessionCardAction(
   if (state === "active" || state === "analyzing" || state === "draft") {
     return { kind: "endSession", label: "세션 종료" };
   }
-  return { kind: "viewReport", label: "리포트 보기" };
+  return { kind: "viewReport", label: "보고서 보기" };
 }
 
 function parseIso(value: string | null | undefined): number | null {

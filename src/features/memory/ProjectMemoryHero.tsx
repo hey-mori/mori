@@ -48,9 +48,9 @@ export function ProjectMemoryHero({
             icon={FileText}
             onClick={onOpenLatestReport}
             disabled={!reportAvailable}
-            title={reportAvailable ? "최근 리포트 열기" : "아직 생성된 리포트가 없습니다."}
+            title={reportAvailable ? "최근 보고서 열기" : "아직 생성된 보고서가 없습니다."}
           >
-            최근 리포트
+            최근 보고서
           </Button>
           <Button variant="primary" icon={Play} onClick={onStartFollowUp}>
             다음 세션 시작

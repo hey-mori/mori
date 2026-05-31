@@ -209,7 +209,7 @@ const PIPELINE = [
   "검토",
   "타임라인 / 근거",
   "프로젝트 기억 후보",
-  "리포트 / 이어가기",
+  "보고서 / 이어가기",
 ];
 
 const PRIVACY_SUMMARY = [

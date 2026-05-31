@@ -103,7 +103,7 @@ export function deriveSavedReportAvailability(reportCount: number): SavedReportA
     return {
       total: 0,
       hasAny: false,
-      label: "저장된 리포트 없음",
+      label: "저장된 보고서 없음",
       tone: "gray",
       emptyHint: "Reports 화면에서 Markdown을 복사하거나 .mori v0 JSON을 내보내면 목록에 추가됩니다.",
     };
@@ -111,7 +111,7 @@ export function deriveSavedReportAvailability(reportCount: number): SavedReportA
   return {
     total: reportCount,
     hasAny: true,
-    label: `리포트 ${reportCount}건`,
+    label: `보고서 ${reportCount}건`,
     tone: reportCount >= 3 ? "green" : "blue",
     emptyHint: "",
   };
@@ -141,7 +141,7 @@ function buildScopeCaveat({
     parts.push("Quick Pass를 아직 실행하지 않았습니다.");
   }
   if (reportCount === 0) {
-    parts.push("저장된 .mori 패키지 / 리포트가 없습니다.");
+    parts.push("저장된 .mori 패키지 / 보고서가 없습니다.");
   }
   return parts.join(" ");
 }

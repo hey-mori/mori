@@ -193,7 +193,7 @@ describe("describeSessionCardAction", () => {
     for (const state of ["ended", "demo"] as const) {
       expect(describeSessionCardAction(state)).toEqual({
         kind: "viewReport",
-        label: "리포트 보기",
+        label: "보고서 보기",
       });
     }
   });

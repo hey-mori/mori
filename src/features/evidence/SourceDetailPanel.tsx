@@ -60,7 +60,7 @@ export function SourceDetailPanel({
               <Lock size={14} /> 백그라운드 캡처, 브라우저 스캐닝, 자동 계정 연결은 없습니다.
             </li>
             <li>
-              <MapPin size={14} /> 모든 분석/리포트는 가져온 소스에 직접 연결됩니다.
+              <MapPin size={14} /> 모든 분석/보고서는 가져온 소스에 직접 연결됩니다.
             </li>
           </ul>
         </section>

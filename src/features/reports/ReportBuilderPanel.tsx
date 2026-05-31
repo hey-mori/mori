@@ -124,13 +124,13 @@ export function ReportBuilderPanel({
     <aside id={id} className="report-builder-panel base-scroll" aria-label="Report builder">
       <header className="report-builder-head">
         <div>
-          <h2>리포트 생성기</h2>
-          <p>리포트 유형 / 섹션 / 형식을 선택하면 미리보기가 실시간으로 갱신됩니다.</p>
+          <h2>보고서 생성기</h2>
+          <p>보고서 유형 / 섹션 / 형식을 선택하면 미리보기가 실시간으로 갱신됩니다.</p>
         </div>
       </header>
 
       <section className="report-builder-section">
-        <SectionHeader title="1. 리포트 유형" hint={typeDef.audience} />
+        <SectionHeader title="1. 보고서 유형" hint={typeDef.audience} />
         <div className="report-type-list">
           {REPORT_TYPE_DEFINITIONS.map((def) => (
             <button

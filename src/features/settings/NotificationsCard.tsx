@@ -32,8 +32,8 @@ const NOTIFICATION_ROWS: Array<{
   },
   {
     id: "reportReady",
-    label: "리포트 준비됨",
-    description: "리포트 내보내기가 완료되었을 때.",
+    label: "보고서 준비됨",
+    description: "보고서 내보내기가 완료되었을 때.",
   },
   {
     id: "memoryReviewNeeded",

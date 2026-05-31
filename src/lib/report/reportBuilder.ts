@@ -226,7 +226,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
     if (accepted.length === 0) {
       lines.push("_검토된 프로젝트 메모리가 없습니다._");
     } else if (guidance.length === 0) {
-      lines.push("_이 리포트 유형(audience)에 노출 가능한 검토된 메모리가 없습니다._");
+      lines.push("_이 보고서 유형(audience)에 노출 가능한 검토된 메모리가 없습니다._");
     } else {
       for (const memory of sortAcceptedMemories(guidance)) {
         lines.push(renderAcceptedMemory(memory, privacy));

@@ -16,7 +16,7 @@ import {
  *  1. **What have I worked on** — recent captured sessions across projects.
  *  2. **What needs my attention** — framed as *value the user gains* by acting,
  *     never as a bare "n candidates to review".
- *  3. **What's next** — the key actions (가져오기 / 이어가기 / 리포트) live in the
+ *  3. **What's next** — the key actions (가져오기 / 이어가기 / 보고서) live in the
  *     view's action bar; the value cards point at them.
  *  4. **How am I using AI** — a calm strip of real metrics (session count,
  *     project count, recent activity, reconstructed items). No fabricated
@@ -854,10 +854,10 @@ function buildNextActions(params: {
     actions.push({
       key: "report",
       kind: "report",
-      title: "작업을 리포트로 정리하기",
+      title: "작업을 보고서로 정리하기",
       description:
-        "지금까지의 세션을 리포트로 묶으면 팀에 공유하거나 나중에 다시 돌아볼 수 있습니다.",
-      actionLabel: "리포트 만들기",
+        "지금까지의 세션을 보고서로 묶으면 팀에 공유하거나 나중에 다시 돌아볼 수 있습니다.",
+      actionLabel: "보고서 만들기",
       destination: "reports",
       targetSessionId: mostRecent.sessionId,
       tone: "success",

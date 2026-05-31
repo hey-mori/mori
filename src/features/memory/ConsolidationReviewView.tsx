@@ -650,7 +650,7 @@ function ApplyBoundaryBanner({
           </strong>
           <span>
             감사 로그 {applyState.summary.reviewActionCount}건 기록. 메모리 페이지의 확정 메모리
-            카드와 Resume 프롬프트 · 리포트에서 확인할 수 있습니다.
+            카드와 Resume 프롬프트 · 보고서에서 확인할 수 있습니다.
           </span>
           {applyState.fellBack ? (
             <span className="consolidation-review-apply-fallback">

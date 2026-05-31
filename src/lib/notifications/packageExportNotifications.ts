@@ -13,7 +13,7 @@ import type { CompanionNotification } from "./notification";
  * row even if storage is read twice in the same tick.
  *
  * The notification carries no destination — exports already live on the
- * Reports surface, so the action label is informational ("리포트 열기")
+ * Reports surface, so the action label is informational ("보고서 열기")
  * and routes back to the reports view via the standard producer-neutral
  * action target.
  */
@@ -68,7 +68,7 @@ function toNotification(draft: StoredMoriPackageDraft): CompanionNotification {
     basis: "verified",
     linkedItemIds: [draft.packageId],
     evidenceRefs: [],
-    actionLabel: "리포트 열기",
+    actionLabel: "보고서 열기",
     actionTarget: { kind: "view", view: "reports" },
     createdAt: draft.savedAt,
   };

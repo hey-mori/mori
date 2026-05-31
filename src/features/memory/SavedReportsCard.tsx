@@ -17,11 +17,11 @@ export function SavedReportsCard({
   return (
     <BaseSection
       className="memory-reports"
-      ariaLabel="저장된 리포트"
-      title="저장된 리포트 · .mori 패키지"
+      ariaLabel="저장된 보고서"
+      title="저장된 보고서 · .mori 패키지"
       hint={
         <>
-          현재는 브라우저 draft에 저장된 .mori v0 JSON 패키지를 보여줍니다. 리포트 히스토리(저장된 Markdown / PDF)는
+          현재는 브라우저 draft에 저장된 .mori v0 JSON 패키지를 보여줍니다. 보고서 히스토리(저장된 Markdown / PDF)는
           <strong> 다음 마일스톤</strong>입니다.
         </>
       }
@@ -41,7 +41,7 @@ export function SavedReportsCard({
       }
     >
       {packages.length === 0 ? (
-        <p className="memory-empty">아직 저장된 .mori 패키지가 없습니다. 리포트에서 내보내면 여기 표시됩니다.</p>
+        <p className="memory-empty">아직 저장된 .mori 패키지가 없습니다. 보고서에서 내보내면 여기 표시됩니다.</p>
       ) : (
         <ul className="memory-reports-list">
           {packages.map((entry) => {

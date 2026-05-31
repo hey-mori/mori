@@ -78,7 +78,7 @@ export function AcceptedMemoriesCard({
       }
       hint={
         <span>
-          승인한 통합 결과를 로컬에 영구 저장합니다. Resume 프롬프트 · 리포트와 연동됩니다.
+          승인한 통합 결과를 로컬에 영구 저장합니다. Resume 프롬프트 · 보고서와 연동됩니다.
         </span>
       }
       actions={

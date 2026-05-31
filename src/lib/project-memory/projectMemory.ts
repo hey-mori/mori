@@ -319,7 +319,7 @@ function scopeCaveatFor({
     parts.push("Quick Pass를 아직 실행하지 않았습니다. Review / Reports에서 분석을 실행하면 메모리가 풍부해집니다.");
   }
   if (reportCount === 0) {
-    parts.push("저장된 .mori 패키지 / 리포트가 없습니다.");
+    parts.push("저장된 .mori 패키지 / 보고서가 없습니다.");
   }
   return parts.join(" ");
 }
@@ -360,7 +360,7 @@ export function buildFollowUpPrompt({
     .join("\n");
 
   const memoryFooter = [
-    `- 저장된 세션 ${savedSessionCount}건 · 리포트 ${reportCount}건`,
+    `- 저장된 세션 ${savedSessionCount}건 · 보고서 ${reportCount}건`,
     `- Quick Pass: ${hasAnalysis ? "완료된 분석을 메모리에 반영" : "분석을 아직 실행하지 않음"}`,
   ].join("\n");
 

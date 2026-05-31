@@ -15,7 +15,7 @@ export function PrivacyGuaranteesCard() {
   return (
     <SettingsSection
       title="Mori가 하지 않는 일"
-      description="프로필, 가져온 소스, 리포지토리 경로, 리포트, 메모리는 기본으로 전송되지 않습니다."
+      description="프로필, 가져온 소스, 리포지토리 경로, 보고서, 메모리는 기본으로 전송되지 않습니다."
       action={<StatusPill tone="green">기본 차단</StatusPill>}
     >
       <ul className="settings-privacy-never">

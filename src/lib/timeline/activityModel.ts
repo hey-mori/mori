@@ -195,7 +195,7 @@ const ACTIVITY_VISUALS: Record<ActivityKind, ActivityVisuals> = {
   buildRun: { label: "빌드 실행", shortLabel: "빌드", tone: "orange", description: "빌드 활동 또는 테스트 실행" },
   testRun: { label: "테스트 실행", shortLabel: "테스트", tone: "orange", description: "테스트 실행 또는 테스트 로그" },
   deploy: { label: "배포", shortLabel: "배포", tone: "green", description: "배포 또는 릴리스 활동" },
-  report: { label: "리포트", shortLabel: "리포트", tone: "blue", description: "리포트 출력 또는 생성된 산출물" },
+  report: { label: "보고서", shortLabel: "보고서", tone: "blue", description: "보고서 출력 또는 생성된 산출물" },
   handoff: { label: "이어가기", shortLabel: "이어가기", tone: "blue", description: "다음 세션·공유용 출력" },
   memory: { label: "메모리", shortLabel: "메모리", tone: "purple", description: "프로젝트 메모리 또는 지속 맥락 이벤트" },
   sourceImport: { label: "소스 가져오기", shortLabel: "가져오기", tone: "cyan", description: "캡처된 소스 또는 가져오기 경계" },

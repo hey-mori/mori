@@ -134,14 +134,14 @@ export function ReportsView() {
     </Button>
   ) : undefined;
 
-  // The 리포트 tab is the session's handoff / output surface — three stacked
+  // The 보고서 tab is the session's handoff / output surface — three stacked
   // sections: the continue-context, the report builder, and the .mori export.
   // Session identity, scale metrics, and the wrap-up checklist live in the
   // 개요 tab, not here.
   return (
     <div className="session-tab-pane reports-embedded">
       <div className="session-tab-actionbar">
-        <ActionBar label="리포트" end={quickPassButton} />
+        <ActionBar label="보고서" end={quickPassButton} />
       </div>
       <div className="session-tab-split is-collapsed">
         <div className="session-tab-main">
@@ -241,14 +241,14 @@ function ReportsAnalysisNotice({
         title="아직 가져온 소스가 없습니다"
         actions={<Button onClick={onGoToEvidence}>자료 탭으로 이동</Button>}
       >
-        자료 탭에서 추가하고 Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다.
+        자료 탭에서 추가하고 Quick Pass를 실행하면 Resume 프롬프트와 보고서가 풍부해집니다.
       </NoticeBanner>
     );
   }
   if (!hasAnalysis) {
     return (
       <NoticeBanner tone="info">
-        가져온 소스가 있습니다. 우측 상단에서 Quick Pass를 실행하면 Resume 프롬프트와 리포트가 풍부해집니다.
+        가져온 소스가 있습니다. 우측 상단에서 Quick Pass를 실행하면 Resume 프롬프트와 보고서가 풍부해집니다.
       </NoticeBanner>
     );
   }

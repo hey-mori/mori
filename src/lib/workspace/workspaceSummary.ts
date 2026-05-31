@@ -186,7 +186,7 @@ export function buildWorkspaceSurfaceLinks(
     {
       view: "reports",
       label: "Reports",
-      detail: "세션 리포트와 Resume 프롬프트",
+      detail: "세션 보고서와 Resume 프롬프트",
     },
     {
       view: "memory",

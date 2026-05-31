@@ -651,7 +651,7 @@ function buildSidebarSessionMenuItems({
     },
     {
       id: "open-report",
-      label: "리포트 열기",
+      label: "보고서 열기",
       icon: ScrollText,
       onSelect: () => onOpenTab("report"),
     },

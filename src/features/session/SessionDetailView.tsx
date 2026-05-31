@@ -38,7 +38,7 @@ import { OverviewView } from "./OverviewView";
  *   - **흐름**    — Timeline + conversation thread
  *   - **증거**    — imported sources / evidence
  *   - **검토**    — issues / decisions / next actions to confirm
- *   - **리포트**  — handoff outputs: continue-context, report, .mori export
+ *   - **보고서**  — handoff outputs: continue-context, report, .mori export
  */
 export function SessionDetailView() {
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -127,7 +127,7 @@ const SESSION_TABS: SessionTabSpec[] = [
   { id: "reconstruct", label: "재구성", icon: Workflow },
   { id: "evidence", label: "자료", icon: FileText },
   { id: "insights", label: "검토", icon: Sparkles },
-  { id: "report", label: "리포트", icon: ScrollText },
+  { id: "report", label: "보고서", icon: ScrollText },
 ];
 
 /**
@@ -136,7 +136,7 @@ const SESSION_TABS: SessionTabSpec[] = [
  *  - 흐름:    timeline event count
  *  - 증거:    imported source count
  *  - 검토:    open issues + unconfirmed decisions + pending next actions
- *  - 리포트:  no count (it is an output, not a counted collection)
+ *  - 보고서:  no count (it is an output, not a counted collection)
  *
  * A zero count is hidden rather than rendered as "(0)" so the bar stays calm
  * on a fresh session.

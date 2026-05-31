@@ -30,8 +30,8 @@ import {
  * Pure orientation, no outputs: it answers "what is this session, how big is
  * it, and where do I go next?" The work-unit identity + a one-line summary sit
  * up top, a calm metric strip gives scale, and a row of navigation cards jumps
- * into 흐름 / 증거 / 검토 / 리포트. Handoff artifacts (continue-context, report,
- * .mori export) live in the 리포트 tab, not here.
+ * into 흐름 / 증거 / 검토 / 보고서. Handoff artifacts (continue-context, report,
+ * .mori export) live in the 보고서 tab, not here.
  */
 export function OverviewView() {
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -192,8 +192,8 @@ export function OverviewView() {
             />
             <OverviewNavCard
               icon={ScrollText}
-              label="리포트"
-              description="이어가기 컨텍스트 · 리포트 · .mori 내보내기"
+              label="보고서"
+              description="이어가기 컨텍스트 · 보고서 · .mori 내보내기"
               onOpen={() => setSessionTab("report")}
             />
           </nav>

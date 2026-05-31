@@ -143,7 +143,7 @@ export const PRODUCT_STAGE_CATALOG: Record<ProductStage, ProductStageDescriptor>
   report: {
     id: "report",
     label: "Report / Resume",
-    description: "Markdown 리포트와 .mori v0 JSON 패키지를 내보냅니다.",
+    description: "Markdown 보고서와 .mori v0 JSON 패키지를 내보냅니다.",
     requiredFeatureIds: ["reports.export.markdown"],
     optionalFeatureIds: [
       "reports.export.moriPackage",
@@ -276,7 +276,7 @@ export const PRODUCT_SURFACES: Record<ProductSurfaceId, ProductSurfaceDescriptor
   reports: {
     id: "reports",
     label: "Reports",
-    description: "Resume prompt + Markdown 리포트 + .mori v0 JSON.",
+    description: "Resume prompt + Markdown 보고서 + .mori v0 JSON.",
     ownedFeatureIds: [
       "reports.export.markdown",
       "reports.export.pdf",

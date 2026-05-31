@@ -51,6 +51,6 @@ export function describeRetentionFootprint(mode: RecordingMode): string {
     case "full":
       return "원본 전체 보관 · 가장 많은 공간 사용";
     case "ephemeral":
-      return "리포트만 보관 · 원본 자동 삭제";
+      return "보고서만 보관 · 원본 자동 삭제";
   }
 }

@@ -244,18 +244,18 @@ function buildFocusItems(
     },
     {
       key: "report",
-      title: "인계 리포트",
+      title: "인계 보고서",
       detail:
         stats.savedReports > 0
-          ? "저장된 리포트 패키지가 있습니다."
+          ? "저장된 보고서 패키지가 있습니다."
           : rows.length > 0
-            ? "최근 세션에서 리포트를 만들 수 있습니다."
-            : "세션이 생기면 리포트를 만들 수 있습니다.",
+            ? "최근 세션에서 보고서를 만들 수 있습니다."
+            : "세션이 생기면 보고서를 만들 수 있습니다.",
       count: stats.savedReports,
       statusLabel:
         stats.savedReports > 0 ? `${stats.savedReports}개` : rows.length > 0 ? "작성 가능" : "대기",
       tone: stats.savedReports > 0 ? "success" : "neutral",
-      actionLabel: "리포트",
+      actionLabel: "보고서",
       destination: "report",
       targetSessionId: reportTarget,
       enabled: Boolean(reportTarget),
