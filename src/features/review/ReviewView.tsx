@@ -5,8 +5,6 @@ import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
-import { issueStatusLabels, priorityLabels } from "../../domain/constants";
 import type { Decision, Issue, IssueStatus, NextAction, Priority } from "../../domain/types";
 import {
   selectHasRealAnalysis,
@@ -129,6 +127,10 @@ export function ReviewView() {
     setCurrentView("timeline");
   }
 
+  function toggleSelection(next: ReviewSelection) {
+    setSelection(isSameReviewSelection(activeSelection, next) ? null : next);
+  }
+
   const actionBar = (
     <ActionBar
       label="검토"
@@ -219,7 +221,7 @@ export function ReviewView() {
                   key={issue.id}
                   issue={issue}
                   selected={activeSelection.kind === "issue" && activeSelection.issueId === issue.id}
-                  onSelect={() => setSelection({ kind: "issue", issueId: issue.id })}
+                  onSelect={() => toggleSelection({ kind: "issue", issueId: issue.id })}
                 />
             ))
           )}
@@ -237,7 +239,7 @@ export function ReviewView() {
                   activeSelection.kind === "decision" &&
                   activeSelection.decisionId === decision.id
                 }
-                onSelect={() => setSelection({ kind: "decision", decisionId: decision.id })}
+                onSelect={() => toggleSelection({ kind: "decision", decisionId: decision.id })}
               />
             ))
           )}
@@ -255,7 +257,7 @@ export function ReviewView() {
                   activeSelection.kind === "nextAction" &&
                   activeSelection.nextActionId === action.id
                 }
-                onSelect={() => setSelection({ kind: "nextAction", nextActionId: action.id })}
+                onSelect={() => toggleSelection({ kind: "nextAction", nextActionId: action.id })}
               />
             ))
           )}
@@ -323,14 +325,14 @@ export function ReviewView() {
           <div className="review-inspector-shell" aria-label="선택 항목 상세">
             <header className="review-inspector-shell-head">
               <span>선택 항목</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={X}
-                title="상세 닫기"
+              <button
+                type="button"
+                className="review-inspector-close"
                 aria-label="상세 닫기"
                 onClick={() => setSelection(null)}
-              />
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
             </header>
             {aside}
           </div>
@@ -374,12 +376,14 @@ function ColumnEmpty({ label }: { label: string }) {
 function ReviewBoardCard({
   title,
   subtitle,
+  kindLabel,
   badges,
   selected,
   onSelect,
 }: {
   title: string;
   subtitle?: string;
+  kindLabel: string;
   badges: ReactNode;
   selected: boolean;
   onSelect: () => void;
@@ -389,15 +393,18 @@ function ReviewBoardCard({
       className={`review-issue-card ${selected ? "is-selected" : ""}`}
       aria-current={selected ? "true" : undefined}
     >
-      <BaseObjectRow
-        title={title}
-        subtitle={subtitle}
-        status={badges}
-        selected={selected}
-        density="compact"
+      <button
+        type="button"
+        className="review-board-card-button"
+        aria-pressed={selected}
+        aria-label={title}
         onClick={onSelect}
-        ariaLabel={title}
-      />
+      >
+        <span className="review-card-kicker">{kindLabel}</span>
+        <span className="review-card-title">{title}</span>
+        {subtitle ? <span className="review-card-summary">{subtitle}</span> : null}
+        <span className="review-card-footer">{badges}</span>
+      </button>
     </article>
   );
 }
@@ -415,10 +422,11 @@ function IssueBoardCard({
     <ReviewBoardCard
       title={issue.title}
       subtitle={issue.description}
+      kindLabel="검토 이슈"
       badges={
         <>
-          <Badge tone={issueStatusTone(issue.status)}>{issueStatusLabels[issue.status]}</Badge>
-          <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
+          <Badge tone={issueStatusTone(issue.status)}>상태 {ISSUE_STATUS_CARD_LABELS[issue.status]}</Badge>
+          <Badge tone={priorityTone(issue.priority)}>우선 {PRIORITY_CARD_LABELS[issue.priority]}</Badge>
           {issue.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
         </>
       }
@@ -441,12 +449,13 @@ function DecisionBoardCard({
     <ReviewBoardCard
       title={decision.title}
       subtitle={decision.decision}
+      kindLabel="결정 후보"
       badges={
         <>
           <Badge tone={decision.confirmed ? "green" : "orange"}>
-            {decision.confirmed ? "확정" : "미확정"}
+            상태 {decision.confirmed ? "확정" : "검토 필요"}
           </Badge>
-          <Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge>
+          <Badge tone={priorityTone(decision.importance)}>중요 {PRIORITY_CARD_LABELS[decision.importance]}</Badge>
           {decision.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
         </>
       }
@@ -469,10 +478,11 @@ function NextActionBoardCard({
   return (
     <ReviewBoardCard
       title={action.title}
+      kindLabel="다음 작업"
       badges={
         <>
-          <Badge tone={done ? "green" : "orange"}>{done ? "완료" : "진행"}</Badge>
-          <Badge tone={priorityTone(action.priority)}>{priorityLabels[action.priority]}</Badge>
+          <Badge tone={done ? "green" : "orange"}>상태 {done ? "완료" : "할 일"}</Badge>
+          <Badge tone={priorityTone(action.priority)}>우선 {PRIORITY_CARD_LABELS[action.priority]}</Badge>
           {action.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
         </>
       }
@@ -491,6 +501,27 @@ const ISSUE_STATUS_RANK: Record<IssueStatus, number> = {
   resolved: 3,
 };
 const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
+const ISSUE_STATUS_CARD_LABELS: Record<IssueStatus, string> = {
+  open: "열림",
+  inProgress: "진행",
+  resolved: "해결",
+  watching: "관찰",
+};
+const PRIORITY_CARD_LABELS: Record<Priority, string> = {
+  high: "높음",
+  medium: "중간",
+  low: "낮음",
+};
+
+function isSameReviewSelection(a: ReviewSelection, b: ReviewSelection): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "issue" && b.kind === "issue") return a.issueId === b.issueId;
+  if (a.kind === "decision" && b.kind === "decision") return a.decisionId === b.decisionId;
+  if (a.kind === "nextAction" && b.kind === "nextAction") {
+    return a.nextActionId === b.nextActionId;
+  }
+  return a.kind === "none";
+}
 
 function sortIssues(issues: Issue[]): Issue[] {
   return [...issues].sort(

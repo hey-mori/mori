@@ -2613,13 +2613,30 @@ td a {
 /* Board columns read as a calm bucket — no nested card chrome, the header
    names the bucket and the cards sit directly under it. */
 .review-issue-column {
+  --review-column-tone: var(--muted-2);
+  --review-column-tint: var(--gray-50);
   display: grid;
   gap: var(--base-space-2);
   min-width: 0;
-  padding: var(--base-space-2);
+  padding: var(--base-space-3);
   border: 1px solid var(--base-border);
   border-radius: var(--radius-md);
-  background: var(--base-surface-subtle);
+  background: var(--gray-50);
+}
+
+.review-issue-column.review-tone-orange {
+  --review-column-tone: var(--orange);
+  --review-column-tint: var(--orange-50);
+}
+
+.review-issue-column.review-tone-blue {
+  --review-column-tone: var(--blue);
+  --review-column-tint: var(--blue-50);
+}
+
+.review-issue-column.review-tone-green {
+  --review-column-tone: var(--green);
+  --review-column-tint: var(--green-50);
 }
 
 .review-issue-column > header {
@@ -2647,15 +2664,15 @@ td a {
 }
 
 .review-issue-column.review-tone-orange .review-issue-column-dot {
-  background: var(--orange);
+  background: var(--review-column-tone);
 }
 
 .review-issue-column.review-tone-blue .review-issue-column-dot {
-  background: var(--blue);
+  background: var(--review-column-tone);
 }
 
 .review-issue-column.review-tone-green .review-issue-column-dot {
-  background: var(--green);
+  background: var(--review-column-tone);
 }
 
 .review-issue-column-label strong {
@@ -2694,66 +2711,87 @@ td a {
 
 .review-issue-card {
   border: 1px solid var(--base-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--base-surface);
   transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05);
 }
 
 .review-issue-card:hover {
   border-color: var(--base-border-strong);
-  background: var(--panel-soft);
+  background: var(--base-surface);
 }
 
 .review-issue-card.is-selected {
-  border-color: var(--base-accent);
-  background: var(--base-accent-soft);
-  box-shadow: 0 0 0 1px var(--base-accent);
+  border-color: var(--review-column-tone);
+  background: var(--base-surface);
+  box-shadow: 0 0 0 2px var(--review-column-tint), 0 1px 2px rgba(17, 24, 39, 0.05);
 }
 
-.review-issue-card .base-object-row {
+.review-board-card-button {
+  display: grid;
   gap: var(--base-space-2);
-  min-height: 58px;
-  padding: var(--base-space-2);
-}
-
-.review-issue-card .base-object-row.is-selected {
+  width: 100%;
+  min-height: 112px;
+  padding: var(--base-space-3);
+  border: 0;
   background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.review-issue-card .base-object-row-title {
-  font-size: 12.5px;
-  font-weight: 750;
-  line-height: 1.25;
+.review-board-card-button:focus-visible {
+  outline: 2px solid var(--review-column-tone);
+  outline-offset: 2px;
 }
 
-.review-issue-card .base-object-row-subtitle {
-  font-size: 11.5px;
-  line-height: 1.35;
-  -webkit-line-clamp: 2;
+.review-card-kicker {
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.review-card-title {
   display: -webkit-box;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.32;
   -webkit-box-orient: vertical;
-  white-space: normal;
+  -webkit-line-clamp: 2;
 }
 
-.review-issue-card .base-object-row-aside {
-  align-items: flex-end;
-  gap: var(--base-space-1);
-  max-width: 88px;
+.review-card-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.review-issue-card .base-object-row-status {
-  justify-content: flex-end;
+.review-card-footer {
+  display: flex;
+  align-items: center;
+  align-self: end;
   flex-wrap: wrap;
   gap: var(--base-space-1);
+  margin-top: var(--base-space-1);
 }
 
 .review-issue-card .pill {
-  padding: 2px 6px;
+  padding: 2px 7px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: transparent;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 750;
+  line-height: 1.35;
 }
 
 .review-issue-card .pill.tone-red {
@@ -3222,6 +3260,30 @@ td a {
   color: var(--muted);
   font-size: 12px;
   font-weight: 750;
+}
+
+.review-inspector-close {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.review-inspector-close:hover {
+  border-color: var(--line);
+  background: var(--panel-soft);
+  color: var(--text);
+}
+
+.review-inspector-close:focus-visible {
+  outline: 2px solid var(--base-border-focus);
+  outline-offset: 2px;
 }
 
 .review-inspector-shell > .review-detail {
