@@ -1148,13 +1148,11 @@
   color: var(--base-accent);
 }
 
+/* Flat mode toggle: no box, so the header reads as one uniform icon row and the
+   trailing close button keeps clear room from the panel edge. */
 .workbench-panel-modes {
   display: inline-flex;
-  margin-right: 4px;
-  padding: 2px;
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-sm);
-  background: var(--base-surface-subtle);
+  gap: 2px;
 }
 
 .workbench-panel-modes button,
@@ -1171,7 +1169,7 @@
 }
 
 .workbench-panel-modes button.is-active {
-  background: var(--base-surface);
+  background: var(--base-accent-soft);
   color: var(--base-accent);
 }
 
