@@ -76,7 +76,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--base-space-6);
+  gap: var(--base-space-5);
 }
 
 .lab-spine {
@@ -151,7 +151,7 @@
 }
 
 .lab-moment-body {
-  padding-bottom: var(--base-space-5);
+  padding-bottom: var(--base-space-4);
   min-width: 0;
 }
 
@@ -925,7 +925,7 @@
 .lab-pulse {
   display: flex;
   flex-direction: column;
-  gap: var(--base-space-5);
+  gap: var(--base-space-4);
 }
 
 .lab-pulse-head {
@@ -1443,4 +1443,17 @@ button.lab-pulse-stat {
 
 .lab-lineage-led svg {
   color: var(--muted-2);
+}
+
+/* ── lens header discipline ──────────────────────────────────────────────── */
+/* The lens switcher already names the active lens, so the per-lens title is
+   chrome: keep it as a quiet section label and let the content carry contrast. */
+.lab-pulse-head h4,
+.lab-phases-head h4,
+.lab-causal-head h4,
+.lab-lineage-headbar h4 {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.01em;
 }
