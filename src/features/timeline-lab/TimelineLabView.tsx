@@ -125,13 +125,13 @@ export function TimelineLabView() {
             </button>
           </div>
         ) : (
-          <>
+          <div key={mode} className="lab-lens-fade">
             {mode === "narrative" ? <NarrativeStoryView view={filtered} /> : null}
             {mode === "phases" ? <PhaseFlowView view={filtered} /> : null}
             {mode === "causal" ? <CausalMapView view={filtered} /> : null}
             {mode === "pulse" ? <PulseView view={filtered} onFocusKind={focusKind} /> : null}
             {mode === "lineage" ? <DecisionLineageView view={filtered} /> : null}
-          </>
+          </div>
         )}
       </div>
     </div>

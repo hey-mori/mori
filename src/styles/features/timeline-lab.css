@@ -1457,3 +1457,19 @@ button.lab-pulse-stat {
   color: var(--muted);
   letter-spacing: 0.01em;
 }
+
+/* ── lens motion ─────────────────────────────────────────────────────────── */
+/* A brief cross-fade on lens switch so the five views read as camera angles on
+   one session, not five reloads. Keyed by mode, so it replays on each switch. */
+.lab-lens-fade {
+  animation: labLensIn 140ms ease;
+}
+
+@keyframes labLensIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-lens-fade { animation: none; }
+}
