@@ -503,7 +503,57 @@ export function WorkbenchView() {
     setDrafts((current) => ({ ...current, [focusedMeta.sessionId]: value }));
   };
   const hotClass = (key: string) => (dropHint === key ? " is-hot" : "");
-  const readDragId = (event: React.DragEvent) => event.dataTransfer.getData("text/plain");
+
+  // Pointer-based panel drag. Native HTML5 drag-and-drop proved unreliable in
+  // the app shell, so we track the pointer ourselves: grab the grip, hit-test
+  // the drop zones (data-drop) under the cursor on each move, and apply on
+  // release. Works with mouse, trackpad, and touch, and never depends on a
+  // re-render surviving the gesture.
+  const resolveDrop = (
+    x: number,
+    y: number,
+  ): { hint: string; apply: (panelId: string) => void } | null => {
+    if (typeof document === "undefined") return null;
+    const el = document.elementFromPoint(x, y);
+    const zone = el && "closest" in el ? (el as Element).closest("[data-drop]") : null;
+    const raw = zone?.getAttribute("data-drop");
+    if (!raw) return null;
+    const [type, a, b] = raw.split(":");
+    if (type === "newcol") {
+      const index = Number(a);
+      return { hint: "col:" + index, apply: (id) => relocatePanel(id, { kind: "newColumn", index }) };
+    }
+    if (type === "col") {
+      return { hint: "colz:" + a, apply: (id) => relocatePanel(id, { kind: "column", columnId: a! }) };
+    }
+    if (type === "panelat") {
+      const index = Number(b);
+      return { hint: "vg:" + a + ":" + index, apply: (id) => dropPanelAt(id, a!, index) };
+    }
+    return null;
+  };
+
+  const startPanelDrag = (event: React.PointerEvent, panelId: string) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    setFocusedPanelId(panelId);
+    setDragPanelId(panelId);
+    let drop: { hint: string; apply: (panelId: string) => void } | null = null;
+    const onMove = (move: PointerEvent) => {
+      drop = resolveDrop(move.clientX, move.clientY);
+      setDropHint(drop ? drop.hint : null);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      if (drop) drop.apply(panelId);
+      endDrag();
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
 
   // Cross-session attention: only placed panels with a real open issue or
   // unconfirmed decision, deduped by session and most urgent first.
@@ -799,30 +849,16 @@ export function WorkbenchView() {
             <div
               className={`workbench-col-drop is-lead${hotClass("col:0")}`}
               aria-hidden={!dragPanelId}
-              onDragOver={(event) => {
-                if (!dragPanelId) return;
-                event.preventDefault();
-                setDropHint("col:0");
-              }}
-              onDrop={(event) => {
-                const id = readDragId(event);
-                if (id) relocatePanel(id, { kind: "newColumn", index: 0 });
-              }}
+              data-drop="newcol:0"
             >
               <Plus size={14} aria-hidden="true" />
             </div>
             {columns.map((col, colIndex) => (
               <Fragment key={col.id}>
                 <div
-                  className="workbench-col"
+                  className={`workbench-col${dropHint === "colz:" + col.id ? " is-droptarget" : ""}`}
                   style={{ flexGrow: col.flex, flexBasis: 0 }}
-                  onDragOver={(event) => {
-                    if (dragPanelId) event.preventDefault();
-                  }}
-                  onDrop={(event) => {
-                    const id = event.dataTransfer.getData("text/plain");
-                    if (id) relocatePanel(id, { kind: "column", columnId: col.id });
-                  }}
+                  data-drop={"col:" + col.id}
                 >
                   {col.panels.map((panel, panelIndex) => {
                     const meta = sessionsById.get(panel.sessionId) ?? null;
@@ -837,8 +873,7 @@ export function WorkbenchView() {
                           focused={panel.id === focusedPanelId}
                           dragging={panel.id === dragPanelId}
                           onFocus={() => setFocusedPanelId(panel.id)}
-                          onDragStart={() => setDragPanelId(panel.id)}
-                          onDragEnd={endDrag}
+                          onGripPointerDown={(event) => startPanelDrag(event, panel.id)}
                           onEdgeAdd={(side) =>
                             setLauncher(edgeTarget(side, col.id, colIndex, panelIndex))
                           }
@@ -854,18 +889,8 @@ export function WorkbenchView() {
                             className={`workbench-vgutter${hotClass("vg:" + col.id + ":" + (panelIndex + 1))}`}
                             role="separator"
                             aria-orientation="horizontal"
+                            data-drop={"panelat:" + col.id + ":" + (panelIndex + 1)}
                             onMouseDown={startVResize(col.id, panelIndex)}
-                            onDragOver={(event) => {
-                              if (!dragPanelId) return;
-                              event.preventDefault();
-                              event.stopPropagation();
-                              setDropHint("vg:" + col.id + ":" + (panelIndex + 1));
-                            }}
-                            onDrop={(event) => {
-                              event.stopPropagation();
-                              const id = readDragId(event);
-                              if (id) dropPanelAt(id, col.id, panelIndex + 1);
-                            }}
                           />
                         ) : null}
                       </Fragment>
@@ -877,16 +902,8 @@ export function WorkbenchView() {
                     className={`workbench-gutter${hotClass("col:" + (colIndex + 1))}`}
                     role="separator"
                     aria-orientation="vertical"
+                    data-drop={"newcol:" + (colIndex + 1)}
                     onMouseDown={startResize(colIndex)}
-                    onDragOver={(event) => {
-                      if (!dragPanelId) return;
-                      event.preventDefault();
-                      setDropHint("col:" + (colIndex + 1));
-                    }}
-                    onDrop={(event) => {
-                      const id = readDragId(event);
-                      if (id) relocatePanel(id, { kind: "newColumn", index: colIndex + 1 });
-                    }}
                   />
                 ) : null}
               </Fragment>
@@ -895,15 +912,7 @@ export function WorkbenchView() {
             <div
               className={`workbench-col-drop${hotClass("col:" + columns.length)}`}
               aria-hidden={!dragPanelId}
-              onDragOver={(event) => {
-                if (!dragPanelId) return;
-                event.preventDefault();
-                setDropHint("col:" + columns.length);
-              }}
-              onDrop={(event) => {
-                const id = readDragId(event);
-                if (id) relocatePanel(id, { kind: "newColumn", index: columns.length });
-              }}
+              data-drop={"newcol:" + columns.length}
             >
               <Plus size={15} aria-hidden="true" />
             </div>
@@ -1592,8 +1601,7 @@ function SessionPanel({
   focused,
   dragging,
   onFocus,
-  onDragStart,
-  onDragEnd,
+  onGripPointerDown,
   onEdgeAdd,
   onMode,
   onReplace,
@@ -1610,8 +1618,7 @@ function SessionPanel({
   focused: boolean;
   dragging: boolean;
   onFocus: () => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
+  onGripPointerDown: (event: React.PointerEvent) => void;
   onEdgeAdd: (side: EdgeSide) => void;
   onMode: (mode: PanelMode) => void;
   onReplace: () => void;
@@ -1660,19 +1667,9 @@ function SessionPanel({
       <header className="workbench-panel-head">
         <span
           className="workbench-panel-grip"
-          draggable
           role="button"
-          aria-label="패널 이동 (끌어서 다른 열로)"
-          // Don't let the grip's mousedown bubble to the panel's focus handler:
-          // a focus-driven re-render at mousedown cancels the native drag start.
-          onMouseDown={(event) => event.stopPropagation()}
-          onDragStart={(event) => {
-            event.dataTransfer.setData("text/plain", panel.id);
-            event.dataTransfer.effectAllowed = "move";
-            onFocus();
-            onDragStart();
-          }}
-          onDragEnd={onDragEnd}
+          aria-label="패널 이동 (끌어서 옮기기)"
+          onPointerDown={onGripPointerDown}
         >
           <GripVertical size={14} aria-hidden="true" />
         </span>
