@@ -105,7 +105,7 @@ export function deriveSavedReportAvailability(reportCount: number): SavedReportA
       hasAny: false,
       label: "저장된 보고서 없음",
       tone: "gray",
-      emptyHint: "Reports 화면에서 Markdown을 복사하거나 .mori v0 JSON을 내보내면 목록에 추가됩니다.",
+      emptyHint: "보고서 화면에서 Markdown을 복사하거나 .mori v0 JSON을 내보내면 목록에 추가됩니다.",
     };
   }
   return {

@@ -32,8 +32,8 @@ export function SavedReportsCard({
           disabled={!hasCurrentReportSurface}
           title={
             hasCurrentReportSurface
-              ? "Reports 페이지를 엽니다."
-              : "Reports 페이지는 다음 마일스톤에서 제공됩니다."
+              ? "보고서 페이지를 엽니다."
+              : "보고서 페이지는 다음 마일스톤에서 제공됩니다."
           }
         >
           Reports 열기

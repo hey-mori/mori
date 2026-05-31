@@ -60,7 +60,7 @@ export function QueryableMemoryCard({
   return (
     <BaseSection
       className="memory-search"
-      ariaLabel="Queryable Memory"
+      ariaLabel="메모리 검색"
       title={
         <span className="memory-search-title">
           <Search size={14} aria-hidden="true" /> 메모리 검색

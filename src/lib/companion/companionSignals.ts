@@ -257,7 +257,7 @@ function collectCompanionSignals(input: CompanionSignalInput): CompanionSignal[]
       linkedItemIds: weakIssues.map((issue) => issue.id),
       evidenceRefs: uniqueIds(weakIssues.flatMap((issue) => issue.sourceEventIds)),
       basis: "inferred",
-      actionLabel: "Review에서 확인",
+      actionLabel: "검토에서 확인",
       destination: "review",
       audience: "real",
     });
@@ -377,7 +377,7 @@ function collectCompanionSignals(input: CompanionSignalInput): CompanionSignal[]
     base: {
       id: "companion-ready-to-report",
       type: "ready_to_report",
-      title: "리포트 만들기 가능",
+      title: "보고서 만들기 가능",
       readyMessage: "분석이 끝났습니다. Markdown / .mori 패키지로 정리할 수 있습니다.",
       actionLabel: "보고서 만들기",
       audience: "real",

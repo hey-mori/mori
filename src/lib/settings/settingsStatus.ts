@@ -167,14 +167,14 @@ export function getPrivacyPolicy(): PrivacyPolicyRow[] {
     },
     {
       id: "client-safe-report-mode",
-      label: "Client-safe 리포트",
+      label: "Client-safe 보고서",
       detail: "보고서에서 켜면 원문, 소스 세부 정보, 파일 경로를 내보내기에서 제외합니다.",
       state: "default",
     },
     {
       id: "robust-redaction",
       label: "자동 PII redaction",
-      detail: "리포트 내보내기용 자동 마스킹은 예정입니다. 현재는 섹션 단위 내보내기 제어를 제공합니다.",
+      detail: "보고서 내보내기용 자동 마스킹은 예정입니다. 현재는 섹션 단위 내보내기 제어를 제공합니다.",
       state: "planned",
     },
   ];
@@ -283,13 +283,13 @@ export function getStorageStatusRows({
       hint:
         packageDraftCount > 0
           ? `브라우저 드래프트에 ${packageDraftCount}건의 패키지가 있습니다.`
-          : "Reports 화면의 \".mori v0 JSON 내보내기\" 버튼으로 생성합니다.",
+          : "보고서 화면의 \".mori v0 JSON 내보내기\" 버튼으로 생성합니다.",
       badgeTone: packageDraftCount > 0 ? "purple" : "gray",
     },
     {
       id: "markdown-report",
-      label: "Markdown 리포트",
-      description: "Reports 화면에서 Markdown으로 복사 / .md로 다운로드합니다.",
+      label: "Markdown 보고서",
+      description: "보고서 화면에서 Markdown으로 복사 / .md로 다운로드합니다.",
       state: "active",
       hint: "PDF / HTML 내보내기는 다음 마일스톤입니다.",
       badgeTone: "green",

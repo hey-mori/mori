@@ -185,12 +185,12 @@ export function buildWorkspaceSurfaceLinks(
     },
     {
       view: "reports",
-      label: "Reports",
+      label: "보고서",
       detail: "세션 보고서와 Resume 프롬프트",
     },
     {
       view: "memory",
-      label: "Project Memory",
+      label: "프로젝트 메모리",
       detail: "누적된 프로젝트 메모리",
     },
   ];
