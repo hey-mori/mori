@@ -302,7 +302,7 @@ function ImportReviewSummaryPanel({
   summary: ReturnType<typeof buildImportReviewSummary>;
 }) {
   return (
-    <section className="import-review-summary" aria-label="Import review summary">
+    <section className="import-review-summary" aria-label="가져오기 검토 요약">
       <header>
         <div>
           <span className="import-review-summary-kicker">반영 전 검토</span>
@@ -359,7 +359,7 @@ function ReviewFooter({
   onCancel: () => void;
 }) {
   return (
-    <footer className="review-footer" role="region" aria-label="Apply review">
+    <footer className="review-footer" role="region" aria-label="검토 반영">
       <div className="review-footer-counts">
         <ListChecks size={14} aria-hidden="true" />
         <span>
@@ -448,7 +448,7 @@ function ReviewDraftMetaStrip({ meta }: { meta: ReviewDraftMeta }) {
   const summary = meta.sourceImportSummary;
   if (cells.length === 0 && !summary) return null;
   return (
-    <section className="review-meta-strip" role="status" aria-label="Import meta">
+    <section className="review-meta-strip" role="status" aria-label="가져오기 메타데이터">
       {summary ? (
         <span
           className={`review-meta-source-status tone-${getConnectorSourceImportBadgeTone(summary)}`}

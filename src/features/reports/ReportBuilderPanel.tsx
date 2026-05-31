@@ -121,7 +121,7 @@ export function ReportBuilderPanel({
   }
 
   return (
-    <aside id={id} className="report-builder-panel base-scroll" aria-label="Report builder">
+    <aside id={id} className="report-builder-panel base-scroll" aria-label="보고서 작성">
       <header className="report-builder-head">
         <div>
           <h2>보고서 생성기</h2>
@@ -281,7 +281,7 @@ export function ReportBuilderPanel({
           </ul>
         ) : null}
         {previewVisible ? (
-          <pre className="report-preview base-scroll" aria-label="Markdown preview">
+          <pre className="report-preview base-scroll" aria-label="Markdown 미리보기">
             {payload.markdown}
           </pre>
         ) : null}

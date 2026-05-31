@@ -40,7 +40,7 @@ export function SessionSummaryStrip({
   onOpenAttentionMemory,
 }: SessionSummaryStripProps) {
   return (
-    <section className="session-summary-strip" aria-label="Session summary">
+    <section className="session-summary-strip" aria-label="세션 요약">
       <header>
         <h2>세션 요약</h2>
         <Badge tone={dataBasisTone}>{dataBasis}</Badge>
@@ -54,7 +54,7 @@ export function SessionSummaryStrip({
         <Metric label="다음 액션" value={String(nextActionCount)} />
       </dl>
       {wrapUp ? (
-        <div className="session-wrap-up" aria-label="Continue-later checklist">
+        <div className="session-wrap-up" aria-label="이어가기 체크리스트">
           <div className="session-wrap-up-main">
             <header>
               <h3>세션 마무리 체크리스트</h3>
@@ -117,7 +117,7 @@ function UnresolvedPreview({
   }
 
   return (
-    <div className="session-wrap-up-unresolved" aria-label="Unresolved work preview">
+    <div className="session-wrap-up-unresolved" aria-label="미해결 작업 미리보기">
       <header>
         <strong>다음 세션 전에 확인 필요</strong>
         <Badge tone="orange">미처리 {unresolved.total}건</Badge>

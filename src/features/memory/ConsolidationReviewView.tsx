@@ -408,7 +408,7 @@ export function ConsolidationReviewView({
       />
 
       <div className="consolidation-review-layout">
-        <section className="consolidation-review-list" aria-label="Proposal groups">
+        <section className="consolidation-review-list" aria-label="제안 그룹">
           {KIND_ORDER.map((kind) => {
             const entries = grouped.get(kind) ?? [];
             if (entries.length === 0) return null;
