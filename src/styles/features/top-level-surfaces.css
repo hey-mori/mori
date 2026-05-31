@@ -1040,8 +1040,8 @@
   display: inline-grid;
   flex-shrink: 0;
   place-items: center;
-  width: 16px;
-  height: 24px;
+  width: 20px;
+  height: 28px;
   color: var(--base-text-muted);
   cursor: grab;
   opacity: 0.55;
@@ -1053,6 +1053,11 @@
 
 .workbench-panel-grip:active {
   cursor: grabbing;
+}
+
+/* The icon must not become its own drag target; the grip span owns the drag. */
+.workbench-panel-grip svg {
+  pointer-events: none;
 }
 
 .workbench-panel-id {

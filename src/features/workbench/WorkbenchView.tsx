@@ -1655,7 +1655,7 @@ function SessionPanel({
       style={{ flexGrow: collapsed ? 0 : flex, flexBasis: collapsed ? "auto" : 0 }}
       data-wb-panel={panel.id}
       aria-label={meta.title}
-      onMouseDownCapture={onFocus}
+      onMouseDown={onFocus}
     >
       <header className="workbench-panel-head">
         <span
@@ -1663,9 +1663,13 @@ function SessionPanel({
           draggable
           role="button"
           aria-label="패널 이동 (끌어서 다른 열로)"
+          // Don't let the grip's mousedown bubble to the panel's focus handler:
+          // a focus-driven re-render at mousedown cancels the native drag start.
+          onMouseDown={(event) => event.stopPropagation()}
           onDragStart={(event) => {
             event.dataTransfer.setData("text/plain", panel.id);
             event.dataTransfer.effectAllowed = "move";
+            onFocus();
             onDragStart();
           }}
           onDragEnd={onDragEnd}
