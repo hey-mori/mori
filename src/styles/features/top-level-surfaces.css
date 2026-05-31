@@ -1086,6 +1086,19 @@
   align-items: center;
 }
 
+/* Secondary panel actions stay out of the way until the panel is focused or
+   hovered, so narrow panels keep room for the title. Focusing a panel by
+   keyboard (1–9) also reveals them. */
+.workbench-panel-actions-extra {
+  display: none;
+  gap: 2px;
+}
+
+.workbench-panel:hover .workbench-panel-actions-extra,
+.workbench-panel.is-focused .workbench-panel-actions-extra {
+  display: inline-flex;
+}
+
 .workbench-panel-modes {
   display: inline-flex;
   margin-right: 4px;

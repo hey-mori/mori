@@ -1742,8 +1742,10 @@ function SessionPanel({
             label={collapsed ? "패널 펼치기" : "패널 접기"}
             onClick={onToggleCollapse}
           />
-          <IconAction icon={RefreshCcw} label="세션 교체" onClick={onReplace} />
-          <IconAction icon={ArrowUpRight} label="작업 공간에서 열기" onClick={onOpen} />
+          <span className="workbench-panel-actions-extra">
+            <IconAction icon={RefreshCcw} label="세션 교체" onClick={onReplace} />
+            <IconAction icon={ArrowUpRight} label="작업 공간에서 열기" onClick={onOpen} />
+          </span>
           <IconAction icon={X} label="패널 닫기" onClick={onClose} />
         </div>
       </header>
