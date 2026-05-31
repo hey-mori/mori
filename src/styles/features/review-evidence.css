@@ -2424,13 +2424,75 @@ td a {
 
 /* Issue Garden */
 
+.review-tab-canvas {
+  padding-top: var(--base-space-4);
+}
+
+.review-tab-canvas .session-tab-main {
+  gap: var(--base-space-5);
+}
+
 .review-issue-board {
   display: grid;
-  gap: 10px;
-  padding: 12px 14px 14px;
+  gap: var(--base-space-3);
+  min-width: 0;
+}
+
+.review-board-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--base-space-4);
+  min-width: 0;
+  padding: 0;
+}
+
+.review-board-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.review-board-title strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.review-board-title span {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.review-board-metrics {
+  display: inline-grid;
+  grid-template-columns: repeat(4, minmax(48px, auto));
+  gap: var(--base-space-1);
+  margin: 0;
+}
+
+.review-board-metrics div {
+  display: grid;
+  gap: 1px;
+  min-width: 48px;
+  padding: var(--base-space-1) var(--base-space-2);
   border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-lg);
+  border-radius: var(--radius-sm);
   background: var(--base-surface);
+}
+
+.review-board-metrics dt {
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.review-board-metrics dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 /* Issue Garden filter bar */
@@ -2519,7 +2581,9 @@ td a {
    widths. Narrow-width collapses (2 / 1 column) inherit from the base
    .review-issue-board-columns media queries below. */
 .review-board-columns {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: var(--base-space-3);
+  align-items: start;
 }
 
 /* The board lives inside the shell's constrained main column, so it drops to a
@@ -2535,71 +2599,182 @@ td a {
   .review-issue-board-columns {
     grid-template-columns: 1fr;
   }
+
+  .review-board-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .review-board-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 /* Board columns read as a calm bucket — no nested card chrome, the header
    names the bucket and the cards sit directly under it. */
 .review-issue-column {
   display: grid;
-  gap: 8px;
-  padding: 0 4px;
+  gap: var(--base-space-2);
   min-width: 0;
+  padding: var(--base-space-2);
+  border: 1px solid var(--base-border);
+  border-radius: var(--radius-md);
+  background: var(--base-surface-subtle);
 }
 
 .review-issue-column > header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 2px 4px;
-  border-bottom: 1px solid var(--line);
+  min-height: 24px;
+  padding: 0 var(--base-space-1);
 }
 
 .review-issue-column-label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--base-space-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.review-issue-column-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--muted-2);
+}
+
+.review-issue-column.review-tone-orange .review-issue-column-dot {
+  background: var(--orange);
+}
+
+.review-issue-column.review-tone-blue .review-issue-column-dot {
+  background: var(--blue);
+}
+
+.review-issue-column.review-tone-green .review-issue-column-dot {
+  background: var(--green);
 }
 
 .review-issue-column-label strong {
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--base-border);
+  border-radius: 999px;
+  background: var(--base-surface);
+  font-size: 11px;
+  font-weight: 750;
   color: var(--muted);
-  letter-spacing: 0.01em;
 }
 
 .review-issue-column-list {
   display: grid;
-  gap: 8px;
+  align-content: start;
+  gap: var(--base-space-2);
   min-height: 40px;
 }
 
 .review-issue-column-empty {
   margin: 0;
-  padding: 12px 8px;
+  padding: var(--base-space-4) var(--base-space-2);
   border: 1px dashed var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--muted-2);
   font-size: 11px;
   text-align: center;
-  background: white;
+  background: var(--panel);
 }
 
 /* Issue card */
 
 .review-issue-card {
   border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-md);
-  background: var(--base-surface-subtle);
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  border-radius: var(--radius-sm);
+  background: var(--base-surface);
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .review-issue-card:hover {
   border-color: var(--base-border-strong);
+  background: var(--panel-soft);
 }
 
 .review-issue-card.is-selected {
   border-color: var(--base-accent);
-  box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.1);
+  background: var(--base-accent-soft);
+  box-shadow: 0 0 0 1px var(--base-accent);
+}
+
+.review-issue-card .base-object-row {
+  gap: var(--base-space-2);
+  min-height: 58px;
+  padding: var(--base-space-2);
+}
+
+.review-issue-card .base-object-row.is-selected {
+  background: transparent;
+}
+
+.review-issue-card .base-object-row-title {
+  font-size: 12.5px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.review-issue-card .base-object-row-subtitle {
+  font-size: 11.5px;
+  line-height: 1.35;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+
+.review-issue-card .base-object-row-aside {
+  align-items: flex-end;
+  gap: var(--base-space-1);
+  max-width: 88px;
+}
+
+.review-issue-card .base-object-row-status {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--base-space-1);
+}
+
+.review-issue-card .pill {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.review-issue-card .pill.tone-red {
+  border-color: var(--red-50);
+  color: var(--red);
+}
+
+.review-issue-card .pill.tone-orange {
+  border-color: var(--orange-50);
+  color: var(--orange);
+}
+
+.review-issue-card .pill.tone-green {
+  border-color: var(--green-50);
+  color: var(--green);
+}
+
+.review-issue-card .pill.tone-blue,
+.review-issue-card .pill.tone-gray {
+  border-color: var(--line);
+  color: var(--muted);
 }
 
 .review-issue-card-body {
@@ -3028,6 +3203,47 @@ td a {
   color: var(--green);
 }
 
+.review-inspector-shell {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  align-content: start;
+}
+
+.review-inspector-shell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 30px;
+}
+
+.review-inspector-shell-head span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.review-inspector-shell > .review-detail {
+  box-shadow: none;
+}
+
+.session-tab-split > .review-inspector-shell {
+  position: sticky;
+  top: 56px;
+  align-self: start;
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
+}
+
+@media (max-width: 1180px) {
+  .session-tab-split > .review-inspector-shell {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 /* Detail panel */
 
 .review-detail {
@@ -3035,7 +3251,7 @@ td a {
   gap: 12px;
   padding: 16px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   background: white;
   box-shadow: var(--shadow-soft);
   min-width: 0;

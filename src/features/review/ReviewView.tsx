@@ -1,4 +1,4 @@
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -6,7 +6,6 @@ import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
-import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 import { issueStatusLabels, priorityLabels } from "../../domain/constants";
 import type { Decision, Issue, IssueStatus, NextAction, Priority } from "../../domain/types";
 import {
@@ -16,7 +15,7 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { getReportEvidenceSummary, getIssueEvidenceSources } from "../../lib/sources/traceability";
+import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import {
   isNextActionCompleted,
   splitNextActionsByCompletion,
@@ -24,12 +23,11 @@ import {
 import {
   getUnresolvedItems,
   issueStatusTone,
-  pickDefaultReviewSelection,
   priorityTone,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
-import { formatDate, formatDateTime } from "../../lib/formatting/time";
+import { formatDateTime } from "../../lib/formatting/time";
 
 /**
  * Review workspace — the **검토** tab inside the unified Session Detail workspace.
@@ -90,29 +88,18 @@ export function ReviewView() {
     [view.issues, view.decisions, view.nextActions],
   );
   const dataBasis = useMemo(() => getReportEvidenceSummary(view).dataBasis, [view]);
-  const defaultSelection = useMemo(
-    () =>
-      pickDefaultReviewSelection({
-        issues: view.issues,
-        decisions: view.decisions,
-        nextActions: view.nextActions,
-      }),
-    [view.issues, view.decisions, view.nextActions],
-  );
-
-  // Keep selection in sync with the active view. We never overwrite the user's
-  // selection without cause; we only fill in the default when none is set yet
-  // or when the previously-selected id disappears.
-  const effectiveSelection: ReviewSelection = (() => {
-    if (!selection) return defaultSelection;
+  // Keep selection in sync with the active view. The board now opens without a
+  // default inspector; detail appears only after a user click or a deep link.
+  const activeSelection: ReviewSelection = (() => {
+    if (!selection) return { kind: "none" };
     if (selection.kind === "issue" && !view.issues.some((i) => i.id === selection.issueId)) {
-      return defaultSelection;
+      return { kind: "none" };
     }
     if (selection.kind === "decision" && !view.decisions.some((d) => d.id === selection.decisionId)) {
-      return defaultSelection;
+      return { kind: "none" };
     }
     if (selection.kind === "nextAction" && !view.nextActions.some((a) => a.id === selection.nextActionId)) {
-      return defaultSelection;
+      return { kind: "none" };
     }
     return selection;
   })();
@@ -124,6 +111,18 @@ export function ReviewView() {
   const sortedIssues = useMemo(() => sortIssues(view.issues), [view.issues]);
   const sortedDecisions = useMemo(() => sortDecisions(view.decisions), [view.decisions]);
   const sortedNextActions = useMemo(() => sortNextActions(view.nextActions), [view.nextActions]);
+  const pendingActionCount = useMemo(
+    () => view.nextActions.filter((action) => !isNextActionCompleted(action)).length,
+    [view.nextActions],
+  );
+  const openIssueCount = useMemo(
+    () => view.issues.filter((issue) => issue.status === "open" || issue.status === "inProgress").length,
+    [view.issues],
+  );
+  const unconfirmedDecisionCount = useMemo(
+    () => view.decisions.filter((decision) => !decision.confirmed).length,
+    [view.decisions],
+  );
 
   function handleShowTimeline(eventId: string) {
     setSelectedEventId(eventId);
@@ -166,7 +165,7 @@ export function ReviewView() {
 
   const aside = (
     <ReviewDetailPanel
-      selection={effectiveSelection}
+      selection={activeSelection}
       view={view}
       onShowTimeline={handleShowTimeline}
       onToggleNextActionComplete={(id, completed) => setNextActionCompletion(id, completed)}
@@ -186,19 +185,42 @@ export function ReviewView() {
 
   const board = (
     <section className="review-issue-board">
+      <header className="review-board-head">
+        <div className="review-board-title">
+          <strong>검토 보드</strong>
+          <span>{view.issues.length + view.decisions.length + view.nextActions.length}개 항목</span>
+        </div>
+        <dl className="review-board-metrics" aria-label="검토 요약">
+          <div>
+            <dt>확인</dt>
+            <dd>{unresolved.length}</dd>
+          </div>
+          <div>
+            <dt>이슈</dt>
+            <dd>{openIssueCount}</dd>
+          </div>
+          <div>
+            <dt>결정</dt>
+            <dd>{unconfirmedDecisionCount}</dd>
+          </div>
+          <div>
+            <dt>액션</dt>
+            <dd>{pendingActionCount}</dd>
+          </div>
+        </dl>
+      </header>
       <div className="review-issue-board-columns review-board-columns">
         <ReviewBoardColumn label="이슈" tone="orange" count={view.issues.length}>
           {sortedIssues.length === 0 ? (
             <ColumnEmpty label="이슈 없음" />
           ) : (
             sortedIssues.map((issue) => (
-              <IssueBoardCard
-                key={issue.id}
-                issue={issue}
-                view={view}
-                selected={effectiveSelection.kind === "issue" && effectiveSelection.issueId === issue.id}
-                onSelect={() => setSelection({ kind: "issue", issueId: issue.id })}
-              />
+                <IssueBoardCard
+                  key={issue.id}
+                  issue={issue}
+                  selected={activeSelection.kind === "issue" && activeSelection.issueId === issue.id}
+                  onSelect={() => setSelection({ kind: "issue", issueId: issue.id })}
+                />
             ))
           )}
         </ReviewBoardColumn>
@@ -212,8 +234,8 @@ export function ReviewView() {
                 key={decision.id}
                 decision={decision}
                 selected={
-                  effectiveSelection.kind === "decision" &&
-                  effectiveSelection.decisionId === decision.id
+                  activeSelection.kind === "decision" &&
+                  activeSelection.decisionId === decision.id
                 }
                 onSelect={() => setSelection({ kind: "decision", decisionId: decision.id })}
               />
@@ -230,8 +252,8 @@ export function ReviewView() {
                 key={action.id}
                 action={action}
                 selected={
-                  effectiveSelection.kind === "nextAction" &&
-                  effectiveSelection.nextActionId === action.id
+                  activeSelection.kind === "nextAction" &&
+                  activeSelection.nextActionId === action.id
                 }
                 onSelect={() => setSelection({ kind: "nextAction", nextActionId: action.id })}
               />
@@ -290,14 +312,29 @@ export function ReviewView() {
     </>
   );
 
-  const showAside = effectiveSelection.kind !== "none";
+  const showAside = activeSelection.kind !== "none";
 
   return (
     <div className="session-tab-pane session-tab-insights">
       <div className="session-tab-actionbar">{actionBar}</div>
-      <div className={`session-tab-split${showAside ? "" : " is-collapsed"}`}>
+      <div className={`session-tab-split review-tab-canvas${showAside ? "" : " is-collapsed"}`}>
         <div className="session-tab-main">{body}</div>
-        {showAside ? aside : null}
+        {showAside ? (
+          <div className="review-inspector-shell" aria-label="선택 항목 상세">
+            <header className="review-inspector-shell-head">
+              <span>선택 항목</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={X}
+                title="상세 닫기"
+                aria-label="상세 닫기"
+                onClick={() => setSelection(null)}
+              />
+            </header>
+            {aside}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -317,10 +354,11 @@ function ReviewBoardColumn({
   children: ReactNode;
 }) {
   return (
-    <article className="review-issue-column">
+    <article className={`review-issue-column review-tone-${tone}`}>
       <header>
         <span className="review-issue-column-label">
-          <Badge tone={tone}>{label}</Badge>
+          <span className="review-issue-column-dot" aria-hidden="true" />
+          <span>{label}</span>
           <strong>{count}</strong>
         </span>
       </header>
@@ -336,14 +374,12 @@ function ColumnEmpty({ label }: { label: string }) {
 function ReviewBoardCard({
   title,
   subtitle,
-  meta,
   badges,
   selected,
   onSelect,
 }: {
   title: string;
   subtitle?: string;
-  meta?: ReactNode;
   badges: ReactNode;
   selected: boolean;
   onSelect: () => void;
@@ -356,9 +392,9 @@ function ReviewBoardCard({
       <BaseObjectRow
         title={title}
         subtitle={subtitle}
-        meta={meta}
         status={badges}
         selected={selected}
+        density="compact"
         onClick={onSelect}
         ariaLabel={title}
       />
@@ -368,31 +404,17 @@ function ReviewBoardCard({
 
 function IssueBoardCard({
   issue,
-  view,
   selected,
   onSelect,
 }: {
   issue: Issue;
-  view: ReturnType<typeof selectSessionView>;
   selected: boolean;
   onSelect: () => void;
 }) {
-  const evidence = getIssueEvidenceSources(issue, view.events, view.sources);
   return (
     <ReviewBoardCard
       title={issue.title}
       subtitle={issue.description}
-      meta={
-        <BaseMetadataLine
-          items={[
-            formatDate(issue.createdAt),
-            <span title={`이벤트 ${evidence.eventCount}개 · 소스 ${evidence.sourceCount}개`}>
-              {evidence.eventCount}E · {evidence.sourceCount}S
-              {issue.relatedDecisionIds.length ? ` · ${issue.relatedDecisionIds.length}D` : ""}
-            </span>,
-          ]}
-        />
-      }
       badges={
         <>
           <Badge tone={issueStatusTone(issue.status)}>{issueStatusLabels[issue.status]}</Badge>
@@ -419,7 +441,6 @@ function DecisionBoardCard({
     <ReviewBoardCard
       title={decision.title}
       subtitle={decision.decision}
-      meta={<BaseMetadataLine items={[formatDate(decision.createdAt)]} />}
       badges={
         <>
           <Badge tone={decision.confirmed ? "green" : "orange"}>
@@ -448,11 +469,6 @@ function NextActionBoardCard({
   return (
     <ReviewBoardCard
       title={action.title}
-      meta={
-        done && action.completedAt
-          ? <BaseMetadataLine items={[`완료 ${formatDate(action.completedAt)}`]} />
-          : undefined
-      }
       badges={
         <>
           <Badge tone={done ? "green" : "orange"}>{done ? "완료" : "진행"}</Badge>
