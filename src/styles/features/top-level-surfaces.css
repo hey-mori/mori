@@ -1511,6 +1511,43 @@
   white-space: nowrap;
 }
 
+.workbench-inspector-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--base-space-2);
+  padding-bottom: var(--base-space-3);
+  border-bottom: 1px solid var(--base-border);
+}
+
+.workbench-inspector-stats > div {
+  display: grid;
+  gap: 1px;
+}
+
+.workbench-inspector-stats span {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-2xs);
+}
+
+.workbench-inspector-stats strong {
+  color: var(--base-text);
+  font-size: var(--base-font-size-lg);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+
+.workbench-inspector-stats .tone-issue strong {
+  color: var(--base-status-warning);
+}
+
+.workbench-inspector-stats .tone-decision strong {
+  color: var(--base-status-info);
+}
+
+.workbench-inspector-stats .tone-next strong {
+  color: var(--base-status-success);
+}
+
 .workbench-inspector-section {
   display: grid;
   gap: 6px;

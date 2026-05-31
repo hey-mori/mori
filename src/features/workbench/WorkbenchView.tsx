@@ -2050,11 +2050,23 @@ function WorkbenchInspector({
         </button>
       </header>
 
-      <div className="workbench-timeline-stats">
-        <Stat label="항목" value={meta.eventCount} />
-        <Stat label="이슈" value={meta.openIssues} tone={meta.openIssues > 0 ? "warning" : "neutral"} />
-        <Stat label="결정" value={meta.unconfirmedDecisions} />
-        <Stat label="다음" value={meta.pendingNextActions} />
+      <div className="workbench-inspector-stats">
+        <div>
+          <span>항목</span>
+          <strong>{meta.eventCount}</strong>
+        </div>
+        <div className={meta.openIssues > 0 ? "tone-issue" : ""}>
+          <span>이슈</span>
+          <strong>{meta.openIssues}</strong>
+        </div>
+        <div className={meta.unconfirmedDecisions > 0 ? "tone-decision" : ""}>
+          <span>결정</span>
+          <strong>{meta.unconfirmedDecisions}</strong>
+        </div>
+        <div className={meta.pendingNextActions > 0 ? "tone-next" : ""}>
+          <span>다음</span>
+          <strong>{meta.pendingNextActions}</strong>
+        </div>
       </div>
 
       <InspectorList title="열린 이슈" tone="issue" items={work.openIssues} empty="열린 이슈가 없습니다" />
