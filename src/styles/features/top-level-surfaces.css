@@ -1125,7 +1125,7 @@
 .workbench-conversation {
   display: grid;
   align-content: start;
-  gap: var(--base-space-3);
+  gap: var(--base-space-2);
 }
 
 .workbench-msg {
@@ -1146,15 +1146,15 @@
 }
 
 .workbench-msg-actor {
-  color: var(--base-accent);
+  color: var(--base-text-muted);
   font-size: var(--base-font-size-2xs);
-  font-weight: 750;
+  font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
 .workbench-msg.is-user .workbench-msg-actor {
-  color: var(--base-text-muted);
+  color: var(--base-accent);
 }
 
 .workbench-msg-meta time {
@@ -1670,9 +1670,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  width: 220px;
+  width: 240px;
   max-width: 32vw;
-  padding: 5px 10px;
+  height: 32px;
+  padding: 0 10px;
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-md);
   background: var(--base-surface);
@@ -1687,6 +1688,8 @@
 .workbench-toolbar-search input {
   flex: 1;
   min-width: 0;
+  height: 100%;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--base-text);
