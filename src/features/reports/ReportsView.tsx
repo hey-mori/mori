@@ -1,8 +1,8 @@
-import { Archive, FileText, Sparkles } from "lucide-react";
+import { Archive, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { ActionBar } from "../../components/layout/ActionBar";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { Button } from "../../components/ui/Button";
+import { InfoHint } from "../../components/ui/InfoHint";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import {
   buildClientSafeMoriPackage,
@@ -53,7 +53,6 @@ export function ReportsView() {
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
   const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
   const analysisError = useSessionStore((state) => state.analysisError);
-  const runQuickPass = useSessionStore((state) => state.runQuickPass);
   const imports = useSessionStore((state) => state.imports);
 
   useEffect(() => {
@@ -87,7 +86,6 @@ export function ReportsView() {
   }, [reportProjectId]);
 
   const isDemo = mode === "demo";
-  const canRunQuickPass = !isDemo && imports.length > 0 && analysisStatus !== "running";
 
   const resumePromptText = useMemo(() => {
     if (hasAnalysis && analysis) return analysis.summary.resumePrompt;
@@ -112,37 +110,13 @@ export function ReportsView() {
     [view, acceptedMemories, reviewActions],
   );
 
-  const quickPassButton = !isDemo ? (
-    <Button
-      variant="primary"
-      icon={Sparkles}
-      onClick={() => runQuickPass()}
-      disabled={!canRunQuickPass}
-      title={
-        canRunQuickPass
-          ? "Quick Pass 실행"
-          : imports.length === 0
-            ? "먼저 소스를 가져오세요."
-            : "이미 실행 중입니다."
-      }
-    >
-      {analysisStatus === "running"
-        ? "분석 중..."
-        : hasAnalysis
-          ? "Quick Pass 재실행"
-          : "Quick Pass 실행"}
-    </Button>
-  ) : undefined;
-
   // The 보고서 tab is the session's handoff / output surface — three stacked
   // sections: the continue-context, the report builder, and the .mori export.
   // Session identity, scale metrics, and the wrap-up checklist live in the
-  // 개요 tab, not here.
+  // 개요 tab, not here. The Quick Pass re-run lives in the 검토 tab where the
+  // proposals it produces are reviewed; this surface is output-only.
   return (
     <div className="session-tab-pane reports-embedded">
-      <div className="session-tab-actionbar">
-        <ActionBar label="보고서" end={quickPassButton} />
-      </div>
       <div className="session-tab-split is-collapsed">
         <div className="session-tab-main">
           <ReportsAnalysisNotice
@@ -248,7 +222,7 @@ function ReportsAnalysisNotice({
   if (!hasAnalysis) {
     return (
       <NoticeBanner tone="info">
-        가져온 소스가 있습니다. 우측 상단에서 Quick Pass를 실행하면 Resume 프롬프트와 보고서가 풍부해집니다.
+        가져온 소스가 있습니다. 검토 탭에서 Quick Pass를 실행하면 Resume 프롬프트와 보고서가 풍부해집니다.
       </NoticeBanner>
     );
   }
@@ -376,10 +350,10 @@ function MoriPackageStrip({
       <div className="mori-package-strip-intro">
         <h3>
           <Archive size={14} aria-hidden="true" /> .mori v0 패키지
+          <InfoHint label=".mori 패키지 설명">
+            세션·근거·리뷰·승인 메모리를 하나의 로컬 .mori 파일로 묶습니다. 가져오기는 자동 병합이 아니라 검토를 다시 거칩니다.
+          </InfoHint>
         </h3>
-        <p>
-          세션·근거·리뷰·승인 메모리를 하나의 로컬 .mori 파일로 묶습니다. 가져오기는 자동 병합이 아니라 검토를 다시 거칩니다.
-        </p>
         <p className="mori-package-content-line">
           출처 {exportPlan.full.sources} · 이벤트 {exportPlan.full.events} · 메모리 {exportPlan.full.memories} · 감사 {exportPlan.full.auditRows}
           {exportPlan.clientSafe.droppedMemories > 0 || exportPlan.clientSafe.droppedAuditRows > 0
@@ -390,10 +364,10 @@ function MoriPackageStrip({
       </div>
       <div className="mori-package-strip-actions">
         <div className="mori-package-strip-buttons">
-          <Button icon={FileText} onClick={() => runExport(false)} disabled={busy}>
+          <Button icon={FileText} size="sm" onClick={() => runExport(false)} disabled={busy}>
             {busy && activeKind === "full" ? "내보내는 중..." : ".mori 패키지 내보내기"}
           </Button>
-          <Button icon={FileText} onClick={() => runExport(true)} disabled={busy}>
+          <Button icon={FileText} size="sm" onClick={() => runExport(true)} disabled={busy}>
             {busy && activeKind === "clientSafe"
               ? "내보내는 중..."
               : "클라이언트 공유용 .mori 내보내기"}
