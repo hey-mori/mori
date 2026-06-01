@@ -205,6 +205,12 @@ newer connector script does not lose events against an older Mori. The Codex
 and Antigravity transcript parsers are `serde_json::Value`-based and
 skip-on-error for the same reason.
 
+**No silent truncation.** A session file we cannot read (over the 8 MB cap, or
+IO/parse failure) is surfaced as a placeholder meta (`⚠ 읽을 수 없는 세션 ·
+{reason}`, zero messages, real file path) rather than silently dropped, so the
+Connections feed shows that something is there and import surfaces the
+underlying error on click. Honesty over neatness.
+
 ## 8. Shipped this pass (changelog pointer)
 
 - Claude hook UTF-8 + per-session-file fixes; Codex wrapper BOM/`·`/git
@@ -232,6 +238,9 @@ skip-on-error for the same reason.
   `feat: make claude detection and install honor CLAUDE_CONFIG_DIR`).
 - Tolerant-reader handling of unknown connector event kinds (`feat: tolerate
   unknown connector event kinds for forward compatibility`).
+- Unreadable discovery sessions surfaced as honest placeholders instead of
+  dropped (`feat: surface unreadable discovery sessions as honest
+  placeholders`).
 - Ignore python bytecode from the connector scripts (`chore: ignore python
   bytecode from the connector scripts`).
 
