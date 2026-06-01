@@ -32,6 +32,8 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   clearAllDataAndViewDemo: async () => {},
   runQuickPass: async () => null,
   clearAnalysis: () => {},
+  loadAnalysisRunHistory: () => null,
+  selectAnalysisRun: () => false,
   updateAnalysisSettings: () => ({ ...DEFAULT_QUICK_PASS_SETTINGS }),
   loadDesktopSession: async () => false,
   loadBrowserSession: () => false,

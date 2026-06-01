@@ -1016,3 +1016,94 @@ describe("useSessionStore import as new session", () => {
     expect(typeof useSessionStore.getState().importAsNewSession).toBe("function");
   });
 });
+
+describe("useSessionStore analysis run history", () => {
+  let repository: BrowserDraftRepository;
+
+  beforeEach(() => {
+    repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  function seedSession() {
+    const built = createSessionDraft({
+      sessionTitle: "Run history session",
+      projectName: "RH Project",
+      selectedSources: [],
+      recordingMode: "summary",
+      llmProvider: "ollama",
+      llmModel: "llama3.1:8b",
+      storageLocation: "~/Mori/Records",
+      now: fixedNow,
+    });
+    const stored = { ...built, savedAt: fixedNow, adapter: "browser-local-storage" as const };
+    useSessionStore.getState().setDraft(stored);
+    useSessionStore.getState().addImport(
+      normalizeManualNote({
+        projectId: stored.project.id,
+        sessionId: stored.session.id,
+        title: "Risk",
+        note: "위험: token rotation 미정. TODO: rotate.",
+        capturedAt: fixedNow,
+      }),
+    );
+    return stored;
+  }
+
+  it("accumulates a run per re-analysis and reads them back newest-adopted", async () => {
+    seedSession();
+    await useSessionStore.getState().runQuickPass(buildProvider("deterministic-heuristic-v1"));
+    await useSessionStore.getState().runQuickPass(buildProvider("ollama-quick-pass-v1"));
+
+    const history = useSessionStore.getState().loadAnalysisRunHistory();
+    expect(history?.runs).toHaveLength(2);
+    expect(history?.runs.map((run) => run.providerName)).toEqual([
+      "deterministic-heuristic-v1",
+      "ollama-quick-pass-v1",
+    ]);
+    // The most recent run is the adopted understanding.
+    expect(history?.currentRunId).toBe(useSessionStore.getState().analysis?.runId);
+    expect(useSessionStore.getState().analysis?.providerName).toBe("ollama-quick-pass-v1");
+  });
+
+  it("adopts a prior run and reflects it in store state and storage", async () => {
+    const stored = seedSession();
+    await useSessionStore.getState().runQuickPass(buildProvider("deterministic-heuristic-v1"));
+    const firstRunId = useSessionStore.getState().analysis!.runId;
+    await useSessionStore.getState().runQuickPass(buildProvider("ollama-quick-pass-v1"));
+
+    const ok = useSessionStore.getState().selectAnalysisRun(firstRunId);
+    expect(ok).toBe(true);
+    expect(useSessionStore.getState().analysis?.runId).toBe(firstRunId);
+    expect(useSessionStore.getState().analysisProviderLabel).toBe("deterministic-heuristic-v1");
+    // The single analysis mirror tracks the adopted run for other readers.
+    expect(repository.loadSessionAnalysis(stored.session.id)?.result.runId).toBe(firstRunId);
+    expect(repository.loadSessionAnalysisHistory(stored.session.id)?.history.currentRunId).toBe(
+      firstRunId,
+    );
+  });
+
+  it("returns false adopting an unknown run id and leaves the adopted run intact", async () => {
+    seedSession();
+    await useSessionStore.getState().runQuickPass(buildProvider("ollama-quick-pass-v1"));
+    const currentRunId = useSessionStore.getState().analysis!.runId;
+
+    expect(useSessionStore.getState().selectAnalysisRun("run-missing")).toBe(false);
+    expect(useSessionStore.getState().analysis?.runId).toBe(currentRunId);
+  });
+
+  it("returns null history and false selection with no active session", () => {
+    expect(useSessionStore.getState().loadAnalysisRunHistory()).toBeNull();
+    expect(useSessionStore.getState().selectAnalysisRun("run-x")).toBe(false);
+  });
+});

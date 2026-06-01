@@ -13,6 +13,7 @@ import type {
 import type {
   AnalysisProvider,
   AnalysisResult,
+  AnalysisRunHistory,
   AnalysisRunStatus,
   QuickPassAnalysisSettings,
 } from "../lib/analysis";
@@ -21,6 +22,7 @@ import {
   createDeterministicQuickPassProvider,
   createOllamaQuickPassProvider,
   createOpenAiCompatibleQuickPassProvider,
+  getCurrentRun,
   sanitizeQuickPassSettings,
 } from "../lib/analysis";
 import type { NormalizedImportCandidate } from "../lib/import";
@@ -198,6 +200,20 @@ export type SessionState = {
   clearAllDataAndViewDemo: () => Promise<void>;
   runQuickPass: (provider?: AnalysisProvider) => Promise<AnalysisResult | null>;
   clearAnalysis: () => void;
+  /**
+   * Read the active session's append-only analysis run history (every
+   * Quick Pass run plus the adopted-run pointer). Returns `null` when no
+   * session is active or the session has no analysis. A read, not a
+   * subscription — callers re-read when `analysis` changes.
+   */
+  loadAnalysisRunHistory: () => AnalysisRunHistory | null;
+  /**
+   * Adopt a stored run as the active session's current understanding.
+   * Rewrites the analysis mirror + memory body to the adopted run and
+   * updates store state. Returns `false` when there is no session, no
+   * history, or the run id is unknown.
+   */
+  selectAnalysisRun: (runId: string) => boolean;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
   /**
@@ -751,6 +767,34 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       analysisProviderLabel: null,
       analysisFallbackUsed: false,
     });
+  },
+  loadAnalysisRunHistory: () => {
+    const draft = get().draft;
+    if (!draft) return null;
+    return getRepository().loadSessionAnalysisHistory(draft.session.id)?.history ?? null;
+  },
+  selectAnalysisRun: (runId) => {
+    const draft = get().draft;
+    if (!draft) return false;
+    const repository = getRepository();
+    const stored = repository.selectSessionAnalysisRun(draft.session.id, runId);
+    // An unknown run id is a no-op at the storage layer (the pointer is
+    // unchanged); report it as a failed adoption so the UI does not
+    // signal success for a run that does not exist.
+    if (!stored || stored.history.currentRunId !== runId) return false;
+    const adopted = getCurrentRun(stored.history);
+    if (!adopted) return false;
+    // The adopted run becomes the live understanding: rewrite the memory
+    // body so Project Memory aggregates the adopted run, and reflect it
+    // in store state for Review / Timeline / Reports.
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, adopted);
+    set({
+      analysis: adopted,
+      analysisStatus: "succeeded",
+      analysisError: null,
+      analysisProviderLabel: adopted.providerLabel,
+    });
+    return true;
   },
   updateAnalysisSettings: (patch) => {
     const repository = getRepository();
