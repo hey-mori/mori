@@ -1,10 +1,22 @@
-import { CheckCircle2, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ActionBar } from "../../components/layout/ActionBar";
+import {
+  Check,
+  CheckCircle2,
+  CircleDashed,
+  CircleDot,
+  Eye,
+  Filter,
+  Loader2,
+  RotateCcw,
+  Sparkles,
+  Square,
+  SquareCheck,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { SearchField } from "../../components/ui/SearchField";
 import type { Decision, Issue, IssueStatus, NextAction, Priority } from "../../domain/types";
 import {
   selectHasRealAnalysis,
@@ -26,6 +38,14 @@ import {
 } from "../../lib/review-workspace/reviewWorkspace";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
 import { formatDateTime } from "../../lib/formatting/time";
+
+type ReviewColumn = "issue" | "decision" | "nextAction";
+
+const REVIEW_COLUMN_LABELS: Record<ReviewColumn, string> = {
+  issue: "이슈",
+  decision: "결정",
+  nextAction: "다음 액션",
+};
 
 /**
  * Review workspace — the **검토** tab inside the unified Session Detail workspace.
@@ -67,6 +87,8 @@ export function ReviewView() {
   }, [initialized, hydrate]);
 
   const [selection, setSelection] = useState<ReviewSelection | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeColumns, setActiveColumns] = useState<ReviewColumn[]>([]);
 
   // Consume a one-shot deep-link from another surface (e.g. the Timeline event
   // inspector "create issue"): focus the requested item and clear the request.
@@ -106,9 +128,33 @@ export function ReviewView() {
   const canRunQuickPass = imports.length > 0 && analysisStatus !== "running";
   const showQuickPassEmpty = mode === "draft" && !hasAnalysis;
 
-  const sortedIssues = useMemo(() => sortIssues(view.issues), [view.issues]);
-  const sortedDecisions = useMemo(() => sortDecisions(view.decisions), [view.decisions]);
-  const sortedNextActions = useMemo(() => sortNextActions(view.nextActions), [view.nextActions]);
+  const matchesQuery = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return () => true;
+    return (haystack: string) => haystack.toLowerCase().includes(query);
+  }, [searchQuery]);
+
+  const visibleIssues = useMemo(() => {
+    const showColumn = activeColumns.length === 0 || activeColumns.includes("issue");
+    if (!showColumn) return [];
+    return view.issues.filter((issue) => matchesQuery(`${issue.title} ${issue.description ?? ""}`));
+  }, [view.issues, activeColumns, matchesQuery]);
+  const visibleDecisions = useMemo(() => {
+    const showColumn = activeColumns.length === 0 || activeColumns.includes("decision");
+    if (!showColumn) return [];
+    return view.decisions.filter((decision) =>
+      matchesQuery(`${decision.title} ${decision.decision ?? ""}`),
+    );
+  }, [view.decisions, activeColumns, matchesQuery]);
+  const visibleNextActions = useMemo(() => {
+    const showColumn = activeColumns.length === 0 || activeColumns.includes("nextAction");
+    if (!showColumn) return [];
+    return view.nextActions.filter((action) => matchesQuery(action.title));
+  }, [view.nextActions, activeColumns, matchesQuery]);
+
+  const sortedIssues = useMemo(() => sortIssues(visibleIssues), [visibleIssues]);
+  const sortedDecisions = useMemo(() => sortDecisions(visibleDecisions), [visibleDecisions]);
+  const sortedNextActions = useMemo(() => sortNextActions(visibleNextActions), [visibleNextActions]);
   const pendingActionCount = useMemo(
     () => view.nextActions.filter((action) => !isNextActionCompleted(action)).length,
     [view.nextActions],
@@ -131,39 +177,57 @@ export function ReviewView() {
     setSelection(isSameReviewSelection(activeSelection, next) ? null : next);
   }
 
-  const actionBar = (
-    <ActionBar
-      label="검토"
-      start={
-        <Badge tone={unresolved.length ? "orange" : "green"}>
-          확인 필요 {unresolved.length}
-        </Badge>
+  const quickPassButton = !isDemo ? (
+    <Button
+      variant="primary"
+      icon={Sparkles}
+      onClick={() => runQuickPass()}
+      disabled={!canRunQuickPass}
+      title={
+        canRunQuickPass
+          ? "Quick Pass 실행"
+          : imports.length === 0
+            ? "먼저 소스를 가져오세요."
+            : "이미 실행 중입니다."
       }
-      end={
-        !isDemo ? (
-          <Button
-            variant="primary"
-            icon={Sparkles}
-            onClick={() => runQuickPass()}
-            disabled={!canRunQuickPass}
-            title={
-              canRunQuickPass
-                ? "Quick Pass 실행"
-                : imports.length === 0
-                  ? "먼저 소스를 가져오세요."
-                  : "이미 실행 중입니다."
-            }
-          >
-            {analysisStatus === "running"
-              ? "분석 중..."
-              : hasAnalysis
-                ? "Quick Pass 재실행"
-                : "Quick Pass 실행"}
-          </Button>
-        ) : null
-      }
-    />
-  );
+    >
+      {analysisStatus === "running"
+        ? "분석 중..."
+        : hasAnalysis
+          ? "Quick Pass 재실행"
+          : "Quick Pass 실행"}
+    </Button>
+  ) : null;
+
+  const totalReviewItems =
+    view.issues.length + view.decisions.length + view.nextActions.length;
+  const toolbar =
+    totalReviewItems > 0 ? (
+      <ReviewToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        activeColumns={activeColumns}
+        onToggleColumn={(column) =>
+          setActiveColumns((current) =>
+            current.includes(column)
+              ? current.filter((entry) => entry !== column)
+              : [...current, column],
+          )
+        }
+        onClearFilters={() => {
+          setSearchQuery("");
+          setActiveColumns([]);
+        }}
+        confirmCount={unresolved.length}
+        issueCount={openIssueCount}
+        decisionCount={unconfirmedDecisionCount}
+        actionCount={pendingActionCount}
+        totalIssueCount={view.issues.length}
+        totalDecisionCount={view.decisions.length}
+        totalNextActionCount={view.nextActions.length}
+        quickPassButton={quickPassButton}
+      />
+    ) : null;
 
   const aside = (
     <ReviewDetailPanel
@@ -185,83 +249,94 @@ export function ReviewView() {
     />
   );
 
+  const filterColumnsActive = activeColumns.length > 0;
+  const showIssueColumn = !filterColumnsActive || activeColumns.includes("issue");
+  const showDecisionColumn = !filterColumnsActive || activeColumns.includes("decision");
+  const showActionColumn = !filterColumnsActive || activeColumns.includes("nextAction");
+  const canWrite = !isDemo;
+  const issueProgress = `열림 ${openIssueCount} · 해결 ${view.issues.filter((i) => i.status === "resolved").length}`;
+  const decisionProgress = `확정 ${view.decisions.filter((d) => d.confirmed).length} / ${view.decisions.length}`;
+  const actionProgress = `완료 ${view.nextActions.length - pendingActionCount} / ${view.nextActions.length}`;
   const board = (
     <section className="review-issue-board">
-      <header className="review-board-head">
-        <div className="review-board-title">
-          <strong>검토 보드</strong>
-          <span>{view.issues.length + view.decisions.length + view.nextActions.length}개 항목</span>
-        </div>
-        <dl className="review-board-metrics" aria-label="검토 요약">
-          <div>
-            <dt>확인</dt>
-            <dd>{unresolved.length}</dd>
-          </div>
-          <div>
-            <dt>이슈</dt>
-            <dd>{openIssueCount}</dd>
-          </div>
-          <div>
-            <dt>결정</dt>
-            <dd>{unconfirmedDecisionCount}</dd>
-          </div>
-          <div>
-            <dt>액션</dt>
-            <dd>{pendingActionCount}</dd>
-          </div>
-        </dl>
-      </header>
       <div className="review-issue-board-columns review-board-columns">
-        <ReviewBoardColumn label="이슈" tone="orange" count={view.issues.length}>
-          {sortedIssues.length === 0 ? (
-            <ColumnEmpty label="이슈 없음" />
-          ) : (
-            sortedIssues.map((issue) => (
+        {showIssueColumn ? (
+          <ReviewBoardColumn
+            label="이슈"
+            tone="orange"
+            count={view.issues.length}
+            progress={view.issues.length > 0 ? issueProgress : undefined}
+          >
+            {sortedIssues.length === 0 ? (
+              <ColumnEmpty label="이슈 없음" />
+            ) : (
+              sortedIssues.map((issue) => (
                 <IssueBoardCard
                   key={issue.id}
                   issue={issue}
+                  canWrite={canWrite}
                   selected={activeSelection.kind === "issue" && activeSelection.issueId === issue.id}
                   onSelect={() => toggleSelection({ kind: "issue", issueId: issue.id })}
+                  onSetStatus={(status) => setIssueStatus(issue.id, status)}
                 />
-            ))
-          )}
-        </ReviewBoardColumn>
+              ))
+            )}
+          </ReviewBoardColumn>
+        ) : null}
 
-        <ReviewBoardColumn label="결정" tone="blue" count={view.decisions.length}>
-          {sortedDecisions.length === 0 ? (
-            <ColumnEmpty label="결정 없음" />
-          ) : (
-            sortedDecisions.map((decision) => (
-              <DecisionBoardCard
-                key={decision.id}
-                decision={decision}
-                selected={
-                  activeSelection.kind === "decision" &&
-                  activeSelection.decisionId === decision.id
-                }
-                onSelect={() => toggleSelection({ kind: "decision", decisionId: decision.id })}
-              />
-            ))
-          )}
-        </ReviewBoardColumn>
+        {showDecisionColumn ? (
+          <ReviewBoardColumn
+            label="결정"
+            tone="blue"
+            count={view.decisions.length}
+            progress={view.decisions.length > 0 ? decisionProgress : undefined}
+          >
+            {sortedDecisions.length === 0 ? (
+              <ColumnEmpty label="결정 없음" />
+            ) : (
+              sortedDecisions.map((decision) => (
+                <DecisionBoardCard
+                  key={decision.id}
+                  decision={decision}
+                  canWrite={canWrite}
+                  selected={
+                    activeSelection.kind === "decision" &&
+                    activeSelection.decisionId === decision.id
+                  }
+                  onSelect={() => toggleSelection({ kind: "decision", decisionId: decision.id })}
+                  onSetConfirmed={(confirmed) => setDecisionConfirmed(decision.id, confirmed)}
+                />
+              ))
+            )}
+          </ReviewBoardColumn>
+        ) : null}
 
-        <ReviewBoardColumn label="다음 액션" tone="green" count={view.nextActions.length}>
-          {sortedNextActions.length === 0 ? (
-            <ColumnEmpty label="다음 액션 없음" />
-          ) : (
-            sortedNextActions.map((action) => (
-              <NextActionBoardCard
-                key={action.id}
-                action={action}
-                selected={
-                  activeSelection.kind === "nextAction" &&
-                  activeSelection.nextActionId === action.id
-                }
-                onSelect={() => toggleSelection({ kind: "nextAction", nextActionId: action.id })}
-              />
-            ))
-          )}
-        </ReviewBoardColumn>
+        {showActionColumn ? (
+          <ReviewBoardColumn
+            label="다음 액션"
+            tone="green"
+            count={view.nextActions.length}
+            progress={view.nextActions.length > 0 ? actionProgress : undefined}
+          >
+            {sortedNextActions.length === 0 ? (
+              <ColumnEmpty label="다음 액션 없음" />
+            ) : (
+              sortedNextActions.map((action) => (
+                <NextActionBoardCard
+                  key={action.id}
+                  action={action}
+                  canWrite={canWrite}
+                  selected={
+                    activeSelection.kind === "nextAction" &&
+                    activeSelection.nextActionId === action.id
+                  }
+                  onSelect={() => toggleSelection({ kind: "nextAction", nextActionId: action.id })}
+                  onSetCompletion={(completed) => setNextActionCompletion(action.id, completed)}
+                />
+              ))
+            )}
+          </ReviewBoardColumn>
+        ) : null}
       </div>
     </section>
   );
@@ -280,6 +355,8 @@ export function ReviewView() {
         dataBasis={dataBasis}
         onGoToEvidence={() => setCurrentView("evidence")}
       />
+
+      {toolbar}
 
       {showQuickPassEmpty ? (
         <EmptyState
@@ -318,7 +395,6 @@ export function ReviewView() {
 
   return (
     <div className="session-tab-pane session-tab-insights">
-      <div className="session-tab-actionbar">{actionBar}</div>
       <div className={`session-tab-split review-tab-canvas${showAside ? "" : " is-collapsed"}`}>
         <div className="session-tab-main">{body}</div>
         {showAside ? (
@@ -342,17 +418,164 @@ export function ReviewView() {
   );
 }
 
+// ─── Tab toolbar ──────────────────────────────────────────────────────────────
+
+/**
+ * Replaces the deprecated ActionBar + "검토 보드 / N개 항목" header. Search and a
+ * column filter live on the left, the confirm / issue / decision / action
+ * counts (formerly the dl strip) live on the right, the Quick Pass button
+ * stays anchored to the far end so it never moves.
+ */
+function ReviewToolbar({
+  searchQuery,
+  onSearchChange,
+  activeColumns,
+  onToggleColumn,
+  onClearFilters,
+  confirmCount,
+  issueCount,
+  decisionCount,
+  actionCount,
+  totalIssueCount,
+  totalDecisionCount,
+  totalNextActionCount,
+  quickPassButton,
+}: {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  activeColumns: ReviewColumn[];
+  onToggleColumn: (column: ReviewColumn) => void;
+  onClearFilters: () => void;
+  confirmCount: number;
+  issueCount: number;
+  decisionCount: number;
+  actionCount: number;
+  totalIssueCount: number;
+  totalDecisionCount: number;
+  totalNextActionCount: number;
+  quickPassButton: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const popRef = useRef<HTMLDivElement | null>(null);
+  const filterActive = searchQuery.trim().length > 0 || activeColumns.length > 0;
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(event: MouseEvent) {
+      if (!popRef.current) return;
+      if (!popRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const columns: { id: ReviewColumn; total: number }[] = [
+    { id: "issue", total: totalIssueCount },
+    { id: "decision", total: totalDecisionCount },
+    { id: "nextAction", total: totalNextActionCount },
+  ];
+
+  return (
+    <div className="tab-toolbar" role="toolbar" aria-label="검토 도구">
+      <SearchField
+        value={searchQuery}
+        onChange={onSearchChange}
+        ariaLabel="검토 항목 검색"
+        className="tab-toolbar-search"
+      />
+      <span className="tab-toolbar-spacer" aria-hidden="true" />
+      <div className="tab-toolbar-right">
+        <dl className="tab-toolbar-metrics" aria-label="검토 요약">
+          <div className={`tab-toolbar-metric ${confirmCount === 0 ? "is-zero" : "tone-orange"}`}>
+            <dt>확인</dt>
+            <dd>{confirmCount}</dd>
+          </div>
+          <div className={`tab-toolbar-metric ${issueCount === 0 ? "is-zero" : "tone-orange"}`}>
+            <dt>이슈</dt>
+            <dd>{issueCount}</dd>
+          </div>
+          <div className={`tab-toolbar-metric ${decisionCount === 0 ? "is-zero" : "tone-blue"}`}>
+            <dt>결정</dt>
+            <dd>{decisionCount}</dd>
+          </div>
+          <div className={`tab-toolbar-metric ${actionCount === 0 ? "is-zero" : "tone-green"}`}>
+            <dt>액션</dt>
+            <dd>{actionCount}</dd>
+          </div>
+        </dl>
+        <div className="toolbar-pop-wrap" ref={popRef}>
+          <button
+            type="button"
+            className={`toolbar-toggle ${activeColumns.length ? "is-active" : ""}`}
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            aria-controls="review-filter-popover"
+            title="검토 카테고리 필터"
+          >
+            <Filter size={14} aria-hidden="true" />
+            {activeColumns.length ? `필터 · ${activeColumns.length}` : "필터"}
+          </button>
+          {open ? (
+            <div
+              className="filter-popover"
+              id="review-filter-popover"
+              role="dialog"
+              aria-label="검토 카테고리 필터"
+            >
+              <header>
+                <span>카테고리</span>
+                <button
+                  type="button"
+                  className="filter-popover-clear"
+                  onClick={() => {
+                    onClearFilters();
+                    setOpen(false);
+                  }}
+                  disabled={!filterActive}
+                >
+                  지우기
+                </button>
+              </header>
+              <ul>
+                {columns.map((column) => {
+                  const active = activeColumns.includes(column.id);
+                  return (
+                    <li key={column.id}>
+                      <button
+                        type="button"
+                        className={`filter-pop-item ${active ? "active" : ""}`}
+                        aria-pressed={active}
+                        onClick={() => onToggleColumn(column.id)}
+                      >
+                        <span className="filter-pop-label">{REVIEW_COLUMN_LABELS[column.id]}</span>
+                        <span className="filter-pop-count">{column.total}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+        {quickPassButton}
+      </div>
+    </div>
+  );
+}
+
 // ─── Board primitives ─────────────────────────────────────────────────────────
 
 function ReviewBoardColumn({
   label,
   tone,
   count,
+  progress,
   children,
 }: {
   label: string;
   tone: "orange" | "blue" | "green";
   count: number;
+  progress?: string;
   children: ReactNode;
 }) {
   return (
@@ -363,6 +586,7 @@ function ReviewBoardColumn({
           <span>{label}</span>
           <strong>{count}</strong>
         </span>
+        {progress ? <small className="review-issue-column-progress">{progress}</small> : null}
       </header>
       <div className="review-issue-column-list">{children}</div>
     </article>
@@ -373,24 +597,53 @@ function ColumnEmpty({ label }: { label: string }) {
   return <p className="review-issue-column-empty">{label}</p>;
 }
 
+/**
+ * Calm card primitive shared by 이슈 / 결정 / 다음 액션. Layout:
+ *   ┌─────────────────────────────────────────┐
+ *   │ ● 제목 (leading status glyph + title) ⚐ │
+ *   │ 요약 두 줄까지                          │
+ *   │ [상태 칩]   근거 N · 연결 M             │
+ *   └─────────────────────────────────────────┘
+ *
+ * The kicker label ("검토 이슈" / "결정 후보" / "다음 작업") is removed —
+ * the column header already says what kind a card is, so repeating it on
+ * every card is duplicated chrome.
+ * Quick actions float at the top-right of the card on hover for one-click
+ * confirm / resolve / complete.
+ */
 function ReviewBoardCard({
   title,
   subtitle,
-  kindLabel,
-  badges,
+  leading,
+  stateChip,
+  metaText,
+  priority,
+  edited,
+  muted,
+  quickActions,
   selected,
   onSelect,
 }: {
   title: string;
   subtitle?: string;
-  kindLabel: string;
-  badges: ReactNode;
+  leading: ReactNode;
+  stateChip: ReactNode;
+  metaText?: string;
+  priority?: Priority;
+  edited?: boolean;
+  muted?: boolean;
+  quickActions?: ReactNode;
   selected: boolean;
   onSelect: () => void;
 }) {
   return (
     <article
-      className={`review-issue-card ${selected ? "is-selected" : ""}`}
+      className={
+        "review-issue-card" +
+        (priority ? ` priority-${priority}` : "") +
+        (muted ? " is-muted" : "") +
+        (selected ? " is-selected" : "")
+      }
       aria-current={selected ? "true" : undefined}
     >
       <button
@@ -400,36 +653,145 @@ function ReviewBoardCard({
         aria-label={title}
         onClick={onSelect}
       >
-        <span className="review-card-kicker">{kindLabel}</span>
-        <span className="review-card-title">{title}</span>
-        {subtitle ? <span className="review-card-summary">{subtitle}</span> : null}
-        <span className="review-card-footer">{badges}</span>
+        <div className="review-card-head-row">
+          <span className="review-card-leading" aria-hidden="true">
+            {leading}
+          </span>
+          <span className="review-card-title">{title}</span>
+          {priority === "high" ? (
+            <span className="review-card-priority-flag" aria-label="우선 높음" title="우선 높음">
+              높음
+            </span>
+          ) : null}
+          {edited ? (
+            <span className="review-card-edited" aria-label="사용자가 수정함" title="사용자가 수정함" />
+          ) : null}
+        </div>
+        {subtitle ? <p className="review-card-summary">{subtitle}</p> : null}
+        <footer className="review-card-meta-row">
+          {stateChip}
+          {metaText ? <span className="review-card-meta-text">{metaText}</span> : null}
+        </footer>
       </button>
+      {quickActions ? (
+        <div className="review-card-quick-actions" role="group" aria-label="빠른 작업">
+          {quickActions}
+        </div>
+      ) : null}
     </article>
   );
+}
+
+function IssueStatusGlyph({ status }: { status: IssueStatus }) {
+  switch (status) {
+    case "resolved":
+      return <CheckCircle2 size={14} className="status-glyph status-resolved" />;
+    case "inProgress":
+      return <Loader2 size={14} className="status-glyph status-inProgress" />;
+    case "watching":
+      return <Eye size={14} className="status-glyph status-watching" />;
+    case "open":
+    default:
+      return <CircleDot size={14} className="status-glyph status-open" />;
+  }
+}
+
+function buildIssueMeta(issue: Issue): string | undefined {
+  const evidence = issue.sourceEventIds?.length ?? 0;
+  const linked = (issue.relatedDecisionIds?.length ?? 0) + (issue.relatedFileIds?.length ?? 0);
+  const parts: string[] = [];
+  if (evidence > 0) parts.push(`근거 ${evidence}`);
+  if (linked > 0) parts.push(`연결 ${linked}`);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+function buildDecisionMeta(decision: Decision): string | undefined {
+  const evidence = decision.sourceEventIds?.length ?? 0;
+  const impact = decision.impact?.length ?? 0;
+  const parts: string[] = [];
+  if (evidence > 0) parts.push(`근거 ${evidence}`);
+  if (impact > 0) parts.push(`영향 ${impact}`);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+function buildActionMeta(action: NextAction): string | undefined {
+  const issues = action.relatedIssueIds?.length ?? 0;
+  return issues > 0 ? `이슈 ${issues}` : undefined;
+}
+
+function stopAnd(handler: () => void) {
+  return (event: ReactMouseEvent) => {
+    event.stopPropagation();
+    handler();
+  };
 }
 
 function IssueBoardCard({
   issue,
   selected,
+  canWrite,
   onSelect,
+  onSetStatus,
 }: {
   issue: Issue;
   selected: boolean;
+  canWrite: boolean;
   onSelect: () => void;
+  onSetStatus: (status: IssueStatus) => void;
 }) {
+  const stateChip = (
+    <span className={`review-card-state tone-${issueStatusTone(issue.status)}`}>
+      {ISSUE_STATUS_CARD_LABELS[issue.status]}
+    </span>
+  );
+  const isResolved = issue.status === "resolved";
+  const quickActions = canWrite ? (
+    isResolved ? (
+      <button
+        type="button"
+        className="review-card-quick"
+        onClick={stopAnd(() => onSetStatus("open"))}
+        title="다시 열기"
+      >
+        <RotateCcw size={12} aria-hidden="true" />
+        다시 열기
+      </button>
+    ) : (
+      <>
+        <button
+          type="button"
+          className="review-card-quick is-primary"
+          onClick={stopAnd(() => onSetStatus("resolved"))}
+          title="해결로 표시"
+        >
+          <Check size={12} aria-hidden="true" />
+          해결
+        </button>
+        {issue.status !== "watching" ? (
+          <button
+            type="button"
+            className="review-card-quick"
+            onClick={stopAnd(() => onSetStatus("watching"))}
+            title="관찰로 표시"
+          >
+            <Eye size={12} aria-hidden="true" />
+            관찰
+          </button>
+        ) : null}
+      </>
+    )
+  ) : null;
   return (
     <ReviewBoardCard
       title={issue.title}
       subtitle={issue.description}
-      kindLabel="검토 이슈"
-      badges={
-        <>
-          <Badge tone={issueStatusTone(issue.status)}>상태 {ISSUE_STATUS_CARD_LABELS[issue.status]}</Badge>
-          <Badge tone={priorityTone(issue.priority)}>우선 {PRIORITY_CARD_LABELS[issue.priority]}</Badge>
-          {issue.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
-        </>
-      }
+      leading={<IssueStatusGlyph status={issue.status} />}
+      stateChip={stateChip}
+      metaText={buildIssueMeta(issue)}
+      priority={issue.priority}
+      edited={issue.editedByUser}
+      muted={isResolved}
+      quickActions={quickActions}
       selected={selected}
       onSelect={onSelect}
     />
@@ -439,26 +801,61 @@ function IssueBoardCard({
 function DecisionBoardCard({
   decision,
   selected,
+  canWrite,
   onSelect,
+  onSetConfirmed,
 }: {
   decision: Decision;
   selected: boolean;
+  canWrite: boolean;
   onSelect: () => void;
+  onSetConfirmed: (confirmed: boolean) => void;
 }) {
+  const stateChip = (
+    <span className={`review-card-state tone-${decision.confirmed ? "green" : "orange"}`}>
+      {decision.confirmed ? "확정" : "검토 필요"}
+    </span>
+  );
+  const quickActions = canWrite ? (
+    decision.confirmed ? (
+      <button
+        type="button"
+        className="review-card-quick"
+        onClick={stopAnd(() => onSetConfirmed(false))}
+        title="확정 취소"
+      >
+        <RotateCcw size={12} aria-hidden="true" />
+        재검토
+      </button>
+    ) : (
+      <button
+        type="button"
+        className="review-card-quick is-primary"
+        onClick={stopAnd(() => onSetConfirmed(true))}
+        title="확정"
+      >
+        <Check size={12} aria-hidden="true" />
+        확정
+      </button>
+    )
+  ) : null;
   return (
     <ReviewBoardCard
       title={decision.title}
       subtitle={decision.decision}
-      kindLabel="결정 후보"
-      badges={
-        <>
-          <Badge tone={decision.confirmed ? "green" : "orange"}>
-            상태 {decision.confirmed ? "확정" : "검토 필요"}
-          </Badge>
-          <Badge tone={priorityTone(decision.importance)}>중요 {PRIORITY_CARD_LABELS[decision.importance]}</Badge>
-          {decision.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
-        </>
+      leading={
+        decision.confirmed ? (
+          <CheckCircle2 size={14} className="status-glyph status-confirmed" />
+        ) : (
+          <CircleDashed size={14} className="status-glyph status-pending" />
+        )
       }
+      stateChip={stateChip}
+      metaText={buildDecisionMeta(decision)}
+      priority={decision.importance}
+      edited={decision.editedByUser}
+      muted={false}
+      quickActions={quickActions}
       selected={selected}
       onSelect={onSelect}
     />
@@ -468,24 +865,71 @@ function DecisionBoardCard({
 function NextActionBoardCard({
   action,
   selected,
+  canWrite,
   onSelect,
+  onSetCompletion,
 }: {
   action: NextAction;
   selected: boolean;
+  canWrite: boolean;
   onSelect: () => void;
+  onSetCompletion: (completed: boolean) => void;
 }) {
   const done = isNextActionCompleted(action);
+  const stateChip = (
+    <span className={`review-card-state tone-${done ? "green" : "orange"}`}>
+      {done ? "완료" : "할 일"}
+    </span>
+  );
+  // The leading affordance for a next action is the checkbox itself — clicking
+  // it toggles completion without opening the inspector.
+  const leading = canWrite ? (
+    <button
+      type="button"
+      className={`review-card-checkbox${done ? " is-done" : ""}`}
+      onClick={stopAnd(() => onSetCompletion(!done))}
+      aria-pressed={done}
+      aria-label={done ? "완료 취소" : "완료로 표시"}
+      title={done ? "완료 취소" : "완료로 표시"}
+    >
+      {done ? <SquareCheck size={16} aria-hidden="true" /> : <Square size={16} aria-hidden="true" />}
+    </button>
+  ) : done ? (
+    <SquareCheck size={14} className="status-glyph status-done" />
+  ) : (
+    <Square size={14} className="status-glyph status-pending" />
+  );
+  const quickActions = canWrite && !done ? (
+    <button
+      type="button"
+      className="review-card-quick is-primary"
+      onClick={stopAnd(() => onSetCompletion(true))}
+      title="완료로 표시"
+    >
+      <Check size={12} aria-hidden="true" />
+      완료
+    </button>
+  ) : canWrite && done ? (
+    <button
+      type="button"
+      className="review-card-quick"
+      onClick={stopAnd(() => onSetCompletion(false))}
+      title="완료 취소"
+    >
+      <RotateCcw size={12} aria-hidden="true" />
+      되돌리기
+    </button>
+  ) : null;
   return (
     <ReviewBoardCard
       title={action.title}
-      kindLabel="다음 작업"
-      badges={
-        <>
-          <Badge tone={done ? "green" : "orange"}>상태 {done ? "완료" : "할 일"}</Badge>
-          <Badge tone={priorityTone(action.priority)}>우선 {PRIORITY_CARD_LABELS[action.priority]}</Badge>
-          {action.editedByUser ? <Badge tone="blue">수정됨</Badge> : null}
-        </>
-      }
+      leading={leading}
+      stateChip={stateChip}
+      metaText={buildActionMeta(action)}
+      priority={action.priority}
+      edited={action.editedByUser}
+      muted={done}
+      quickActions={quickActions}
       selected={selected}
       onSelect={onSelect}
     />

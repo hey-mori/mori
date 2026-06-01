@@ -1,12 +1,12 @@
-import { FileText, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { FileText, Filter, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { BaseSection } from "../../components/ui/BaseSection";
+import { SearchField } from "../../components/ui/SearchField";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
-import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import type { SourceKind } from "../../domain/types";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -86,8 +86,30 @@ export function EvidenceView() {
   }, []);
 
   const [selection, setSelection] = useState<EvidenceDetailSelection>({ kind: "empty" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFamilies, setActiveFamilies] = useState<SourceFamily[]>([]);
 
   const importedSources = view.sources;
+  const familyCounts = useMemo(() => {
+    const counts = new Map<SourceFamily, number>();
+    for (const source of importedSources) {
+      const family = sourceFamily(source.kind);
+      counts.set(family, (counts.get(family) ?? 0) + 1);
+    }
+    return counts;
+  }, [importedSources]);
+  const filteredSources = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return importedSources.filter((source) => {
+      if (activeFamilies.length > 0 && !activeFamilies.includes(sourceFamily(source.kind))) {
+        return false;
+      }
+      if (!query) return true;
+      const haystack = `${source.title} ${source.detail} ${source.kind}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [importedSources, searchQuery, activeFamilies]);
+  const filterActive = searchQuery.trim().length > 0 || activeFamilies.length > 0;
   const isDemoSession = mode === "demo";
   const importCompletion = useMemo(
     () =>
@@ -122,22 +144,6 @@ export function EvidenceView() {
     return <ImportReviewView embedded />;
   }
 
-  const actionBar = (
-    <ActionBar
-      label="세션 구성"
-      start={
-        <>
-          <Badge tone={importedSources.length ? "purple" : "gray"}>
-            출처 {importedSources.length}
-          </Badge>
-          <Badge tone={view.events.length ? "blue" : "gray"}>
-            이벤트 {view.events.length}
-          </Badge>
-        </>
-      }
-    />
-  );
-
   const aside = (
     <SourceDetailPanel
       selection={selection}
@@ -148,50 +154,52 @@ export function EvidenceView() {
           ? imports.find((entry) => entry.source.id === selection.sourceId)?.importSummary
           : undefined
       }
+      onClose={() => setSelection({ kind: "empty" })}
     />
   );
 
-  const importedSourcesSection = (
-    <BaseSection
-      className="evidence-section evidence-imported-sources"
-      title="세션을 구성한 자료"
-      actions={
-        <Badge tone={importedSources.length ? "purple" : "gray"}>
-          {importedSources.length}개
-        </Badge>
-      }
-      ariaLabel="세션을 구성한 자료"
-    >
-      {importedSources.length === 0 ? (
-        <EvidenceEmptyState isDemo={isDemoSession} />
-      ) : (
-        <div className="imported-source-list">
-          {importedSources.map((source) => {
-            const importEntry = imports.find((entry) => entry.source.id === source.id);
-            const selected = selection.kind === "source" && selection.sourceId === source.id;
-            return (
-              <ImportedSourceRow
-                key={source.id}
-                source={source}
-                events={view.events}
-                selected={selected}
-                importSummary={importEntry?.importSummary}
-                onSelect={() => setSelection({ kind: "source", sourceId: source.id })}
-                onRemove={
-                  importEntry && !isDemoSession
-                    ? () => {
-                        removeImport(importEntry.id);
-                        if (selected) setSelection({ kind: "empty" });
-                      }
-                    : undefined
-                }
-              />
-            );
-          })}
-        </div>
-      )}
-    </BaseSection>
-  );
+  const importedSourcesSection =
+    importedSources.length === 0 ? (
+      <EvidenceEmptyState isDemo={isDemoSession} />
+    ) : filteredSources.length === 0 ? (
+      <EvidenceFilteredEmpty
+        onClear={() => {
+          setSearchQuery("");
+          setActiveFamilies([]);
+        }}
+      />
+    ) : (
+      <div className="imported-source-list" aria-label="세션을 구성한 자료">
+        {filteredSources.map((source) => {
+          const importEntry = imports.find((entry) => entry.source.id === source.id);
+          const selected = selection.kind === "source" && selection.sourceId === source.id;
+          return (
+            <ImportedSourceRow
+              key={source.id}
+              source={source}
+              events={view.events}
+              selected={selected}
+              importSummary={importEntry?.importSummary}
+              onSelect={() =>
+                setSelection(
+                  selected
+                    ? { kind: "empty" }
+                    : { kind: "source", sourceId: source.id },
+                )
+              }
+              onRemove={
+                importEntry && !isDemoSession
+                  ? () => {
+                      removeImport(importEntry.id);
+                      if (selected) setSelection({ kind: "empty" });
+                    }
+                  : undefined
+              }
+            />
+          );
+        })}
+      </div>
+    );
 
   const quickPassSection =
     mode === "draft" ? (
@@ -215,6 +223,28 @@ export function EvidenceView() {
         onOpenSettings={() => setCurrentView("settings")}
         onRun={() => runQuickPass()}
         onClear={clearAnalysis}
+      />
+    ) : null;
+
+  const toolbar =
+    importedSources.length > 0 ? (
+      <EvidenceToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        activeFamilies={activeFamilies}
+        onToggleFamily={(family) =>
+          setActiveFamilies((current) =>
+            current.includes(family)
+              ? current.filter((entry) => entry !== family)
+              : [...current, family],
+          )
+        }
+        onClearFilters={() => {
+          setSearchQuery("");
+          setActiveFamilies([]);
+        }}
+        familyCounts={familyCounts}
+        filterActive={filterActive}
       />
     ) : null;
 
@@ -242,6 +272,7 @@ export function EvidenceView() {
         </NoticeBanner>
       ) : null}
 
+      {toolbar}
       {importedSourcesSection}
       {quickPassSection}
     </>
@@ -254,11 +285,179 @@ export function EvidenceView() {
 
   return (
     <div className="session-tab-pane session-tab-evidence">
-      <div className="session-tab-actionbar">{actionBar}</div>
       <div className={`session-tab-split${showAside ? "" : " is-collapsed"}`}>
         <div className="session-tab-main">{body}</div>
         {showAside ? aside : null}
       </div>
+    </div>
+  );
+}
+
+type SourceFamily = "ai" | "git" | "terminal" | "file" | "note" | "web" | "other";
+
+const FAMILY_LABELS: Record<SourceFamily, string> = {
+  ai: "AI 대화",
+  git: "Git",
+  terminal: "터미널",
+  file: "코드·파일",
+  note: "메모",
+  web: "웹·URL",
+  other: "기타",
+};
+
+const FAMILY_ORDER: SourceFamily[] = ["ai", "git", "file", "note", "web", "terminal", "other"];
+
+function sourceFamily(kind: SourceKind): SourceFamily {
+  switch (kind) {
+    case "aiConversation":
+    case "claudeTranscript":
+    case "chatgptTranscript":
+    case "codexTranscript":
+    case "desktopTranscriptImport":
+    case "connectorJsonl":
+      return "ai";
+    case "gitDiff":
+    case "tauriGitDiff":
+    case "git":
+    case "gitCommand":
+    case "githubPrImport":
+    case "repository":
+      return "git";
+    case "terminal":
+    case "terminalShell":
+    case "buildLog":
+    case "deployLog":
+    case "automation":
+      return "terminal";
+    case "file":
+    case "fileSystem":
+    case "editor":
+    case "vscode":
+    case "cursor":
+      return "file";
+    case "manualNote":
+    case "docs":
+    case "notion":
+      return "note";
+    case "browser":
+    case "browserTab":
+    case "url":
+      return "web";
+    default:
+      return "other";
+  }
+}
+
+function EvidenceToolbar({
+  searchQuery,
+  onSearchChange,
+  activeFamilies,
+  onToggleFamily,
+  onClearFilters,
+  familyCounts,
+  filterActive,
+}: {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  activeFamilies: SourceFamily[];
+  onToggleFamily: (family: SourceFamily) => void;
+  onClearFilters: () => void;
+  familyCounts: Map<SourceFamily, number>;
+  filterActive: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const popRef = useRef<HTMLDivElement | null>(null);
+  const families = FAMILY_ORDER.filter((family) => (familyCounts.get(family) ?? 0) > 0);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(event: MouseEvent) {
+      if (!popRef.current) return;
+      if (!popRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  return (
+    <div className="tab-toolbar" role="toolbar" aria-label="자료 도구">
+      <SearchField
+        value={searchQuery}
+        onChange={onSearchChange}
+        ariaLabel="자료 검색"
+        className="tab-toolbar-search"
+      />
+      <span className="tab-toolbar-spacer" aria-hidden="true" />
+      <div className="tab-toolbar-right">
+        {families.length > 0 ? (
+          <div className="toolbar-pop-wrap" ref={popRef}>
+            <button
+              type="button"
+              className={`toolbar-toggle ${activeFamilies.length ? "is-active" : ""}`}
+              onClick={() => setOpen((value) => !value)}
+              aria-expanded={open}
+              aria-controls="evidence-filter-popover"
+              title="자료 종류 필터"
+            >
+              <Filter size={14} aria-hidden="true" />
+              {activeFamilies.length ? `필터 · ${activeFamilies.length}` : "필터"}
+            </button>
+            {open ? (
+              <div
+                className="filter-popover"
+                id="evidence-filter-popover"
+                role="dialog"
+                aria-label="자료 종류 필터"
+              >
+                <header>
+                  <span>자료 종류</span>
+                  <button
+                    type="button"
+                    className="filter-popover-clear"
+                    onClick={() => {
+                      onClearFilters();
+                      setOpen(false);
+                    }}
+                    disabled={!filterActive}
+                  >
+                    지우기
+                  </button>
+                </header>
+                <ul>
+                  {families.map((family) => {
+                    const active = activeFamilies.includes(family);
+                    const count = familyCounts.get(family) ?? 0;
+                    return (
+                      <li key={family}>
+                        <button
+                          type="button"
+                          className={`filter-pop-item ${active ? "active" : ""}`}
+                          aria-pressed={active}
+                          onClick={() => onToggleFamily(family)}
+                        >
+                          <span className="filter-pop-label">{FAMILY_LABELS[family]}</span>
+                          <span className="filter-pop-count">{count}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function EvidenceFilteredEmpty({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="evidence-empty">
+      <p>검색·필터에 맞는 자료가 없습니다.</p>
+      <button type="button" className="filter-popover-clear" onClick={onClear}>
+        필터 지우기
+      </button>
     </div>
   );
 }

@@ -836,6 +836,97 @@ td a {
   border-bottom: 0;
 }
 
+/* ============================
+ * Shared session-tab toolbar (흐름, 자료, 검토)
+ * An inset lavender band with a fixed 52px height and a fixed 320px search
+ * input so every tab lands at exactly the same eye-line and the search box
+ * never shifts when the user switches tabs.
+ * Layout invariant — left → right:
+ *     [search] [spacer] [secondary controls] [필터]
+ * The filter button is always the rightmost control on every tab.
+ * ============================ */
+
+.tab-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  margin-bottom: var(--base-space-4);
+  padding: 0 var(--base-space-5);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface-subtle);
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.tab-toolbar .tab-toolbar-search,
+.timeline-toolbar .tab-toolbar-search {
+  flex: 0 1 240px;
+  width: 240px;
+  height: 30px;
+  background: var(--base-surface);
+}
+
+.tab-toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tab-toolbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.tab-toolbar-metrics {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  height: 30px;
+}
+
+.tab-toolbar-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-pill);
+  background: var(--base-surface);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.tab-toolbar-metric dt {
+  margin: 0;
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.tab-toolbar-metric dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tab-toolbar-metric.tone-orange dd { color: var(--orange); }
+.tab-toolbar-metric.tone-blue dd { color: var(--blue); }
+.tab-toolbar-metric.tone-green dd { color: var(--green); }
+.tab-toolbar-metric.is-zero {
+  opacity: 0.55;
+}
+
 .evidence-source-catalog.is-secondary {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: none;
@@ -1182,7 +1273,11 @@ td a {
 
 /* Right detail panel */
 
-.evidence-detail {
+/* .evidence-detail is now applied as a feature-flavor class on top of
+   `.base-inspector-panel`. The base layer owns positioning, height, and
+   scroll — keep this rule for legacy non-panel adopters but neutralize the
+   layout/scroll overrides when paired with the panel. */
+.evidence-detail:not(.base-inspector-panel) {
   position: sticky;
   top: 88px;
   display: grid;
@@ -1198,7 +1293,7 @@ td a {
 }
 
 @media (max-width: 1180px) {
-  .evidence-detail {
+  .evidence-detail:not(.base-inspector-panel) {
     position: static;
     max-height: none;
   }
@@ -2424,10 +2519,8 @@ td a {
 
 /* Issue Garden */
 
-.review-tab-canvas {
-  padding-top: var(--base-space-4);
-}
-
+/* The 검토 split inherits the shared `.session-tab-split` padding — no extra
+   top inset, so every tab pane lands at the same y-coordinate. */
 .review-tab-canvas .session-tab-main {
   gap: var(--base-space-5);
 }
@@ -2782,6 +2875,241 @@ td a {
   flex-wrap: wrap;
   gap: var(--base-space-1);
   margin-top: var(--base-space-1);
+}
+
+/* ============================
+ * Review card v2 layout
+ * Leading status glyph + title row, two-line summary, meta row (state chip +
+ * evidence count), hover-revealed quick action chips floating top-right.
+ * Replaces the old kicker / badge stack — the column header already names the
+ * card kind, so each card stays compact and information-dense.
+ * ============================ */
+
+.review-issue-card {
+  position: relative;
+}
+
+.review-card-head-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.review-card-head-row .review-card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.review-card-leading {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.status-glyph { color: var(--muted-2); }
+.status-glyph.status-open { color: var(--orange); }
+.status-glyph.status-inProgress {
+  color: var(--blue);
+  animation: review-status-spin 1.6s linear infinite;
+}
+.status-glyph.status-watching { color: var(--purple); }
+.status-glyph.status-resolved,
+.status-glyph.status-confirmed,
+.status-glyph.status-done { color: var(--green); }
+.status-glyph.status-pending { color: var(--muted-2); }
+
+@keyframes review-status-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-glyph.status-inProgress { animation: none; }
+}
+
+.review-card-priority-flag {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: var(--base-radius-pill);
+  background: var(--red-50, #fef2f2);
+  color: var(--red, #b91c1c);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.review-card-edited {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--blue, #2563eb);
+}
+
+.review-card-meta-row {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.review-card-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--base-radius-pill);
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  background: var(--gray-50);
+  color: var(--muted);
+}
+
+.review-card-state.tone-orange {
+  background: var(--orange-50, #fff8e6);
+  color: var(--orange);
+}
+.review-card-state.tone-blue {
+  background: var(--blue-50, #eef2ff);
+  color: var(--blue);
+}
+.review-card-state.tone-green {
+  background: var(--green-50, #ecfdf5);
+  color: var(--green);
+}
+.review-card-state.tone-red {
+  background: var(--red-50, #fef2f2);
+  color: var(--red);
+}
+
+.review-card-meta-text {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Resolved issues / completed actions read as already-done: muted background,
+   muted title, light strikethrough. */
+.review-issue-card.is-muted {
+  background: var(--base-surface-subtle);
+}
+
+.review-issue-card.is-muted .review-card-title {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--muted-2);
+  text-decoration-thickness: 1px;
+}
+
+.review-issue-card.is-muted .review-card-summary {
+  color: var(--muted-2);
+}
+
+/* High-priority cards: warm border tint only. No left-edge accent bar — Mori
+   avoids that AI-cliché. The 높음 chip in the title row already signals
+   urgency. */
+.review-issue-card.priority-high:not(.is-muted) {
+  border-color: var(--orange-200, #fde8b8);
+}
+
+/* Column header: stacked title row + tiny progress hint, vertically grouped
+   so the count + progress read together. */
+.review-issue-column > header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.review-issue-column-progress {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding-left: 15px;
+}
+
+/* Quick action chips floating top-right — hidden until hover/focus so the
+   board stays calm and the chip cluster never competes with the title. */
+.review-card-quick-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.review-issue-card:hover .review-card-quick-actions,
+.review-issue-card:focus-within .review-card-quick-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.review-card-quick {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-pill);
+  background: var(--base-surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+}
+
+.review-card-quick:hover {
+  border-color: var(--base-border-strong);
+}
+
+.review-card-quick.is-primary {
+  background: var(--green, #047857);
+  border-color: var(--green, #047857);
+  color: white;
+}
+
+.review-card-quick.is-primary:hover {
+  filter: brightness(0.95);
+}
+
+/* Inline checkbox affordance for next-action cards. Clicking it toggles
+   completion without opening the inspector; clicking the rest of the card
+   opens the inspector as usual. */
+.review-card-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.review-card-checkbox:hover {
+  background: var(--green-50, #ecfdf5);
+  color: var(--green);
+}
+
+.review-card-checkbox.is-done {
+  color: var(--green);
 }
 
 .review-issue-card .pill {
@@ -4502,10 +4830,10 @@ td a {
 
 .resume-prompt-card {
   display: grid;
-  gap: 12px;
-  padding: 16px 18px 18px;
+  gap: 8px;
+  padding: 10px 12px 12px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 11px;
   background: white;
   box-shadow: var(--shadow-soft);
 }
@@ -4513,21 +4841,22 @@ td a {
 .resume-prompt-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
+  min-height: 28px;
+}
+
+.resume-prompt-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .resume-prompt-head h2 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-}
-
-.resume-prompt-head p {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
-  max-width: 620px;
+  font-size: 13.5px;
+  font-weight: 700;
 }
 
 .resume-prompt-meta {
@@ -4539,38 +4868,37 @@ td a {
 
 .resume-prompt-body {
   margin: 0;
-  padding: 14px 16px;
+  padding: 10px 12px;
   border: 1px solid #d9d0ff;
-  border-radius: 10px;
+  border-radius: 9px;
   background: linear-gradient(180deg, #fff, #fbf9ff);
   color: #253352;
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 12px;
+  line-height: 1.6;
   white-space: pre-wrap;
-  max-height: 320px;
+  max-height: 220px;
   overflow: auto;
 }
 
 .resume-prompt-empty {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 14px 16px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
   border: 1px dashed var(--line-strong);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--panel-soft);
   color: var(--muted);
 }
 
 .resume-prompt-empty p {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .resume-prompt-empty svg {
   flex-shrink: 0;
-  margin-top: 2px;
   color: var(--purple);
 }
 
@@ -4675,33 +5003,35 @@ td a {
 .mori-package-strip {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid #d9d0ff;
-  border-radius: 12px;
+  border-radius: 11px;
   background: linear-gradient(180deg, #fff, #fbf9ff);
   box-shadow: var(--shadow-soft);
 }
 
 .mori-package-strip h3 {
-  margin: 0 0 4px 0;
+  margin: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .mori-package-strip p {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 11.5px;
+  line-height: 1.5;
 }
 
 .mori-package-strip-intro {
   display: grid;
-  gap: 10px;
+  gap: 4px;
   min-width: 0;
+  align-content: center;
 }
 
 .mori-package-export-options {

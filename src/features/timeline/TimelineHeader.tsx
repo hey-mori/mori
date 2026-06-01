@@ -1,12 +1,6 @@
-import {
-  Filter,
-  List,
-  Route,
-  Rows3,
-  Search,
-  X,
-} from "lucide-react";
+import { Filter, List, Route, Rows3 } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { SearchField } from "../../components/ui/SearchField";
 import {
   CANONICAL_TIMELINE_LANES,
   getActivityLaneVisuals,
@@ -52,7 +46,16 @@ export function TimelineToolbar({
 
   return (
     <div className="timeline-toolbar" role="toolbar" aria-label="타임라인 컨트롤">
-      <div className="timeline-toolbar-left">
+      <SearchField
+        value={searchQuery}
+        onChange={onSearchChange}
+        ariaLabel="타임라인 이벤트 검색"
+        className="tab-toolbar-search"
+      />
+
+      <span className="timeline-toolbar-spacer" aria-hidden="true" />
+
+      <div className="timeline-toolbar-right">
         <div className="timeline-mode-switch" role="group" aria-label="흐름 보기 방식">
           <button
             type="button"
@@ -82,31 +85,6 @@ export function TimelineToolbar({
             연결
           </button>
         </div>
-      </div>
-
-      <div className="timeline-toolbar-search" role="search" aria-label="타임라인 이벤트 검색">
-        <Search size={14} aria-hidden="true" className="timeline-search-icon" />
-        <input
-          type="search"
-          className="timeline-search-input"
-          placeholder=""
-          value={searchQuery}
-          onChange={(event) => onSearchChange(event.target.value)}
-          aria-label="타임라인 이벤트 검색"
-        />
-        {searchQuery ? (
-          <button
-            type="button"
-            className="timeline-search-clear"
-            onClick={() => onSearchChange("")}
-            aria-label="검색어 지우기"
-          >
-            <X size={13} aria-hidden="true" />
-          </button>
-        ) : null}
-      </div>
-
-      <div className="timeline-toolbar-right">
         <div className="toolbar-pop-wrap" ref={filterPopRef}>
           <button
             type="button"
