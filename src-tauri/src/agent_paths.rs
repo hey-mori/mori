@@ -1,6 +1,6 @@
 //! Centralized, env-aware resolution of where each agent stores its data.
 //!
-//! Agents do not use XDG / Known Folder conventions — they use literal
+//! Agents do not use XDG / Known Folder conventions: they use literal
 //! dot-directories under the user's home, but several honor an environment
 //! override that relocates that root (Codex: `CODEX_HOME`; Claude Code:
 //! `CLAUDE_CONFIG_DIR`). Resolving here, once and env-aware, keeps discovery

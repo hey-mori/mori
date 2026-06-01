@@ -1,15 +1,15 @@
 //! Antigravity local session discovery + read.
 //!
 //! Google Antigravity stores authoritative conversations as protobuf
-//! (`~/.gemini/antigravity/conversations/<id>.pb`) — which Mori must NOT read
-//! (internal store, a hard non-goal) — and, for *some* conversations, a
+//! (`~/.gemini/antigravity/conversations/<id>.pb`), which Mori must NOT read
+//! (internal store, a hard non-goal), and, for *some* conversations, a
 //! readable JSON Lines transcript at
 //! `~/.gemini/antigravity/brain/<conversation-id>/.system_generated/logs/transcript.jsonl`.
 //!
 //! This reader walks only the `brain/*/.system_generated/logs/` transcripts.
 //! It is read-only, bounded (8 MB cap, skips large files), and tolerant: a
 //! malformed line is skipped, never fatal. Capture is therefore deliberately
-//! **partial** — conversations that only have a `.pb` and no generated
+//! **partial**: conversations that only have a `.pb` and no generated
 //! transcript are not discoverable, and the transcript format is undocumented
 //! and has changed across Antigravity releases, so this parser favours
 //! resilience over completeness. The UI must label the capture partial.
@@ -192,7 +192,7 @@ pub(crate) fn read_session_at(
 }
 
 /// Walk `brain/<id>/.system_generated/logs/transcript.jsonl`. We do not recurse
-/// arbitrarily — only the fixed `.system_generated/logs` leaf under each
+/// arbitrarily; only the fixed `.system_generated/logs` leaf under each
 /// conversation directory is inspected.
 fn collect_transcripts(brain_root: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(brain_root) else {

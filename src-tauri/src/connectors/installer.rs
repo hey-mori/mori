@@ -2,7 +2,7 @@
 //!
 //! Reports, per capture connector, whether the underlying tool is present and
 //! whether Mori's capture is wired up. Read-only and bounded, like the other
-//! connector + discovery probes — it stats directories, parses one settings
+//! connector + discovery probes: it stats directories, parses one settings
 //! file, and counts session files. It never writes, never recurses outside
 //! the known roots, and never reads session content.
 //!
@@ -15,7 +15,7 @@
 //!     session rollout files can Mori read back?
 //!
 //! Field names mirror the TypeScript `ConnectorDetectionResult` via
-//! `rename_all = "camelCase"` — keep the two in sync.
+//! `rename_all = "camelCase"`. Keep the two in sync.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -89,7 +89,7 @@ fn detect_claude(env: &DetectEnv) -> ConnectorDetection {
     }
 }
 
-/// True when `settings.json` wires in the Mori hook — i.e. some hook command
+/// True when `settings.json` wires in the Mori hook (some hook command
 /// string references the `mori-claude-hook` script. Tolerant of the exact
 /// path and launcher (`.py` / `.sh` / `.ps1`); a malformed or hookless file
 /// reads as "not installed" rather than erroring.
