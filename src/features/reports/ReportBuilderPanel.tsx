@@ -63,7 +63,7 @@ const DEFAULT_SECTIONS: ReadonlySet<ReportSectionId> = new Set(
 );
 
 // "공유 정책" used to fan out into three independent toggles (clientSafe /
-// excludeRawTranscripts / excludeSourceDetails). One global "외부 공유용"
+// excludeRawTranscripts / excludeSourceDetails). One global "외부 공유"
 // switch is enough: when on, all three privacy gates fire together so the
 // rendered report and the .mori export are both client-safe. When off, none
 // fire — the report is the user's own internal copy.
@@ -157,7 +157,7 @@ export function ReportBuilderPanel({
   const previewHtml = useMemo(() => renderReportMarkdownToHtml(payload.markdown), [payload.markdown]);
 
   // The "Client-safe 모드: …" notice is now covered by the InfoHint next to
-  // the 외부 공유용 toggle, so it never needs to clutter the preview area.
+  // the 외부 공유 toggle, so it never needs to clutter the preview area.
   const visibleWarnings = useMemo(
     () => payload.warnings.filter((warning) => !warning.startsWith("Client-safe 모드")),
     [payload.warnings],
@@ -171,12 +171,12 @@ export function ReportBuilderPanel({
         <span className={`report-share-toggle ${externalShare ? "is-active" : ""}`}>
           <Toggle
             active={externalShare}
-            label="외부 공유용"
+            label="외부 공유"
             onClick={onToggleExternalShare}
           />
-          <span className="report-share-toggle-label">외부 공유용</span>
-          <InfoHint label="외부 공유용 설명">
-            외부 공유용으로 두면 원본 대화, 출처 상세, 파일 경로가 보고서와 .mori 패키지에서 빠집니다. 클라이언트에게 그대로 건넬 수 있는 상태.
+          <span className="report-share-toggle-label">외부 공유</span>
+          <InfoHint label="외부 공유 설명">
+            외부 공유로 두면 원본 대화, 출처 상세, 파일 경로가 보고서와 .mori 패키지에서 빠집니다.
           </InfoHint>
         </span>
         <span className="tab-toolbar-spacer" aria-hidden="true" />
@@ -205,7 +205,7 @@ export function ReportBuilderPanel({
             ))}
           </ul>
         ) : null}
-        <div className="report-preview" aria-label="보고서 미리보기 본문">
+        <div className="report-preview base-scroll" aria-label="보고서 미리보기 본문">
           <div
             className="report-rendered-preview"
             dangerouslySetInnerHTML={{ __html: previewHtml }}

@@ -282,7 +282,7 @@ function MoriPackageStrip({
   memoryStorageFellBack: boolean;
   exportPlan: ReturnType<typeof buildMoriPackageExportPlan>;
   /** When true the export follows the client-safe path; mirrors the
-   *  report builder's 외부 공유용 toggle so one switch drives both. */
+   *  report builder's 외부 공유 toggle so one switch drives both. */
   externalShare: boolean;
 }) {
   const repository = useMemo(() => createBrowserDraftRepository(), []);

@@ -50,7 +50,7 @@ export function ResumePromptCard({
           <summary>
             <span>내용 보기</span>
           </summary>
-          <pre className="resume-prompt-body">{prompt}</pre>
+          <pre className="resume-prompt-body base-scroll">{prompt}</pre>
         </details>
       ) : (
         <div className="resume-prompt-empty">

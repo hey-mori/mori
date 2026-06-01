@@ -469,7 +469,7 @@
   min-width: 140px;
 }
 
-/* "외부 공유용" pill — Toggle + a calm label + an InfoHint, in a small
+/* "외부 공유" pill — Toggle + a calm label + an InfoHint, in a small
    inset chip so it reads as one setting next to the dropdowns. */
 .report-share-toggle {
   display: inline-flex;
