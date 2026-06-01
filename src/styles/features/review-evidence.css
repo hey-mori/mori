@@ -2933,9 +2933,9 @@ td a {
   flex-shrink: 0;
   padding: 1px 7px;
   border-radius: var(--base-radius-pill);
-  background: var(--gray-50);
-  color: var(--muted);
-  border: 1px solid var(--base-border);
+  background: var(--orange-50, #fff3e6);
+  color: #8a4500;
+  border: 1px solid rgba(180, 97, 0, 0.22);
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.02em;
@@ -2973,21 +2973,28 @@ td a {
   color: var(--muted);
 }
 
+/* Non-default state chips carry meaning, so each tone gets a calm coloring
+   that the eye can pick up at a glance: green for resolved-positive (해결 ·
+   확정 · 완료), blue for in-progress, orange for watching/attention. */
 .review-card-state.tone-orange {
-  background: var(--base-surface-subtle);
-  color: var(--muted);
+  background: #fff3e6;
+  color: #8a4500;
+  border-color: rgba(180, 97, 0, 0.22);
 }
 .review-card-state.tone-blue {
-  background: var(--base-surface-subtle);
-  color: var(--muted);
+  background: #eff4ff;
+  color: #2f5fb0;
+  border-color: rgba(47, 95, 176, 0.22);
 }
 .review-card-state.tone-green {
-  background: var(--base-surface-subtle);
-  color: var(--muted);
+  background: #ecf7ee;
+  color: #2c7a45;
+  border-color: rgba(44, 122, 69, 0.22);
 }
 .review-card-state.tone-red {
-  background: var(--base-surface-subtle);
-  color: var(--muted);
+  background: #fdf2f2;
+  color: #b23b3b;
+  border-color: rgba(178, 59, 59, 0.22);
 }
 
 .review-card-meta-text {

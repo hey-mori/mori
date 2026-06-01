@@ -739,7 +739,11 @@ function IssueBoardCard({
   onSelect: () => void;
   onSetStatus: (status: IssueStatus) => void;
 }) {
-  const stateChip = (
+  // "open" is the column's default state — the leading status glyph already
+  // says so, and the column header carries the count. Skip the chip for
+  // default state so each card only flags genuinely informative transitions
+  // (진행 · 관찰 · 해결).
+  const stateChip = issue.status === "open" ? null : (
     <span className={`review-card-state tone-${issueStatusTone(issue.status)}`}>
       {ISSUE_STATUS_CARD_LABELS[issue.status]}
     </span>
@@ -811,11 +815,11 @@ function DecisionBoardCard({
   onSelect: () => void;
   onSetConfirmed: (confirmed: boolean) => void;
 }) {
-  const stateChip = (
-    <span className={`review-card-state tone-${decision.confirmed ? "green" : "orange"}`}>
-      {decision.confirmed ? "확정" : "검토 필요"}
-    </span>
-  );
+  // Unconfirmed is the column default ("확정 0/N"). Only flag the confirmed
+  // transition so the chip carries new information.
+  const stateChip = decision.confirmed ? (
+    <span className="review-card-state tone-green">확정</span>
+  ) : null;
   const quickActions = canWrite ? (
     decision.confirmed ? (
       <button
@@ -876,11 +880,11 @@ function NextActionBoardCard({
   onSetCompletion: (completed: boolean) => void;
 }) {
   const done = isNextActionCompleted(action);
-  const stateChip = (
-    <span className={`review-card-state tone-${done ? "green" : "orange"}`}>
-      {done ? "완료" : "할 일"}
-    </span>
-  );
+  // 할 일 is the column default ("완료 0/N"). Only flag the completed state so
+  // the chip is a transition signal, not noise.
+  const stateChip = done ? (
+    <span className="review-card-state tone-green">완료</span>
+  ) : null;
   // The leading affordance for a next action is the checkbox itself — clicking
   // it toggles completion without opening the inspector.
   const leading = canWrite ? (
