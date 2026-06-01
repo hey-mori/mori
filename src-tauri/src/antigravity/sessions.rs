@@ -99,26 +99,69 @@ pub(crate) fn list_sessions_at(brain_root: &Path) -> Result<Vec<AntigravitySessi
     let mut out = Vec::new();
     for path in transcripts {
         let Ok(metadata) = fs::metadata(&path) else {
+            // No-silent-truncation: surface a placeholder rather than drop.
+            out.push(unreadable_antigravity_meta(
+                &path,
+                "메타데이터 읽기 실패",
+                SystemTime::UNIX_EPOCH,
+            ));
             continue;
         };
+        let modified = metadata
+            .modified()
+            .or_else(|_| metadata.created())
+            .unwrap_or(SystemTime::UNIX_EPOCH);
         if metadata.len() > MAX_FILE_BYTES {
+            out.push(unreadable_antigravity_meta(
+                &path,
+                &format!("{} MB 초과", MAX_FILE_BYTES / (1024 * 1024)),
+                modified,
+            ));
             continue;
         }
-        if let Ok(detail) = parse_transcript(&path, false) {
-            out.push(AntigravitySessionMeta {
-                session_id: detail.session_id,
-                project_path: detail.project_path,
-                project_name: detail.project_name,
-                file_path: detail.file_path,
-                started_at: detail.started_at,
-                updated_at: detail.updated_at,
-                message_count: detail.message_count,
-                title: detail.title,
-            });
+        match parse_transcript(&path, false) {
+            Ok(detail) => {
+                out.push(AntigravitySessionMeta {
+                    session_id: detail.session_id,
+                    project_path: detail.project_path,
+                    project_name: detail.project_name,
+                    file_path: detail.file_path,
+                    started_at: detail.started_at,
+                    updated_at: detail.updated_at,
+                    message_count: detail.message_count,
+                    title: detail.title,
+                });
+            }
+            Err(_) => {
+                out.push(unreadable_antigravity_meta(&path, "파싱 실패", modified));
+            }
         }
     }
     out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
     Ok(out)
+}
+
+/// Placeholder meta for a transcript we could not read (too large, IO
+/// failure, etc.). Listed as an unreadable row so the user sees the file
+/// rather than silently losing it; the partial-capture reality already means
+/// the feed must honestly distinguish what was readable.
+fn unreadable_antigravity_meta(
+    path: &Path,
+    reason: &str,
+    modified: SystemTime,
+) -> AntigravitySessionMeta {
+    let session_id = conversation_id_from_path(path);
+    let when = format_modified_iso(modified);
+    AntigravitySessionMeta {
+        session_id,
+        project_path: "Antigravity".to_string(),
+        project_name: "Antigravity".to_string(),
+        file_path: path.to_string_lossy().to_string(),
+        started_at: when.clone(),
+        updated_at: when,
+        message_count: 0,
+        title: format!("⚠ 읽을 수 없는 세션 · {reason}"),
+    }
 }
 
 pub(crate) fn read_session_at(
@@ -382,5 +425,46 @@ mod tests {
         let temp = TempDir::new().unwrap();
         std::fs::create_dir_all(temp.path()).unwrap();
         assert!(list_sessions_at(temp.path()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn surfaces_an_unreadable_placeholder_for_a_too_large_transcript() {
+        use std::io::Write;
+        let temp = TempDir::new().unwrap();
+        // A readable transcript next to the unreadable one.
+        write_transcript(temp.path(), "conv-good", SAMPLE);
+        // A transcript just over the 8 MB cap.
+        let big_logs = temp
+            .path()
+            .join("conv-big")
+            .join(".system_generated")
+            .join("logs");
+        std::fs::create_dir_all(&big_logs).unwrap();
+        let big = big_logs.join("transcript.jsonl");
+        let mut file = std::fs::File::create(&big).unwrap();
+        let chunk = vec![b'a'; 64 * 1024];
+        let chunks_required = (MAX_FILE_BYTES / chunk.len() as u64) + 1;
+        for _ in 0..chunks_required {
+            file.write_all(&chunk).unwrap();
+        }
+        drop(file);
+
+        let sessions = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(sessions.len(), 2);
+        let placeholder = sessions
+            .iter()
+            .find(|session| session.session_id == "conv-big")
+            .expect("placeholder for the too-large transcript is missing");
+        assert!(
+            placeholder.title.contains("읽을 수 없는 세션"),
+            "title was {}",
+            placeholder.title
+        );
+        assert!(
+            placeholder.title.contains("MB 초과"),
+            "title was {}",
+            placeholder.title
+        );
+        assert_eq!(placeholder.message_count, 0);
     }
 }

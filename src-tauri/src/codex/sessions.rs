@@ -84,27 +84,67 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<CodexSessionMeta>, Str
     let mut out = Vec::new();
     for path in files {
         let Ok(metadata) = fs::metadata(&path) else {
+            // No-silent-truncation: surface a placeholder so the user sees
+            // there was a file we could not even stat, instead of dropping it.
+            out.push(unreadable_codex_meta(&path, "메타데이터 읽기 실패", SystemTime::UNIX_EPOCH));
             continue;
         };
+        let modified = metadata
+            .modified()
+            .or_else(|_| metadata.created())
+            .unwrap_or(SystemTime::UNIX_EPOCH);
         if metadata.len() > MAX_FILE_BYTES {
+            out.push(unreadable_codex_meta(
+                &path,
+                &format!("{} MB 초과", MAX_FILE_BYTES / (1024 * 1024)),
+                modified,
+            ));
             continue;
         }
-        if let Ok(detail) = parse_session_file(&path, false) {
-            out.push(CodexSessionMeta {
-                session_id: detail.session_id,
-                project_path: detail.project_path,
-                project_name: detail.project_name,
-                file_path: detail.file_path,
-                started_at: detail.started_at,
-                updated_at: detail.updated_at,
-                message_count: detail.message_count,
-                title: detail.title,
-                originator: detail.originator,
-            });
+        match parse_session_file(&path, false) {
+            Ok(detail) => {
+                out.push(CodexSessionMeta {
+                    session_id: detail.session_id,
+                    project_path: detail.project_path,
+                    project_name: detail.project_name,
+                    file_path: detail.file_path,
+                    started_at: detail.started_at,
+                    updated_at: detail.updated_at,
+                    message_count: detail.message_count,
+                    title: detail.title,
+                    originator: detail.originator,
+                });
+            }
+            Err(_) => {
+                out.push(unreadable_codex_meta(&path, "파싱 실패", modified));
+            }
         }
     }
     out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
     Ok(out)
+}
+
+/// Placeholder meta for a rollout file we could not read (too large, IO
+/// failure, etc.). Listing it as an unreadable row is honest: the user sees
+/// something is there and that Mori could not import it, rather than silently
+/// losing the session.
+fn unreadable_codex_meta(path: &Path, reason: &str, modified: SystemTime) -> CodexSessionMeta {
+    let session_id = path
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().to_string())
+        .unwrap_or_else(|| "unreadable".to_string());
+    let when = format_modified_iso(modified);
+    CodexSessionMeta {
+        session_id,
+        project_path: "Codex".to_string(),
+        project_name: "Codex".to_string(),
+        file_path: path.to_string_lossy().to_string(),
+        started_at: when.clone(),
+        updated_at: when,
+        message_count: 0,
+        title: format!("⚠ 읽을 수 없는 세션 · {reason}"),
+        originator: "Codex".to_string(),
+    }
 }
 
 pub(crate) fn read_session_at(
@@ -382,5 +422,43 @@ mod tests {
         std::fs::write(&outside, "{}\n").unwrap();
         let err = read_session_at(&root, outside.to_string_lossy().as_ref()).unwrap_err();
         assert!(err.contains("outside"));
+    }
+
+    #[test]
+    fn surfaces_an_unreadable_placeholder_for_a_too_large_session() {
+        use std::io::Write;
+        let temp = TempDir::new().unwrap();
+        let dir = temp.path().join("2026").join("05").join("28");
+        std::fs::create_dir_all(&dir).unwrap();
+        // A valid small session next to the unreadable one.
+        std::fs::write(
+            dir.join("rollout-good.jsonl"),
+            "{\"timestamp\":\"2026-05-28T00:00:00Z\",\"type\":\"session_meta\",\"payload\":{\"id\":\"good\",\"cwd\":\"C:\\\\x\",\"originator\":\"Codex\"}}\n",
+        )
+        .unwrap();
+        // A file just over the 8 MB cap.
+        let big = dir.join("rollout-too-large.jsonl");
+        let mut file = std::fs::File::create(&big).unwrap();
+        let chunk = vec![b'a'; 64 * 1024];
+        let chunks_required = (MAX_FILE_BYTES / chunk.len() as u64) + 1;
+        for _ in 0..chunks_required {
+            file.write_all(&chunk).unwrap();
+        }
+        drop(file);
+
+        let sessions = list_sessions_at(temp.path()).unwrap();
+        assert_eq!(sessions.len(), 2);
+        let placeholder = sessions
+            .iter()
+            .find(|session| session.title.contains("읽을 수 없는 세션"))
+            .expect("placeholder for the too-large file is missing");
+        assert!(
+            placeholder.title.contains("MB 초과"),
+            "title was {}",
+            placeholder.title
+        );
+        assert_eq!(placeholder.message_count, 0);
+        assert_eq!(placeholder.session_id, "rollout-too-large");
+        assert_eq!(placeholder.originator, "Codex");
     }
 }
