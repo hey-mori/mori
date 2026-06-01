@@ -55,18 +55,27 @@
 
 /* Report builder panel */
 
+/* Outer wrapper that holds the toolbar band + preview shell as separate
+   visual surfaces (the toolbar is a sibling of the preview, not nested
+   inside it — matches the 흐름 / 자료 / 검토 pattern). */
+.report-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Legacy alias retained for any leftover surface that still references the
+   old class name — collapses to the same flex column. */
 .report-builder-panel {
   display: flex;
   flex-direction: column;
+  gap: 12px;
   min-width: 0;
-  /* The preview is the surface that matters — give the panel almost the full
-     visible session detail height so it never reads as a half-height card. */
-  min-height: calc(100vh - 260px);
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: white;
-  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
-  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .report-builder-head {
@@ -435,18 +444,14 @@
   min-width: 0;
 }
 
-/* Top filter-style toolbar — section / format / 공유 토글 / 복사 + 저장.
-   Same idea as the 흐름 / 자료 / 검토 toolbars: an inset band that anchors
-   the page. The preview pane below fills the remaining height. */
+/* Report builder toolbar variant — reuses `.tab-toolbar` (same lavender
+   band, 52px height, rounded chrome) so 보고서 lands at the same eye-line
+   as 자료 / 검토. Section / format / share / actions all live inline. */
 .report-builder-toolbar {
-  display: flex;
+  /* Allow the inner controls (a 38px BaseSelect trigger, a 38px share pill)
+     to be slightly taller than the 30px toolbar default without growing
+     the band height. */
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  min-height: 52px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--line);
-  background: var(--panel-soft);
 }
 
 .report-builder-toolbar .report-builder-field {
@@ -454,35 +459,31 @@
   min-width: 0;
 }
 
+.report-builder-toolbar .report-builder-field > span {
+  display: none;
+}
+
 .report-builder-toolbar .report-builder-field > .base-select-trigger,
 .report-builder-toolbar .report-builder-field > .base-checklist-trigger {
-  min-width: 160px;
+  height: 32px;
+  min-width: 140px;
 }
 
-.report-builder-toolbar .report-builder-actions {
-  margin-left: auto;
-}
-
-/* "외부 공유용" pill — Toggle + a calm label, in a small inset chip so it
-   reads as a single setting next to the dropdowns. */
+/* "외부 공유용" pill — Toggle + a calm label + an InfoHint, in a small
+   inset chip so it reads as one setting next to the dropdowns. */
 .report-share-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--panel);
-  color: var(--text);
+  height: 32px;
+  padding: 0 10px 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--base-radius-pill);
+  background: var(--base-surface);
+  color: var(--muted);
   font-size: 12px;
   font-weight: 650;
-  cursor: pointer;
   transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
-}
-
-.report-share-toggle:hover {
-  border-color: var(--line-strong);
 }
 
 .report-share-toggle.is-active {
@@ -493,6 +494,10 @@
 
 .report-share-toggle-label {
   white-space: nowrap;
+}
+
+.report-share-toggle .switch {
+  flex-shrink: 0;
 }
 
 .report-type-select-row {
@@ -631,22 +636,41 @@
   justify-content: flex-end;
 }
 
-/* Preview pane fills the rest of the panel's height; the rendered preview
-   scrolls inside it. */
-.report-preview-pane {
+/* Preview shell — its own bordered surface (so it reads as a separate area
+   from the toolbar band). Holds an optional warnings list and the rendered
+   preview, which scrolls inside the shell's bounded height. */
+.report-preview-shell {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex: 1 1 auto;
   min-width: 0;
-  min-height: 0;
+  min-height: 320px;
+  /* Bounded to the viewport: shrinks on small screens, never spills past the
+     fold on tall ones. The preview inside takes the slack and scrolls. */
+  max-height: calc(100vh - 280px);
   padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
 }
 
-.report-preview-pane .report-preview {
+.report-preview-shell .report-preview {
   flex: 1 1 auto;
   min-height: 0;
   max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 1180px) {
+  .report-preview-shell {
+    max-height: calc(100vh - 260px);
+  }
 }
 
 .report-rendered-preview {

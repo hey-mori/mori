@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { BaseActionCluster } from "../../components/ui/BaseActionCluster";
 import { BaseChecklistSelect, type BaseChecklistOption } from "../../components/ui/BaseChecklistSelect";
 import { BaseSelect, type BaseSelectOption } from "../../components/ui/BaseSelect";
+import { InfoHint } from "../../components/ui/InfoHint";
 import { Toggle } from "../../components/ui/Toggle";
 import type { MockSession } from "../../domain/types";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
@@ -155,19 +156,30 @@ export function ReportBuilderPanel({
   const selectedFormat = FORMAT_DEFS.find((entry) => entry.id === format) ?? FORMAT_DEFS[0];
   const previewHtml = useMemo(() => renderReportMarkdownToHtml(payload.markdown), [payload.markdown]);
 
+  // The "Client-safe 모드: …" notice is now covered by the InfoHint next to
+  // the 외부 공유용 toggle, so it never needs to clutter the preview area.
+  const visibleWarnings = useMemo(
+    () => payload.warnings.filter((warning) => !warning.startsWith("Client-safe 모드")),
+    [payload.warnings],
+  );
+
   return (
-    <aside id={id} className="report-builder-panel" aria-label="보고서 작성">
-      <header className="report-builder-toolbar" role="toolbar" aria-label="보고서 옵션">
+    <div id={id} className="report-builder" aria-label="보고서 작성">
+      <header className="tab-toolbar report-builder-toolbar" role="toolbar" aria-label="보고서 옵션">
         <ReportSectionPicker sections={sections} onToggle={handleToggleSection} />
         <ReportFormatPicker format={format} onChange={setFormat} />
-        <label className={`report-share-toggle ${externalShare ? "is-active" : ""}`}>
+        <span className={`report-share-toggle ${externalShare ? "is-active" : ""}`}>
           <Toggle
             active={externalShare}
             label="외부 공유용"
             onClick={onToggleExternalShare}
           />
           <span className="report-share-toggle-label">외부 공유용</span>
-        </label>
+          <InfoHint label="외부 공유용 설명">
+            외부 공유용으로 두면 원본 대화, 출처 상세, 파일 경로가 보고서와 .mori 패키지에서 빠집니다. 클라이언트에게 그대로 건넬 수 있는 상태.
+          </InfoHint>
+        </span>
+        <span className="tab-toolbar-spacer" aria-hidden="true" />
         <BaseActionCluster className="report-builder-actions">
           <Button
             variant="primary"
@@ -182,10 +194,10 @@ export function ReportBuilderPanel({
           </Button>
         </BaseActionCluster>
       </header>
-      <section className="report-preview-pane" aria-label="보고서 미리보기">
-        {payload.warnings.length > 0 ? (
+      <section className="report-preview-shell" aria-label="보고서 미리보기">
+        {visibleWarnings.length > 0 ? (
           <ul className="report-warnings">
-            {payload.warnings.map((warning) => (
+            {visibleWarnings.map((warning) => (
               <li key={warning}>
                 <Sparkles size={11} aria-hidden="true" />
                 <span>{warning}</span>
@@ -193,14 +205,14 @@ export function ReportBuilderPanel({
             ))}
           </ul>
         ) : null}
-        <div className="report-preview base-scroll" aria-label="보고서 미리보기 본문">
+        <div className="report-preview" aria-label="보고서 미리보기 본문">
           <div
             className="report-rendered-preview"
             dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
         </div>
       </section>
-    </aside>
+    </div>
   );
 }
 
