@@ -177,6 +177,55 @@ function groupByProject(rows: SidebarSessionRow[]): SidebarSessionGroup[] {
 }
 
 /**
+ * Default visible-row caps used by the sidebar list before the user clicks
+ * "더 보기". Centralised here so tests and the renderer agree on the same
+ * numbers; tuned for ChatGPT/Codex-style behaviour where the *typical*
+ * working set fits without expansion and the long tail is one click away.
+ *
+ *   - Project mode: each project folder shows its 5 most-recent sessions.
+ *   - Recency mode: a single global cap across all buckets (오늘 → 이전),
+ *     so the user lands on a calm column instead of a long "이전" tail.
+ */
+export const SIDEBAR_PROJECT_VISIBLE_LIMIT = 5;
+export const SIDEBAR_RECENCY_VISIBLE_LIMIT = 12;
+
+/**
+ * Truncate a recency-mode group list to at most `limit` rows total, walking
+ * buckets in order (today first). A bucket past the cap is dropped; a bucket
+ * that the cap falls inside is sliced. Returns the truncated groups *and* the
+ * count of hidden rows so the renderer can label the "더 보기" affordance.
+ *
+ * `limit <= 0` returns no rows (still tells the caller how many were hidden);
+ * a non-finite or negative `limit` is treated as "no limit" and returns the
+ * input unchanged. Pure / synchronous so it composes cheaply with `useMemo`.
+ */
+export function truncateRecencyGroups(
+  groups: SidebarSessionGroup[],
+  limit: number,
+): { groups: SidebarSessionGroup[]; hiddenCount: number } {
+  const totalRows = groups.reduce((sum, g) => sum + g.rows.length, 0);
+  if (!Number.isFinite(limit) || limit < 0) {
+    return { groups, hiddenCount: 0 };
+  }
+  if (totalRows <= limit) {
+    return { groups, hiddenCount: 0 };
+  }
+  let remaining = limit;
+  const out: SidebarSessionGroup[] = [];
+  for (const group of groups) {
+    if (remaining <= 0) break;
+    if (group.rows.length <= remaining) {
+      out.push(group);
+      remaining -= group.rows.length;
+      continue;
+    }
+    out.push({ ...group, rows: group.rows.slice(0, remaining) });
+    remaining = 0;
+  }
+  return { groups: out, hiddenCount: totalRows - limit };
+}
+
+/**
  * Short relative-time label used in the sidebar list — "방금", "12분 전",
  * "3시간 전", "어제", or a calendar date for older rows. Calendar dates are
  * rendered as "5월 24일" (Korean short form) — the longer "2026. 5. 24."

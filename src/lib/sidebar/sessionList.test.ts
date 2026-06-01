@@ -5,6 +5,8 @@ import {
   formatSidebarRelative,
   groupSidebarRows,
   toSidebarRow,
+  truncateRecencyGroups,
+  type SidebarSessionGroup,
   type SidebarSessionRow,
 } from "./sessionList";
 
@@ -151,5 +153,61 @@ describe("formatSidebarRelative", () => {
 
   it("returns an empty string for an unparseable timestamp", () => {
     expect(formatSidebarRelative("not-a-date")).toBe("");
+  });
+});
+
+describe("truncateRecencyGroups", () => {
+  function group(label: string, count: number): SidebarSessionGroup {
+    return {
+      bucket: "today",
+      label,
+      rows: Array.from({ length: count }, (_, i) => ({
+        sessionId: `${label}-${i}`,
+        title: `${label} ${i}`,
+        timestamp: "2026-05-22T10:00:00.000Z",
+      })),
+    };
+  }
+
+  it("returns the groups unchanged when the total row count fits the limit", () => {
+    const groups = [group("오늘", 3), group("어제", 2)];
+    const result = truncateRecencyGroups(groups, 12);
+    expect(result.groups).toEqual(groups);
+    expect(result.hiddenCount).toBe(0);
+  });
+
+  it("walks buckets in order and slices the bucket the cap falls inside", () => {
+    const groups = [group("오늘", 4), group("어제", 5), group("이전", 10)];
+    // limit 6 → 오늘(4) + 어제 first 2; 이전 dropped entirely.
+    const result = truncateRecencyGroups(groups, 6);
+    expect(result.groups).toHaveLength(2);
+    expect(result.groups[0].rows).toHaveLength(4);
+    expect(result.groups[1].rows).toHaveLength(2);
+    expect(result.hiddenCount).toBe(13);
+  });
+
+  it("drops buckets entirely when the cap is consumed before reaching them", () => {
+    const groups = [group("오늘", 12), group("어제", 5), group("이전", 8)];
+    const result = truncateRecencyGroups(groups, 12);
+    // 오늘 exactly fills the cap → 어제 / 이전 dropped.
+    expect(result.groups).toHaveLength(1);
+    expect(result.groups[0].rows).toHaveLength(12);
+    expect(result.hiddenCount).toBe(13);
+  });
+
+  it("returns zero rows but reports hidden count when limit is 0", () => {
+    const groups = [group("오늘", 3)];
+    const result = truncateRecencyGroups(groups, 0);
+    expect(result.groups).toEqual([]);
+    expect(result.hiddenCount).toBe(3);
+  });
+
+  it("treats a negative or non-finite limit as 'no limit'", () => {
+    const groups = [group("오늘", 3)];
+    expect(truncateRecencyGroups(groups, -1)).toEqual({ groups, hiddenCount: 0 });
+    expect(truncateRecencyGroups(groups, Number.POSITIVE_INFINITY)).toEqual({
+      groups,
+      hiddenCount: 0,
+    });
   });
 });

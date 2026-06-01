@@ -30,7 +30,10 @@ import {
   filterSidebarRows,
   groupSidebarRows,
   shortProjectLabel,
+  SIDEBAR_PROJECT_VISIBLE_LIMIT,
+  SIDEBAR_RECENCY_VISIBLE_LIMIT,
   toSidebarRow,
+  truncateRecencyGroups,
   type SidebarGroupingMode,
   type SidebarSessionGroup,
   type SidebarSessionRow,
@@ -183,6 +186,23 @@ export function Sidebar({
     });
   }, []);
 
+  // "더 보기" expansion — per-project in project mode, single flag in recency
+  // mode. State is in-memory only: every fresh session lands on the calm
+  // truncated view, and one click reveals the long tail. Toggling back to
+  // the truncated state is supported (the row label flips to "접기").
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const toggleProjectExpanded = useCallback((label: string) => {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }, []);
+  const [recencyExpanded, setRecencyExpanded] = useState(false);
+
   const refresh = useCallback(() => {
     setSummaries(safeListSessions());
   }, []);
@@ -203,6 +223,19 @@ export function Sidebar({
     () => groupSidebarRows(filtered, Date.now(), groupingMode),
     [filtered, groupingMode],
   );
+
+  // A live search reveals everything — caps would silently hide a matching
+  // row and read as a broken search. Otherwise recency mode slices a single
+  // global cap across all buckets; project mode applies the per-project cap
+  // inside each folder (see `ProjectFolder` below).
+  const isSearching = query.trim().length > 0;
+  const isRecencyMode = groupingMode === "recency";
+  const { groups: visibleGroups, hiddenCount: recencyHiddenCount } = useMemo(() => {
+    if (!isRecencyMode || isSearching || recencyExpanded) {
+      return { groups, hiddenCount: 0 };
+    }
+    return truncateRecencyGroups(groups, SIDEBAR_RECENCY_VISIBLE_LIMIT);
+  }, [groups, isRecencyMode, isSearching, recencyExpanded]);
 
   const isDesktop = source === "desktop-sqlite";
 
@@ -348,46 +381,66 @@ export function Sidebar({
         ) : filtered.length === 0 ? (
           <p className="sidebar-empty-search">검색 결과가 없습니다.</p>
         ) : (
-          groups.map((group) => {
-            const isProject =
-              group.bucket === "project" || group.bucket === "unsourced";
-            if (isProject) {
-              const collapsed = collapsedProjects.has(group.label);
-              const projectKey = group.label;
-              const canOpenProject = group.bucket === "project";
+          <>
+            {visibleGroups.map((group) => {
+              const isProject =
+                group.bucket === "project" || group.bucket === "unsourced";
+              if (isProject) {
+                const collapsed = collapsedProjects.has(group.label);
+                const projectKey = group.label;
+                const canOpenProject = group.bucket === "project";
+                return (
+                  <ProjectFolder
+                    key={`project-${group.label}`}
+                    group={group}
+                    collapsed={collapsed}
+                    searching={isSearching}
+                    expanded={expandedProjects.has(group.label)}
+                    visibleLimit={SIDEBAR_PROJECT_VISIBLE_LIMIT}
+                    activeSessionId={highlightedSessionId}
+                    currentProjectKey={
+                      currentView === "project" ? currentProjectKey : null
+                    }
+                    onSelect={handleSwitch}
+                    onOpenTab={handleSwitch}
+                    onRename={handleRenameSession}
+                    onToggle={() => toggleProjectCollapsed(group.label)}
+                    onToggleExpanded={() => toggleProjectExpanded(group.label)}
+                    onOpenProject={
+                      canOpenProject ? () => openProject(projectKey) : undefined
+                    }
+                  />
+                );
+              }
               return (
-                <ProjectFolder
-                  key={`project-${group.label}`}
-                  group={group}
-                  collapsed={collapsed}
-                  searching={query.trim().length > 0}
+                <SessionGroup
+                  key={`${group.bucket}-${group.label}`}
+                  label={group.label}
+                  rows={group.rows}
                   activeSessionId={highlightedSessionId}
-                  currentProjectKey={
-                    currentView === "project" ? currentProjectKey : null
-                  }
                   onSelect={handleSwitch}
                   onOpenTab={handleSwitch}
+                  onOpenProject={(projectKey) => openProject(projectKey)}
                   onRename={handleRenameSession}
-                  onToggle={() => toggleProjectCollapsed(group.label)}
-                  onOpenProject={
-                    canOpenProject ? () => openProject(projectKey) : undefined
-                  }
                 />
               );
-            }
-            return (
-              <SessionGroup
-                key={`${group.bucket}-${group.label}`}
-                label={group.label}
-                rows={group.rows}
-                activeSessionId={highlightedSessionId}
-                onSelect={handleSwitch}
-                onOpenTab={handleSwitch}
-                onOpenProject={(projectKey) => openProject(projectKey)}
-                onRename={handleRenameSession}
-              />
-            );
-          })
+            })}
+            {/* Recency-mode "더 보기" foot. Hidden during search and when
+                the truncation didn't kick in. Toggles between truncated and
+                full so the user can collapse back to a calm list. */}
+            {isRecencyMode && !isSearching && (recencyExpanded || recencyHiddenCount > 0) ? (
+              <button
+                type="button"
+                className="sidebar-show-more"
+                onClick={() => setRecencyExpanded((prev) => !prev)}
+                aria-expanded={recencyExpanded}
+              >
+                {recencyExpanded
+                  ? "접기"
+                  : `${recencyHiddenCount}개 더 보기`}
+              </button>
+            ) : null}
+          </>
         )}
       </div>
 
@@ -419,17 +472,24 @@ function ProjectFolder({
   group,
   collapsed,
   searching,
+  expanded,
+  visibleLimit,
   activeSessionId,
   currentProjectKey,
   onSelect,
   onOpenTab,
   onRename,
   onToggle,
+  onToggleExpanded,
   onOpenProject,
 }: {
   group: SidebarSessionGroup;
   collapsed: boolean;
   searching: boolean;
+  /** User has clicked "더 보기" on this folder. */
+  expanded: boolean;
+  /** Row cap before the "더 보기" affordance kicks in. */
+  visibleLimit: number;
   activeSessionId: string | null;
   /** When the user is on a project page, the matching folder lights up. */
   currentProjectKey: string | null;
@@ -437,6 +497,7 @@ function ProjectFolder({
   onOpenTab: (id: string, tab: SessionTab) => void;
   onRename: (row: SidebarSessionRow) => void;
   onToggle: () => void;
+  onToggleExpanded: () => void;
   /** Optional — when provided, clicking the folder *name* opens the project
    *  page. The chevron always toggles open/closed regardless. */
   onOpenProject?: () => void;
@@ -448,6 +509,19 @@ function ProjectFolder({
     (row) => row.sessionId === activeSessionId,
   );
   const isCurrentProject = currentProjectKey === group.label;
+  // While searching, every match shows so a hit inside a long tail does not
+  // get hidden behind "더 보기". Pinning the active session into view also
+  // matters: if the user is on session #8 of a project that's still
+  // truncated at 5, expand for them so the highlight isn't off-screen.
+  const activeHidden =
+    !expanded &&
+    group.rows
+      .slice(visibleLimit)
+      .some((row) => row.sessionId === activeSessionId);
+  const showAll = searching || expanded || activeHidden;
+  const visibleRows = showAll ? group.rows : group.rows.slice(0, visibleLimit);
+  const hiddenCount = group.rows.length - visibleRows.length;
+  const canToggleExpanded = !searching && group.rows.length > visibleLimit;
   return (
     <div
       className={[
@@ -493,7 +567,7 @@ function ProjectFolder({
           id={`sidebar-folder-${encodeURIComponent(group.label)}`}
           className="sidebar-folder-body"
         >
-          {group.rows.map((row) => (
+          {visibleRows.map((row) => (
             <SessionRow
               key={row.sessionId}
               row={row}
@@ -505,6 +579,18 @@ function ProjectFolder({
               hideSource
             />
           ))}
+          {canToggleExpanded ? (
+            <li>
+              <button
+                type="button"
+                className="sidebar-folder-more"
+                onClick={onToggleExpanded}
+                aria-expanded={showAll}
+              >
+                {showAll ? "접기" : `${hiddenCount}개 더 보기`}
+              </button>
+            </li>
+          ) : null}
         </ul>
       ) : null}
     </div>

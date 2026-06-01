@@ -405,6 +405,48 @@
   padding-left: 8px;
 }
 
+/* "더 보기" / "접기" affordance — calm, muted, full-width inside the
+   project folder (indented to align with the nested rows above it).
+   Style mirrors a session row's left padding so the column reads as
+   continuous. The recency-mode variant (`.sidebar-show-more`) sits
+   directly under the bucket list and matches a sidebar-row's inset. */
+.sidebar-folder-more,
+.sidebar-show-more {
+  display: block;
+  width: 100%;
+  margin: 4px 0 2px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.sidebar-folder-more {
+  padding-left: 18px;
+}
+
+.sidebar-show-more {
+  padding-left: 14px;
+}
+
+.sidebar-folder-more:hover,
+.sidebar-show-more:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.sidebar-folder-more:focus-visible,
+.sidebar-show-more:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
 .sidebar-row {
   display: grid;
   grid-template-rows: auto auto;
