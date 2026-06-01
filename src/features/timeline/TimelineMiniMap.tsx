@@ -151,7 +151,6 @@ export function TimelineMiniMap({
         ref={trackRef}
         className={`mini-track${interactive ? " is-seekable" : ""}`}
         onPointerDown={handleTrackPointerDown}
-        title={interactive ? "클릭하거나 요약 막대를 끌어 타임라인을 이동합니다." : undefined}
       >
         <span
           className={`mini-map-viewport${interactive ? " is-draggable" : ""}`}

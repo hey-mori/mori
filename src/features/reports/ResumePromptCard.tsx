@@ -62,7 +62,6 @@ export function ResumePromptCard({
             disabled={!hasPrompt}
             variant={hasPrompt ? "primary" : "secondary"}
             size="sm"
-            title={hasPrompt ? "컨텍스트를 클립보드로 복사" : "컨텍스트가 비어 있습니다"}
           >
             {copied ? "복사됨" : "컨텍스트 복사"}
           </Button>
