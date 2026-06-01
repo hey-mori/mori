@@ -397,7 +397,7 @@ function EvidenceToolbar({
               onClick={() => setOpen((value) => !value)}
               aria-expanded={open}
               aria-controls="evidence-filter-popover"
-              title="자료 종류 필터"
+              aria-label="자료 종류 필터"
             >
               <Filter size={14} aria-hidden="true" />
               {activeFamilies.length ? `필터 · ${activeFamilies.length}` : "필터"}

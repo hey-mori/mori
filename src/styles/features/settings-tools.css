@@ -1602,7 +1602,8 @@
   border-radius: var(--base-radius-lg);
   background: var(--base-surface-subtle);
   flex-wrap: nowrap;
-  overflow: hidden;
+  /* See `.tab-toolbar` — keep `visible` so the 필터 popover is not clipped. */
+  overflow: visible;
 }
 
 /* Search field uses the shared `.tab-toolbar-search` width rule (see

@@ -92,7 +92,7 @@ export function TimelineToolbar({
             onClick={() => setFilterOpen((open) => !open)}
             aria-expanded={filterOpen}
             aria-controls="timeline-filter-popover"
-            title="카테고리 필터"
+            aria-label="카테고리 필터"
           >
             <Filter size={14} aria-hidden="true" />
             {activeFilters.length ? `필터 · ${activeFilters.length}` : "필터"}

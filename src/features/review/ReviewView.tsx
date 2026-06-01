@@ -510,7 +510,7 @@ function ReviewToolbar({
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
             aria-controls="review-filter-popover"
-            title="검토 카테고리 필터"
+            aria-label="검토 카테고리 필터"
           >
             <Filter size={14} aria-hidden="true" />
             {activeColumns.length ? `필터 · ${activeColumns.length}` : "필터"}

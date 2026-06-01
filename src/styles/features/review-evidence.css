@@ -857,7 +857,9 @@ td a {
   border-radius: var(--base-radius-lg);
   background: var(--base-surface-subtle);
   flex-wrap: nowrap;
-  overflow: hidden;
+  /* Stay `visible` so the 필터 popover (absolutely positioned below the band)
+     is never clipped by the toolbar rounding. */
+  overflow: visible;
 }
 
 .tab-toolbar .tab-toolbar-search,
