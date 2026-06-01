@@ -3622,10 +3622,12 @@ td a {
 
 .session-tab-split > .review-inspector-shell {
   position: sticky;
-  top: 56px;
+  top: 64px;
   align-self: start;
-  max-height: calc(100vh - 210px);
+  max-height: calc(100vh - 128px);
   overflow-y: auto;
+  padding-bottom: var(--base-space-5);
+  scroll-padding-bottom: var(--base-space-5);
 }
 
 @media (max-width: 1180px) {
