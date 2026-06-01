@@ -44,3 +44,17 @@ export {
 } from "./analysisStatusDisplay";
 export { buildQuickPassPrompt } from "./promptTemplates";
 export { providerNameLabel, resolveQuickPassProvider, type QuickPassProviderConfig } from "./quickPassProvider";
+export {
+  appendAnalysisRun,
+  createAnalysisRunHistory,
+  describeAnalysisRunReason,
+  diffAnalysisRuns,
+  getAnalysisRun,
+  getCurrentRun,
+  listAnalysisRunsNewestFirst,
+  selectAnalysisRun,
+  type AnalysisCategoryDiff,
+  type AnalysisRunDiff,
+  type AnalysisRunHistory,
+  type AnalysisRunReason,
+} from "./analysisRunHistory";
