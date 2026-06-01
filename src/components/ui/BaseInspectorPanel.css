@@ -1,0 +1,111 @@
+/* BaseInspectorPanel — the shared right-rail surface used by 흐름 / 자료 to
+   render contextual detail for a selected item. Owns the sticky-header + body
+   shape and fills 100% height of its grid cell so the panel always reads as a
+   real side surface (not a half-height card floating above whitespace). */
+
+.base-inspector-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.base-inspector-panel-head {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px 12px;
+  padding-right: 40px;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+
+.base-inspector-panel-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.base-inspector-panel-close:hover {
+  background: var(--gray-50);
+  color: var(--text);
+}
+
+.base-inspector-panel-eyebrow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+/* Wrapper span gives the dedupe pass a stable key per slot without leaving
+   a phantom gap when a child component (e.g. a status badge that renders
+   null for the "full" case) yields no DOM. `display: contents` makes the
+   wrapper layout-invisible so the flex gap snaps to the next real chip. */
+.base-inspector-panel-eyebrow-item {
+  display: contents;
+}
+
+.base-inspector-panel-title {
+  margin: 0;
+  font-size: var(--base-font-size-lg);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.base-inspector-panel-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.base-inspector-panel-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.base-inspector-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 18px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+/* Internal scrollbar treatment matches the timeline inspector. */
+.base-inspector-panel-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.base-inspector-panel-body::-webkit-scrollbar-thumb {
+  background: var(--gray-200, rgba(15, 23, 42, 0.12));
+  border-radius: 999px;
+}
+
+.base-inspector-panel-body::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-300, rgba(15, 23, 42, 0.2));
+}

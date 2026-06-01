@@ -55,4 +55,8 @@ export {
 export { SearchField, type SearchFieldProps } from "./SearchField";
 export { ToolbarSearch, type ToolbarSearchProps } from "./ToolbarSearch";
 export { BaseSectionHeader, type BaseSectionHeaderProps } from "./BaseSectionHeader";
+export {
+  BaseInspectorPanel,
+  type BaseInspectorPanelProps,
+} from "./BaseInspectorPanel";
 export { BaseMetricStrip, type BaseMetricStripProps, type BaseMetricItem } from "./BaseMetricStrip";

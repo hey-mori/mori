@@ -3139,7 +3139,11 @@ kbd {
   color: var(--muted);
 }
 
-.inspector {
+/* Legacy `.inspector` layout: timeline event inspector now wraps its content
+   in `.base-inspector-panel`, which owns the surface, padding, scroll and
+   border. Apply these legacy rules only when the inspector is NOT inside the
+   shared panel wrapper (older surfaces that still render `<aside class="inspector" />` directly). */
+.inspector:not(.base-inspector-panel) {
   min-width: 0;
   padding: 14px 16px 16px;
   background: rgba(255, 255, 255, 0.98);

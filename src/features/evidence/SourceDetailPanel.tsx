@@ -1,5 +1,6 @@
-import { CalendarClock, Lock, MapPin, ShieldCheck } from "lucide-react";
+import { CalendarClock, Lock } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
+import { BaseInspectorPanel } from "../../components/ui/BaseInspectorPanel";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { BaseTrustBadge } from "../../components/ui/BaseTrustBadge";
 import { BaseFidelityBadge } from "../../components/ui/BaseFidelityBadge";
@@ -35,38 +36,17 @@ export function SourceDetailPanel({
   view,
   integrationLookup,
   importSummary,
+  onClose,
 }: {
   selection: EvidenceDetailSelection;
   view: MockSession;
   integrationLookup: Map<string, SourceIntegration>;
   /** Optional re-import summary for the selected source (connector imports only). */
   importSummary?: ConnectorSourceImportSummary;
+  /** Close the panel from within (renders the X). */
+  onClose?: () => void;
 }) {
-  if (selection.kind === "empty") {
-    return (
-      <aside className="evidence-detail base-scroll" aria-label="자료 상세">
-        <header className="evidence-detail-header">
-          <Badge tone="gray">선택된 항목 없음</Badge>
-          <h3>근거 상세</h3>
-          <p>왼쪽에서 소스 카드를 선택하면 출처, 신뢰도, 관련 이벤트가 여기 표시됩니다.</p>
-        </header>
-        <section className="evidence-detail-section">
-          <SectionHeader title="Mori가 약속하는 것" />
-          <ul className="evidence-detail-pledges">
-            <li>
-              <ShieldCheck size={14} /> 명시적으로 추가한 소스만 사용합니다.
-            </li>
-            <li>
-              <Lock size={14} /> 백그라운드 캡처, 브라우저 스캐닝, 자동 계정 연결은 없습니다.
-            </li>
-            <li>
-              <MapPin size={14} /> 모든 분석/보고서는 가져온 소스에 직접 연결됩니다.
-            </li>
-          </ul>
-        </section>
-      </aside>
-    );
-  }
+  if (selection.kind === "empty") return null;
 
   if (selection.kind === "source") {
     return (
@@ -75,11 +55,18 @@ export function SourceDetailPanel({
         view={view}
         integrationLookup={integrationLookup}
         importSummary={importSummary}
+        onClose={onClose}
       />
     );
   }
 
-  return <IntegrationDetailView selection={selection} integrationLookup={integrationLookup} />;
+  return (
+    <IntegrationDetailView
+      selection={selection}
+      integrationLookup={integrationLookup}
+      onClose={onClose}
+    />
+  );
 }
 
 function SourceDetailView({
@@ -87,21 +74,27 @@ function SourceDetailView({
   view,
   integrationLookup,
   importSummary,
+  onClose,
 }: {
   selection: { kind: "source"; sourceId: string };
   view: MockSession;
   integrationLookup: Map<string, SourceIntegration>;
   importSummary?: ConnectorSourceImportSummary;
+  onClose?: () => void;
 }) {
   const source = view.sources.find((entry) => entry.id === selection.sourceId);
   if (!source) {
     return (
-      <aside className="evidence-detail base-scroll" aria-label="자료 상세">
-        <header className="evidence-detail-header">
-          <Badge tone="gray">선택된 소스를 찾을 수 없음</Badge>
-          <p>이 세션에는 이 ID에 해당하는 소스가 더 이상 없습니다.</p>
-        </header>
-      </aside>
+      <BaseInspectorPanel
+        className="evidence-detail"
+        ariaLabel="자료 상세"
+        onClose={onClose}
+        eyebrow={<Badge tone="gray">선택된 소스를 찾을 수 없음</Badge>}
+        title="이 소스를 찾을 수 없습니다"
+        description="이 세션에는 이 ID에 해당하는 소스가 더 이상 없습니다."
+      >
+        {null}
+      </BaseInspectorPanel>
     );
   }
 
@@ -113,9 +106,12 @@ function SourceDetailView({
   const relatedEvents = view.events.filter((event) => event.sourceRefs.includes(source.id));
 
   return (
-    <aside className="evidence-detail base-scroll" aria-label="자료 상세">
-      <header className="evidence-detail-header">
-        <div className="evidence-detail-badges">
+    <BaseInspectorPanel
+      className="evidence-detail"
+      ariaLabel="자료 상세"
+      onClose={onClose}
+      eyebrow={
+        <>
           <BaseTrustBadge level={source.trustLevel} />
           <BaseFidelityBadge fidelity={source.captureFidelity} />
           <BaseStatusBadge
@@ -126,11 +122,11 @@ function SourceDetailView({
             {display.statusLabel}
           </BaseStatusBadge>
           <Badge tone="purple">{display.integrationLabel}</Badge>
-        </div>
-        <h3>{source.title}</h3>
-        <p className="evidence-detail-detail">{source.detail}</p>
-      </header>
-
+        </>
+      }
+      title={source.title}
+      description={source.detail}
+    >
       <section className="evidence-detail-section">
         <SectionHeader title="출처 및 캡처" />
         <dl className="evidence-detail-grid">
@@ -240,26 +236,32 @@ function SourceDetailView({
       </section>
 
       <RelatedRecordsSection sourceId={source.id} view={view} relatedEvents={relatedEvents} />
-    </aside>
+    </BaseInspectorPanel>
   );
 }
 
 function IntegrationDetailView({
   selection,
   integrationLookup,
+  onClose,
 }: {
   selection: { kind: "integration"; integrationId: string };
   integrationLookup: Map<string, SourceIntegration>;
+  onClose?: () => void;
 }) {
   const integration = integrationLookup.get(selection.integrationId);
   if (!integration) {
     return (
-      <aside className="evidence-detail base-scroll" aria-label="통합 상세">
-        <header className="evidence-detail-header">
-          <Badge tone="gray">알 수 없는 통합</Badge>
-          <p>이 ID에 해당하는 소스 통합 정의가 없습니다.</p>
-        </header>
-      </aside>
+      <BaseInspectorPanel
+        className="evidence-detail"
+        ariaLabel="통합 상세"
+        onClose={onClose}
+        eyebrow={<Badge tone="gray">알 수 없는 통합</Badge>}
+        title="이 통합을 찾을 수 없습니다"
+        description="이 ID에 해당하는 소스 통합 정의가 없습니다."
+      >
+        {null}
+      </BaseInspectorPanel>
     );
   }
 
@@ -267,9 +269,12 @@ function IntegrationDetailView({
   const inaccessible = describeInaccessible(integration);
 
   return (
-    <aside className="evidence-detail base-scroll" aria-label="통합 상세">
-      <header className="evidence-detail-header">
-        <div className="evidence-detail-badges">
+    <BaseInspectorPanel
+      className="evidence-detail"
+      ariaLabel="통합 상세"
+      onClose={onClose}
+      eyebrow={
+        <>
           <BaseStatusBadge
             tone={getProductAvailabilityTone(
               productAvailabilityFromIntegrationStatus(integration.status),
@@ -278,11 +283,11 @@ function IntegrationDetailView({
             {getIntegrationStatusLabel(integration.status)}
           </BaseStatusBadge>
           <Badge tone="purple">{integration.id}</Badge>
-        </div>
-        <h3>{integration.label}</h3>
-        <p className="evidence-detail-detail">{integration.description}</p>
-      </header>
-
+        </>
+      }
+      title={integration.label}
+      description={integration.description}
+    >
       <section className="evidence-detail-section">
         <SectionHeader title="현재 상태" />
         <dl className="evidence-detail-grid">
@@ -328,7 +333,7 @@ function IntegrationDetailView({
           <span>{integration.privacyNote}</span>
         </p>
       </section>
-    </aside>
+    </BaseInspectorPanel>
   );
 }
 

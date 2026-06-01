@@ -6,10 +6,10 @@ import {
   Combine,
   PlusCircle,
   StickyNote,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
+import { BaseInspectorPanel } from "../../components/ui/BaseInspectorPanel";
 import { InlineEditForm } from "../review/InlineEditForm";
 import type { TimelineEventEdits } from "../../lib/timeline/eventEdits";
 import { canSplitEvent } from "../../lib/timeline/eventSplit";
@@ -85,32 +85,22 @@ export function EventInspector({
   }
 
   return (
-    <aside className="inspector" aria-label="이벤트 인스펙터">
-      <header className="inspector-header">
-        {onClose ? (
-          <button
-            type="button"
-            className="inspector-close"
-            onClick={onClose}
-            aria-label="인스펙터 닫기"
-            title="인스펙터 닫기"
-          >
-            <X size={15} aria-hidden="true" />
-          </button>
-        ) : null}
-        <div className="inspector-badges">
+    <BaseInspectorPanel
+      className="inspector"
+      ariaLabel="이벤트 인스펙터"
+      onClose={onClose}
+      eyebrow={
+        <>
           <Badge tone={activity.laneVisuals.tone}>{activity.laneVisuals.label}</Badge>
           <Badge tone={activity.activityVisuals.tone}>{activity.activityVisuals.label}</Badge>
           <Badge tone={eventTypeTone[selectedEvent.type]}>{eventTypeLabels[selectedEvent.type]}</Badge>
           {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
-        </div>
-        {editing ? null : (
-          <h3 className="inspector-title">{selectedEvent.title}</h3>
-        )}
-        <p className="inspector-time">{formatTimeRange(selectedEvent.start, selectedEvent.end)}</p>
-        <p className="inspector-work-context">{activity.sourceVisuals.label}</p>
-      </header>
-
+        </>
+      }
+      title={editing ? "이벤트 편집" : selectedEvent.title}
+      meta={formatTimeRange(selectedEvent.start, selectedEvent.end)}
+      description={activity.sourceVisuals.label}
+    >
       <section className="inspector-section">
         {editing && onEditEvent ? (
           <InlineEditForm
@@ -302,7 +292,7 @@ export function EventInspector({
         )}
       </section>
       ) : null}
-    </aside>
+    </BaseInspectorPanel>
   );
 }
 
