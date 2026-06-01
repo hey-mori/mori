@@ -58,3 +58,9 @@ export {
   type AnalysisRunHistory,
   type AnalysisRunReason,
 } from "./analysisRunHistory";
+export {
+  buildAnalysisRunHistoryViewModel,
+  summarizeRunDiff,
+  type AnalysisRunHistoryViewModel,
+  type AnalysisRunRowViewModel,
+} from "./analysisRunHistoryView";
