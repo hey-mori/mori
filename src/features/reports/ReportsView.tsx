@@ -14,11 +14,7 @@ import {
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import {
-  exportPhaseRole,
-  exportPhaseTone,
-  exportRunningLabel,
   phaseForWriteResult,
-  type MoriExportKind,
   type MoriExportPhase,
   type MoriExportWriteResult,
 } from "../../lib/report/exportStatus";
@@ -291,13 +287,10 @@ function MoriPackageStrip({
 }) {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [phase, setPhase] = useState<MoriExportPhase>("idle");
-  const [message, setMessage] = useState<string>("");
   const busy = phase === "running";
   async function runExport() {
     const clientSafe = externalShare;
-    const kind: MoriExportKind = clientSafe ? "clientSafe" : "full";
     setPhase("running");
-    setMessage(exportRunningLabel(kind));
     try {
       const fullPkg = createMoriPackageFromSession(view, {
         consolidatedMemories: acceptedMemories,
@@ -317,22 +310,11 @@ function MoriPackageStrip({
         ? `${pkg.manifest.packageId}-client-safe.mori`
         : `${pkg.manifest.packageId}.mori`;
       const written = await writeMoriZipPackage(zipBytes, filename);
-      const settled = phaseForWriteResult(written);
-      // Surface only failure / cancel to keep the strip calm; a successful
-      // save is its own confirmation (the browser download row or the
-      // desktop file picker closing).
-      if (settled !== "success") setMessage(written.message);
-      else setMessage("");
-      setPhase(settled);
-    } catch (error) {
+      setPhase(phaseForWriteResult(written));
+    } catch {
       setPhase("error");
-      setMessage(
-        `내보내기 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
-      );
     }
   }
-
-  const tone = exportPhaseTone(phase);
   return (
     <section id="reports-package-export" className="mori-package-strip" aria-label=".mori package export">
       <div className="mori-package-strip-intro">
@@ -384,16 +366,6 @@ function MoriPackageStrip({
         >
           {busy ? "내보내는 중..." : "내보내기"}
         </Button>
-        {message ? (
-          <p
-            className={`mori-package-feedback tone-${tone}`}
-            role={exportPhaseRole(phase)}
-            aria-live={phase === "error" ? "assertive" : "polite"}
-          >
-            {phase === "running" ? <span className="mori-package-feedback-spinner" aria-hidden="true" /> : null}
-            <span>{message}</span>
-          </p>
-        ) : null}
       </div>
     </section>
   );

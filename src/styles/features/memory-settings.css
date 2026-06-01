@@ -636,9 +636,10 @@
   justify-content: flex-end;
 }
 
-/* Preview shell — its own bordered surface (so it reads as a separate area
-   from the toolbar band). Holds an optional warnings list and the rendered
-   preview, which scrolls inside the shell's bounded height. */
+/* Preview shell — no card chrome, just a bounded scroll area. The toolbar
+   band above already names the surface; wrapping the preview in another
+   bordered + shadowed box reads as a double-wrapped panel and other tabs
+   (흐름 / 자료 / 검토) do not shadow their content surfaces either. */
 .report-preview-shell {
   display: flex;
   flex-direction: column;
@@ -648,23 +649,17 @@
   /* Bounded to the viewport: shrinks on small screens, never spills past the
      fold on tall ones. The preview inside takes the slack and scrolls. */
   max-height: calc(100vh - 280px);
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: white;
-  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
+  padding: 0;
 }
 
 .report-preview-shell .report-preview {
+  /* The base `.report-preview` keeps its own subtle paper chrome (a thin
+     `var(--line)` border + #fbfcff bg). Inside the shell it grows to fill
+     the available height and scrolls; the 240px cap on the base rule is
+     dropped. */
   flex: 1 1 auto;
   min-height: 0;
   max-height: none;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 @media (max-width: 1180px) {

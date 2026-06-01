@@ -5037,10 +5037,9 @@ td a {
 /* .mori package strip */
 
 /* Compact bottom strip. Single internal row: header + stats on the left,
-   a single 내보내기 button on the right. No nested vertical stack, no
-   always-on status line — successful exports speak for themselves through
-   the browser download row / desktop file picker; only a real failure or
-   the running spinner promotes the small feedback line. */
+   a single 내보내기 button on the right. Bordered but not shadowed — the
+   other session-detail surfaces (흐름 / 자료 / 검토) do not shadow content
+   either. */
 .mori-package-strip {
   display: flex;
   align-items: center;
@@ -5050,7 +5049,6 @@ td a {
   border: 1px solid var(--line);
   border-radius: 11px;
   background: white;
-  box-shadow: var(--shadow-soft);
 }
 
 .mori-package-strip h3 {
