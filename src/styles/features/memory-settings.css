@@ -57,8 +57,8 @@
 
 .report-builder-panel {
   display: grid;
-  gap: 16px;
-  padding: 14px 14px 16px;
+  gap: 10px;
+  padding: 10px 12px 12px;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: white;
@@ -68,6 +68,13 @@
   top: 88px;
   max-height: calc(100vh - 110px);
   overflow-y: auto;
+}
+
+.report-builder-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
 }
 
 /* Inside the page shell the rail sticks to the top of the scroll region. */
@@ -89,20 +96,14 @@
 }
 
 .report-builder-head h2 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-}
-
-.report-builder-head p {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 13.5px;
+  font-weight: 700;
 }
 
 .report-builder-section {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .report-type-list {
@@ -115,9 +116,9 @@
    the lavender fill + purple icon. */
 .report-type-card {
   display: grid;
-  grid-template-columns: 16px 1fr;
-  gap: 9px;
-  padding: 8px 10px;
+  grid-template-columns: 14px 1fr;
+  gap: 8px;
+  padding: 6px 8px;
   border: 0;
   border-radius: 7px;
   background: transparent;
@@ -176,12 +177,12 @@
 
 .report-section-list label {
   display: grid;
-  grid-template-columns: 18px 1fr;
+  grid-template-columns: 16px 1fr;
   gap: 8px;
   align-items: center;
-  padding: 6px 8px;
+  padding: 4px 8px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -222,10 +223,10 @@
 
 .report-format-button {
   display: grid;
-  gap: 2px;
-  padding: 8px;
+  gap: 1px;
+  padding: 6px 8px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   background: white;
   text-align: center;
   cursor: pointer;
@@ -273,9 +274,9 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 7px;
   min-width: 0;
 }
 
@@ -308,11 +309,11 @@
 }
 
 .report-privacy-advanced {
-  margin-top: 12px;
+  margin-top: 6px;
 }
 
 .report-privacy-advanced .report-privacy-list {
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 .report-builder-actions {
@@ -350,15 +351,15 @@
 
 .report-preview {
   margin: 0;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--panel-soft);
   color: #253352;
   font-size: 11px;
-  line-height: 1.6;
+  line-height: 1.55;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  max-height: 360px;
+  max-height: 240px;
   overflow: auto;
   white-space: pre-wrap;
   overscroll-behavior: contain;

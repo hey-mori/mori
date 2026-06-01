@@ -123,14 +123,14 @@ export function ReportBuilderPanel({
   return (
     <aside id={id} className="report-builder-panel base-scroll" aria-label="보고서 작성">
       <header className="report-builder-head">
-        <div>
-          <h2>보고서 생성기</h2>
-          <p>보고서 유형 / 섹션 / 형식을 선택하면 미리보기가 실시간으로 갱신됩니다.</p>
-        </div>
+        <h2>보고서 생성기</h2>
+        <InfoHint label="보고서 생성기 설명">
+          보고서 유형 / 섹션 / 형식을 선택하면 미리보기가 실시간으로 갱신됩니다.
+        </InfoHint>
       </header>
 
       <section className="report-builder-section">
-        <SectionHeader title="1. 보고서 유형" hint={typeDef.audience} />
+        <SectionHeader title="보고서 유형" hint={typeDef.audience} />
         <div className="report-type-list">
           {REPORT_TYPE_DEFINITIONS.map((def) => (
             <button
@@ -151,7 +151,7 @@ export function ReportBuilderPanel({
       </section>
 
       <section className="report-builder-section">
-        <SectionHeader title="2. 포함 섹션" hint={`${sections.size} / ${SECTION_DEFINITIONS.length}`} />
+        <SectionHeader title="포함 섹션" hint={`${sections.size} / ${SECTION_DEFINITIONS.length}`} />
         <ul className="report-section-list">
           {SECTION_DEFINITIONS.map((def) => (
             <li key={def.id}>
@@ -172,7 +172,7 @@ export function ReportBuilderPanel({
       </section>
 
       <section className="report-builder-section">
-        <SectionHeader title="3. 출력 형식" hint="Markdown만 활성화" />
+        <SectionHeader title="출력 형식" hint="Markdown만 활성화" />
         <div className="report-format-list">
           {FORMAT_DEFS.map((def) => {
             const feature = getFeatureControlProps(def.featureId);
@@ -201,8 +201,8 @@ export function ReportBuilderPanel({
 
       <section className="report-builder-section">
         <SectionHeader
-          title="4. 공유 안전"
-          hint="보고서에는 원문 대화 · 파일 경로 · 민감 속성을 직접 포함하지 않습니다."
+          title="공유 안전"
+          hint="원문 대화 · 파일 경로 · 민감 속성을 직접 포함하지 않습니다."
           right={
             <InfoHint label="공유 안전 설명">
               지금은 토글에 해당하는 섹션만 제외합니다. 개인 식별 정보 자동 마스킹은 다음 마일스톤입니다.
@@ -253,7 +253,7 @@ export function ReportBuilderPanel({
       </section>
 
       <section className="report-builder-section">
-        <SectionHeader title="5. 미리보기 / 내보내기" hint={`이벤트 ${payload.counts.events} · 이슈 ${payload.counts.issues} · 결정 ${payload.counts.decisions}`} />
+        <SectionHeader title="미리보기 / 내보내기" hint={`이벤트 ${payload.counts.events} · 이슈 ${payload.counts.issues} · 결정 ${payload.counts.decisions}`} />
         <BaseActionCluster className="report-builder-actions">
           <Button
             variant="primary"

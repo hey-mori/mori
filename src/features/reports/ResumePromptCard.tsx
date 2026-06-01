@@ -2,6 +2,7 @@ import { Check, ClipboardCopy, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { InfoHint } from "../../components/ui/InfoHint";
 
 export type ResumePromptOrigin =
   | { kind: "analysis"; providerLabel: string }
@@ -47,9 +48,11 @@ export function ResumePromptCard({
   return (
     <section className="resume-prompt-card" aria-label="다음 세션으로 이어가기">
       <header className="resume-prompt-head">
-        <div>
+        <div className="resume-prompt-title">
           <h2>다음 세션으로 이어가기</h2>
-          <p>이 세션의 AI 작업을 정리한 컨텍스트입니다. Claude / ChatGPT / Codex 다음 대화에 붙여넣으면 이어서 작업할 수 있습니다.</p>
+          <InfoHint label="이어가기 설명">
+            이 세션의 AI 작업을 정리한 컨텍스트입니다. Claude / ChatGPT / Codex 다음 대화에 붙여넣으면 이어서 작업할 수 있습니다.
+          </InfoHint>
         </div>
         <div className="resume-prompt-meta">
           {originBadge}
@@ -58,6 +61,7 @@ export function ResumePromptCard({
             onClick={handleCopy}
             disabled={!hasPrompt}
             variant={hasPrompt ? "primary" : "secondary"}
+            size="sm"
             title={hasPrompt ? "컨텍스트를 클립보드로 복사" : "컨텍스트가 비어 있습니다"}
           >
             {copied ? "복사됨" : "컨텍스트 복사"}
