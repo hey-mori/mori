@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockSession } from "../../domain/mock-data";
+import type { AnalysisResult } from "../analysis";
 import { DEFAULT_QUICK_PASS_SETTINGS, createDeterministicQuickPassProvider } from "../analysis";
 import { normalizeAiConversationText, normalizeManualNote, normalizeUrlSource } from "../import";
 import { createMoriPackageFromSession } from "../mori-package";
@@ -146,6 +147,75 @@ describe("BrowserDraftRepository", () => {
     storage.setItem("mori.sessionAnalysis.sess-bad", "{not-valid}");
     const repository = new BrowserDraftRepository(storage);
     expect(repository.loadSessionAnalysis("sess-bad")).toBeNull();
+  });
+
+  it("accumulates an append-only run history across re-analysis", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    repository.saveSessionAnalysis("sess-h", makeAnalysisResult("sess-h", "run-1"));
+    repository.saveSessionAnalysis(
+      "sess-h",
+      makeAnalysisResult("sess-h", "run-2", { providerLabel: "Ollama" }),
+    );
+
+    const history = repository.loadSessionAnalysisHistory("sess-h");
+    expect(history?.history.runs.map((run) => run.runId)).toEqual(["run-1", "run-2"]);
+    expect(history?.history.currentRunId).toBe("run-2");
+    // The single mirror tracks the latest run for existing readers.
+    expect(repository.loadSessionAnalysis("sess-h")?.result.runId).toBe("run-2");
+  });
+
+  it("updates a run in place when the same runId is re-saved (an edit)", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    repository.saveSessionAnalysis("sess-h", makeAnalysisResult("sess-h", "run-1"));
+    // An in-place review edit reuses the runId and bumps duration only.
+    repository.saveSessionAnalysis(
+      "sess-h",
+      makeAnalysisResult("sess-h", "run-1", { durationMs: 999 }),
+    );
+
+    const history = repository.loadSessionAnalysisHistory("sess-h");
+    expect(history?.history.runs).toHaveLength(1);
+    expect(history?.history.runs[0]?.durationMs).toBe(999);
+  });
+
+  it("forward-migrates a legacy single analysis record into a one-run history", () => {
+    const storage = new MemoryKeyValueStorage();
+    const legacy = {
+      sessionId: "sess-legacy",
+      result: makeAnalysisResult("sess-legacy", "run-old"),
+      savedAt: "2026-05-01T00:00:00.000Z",
+      adapter: "browser-local-storage",
+    };
+    // Only the legacy single-result key exists (no history key).
+    storage.setItem("mori.sessionAnalysis.sess-legacy", JSON.stringify(legacy));
+    const repository = new BrowserDraftRepository(storage);
+
+    const history = repository.loadSessionAnalysisHistory("sess-legacy");
+    expect(history?.history.runs.map((run) => run.runId)).toEqual(["run-old"]);
+    expect(history?.history.currentRunId).toBe("run-old");
+    expect(repository.loadSessionAnalysisHistory("sess-missing")).toBeNull();
+  });
+
+  it("adopts a selected run and mirrors it; an unknown id is a no-op", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    repository.saveSessionAnalysis("sess-h", makeAnalysisResult("sess-h", "run-1"));
+    repository.saveSessionAnalysis("sess-h", makeAnalysisResult("sess-h", "run-2"));
+
+    const adopted = repository.selectSessionAnalysisRun("sess-h", "run-1");
+    expect(adopted?.history.currentRunId).toBe("run-1");
+    expect(repository.loadSessionAnalysis("sess-h")?.result.runId).toBe("run-1");
+
+    const unchanged = repository.selectSessionAnalysisRun("sess-h", "run-missing");
+    expect(unchanged?.history.currentRunId).toBe("run-1");
+    expect(repository.selectSessionAnalysisRun("sess-none", "run-1")).toBeNull();
+  });
+
+  it("clears the run history alongside the single analysis record", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    repository.saveSessionAnalysis("sess-h", makeAnalysisResult("sess-h", "run-1"));
+    repository.clearSessionAnalysis("sess-h");
+    expect(repository.loadSessionAnalysis("sess-h")).toBeNull();
+    expect(repository.loadSessionAnalysisHistory("sess-h")).toBeNull();
   });
 
   it("persists, loads, and clears session memory bodies", () => {
@@ -709,3 +779,40 @@ describe("BrowserDraftRepository", () => {
     expect(repository.loadRepositorySettings().repositories).toHaveLength(0);
   });
 });
+
+function makeAnalysisResult(
+  sessionId: string,
+  runId: string,
+  overrides: Partial<AnalysisResult> = {},
+): AnalysisResult {
+  const generatedAt = overrides.generatedAt ?? "2026-05-12T13:30:00.000Z";
+  return {
+    runId,
+    providerName: overrides.providerName ?? "deterministic-heuristic-v1",
+    providerLabel: overrides.providerLabel ?? "Deterministic",
+    sessionId,
+    projectId: overrides.projectId ?? "proj-1",
+    generatedAt,
+    durationMs: overrides.durationMs ?? 10,
+    inputEventCount: overrides.inputEventCount ?? 0,
+    inputSourceCount: overrides.inputSourceCount ?? 0,
+    summary: overrides.summary ?? { sessionSummary: "", resumePrompt: "", highlights: [] },
+    issues: overrides.issues ?? [],
+    decisions: overrides.decisions ?? [],
+    relationships: overrides.relationships ?? [],
+    nextActions: overrides.nextActions ?? [],
+    rendered: overrides.rendered ?? {
+      summary: {
+        id: `summary-${runId}`,
+        sessionId,
+        sessionSummary: "",
+        resumePrompt: "",
+        reportMarkdown: "",
+        nextActionIds: [],
+        generatedAt,
+      },
+    },
+    confidence: overrides.confidence ?? 0.75,
+    notes: overrides.notes ?? [],
+  };
+}

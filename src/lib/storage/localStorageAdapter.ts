@@ -1,5 +1,12 @@
 import type { AnalysisResult, QuickPassAnalysisSettings } from "../analysis";
-import { DEFAULT_QUICK_PASS_SETTINGS, sanitizeQuickPassSettings } from "../analysis";
+import {
+  appendAnalysisRun,
+  createAnalysisRunHistory,
+  DEFAULT_QUICK_PASS_SETTINGS,
+  getCurrentRun,
+  sanitizeQuickPassSettings,
+  selectAnalysisRun,
+} from "../analysis";
 import type { ConnectorSourceImportSummary } from "../connectors";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
@@ -14,6 +21,7 @@ import type {
   StoredMemoryReviewAction,
   StoredMoriPackageDraft,
   StoredSessionAnalysis,
+  StoredSessionAnalysisHistory,
   StoredSessionDraft,
   StoredSessionImport,
   StoredSessionMemoryBody,
@@ -25,6 +33,7 @@ const SESSION_PREFIX = "mori.sessionDraft.";
 const PACKAGE_PREFIX = "mori.packageDraft.";
 const IMPORTS_PREFIX = "mori.sessionImports.";
 const ANALYSIS_PREFIX = "mori.sessionAnalysis.";
+const ANALYSIS_HISTORY_PREFIX = "mori.sessionAnalysisHistory.";
 const MEMORY_PREFIX = "mori.sessionMemory.";
 const ACCEPTED_MEMORY_PREFIX = "mori.consolidatedMemory.";
 const REVIEW_ACTION_PREFIX = "mori.consolidatedMemoryAudit.";
@@ -32,6 +41,7 @@ const QUICK_PASS_SETTINGS_KEY = "mori.quickPassSettings";
 const REPOSITORY_SETTINGS_KEY = "mori.repositorySettings";
 
 const MEMORY_BODY_SCHEMA_VERSION = 1 as const;
+const ANALYSIS_HISTORY_SCHEMA_VERSION = 1 as const;
 const ACCEPTED_MEMORY_SCHEMA_VERSION = 1 as const;
 const REVIEW_ACTION_SCHEMA_VERSION = 1 as const;
 
@@ -157,6 +167,7 @@ export class BrowserDraftRepository implements DraftRepository {
     this.storage.removeItem(`${SESSION_PREFIX}${sessionId}`);
     this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);
     this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
+    this.storage.removeItem(`${ANALYSIS_HISTORY_PREFIX}${sessionId}`);
     this.storage.removeItem(`${MEMORY_PREFIX}${sessionId}`);
     const current = this.loadCurrentSessionDraft();
     if (current?.session.id === sessionId) {
@@ -171,6 +182,7 @@ export class BrowserDraftRepository implements DraftRepository {
       this.storage.removeItem(`${SESSION_PREFIX}${current.session.id}`);
       this.storage.removeItem(`${IMPORTS_PREFIX}${current.session.id}`);
       this.storage.removeItem(`${ANALYSIS_PREFIX}${current.session.id}`);
+      this.storage.removeItem(`${ANALYSIS_HISTORY_PREFIX}${current.session.id}`);
       this.storage.removeItem(`${MEMORY_PREFIX}${current.session.id}`);
     }
   }
@@ -263,13 +275,22 @@ export class BrowserDraftRepository implements DraftRepository {
   }
 
   saveSessionAnalysis(sessionId: string, result: AnalysisResult): StoredSessionAnalysis {
+    const savedAt = new Date().toISOString();
     const stored: StoredSessionAnalysis = {
       sessionId,
       result,
-      savedAt: new Date().toISOString(),
+      savedAt,
       adapter: "browser-local-storage",
     };
     this.write(`${ANALYSIS_PREFIX}${sessionId}`, stored);
+    // Maintain the append-only run history alongside the single mirror.
+    // A re-analysis (new runId) appends; an in-place review edit (same
+    // runId) updates that run, so routine edits do not inflate history.
+    const existing = this.readAnalysisHistory(sessionId);
+    const history = existing
+      ? appendAnalysisRun(existing.history, result)
+      : createAnalysisRunHistory(result);
+    this.writeAnalysisHistory(sessionId, history, savedAt);
     return stored;
   }
 
@@ -279,6 +300,74 @@ export class BrowserDraftRepository implements DraftRepository {
 
   clearSessionAnalysis(sessionId: string): void {
     this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
+    this.storage.removeItem(`${ANALYSIS_HISTORY_PREFIX}${sessionId}`);
+  }
+
+  loadSessionAnalysisHistory(sessionId: string): StoredSessionAnalysisHistory | null {
+    const existing = this.readAnalysisHistory(sessionId);
+    if (existing) return existing;
+    // Forward migration: synthesise a one-run history from the legacy
+    // single analysis record so sessions analysed before this milestone
+    // still expose a run history. Not written back here — the next
+    // saveSessionAnalysis persists it.
+    const legacy = this.loadSessionAnalysis(sessionId);
+    if (!legacy) return null;
+    return {
+      sessionId,
+      savedAt: legacy.savedAt,
+      adapter: "browser-local-storage",
+      schemaVersion: ANALYSIS_HISTORY_SCHEMA_VERSION,
+      history: createAnalysisRunHistory(legacy.result),
+    };
+  }
+
+  selectSessionAnalysisRun(
+    sessionId: string,
+    runId: string,
+  ): StoredSessionAnalysisHistory | null {
+    const current = this.loadSessionAnalysisHistory(sessionId);
+    if (!current) return null;
+    const history = selectAnalysisRun(current.history, runId);
+    const savedAt = new Date().toISOString();
+    const next = this.writeAnalysisHistory(sessionId, history, savedAt);
+    // Keep the single analysis mirror in sync with the adopted run so
+    // existing readers reflect the selection.
+    const adopted = getCurrentRun(history);
+    if (adopted) {
+      this.write(`${ANALYSIS_PREFIX}${sessionId}`, {
+        sessionId,
+        result: adopted,
+        savedAt,
+        adapter: "browser-local-storage",
+      } satisfies StoredSessionAnalysis);
+    }
+    return next;
+  }
+
+  private readAnalysisHistory(sessionId: string): StoredSessionAnalysisHistory | null {
+    const raw = this.read<StoredSessionAnalysisHistory>(`${ANALYSIS_HISTORY_PREFIX}${sessionId}`);
+    if (!raw) return null;
+    // Defensive: refuse an unknown schema version or a malformed shape so
+    // a hand-edited value cannot strand the run pointer.
+    if (raw.schemaVersion !== ANALYSIS_HISTORY_SCHEMA_VERSION) return null;
+    if (!raw.history || !Array.isArray(raw.history.runs)) return null;
+    return raw;
+  }
+
+  private writeAnalysisHistory(
+    sessionId: string,
+    history: StoredSessionAnalysisHistory["history"],
+    savedAt: string,
+  ): StoredSessionAnalysisHistory {
+    const record: StoredSessionAnalysisHistory = {
+      sessionId,
+      savedAt,
+      adapter: "browser-local-storage",
+      schemaVersion: ANALYSIS_HISTORY_SCHEMA_VERSION,
+      history,
+    };
+    this.write(`${ANALYSIS_HISTORY_PREFIX}${sessionId}`, record);
+    return record;
   }
 
   saveSessionMemoryBody(

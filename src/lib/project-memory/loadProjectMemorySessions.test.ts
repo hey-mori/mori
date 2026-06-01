@@ -34,6 +34,8 @@ function stubRepository(overrides: Partial<DraftRepository> = {}): DraftReposito
     saveSessionAnalysis: vi.fn() as unknown as DraftRepository["saveSessionAnalysis"],
     loadSessionAnalysis: () => null,
     clearSessionAnalysis: vi.fn(),
+    loadSessionAnalysisHistory: () => null,
+    selectSessionAnalysisRun: () => null,
     saveSessionMemoryBody: vi.fn() as unknown as DraftRepository["saveSessionMemoryBody"],
     loadSessionMemoryBody: () => null,
     clearSessionMemoryBody: vi.fn(),

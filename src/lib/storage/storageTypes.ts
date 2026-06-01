@@ -8,7 +8,7 @@ import type {
   SourceRef,
   TimelineEvent,
 } from "../../domain/types";
-import type { AnalysisResult, QuickPassAnalysisSettings } from "../analysis";
+import type { AnalysisResult, AnalysisRunHistory, QuickPassAnalysisSettings } from "../analysis";
 import type { ConnectorSourceImportSummary } from "../connectors";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
@@ -120,6 +120,32 @@ export type StoredSessionAnalysis = {
 };
 
 /**
+ * Append-only history of every analysis run for a session. Today
+ * `StoredSessionAnalysis` keeps only the latest result, so re-running
+ * Quick Pass (for example with a different local model) overwrites and
+ * destroys the prior understanding. This record keeps every run plus
+ * the currently-adopted pointer, so re-analysis is reviewable. The
+ * single `StoredSessionAnalysis` record is kept in lockstep as the
+ * adopted-run mirror for existing readers.
+ *
+ * A genuine re-analysis carries a new `runId` and appends a history
+ * entry; an in-place review edit reuses the same `runId` and updates
+ * that entry in place (see `appendAnalysisRun`), so routine edits do
+ * not inflate the history.
+ *
+ * `schemaVersion` is a forward-compat hook; the loader rejects unknown
+ * majors so a future bump cannot silently corrupt the history.
+ */
+export type StoredSessionAnalysisHistory = {
+  sessionId: string;
+  savedAt: string;
+  adapter: "browser-local-storage";
+  /** Bumped when the on-disk shape changes incompatibly. */
+  schemaVersion: 1;
+  history: AnalysisRunHistory;
+};
+
+/**
  * Durable browser snapshot of a session's *memory body* — the parts of
  * the session view that Project Memory aggregates across saved
  * sessions: issues, decisions, next-actions, plus a tiny summary
@@ -228,6 +254,27 @@ export type DraftRepository = {
   saveSessionAnalysis: (sessionId: string, result: AnalysisResult) => StoredSessionAnalysis;
   loadSessionAnalysis: (sessionId: string) => StoredSessionAnalysis | null;
   clearSessionAnalysis: (sessionId: string) => void;
+  /**
+   * Read the append-only analysis run history for a session. When no
+   * history record exists yet, a one-run history is forward-migrated
+   * from the legacy single `StoredSessionAnalysis` record so sessions
+   * analysed before this milestone still expose a history. The
+   * synthesised history is not written back by this read; the next
+   * `saveSessionAnalysis` persists it. Returns `null` only when the
+   * session has no analysis at all.
+   */
+  loadSessionAnalysisHistory: (sessionId: string) => StoredSessionAnalysisHistory | null;
+  /**
+   * Adopt a different run as the session's current understanding. The
+   * single `StoredSessionAnalysis` mirror is rewritten to the adopted
+   * run so existing readers (`loadSessionAnalysis`) stay in sync. An
+   * unknown run id leaves the pointer unchanged (no-op-safe). Returns
+   * the updated history, or `null` when the session has no history.
+   */
+  selectSessionAnalysisRun: (
+    sessionId: string,
+    runId: string,
+  ) => StoredSessionAnalysisHistory | null;
   /**
    * Persist a session's durable memory body (issues / decisions /
    * next-actions / optional summary snapshot). Designed to be called
