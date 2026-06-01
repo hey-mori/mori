@@ -922,9 +922,9 @@ td a {
   line-height: 1;
 }
 
-.tab-toolbar-metric.tone-orange dd { color: var(--orange); }
-.tab-toolbar-metric.tone-blue dd { color: var(--blue); }
-.tab-toolbar-metric.tone-green dd { color: var(--green); }
+.tab-toolbar-metric.tone-orange dd,
+.tab-toolbar-metric.tone-blue dd,
+.tab-toolbar-metric.tone-green dd { color: var(--text); }
 .tab-toolbar-metric.is-zero {
   opacity: 0.55;
 }
@@ -2529,7 +2529,7 @@ td a {
 
 .review-issue-board {
   display: grid;
-  gap: var(--base-space-3);
+  gap: var(--base-space-4);
   min-width: 0;
 }
 
@@ -2667,7 +2667,7 @@ td a {
 .review-issue-board-columns {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 16px;
   align-items: start;
 }
 
@@ -2677,7 +2677,7 @@ td a {
    .review-issue-board-columns media queries below. */
 .review-board-columns {
   grid-template-columns: repeat(3, minmax(220px, 1fr));
-  gap: var(--base-space-3);
+  gap: 16px;
   align-items: start;
 }
 
@@ -2711,12 +2711,12 @@ td a {
   --review-column-tone: var(--muted-2);
   --review-column-tint: var(--gray-50);
   display: grid;
-  gap: var(--base-space-2);
+  gap: var(--base-space-3);
   min-width: 0;
-  padding: var(--base-space-3);
+  padding: 16px;
   border: 1px solid var(--base-border);
   border-radius: var(--radius-md);
-  background: var(--gray-50);
+  background: #f7f8fb;
 }
 
 .review-issue-column.review-tone-orange {
@@ -2739,7 +2739,7 @@ td a {
   justify-content: space-between;
   align-items: center;
   min-height: 24px;
-  padding: 0 var(--base-space-1);
+  padding: 0 2px 2px;
 }
 
 .review-issue-column-label {
@@ -2787,7 +2787,7 @@ td a {
 .review-issue-column-list {
   display: grid;
   align-content: start;
-  gap: var(--base-space-2);
+  gap: 12px;
   min-height: 40px;
 }
 
@@ -2809,7 +2809,7 @@ td a {
   border-radius: var(--radius-md);
   background: var(--base-surface);
   transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05);
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.035);
 }
 
 .review-issue-card:hover {
@@ -2818,17 +2818,17 @@ td a {
 }
 
 .review-issue-card.is-selected {
-  border-color: var(--review-column-tone);
+  border-color: var(--base-accent, var(--purple));
   background: var(--base-surface);
-  box-shadow: 0 0 0 2px var(--review-column-tint), 0 1px 2px rgba(17, 24, 39, 0.05);
+  box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.12), 0 1px 2px rgba(17, 24, 39, 0.05);
 }
 
 .review-board-card-button {
   display: grid;
-  gap: var(--base-space-2);
+  gap: 12px;
   width: 100%;
-  min-height: 112px;
-  padding: var(--base-space-3);
+  min-height: 124px;
+  padding: 16px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -2837,7 +2837,7 @@ td a {
 }
 
 .review-board-card-button:focus-visible {
-  outline: 2px solid var(--review-column-tone);
+  outline: 2px solid var(--base-accent, var(--purple));
   outline-offset: 2px;
 }
 
@@ -2894,7 +2894,7 @@ td a {
 .review-card-head-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   min-width: 0;
 }
 
@@ -2909,17 +2909,17 @@ td a {
   flex-shrink: 0;
 }
 
-.status-glyph { color: var(--muted-2); }
-.status-glyph.status-open { color: var(--orange); }
+.status-glyph { color: #8792a6; }
+.status-glyph.status-open { color: #8792a6; }
 .status-glyph.status-inProgress {
-  color: var(--blue);
+  color: #8792a6;
   animation: review-status-spin 1.6s linear infinite;
 }
-.status-glyph.status-watching { color: var(--purple); }
+.status-glyph.status-watching { color: #8792a6; }
 .status-glyph.status-resolved,
 .status-glyph.status-confirmed,
-.status-glyph.status-done { color: var(--green); }
-.status-glyph.status-pending { color: var(--muted-2); }
+.status-glyph.status-done { color: #667085; }
+.status-glyph.status-pending { color: #8792a6; }
 
 @keyframes review-status-spin {
   to { transform: rotate(360deg); }
@@ -2933,8 +2933,9 @@ td a {
   flex-shrink: 0;
   padding: 1px 7px;
   border-radius: var(--base-radius-pill);
-  background: var(--red-50, #fef2f2);
-  color: var(--red, #b91c1c);
+  background: var(--gray-50);
+  color: var(--muted);
+  border: 1px solid var(--base-border);
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.02em;
@@ -2946,7 +2947,7 @@ td a {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: var(--blue, #2563eb);
+  background: var(--muted-2);
 }
 
 .review-card-meta-row {
@@ -2954,7 +2955,7 @@ td a {
   align-items: center;
   align-self: end;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
   padding: 0;
 }
@@ -2962,31 +2963,31 @@ td a {
 .review-card-state {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: var(--base-radius-pill);
   font-size: 10.5px;
   font-weight: 750;
   letter-spacing: 0.01em;
-  border: 1px solid transparent;
-  background: var(--gray-50);
+  border: 1px solid var(--base-border);
+  background: var(--base-surface-subtle);
   color: var(--muted);
 }
 
 .review-card-state.tone-orange {
-  background: var(--orange-50, #fff8e6);
-  color: var(--orange);
+  background: var(--base-surface-subtle);
+  color: var(--muted);
 }
 .review-card-state.tone-blue {
-  background: var(--blue-50, #eef2ff);
-  color: var(--blue);
+  background: var(--base-surface-subtle);
+  color: var(--muted);
 }
 .review-card-state.tone-green {
-  background: var(--green-50, #ecfdf5);
-  color: var(--green);
+  background: var(--base-surface-subtle);
+  color: var(--muted);
 }
 .review-card-state.tone-red {
-  background: var(--red-50, #fef2f2);
-  color: var(--red);
+  background: var(--base-surface-subtle);
+  color: var(--muted);
 }
 
 .review-card-meta-text {
@@ -3000,7 +3001,7 @@ td a {
 /* Resolved issues / completed actions read as already-done: muted background,
    muted title, light strikethrough. */
 .review-issue-card.is-muted {
-  background: var(--base-surface-subtle);
+  background: #fafbfc;
 }
 
 .review-issue-card.is-muted .review-card-title {
@@ -3018,7 +3019,7 @@ td a {
    avoids that AI-cliché. The 높음 chip in the title row already signals
    urgency. */
 .review-issue-card.priority-high:not(.is-muted) {
-  border-color: var(--orange-200, #fde8b8);
+  border-color: var(--base-border);
 }
 
 /* Column header: stacked title row + tiny progress hint, vertically grouped
@@ -3026,7 +3027,7 @@ td a {
 .review-issue-column > header {
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 4px;
 }
 
 .review-issue-column-progress {
@@ -3034,15 +3035,15 @@ td a {
   font-size: 10.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  padding-left: 15px;
+  padding-left: 16px;
 }
 
 /* Quick action chips floating top-right — hidden until hover/focus so the
    board stays calm and the chip cluster never competes with the title. */
 .review-card-quick-actions {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 10px;
+  right: 10px;
   display: inline-flex;
   gap: 4px;
   opacity: 0;
@@ -3078,8 +3079,8 @@ td a {
 }
 
 .review-card-quick.is-primary {
-  background: var(--green, #047857);
-  border-color: var(--green, #047857);
+  background: var(--text);
+  border-color: var(--text);
   color: white;
 }
 
@@ -3106,12 +3107,12 @@ td a {
 }
 
 .review-card-checkbox:hover {
-  background: var(--green-50, #ecfdf5);
-  color: var(--green);
+  background: var(--gray-50);
+  color: var(--text);
 }
 
 .review-card-checkbox.is-done {
-  color: var(--green);
+  color: var(--text);
 }
 
 .review-issue-card .pill {
@@ -4097,9 +4098,14 @@ td a {
   color: var(--base-text-muted);
 }
 
+.reports-embedded .session-tab-split {
+  padding-top: var(--base-space-6);
+  padding-bottom: var(--base-space-6);
+}
+
 .reports-main {
   display: grid;
-  gap: var(--base-space-7);
+  gap: 12px;
   min-width: 0;
 }
 
@@ -4835,11 +4841,15 @@ td a {
 .resume-prompt-card {
   display: grid;
   gap: 8px;
-  padding: 10px 12px 12px;
+  padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: white;
   box-shadow: var(--shadow-soft);
+}
+
+.resume-prompt-card.is-compact {
+  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
 }
 
 .resume-prompt-head {
@@ -4871,7 +4881,7 @@ td a {
 }
 
 .resume-prompt-body {
-  margin: 0;
+  margin: 8px 0 0;
   padding: 10px 12px;
   border: 1px solid #d9d0ff;
   border-radius: 9px;
@@ -4880,8 +4890,29 @@ td a {
   font-size: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
-  max-height: 220px;
+  max-height: 180px;
   overflow: auto;
+}
+
+.resume-prompt-details {
+  display: grid;
+  gap: 8px;
+}
+
+.resume-prompt-details summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.resume-prompt-details summary small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .resume-prompt-empty {
@@ -5007,11 +5038,11 @@ td a {
 .mori-package-strip {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid #d9d0ff;
+  gap: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
   border-radius: 11px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: white;
   box-shadow: var(--shadow-soft);
 }
 
@@ -5033,9 +5064,42 @@ td a {
 
 .mori-package-strip-intro {
   display: grid;
-  gap: 4px;
+  gap: 10px;
   min-width: 0;
   align-content: center;
+}
+
+.mori-package-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.mori-package-stats div {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-soft);
+}
+
+.mori-package-stats dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.mori-package-stats dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
 }
 
 .mori-package-export-options {
@@ -5114,13 +5178,15 @@ td a {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .mori-package-strip-buttons {
   display: inline-flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 @media (max-width: 1180px) {
