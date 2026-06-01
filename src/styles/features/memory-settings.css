@@ -56,18 +56,17 @@
 /* Report builder panel */
 
 .report-builder-panel {
-  display: grid;
-  gap: 10px;
-  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* The preview is the surface that matters — give the panel almost the full
+     visible session detail height so it never reads as a half-height card. */
+  min-height: calc(100vh - 260px);
   border: 1px solid var(--line);
   border-radius: 11px;
   background: white;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
-  min-width: 0;
-  position: sticky;
-  top: 88px;
-  max-height: calc(100vh - 110px);
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .report-builder-head {
@@ -436,88 +435,64 @@
   min-width: 0;
 }
 
-.report-builder-controls {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-}
-
-/* Section + format sit side-by-side at the top of the controls column. */
-.report-builder-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
-  min-width: 0;
-}
-
-/* 공유 안전 control — inline toggles instead of a dropdown so the active
-   state is always visible at a glance. */
-.report-privacy-toggles {
-  margin: 0;
-  padding: 12px 14px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+/* Top filter-style toolbar — section / format / 공유 토글 / 복사 + 저장.
+   Same idea as the 흐름 / 자료 / 검토 toolbars: an inset band that anchors
+   the page. The preview pane below fills the remaining height. */
+.report-builder-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
   background: var(--panel-soft);
 }
 
-.report-privacy-toggles legend {
-  padding: 0 4px;
+.report-builder-toolbar .report-builder-field {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.report-builder-toolbar .report-builder-field > .base-select-trigger,
+.report-builder-toolbar .report-builder-field > .base-checklist-trigger {
+  min-width: 160px;
+}
+
+.report-builder-toolbar .report-builder-actions {
+  margin-left: auto;
+}
+
+/* "외부 공유용" pill — Toggle + a calm label, in a small inset chip so it
+   reads as a single setting next to the dropdowns. */
+.report-share-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
   color: var(--text);
   font-size: 12px;
-  font-weight: 700;
-}
-
-.report-privacy-toggles ul {
-  display: grid;
-  gap: 4px;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.report-privacy-toggles li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 6px 8px;
-  border-radius: 6px;
-}
-
-.report-privacy-toggles li.is-active {
-  background: var(--purple-50);
-}
-
-.report-privacy-toggle-copy {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-  line-height: 1.3;
-}
-
-.report-privacy-toggle-copy strong {
-  color: var(--text);
-  font-size: 12.5px;
   font-weight: 650;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
 }
 
-.report-privacy-toggle-copy small {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.report-share-toggle:hover {
+  border-color: var(--line-strong);
 }
 
-@media (max-width: 780px) {
-  .report-builder-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.report-share-toggle.is-active {
+  border-color: var(--purple);
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.report-share-toggle-label {
+  white-space: nowrap;
 }
 
 .report-type-select-row {
@@ -656,33 +631,22 @@
   justify-content: flex-end;
 }
 
+/* Preview pane fills the rest of the panel's height; the rendered preview
+   scrolls inside it. */
 .report-preview-pane {
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-}
-
-.report-preview-pane header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
-  min-height: 24px;
-}
-
-.report-preview-pane header strong {
-  color: var(--text);
-  font-size: 13px;
-}
-
-.report-preview-pane header span {
-  color: var(--muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 14px 16px;
 }
 
 .report-preview-pane .report-preview {
-  max-height: 380px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .report-rendered-preview {

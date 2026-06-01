@@ -101,6 +101,11 @@ export function ReportsView() {
     [view, acceptedMemories, reviewActions],
   );
 
+  // One global "공유 정책" toggle for both the report builder and the .mori
+  // export. When on, the report renders as client-safe (raw transcripts +
+  // source details excluded) and the .mori export uses the client-safe path.
+  const [externalShare, setExternalShare] = useState(false);
+
   // The 보고서 tab is the session's handoff / output surface — three stacked
   // sections: the continue-context, the report builder, and the .mori export.
   // Session identity, scale metrics, and the wrap-up checklist live in the
@@ -128,6 +133,8 @@ export function ReportsView() {
               view={view}
               resumePromptOverride={resumePromptText}
               acceptedMemories={acceptedMemories}
+              externalShare={externalShare}
+              onToggleExternalShare={() => setExternalShare((current) => !current)}
             />
 
             <MoriPackageStrip
@@ -136,6 +143,7 @@ export function ReportsView() {
               reviewActions={reviewActions}
               memoryStorageFellBack={memoryStorageFellBack}
               exportPlan={exportPlan}
+              externalShare={externalShare}
             />
           </div>
         </div>
@@ -270,24 +278,25 @@ function MoriPackageStrip({
   reviewActions,
   memoryStorageFellBack,
   exportPlan,
+  externalShare,
 }: {
   view: ReturnType<typeof selectSessionView>;
   acceptedMemories: StoredAcceptedProjectMemory[];
   reviewActions: StoredMemoryReviewAction[];
   memoryStorageFellBack: boolean;
   exportPlan: ReturnType<typeof buildMoriPackageExportPlan>;
+  /** When true the export follows the client-safe path; mirrors the
+   *  report builder's 외부 공유용 toggle so one switch drives both. */
+  externalShare: boolean;
 }) {
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [phase, setPhase] = useState<MoriExportPhase>("idle");
-  const [activeKind, setActiveKind] = useState<MoriExportKind | null>(null);
-  const [message, setMessage] = useState<string>(
-    ".mori v0 패키지를 내보낼 준비가 되었습니다.",
-  );
+  const [message, setMessage] = useState<string>("");
   const busy = phase === "running";
-  async function runExport(clientSafe: boolean) {
+  async function runExport() {
+    const clientSafe = externalShare;
     const kind: MoriExportKind = clientSafe ? "clientSafe" : "full";
     setPhase("running");
-    setActiveKind(kind);
     setMessage(exportRunningLabel(kind));
     try {
       const fullPkg = createMoriPackageFromSession(view, {
@@ -309,13 +318,11 @@ function MoriPackageStrip({
         : `${pkg.manifest.packageId}.mori`;
       const written = await writeMoriZipPackage(zipBytes, filename);
       const settled = phaseForWriteResult(written);
-      if (settled === "success" && clientSafe) {
-        setMessage(
-          `${written.message} · 클라이언트 공유용: memory ${exportPlan.clientSafe.memories}건 포함 / ${exportPlan.clientSafe.droppedMemories}건 제외.`,
-        );
-      } else {
-        setMessage(written.message);
-      }
+      // Surface only failure / cancel to keep the strip calm; a successful
+      // save is its own confirmation (the browser download row or the
+      // desktop file picker closing).
+      if (settled !== "success") setMessage(written.message);
+      else setMessage("");
       setPhase(settled);
     } catch (error) {
       setPhase("error");
@@ -353,34 +360,40 @@ function MoriPackageStrip({
             <dd>{exportPlan.full.auditRows}</dd>
           </div>
         </dl>
-        {exportPlan.clientSafe.droppedMemories > 0 || exportPlan.clientSafe.droppedAuditRows > 0 || memoryStorageFellBack ? (
-          <p className="mori-package-content-line">
-            {exportPlan.clientSafe.droppedMemories > 0 || exportPlan.clientSafe.droppedAuditRows > 0
-              ? `클라이언트 공유 시 메모리 ${exportPlan.clientSafe.droppedMemories}·감사 ${exportPlan.clientSafe.droppedAuditRows} 제외`
-              : ""}
-            {memoryStorageFellBack ? "SQLite 읽기 실패, browser fallback 사용" : ""}
-          </p>
-        ) : null}
+        {externalShare && (exportPlan.clientSafe.droppedMemories > 0 || exportPlan.clientSafe.droppedAuditRows > 0)
+          ? (
+            <p className="mori-package-content-line">
+              외부 공유 모드 · 메모리 {exportPlan.clientSafe.droppedMemories}·감사 {exportPlan.clientSafe.droppedAuditRows} 제외
+            </p>
+          )
+          : memoryStorageFellBack
+            ? (
+              <p className="mori-package-content-line">
+                SQLite 읽기 실패, browser fallback 사용
+              </p>
+            )
+            : null}
       </div>
       <div className="mori-package-strip-actions">
-        <div className="mori-package-strip-buttons">
-          <Button icon={FileText} size="sm" onClick={() => runExport(false)} disabled={busy}>
-            {busy && activeKind === "full" ? "내보내는 중..." : ".mori 패키지 내보내기"}
-          </Button>
-          <Button icon={FileText} size="sm" onClick={() => runExport(true)} disabled={busy}>
-            {busy && activeKind === "clientSafe"
-              ? "내보내는 중..."
-              : "클라이언트 공유용 .mori 내보내기"}
-          </Button>
-        </div>
-        <p
-          className={`mori-package-feedback tone-${tone}`}
-          role={exportPhaseRole(phase)}
-          aria-live={phase === "error" ? "assertive" : "polite"}
+        <Button
+          variant="primary"
+          icon={FileText}
+          size="sm"
+          onClick={runExport}
+          disabled={busy}
         >
-          {phase === "running" ? <span className="mori-package-feedback-spinner" aria-hidden="true" /> : null}
-          <span>{message}</span>
-        </p>
+          {busy ? "내보내는 중..." : "내보내기"}
+        </Button>
+        {message ? (
+          <p
+            className={`mori-package-feedback tone-${tone}`}
+            role={exportPhaseRole(phase)}
+            aria-live={phase === "error" ? "assertive" : "polite"}
+          >
+            {phase === "running" ? <span className="mori-package-feedback-spinner" aria-hidden="true" /> : null}
+            <span>{message}</span>
+          </p>
+        ) : null}
       </div>
     </section>
   );

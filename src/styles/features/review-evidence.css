@@ -4104,7 +4104,8 @@ td a {
 }
 
 .reports-main {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   min-width: 0;
 }
@@ -5035,11 +5036,17 @@ td a {
 
 /* .mori package strip */
 
+/* Compact bottom strip. Single internal row: header + stats on the left,
+   a single 내보내기 button on the right. No nested vertical stack, no
+   always-on status line — successful exports speak for themselves through
+   the browser download row / desktop file picker; only a real failure or
+   the running spinner promotes the small feedback line. */
 .mori-package-strip {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  align-items: center;
   gap: 18px;
-  padding: 14px 16px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 11px;
   background: white;
@@ -5063,10 +5070,12 @@ td a {
 }
 
 .mori-package-strip-intro {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
   min-width: 0;
-  align-content: center;
 }
 
 .mori-package-stats {
@@ -5176,17 +5185,9 @@ td a {
 
 .mori-package-strip-actions {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 10px;
   flex-shrink: 0;
-}
-
-.mori-package-strip-buttons {
-  display: inline-flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 @media (max-width: 1180px) {

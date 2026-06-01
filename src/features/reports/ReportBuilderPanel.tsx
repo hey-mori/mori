@@ -9,7 +9,6 @@ import type { MockSession } from "../../domain/types";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import {
   buildReportMarkdown,
-  REPORT_TYPE_DEFINITIONS,
   SECTION_DEFINITIONS,
   toggleSection,
   type ReportFormat,
@@ -55,54 +54,44 @@ const SECTION_OPTIONS: Array<BaseChecklistOption<ReportSectionId>> = SECTION_DEF
 // audience's defaults. The selector is gone — sections start with every
 // section enabled and the user decides what to drop. The internal "type"
 // stays at `personalRetrospective` (the most permissive audience) so the
-// underlying `buildReportMarkdown` contract is unchanged; privacy toggles
-// do the real share-scope filtering downstream.
+// underlying `buildReportMarkdown` contract is unchanged; the single 외부
+// 공유용 toggle drives the real share-scope filtering downstream.
 const DEFAULT_REPORT_TYPE = "personalRetrospective" as const;
 const DEFAULT_SECTIONS: ReadonlySet<ReportSectionId> = new Set(
   SECTION_DEFINITIONS.map((def) => def.id),
 );
-const DEFAULT_PRIVACY: ReportPrivacyOptions =
-  REPORT_TYPE_DEFINITIONS.find((entry) => entry.id === DEFAULT_REPORT_TYPE)
-    ?.defaultPrivacy
-    ?? { clientSafe: false, excludeRawTranscripts: false, excludeSourceDetails: false };
 
-const PRIVACY_TOGGLES: Array<{
-  id: keyof ReportPrivacyOptions;
-  label: string;
-  hint: string;
-}> = [
-  {
-    id: "clientSafe",
-    label: "외부 공유용",
-    hint: "원문 대화·출처 상세·파일 경로 노출을 줄입니다.",
-  },
-  {
-    id: "excludeRawTranscripts",
-    label: "AI 대화 원문 제외",
-    hint: "요약과 메타데이터만 사용합니다.",
-  },
-  {
-    id: "excludeSourceDetails",
-    label: "출처 상세 제외",
-    hint: "Evidence 섹션에서 소스 제목을 숨깁니다.",
-  },
-];
+// "공유 정책" used to fan out into three independent toggles (clientSafe /
+// excludeRawTranscripts / excludeSourceDetails). One global "외부 공유용"
+// switch is enough: when on, all three privacy gates fire together so the
+// rendered report and the .mori export are both client-safe. When off, none
+// fire — the report is the user's own internal copy.
+function buildPrivacyFromShare(externalShare: boolean): ReportPrivacyOptions {
+  return externalShare
+    ? { clientSafe: true, excludeRawTranscripts: true, excludeSourceDetails: true }
+    : { clientSafe: false, excludeRawTranscripts: false, excludeSourceDetails: false };
+}
 
 export function ReportBuilderPanel({
   id,
   view,
   resumePromptOverride,
   acceptedMemories,
+  externalShare,
+  onToggleExternalShare,
 }: {
   id?: string;
   view: MockSession;
   resumePromptOverride?: string;
   acceptedMemories?: readonly StoredAcceptedProjectMemory[];
+  /** Single 공유 정책 toggle lifted to `ReportsView` so the .mori strip and
+   *  the report copy stay in sync. */
+  externalShare: boolean;
+  onToggleExternalShare: () => void;
 }) {
   const [sections, setSections] = useState<ReadonlySet<ReportSectionId>>(
     () => new Set(DEFAULT_SECTIONS),
   );
-  const [privacy, setPrivacy] = useState<ReportPrivacyOptions>(DEFAULT_PRIVACY);
   const [format, setFormat] = useState<ReportFormat>("markdown");
   const [copiedMd, setCopiedMd] = useState(false);
 
@@ -110,9 +99,7 @@ export function ReportBuilderPanel({
     setSections((current) => toggleSection(current, id));
   }
 
-  function togglePrivacyKey<K extends keyof ReportPrivacyOptions>(key: K) {
-    setPrivacy((current) => ({ ...current, [key]: !current[key] }));
-  }
+  const privacy = useMemo(() => buildPrivacyFromShare(externalShare), [externalShare]);
 
   const payload = useMemo(
     () =>
@@ -169,52 +156,50 @@ export function ReportBuilderPanel({
   const previewHtml = useMemo(() => renderReportMarkdownToHtml(payload.markdown), [payload.markdown]);
 
   return (
-    <aside id={id} className="report-builder-panel base-scroll" aria-label="보고서 작성">
-      <div className="report-builder-workbench">
-        <div className="report-builder-controls">
-          <div className="report-builder-row">
-            <ReportSectionPicker sections={sections} onToggle={handleToggleSection} />
-            <ReportFormatPicker format={format} onChange={setFormat} />
-          </div>
-
-          <ReportPrivacyToggles privacy={privacy} onToggle={togglePrivacyKey} />
+    <aside id={id} className="report-builder-panel" aria-label="보고서 작성">
+      <header className="report-builder-toolbar" role="toolbar" aria-label="보고서 옵션">
+        <ReportSectionPicker sections={sections} onToggle={handleToggleSection} />
+        <ReportFormatPicker format={format} onChange={setFormat} />
+        <label className={`report-share-toggle ${externalShare ? "is-active" : ""}`}>
+          <Toggle
+            active={externalShare}
+            label="외부 공유용"
+            onClick={onToggleExternalShare}
+          />
+          <span className="report-share-toggle-label">외부 공유용</span>
+        </label>
+        <BaseActionCluster className="report-builder-actions">
+          <Button
+            variant="primary"
+            icon={copiedMd ? Check : ClipboardCopy}
+            size="sm"
+            onClick={handleCopyMarkdown}
+          >
+            {copiedMd ? "복사됨" : "복사"}
+          </Button>
+          <Button icon={Download} size="sm" onClick={handleDownload}>
+            저장
+          </Button>
+        </BaseActionCluster>
+      </header>
+      <section className="report-preview-pane" aria-label="보고서 미리보기">
+        {payload.warnings.length > 0 ? (
+          <ul className="report-warnings">
+            {payload.warnings.map((warning) => (
+              <li key={warning}>
+                <Sparkles size={11} aria-hidden="true" />
+                <span>{warning}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="report-preview base-scroll" aria-label="보고서 미리보기 본문">
+          <div
+            className="report-rendered-preview"
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
+          />
         </div>
-
-        <section className="report-preview-pane" aria-label="보고서 미리보기">
-          <header>
-            <strong>미리보기</strong>
-            <BaseActionCluster className="report-builder-actions">
-              <Button
-                variant="primary"
-                icon={copiedMd ? Check : ClipboardCopy}
-                size="sm"
-                onClick={handleCopyMarkdown}
-              >
-                {copiedMd ? "복사됨" : "복사"}
-              </Button>
-              <Button icon={Download} size="sm" onClick={handleDownload}>
-                저장
-              </Button>
-            </BaseActionCluster>
-          </header>
-          {payload.warnings.length > 0 ? (
-            <ul className="report-warnings">
-              {payload.warnings.map((warning) => (
-                <li key={warning}>
-                  <Sparkles size={11} aria-hidden="true" />
-                  <span>{warning}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="report-preview base-scroll" aria-label="보고서 미리보기 본문">
-            <div
-              className="report-rendered-preview"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
-          </div>
-        </section>
-      </div>
+      </section>
     </aside>
   );
 }
@@ -258,44 +243,6 @@ function ReportSectionPicker({
         icon={ListChecks}
       />
     </div>
-  );
-}
-
-/**
- * Privacy controls used to live in a dropdown labelled "공유 범위", which
- * mixed two ideas (the value label tried to summarise a count of restrictions)
- * and required a click to see what was on. Inline toggles make the state
- * always visible, calmer, and one tap to flip.
- */
-function ReportPrivacyToggles({
-  privacy,
-  onToggle,
-}: {
-  privacy: ReportPrivacyOptions;
-  onToggle: <K extends keyof ReportPrivacyOptions>(key: K) => void;
-}) {
-  return (
-    <fieldset className="report-privacy-toggles" aria-label="공유 안전">
-      <legend>공유 안전</legend>
-      <ul>
-        {PRIVACY_TOGGLES.map((entry) => {
-          const active = Boolean(privacy[entry.id]);
-          return (
-            <li key={entry.id} className={active ? "is-active" : ""}>
-              <div className="report-privacy-toggle-copy">
-                <strong>{entry.label}</strong>
-                <small>{entry.hint}</small>
-              </div>
-              <Toggle
-                active={active}
-                label={entry.label}
-                onClick={() => onToggle(entry.id)}
-              />
-            </li>
-          );
-        })}
-      </ul>
-    </fieldset>
   );
 }
 
