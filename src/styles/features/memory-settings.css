@@ -653,13 +653,18 @@
 }
 
 .report-preview-shell .report-preview {
-  /* The base `.report-preview` keeps its own subtle paper chrome (a thin
-     `var(--line)` border + #fbfcff bg). Inside the shell it grows to fill
-     the available height and scrolls; the 240px cap on the base rule is
-     dropped. */
+  /* Strip the base `.report-preview` paper chrome (border + #fbfcff bg +
+     rounded corners): the toolbar band above is the only bordered surface
+     on this tab. The preview just renders markdown directly on the page;
+     the inner overflow handles the scroll. */
   flex: 1 1 auto;
   min-height: 0;
   max-height: none;
+  margin: 0;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 @media (max-width: 1180px) {
