@@ -1,9 +1,10 @@
-import { Check, ClipboardCopy, Download, FileText, ListChecks, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, ClipboardCopy, Download, FileText, ListChecks, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { BaseActionCluster } from "../../components/ui/BaseActionCluster";
 import { BaseChecklistSelect, type BaseChecklistOption } from "../../components/ui/BaseChecklistSelect";
 import { BaseSelect, type BaseSelectOption } from "../../components/ui/BaseSelect";
+import { Toggle } from "../../components/ui/Toggle";
 import type { MockSession } from "../../domain/types";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import {
@@ -14,7 +15,6 @@ import {
   type ReportFormat,
   type ReportPrivacyOptions,
   type ReportSectionId,
-  type ReportType,
 } from "../../lib/report/reportBuilder";
 import { buildReportHtmlDocument } from "../../lib/report/reportHtml";
 import { renderReportMarkdownToHtml } from "../../lib/report/reportHtml";
@@ -34,13 +34,6 @@ const FORMAT_DEFS: Array<{
   { id: "html", label: "HTML", ext: ".html", featureId: "reports.export.html" },
 ];
 
-const REPORT_TYPE_OPTIONS: Array<BaseSelectOption<ReportType>> = REPORT_TYPE_DEFINITIONS.map((def) => ({
-  id: def.id,
-  label: def.label,
-  description: def.audience,
-  icon: FileText,
-}));
-
 const FORMAT_OPTIONS: Array<BaseSelectOption<ReportFormat>> = FORMAT_DEFS.map((def) => {
   const feature = getFeatureControlProps(def.featureId);
   return {
@@ -58,23 +51,40 @@ const SECTION_OPTIONS: Array<BaseChecklistOption<ReportSectionId>> = SECTION_DEF
   description: def.description,
 }));
 
-type PrivacyOptionId = keyof ReportPrivacyOptions;
+// 보고서 유형 ("템플릿") was a section-preset that locked the user into one
+// audience's defaults. The selector is gone — sections start with every
+// section enabled and the user decides what to drop. The internal "type"
+// stays at `personalRetrospective` (the most permissive audience) so the
+// underlying `buildReportMarkdown` contract is unchanged; privacy toggles
+// do the real share-scope filtering downstream.
+const DEFAULT_REPORT_TYPE = "personalRetrospective" as const;
+const DEFAULT_SECTIONS: ReadonlySet<ReportSectionId> = new Set(
+  SECTION_DEFINITIONS.map((def) => def.id),
+);
+const DEFAULT_PRIVACY: ReportPrivacyOptions =
+  REPORT_TYPE_DEFINITIONS.find((entry) => entry.id === DEFAULT_REPORT_TYPE)
+    ?.defaultPrivacy
+    ?? { clientSafe: false, excludeRawTranscripts: false, excludeSourceDetails: false };
 
-const PRIVACY_OPTIONS: Array<BaseChecklistOption<PrivacyOptionId>> = [
+const PRIVACY_TOGGLES: Array<{
+  id: keyof ReportPrivacyOptions;
+  label: string;
+  hint: string;
+}> = [
   {
     id: "clientSafe",
     label: "외부 공유용",
-    description: "원문 대화·출처 상세·파일 경로 노출을 줄입니다.",
+    hint: "원문 대화·출처 상세·파일 경로 노출을 줄입니다.",
   },
   {
     id: "excludeRawTranscripts",
     label: "AI 대화 원문 제외",
-    description: "요약과 메타데이터만 사용합니다.",
+    hint: "요약과 메타데이터만 사용합니다.",
   },
   {
     id: "excludeSourceDetails",
     label: "출처 상세 제외",
-    description: "Evidence 섹션에서 소스 제목을 숨깁니다.",
+    hint: "Evidence 섹션에서 소스 제목을 숨깁니다.",
   },
 ];
 
@@ -89,46 +99,32 @@ export function ReportBuilderPanel({
   resumePromptOverride?: string;
   acceptedMemories?: readonly StoredAcceptedProjectMemory[];
 }) {
-  const [type, setType] = useState<ReportType>("personalRetrospective");
-  const typeDef = useMemo(
-    () => REPORT_TYPE_DEFINITIONS.find((entry) => entry.id === type) ?? REPORT_TYPE_DEFINITIONS[0],
-    [type],
-  );
   const [sections, setSections] = useState<ReadonlySet<ReportSectionId>>(
-    () => new Set(typeDef.defaultSections),
+    () => new Set(DEFAULT_SECTIONS),
   );
-  const [privacy, setPrivacy] = useState<ReportPrivacyOptions>(typeDef.defaultPrivacy);
+  const [privacy, setPrivacy] = useState<ReportPrivacyOptions>(DEFAULT_PRIVACY);
   const [format, setFormat] = useState<ReportFormat>("markdown");
   const [copiedMd, setCopiedMd] = useState(false);
-
-  function handleTypeChange(nextType: ReportType) {
-    setType(nextType);
-    const def = REPORT_TYPE_DEFINITIONS.find((entry) => entry.id === nextType);
-    if (def) {
-      setSections(new Set(def.defaultSections));
-      setPrivacy(def.defaultPrivacy);
-    }
-  }
 
   function handleToggleSection(id: ReportSectionId) {
     setSections((current) => toggleSection(current, id));
   }
 
-  function setPrivacyKey<K extends keyof ReportPrivacyOptions>(key: K, value: ReportPrivacyOptions[K]) {
-    setPrivacy((current) => ({ ...current, [key]: value }));
+  function togglePrivacyKey<K extends keyof ReportPrivacyOptions>(key: K) {
+    setPrivacy((current) => ({ ...current, [key]: !current[key] }));
   }
 
   const payload = useMemo(
     () =>
       buildReportMarkdown({
         view,
-        type,
+        type: DEFAULT_REPORT_TYPE,
         sections,
         privacy,
         resumePromptOverride,
         acceptedMemories,
       }),
-    [view, type, sections, privacy, resumePromptOverride, acceptedMemories],
+    [view, sections, privacy, resumePromptOverride, acceptedMemories],
   );
 
   async function handleCopyMarkdown() {
@@ -162,7 +158,7 @@ export function ReportBuilderPanel({
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${view.session.title.replace(/\s+/g, "_")}-${type}${selectedFormat.ext}`;
+    anchor.download = `${view.session.title.replace(/\s+/g, "_")}-${DEFAULT_REPORT_TYPE}${selectedFormat.ext}`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -171,26 +167,17 @@ export function ReportBuilderPanel({
 
   const selectedFormat = FORMAT_DEFS.find((entry) => entry.id === format) ?? FORMAT_DEFS[0];
   const previewHtml = useMemo(() => renderReportMarkdownToHtml(payload.markdown), [payload.markdown]);
-  const activePrivacyCount =
-    Number(privacy.clientSafe) +
-    Number(privacy.excludeRawTranscripts) +
-    Number(privacy.excludeSourceDetails);
 
   return (
     <aside id={id} className="report-builder-panel base-scroll" aria-label="보고서 작성">
       <div className="report-builder-workbench">
         <div className="report-builder-controls">
-          <ReportTypeField type={type} onChange={handleTypeChange} />
+          <div className="report-builder-row">
+            <ReportSectionPicker sections={sections} onToggle={handleToggleSection} />
+            <ReportFormatPicker format={format} onChange={setFormat} />
+          </div>
 
-          <ReportFormatPicker format={format} onChange={setFormat} />
-
-          <ReportPrivacyPicker
-            activePrivacyCount={activePrivacyCount}
-            privacy={privacy}
-            setPrivacyKey={setPrivacyKey}
-          />
-
-          <ReportSectionPicker sections={sections} onToggle={handleToggleSection} />
+          <ReportPrivacyToggles privacy={privacy} onToggle={togglePrivacyKey} />
         </div>
 
         <section className="report-preview-pane" aria-label="보고서 미리보기">
@@ -252,61 +239,6 @@ function ReportFormatPicker({
   );
 }
 
-function ReportTypeField({
-  type,
-  onChange,
-}: {
-  type: ReportType;
-  onChange: (type: ReportType) => void;
-}) {
-  return (
-    <label className="report-builder-field report-builder-field-type">
-      <span>보고서</span>
-      <BaseSelect
-        value={type}
-        options={REPORT_TYPE_OPTIONS}
-        onChange={onChange}
-        label="보고서 유형"
-        className="report-type-select"
-      />
-    </label>
-  );
-}
-
-function ReportPrivacyPicker({
-  activePrivacyCount,
-  privacy,
-  setPrivacyKey,
-}: {
-  activePrivacyCount: number;
-  privacy: ReportPrivacyOptions;
-  setPrivacyKey: <K extends keyof ReportPrivacyOptions>(key: K, value: ReportPrivacyOptions[K]) => void;
-}) {
-  const selected = new Set(
-    PRIVACY_OPTIONS
-      .filter((option) => privacy[option.id])
-      .map((option) => option.id),
-  );
-  const valueLabel = activePrivacyCount === 0
-    ? "내부용"
-    : privacy.clientSafe
-      ? `외부용 · ${activePrivacyCount}개 제한`
-      : `${activePrivacyCount}개 제한`;
-  return (
-    <div className="report-builder-field">
-      <span>공유 범위</span>
-      <BaseChecklistSelect
-        label="공유 범위 옵션"
-        valueLabel={valueLabel}
-        options={PRIVACY_OPTIONS}
-        selectedIds={selected}
-        onToggle={(id) => setPrivacyKey(id, !privacy[id])}
-        icon={ShieldCheck}
-      />
-    </div>
-  );
-}
-
 function ReportSectionPicker({
   sections,
   onToggle,
@@ -326,6 +258,44 @@ function ReportSectionPicker({
         icon={ListChecks}
       />
     </div>
+  );
+}
+
+/**
+ * Privacy controls used to live in a dropdown labelled "공유 범위", which
+ * mixed two ideas (the value label tried to summarise a count of restrictions)
+ * and required a click to see what was on. Inline toggles make the state
+ * always visible, calmer, and one tap to flip.
+ */
+function ReportPrivacyToggles({
+  privacy,
+  onToggle,
+}: {
+  privacy: ReportPrivacyOptions;
+  onToggle: <K extends keyof ReportPrivacyOptions>(key: K) => void;
+}) {
+  return (
+    <fieldset className="report-privacy-toggles" aria-label="공유 안전">
+      <legend>공유 안전</legend>
+      <ul>
+        {PRIVACY_TOGGLES.map((entry) => {
+          const active = Boolean(privacy[entry.id]);
+          return (
+            <li key={entry.id} className={active ? "is-active" : ""}>
+              <div className="report-privacy-toggle-copy">
+                <strong>{entry.label}</strong>
+                <small>{entry.hint}</small>
+              </div>
+              <Toggle
+                active={active}
+                label={entry.label}
+                onClick={() => onToggle(entry.id)}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </fieldset>
   );
 }
 
