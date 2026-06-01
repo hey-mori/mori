@@ -40,7 +40,7 @@ export type ReportSectionId =
   | "evidence"
   | "nextActions";
 
-export type ReportFormat = "markdown" | "pdf" | "html";
+export type ReportFormat = "markdown" | "txt" | "pdf" | "html";
 
 export type ReportPrivacyOptions = {
   clientSafe: boolean;

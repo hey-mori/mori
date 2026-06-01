@@ -1,14 +1,11 @@
-import { Check, ClipboardCopy, Download, FileText, Lock, Sparkles } from "lucide-react";
+import { Check, ClipboardCopy, Download, FileText, ListChecks, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { BaseActionCluster } from "../../components/ui/BaseActionCluster";
-import { SectionHeader } from "../../components/ui/SectionHeader";
-import { InfoHint } from "../../components/ui/InfoHint";
-import { Toggle } from "../../components/ui/Toggle";
+import { BaseChecklistSelect, type BaseChecklistOption } from "../../components/ui/BaseChecklistSelect";
+import { BaseSelect, type BaseSelectOption } from "../../components/ui/BaseSelect";
 import type { MockSession } from "../../domain/types";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
-import { buildMemoryClientSafeBreakdown } from "../../lib/mori-package";
 import {
   buildReportMarkdown,
   REPORT_TYPE_DEFINITIONS,
@@ -20,6 +17,7 @@ import {
   type ReportType,
 } from "../../lib/report/reportBuilder";
 import { buildReportHtmlDocument } from "../../lib/report/reportHtml";
+import { renderReportMarkdownToHtml } from "../../lib/report/reportHtml";
 import { getFeatureControlProps, type FeatureId } from "../../app/featureStatus";
 
 // Format status is sourced from the feature registry so the panel can never
@@ -30,9 +28,54 @@ const FORMAT_DEFS: Array<{
   ext: string;
   featureId: FeatureId;
 }> = [
-  { id: "markdown", label: "Markdown", ext: ".md", featureId: "reports.export.markdown" },
+  { id: "markdown", label: "MD", ext: ".md", featureId: "reports.export.markdown" },
+  { id: "txt", label: "TXT", ext: ".txt", featureId: "reports.export.txt" },
   { id: "pdf", label: "PDF", ext: ".pdf", featureId: "reports.export.pdf" },
   { id: "html", label: "HTML", ext: ".html", featureId: "reports.export.html" },
+];
+
+const REPORT_TYPE_OPTIONS: Array<BaseSelectOption<ReportType>> = REPORT_TYPE_DEFINITIONS.map((def) => ({
+  id: def.id,
+  label: def.label,
+  description: def.audience,
+  icon: FileText,
+}));
+
+const FORMAT_OPTIONS: Array<BaseSelectOption<ReportFormat>> = FORMAT_DEFS.map((def) => {
+  const feature = getFeatureControlProps(def.featureId);
+  return {
+    id: def.id,
+    label: def.label,
+    description: feature.statusLabel,
+    icon: FileText,
+    disabled: !feature.enabled,
+  };
+});
+
+const SECTION_OPTIONS: Array<BaseChecklistOption<ReportSectionId>> = SECTION_DEFINITIONS.map((def) => ({
+  id: def.id,
+  label: def.label,
+  description: def.description,
+}));
+
+type PrivacyOptionId = keyof ReportPrivacyOptions;
+
+const PRIVACY_OPTIONS: Array<BaseChecklistOption<PrivacyOptionId>> = [
+  {
+    id: "clientSafe",
+    label: "외부 공유용",
+    description: "원문 대화·출처 상세·파일 경로 노출을 줄입니다.",
+  },
+  {
+    id: "excludeRawTranscripts",
+    label: "AI 대화 원문 제외",
+    description: "요약과 메타데이터만 사용합니다.",
+  },
+  {
+    id: "excludeSourceDetails",
+    label: "출처 상세 제외",
+    description: "Evidence 섹션에서 소스 제목을 숨깁니다.",
+  },
 ];
 
 export function ReportBuilderPanel({
@@ -57,7 +100,6 @@ export function ReportBuilderPanel({
   const [privacy, setPrivacy] = useState<ReportPrivacyOptions>(typeDef.defaultPrivacy);
   const [format, setFormat] = useState<ReportFormat>("markdown");
   const [copiedMd, setCopiedMd] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(true);
 
   function handleTypeChange(nextType: ReportType) {
     setType(nextType);
@@ -104,229 +146,196 @@ export function ReportBuilderPanel({
   function handleDownload() {
     if (typeof window === "undefined") return;
     const isHtml = format === "html";
+    const isText = format === "txt";
     const content = isHtml
       ? buildReportHtmlDocument({ markdown: payload.markdown, title: view.session.title })
+      : isText
+        ? buildReportTextDocument(payload.markdown)
       : payload.markdown;
     const blob = new Blob([content], {
-      type: isHtml ? "text/html;charset=utf-8" : "text/markdown;charset=utf-8",
+      type: isHtml
+        ? "text/html;charset=utf-8"
+        : isText
+          ? "text/plain;charset=utf-8"
+          : "text/markdown;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${view.session.title.replace(/\s+/g, "_")}-${type}${isHtml ? ".html" : ".md"}`;
+    anchor.download = `${view.session.title.replace(/\s+/g, "_")}-${type}${selectedFormat.ext}`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
   }
 
+  const selectedFormat = FORMAT_DEFS.find((entry) => entry.id === format) ?? FORMAT_DEFS[0];
+  const previewHtml = useMemo(() => renderReportMarkdownToHtml(payload.markdown), [payload.markdown]);
+  const activePrivacyCount =
+    Number(privacy.clientSafe) +
+    Number(privacy.excludeRawTranscripts) +
+    Number(privacy.excludeSourceDetails);
+
   return (
     <aside id={id} className="report-builder-panel base-scroll" aria-label="보고서 작성">
-      <header className="report-builder-head">
-        <h2>보고서 생성기</h2>
-        <InfoHint label="보고서 생성기 설명">
-          보고서 유형 / 섹션 / 형식을 선택하면 미리보기가 실시간으로 갱신됩니다.
-        </InfoHint>
-      </header>
+      <div className="report-builder-workbench">
+        <div className="report-builder-controls">
+          <ReportTypeField type={type} onChange={handleTypeChange} />
 
-      <section className="report-builder-section">
-        <SectionHeader title="보고서 유형" hint={typeDef.audience} />
-        <div className="report-type-list">
-          {REPORT_TYPE_DEFINITIONS.map((def) => (
-            <button
-              key={def.id}
-              type="button"
-              className={`report-type-card ${type === def.id ? "selected" : ""}`}
-              onClick={() => handleTypeChange(def.id)}
-              aria-pressed={type === def.id}
-            >
-              <FileText size={14} aria-hidden="true" />
-              <div>
-                <strong>{def.label}</strong>
-                <small>{def.description}</small>
-              </div>
-            </button>
-          ))}
+          <ReportFormatPicker format={format} onChange={setFormat} />
+
+          <ReportPrivacyPicker
+            activePrivacyCount={activePrivacyCount}
+            privacy={privacy}
+            setPrivacyKey={setPrivacyKey}
+          />
+
+          <ReportSectionPicker sections={sections} onToggle={handleToggleSection} />
         </div>
-      </section>
 
-      <section className="report-builder-section">
-        <SectionHeader title="포함 섹션" hint={`${sections.size} / ${SECTION_DEFINITIONS.length}`} />
-        <ul className="report-section-list">
-          {SECTION_DEFINITIONS.map((def) => (
-            <li key={def.id}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={sections.has(def.id)}
-                  onChange={() => handleToggleSection(def.id)}
-                />
-                <span>
-                  <strong>{def.label}</strong>
-                  <small>{def.description}</small>
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="report-builder-section">
-        <SectionHeader title="출력 형식" hint="Markdown만 활성화" />
-        <div className="report-format-list">
-          {FORMAT_DEFS.map((def) => {
-            const feature = getFeatureControlProps(def.featureId);
-            const disabled = !feature.enabled;
-            return (
-              <button
-                key={def.id}
-                type="button"
-                className={`report-format-button ${format === def.id ? "selected" : ""} ${
-                  disabled ? "is-disabled" : ""
-                }`}
-                onClick={() => !disabled && setFormat(def.id)}
-                disabled={disabled}
-                aria-pressed={format === def.id}
-                title={feature.title ?? `${def.label} 형식 선택`}
+        <section className="report-preview-pane" aria-label="보고서 미리보기">
+          <header>
+            <strong>미리보기</strong>
+            <BaseActionCluster className="report-builder-actions">
+              <Button
+                variant="primary"
+                icon={copiedMd ? Check : ClipboardCopy}
+                size="sm"
+                onClick={handleCopyMarkdown}
               >
-                <strong>{def.label}</strong>
-                <small>
-                  {def.ext} · {feature.statusLabel}
-                </small>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="report-builder-section">
-        <SectionHeader
-          title="공유 안전"
-          hint="원문 대화 · 파일 경로 · 민감 속성을 직접 포함하지 않습니다."
-          right={
-            <InfoHint label="공유 안전 설명">
-              지금은 토글에 해당하는 섹션만 제외합니다. 개인 식별 정보 자동 마스킹은 다음 마일스톤입니다.
-            </InfoHint>
-          }
-        />
-        <ul className="report-privacy-list">
-          <li>
-            <span>
-              <Lock size={12} aria-hidden="true" /> 외부 공유용으로 정리
-              <small>원문 대화 · 출처 상세 · 파일 경로 제외</small>
-              <ClientSafeBadge memories={acceptedMemories} />
-            </span>
-            <Toggle
-              active={privacy.clientSafe}
-              onClick={() => setPrivacyKey("clientSafe", !privacy.clientSafe)}
+                {copiedMd ? "복사됨" : "복사"}
+              </Button>
+              <Button icon={Download} size="sm" onClick={handleDownload}>
+                저장
+              </Button>
+            </BaseActionCluster>
+          </header>
+          {payload.warnings.length > 0 ? (
+            <ul className="report-warnings">
+              {payload.warnings.map((warning) => (
+                <li key={warning}>
+                  <Sparkles size={11} aria-hidden="true" />
+                  <span>{warning}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <div className="report-preview base-scroll" aria-label="보고서 미리보기 본문">
+            <div
+              className="report-rendered-preview"
+              dangerouslySetInnerHTML={{ __html: previewHtml }}
             />
-          </li>
-        </ul>
-        <details className="report-privacy-advanced base-disclosure">
-          <summary>
-            <span>세부 옵션</span>
-            <small>제외 범위를 직접 고르고 싶을 때</small>
-          </summary>
-          <ul className="report-privacy-list">
-            <li>
-              <span>
-                AI 대화 원문 제외
-                <small>요약과 메타데이터만 사용</small>
-              </span>
-              <Toggle
-                active={privacy.excludeRawTranscripts}
-                onClick={() => setPrivacyKey("excludeRawTranscripts", !privacy.excludeRawTranscripts)}
-              />
-            </li>
-            <li>
-              <span>
-                출처 상세 제외
-                <small>Evidence 섹션에서 소스 제목을 숨김</small>
-              </span>
-              <Toggle
-                active={privacy.excludeSourceDetails}
-                onClick={() => setPrivacyKey("excludeSourceDetails", !privacy.excludeSourceDetails)}
-              />
-            </li>
-          </ul>
-        </details>
-      </section>
-
-      <section className="report-builder-section">
-        <SectionHeader title="미리보기 / 내보내기" hint={`이벤트 ${payload.counts.events} · 이슈 ${payload.counts.issues} · 결정 ${payload.counts.decisions}`} />
-        <BaseActionCluster className="report-builder-actions">
-          <Button
-            variant="primary"
-            icon={copiedMd ? Check : ClipboardCopy}
-            size="sm"
-            onClick={handleCopyMarkdown}
-          >
-            {copiedMd ? "복사됨" : "Markdown 복사"}
-          </Button>
-          <Button icon={Download} size="sm" onClick={handleDownload}>
-            {format === "html" ? ".html 다운로드" : ".md 다운로드"}
-          </Button>
-          <Button size="sm" onClick={() => setPreviewVisible((value) => !value)}>
-            {previewVisible ? "미리보기 숨기기" : "미리보기 보기"}
-          </Button>
-        </BaseActionCluster>
-        {payload.warnings.length > 0 ? (
-          <ul className="report-warnings">
-            {payload.warnings.map((warning) => (
-              <li key={warning}>
-                <Sparkles size={11} aria-hidden="true" />
-                <span>{warning}</span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {previewVisible ? (
-          <pre className="report-preview base-scroll" aria-label="Markdown 미리보기">
-            {payload.markdown}
-          </pre>
-        ) : null}
-        <p className="report-data-basis">
-          <Badge tone="gray">데이터 기준</Badge> {payload.dataBasis}
-        </p>
-      </section>
+          </div>
+        </section>
+      </div>
     </aside>
   );
 }
 
-/**
- * Inline summary under the "클라이언트 안전 모드" toggle so the user can see at
- * a glance how the client-safe filter would slice the project's accepted
- * memory. The breakdown mirrors `buildClientSafeMoriPackage` exactly, with
- * separate counts for tier-excluded and sensitivity-excluded memories so the
- * user can act on the right field. Renders nothing when there is no accepted
- * memory yet — the toggle stays calm until there is something to filter.
- */
-function ClientSafeBadge({
-  memories,
+function ReportFormatPicker({
+  format,
+  onChange,
 }: {
-  memories?: readonly StoredAcceptedProjectMemory[];
+  format: ReportFormat;
+  onChange: (format: ReportFormat) => void;
 }) {
-  if (!memories || memories.length === 0) return null;
-  const breakdown = buildMemoryClientSafeBreakdown(memories);
-  if (breakdown.included === 0 && breakdown.totalExcluded === 0) return null;
-  const exclusionDetail: string[] = [];
-  if (breakdown.excludedTier > 0) {
-    exclusionDetail.push(`팀/개인 등급 ${breakdown.excludedTier}`);
-  }
-  if (breakdown.excludedSensitive > 0) {
-    exclusionDetail.push(`민감 ${breakdown.excludedSensitive}`);
-  }
   return (
-    <span className="report-privacy-clientsafe">
-      <Badge tone="green">공유 가능 {breakdown.included}</Badge>
-      {breakdown.totalExcluded > 0 ? (
-        <Badge
-          tone="gray"
-          title={exclusionDetail.length > 0 ? exclusionDetail.join(" · ") : undefined}
-        >
-          제외 {breakdown.totalExcluded}
-        </Badge>
-      ) : null}
-    </span>
+    <div className="report-builder-field">
+      <span>형식</span>
+      <BaseSelect
+        value={format}
+        options={FORMAT_OPTIONS}
+        onChange={onChange}
+        label="출력 형식"
+      />
+    </div>
   );
+}
+
+function ReportTypeField({
+  type,
+  onChange,
+}: {
+  type: ReportType;
+  onChange: (type: ReportType) => void;
+}) {
+  return (
+    <label className="report-builder-field report-builder-field-type">
+      <span>보고서</span>
+      <BaseSelect
+        value={type}
+        options={REPORT_TYPE_OPTIONS}
+        onChange={onChange}
+        label="보고서 유형"
+        className="report-type-select"
+      />
+    </label>
+  );
+}
+
+function ReportPrivacyPicker({
+  activePrivacyCount,
+  privacy,
+  setPrivacyKey,
+}: {
+  activePrivacyCount: number;
+  privacy: ReportPrivacyOptions;
+  setPrivacyKey: <K extends keyof ReportPrivacyOptions>(key: K, value: ReportPrivacyOptions[K]) => void;
+}) {
+  const selected = new Set(
+    PRIVACY_OPTIONS
+      .filter((option) => privacy[option.id])
+      .map((option) => option.id),
+  );
+  const valueLabel = activePrivacyCount === 0
+    ? "내부용"
+    : privacy.clientSafe
+      ? `외부용 · ${activePrivacyCount}개 제한`
+      : `${activePrivacyCount}개 제한`;
+  return (
+    <div className="report-builder-field">
+      <span>공유 범위</span>
+      <BaseChecklistSelect
+        label="공유 범위 옵션"
+        valueLabel={valueLabel}
+        options={PRIVACY_OPTIONS}
+        selectedIds={selected}
+        onToggle={(id) => setPrivacyKey(id, !privacy[id])}
+        icon={ShieldCheck}
+      />
+    </div>
+  );
+}
+
+function ReportSectionPicker({
+  sections,
+  onToggle,
+}: {
+  sections: ReadonlySet<ReportSectionId>;
+  onToggle: (id: ReportSectionId) => void;
+}) {
+  return (
+    <div className="report-builder-field">
+      <span>섹션</span>
+      <BaseChecklistSelect
+        label="포함 섹션"
+        valueLabel={`${sections.size}개 선택`}
+        options={SECTION_OPTIONS}
+        selectedIds={sections}
+        onToggle={onToggle}
+        icon={ListChecks}
+      />
+    </div>
+  );
+}
+
+function buildReportTextDocument(markdown: string): string {
+  return markdown
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .concat("\n");
 }

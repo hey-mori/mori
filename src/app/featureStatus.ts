@@ -71,6 +71,7 @@ export type FeatureId =
   | "review.promoteToNextAction"
   // Reports
   | "reports.export.markdown"
+  | "reports.export.txt"
   | "reports.export.pdf"
   | "reports.export.html"
   | "reports.export.moriPackage"
@@ -228,6 +229,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "review.promoteToNextAction", label: "Promote to next action", status: "implemented", description: "Promote a Review issue into a linked Next Action without duplicating an existing action." },
   // ─────────────────────────── Reports ───────────────────────────
   { id: "reports.export.markdown", label: "Copy / download Markdown", status: "implemented", description: "Render the report as Markdown and copy or download it." },
+  { id: "reports.export.txt", label: "Text export", status: "implemented", description: "Render the report as a plain text file for lightweight sharing." },
   { id: "reports.export.pdf", label: "PDF export", status: PLANNED, description: "Render the report as a PDF document.", disabledReason: "PDF 내보내기는 예정 마일스톤입니다." },
   { id: "reports.export.html", label: "HTML export", status: "implemented", description: "Render the report as a standalone, self-contained HTML document." },
   { id: "reports.export.moriPackage", label: "Export .mori v0 JSON", status: "implemented", description: "Serialise the session to a .mori v0 JSON package." },

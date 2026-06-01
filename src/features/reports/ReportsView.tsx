@@ -37,7 +37,6 @@ import {
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
 import { formatDateTime } from "../../lib/formatting/time";
-import { ResumePromptCard, type ResumePromptOrigin } from "./ResumePromptCard";
 import { ReportBuilderPanel } from "./ReportBuilderPanel";
 
 export function ReportsView() {
@@ -85,20 +84,12 @@ export function ReportsView() {
     };
   }, [reportProjectId]);
 
-  const isDemo = mode === "demo";
-
   const resumePromptText = useMemo(() => {
     if (hasAnalysis && analysis) return analysis.summary.resumePrompt;
     if (mode === "demo") return view.summary.resumePrompt || buildResumePrompt(view);
     if (imports.length === 0) return "";
     return buildResumePrompt(view);
   }, [analysis, hasAnalysis, mode, imports.length, view]);
-
-  const promptOrigin = useMemo<ResumePromptOrigin>(() => {
-    if (hasAnalysis) return { kind: "analysis", providerLabel: analysisProviderLabel ?? "deterministic" };
-    if (isDemo) return { kind: "demo" };
-    return { kind: "fallback" };
-  }, [hasAnalysis, isDemo, analysisProviderLabel]);
 
   const exportPlan = useMemo(
     () =>
@@ -132,16 +123,6 @@ export function ReportsView() {
           />
 
           <div className="reports-main">
-            <ResumePromptCard
-              prompt={resumePromptText}
-              origin={promptOrigin}
-              emptyHint={
-                imports.length === 0
-                  ? "아직 가져온 자료가 없습니다. 자료 탭에서 추가한 뒤 Quick Pass를 실행하면 분석 기반 컨텍스트가 표시됩니다."
-                  : "Quick Pass를 실행하면 분석 기반 컨텍스트가 표시됩니다."
-              }
-            />
-
             <ReportBuilderPanel
               id="reports-builder"
               view={view}
@@ -349,18 +330,37 @@ function MoriPackageStrip({
     <section id="reports-package-export" className="mori-package-strip" aria-label=".mori package export">
       <div className="mori-package-strip-intro">
         <h3>
-          <Archive size={14} aria-hidden="true" /> .mori v0 패키지
+          <Archive size={14} aria-hidden="true" /> .mori 패키지
           <InfoHint label=".mori 패키지 설명">
             세션·근거·리뷰·승인 메모리를 하나의 로컬 .mori 파일로 묶습니다. 가져오기는 자동 병합이 아니라 검토를 다시 거칩니다.
           </InfoHint>
         </h3>
-        <p className="mori-package-content-line">
-          출처 {exportPlan.full.sources} · 이벤트 {exportPlan.full.events} · 메모리 {exportPlan.full.memories} · 감사 {exportPlan.full.auditRows}
-          {exportPlan.clientSafe.droppedMemories > 0 || exportPlan.clientSafe.droppedAuditRows > 0
-            ? ` · 클라이언트 공유 시 메모리 ${exportPlan.clientSafe.droppedMemories}·감사 ${exportPlan.clientSafe.droppedAuditRows} 제외`
-            : ""}
-          {memoryStorageFellBack ? " · SQLite 읽기 실패, browser fallback" : ""}
-        </p>
+        <dl className="mori-package-stats" aria-label=".mori 패키지 포함 항목">
+          <div>
+            <dt>출처</dt>
+            <dd>{exportPlan.full.sources}</dd>
+          </div>
+          <div>
+            <dt>이벤트</dt>
+            <dd>{exportPlan.full.events}</dd>
+          </div>
+          <div>
+            <dt>메모리</dt>
+            <dd>{exportPlan.full.memories}</dd>
+          </div>
+          <div>
+            <dt>감사</dt>
+            <dd>{exportPlan.full.auditRows}</dd>
+          </div>
+        </dl>
+        {exportPlan.clientSafe.droppedMemories > 0 || exportPlan.clientSafe.droppedAuditRows > 0 || memoryStorageFellBack ? (
+          <p className="mori-package-content-line">
+            {exportPlan.clientSafe.droppedMemories > 0 || exportPlan.clientSafe.droppedAuditRows > 0
+              ? `클라이언트 공유 시 메모리 ${exportPlan.clientSafe.droppedMemories}·감사 ${exportPlan.clientSafe.droppedAuditRows} 제외`
+              : ""}
+            {memoryStorageFellBack ? "SQLite 읽기 실패, browser fallback 사용" : ""}
+          </p>
+        ) : null}
       </div>
       <div className="mori-package-strip-actions">
         <div className="mori-package-strip-buttons">

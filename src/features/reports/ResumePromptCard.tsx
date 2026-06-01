@@ -1,21 +1,12 @@
 import { Check, ClipboardCopy, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { InfoHint } from "../../components/ui/InfoHint";
-
-export type ResumePromptOrigin =
-  | { kind: "analysis"; providerLabel: string }
-  | { kind: "demo" }
-  | { kind: "fallback" };
 
 export function ResumePromptCard({
   prompt,
-  origin,
   emptyHint,
 }: {
   prompt: string;
-  origin: ResumePromptOrigin;
   /** Optional copy that replaces the prompt block when prompt is empty. */
   emptyHint?: string;
 }) {
@@ -35,27 +26,13 @@ export function ResumePromptCard({
     }
   }
 
-  const originBadge = (() => {
-    if (origin.kind === "analysis") {
-      return <Badge tone="purple">{origin.providerLabel}</Badge>;
-    }
-    if (origin.kind === "demo") {
-      return <Badge tone="gray">데모 데이터</Badge>;
-    }
-    return <Badge tone="orange">폴백 (Quick Pass 미실행)</Badge>;
-  })();
-
   return (
-    <section className="resume-prompt-card" aria-label="다음 세션으로 이어가기">
+    <section className="resume-prompt-card is-compact" aria-label="프롬프트">
       <header className="resume-prompt-head">
         <div className="resume-prompt-title">
-          <h2>다음 세션으로 이어가기</h2>
-          <InfoHint label="이어가기 설명">
-            이 세션의 AI 작업을 정리한 컨텍스트입니다. Claude / ChatGPT / Codex 다음 대화에 붙여넣으면 이어서 작업할 수 있습니다.
-          </InfoHint>
+          <h2>프롬프트</h2>
         </div>
         <div className="resume-prompt-meta">
-          {originBadge}
           <Button
             icon={copied ? Check : ClipboardCopy}
             onClick={handleCopy}
@@ -63,13 +40,18 @@ export function ResumePromptCard({
             variant={hasPrompt ? "primary" : "secondary"}
             size="sm"
           >
-            {copied ? "복사됨" : "컨텍스트 복사"}
+            {copied ? "복사됨" : "복사"}
           </Button>
         </div>
       </header>
 
       {hasPrompt ? (
-        <pre className="resume-prompt-body">{prompt}</pre>
+        <details className="resume-prompt-details">
+          <summary>
+            <span>내용 보기</span>
+          </summary>
+          <pre className="resume-prompt-body">{prompt}</pre>
+        </details>
       ) : (
         <div className="resume-prompt-empty">
           <Sparkles size={18} aria-hidden="true" />
