@@ -62,12 +62,16 @@ const GUIDES: Partial<Record<CaptureSurfaceId, ConnectorSetupGuide>> = {
     templateDir: "connectors/codex-cli/",
     steps: [
       {
-        text: "래퍼 스크립트를 PATH에 설치합니다.",
-        command: "cp connectors/codex-cli/mori-codex-wrapper.sh ~/.local/bin/",
+        text: "Codex 기록은 ~/.codex/sessions에서 자동 감지됩니다. 래퍼는 시작·종료·git diff 마커가 따로 필요할 때만 씁니다.",
       },
       {
-        text: "Codex 실행을 래퍼로 감싸면 prompt 요약·exit code·duration이 기록됩니다.",
-        command: 'mori-codex-wrapper.sh --git -- codex run "작업 설명"',
+        text: "macOS / Linux: .sh 래퍼로 Codex 실행을 감쌉니다 (요약·exit code·duration 기록).",
+        command: 'connectors/codex-cli/mori-codex-wrapper.sh --git -- codex run "작업 설명"',
+      },
+      {
+        text: "Windows: .ps1 래퍼를 PowerShell로 실행합니다.",
+        command:
+          'powershell -ExecutionPolicy Bypass -File connectors\\codex-cli\\mori-codex-wrapper.ps1 -Git -- codex run "작업 설명"',
       },
     ],
     importNote: "기록된 JSONL을 이 행의 'Connector JSONL 가져오기'로 가져옵니다. Codex 출력 본문은 수집하지 않습니다.",
@@ -77,12 +81,16 @@ const GUIDES: Partial<Record<CaptureSurfaceId, ConnectorSetupGuide>> = {
     templateDir: "connectors/opencode-cli/",
     steps: [
       {
-        text: "래퍼 스크립트를 PATH에 설치합니다.",
-        command: "cp connectors/opencode-cli/mori-opencode-wrapper.sh ~/.local/bin/",
+        text: "OpenCode 기록은 데스크톱에서 자동 감지됩니다. 래퍼는 시작·종료·git diff 마커가 따로 필요할 때만 씁니다.",
       },
       {
-        text: "OpenCode 실행을 래퍼로 감싸면 prompt 요약·exit code·duration이 기록됩니다.",
-        command: 'mori-opencode-wrapper.sh --git -- opencode run "작업 설명"',
+        text: "macOS / Linux: .sh 래퍼로 OpenCode 실행을 감쌉니다 (요약·exit code·duration 기록).",
+        command: 'connectors/opencode-cli/mori-opencode-wrapper.sh --git -- opencode run "작업 설명"',
+      },
+      {
+        text: "Windows: .ps1 래퍼를 PowerShell로 실행합니다.",
+        command:
+          'powershell -ExecutionPolicy Bypass -File connectors\\opencode-cli\\mori-opencode-wrapper.ps1 -Git -- opencode run "작업 설명"',
       },
     ],
     importNote: "기록된 JSONL을 이 행의 'Connector JSONL 가져오기'로 가져옵니다. OpenCode 출력 본문은 수집하지 않습니다.",
