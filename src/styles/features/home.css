@@ -521,31 +521,25 @@
   height: 10px;
 }
 
-/* ── Command Home ─────────────────────────────────────────────────────────────
-   The landing canvas (HomeView). A calm command-entry surface, not a
-   dashboard: an ambient lavender wash behind a centred question, a command
-   input, and three quick actions, with a folded 최근 작업 disclosure docked at
-   the foot. The richer continuation surface (hero + focal card + rails, the
-   rules above) is retired to HomeContinuationView and reached via 검토 이어가기. */
-.home-canvas {
-  /* Frosted-glass surface tint for the command input. Light by default; the
-     nightLake override at the foot swaps it to dark glass so the input never
-     reads as a white panel floating on a dark canvas. */
-  --home-glass: rgba(255, 255, 255, 0.72);
-  --home-glass-hover: rgba(255, 255, 255, 0.92);
-  --home-sheen: rgba(255, 255, 255, 0.34);
+/* ── Mori Command Space Home ────────────────────────────────────────────────
+   Current landing experiment. `HomeView` only mounts this component so the
+   product can swap future home concepts without touching app routing. */
+.mori-command-space {
+  --mcs-glass: rgba(255, 255, 255, 0.76);
+  --mcs-glass-strong: rgba(255, 255, 255, 0.92);
+  --mcs-line: rgba(99, 102, 241, 0.12);
+  --mcs-field: rgba(255, 255, 255, 0.5);
+  --mcs-node-bg: rgba(255, 255, 255, 0.56);
+  --mcs-node-border: rgba(110, 118, 138, 0.1);
   position: relative;
   height: 100%;
   overflow: hidden;
   background:
-    radial-gradient(120% 72% at 50% -10%, rgba(124, 92, 255, 0.05) 0%, transparent 56%),
+    linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(246, 248, 255, 0.86)),
     var(--base-bg);
 }
 
-/* Ambient layer: decorative only, behind everything, never interactive. Two
-   slow-drifting lavender blobs plus one faint diagonal sheen. Movement is
-   deliberately sub-perceptible; it should read as alive only in the periphery. */
-.home-ambient {
+.mcs-background {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -553,94 +547,142 @@
   pointer-events: none;
 }
 
-.home-ambient-blob {
+.mcs-grid {
   position: absolute;
-  width: 46vw;
-  max-width: 720px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.3;
+  inset: -1px;
+  background-image:
+    linear-gradient(var(--mcs-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--mcs-line) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse at center, black 0%, black 42%, transparent 76%);
+  opacity: 0.34;
 }
 
-.home-ambient-blob-a {
-  top: -14%;
-  left: -8%;
-  background: radial-gradient(circle, rgba(124, 92, 255, 0.09), transparent 68%);
-}
-
-.home-ambient-blob-b {
-  right: -12%;
-  bottom: -18%;
-  background: radial-gradient(circle, rgba(177, 140, 255, 0.09), transparent 70%);
-}
-
-.home-ambient-sheen {
+.mcs-wave {
   position: absolute;
-  inset: -20% -16%;
-  background: linear-gradient(
-    116deg,
-    transparent 34%,
-    var(--home-sheen) 48%,
-    rgba(231, 225, 255, 0.18) 53%,
-    transparent 68%
-  );
-  opacity: 0.26;
+  inset: 18% 14%;
+  border: 1px solid rgba(124, 92, 255, 0.14);
+  border-radius: 46% 54% 48% 52%;
+  transform: rotate(-8deg);
+  opacity: 0.24;
+}
+
+.mcs-wave-b {
+  inset: 24% 19%;
+  border-color: rgba(52, 194, 122, 0.12);
+  transform: rotate(11deg);
+  opacity: 0.18;
+}
+
+.mcs-context-node {
+  position: absolute;
+  left: var(--mcs-x);
+  top: var(--mcs-y);
+  display: grid;
+  gap: 2px;
+  min-width: 126px;
+  max-width: 190px;
+  padding: 8px 10px;
+  border: 1px solid var(--mcs-node-border);
+  border-radius: 8px;
+  background: var(--mcs-node-bg);
+  box-shadow: 0 12px 32px rgba(31, 41, 55, 0.08);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  filter: blur(1.5px);
+  transform: translate(-50%, -50%) scale(var(--mcs-scale));
+  opacity: 0.16;
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease,
+    border-color 260ms ease;
+}
+
+.mcs-context-node::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--mcs-node-color);
+  transform: translateY(-50%);
+}
+
+.mcs-context-node span,
+.mcs-context-node small {
+  padding-left: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcs-context-node span {
+  color: var(--base-text);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.mcs-context-node small {
+  color: var(--base-text-muted);
+  font-size: 10px;
+}
+
+.mcs-context-node.is-violet { --mcs-node-color: var(--base-accent); }
+.mcs-context-node.is-green { --mcs-node-color: var(--base-status-success); }
+.mcs-context-node.is-blue { --mcs-node-color: var(--base-status-info); }
+.mcs-context-node.is-amber { --mcs-node-color: #d8923f; }
+.mcs-context-node.is-slate { --mcs-node-color: #748094; }
+
+.mori-command-space[data-intent="find"] .mcs-context-node.is-violet,
+.mori-command-space[data-intent="shape"] .mcs-context-node.is-green,
+.mori-command-space[data-intent="create"] .mcs-context-node.is-blue,
+.mori-command-space[data-intent="review"] .mcs-context-node.is-amber,
+.mori-command-space[data-intent="connect"] .mcs-context-node.is-slate {
+  opacity: 0.5;
+  transform: translate(-50%, -50%) scale(calc(var(--mcs-scale) + 0.03));
+  border-color: color-mix(in srgb, var(--mcs-node-color) 24%, transparent);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .home-ambient-blob-a {
-    animation: home-drift-a 24s ease-in-out infinite;
+  .mcs-wave-a {
+    animation: mcs-field-turn 18s ease-in-out infinite;
   }
-  .home-ambient-blob-b {
-    animation: home-drift-b 28s ease-in-out infinite;
+
+  .mcs-wave-b {
+    animation: mcs-field-turn 22s ease-in-out infinite reverse;
   }
-  .home-ambient-sheen {
-    animation: home-sheen 26s ease-in-out infinite;
+
+  .mcs-context-node {
+    animation: mcs-node-breathe 7s ease-in-out infinite;
+    animation-delay: var(--mcs-delay);
   }
 }
 
-@keyframes home-drift-a {
+@keyframes mcs-field-turn {
   0%,
   100% {
-    transform: translate3d(0, 0, 0);
-    opacity: 0.26;
+    border-radius: 46% 54% 48% 52%;
+    transform: rotate(-8deg) scale(1);
   }
   50% {
-    transform: translate3d(18px, 12px, 0);
-    opacity: 0.34;
+    border-radius: 52% 48% 55% 45%;
+    transform: rotate(9deg) scale(1.02);
   }
 }
 
-@keyframes home-drift-b {
+@keyframes mcs-node-breathe {
   0%,
   100% {
-    transform: translate3d(0, 0, 0);
-    opacity: 0.3;
+    margin-top: 0;
   }
   50% {
-    transform: translate3d(-16px, -14px, 0);
-    opacity: 0.24;
+    margin-top: -7px;
   }
 }
 
-@keyframes home-sheen {
-  0%,
-  100% {
-    transform: translateX(-3%);
-    opacity: 0.22;
-  }
-  50% {
-    transform: translateX(3%);
-    opacity: 0.3;
-  }
-}
-
-/* Scroll / centre layer: sits above the ambient and holds the content. Flex-
-   centred, with a heavier foot padding so the command centre settles slightly
-   above the middle (rather than dead-centre). Scrolls on its own so the ambient
-   never moves with content on short viewports. */
-.home-canvas-scroll {
+.mcs-scroll {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -648,106 +690,244 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(24px, 6vh, 64px) clamp(20px, 5vw, 48px) clamp(64px, 16vh, 160px);
+  padding: clamp(24px, 5vh, 52px) clamp(18px, 5vw, 56px);
 }
 
-/* Command centre: the headline + command input, centred in the canvas. */
-.home-command-center {
+.mcs-stage {
+  display: grid;
+  gap: clamp(18px, 3vh, 28px);
+  width: min(960px, 100%);
+  min-height: min(760px, calc(100vh - 140px));
+  align-content: center;
+}
+
+.mcs-status-row {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(129, 140, 168, 0.16);
+  border-radius: var(--base-radius-pill);
+  background: rgba(255, 255, 255, 0.46);
+  color: var(--base-text-muted);
+  font-size: 12px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.mcs-status-row > span + span::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 10px 2px 0;
+  border-radius: 50%;
+  background: var(--base-border-strong);
+}
+
+.mcs-status-row button {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface);
+  color: var(--base-text-muted);
+  font: inherit;
+  font-weight: 650;
+}
+
+.mcs-center {
+  justify-self: center;
   display: grid;
   justify-items: center;
-  gap: var(--base-space-8);
-  width: 100%;
-  max-width: 640px;
+  gap: var(--base-space-7);
+  width: min(760px, 100%);
 }
 
-.home-headline {
+.mcs-center h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 680;
-  letter-spacing: -0.01em;
-  line-height: var(--base-line-tight);
+  color: var(--base-text);
+  font-size: clamp(28px, 4.2vw, 44px);
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 1.08;
   text-align: center;
-  color: var(--base-accent);
 }
 
-/* Command input: a wide, low pill that opens the ⌘K palette. It reads as a
-   search field but is a button (no caret, no focus trap); the calm default
-   sharpens to a brand-bordered focus ring on hover / keyboard focus. */
-.home-command-input {
-  display: flex;
+.mcs-command-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 38px;
   align-items: center;
-  gap: var(--base-space-5);
-  width: 100%;
-  height: 60px;
-  padding: 0 var(--base-space-6);
-  border: 1px solid var(--base-border);
+  gap: 12px;
+  width: min(720px, 100%);
+  min-height: 68px;
+  padding: 8px 10px 8px 22px;
+  border: 1px solid rgba(108, 116, 143, 0.18);
   border-radius: var(--base-radius-pill);
-  background: var(--home-glass);
-  box-shadow: var(--base-shadow-card);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  cursor: text;
+  background: var(--mcs-glass);
+  box-shadow:
+    0 26px 70px rgba(31, 41, 55, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   transition:
     border-color var(--base-transition),
     box-shadow var(--base-transition),
     background var(--base-transition);
 }
 
-.home-command-input:hover {
-  border-color: var(--base-border-strong);
-  background: var(--home-glass-hover);
+.mcs-command-bar:focus-within {
+  border-color: color-mix(in srgb, var(--base-accent) 55%, var(--base-border));
+  background: var(--mcs-glass-strong);
+  box-shadow:
+    0 0 0 4px var(--base-accent-soft),
+    0 26px 70px rgba(31, 41, 55, 0.13);
 }
 
-.home-command-input:focus-visible {
-  outline: none;
-  border-color: var(--base-accent);
-  box-shadow: 0 0 0 3px var(--base-accent-soft), var(--base-shadow-card);
-}
-
-.home-command-input-icon {
-  flex-shrink: 0;
+.mcs-command-bar > svg {
   color: var(--base-accent);
 }
 
-.home-command-input-text {
-  flex: 1;
+.mcs-command-bar input {
+  width: 100%;
   min-width: 0;
-  text-align: left;
-  font-size: var(--base-font-size-lg);
-  color: var(--base-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  color: var(--base-text);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 560;
+  outline: none;
 }
 
-.home-command-input-kbd {
-  flex-shrink: 0;
+.mcs-command-bar input::placeholder {
+  color: var(--base-text-muted);
+  opacity: 0.86;
+}
+
+.mcs-command-bar button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--base-accent);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(80, 64, 160, 0.22);
+  transition:
+    transform var(--base-transition),
+    box-shadow var(--base-transition);
+}
+
+.mcs-command-bar button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(80, 64, 160, 0.26);
+}
+
+.mcs-mode-rail {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: min(640px, 100%);
+}
+
+.mcs-mode-rail button {
+  border: 1px solid rgba(118, 128, 154, 0.16);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--base-text);
+  font: inherit;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition:
+    transform var(--base-transition),
+    border-color var(--base-transition),
+    background var(--base-transition),
+    box-shadow var(--base-transition);
+}
+
+.mcs-mode-rail button {
   display: inline-flex;
   align-items: center;
-  height: 24px;
-  padding: 0 9px;
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-sm);
-  background: var(--base-surface-subtle);
-  color: var(--base-text-muted-2);
-  font-family: inherit;
-  font-size: var(--base-font-size-xs);
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--base-radius-pill);
+  color: var(--base-text-muted);
+  font-size: 13px;
+  font-weight: 680;
 }
 
-@media (max-width: 640px) {
-  .home-headline {
-    font-size: 20px;
+.mcs-mode-rail button:hover,
+.mcs-mode-rail button:focus-visible,
+.mcs-mode-rail button.is-active {
+  outline: none;
+  border-color: rgba(124, 92, 255, 0.25);
+  background: var(--base-surface);
+  color: var(--base-accent);
+  box-shadow: 0 12px 30px rgba(78, 62, 145, 0.1);
+}
+
+@media (max-width: 860px) {
+  .mcs-stage {
+    min-height: min(720px, calc(100vh - 110px));
+  }
+
+  .mcs-context-node {
+    opacity: 0.24;
   }
 }
 
-/* nightLake (dark): swap the frosted-glass tint to dark glass and cool the
-   sheen so the command input sits on the dark canvas instead of floating as a
-   white panel. The purple blobs and the token-driven colours (headline, kbd,
-   shadows) already adapt via the theme layer. */
-[data-base-theme="nightLake"] .home-canvas {
-  --home-glass: rgba(30, 34, 46, 0.55);
-  --home-glass-hover: rgba(40, 45, 60, 0.82);
-  --home-sheen: rgba(155, 125, 252, 0.1);
+@media (max-width: 560px) {
+  .mcs-scroll {
+    align-items: flex-start;
+    padding: 22px 14px 28px;
+  }
+
+  .mcs-stage {
+    min-height: 0;
+  }
+
+  .mcs-context-node {
+    display: none;
+  }
+
+  .mcs-status-row {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .mcs-command-bar {
+    grid-template-columns: auto minmax(0, 1fr) 34px;
+    min-height: 58px;
+    padding-left: 16px;
+  }
+
+  .mcs-command-bar input {
+    font-size: 15px;
+  }
+
+  .mcs-command-bar button {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+[data-base-theme="nightLake"] .mori-command-space {
+  --mcs-glass: rgba(27, 31, 42, 0.68);
+  --mcs-glass-strong: rgba(36, 41, 55, 0.86);
+  --mcs-line: rgba(155, 125, 252, 0.08);
+  --mcs-node-bg: rgba(27, 31, 42, 0.58);
+  --mcs-node-border: rgba(169, 176, 194, 0.12);
+  background:
+    linear-gradient(135deg, rgba(18, 22, 31, 0.98), rgba(24, 28, 40, 0.94)),
+    var(--base-bg);
+}
+
+[data-base-theme="nightLake"] .mcs-status-row,
+[data-base-theme="nightLake"] .mcs-mode-rail button {
+  background: rgba(26, 30, 41, 0.64);
 }
