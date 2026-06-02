@@ -1,9 +1,18 @@
-import type { CSSProperties, FormEvent } from "react";
-import { useMemo, useState } from "react";
+import type {
+  CSSProperties,
+  FocusEvent,
+  FormEvent,
+  KeyboardEvent,
+  MutableRefObject,
+  ReactNode,
+} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
+  Folder,
   GitBranch,
   Layers3,
+  MessageSquare,
   Plus,
   Search,
   ShieldCheck,
@@ -16,8 +25,12 @@ import {
 } from "../../app/sessionStore";
 import { DEMO_SESSION_SUMMARIES } from "../../lib/demo/demoSessionFixtures";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
-
-type CommandModeId = "find" | "shape" | "create" | "review" | "connect";
+import {
+  buildCommandSpaceResults,
+  type CommandModeId,
+  type CommandSpaceActionTarget,
+  type CommandSpaceRow,
+} from "../../lib/home/commandSpace";
 
 type CommandMode = {
   id: CommandModeId;
@@ -74,6 +87,11 @@ const COMMAND_MODES: CommandMode[] = [
   },
 ];
 
+const ROW_ICON = {
+  session: MessageSquare,
+  project: Folder,
+} as const;
+
 const NODE_POSITIONS = [
   [17, 20, 1.08],
   [32, 13, 0.88],
@@ -94,8 +112,14 @@ const NODE_TONES: CommandNode["tone"][] = ["violet", "green", "blue", "amber", "
 export function MoriCommandSpaceHome() {
   const [activeModeId, setActiveModeId] = useState<CommandModeId>("find");
   const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const rowRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
   const navigate = useAppStore((state) => state.navigate);
   const openCommandPalette = useAppStore((state) => state.openCommandPalette);
+  const openProject = useAppStore((state) => state.openProject);
   const openSession = useAppStore((state) => state.openSession);
   const source = useSessionStore((state) => state.source);
   const initialized = useSessionStore((state) => state.initialized);
@@ -111,34 +135,29 @@ export function MoriCommandSpaceHome() {
 
   const activeMode = COMMAND_MODES.find((mode) => mode.id === activeModeId) ?? COMMAND_MODES[0];
   const sessionNodes = useMemo(() => buildCommandNodes(sessions), [sessions]);
-  const matchingSessions = useMemo(
-    () => filterSessions(sessions, query).slice(0, 4),
-    [query, sessions],
+  const results = useMemo(
+    () => buildCommandSpaceResults({ modeId: activeModeId, query, sessions }),
+    [activeModeId, query, sessions],
   );
   const projectCount = useMemo(
     () => new Set(sessions.map((session) => session.sourceLabel || session.projectName)).size,
     [sessions],
   );
 
-  function runModeAction(modeId: CommandModeId = activeModeId): void {
-    switch (modeId) {
-      case "find":
-        openCommandPalette();
-        break;
-      case "shape":
-        navigate("memory");
-        break;
-      case "create":
-        navigate("start");
-        break;
-      case "review":
-        navigate("continue");
-        break;
-      case "connect":
-        navigate("connections");
-        break;
-    }
-  }
+  const rows = results.rows;
+  const open = focused && rows.length > 0;
+  const safeIndex = Math.min(activeIndex, Math.max(0, rows.length - 1));
+
+  // Re-home the highlight on the top row whenever the result set changes shape.
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query, activeModeId]);
+
+  // Keep the keyboard-highlighted row in view when the list scrolls.
+  useEffect(() => {
+    if (!open) return;
+    rowRefs.current[safeIndex]?.scrollIntoView({ block: "nearest" });
+  }, [open, safeIndex]);
 
   function openSessionById(sessionId: string, tab: SessionTab = "flow"): void {
     if (sessionId === activeSessionId) {
@@ -156,17 +175,62 @@ export function MoriCommandSpaceHome() {
     openSession(tab);
   }
 
-  function submitCommand(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    if (query.trim() && matchingSessions[0]) {
-      openSessionById(matchingSessions[0].sessionId);
+  function runActionTarget(target: CommandSpaceActionTarget): void {
+    if (target.type === "palette") {
+      openCommandPalette();
       return;
     }
-    runModeAction();
+    navigate(target.view);
+  }
+
+  function activateRow(row: CommandSpaceRow): void {
+    switch (row.kind) {
+      case "action":
+        runActionTarget(row.target);
+        break;
+      case "session":
+        openSessionById(row.sessionId);
+        break;
+      case "project":
+        openProject(row.projectKey);
+        break;
+    }
+  }
+
+  function submitCommand(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const row = rows[safeIndex] ?? rows[0];
+    if (row) activateRow(row);
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((index) => Math.min(index + 1, rows.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((index) => Math.max(index - 1, 0));
+    } else if (event.key === "Escape") {
+      if (query) {
+        setQuery("");
+      } else {
+        inputRef.current?.blur();
+      }
+    }
+  }
+
+  function handleConsoleBlur(event: FocusEvent<HTMLDivElement>): void {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      setFocused(false);
+    }
   }
 
   return (
-    <div className="mori-command-space" data-intent={activeModeId}>
+    <div
+      className="mori-command-space"
+      data-intent={activeModeId}
+      data-focused={focused ? "true" : undefined}
+    >
       <div className="mcs-background" aria-hidden="true">
         <span className="mcs-grid" />
         <span className="mcs-wave mcs-wave-a" />
@@ -203,44 +267,132 @@ export function MoriCommandSpaceHome() {
           <div className="mcs-center">
             <h1>무엇을 해볼까요?</h1>
 
-            <form className="mcs-command-bar" onSubmit={submitCommand}>
-              <Search size={20} aria-hidden="true" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={activeMode.placeholder}
-                aria-label="Mori에 요청하기"
-              />
-              <button type="submit" aria-label="실행">
-                <ArrowRight size={18} aria-hidden="true" />
-              </button>
-            </form>
+            <div
+              className="mcs-console"
+              onFocus={() => setFocused(true)}
+              onBlur={handleConsoleBlur}
+            >
+              <form className="mcs-command-bar" onSubmit={submitCommand}>
+                <Search size={20} aria-hidden="true" />
+                <input
+                  ref={inputRef}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={activeMode.placeholder}
+                  aria-label="Mori에 요청하기"
+                  role="combobox"
+                  aria-expanded={open}
+                  aria-controls="mcs-results"
+                  aria-activedescendant={open ? `mcs-row-${safeIndex}` : undefined}
+                  autoComplete="off"
+                />
+                <button type="submit" aria-label="실행">
+                  <ArrowRight size={18} aria-hidden="true" />
+                </button>
+              </form>
 
-            <div className="mcs-mode-rail" role="tablist" aria-label="명령 모드">
-              {COMMAND_MODES.map((mode) => {
-                const Icon = mode.icon;
-                const active = mode.id === activeModeId;
-                return (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    className={active ? "is-active" : undefined}
-                    onClick={() => setActiveModeId(mode.id)}
-                  >
-                    <Icon size={16} aria-hidden="true" />
-                    <span>{mode.label}</span>
-                  </button>
-                );
-              })}
+              {open ? (
+                <div className="mcs-results" id="mcs-results" role="listbox">
+                  {renderRows(rows, {
+                    activeMode,
+                    safeIndex,
+                    hasQuery: results.hasQuery,
+                    rowRefs,
+                    onActivate: activateRow,
+                    onHover: setActiveIndex,
+                  })}
+                </div>
+              ) : null}
+
+              <div className="mcs-mode-rail" role="tablist" aria-label="명령 모드">
+                {COMMAND_MODES.map((mode) => {
+                  const Icon = mode.icon;
+                  const active = mode.id === activeModeId;
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={active ? "is-active" : undefined}
+                      // Switching lens keeps the caret in the input, so an open
+                      // result panel re-shapes under the new mode without losing
+                      // focus — and clicking a lens from idle never pops a panel.
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => setActiveModeId(mode.id)}
+                    >
+                      <Icon size={16} aria-hidden="true" />
+                      <span>{mode.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-
         </section>
       </div>
     </div>
   );
+}
+
+function renderRows(
+  rows: CommandSpaceRow[],
+  options: {
+    activeMode: CommandMode;
+    safeIndex: number;
+    hasQuery: boolean;
+    rowRefs: MutableRefObject<Array<HTMLButtonElement | null>>;
+    onActivate: (row: CommandSpaceRow) => void;
+    onHover: (index: number) => void;
+  },
+) {
+  const { activeMode, safeIndex, hasQuery, rowRefs, onActivate, onHover } = options;
+  rowRefs.current = [];
+  const out: ReactNode[] = [];
+  let prevKind: CommandSpaceRow["kind"] | null = null;
+
+  rows.forEach((row, index) => {
+    if (row.kind !== prevKind) {
+      out.push(
+        <p className="mcs-result-head" key={`head-${row.kind}`}>
+          {groupLabel(row.kind, hasQuery)}
+        </p>,
+      );
+      prevKind = row.kind;
+    }
+    const Icon = row.kind === "action" ? activeMode.icon : ROW_ICON[row.kind];
+    out.push(
+      <button
+        type="button"
+        key={row.id}
+        id={`mcs-row-${index}`}
+        role="option"
+        aria-selected={index === safeIndex}
+        ref={(element) => {
+          rowRefs.current[index] = element;
+        }}
+        className={`mcs-result-row${index === safeIndex ? " is-active" : ""}`}
+        // Keep focus in the input so the dropdown survives the click, then act.
+        onMouseDown={(event) => event.preventDefault()}
+        onMouseEnter={() => onHover(index)}
+        onClick={() => onActivate(row)}
+      >
+        <Icon size={15} aria-hidden="true" className="mcs-result-icon" />
+        <span className="mcs-result-label">{row.label}</span>
+        {row.hint ? <span className="mcs-result-hint">{row.hint}</span> : null}
+        <ArrowRight size={14} aria-hidden="true" className="mcs-result-go" />
+      </button>,
+    );
+  });
+
+  return out;
+}
+
+function groupLabel(kind: CommandSpaceRow["kind"], hasQuery: boolean): string {
+  if (kind === "action") return "바로 실행";
+  if (kind === "project") return "프로젝트";
+  return hasQuery ? "관련 세션" : "최근 세션";
 }
 
 function buildCommandNodes(sessions: StoredSessionSummary[]): CommandNode[] {
@@ -257,14 +409,4 @@ function buildCommandNodes(sessions: StoredSessionSummary[]): CommandNode[] {
       tone: NODE_TONES[index % NODE_TONES.length],
     };
   });
-}
-
-function filterSessions(sessions: StoredSessionSummary[], query: string): StoredSessionSummary[] {
-  const term = query.trim().toLowerCase();
-  if (!term) return sessions.slice(0, 4);
-  return sessions.filter((session) =>
-    [session.title, session.projectName, session.sourceLabel]
-      .filter((value): value is string => Boolean(value))
-      .some((value) => value.toLowerCase().includes(term)),
-  );
 }
