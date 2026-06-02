@@ -302,6 +302,125 @@
   gap: 16px;
 }
 
+/* ─── Project 현재 상황 strip ────────────────────────────────────────────
+   Summary glance above the session list: a calm status dot carries the state,
+   a facts line and one clickable latest-session row carry the rest. No chart
+   and no left-border accent (brand rule); hidden entirely for a quiet project
+   so a calm workspace shows no band at all. */
+.project-state-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-5);
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+}
+
+.project-state-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.project-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  flex-shrink: 0;
+}
+
+.project-state-strip[data-tone="info"] .project-state-dot {
+  background: var(--blue);
+}
+
+.project-state-strip[data-tone="warning"] .project-state-dot {
+  background: #d8923f;
+}
+
+.project-state-strip[data-tone="danger"] .project-state-dot {
+  background: var(--red);
+}
+
+.project-state-status {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.project-state-heading {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.project-state-facts {
+  flex: 1;
+  min-width: 140px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.project-state-latest {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px 8px 6px 10px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.project-state-latest:hover {
+  border-color: color-mix(in srgb, var(--base-accent) 40%, var(--base-border));
+}
+
+.project-state-latest:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--base-accent) 50%, var(--base-border));
+  box-shadow: 0 0 0 3px var(--base-accent-soft);
+}
+
+.project-state-latest-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.project-state-latest-title {
+  min-width: 0;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.project-state-latest-meta {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.project-state-latest svg {
+  flex-shrink: 0;
+  color: var(--muted-2);
+}
+
 /* Top band: the activity heatmap with the synthesis info cards beside it. */
 .project-top {
   display: flex;

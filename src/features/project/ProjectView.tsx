@@ -37,6 +37,8 @@ import { projectIdentitiesMatch } from "../../lib/projects/projectConnection";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { ProjectSynthesisSection } from "./ProjectSynthesisSection";
 import { ProjectPulse } from "./ProjectPulse";
+import { ProjectStateStrip } from "./ProjectStateStrip";
+import { buildProjectStateSummary } from "../../lib/project/projectStateSummary";
 import { useProjectSynthesis } from "./useProjectSynthesis";
 import { spanLabel } from "../../lib/session/workContext";
 
@@ -152,6 +154,13 @@ export function ProjectView() {
     [sessionRows],
   );
   const synthesis = useProjectSynthesis(sessionRows);
+
+  // "현재 상황" Summary glance — derived only from saved sessions (honest basis,
+  // no live tracker). Hidden for a quiet project so a calm workspace shows none.
+  const projectState = useMemo(
+    () => buildProjectStateSummary({ rows: sessionRows }),
+    [sessionRows],
+  );
 
   // Display name + description honour a user override; whether the project is
   // explicitly created decides if it can be deleted (a session-derived project
@@ -278,6 +287,8 @@ export function ProjectView() {
           remaining height and scrolls internally, so the page never grows with
           the session count. */}
       <div className="project-body">
+        <ProjectStateStrip summary={projectState} onOpenSession={openSessionId} />
+
         <div className="project-top">
           <ProjectPulse timestamps={sessionTimestamps} />
           <ProjectSynthesisSection synthesis={synthesis} />
