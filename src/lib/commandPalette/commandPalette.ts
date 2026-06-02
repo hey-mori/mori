@@ -43,7 +43,8 @@ export type CommandEntry = {
 };
 
 const NAVIGATE_COMMANDS: ReadonlyArray<{ id: string; label: string; view: ViewKey; keywords?: string[] }> = [
-  { id: "nav-home", label: "홈 열기", view: "home", keywords: ["dashboard"] },
+  { id: "nav-home", label: "홈 열기", view: "home", keywords: ["dashboard", "검색", "명령"] },
+  { id: "nav-continue", label: "이어가기 열기", view: "continue", keywords: ["continue", "이어가기", "검토", "resume", "최근 작업"] },
   { id: "nav-graph", label: "작업 그래프 열기", view: "graph", keywords: ["graph", "그래프", "맵", "map", "관계"] },
   { id: "nav-session", label: "프로젝트", view: "workspace", keywords: ["projects", "sessions", "프로젝트", "세션", "워크스페이스"] },
   { id: "nav-memory", label: "메모리", view: "memory" },

@@ -2,6 +2,9 @@ import type { LucideIcon } from "lucide-react";
 
 export type ViewKey =
   | "home"
+  /** Retired landing surface, now the "이어가기" continuation view reached from
+   *  Home's 검토 이어가기 action and the command palette. */
+  | "continue"
   | "start"
   | "session"
   | "timeline"

@@ -12,6 +12,13 @@ import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
 // separate chunk per dynamic import, shrinking the entry bundle.
 import { HomeView } from "../features/home/HomeView";
 
+// The retired continuation surface ("이어가기"), reached from Home's 검토 이어가기
+// action and the command palette — lazy so it never weighs on first paint.
+const HomeContinuationView = lazy(() =>
+  import("../features/home/HomeContinuationView").then((m) => ({
+    default: m.HomeContinuationView,
+  })),
+);
 const StartSessionView = lazy(() =>
   import("../features/start-session/StartSessionView").then((m) => ({
     default: m.StartSessionView,
@@ -98,6 +105,7 @@ export default function App() {
         <ErrorBoundary resetKey={currentView}>
           <Suspense fallback={<RouteFallback />}>
             {currentView === "home" ? <HomeView /> : null}
+            {currentView === "continue" ? <HomeContinuationView /> : null}
             {currentView === "start" ? <StartSessionView /> : null}
             {/* The unified session workspace. The legacy timeline / flow / evidence /
                 review keys map here too so no deep link dead-ends — they all open

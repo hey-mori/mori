@@ -520,3 +520,234 @@
   width: 10px;
   height: 10px;
 }
+
+/* ── Command Home ─────────────────────────────────────────────────────────────
+   The landing canvas (HomeView). A calm command-entry surface, not a
+   dashboard: an ambient lavender wash behind a centred question, a command
+   input, and three quick actions, with a folded 최근 작업 disclosure docked at
+   the foot. The richer continuation surface (hero + focal card + rails, the
+   rules above) is retired to HomeContinuationView and reached via 검토 이어가기. */
+.home-canvas {
+  /* Frosted-glass surface tint for the command input. Light by default; the
+     nightLake override at the foot swaps it to dark glass so the input never
+     reads as a white panel floating on a dark canvas. */
+  --home-glass: rgba(255, 255, 255, 0.72);
+  --home-glass-hover: rgba(255, 255, 255, 0.92);
+  --home-sheen: rgba(255, 255, 255, 0.34);
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 72% at 50% -10%, rgba(124, 92, 255, 0.05) 0%, transparent 56%),
+    var(--base-bg);
+}
+
+/* Ambient layer: decorative only, behind everything, never interactive. Two
+   slow-drifting lavender blobs plus one faint diagonal sheen. Movement is
+   deliberately sub-perceptible; it should read as alive only in the periphery. */
+.home-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.home-ambient-blob {
+  position: absolute;
+  width: 46vw;
+  max-width: 720px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+}
+
+.home-ambient-blob-a {
+  top: -14%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(124, 92, 255, 0.09), transparent 68%);
+}
+
+.home-ambient-blob-b {
+  right: -12%;
+  bottom: -18%;
+  background: radial-gradient(circle, rgba(177, 140, 255, 0.09), transparent 70%);
+}
+
+.home-ambient-sheen {
+  position: absolute;
+  inset: -20% -16%;
+  background: linear-gradient(
+    116deg,
+    transparent 34%,
+    var(--home-sheen) 48%,
+    rgba(231, 225, 255, 0.18) 53%,
+    transparent 68%
+  );
+  opacity: 0.26;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-ambient-blob-a {
+    animation: home-drift-a 24s ease-in-out infinite;
+  }
+  .home-ambient-blob-b {
+    animation: home-drift-b 28s ease-in-out infinite;
+  }
+  .home-ambient-sheen {
+    animation: home-sheen 26s ease-in-out infinite;
+  }
+}
+
+@keyframes home-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.26;
+  }
+  50% {
+    transform: translate3d(18px, 12px, 0);
+    opacity: 0.34;
+  }
+}
+
+@keyframes home-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate3d(-16px, -14px, 0);
+    opacity: 0.24;
+  }
+}
+
+@keyframes home-sheen {
+  0%,
+  100% {
+    transform: translateX(-3%);
+    opacity: 0.22;
+  }
+  50% {
+    transform: translateX(3%);
+    opacity: 0.3;
+  }
+}
+
+/* Scroll / centre layer: sits above the ambient and holds the content. Flex-
+   centred, with a heavier foot padding so the command centre settles slightly
+   above the middle (rather than dead-centre). Scrolls on its own so the ambient
+   never moves with content on short viewports. */
+.home-canvas-scroll {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(24px, 6vh, 64px) clamp(20px, 5vw, 48px) clamp(64px, 16vh, 160px);
+}
+
+/* Command centre: the headline + command input, centred in the canvas. */
+.home-command-center {
+  display: grid;
+  justify-items: center;
+  gap: var(--base-space-8);
+  width: 100%;
+  max-width: 640px;
+}
+
+.home-headline {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+  line-height: var(--base-line-tight);
+  text-align: center;
+  color: var(--base-accent);
+}
+
+/* Command input: a wide, low pill that opens the ⌘K palette. It reads as a
+   search field but is a button (no caret, no focus trap); the calm default
+   sharpens to a brand-bordered focus ring on hover / keyboard focus. */
+.home-command-input {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-5);
+  width: 100%;
+  height: 60px;
+  padding: 0 var(--base-space-6);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-pill);
+  background: var(--home-glass);
+  box-shadow: var(--base-shadow-card);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  cursor: text;
+  transition:
+    border-color var(--base-transition),
+    box-shadow var(--base-transition),
+    background var(--base-transition);
+}
+
+.home-command-input:hover {
+  border-color: var(--base-border-strong);
+  background: var(--home-glass-hover);
+}
+
+.home-command-input:focus-visible {
+  outline: none;
+  border-color: var(--base-accent);
+  box-shadow: 0 0 0 3px var(--base-accent-soft), var(--base-shadow-card);
+}
+
+.home-command-input-icon {
+  flex-shrink: 0;
+  color: var(--base-accent);
+}
+
+.home-command-input-text {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: var(--base-font-size-lg);
+  color: var(--base-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-command-input-kbd {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+  color: var(--base-text-muted-2);
+  font-family: inherit;
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 640px) {
+  .home-headline {
+    font-size: 20px;
+  }
+}
+
+/* nightLake (dark): swap the frosted-glass tint to dark glass and cool the
+   sheen so the command input sits on the dark canvas instead of floating as a
+   white panel. The purple blobs and the token-driven colours (headline, kbd,
+   shadows) already adapt via the theme layer. */
+[data-base-theme="nightLake"] .home-canvas {
+  --home-glass: rgba(30, 34, 46, 0.55);
+  --home-glass-hover: rgba(40, 45, 60, 0.82);
+  --home-sheen: rgba(155, 125, 252, 0.1);
+}
