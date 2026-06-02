@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { ViewKey } from "../domain/types";
 import type { ActivityLaneId } from "../lib/timeline/activityModel";
 import type { ReviewSelection } from "../lib/review-workspace/reviewWorkspace";
+import type { AgentWorkAgentId } from "../lib/agents/agentRegistry";
 
 /** Active tab on the Review surface. Persisted so the user returns to the same tab. */
 export type ReviewTab = "issues" | "decisions" | "nextActions" | "unresolved" | "suggestions";
@@ -130,6 +131,13 @@ type AppState = {
    * consumes and clears it so it fires once per request.
    */
   startRecordsRequest: boolean;
+  /**
+   * Which anchor agent the 기록에서 불러오기 request was made for. The 소스 hub
+   * lets the user pick a specific agent before importing its records, so the
+   * start view pre-selects it instead of always defaulting to Claude. `null`
+   * means "no preference" and falls back to the first detection-capable agent.
+   */
+  startRecordsAgentId: AgentWorkAgentId | null;
   setCurrentView: (view: ViewKey) => void;
   setSelectedEventId: (eventId: string) => void;
   setHoveredEventId: (eventId: string | null) => void;
@@ -184,8 +192,11 @@ type AppState = {
    * route through the same action so the surface only has one front door.
    */
   openProject: (projectKey: string) => void;
-  /** From the 소스 hub: route to the new-session flow with the 기록에서 불러오기 browser armed. */
-  requestStartRecords: () => void;
+  /**
+   * From the 소스 hub: route to the new-session flow with the 기록에서 불러오기
+   * browser armed, optionally pre-selecting the agent the user picked.
+   */
+  requestStartRecords: (agentId?: AgentWorkAgentId) => void;
   clearStartRecordsRequest: () => void;
 };
 
@@ -210,6 +221,7 @@ export const useAppStore = create<AppState>((set) => ({
   commandPaletteOpen: false,
   currentProjectKey: null,
   startRecordsRequest: false,
+  startRecordsAgentId: null,
   setCurrentView: (currentView) => set({ currentView }),
   // Selecting an event auto-expands the timeline inspector — picking an event
   // is the exact intent the inspector serves, so the user never has to also
@@ -283,6 +295,12 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
   openProject: (projectKey) =>
     set({ currentView: "project", currentProjectKey: projectKey }),
-  requestStartRecords: () => set({ currentView: "start", startRecordsRequest: true }),
-  clearStartRecordsRequest: () => set({ startRecordsRequest: false }),
+  requestStartRecords: (agentId) =>
+    set({
+      currentView: "start",
+      startRecordsRequest: true,
+      startRecordsAgentId: agentId ?? null,
+    }),
+  clearStartRecordsRequest: () =>
+    set({ startRecordsRequest: false, startRecordsAgentId: null }),
 }));

@@ -43,6 +43,7 @@ import {
   type SourceProvider,
   type SourceProviderMethod,
 } from "../../lib/sources/sourceProviderGroups";
+import type { AgentWorkAgentId } from "../../lib/agents/agentRegistry";
 import type { StoredSessionImport } from "../../lib/storage/storageTypes";
 import { ConnectorInstallModal } from "./ConnectorInstallModal";
 
@@ -242,7 +243,14 @@ export function SourcesView() {
             }}
             onSelectRecords={providerIsAnchor ? () => setRecordsMode(true) : undefined}
             onAction={() => runSourceAction(selectedMethod.source)}
-            onBrowseRecords={providerIsAnchor ? requestStartRecords : undefined}
+            onBrowseRecords={
+              providerIsAnchor
+                ? // providerIsAnchor guarantees the id is an anchor agent id
+                  // (ANCHOR_AGENT_IDS = the agent registry), so the start view
+                  // opens the records browser scoped to the picked agent.
+                  () => requestStartRecords(selectedProvider.id as AgentWorkAgentId)
+                : undefined
+            }
           />
         ) : null
       }

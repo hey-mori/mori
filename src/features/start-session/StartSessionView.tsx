@@ -36,6 +36,7 @@ import {
   describeSessionStorageTarget,
   type SessionStorageTarget,
 } from "../../lib/session/sessionStorageTarget";
+import { resolveStartRecordsAgentId } from "../../lib/session/startRecordsAgent";
 import { isTauriRuntime } from "../../lib/desktop";
 import { formatDateTime } from "../../lib/formatting/time";
 import {
@@ -176,6 +177,7 @@ export function StartSessionView() {
   const setCurrentView = useAppStore((state) => state.navigate);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const startRecordsRequest = useAppStore((state) => state.startRecordsRequest);
+  const startRecordsAgentId = useAppStore((state) => state.startRecordsAgentId);
   const clearStartRecordsRequest = useAppStore((state) => state.clearStartRecordsRequest);
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -251,13 +253,18 @@ export function StartSessionView() {
     if (existingProjects.includes(meta.projectName)) setProjectChoice(meta.projectName);
   }
 
-  // Honour a 기록에서 불러오기 request routed from the 소스 hub: default to the
-  // first detection-capable agent (Claude), choose the method, and let the
+  // Honour a 기록에서 불러오기 request routed from the 소스 hub: pre-select the
+  // agent the user picked there (falling back to the first detection-capable
+  // agent when the hub sent no preference), choose the method, and let the
   // inline browse button open the modal only when the user asks for it.
   useEffect(() => {
     if (!startRecordsRequest) return;
-    const agent = AGENT_OPTIONS.find((option) => option.detect) ?? AGENT_OPTIONS[0] ?? null;
-    if (agent) setSelectedAgentId(agent.id);
+    const agentId = resolveStartRecordsAgentId(startRecordsAgentId);
+    const option =
+      (agentId ? AGENT_OPTIONS.find((entry) => entry.agentId === agentId) : null) ??
+      AGENT_OPTIONS[0] ??
+      null;
+    if (option) setSelectedAgentId(option.id);
     setMethod("records");
     clearStartRecordsRequest();
     // eslint-disable-next-line react-hooks/exhaustive-deps

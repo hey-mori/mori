@@ -115,4 +115,31 @@ describe("app store — session-centric routing", () => {
     useAppStore.getState().clearEvidenceImportRequest();
     expect(useAppStore.getState().evidenceImportRequest).toBeNull();
   });
+
+  it("requestStartRecords(agentId) arms the records browser for the picked agent", () => {
+    useAppStore.setState({
+      currentView: "connections",
+      startRecordsRequest: false,
+      startRecordsAgentId: null,
+    });
+    useAppStore.getState().requestStartRecords("codex");
+    const state = useAppStore.getState();
+    expect(state.currentView).toBe("start");
+    expect(state.startRecordsRequest).toBe(true);
+    expect(state.startRecordsAgentId).toBe("codex");
+  });
+
+  it("requestStartRecords() without an agent leaves the preference empty", () => {
+    useAppStore.setState({ startRecordsAgentId: "cursor" });
+    useAppStore.getState().requestStartRecords();
+    expect(useAppStore.getState().startRecordsAgentId).toBeNull();
+  });
+
+  it("clearStartRecordsRequest() consumes both one-shots", () => {
+    useAppStore.setState({ startRecordsRequest: true, startRecordsAgentId: "opencode" });
+    useAppStore.getState().clearStartRecordsRequest();
+    const state = useAppStore.getState();
+    expect(state.startRecordsRequest).toBe(false);
+    expect(state.startRecordsAgentId).toBeNull();
+  });
 });
