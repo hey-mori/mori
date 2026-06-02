@@ -1721,21 +1721,26 @@ kbd {
   stroke: #c8cee0;
   stroke-width: 1.4;
   opacity: 0.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  transition: opacity 140ms ease, stroke-width 140ms ease, filter 140ms ease;
 }
 
 .connector.subtle {
   stroke-width: 1.2;
-  opacity: 0.22;
+  opacity: 0.3;
 }
 
 .connector.active {
   stroke-width: 2;
-  opacity: 0.52;
+  opacity: 0.78;
+  filter: drop-shadow(0 1px 2px rgba(20, 25, 36, 0.18));
 }
 
 .connector.timeline.active {
-  stroke-width: 1.1;
-  opacity: 0.28;
+  stroke-width: 1.55;
+  opacity: 0.68;
 }
 
 .connector.flow.active {
@@ -2086,6 +2091,12 @@ kbd {
   opacity: 1;
 }
 
+.timeline-frame.is-focus-active .event-card.focus-related {
+  border-color: rgba(98, 70, 245, 0.36);
+  box-shadow: 0 0 0 1px rgba(98, 70, 245, 0.18), 0 6px 16px rgba(20, 25, 36, 0.08);
+  z-index: 6;
+}
+
 .event-card.focus-context {
   opacity: 1;
 }
@@ -2321,6 +2332,12 @@ kbd {
 
 .timeline-bundle-card.focus-related {
   opacity: 1;
+}
+
+.timeline-frame.is-focus-active .timeline-bundle-card.focus-related {
+  border-color: rgba(98, 70, 245, 0.36);
+  box-shadow: 0 0 0 1px rgba(98, 70, 245, 0.18), 0 6px 16px rgba(20, 25, 36, 0.08);
+  z-index: 6;
 }
 
 .timeline-bundle-card.focus-context {
@@ -3814,4 +3831,3 @@ textarea {
   padding-left: var(--page-inset);
   padding-right: var(--page-inset);
 }
-

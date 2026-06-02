@@ -185,6 +185,30 @@ describe("buildTimelineRenderModel", () => {
     expect(model.focusedSet.has(target.id)).toBe(true);
   });
 
+  it("seeds focusedSet from hover even when nothing is selected", () => {
+    const seed = mockSession.events[0]!;
+    const related = mockSession.events[1]!;
+    const relationship: Relationship = {
+      id: "rel-hover-focus",
+      fromId: seed.id,
+      fromType: "event",
+      toId: related.id,
+      toType: "event",
+      type: "ledTo",
+      confidence: 0.8,
+      reason: "test",
+    };
+    const model = buildModel(withEvents([seed, related], [relationship]), {
+      hoveredEventId: seed.id,
+      selectedEventId: null,
+    });
+
+    expect(model.selectedItem).toBeNull();
+    expect(model.focusedSet.has(seed.id)).toBe(true);
+    expect(model.focusedSet.has(related.id)).toBe(true);
+    expect(model.focusActive).toBe(true);
+  });
+
   it("widens focusedSet to depth 2 in flow mode", () => {
     const target = mockSession.events.find((event) => event.type === "decision")!;
     const flowModel = buildModel(mockSession, { selectedEventId: target.id, mode: "flow" });

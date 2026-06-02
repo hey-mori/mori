@@ -479,12 +479,18 @@ function computeFocusedSet(args: {
   relationships: Relationship[];
   mode: TimelineMode;
 }): Set<string> {
-  if (!args.selectedItem) return new Set();
-  const seeds = args.hoveredEventId
-    ? args.items.find((item) => item.id === args.hoveredEventId)?.memberEventIds ?? [
-        args.hoveredEventId,
-      ]
-    : args.selectedItem.memberEventIds;
+  const hoveredEventId = args.hoveredEventId;
+  const hoverItem = hoveredEventId
+    ? args.items.find(
+        (item) =>
+          item.id === hoveredEventId ||
+          item.memberEventIds.includes(hoveredEventId),
+      )
+    : null;
+  const seeds =
+    hoverItem?.memberEventIds ??
+    (hoveredEventId ? [hoveredEventId] : args.selectedItem?.memberEventIds);
+  if (!seeds?.length) return new Set();
   const focusedSet = new Set<string>();
   for (const seed of seeds) {
     for (const entityId of getFocusedEntitySet(
