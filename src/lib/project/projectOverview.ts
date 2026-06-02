@@ -64,6 +64,12 @@ export type BuildProjectOverviewInput = {
   projectKey: string;
   sessions: ReadonlyArray<StoredSessionSummary>;
   sessionInsights?: ReadonlyArray<ProjectSessionInsightSnapshot>;
+  /**
+   * Extra raw labels the user confirmed are this same project (connection
+   * mapping aliases). Sessions whose `sourceLabel` matches the project key
+   * *or* any alias are grouped in. Defaults to none.
+   */
+  aliases?: ReadonlyArray<string>;
   /** Reference time for the recency buckets. Defaults to `Date.now()`. */
   now?: number;
 };
@@ -109,8 +115,11 @@ export function buildProjectOverview(input: BuildProjectOverviewInput): ProjectO
   const insights = new Map(
     (input.sessionInsights ?? []).map((snapshot) => [snapshot.sessionId, snapshot]),
   );
-  const mine = input.sessions.filter((summary) =>
-    projectIdentitiesMatch(summary.sourceLabel, input.projectKey),
+  const aliases = input.aliases ?? [];
+  const mine = input.sessions.filter(
+    (summary) =>
+      projectIdentitiesMatch(summary.sourceLabel, input.projectKey) ||
+      aliases.some((alias) => projectIdentitiesMatch(summary.sourceLabel, alias)),
   );
 
   const rows: ProjectSessionRow[] = mine

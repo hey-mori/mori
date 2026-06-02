@@ -55,6 +55,26 @@ describe("buildProjectOverview", () => {
     ).toEqual(["case", "slash", "trailing"]);
   });
 
+  it("groups sessions under a confirmed alias label", () => {
+    const overview = buildProjectOverview({
+      projectKey: "/Users/x/dev/mori",
+      sessions: [
+        summary({ sessionId: "full", sourceLabel: "/Users/x/dev/mori" }),
+        summary({ sessionId: "short", sourceLabel: "mori" }),
+        summary({ sessionId: "unrelated", sourceLabel: "/play/mori" }),
+      ],
+      aliases: ["mori"],
+      now: NOW,
+    });
+    expect(overview.stats.sessions).toBe(2);
+    expect(
+      overview.groups
+        .flatMap((g) => g.rows)
+        .map((r) => r.sessionId)
+        .sort(),
+    ).toEqual(["full", "short"]);
+  });
+
   it("does not merge a different project that only shares a trailing name", () => {
     const overview = buildProjectOverview({
       projectKey: "/work/api",
