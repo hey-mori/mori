@@ -22,6 +22,7 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
+import { buildDemoSessionContent } from "../../lib/demo/demoSessionContent";
 import {
   buildProjectOverview,
   type ProjectSessionRow,
@@ -437,6 +438,26 @@ function gatherProjectSessionInsights(
     }
 
     if (!body) {
+      // Demo sessions have no saved memory body, so fall back to their
+      // reconstructed demo content (the same source the synthesis section uses).
+      // This keeps the current-state strip, focus items, and synthesis cards
+      // consistent in demo mode; a real session with no body returns null here.
+      const demo = buildDemoSessionContent(summary.sessionId);
+      if (demo) {
+        return {
+          sessionId: summary.sessionId,
+          sourceCount,
+          openIssues: demo.issues.filter((issue) => issue.status === "open").length,
+          unconfirmedDecisions: demo.decisions.filter((decision) => !decision.confirmed)
+            .length,
+          pendingNextActions: demo.nextActions.filter(
+            (action) => !isNextActionCompleted(action),
+          ).length,
+          decisionCount: demo.decisions.length,
+          hasSummary: Boolean(demo.summary),
+          reportCount: reportSessionIds.get(summary.sessionId) ?? 0,
+        };
+      }
       return {
         sessionId: summary.sessionId,
         sourceCount,
