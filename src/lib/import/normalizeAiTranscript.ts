@@ -13,27 +13,12 @@ import { parseChatGptExport, type ChatGptExportTurn } from "./parseChatGptExport
  * Platform-specific integration ID mapping
  */
 function getIntegrationId(platform: AiTranscriptPlatform): string {
-  switch (platform) {
-    case "claude":
-      return "claudeTranscript";
-    case "chatgpt":
-      return "chatgptTranscript";
-    case "codex":
-      return "codexTranscript";
-    case "antigravity":
-      return "antigravityTranscript";
-    case "opencode":
-      return "opencodeTranscript";
-    case "continue":
-      return "continueTranscript";
-    case "cline":
-      return "clineTranscript";
-    case "cursor":
-      return "cursorTranscript";
-    case "other":
-    default:
-      return "aiConversation";
-  }
+  // Every named anchor platform maps to a `<platform>Transcript` source kind
+  // by convention; only the catch-all "other" uses the generic conversation
+  // kind. Keeping this a convention (not a per-platform switch) means a new
+  // agent needs no edit here — its `<platform>Transcript` entry in
+  // sourceRegistry is enforced instead by the agentRegistry guard test.
+  return platform === "other" ? "aiConversation" : `${platform}Transcript`;
 }
 
 /**
