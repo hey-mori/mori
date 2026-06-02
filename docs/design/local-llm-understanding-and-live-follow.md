@@ -197,12 +197,13 @@ bypasses a review gate.
    privacy-safe prompt, deterministic fallback) plus a
    `generateRequestAbstraction` store action and an on-demand
    "로컬 LLM으로 요지 생성" inspector action that feeds the projection.
-6. **Local LLM connectivity depth.** First slice shipped: the
-   connection probe's discovered models are click-to-select chips in the
-   Local AI settings, writing through to the tested provider's model
-   field. Remaining: a model registry, per-task model routing, and a
-   distinct LM Studio surface (today LM Studio connects via the
-   OpenAI-compatible provider).
+6. **Local LLM connectivity depth.** Shipped: the connection probe's
+   discovered models are click-to-select chips in the Local AI settings;
+   per-task model routing (`resolveTaskModel` + a `requestAbstractionModel`
+   override so a small model can do the lightweight abstraction while
+   Quick Pass keeps the main one). Remaining (optional): a richer model
+   registry and a distinct LM Studio surface (today LM Studio connects
+   via the OpenAI-compatible provider).
 7. **Live Follow.** Decision brain shipped: `live-follow/
    followController.ts`, a pure reducer (start / poll / pause / resume /
    error / stop) with `computeNewEventIds` delta detection and
@@ -236,9 +237,9 @@ across the Event Inspector, the chronological list, and exported
 reports; a deterministic request abstraction with an optional on-demand
 local-LLM abstraction; the original is always stored.
 
-Pillar 3 (local LLM connectivity depth) has its first slice: the
-connection probe's discovered models are click-to-select in the Local AI
-settings.
+Pillar 3 (local LLM connectivity depth): discovered-model selection plus
+per-task model routing (a dedicated request-abstraction model) shipped;
+a richer registry / LM Studio surface remain optional.
 
 Pillar 4 (Live Follow) has its tested decision brain
 (`live-follow/followController.ts`); the desktop foreground polling shell
