@@ -11,3 +11,9 @@ export {
   type DisclosureProjection,
   type DisclosureVariants,
 } from "./disclosureLevel";
+export {
+  buildRequestAbstraction,
+  classifyRequestIntent,
+  type RequestAbstraction,
+  type RequestIntent,
+} from "./requestAbstraction";
