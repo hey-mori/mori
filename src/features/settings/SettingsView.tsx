@@ -22,6 +22,7 @@ import {
 } from "../../app/repositoryStore";
 import { useAppStore } from "../../app/store";
 import type { SettingsTab } from "../../app/store";
+import { buildAnalysisRunHistoryViewModel } from "../../lib/analysis";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { getProductRuntimeLabel } from "../../lib/product-state/productState";
@@ -58,6 +59,7 @@ export function SettingsView() {
   const analysisError = useSessionStore((state) => state.analysisError);
   const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
   const analysisFallbackUsed = useSessionStore((state) => state.analysisFallbackUsed);
+  const loadAnalysisRunHistory = useSessionStore((state) => state.loadAnalysisRunHistory);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
 
   const sqliteAvailable = useSqliteStore((state) => state.available);
@@ -99,6 +101,12 @@ export function SettingsView() {
 
   const desktopRuntime = useMemo(() => isTauriRuntime(), []);
   const mode: RuntimeMode = desktopRuntime ? "tauri-desktop" : "browser";
+
+  const runHistory = useMemo(() => {
+    const history = loadAnalysisRunHistory();
+    return history ? buildAnalysisRunHistoryViewModel(history) : null;
+    // Re-derive when a new run is adopted (analysis.runId) or after hydration.
+  }, [loadAnalysisRunHistory, analysis?.runId, initialized]);
 
   const providerLabel =
     settings.provider === "ollama"
@@ -150,6 +158,7 @@ export function SettingsView() {
               importCount: imports.length,
               sourceCount: sessionView.sources.length,
             }}
+            runHistory={runHistory}
             onProviderChange={(provider) => updateAnalysisSettings({ provider })}
             onUpdateSettings={(patch) => updateAnalysisSettings(patch)}
           />

@@ -18,11 +18,13 @@ import {
 } from "../../lib/analysis";
 import type {
   AnalysisResult,
+  AnalysisRunHistoryViewModel,
   AnalysisRunStatus,
   QuickPassAnalysisSettings,
   QuickPassCapabilityReport,
   QuickPassProviderKind,
 } from "../../lib/analysis";
+import { formatRelativeKo } from "../../lib/home/homeOverview";
 import { getProviderRows, type ProviderRow as ProviderRowModel } from "../../lib/settings/settingsStatus";
 import {
   PreferenceToggle,
@@ -81,11 +83,13 @@ type EngineDiagnostics = {
 export function LocalAiCard({
   settings,
   diagnostics,
+  runHistory,
   onProviderChange,
   onUpdateSettings,
 }: {
   settings: QuickPassAnalysisSettings;
   diagnostics: EngineDiagnostics;
+  runHistory: AnalysisRunHistoryViewModel | null;
   onProviderChange: (kind: QuickPassProviderKind) => void;
   onUpdateSettings: (patch: Partial<QuickPassAnalysisSettings>) => void;
 }) {
@@ -161,6 +165,10 @@ export function LocalAiCard({
           onUpdateSettings={onUpdateSettings}
         />
       </div>
+
+      {runHistory && runHistory.runCount > 0 ? (
+        <RecentRunsDisclosure runHistory={runHistory} />
+      ) : null}
 
       {plannedRows.length > 0 ? (
         <details className="settings-ai-planned">
@@ -628,6 +636,44 @@ function CapabilityRow({ capability }: { capability: CapabilityState }) {
         <small className="settings-capability-error">{truncate(report.error, 80)}</small>
       ) : null}
     </div>
+  );
+}
+
+const MAX_RECENT_RUNS = 5;
+
+function RecentRunsDisclosure({ runHistory }: { runHistory: AnalysisRunHistoryViewModel }) {
+  const rows = runHistory.rows.slice(0, MAX_RECENT_RUNS);
+  return (
+    <details className="settings-ai-runs">
+      <summary>
+        <span>실행 기록</span>
+        <small>{runHistory.runCount}회</small>
+      </summary>
+      <ul className="settings-ai-run-list">
+        {rows.map((row) => (
+          <li
+            key={row.runId}
+            className={`settings-ai-run-row${row.isCurrent ? " is-current" : ""}`}
+          >
+            <span className="settings-ai-run-dot" aria-hidden="true" />
+            <div className="settings-ai-run-main">
+              <div className="settings-ai-run-head">
+                <strong>{row.providerLabel}</strong>
+                {row.isCurrent ? <span className="settings-ai-run-current">현재</span> : null}
+                <small>{formatRelativeKo(row.generatedAt)}</small>
+              </div>
+              <small className="settings-ai-run-stats">
+                이슈 {row.reason.elementCounts.issues}개 · 결정 {row.reason.elementCounts.decisions}개 ·
+                신뢰 {Math.round(row.confidence * 100)}% · {row.durationMs}ms
+                {row.changeSummary && row.changeSummary !== "변화 없음"
+                  ? ` · ${row.changeSummary}`
+                  : ""}
+              </small>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
