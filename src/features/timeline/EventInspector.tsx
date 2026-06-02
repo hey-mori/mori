@@ -37,8 +37,8 @@ import { sourceFamilyIcons } from "./lib/activityIcons";
 import { useSessionStore } from "../../app/sessionStore";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import {
-  buildRequestAbstraction,
-  projectDisclosure,
+  isUserRequestEvent,
+  projectEventRequestSummary,
   DISCLOSURE_LABELS,
   type DisclosureLevel,
 } from "../../lib/disclosure";
@@ -91,16 +91,8 @@ export function EventInspector({
   const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
   // The user's own request text is the privacy-sensitive content; other
   // actors' events render their summary as before.
-  const isUserRequest = selectedEvent.actor === "user";
-  const requestAbstraction = buildRequestAbstraction(selectedEvent.summary);
-  const requestProjection = projectDisclosure(
-    {
-      raw: selectedEvent.summary,
-      summary: requestAbstraction.summary,
-      abstract: requestAbstraction.abstract,
-    },
-    requestDisclosureLevel,
-  );
+  const isUserRequest = isUserRequestEvent(selectedEvent);
+  const requestProjection = projectEventRequestSummary(selectedEvent, requestDisclosureLevel);
   const mergeTarget = findMergeTarget(session.events, selectedEvent.id);
   const inspector = buildInspectorViewModel({
     event: selectedEvent,

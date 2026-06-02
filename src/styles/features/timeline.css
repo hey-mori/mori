@@ -1038,6 +1038,11 @@ kbd {
   color: var(--muted);
 }
 
+.timeline-chrono-detail p.timeline-chrono-withheld {
+  font-style: italic;
+  color: var(--muted);
+}
+
 /* ── Timeline basis caption ────────────────────────────────────────────────
    States plainly what the timeline is organised by, so the user is never
    left guessing whether it is time- or topic-ordered. */

@@ -1,5 +1,7 @@
 import { Layers3 } from "lucide-react";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
+import { useSessionStore } from "../../app/sessionStore";
+import { projectEventRequestSummary, type DisclosureLevel } from "../../lib/disclosure";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { sortDisplayItemsChronologically } from "../../lib/timeline/displayItems";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
@@ -38,6 +40,9 @@ export function TimelineChronoList({
   density: TimelineDensity;
   eventMenuItems?: (event: TimelineEvent) => BaseMenuItemSpec[];
 }) {
+  const requestDisclosureLevel = useSessionStore(
+    (state) => state.analysisSettings.requestDisclosureLevel,
+  );
   const items = sortDisplayItemsChronologically(model.visibleDisplayItems);
   if (items.length === 0) return null;
 
@@ -97,6 +102,7 @@ export function TimelineChronoList({
             onSelect={() => onSelect(item.id)}
             menuItems={eventMenuItems?.(item.event)}
             sourceIndex={model.sourceIndex}
+            requestDisclosureLevel={requestDisclosureLevel}
           />
         );
       })}
@@ -110,17 +116,22 @@ function TimelineChronoEventRow({
   onSelect,
   menuItems,
   sourceIndex,
+  requestDisclosureLevel,
 }: {
   event: TimelineEvent;
   selected: boolean;
   onSelect: () => void;
   menuItems?: BaseMenuItemSpec[];
   sourceIndex?: ReadonlyMap<string, SourceRef>;
+  requestDisclosureLevel: DisclosureLevel;
 }) {
   const menu = useContextMenuPosition();
   const vm = buildTimelineEventCardViewModel(event, sourceIndex ?? []);
   const Icon = activityKindIcons[vm.activityKind] ?? activityKindIcons.unknown;
-  const snippet = oneLine(event.summary);
+  // The user's own request text obeys the disclosure level here too, so a
+  // withheld request cannot leak through the narrow-width list view.
+  const requestProjection = projectEventRequestSummary(event, requestDisclosureLevel);
+  const snippet = oneLine(requestProjection.text);
   return (
     <li>
       <button
@@ -146,7 +157,11 @@ function TimelineChronoEventRow({
       </button>
       {selected ? (
         <div className="timeline-chrono-detail" role="region">
-          <p>{event.summary}</p>
+          {requestProjection.text ? (
+            <p>{requestProjection.text}</p>
+          ) : (
+            <p className="timeline-chrono-withheld">원문이 표시되지 않도록 설정됨</p>
+          )}
           <small>{eventDetailMeta(event)}</small>
         </div>
       ) : null}

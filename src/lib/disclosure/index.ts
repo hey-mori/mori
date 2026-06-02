@@ -17,3 +17,7 @@ export {
   type RequestAbstraction,
   type RequestIntent,
 } from "./requestAbstraction";
+export {
+  isUserRequestEvent,
+  projectEventRequestSummary,
+} from "./eventDisclosure";
