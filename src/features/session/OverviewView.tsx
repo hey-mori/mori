@@ -192,7 +192,7 @@ export function OverviewView() {
             />
             <OverviewNavCard
               icon={ScrollText}
-              label="보고서"
+              label="공유"
               description="이어가기 컨텍스트 · 보고서 · .mori 내보내기"
               onOpen={() => setSessionTab("report")}
             />

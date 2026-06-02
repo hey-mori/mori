@@ -185,7 +185,7 @@ export function buildWorkspaceSurfaceLinks(
     },
     {
       view: "reports",
-      label: "보고서",
+      label: "공유",
       detail: "세션 보고서와 Resume 프롬프트",
     },
     {

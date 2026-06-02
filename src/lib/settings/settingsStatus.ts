@@ -283,13 +283,13 @@ export function getStorageStatusRows({
       hint:
         packageDraftCount > 0
           ? `브라우저 드래프트에 ${packageDraftCount}건의 패키지가 있습니다.`
-          : "보고서 화면의 \".mori v0 JSON 내보내기\" 버튼으로 생성합니다.",
+          : "공유 화면의 \".mori v0 JSON 내보내기\" 버튼으로 생성합니다.",
       badgeTone: packageDraftCount > 0 ? "purple" : "gray",
     },
     {
       id: "markdown-report",
       label: "Markdown 보고서",
-      description: "보고서 화면에서 Markdown으로 복사 / .md로 다운로드합니다.",
+      description: "공유 화면에서 Markdown으로 복사 / .md로 다운로드합니다.",
       state: "active",
       hint: "PDF / HTML 내보내기는 다음 마일스톤입니다.",
       badgeTone: "green",
