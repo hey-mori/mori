@@ -19,6 +19,7 @@ describe("agentRegistry", () => {
       "antigravity",
       "continue",
       "cline",
+      "cursor",
     ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -54,6 +55,7 @@ describe("agentRegistry", () => {
     expect(getAgentConnectorBinding("antigravity")).toBeUndefined();
     expect(getAgentConnectorBinding("continue")).toBeUndefined();
     expect(getAgentConnectorBinding("cline")).toBeUndefined();
+    expect(getAgentConnectorBinding("cursor")).toBeUndefined();
   });
 
   it("keeps every descriptor's icon key within the supported glyph set", () => {
@@ -64,6 +66,7 @@ describe("agentRegistry", () => {
       "rocket",
       "infinity",
       "bot",
+      "cursor",
     ]);
     for (const descriptor of AGENT_REGISTRY) {
       expect(allowed.has(descriptor.iconKey)).toBe(true);

@@ -25,6 +25,7 @@ describe("buildSourceProviderGroups", () => {
       "antigravity",
       "continue",
       "cline",
+      "cursor",
     ]);
   });
 

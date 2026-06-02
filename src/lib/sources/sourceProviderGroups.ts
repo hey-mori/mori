@@ -105,6 +105,7 @@ const PROVIDER_SPEC_BY_ID: Record<string, ProviderSpec> = {
   antigravityDiscovery: { id: "antigravity", name: "Antigravity" },
   continueDiscovery: { id: "continue", name: "Continue" },
   clineDiscovery: { id: "cline", name: "Cline" },
+  cursorDiscovery: { id: "cursor", name: "Cursor" },
   // The universal paste surface ("Claude / ChatGPT / Codex / Other") gives
   // OpenCode and any unlisted agent a paste path; the named anchors above
   // already carry their own transcript paste.
@@ -144,6 +145,7 @@ const METHOD_BY_ID: Record<string, { methodLabel: string; connectLabel: string }
   antigravityDiscovery: { methodLabel: "기록에서 불러오기", connectLabel: "데스크톱 감지" },
   continueDiscovery: { methodLabel: "기록에서 불러오기", connectLabel: "데스크톱 감지" },
   clineDiscovery: { methodLabel: "기록에서 불러오기", connectLabel: "데스크톱 감지" },
+  cursorDiscovery: { methodLabel: "기록에서 불러오기", connectLabel: "데스크톱 감지" },
   aiTranscriptPaste: { methodLabel: "대화 붙여넣기", connectLabel: "붙여넣기" },
   connectorJsonl: { methodLabel: "JSONL 가져오기", connectLabel: "JSONL" },
   gitDiffPaste: { methodLabel: "diff 붙여넣기", connectLabel: "붙여넣기" },

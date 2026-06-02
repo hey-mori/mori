@@ -69,6 +69,7 @@ describe("sourceRegistry", () => {
       expect(implementedIds).toContain("opencodeTranscript");
       expect(implementedIds).toContain("continueTranscript");
       expect(implementedIds).toContain("clineTranscript");
+      expect(implementedIds).toContain("cursorTranscript");
       expect(implementedIds).toContain("gitDiff");
       expect(implementedIds).toContain("tauriGitDiff");
       expect(implementedIds).toContain("repository");

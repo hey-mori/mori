@@ -472,6 +472,27 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
     },
   },
 
+  cursorTranscript: {
+    id: "cursorTranscript",
+    label: "Cursor Transcript",
+    description: "Cursor composer(채팅) 세션 자동 감지로 가져온 대화 기록",
+    status: "implemented",
+    trustDefault: "verified",
+    rawDataPolicy: "summaryOnly",
+    captureMode: "explicitImport",
+    privacyNote:
+      "데스크톱 앱이 Cursor의 state.vscdb(cursorDiskKV) 채팅 기록만 읽기 전용으로 읽습니다. 자동 백그라운드 캡처는 없습니다.",
+    supportedInputTypes: ["application/json", "text/plain"],
+    outputRecords: {
+      sources: true,
+      timelineEvents: true,
+      issues: false,
+      decisions: false,
+      relationships: false,
+      artifacts: false,
+    },
+  },
+
   chatgptTranscript: {
     id: "chatgptTranscript",
     label: "ChatGPT Transcript",

@@ -28,7 +28,8 @@ export type AgentWorkAgentId =
   | "opencode"
   | "antigravity"
   | "continue"
-  | "cline";
+  | "cline"
+  | "cursor";
 
 /**
  * Stable glyph key. UI surfaces map this to a concrete icon component so
@@ -40,7 +41,8 @@ export type AgentIconKey =
   | "braces"
   | "rocket"
   | "infinity"
-  | "bot";
+  | "bot"
+  | "cursor";
 
 /**
  * Binding to the connector JSONL inbox for agents whose work records
@@ -123,6 +125,14 @@ export const AGENT_REGISTRY: readonly AgentDescriptor[] = [
     detail: "Cline · VS Code",
     iconKey: "bot",
     platform: "cline",
+    detect: true,
+  },
+  {
+    agentId: "cursor",
+    agentName: "Cursor",
+    detail: "Cursor · composer chat",
+    iconKey: "cursor",
+    platform: "cursor",
     detect: true,
   },
 ];

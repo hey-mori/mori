@@ -33,6 +33,7 @@ export type AiTranscriptPlatform =
   | "opencode"
   | "continue"
   | "cline"
+  | "cursor"
   | "other";
 
 /**

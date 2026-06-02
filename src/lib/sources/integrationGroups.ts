@@ -32,6 +32,7 @@ const HUB_HIDDEN_INTEGRATION_IDS = new Set([
   "opencodeTranscript",
   "continueTranscript",
   "clineTranscript",
+  "cursorTranscript",
 ]);
 
 /**

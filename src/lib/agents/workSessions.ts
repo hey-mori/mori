@@ -35,6 +35,11 @@ import {
 } from "../cline/clineTauri";
 import type { ClineSessionMeta } from "../cline/types";
 import {
+  discoverCursorSessions,
+  getCursorSession,
+} from "../cursor/cursorTauri";
+import type { CursorSessionMeta } from "../cursor/types";
+import {
   normalizeConnectorEventBatch,
   parseConnectorJsonl,
   type ConnectorEvent,
@@ -61,6 +66,7 @@ export type AgentWorkImportKind =
   | "opencode-session"
   | "continue-session"
   | "cline-session"
+  | "cursor-session"
   | "connector-jsonl";
 
 export type AgentWorkSessionMeta = {
@@ -161,6 +167,14 @@ export async function listAgentWorkSessions(
       .map(mapClineMeta)
       .sort((a, b) => time(b.startedAt) - time(a.startedAt));
   }
+  if (agentId === "cursor") {
+    const direct = await discoverCursorSessions().catch(
+      () => [] as CursorSessionMeta[],
+    );
+    return direct
+      .map(mapCursorMeta)
+      .sort((a, b) => time(b.startedAt) - time(a.startedAt));
+  }
   const [openCodeDirect, openCodeConnector] = await Promise.all([
     discoverOpenCodeSessions().catch(() => [] as OpenCodeSessionMeta[]),
     listConnectorBackedSessions(connectorConfigFor("opencode")),
@@ -220,6 +234,13 @@ export async function getAgentWorkSession(
     const detail = await getClineSession(meta.sourceFilePath);
     return {
       ...mapClineMeta(detail),
+      messages: detail.messages,
+    };
+  }
+  if (meta.importKind === "cursor-session") {
+    const detail = await getCursorSession(meta.sourceFilePath);
+    return {
+      ...mapCursorMeta(detail),
       messages: detail.messages,
     };
   }
@@ -305,6 +326,18 @@ export function buildImportCandidatesFromAgentWorkSession(
         sessionId: input.sessionId,
         capturedAt: input.capturedAt,
         platform: "cline",
+        title: detail.title,
+        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
+      }),
+    ];
+  }
+  if (detail.importKind === "cursor-session") {
+    return [
+      normalizeAiTranscript({
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        capturedAt: input.capturedAt,
+        platform: "cursor",
         title: detail.title,
         text: renderMessagesAsTranscript(detail.messages, detail.agentName),
       }),
@@ -443,6 +476,26 @@ function mapClineMeta(session: ClineSessionMeta): AgentWorkSessionMeta {
     projectName: session.projectName,
     filePath: session.filePath,
     sourceFilePath: session.filePath,
+    startedAt: session.startedAt,
+    updatedAt: session.updatedAt,
+    messageCount: session.messageCount,
+    title: session.title,
+  };
+}
+
+function mapCursorMeta(session: CursorSessionMeta): AgentWorkSessionMeta {
+  return {
+    agentId: "cursor",
+    agentName: "Cursor",
+    importKind: "cursor-session",
+    id: session.sessionId,
+    sessionId: session.sessionId,
+    projectPath: session.projectPath,
+    projectName: session.projectName,
+    filePath: session.filePath,
+    // Cursor sessions live in a SQLite KV store; the reader is keyed by the
+    // composer id (sessionId), not a filesystem path.
+    sourceFilePath: session.sessionId,
     startedAt: session.startedAt,
     updatedAt: session.updatedAt,
     messageCount: session.messageCount,

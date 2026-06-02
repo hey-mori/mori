@@ -10,6 +10,7 @@ import {
   History,
   Infinity,
   Lock,
+  MousePointer2,
   Rocket,
   Settings2,
   Sparkles,
@@ -114,6 +115,7 @@ const AGENT_ICON: Record<AgentIconKey, LucideIcon> = {
   rocket: Rocket,
   infinity: Infinity,
   bot: Bot,
+  cursor: MousePointer2,
 };
 
 /**

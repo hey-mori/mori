@@ -28,6 +28,8 @@ function getIntegrationId(platform: AiTranscriptPlatform): string {
       return "continueTranscript";
     case "cline":
       return "clineTranscript";
+    case "cursor":
+      return "cursorTranscript";
     case "other":
     default:
       return "aiConversation";
@@ -53,6 +55,8 @@ function getPlatformLabel(platform: AiTranscriptPlatform): string {
       return "Continue";
     case "cline":
       return "Cline";
+    case "cursor":
+      return "Cursor";
     case "other":
     default:
       return "AI";

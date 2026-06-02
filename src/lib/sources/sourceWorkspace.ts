@@ -488,6 +488,25 @@ const DISCOVERY_AGENT_SPECS: readonly DiscoveryAgentSpec[] = [
     likelyFiles: ["src-tauri/src/cline/sessions.rs", "src/lib/cline/"],
     testsNeeded: ["task dir parser", "ui_messages role mapping"],
   },
+  {
+    id: "cursorDiscovery",
+    name: "Cursor",
+    acquisitionMethod: "데스크톱에서 Cursor composer(채팅) 기록을 감지해 불러옵니다.",
+    acceptedFormats: ["Cursor cursorDiskKV composer (로컬 채팅 기록)"],
+    setupMethod:
+      "설정 불필요. 데스크톱 앱이 Cursor의 state.vscdb 채팅 기록만 읽기 전용으로 읽습니다.",
+    privacyNote:
+      "로컬 state.vscdb를 읽기 전용으로만 엽니다. 계정 · API 접근이나 백그라운드 수집은 없습니다.",
+    whatMoriCanAccess: [
+      "감지된 composer 대화 (제목 · 시각)",
+      "사용자 · 모델 메시지 미리보기",
+    ],
+    whatMoriCannotAccess: ["계정 · API 접근", "백그라운드 감시", "원본 대화 전체 보관"],
+    reviewBehavior:
+      "감지한 Cursor 대화는 세션 생성 후 Import Review를 거쳐 타임라인에 반영됩니다.",
+    likelyFiles: ["src-tauri/src/cursor/sessions.rs", "src/lib/cursor/"],
+    testsNeeded: ["cursorDiskKV reader", "split + inline bubble formats"],
+  },
 ];
 
 function discoveryAgentSource(

@@ -169,6 +169,48 @@ fn cline_global_storage_dir() -> Option<PathBuf> {
     }
 }
 
+/// Cursor global state database: `<Cursor globalStorage>/state.vscdb`. Recent
+/// Cursor stores composer (chat) sessions in this SQLite file's `cursorDiskKV`
+/// table. A `$CURSOR_DATA` override points at the globalStorage dir; otherwise
+/// the location follows Cursor's per-OS user-data dir.
+pub fn cursor_global_db() -> Option<PathBuf> {
+    join(cursor_global_storage_dir(), &["state.vscdb"])
+}
+
+fn cursor_global_storage_dir() -> Option<PathBuf> {
+    if let Some(value) = env_override(&["CURSOR_DATA"]) {
+        return Some(PathBuf::from(value));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var_os("APPDATA")
+            .filter(|value| !value.is_empty())
+            .map(|appdata| {
+                PathBuf::from(appdata)
+                    .join("Cursor")
+                    .join("User")
+                    .join("globalStorage")
+            })
+    }
+    #[cfg(target_os = "macos")]
+    {
+        join(
+            home_dir(),
+            &[
+                "Library",
+                "Application Support",
+                "Cursor",
+                "User",
+                "globalStorage",
+            ],
+        )
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        join(home_dir(), &[".config", "Cursor", "User", "globalStorage"])
+    }
+}
+
 /// Mori connector inbox root: `~/.mori/connectors` (the hook writes here; no
 /// override, so reader and writer never disagree).
 pub fn mori_inbox_dir() -> Option<PathBuf> {

@@ -3,6 +3,7 @@ mod antigravity;
 mod claude;
 mod cline;
 mod codex;
+mod cursor;
 mod commands;
 mod continue_agent;
 mod connectors;
@@ -65,6 +66,8 @@ fn main() {
             continue_agent::sessions::get_continue_session,
             cline::sessions::discover_cline_sessions,
             cline::sessions::get_cline_session,
+            cursor::sessions::discover_cursor_sessions,
+            cursor::sessions::get_cursor_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

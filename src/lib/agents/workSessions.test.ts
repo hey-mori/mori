@@ -35,7 +35,9 @@ function detail(
             ? "continue"
             : importKind === "cline-session"
               ? "cline"
-              : "opencode",
+              : importKind === "cursor-session"
+                ? "cursor"
+                : "opencode",
     agentName:
       importKind === "codex-session"
         ? "Codex"
@@ -45,7 +47,9 @@ function detail(
             ? "Continue"
             : importKind === "cline-session"
               ? "Cline"
-              : "OpenCode",
+              : importKind === "cursor-session"
+                ? "Cursor"
+                : "OpenCode",
     importKind,
     id: "id-1",
     sessionId: "sess-1",
@@ -77,6 +81,7 @@ describe("reviewOriginForAgentWorkSession", () => {
       "opencode-session",
       "continue-session",
       "cline-session",
+      "cursor-session",
     ] as const) {
       expect(reviewOriginForAgentWorkSession({ importKind: kind })).toBe("ai-transcript");
     }
@@ -127,6 +132,15 @@ describe("buildImportCandidatesFromAgentWorkSession", () => {
       buildInput,
     );
     expect(candidate.source.kind).toBe("clineTranscript");
+    expect(candidate.source.title).toBe("Retry helper work");
+  });
+
+  it("maps a Cursor session to a dedicated cursorTranscript candidate", () => {
+    const [candidate] = buildImportCandidatesFromAgentWorkSession(
+      detail("cursor-session"),
+      buildInput,
+    );
+    expect(candidate.source.kind).toBe("cursorTranscript");
     expect(candidate.source.title).toBe("Retry helper work");
   });
 
