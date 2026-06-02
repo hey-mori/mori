@@ -1,4 +1,4 @@
-import { Bot, Code2, Rocket, Sparkles, type LucideIcon } from "lucide-react";
+import { Bot, Code2, Infinity, Rocket, Sparkles, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import {
@@ -11,6 +11,8 @@ const ICONS: Record<ConnectorInstallerId, LucideIcon> = {
   "claude-code": Sparkles,
   "codex-cli": Code2,
   antigravity: Rocket,
+  continue: Infinity,
+  cline: Bot,
 };
 
 type PanelState =

@@ -23,12 +23,24 @@ describe("connector installer registry", () => {
     expect(installers.map((i) => i.id).sort()).toEqual([
       "antigravity",
       "claude-code",
+      "cline",
       "codex-cli",
+      "continue",
     ]);
     expect(getConnectorInstallerMeta("claude-code")?.captureModel).toBe("config-hook");
     expect(getConnectorInstallerMeta("codex-cli")?.captureModel).toBe("session-discovery");
     expect(getConnectorInstallerMeta("antigravity")?.captureModel).toBe("session-discovery");
+    expect(getConnectorInstallerMeta("continue")?.captureModel).toBe("planned");
+    expect(getConnectorInstallerMeta("cline")?.captureModel).toBe("planned");
     expect(getConnectorInstallerMeta("unknown" as never)).toBeUndefined();
+  });
+
+  it("matches the source-page anchor agents (continue and cline included)", () => {
+    // The 소스 page lists continue and cline as anchor agents; the modal
+    // registry must include them so the two surfaces never disagree.
+    const ids = listConnectorInstallers().map((i) => i.id);
+    expect(ids).toContain("continue");
+    expect(ids).toContain("cline");
   });
 
   it("returns a fresh copy so callers cannot mutate the registry", () => {
@@ -39,16 +51,32 @@ describe("connector installer registry", () => {
 });
 
 describe("buildConnectorStatusViewModels:browser mode", () => {
-  it("marks every connector desktop-only when detection is unsupported", () => {
+  it("marks detectable connectors desktop-only when detection is unsupported", () => {
     const models = buildConnectorStatusViewModels({
       runtimeSupportsDetection: false,
       results: [],
     });
-    expect(models).toHaveLength(3);
-    for (const model of models) {
+    // Detectable (non-planned) connectors fall to desktop-only in the browser.
+    const detectable = models.filter((model) => model.captureModel !== "planned");
+    expect(detectable.length).toBeGreaterThan(0);
+    for (const model of detectable) {
       expect(model.availability).toBe("desktopOnly");
       expect(model.canInstall).toBe(false);
       expect(model.detail.join(" ")).toContain("데스크톱");
+    }
+  });
+
+  it("shows planned anchors (continue, cline) as planned in every runtime", () => {
+    for (const runtimeSupportsDetection of [false, true]) {
+      const models = buildConnectorStatusViewModels({
+        runtimeSupportsDetection,
+        results: [],
+      });
+      for (const id of ["continue", "cline"] as const) {
+        const model = models.find((m) => m.id === id);
+        expect(model?.availability).toBe("planned");
+        expect(model?.canInstall).toBe(false);
+      }
     }
   });
 });

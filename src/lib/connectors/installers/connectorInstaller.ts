@@ -22,15 +22,22 @@ import {
 } from "../../product-state/productState";
 
 /** Agents Mori can detect a capture connection for. */
-export type ConnectorInstallerId = "claude-code" | "codex-cli" | "antigravity";
+export type ConnectorInstallerId =
+  | "claude-code"
+  | "codex-cli"
+  | "antigravity"
+  | "continue"
+  | "cline";
 
 /**
  * How a connector captures. `config-hook` installs into the tool's own
  * config (Claude hook); `session-discovery` reads the tool's own session
- * history read-only (Codex). The status surface must describe both honestly,
- * since only `config-hook` has anything to "install".
+ * history read-only (Codex). `planned` is an anchor agent whose detection
+ * backend is not built yet, surfaced honestly rather than hidden. The status
+ * surface must describe each honestly, since only `config-hook` has anything
+ * to "install".
  */
-export type ConnectorCaptureModel = "config-hook" | "session-discovery";
+export type ConnectorCaptureModel = "config-hook" | "session-discovery" | "planned";
 
 export type ConnectorInstallerMeta = {
   id: ConnectorInstallerId;
@@ -49,6 +56,8 @@ const REGISTRY: readonly ConnectorInstallerMeta[] = [
     captureModel: "session-discovery",
     captureNote: "부분 캡처 · 트랜스크립트가 있는 세션만 (protobuf 전용 대화는 제외).",
   },
+  { id: "continue", displayName: "Continue", captureModel: "planned" },
+  { id: "cline", displayName: "Cline", captureModel: "planned" },
 ];
 
 export function listConnectorInstallers(): ConnectorInstallerMeta[] {
@@ -151,6 +160,18 @@ function buildOne(
     displayName: meta.displayName,
     captureModel: meta.captureModel,
   };
+
+  // A planned anchor has no detection backend yet; show it honestly as planned
+  // in every runtime rather than implying it could connect.
+  if (meta.captureModel === "planned") {
+    return {
+      ...base,
+      availability: "planned",
+      display: getProductAvailabilityDisplay("planned"),
+      detail: [meta.captureNote ?? "연동은 지원 예정입니다."],
+      canInstall: false,
+    };
+  }
 
   if (!runtimeSupportsDetection) {
     return {
