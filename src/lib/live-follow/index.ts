@@ -9,3 +9,4 @@ export {
   type FollowState,
   type FollowStatus,
 } from "./followController";
+export { selectNewFollowEventIds } from "./followSource";
