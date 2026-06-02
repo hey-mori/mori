@@ -948,6 +948,33 @@
   pointer-events: none;
 }
 
+/* Cursor-following label shown while dragging a panel. */
+.workbench-drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  max-width: 240px;
+  padding: 5px 11px;
+  overflow: hidden;
+  border: 1px solid var(--base-accent);
+  border-radius: 999px;
+  background: var(--base-surface);
+  box-shadow: var(--base-shadow-card-strong);
+  color: var(--base-accent);
+  font-size: var(--base-font-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.workbench-drag-ghost[data-active="1"] {
+  opacity: 1;
+}
+
 /* Column highlighted as the drop target during a pointer drag. */
 .workbench-col.is-droptarget {
   outline: 1px solid var(--base-accent);

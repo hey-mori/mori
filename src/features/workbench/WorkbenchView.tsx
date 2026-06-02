@@ -147,6 +147,7 @@ export function WorkbenchView() {
   >(null);
   const idRef = useRef(0);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
   const nextId = (prefix: string) =>
     `${prefix}-${Date.now().toString(36)}-${(idRef.current += 1)}`;
 
@@ -538,6 +539,8 @@ export function WorkbenchView() {
     setFocusedPanelId(panelId);
     const startX = event.clientX;
     const startY = event.clientY;
+    const dragged = columns.flatMap((col) => col.panels).find((entry) => entry.id === panelId);
+    const title = (dragged && sessionsById.get(dragged.sessionId)?.title) || "세션";
     let started = false;
     let drop: { hint: string; apply: (panelId: string) => void } | null = null;
     const onMove = (move: PointerEvent) => {
@@ -547,8 +550,16 @@ export function WorkbenchView() {
         if (Math.abs(move.clientX - startX) + Math.abs(move.clientY - startY) < 5) return;
         started = true;
         setDragPanelId(panelId);
+        if (ghostRef.current) {
+          ghostRef.current.textContent = title;
+          ghostRef.current.dataset.active = "1";
+        }
       }
       move.preventDefault();
+      // Move the cursor-following label directly (no re-render per move).
+      if (ghostRef.current) {
+        ghostRef.current.style.transform = `translate(${move.clientX + 14}px, ${move.clientY + 14}px)`;
+      }
       drop = resolveDrop(move.clientX, move.clientY);
       setDropHint(drop ? drop.hint : null);
     };
@@ -556,6 +567,7 @@ export function WorkbenchView() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
+      if (ghostRef.current) ghostRef.current.dataset.active = "0";
       if (!started) return;
       if (drop) drop.apply(panelId);
       endDrag();
@@ -997,6 +1009,8 @@ export function WorkbenchView() {
           onClose={() => setNameModal(null)}
         />
       ) : null}
+
+      <div ref={ghostRef} className="workbench-drag-ghost" data-active="0" aria-hidden="true" />
     </PageShell>
   );
 }
