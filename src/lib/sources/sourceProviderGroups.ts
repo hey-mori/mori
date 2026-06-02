@@ -4,6 +4,7 @@ import type {
   SourceWorkspaceStatus,
   SourceWorkspaceViewModel,
 } from "./sourceWorkspace";
+import { listAgentIds } from "../agents/agentRegistry";
 
 /**
  * Provider grouping for the 소스 page.
@@ -69,14 +70,10 @@ type ProviderSpec = { id: string; name: string };
  * attaches as evidence. Shared with the 소스 page so the page and the grouping
  * never disagree on what can anchor.
  */
-export const ANCHOR_AGENT_IDS = new Set([
-  "claude",
-  "codex",
-  "opencode",
-  "antigravity",
-  "continue",
-  "cline",
-]);
+// Derived from the central agent registry so the 소스 page can never disagree
+// with the 새 세션 picker about what anchors a session: adding an agent to
+// AGENT_REGISTRY classifies it as an anchor here automatically.
+export const ANCHOR_AGENT_IDS: ReadonlySet<string> = new Set(listAgentIds());
 
 function roleFor(providerId: string): SourceProviderRole {
   return ANCHOR_AGENT_IDS.has(providerId) ? "agent" : "evidence";
@@ -172,7 +169,8 @@ const STATUS_RANK: Record<SourceWorkspaceStatus, number> = {
   unsupported: 4,
 };
 
-const AGENT_ORDER = ["claude", "codex", "opencode", "antigravity", "continue", "cline"];
+// Canonical agent presentation order is the registry order.
+const AGENT_ORDER: string[] = listAgentIds();
 const EVIDENCE_ORDER = ["git", "terminal", "connector", "note", "url", "chatgpt", "document"];
 
 function specFor(source: SourceWorkspaceSource): ProviderSpec {
