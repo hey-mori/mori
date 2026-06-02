@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_QUICK_PASS_SETTINGS, sanitizeQuickPassSettings } from "./analysisSettings";
+import {
+  DEFAULT_QUICK_PASS_SETTINGS,
+  resolveTaskModel,
+  sanitizeQuickPassSettings,
+} from "./analysisSettings";
 
 describe("sanitizeQuickPassSettings", () => {
   it("returns defaults for missing or wrong shape input", () => {
@@ -18,6 +22,19 @@ describe("sanitizeQuickPassSettings", () => {
   it("falls back to defaults for unknown provider values", () => {
     const sanitized = sanitizeQuickPassSettings({ provider: "openai" as unknown as "ollama" });
     expect(sanitized.provider).toBe(DEFAULT_QUICK_PASS_SETTINGS.provider);
+  });
+
+  it("routes the abstraction task to its override model, else the main model", () => {
+    const base = { ...DEFAULT_QUICK_PASS_SETTINGS, ollamaModel: "llama3.1:8b" };
+    expect(resolveTaskModel(base, "quickPass")).toBe("llama3.1:8b");
+    expect(resolveTaskModel(base, "requestAbstraction")).toBe("llama3.1:8b");
+
+    const routed = { ...base, requestAbstractionModel: "qwen2.5:0.5b" };
+    expect(resolveTaskModel(routed, "requestAbstraction")).toBe("qwen2.5:0.5b");
+    expect(resolveTaskModel(routed, "quickPass")).toBe("llama3.1:8b");
+
+    const blank = { ...base, requestAbstractionModel: "   " };
+    expect(resolveTaskModel(blank, "requestAbstraction")).toBe("llama3.1:8b");
   });
 
   it("defaults the request disclosure level and rejects unknown values", () => {

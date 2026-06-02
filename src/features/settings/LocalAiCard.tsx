@@ -153,6 +153,18 @@ export function LocalAiCard({
           }
         />
         <SettingsRow
+          label="요청 추상화 모델 (선택)"
+          description="비워두면 위 모델을 사용합니다. 요지 생성처럼 가벼운 작업에 더 작고 빠른 모델을 지정할 수 있습니다."
+          control={
+            <ProviderField
+              label="요청 추상화 모델"
+              value={settings.requestAbstractionModel}
+              disabled={settings.provider !== "ollama"}
+              onChange={(value) => onUpdateSettings({ requestAbstractionModel: value })}
+            />
+          }
+        />
+        <SettingsRow
           label="OpenAI 호환 base URL"
           description="/v1까지 포함한 base URL입니다. 예: http://localhost:1234/v1 또는 https://api.openai.com/v1"
           control={

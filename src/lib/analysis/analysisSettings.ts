@@ -20,7 +20,16 @@ export type QuickPassAnalysisSettings = {
    * user dials it down.
    */
   requestDisclosureLevel: DisclosureLevel;
+  /**
+   * Optional per-task model override for request abstraction (a small,
+   * fast model fits the one-line intent task). Empty means "use the main
+   * Ollama model". Resolved via `resolveTaskModel`.
+   */
+  requestAbstractionModel: string;
 };
+
+/** Local-LLM tasks that can route to different models. */
+export type AnalysisTask = "quickPass" | "requestAbstraction";
 
 export const DEFAULT_QUICK_PASS_SETTINGS: QuickPassAnalysisSettings = {
   provider: "deterministic",
@@ -33,6 +42,7 @@ export const DEFAULT_QUICK_PASS_SETTINGS: QuickPassAnalysisSettings = {
   openAiTimeoutMs: 60_000,
   fallbackToDeterministic: true,
   requestDisclosureLevel: "raw",
+  requestAbstractionModel: "",
 };
 
 const ALLOWED_PROVIDERS = [
@@ -64,11 +74,28 @@ const QuickPassSettingsSchema = z.object({
   requestDisclosureLevel: z
     .enum(["raw", "summary", "abstract", "hidden"])
     .catch(DEFAULT_QUICK_PASS_SETTINGS.requestDisclosureLevel),
+  requestAbstractionModel: trimmedString(DEFAULT_QUICK_PASS_SETTINGS.requestAbstractionModel),
 });
 
 export function sanitizeQuickPassSettings(input: unknown): QuickPassAnalysisSettings {
   const parsed = QuickPassSettingsSchema.safeParse(input);
   return parsed.success ? parsed.data : { ...DEFAULT_QUICK_PASS_SETTINGS };
+}
+
+/**
+ * Resolve which Ollama model a task should use. Request abstraction can
+ * route to a small dedicated model; an empty override (or any other task)
+ * falls back to the main `ollamaModel`.
+ */
+export function resolveTaskModel(
+  settings: QuickPassAnalysisSettings,
+  task: AnalysisTask,
+): string {
+  if (task === "requestAbstraction") {
+    const override = settings.requestAbstractionModel.trim();
+    if (override) return override;
+  }
+  return settings.ollamaModel;
 }
 
 function clampNumber(value: number, min: number, max: number): number {

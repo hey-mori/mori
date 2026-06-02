@@ -13,7 +13,9 @@ export type {
 } from "./analysisTypes";
 export {
   DEFAULT_QUICK_PASS_SETTINGS,
+  resolveTaskModel,
   sanitizeQuickPassSettings,
+  type AnalysisTask,
   type QuickPassAnalysisSettings,
   type QuickPassProviderKind,
 } from "./analysisSettings";

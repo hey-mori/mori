@@ -23,6 +23,7 @@ import {
   createOllamaQuickPassProvider,
   createOpenAiCompatibleQuickPassProvider,
   getCurrentRun,
+  resolveTaskModel,
   sanitizeQuickPassSettings,
 } from "../lib/analysis";
 import { buildLlmRequestAbstraction, type DisclosureLevel } from "../lib/disclosure";
@@ -835,7 +836,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const { analysisSettings } = get();
     const result = await buildLlmRequestAbstraction(rawText, {
       endpoint: analysisSettings.ollamaEndpoint,
-      model: analysisSettings.ollamaModel,
+      model: resolveTaskModel(analysisSettings, "requestAbstraction"),
       timeoutMs: analysisSettings.ollamaTimeoutMs,
     });
     set((state) => ({
