@@ -140,7 +140,7 @@ help row so paste-based import remains the supported fallback.
 | `kind` | See "Event kinds" below |
 | `occurredAt` | ISO 8601 timestamp |
 | `summary` | Short, single-line human label |
-| `privacy.captureMethod` | One of `manual_paste` · `local_hook` · `local_cli_wrapper` · `local_desktop_command` · `planned_extension` |
+| `privacy.captureMethod` | One of `manual_paste` · `local_hook` · `local_cli_wrapper` · `local_desktop_command` · `local_mcp` · `planned_extension` |
 | `privacy.rawDataPolicy` | One of `summary_only` · `retained` · `redacted` · `reference_only` |
 | `provenance.toolName` | Free-form identifier of the tool that wrote the line |
 
@@ -266,6 +266,7 @@ five so the type matches the capture surface matrix:
 | `git` | Planned (legacy alias) |
 | `desktopTranscriptImport` | Manual-only today |
 | `githubPrImport` | Planned |
+| `mcpServer` | Docs-template-only (local MCP server → `~/.mori/connectors/mcp/`, `captureMethod: local_mcp`, maps to `aiConversation`) |
 | `manual` | Manual-only |
 
 The new `transcript_imported` event kind sits alongside the existing

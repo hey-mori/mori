@@ -165,6 +165,8 @@ function connectorLabel(connectorId: ConnectorId): string {
       return "Desktop transcript import";
     case "githubPrImport":
       return "GitHub PR import";
+    case "mcpServer":
+      return "MCP capture session";
     case "manual":
       return "Manual connector batch";
     default:
@@ -204,6 +206,12 @@ function mapConnectorToSourceKind(connectorId: ConnectorId, events: ConnectorEve
       // GitHub PR import is planned; until a richer path lands, treat the
       // imported text as a gitDiff-style source so existing helpers run.
       return "gitDiff";
+    case "mcpServer":
+      // An MCP host (Claude Desktop, etc.) explicitly hands Mori context via
+      // the local MCP server. Treat it as AI-conversation evidence so it flows
+      // through the existing transcript path; the MCP origin is preserved via
+      // connectorId + the "MCP capture session" source title.
+      return "aiConversation";
     case "manual":
       return "manualNote";
     default: {

@@ -78,6 +78,7 @@ export type CaptureSurfaceCaptureMode =
   | "plannedExtension"
   | "plannedApi"
   | "plannedMcp"
+  | "localMcp"
   | "manualAnalysis";
 
 export type CaptureSurfaceRawDataPolicy =
@@ -596,19 +597,22 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     label: "MCP server (Model Context Protocol)",
     toolFamily: "claude",
     surface: "extension",
-    status: "planned",
-    captureMode: "plannedMcp",
-    userActionRequired: "(미구현) 사용자가 Mori MCP 서버를 호스트 앱(Claude Desktop 등)에 등록.",
-    canCreateSource: false,
-    canCreateEvents: false,
-    canEnterImportReview: false,
+    status: "docsTemplateOnly",
+    captureMode: "localMcp",
+    userActionRequired:
+      "사용자가 Mori MCP 서버 템플릿을 호스트 앱(Claude Desktop 등)에 등록하고, 호스트 AI에게 capture 도구를 호출하도록 명시적으로 요청.",
+    canCreateSource: true,
+    canCreateEvents: true,
+    canEnterImportReview: true,
     rawDataPolicy: "summaryOnly",
     trustDefault: "observed",
-    privacyBoundary: "구현 시에도 호스트 앱이 보낸 데이터만 처리합니다. Mori가 호스트 앱을 자동으로 읽지 않습니다.",
-    whatMoriCanAccess: ["(구현 시) MCP host가 명시적으로 Mori에 보낸 컨텍스트"],
+    privacyBoundary:
+      "호스트 앱이 capture 도구로 명시적으로 보낸 데이터만 로컬 `~/.mori/connectors/mcp/` JSONL로 기록합니다. Mori가 호스트 앱 메모리를 자동으로 읽거나 네트워크로 보내지 않습니다.",
+    whatMoriCanAccess: ["MCP host가 capture 도구로 명시적으로 보낸 노트 · 세션 요약"],
     whatMoriNeverAccesses: ["호스트 앱 메모리", "auto-discovery", "background polling"],
-    setupRequirement: "MCP server 미구현.",
-    nextStep: "MCP 표준 안정화 + Mori transport 설계.",
+    setupRequirement:
+      "connectors/mcp/ 템플릿(MCP 서버)을 호스트에 등록. 가져오기는 Connector JSONL 인박스 → Import Review를 거칩니다.",
+    nextStep: "Connector JSONL Import 탭으로 이미 합류 가능; 다음 단계는 MCP 서버 등록을 돕는 in-app 가이드 + 도구 스키마 확장.",
     relatedIntegrationIds: ["claudeTranscript"],
   },
 ];

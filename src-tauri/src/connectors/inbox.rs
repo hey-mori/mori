@@ -18,6 +18,7 @@ const KNOWN_FAMILIES: &[&str] = &[
     "claude-code",
     "codex-cli",
     "opencode-cli",
+    "mcp",
     "terminal",
     "git",
     "other",

@@ -27,6 +27,7 @@ export type ConnectorId =
   | "git"
   | "desktopTranscriptImport"
   | "githubPrImport"
+  | "mcpServer"
   | "manual"
   | (string & {});
 
@@ -40,6 +41,7 @@ export const KNOWN_CONNECTOR_IDS = [
   "git",
   "desktopTranscriptImport",
   "githubPrImport",
+  "mcpServer",
   "manual",
 ] as const;
 
@@ -82,6 +84,7 @@ export type ConnectorCaptureMethod =
   | "local_hook"
   | "local_cli_wrapper"
   | "local_desktop_command"
+  | "local_mcp"
   | "planned_extension";
 
 export const CONNECTOR_CAPTURE_METHODS: readonly ConnectorCaptureMethod[] = [
@@ -89,6 +92,7 @@ export const CONNECTOR_CAPTURE_METHODS: readonly ConnectorCaptureMethod[] = [
   "local_hook",
   "local_cli_wrapper",
   "local_desktop_command",
+  "local_mcp",
   "planned_extension",
 ];
 

@@ -101,6 +101,20 @@ const GUIDES: Partial<Record<CaptureSurfaceId, ConnectorSetupGuide>> = {
     ],
     importNote: "스크립트가 쓴 JSONL을 이 행의 'Connector JSONL 가져오기'로 가져옵니다. watcher나 데몬은 없습니다.",
   },
+  mcpServer: {
+    surfaceId: "mcpServer",
+    templateDir: "connectors/mcp/",
+    steps: [
+      {
+        text: "MCP SDK를 설치하고 서버 템플릿을 호스트 앱(Claude Desktop 등)에 등록합니다.",
+        command: 'pip install "mcp[cli]"',
+      },
+      {
+        text: "호스트에서 AI에게 capture 도구를 명시적으로 호출하도록 요청하면 ~/.mori/connectors/mcp/에 JSONL이 기록됩니다.",
+      },
+    ],
+    importNote: "기록된 JSONL을 이 행의 'Connector JSONL 가져오기'로 가져옵니다. 호스트 앱 메모리나 네트워크는 읽지 않습니다.",
+  },
 };
 
 /** The setup guide for a capture surface, or null when none is needed. */

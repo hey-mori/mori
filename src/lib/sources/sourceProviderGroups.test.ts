@@ -76,8 +76,11 @@ describe("buildSourceProviderGroups", () => {
     const plannedIds = groups.planned.map((provider) => provider.id);
     // Future integrations and planned-only surfaces live here.
     expect(plannedIds).toContain("ide");
-    expect(plannedIds).toContain("mcp");
     expect(plannedIds.length).toBeGreaterThan(0);
+    // MCP is now a docs-template capture path (a local server writing connector
+    // JSONL), so it is a live evidence provider, not a planned chip.
+    const evidenceIds = groups.evidence.map((provider) => provider.id);
+    expect(evidenceIds).toContain("mcp");
     // No live agent ever lands in the planned bucket.
     for (const id of ["claude", "chatgpt", "codex", "opencode", "antigravity"]) {
       expect(plannedIds).not.toContain(id);
