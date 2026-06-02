@@ -28,6 +28,7 @@ const HUB_HIDDEN_INTEGRATION_IDS = new Set(["repository", "quickPass", "tauriGit
 const AVAILABLE_HUB_ORDER: string[] = [
   "claudeTranscript",
   "chatgptTranscript",
+  "codexTranscript",
   "aiConversation",
   "gitDiff",
   "connectorJsonl",
@@ -39,7 +40,6 @@ const AVAILABLE_HUB_ORDER: string[] = [
  * Stable hub order for the "Planned connectors" row.
  */
 const PLANNED_HUB_ORDER: string[] = [
-  "codexTranscript",
   "vscode",
   "cursor",
   "terminal",

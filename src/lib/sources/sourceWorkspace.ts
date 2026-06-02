@@ -491,8 +491,7 @@ function fromImportIntegration(
   integration: SourceIntegration,
   input: BuildControlCenterInput,
 ): SourceWorkspaceSource {
-  const status: SourceWorkspaceStatus =
-    integration.id === "codexTranscript" ? "available" : statusFromIntegration(integration.status);
+  const status: SourceWorkspaceStatus = statusFromIntegration(integration.status);
   const display = statusLabel(status);
   const actionEnabled = input.hasActiveSession && status === "available";
   const isChatGpt = integration.id === "chatgptTranscript";
@@ -530,7 +529,7 @@ function fromImportIntegration(
     },
     likelyFiles: LIKELY_FILES_BY_SOURCE_ID.aiTranscriptPaste ?? [],
     testsNeeded: TESTS_BY_SOURCE_ID.aiTranscriptPaste ?? [],
-    safeToImplementNow: integration.status === "implemented" || integration.id === "codexTranscript",
+    safeToImplementNow: integration.status === "implemented",
   };
 }
 

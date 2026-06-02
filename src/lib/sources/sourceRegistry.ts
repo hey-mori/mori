@@ -371,12 +371,12 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
   codexTranscript: {
     id: "codexTranscript",
     label: "Codex Transcript",
-    description: "GitHub Copilot / Codex 상호작용 기록",
-    status: "planned",
+    description: "Codex CLI 세션 자동 감지 또는 transcript 붙여넣기로 가져온 Codex 대화 기록",
+    status: "implemented",
     trustDefault: "verified",
     rawDataPolicy: "summaryOnly",
     captureMode: "explicitImport",
-    privacyNote: "예정: 명시적인 Codex 기록 가져오기입니다. 사용자가 가져올 세션을 직접 고릅니다.",
+    privacyNote: "사용자가 Codex 대화 텍스트를 붙여넣거나, 연결 페이지에서 Codex CLI 세션(~/.codex/sessions)을 명시적으로 선택해 가져옵니다. 자동 백그라운드 캡처는 없습니다.",
     supportedInputTypes: ["application/json", "text/plain"],
     outputRecords: {
       sources: true,

@@ -64,6 +64,7 @@ describe("sourceRegistry", () => {
       expect(implementedIds).toContain("aiConversation");
       expect(implementedIds).toContain("claudeTranscript");
       expect(implementedIds).toContain("chatgptTranscript");
+      expect(implementedIds).toContain("codexTranscript");
       expect(implementedIds).toContain("gitDiff");
       expect(implementedIds).toContain("tauriGitDiff");
       expect(implementedIds).toContain("repository");
@@ -73,7 +74,6 @@ describe("sourceRegistry", () => {
       expect(implementedIds).not.toContain("terminal");
       expect(implementedIds).not.toContain("vscode");
       expect(implementedIds).not.toContain("slack");
-      expect(implementedIds).not.toContain("codexTranscript");
     });
 
     it("marks planned integrations correctly", () => {
@@ -86,7 +86,6 @@ describe("sourceRegistry", () => {
       expect(plannedIds).toContain("vscode");
       expect(plannedIds).toContain("cursor");
       expect(plannedIds).toContain("browserTab");
-      expect(plannedIds).toContain("codexTranscript");
       expect(plannedIds).toContain("docs");
       expect(plannedIds).toContain("slack");
       expect(plannedIds).toContain("figma");
@@ -97,6 +96,7 @@ describe("sourceRegistry", () => {
       expect(plannedIds).not.toContain("url");
       expect(plannedIds).not.toContain("claudeTranscript");
       expect(plannedIds).not.toContain("chatgptTranscript");
+      expect(plannedIds).not.toContain("codexTranscript");
     });
 
     it("sets correct trust defaults", () => {

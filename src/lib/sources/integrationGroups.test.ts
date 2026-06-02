@@ -58,7 +58,6 @@ describe("integrationGroups", () => {
 
     it("includes the connectors documented in the screen reference", () => {
       const ids = getHubPlannedIntegrations().map((entry) => entry.id);
-      expect(ids).toContain("codexTranscript");
       expect(ids).toContain("vscode");
       expect(ids).toContain("cursor");
       expect(ids).toContain("terminal");
@@ -75,6 +74,7 @@ describe("integrationGroups", () => {
       expect(ids).not.toContain("aiConversation");
       expect(ids).not.toContain("claudeTranscript");
       expect(ids).not.toContain("chatgptTranscript");
+      expect(ids).not.toContain("codexTranscript");
       expect(ids).not.toContain("gitDiff");
     });
   });
@@ -148,12 +148,12 @@ describe("integrationGroups", () => {
       expect(getHubCardActionLabel(SOURCE_REGISTRY.gitDiff)).toMatch(/Git/);
       expect(getHubCardActionLabel(SOURCE_REGISTRY.claudeTranscript)).toMatch(/AI/);
       expect(getHubCardActionLabel(SOURCE_REGISTRY.chatgptTranscript)).toMatch(/AI/);
+      expect(getHubCardActionLabel(SOURCE_REGISTRY.codexTranscript)).toMatch(/AI/);
     });
 
     it("marks planned integrations with the 예정 label, not an active verb", () => {
       expect(getHubCardActionLabel(SOURCE_REGISTRY.vscode)).toBe("예정");
       expect(getHubCardActionLabel(SOURCE_REGISTRY.slack)).toBe("예정");
-      expect(getHubCardActionLabel(SOURCE_REGISTRY.codexTranscript)).toBe("예정");
     });
   });
 });
