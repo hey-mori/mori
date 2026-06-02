@@ -21,3 +21,10 @@ export {
   isUserRequestEvent,
   projectEventRequestSummary,
 } from "./eventDisclosure";
+export {
+  buildLlmRequestAbstraction,
+  parseAbstractionJson,
+  type LlmRequestAbstractionConfig,
+  type LlmRequestAbstractionDeps,
+  type LlmRequestAbstractionResult,
+} from "./llmRequestAbstraction";
