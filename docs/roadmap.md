@@ -24,6 +24,10 @@ Related directional notes:
   (홈 · 소스 · 대시보드 · 워크벤치) organized by axis rather than data type, with
   the single-project page demoted to a drill-through and one consistent rule
   for right-side inspector panels.
+- [Live Project Intelligence](live-project-intelligence.md) records the
+  planning contract for opt-in connected-project awareness. It extends the
+  existing session-scoped Live Follow boundary into project Summary / Signal
+  surfaces without adding a background watcher or bypassing Import Review.
 
 ## Phase 0: UI Prototype
 
@@ -192,6 +196,57 @@ Not included yet:
 
 - Acting as an autonomous coding agent
 - Automatically changing source files
+
+## Live Project Intelligence Track (Planning)
+
+Goal: make connected AI work understandable while preserving Mori's explicit
+local capture and review-before-apply model.
+
+This track is intentionally ordered from session-scoped evidence to project
+summary. Project-level intelligence should not ship before the narrower Live
+Follow shell is honest and end-to-end verified.
+
+This section is a planning track, not a claim that the corresponding UI
+capabilities are already present in the feature-status registry. Add registry
+rows when a slice becomes a rendered planned control or a shipped capability.
+
+Key slices:
+
+1. **Live Follow desktop shell.** Wire the existing pure follow controller and
+   poll orchestration into a foreground desktop loop: start / pause / stop,
+   read one followed session's connector file, import genuinely new pending
+   events, trigger incremental analysis, and produce one low-noise feed update.
+2. **Project connection mapping.** Add a user-confirmed mapping from Mori
+   project to external project key / repository identity / connector family,
+   rather than trusting raw paths or `sourceLabel` alone.
+3. **External session status.** Track discovered / following / paused /
+   needs-review / analyzing / blocked / completed / error states for external
+   agent sessions associated with the project.
+4. **Project current-state strip.** Add a project Summary surface that reports
+   active sessions, waiting items, blocked sessions, and the latest meaningful
+   update from accepted and clearly labelled pending evidence.
+5. **Signal promotion policy.** Promote only decision-needed, completed, and
+   blocked notifications first; keep risk/conflict as in-app candidates until
+   evidence, ranking, and mute controls are mature.
+6. **Local LLM insight candidates.** Run local/deterministic analysis over
+   compact event digests, emit inferred candidates with supporting event ids,
+   and require review/adoption before durable Project Memory.
+
+Expected output:
+
+- A user can follow a still-running AI session while Mori is open.
+- A project page can explain what is currently active, waiting, or blocked.
+- A notification points to evidence and never fires for raw trace noise.
+- Local LLM output is useful but visibly inferred and correctable.
+
+Not included yet:
+
+- Always-on machine monitoring.
+- Applying connector events directly to durable memory without review.
+- Reading agent private databases, browser stores, account data, or opaque
+  internal formats.
+- Cross-agent orchestration or automatic source-code changes.
+- OS-level notifications for every risk or file change.
 
 ## Memory Orchestrator Roadmap
 
