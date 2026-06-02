@@ -63,7 +63,7 @@ so the UI can derive labels and badges from a single source of truth.
 | Browser extension | browser | extension | Planned | No |
 | GitHub PR / commit import | git | web | Planned | No |
 | File / document import | document | localFile | Planned | No |
-| MCP server | claude | extension | Planned | No |
+| MCP server | claude | extension | **Docs-template-only** | Yes (via parser) |
 
 ## Per-surface honesty notes
 
@@ -124,8 +124,15 @@ Specifically:
   [`github-pr-import.md`](./github-pr-import.md).
 - **File / document import** — explicit Tauri file picker. No
   directory scanning, no recent-files tracking.
-- **MCP server** — Mori would expose a context endpoint that a Claude
-  Desktop / etc. host calls explicitly. Still planned.
+- **MCP server** — a local MCP server template
+  (`connectors/mcp/mori-mcp-server.py`) exposes `capture_note` /
+  `capture_session` tools that a Claude Desktop / etc. host calls
+  explicitly. Each call appends a connector event (`connectorId:
+  "mcpServer"`, `captureMethod: "local_mcp"`) to
+  `~/.mori/connectors/mcp/`, which imports through the normal Connector
+  JSONL → Import Review path. The server only writes a local JSONL file;
+  it never reads the host's memory, polls, or uses the network. A turnkey
+  in-host registration helper is the remaining follow-up.
 
 ## Helpers
 
