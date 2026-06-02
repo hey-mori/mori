@@ -48,6 +48,8 @@ fn main() {
             connectors::inbox::list_connector_jsonl_inbox,
             connectors::inbox::read_connector_jsonl_file,
             connectors::installer::detect_connector_status,
+            connectors::mcp_setup::stage_mcp_server,
+            connectors::mcp_setup::mcp_server_target_path,
             connectors::installer::install_claude_hook,
             connectors::installer::uninstall_claude_hook,
             claude::desktop::discover_claude_desktop,

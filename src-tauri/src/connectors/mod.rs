@@ -30,3 +30,4 @@
 
 pub mod inbox;
 pub mod installer;
+pub mod mcp_setup;
