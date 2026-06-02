@@ -5559,3 +5559,100 @@ td a {
   text-decoration: underline;
 }
 
+/* ─── Analysis run history (re-analysis review) ─────────────────────── */
+.analysis-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: var(--base-space-4) 0;
+  padding: var(--base-space-4) var(--base-space-5);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-soft);
+}
+
+.analysis-runs-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.analysis-runs-provider {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.analysis-runs-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.analysis-runs-disclosure > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--purple);
+  list-style: none;
+}
+
+.analysis-runs-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.analysis-runs-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.analysis-run-row {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--base-surface);
+}
+
+.analysis-run-row.is-current {
+  border-color: var(--purple-50);
+  background: var(--purple-50);
+}
+
+.analysis-run-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.analysis-run-row-provider {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.analysis-run-row-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--purple);
+}
+
+.analysis-run-row-meta {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.analysis-run-row-change {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--muted-2);
+}
+
+.analysis-run-row-change.is-base {
+  font-style: italic;
+}
+

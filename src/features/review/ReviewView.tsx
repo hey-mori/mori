@@ -37,6 +37,7 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
+import { AnalysisRunHistoryPanel } from "./AnalysisRunHistoryPanel";
 import { formatDateTime } from "../../lib/formatting/time";
 
 type ReviewColumn = "issue" | "decision" | "nextAction";
@@ -357,6 +358,8 @@ export function ReviewView() {
       />
 
       {toolbar}
+
+      <AnalysisRunHistoryPanel />
 
       {showQuickPassEmpty ? (
         <EmptyState
