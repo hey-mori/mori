@@ -36,10 +36,18 @@ if (-not $Session) {
 $task = ($Command -join " ")
 if ($task.Length -gt 280) { $task = $task.Substring(0, 280) }
 
+# Write UTF-8 without a BOM. Windows PowerShell 5.1's `Add-Content -Encoding
+# utf8` prepends a BOM, which corrupts the first JSONL line for strict
+# parsers. Build the middle-dot separator from its code point so this script
+# stays pure ASCII on disk; PS 5.1 reads a BOM-less .ps1 as the system
+# codepage (cp949 here), which would otherwise mangle a literal "·".
+$Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+$Dot = [char]0x00B7
+
 function Now { (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
 function Emit($obj) {
   $line = $obj | ConvertTo-Json -Depth 6 -Compress
-  Add-Content -LiteralPath $outFile -Value $line -Encoding utf8
+  [System.IO.File]::AppendAllText($outFile, $line + "`n", $Utf8NoBom)
 }
 
 $startNow = Now
@@ -83,13 +91,21 @@ Emit @{
   occurredAt   = $endNow
   sessionId    = $Session
   command      = "opencode ($task)"
-  summary      = "OpenCode run · exit $exitCode · ${durationMs}ms"
+  summary      = "OpenCode run $Dot exit $exitCode $Dot ${durationMs}ms"
   privacy      = @{ captureMethod = "local_cli_wrapper"; rawDataPolicy = "summary_only" }
   provenance   = @{ toolName = "mori-opencode-wrapper.ps1"; toolVersion = "0.1.0" }
 }
 
 if ($Git) {
-  $stat = (& git diff --shortstat 2>$null) -join " "
+  # git writes benign warnings (e.g. LF/CRLF) to stderr; under
+  # ErrorActionPreference=Stop PS 5.1 turns that into a terminating
+  # NativeCommandError that would crash the wrapper after the run. Relax it
+  # locally and discard stderr.
+  $stat = ""
+  $prevEap = $ErrorActionPreference
+  $ErrorActionPreference = "SilentlyContinue"
+  try { $stat = ((& git diff --shortstat 2>$null) -join " ").Trim() } catch { $stat = "" }
+  $ErrorActionPreference = $prevEap
   if ($stat) {
     Emit @{
       id           = "opencode-git-$Session"
@@ -111,7 +127,7 @@ Emit @{
   kind         = "session_finished"
   occurredAt   = $endNow
   sessionId    = $Session
-  summary      = "OpenCode session finished · exit $exitCode"
+  summary      = "OpenCode session finished $Dot exit $exitCode"
   privacy      = @{ captureMethod = "local_cli_wrapper"; rawDataPolicy = "summary_only" }
   provenance   = @{ toolName = "mori-opencode-wrapper.ps1"; toolVersion = "0.1.0" }
 }
