@@ -871,11 +871,11 @@
   box-shadow: 0 12px 30px rgba(78, 62, 145, 0.1);
 }
 
-/* ── Console + live results — the "Response" layer ─────────────────────────────
+/* ── Console + live results · the "Response" layer ─────────────────────────────
    The bar, the result dropdown, and the lens rail form one cluster. Focusing
    the field turns the calm landing into a small work surface: results unfold
    below the bar and the ambient background recedes so the panel reads clearly.
-   No left-border accent bar on the active row (an AI-cliché) — a calm lavender
+   No left-border accent bar on the active row (an AI-cliché). A calm lavender
    tint marks it instead. */
 .mcs-console {
   position: relative;
@@ -894,8 +894,15 @@
   opacity: 0.4;
 }
 
+/* Floated out of flow, anchored just under the bar + lens cluster, so opening
+   the panel never pushes the title / bar / lenses around. They hold still and
+   the panel simply fades into the empty space below. */
 .mcs-results {
-  width: 100%;
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  right: 0;
+  z-index: 5;
   max-height: min(46vh, 432px);
   overflow-y: auto;
   padding: 6px;

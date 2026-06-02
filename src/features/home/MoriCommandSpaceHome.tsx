@@ -318,7 +318,7 @@ export function MoriCommandSpaceHome() {
                       className={active ? "is-active" : undefined}
                       // Switching lens keeps the caret in the input, so an open
                       // result panel re-shapes under the new mode without losing
-                      // focus — and clicking a lens from idle never pops a panel.
+                      // focus, and clicking a lens from idle never pops a panel.
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => setActiveModeId(mode.id)}
                     >

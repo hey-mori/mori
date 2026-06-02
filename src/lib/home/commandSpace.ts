@@ -2,7 +2,7 @@ import type { ViewKey } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 
 /**
- * Mori Command Space — pure result derivation.
+ * Mori Command Space: pure result derivation.
  *
  * The home command bar is not a dead search box: the moment the field is
  * engaged it becomes a small work surface. This module turns the three live
@@ -12,10 +12,10 @@ import type { StoredSessionSummary } from "../storage/storageTypes";
  * without mounting React, and the component stays a thin renderer.
  *
  * Two row families:
- *   - `action`  — the verb the active mode performs, worded with the query.
- *                 Always present, so the panel is never empty.
- *   - context   — `session` / `project` rows drawn from the user's real data,
- *                 filtered by the query (or the most-recent few when idle).
+ *   - `action`: the verb the active mode performs, worded with the query.
+ *     Always present, so the panel is never empty.
+ *   - context: `session` / `project` rows drawn from the user's real data,
+ *     filtered by the query (or the most-recent few when idle).
  */
 
 export type CommandModeId = "find" | "shape" | "create" | "review" | "connect";
@@ -201,7 +201,7 @@ function matchProjects(
       kind: "project",
       id: `project:${project.key}`,
       label: project.label,
-      // A path hint only when it adds information beyond the display name —
+      // A path hint only when it adds information beyond the display name,
       // never a redundant session count.
       hint: project.key !== project.label ? project.key : undefined,
       projectKey: project.key,
