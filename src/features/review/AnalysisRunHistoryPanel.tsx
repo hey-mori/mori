@@ -45,9 +45,8 @@ export function AnalysisRunHistoryPanel() {
       <div className="analysis-runs-current">
         <span className="analysis-runs-provider">{current.providerLabel}</span>
         <span className="analysis-runs-meta">
-          {formatClaudeRelativeKo(current.generatedAt)} · 신뢰도{" "}
-          {Math.round(current.confidence * 100)}% · 이슈 {current.reason.elementCounts.issues} ·
-          결정 {current.reason.elementCounts.decisions}
+          {formatClaudeRelativeKo(current.generatedAt)} · 이슈{" "}
+          {current.reason.elementCounts.issues} · 결정 {current.reason.elementCounts.decisions}
         </span>
         <InfoHint label="분석 기록 설명">
           분석을 다시 실행해도 이전 분석은 사라지지 않고 기록으로 남습니다. 각 실행은 사용한 모델,
@@ -80,8 +79,7 @@ export function AnalysisRunHistoryPanel() {
                   )}
                 </div>
                 <div className="analysis-run-row-meta">
-                  {formatClaudeRelativeKo(row.generatedAt)} · 신뢰도{" "}
-                  {Math.round(row.confidence * 100)}%
+                  {formatClaudeRelativeKo(row.generatedAt)}
                 </div>
                 <div
                   className={`analysis-run-row-change${row.changeSummary ? "" : " is-base"}`}
