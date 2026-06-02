@@ -76,6 +76,7 @@ function resetStore() {
     requestAbstractions: {},
     requestDisclosureOverrides: {},
     follow: initialFollowState(),
+    followNotifications: [],
     source: "demo",
   });
 }
@@ -1144,6 +1145,12 @@ describe("useSessionStore live follow orchestration", () => {
     expect(reaction).toEqual({ shouldReanalyze: true, shouldNotify: true, newCount: 1 });
     expect(useSessionStore.getState().follow.pendingEventIds).toEqual([]);
     expect(useSessionStore.getState().follow.knownEventIds).toEqual(["e1", "e2"]);
+
+    // The reacting poll captured a feed notification.
+    const notes = useSessionStore.getState().followNotifications;
+    expect(notes).toHaveLength(1);
+    expect(notes[0].kind).toBe("live_follow_update");
+    expect(notes[0].message).toContain("1");
   });
 
   it("pauses, resumes, and stops following", () => {

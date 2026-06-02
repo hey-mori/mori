@@ -34,6 +34,8 @@ import {
   type FollowReaction,
   type FollowState,
 } from "../lib/live-follow";
+import { buildFollowNotification } from "../lib/notifications/followNotifications";
+import type { CompanionNotification } from "../lib/notifications/notification";
 
 /** Stored per-event local-LLM request abstraction (or its deterministic fallback). */
 export type RequestAbstractionEntry = {
@@ -152,6 +154,13 @@ export type SessionState = {
    * explicit, session-scoped, and foreground only, never a daemon.
    */
   follow: FollowState;
+  /**
+   * Live Follow feed notifications captured at poll time (pending events
+   * are consumed on reaction, so the notice is recorded here when it
+   * fires). The notifications hook surfaces these in the cross-session
+   * feed. Ephemeral, in-memory, aged out by the feed's recency sort.
+   */
+  followNotifications: CompanionNotification[];
   source: SessionSource;
   /**
    * Bumped whenever a data reset wipes stored sessions
@@ -418,6 +427,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   requestAbstractions: {},
   requestDisclosureOverrides: {},
   follow: initialFollowState(),
+  followNotifications: [],
   source: "demo",
   dataResetNonce: 0,
   dataSource: createStaticMockDataSource(demoView),
@@ -897,14 +907,33 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
   },
   applyFollowPoll: (incomingEventIds, at) => {
-    const polled = followReducer(get().follow, { type: "poll", incomingEventIds, at });
+    const state = get();
+    const polled = followReducer(state.follow, { type: "poll", incomingEventIds, at });
     const reaction = decideFollowReaction(polled);
     // Consume pending only when a reaction fires, so a sub-threshold poll
     // keeps accumulating until enough new events arrive.
     const next = reaction.shouldReanalyze
       ? followReducer(polled, { type: "consumePending" })
       : polled;
-    set({ follow: next });
+    // Capture the feed notice now: pending is cleared on reaction, so it
+    // cannot be derived from follow state later.
+    const notification =
+      reaction.shouldNotify && polled.sessionId
+        ? buildFollowNotification({
+            shouldNotify: true,
+            newCount: reaction.newCount,
+            sessionId: polled.sessionId,
+            sessionTitle: state.draft?.session.title,
+            projectLabel: state.draft?.project.name,
+            at,
+          })
+        : null;
+    set({
+      follow: next,
+      followNotifications: notification
+        ? [...state.followNotifications, notification]
+        : state.followNotifications,
+    });
     return reaction;
   },
   pauseFollow: () => set({ follow: followReducer(get().follow, { type: "pause" }) }),

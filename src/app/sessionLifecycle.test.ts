@@ -22,6 +22,7 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     requestAbstractions: {},
     requestDisclosureOverrides: {},
     follow: initialFollowState(),
+    followNotifications: [],
     source: "demo",
     dataResetNonce: 0,
     dataSource: createStaticMockDataSource<SessionViewModel>({} as SessionViewModel),

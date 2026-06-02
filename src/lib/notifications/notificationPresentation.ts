@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bell,
   CheckCircle2,
   FileText,
@@ -41,6 +42,8 @@ export function notificationIcon(kind: CompanionNotificationKind): LucideIcon {
       return Lightbulb;
     case "important_decision":
       return Sparkles;
+    case "live_follow_update":
+      return Activity;
     case "demo_mode_notice":
     default:
       return Bell;
