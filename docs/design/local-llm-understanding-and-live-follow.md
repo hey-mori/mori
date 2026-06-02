@@ -176,11 +176,22 @@ bypasses a review gate.
    a disclosure with per-run diff + adopt action when multiple runs
    exist). Confidence % is intentionally not shown (internal-vocabulary
    rule).
-4. **Disclosure level (projection).** Per-element disclosure level with
-   a configurable default; non-destructive projection over stored
-   elements. Wire into Review / Timeline / Resume Prompt rendering.
-5. **Request abstraction pass.** A provider pass that produces an intent
-   line for a request message; feeds the `abstract` disclosure level.
+4. **Disclosure level (projection).** Foundation shipped:
+   `disclosureLevel.ts` (`raw` / `summary` / `abstract` / `hidden`,
+   Korean labels, `projectDisclosure` with privacy-monotonic fallback so
+   a missing variant never leaks a less-private one). First real
+   consumer wired (see slice 5). Remaining: a Settings control,
+   per-element overrides (today one persisted global level), and
+   applying disclosure to more surfaces (Resume Prompt, Reports, other
+   event renders).
+5. **Request abstraction + first wiring.** Shipped:
+   `requestAbstraction.ts` (`buildRequestAbstraction` /
+   `classifyRequestIntent`, deterministic, content-free intent line, the
+   always-available floor). Wired into the Event Inspector: a user's own
+   request summary is projected at a persisted `requestDisclosureLevel`
+   (`QuickPassAnalysisSettings`, default `raw`) via a segmented control,
+   storage always keeps the original. Remaining: a local-LLM-backed
+   abstraction that enriches the intent line.
 6. **Local LLM connectivity depth.** LM Studio surface, a model
    registry, and per-task model routing on top of the existing
    provider settings.
@@ -201,11 +212,16 @@ bypasses a review gate.
 
 ## 7. Status
 
-Slices 1 to 3 shipped: the explainable re-analysis spine is complete
-end to end (pure helper, persistence, store, and a visible Review-tab
-panel). Re-running Quick Pass with a different local model now keeps
-every run, shows what changed, and lets the user adopt any run as the
-live understanding, with the model and timing of each run inspectable.
+Pillar 1 (explainable re-analysis, slices 1 to 3) shipped end to end:
+re-running Quick Pass keeps every run, shows what changed, and lets the
+user adopt any run, with each run's model and timing inspectable.
 
-Next: slice 4 (per-element disclosure / projection), the foundation for
-"store everything, show by setting" and request abstraction.
+Pillar 2 (store everything, show by setting) has its first end-to-end
+slice: the disclosure projection + deterministic request abstraction
+(slices 4 to 5) are wired into the Event Inspector, where a user's own
+request text shows at a chosen level (`원문` / `요약` / `요지` / `숨김`),
+persisted, with the original always stored.
+
+Next: deepen pillar 2 (Settings control, per-element overrides, more
+surfaces, LLM-backed abstraction), then slice 6 (local LLM
+connectivity depth) and slice 7 (Live Follow).
