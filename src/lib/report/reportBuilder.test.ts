@@ -41,6 +41,42 @@ describe("buildReportMarkdown", () => {
     expect(payload.counts.sources).toBe(mockSession.sources.length);
   });
 
+  it("withholds a user's request text in the timeline at non-raw disclosure levels", () => {
+    const base = mockSession.events[0];
+    const userEvent = {
+      ...base,
+      id: "evt-user-req",
+      actor: "user" as const,
+      type: "aiConversation" as const,
+      title: "요청",
+      summary: "비밀 요청 원문 텍스트를 고쳐줘",
+    };
+    const view = { ...mockSession, events: [userEvent] };
+    const sections = new Set<ReportSectionId>(["timeline"]);
+
+    const raw = buildReportMarkdown({ view, type: "workLog", sections, privacy: privacy() });
+    expect(raw.markdown).toContain("비밀 요청 원문 텍스트를 고쳐줘");
+
+    const abstract = buildReportMarkdown({
+      view,
+      type: "workLog",
+      sections,
+      privacy: privacy(),
+      requestDisclosureLevel: "abstract",
+    });
+    expect(abstract.markdown).not.toContain("비밀 요청 원문");
+    expect(abstract.markdown).toContain("사용자가 수정·디버깅을 요청함");
+
+    const hidden = buildReportMarkdown({
+      view,
+      type: "workLog",
+      sections,
+      privacy: privacy(),
+      requestDisclosureLevel: "hidden",
+    });
+    expect(hidden.markdown).not.toContain("비밀 요청 원문");
+  });
+
   it("warns and tags the source list when a source is a partial capture", () => {
     const [firstSource, ...restSources] = mockSession.sources;
     const payload = buildReportMarkdown({

@@ -19,6 +19,7 @@ import {
 import { buildReportHtmlDocument } from "../../lib/report/reportHtml";
 import { renderReportMarkdownToHtml } from "../../lib/report/reportHtml";
 import { getFeatureControlProps, type FeatureId } from "../../app/featureStatus";
+import { useSessionStore } from "../../app/sessionStore";
 
 // Format status is sourced from the feature registry so the panel can never
 // drift from `docs/feature-status.md` or the rest of the app.
@@ -101,6 +102,9 @@ export function ReportBuilderPanel({
   }
 
   const privacy = useMemo(() => buildPrivacyFromShare(externalShare), [externalShare]);
+  const requestDisclosureLevel = useSessionStore(
+    (state) => state.analysisSettings.requestDisclosureLevel,
+  );
 
   const payload = useMemo(
     () =>
@@ -111,8 +115,9 @@ export function ReportBuilderPanel({
         privacy,
         resumePromptOverride,
         acceptedMemories,
+        requestDisclosureLevel,
       }),
-    [view, sections, privacy, resumePromptOverride, acceptedMemories],
+    [view, sections, privacy, resumePromptOverride, acceptedMemories, requestDisclosureLevel],
   );
 
   async function handleCopyMarkdown() {

@@ -8,6 +8,7 @@ import type {
   TimelineEvent,
 } from "../../domain/types";
 import { eventTypeLabels } from "../../domain/constants";
+import { projectEventRequestSummary, type DisclosureLevel } from "../disclosure";
 import {
   isNextActionCompleted,
   splitNextActionsByCompletion,
@@ -154,6 +155,12 @@ export type ReportInput = {
    * omitting it produces the live-session-only report, as before.
    */
   acceptedMemories?: readonly StoredAcceptedProjectMemory[];
+  /**
+   * How a user's own request events render in the timeline section. The
+   * report is a handoff surface, so a withheld request must not leak the
+   * original here. Defaults to `raw` (unchanged output) when omitted.
+   */
+  requestDisclosureLevel?: DisclosureLevel;
 };
 
 export type ReportPayload = {
@@ -175,6 +182,7 @@ export type ReportPayload = {
  */
 export function buildReportMarkdown(input: ReportInput): ReportPayload {
   const { view, type, sections, privacy } = input;
+  const requestDisclosureLevel = input.requestDisclosureLevel ?? "raw";
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const typeDef = REPORT_TYPE_DEFINITIONS.find((entry) => entry.id === type) ?? REPORT_TYPE_DEFINITIONS[0];
   const summary = getReportEvidenceSummary(view);
@@ -249,7 +257,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
       lines.push("_타임라인 이벤트가 없습니다._");
     } else {
       for (const event of timelineEvents) {
-        lines.push(renderTimelineLine(event, privacy));
+        lines.push(renderTimelineLine(event, privacy, requestDisclosureLevel));
       }
     }
     lines.push("");
@@ -381,14 +389,20 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   };
 }
 
-function renderTimelineLine(event: TimelineEvent, privacy: ReportPrivacyOptions): string {
+function renderTimelineLine(
+  event: TimelineEvent,
+  privacy: ReportPrivacyOptions,
+  requestDisclosureLevel: DisclosureLevel,
+): string {
   const time = formatIso(event.start);
   const typeLabel = eventTypeLabels[event.type] ?? event.type;
   const title = event.title;
   if (privacy.clientSafe) {
     return `- \`${time}\` **${title}** _(${typeLabel})_`;
   }
-  const summary = (event.summary || "").trim();
+  // A user's own request obeys the disclosure level so a withheld request
+  // does not leak its original text into an exported / handoff report.
+  const summary = projectEventRequestSummary(event, requestDisclosureLevel).text.trim();
   return `- \`${time}\` **${title}** _(${typeLabel})_${summary ? ` — ${truncate(summary, 220)}` : ""}`;
 }
 
