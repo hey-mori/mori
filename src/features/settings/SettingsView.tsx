@@ -28,6 +28,7 @@ import { getProductRuntimeLabel } from "../../lib/product-state/productState";
 import { LocalAiCard } from "./LocalAiCard";
 import { PrivacyDefaultsCard } from "./PrivacyDefaultsCard";
 import { PrivacyGuaranteesCard } from "./PrivacyGuaranteesCard";
+import { RequestDisclosureCard } from "./RequestDisclosureCard";
 import { StorageCard } from "./StorageCard";
 import { RepositoriesCard } from "./RepositoriesCard";
 import { ThemeCard } from "./ThemeCard";
@@ -143,6 +144,7 @@ export function SettingsView() {
         {activeTab === "privacy" ? (
           <>
             <PrivacyDefaultsCard />
+            <RequestDisclosureCard />
             <PrivacyGuaranteesCard />
           </>
         ) : null}
