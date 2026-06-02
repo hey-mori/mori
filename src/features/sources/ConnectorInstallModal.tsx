@@ -2,7 +2,7 @@ import { Bot, Code2, Rocket, Sparkles, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { Button } from "../../components/ui/Button";
-import { trapTabKey } from "../../components/ui/focusTrap";
+import { focusFirstElement, trapTabKey } from "../../components/ui/focusTrap";
 import {
   connectClaudeHook,
   loadConnectorStatus,
@@ -16,6 +16,8 @@ const ICONS: Record<ConnectorInstallerId, LucideIcon> = {
   "codex-cli": Code2,
   antigravity: Rocket,
 };
+
+const TITLE_ID = "connector-install-modal-title";
 
 /**
  * Agent connect modal. Detects each agent's status and, for the Claude hook
@@ -49,6 +51,9 @@ export function ConnectorInstallModal({ onClose }: { onClose: () => void }) {
     document.addEventListener("keydown", onKey);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Match SettingsSheet: focus the first focusable element on the next paint
+    // so the modal is immediately keyboard-actionable.
+    window.requestAnimationFrame(() => focusFirstElement(dialogRef.current));
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
@@ -77,12 +82,12 @@ export function ConnectorInstallModal({ onClose }: { onClose: () => void }) {
         className="connector-install-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="에이전트 연동"
+        aria-labelledby={TITLE_ID}
         tabIndex={-1}
       >
         <header className="settings-sheet-head">
           <div className="settings-sheet-title">
-            <strong>에이전트 연동</strong>
+            <strong id={TITLE_ID}>에이전트 연동</strong>
           </div>
           <button
             type="button"
@@ -94,7 +99,7 @@ export function ConnectorInstallModal({ onClose }: { onClose: () => void }) {
             <X size={16} aria-hidden="true" />
           </button>
         </header>
-        <div className="connector-install-modal-body">
+        <main className="connector-install-modal-body base-scroll">
           {models === null ? (
             <p className="connector-install-note">감지하는 중...</p>
           ) : (
@@ -133,11 +138,11 @@ export function ConnectorInstallModal({ onClose }: { onClose: () => void }) {
           )}
           {error ? <p className="connector-install-error">{error}</p> : null}
           <p className="connector-install-note">
-            Claude는 전역 설정(~/.claude/settings.json)에 훅을 연결합니다. 요약만
-            기록하고, 가져오기는 검토를 거칩니다. Codex · Antigravity는 자동 감지라
-            연결이 필요 없습니다.
+            훅 기반 에이전트는 전역 설정(`~/.claude/settings.json` 등)에 훅을
+            연결합니다. 요약만 기록하고, 가져오기는 검토를 거칩니다. 기록 기반
+            자동 감지 에이전트는 따로 연결할 필요가 없습니다.
           </p>
-        </div>
+        </main>
       </div>
     </div>
   );
@@ -154,35 +159,40 @@ function ConnectorAction({
   onConnect: () => void;
   onDisconnect: () => void;
 }) {
-  // Session-discovery agents (Codex / Antigravity) are captured automatically;
-  // there is nothing to wire.
+  // Session-discovery agents (Codex, Antigravity, future discovery anchors) are
+  // captured automatically; there is nothing to wire.
   if (model.captureModel === "session-discovery") {
     return <span className="connector-install-auto">자동 감지</span>;
   }
-  // config-hook (Claude): connected → offer 연결 해제; installed-but-not-hooked
-  // → offer 연결; otherwise the action is disabled with the honest reason.
-  if (model.availability === "available") {
+  // config-hook (Claude, plus any future hook-based connector): if connected,
+  // offer 연결 해제; if the tool is present but not hooked, offer 연결; else the
+  // action is disabled with the honest reason from the product-state model.
+  if (model.captureModel === "config-hook") {
+    if (model.availability === "available") {
+      return (
+        <Button
+          className="connector-install-action"
+          variant="ghost"
+          disabled={busy}
+          onClick={onDisconnect}
+        >
+          연결 해제
+        </Button>
+      );
+    }
+    const canConnect = model.canInstall;
     return (
       <Button
         className="connector-install-action"
-        variant="ghost"
-        disabled={busy}
-        onClick={onDisconnect}
+        variant="primary"
+        disabled={busy || !canConnect}
+        title={canConnect ? "훅을 연결합니다" : model.display.description}
+        onClick={onConnect}
       >
-        연결 해제
+        연결
       </Button>
     );
   }
-  const canConnect = model.canInstall;
-  return (
-    <Button
-      className="connector-install-action"
-      variant="primary"
-      disabled={busy || !canConnect}
-      title={canConnect ? "훅을 연결합니다" : model.display.description}
-      onClick={onConnect}
-    >
-      연결
-    </Button>
-  );
+  // Any future capture model: render nothing rather than guess at an action.
+  return null;
 }
