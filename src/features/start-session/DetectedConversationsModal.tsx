@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
+import { focusFirstElement, trapTabKey } from "../../components/ui/focusTrap";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import {
   formatClaudeRelativeKo,
@@ -102,6 +103,7 @@ export function DetectedConversationsModal({
   const [detailStatus, setDetailStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     if (!bridge || !supported) {
@@ -121,13 +123,23 @@ export function DetectedConversationsModal({
     void load();
   }, [load]);
 
-  // Escape closes the modal from anywhere.
+  // Escape closes the modal; Tab is trapped inside it. Focus the first
+  // focusable element on mount so the modal is immediately keyboard-actionable,
+  // matching SettingsSheet.
   useEffect(() => {
     function onKey(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") closeRef.current();
+      if (event.key === "Escape") {
+        closeRef.current();
+        return;
+      }
+      trapTabKey(event, dialogRef.current);
     }
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    const raf = window.requestAnimationFrame(() => focusFirstElement(dialogRef.current));
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.cancelAnimationFrame(raf);
+    };
   }, []);
 
   // Load the highlighted conversation's content for the preview pane.
@@ -199,13 +211,15 @@ export function DetectedConversationsModal({
       }}
     >
       <div
+        ref={dialogRef}
         className="detected-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={`${agentName} 작업 대화 둘러보기`}
+        aria-labelledby="detected-modal-title"
+        tabIndex={-1}
       >
         <header className="detected-modal-head">
-          <h2>기록에서 불러오기</h2>
+          <h2 id="detected-modal-title">기록에서 불러오기</h2>
           <button type="button" className="detected-modal-close" onClick={onClose} aria-label="닫기">
             <X size={18} aria-hidden="true" />
           </button>
