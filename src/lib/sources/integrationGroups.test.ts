@@ -28,6 +28,10 @@ describe("integrationGroups", () => {
       expect(ids).not.toContain("quickPass");
       expect(ids).not.toContain("repository");
       expect(ids).not.toContain("tauriGitDiff");
+      // Antigravity / OpenCode arrive through 기록에서 불러오기, not a Hub paste
+      // card; their transcript kinds exist only for imported-session provenance.
+      expect(ids).not.toContain("antigravityTranscript");
+      expect(ids).not.toContain("opencodeTranscript");
     });
 
     it("never includes a planned integration", () => {

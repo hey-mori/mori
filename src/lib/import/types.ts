@@ -25,7 +25,13 @@ export type NormalizeUrlSourceInput = NormalizeBaseInput & {
 /**
  * AI transcript platform options
  */
-export type AiTranscriptPlatform = "claude" | "chatgpt" | "codex" | "other";
+export type AiTranscriptPlatform =
+  | "claude"
+  | "chatgpt"
+  | "codex"
+  | "antigravity"
+  | "opencode"
+  | "other";
 
 /**
  * Parsed transcript turn structure (optional, for enhanced parsing)

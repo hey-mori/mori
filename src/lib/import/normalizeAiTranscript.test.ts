@@ -49,6 +49,32 @@ describe("normalizeAiTranscript", () => {
       expect(result.source.title).toContain("Codex");
     });
 
+    it("maps antigravity platform to antigravityTranscript integration", () => {
+      const input: NormalizeAiTranscriptInput = {
+        ...mockBase,
+        platform: "antigravity",
+        text: "User: Plan the island\nAssistant: Here is the spec",
+      };
+
+      const result = normalizeAiTranscript(input);
+
+      expect(result.source.kind).toBe("antigravityTranscript");
+      expect(result.source.title).toContain("Antigravity");
+    });
+
+    it("maps opencode platform to opencodeTranscript integration", () => {
+      const input: NormalizeAiTranscriptInput = {
+        ...mockBase,
+        platform: "opencode",
+        text: "User: Add retry\nAssistant: Done",
+      };
+
+      const result = normalizeAiTranscript(input);
+
+      expect(result.source.kind).toBe("opencodeTranscript");
+      expect(result.source.title).toContain("OpenCode");
+    });
+
     it("maps other platform to aiConversation integration", () => {
       const input: NormalizeAiTranscriptInput = {
         ...mockBase,

@@ -73,22 +73,22 @@ describe("buildImportCandidatesFromAgentWorkSession", () => {
     expect(candidate.source.title).toBe("Retry helper work");
   });
 
-  it("maps an Antigravity session to a generic aiConversation candidate", () => {
+  it("maps an Antigravity session to a dedicated antigravityTranscript candidate", () => {
     const [candidate] = buildImportCandidatesFromAgentWorkSession(
       detail("antigravity-session"),
       buildInput,
     );
-    // Antigravity has no dedicated transcript integration, so it normalizes
-    // through the platform-neutral "other" path.
-    expect(candidate.source.kind).toBe("aiConversation");
+    // Imported Antigravity sessions carry their own source kind so the
+    // Evidence Hub reads "Antigravity", not the generic "AI 대화".
+    expect(candidate.source.kind).toBe("antigravityTranscript");
   });
 
-  it("maps an OpenCode session to a generic aiConversation candidate", () => {
+  it("maps an OpenCode session to a dedicated opencodeTranscript candidate", () => {
     const [candidate] = buildImportCandidatesFromAgentWorkSession(
       detail("opencode-session"),
       buildInput,
     );
-    expect(candidate.source.kind).toBe("aiConversation");
+    expect(candidate.source.kind).toBe("opencodeTranscript");
     expect(candidate.source.title).toBe("Retry helper work");
   });
 

@@ -65,6 +65,8 @@ describe("sourceRegistry", () => {
       expect(implementedIds).toContain("claudeTranscript");
       expect(implementedIds).toContain("chatgptTranscript");
       expect(implementedIds).toContain("codexTranscript");
+      expect(implementedIds).toContain("antigravityTranscript");
+      expect(implementedIds).toContain("opencodeTranscript");
       expect(implementedIds).toContain("gitDiff");
       expect(implementedIds).toContain("tauriGitDiff");
       expect(implementedIds).toContain("repository");

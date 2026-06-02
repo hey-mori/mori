@@ -20,6 +20,10 @@ function getIntegrationId(platform: AiTranscriptPlatform): string {
       return "chatgptTranscript";
     case "codex":
       return "codexTranscript";
+    case "antigravity":
+      return "antigravityTranscript";
+    case "opencode":
+      return "opencodeTranscript";
     case "other":
     default:
       return "aiConversation";
@@ -37,6 +41,10 @@ function getPlatformLabel(platform: AiTranscriptPlatform): string {
       return "ChatGPT";
     case "codex":
       return "Codex";
+    case "antigravity":
+      return "Antigravity";
+    case "opencode":
+      return "OpenCode";
     case "other":
     default:
       return "AI";

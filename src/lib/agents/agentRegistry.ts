@@ -85,7 +85,7 @@ export const AGENT_REGISTRY: readonly AgentDescriptor[] = [
     agentName: "OpenCode",
     detail: "OpenCode CLI",
     iconKey: "braces",
-    platform: "other",
+    platform: "opencode",
     detect: true,
     connector: { connectorFamily: "opencode-cli", connectorIds: ["openCodeCli"] },
   },
@@ -94,7 +94,7 @@ export const AGENT_REGISTRY: readonly AgentDescriptor[] = [
     agentName: "Antigravity",
     detail: "Antigravity · Gemini",
     iconKey: "rocket",
-    platform: "other",
+    platform: "antigravity",
     detect: true,
   },
 ];

@@ -14,11 +14,23 @@ import {
  * - `quickPass` is an analysis pass, not an evidence source.
  * - `tauriGitDiff` is the desktop runtime variant of Git diff and shares the
  *   same card as the pasted Git diff flow.
+ * - `antigravityTranscript` / `opencodeTranscript` are the source kinds carried
+ *   by auto-detected Antigravity / OpenCode sessions (so an imported session
+ *   reads as "Antigravity" / "OpenCode" in the source detail rather than the
+ *   generic "AI 대화"). They are not standalone Hub paste cards: those agents
+ *   arrive through 기록에서 불러오기, and the universal AI-conversation card
+ *   already covers a manual paste fallback.
  *
  * We hide those internal entries from the Hub but still respect them inside
  * the source detail panel, where any source kind can be displayed.
  */
-const HUB_HIDDEN_INTEGRATION_IDS = new Set(["repository", "quickPass", "tauriGitDiff"]);
+const HUB_HIDDEN_INTEGRATION_IDS = new Set([
+  "repository",
+  "quickPass",
+  "tauriGitDiff",
+  "antigravityTranscript",
+  "opencodeTranscript",
+]);
 
 /**
  * Stable hub order for the "Available now" row.
