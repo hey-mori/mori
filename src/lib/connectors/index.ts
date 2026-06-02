@@ -126,6 +126,12 @@ export type {
   ConnectorSetupGuide,
   ConnectorSetupStep,
 } from "./connectorSetupGuide";
+export {
+  buildMcpConfigSnippet,
+  stageMcpServer,
+  getMcpServerTargetPath,
+} from "./mcpServerSetup";
+export type { McpServerStaged, McpConfigSnippetOptions } from "./mcpServerSetup";
 export type {
   BuildControlCenterInput,
   ConnectorControlCenterViewModel,
