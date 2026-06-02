@@ -20,6 +20,18 @@ describe("sanitizeQuickPassSettings", () => {
     expect(sanitized.provider).toBe(DEFAULT_QUICK_PASS_SETTINGS.provider);
   });
 
+  it("defaults the request disclosure level and rejects unknown values", () => {
+    expect(sanitizeQuickPassSettings({}).requestDisclosureLevel).toBe("raw");
+    expect(
+      sanitizeQuickPassSettings({ requestDisclosureLevel: "abstract" }).requestDisclosureLevel,
+    ).toBe("abstract");
+    expect(
+      sanitizeQuickPassSettings({
+        requestDisclosureLevel: "bogus" as unknown as "raw",
+      }).requestDisclosureLevel,
+    ).toBe("raw");
+  });
+
   it("keeps user-provided endpoint and model strings when present", () => {
     const sanitized = sanitizeQuickPassSettings({
       provider: "ollama",

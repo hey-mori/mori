@@ -34,6 +34,21 @@ import {
 import { buildInspectorViewModel } from "../../lib/timeline/timelineViewModel";
 import { deriveSourceFamily } from "../../lib/timeline/activityModel";
 import { sourceFamilyIcons } from "./lib/activityIcons";
+import { useSessionStore } from "../../app/sessionStore";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import {
+  buildRequestAbstraction,
+  projectDisclosure,
+  DISCLOSURE_LABELS,
+  type DisclosureLevel,
+} from "../../lib/disclosure";
+
+const DISCLOSURE_OPTIONS: { id: DisclosureLevel; label: string }[] = [
+  { id: "raw", label: DISCLOSURE_LABELS.raw },
+  { id: "summary", label: DISCLOSURE_LABELS.summary },
+  { id: "abstract", label: DISCLOSURE_LABELS.abstract },
+  { id: "hidden", label: DISCLOSURE_LABELS.hidden },
+];
 
 export function EventInspector({
   selectedEvent,
@@ -70,6 +85,22 @@ export function EventInspector({
 }) {
   const [editing, setEditing] = useState(false);
   const [noteEditing, setNoteEditing] = useState(false);
+  const requestDisclosureLevel = useSessionStore(
+    (state) => state.analysisSettings.requestDisclosureLevel,
+  );
+  const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
+  // The user's own request text is the privacy-sensitive content; other
+  // actors' events render their summary as before.
+  const isUserRequest = selectedEvent.actor === "user";
+  const requestAbstraction = buildRequestAbstraction(selectedEvent.summary);
+  const requestProjection = projectDisclosure(
+    {
+      raw: selectedEvent.summary,
+      summary: requestAbstraction.summary,
+      abstract: requestAbstraction.abstract,
+    },
+    requestDisclosureLevel,
+  );
   const mergeTarget = findMergeTarget(session.events, selectedEvent.id);
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
@@ -114,6 +145,33 @@ export function EventInspector({
             }}
             onCancel={() => setEditing(false)}
           />
+        ) : isUserRequest ? (
+          <div className="inspector-summary-card">
+            <div className="inspector-summary-head">
+              <span>요약</span>
+              <SegmentedControl
+                ariaLabel="내 요청 표시 수준"
+                role="radiogroup"
+                value={requestDisclosureLevel}
+                onChange={(level) =>
+                  updateAnalysisSettings({ requestDisclosureLevel: level })
+                }
+                options={DISCLOSURE_OPTIONS}
+              />
+            </div>
+            {requestProjection.text ? (
+              <p>{requestProjection.text}</p>
+            ) : (
+              <p className="inspector-summary-withheld">
+                원문이 표시되지 않도록 설정되어 있습니다. 데이터는 그대로 저장됩니다.
+              </p>
+            )}
+            {requestProjection.isWithheld && requestProjection.text ? (
+              <span className="inspector-summary-note">
+                원문 비공개 · 데이터는 그대로 저장됩니다
+              </span>
+            ) : null}
+          </div>
         ) : (
           <div className="inspector-summary-card">
             <span>요약</span>

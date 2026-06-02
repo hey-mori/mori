@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { DisclosureLevel } from "../disclosure";
 
 export type QuickPassProviderKind = "deterministic" | "ollama" | "openAiCompatible";
 
@@ -12,6 +13,13 @@ export type QuickPassAnalysisSettings = {
   openAiApiKey: string;
   openAiTimeoutMs: number;
   fallbackToDeterministic: boolean;
+  /**
+   * How a user's own request text is disclosed in detail views (Event
+   * Inspector). Storage always keeps the full text; this only controls
+   * what is rendered. Defaults to `raw` so display is unchanged until the
+   * user dials it down.
+   */
+  requestDisclosureLevel: DisclosureLevel;
 };
 
 export const DEFAULT_QUICK_PASS_SETTINGS: QuickPassAnalysisSettings = {
@@ -24,6 +32,7 @@ export const DEFAULT_QUICK_PASS_SETTINGS: QuickPassAnalysisSettings = {
   openAiApiKey: "",
   openAiTimeoutMs: 60_000,
   fallbackToDeterministic: true,
+  requestDisclosureLevel: "raw",
 };
 
 const ALLOWED_PROVIDERS = [
@@ -52,6 +61,9 @@ const QuickPassSettingsSchema = z.object({
   fallbackToDeterministic: z
     .boolean()
     .catch(DEFAULT_QUICK_PASS_SETTINGS.fallbackToDeterministic),
+  requestDisclosureLevel: z
+    .enum(["raw", "summary", "abstract", "hidden"])
+    .catch(DEFAULT_QUICK_PASS_SETTINGS.requestDisclosureLevel),
 });
 
 export function sanitizeQuickPassSettings(input: unknown): QuickPassAnalysisSettings {
