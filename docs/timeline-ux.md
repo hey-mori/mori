@@ -7,6 +7,10 @@ controls are real today.
 
 ## Component structure
 
+For the planned project-level live aggregation that feeds but does not replace
+the session `흐름` trace, see
+[Live Project Intelligence](./live-project-intelligence.md).
+
 ```
 src/features/timeline/
   TimelineView.tsx        - thin orchestrator: builds the render model,

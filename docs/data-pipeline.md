@@ -142,6 +142,7 @@ No part of the pipeline should be touched beyond those four steps.
 ## Related
 
 - [Product flow](./product-flow.md)
+- [Live Project Intelligence](./live-project-intelligence.md)
 - [Feature status](./feature-status.md)
 - [Modular architecture](./modular-architecture.md)
 - [Imports](./imports.md)

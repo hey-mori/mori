@@ -99,6 +99,7 @@ those rows pretending to be active.
 
 - [Feature status](./feature-status.md)
 - [Data pipeline](./data-pipeline.md)
+- [Live Project Intelligence](./live-project-intelligence.md)
 - [Theme system](./theme-system.md)
 - [Modular architecture](./modular-architecture.md)
 - [Roadmap](./roadmap.md)
