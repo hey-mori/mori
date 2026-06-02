@@ -57,7 +57,6 @@ export function BaseInspectorPanel({
             className="base-inspector-panel-close"
             onClick={onClose}
             aria-label="패널 닫기"
-            title="패널 닫기"
           >
             <X size={15} aria-hidden="true" />
           </button>

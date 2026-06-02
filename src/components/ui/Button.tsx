@@ -16,9 +16,12 @@ export function Button({
   size = "md",
   className = "",
   title,
+  "aria-label": ariaLabel,
   ...props
 }: ButtonProps) {
   const iconOnly = Boolean(Icon) && !children;
+  const tooltip = iconOnly ? title : undefined;
+  const resolvedAriaLabel = ariaLabel ?? (iconOnly && typeof title === "string" ? title : undefined);
   const button = (
     <button
       className={[
@@ -32,14 +35,15 @@ export function Button({
         .join(" ")}
       type="button"
       {...props}
+      aria-label={resolvedAriaLabel}
     >
       {Icon ? <Icon size={size === "sm" ? 14 : 16} aria-hidden="true" /> : null}
       {children}
     </button>
   );
-  if (!title) return button;
+  if (!tooltip) return button;
   return (
-    <BaseTooltip content={title} kind="control">
+    <BaseTooltip content={tooltip} kind="control">
       {button}
     </BaseTooltip>
   );

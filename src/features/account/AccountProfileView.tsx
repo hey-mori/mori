@@ -72,7 +72,6 @@ export function AccountProfileView() {
               <SettingsInlineAction
                 disabled={!dirty}
                 onClick={() => setDraftName(profile.displayName)}
-                title="되돌리기"
               >
                 <RotateCcw size={13} aria-hidden="true" />
                 되돌리기

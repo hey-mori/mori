@@ -82,7 +82,6 @@ export function ProjectFormModal({
             className="settings-sheet-close"
             onClick={onClose}
             aria-label="닫기"
-            title="닫기 (Esc)"
           >
             <X size={16} aria-hidden="true" />
           </button>

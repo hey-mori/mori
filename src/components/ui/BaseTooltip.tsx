@@ -70,7 +70,6 @@ export function BaseTooltipProvider({ children }: { children: ReactNode }) {
 
   const open = useCallback(
     (target: HTMLElement) => {
-      normalizeNativeTitle(target);
       const content = target.getAttribute("data-base-tooltip")?.trim();
       if (!content) {
         close();
@@ -96,34 +95,8 @@ export function BaseTooltipProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    normalizeNativeTitles(document.body);
-
-    const observer = new MutationObserver((records) => {
-      for (const record of records) {
-        if (record.type === "attributes" && record.target instanceof HTMLElement) {
-          normalizeNativeTitle(record.target);
-          continue;
-        }
-        for (const node of record.addedNodes) {
-          if (node instanceof HTMLElement) normalizeNativeTitles(node);
-        }
-      }
-    });
-
-    observer.observe(document.body, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["title"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     function tooltipTarget(node: EventTarget | null): HTMLElement | null {
       if (!(node instanceof Element)) return null;
-      normalizeNativeTitles(node);
       return node.closest<HTMLElement>("[data-base-tooltip]");
     }
 
@@ -203,23 +176,6 @@ export function BaseTooltipProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function normalizeNativeTitles(root: Element | DocumentFragment) {
-  if (root instanceof HTMLElement) normalizeNativeTitle(root);
-  root.querySelectorAll<HTMLElement>("[title]").forEach(normalizeNativeTitle);
-}
-
-function normalizeNativeTitle(el: HTMLElement) {
-  const title = el.getAttribute("title");
-  if (title === null) return;
-  const trimmed = title.trim();
-  el.removeAttribute("title");
-  if (!trimmed || el.hasAttribute("data-base-tooltip")) return;
-  el.setAttribute("data-base-tooltip", trimmed);
-  if (!el.hasAttribute("data-base-tooltip-kind")) {
-    el.setAttribute("data-base-tooltip-kind", inferTooltipKind(el));
-  }
-}
-
 function getTooltipKind(el: HTMLElement): BaseTooltipKind {
   const kind = el.getAttribute("data-base-tooltip-kind");
   if (
@@ -231,15 +187,5 @@ function getTooltipKind(el: HTMLElement): BaseTooltipKind {
   ) {
     return kind;
   }
-  return "text";
-}
-
-function inferTooltipKind(el: HTMLElement): BaseTooltipKind {
-  if (el.closest(".timeline-page, .timeline-shell, .timeline-panel, .event-inspector")) {
-    return "timeline";
-  }
-  if (el.closest(".base-metric-strip, .overview-metrics")) return "metric";
-  if (el.closest(".pill, .base-status-badge, .base-feature-status-chip")) return "status";
-  if (el.matches("button, [role='button'], [role='menuitem']")) return "control";
   return "text";
 }
