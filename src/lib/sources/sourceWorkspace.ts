@@ -411,30 +411,33 @@ function connectorJsonlSource(input: BuildControlCenterInput): SourceWorkspaceSo
 }
 
 /**
- * Antigravity is a session-discovery agent: Mori reads the readable
- * `transcript.jsonl` logs the desktop app writes, never the authoritative
- * protobuf store. It has no paste / wrapper way-in, so it is injected here as
- * a single discovery source rather than derived from the connector surfaces.
- * Capture is honestly partial (only conversations with a generated transcript).
+ * Discovery-only anchor agents (Antigravity / Continue / Cline) all share the
+ * same 소스-page shape: a desktop-only, read-only, summary-only tile with no
+ * paste / wrapper way-in, surfaced as a single "기록에서 불러오기" source. Only
+ * the per-agent copy differs, so it lives in a data table and one builder fills
+ * the shared structure. Adding the next discovery agent is one entry here.
  */
-function antigravitySource(input: BuildControlCenterInput): SourceWorkspaceSource {
-  const status: SourceWorkspaceStatus = input.isDesktop ? "available" : "needsDesktopApp";
-  const display = statusLabel(status);
-  return {
+type DiscoveryAgentSpec = {
+  id: string;
+  name: string;
+  acquisitionMethod: string;
+  acceptedFormats: string[];
+  setupMethod: string;
+  privacyNote: string;
+  whatMoriCanAccess: string[];
+  whatMoriCannotAccess: string[];
+  reviewBehavior: string;
+  likelyFiles: string[];
+  testsNeeded: string[];
+};
+
+const DISCOVERY_AGENT_SPECS: readonly DiscoveryAgentSpec[] = [
+  {
     id: "antigravityDiscovery",
     name: "Antigravity",
-    category: "Code",
-    familyLabel: "Antigravity",
-    status,
-    statusLabel: display.label,
-    statusTone: display.tone,
     acquisitionMethod: "데스크톱에서 Antigravity 작업 기록을 감지해 불러옵니다.",
     acceptedFormats: ["Antigravity transcript.jsonl (로컬 작업 기록)"],
     setupMethod: "설정 불필요. 데스크톱 앱이 ~/.gemini/antigravity의 생성된 트랜스크립트만 읽습니다.",
-    pathMode: "notNeeded",
-    pathStateLabel: "경로 설정 없음",
-    localOnly: true,
-    recommended: false,
     privacyNote: "로컬 트랜스크립트만 읽습니다. 권위 저장소인 protobuf(.pb)는 읽지 않습니다.",
     whatMoriCanAccess: [
       "트랜스크립트가 생성된 대화 (제목 · 시각)",
@@ -445,96 +448,78 @@ function antigravitySource(input: BuildControlCenterInput): SourceWorkspaceSourc
       "계정 · API 접근",
       "백그라운드 감시",
     ],
-    creates: ["AI 대화 소스", "타임라인 이벤트 후보", "검토 후보"],
     reviewBehavior:
       "감지한 Antigravity 대화는 세션 생성 후 Import Review를 거쳐 타임라인에 반영됩니다. 트랜스크립트가 있는 세션만 잡히는 부분 캡처입니다.",
-    rawDataPolicy: "summaryOnly",
-    action: { kind: "none", label: "기록에서 불러오기", enabled: false },
     likelyFiles: ["src-tauri/src/antigravity/sessions.rs", "src/lib/antigravity/"],
     testsNeeded: ["transcript parser", "partial-capture honesty"],
-    safeToImplementNow: true,
-  };
-}
-
-/**
- * Continue (continue.dev) is a discovery-only agent: the desktop app reads the
- * local `~/.continue/sessions` store (a `sessions.json` index plus one JSON per
- * session). No paste / wrapper way-in, so it is injected as a single discovery
- * source like Antigravity.
- */
-function continueSource(input: BuildControlCenterInput): SourceWorkspaceSource {
-  const status: SourceWorkspaceStatus = input.isDesktop ? "available" : "needsDesktopApp";
-  const display = statusLabel(status);
-  return {
+  },
+  {
     id: "continueDiscovery",
     name: "Continue",
-    category: "Code",
-    familyLabel: "Continue",
-    status,
-    statusLabel: display.label,
-    statusTone: display.tone,
     acquisitionMethod: "데스크톱에서 Continue 작업 기록을 감지해 불러옵니다.",
     acceptedFormats: ["Continue session JSON (로컬 작업 기록)"],
     setupMethod: "설정 불필요. 데스크톱 앱이 ~/.continue/sessions의 로컬 세션만 읽습니다.",
-    pathMode: "notNeeded",
-    pathStateLabel: "경로 설정 없음",
-    localOnly: true,
-    recommended: false,
     privacyNote: "로컬 세션 JSON만 읽습니다. 계정 · API 접근이나 백그라운드 수집은 없습니다.",
     whatMoriCanAccess: [
       "감지된 작업 대화 (제목 · 프로젝트 · 시각)",
       "사용자 · 모델 메시지 미리보기",
     ],
     whatMoriCannotAccess: ["계정 · API 접근", "백그라운드 감시", "원본 대화 전체 보관"],
-    creates: ["AI 대화 소스", "타임라인 이벤트 후보", "검토 후보"],
     reviewBehavior:
       "감지한 Continue 대화는 세션 생성 후 Import Review를 거쳐 타임라인에 반영됩니다.",
-    rawDataPolicy: "summaryOnly",
-    action: { kind: "none", label: "기록에서 불러오기", enabled: false },
     likelyFiles: ["src-tauri/src/continue_agent/sessions.rs", "src/lib/continueAgent/"],
     testsNeeded: ["index + session parser", "file:// workspace decode"],
-    safeToImplementNow: true,
-  };
-}
-
-/**
- * Cline (saoudrizwan.claude-dev) is a discovery-only agent: the desktop app
- * reads the VS Code globalStorage task store (one directory per task with a
- * `ui_messages.json` transcript). No paste / wrapper way-in, so it is injected
- * as a single discovery source like Antigravity and Continue.
- */
-function clineSource(input: BuildControlCenterInput): SourceWorkspaceSource {
-  const status: SourceWorkspaceStatus = input.isDesktop ? "available" : "needsDesktopApp";
-  const display = statusLabel(status);
-  return {
+  },
+  {
     id: "clineDiscovery",
     name: "Cline",
-    category: "Code",
-    familyLabel: "Cline",
-    status,
-    statusLabel: display.label,
-    statusTone: display.tone,
     acquisitionMethod: "데스크톱에서 Cline 작업 기록을 감지해 불러옵니다.",
     acceptedFormats: ["Cline task JSON (로컬 작업 기록)"],
     setupMethod:
       "설정 불필요. 데스크톱 앱이 VS Code globalStorage의 Cline task 기록만 읽습니다.",
-    pathMode: "notNeeded",
-    pathStateLabel: "경로 설정 없음",
-    localOnly: true,
-    recommended: false,
     privacyNote: "로컬 task JSON만 읽습니다. 계정 · API 접근이나 백그라운드 수집은 없습니다.",
     whatMoriCanAccess: [
       "감지된 작업 대화 (제목 · 프로젝트 · 시각)",
       "사용자 · 모델 메시지 미리보기",
     ],
     whatMoriCannotAccess: ["계정 · API 접근", "백그라운드 감시", "원본 대화 전체 보관"],
-    creates: ["AI 대화 소스", "타임라인 이벤트 후보", "검토 후보"],
     reviewBehavior:
       "감지한 Cline 대화는 세션 생성 후 Import Review를 거쳐 타임라인에 반영됩니다.",
-    rawDataPolicy: "summaryOnly",
-    action: { kind: "none", label: "기록에서 불러오기", enabled: false },
     likelyFiles: ["src-tauri/src/cline/sessions.rs", "src/lib/cline/"],
     testsNeeded: ["task dir parser", "ui_messages role mapping"],
+  },
+];
+
+function discoveryAgentSource(
+  spec: DiscoveryAgentSpec,
+  input: BuildControlCenterInput,
+): SourceWorkspaceSource {
+  const status: SourceWorkspaceStatus = input.isDesktop ? "available" : "needsDesktopApp";
+  const display = statusLabel(status);
+  return {
+    id: spec.id,
+    name: spec.name,
+    category: "Code",
+    familyLabel: spec.name,
+    status,
+    statusLabel: display.label,
+    statusTone: display.tone,
+    acquisitionMethod: spec.acquisitionMethod,
+    acceptedFormats: spec.acceptedFormats,
+    setupMethod: spec.setupMethod,
+    pathMode: "notNeeded",
+    pathStateLabel: "경로 설정 없음",
+    localOnly: true,
+    recommended: false,
+    privacyNote: spec.privacyNote,
+    whatMoriCanAccess: spec.whatMoriCanAccess,
+    whatMoriCannotAccess: spec.whatMoriCannotAccess,
+    creates: ["AI 대화 소스", "타임라인 이벤트 후보", "검토 후보"],
+    reviewBehavior: spec.reviewBehavior,
+    rawDataPolicy: "summaryOnly",
+    action: { kind: "none", label: "기록에서 불러오기", enabled: false },
+    likelyFiles: spec.likelyFiles,
+    testsNeeded: spec.testsNeeded,
     safeToImplementNow: true,
   };
 }
@@ -669,9 +654,7 @@ export function buildSourceWorkspace(input: BuildControlCenterInput): SourceWork
   });
   const sources = [
     connectorJsonlSource(input),
-    antigravitySource(input),
-    continueSource(input),
-    clineSource(input),
+    ...DISCOVERY_AGENT_SPECS.map((spec) => discoveryAgentSource(spec, input)),
     ...importSources,
     ...surfaceSources,
     ...futureSources,
