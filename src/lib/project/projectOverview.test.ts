@@ -35,6 +35,41 @@ describe("buildProjectOverview", () => {
     expect(overview.groups.flatMap((g) => g.rows).map((r) => r.sessionId)).toEqual(["in"]);
   });
 
+  it("groups sessions whose sourceLabel is the same project written differently", () => {
+    const overview = buildProjectOverview({
+      projectKey: "C:/dev/mori",
+      sessions: [
+        summary({ sessionId: "slash", sourceLabel: "C:\\dev\\mori" }),
+        summary({ sessionId: "trailing", sourceLabel: "C:/dev/mori/" }),
+        summary({ sessionId: "case", sourceLabel: "c:/dev/mori" }),
+        summary({ sessionId: "other", sourceLabel: "C:/dev/jinga" }),
+      ],
+      now: NOW,
+    });
+    expect(overview.stats.sessions).toBe(3);
+    expect(
+      overview.groups
+        .flatMap((g) => g.rows)
+        .map((r) => r.sessionId)
+        .sort(),
+    ).toEqual(["case", "slash", "trailing"]);
+  });
+
+  it("does not merge a different project that only shares a trailing name", () => {
+    const overview = buildProjectOverview({
+      projectKey: "/work/api",
+      sessions: [
+        summary({ sessionId: "mine", sourceLabel: "/work/api" }),
+        summary({ sessionId: "lookalike", sourceLabel: "/play/api" }),
+      ],
+      now: NOW,
+    });
+    expect(overview.stats.sessions).toBe(1);
+    expect(overview.groups.flatMap((g) => g.rows).map((r) => r.sessionId)).toEqual([
+      "mine",
+    ]);
+  });
+
   it("derives a short display name from the last path segment", () => {
     const overview = buildProjectOverview({
       projectKey: "C:/dev/mori",

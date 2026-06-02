@@ -1,5 +1,6 @@
 import type { StoredSessionSummary } from "../storage/storageTypes";
 import type { ProductStateTone } from "../product-state/productState";
+import { projectIdentitiesMatch } from "../projects/projectConnection";
 
 /**
  * Project workspace — pure derivation helper.
@@ -108,8 +109,8 @@ export function buildProjectOverview(input: BuildProjectOverviewInput): ProjectO
   const insights = new Map(
     (input.sessionInsights ?? []).map((snapshot) => [snapshot.sessionId, snapshot]),
   );
-  const mine = input.sessions.filter(
-    (summary) => normaliseLabel(summary.sourceLabel) === normaliseLabel(input.projectKey),
+  const mine = input.sessions.filter((summary) =>
+    projectIdentitiesMatch(summary.sourceLabel, input.projectKey),
   );
 
   const rows: ProjectSessionRow[] = mine
@@ -296,10 +297,6 @@ function groupByRecency(
       ? [{ bucket, label: RECENCY_LABELS[bucket], rows: map[bucket] }]
       : [],
   );
-}
-
-function normaliseLabel(value: string | undefined): string {
-  return (value ?? "").trim();
 }
 
 function shortName(value: string): string {

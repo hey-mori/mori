@@ -33,6 +33,7 @@ import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMe
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import { useProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
+import { projectIdentitiesMatch } from "../../lib/projects/projectConnection";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { ProjectSynthesisSection } from "./ProjectSynthesisSection";
 import { ProjectPulse } from "./ProjectPulse";
@@ -104,9 +105,8 @@ export function ProjectView() {
   // having to be one of them.
   const projectId = useMemo(() => {
     if (!projectKey) return null;
-    const key = projectKey.trim().toLowerCase();
-    const match = storedSessions.find(
-      (entry) => (entry.sourceLabel ?? "").trim().toLowerCase() === key,
+    const match = storedSessions.find((entry) =>
+      projectIdentitiesMatch(entry.sourceLabel, projectKey),
     );
     return match?.projectId ?? null;
   }, [projectKey, storedSessions]);
