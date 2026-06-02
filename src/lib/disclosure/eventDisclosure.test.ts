@@ -48,4 +48,23 @@ describe("projectEventRequestSummary", () => {
     expect(projection.text).toBe("");
     expect(projection.isWithheld).toBe(true);
   });
+
+  it("prefers a precomputed override abstract over the deterministic one", () => {
+    const projection = projectEventRequestSummary(
+      { actor: "user", summary: "로그인 버그 고쳐줘" },
+      "abstract",
+      { abstract: "사용자가 인증 흐름 개선을 요청함" },
+    );
+    expect(projection.text).toBe("사용자가 인증 흐름 개선을 요청함");
+    expect(projection.isWithheld).toBe(true);
+  });
+
+  it("falls back to the deterministic abstract when the override field is blank", () => {
+    const projection = projectEventRequestSummary(
+      { actor: "user", summary: "로그인 버그 고쳐줘" },
+      "abstract",
+      { abstract: "   " },
+    );
+    expect(projection.text).toBe("사용자가 수정·디버깅을 요청함");
+  });
 });

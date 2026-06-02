@@ -22,13 +22,24 @@ export function isUserRequestEvent(event: { actor?: EventActor }): boolean {
 export function projectEventRequestSummary(
   event: { actor?: EventActor; summary: string },
   level: DisclosureLevel,
+  /**
+   * Optional precomputed abstraction (for example a local-LLM result).
+   * A non-empty `summary` / `abstract` here overrides the deterministic
+   * one for that variant; missing fields fall back to the deterministic
+   * floor, so an override can only improve, never erase, the projection.
+   */
+  override?: { summary?: string; abstract?: string },
 ): DisclosureProjection {
   if (!isUserRequestEvent(event)) {
     return { level: "raw", text: event.summary, isWithheld: false, fallbackUsed: false };
   }
   const abstraction = buildRequestAbstraction(event.summary);
   return projectDisclosure(
-    { raw: event.summary, summary: abstraction.summary, abstract: abstraction.abstract },
+    {
+      raw: event.summary,
+      summary: override?.summary?.trim() || abstraction.summary,
+      abstract: override?.abstract?.trim() || abstraction.abstract,
+    },
     level,
   );
 }

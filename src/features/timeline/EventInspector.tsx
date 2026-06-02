@@ -89,10 +89,29 @@ export function EventInspector({
     (state) => state.analysisSettings.requestDisclosureLevel,
   );
   const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
+  const provider = useSessionStore((state) => state.analysisSettings.provider);
+  const requestAbstractions = useSessionStore((state) => state.requestAbstractions);
+  const generateRequestAbstraction = useSessionStore((state) => state.generateRequestAbstraction);
+  const [generatingAbstraction, setGeneratingAbstraction] = useState(false);
   // The user's own request text is the privacy-sensitive content; other
-  // actors' events render their summary as before.
+  // actors' events render their summary as before. A stored local-LLM
+  // abstraction (if any) enriches the withheld projection.
   const isUserRequest = isUserRequestEvent(selectedEvent);
-  const requestProjection = projectEventRequestSummary(selectedEvent, requestDisclosureLevel);
+  const abstractionEntry = requestAbstractions[selectedEvent.id];
+  const requestProjection = projectEventRequestSummary(
+    selectedEvent,
+    requestDisclosureLevel,
+    abstractionEntry,
+  );
+
+  async function handleGenerateAbstraction() {
+    setGeneratingAbstraction(true);
+    try {
+      await generateRequestAbstraction(selectedEvent.id, selectedEvent.summary);
+    } finally {
+      setGeneratingAbstraction(false);
+    }
+  }
   const mergeTarget = findMergeTarget(session.events, selectedEvent.id);
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
@@ -162,6 +181,25 @@ export function EventInspector({
               <span className="inspector-summary-note">
                 원문 비공개 · 데이터는 그대로 저장됩니다
               </span>
+            ) : null}
+            {requestDisclosureLevel !== "raw" && provider === "ollama" ? (
+              <div className="inspector-abstraction-row">
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={handleGenerateAbstraction}
+                  disabled={generatingAbstraction}
+                >
+                  {generatingAbstraction ? "생성 중..." : "로컬 LLM으로 요지 생성"}
+                </button>
+                {abstractionEntry ? (
+                  <span className="inspector-summary-note">
+                    {abstractionEntry.source === "llm"
+                      ? "로컬 LLM이 생성한 요지"
+                      : `기본 요지 사용${abstractionEntry.note ? ` · ${abstractionEntry.note}` : ""}`}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : (

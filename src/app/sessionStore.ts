@@ -25,6 +25,15 @@ import {
   getCurrentRun,
   sanitizeQuickPassSettings,
 } from "../lib/analysis";
+import { buildLlmRequestAbstraction } from "../lib/disclosure";
+
+/** Stored per-event local-LLM request abstraction (or its deterministic fallback). */
+export type RequestAbstractionEntry = {
+  summary: string;
+  abstract: string;
+  source: "llm" | "deterministic";
+  note?: string;
+};
 import type { NormalizedImportCandidate } from "../lib/import";
 import { createSessionDraft } from "../lib/session/createSessionDraft";
 import {
@@ -113,6 +122,13 @@ export type SessionState = {
   analysisProviderLabel: string | null;
   analysisFallbackUsed: boolean;
   analysisSettings: QuickPassAnalysisSettings;
+  /**
+   * Per-event local-LLM request abstractions, keyed by event id. Filled
+   * on demand by `generateRequestAbstraction`; the disclosure projection
+   * prefers a stored LLM abstract over the deterministic floor. Event ids
+   * are session-unique, so entries do not collide across sessions.
+   */
+  requestAbstractions: Record<string, RequestAbstractionEntry>;
   source: SessionSource;
   /**
    * Bumped whenever a data reset wipes stored sessions
@@ -214,6 +230,14 @@ export type SessionState = {
    * history, or the run id is unknown.
    */
   selectAnalysisRun: (runId: string) => boolean;
+  /**
+   * Generate a local-LLM request abstraction for one event and store it
+   * by event id (the disclosure projection prefers it over the
+   * deterministic floor). Uses the persisted Ollama settings; falls back
+   * to the deterministic abstraction on any failure. Returns `true` only
+   * when the local model produced the abstract.
+   */
+  generateRequestAbstraction: (eventId: string, rawText: string) => Promise<boolean>;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
   /**
@@ -353,6 +377,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   analysisProviderLabel: null,
   analysisFallbackUsed: false,
   analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
+  requestAbstractions: {},
   source: "demo",
   dataResetNonce: 0,
   dataSource: createStaticMockDataSource(demoView),
@@ -795,6 +820,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       analysisProviderLabel: adopted.providerLabel,
     });
     return true;
+  },
+  generateRequestAbstraction: async (eventId, rawText) => {
+    const { analysisSettings } = get();
+    const result = await buildLlmRequestAbstraction(rawText, {
+      endpoint: analysisSettings.ollamaEndpoint,
+      model: analysisSettings.ollamaModel,
+      timeoutMs: analysisSettings.ollamaTimeoutMs,
+    });
+    set((state) => ({
+      requestAbstractions: {
+        ...state.requestAbstractions,
+        [eventId]: {
+          summary: result.summary,
+          abstract: result.abstract,
+          source: result.source,
+          note: result.note,
+        },
+      },
+    }));
+    return result.source === "llm";
   },
   updateAnalysisSettings: (patch) => {
     const repository = getRepository();

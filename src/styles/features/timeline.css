@@ -3310,6 +3310,14 @@ kbd {
   letter-spacing: 0;
 }
 
+.inspector-abstraction-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
 .inspector-trust-card {
   display: grid;
   gap: 3px;
