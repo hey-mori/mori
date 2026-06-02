@@ -179,19 +179,24 @@ bypasses a review gate.
 4. **Disclosure level (projection).** Foundation shipped:
    `disclosureLevel.ts` (`raw` / `summary` / `abstract` / `hidden`,
    Korean labels, `projectDisclosure` with privacy-monotonic fallback so
-   a missing variant never leaks a less-private one). First real
-   consumer wired (see slice 5). Remaining: a Settings control,
-   per-element overrides (today one persisted global level), and
-   applying disclosure to more surfaces (Resume Prompt, Reports, other
-   event renders).
+   a missing variant never leaks a less-private one). Shipped end to
+   end: a Settings default (RequestDisclosureCard) plus per-event
+   overrides (`requestDisclosureOverrides` + `setRequestDisclosureOverride`,
+   resolved via `resolveDisclosureLevel`) applied consistently in the
+   Event Inspector, the chronological list, and the report builder, so a
+   request hidden on one event stays hidden in every surface. The Resume
+   Prompt embeds no raw event text, so it needs none.
 5. **Request abstraction + first wiring.** Shipped:
    `requestAbstraction.ts` (`buildRequestAbstraction` /
    `classifyRequestIntent`, deterministic, content-free intent line, the
    always-available floor). Wired into the Event Inspector: a user's own
    request summary is projected at a persisted `requestDisclosureLevel`
    (`QuickPassAnalysisSettings`, default `raw`) via a segmented control,
-   storage always keeps the original. Remaining: a local-LLM-backed
-   abstraction that enriches the intent line.
+   storage always keeps the original. Local-LLM-backed abstraction also
+   shipped: `llmRequestAbstraction.ts` (`buildLlmRequestAbstraction`,
+   privacy-safe prompt, deterministic fallback) plus a
+   `generateRequestAbstraction` store action and an on-demand
+   "로컬 LLM으로 요지 생성" inspector action that feeds the projection.
 6. **Local LLM connectivity depth.** First slice shipped: the
    connection probe's discovered models are click-to-select chips in the
    Local AI settings, writing through to the tested provider's model
@@ -225,11 +230,11 @@ Pillar 1 (explainable re-analysis, slices 1 to 3) shipped end to end:
 re-running Quick Pass keeps every run, shows what changed, and lets the
 user adopt any run, with each run's model and timing inspectable.
 
-Pillar 2 (store everything, show by setting) has its first end-to-end
-slice: the disclosure projection + deterministic request abstraction
-(slices 4 to 5) are wired into the Event Inspector, where a user's own
-request text shows at a chosen level (`원문` / `요약` / `요지` / `숨김`),
-persisted, with the original always stored.
+Pillar 2 (store everything, show by setting) is comprehensively shipped:
+a global Settings default plus per-event overrides, applied without leak
+across the Event Inspector, the chronological list, and exported
+reports; a deterministic request abstraction with an optional on-demand
+local-LLM abstraction; the original is always stored.
 
 Pillar 3 (local LLM connectivity depth) has its first slice: the
 connection probe's discovered models are click-to-select in the Local AI
@@ -239,6 +244,7 @@ Pillar 4 (Live Follow) has its tested decision brain
 (`live-follow/followController.ts`); the desktop foreground polling shell
 and the notification producer remain.
 
-Next: deepen pillar 2 (per-element overrides, disclosure on Reports /
-Resume Prompt, LLM-backed abstraction), deepen pillar 3 (per-task
-routing), and build the Live Follow desktop shell.
+Next: the Live Follow desktop shell (foreground session-scoped polling +
+incremental analysis + notification producer; needs the Tauri desktop
+app to build and verify), and deeper pillar 3 (per-task model routing, a
+model registry). Pillars 1 and 2 are complete.
