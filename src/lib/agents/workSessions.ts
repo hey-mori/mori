@@ -33,6 +33,7 @@ import { normalizeAiTranscript, type NormalizedImportCandidate } from "../import
 import {
   getAgentConnectorBinding,
   getAgentDescriptor,
+  listAgentIds,
   type AgentWorkAgentId,
 } from "./agentRegistry";
 
@@ -130,12 +131,9 @@ export async function listAgentWorkSessions(
 }
 
 export async function listAllAgentWorkSessions(): Promise<AgentWorkSessionMeta[]> {
-  const lists = await Promise.all([
-    listAgentWorkSessions("claude"),
-    listAgentWorkSessions("codex"),
-    listAgentWorkSessions("opencode"),
-    listAgentWorkSessions("antigravity"),
-  ]);
+  // Registry-driven: a new anchor agent appears in the cross-agent list as
+  // soon as it is added to AGENT_REGISTRY, with no edit here.
+  const lists = await Promise.all(listAgentIds().map((id) => listAgentWorkSessions(id)));
   return lists.flat().sort((a, b) => time(b.startedAt) - time(a.startedAt));
 }
 
