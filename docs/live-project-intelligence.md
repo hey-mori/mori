@@ -119,6 +119,11 @@ allowed to associate with connector events. It should not rely on raw
 `projectPath` or `sourceLabel` alone; the user-confirmed mapping is a separate
 trust boundary.
 
+The first cut of this object (canonical project identity, a user-confirmed alias
+mapping, candidate proposals, and alias-aware grouping) is implemented; see
+[Project Connection Mapping](./project-connection-mapping.md) for the data model
+and the remaining slices.
+
 Typical fields:
 
 - `id`
