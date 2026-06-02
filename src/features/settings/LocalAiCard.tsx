@@ -4,17 +4,23 @@ import {
   Cloud,
   Code2,
   Database,
+  FlaskConical,
   Plug,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/ui/Button";
-import { probeOllamaConnection, probeOpenAiCompatibleConnection } from "../../lib/analysis";
+import {
+  checkQuickPassCapability,
+  probeOllamaConnection,
+  probeOpenAiCompatibleConnection,
+} from "../../lib/analysis";
 import type {
   AnalysisResult,
   AnalysisRunStatus,
   QuickPassAnalysisSettings,
+  QuickPassCapabilityReport,
   QuickPassProviderKind,
 } from "../../lib/analysis";
 import { getProviderRows, type ProviderRow as ProviderRowModel } from "../../lib/settings/settingsStatus";
@@ -57,6 +63,11 @@ type ProbeState =
   | { status: "ok"; message: string; models: string[]; kind: QuickPassProviderKind }
   | { status: "error"; message: string; kind: QuickPassProviderKind };
 
+type CapabilityState =
+  | { status: "idle" }
+  | { status: "running"; kind: QuickPassProviderKind }
+  | { status: "done"; kind: QuickPassProviderKind; report: QuickPassCapabilityReport };
+
 type EngineDiagnostics = {
   analysis: AnalysisResult | null;
   status: AnalysisRunStatus;
@@ -86,13 +97,15 @@ export function LocalAiCard({
   const plannedRows = rows.filter((row) => row.status !== "implemented");
   const activeRow = selectableRows.find((row) => row.id === settings.provider) ?? selectableRows[0];
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
+  const [capability, setCapability] = useState<CapabilityState>({ status: "idle" });
 
   function selectProvider(kind: QuickPassProviderKind) {
     onProviderChange(kind);
     setProbe({ status: "idle" });
+    setCapability({ status: "idle" });
   }
 
-  async function handleTest(kind: QuickPassProviderKind) {
+  async function handleProbe(kind: QuickPassProviderKind) {
     if (kind === "deterministic") return;
     setProbe({ status: "checking", kind });
     const result =
@@ -111,6 +124,13 @@ export function LocalAiCard({
     } else {
       setProbe({ status: "error", message: result.message, kind });
     }
+  }
+
+  async function handleCapabilityTest(kind: QuickPassProviderKind) {
+    if (kind === "deterministic") return;
+    setCapability({ status: "running", kind });
+    const report = await checkQuickPassCapability(settings);
+    setCapability({ status: "done", kind, report });
   }
 
   return (
@@ -135,7 +155,9 @@ export function LocalAiCard({
           settings={settings}
           diagnostics={diagnostics}
           probe={probe}
-          onTest={() => handleTest(settings.provider)}
+          capability={capability}
+          onProbe={() => handleProbe(settings.provider)}
+          onCapabilityTest={() => handleCapabilityTest(settings.provider)}
           onUpdateSettings={onUpdateSettings}
         />
       </div>
@@ -202,19 +224,24 @@ function EngineConfigPanel({
   settings,
   diagnostics,
   probe,
-  onTest,
+  capability,
+  onProbe,
+  onCapabilityTest,
   onUpdateSettings,
 }: {
   row?: ProviderRowModel & { id: QuickPassProviderKind };
   settings: QuickPassAnalysisSettings;
   diagnostics: EngineDiagnostics;
   probe: ProbeState;
-  onTest: () => void;
+  capability: CapabilityState;
+  onProbe: () => void;
+  onCapabilityTest: () => void;
   onUpdateSettings: (patch: Partial<QuickPassAnalysisSettings>) => void;
 }) {
   if (!row) return null;
   const copy = PROVIDER_COPY[row.id];
-  const busy = probe.status === "checking" && probe.kind === row.id;
+  const probing = probe.status === "checking" && probe.kind === row.id;
+  const testing = capability.status === "running" && capability.kind === row.id;
   const canTest = row.id !== "deterministic";
   return (
     <section className="settings-ai-config-panel" aria-label={`${copy.label} 설정`}>
@@ -224,9 +251,20 @@ function EngineConfigPanel({
           <p>{row.id === "deterministic" ? "즉시 사용 가능. 가볍지만 LLM처럼 문맥을 깊게 추론하지는 않습니다." : row.setupRequirement}</p>
         </div>
         {canTest ? (
-          <Button icon={Plug} onClick={onTest} disabled={busy}>
-            {busy ? "확인 중" : "연결 확인"}
-          </Button>
+          <div className="settings-ai-config-actions">
+            <Button icon={Plug} variant="ghost" size="sm" onClick={onProbe} disabled={probing}>
+              {probing ? "확인 중" : "연결 확인"}
+            </Button>
+            <Button
+              icon={FlaskConical}
+              variant="primary"
+              size="sm"
+              onClick={onCapabilityTest}
+              disabled={testing}
+            >
+              {testing ? "테스트 중" : "응답 테스트"}
+            </Button>
+          </div>
         ) : null}
       </header>
 
@@ -295,9 +333,12 @@ function EngineConfigPanel({
         }}
       />
 
+      <CapabilityRow capability={capability} />
+
       <EngineDiagnosticsPanel
         provider={row.id}
         probe={probe}
+        capability={capability}
         diagnostics={diagnostics}
         fallbackEnabled={settings.fallbackToDeterministic}
       />
@@ -347,15 +388,17 @@ function EngineConfigPanel({
 function EngineDiagnosticsPanel({
   provider,
   probe,
+  capability,
   diagnostics,
   fallbackEnabled,
 }: {
   provider: QuickPassProviderKind;
   probe: ProbeState;
+  capability: CapabilityState;
   diagnostics: EngineDiagnostics;
   fallbackEnabled: boolean;
 }) {
-  const items = buildDiagnosticItems({ provider, probe, diagnostics, fallbackEnabled });
+  const items = buildDiagnosticItems({ provider, probe, capability, diagnostics, fallbackEnabled });
   return (
     <div className="settings-ai-diagnostics" aria-label="AI 엔진 진단">
       {items.map((item) => (
@@ -380,11 +423,13 @@ type DiagnosticItem = {
 function buildDiagnosticItems({
   provider,
   probe,
+  capability,
   diagnostics,
   fallbackEnabled,
 }: {
   provider: QuickPassProviderKind;
   probe: ProbeState;
+  capability: CapabilityState;
   diagnostics: EngineDiagnostics;
   fallbackEnabled: boolean;
 }): DiagnosticItem[] {
@@ -399,9 +444,33 @@ function buildDiagnosticItems({
     },
     dataRouteDiagnostic(provider),
     connectionDiagnostic(provider, probe),
+    capabilityDiagnostic(provider, capability),
     fallbackDiagnostic(provider, fallbackEnabled),
     lastRunDiagnostic(diagnostics),
   ];
+}
+
+function capabilityDiagnostic(
+  provider: QuickPassProviderKind,
+  capability: CapabilityState,
+): DiagnosticItem {
+  if (provider === "deterministic") {
+    return { label: "응답", value: "항상 가능", tone: "ok" };
+  }
+  if (capability.status === "running" && capability.kind === provider) {
+    return { label: "응답", value: "테스트 중", tone: "idle" };
+  }
+  if (capability.status === "done" && capability.kind === provider) {
+    const { report } = capability;
+    if (report.verdict === "ready") {
+      return { label: "응답", value: `구조화 가능 · ${report.durationMs}ms`, tone: "ok" };
+    }
+    if (report.verdict === "reachableNoStructure") {
+      return { label: "응답", value: "구조 없음", tone: "warn" };
+    }
+    return { label: "응답", value: "실패", tone: "error" };
+  }
+  return { label: "응답", value: "아직 테스트 안 함", tone: "idle" };
 }
 
 function dataRouteDiagnostic(provider: QuickPassProviderKind): DiagnosticItem {
@@ -515,6 +584,49 @@ function ProbeRow({
     <div className="settings-probe-row tone-err" role="alert">
       <StatusPill tone="red">연결 불가</StatusPill>
       <span>{probe.message}</span>
+    </div>
+  );
+}
+
+function CapabilityRow({ capability }: { capability: CapabilityState }) {
+  if (capability.status === "idle") return null;
+  if (capability.status === "running") {
+    return (
+      <div className="settings-capability-row">
+        <StatusPill tone="purple">테스트 중</StatusPill>
+        <span>합성 샘플로 엔진이 구조화된 응답을 내는지 확인합니다...</span>
+      </div>
+    );
+  }
+  const { report } = capability;
+  if (report.verdict === "ready") {
+    return (
+      <div className="settings-capability-row tone-ok">
+        <StatusPill tone="green">응답 확인됨</StatusPill>
+        <span>
+          {report.message} · 이슈 {report.counts.issues}개 · 결정 {report.counts.decisions}개 ·{" "}
+          {report.durationMs}ms
+        </span>
+      </div>
+    );
+  }
+  if (report.verdict === "reachableNoStructure") {
+    return (
+      <div className="settings-capability-row tone-warn">
+        <StatusPill tone="orange">부분 응답</StatusPill>
+        <span>{report.message}</span>
+        {report.hint ? <small className="settings-capability-hint">{report.hint}</small> : null}
+      </div>
+    );
+  }
+  return (
+    <div className="settings-capability-row tone-err" role="alert">
+      <StatusPill tone="red">테스트 실패</StatusPill>
+      <span>{report.message}</span>
+      {report.hint ? <small className="settings-capability-hint">{report.hint}</small> : null}
+      {report.error ? (
+        <small className="settings-capability-error">{truncate(report.error, 80)}</small>
+      ) : null}
     </div>
   );
 }

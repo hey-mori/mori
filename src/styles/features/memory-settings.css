@@ -3689,6 +3689,12 @@ button.settings-option {
   line-height: 1.45;
 }
 
+.settings-ai-config-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
 .settings-ai-empty-config {
   display: inline-flex;
   align-items: center;

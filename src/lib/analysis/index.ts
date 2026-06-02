@@ -45,7 +45,23 @@ export {
   type AnalysisStatusTone,
 } from "./analysisStatusDisplay";
 export { buildQuickPassPrompt } from "./promptTemplates";
-export { providerNameLabel, resolveQuickPassProvider, type QuickPassProviderConfig } from "./quickPassProvider";
+export {
+  buildProviderConfigFromSettings,
+  providerNameLabel,
+  resolveQuickPassProvider,
+  type ProviderConfigOverrides,
+  type QuickPassProviderConfig,
+} from "./quickPassProvider";
+export {
+  buildQuickPassSampleInput,
+  checkQuickPassCapability,
+  deriveFailureHint,
+  gradeQuickPassResult,
+  CAPABILITY_TEST_TIMEOUT_CAP_MS,
+  type QuickPassCapabilityCounts,
+  type QuickPassCapabilityReport,
+  type QuickPassCapabilityVerdict,
+} from "./quickPassCapability";
 export {
   appendAnalysisRun,
   createAnalysisRunHistory,

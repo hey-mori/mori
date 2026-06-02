@@ -12,6 +12,7 @@ import {
   OpenAiCompatibleQuickPassProvider,
   type OpenAiCompatibleProviderConfig,
 } from "./openAiCompatibleProvider";
+import type { QuickPassAnalysisSettings } from "./analysisSettings";
 import type { AnalysisProvider, AnalysisProviderName } from "./analysisTypes";
 
 export type QuickPassProviderConfig =
@@ -25,6 +26,50 @@ export function resolveQuickPassProvider(config: QuickPassProviderConfig): Analy
     return createOpenAiCompatibleQuickPassProvider(config.config);
   }
   return createDeterministicQuickPassProvider();
+}
+
+/** Optional per-call overrides when turning settings into a provider config. */
+export type ProviderConfigOverrides = {
+  /** Inject a custom fetch (tests, capability probes). */
+  fetchImpl?: typeof fetch;
+  /** Cap the request timeout instead of the user-configured value. */
+  timeoutMs?: number;
+};
+
+/**
+ * Map the persisted Quick Pass settings onto the discriminated provider
+ * config the resolver understands. One source of truth for "selected
+ * provider → live config" so the store, the capability check, and any
+ * future caller agree on endpoint / model / timeout wiring.
+ */
+export function buildProviderConfigFromSettings(
+  settings: QuickPassAnalysisSettings,
+  overrides: ProviderConfigOverrides = {},
+): QuickPassProviderConfig {
+  if (settings.provider === "ollama") {
+    return {
+      kind: "ollama",
+      config: {
+        endpoint: settings.ollamaEndpoint,
+        model: settings.ollamaModel,
+        timeoutMs: overrides.timeoutMs ?? settings.ollamaTimeoutMs,
+        ...(overrides.fetchImpl ? { fetchImpl: overrides.fetchImpl } : {}),
+      },
+    };
+  }
+  if (settings.provider === "openAiCompatible") {
+    return {
+      kind: "openAiCompatible",
+      config: {
+        baseUrl: settings.openAiBaseUrl,
+        model: settings.openAiModel,
+        apiKey: settings.openAiApiKey,
+        timeoutMs: overrides.timeoutMs ?? settings.openAiTimeoutMs,
+        ...(overrides.fetchImpl ? { fetchImpl: overrides.fetchImpl } : {}),
+      },
+    };
+  }
+  return { kind: "deterministic" };
 }
 
 export function providerNameLabel(name: AnalysisProviderName): string {

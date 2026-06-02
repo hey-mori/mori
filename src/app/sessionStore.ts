@@ -19,10 +19,10 @@ import type {
 } from "../lib/analysis";
 import {
   DEFAULT_QUICK_PASS_SETTINGS,
+  buildProviderConfigFromSettings,
   createDeterministicQuickPassProvider,
-  createOllamaQuickPassProvider,
-  createOpenAiCompatibleQuickPassProvider,
   getCurrentRun,
+  resolveQuickPassProvider,
   resolveTaskModel,
   sanitizeQuickPassSettings,
 } from "../lib/analysis";
@@ -1311,22 +1311,10 @@ function applyStoredSessionEdit(
 }
 
 function resolveProviderFromSettings(settings: QuickPassAnalysisSettings): AnalysisProvider {
-  if (settings.provider === "ollama") {
-    return createOllamaQuickPassProvider({
-      endpoint: settings.ollamaEndpoint,
-      model: settings.ollamaModel,
-      timeoutMs: settings.ollamaTimeoutMs,
-    });
-  }
-  if (settings.provider === "openAiCompatible") {
-    return createOpenAiCompatibleQuickPassProvider({
-      baseUrl: settings.openAiBaseUrl,
-      model: settings.openAiModel,
-      apiKey: settings.openAiApiKey,
-      timeoutMs: settings.openAiTimeoutMs,
-    });
-  }
-  return getDefaultProvider();
+  // Deterministic stays memoised; the LLM providers share the one
+  // settings → config mapping with the capability check and any future caller.
+  if (settings.provider === "deterministic") return getDefaultProvider();
+  return resolveQuickPassProvider(buildProviderConfigFromSettings(settings));
 }
 
 type ViewCache = {

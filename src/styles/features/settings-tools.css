@@ -330,6 +330,47 @@
   font-weight: 600;
 }
 
+/* Capability test: a graded verdict from running a synthetic sample through
+   the real analyze() path. Mirrors the probe-row look, with a hint line that
+   wraps below the verdict. */
+.settings-capability-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-capability-row.tone-ok {
+  background: var(--green-50);
+  color: var(--green);
+}
+
+.settings-capability-row.tone-warn {
+  background: var(--orange-50);
+  color: var(--orange);
+}
+
+.settings-capability-row.tone-err {
+  background: var(--red-50);
+  color: var(--red);
+}
+
+.settings-capability-hint,
+.settings-capability-error {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.settings-capability-error {
+  color: var(--muted-2);
+}
+
 /* Privacy defaults */
 
 .settings-privacy-list {
