@@ -430,6 +430,27 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
     },
   },
 
+  continueTranscript: {
+    id: "continueTranscript",
+    label: "Continue Transcript",
+    description: "Continue 세션 자동 감지로 가져온 대화 기록",
+    status: "implemented",
+    trustDefault: "verified",
+    rawDataPolicy: "summaryOnly",
+    captureMode: "explicitImport",
+    privacyNote:
+      "데스크톱 앱이 ~/.continue/sessions의 로컬 세션만 읽습니다. 자동 백그라운드 캡처는 없습니다.",
+    supportedInputTypes: ["application/json", "text/plain"],
+    outputRecords: {
+      sources: true,
+      timelineEvents: true,
+      issues: false,
+      decisions: false,
+      relationships: false,
+      artifacts: false,
+    },
+  },
+
   chatgptTranscript: {
     id: "chatgptTranscript",
     label: "ChatGPT Transcript",

@@ -25,6 +25,11 @@ import {
 } from "../opencode/opencodeTauri";
 import type { OpenCodeSessionMeta } from "../opencode/types";
 import {
+  discoverContinueSessions,
+  getContinueSession,
+} from "../continueAgent/continueTauri";
+import type { ContinueSessionMeta } from "../continueAgent/types";
+import {
   normalizeConnectorEventBatch,
   parseConnectorJsonl,
   type ConnectorEvent,
@@ -49,6 +54,7 @@ export type AgentWorkImportKind =
   | "codex-session"
   | "antigravity-session"
   | "opencode-session"
+  | "continue-session"
   | "connector-jsonl";
 
 export type AgentWorkSessionMeta = {
@@ -133,6 +139,14 @@ export async function listAgentWorkSessions(
       .map(mapAntigravityMeta)
       .sort((a, b) => time(b.startedAt) - time(a.startedAt));
   }
+  if (agentId === "continue") {
+    const direct = await discoverContinueSessions().catch(
+      () => [] as ContinueSessionMeta[],
+    );
+    return direct
+      .map(mapContinueMeta)
+      .sort((a, b) => time(b.startedAt) - time(a.startedAt));
+  }
   const [openCodeDirect, openCodeConnector] = await Promise.all([
     discoverOpenCodeSessions().catch(() => [] as OpenCodeSessionMeta[]),
     listConnectorBackedSessions(connectorConfigFor("opencode")),
@@ -178,6 +192,13 @@ export async function getAgentWorkSession(
     const detail = await getOpenCodeSession(meta.sourceFilePath);
     return {
       ...mapOpenCodeMeta(detail),
+      messages: detail.messages,
+    };
+  }
+  if (meta.importKind === "continue-session") {
+    const detail = await getContinueSession(meta.sourceFilePath);
+    return {
+      ...mapContinueMeta(detail),
       messages: detail.messages,
     };
   }
@@ -239,6 +260,18 @@ export function buildImportCandidatesFromAgentWorkSession(
         sessionId: input.sessionId,
         capturedAt: input.capturedAt,
         platform: "opencode",
+        title: detail.title,
+        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
+      }),
+    ];
+  }
+  if (detail.importKind === "continue-session") {
+    return [
+      normalizeAiTranscript({
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        capturedAt: input.capturedAt,
+        platform: "continue",
         title: detail.title,
         text: renderMessagesAsTranscript(detail.messages, detail.agentName),
       }),
@@ -335,6 +368,24 @@ function mapOpenCodeMeta(session: OpenCodeSessionMeta): AgentWorkSessionMeta {
     agentId: "opencode",
     agentName: "OpenCode",
     importKind: "opencode-session",
+    id: session.sessionId,
+    sessionId: session.sessionId,
+    projectPath: session.projectPath,
+    projectName: session.projectName,
+    filePath: session.filePath,
+    sourceFilePath: session.filePath,
+    startedAt: session.startedAt,
+    updatedAt: session.updatedAt,
+    messageCount: session.messageCount,
+    title: session.title,
+  };
+}
+
+function mapContinueMeta(session: ContinueSessionMeta): AgentWorkSessionMeta {
+  return {
+    agentId: "continue",
+    agentName: "Continue",
+    importKind: "continue-session",
     id: session.sessionId,
     sessionId: session.sessionId,
     projectPath: session.projectPath,

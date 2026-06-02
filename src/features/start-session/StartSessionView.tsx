@@ -7,6 +7,7 @@ import {
   Code2,
   FilePlus2,
   History,
+  Infinity,
   Lock,
   Rocket,
   Settings2,
@@ -110,6 +111,7 @@ const AGENT_ICON: Record<AgentIconKey, LucideIcon> = {
   code2: Code2,
   braces: Braces,
   rocket: Rocket,
+  infinity: Infinity,
 };
 
 /**

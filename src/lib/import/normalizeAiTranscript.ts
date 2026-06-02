@@ -24,6 +24,8 @@ function getIntegrationId(platform: AiTranscriptPlatform): string {
       return "antigravityTranscript";
     case "opencode":
       return "opencodeTranscript";
+    case "continue":
+      return "continueTranscript";
     case "other":
     default:
       return "aiConversation";
@@ -45,6 +47,8 @@ function getPlatformLabel(platform: AiTranscriptPlatform): string {
       return "Antigravity";
     case "opencode":
       return "OpenCode";
+    case "continue":
+      return "Continue";
     case "other":
     default:
       return "AI";

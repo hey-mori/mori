@@ -75,6 +75,19 @@ describe("normalizeAiTranscript", () => {
       expect(result.source.title).toContain("OpenCode");
     });
 
+    it("maps continue platform to continueTranscript integration", () => {
+      const input: NormalizeAiTranscriptInput = {
+        ...mockBase,
+        platform: "continue",
+        text: "User: Explain routing\nAssistant: Trie matcher",
+      };
+
+      const result = normalizeAiTranscript(input);
+
+      expect(result.source.kind).toBe("continueTranscript");
+      expect(result.source.title).toContain("Continue");
+    });
+
     it("maps other platform to aiConversation integration", () => {
       const input: NormalizeAiTranscriptInput = {
         ...mockBase,

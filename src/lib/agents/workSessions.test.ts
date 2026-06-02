@@ -26,8 +26,22 @@ function detail(
   overrides: Partial<AgentWorkSessionDetail> = {},
 ): AgentWorkSessionDetail {
   return {
-    agentId: importKind === "codex-session" ? "codex" : importKind === "antigravity-session" ? "antigravity" : "opencode",
-    agentName: importKind === "codex-session" ? "Codex" : importKind === "antigravity-session" ? "Antigravity" : "OpenCode",
+    agentId:
+      importKind === "codex-session"
+        ? "codex"
+        : importKind === "antigravity-session"
+          ? "antigravity"
+          : importKind === "continue-session"
+            ? "continue"
+            : "opencode",
+    agentName:
+      importKind === "codex-session"
+        ? "Codex"
+        : importKind === "antigravity-session"
+          ? "Antigravity"
+          : importKind === "continue-session"
+            ? "Continue"
+            : "OpenCode",
     importKind,
     id: "id-1",
     sessionId: "sess-1",
@@ -57,6 +71,7 @@ describe("reviewOriginForAgentWorkSession", () => {
       "codex-session",
       "antigravity-session",
       "opencode-session",
+      "continue-session",
     ] as const) {
       expect(reviewOriginForAgentWorkSession({ importKind: kind })).toBe("ai-transcript");
     }
@@ -89,6 +104,15 @@ describe("buildImportCandidatesFromAgentWorkSession", () => {
       buildInput,
     );
     expect(candidate.source.kind).toBe("opencodeTranscript");
+    expect(candidate.source.title).toBe("Retry helper work");
+  });
+
+  it("maps a Continue session to a dedicated continueTranscript candidate", () => {
+    const [candidate] = buildImportCandidatesFromAgentWorkSession(
+      detail("continue-session"),
+      buildInput,
+    );
+    expect(candidate.source.kind).toBe("continueTranscript");
     expect(candidate.source.title).toBe("Retry helper work");
   });
 

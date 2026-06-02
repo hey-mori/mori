@@ -3,6 +3,7 @@ mod antigravity;
 mod claude;
 mod codex;
 mod commands;
+mod continue_agent;
 mod connectors;
 mod db;
 mod git;
@@ -59,6 +60,8 @@ fn main() {
             antigravity::sessions::get_antigravity_session,
             opencode::sessions::discover_opencode_sessions,
             opencode::sessions::get_opencode_session,
+            continue_agent::sessions::discover_continue_sessions,
+            continue_agent::sessions::get_continue_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

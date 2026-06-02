@@ -22,13 +22,18 @@
 import type { AiTranscriptPlatform } from "../import";
 
 /** Every AI-agent anchor Mori can treat as a session spine. */
-export type AgentWorkAgentId = "claude" | "codex" | "opencode" | "antigravity";
+export type AgentWorkAgentId =
+  | "claude"
+  | "codex"
+  | "opencode"
+  | "antigravity"
+  | "continue";
 
 /**
  * Stable glyph key. UI surfaces map this to a concrete icon component so
  * the registry stays free of React / lucide imports.
  */
-export type AgentIconKey = "sparkles" | "code2" | "braces" | "rocket";
+export type AgentIconKey = "sparkles" | "code2" | "braces" | "rocket" | "infinity";
 
 /**
  * Binding to the connector JSONL inbox for agents whose work records
@@ -95,6 +100,14 @@ export const AGENT_REGISTRY: readonly AgentDescriptor[] = [
     detail: "Antigravity · Gemini",
     iconKey: "rocket",
     platform: "antigravity",
+    detect: true,
+  },
+  {
+    agentId: "continue",
+    agentName: "Continue",
+    detail: "Continue · VS Code · JetBrains",
+    iconKey: "infinity",
+    platform: "continue",
     detect: true,
   },
 ];

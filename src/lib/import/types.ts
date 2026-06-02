@@ -31,6 +31,7 @@ export type AiTranscriptPlatform =
   | "codex"
   | "antigravity"
   | "opencode"
+  | "continue"
   | "other";
 
 /**

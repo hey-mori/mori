@@ -112,6 +112,17 @@ pub fn opencode_storage_dir() -> Option<PathBuf> {
     join(opencode_data_dir(), &["storage"])
 }
 
+/// Continue global dir: `$CONTINUE_GLOBAL_DIR`, else `~/.continue`.
+pub fn continue_dir() -> Option<PathBuf> {
+    resolve_root(env_override(&["CONTINUE_GLOBAL_DIR"]), home_dir(), &[".continue"])
+}
+
+/// Continue session store: `<continue dir>/sessions` (one `sessions.json`
+/// index plus one `<sessionId>.json` per session).
+pub fn continue_sessions_dir() -> Option<PathBuf> {
+    join(continue_dir(), &["sessions"])
+}
+
 /// Mori connector inbox root: `~/.mori/connectors` (the hook writes here; no
 /// override, so reader and writer never disagree).
 pub fn mori_inbox_dir() -> Option<PathBuf> {

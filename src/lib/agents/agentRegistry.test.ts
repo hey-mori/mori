@@ -10,7 +10,7 @@ import {
 describe("agentRegistry", () => {
   it("covers every anchor agent exactly once", () => {
     const ids = listAgentIds();
-    expect(ids).toEqual(["claude", "codex", "opencode", "antigravity"]);
+    expect(ids).toEqual(["claude", "codex", "opencode", "antigravity", "continue"]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -39,13 +39,14 @@ describe("agentRegistry", () => {
       connectorFamily: "opencode-cli",
       connectorIds: ["openCodeCli"],
     });
-    // Claude and Antigravity are read directly from their native stores.
+    // Claude, Antigravity, and Continue are read directly from their native stores.
     expect(getAgentConnectorBinding("claude")).toBeUndefined();
     expect(getAgentConnectorBinding("antigravity")).toBeUndefined();
+    expect(getAgentConnectorBinding("continue")).toBeUndefined();
   });
 
   it("keeps every descriptor's icon key within the supported glyph set", () => {
-    const allowed = new Set(["sparkles", "code2", "braces", "rocket"]);
+    const allowed = new Set(["sparkles", "code2", "braces", "rocket", "infinity"]);
     for (const descriptor of AGENT_REGISTRY) {
       expect(allowed.has(descriptor.iconKey)).toBe(true);
     }

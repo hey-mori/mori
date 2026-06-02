@@ -23,6 +23,7 @@ describe("buildSourceProviderGroups", () => {
       "codex",
       "opencode",
       "antigravity",
+      "continue",
     ]);
   });
 

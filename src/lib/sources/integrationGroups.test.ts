@@ -32,6 +32,7 @@ describe("integrationGroups", () => {
       // card; their transcript kinds exist only for imported-session provenance.
       expect(ids).not.toContain("antigravityTranscript");
       expect(ids).not.toContain("opencodeTranscript");
+      expect(ids).not.toContain("continueTranscript");
     });
 
     it("never includes a planned integration", () => {
