@@ -10,3 +10,8 @@ export {
   type FollowStatus,
 } from "./followController";
 export { selectNewFollowEventIds } from "./followSource";
+export {
+  runFollowPoll,
+  type FollowPollDeps,
+  type FollowPollOutcome,
+} from "./followDriver";
