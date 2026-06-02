@@ -976,7 +976,17 @@
   outline: 1px solid var(--base-accent);
   outline-offset: -1px;
   border-radius: var(--base-radius-md);
+}
+
+/* Insertion preview shown where the dragged panel will land in a column. */
+.workbench-drop-placeholder {
+  flex: 0 0 auto;
+  min-height: 92px;
+  margin-top: var(--base-space-2);
+  border: 1.5px dashed var(--base-accent);
+  border-radius: var(--base-radius-md);
   background: var(--base-accent-soft);
+  animation: wb-fade 120ms ease both;
 }
 
 .workbench-edge {

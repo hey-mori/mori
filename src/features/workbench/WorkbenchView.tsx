@@ -880,6 +880,9 @@ export function WorkbenchView() {
                       </Fragment>
                     );
                   })}
+                  {dropHint === "colz:" + col.id ? (
+                    <div className="workbench-drop-placeholder" aria-hidden="true" />
+                  ) : null}
                 </div>
                 {colIndex < columns.length - 1 ? (
                   <div
