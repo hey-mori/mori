@@ -1,21 +1,25 @@
-import { Bot, Cloud, Code2, Database, Plug, Sparkles } from "lucide-react";
+import {
+  Bot,
+  CheckCircle2,
+  Cloud,
+  Code2,
+  Database,
+  Plug,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/ui/Button";
-import { BasePlannedAction } from "../../components/ui/BasePlannedAction";
-import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { probeOllamaConnection, probeOpenAiCompatibleConnection } from "../../lib/analysis";
-import type { QuickPassAnalysisSettings, QuickPassProviderKind } from "../../lib/analysis";
+import type {
+  AnalysisResult,
+  AnalysisRunStatus,
+  QuickPassAnalysisSettings,
+  QuickPassProviderKind,
+} from "../../lib/analysis";
 import { getProviderRows, type ProviderRow as ProviderRowModel } from "../../lib/settings/settingsStatus";
 import {
-  getProductAvailabilityDisplay,
-  productAvailabilityFromFeatureStatus,
-} from "../../lib/product-state/productState";
-import {
   PreferenceToggle,
-  SettingsNotice,
-  SettingsOptionGroup,
-  SettingsProviderOption,
-  SettingsRow,
   SettingsSection,
   StatusPill,
 } from "./SettingsPrimitives";
@@ -29,26 +33,68 @@ const ICONS: Record<string, typeof Bot> = {
   cloudApi: Cloud,
 };
 
+const PROVIDER_COPY: Record<QuickPassProviderKind, { label: string; summary: string; data: string }> = {
+  deterministic: {
+    label: "규칙 기반",
+    summary: "모델 없이 제목과 요약의 신호를 빠르게 정리합니다.",
+    data: "네트워크 호출 없음",
+  },
+  ollama: {
+    label: "Ollama",
+    summary: "로컬 LLM으로 더 풍부한 이슈와 결정을 추출합니다.",
+    data: "입력한 로컬 endpoint만 사용",
+  },
+  openAiCompatible: {
+    label: "OpenAI 호환",
+    summary: "LM Studio, vLLM, LocalAI, OpenAI 호환 API를 연결합니다.",
+    data: "입력한 base URL로 전송",
+  },
+};
+
 type ProbeState =
   | { status: "idle" }
-  | { status: "checking" }
+  | { status: "checking"; kind: QuickPassProviderKind }
   | { status: "ok"; message: string; models: string[]; kind: QuickPassProviderKind }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; kind: QuickPassProviderKind };
+
+type EngineDiagnostics = {
+  analysis: AnalysisResult | null;
+  status: AnalysisRunStatus;
+  error: string | null;
+  providerLabel: string | null;
+  fallbackUsed: boolean;
+  importCount: number;
+  sourceCount: number;
+};
 
 export function LocalAiCard({
   settings,
+  diagnostics,
   onProviderChange,
   onUpdateSettings,
 }: {
   settings: QuickPassAnalysisSettings;
+  diagnostics: EngineDiagnostics;
   onProviderChange: (kind: QuickPassProviderKind) => void;
   onUpdateSettings: (patch: Partial<QuickPassAnalysisSettings>) => void;
 }) {
   const rows = getProviderRows(settings);
+  const selectableRows = rows.filter((row): row is ProviderRowModel & { id: QuickPassProviderKind } =>
+    row.status === "implemented" &&
+    (row.id === "deterministic" || row.id === "ollama" || row.id === "openAiCompatible"),
+  );
+  const plannedRows = rows.filter((row) => row.status !== "implemented");
+  const activeRow = selectableRows.find((row) => row.id === settings.provider) ?? selectableRows[0];
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
 
+  function selectProvider(kind: QuickPassProviderKind) {
+    onProviderChange(kind);
+    setProbe({ status: "idle" });
+  }
+
   async function handleTest(kind: QuickPassProviderKind) {
-    setProbe({ status: "checking" });
+    if (kind === "deterministic") return;
+    setProbe({ status: "checking", kind });
     const result =
       kind === "openAiCompatible"
         ? await probeOpenAiCompatibleConnection({
@@ -63,186 +109,174 @@ export function LocalAiCard({
     if (result.ok) {
       setProbe({ status: "ok", message: result.message, models: result.models ?? [], kind });
     } else {
-      setProbe({ status: "error", message: result.message });
+      setProbe({ status: "error", message: result.message, kind });
     }
   }
 
-  const selectableRows = rows.filter((row) => row.status === "implemented");
-  const plannedRows = rows.filter((row) => row.status !== "implemented");
-
   return (
     <SettingsSection
-      title="AI 제공자"
-      description="Quick Pass가 가져온 자료를 이슈, 결정, 다음 행동으로 정리할 때 사용할 제공자입니다."
+      title="Quick Pass 엔진"
+      description="Quick Pass가 가져온 자료를 이슈, 결정, 다음 행동으로 정리할 때 사용할 엔진입니다."
     >
-      <SettingsOptionGroup label="Quick Pass 제공자" columns="single">
-        {selectableRows.map((row) => {
-          const Icon = ICONS[row.id] ?? Bot;
-          const isCurrent = row.selected;
-          const availability = getProductAvailabilityDisplay(
-            productAvailabilityFromFeatureStatus(row.status),
-          );
-          return (
-            <ProviderOption
+      <div className="settings-ai-layout">
+        <div className="settings-ai-provider-grid" role="radiogroup" aria-label="Quick Pass 엔진">
+          {selectableRows.map((row) => (
+            <ProviderChoice
               key={row.id}
               row={row}
-              icon={Icon}
-              isCurrent={isCurrent}
-              canSelect
-              availabilityLabel={availability.label}
-              availabilityTone={availability.tone}
-              onSelect={() => onProviderChange(row.id as QuickPassProviderKind)}
-              onTest={row.canTest ? () => handleTest(row.id as QuickPassProviderKind) : undefined}
-              testBusy={probe.status === "checking"}
+              selected={row.id === settings.provider}
+              onSelect={() => selectProvider(row.id)}
             />
-          );
-        })}
-      </SettingsOptionGroup>
+          ))}
+        </div>
+
+        <EngineConfigPanel
+          row={activeRow}
+          settings={settings}
+          diagnostics={diagnostics}
+          probe={probe}
+          onTest={() => handleTest(settings.provider)}
+          onUpdateSettings={onUpdateSettings}
+        />
+      </div>
 
       {plannedRows.length > 0 ? (
-        <details className="settings-planned-disclosure">
+        <details className="settings-ai-planned">
           <summary>
-            <span>예정 제공자 {plannedRows.length}개</span>
-            <small>구현 전까지 선택할 수 없고, 외부로 데이터를 보내지 않습니다.</small>
+            <span>향후 지원</span>
+            <small>{plannedRows.length}개 엔진</small>
           </summary>
-          <ul className="settings-planned-list">
+          <div className="settings-ai-planned-list">
             {plannedRows.map((row) => {
               const Icon = ICONS[row.id] ?? Bot;
               return (
-                <li key={row.id}>
-                  <span className="settings-planned-icon" aria-hidden="true">
-                    <Icon size={14} />
-                  </span>
-                  <div className="settings-planned-text">
-                    <strong>{row.label}</strong>
-                    <small>{row.description}</small>
-                  </div>
-                  <StatusPill tone={row.isLocal ? "green" : "orange"}>
-                    {row.isLocal ? "로컬" : "외부"}
-                  </StatusPill>
-                </li>
+                <span key={row.id}>
+                  <Icon size={13} aria-hidden="true" />
+                  {row.label}
+                </span>
               );
             })}
-          </ul>
+          </div>
         </details>
       ) : null}
+    </SettingsSection>
+  );
+}
 
-      <div className="settings-row-list">
-        <SettingsRow
-          label="Ollama endpoint"
-          description="Ollama 제공자를 선택한 경우에만 사용됩니다."
-          control={
-            <ProviderField
-              label="Ollama endpoint"
-              value={settings.ollamaEndpoint}
-              disabled={settings.provider !== "ollama"}
-              onChange={(value) => onUpdateSettings({ ollamaEndpoint: value })}
-            />
-          }
-        />
-        <SettingsRow
-          label="모델"
-          description="Ollama 요청에 전달할 로컬 모델 이름입니다."
-          control={
-            <ProviderField
-              label="모델"
-              value={settings.ollamaModel}
-              disabled={settings.provider !== "ollama"}
-              onChange={(value) => onUpdateSettings({ ollamaModel: value })}
-            />
-          }
-        />
-        <SettingsRow
-          label="요청 추상화 모델 (선택)"
-          description="비워두면 위 모델을 사용합니다. 요지 생성처럼 가벼운 작업에 더 작고 빠른 모델을 지정할 수 있습니다."
-          control={
-            <ProviderField
-              label="요청 추상화 모델"
-              value={settings.requestAbstractionModel}
-              disabled={settings.provider !== "ollama"}
-              onChange={(value) => onUpdateSettings({ requestAbstractionModel: value })}
-            />
-          }
-        />
-        <SettingsRow
-          label="OpenAI 호환 base URL"
-          description="/v1까지 포함한 base URL입니다. 예: http://localhost:1234/v1 또는 https://api.openai.com/v1"
-          control={
-            <ProviderField
-              label="OpenAI 호환 base URL"
-              value={settings.openAiBaseUrl}
-              disabled={settings.provider !== "openAiCompatible"}
-              onChange={(value) => onUpdateSettings({ openAiBaseUrl: value })}
-            />
-          }
-        />
-        <SettingsRow
-          label="OpenAI 호환 모델"
-          description="chat/completions 요청에 전달할 모델 이름입니다."
-          control={
-            <ProviderField
-              label="OpenAI 호환 모델"
-              value={settings.openAiModel}
-              disabled={settings.provider !== "openAiCompatible"}
-              onChange={(value) => onUpdateSettings({ openAiModel: value })}
-            />
-          }
-        />
-        <SettingsRow
-          label="API key"
-          description="필요한 엔드포인트에서만 사용합니다. 이 기기의 Quick Pass 설정에 저장됩니다."
-          control={
-            <ProviderField
-              label="API key"
-              value={settings.openAiApiKey}
-              disabled={settings.provider !== "openAiCompatible"}
-              type="password"
-              onChange={(value) => onUpdateSettings({ openAiApiKey: value })}
-            />
-          }
-        />
-        <SettingsRow
-          label="OpenAI 호환 타임아웃"
-          description="OpenAI 호환 응답을 기다리는 최대 시간(ms)입니다."
-          control={
-            <ProviderField
-              label="OpenAI 호환 타임아웃"
-              value={String(settings.openAiTimeoutMs)}
-              disabled={settings.provider !== "openAiCompatible"}
-              onChange={(value) =>
-                onUpdateSettings({ openAiTimeoutMs: parseTimeout(value, settings.openAiTimeoutMs) })
-              }
-            />
-          }
-        />
-        <SettingsRow
-          label="타임아웃"
-          description="로컬 Ollama 응답을 기다리는 최대 시간(ms)입니다."
-          control={
-            <ProviderField
-              label="타임아웃"
-              value={String(settings.ollamaTimeoutMs)}
-              disabled={settings.provider !== "ollama"}
-              onChange={(value) =>
-                onUpdateSettings({ ollamaTimeoutMs: parseTimeout(value, settings.ollamaTimeoutMs) })
-              }
-            />
-          }
-        />
-        <SettingsRow
-          label="Quick Pass로 fallback"
-          description="LLM 제공자가 닿지 않으면 결정론적 로컬 제공자로 전환합니다."
-          control={
-            <PreferenceToggle
-              label="LLM 실패 시 자동 전환"
-              active={settings.fallbackToDeterministic}
-              onToggle={() =>
-                onUpdateSettings({ fallbackToDeterministic: !settings.fallbackToDeterministic })
-              }
-            />
-          }
-        />
-      </div>
+function ProviderChoice({
+  row,
+  selected,
+  onSelect,
+}: {
+  row: ProviderRowModel & { id: QuickPassProviderKind };
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const Icon = ICONS[row.id] ?? Bot;
+  const copy = PROVIDER_COPY[row.id];
+  return (
+    <button
+      type="button"
+      className={`settings-ai-provider${selected ? " is-selected" : ""}`}
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+    >
+      <span className="settings-ai-provider-icon" aria-hidden="true">
+        <Icon size={15} />
+      </span>
+      <span className="settings-ai-provider-main">
+        <span className="settings-ai-provider-title">
+          <strong>{copy.label}</strong>
+          {selected ? <CheckCircle2 size={14} aria-hidden="true" /> : null}
+        </span>
+        <small>{copy.summary}</small>
+      </span>
+      <span className="settings-ai-provider-data">{copy.data}</span>
+    </button>
+  );
+}
+
+function EngineConfigPanel({
+  row,
+  settings,
+  diagnostics,
+  probe,
+  onTest,
+  onUpdateSettings,
+}: {
+  row?: ProviderRowModel & { id: QuickPassProviderKind };
+  settings: QuickPassAnalysisSettings;
+  diagnostics: EngineDiagnostics;
+  probe: ProbeState;
+  onTest: () => void;
+  onUpdateSettings: (patch: Partial<QuickPassAnalysisSettings>) => void;
+}) {
+  if (!row) return null;
+  const copy = PROVIDER_COPY[row.id];
+  const busy = probe.status === "checking" && probe.kind === row.id;
+  const canTest = row.id !== "deterministic";
+  return (
+    <section className="settings-ai-config-panel" aria-label={`${copy.label} 설정`}>
+      <header className="settings-ai-config-head">
+        <div>
+          <h4>{copy.label}</h4>
+          <p>{row.id === "deterministic" ? "즉시 사용 가능. 가볍지만 LLM처럼 문맥을 깊게 추론하지는 않습니다." : row.setupRequirement}</p>
+        </div>
+        {canTest ? (
+          <Button icon={Plug} onClick={onTest} disabled={busy}>
+            {busy ? "확인 중" : "연결 확인"}
+          </Button>
+        ) : null}
+      </header>
+
+      {row.id === "deterministic" ? (
+        <div className="settings-ai-empty-config">
+          <ShieldCheck size={15} aria-hidden="true" />
+          <span>추가 설정 없이 이 기기 안에서 실행됩니다.</span>
+        </div>
+      ) : null}
+
+      {row.id === "ollama" ? (
+        <div className="settings-ai-field-grid">
+          <ProviderField
+            label="Endpoint"
+            value={settings.ollamaEndpoint}
+            placeholder="http://localhost:11434"
+            onChange={(value) => onUpdateSettings({ ollamaEndpoint: value })}
+          />
+          <ProviderField
+            label="모델"
+            value={settings.ollamaModel}
+            placeholder="llama3.1:8b"
+            onChange={(value) => onUpdateSettings({ ollamaModel: value })}
+          />
+        </div>
+      ) : null}
+
+      {row.id === "openAiCompatible" ? (
+        <div className="settings-ai-field-grid">
+          <ProviderField
+            label="Base URL"
+            value={settings.openAiBaseUrl}
+            placeholder="http://localhost:1234/v1"
+            onChange={(value) => onUpdateSettings({ openAiBaseUrl: value })}
+          />
+          <ProviderField
+            label="모델"
+            value={settings.openAiModel}
+            placeholder="local-model"
+            onChange={(value) => onUpdateSettings({ openAiModel: value })}
+          />
+          <ProviderField
+            label="API key"
+            value={settings.openAiApiKey}
+            type="password"
+            placeholder="필요한 경우만"
+            onChange={(value) => onUpdateSettings({ openAiApiKey: value })}
+          />
+        </div>
+      ) : null}
 
       <ProbeRow
         probe={probe}
@@ -260,85 +294,180 @@ export function LocalAiCard({
           );
         }}
       />
-      <SettingsNotice icon={Cloud} title="외부 제공자">
-        OpenAI 호환 base URL에 Cloud API 주소를 입력하면 Quick Pass 실행 시 현재 세션의 이벤트와 소스 요약이 해당 외부 API로 전송됩니다. 결정론적 / Ollama 제공자는 외부 Cloud API를 호출하지 않습니다.
-      </SettingsNotice>
-    </SettingsSection>
+
+      <EngineDiagnosticsPanel
+        provider={row.id}
+        probe={probe}
+        diagnostics={diagnostics}
+        fallbackEnabled={settings.fallbackToDeterministic}
+      />
+
+      {row.id !== "deterministic" ? (
+        <details className="settings-ai-advanced">
+          <summary>고급 설정</summary>
+          <div className="settings-ai-advanced-body">
+            {row.id === "ollama" ? (
+              <ProviderField
+                label="요청 요약 모델"
+                value={settings.requestAbstractionModel}
+                placeholder="비워두면 기본 모델 사용"
+                onChange={(value) => onUpdateSettings({ requestAbstractionModel: value })}
+              />
+            ) : null}
+            <ProviderField
+              label="타임아웃(ms)"
+              value={String(row.id === "openAiCompatible" ? settings.openAiTimeoutMs : settings.ollamaTimeoutMs)}
+              inputMode="numeric"
+              onChange={(value) =>
+                row.id === "openAiCompatible"
+                  ? onUpdateSettings({ openAiTimeoutMs: parseTimeout(value, settings.openAiTimeoutMs) })
+                  : onUpdateSettings({ ollamaTimeoutMs: parseTimeout(value, settings.ollamaTimeoutMs) })
+              }
+            />
+            <div className="settings-ai-fallback">
+              <span>
+                <strong>실패 시 규칙 기반으로 전환</strong>
+                <small>엔진 연결이 실패해도 Quick Pass 결과를 비워두지 않습니다.</small>
+              </span>
+              <PreferenceToggle
+                label="실패 시 규칙 기반으로 전환"
+                active={settings.fallbackToDeterministic}
+                onToggle={() =>
+                  onUpdateSettings({ fallbackToDeterministic: !settings.fallbackToDeterministic })
+                }
+              />
+            </div>
+          </div>
+        </details>
+      ) : null}
+    </section>
   );
 }
 
-function ProviderOption({
-  row,
-  icon: Icon,
-  isCurrent,
-  canSelect,
-  availabilityLabel,
-  availabilityTone,
-  onSelect,
-  onTest,
-  testBusy,
+function EngineDiagnosticsPanel({
+  provider,
+  probe,
+  diagnostics,
+  fallbackEnabled,
 }: {
-  row: ProviderRowModel;
-  icon: typeof Bot;
-  isCurrent: boolean;
-  canSelect: boolean;
-  availabilityLabel: string;
-  availabilityTone: Parameters<typeof BaseStatusBadge>[0]["tone"];
-  onSelect: () => void;
-  onTest?: () => void;
-  testBusy: boolean;
+  provider: QuickPassProviderKind;
+  probe: ProbeState;
+  diagnostics: EngineDiagnostics;
+  fallbackEnabled: boolean;
 }) {
-  const status = (
-    <BaseStatusBadge tone={availabilityTone}>
-      {availabilityLabel}
-    </BaseStatusBadge>
-  );
-  const actions = canSelect ? (
-    <>
-      <Button
-        variant={isCurrent ? "primary" : "secondary"}
-        onClick={onSelect}
-        disabled={isCurrent}
-        title={isCurrent ? "현재 선택된 제공자입니다." : "Quick Pass 제공자로 선택"}
-      >
-        {isCurrent ? "선택됨" : "선택"}
-      </Button>
-      {onTest ? (
-        <Button
-          icon={Plug}
-          onClick={onTest}
-          disabled={testBusy}
-          title="현재 입력된 endpoint로 연결을 테스트합니다."
-        >
-          {testBusy ? "테스트 중" : "테스트"}
-        </Button>
-      ) : null}
-    </>
-  ) : (
-    <BasePlannedAction
-      label="예정"
-      title="다음 마일스톤에서 활성화됩니다."
-    />
-  );
-
+  const items = buildDiagnosticItems({ provider, probe, diagnostics, fallbackEnabled });
   return (
-    <SettingsProviderOption
-      selected={isCurrent}
-      planned={!canSelect}
-      icon={Icon}
-      label={row.label}
-      description={`${row.description} ${row.privacyNote}`}
-      locality={
-        <StatusPill tone={row.isLocal ? "green" : "orange"}>
-          {row.isLocal ? "로컬" : "외부"}
-        </StatusPill>
-      }
-      dataNotice={row.receivesData}
-      setup={row.setupRequirement}
-      status={status}
-      actions={actions}
-    />
+    <div className="settings-ai-diagnostics" aria-label="AI 엔진 진단">
+      {items.map((item) => (
+        <div key={item.label} className={`settings-ai-diagnostic tone-${item.tone}`}>
+          <span className="settings-ai-diagnostic-dot" aria-hidden="true" />
+          <span>
+            <small>{item.label}</small>
+            <strong>{item.value}</strong>
+          </span>
+        </div>
+      ))}
+    </div>
   );
+}
+
+type DiagnosticItem = {
+  label: string;
+  value: string;
+  tone: "ok" | "info" | "idle" | "warn" | "error";
+};
+
+function buildDiagnosticItems({
+  provider,
+  probe,
+  diagnostics,
+  fallbackEnabled,
+}: {
+  provider: QuickPassProviderKind;
+  probe: ProbeState;
+  diagnostics: EngineDiagnostics;
+  fallbackEnabled: boolean;
+}): DiagnosticItem[] {
+  return [
+    {
+      label: "입력",
+      value:
+        diagnostics.importCount > 0 || diagnostics.sourceCount > 0
+          ? `가져오기 ${diagnostics.importCount}건 · 출처 ${diagnostics.sourceCount}개`
+          : "분석할 자료 없음",
+      tone: diagnostics.importCount > 0 || diagnostics.sourceCount > 0 ? "info" : "idle",
+    },
+    dataRouteDiagnostic(provider),
+    connectionDiagnostic(provider, probe),
+    fallbackDiagnostic(provider, fallbackEnabled),
+    lastRunDiagnostic(diagnostics),
+  ];
+}
+
+function dataRouteDiagnostic(provider: QuickPassProviderKind): DiagnosticItem {
+  if (provider === "openAiCompatible") {
+    return { label: "데이터 경로", value: "입력한 base URL", tone: "warn" };
+  }
+  if (provider === "ollama") {
+    return { label: "데이터 경로", value: "입력한 로컬 endpoint", tone: "ok" };
+  }
+  return { label: "데이터 경로", value: "기기 내부", tone: "ok" };
+}
+
+function connectionDiagnostic(provider: QuickPassProviderKind, probe: ProbeState): DiagnosticItem {
+  if (provider === "deterministic") {
+    return { label: "연결", value: "필요 없음", tone: "ok" };
+  }
+  if (probe.status === "checking" && probe.kind === provider) {
+    return { label: "연결", value: "확인 중", tone: "idle" };
+  }
+  if (probe.status === "ok" && probe.kind === provider) {
+    const suffix = probe.models.length ? ` · 모델 ${probe.models.length}개` : "";
+    return { label: "연결", value: `확인됨${suffix}`, tone: "ok" };
+  }
+  if (probe.status === "error" && probe.kind === provider) {
+    return { label: "연결", value: "확인 실패", tone: "error" };
+  }
+  return { label: "연결", value: "아직 확인 안 함", tone: "idle" };
+}
+
+function fallbackDiagnostic(provider: QuickPassProviderKind, enabled: boolean): DiagnosticItem {
+  if (provider === "deterministic") {
+    return { label: "Fallback", value: "해당 없음", tone: "idle" };
+  }
+  return {
+    label: "Fallback",
+    value: enabled ? "규칙 기반으로 전환" : "실패를 그대로 표시",
+    tone: enabled ? "info" : "warn",
+  };
+}
+
+function lastRunDiagnostic(diagnostics: EngineDiagnostics): DiagnosticItem {
+  if (diagnostics.status === "running") {
+    return { label: "최근 실행", value: "실행 중", tone: "idle" };
+  }
+  if (diagnostics.status === "failed") {
+    return {
+      label: "최근 실행",
+      value: diagnostics.error ? `실패 · ${truncate(diagnostics.error, 34)}` : "실패",
+      tone: "error",
+    };
+  }
+  if (!diagnostics.analysis) {
+    return { label: "최근 실행", value: "아직 없음", tone: "idle" };
+  }
+  const provider = diagnostics.fallbackUsed
+    ? "fallback 사용"
+    : diagnostics.providerLabel ?? diagnostics.analysis.providerLabel;
+  return {
+    label: "최근 실행",
+    value: `${provider} · ${Math.round(diagnostics.analysis.confidence * 100)}% · ${diagnostics.analysis.durationMs}ms`,
+    tone: "ok",
+  };
+}
+
+function truncate(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
 function ProbeRow({
@@ -355,7 +484,7 @@ function ProbeRow({
     return (
       <div className="settings-probe-row">
         <StatusPill tone="purple">확인 중</StatusPill>
-        <span>Ollama에 연결을 시도하고 있습니다...</span>
+        <span>엔드포인트에 연결하고 있습니다...</span>
       </div>
     );
   }
@@ -373,7 +502,6 @@ function ProbeRow({
                 className={`settings-probe-model${model === selectedModel ? " is-selected" : ""}`}
                 aria-pressed={model === selectedModel}
                 onClick={() => onSelectModel?.(model)}
-                title="이 모델을 사용합니다"
               >
                 {model}
               </button>
@@ -394,23 +522,26 @@ function ProbeRow({
 function ProviderField({
   label,
   value,
-  disabled,
   type = "text",
+  placeholder,
+  inputMode,
   onChange,
 }: {
   label: string;
   value: string;
-  disabled: boolean;
   type?: "text" | "password";
+  placeholder?: string;
+  inputMode?: "numeric";
   onChange: (value: string) => void;
 }) {
   return (
-    <label className={`settings-provider-field ${disabled ? "is-disabled" : ""}`}>
-      <span className="sr-only">{label}</span>
+    <label className="settings-ai-field">
+      <span>{label}</span>
       <input
         type={type}
         value={value}
-        disabled={disabled}
+        placeholder={placeholder}
+        inputMode={inputMode}
         onChange={(event) => onChange(event.target.value)}
       />
     </label>

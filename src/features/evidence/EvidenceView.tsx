@@ -523,7 +523,7 @@ function QuickPassControl({
       ? `Ollama · ${settings.ollamaModel} (${settings.ollamaEndpoint})`
       : settings.provider === "openAiCompatible"
         ? `OpenAI 호환 · ${settings.openAiModel} (${settings.openAiBaseUrl})`
-      : "결정론적 로컬 휴리스틱 (네트워크 없음)";
+      : "규칙 기반 로컬 엔진 (네트워크 없음)";
 
   return (
     <div className={`analysis-panel status-${status}`}>
@@ -532,7 +532,7 @@ function QuickPassControl({
           <h2>Quick Pass 분석</h2>
           <p>
             현재 세션에 가져온 소스와 이벤트로부터 이슈, 결정, 다음 액션을 추출합니다.
-            기본 제공자는 결정론적 로컬 휴리스틱이며, 설정에서 Ollama 같은 로컬 LLM 제공자로 교체할 수 있습니다.
+            기본 제공자는 규칙 기반 로컬 엔진이며, 설정에서 Ollama 같은 로컬 LLM 제공자로 교체할 수 있습니다.
           </p>
         </div>
         <div className="analysis-panel-actions">
@@ -565,7 +565,7 @@ function QuickPassControl({
           value={settings.provider}
           onChange={onProviderChange}
           options={[
-            { id: "deterministic", label: "결정론적" },
+            { id: "deterministic", label: "규칙 기반" },
             { id: "ollama", label: "Ollama (로컬 LLM)" },
             { id: "openAiCompatible", label: "OpenAI 호환" },
           ]}
@@ -578,7 +578,7 @@ function QuickPassControl({
               checked={settings.fallbackToDeterministic}
               onChange={(event) => onFallbackChange(event.target.checked)}
             />
-            <span>실패 시 결정론적 제공자로 폴백</span>
+            <span>실패 시 규칙 기반으로 전환</span>
           </label>
         ) : null}
         <Button icon={SettingsIcon} onClick={onOpenSettings}>

@@ -30,7 +30,7 @@ export function resolveQuickPassProvider(config: QuickPassProviderConfig): Analy
 export function providerNameLabel(name: AnalysisProviderName): string {
   if (name === "ollama-quick-pass-v1") return "Ollama Quick Pass";
   if (name === "openai-compatible-quick-pass-v1") return "OpenAI-compatible Quick Pass";
-  return "Deterministic Quick Pass";
+  return "규칙 기반 Quick Pass";
 }
 
 export {

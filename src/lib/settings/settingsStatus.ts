@@ -45,11 +45,11 @@ export function getProviderRows(
   return [
     {
       id: "deterministic",
-      label: "결정론적 Quick Pass",
-      description: "결정론적 로컬 휴리스틱 — 네트워크 없음, LLM 없음.",
+      label: "규칙 기반 Quick Pass",
+      description: "로컬 규칙 엔진 — 네트워크 없음, LLM 없음.",
       status: "implemented",
       isLocal: true,
-      privacyNote: "네트워크 호출이 없고 모델도 사용하지 않습니다. 기본 안전 모드입니다.",
+      privacyNote: "네트워크 호출이 없고 모델도 사용하지 않습니다. 가장 가벼운 기본 모드입니다.",
       receivesData: "현재 세션의 이벤트 + 소스 (메모리에만 사용)",
       setupRequirement: "설정 불필요",
       selected: provider === "deterministic",

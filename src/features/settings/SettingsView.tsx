@@ -27,7 +27,6 @@ import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { getProductRuntimeLabel } from "../../lib/product-state/productState";
 import { LocalAiCard } from "./LocalAiCard";
 import { PrivacyDefaultsCard } from "./PrivacyDefaultsCard";
-import { PrivacyGuaranteesCard } from "./PrivacyGuaranteesCard";
 import { RequestDisclosureCard } from "./RequestDisclosureCard";
 import { StorageCard } from "./StorageCard";
 import { RepositoriesCard } from "./RepositoriesCard";
@@ -54,6 +53,11 @@ export function SettingsView() {
   const sessionDraft = useSessionStore((state) => state.draft);
   const imports = useSessionStore((state) => state.imports);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
+  const analysis = useSessionStore((state) => state.analysis);
+  const analysisStatus = useSessionStore((state) => state.analysisStatus);
+  const analysisError = useSessionStore((state) => state.analysisError);
+  const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
+  const analysisFallbackUsed = useSessionStore((state) => state.analysisFallbackUsed);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
 
   const sqliteAvailable = useSqliteStore((state) => state.available);
@@ -101,7 +105,7 @@ export function SettingsView() {
       ? `Ollama · ${settings.ollamaModel}`
       : settings.provider === "openAiCompatible"
         ? `OpenAI 호환 · ${settings.openAiModel}`
-      : "Deterministic Quick Pass";
+      : "규칙 기반 Quick Pass";
 
   async function handlePickRepository() {
     const result = await pickRepositoryDirectory({ title: "Mori: Select repository" });
@@ -137,6 +141,15 @@ export function SettingsView() {
         {activeTab === "localAi" ? (
           <LocalAiCard
             settings={settings}
+            diagnostics={{
+              analysis,
+              status: analysisStatus,
+              error: analysisError,
+              providerLabel: analysisProviderLabel,
+              fallbackUsed: analysisFallbackUsed,
+              importCount: imports.length,
+              sourceCount: sessionView.sources.length,
+            }}
             onProviderChange={(provider) => updateAnalysisSettings({ provider })}
             onUpdateSettings={(patch) => updateAnalysisSettings(patch)}
           />
@@ -145,7 +158,6 @@ export function SettingsView() {
           <>
             <PrivacyDefaultsCard />
             <RequestDisclosureCard />
-            <PrivacyGuaranteesCard />
           </>
         ) : null}
         {activeTab === "storage" ? (
