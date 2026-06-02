@@ -158,18 +158,24 @@ always retained, capture stays explicit.
 Each is a standalone production slice with colocated tests; none
 bypasses a review gate.
 
-1. **Analysis run history (pure helper).** `analysisRunHistory.ts`:
+1. ~~**Analysis run history (pure helper).**~~ Shipped. `analysisRunHistory.ts`:
    append-only run records, current pointer, run diff, and a
    human-readable run-reason descriptor over the existing
-   `AnalysisResult` fields. No storage or UI change yet. (Foundation
-   for re-analysis + "why this analysis".) **Conflict: none.**
-2. **Run-history persistence.** Extend the stored analysis record (or a
-   sibling record) to hold the run history with a schema version and a
-   forward migration from today's single-result shape; route through
-   `SessionPersistenceService` (browser + SQLite).
-3. **Run-history UI.** Surface the run list, the adopted-run switch, and
-   the run diff on the Quick Pass / Review surface, with the run reason
-   visible.
+   `AnalysisResult` fields. (Foundation for re-analysis + "why this
+   analysis".)
+2. ~~**Run-history persistence.**~~ Shipped. `StoredSessionAnalysisHistory`
+   maintained inside `saveSessionAnalysis` (re-analysis appends, in-place
+   edits update the run by id), `loadSessionAnalysisHistory` with forward
+   migration from the legacy single-result record, and
+   `selectSessionAnalysisRun`. Browser localStorage; analysis is not
+   SQLite-mirrored, so no migration was needed there.
+3. ~~**Run-history UI.**~~ Shipped. Store actions `loadAnalysisRunHistory`
+   / `selectAnalysisRun`, a pure `buildAnalysisRunHistoryViewModel`
+   (newest-first rows, run reason, Korean change-vs-previous), and the
+   `AnalysisRunHistoryPanel` on the Review tab (adopted-run reason always;
+   a disclosure with per-run diff + adopt action when multiple runs
+   exist). Confidence % is intentionally not shown (internal-vocabulary
+   rule).
 4. **Disclosure level (projection).** Per-element disclosure level with
    a configurable default; non-destructive projection over stored
    elements. Wire into Review / Timeline / Resume Prompt rendering.
@@ -195,5 +201,11 @@ bypasses a review gate.
 
 ## 7. Status
 
-Designed. Slice 1 (analysis run history pure helper) is the first
-implementation step.
+Slices 1 to 3 shipped: the explainable re-analysis spine is complete
+end to end (pure helper, persistence, store, and a visible Review-tab
+panel). Re-running Quick Pass with a different local model now keeps
+every run, shows what changed, and lets the user adopt any run as the
+live understanding, with the model and timing of each run inspectable.
+
+Next: slice 4 (per-element disclosure / projection), the foundation for
+"store everything, show by setting" and request abstraction.
