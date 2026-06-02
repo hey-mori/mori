@@ -134,12 +134,32 @@ pub(crate) fn list_sessions_from(
         let (key, text) = row;
         let composer_id = key.strip_prefix("composerData:").unwrap_or(&key).to_string();
         let Ok(data) = serde_json::from_str::<Value>(&text) else {
+            // No-silent-truncation: a composer row whose JSON will not parse is
+            // surfaced as an unreadable placeholder, matching the other
+            // discovery parsers, rather than vanishing from the session list.
+            out.push(unreadable_cursor_meta(&composer_id, "파싱 실패", db_label));
             continue;
         };
         out.push(meta_from_composer(&composer_id, &data, db_label));
     }
     out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
     Ok(out)
+}
+
+/// Placeholder meta for a composer row we could not parse. Listed so the user
+/// sees the Cursor session exists and that Mori could not read it, instead of
+/// silently dropping it.
+fn unreadable_cursor_meta(composer_id: &str, reason: &str, db_label: &str) -> CursorSessionMeta {
+    CursorSessionMeta {
+        session_id: composer_id.to_string(),
+        project_path: "Cursor".to_string(),
+        project_name: "Cursor".to_string(),
+        file_path: format!("{db_label}#{composer_id}"),
+        started_at: String::new(),
+        updated_at: String::new(),
+        message_count: 0,
+        title: format!("⚠ 읽을 수 없는 세션 · {reason}"),
+    }
 }
 
 fn meta_from_composer(composer_id: &str, data: &Value, db_label: &str) -> CursorSessionMeta {
@@ -434,5 +454,39 @@ mod tests {
         let sessions = list_sessions_from(&conn, "db").unwrap();
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].title, "Cursor session abcd1234");
+    }
+
+    #[test]
+    fn surfaces_an_unreadable_placeholder_for_a_corrupt_composer_row() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute(
+            "CREATE TABLE cursorDiskKV (key TEXT PRIMARY KEY, value BLOB)",
+            [],
+        )
+        .unwrap();
+        // One good composer and one whose JSON will not parse.
+        conn.execute(
+            "INSERT INTO cursorDiskKV VALUES ('composerData:good', ?1)",
+            [r#"{"name":"Real session","conversation":[]}"#],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO cursorDiskKV VALUES ('composerData:broken', ?1)",
+            ["{ not valid json"],
+        )
+        .unwrap();
+
+        let sessions = list_sessions_from(&conn, "db").unwrap();
+        assert_eq!(sessions.len(), 2, "the corrupt row must still be listed");
+        let placeholder = sessions
+            .iter()
+            .find(|session| session.session_id == "broken")
+            .expect("placeholder for the corrupt composer is missing");
+        assert!(
+            placeholder.title.contains("읽을 수 없는 세션"),
+            "title was {}",
+            placeholder.title
+        );
+        assert_eq!(placeholder.message_count, 0);
     }
 }
