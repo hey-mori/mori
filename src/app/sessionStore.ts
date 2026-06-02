@@ -25,7 +25,7 @@ import {
   getCurrentRun,
   sanitizeQuickPassSettings,
 } from "../lib/analysis";
-import { buildLlmRequestAbstraction } from "../lib/disclosure";
+import { buildLlmRequestAbstraction, type DisclosureLevel } from "../lib/disclosure";
 
 /** Stored per-event local-LLM request abstraction (or its deterministic fallback). */
 export type RequestAbstractionEntry = {
@@ -129,6 +129,13 @@ export type SessionState = {
    * are session-unique, so entries do not collide across sessions.
    */
   requestAbstractions: Record<string, RequestAbstractionEntry>;
+  /**
+   * Per-event disclosure level overrides, keyed by event id. The Event
+   * Inspector sets these so one request can be shown differently from the
+   * `requestDisclosureLevel` global default; surfaces resolve the effective
+   * level via `resolveDisclosureLevel(override, default)`.
+   */
+  requestDisclosureOverrides: Record<string, DisclosureLevel>;
   source: SessionSource;
   /**
    * Bumped whenever a data reset wipes stored sessions
@@ -238,6 +245,8 @@ export type SessionState = {
    * when the local model produced the abstract.
    */
   generateRequestAbstraction: (eventId: string, rawText: string) => Promise<boolean>;
+  /** Set a per-event disclosure level override (Event Inspector control). */
+  setRequestDisclosureOverride: (eventId: string, level: DisclosureLevel) => void;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
   /**
@@ -378,6 +387,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   analysisFallbackUsed: false,
   analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
   requestAbstractions: {},
+  requestDisclosureOverrides: {},
   source: "demo",
   dataResetNonce: 0,
   dataSource: createStaticMockDataSource(demoView),
@@ -840,6 +850,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       },
     }));
     return result.source === "llm";
+  },
+  setRequestDisclosureOverride: (eventId, level) => {
+    set((state) => ({
+      requestDisclosureOverrides: { ...state.requestDisclosureOverrides, [eventId]: level },
+    }));
   },
   updateAnalysisSettings: (patch) => {
     const repository = getRepository();

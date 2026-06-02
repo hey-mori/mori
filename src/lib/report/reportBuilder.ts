@@ -8,7 +8,11 @@ import type {
   TimelineEvent,
 } from "../../domain/types";
 import { eventTypeLabels } from "../../domain/constants";
-import { projectEventRequestSummary, type DisclosureLevel } from "../disclosure";
+import {
+  projectEventRequestSummary,
+  resolveDisclosureLevel,
+  type DisclosureLevel,
+} from "../disclosure";
 import {
   isNextActionCompleted,
   splitNextActionsByCompletion,
@@ -161,6 +165,8 @@ export type ReportInput = {
    * original here. Defaults to `raw` (unchanged output) when omitted.
    */
   requestDisclosureLevel?: DisclosureLevel;
+  /** Per-event disclosure overrides; each wins over the default above. */
+  requestDisclosureOverrides?: Record<string, DisclosureLevel>;
 };
 
 export type ReportPayload = {
@@ -183,6 +189,7 @@ export type ReportPayload = {
 export function buildReportMarkdown(input: ReportInput): ReportPayload {
   const { view, type, sections, privacy } = input;
   const requestDisclosureLevel = input.requestDisclosureLevel ?? "raw";
+  const requestDisclosureOverrides = input.requestDisclosureOverrides ?? {};
   const generatedAt = input.generatedAt ?? new Date().toISOString();
   const typeDef = REPORT_TYPE_DEFINITIONS.find((entry) => entry.id === type) ?? REPORT_TYPE_DEFINITIONS[0];
   const summary = getReportEvidenceSummary(view);
@@ -257,7 +264,13 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
       lines.push("_타임라인 이벤트가 없습니다._");
     } else {
       for (const event of timelineEvents) {
-        lines.push(renderTimelineLine(event, privacy, requestDisclosureLevel));
+        lines.push(
+          renderTimelineLine(
+            event,
+            privacy,
+            resolveDisclosureLevel(requestDisclosureOverrides[event.id], requestDisclosureLevel),
+          ),
+        );
       }
     }
     lines.push("");

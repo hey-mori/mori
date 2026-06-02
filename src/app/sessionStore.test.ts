@@ -73,6 +73,7 @@ function resetStore() {
     analysisFallbackUsed: false,
     analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
     requestAbstractions: {},
+    requestDisclosureOverrides: {},
     source: "demo",
   });
 }

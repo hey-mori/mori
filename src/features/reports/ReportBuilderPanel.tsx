@@ -105,6 +105,7 @@ export function ReportBuilderPanel({
   const requestDisclosureLevel = useSessionStore(
     (state) => state.analysisSettings.requestDisclosureLevel,
   );
+  const requestDisclosureOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
 
   const payload = useMemo(
     () =>
@@ -116,8 +117,17 @@ export function ReportBuilderPanel({
         resumePromptOverride,
         acceptedMemories,
         requestDisclosureLevel,
+        requestDisclosureOverrides,
       }),
-    [view, sections, privacy, resumePromptOverride, acceptedMemories, requestDisclosureLevel],
+    [
+      view,
+      sections,
+      privacy,
+      resumePromptOverride,
+      acceptedMemories,
+      requestDisclosureLevel,
+      requestDisclosureOverrides,
+    ],
   );
 
   async function handleCopyMarkdown() {

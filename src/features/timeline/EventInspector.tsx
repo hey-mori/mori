@@ -39,6 +39,7 @@ import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import {
   isUserRequestEvent,
   projectEventRequestSummary,
+  resolveDisclosureLevel,
   DISCLOSURE_LABELS,
   type DisclosureLevel,
 } from "../../lib/disclosure";
@@ -85,22 +86,30 @@ export function EventInspector({
 }) {
   const [editing, setEditing] = useState(false);
   const [noteEditing, setNoteEditing] = useState(false);
-  const requestDisclosureLevel = useSessionStore(
+  const requestDisclosureDefault = useSessionStore(
     (state) => state.analysisSettings.requestDisclosureLevel,
   );
-  const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
+  const requestDisclosureOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
+  const setRequestDisclosureOverride = useSessionStore(
+    (state) => state.setRequestDisclosureOverride,
+  );
   const provider = useSessionStore((state) => state.analysisSettings.provider);
   const requestAbstractions = useSessionStore((state) => state.requestAbstractions);
   const generateRequestAbstraction = useSessionStore((state) => state.generateRequestAbstraction);
   const [generatingAbstraction, setGeneratingAbstraction] = useState(false);
   // The user's own request text is the privacy-sensitive content; other
-  // actors' events render their summary as before. A stored local-LLM
-  // abstraction (if any) enriches the withheld projection.
+  // actors' events render their summary as before. The effective level is
+  // this event's override, falling back to the global default. A stored
+  // local-LLM abstraction (if any) enriches the withheld projection.
   const isUserRequest = isUserRequestEvent(selectedEvent);
+  const effectiveDisclosureLevel = resolveDisclosureLevel(
+    requestDisclosureOverrides[selectedEvent.id],
+    requestDisclosureDefault,
+  );
   const abstractionEntry = requestAbstractions[selectedEvent.id];
   const requestProjection = projectEventRequestSummary(
     selectedEvent,
-    requestDisclosureLevel,
+    effectiveDisclosureLevel,
     abstractionEntry,
   );
 
@@ -161,11 +170,11 @@ export function EventInspector({
             <div className="inspector-summary-head">
               <span>요약</span>
               <SegmentedControl
-                ariaLabel="내 요청 표시 수준"
+                ariaLabel="이 요청 표시 수준"
                 role="radiogroup"
-                value={requestDisclosureLevel}
+                value={effectiveDisclosureLevel}
                 onChange={(level) =>
-                  updateAnalysisSettings({ requestDisclosureLevel: level })
+                  setRequestDisclosureOverride(selectedEvent.id, level)
                 }
                 options={DISCLOSURE_OPTIONS}
               />
@@ -182,7 +191,7 @@ export function EventInspector({
                 원문 비공개 · 데이터는 그대로 저장됩니다
               </span>
             ) : null}
-            {requestDisclosureLevel !== "raw" && provider === "ollama" ? (
+            {effectiveDisclosureLevel !== "raw" && provider === "ollama" ? (
               <div className="inspector-abstraction-row">
                 <button
                   type="button"

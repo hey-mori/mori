@@ -75,6 +75,17 @@ describe("buildReportMarkdown", () => {
       requestDisclosureLevel: "hidden",
     });
     expect(hidden.markdown).not.toContain("비밀 요청 원문");
+
+    // A per-event override wins over a raw default.
+    const overridden = buildReportMarkdown({
+      view,
+      type: "workLog",
+      sections,
+      privacy: privacy(),
+      requestDisclosureLevel: "raw",
+      requestDisclosureOverrides: { "evt-user-req": "hidden" },
+    });
+    expect(overridden.markdown).not.toContain("비밀 요청 원문");
   });
 
   it("warns and tags the source list when a source is a partial capture", () => {

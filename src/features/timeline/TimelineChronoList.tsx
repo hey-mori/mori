@@ -1,7 +1,11 @@
 import { Layers3 } from "lucide-react";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
 import { useSessionStore } from "../../app/sessionStore";
-import { projectEventRequestSummary, type DisclosureLevel } from "../../lib/disclosure";
+import {
+  projectEventRequestSummary,
+  resolveDisclosureLevel,
+  type DisclosureLevel,
+} from "../../lib/disclosure";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { sortDisplayItemsChronologically } from "../../lib/timeline/displayItems";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
@@ -40,9 +44,10 @@ export function TimelineChronoList({
   density: TimelineDensity;
   eventMenuItems?: (event: TimelineEvent) => BaseMenuItemSpec[];
 }) {
-  const requestDisclosureLevel = useSessionStore(
+  const requestDisclosureDefault = useSessionStore(
     (state) => state.analysisSettings.requestDisclosureLevel,
   );
+  const requestDisclosureOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
   const items = sortDisplayItemsChronologically(model.visibleDisplayItems);
   if (items.length === 0) return null;
 
@@ -102,7 +107,10 @@ export function TimelineChronoList({
             onSelect={() => onSelect(item.id)}
             menuItems={eventMenuItems?.(item.event)}
             sourceIndex={model.sourceIndex}
-            requestDisclosureLevel={requestDisclosureLevel}
+            requestDisclosureLevel={resolveDisclosureLevel(
+              requestDisclosureOverrides[item.event.id],
+              requestDisclosureDefault,
+            )}
           />
         );
       })}
