@@ -204,16 +204,21 @@ bypasses a review gate.
    Quick Pass keeps the main one). Remaining (optional): a richer model
    registry and a distinct LM Studio surface (today LM Studio connects
    via the OpenAI-compatible provider).
-7. **Live Follow.** Decision brain shipped: `live-follow/
-   followController.ts`, a pure reducer (start / poll / pause / resume /
-   error / stop) with `computeNewEventIds` delta detection and
-   `decideFollowReaction` gating re-analysis + notification on
-   actively-following plus a min-new threshold. Remaining (desktop):
-   the foreground, session-scoped polling shell that re-reads the one
-   session's connector file, the incremental delta analysis merged into
-   the current run, and a Notification Center producer. The shell is
-   where the no-daemon principle is enforced (foreground only, stops on
-   app close / unfollow).
+7. **Live Follow.** Brain + store orchestration shipped:
+   `live-follow/followController.ts` (pure reducer: start / poll / pause /
+   resume / error / stop, `computeNewEventIds`, `decideFollowReaction`)
+   and the session-store slice (`follow` state + `startFollow` /
+   `applyFollowPoll` / pause / resume / stop / setFollowError), both
+   tested. The existing Tauri commands `list_connector_jsonl_inbox` and
+   `read_connector_jsonl_file` already cover the polling IO, so no new
+   Rust is needed. Remaining (a foreground desktop glue slice, best built
+   while running the Tauri app so the live loop can be verified
+   end-to-end): an interval driver that re-reads the followed session's
+   connector file, parses + imports new events through the normal Import
+   path, calls `applyFollowPoll`, and on the returned reaction triggers
+   re-analysis + a Notification Center producer, plus a start / stop
+   control. The driver is where the no-daemon principle is enforced:
+   foreground only, session-scoped, stops on unfollow / app close.
 
 ## 6. Non-goals (unchanged by this spec)
 
@@ -241,9 +246,12 @@ Pillar 3 (local LLM connectivity depth): discovered-model selection plus
 per-task model routing (a dedicated request-abstraction model) shipped;
 a richer registry / LM Studio surface remain optional.
 
-Pillar 4 (Live Follow) has its tested decision brain
-(`live-follow/followController.ts`); the desktop foreground polling shell
-and the notification producer remain.
+Pillar 4 (Live Follow) has its tested decision brain and a tested
+session-store orchestration slice; the polling IO is already covered by
+existing connector-read Tauri commands. What remains is one foreground
+desktop glue slice (interval → import new events → `applyFollowPoll` →
+re-analysis + notification + start/stop control), best built while
+running the Tauri app so the live loop is verified end-to-end.
 
 Next: the Live Follow desktop shell (foreground session-scoped polling +
 incremental analysis + notification producer; needs the Tauri desktop
