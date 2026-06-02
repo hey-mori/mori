@@ -3,6 +3,7 @@ import { deriveSessionStatus } from "./sessionStatus";
 import type { SessionState, SessionViewModel } from "../../app/sessionStore";
 import { createStaticMockDataSource } from "./timelineDataSource";
 import { DEFAULT_QUICK_PASS_SETTINGS } from "../analysis";
+import { initialFollowState } from "../live-follow";
 
 const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   initialized: true,
@@ -18,6 +19,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
   requestAbstractions: {},
   requestDisclosureOverrides: {},
+  follow: initialFollowState(),
   source: "demo",
   dataResetNonce: 0,
   dataSource: createStaticMockDataSource<SessionViewModel>({} as SessionViewModel),
@@ -38,6 +40,12 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   selectAnalysisRun: () => false,
   generateRequestAbstraction: async () => false,
   setRequestDisclosureOverride: () => {},
+  startFollow: () => {},
+  applyFollowPoll: () => ({ shouldReanalyze: false, shouldNotify: false, newCount: 0 }),
+  pauseFollow: () => {},
+  resumeFollow: () => {},
+  stopFollow: () => {},
+  setFollowError: () => {},
   updateAnalysisSettings: () => ({ ...DEFAULT_QUICK_PASS_SETTINGS }),
   loadDesktopSession: async () => false,
   loadBrowserSession: () => false,

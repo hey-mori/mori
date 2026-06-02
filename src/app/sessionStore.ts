@@ -27,6 +27,13 @@ import {
   sanitizeQuickPassSettings,
 } from "../lib/analysis";
 import { buildLlmRequestAbstraction, type DisclosureLevel } from "../lib/disclosure";
+import {
+  decideFollowReaction,
+  followReducer,
+  initialFollowState,
+  type FollowReaction,
+  type FollowState,
+} from "../lib/live-follow";
 
 /** Stored per-event local-LLM request abstraction (or its deterministic fallback). */
 export type RequestAbstractionEntry = {
@@ -137,6 +144,14 @@ export type SessionState = {
    * level via `resolveDisclosureLevel(override, default)`.
    */
   requestDisclosureOverrides: Record<string, DisclosureLevel>;
+  /**
+   * Live Follow state for the active session. The reducer brain lives in
+   * `lib/live-follow`; this holds its state. The foreground polling shell
+   * (desktop) drives it by importing new connector events, calling
+   * `applyFollowPoll`, and acting on the returned reaction. Following is
+   * explicit, session-scoped, and foreground only, never a daemon.
+   */
+  follow: FollowState;
   source: SessionSource;
   /**
    * Bumped whenever a data reset wipes stored sessions
@@ -248,6 +263,19 @@ export type SessionState = {
   generateRequestAbstraction: (eventId: string, rawText: string) => Promise<boolean>;
   /** Set a per-event disclosure level override (Event Inspector control). */
   setRequestDisclosureOverride: (eventId: string, level: DisclosureLevel) => void;
+  /** Begin following the given session, seeding the already-known event ids. */
+  startFollow: (sessionId: string, knownEventIds?: string[]) => void;
+  /**
+   * Apply one foreground poll: the caller has read + imported any new
+   * connector events and passes the session's current event ids. Returns
+   * the reaction (whether to re-analyze / notify); pending events are
+   * consumed when a reaction fires.
+   */
+  applyFollowPoll: (incomingEventIds: string[], at: string) => FollowReaction;
+  pauseFollow: () => void;
+  resumeFollow: () => void;
+  stopFollow: () => void;
+  setFollowError: (message: string, at?: string) => void;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
   /**
@@ -389,6 +417,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
   requestAbstractions: {},
   requestDisclosureOverrides: {},
+  follow: initialFollowState(),
   source: "demo",
   dataResetNonce: 0,
   dataSource: createStaticMockDataSource(demoView),
@@ -857,6 +886,32 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       requestDisclosureOverrides: { ...state.requestDisclosureOverrides, [eventId]: level },
     }));
   },
+  startFollow: (sessionId, knownEventIds) => {
+    set({
+      follow: followReducer(get().follow, {
+        type: "start",
+        sessionId,
+        knownEventIds,
+        at: new Date().toISOString(),
+      }),
+    });
+  },
+  applyFollowPoll: (incomingEventIds, at) => {
+    const polled = followReducer(get().follow, { type: "poll", incomingEventIds, at });
+    const reaction = decideFollowReaction(polled);
+    // Consume pending only when a reaction fires, so a sub-threshold poll
+    // keeps accumulating until enough new events arrive.
+    const next = reaction.shouldReanalyze
+      ? followReducer(polled, { type: "consumePending" })
+      : polled;
+    set({ follow: next });
+    return reaction;
+  },
+  pauseFollow: () => set({ follow: followReducer(get().follow, { type: "pause" }) }),
+  resumeFollow: () => set({ follow: followReducer(get().follow, { type: "resume" }) }),
+  stopFollow: () => set({ follow: followReducer(get().follow, { type: "stop" }) }),
+  setFollowError: (message, at) =>
+    set({ follow: followReducer(get().follow, { type: "error", message, at }) }),
   updateAnalysisSettings: (patch) => {
     const repository = getRepository();
     const next = sanitizeQuickPassSettings({ ...get().analysisSettings, ...patch });

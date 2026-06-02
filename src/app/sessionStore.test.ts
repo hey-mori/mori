@@ -11,6 +11,7 @@ import { buildImportCandidateFromClaudeCodeSession } from "../lib/claude/claudeI
 import type { ClaudeCodeSessionDetail } from "../lib/claude/types";
 import { BrowserDraftRepository } from "../lib/storage/localStorageAdapter";
 import { MemoryKeyValueStorage } from "../lib/storage/memoryStorage";
+import { initialFollowState } from "../lib/live-follow";
 import type { AnalysisProvider, AnalysisResult } from "../lib/analysis";
 import { DEFAULT_QUICK_PASS_SETTINGS } from "../lib/analysis";
 import { mockSession } from "../domain/mock-data";
@@ -74,6 +75,7 @@ function resetStore() {
     analysisSettings: { ...DEFAULT_QUICK_PASS_SETTINGS },
     requestAbstractions: {},
     requestDisclosureOverrides: {},
+    follow: initialFollowState(),
     source: "demo",
   });
 }
@@ -1107,5 +1109,54 @@ describe("useSessionStore analysis run history", () => {
   it("returns null history and false selection with no active session", () => {
     expect(useSessionStore.getState().loadAnalysisRunHistory()).toBeNull();
     expect(useSessionStore.getState().selectAnalysisRun("run-x")).toBe(false);
+  });
+});
+
+describe("useSessionStore live follow orchestration", () => {
+  beforeEach(() => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  it("starts, polls, and reacts to new events, then consumes pending", () => {
+    const store = useSessionStore.getState();
+    store.startFollow("sess-live", ["e1"]);
+    expect(useSessionStore.getState().follow.status).toBe("following");
+
+    // A poll with no new events does not react.
+    const quiet = useSessionStore.getState().applyFollowPoll(["e1"], "2026-06-02T00:01:00Z");
+    expect(quiet.shouldReanalyze).toBe(false);
+
+    // A poll with new events reacts and clears pending.
+    const reaction = useSessionStore
+      .getState()
+      .applyFollowPoll(["e1", "e2"], "2026-06-02T00:02:00Z");
+    expect(reaction).toEqual({ shouldReanalyze: true, shouldNotify: true, newCount: 1 });
+    expect(useSessionStore.getState().follow.pendingEventIds).toEqual([]);
+    expect(useSessionStore.getState().follow.knownEventIds).toEqual(["e1", "e2"]);
+  });
+
+  it("pauses, resumes, and stops following", () => {
+    const store = useSessionStore.getState();
+    store.startFollow("sess-live");
+    store.pauseFollow();
+    expect(useSessionStore.getState().follow.status).toBe("paused");
+    // A poll while paused is ignored.
+    useSessionStore.getState().applyFollowPoll(["e9"], "2026-06-02T00:03:00Z");
+    expect(useSessionStore.getState().follow.knownEventIds).toEqual([]);
+    useSessionStore.getState().resumeFollow();
+    expect(useSessionStore.getState().follow.status).toBe("following");
+    useSessionStore.getState().stopFollow();
+    expect(useSessionStore.getState().follow.status).toBe("stopped");
   });
 });
