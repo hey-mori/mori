@@ -7,10 +7,10 @@ import { useRepositoryStore } from "./repositoryStore";
 import { useProfileStore } from "./profileStore";
 import { useThemeStore } from "./themeStore";
 import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
-// HomeView is the landing surface — stay eager so first paint never waits
+// HomeDreamView is the landing surface — stay eager so first paint never waits
 // on a chunk fetch. Every other surface is loaded on demand; Vite emits a
 // separate chunk per dynamic import, shrinking the entry bundle.
-import { HomeView } from "../features/home/HomeView";
+import { HomeDreamView } from "../features/home/HomeDreamView";
 
 const StartSessionView = lazy(() =>
   import("../features/start-session/StartSessionView").then((m) => ({
@@ -60,7 +60,6 @@ const GraphView = lazy(() =>
     default: m.GraphView,
   })),
 );
-
 export default function App() {
   const currentView = useAppStore((state) => state.currentView);
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -98,7 +97,7 @@ export default function App() {
       <AppShell>
         <ErrorBoundary resetKey={currentView}>
           <Suspense fallback={<RouteFallback />}>
-            {currentView === "home" ? <HomeView /> : null}
+            {currentView === "home" ? <HomeDreamView /> : null}
             {currentView === "start" ? <StartSessionView /> : null}
             {/* The unified session workspace. The legacy timeline / flow / evidence /
                 review keys map here too so no deep link dead-ends — they all open
