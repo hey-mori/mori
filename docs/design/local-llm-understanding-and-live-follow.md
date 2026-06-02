@@ -192,13 +192,22 @@ bypasses a review gate.
    (`QuickPassAnalysisSettings`, default `raw`) via a segmented control,
    storage always keeps the original. Remaining: a local-LLM-backed
    abstraction that enriches the intent line.
-6. **Local LLM connectivity depth.** LM Studio surface, a model
-   registry, and per-task model routing on top of the existing
-   provider settings.
-7. **Live Follow.** Session-scoped foreground polling of the session's
-   connector file, incremental delta analysis merged into the current
-   run, and a Notification Center producer. Built last because it
-   depends on 1 to 4.
+6. **Local LLM connectivity depth.** First slice shipped: the
+   connection probe's discovered models are click-to-select chips in the
+   Local AI settings, writing through to the tested provider's model
+   field. Remaining: a model registry, per-task model routing, and a
+   distinct LM Studio surface (today LM Studio connects via the
+   OpenAI-compatible provider).
+7. **Live Follow.** Decision brain shipped: `live-follow/
+   followController.ts`, a pure reducer (start / poll / pause / resume /
+   error / stop) with `computeNewEventIds` delta detection and
+   `decideFollowReaction` gating re-analysis + notification on
+   actively-following plus a min-new threshold. Remaining (desktop):
+   the foreground, session-scoped polling shell that re-reads the one
+   session's connector file, the incremental delta analysis merged into
+   the current run, and a Notification Center producer. The shell is
+   where the no-daemon principle is enforced (foreground only, stops on
+   app close / unfollow).
 
 ## 6. Non-goals (unchanged by this spec)
 
@@ -222,6 +231,14 @@ slice: the disclosure projection + deterministic request abstraction
 request text shows at a chosen level (`원문` / `요약` / `요지` / `숨김`),
 persisted, with the original always stored.
 
-Next: deepen pillar 2 (Settings control, per-element overrides, more
-surfaces, LLM-backed abstraction), then slice 6 (local LLM
-connectivity depth) and slice 7 (Live Follow).
+Pillar 3 (local LLM connectivity depth) has its first slice: the
+connection probe's discovered models are click-to-select in the Local AI
+settings.
+
+Pillar 4 (Live Follow) has its tested decision brain
+(`live-follow/followController.ts`); the desktop foreground polling shell
+and the notification producer remain.
+
+Next: deepen pillar 2 (per-element overrides, disclosure on Reports /
+Resume Prompt, LLM-backed abstraction), deepen pillar 3 (per-task
+routing), and build the Live Follow desktop shell.
