@@ -113,7 +113,10 @@ def capture_transcript(path: str, session_id: str, received_at: str,
     # `-` reads the transcript from stdin so a piped CLI session can be
     # captured. Any other value is an explicit file path.
     if path == "-":
-        text = sys.stdin.read()
+        # Decode stdin as UTF-8 from raw bytes, not the OS locale codepage
+        # (cp949 on Korean Windows), so a piped Korean transcript is not
+        # mangled. Matches the explicit utf-8 used on the file-read path below.
+        text = sys.stdin.buffer.read().decode("utf-8", errors="replace")
         if not text.strip():
             raise CaptureError("--transcript: stdin was empty")
         name = "stdin"
