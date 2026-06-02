@@ -52,7 +52,12 @@ describe("reviewOriginForAgentWorkSession", () => {
   });
 
   it("routes native agent sessions to the ai-transcript review origin", () => {
-    for (const kind of ["claude-code", "codex-session", "antigravity-session"] as const) {
+    for (const kind of [
+      "claude-code",
+      "codex-session",
+      "antigravity-session",
+      "opencode-session",
+    ] as const) {
       expect(reviewOriginForAgentWorkSession({ importKind: kind })).toBe("ai-transcript");
     }
   });
@@ -76,6 +81,15 @@ describe("buildImportCandidatesFromAgentWorkSession", () => {
     // Antigravity has no dedicated transcript integration, so it normalizes
     // through the platform-neutral "other" path.
     expect(candidate.source.kind).toBe("aiConversation");
+  });
+
+  it("maps an OpenCode session to a generic aiConversation candidate", () => {
+    const [candidate] = buildImportCandidatesFromAgentWorkSession(
+      detail("opencode-session"),
+      buildInput,
+    );
+    expect(candidate.source.kind).toBe("aiConversation");
+    expect(candidate.source.title).toBe("Retry helper work");
   });
 
   it("throws when a Claude session is missing its parsed detail", () => {

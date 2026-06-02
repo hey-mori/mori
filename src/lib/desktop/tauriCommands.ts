@@ -36,6 +36,7 @@ import type {
 import type { LocalAiToolReport } from "../claude/installations";
 import type { CodexSessionDetail, CodexSessionMeta } from "../codex/types";
 import type { AntigravitySessionDetail, AntigravitySessionMeta } from "../antigravity/types";
+import type { OpenCodeSessionDetail, OpenCodeSessionMeta } from "../opencode/types";
 import type {
   ClaudeHookInstallResult,
   ClaudeHookUninstallResult,
@@ -89,6 +90,8 @@ export type TauriCommandName =
   | "get_codex_session"
   | "discover_antigravity_sessions"
   | "get_antigravity_session"
+  | "discover_opencode_sessions"
+  | "get_opencode_session"
   | "analyze_session_quick_pass"
   | "generate_report";
 
@@ -229,6 +232,11 @@ export type TauriCommandMap = {
   get_antigravity_session: {
     input: { sessionPath: string };
     output: AntigravitySessionDetail;
+  };
+  discover_opencode_sessions: { input: undefined; output: OpenCodeSessionMeta[] };
+  get_opencode_session: {
+    input: { sessionPath: string };
+    output: OpenCodeSessionDetail;
   };
   analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
   generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };

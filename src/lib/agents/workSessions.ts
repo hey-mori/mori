@@ -20,6 +20,11 @@ import {
 } from "../antigravity/antigravityTauri";
 import type { AntigravitySessionMeta } from "../antigravity/types";
 import {
+  discoverOpenCodeSessions,
+  getOpenCodeSession,
+} from "../opencode/opencodeTauri";
+import type { OpenCodeSessionMeta } from "../opencode/types";
+import {
   normalizeConnectorEventBatch,
   parseConnectorJsonl,
   type ConnectorEvent,
@@ -43,6 +48,7 @@ export type AgentWorkImportKind =
   | "claude-code"
   | "codex-session"
   | "antigravity-session"
+  | "opencode-session"
   | "connector-jsonl";
 
 export type AgentWorkSessionMeta = {
@@ -127,7 +133,13 @@ export async function listAgentWorkSessions(
       .map(mapAntigravityMeta)
       .sort((a, b) => time(b.startedAt) - time(a.startedAt));
   }
-  return listConnectorBackedSessions(connectorConfigFor("opencode"));
+  const [openCodeDirect, openCodeConnector] = await Promise.all([
+    discoverOpenCodeSessions().catch(() => [] as OpenCodeSessionMeta[]),
+    listConnectorBackedSessions(connectorConfigFor("opencode")),
+  ]);
+  return [...openCodeDirect.map(mapOpenCodeMeta), ...openCodeConnector].sort(
+    (a, b) => time(b.startedAt) - time(a.startedAt),
+  );
 }
 
 export async function listAllAgentWorkSessions(): Promise<AgentWorkSessionMeta[]> {
@@ -159,6 +171,13 @@ export async function getAgentWorkSession(
     const detail = await getAntigravitySession(meta.sourceFilePath);
     return {
       ...mapAntigravityMeta(detail),
+      messages: detail.messages,
+    };
+  }
+  if (meta.importKind === "opencode-session") {
+    const detail = await getOpenCodeSession(meta.sourceFilePath);
+    return {
+      ...mapOpenCodeMeta(detail),
       messages: detail.messages,
     };
   }
@@ -202,6 +221,18 @@ export function buildImportCandidatesFromAgentWorkSession(
     ];
   }
   if (detail.importKind === "antigravity-session") {
+    return [
+      normalizeAiTranscript({
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        capturedAt: input.capturedAt,
+        platform: "other",
+        title: detail.title,
+        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
+      }),
+    ];
+  }
+  if (detail.importKind === "opencode-session") {
     return [
       normalizeAiTranscript({
         projectId: input.projectId,
@@ -286,6 +317,24 @@ function mapAntigravityMeta(session: AntigravitySessionMeta): AgentWorkSessionMe
     agentId: "antigravity",
     agentName: "Antigravity",
     importKind: "antigravity-session",
+    id: session.sessionId,
+    sessionId: session.sessionId,
+    projectPath: session.projectPath,
+    projectName: session.projectName,
+    filePath: session.filePath,
+    sourceFilePath: session.filePath,
+    startedAt: session.startedAt,
+    updatedAt: session.updatedAt,
+    messageCount: session.messageCount,
+    title: session.title,
+  };
+}
+
+function mapOpenCodeMeta(session: OpenCodeSessionMeta): AgentWorkSessionMeta {
+  return {
+    agentId: "opencode",
+    agentName: "OpenCode",
+    importKind: "opencode-session",
     id: session.sessionId,
     sessionId: session.sessionId,
     projectPath: session.projectPath,

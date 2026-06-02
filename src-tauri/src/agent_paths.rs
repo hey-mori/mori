@@ -90,6 +90,28 @@ pub fn antigravity_brain_dir() -> Option<PathBuf> {
     }
 }
 
+/// OpenCode data root. OpenCode uses an XDG-style data dir even on Windows
+/// (`%USERPROFILE%\.local\share\opencode`). A direct `$OPENCODE_DATA`
+/// override points at the data dir itself; otherwise `$XDG_DATA_HOME`
+/// relocates the parent and we append `opencode`, falling back to
+/// `~/.local/share/opencode`.
+pub fn opencode_data_dir() -> Option<PathBuf> {
+    if let Some(value) = env_override(&["OPENCODE_DATA"]) {
+        return Some(PathBuf::from(value));
+    }
+    match env_override(&["XDG_DATA_HOME"]) {
+        Some(value) => Some(PathBuf::from(value).join("opencode")),
+        None => join(home_dir(), &[".local", "share", "opencode"]),
+    }
+}
+
+/// OpenCode session store: `<opencode data dir>/storage`. Sessions, messages,
+/// and message parts live in `storage/session`, `storage/message`, and
+/// `storage/part` respectively.
+pub fn opencode_storage_dir() -> Option<PathBuf> {
+    join(opencode_data_dir(), &["storage"])
+}
+
 /// Mori connector inbox root: `~/.mori/connectors` (the hook writes here; no
 /// override, so reader and writer never disagree).
 pub fn mori_inbox_dir() -> Option<PathBuf> {

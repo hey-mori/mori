@@ -6,6 +6,7 @@ mod commands;
 mod connectors;
 mod db;
 mod git;
+mod opencode;
 mod package;
 mod repositories;
 mod session;
@@ -56,6 +57,8 @@ fn main() {
             codex::sessions::get_codex_session,
             antigravity::sessions::discover_antigravity_sessions,
             antigravity::sessions::get_antigravity_session,
+            opencode::sessions::discover_opencode_sessions,
+            opencode::sessions::get_opencode_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");
