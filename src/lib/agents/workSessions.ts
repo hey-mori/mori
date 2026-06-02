@@ -30,8 +30,13 @@ import {
   type ConnectorInboxFile,
 } from "../desktop/connectorInbox";
 import { normalizeAiTranscript, type NormalizedImportCandidate } from "../import";
+import {
+  getAgentConnectorBinding,
+  getAgentDescriptor,
+  type AgentWorkAgentId,
+} from "./agentRegistry";
 
-export type AgentWorkAgentId = "claude" | "codex" | "opencode" | "antigravity";
+export type { AgentWorkAgentId };
 
 export type AgentWorkImportKind =
   | "claude-code"
@@ -77,23 +82,25 @@ type AgentConnectorConfig = {
   connectorIds: string[];
 };
 
-const CONNECTOR_CONFIG: Record<
-  Exclude<AgentWorkAgentId, "claude" | "antigravity">,
-  AgentConnectorConfig
-> = {
-  codex: {
-    agentId: "codex",
-    agentName: "Codex",
-    connectorFamily: "codex-cli",
-    connectorIds: ["codexCliWrapper"],
-  },
-  opencode: {
-    agentId: "opencode",
-    agentName: "OpenCode",
-    connectorFamily: "opencode-cli",
-    connectorIds: ["openCodeCli"],
-  },
-};
+/**
+ * Build the connector inbox config for an agent from its registry
+ * descriptor. Throws for an agent with no connector binding (a
+ * directly-read agent like Claude / Antigravity) — callers only reach
+ * this for connector-backed agents.
+ */
+function connectorConfigFor(agentId: AgentWorkAgentId): AgentConnectorConfig {
+  const descriptor = getAgentDescriptor(agentId);
+  const binding = getAgentConnectorBinding(agentId);
+  if (!binding) {
+    throw new Error(`Agent "${agentId}" has no connector binding.`);
+  }
+  return {
+    agentId: descriptor.agentId,
+    agentName: descriptor.agentName,
+    connectorFamily: binding.connectorFamily,
+    connectorIds: binding.connectorIds,
+  };
+}
 
 export async function listAgentWorkSessions(
   agentId: AgentWorkAgentId,
@@ -105,7 +112,7 @@ export async function listAgentWorkSessions(
   if (agentId === "codex") {
     const [direct, connector] = await Promise.all([
       discoverCodexSessions().catch(() => [] as CodexSessionMeta[]),
-      listConnectorBackedSessions(CONNECTOR_CONFIG.codex),
+      listConnectorBackedSessions(connectorConfigFor("codex")),
     ]);
     return [...direct.map(mapCodexMeta), ...connector].sort(
       (a, b) => time(b.startedAt) - time(a.startedAt),
@@ -119,7 +126,7 @@ export async function listAgentWorkSessions(
       .map(mapAntigravityMeta)
       .sort((a, b) => time(b.startedAt) - time(a.startedAt));
   }
-  return listConnectorBackedSessions(CONNECTOR_CONFIG.opencode);
+  return listConnectorBackedSessions(connectorConfigFor("opencode"));
 }
 
 export async function listAllAgentWorkSessions(): Promise<AgentWorkSessionMeta[]> {

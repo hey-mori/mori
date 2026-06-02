@@ -8,6 +8,7 @@ import {
   FilePlus2,
   History,
   Lock,
+  Rocket,
   Settings2,
   Sparkles,
 } from "lucide-react";
@@ -62,6 +63,11 @@ import {
   type AgentWorkAgentId,
   type AgentWorkSessionMeta,
 } from "../../lib/agents/workSessions";
+import {
+  AGENT_REGISTRY,
+  type AgentDescriptor,
+  type AgentIconKey,
+} from "../../lib/agents/agentRegistry";
 import { DetectedConversationsModal } from "./DetectedConversationsModal";
 
 /**
@@ -98,35 +104,31 @@ type AgentOption = {
   detect: boolean;
 };
 
-const AGENT_OPTIONS: AgentOption[] = [
-  {
-    id: "opt-claude",
-    name: "Claude",
-    detail: "Claude Code · Desktop · Web",
-    icon: Sparkles,
-    platform: "claude",
-    agentId: "claude",
-    detect: true,
-  },
-  {
-    id: "opt-codex",
-    name: "Codex",
-    detail: "Codex CLI",
-    icon: Code2,
-    platform: "codex",
-    agentId: "codex",
-    detect: true,
-  },
-  {
-    id: "opt-opencode",
-    name: "OpenCode",
-    detail: "OpenCode CLI",
-    icon: Braces,
-    platform: "other",
-    agentId: "opencode",
-    detect: true,
-  },
-];
+/** Map the registry's stable glyph key to a concrete lucide icon. */
+const AGENT_ICON: Record<AgentIconKey, LucideIcon> = {
+  sparkles: Sparkles,
+  code2: Code2,
+  braces: Braces,
+  rocket: Rocket,
+};
+
+/**
+ * The agent roster is derived from the central registry so a new anchor
+ * agent appears here automatically — no per-surface list to keep in sync.
+ */
+function toAgentOption(descriptor: AgentDescriptor): AgentOption {
+  return {
+    id: `opt-${descriptor.agentId}`,
+    name: descriptor.agentName,
+    detail: descriptor.detail,
+    icon: AGENT_ICON[descriptor.iconKey],
+    platform: descriptor.platform,
+    agentId: descriptor.agentId,
+    detect: descriptor.detect,
+  };
+}
+
+const AGENT_OPTIONS: AgentOption[] = AGENT_REGISTRY.map(toAgentOption);
 
 type ImportMethod = "records" | "paste" | "fresh";
 const NEW_PROJECT_VALUE = "__new__";
