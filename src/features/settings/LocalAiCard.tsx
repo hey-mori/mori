@@ -32,7 +32,7 @@ const ICONS: Record<string, typeof Bot> = {
 type ProbeState =
   | { status: "idle" }
   | { status: "checking" }
-  | { status: "ok"; message: string; models: string[] }
+  | { status: "ok"; message: string; models: string[]; kind: QuickPassProviderKind }
   | { status: "error"; message: string };
 
 export function LocalAiCard({
@@ -61,7 +61,7 @@ export function LocalAiCard({
             timeoutMs: Math.min(settings.ollamaTimeoutMs, 5_000),
           });
     if (result.ok) {
-      setProbe({ status: "ok", message: result.message, models: result.models ?? [] });
+      setProbe({ status: "ok", message: result.message, models: result.models ?? [], kind });
     } else {
       setProbe({ status: "error", message: result.message });
     }
@@ -232,7 +232,22 @@ export function LocalAiCard({
         />
       </div>
 
-      <ProbeRow probe={probe} />
+      <ProbeRow
+        probe={probe}
+        selectedModel={
+          probe.status === "ok"
+            ? probe.kind === "openAiCompatible"
+              ? settings.openAiModel
+              : settings.ollamaModel
+            : ""
+        }
+        onSelectModel={(model) => {
+          if (probe.status !== "ok") return;
+          onUpdateSettings(
+            probe.kind === "openAiCompatible" ? { openAiModel: model } : { ollamaModel: model },
+          );
+        }}
+      />
       <SettingsNotice icon={Cloud} title="외부 제공자">
         OpenAI 호환 base URL에 Cloud API 주소를 입력하면 Quick Pass 실행 시 현재 세션의 이벤트와 소스 요약이 해당 외부 API로 전송됩니다. 결정론적 / Ollama 제공자는 외부 Cloud API를 호출하지 않습니다.
       </SettingsNotice>
@@ -314,7 +329,15 @@ function ProviderOption({
   );
 }
 
-function ProbeRow({ probe }: { probe: ProbeState }) {
+function ProbeRow({
+  probe,
+  selectedModel = "",
+  onSelectModel,
+}: {
+  probe: ProbeState;
+  selectedModel?: string;
+  onSelectModel?: (model: string) => void;
+}) {
   if (probe.status === "idle") return null;
   if (probe.status === "checking") {
     return (
@@ -330,10 +353,20 @@ function ProbeRow({ probe }: { probe: ProbeState }) {
         <StatusPill tone="green">연결됨</StatusPill>
         <span>{probe.message}</span>
         {probe.models.length ? (
-          <small>
-            models: {probe.models.slice(0, 4).join(", ")}
-            {probe.models.length > 4 ? "..." : ""}
-          </small>
+          <div className="settings-probe-models" aria-label="발견된 모델">
+            {probe.models.map((model) => (
+              <button
+                key={model}
+                type="button"
+                className={`settings-probe-model${model === selectedModel ? " is-selected" : ""}`}
+                aria-pressed={model === selectedModel}
+                onClick={() => onSelectModel?.(model)}
+                title="이 모델을 사용합니다"
+              >
+                {model}
+              </button>
+            ))}
+          </div>
         ) : null}
       </div>
     );

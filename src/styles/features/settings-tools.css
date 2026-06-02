@@ -306,6 +306,30 @@
   font-size: 11px;
 }
 
+.settings-probe-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-basis: 100%;
+}
+
+.settings-probe-model {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--base-radius-pill, 999px);
+  background: #fff;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.settings-probe-model.is-selected {
+  border-color: var(--purple);
+  background: var(--purple-50);
+  color: var(--purple);
+  font-weight: 600;
+}
+
 /* Privacy defaults */
 
 .settings-privacy-list {
