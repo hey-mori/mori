@@ -535,11 +535,20 @@ export function WorkbenchView() {
 
   const startPanelDrag = (event: React.PointerEvent, panelId: string) => {
     if (event.button !== 0) return;
-    event.preventDefault();
     setFocusedPanelId(panelId);
-    setDragPanelId(panelId);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let started = false;
     let drop: { hint: string; apply: (panelId: string) => void } | null = null;
     const onMove = (move: PointerEvent) => {
+      // Only begin the drag once the pointer clears a small threshold, so a tap
+      // or double-click on the header still reads as a click, not a drag.
+      if (!started) {
+        if (Math.abs(move.clientX - startX) + Math.abs(move.clientY - startY) < 5) return;
+        started = true;
+        setDragPanelId(panelId);
+      }
+      move.preventDefault();
       drop = resolveDrop(move.clientX, move.clientY);
       setDropHint(drop ? drop.hint : null);
     };
@@ -547,6 +556,7 @@ export function WorkbenchView() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
+      if (!started) return;
       if (drop) drop.apply(panelId);
       endDrag();
     };
@@ -1675,8 +1685,9 @@ function SessionPanel({
         </span>
         <div
           className="workbench-panel-id"
+          onPointerDown={onGripPointerDown}
           onDoubleClick={onMaximize}
-          title="더블클릭하면 최대화 (f)"
+          title="끌어서 옮기기 · 더블클릭하면 최대화"
         >
           <h2>{meta.title}</h2>
           <span>

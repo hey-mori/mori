@@ -1078,6 +1078,12 @@
 .workbench-panel-id {
   flex: 1;
   min-width: 0;
+  cursor: grab;
+  user-select: none;
+}
+
+.workbench-panel-id:active {
+  cursor: grabbing;
 }
 
 .workbench-panel-id h2 {
@@ -1778,6 +1784,7 @@
 .workbench-focus-head .workbench-panel-id {
   flex: 1;
   min-width: 0;
+  cursor: default;
 }
 
 .workbench-focus-body {
