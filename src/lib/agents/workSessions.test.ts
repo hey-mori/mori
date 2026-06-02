@@ -33,7 +33,9 @@ function detail(
           ? "antigravity"
           : importKind === "continue-session"
             ? "continue"
-            : "opencode",
+            : importKind === "cline-session"
+              ? "cline"
+              : "opencode",
     agentName:
       importKind === "codex-session"
         ? "Codex"
@@ -41,7 +43,9 @@ function detail(
           ? "Antigravity"
           : importKind === "continue-session"
             ? "Continue"
-            : "OpenCode",
+            : importKind === "cline-session"
+              ? "Cline"
+              : "OpenCode",
     importKind,
     id: "id-1",
     sessionId: "sess-1",
@@ -72,6 +76,7 @@ describe("reviewOriginForAgentWorkSession", () => {
       "antigravity-session",
       "opencode-session",
       "continue-session",
+      "cline-session",
     ] as const) {
       expect(reviewOriginForAgentWorkSession({ importKind: kind })).toBe("ai-transcript");
     }
@@ -113,6 +118,15 @@ describe("buildImportCandidatesFromAgentWorkSession", () => {
       buildInput,
     );
     expect(candidate.source.kind).toBe("continueTranscript");
+    expect(candidate.source.title).toBe("Retry helper work");
+  });
+
+  it("maps a Cline session to a dedicated clineTranscript candidate", () => {
+    const [candidate] = buildImportCandidatesFromAgentWorkSession(
+      detail("cline-session"),
+      buildInput,
+    );
+    expect(candidate.source.kind).toBe("clineTranscript");
     expect(candidate.source.title).toBe("Retry helper work");
   });
 

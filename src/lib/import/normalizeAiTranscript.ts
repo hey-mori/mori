@@ -26,6 +26,8 @@ function getIntegrationId(platform: AiTranscriptPlatform): string {
       return "opencodeTranscript";
     case "continue":
       return "continueTranscript";
+    case "cline":
+      return "clineTranscript";
     case "other":
     default:
       return "aiConversation";
@@ -49,6 +51,8 @@ function getPlatformLabel(platform: AiTranscriptPlatform): string {
       return "OpenCode";
     case "continue":
       return "Continue";
+    case "cline":
+      return "Cline";
     case "other":
     default:
       return "AI";

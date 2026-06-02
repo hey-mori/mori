@@ -27,13 +27,20 @@ export type AgentWorkAgentId =
   | "codex"
   | "opencode"
   | "antigravity"
-  | "continue";
+  | "continue"
+  | "cline";
 
 /**
  * Stable glyph key. UI surfaces map this to a concrete icon component so
  * the registry stays free of React / lucide imports.
  */
-export type AgentIconKey = "sparkles" | "code2" | "braces" | "rocket" | "infinity";
+export type AgentIconKey =
+  | "sparkles"
+  | "code2"
+  | "braces"
+  | "rocket"
+  | "infinity"
+  | "bot";
 
 /**
  * Binding to the connector JSONL inbox for agents whose work records
@@ -108,6 +115,14 @@ export const AGENT_REGISTRY: readonly AgentDescriptor[] = [
     detail: "Continue · VS Code · JetBrains",
     iconKey: "infinity",
     platform: "continue",
+    detect: true,
+  },
+  {
+    agentId: "cline",
+    agentName: "Cline",
+    detail: "Cline · VS Code",
+    iconKey: "bot",
+    platform: "cline",
     detect: true,
   },
 ];

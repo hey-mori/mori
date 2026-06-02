@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Bot,
   Braces,
   Check,
   ChevronDown,
@@ -112,6 +113,7 @@ const AGENT_ICON: Record<AgentIconKey, LucideIcon> = {
   braces: Braces,
   rocket: Rocket,
   infinity: Infinity,
+  bot: Bot,
 };
 
 /**

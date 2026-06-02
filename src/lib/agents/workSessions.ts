@@ -30,6 +30,11 @@ import {
 } from "../continueAgent/continueTauri";
 import type { ContinueSessionMeta } from "../continueAgent/types";
 import {
+  discoverClineSessions,
+  getClineSession,
+} from "../cline/clineTauri";
+import type { ClineSessionMeta } from "../cline/types";
+import {
   normalizeConnectorEventBatch,
   parseConnectorJsonl,
   type ConnectorEvent,
@@ -55,6 +60,7 @@ export type AgentWorkImportKind =
   | "antigravity-session"
   | "opencode-session"
   | "continue-session"
+  | "cline-session"
   | "connector-jsonl";
 
 export type AgentWorkSessionMeta = {
@@ -147,6 +153,14 @@ export async function listAgentWorkSessions(
       .map(mapContinueMeta)
       .sort((a, b) => time(b.startedAt) - time(a.startedAt));
   }
+  if (agentId === "cline") {
+    const direct = await discoverClineSessions().catch(
+      () => [] as ClineSessionMeta[],
+    );
+    return direct
+      .map(mapClineMeta)
+      .sort((a, b) => time(b.startedAt) - time(a.startedAt));
+  }
   const [openCodeDirect, openCodeConnector] = await Promise.all([
     discoverOpenCodeSessions().catch(() => [] as OpenCodeSessionMeta[]),
     listConnectorBackedSessions(connectorConfigFor("opencode")),
@@ -199,6 +213,13 @@ export async function getAgentWorkSession(
     const detail = await getContinueSession(meta.sourceFilePath);
     return {
       ...mapContinueMeta(detail),
+      messages: detail.messages,
+    };
+  }
+  if (meta.importKind === "cline-session") {
+    const detail = await getClineSession(meta.sourceFilePath);
+    return {
+      ...mapClineMeta(detail),
       messages: detail.messages,
     };
   }
@@ -272,6 +293,18 @@ export function buildImportCandidatesFromAgentWorkSession(
         sessionId: input.sessionId,
         capturedAt: input.capturedAt,
         platform: "continue",
+        title: detail.title,
+        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
+      }),
+    ];
+  }
+  if (detail.importKind === "cline-session") {
+    return [
+      normalizeAiTranscript({
+        projectId: input.projectId,
+        sessionId: input.sessionId,
+        capturedAt: input.capturedAt,
+        platform: "cline",
         title: detail.title,
         text: renderMessagesAsTranscript(detail.messages, detail.agentName),
       }),
@@ -386,6 +419,24 @@ function mapContinueMeta(session: ContinueSessionMeta): AgentWorkSessionMeta {
     agentId: "continue",
     agentName: "Continue",
     importKind: "continue-session",
+    id: session.sessionId,
+    sessionId: session.sessionId,
+    projectPath: session.projectPath,
+    projectName: session.projectName,
+    filePath: session.filePath,
+    sourceFilePath: session.filePath,
+    startedAt: session.startedAt,
+    updatedAt: session.updatedAt,
+    messageCount: session.messageCount,
+    title: session.title,
+  };
+}
+
+function mapClineMeta(session: ClineSessionMeta): AgentWorkSessionMeta {
+  return {
+    agentId: "cline",
+    agentName: "Cline",
+    importKind: "cline-session",
     id: session.sessionId,
     sessionId: session.sessionId,
     projectPath: session.projectPath,

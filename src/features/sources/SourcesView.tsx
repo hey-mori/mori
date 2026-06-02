@@ -90,6 +90,7 @@ const PROVIDER_ICON: Record<string, LucideIcon> = {
   opencode: Braces,
   antigravity: Rocket,
   continue: Infinity,
+  cline: Bot,
   git: GitBranch,
   terminal: Terminal,
   note: FileText,

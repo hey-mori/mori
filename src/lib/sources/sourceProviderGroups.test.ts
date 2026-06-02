@@ -24,6 +24,7 @@ describe("buildSourceProviderGroups", () => {
       "opencode",
       "antigravity",
       "continue",
+      "cline",
     ]);
   });
 

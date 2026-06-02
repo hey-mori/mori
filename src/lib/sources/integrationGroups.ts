@@ -31,6 +31,7 @@ const HUB_HIDDEN_INTEGRATION_IDS = new Set([
   "antigravityTranscript",
   "opencodeTranscript",
   "continueTranscript",
+  "clineTranscript",
 ]);
 
 /**

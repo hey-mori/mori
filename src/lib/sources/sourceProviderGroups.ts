@@ -75,6 +75,7 @@ export const ANCHOR_AGENT_IDS = new Set([
   "opencode",
   "antigravity",
   "continue",
+  "cline",
 ]);
 
 function roleFor(providerId: string): SourceProviderRole {
@@ -106,6 +107,7 @@ const PROVIDER_SPEC_BY_ID: Record<string, ProviderSpec> = {
   openCodeCli: { id: "opencode", name: "OpenCode" },
   antigravityDiscovery: { id: "antigravity", name: "Antigravity" },
   continueDiscovery: { id: "continue", name: "Continue" },
+  clineDiscovery: { id: "cline", name: "Cline" },
   // The universal paste surface ("Claude / ChatGPT / Codex / Other") gives
   // OpenCode and any unlisted agent a paste path; the named anchors above
   // already carry their own transcript paste.
@@ -144,6 +146,7 @@ const METHOD_BY_ID: Record<string, { methodLabel: string; connectLabel: string }
   openCodeCli: { methodLabel: "CLI 래퍼", connectLabel: "CLI 래퍼" },
   antigravityDiscovery: { methodLabel: "기록에서 불러오기", connectLabel: "데스크톱 감지" },
   continueDiscovery: { methodLabel: "기록에서 불러오기", connectLabel: "데스크톱 감지" },
+  clineDiscovery: { methodLabel: "기록에서 불러오기", connectLabel: "데스크톱 감지" },
   aiTranscriptPaste: { methodLabel: "대화 붙여넣기", connectLabel: "붙여넣기" },
   connectorJsonl: { methodLabel: "JSONL 가져오기", connectLabel: "JSONL" },
   gitDiffPaste: { methodLabel: "diff 붙여넣기", connectLabel: "붙여넣기" },
@@ -169,7 +172,7 @@ const STATUS_RANK: Record<SourceWorkspaceStatus, number> = {
   unsupported: 4,
 };
 
-const AGENT_ORDER = ["claude", "codex", "opencode", "antigravity", "continue"];
+const AGENT_ORDER = ["claude", "codex", "opencode", "antigravity", "continue", "cline"];
 const EVIDENCE_ORDER = ["git", "terminal", "connector", "note", "url", "chatgpt", "document"];
 
 function specFor(source: SourceWorkspaceSource): ProviderSpec {

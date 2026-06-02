@@ -123,6 +123,52 @@ pub fn continue_sessions_dir() -> Option<PathBuf> {
     join(continue_dir(), &["sessions"])
 }
 
+/// Cline task store: `<VS Code globalStorage>/saoudrizwan.claude-dev/tasks`.
+/// A `$CLINE_DATA` override points at the extension's globalStorage dir
+/// (the parent of `tasks`); otherwise the location follows VS Code's
+/// per-OS user-data dir. Other editors (Insiders, VSCodium, Cursor) relocate
+/// this, so `$CLINE_DATA` is the escape hatch.
+pub fn cline_tasks_dir() -> Option<PathBuf> {
+    if let Some(value) = env_override(&["CLINE_DATA"]) {
+        return Some(PathBuf::from(value).join("tasks"));
+    }
+    join(cline_global_storage_dir(), &["tasks"])
+}
+
+fn cline_global_storage_dir() -> Option<PathBuf> {
+    const EXT: &str = "saoudrizwan.claude-dev";
+    #[cfg(target_os = "windows")]
+    {
+        std::env::var_os("APPDATA")
+            .filter(|value| !value.is_empty())
+            .map(|appdata| {
+                PathBuf::from(appdata)
+                    .join("Code")
+                    .join("User")
+                    .join("globalStorage")
+                    .join(EXT)
+            })
+    }
+    #[cfg(target_os = "macos")]
+    {
+        join(
+            home_dir(),
+            &[
+                "Library",
+                "Application Support",
+                "Code",
+                "User",
+                "globalStorage",
+                EXT,
+            ],
+        )
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        join(home_dir(), &[".config", "Code", "User", "globalStorage", EXT])
+    }
+}
+
 /// Mori connector inbox root: `~/.mori/connectors` (the hook writes here; no
 /// override, so reader and writer never disagree).
 pub fn mori_inbox_dir() -> Option<PathBuf> {

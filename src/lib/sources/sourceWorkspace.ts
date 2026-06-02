@@ -497,6 +497,48 @@ function continueSource(input: BuildControlCenterInput): SourceWorkspaceSource {
   };
 }
 
+/**
+ * Cline (saoudrizwan.claude-dev) is a discovery-only agent: the desktop app
+ * reads the VS Code globalStorage task store (one directory per task with a
+ * `ui_messages.json` transcript). No paste / wrapper way-in, so it is injected
+ * as a single discovery source like Antigravity and Continue.
+ */
+function clineSource(input: BuildControlCenterInput): SourceWorkspaceSource {
+  const status: SourceWorkspaceStatus = input.isDesktop ? "available" : "needsDesktopApp";
+  const display = statusLabel(status);
+  return {
+    id: "clineDiscovery",
+    name: "Cline",
+    category: "Code",
+    familyLabel: "Cline",
+    status,
+    statusLabel: display.label,
+    statusTone: display.tone,
+    acquisitionMethod: "데스크톱에서 Cline 작업 기록을 감지해 불러옵니다.",
+    acceptedFormats: ["Cline task JSON (로컬 작업 기록)"],
+    setupMethod:
+      "설정 불필요. 데스크톱 앱이 VS Code globalStorage의 Cline task 기록만 읽습니다.",
+    pathMode: "notNeeded",
+    pathStateLabel: "경로 설정 없음",
+    localOnly: true,
+    recommended: false,
+    privacyNote: "로컬 task JSON만 읽습니다. 계정 · API 접근이나 백그라운드 수집은 없습니다.",
+    whatMoriCanAccess: [
+      "감지된 작업 대화 (제목 · 프로젝트 · 시각)",
+      "사용자 · 모델 메시지 미리보기",
+    ],
+    whatMoriCannotAccess: ["계정 · API 접근", "백그라운드 감시", "원본 대화 전체 보관"],
+    creates: ["AI 대화 소스", "타임라인 이벤트 후보", "검토 후보"],
+    reviewBehavior:
+      "감지한 Cline 대화는 세션 생성 후 Import Review를 거쳐 타임라인에 반영됩니다.",
+    rawDataPolicy: "summaryOnly",
+    action: { kind: "none", label: "기록에서 불러오기", enabled: false },
+    likelyFiles: ["src-tauri/src/cline/sessions.rs", "src/lib/cline/"],
+    testsNeeded: ["task dir parser", "ui_messages role mapping"],
+    safeToImplementNow: true,
+  };
+}
+
 function fromFutureIntegration(integration: SourceIntegration): SourceWorkspaceSource {
   const status = statusFromIntegration(integration.status);
   const display = statusLabel(status);
@@ -629,6 +671,7 @@ export function buildSourceWorkspace(input: BuildControlCenterInput): SourceWork
     connectorJsonlSource(input),
     antigravitySource(input),
     continueSource(input),
+    clineSource(input),
     ...importSources,
     ...surfaceSources,
     ...futureSources,

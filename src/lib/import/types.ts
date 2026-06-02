@@ -32,6 +32,7 @@ export type AiTranscriptPlatform =
   | "antigravity"
   | "opencode"
   | "continue"
+  | "cline"
   | "other";
 
 /**

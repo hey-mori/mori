@@ -1,6 +1,7 @@
 mod agent_paths;
 mod antigravity;
 mod claude;
+mod cline;
 mod codex;
 mod commands;
 mod continue_agent;
@@ -62,6 +63,8 @@ fn main() {
             opencode::sessions::get_opencode_session,
             continue_agent::sessions::discover_continue_sessions,
             continue_agent::sessions::get_continue_session,
+            cline::sessions::discover_cline_sessions,
+            cline::sessions::get_cline_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Mori desktop shell");

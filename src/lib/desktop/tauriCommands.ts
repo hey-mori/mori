@@ -38,6 +38,7 @@ import type { CodexSessionDetail, CodexSessionMeta } from "../codex/types";
 import type { AntigravitySessionDetail, AntigravitySessionMeta } from "../antigravity/types";
 import type { OpenCodeSessionDetail, OpenCodeSessionMeta } from "../opencode/types";
 import type { ContinueSessionDetail, ContinueSessionMeta } from "../continueAgent/types";
+import type { ClineSessionDetail, ClineSessionMeta } from "../cline/types";
 import type {
   ClaudeHookInstallResult,
   ClaudeHookUninstallResult,
@@ -95,6 +96,8 @@ export type TauriCommandName =
   | "get_opencode_session"
   | "discover_continue_sessions"
   | "get_continue_session"
+  | "discover_cline_sessions"
+  | "get_cline_session"
   | "analyze_session_quick_pass"
   | "generate_report";
 
@@ -245,6 +248,11 @@ export type TauriCommandMap = {
   get_continue_session: {
     input: { sessionPath: string };
     output: ContinueSessionDetail;
+  };
+  discover_cline_sessions: { input: undefined; output: ClineSessionMeta[] };
+  get_cline_session: {
+    input: { sessionPath: string };
+    output: ClineSessionDetail;
   };
   analyze_session_quick_pass: { input: QuickPassInput; output: QuickPassOutput };
   generate_report: { input: MarkdownReportInput; output: MarkdownReportOutput };
