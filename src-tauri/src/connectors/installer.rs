@@ -49,6 +49,7 @@ pub(crate) struct DetectEnv {
     pub claude_dir: Option<PathBuf>,
     pub codex_dir: Option<PathBuf>,
     pub antigravity_brain_dir: Option<PathBuf>,
+    pub continue_sessions_dir: Option<PathBuf>,
 }
 
 impl DetectEnv {
@@ -57,12 +58,18 @@ impl DetectEnv {
             claude_dir: crate::agent_paths::claude_dir(),
             codex_dir: crate::agent_paths::codex_dir(),
             antigravity_brain_dir: crate::agent_paths::antigravity_brain_dir(),
+            continue_sessions_dir: crate::agent_paths::continue_sessions_dir(),
         }
     }
 }
 
 pub(crate) fn detect_with_env(env: &DetectEnv) -> Vec<ConnectorDetection> {
-    vec![detect_claude(env), detect_codex(env), detect_antigravity(env)]
+    vec![
+        detect_claude(env),
+        detect_codex(env),
+        detect_antigravity(env),
+        detect_continue(env),
+    ]
 }
 
 fn detect_claude(env: &DetectEnv) -> ConnectorDetection {
@@ -150,6 +157,38 @@ fn detect_antigravity(env: &DetectEnv) -> ConnectorDetection {
         hook_scope: None,
         discovered_session_count,
     }
+}
+
+fn detect_continue(env: &DetectEnv) -> ConnectorDetection {
+    let sessions = env.continue_sessions_dir.clone();
+    let tool_installed = sessions.as_deref().map(Path::is_dir).unwrap_or(false);
+    let discovered_session_count = if tool_installed {
+        Some(sessions.as_deref().map(count_continue_sessions).unwrap_or(0))
+    } else {
+        None
+    };
+    ConnectorDetection {
+        id: "continue".to_string(),
+        tool_installed,
+        tool_version: None,
+        hook_installed: None,
+        hook_scope: None,
+        discovered_session_count,
+    }
+}
+
+/// Count sessions from Continue's `sessions.json` index (the source of truth
+/// Continue maintains). A missing or malformed index reads as zero rather than
+/// erroring, matching the tolerant-reader stance.
+fn count_continue_sessions(sessions_dir: &Path) -> u32 {
+    let index = sessions_dir.join("sessions.json");
+    let Ok(text) = fs::read_to_string(&index) else {
+        return 0;
+    };
+    serde_json::from_str::<Value>(&text)
+        .ok()
+        .and_then(|value| value.as_array().map(|entries| entries.len() as u32))
+        .unwrap_or(0)
 }
 
 /// Count conversations that have a readable transcript under
@@ -470,6 +509,7 @@ mod tests {
             antigravity_brain_dir: Some(
                 temp.path().join(".gemini").join("antigravity").join("brain"),
             ),
+            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
         });
         let claude = find(&results, "claude-code");
         assert!(claude.tool_installed);
@@ -492,6 +532,7 @@ mod tests {
             antigravity_brain_dir: Some(
                 temp.path().join(".gemini").join("antigravity").join("brain"),
             ),
+            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
         });
         let claude = find(&results, "claude-code");
         assert!(claude.tool_installed);
@@ -514,6 +555,7 @@ mod tests {
             antigravity_brain_dir: Some(
                 temp.path().join(".gemini").join("antigravity").join("brain"),
             ),
+            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
         });
         assert_eq!(find(&results, "claude-code").hook_installed, Some(false));
     }
@@ -538,6 +580,7 @@ mod tests {
             antigravity_brain_dir: Some(
                 temp.path().join(".gemini").join("antigravity").join("brain"),
             ),
+            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
         });
         let codex = find(&results, "codex-cli");
         assert!(codex.tool_installed);
@@ -554,6 +597,7 @@ mod tests {
             antigravity_brain_dir: Some(
                 temp.path().join(".gemini").join("antigravity").join("brain"),
             ),
+            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
         });
         assert_eq!(find(&results, "codex-cli").discovered_session_count, Some(0));
     }
@@ -575,10 +619,31 @@ mod tests {
             antigravity_brain_dir: Some(
                 temp.path().join(".gemini").join("antigravity").join("brain"),
             ),
+            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
         });
         let ag = find(&results, "antigravity");
         assert!(ag.tool_installed);
         assert_eq!(ag.discovered_session_count, Some(1));
+    }
+
+    #[test]
+    fn continue_counts_sessions_from_its_index() {
+        let temp = TempDir::new().unwrap();
+        let sessions = temp.path().join(".continue").join("sessions");
+        std::fs::create_dir_all(&sessions).unwrap();
+        std::fs::write(
+            sessions.join("sessions.json"),
+            "[{\"sessionId\":\"a\"},{\"sessionId\":\"b\"}]",
+        )
+        .unwrap();
+
+        let results = detect_with_env(&DetectEnv {
+            continue_sessions_dir: Some(sessions),
+            ..DetectEnv::default()
+        });
+        let cont = find(&results, "continue");
+        assert!(cont.tool_installed);
+        assert_eq!(cont.discovered_session_count, Some(2));
     }
 
     const CMD: &str = "python \"C:\\\\dev\\\\mori\\\\connectors\\\\claude-code\\\\mori-claude-hook.py\"";
@@ -590,6 +655,7 @@ mod tests {
             antigravity_brain_dir: Some(
                 temp.path().join(".gemini").join("antigravity").join("brain"),
             ),
+            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
         }
     }
 
@@ -694,6 +760,7 @@ mod tests {
             claude_dir: Some(relocated.clone()),
             codex_dir: None,
             antigravity_brain_dir: None,
+            continue_sessions_dir: None,
         };
 
         // Detection sees the relocated dir, not ~/.claude.

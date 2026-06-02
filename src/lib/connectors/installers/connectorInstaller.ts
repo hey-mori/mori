@@ -56,7 +56,7 @@ const REGISTRY: readonly ConnectorInstallerMeta[] = [
     captureModel: "session-discovery",
     captureNote: "부분 캡처 · 트랜스크립트가 있는 세션만 (protobuf 전용 대화는 제외).",
   },
-  { id: "continue", displayName: "Continue", captureModel: "planned" },
+  { id: "continue", displayName: "Continue", captureModel: "session-discovery" },
   { id: "cline", displayName: "Cline", captureModel: "planned" },
 ];
 

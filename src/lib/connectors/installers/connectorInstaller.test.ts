@@ -30,7 +30,7 @@ describe("connector installer registry", () => {
     expect(getConnectorInstallerMeta("claude-code")?.captureModel).toBe("config-hook");
     expect(getConnectorInstallerMeta("codex-cli")?.captureModel).toBe("session-discovery");
     expect(getConnectorInstallerMeta("antigravity")?.captureModel).toBe("session-discovery");
-    expect(getConnectorInstallerMeta("continue")?.captureModel).toBe("planned");
+    expect(getConnectorInstallerMeta("continue")?.captureModel).toBe("session-discovery");
     expect(getConnectorInstallerMeta("cline")?.captureModel).toBe("planned");
     expect(getConnectorInstallerMeta("unknown" as never)).toBeUndefined();
   });
@@ -66,18 +66,27 @@ describe("buildConnectorStatusViewModels:browser mode", () => {
     }
   });
 
-  it("shows planned anchors (continue, cline) as planned in every runtime", () => {
+  it("shows a planned anchor (cline) as planned in every runtime", () => {
     for (const runtimeSupportsDetection of [false, true]) {
       const models = buildConnectorStatusViewModels({
         runtimeSupportsDetection,
         results: [],
       });
-      for (const id of ["continue", "cline"] as const) {
-        const model = models.find((m) => m.id === id);
-        expect(model?.availability).toBe("planned");
-        expect(model?.canInstall).toBe(false);
-      }
+      const model = models.find((m) => m.id === "cline");
+      expect(model?.availability).toBe("planned");
+      expect(model?.canInstall).toBe(false);
     }
+  });
+
+  it("shows Continue as a discoverable agent with its session count", () => {
+    const models = buildConnectorStatusViewModels({
+      runtimeSupportsDetection: true,
+      results: [{ id: "continue", toolInstalled: true, discoveredSessionCount: 4 }],
+    });
+    const model = models.find((m) => m.id === "continue");
+    expect(model?.captureModel).toBe("session-discovery");
+    expect(model?.availability).toBe("available");
+    expect(model?.detail.join(" ")).toContain("4");
   });
 });
 
