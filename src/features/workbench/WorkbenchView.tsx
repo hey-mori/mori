@@ -431,42 +431,6 @@ export function WorkbenchView() {
     document.body.style.cursor = "col-resize";
   };
 
-  // Resize two vertically-stacked panels within a column.
-  const startVResize =
-    (columnId: string, panelIndex: number) => (event: React.MouseEvent) => {
-      event.preventDefault();
-      const startY = event.clientY;
-      const colEl = (event.currentTarget as HTMLElement).parentElement;
-      const height = colEl?.getBoundingClientRect().height ?? 1;
-      const col = columns.find((entry) => entry.id === columnId);
-      if (!col) return;
-      const startFlex = col.panels.map((panel) => panel.flex);
-      const sumFlex = startFlex.reduce((sum, value) => sum + value, 0) || 1;
-      const onMove = (moveEvent: MouseEvent) => {
-        const deltaFlex = ((moveEvent.clientY - startY) / height) * sumFlex;
-        setColumns((cols) =>
-          cols.map((entry) => {
-            if (entry.id !== columnId || panelIndex + 1 >= entry.panels.length) return entry;
-            const pair = startFlex[panelIndex]! + startFlex[panelIndex + 1]!;
-            let top = startFlex[panelIndex]! + deltaFlex;
-            top = Math.max(MIN_FLEX, Math.min(pair - MIN_FLEX, top));
-            const panels = entry.panels.map((panel) => ({ ...panel }));
-            panels[panelIndex] = { ...panels[panelIndex]!, flex: top };
-            panels[panelIndex + 1] = { ...panels[panelIndex + 1]!, flex: pair - top };
-            return { ...entry, panels };
-          }),
-        );
-      };
-      const onUp = () => {
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-        document.body.style.cursor = "";
-      };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-      document.body.style.cursor = "row-resize";
-    };
-
   const openInWorkspace = (sessionId: string, isActive: boolean) => {
     if (isActive || loadBrowserSession(sessionId)) openSession("flow");
   };
@@ -878,7 +842,7 @@ export function WorkbenchView() {
             {columns.map((col, colIndex) => (
               <Fragment key={col.id}>
                 <div
-                  className={`workbench-col${dropHint === "colz:" + col.id ? " is-droptarget" : ""}`}
+                  className={`workbench-col base-scroll${dropHint === "colz:" + col.id ? " is-droptarget" : ""}`}
                   style={{ flexGrow: col.flex, flexBasis: 0 }}
                   data-drop={"col:" + col.id}
                 >
@@ -890,7 +854,6 @@ export function WorkbenchView() {
                           panel={panel}
                           meta={meta}
                           repository={repository}
-                          flex={panel.flex}
                           search={search}
                           focused={panel.id === focusedPanelId}
                           dragging={panel.id === dragPanelId}
@@ -912,7 +875,6 @@ export function WorkbenchView() {
                             role="separator"
                             aria-orientation="horizontal"
                             data-drop={"panelat:" + col.id + ":" + (panelIndex + 1)}
-                            onMouseDown={startVResize(col.id, panelIndex)}
                           />
                         ) : null}
                       </Fragment>
@@ -1620,7 +1582,6 @@ function SessionPanel({
   panel,
   meta,
   repository,
-  flex,
   search,
   focused,
   dragging,
@@ -1637,7 +1598,6 @@ function SessionPanel({
   panel: Panel;
   meta: SessionMeta | null;
   repository: ReturnType<typeof createBrowserDraftRepository>;
-  flex: number;
   search: string;
   focused: boolean;
   dragging: boolean;
@@ -1671,7 +1631,7 @@ function SessionPanel({
 
   if (!meta) {
     return (
-      <article className="workbench-panel is-missing" style={{ flexGrow: flex, flexBasis: 0 }}>
+      <article className="workbench-panel is-missing">
         <p>세션을 찾을 수 없습니다.</p>
         <Button size="sm" variant="secondary" onClick={onReplace}>
           다른 세션 선택
@@ -1683,7 +1643,6 @@ function SessionPanel({
   return (
     <article
       className={`workbench-panel${focused ? " is-focused" : ""}${dragging ? " is-dragging-self" : ""}${collapsed ? " is-collapsed" : ""}${noMatch ? " is-nomatch" : ""}`}
-      style={{ flexGrow: collapsed ? 0 : flex, flexBasis: collapsed ? "auto" : 0 }}
       data-wb-panel={panel.id}
       aria-label={meta.title}
       onMouseDown={onFocus}

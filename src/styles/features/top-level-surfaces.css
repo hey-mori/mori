@@ -1,15 +1,11 @@
-/* Dashboard and Workbench: the project-axis and session-axis surfaces. */
-
-.dashboard-page,
-.workbench-page {
-  --page-shell-inset: var(--base-space-4);
-}
-
-.dashboard-page .page-shell-content,
-.workbench-page .page-shell-content {
-  gap: var(--base-space-3);
-  padding-top: var(--base-space-3);
-}
+/* Dashboard and Workbench: the project-axis and session-axis surfaces.
+ *
+ * These deliberately share the standard PageShell frame (horizontal gutter,
+ * top and bottom padding) with every other surface, so the four primary tabs
+ * line up edge-to-edge as you switch between them. Their visual density comes
+ * from each surface's own internal gap (`.dashboard-surface` 8px,
+ * `.workbench-surface` 6px), not from a tighter page inset, so there is no
+ * page-shell-level inset / padding override here on purpose. */
 
 /* ─── Dashboard ─────────────────────────────────────────────────────────── */
 
@@ -811,6 +807,10 @@
   flex-direction: column;
   min-width: 300px;
   min-height: 0;
+  /* Panels size to their content; if a column's panels overrun, it scrolls
+     vertically only (overflow-x stays hidden so no stray horizontal bar). */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .workbench-gutter {
@@ -837,20 +837,14 @@
   position: relative;
   flex: 0 0 9px;
   align-self: stretch;
-  background: transparent;
-  cursor: row-resize;
 }
 
 .workbench-vgutter::after {
   content: "";
   position: absolute;
-  inset: 4px 24px;
+  inset: 4px 12px;
   border-radius: 999px;
   background: transparent;
-}
-
-.workbench-vgutter:hover::after {
-  background: var(--base-border);
 }
 
 .workbench-col-drop {
@@ -927,14 +921,16 @@
      track (otherwise the action buttons spill outside the panel edge). */
   grid-template-columns: minmax(0, 1fr);
   gap: var(--base-space-2);
-  flex: 1 1 0;
-  min-height: 160px;
+  /* Size to content (header + body), capped at the column so a long
+     conversation scrolls inside rather than leaving a tall empty panel. */
+  flex: 0 0 auto;
+  min-height: 132px;
+  max-height: 100%;
   min-width: 0;
   padding: var(--base-space-3);
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-md);
   background: var(--base-surface);
-  animation: wb-rise 170ms ease both;
 }
 
 .workbench-panel.is-focused {
