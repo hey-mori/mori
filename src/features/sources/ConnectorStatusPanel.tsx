@@ -1,4 +1,13 @@
-import { Bot, Code2, Infinity, Rocket, Sparkles, type LucideIcon } from "lucide-react";
+import {
+  Bot,
+  Braces,
+  Code2,
+  Infinity,
+  MousePointer2,
+  Rocket,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import {
@@ -10,9 +19,11 @@ import {
 const ICONS: Record<ConnectorInstallerId, LucideIcon> = {
   "claude-code": Sparkles,
   "codex-cli": Code2,
+  opencode: Braces,
   antigravity: Rocket,
   continue: Infinity,
   cline: Bot,
+  cursor: MousePointer2,
 };
 
 type PanelState =

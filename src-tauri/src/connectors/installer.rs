@@ -11,8 +11,9 @@
 //! disk:
 //!   - claude-code (config-hook): is `~/.claude` present, and does
 //!     `~/.claude/settings.json` already wire in the Mori hook?
-//!   - codex-cli (session-discovery): is `~/.codex` present, and how many
-//!     session rollout files can Mori read back?
+//!   - codex-cli / opencode / antigravity / continue / cline / cursor
+//!     (session-discovery): is the tool's local store present, and how many
+//!     sessions can Mori read back from it?
 //!
 //! Field names mirror the TypeScript `ConnectorDetectionResult` via
 //! `rename_all = "camelCase"`. Keep the two in sync.
@@ -50,6 +51,9 @@ pub(crate) struct DetectEnv {
     pub codex_dir: Option<PathBuf>,
     pub antigravity_brain_dir: Option<PathBuf>,
     pub continue_sessions_dir: Option<PathBuf>,
+    pub cline_tasks_dir: Option<PathBuf>,
+    pub cursor_global_db: Option<PathBuf>,
+    pub opencode_storage_dir: Option<PathBuf>,
 }
 
 impl DetectEnv {
@@ -59,6 +63,9 @@ impl DetectEnv {
             codex_dir: crate::agent_paths::codex_dir(),
             antigravity_brain_dir: crate::agent_paths::antigravity_brain_dir(),
             continue_sessions_dir: crate::agent_paths::continue_sessions_dir(),
+            cline_tasks_dir: crate::agent_paths::cline_tasks_dir(),
+            cursor_global_db: crate::agent_paths::cursor_global_db(),
+            opencode_storage_dir: crate::agent_paths::opencode_storage_dir(),
         }
     }
 }
@@ -69,6 +76,9 @@ pub(crate) fn detect_with_env(env: &DetectEnv) -> Vec<ConnectorDetection> {
         detect_codex(env),
         detect_antigravity(env),
         detect_continue(env),
+        detect_cline(env),
+        detect_cursor(env),
+        detect_opencode(env),
     ]
 }
 
@@ -175,6 +185,94 @@ fn detect_continue(env: &DetectEnv) -> ConnectorDetection {
         hook_scope: None,
         discovered_session_count,
     }
+}
+
+/// Cline (session-discovery): is the VS Code globalStorage tasks root present,
+/// and how many task directories can Mori read back?
+fn detect_cline(env: &DetectEnv) -> ConnectorDetection {
+    let tasks = env.cline_tasks_dir.clone();
+    let tool_installed = tasks.as_deref().map(Path::is_dir).unwrap_or(false);
+    let discovered_session_count = if tool_installed {
+        Some(tasks.as_deref().map(count_cline_tasks).unwrap_or(0))
+    } else {
+        None
+    };
+    ConnectorDetection {
+        id: "cline".to_string(),
+        tool_installed,
+        tool_version: None,
+        hook_installed: None,
+        hook_scope: None,
+        discovered_session_count,
+    }
+}
+
+/// Cursor (session-discovery): is the global `state.vscdb` present, and how
+/// many composer (chat) sessions does its `cursorDiskKV` table hold?
+fn detect_cursor(env: &DetectEnv) -> ConnectorDetection {
+    let db = env.cursor_global_db.clone();
+    let tool_installed = db.as_deref().map(Path::is_file).unwrap_or(false);
+    let discovered_session_count = if tool_installed {
+        Some(
+            db.as_deref()
+                .map(crate::cursor::sessions::count_composer_sessions)
+                .unwrap_or(0),
+        )
+    } else {
+        None
+    };
+    ConnectorDetection {
+        id: "cursor".to_string(),
+        tool_installed,
+        tool_version: None,
+        hook_installed: None,
+        hook_scope: None,
+        discovered_session_count,
+    }
+}
+
+/// OpenCode (session-discovery): is the local `<data>/storage` present, and how
+/// many sessions can Mori read back from `storage/session`?
+fn detect_opencode(env: &DetectEnv) -> ConnectorDetection {
+    let storage = env.opencode_storage_dir.clone();
+    let tool_installed = storage.as_deref().map(Path::is_dir).unwrap_or(false);
+    let discovered_session_count = if tool_installed {
+        Some(storage.as_deref().map(count_opencode_sessions).unwrap_or(0))
+    } else {
+        None
+    };
+    ConnectorDetection {
+        id: "opencode".to_string(),
+        tool_installed,
+        tool_version: None,
+        hook_installed: None,
+        hook_scope: None,
+        discovered_session_count,
+    }
+}
+
+/// Count Cline tasks: one directory per task that holds a `ui_messages.json`,
+/// matching what `cline::sessions::list_sessions_at` lists. A missing or
+/// unreadable root reads as zero.
+fn count_cline_tasks(tasks_root: &Path) -> u32 {
+    let Ok(entries) = fs::read_dir(tasks_root) else {
+        return 0;
+    };
+    let mut count = 0;
+    for entry in entries.flatten() {
+        if entry.path().join("ui_messages.json").is_file() {
+            count += 1;
+        }
+    }
+    count
+}
+
+/// Count OpenCode sessions by deferring to the discovery lister, so the probe
+/// counts exactly what Mori could read back. A read error reads as zero.
+fn count_opencode_sessions(storage_root: &Path) -> u32 {
+    crate::opencode::sessions::list_sessions_at(storage_root)
+        .map(|sessions| sessions.len() as u32)
+        .unwrap_or(0)
 }
 
 /// Count sessions from Continue's `sessions.json` index (the source of truth
@@ -503,14 +601,7 @@ mod tests {
             "{\"permissions\":{\"defaultMode\":\"auto\"}}",
         )
         .unwrap();
-        let results = detect_with_env(&DetectEnv {
-            claude_dir: Some(temp.path().join(".claude")),
-            codex_dir: Some(temp.path().join(".codex")),
-            antigravity_brain_dir: Some(
-                temp.path().join(".gemini").join("antigravity").join("brain"),
-            ),
-            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
-        });
+        let results = detect_with_env(&global_env(&temp));
         let claude = find(&results, "claude-code");
         assert!(claude.tool_installed);
         assert_eq!(claude.hook_installed, Some(false));
@@ -526,14 +617,7 @@ mod tests {
             "{\"hooks\":{\"SessionStart\":[{\"hooks\":[{\"type\":\"command\",\"command\":\"python /x/mori-claude-hook.py\"}]}]}}",
         )
         .unwrap();
-        let results = detect_with_env(&DetectEnv {
-            claude_dir: Some(temp.path().join(".claude")),
-            codex_dir: Some(temp.path().join(".codex")),
-            antigravity_brain_dir: Some(
-                temp.path().join(".gemini").join("antigravity").join("brain"),
-            ),
-            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
-        });
+        let results = detect_with_env(&global_env(&temp));
         let claude = find(&results, "claude-code");
         assert!(claude.tool_installed);
         assert_eq!(claude.hook_installed, Some(true));
@@ -549,14 +633,7 @@ mod tests {
             "{ this is not json",
         )
         .unwrap();
-        let results = detect_with_env(&DetectEnv {
-            claude_dir: Some(temp.path().join(".claude")),
-            codex_dir: Some(temp.path().join(".codex")),
-            antigravity_brain_dir: Some(
-                temp.path().join(".gemini").join("antigravity").join("brain"),
-            ),
-            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
-        });
+        let results = detect_with_env(&global_env(&temp));
         assert_eq!(find(&results, "claude-code").hook_installed, Some(false));
     }
 
@@ -574,14 +651,7 @@ mod tests {
         std::fs::write(day.join("rollout-a.jsonl"), "{}\n").unwrap();
         std::fs::write(day.join("rollout-b.jsonl"), "{}\n").unwrap();
         std::fs::write(day.join("notes.txt"), "ignored").unwrap();
-        let results = detect_with_env(&DetectEnv {
-            claude_dir: Some(temp.path().join(".claude")),
-            codex_dir: Some(temp.path().join(".codex")),
-            antigravity_brain_dir: Some(
-                temp.path().join(".gemini").join("antigravity").join("brain"),
-            ),
-            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
-        });
+        let results = detect_with_env(&global_env(&temp));
         let codex = find(&results, "codex-cli");
         assert!(codex.tool_installed);
         assert_eq!(codex.discovered_session_count, Some(2));
@@ -591,14 +661,7 @@ mod tests {
     fn codex_dir_without_sessions_reports_zero() {
         let temp = TempDir::new().unwrap();
         std::fs::create_dir_all(temp.path().join(".codex")).unwrap();
-        let results = detect_with_env(&DetectEnv {
-            claude_dir: Some(temp.path().join(".claude")),
-            codex_dir: Some(temp.path().join(".codex")),
-            antigravity_brain_dir: Some(
-                temp.path().join(".gemini").join("antigravity").join("brain"),
-            ),
-            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
-        });
+        let results = detect_with_env(&global_env(&temp));
         assert_eq!(find(&results, "codex-cli").discovered_session_count, Some(0));
     }
 
@@ -613,14 +676,7 @@ mod tests {
         std::fs::create_dir_all(brain.join("conv-bbb")).unwrap();
         std::fs::write(brain.join("conv-bbb").join("conv.pb"), b"\x00").unwrap();
 
-        let results = detect_with_env(&DetectEnv {
-            claude_dir: Some(temp.path().join(".claude")),
-            codex_dir: Some(temp.path().join(".codex")),
-            antigravity_brain_dir: Some(
-                temp.path().join(".gemini").join("antigravity").join("brain"),
-            ),
-            continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
-        });
+        let results = detect_with_env(&global_env(&temp));
         let ag = find(&results, "antigravity");
         assert!(ag.tool_installed);
         assert_eq!(ag.discovered_session_count, Some(1));
@@ -646,6 +702,87 @@ mod tests {
         assert_eq!(cont.discovered_session_count, Some(2));
     }
 
+    #[test]
+    fn cline_counts_task_directories_with_ui_messages() {
+        let temp = TempDir::new().unwrap();
+        let tasks = temp.path().join("cline").join("tasks");
+        for id in ["1700000000000", "1700000001000"] {
+            std::fs::create_dir_all(tasks.join(id)).unwrap();
+            std::fs::write(tasks.join(id).join("ui_messages.json"), "[]").unwrap();
+        }
+        // A stray directory without ui_messages.json is not a task.
+        std::fs::create_dir_all(tasks.join("scratch")).unwrap();
+        let results = detect_with_env(&global_env(&temp));
+        let cline = find(&results, "cline");
+        assert!(cline.tool_installed);
+        assert_eq!(cline.discovered_session_count, Some(2));
+    }
+
+    #[test]
+    fn cline_without_tasks_root_reports_nothing() {
+        let results = detect_with_env(&DetectEnv::default());
+        let cline = find(&results, "cline");
+        assert!(!cline.tool_installed);
+        assert_eq!(cline.discovered_session_count, None);
+    }
+
+    #[test]
+    fn opencode_counts_session_files_from_storage() {
+        let temp = TempDir::new().unwrap();
+        let session = temp
+            .path()
+            .join("opencode")
+            .join("storage")
+            .join("session")
+            .join("global");
+        std::fs::create_dir_all(&session).unwrap();
+        for id in ["ses_a", "ses_b"] {
+            std::fs::write(
+                session.join(format!("{id}.json")),
+                format!("{{\"id\":\"{id}\",\"directory\":\"/x\",\"title\":\"t\",\"time\":{{\"created\":1771000000000,\"updated\":1771000005000}}}}"),
+            )
+            .unwrap();
+        }
+        // A non-session json under the tree is ignored (no ses_ prefix).
+        std::fs::write(session.join("notes.json"), "{}").unwrap();
+        let results = detect_with_env(&global_env(&temp));
+        let opencode = find(&results, "opencode");
+        assert!(opencode.tool_installed);
+        assert_eq!(opencode.discovered_session_count, Some(2));
+    }
+
+    #[test]
+    fn cursor_counts_composer_sessions_in_state_db() {
+        let temp = TempDir::new().unwrap();
+        let db_path = temp.path().join("cursor").join("state.vscdb");
+        std::fs::create_dir_all(db_path.parent().unwrap()).unwrap();
+        {
+            let conn = rusqlite::Connection::open(&db_path).unwrap();
+            conn.execute(
+                "CREATE TABLE cursorDiskKV (key TEXT PRIMARY KEY, value BLOB)",
+                [],
+            )
+            .unwrap();
+            for id in ["c1", "c2", "c3"] {
+                conn.execute(
+                    "INSERT INTO cursorDiskKV (key, value) VALUES (?1, ?2)",
+                    rusqlite::params![format!("composerData:{id}"), "{}"],
+                )
+                .unwrap();
+            }
+            // A non-composer row must not be counted.
+            conn.execute(
+                "INSERT INTO cursorDiskKV (key, value) VALUES (?1, ?2)",
+                rusqlite::params!["bubbleId:c1:b1", "{}"],
+            )
+            .unwrap();
+        }
+        let results = detect_with_env(&global_env(&temp));
+        let cursor = find(&results, "cursor");
+        assert!(cursor.tool_installed);
+        assert_eq!(cursor.discovered_session_count, Some(3));
+    }
+
     const CMD: &str = "python \"C:\\\\dev\\\\mori\\\\connectors\\\\claude-code\\\\mori-claude-hook.py\"";
 
     fn global_env(temp: &TempDir) -> DetectEnv {
@@ -656,6 +793,9 @@ mod tests {
                 temp.path().join(".gemini").join("antigravity").join("brain"),
             ),
             continue_sessions_dir: Some(temp.path().join(".continue").join("sessions")),
+            cline_tasks_dir: Some(temp.path().join("cline").join("tasks")),
+            cursor_global_db: Some(temp.path().join("cursor").join("state.vscdb")),
+            opencode_storage_dir: Some(temp.path().join("opencode").join("storage")),
         }
     }
 
@@ -758,9 +898,7 @@ mod tests {
         std::fs::create_dir_all(&relocated).unwrap();
         let env = DetectEnv {
             claude_dir: Some(relocated.clone()),
-            codex_dir: None,
-            antigravity_brain_dir: None,
-            continue_sessions_dir: None,
+            ..DetectEnv::default()
         };
 
         // Detection sees the relocated dir, not ~/.claude.

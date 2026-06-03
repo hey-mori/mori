@@ -25,9 +25,11 @@ import {
 export type ConnectorInstallerId =
   | "claude-code"
   | "codex-cli"
+  | "opencode"
   | "antigravity"
   | "continue"
-  | "cline";
+  | "cline"
+  | "cursor";
 
 /**
  * How a connector captures. `config-hook` installs into the tool's own
@@ -50,6 +52,7 @@ export type ConnectorInstallerMeta = {
 const REGISTRY: readonly ConnectorInstallerMeta[] = [
   { id: "claude-code", displayName: "Claude Code", captureModel: "config-hook" },
   { id: "codex-cli", displayName: "Codex CLI", captureModel: "session-discovery" },
+  { id: "opencode", displayName: "OpenCode", captureModel: "session-discovery" },
   {
     id: "antigravity",
     displayName: "Antigravity",
@@ -57,7 +60,8 @@ const REGISTRY: readonly ConnectorInstallerMeta[] = [
     captureNote: "부분 캡처 · 트랜스크립트가 있는 세션만 (protobuf 전용 대화는 제외).",
   },
   { id: "continue", displayName: "Continue", captureModel: "session-discovery" },
-  { id: "cline", displayName: "Cline", captureModel: "planned" },
+  { id: "cline", displayName: "Cline", captureModel: "session-discovery" },
+  { id: "cursor", displayName: "Cursor", captureModel: "session-discovery" },
 ];
 
 export function listConnectorInstallers(): ConnectorInstallerMeta[] {

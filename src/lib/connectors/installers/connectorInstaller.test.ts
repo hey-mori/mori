@@ -26,21 +26,26 @@ describe("connector installer registry", () => {
       "cline",
       "codex-cli",
       "continue",
+      "cursor",
+      "opencode",
     ]);
     expect(getConnectorInstallerMeta("claude-code")?.captureModel).toBe("config-hook");
     expect(getConnectorInstallerMeta("codex-cli")?.captureModel).toBe("session-discovery");
+    expect(getConnectorInstallerMeta("opencode")?.captureModel).toBe("session-discovery");
     expect(getConnectorInstallerMeta("antigravity")?.captureModel).toBe("session-discovery");
     expect(getConnectorInstallerMeta("continue")?.captureModel).toBe("session-discovery");
-    expect(getConnectorInstallerMeta("cline")?.captureModel).toBe("planned");
+    expect(getConnectorInstallerMeta("cline")?.captureModel).toBe("session-discovery");
+    expect(getConnectorInstallerMeta("cursor")?.captureModel).toBe("session-discovery");
     expect(getConnectorInstallerMeta("unknown" as never)).toBeUndefined();
   });
 
-  it("matches the source-page anchor agents (continue and cline included)", () => {
-    // The 소스 page lists continue and cline as anchor agents; the modal
-    // registry must include them so the two surfaces never disagree.
+  it("matches every source-page anchor agent so the surfaces never disagree", () => {
+    // The 소스 page lists all seven agents as anchors; the modal / inspector
+    // registry must include each so detection covers the whole grid.
     const ids = listConnectorInstallers().map((i) => i.id);
-    expect(ids).toContain("continue");
-    expect(ids).toContain("cline");
+    for (const id of ["claude-code", "codex-cli", "opencode", "antigravity", "continue", "cline", "cursor"]) {
+      expect(ids).toContain(id);
+    }
   });
 
   it("returns a fresh copy so callers cannot mutate the registry", () => {
@@ -66,16 +71,21 @@ describe("buildConnectorStatusViewModels:browser mode", () => {
     }
   });
 
-  it("shows a planned anchor (cline) as planned in every runtime", () => {
-    for (const runtimeSupportsDetection of [false, true]) {
-      const models = buildConnectorStatusViewModels({
-        runtimeSupportsDetection,
-        results: [],
-      });
-      const model = models.find((m) => m.id === "cline");
-      expect(model?.availability).toBe("planned");
-      expect(model?.canInstall).toBe(false);
-    }
+  it("covers cline, cursor, and opencode as session-discovery agents", () => {
+    const models = buildConnectorStatusViewModels({
+      runtimeSupportsDetection: true,
+      results: [
+        { id: "cline", toolInstalled: true, discoveredSessionCount: 2 },
+        { id: "cursor", toolInstalled: true, discoveredSessionCount: 5 },
+        { id: "opencode", toolInstalled: false },
+      ],
+    });
+    expect(models.find((m) => m.id === "cline")?.availability).toBe("available");
+    expect(models.find((m) => m.id === "cursor")?.detail.join(" ")).toContain("5");
+    // No planned anchors remain: every agent in the registry is detectable.
+    expect(models.every((m) => m.captureModel !== "planned")).toBe(true);
+    // An installed-but-empty discovery agent is unavailable, not planned.
+    expect(models.find((m) => m.id === "opencode")?.availability).toBe("unavailable");
   });
 
   it("shows Continue as a discoverable agent with its session count", () => {

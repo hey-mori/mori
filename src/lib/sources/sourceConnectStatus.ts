@@ -8,8 +8,9 @@
  * one onto the other so the inspector can show an agent's real, detected
  * connection state inline, instead of leaving it only in the 연동 설정 modal.
  *
- * Providers with no installer entry yet (OpenCode, Cursor) map to `null`, so
- * the inspector simply omits the live-status block rather than inventing one.
+ * Evidence providers (Git, 메모, …) and any agent with no installer entry map
+ * to `null`, so the inspector simply omits the live-status block rather than
+ * inventing one. Every anchor agent in the registry is backed today.
  */
 import type {
   ConnectorInstallerId,
@@ -20,9 +21,11 @@ import type {
 const PROVIDER_TO_INSTALLER: Record<string, ConnectorInstallerId> = {
   claude: "claude-code",
   codex: "codex-cli",
+  opencode: "opencode",
   antigravity: "antigravity",
   continue: "continue",
   cline: "cline",
+  cursor: "cursor",
 };
 
 /** The installer id that backs a provider's live status, or null when none. */

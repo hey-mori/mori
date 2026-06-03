@@ -1,4 +1,14 @@
-import { Bot, Code2, Infinity, Rocket, Sparkles, X, type LucideIcon } from "lucide-react";
+import {
+  Bot,
+  Braces,
+  Code2,
+  Infinity,
+  MousePointer2,
+  Rocket,
+  Sparkles,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { Button } from "../../components/ui/Button";
@@ -14,9 +24,11 @@ import {
 const ICONS: Record<ConnectorInstallerId, LucideIcon> = {
   "claude-code": Sparkles,
   "codex-cli": Code2,
+  opencode: Braces,
   antigravity: Rocket,
   continue: Infinity,
   cline: Bot,
+  cursor: MousePointer2,
 };
 
 const TITLE_ID = "connector-install-modal-title";

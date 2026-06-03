@@ -92,6 +92,23 @@ fn open_readonly(path: &std::path::Path) -> Result<Connection, String> {
         .map_err(|error| format!("Failed to open {} read-only: {error}", path.display()))
 }
 
+/// Count composer (chat) sessions in a Cursor `state.vscdb`, opening it
+/// read-only. Used by connection-status detection (`detect_cursor`). A missing
+/// table, open failure, or query error reads as zero rather than erroring, so a
+/// status probe never breaks on an unfamiliar Cursor layout.
+pub(crate) fn count_composer_sessions(db_path: &std::path::Path) -> u32 {
+    let Ok(conn) = open_readonly(db_path) else {
+        return 0;
+    };
+    conn.query_row(
+        "SELECT COUNT(*) FROM cursorDiskKV WHERE key LIKE 'composerData:%'",
+        [],
+        |row| row.get::<_, i64>(0),
+    )
+    .map(|count| count.max(0) as u32)
+    .unwrap_or(0)
+}
+
 /// A `cursorDiskKV` value column may be stored as TEXT or BLOB depending on
 /// the Cursor version; decode either as a UTF-8 string.
 fn value_ref_to_string(value: ValueRef) -> Option<String> {
