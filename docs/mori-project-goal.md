@@ -925,6 +925,12 @@ before starting.
    that wraps `claude` / `codex` invocations and writes canonical
    Connector JSONL, removing the need to install template scripts
    manually.
+   - *Progress:* the first `connectors/mori-cli/mori.py` scaffold ships
+     `mori capture note`, `mori capture transcript`, and `mori capture git`
+     by delegating to `mori-local-capture.py`, with generated-output smoke
+     coverage through the Import Review draft boundary. `mori capture commit`
+     is covered too, and symlink invocation as `mori` is documented and
+     tested. Still open: `mori run --connector ...` agent wrapping.
 2. **IDE / Terminal Integration.** VS Code / Cursor extension
    sending workspace events to a local Mori endpoint with explicit
    opt-in and scoping. Terminal integration: a shell-history

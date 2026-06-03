@@ -102,17 +102,28 @@ Acceptance:
 
 ## Phase 2. Mori CLI wrapper
 
-**Status:** next large product milestone.
+**Status:** in progress.
 
 Goal: ship a `mori` command that produces canonical Connector JSONL without
 asking users to hand-copy wrapper scripts.
 
-First build should be small:
+First build shipped:
 
-1. `mori capture note --text ...`
-2. `mori capture transcript --file ...`
+1. `mori capture note "..."`
+2. `mori capture transcript <path-or-stdin>`
 3. `mori capture git --repo ...`
-4. `mori run --connector codex -- <command...>` as a later step, once the
+4. `mori capture commit [ref] --repo ...`
+
+The current scaffold lives at
+[`../../connectors/mori-cli/mori.py`](../../connectors/mori-cli/mori.py). It
+delegates to `mori-local-capture.py`, so it emits the same Connector JSONL
+schema and inherits the same Import Review path. Generated-output smoke tests
+cover note / transcript / git / commit commands through the review-draft
+boundary.
+
+Remaining:
+
+1. Add `mori run --connector codex -- <command...>` as a later step, once the
    capture commands are stable.
 
 Design constraints:
@@ -230,8 +241,7 @@ These stay out unless the product direction is explicitly reprioritized:
 
 The next smallest valuable action is:
 
-**Mori CLI wrapper scaffold.** Start Phase 2 with the smallest useful `mori`
-command: `mori capture note`, `mori capture transcript`, and
-`mori capture git`, all emitting the existing Connector JSONL schema into a
-chosen output directory. Do not wrap real agent binaries until those capture
-commands are tested.
+**CLI run wrapper.** Add `mori run --connector codex -- <command...>` and
+`mori run --connector opencode -- <command...>` by delegating to the hardened
+POSIX wrapper logic or a shared Python emitter. Keep it explicit and do not
+capture stdout/stderr bodies.
