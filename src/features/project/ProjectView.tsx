@@ -35,7 +35,17 @@ import { getAcceptedMemoryRepository } from "../../lib/project-memory/acceptedMe
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 import { useProjectStore } from "../../app/projectStore";
 import { projectDisplayName } from "../../lib/projects/userProjects";
-import { projectIdentitiesMatch } from "../../lib/projects/projectConnection";
+import {
+  addProjectAlias,
+  buildProjectConnectionCandidates,
+  getProjectAliases,
+  loadConnectedProjects,
+  projectMatchesWithAliases,
+  saveConnectedProjects,
+  type ConnectedProject,
+  type ProjectConnectionCandidate,
+} from "../../lib/projects/projectConnection";
+import { InfoHint } from "../../components/ui/InfoHint";
 import { ProjectFormModal } from "./ProjectFormModal";
 import { ProjectSynthesisSection } from "./ProjectSynthesisSection";
 import { ProjectPulse } from "./ProjectPulse";
@@ -99,14 +109,48 @@ export function ProjectView() {
     [summaries],
   );
 
+  // User-confirmed connection aliases (look-alike labels the user mapped onto
+  // this project). They widen grouping beyond an exact path match.
+  const [connections, setConnections] = useState<ConnectedProject[]>(() =>
+    loadConnectedProjects(),
+  );
+  const aliases = useMemo(
+    () => (projectKey ? getProjectAliases(connections, projectKey) : []),
+    [connections, projectKey],
+  );
+
   const overview = useMemo(() => {
     if (!projectKey) return null;
     return buildProjectOverview({
       projectKey,
       sessions: storedSessions,
       sessionInsights: gatherProjectSessionInsights(storedSessions, repository),
+      aliases,
     });
-  }, [projectKey, repository, storedSessions]);
+  }, [projectKey, repository, storedSessions, aliases]);
+
+  // Look-alike sessions (same trailing name, different path) the user could
+  // confirm as this project. Empty unless such a near-match exists, so the
+  // section stays hidden for an unambiguous project.
+  const connectionCandidates = useMemo<ProjectConnectionCandidate[]>(() => {
+    if (!projectKey) return [];
+    return buildProjectConnectionCandidates({
+      projectKey,
+      sources: storedSessions.map((entry) => ({
+        id: entry.sessionId,
+        label: entry.sourceLabel,
+        title: entry.title,
+      })),
+      connections,
+    });
+  }, [projectKey, storedSessions, connections]);
+
+  const handleConnectCandidate = (label: string) => {
+    if (!projectKey) return;
+    const next = addProjectAlias(connections, projectKey, label);
+    setConnections(next);
+    saveConnectedProjects(next);
+  };
 
   // Durable memory is keyed by `projectId`, but the project page is opened by
   // `sourceLabel`. Resolve one to the other from the project's own sessions so
@@ -115,10 +159,10 @@ export function ProjectView() {
   const projectId = useMemo(() => {
     if (!projectKey) return null;
     const match = storedSessions.find((entry) =>
-      projectIdentitiesMatch(entry.sourceLabel, projectKey),
+      projectMatchesWithAliases(projectKey, entry.sourceLabel, connections),
     );
     return match?.projectId ?? null;
-  }, [projectKey, storedSessions]);
+  }, [projectKey, storedSessions, connections]);
 
   // Durable accepted memory for this project — surfaced inline and compactly
   // (only when it exists). No consolidation navigate-away; reviewing proposals
@@ -313,6 +357,11 @@ export function ProjectView() {
           <ProjectSynthesisSection synthesis={synthesis} />
         </div>
 
+        <ProjectConnectionCandidates
+          candidates={connectionCandidates}
+          onConnect={handleConnectCandidate}
+        />
+
         <BaseSection
           className="project-sessions"
           title="세션"
@@ -412,6 +461,43 @@ function ProjectMemoryList({ memories }: { memories: StoredAcceptedProjectMemory
         ))}
       </ul>
     </BaseSection>
+  );
+}
+
+/**
+ * Look-alike sessions the user can confirm as this project. Renders nothing
+ * unless a basename near-match exists, so an unambiguous project shows no band.
+ * Confirming writes a connection alias, after which those sessions group in.
+ */
+function ProjectConnectionCandidates({
+  candidates,
+  onConnect,
+}: {
+  candidates: ProjectConnectionCandidate[];
+  onConnect: (label: string) => void;
+}) {
+  if (candidates.length === 0) return null;
+  return (
+    <section className="project-connect" aria-label="연결 후보">
+      <div className="project-connect-head">
+        <span className="project-connect-title">연결 후보</span>
+        <InfoHint label="연결 후보 설명">
+          이름은 같지만 경로가 다른 세션입니다. 연결하면 이 프로젝트의 세션으로 함께
+          묶입니다.
+        </InfoHint>
+      </div>
+      <ul className="project-connect-list">
+        {candidates.map((candidate) => (
+          <li key={candidate.canonicalKey} className="project-connect-row">
+            <span className="project-connect-label">{candidate.displayLabel}</span>
+            <span className="project-connect-meta">세션 {candidate.count}개</span>
+            <Button variant="ghost" onClick={() => onConnect(candidate.label)}>
+              연결
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
