@@ -70,7 +70,6 @@ export function ProjectStateStrip({
         onClick={() =>
           onOpenSession(latest.sessionId, latestNeedsReview ? "insights" : "flow")
         }
-        title={latest.title}
       >
         <span className="project-state-latest-label">최근</span>
         <span className="project-state-latest-title">{latest.title}</span>
