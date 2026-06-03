@@ -20,6 +20,9 @@ Companion docs (read these before changing code):
 - [imports.md](imports.md) — every import surface and its review gate.
 - [source-integrations.md](source-integrations.md) — source registry,
   trust levels, raw-data policy.
+- [connectors/connection-surface.md](connectors/connection-surface.md) covers
+  the 연동 surface contract (provider grid + inspector, setup guides, live
+  connection status) and the remaining connector roadmap.
 - [persistence.md](persistence.md) — storage adapters, schema
   versions, fallback behaviour.
 - [roadmap.md](roadmap.md) — capability buckets and historical phase
@@ -235,6 +238,29 @@ that is called out.
   an AI conversation (the spine), with other sources attached as evidence. The
   `WorkBundlePanel` is demoted to an advanced disclosure in the Connections
   hub.
+
+**Connections Surface (연동)**
+
+- 연동 page (`SourcesView`) is a calm provider grid (agents · evidence ·
+  planned chips) with a right inspector, backed by the pure
+  `buildSourceWorkspace` → `buildSourceProviderGroups` derivation. Anchor
+  agents (Claude / Codex / OpenCode / Antigravity / Continue / Cline / Cursor)
+  carry the 기록에서 불러오기 way-in; everything else attaches as evidence.
+- The inspector surfaces each method's 읽는 것 / 읽지 않는 것 / 지원 형식 and
+  its import action. For the docs-template methods (Code 훅 · CLI 래퍼 ·
+  OpenCode · 터미널 브릿지 · MCP) it renders an inline **연결하기** block of
+  copyable setup steps from `getConnectorSetupGuide`, plus an MCP
+  server-staging affordance, so a method is never a dead end.
+- Each anchor agent shows a live **연동 상태** block derived from
+  `detect_connector_status` via the pure `sourceConnectStatus` mapping; the
+  Claude config-hook offers in-place 연결 / 연결 해제 driven by the safe
+  installer engine. Browser mode reports an honest desktop-only state.
+- `detect_connector_status` covers all seven anchor agents: Claude Code
+  (config-hook, hook present in `settings.json`?) and Codex / OpenCode /
+  Antigravity / Continue / Cline / Cursor (session-discovery, how many
+  sessions can Mori read back?). See
+  [connectors/connection-surface.md](connectors/connection-surface.md) for the
+  surface contract and the remaining roadmap.
 
 **Timeline and Review Experience**
 
@@ -888,6 +914,13 @@ before starting.
    templates reliable on a real user workflow. Document setup,
    verify JSONL output round-trips through Import Review, and add
    fixture tests so regressions surface.
+   - *Progress:* in-app setup guides now render inline in the 연동
+     inspector, live connection status is shown per anchor agent with
+     in-place Claude hook connect / disconnect, and
+     `detect_connector_status` covers all seven anchor agents. Still open:
+     a fixture test that asserts each template's JSONL round-trips through
+     Import Review. See
+     [connectors/connection-surface.md](connectors/connection-surface.md).
 2. **CLI Wrapper for Claude / Codex workflows.** A small `mori` CLI
    that wraps `claude` / `codex` invocations and writes canonical
    Connector JSONL, removing the need to install template scripts
