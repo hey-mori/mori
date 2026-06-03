@@ -174,9 +174,11 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 
 **Usage**: User imports sources, clicks "Run Quick Pass" in Review page banner. Mori analyzes imported sources to extract issues, decisions, relationships, and next actions.
 
-## Planned Integrations
+## Later / partial integrations
 
-These integrations are **not yet implemented**. They appear in planning documents and type definitions but have no real capture logic.
+These integrations are not fully implemented as turnkey connectors. Some have
+an explicit first slice available today (for example a task template, shell
+helper, or desktop session discovery); each section states its actual status.
 
 ### 10. Terminal History (`terminal`)
 
@@ -240,13 +242,26 @@ task-template explicit-capture contract is proven in real use.
 
 ### 14. Cursor Integration (`cursor`)
 
-- **Status**: Planned
-- **Capture Mode**: Planned connector
+- **Status**: Implemented for desktop composer-session discovery; planned for
+  extension-based workspace events
+- **Capture Mode**: Desktop command (session-discovery) today; planned
+  connector for the future extension
 - **Trust Level**: Observed
-- **Raw Data Policy**: Summary only
-- **Privacy Note**: Requires extension installation and explicit opt-in.
+- **Raw Data Policy**: Retained for imported chat transcript events, after
+  Import Review
+- **Privacy Note**: The current desktop path opens Cursor's local
+  `state.vscdb` read-only and reads only `composerData:*` chat rows after the
+  user explicitly invokes Cursor session discovery / import. It does not read
+  editor buffers, workspace state, Cursor account data, browser storage, or run
+  a watcher.
 
-**Future Usage**: Cursor extension sends AI interaction events to Mori.
+**Usage today**: User selects Cursor from 연동 / 기록에서 불러오기, Mori lists
+local composer sessions, the user selects one, and the transcript goes through
+Import Review before Timeline.
+
+**Future Usage**: Cursor extension sends explicit AI interaction / workspace
+events to Mori as Connector JSONL. That extension remains planned and must not
+poll buffers or watch the editor.
 
 ### 15. Browser Tab History (`browserTab`)
 

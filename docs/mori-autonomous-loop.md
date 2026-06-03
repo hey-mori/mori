@@ -77,7 +77,9 @@ Never implement:
 - account scraping
 - Claude Desktop database scraping
 - ChatGPT browser scraping
-- Cursor internal database scraping
+- Cursor internal database scraping, except the product-approved Cursor
+  composer-chat path: user-invoked, read-only, `composerData:*` rows
+  only, and still review-before-apply
 - browser history scraping
 - screen recording
 - keylogging

@@ -158,31 +158,27 @@ explicit reprioritization by the user.
 - **Background watchers / daemons** (file-system watcher, editor-buffer poll,
   optional watched inbox beyond explicit Refresh). Capture stays explicit.
 
-## 6. Open tension to resolve (Cursor `state.vscdb`)
+## 6. Cursor `state.vscdb` boundary
 
-**Flagged for an explicit product decision.** Cursor discovery
-(`discover_cursor_sessions`, shipped and registered) and the new Cursor
-detection (`count_composer_sessions`) both open Cursor's global `state.vscdb`
-**read-only** and read only the user's own composer (chat) records. The UI
-states this plainly ("로컬 state.vscdb를 읽기 전용으로만 엽니다").
+Cursor composer session discovery is an approved narrow exception to the
+general "do not read app databases" rule. The reason is practical and scoped:
+Cursor's current local record for user composer chat sessions lives in
+`state.vscdb`, so Mori may open that database **read-only** only when the user
+explicitly invokes Cursor discovery / import, and only to read `composerData:*`
+chat rows. The UI states this plainly ("로컬 state.vscdb를 읽기 전용으로만
+엽니다").
 
-This is in tension with the literal wording of the non-goals, which list
-"Cursor internal databases" among the stores Mori must not read
-([mori-project-goal.md](../mori-project-goal.md) §14, §7;
-[connection-architecture.md](./connection-architecture.md) §2). Two readings:
+This exception does **not** permit:
 
-- **Allowed exception (current behavior).** The non-goal targets *scraping* an
-  app's private store for arbitrary data, or doing so in the background. A
-  read-only, on-demand read of the user's *own* AI chat log, surfaced honestly,
-  is the only local record Cursor keeps and is treated like any other agent
-  transcript.
-- **Strict reading.** `state.vscdb` is an internal SQLite database, so reading
-  it at all crosses the stated line, and Cursor should drop to paste-only.
+- arbitrary Cursor app-data scraping;
+- editor-buffer, workspace-state, account, browser-storage, or API-key reads;
+- background watchers / polling;
+- importing the selected transcript without Import Review.
 
-The code currently follows the first reading; the docs still assert the second.
-**This needs the user to pick one,** then the wording (§14 / §7 / §2) or the
-Cursor capability is updated to match. Until then it is recorded here as a known
-contradiction, not silently resolved.
+In other words, Cursor composer discovery is treated like an explicit local
+agent transcript import, not like a general Cursor database connector. The
+future Cursor extension remains a separate explicit-emit path for workspace
+events.
 
 ## 7. Extending the surface (scalability)
 

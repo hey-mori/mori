@@ -84,7 +84,10 @@ pub fn get_cursor_session(session_path: String) -> Result<CursorSessionDetail, S
 }
 
 fn cursor_global_db() -> Result<std::path::PathBuf, String> {
-    crate::agent_paths::require(crate::agent_paths::cursor_global_db(), "Cursor state database")
+    crate::agent_paths::require(
+        crate::agent_paths::cursor_global_db(),
+        "Cursor state database",
+    )
 }
 
 fn open_readonly(path: &std::path::Path) -> Result<Connection, String> {
@@ -149,7 +152,10 @@ pub(crate) fn list_sessions_from(
     let mut out = Vec::new();
     for row in rows.flatten() {
         let (key, text) = row;
-        let composer_id = key.strip_prefix("composerData:").unwrap_or(&key).to_string();
+        let composer_id = key
+            .strip_prefix("composerData:")
+            .unwrap_or(&key)
+            .to_string();
         let Ok(data) = serde_json::from_str::<Value>(&text) else {
             // No-silent-truncation: a composer row whose JSON will not parse is
             // surfaced as an unreadable placeholder, matching the other
@@ -242,7 +248,10 @@ pub(crate) fn read_session_from(
 
     // Newer split-bubble format: walk the ordered headers and resolve each
     // bubble row. Older inline format: read the `conversation` array directly.
-    if let Some(headers) = data.get("fullConversationHeadersOnly").and_then(Value::as_array) {
+    if let Some(headers) = data
+        .get("fullConversationHeadersOnly")
+        .and_then(Value::as_array)
+    {
         for (index, header) in headers.iter().enumerate() {
             let Some(bubble_id) = header.get("bubbleId").and_then(Value::as_str) else {
                 continue;
@@ -344,13 +353,50 @@ fn short_id(id: &str) -> String {
 }
 
 fn format_millis_iso(millis: i64) -> String {
-    let seconds = if millis > 0 { (millis / 1000) as u64 } else { 0 };
+    let seconds = if millis > 0 {
+        (millis / 1000) as u64
+    } else {
+        0
+    };
     crate::claude::format_unix_seconds(seconds)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn readonly_connection_refuses_writes() {
+        let temp = TempDir::new().unwrap();
+        let db_path = temp.path().join("state.vscdb");
+        let conn = Connection::open(&db_path).unwrap();
+        conn.execute(
+            "CREATE TABLE cursorDiskKV (key TEXT PRIMARY KEY, value BLOB)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO cursorDiskKV VALUES ('composerData:c1', ?1)",
+            [r#"{"name":"Read only"}"#],
+        )
+        .unwrap();
+        drop(conn);
+
+        let readonly = open_readonly(&db_path).unwrap();
+        let count = count_composer_sessions(&db_path);
+        assert_eq!(count, 1);
+        let err = readonly
+            .execute(
+                "INSERT INTO cursorDiskKV VALUES ('composerData:c2', ?1)",
+                [r#"{"name":"Should fail"}"#],
+            )
+            .unwrap_err();
+        assert!(
+            err.to_string().contains("readonly") || err.to_string().contains("read-only"),
+            "unexpected SQLite error: {err}"
+        );
+    }
 
     fn seed_split_format(conn: &Connection) {
         conn.execute(
@@ -414,7 +460,10 @@ mod tests {
         assert_eq!(detail.messages[0].role, "human");
         assert_eq!(detail.messages[0].content, "Why does useQuery fail?");
         assert_eq!(detail.messages[1].role, "assistant");
-        assert_eq!(detail.messages[1].content, "Because the argument is undefined.");
+        assert_eq!(
+            detail.messages[1].content,
+            "Because the argument is undefined."
+        );
     }
 
     #[test]

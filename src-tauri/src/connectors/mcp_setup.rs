@@ -12,7 +12,7 @@
 //! the repo `connectors/` tree is absent) can still stage it.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::Serialize;
 
@@ -33,10 +33,8 @@ pub struct McpServerStaged {
 
 #[tauri::command]
 pub fn stage_mcp_server() -> Result<McpServerStaged, String> {
-    let inbox = crate::agent_paths::require(
-        crate::agent_paths::mori_inbox_dir(),
-        "Mori connector inbox",
-    )?;
+    let inbox =
+        crate::agent_paths::require(crate::agent_paths::mori_inbox_dir(), "Mori connector inbox")?;
     stage_to(&inbox)
 }
 
@@ -68,10 +66,8 @@ pub(crate) fn stage_to(inbox_root: &Path) -> Result<McpServerStaged, String> {
 /// Useful for showing the config snippet before the user stages.
 #[tauri::command]
 pub fn mcp_server_target_path() -> Result<String, String> {
-    let inbox = crate::agent_paths::require(
-        crate::agent_paths::mori_inbox_dir(),
-        "Mori connector inbox",
-    )?;
+    let inbox =
+        crate::agent_paths::require(crate::agent_paths::mori_inbox_dir(), "Mori connector inbox")?;
     Ok(inbox
         .join("mcp")
         .join(SCRIPT_FILENAME)
@@ -82,6 +78,7 @@ pub fn mcp_server_target_path() -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     #[test]
@@ -92,7 +89,9 @@ mod tests {
         assert!(staged.wrote);
         let path = PathBuf::from(&staged.script_path);
         assert!(path.exists());
-        assert!(path.ends_with("mcp/mori-mcp-server.py") || path.ends_with("mcp\\mori-mcp-server.py"));
+        assert!(
+            path.ends_with("mcp/mori-mcp-server.py") || path.ends_with("mcp\\mori-mcp-server.py")
+        );
         let written = std::fs::read_to_string(&path).unwrap();
         assert!(written.contains("FastMCP"));
         assert!(written.contains("capture_session"));

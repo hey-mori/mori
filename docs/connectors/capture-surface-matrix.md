@@ -23,7 +23,7 @@ so the UI can derive labels and badges from a single source of truth.
 | **Implemented** | The path works today. The user can use it without reading any docs. |
 | **Partial** | Some of the path works (e.g. the parser) but a piece is missing (usually the UI surface). |
 | **Manual-only** | The only way is to paste text by hand. No structured capture. |
-| **Docs-template-only** | A pure TypeScript pipeline + a setup template exist; UI to ingest the result is not built yet. |
+| **Docs-template-only** | A pure TypeScript pipeline, setup template, and Connector JSONL ingestion exist; turnkey install / live sync is not built yet. |
 | **Planned** | Designed in this doc, not built. |
 | **Unavailable** | Platform / vendor / privacy constraints block this surface. |
 
@@ -57,6 +57,7 @@ so the UI can derive labels and badges from a single source of truth.
 | Codex CLI wrapper (local JSONL) | codex | cli | **Docs-template-only** | Yes (via parser) |
 | Codex Desktop export | codex | desktop | Planned | No |
 | Codex Web · GitHub workflow | codex | web | Planned | No |
+| Cursor composer session discovery | ide | localCommand | Implemented | Yes |
 | VS Code extension | ide | extension | Planned | No |
 | Cursor extension | ide | extension | Planned | No |
 | Terminal shell integration | terminal | cli | Planned | No |
@@ -90,13 +91,24 @@ so the UI can derive labels and badges from a single source of truth.
   (or `.ps1`) on their machine and registers it in Claude Code's hook
   config. The hook writes one Mori `ConnectorEvent` line per event to
   `~/.mori/connectors/claude-code/<date>.jsonl`. The pure pipeline in
-  `src/lib/connectors/` parses and normalises the file. **What is still
-  missing: a UI surface that lets the user pick this file from inside
-  Evidence Hub.** Today users paste the file's contents into the AI 대화
-  tab.
+  `src/lib/connectors/` parses and normalises the file. The 연동 inspector
+  shows copyable setup steps, and Evidence Hub / Import Panel can ingest the
+  JSONL through the Connector JSONL path. What is still missing is a turnkey
+  installer / live sync path beyond the Claude in-app hook installer.
 - **Codex CLI wrapper**: same shape with
   [`connectors/codex-cli/mori-codex-wrapper.sh`](../../connectors/codex-cli/mori-codex-wrapper.sh).
-  Same missing UI piece.
+  Same remaining gap: turnkey wrapper installation and fixture-backed
+  round-trip coverage, not the JSONL ingest UI.
+
+### Cursor composer session discovery (Implemented)
+
+- **Cursor composer session discovery**: explicit desktop-only session
+  discovery. Mori opens Cursor's local `state.vscdb` read-only, counts and
+  lists only `composerData:*` chat rows, then imports the selected transcript
+  through Import Review. It does not read editor buffers, workspace state,
+  arbitrary Cursor app data, accounts, browser storage, or run a watcher. The
+  future Cursor extension is a separate planned surface for explicit workspace
+  event emits.
 
 ### Planned surfaces
 
@@ -119,7 +131,8 @@ Specifically:
 - **VS Code / Cursor / browser / terminal** — explicit extensions /
   shell hooks remain Planned; the explicit-capture path today is the
   local capture bridge (via the `vscode-task` / `terminal-helper`
-  templates). Mori will not auto-discover.
+  templates). Cursor composer session discovery is the one implemented
+  desktop session-discovery exception and remains user-invoked / read-only.
 - **GitHub PR / commit import** — see
   [`github-pr-import.md`](./github-pr-import.md).
 - **File / document import** — explicit Tauri file picker. No

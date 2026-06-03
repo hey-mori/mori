@@ -677,9 +677,10 @@ evidence without surveillance:
   remains required.
 
 **Avoid (non-goals).** Account scraping, hidden app database reading
-(Claude Desktop SQLite, ChatGPT browser storage, Cursor internal DB),
-global background monitoring, screen capture, keylogging, automatic
-cloud sync, scheduled consolidation jobs.
+(Claude Desktop SQLite, ChatGPT browser storage, arbitrary Cursor app
+data outside the explicit composer-chat exception), global background
+monitoring, screen capture, keylogging, automatic cloud sync,
+scheduled consolidation jobs.
 
 ## 8. Memory Strategy
 
@@ -945,8 +946,11 @@ explicitly reprioritises them:
 - Cloud sync by default. Cross-device memory is `.mori v0`
   export / import only.
 - Automatic external account reading.
-- Reading Claude Desktop SQLite, ChatGPT browser storage, Cursor
-  internal databases, or any third-party app's private storage.
+- Reading Claude Desktop SQLite, ChatGPT browser storage, arbitrary
+  Cursor app data outside the explicit composer-chat exception, or any
+  third-party app's private storage. The Cursor exception is narrow:
+  user-invoked, read-only, `composerData:*` chat rows only, and still
+  review-before-apply.
 - Unreviewed memory writes. AI proposes; user disposes.
 - Autonomous agent daemon ("Mori figures it out for you in the
   background").

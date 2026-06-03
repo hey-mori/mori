@@ -48,19 +48,28 @@ agent work
 
 ## 2. The hard boundary (non-goal compliance)
 
-Mori reads **file-based transcripts the agent itself writes**. It must
-**never** read an agent's **internal database** (SQLite / protobuf), browser
-storage, or account. This is the line between "the user's own readable work
-logs" and "scraping a third-party app's private store", the latter is a
-hard non-goal (see [mori-autonomous-loop.md](../mori-autonomous-loop.md) §4).
+Mori primarily reads **file-based transcripts the agent itself writes**. It
+must **never** scrape an agent's private store, browser storage, or account for
+arbitrary app data. This is the line between "the user's own readable work
+logs" and "scraping a third-party app's private store", the latter is a hard
+non-goal (see [mori-autonomous-loop.md](../mori-autonomous-loop.md) §4).
+
+There is one narrow local-agent exception: **Cursor composer chat**. Cursor's
+current local record for user chat sessions lives in `state.vscdb`, so Mori may
+open that database read-only, only after the user explicitly invokes Cursor
+session discovery / import, and only to read `composerData:*` chat rows that
+still pass through Import Review. This exception does not allow reading editor
+buffers, workspace state, arbitrary Cursor app data, or running a background
+watcher.
 
 Concretely:
 
 - Read: `~/.claude/projects/*.jsonl`, `~/.codex/sessions/*.jsonl`,
-  hook/wrapper JSONL under `~/.mori/connectors/`.
+  hook/wrapper JSONL under `~/.mori/connectors/`, and the narrow Cursor
+  composer-chat rows described above.
 - Do **not** read: Claude Desktop SQLite, `opencode.db` (SQLite),
-  Antigravity `conversations/*.pb` (protobuf), Cursor internal DBs, browser
-  cookies / history.
+  Antigravity `conversations/*.pb` (protobuf), arbitrary Cursor internal app
+  data outside composer-chat rows, browser cookies / history.
 
 ## 3. Per-agent reality
 
@@ -70,8 +79,11 @@ Verified against a real machine (2026-05). Status is honest, not aspirational.
 |---|---|---|---|
 | **Claude Code** | config-hook (live) + discovery | inbox `claude-code/<date>-<session-id>.jsonl`; `~/.claude/projects` | hook live and hardened; discovery shipped |
 | **Codex** | session-discovery | `~/.codex/sessions/**/rollout-*.jsonl` (incl. Codex Desktop) | discovery shipped (Rust parser verified vs 0.115.0); wrapper is the secondary marker path |
-| **OpenCode** | config-hook (wrapper) | inbox `opencode-cli/*.jsonl` | wrapper path shipped; native discovery **deferred** (see §6) |
-| **Antigravity** | session-discovery | `~/.gemini/antigravity/brain/*/.system_generated/logs/transcript.jsonl` | discovery **planned, partial** (see §6) |
+| **OpenCode** | session-discovery + wrapper | `<data>/storage/session`; inbox `opencode-cli/*.jsonl` | file-session discovery and wrapper path shipped; `opencode.db` stays forbidden (see §6) |
+| **Antigravity** | session-discovery | `~/.gemini/antigravity/brain/*/.system_generated/logs/transcript.jsonl` | discovery shipped, honestly partial (see §6) |
+| **Continue** | session-discovery | `~/.continue/sessions/sessions.json` | discovery shipped |
+| **Cline** | session-discovery | VS Code globalStorage task dirs containing `ui_messages.json` | discovery shipped |
+| **Cursor** | session-discovery | read-only `state.vscdb` `composerData:*` rows | discovery shipped under the narrow composer-chat exception (see §2) |
 
 "Codex Desktop" sessions also land in `~/.codex/sessions` (observed
 `originator: "Codex Desktop"`), so discovery covers the desktop app too, a
@@ -114,7 +126,8 @@ uninstall removes only Mori entries. The TS side computes the OS-aware command
 resolves it via Tauri resources). The **Connect modal** (소스 → 연결 설정,
 [`ConnectorInstallModal.tsx`](../../src/features/sources/ConnectorInstallModal.tsx))
 detects each agent and drives connect / disconnect; session-discovery agents
-(Codex, Antigravity) show their auto-detected status with no action. Desktop
+(Codex, OpenCode, Antigravity, Continue, Cline, Cursor) show their
+auto-detected status with no action. Desktop
 only; browser mode shows the honest desktop-only state.
 
 ## 5. Hardening notes (cross-OS)
@@ -146,25 +159,22 @@ lives in one place. Real-world fixes that must not regress:
 
 ## 6. Decisions: OpenCode and Antigravity
 
-Both agents store sessions locally, but both push on the §2 boundary, so the
-approach is deliberate, not symmetric with Codex.
+Both agents store sessions locally, but both push on the §2 boundary, so their
+discovery paths are deliberately narrower than Codex.
 
-### OpenCode: keep the wrapper path; defer native discovery
+### OpenCode: file-session discovery only, never `opencode.db`
 
 OpenCode stores file-based session data under
 `~/.local/share/opencode/storage/` (`session/`, `message/<sid>/`, `part/`)
 **and** a large `opencode.db` SQLite store. Decision:
 
 - **Do not read `opencode.db`** (internal SQLite, §2 non-goal).
-- **Defer file-JSON discovery.** Reconstructing a transcript needs
-  multi-file assembly (`message` + `part`), and as of v1.2.27 the authoritative
-  store appears to be migrating to `opencode.db`, so the JSON files risk
-  being incomplete. Shipping a parser that silently captures partial data
-  conflicts with "evidence is the source of truth" and "honest status".
-- **OpenCode is already captured** via the shipped wrapper + connector inbox
-  (`opencode-cli/`). That path is explicit, complete for what it records, and
-  mission-aligned. Revisit native discovery only if OpenCode's file store is
-  confirmed authoritative and stable.
+- **Use file-session discovery where available.** Detection counts readable
+  files under `storage/session`; session import uses the readable file-backed
+  records Mori can assemble without touching the SQLite store.
+- **Keep the wrapper path.** The shipped `opencode-cli/` wrapper remains the
+  explicit capture path for users who want canonical Connector JSONL instead
+  of relying on OpenCode's local file layout.
 
 ### Antigravity: add discovery, honestly partial
 

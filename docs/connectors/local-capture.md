@@ -205,7 +205,8 @@ Consistent with [`docs/mori-project-goal.md`](../mori-project-goal.md),
 this bridge intentionally does **not**:
 
 - watch the filesystem, run a daemon, or run on a schedule;
-- read accounts, app databases (Claude Desktop, Cursor, etc.), browser
+- read accounts, app databases (Claude Desktop, arbitrary Cursor app
+  data outside the explicit composer-chat exception, etc.), browser
   history / tabs, or the clipboard;
 - capture full diffs, file contents, or full transcript text;
 - send anything over the network;

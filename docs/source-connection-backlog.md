@@ -7,7 +7,9 @@ what is UI-only or planned, and what must stay forbidden.
 Principle: Mori is local-first. Every acquisition path is explicit, local,
 and review-before-apply unless the item is a user-authored note or URL
 reference. Mori does not scrape accounts, app databases, browser history,
-terminal scrollback, editor buffers, or hidden folders.
+terminal scrollback, editor buffers, or hidden folders. The one approved
+database-shaped exception is Cursor composer chat: user-invoked, read-only,
+`composerData:*` rows only, and still review-before-apply.
 
 ## Capability Audit
 
@@ -18,6 +20,7 @@ terminal scrollback, editor buffers, or hidden folders.
 | Codex transcript paste | Real and usable via AI tab | Pasted transcript | Plain text transcript | `normalizeAiTranscript` | `codexTranscript` source + timeline events | AI 대화 붙여넣기 | No Codex account/API access | Import Review before Timeline | `src/lib/import/normalizeAiTranscript.ts` | Platform mapping | Yes |
 | Codex CLI wrapper | Partially implemented | Local wrapper JSONL package | Connector JSONL | connector JSONL pipeline | connector source + events | Install wrapper, import JSONL | Captures metadata only by explicit command | Import Review before Timeline | `connectors/codex-cli/` | Fixture round-trip + no secret capture | Yes |
 | OpenCode CLI wrapper | Partially implemented | Local wrapper JSONL package | Connector JSONL | connector JSONL pipeline | connector source + events | Install wrapper, import JSONL | No account/API capture | Import Review before Timeline | `connectors/opencode-cli/` | Fixture round-trip | Yes |
+| Cursor composer sessions | Real and usable in Tauri | User-invoked local session discovery | Cursor `state.vscdb` composer rows | Cursor session adapter | `cursorTranscript` source + timeline events | Click 기록에서 불러오기 / select session | Read-only `composerData:*` chat rows only; no editor buffers, account, watcher, or arbitrary app data | Import Review before Timeline | `src-tauri/src/cursor/sessions.rs`, `src/lib/agents/workSessions.ts` | Cursor fixture + privacy invariant | Yes |
 | ChatGPT export import | Real and usable | Pasted export JSON or transcript | `conversations.json` content / text | `parseChatGptExport`, `normalizeAiTranscript` | `chatgptTranscript` source + events | Paste exported JSON/text | User-selected export only | Import Review before Timeline | `src/lib/import/parseChatGptExport.ts` | Export parser + fallback text parser | Yes |
 | Git diff paste | Real and usable | Pasted diff | Unified diff | `normalizeGitDiff` | `gitDiff` source + file events | Paste diff | Reads only pasted text | Import Review before Timeline | `src/lib/import/normalizeGitDiff.ts` | Diff parser + file stats | Yes |
 | Git diff desktop command | Real and usable in Tauri | User-added repo path + range | Repo path, range, staged flag | Tauri git command + diff normalizer | `tauriGitDiff` source + events | Click fetch | Runs only on selected repo path | Import Review before Timeline | `src-tauri/src/git/diff.rs` | Command + path boundary | Yes |
@@ -38,7 +41,9 @@ terminal scrollback, editor buffers, or hidden folders.
 
 - Claude Desktop database scraping
 - ChatGPT browser scraping
-- Cursor internal database scraping
+- Cursor internal database scraping, except the approved composer-chat
+  path: user-invoked, read-only, `composerData:*` rows only, and still
+  review-before-apply
 - browser history scraping
 - terminal scrollback or shell-history scraping
 - hidden folder monitoring
@@ -217,4 +222,3 @@ selected provider.
 - `src/lib/sources/sourceWorkspace.ts` · the flat source view-model it builds on.
 - `src/lib/connectors/connectorControlCenter.ts` · agent vs evidence role and
   runtime availability.
-
