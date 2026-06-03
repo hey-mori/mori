@@ -246,7 +246,10 @@ export type SessionState = {
    * SQLite database (sessions the user registered there). Irreversible.
    */
   clearAllDataAndViewDemo: () => Promise<void>;
-  runQuickPass: (provider?: AnalysisProvider) => Promise<AnalysisResult | null>;
+  runQuickPass: (
+    provider?: AnalysisProvider,
+    fallbackSettings?: QuickPassAnalysisSettings,
+  ) => Promise<AnalysisResult | null>;
   clearAnalysis: () => void;
   /**
    * Read the active session's append-only analysis run history (every
@@ -730,7 +733,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       dataResetNonce: get().dataResetNonce + 1,
     });
   },
-  runQuickPass: async (provider) => {
+  runQuickPass: async (provider, fallbackSettings) => {
     const repository = getRepository();
     const state = get();
     const draft = state.draft;
@@ -753,6 +756,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
 
     const settings = state.analysisSettings;
+    // A one-off run (e.g. an engine preset chosen for this run only) passes the
+    // provider it built plus the engine settings it was built from, so the
+    // fallback decision reflects that engine rather than the persisted one.
+    const effective = fallbackSettings ?? settings;
     const primary = provider ?? resolveProviderFromSettings(settings);
     const events = imports.flatMap((entry) => entry.events);
     const sources = imports.map((entry) => entry.source);
@@ -786,8 +793,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       const primaryMessage = primaryError instanceof Error ? primaryError.message : "Quick Pass failed";
 
       if (
-        settings.provider !== "deterministic" &&
-        settings.fallbackToDeterministic &&
+        effective.provider !== "deterministic" &&
+        effective.fallbackToDeterministic &&
         primary.name !== "deterministic-heuristic-v1"
       ) {
         const deterministic = getDefaultProvider();

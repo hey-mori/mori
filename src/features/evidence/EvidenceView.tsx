@@ -16,8 +16,12 @@ import {
 import { useAppStore } from "../../app/store";
 import { useReviewStore } from "../../app/reviewStore";
 import {
+  applyEnginePreset,
+  buildProviderConfigFromSettings,
   describeAnalysisStatus,
   getAnalysisStatusTone,
+  loadEnginePresets,
+  resolveQuickPassProvider,
 } from "../../lib/analysis";
 import {
   buildImportApplyCompletion,
@@ -25,6 +29,7 @@ import {
 } from "../../lib/review/importApplyCompletion";
 import type {
   AnalysisRunStatus,
+  EnginePreset,
   QuickPassAnalysisSettings,
   QuickPassProviderKind,
 } from "../../lib/analysis";
@@ -68,6 +73,21 @@ export function EvidenceView() {
   // `navigate` routes legacy session-surface keys (timeline) into the unified
   // Session Detail workspace; other keys (memory / settings) pass through.
   const setCurrentView = useAppStore((state) => state.navigate);
+
+  // Engine presets saved in AI engine settings can drive a one-off run without
+  // changing the persisted engine. `null` runs with the current settings.
+  const enginePresets = useMemo(() => loadEnginePresets(), []);
+  const [runPresetId, setRunPresetId] = useState<string | null>(null);
+
+  function handleRunQuickPass() {
+    const preset = runPresetId ? enginePresets.find((entry) => entry.id === runPresetId) : null;
+    if (!preset) {
+      void runQuickPass();
+      return;
+    }
+    const effective = applyEnginePreset(analysisSettings, preset);
+    void runQuickPass(resolveQuickPassProvider(buildProviderConfigFromSettings(effective)), effective);
+  }
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -218,10 +238,13 @@ export function EvidenceView() {
         confidence={analysis?.confidence ?? null}
         notes={analysis?.notes ?? []}
         settings={analysisSettings}
+        enginePresets={enginePresets}
+        runPresetId={runPresetId}
+        onRunPresetChange={setRunPresetId}
         onProviderChange={(provider) => updateAnalysisSettings({ provider })}
         onFallbackChange={(value) => updateAnalysisSettings({ fallbackToDeterministic: value })}
         onOpenSettings={() => setCurrentView("settings")}
-        onRun={() => runQuickPass()}
+        onRun={handleRunQuickPass}
         onClear={clearAnalysis}
       />
     ) : null;
@@ -492,6 +515,9 @@ function QuickPassControl({
   confidence,
   notes,
   settings,
+  enginePresets,
+  runPresetId,
+  onRunPresetChange,
   onProviderChange,
   onFallbackChange,
   onOpenSettings,
@@ -512,6 +538,9 @@ function QuickPassControl({
   confidence: number | null;
   notes: string[];
   settings: QuickPassAnalysisSettings;
+  enginePresets: EnginePreset[];
+  runPresetId: string | null;
+  onRunPresetChange: (id: string | null) => void;
   onProviderChange: (provider: QuickPassProviderKind) => void;
   onFallbackChange: (value: boolean) => void;
   onOpenSettings: () => void;
@@ -536,6 +565,22 @@ function QuickPassControl({
           </p>
         </div>
         <div className="analysis-panel-actions">
+          {enginePresets.length > 0 ? (
+            <label className="analysis-panel-run-engine">
+              <span>이번 실행</span>
+              <select
+                value={runPresetId ?? ""}
+                onChange={(event) => onRunPresetChange(event.target.value || null)}
+              >
+                <option value="">현재 설정</option>
+                {enginePresets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <Button
             variant="primary"
             icon={Sparkles}

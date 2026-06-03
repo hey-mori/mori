@@ -1234,8 +1234,42 @@
 
 .analysis-panel-actions {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* One-off engine for this run, chosen from a saved preset without changing
+   the persisted engine. Only rendered when the user has saved presets. */
+.analysis-panel-run-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.analysis-panel-run-engine span {
+  font-weight: 650;
+}
+
+.analysis-panel-run-engine select {
+  height: 32px;
+  max-width: 200px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--base-radius-md, 8px);
+  background: white;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.analysis-panel-run-engine select:focus {
+  border-color: var(--purple);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.12);
 }
 
 .analysis-panel-status {

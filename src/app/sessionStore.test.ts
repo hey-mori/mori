@@ -211,6 +211,27 @@ describe("useSessionStore Quick Pass provider flow", () => {
     expect(state.analysisFallbackUsed).toBe(true);
     expect(state.analysis?.providerName).toBe("deterministic-heuristic-v1");
   });
+
+  it("uses the per-run engine override for the fallback decision, not the persisted settings", async () => {
+    seedDraftWithImport();
+    // Persisted engine is deterministic and would never fall back, but the
+    // one-off run is an Ollama engine with fallback enabled.
+    useSessionStore.getState().updateAnalysisSettings({ provider: "deterministic" });
+
+    const failingOllama = buildProvider("ollama-quick-pass-v1", { fail: true, label: "Ollama once" });
+    const overrideSettings = {
+      ...DEFAULT_QUICK_PASS_SETTINGS,
+      provider: "ollama" as const,
+      fallbackToDeterministic: true,
+    };
+    const result = await useSessionStore.getState().runQuickPass(failingOllama, overrideSettings);
+
+    expect(result).not.toBeNull();
+    const state = useSessionStore.getState();
+    expect(state.analysisStatus).toBe("succeeded");
+    expect(state.analysisFallbackUsed).toBe(true);
+    expect(state.analysis?.providerName).toBe("deterministic-heuristic-v1");
+  });
 });
 
 describe("useSessionStore desktop persistence", () => {
