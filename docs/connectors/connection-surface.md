@@ -92,7 +92,10 @@ latest provider-specific files, and routes the user to the existing Connector
 JSONL import/review flow. It does not watch the folder, read file contents from
 the inspector, or import anything directly. `local-capture` is a first-class
 inbox family because the Mori CLI, terminal helper, VS Code task template, and
-git/note capture commands write there.
+git/note capture commands write there. A per-file "새 이벤트 확인" action reads
+only the selected file, reuses the same history-aware preview engine as
+ImportPanel, and shows 새 이벤트 / 이미 가져온 이벤트 counts plus saved-session
+attribution when available.
 
 **Detection coverage.** `detect_connector_status`
 ([installer.rs](../../src-tauri/src/connectors/installer.rs)) covers all seven

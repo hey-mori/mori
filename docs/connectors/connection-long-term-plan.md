@@ -102,7 +102,7 @@ Acceptance:
 
 ## Phase 2. Mori CLI wrapper
 
-**Status:** in progress.
+**Status:** shipped.
 
 Goal: ship a `mori` command that produces canonical Connector JSONL without
 asking users to hand-copy wrapper scripts.
@@ -171,8 +171,8 @@ Slices:
 
 1. **Shipped:** show recent inbox files per connector family in the 연동
    inspector.
-2. Add "last imported" and "new events" hints from the connector identity
-   history.
+2. **Shipped:** add "last imported" and "new events" hints from the connector
+   identity history.
 3. **Shipped:** add a manual Refresh button scoped to the selected provider.
 
 Shipped detail:
@@ -186,6 +186,9 @@ Shipped detail:
 - The block reads metadata only, after an explicit Refresh click, and routes the
   user to the existing Connector JSONL import/review flow instead of reading or
   importing files directly.
+- A per-file **새 이벤트 확인** action reads only the selected file, overlays
+  the existing history-aware Connector JSONL preview, and shows 새 이벤트 /
+  이미 가져온 이벤트 counts plus saved-session attribution when available.
 
 Hard boundary:
 
@@ -274,6 +277,6 @@ These stay out unless the product direction is explicitly reprioritized:
 
 The next smallest valuable action is:
 
-**Connector import freshness.** Finish Phase 3 by deriving "last imported" and
-"new events" hints from connector identity / import history, still without a
-watcher or automatic import.
+**IDE and terminal emitters.** Move to Phase 4: make the explicit terminal /
+editor emitters easier to install and verify against the same Connector JSONL
+review pipeline.

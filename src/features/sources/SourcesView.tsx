@@ -29,7 +29,11 @@ import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
-import { useSessionStore } from "../../app/sessionStore";
+import {
+  loadConnectorImportHistorySavedSessionsAsync,
+  selectSessionView,
+  useSessionStore,
+} from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
 import {
   formatConnectorFamily,
@@ -37,6 +41,7 @@ import {
   formatInboxModifiedAt,
   isTauriRuntime,
   listConnectorJsonlInbox,
+  readConnectorJsonlFile,
   type ConnectorInboxListing,
 } from "../../lib/desktop";
 import { formatDateTime } from "../../lib/formatting/time";
@@ -53,7 +58,11 @@ import {
 } from "../../lib/sources/sourceProviderGroups";
 import type { AgentWorkAgentId } from "../../lib/agents/agentRegistry";
 import type { StoredSessionImport } from "../../lib/storage/storageTypes";
-import { getConnectorSetupGuide, type CaptureSurfaceId } from "../../lib/connectors";
+import {
+  buildConnectorJsonlPreviewWithHistory,
+  getConnectorSetupGuide,
+  type CaptureSurfaceId,
+} from "../../lib/connectors";
 import {
   connectClaudeHook,
   loadConnectorStatus,
@@ -63,7 +72,9 @@ import {
 import { findConnectStatusForProvider } from "../../lib/sources/sourceConnectStatus";
 import {
   buildSourceInboxHint,
+  describeSourceInboxFreshness,
   getInboxFamiliesForProvider,
+  type SourceInboxFreshness,
   type SourceInboxHint,
 } from "../../lib/sources/sourceInboxHints";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
@@ -132,6 +143,21 @@ function providerIcon(provider: SourceProvider): LucideIcon {
   return PROVIDER_ICON[provider.id] ?? CATEGORY_ICON[provider.category];
 }
 
+type SourceInboxFreshnessCheck =
+  | SourceInboxFreshness
+  | {
+      status: "loading";
+      tone: "blue";
+      label: string;
+      detail: string;
+    }
+  | {
+      status: "error";
+      tone: "red";
+      label: string;
+      detail: string;
+    };
+
 function providerMatchesQuery(provider: SourceProvider, needle: string): boolean {
   if (!needle) return true;
   if (provider.name.toLowerCase().includes(needle)) return true;
@@ -156,6 +182,7 @@ function flattenProviders(groups: ReturnType<typeof buildSourceProviderGroups>):
 
 export function SourcesView() {
   const draft = useSessionStore((state) => state.draft);
+  const sessionView = useSessionStore(selectSessionView);
   const imports = useSessionStore((state) => state.imports);
   const requestEvidenceImport = useAppStore((state) => state.requestEvidenceImport);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
@@ -186,6 +213,9 @@ export function SourcesView() {
     tone: "info" | "error";
     message: string;
   } | null>(null);
+  const [inboxFreshnessByPath, setInboxFreshnessByPath] = useState<
+    Record<string, SourceInboxFreshnessCheck>
+  >({});
   const [selectedId, setSelectedId] = useState(defaultSelectedId);
   // Anchor agents open on their canonical way-in (기록에서 불러오기); every other
   // provider, and ChatGPT, opens on its first import method.
@@ -232,6 +262,50 @@ export function SourcesView() {
       setConnectorInboxBusy(false);
     }
   }, [desktop]);
+
+  const checkConnectorInboxFile = useCallback(
+    async (file: { path: string; displayName: string }) => {
+      if (!desktop) {
+        setConnectorInboxStatus({
+          tone: "info",
+          message: "새 이벤트 확인은 Mori 데스크톱 앱에서만 파일을 읽을 수 있습니다.",
+        });
+        return;
+      }
+      setInboxFreshnessByPath((prev) => ({
+        ...prev,
+        [file.path]: {
+          status: "loading",
+          tone: "blue",
+          label: "확인 중",
+          detail: "파일을 읽어 새 이벤트와 이미 가져온 이벤트를 계산합니다.",
+        },
+      }));
+      try {
+        const result = await readConnectorJsonlFile(file.path);
+        const savedSessions = await loadConnectorImportHistorySavedSessionsAsync({
+          excludeSessionId: draft?.session.id ?? null,
+        });
+        const preview = buildConnectorJsonlPreviewWithHistory(result.text, {
+          activeSession: sessionView,
+          savedSessions,
+        });
+        const freshness = describeSourceInboxFreshness(preview);
+        setInboxFreshnessByPath((prev) => ({ ...prev, [file.path]: freshness }));
+      } catch (caught) {
+        setInboxFreshnessByPath((prev) => ({
+          ...prev,
+          [file.path]: {
+            status: "error",
+            tone: "red",
+            label: "확인 실패",
+            detail: caught instanceof Error ? caught.message : String(caught),
+          },
+        }));
+      }
+    },
+    [desktop, draft?.session.id, sessionView],
+  );
 
   const needle = query.trim().toLowerCase();
   const filtered = useMemo(
@@ -326,8 +400,10 @@ export function SourcesView() {
             inboxHint={selectedInboxHint}
             inboxBusy={connectorInboxBusy}
             inboxStatus={connectorInboxStatus}
+            inboxFreshnessByPath={inboxFreshnessByPath}
             onReloadConnectStatus={reloadConnectStatus}
             onRefreshInbox={() => void refreshConnectorInbox()}
+            onCheckInboxFile={(file) => void checkConnectorInboxFile(file)}
             onOpenConnectorImport={() => requestEvidenceImport("connector")}
             onSelectMethod={(id) => {
               setSelectedId(id);
@@ -509,8 +585,10 @@ function SourceInspector({
   inboxHint,
   inboxBusy,
   inboxStatus,
+  inboxFreshnessByPath,
   onReloadConnectStatus,
   onRefreshInbox,
+  onCheckInboxFile,
   onOpenConnectorImport,
   onSelectMethod,
   onSelectRecords,
@@ -527,9 +605,11 @@ function SourceInspector({
   inboxHint: SourceInboxHint | null;
   inboxBusy: boolean;
   inboxStatus: { tone: "info" | "error"; message: string } | null;
+  inboxFreshnessByPath: Record<string, SourceInboxFreshnessCheck>;
   /** Re-detect connection status after an inline connect / disconnect. */
   onReloadConnectStatus: () => void;
   onRefreshInbox: () => void;
+  onCheckInboxFile: (file: { path: string; displayName: string }) => void;
   onOpenConnectorImport: () => void;
   onSelectMethod: (id: string) => void;
   /** Select the 기록에서 불러오기 way-in (anchor agents only). */
@@ -575,7 +655,9 @@ function SourceInspector({
           hint={inboxHint}
           busy={inboxBusy}
           status={inboxStatus}
+          freshnessByPath={inboxFreshnessByPath}
           onRefresh={onRefreshInbox}
+          onCheckFile={onCheckInboxFile}
           onOpenImport={onOpenConnectorImport}
         />
       ) : null}
@@ -725,7 +807,9 @@ function ConnectorInboxHintBlock({
   hint,
   busy,
   status,
+  freshnessByPath,
   onRefresh,
+  onCheckFile,
   onOpenImport,
 }: {
   available: boolean;
@@ -733,7 +817,9 @@ function ConnectorInboxHintBlock({
   hint: SourceInboxHint | null;
   busy: boolean;
   status: { tone: "info" | "error"; message: string } | null;
+  freshnessByPath: Record<string, SourceInboxFreshnessCheck>;
   onRefresh: () => void;
+  onCheckFile: (file: { path: string; displayName: string }) => void;
   onOpenImport: () => void;
 }) {
   const familyLabel = families.map(formatConnectorFamily).join(" · ");
@@ -763,19 +849,41 @@ function ConnectorInboxHintBlock({
           hasFiles ? (
             <>
               <ul className="sources-inbox-list">
-                {hint.files.map((file) => (
-                  <li key={file.path}>
-                    <div className="sources-inbox-file-main">
-                      <Badge tone="purple">{formatConnectorFamily(file.connectorFamily)}</Badge>
-                      <strong title={file.path}>{file.displayName}</strong>
-                    </div>
-                    <div className="sources-inbox-file-meta">
-                      <span>{formatInboxFileSize(file.sizeBytes)}</span>
-                      <span>{formatInboxModifiedAt(file.modifiedAt)}</span>
-                      <small>{file.relativePath}</small>
-                    </div>
-                  </li>
-                ))}
+                {hint.files.map((file) => {
+                  const freshness = freshnessByPath[file.path] ?? null;
+                  const checking = freshness?.status === "loading";
+                  return (
+                    <li key={file.path}>
+                      <div className="sources-inbox-file-main">
+                        <Badge tone="purple">{formatConnectorFamily(file.connectorFamily)}</Badge>
+                        <strong title={file.path}>{file.displayName}</strong>
+                      </div>
+                      <div className="sources-inbox-file-meta">
+                        <span>{formatInboxFileSize(file.sizeBytes)}</span>
+                        <span>{formatInboxModifiedAt(file.modifiedAt)}</span>
+                        <small>{file.relativePath}</small>
+                      </div>
+                      <div className="sources-inbox-file-freshness">
+                        {freshness ? (
+                          <Badge tone={freshness.tone} title={freshness.detail}>
+                            {freshness.label}
+                          </Badge>
+                        ) : null}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={checking}
+                          onClick={() => onCheckFile(file)}
+                        >
+                          {checking ? "확인 중..." : freshness ? "다시 확인" : "새 이벤트 확인"}
+                        </Button>
+                      </div>
+                      {freshness ? (
+                        <p className="sources-inbox-freshness-detail">{freshness.detail}</p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
               {hiddenCount > 0 ? (
                 <p className="sources-inbox-empty">그 외 {hiddenCount}개 파일이 더 있습니다.</p>

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSourceInboxHint,
+  describeSourceInboxFreshness,
   getInboxFamiliesForProvider,
   SOURCE_INBOX_PREVIEW_LIMIT,
 } from "./sourceInboxHints";
+import type { ConnectorJsonlPreview } from "../connectors";
 import type { ConnectorInboxFile, ConnectorInboxListing } from "../desktop";
 
 function file(
@@ -83,5 +85,93 @@ describe("buildSourceInboxHint", () => {
 
   it("returns null when a provider has no connector JSONL family", () => {
     expect(buildSourceInboxHint("chatgpt", listing([]))).toBeNull();
+  });
+});
+
+function preview(overrides: Partial<ConnectorJsonlPreview>): ConnectorJsonlPreview {
+  return {
+    kind: "valid",
+    totalLines: 1,
+    skippedBlankLines: 0,
+    validEventCount: 1,
+    invalidLineCount: 0,
+    connectorIds: ["claudeCodeHook"],
+    eventKinds: ["prompt_submitted"],
+    buckets: [],
+    projectPaths: [],
+    earliestOccurredAt: "2026-05-14T10:00:00Z",
+    latestOccurredAt: "2026-05-14T10:00:00Z",
+    redacted: false,
+    containsLikelySecret: false,
+    errors: [],
+    headline: "",
+    events: [],
+    newEventCount: 1,
+    duplicateEventCount: 0,
+    newEvents: [],
+    duplicateEvents: [],
+    duplicateIdentities: [],
+    currentSessionDuplicateCount: 0,
+    savedSessionDuplicateCount: 0,
+    inBatchDuplicateCount: 0,
+    identityUnavailableCount: 0,
+    savedSessionHistoryAvailable: true,
+    matchedSavedSessions: [],
+    warnings: [],
+    canImport: true,
+    ...overrides,
+  };
+}
+
+describe("describeSourceInboxFreshness", () => {
+  it("summarizes all-new files", () => {
+    const result = describeSourceInboxFreshness(preview({ newEventCount: 4 }));
+    expect(result.status).toBe("new");
+    expect(result.tone).toBe("green");
+    expect(result.label).toBe("새 이벤트 4");
+  });
+
+  it("summarizes partial re-imports with duplicate breakdowns", () => {
+    const result = describeSourceInboxFreshness(
+      preview({
+        newEventCount: 2,
+        duplicateEventCount: 3,
+        currentSessionDuplicateCount: 1,
+        savedSessionDuplicateCount: 2,
+        matchedSavedSessions: [{ sessionId: "saved-a", title: "Saved A", events: [] }],
+      }),
+    );
+    expect(result.status).toBe("partial");
+    expect(result.tone).toBe("orange");
+    expect(result.detail).toContain("현재 세션 1");
+    expect(result.detail).toContain("저장 세션 2 (Saved A)");
+  });
+
+  it("summarizes duplicate-only files", () => {
+    const result = describeSourceInboxFreshness(
+      preview({
+        newEventCount: 0,
+        duplicateEventCount: 3,
+        inBatchDuplicateCount: 3,
+      }),
+    );
+    expect(result.status).toBe("duplicate");
+    expect(result.label).toBe("이미 가져옴 3");
+  });
+
+  it("surfaces unavailable saved-session history", () => {
+    const result = describeSourceInboxFreshness(
+      preview({ savedSessionHistoryAvailable: false }),
+    );
+    expect(result.detail).toContain("저장 세션 기록");
+  });
+
+  it("summarizes parse failures and empty files", () => {
+    expect(
+      describeSourceInboxFreshness(
+        preview({ kind: "errors-only", invalidLineCount: 2, newEventCount: 0 }),
+      ).status,
+    ).toBe("invalid");
+    expect(describeSourceInboxFreshness(preview({ kind: "empty" })).status).toBe("empty");
   });
 });
