@@ -250,7 +250,7 @@ Targets:
   `opencode.db`;
 - Antigravity partial-format resilience;
 - Cline task metadata;
-- Cursor title / timestamp fallbacks;
+- **In progress:** Cursor title / timestamp / bubble-text fallbacks;
 - Continue session detail fidelity.
 
 Shipped detail:
@@ -258,6 +258,9 @@ Shipped detail:
 - OpenCode session reads now prefer the canonical `part/<messageID>/` text
   tree, but fall back to inline `content`, `text`, or `parts[]` on the message
   JSON when part files are absent. Tool / non-text parts remain excluded.
+- Cursor composer reads now prefer `text`, but fall back to `richText`,
+  `content`, and text-only `parts[]` / content arrays. Tool / thinking bubbles
+  remain excluded, and the database is still opened read-only.
 
 Acceptance:
 

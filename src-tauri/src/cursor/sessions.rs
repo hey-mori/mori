@@ -327,15 +327,55 @@ fn message_from_bubble(
     })
 }
 
-/// A bubble's human-readable text. Cursor stores the message under `text`
-/// (some versions also carry a `richText`); tool / thinking bubbles have
-/// neither and render as empty so they drop out of the transcript.
+/// A bubble's human-readable text. Cursor usually stores the message under
+/// `text`, while some versions / exports use `richText`, `content`, or
+/// `parts[]`. Tool / thinking bubbles either carry no text fields or carry a
+/// non-text `type`, so they render as empty and drop out of the transcript.
 fn bubble_text(bubble: &Value) -> String {
+    for key in ["text", "richText", "content"] {
+        if let Some(value) = bubble.get(key) {
+            let text = collect_text_value(value);
+            if !text.trim().is_empty() {
+                return text;
+            }
+        }
+    }
     bubble
-        .get("text")
-        .and_then(Value::as_str)
-        .map(str::to_string)
+        .get("parts")
+        .map(collect_text_value)
         .unwrap_or_default()
+}
+
+fn collect_text_value(value: &Value) -> String {
+    match value {
+        Value::String(text) => text.to_string(),
+        Value::Array(items) => items
+            .iter()
+            .map(collect_text_value)
+            .filter(|text| !text.trim().is_empty())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        Value::Object(map) => {
+            if map
+                .get("type")
+                .and_then(Value::as_str)
+                .map(|kind| kind != "text")
+                .unwrap_or(false)
+            {
+                return String::new();
+            }
+            for key in ["text", "richText", "content"] {
+                if let Some(value) = map.get(key) {
+                    let text = collect_text_value(value);
+                    if !text.trim().is_empty() {
+                        return text;
+                    }
+                }
+            }
+            String::new()
+        }
+        _ => String::new(),
+    }
 }
 
 fn truncate(input: &str, max: usize) -> String {
@@ -411,7 +451,9 @@ mod tests {
             "fullConversationHeadersOnly": [
                 {"bubbleId": "b1", "type": 1},
                 {"bubbleId": "b2", "type": 2},
-                {"bubbleId": "b3", "type": 2}
+                {"bubbleId": "b3", "type": 2},
+                {"bubbleId": "b4", "type": 1},
+                {"bubbleId": "b5", "type": 2}
             ]
         }"#;
         conn.execute(
@@ -426,13 +468,23 @@ mod tests {
         .unwrap();
         conn.execute(
             "INSERT INTO cursorDiskKV VALUES ('bubbleId:c1:b2', ?1)",
-            [r#"{"type":2,"text":"Because the argument is undefined."}"#],
+            [r#"{"type":2,"richText":"Because the argument is undefined."}"#],
         )
         .unwrap();
         // A tool-only bubble with no text must be skipped.
         conn.execute(
             "INSERT INTO cursorDiskKV VALUES ('bubbleId:c1:b3', ?1)",
             [r#"{"type":2,"name":"run_terminal_cmd","params":"{}"}"#],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO cursorDiskKV VALUES ('bubbleId:c1:b4', ?1)",
+            [r#"{"type":1,"parts":[{"type":"text","text":"Follow-up from parts"},{"type":"tool","text":"ignored"}]}"#],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO cursorDiskKV VALUES ('bubbleId:c1:b5', ?1)",
+            [r#"{"type":2,"content":[{"type":"text","content":"Assistant content array"}]}"#],
         )
         .unwrap();
     }
@@ -445,8 +497,8 @@ mod tests {
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].session_id, "c1");
         assert_eq!(sessions[0].title, "Resolving useQuery Argument Error");
-        // message_count from the headers list (3 headers).
-        assert_eq!(sessions[0].message_count, 3);
+        // message_count from the headers list (includes textless tool bubbles).
+        assert_eq!(sessions[0].message_count, 5);
         assert_eq!(sessions[0].file_path, "db#c1");
     }
 
@@ -455,8 +507,8 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         seed_split_format(&conn);
         let detail = read_session_from(&conn, "c1", "db").unwrap();
-        // Two text bubbles render; the tool-only bubble drops out.
-        assert_eq!(detail.messages.len(), 2);
+        // Four text bubbles render; the tool-only bubble drops out.
+        assert_eq!(detail.messages.len(), 4);
         assert_eq!(detail.messages[0].role, "human");
         assert_eq!(detail.messages[0].content, "Why does useQuery fail?");
         assert_eq!(detail.messages[1].role, "assistant");
@@ -464,6 +516,10 @@ mod tests {
             detail.messages[1].content,
             "Because the argument is undefined."
         );
+        assert_eq!(detail.messages[2].role, "human");
+        assert_eq!(detail.messages[2].content, "Follow-up from parts");
+        assert_eq!(detail.messages[3].role, "assistant");
+        assert_eq!(detail.messages[3].content, "Assistant content array");
     }
 
     #[test]
