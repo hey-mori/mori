@@ -797,9 +797,11 @@
   min-width: 0;
   min-height: 0;
   /* Room for the edge "+" controls that straddle each panel border, so a
-     layout that fits never produces phantom scrollbars. */
+     layout that fits never produces phantom scrollbars. The canvas pans
+     horizontally only; each column owns its own vertical scroll. */
   padding: var(--base-space-4);
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .workbench-col {
@@ -807,8 +809,9 @@
   flex-direction: column;
   min-width: 300px;
   min-height: 0;
-  /* Panels size to their content; if a column's panels overrun, it scrolls
-     vertically only (overflow-x stays hidden so no stray horizontal bar). */
+  /* Cap each column at the canvas height so it scrolls on its own instead of
+     growing the whole canvas into one shared scroll. */
+  max-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
 }
