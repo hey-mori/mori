@@ -8,6 +8,7 @@
  */
 import { execFileSync } from "node:child_process";
 import {
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -53,6 +54,13 @@ function run(command: string, args: string[], cwd?: string): string {
   });
 }
 
+function makeStub(root: string, name: string): string {
+  const path = join(root, name);
+  writeFileSync(path, "#!/usr/bin/env bash\nprintf 'stub %s\\n' \"$*\"\nexit 0\n");
+  chmodSync(path, 0o755);
+  return path;
+}
+
 describe("mori capture CLI", () => {
   it("can be invoked through a mori symlink on PATH", () => {
     const root = makeTempRoot();
@@ -87,6 +95,81 @@ describe("mori capture CLI", () => {
     expect(result.outcome.errors).toEqual([]);
     expect(result.outcome.events).toHaveLength(1);
     expect(result.outcome.events[0]?.kind).toBe("session_finished");
+  });
+
+  it("runs Codex and OpenCode commands through bundled wrappers", () => {
+    const root = makeTempRoot();
+    const codexOut = join(root, "codex-out");
+    const openCodeOut = join(root, "opencode-out");
+    mkdirSync(codexOut, { recursive: true });
+    mkdirSync(openCodeOut, { recursive: true });
+    const codexStub = makeStub(root, "codex-stub");
+    const openCodeStub = makeStub(root, "opencode-stub");
+
+    run("python3", [
+      MORI_CLI,
+      "run",
+      "--connector",
+      "codex",
+      "--out",
+      codexOut,
+      "--session",
+      'mori-run-codex-"한글"',
+      "--",
+      codexStub,
+      "run",
+      'Fix "quoted" prompt',
+    ]);
+    run("python3", [
+      MORI_CLI,
+      "run",
+      "--connector",
+      "opencode",
+      "--out",
+      openCodeOut,
+      "--session",
+      'mori-run-opencode-"한글"',
+      "--",
+      openCodeStub,
+      "run",
+      'Add "업로드" retry',
+    ]);
+
+    const codexJsonl = readdirSync(codexOut)
+      .filter((file) => file.endsWith(".jsonl"))
+      .map((file) => readFileSync(join(codexOut, file), "utf8"))
+      .join("");
+    const openCodeJsonl = readdirSync(openCodeOut)
+      .filter((file) => file.endsWith(".jsonl"))
+      .map((file) => readFileSync(join(openCodeOut, file), "utf8"))
+      .join("");
+
+    const codex = ingestConnectorJsonl({
+      text: codexJsonl,
+      projectId: "p-mori-cli",
+      sessionId: "s-mori-cli",
+    });
+    expect(codex.outcome.errors).toEqual([]);
+    expect(codex.outcome.events.map((event) => event.connectorId)).toEqual([
+      "codexCliWrapper",
+      "codexCliWrapper",
+    ]);
+
+    const openCode = ingestConnectorJsonl({
+      text: openCodeJsonl,
+      projectId: "p-mori-cli",
+      sessionId: "s-mori-cli",
+    });
+    expect(openCode.outcome.errors).toEqual([]);
+    expect(openCode.outcome.events.map((event) => event.connectorId)).toEqual([
+      "openCodeCli",
+      "openCodeCli",
+      "openCodeCli",
+      "openCodeCli",
+    ]);
+
+    expect(mergeConnectorCandidatesForReview(codex.candidates)?.events.length).toBe(1);
+    expect(mergeConnectorCandidatesForReview(openCode.candidates)?.events.length).toBe(3);
   });
 
   it("captures note, transcript, git, and commit commands into reviewable Connector JSONL", () => {

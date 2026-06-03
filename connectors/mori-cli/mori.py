@@ -31,6 +31,20 @@ def default_local_capture() -> Path:
     return Path(__file__).resolve().parents[1] / "local-capture" / "mori-local-capture.py"
 
 
+def default_wrapper(connector: str) -> Path:
+    env_name = {
+        "codex": "MORI_CODEX_WRAPPER",
+        "opencode": "MORI_OPENCODE_WRAPPER",
+    }[connector]
+    env = os.environ.get(env_name)
+    if env:
+        return Path(os.path.expanduser(env))
+    base = Path(__file__).resolve().parents[1]
+    if connector == "codex":
+        return base / "codex-cli" / "mori-codex-wrapper.sh"
+    return base / "opencode-cli" / "mori-opencode-wrapper.sh"
+
+
 def add_common_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--out", metavar="DIR", help="output directory for Connector JSONL")
     parser.add_argument("--session", metavar="ID", help="external connector session id")
@@ -46,6 +60,12 @@ def append_common(args: argparse.Namespace, command: list[str]) -> None:
         command.extend(["--out", args.out])
     if args.session:
         command.extend(["--session", args.session])
+
+
+def normalize_remainder(command: list[str]) -> list[str]:
+    if command and command[0] == "--":
+        return command[1:]
+    return command
 
 
 def build_local_capture_command(args: argparse.Namespace) -> list[str]:
@@ -69,6 +89,30 @@ def build_local_capture_command(args: argparse.Namespace) -> list[str]:
         raise SystemExit(f"mori: unknown capture action: {action}")
 
     append_common(args, command)
+    return command
+
+
+def build_run_command(args: argparse.Namespace) -> list[str]:
+    wrapped = normalize_remainder(args.wrapped_command)
+    if not wrapped:
+        raise SystemExit("mori run: provide a command after --")
+    wrapper = (
+        Path(os.path.expanduser(args.wrapper))
+        if args.wrapper
+        else default_wrapper(args.connector)
+    )
+    if not wrapper.is_file():
+        raise SystemExit(f"mori run: wrapper not found: {wrapper}")
+
+    command = ["bash", str(wrapper)]
+    if args.out:
+        command.extend(["--out", args.out])
+    if args.session:
+        command.extend(["--session", args.session])
+    if args.git:
+        command.append("--git")
+    command.append("--")
+    command.extend(wrapped)
     return command
 
 
@@ -107,6 +151,21 @@ def build_parser() -> argparse.ArgumentParser:
     commit.add_argument("--repo", default=".", help="repository path (default: current directory)")
     add_common_flags(commit)
 
+    run = subcommands.add_parser(
+        "run",
+        help="run an agent command through a Mori connector wrapper",
+    )
+    run.add_argument("--connector", choices=["codex", "opencode"], required=True)
+    run.add_argument("--out", metavar="DIR", help="output directory for Connector JSONL")
+    run.add_argument("--session", metavar="ID", help="external connector session id")
+    run.add_argument("--git", action="store_true", help="append git diff summary after the run")
+    run.add_argument(
+        "--wrapper",
+        metavar="PATH",
+        help="override wrapper path (defaults to bundled connector wrapper)",
+    )
+    run.add_argument("wrapped_command", nargs=argparse.REMAINDER, help="command after --")
+
     return parser
 
 
@@ -114,16 +173,20 @@ def main(argv: list[str]) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if args.command != "capture":
-        parser.error("only `capture` is implemented")
+    if args.command == "capture":
+        command = build_local_capture_command(args)
+        cwd = (
+            os.path.abspath(os.path.expanduser(args.repo))
+            if args.capture_action == "commit"
+            else None
+        )
+        return subprocess.run(command, cwd=cwd, check=False).returncode
 
-    command = build_local_capture_command(args)
-    cwd = (
-        os.path.abspath(os.path.expanduser(args.repo))
-        if args.command == "capture" and args.capture_action == "commit"
-        else None
-    )
-    return subprocess.run(command, cwd=cwd, check=False).returncode
+    if args.command == "run":
+        command = build_run_command(args)
+        return subprocess.run(command, check=False).returncode
+
+    parser.error(f"unknown command: {args.command}")
 
 
 if __name__ == "__main__":

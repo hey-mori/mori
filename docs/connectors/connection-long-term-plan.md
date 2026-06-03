@@ -121,10 +121,21 @@ schema and inherits the same Import Review path. Generated-output smoke tests
 cover note / transcript / git / commit commands through the review-draft
 boundary.
 
+Additional scaffold shipped:
+
+- `mori run --connector codex -- <command...>`
+- `mori run --connector opencode -- <command...>`
+
+Both delegate to the hardened POSIX wrappers, keep stdout/stderr flowing to the
+terminal without retaining output bodies, and are covered by generated-output
+smoke tests with stub binaries and quoted Korean text.
+
+The in-app setup guides now prefer the Mori CLI commands for Codex, OpenCode,
+and local capture, while retaining raw scripts as fallback.
+
 Remaining:
 
-1. Add `mori run --connector codex -- <command...>` as a later step, once the
-   capture commands are stable.
+1. Package / install the CLI with the desktop app.
 
 Design constraints:
 
@@ -241,7 +252,5 @@ These stay out unless the product direction is explicitly reprioritized:
 
 The next smallest valuable action is:
 
-**CLI run wrapper.** Add `mori run --connector codex -- <command...>` and
-`mori run --connector opencode -- <command...>` by delegating to the hardened
-POSIX wrapper logic or a shared Python emitter. Keep it explicit and do not
-capture stdout/stderr bodies.
+**Desktop CLI packaging.** Stage `mori.py` (and the scripts it delegates to)
+from the desktop app so users do not need to know the repo checkout path.

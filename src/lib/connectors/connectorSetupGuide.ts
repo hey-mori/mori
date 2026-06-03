@@ -65,7 +65,11 @@ const GUIDES: Partial<Record<CaptureSurfaceId, ConnectorSetupGuide>> = {
         text: "Codex 기록은 ~/.codex/sessions에서 자동 감지됩니다. 래퍼는 시작·종료·git diff 마커가 따로 필요할 때만 씁니다.",
       },
       {
-        text: "macOS / Linux: .sh 래퍼로 Codex 실행을 감쌉니다 (요약·exit code·duration 기록).",
+        text: "권장: Mori CLI로 Codex 실행을 감쌉니다 (요약·exit code·duration 기록, 출력 본문 미저장).",
+        command: 'connectors/mori-cli/mori.py run --connector codex --git -- codex run "작업 설명"',
+      },
+      {
+        text: "fallback: macOS / Linux에서 raw .sh 래퍼를 직접 호출할 수도 있습니다.",
         command: 'connectors/codex-cli/mori-codex-wrapper.sh --git -- codex run "작업 설명"',
       },
       {
@@ -84,7 +88,11 @@ const GUIDES: Partial<Record<CaptureSurfaceId, ConnectorSetupGuide>> = {
         text: "OpenCode 기록은 데스크톱에서 자동 감지됩니다. 래퍼는 시작·종료·git diff 마커가 따로 필요할 때만 씁니다.",
       },
       {
-        text: "macOS / Linux: .sh 래퍼로 OpenCode 실행을 감쌉니다 (요약·exit code·duration 기록).",
+        text: "권장: Mori CLI로 OpenCode 실행을 감쌉니다 (요약·exit code·duration 기록, 출력 본문 미저장).",
+        command: 'connectors/mori-cli/mori.py run --connector opencode --git -- opencode run "작업 설명"',
+      },
+      {
+        text: "fallback: macOS / Linux에서 raw .sh 래퍼를 직접 호출할 수도 있습니다.",
         command: 'connectors/opencode-cli/mori-opencode-wrapper.sh --git -- opencode run "작업 설명"',
       },
       {
@@ -100,7 +108,11 @@ const GUIDES: Partial<Record<CaptureSurfaceId, ConnectorSetupGuide>> = {
     templateDir: "connectors/local-capture/",
     steps: [
       {
-        text: "Python 3.8+ 환경에서 캡처 스크립트를 직접 실행합니다 (--note / --transcript / --git-repo).",
+        text: "권장: Mori CLI로 명시적 캡처를 실행합니다 (--note / --transcript / --git / --commit).",
+        command: 'connectors/mori-cli/mori.py capture note "메모 내용"',
+      },
+      {
+        text: "fallback: Python 3.8+ 환경에서 local-capture 스크립트를 직접 실행할 수도 있습니다 (--note / --transcript / --git-repo).",
         command: 'python3 connectors/local-capture/mori-local-capture.py --note "메모 내용"',
       },
       {

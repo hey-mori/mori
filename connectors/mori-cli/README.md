@@ -14,6 +14,8 @@ python3 mori.py capture transcript ~/notes/claude-session.txt
 some-command | python3 mori.py capture transcript -
 python3 mori.py capture git --repo .
 python3 mori.py capture commit HEAD --repo .
+python3 mori.py run --connector codex -- codex run "Upgrade dependencies"
+python3 mori.py run --connector opencode -- opencode run "Add retry"
 ```
 
 Common flags:
@@ -37,6 +39,7 @@ Then call:
 ```bash
 mori capture note "Wrapped the connector smoke tests"
 mori capture git --repo .
+mori run --connector codex -- codex run "Review the import path"
 ```
 
 If Mori is cloned somewhere unusual, set `MORI_LOCAL_CAPTURE` so the CLI can
@@ -46,6 +49,14 @@ find the underlying capture bridge:
 export MORI_LOCAL_CAPTURE="/path/to/mori/connectors/local-capture/mori-local-capture.py"
 ```
 
+For `mori run`, the CLI uses the bundled POSIX wrappers by default. Override
+them only if you have installed custom wrapper scripts:
+
+```bash
+export MORI_CODEX_WRAPPER="/path/to/mori-codex-wrapper.sh"
+export MORI_OPENCODE_WRAPPER="/path/to/mori-opencode-wrapper.sh"
+```
+
 ## Boundary
 
 This CLI is deliberately small:
@@ -53,8 +64,6 @@ This CLI is deliberately small:
 - no daemon;
 - no watcher;
 - no shell history or terminal scrollback read;
-- no Claude / Codex / OpenCode subprocess wrapping yet;
+- `mori run` records command metadata only; it does not retain stdout/stderr
+  bodies;
 - no import without Import Review.
-
-Future `mori run ...` agent wrapping should be added only after these capture
-commands stay stable under generated-output tests.

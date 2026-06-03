@@ -25,9 +25,17 @@ describe("getConnectorSetupGuide", () => {
       }
       expect(step.text.trim().length).toBeGreaterThan(0);
     }
-    // The wrapper invocation is the actionable command.
+    // The Mori CLI is the preferred command; raw wrapper remains fallback.
+    expect(guide!.steps.some((step) => step.command?.includes("mori.py run --connector codex"))).toBe(true);
     expect(guide!.steps.some((step) => step.command?.includes("mori-codex-wrapper"))).toBe(true);
     expect(guide!.steps.some((step) => step.command?.includes("codex run"))).toBe(true);
+  });
+
+  it("surfaces Mori CLI capture commands before raw local-capture fallback", () => {
+    const guide = getConnectorSetupGuide("localCaptureBridge");
+    expect(guide).not.toBeNull();
+    expect(guide!.steps[0]?.command).toContain("connectors/mori-cli/mori.py capture");
+    expect(guide!.steps.some((step) => step.command?.includes("mori-local-capture.py"))).toBe(true);
   });
 
   it("never instructs the user to provide an account, token, or run a watcher", () => {

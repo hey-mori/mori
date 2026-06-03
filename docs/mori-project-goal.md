@@ -930,7 +930,10 @@ before starting.
      by delegating to `mori-local-capture.py`, with generated-output smoke
      coverage through the Import Review draft boundary. `mori capture commit`
      is covered too, and symlink invocation as `mori` is documented and
-     tested. Still open: `mori run --connector ...` agent wrapping.
+     tested. `mori run --connector codex/opencode -- <command...>` delegates
+     to the hardened POSIX wrappers and is smoke-tested with stub binaries.
+     Setup guides now prefer the Mori CLI commands with raw scripts as
+     fallback. Still open: package/install it with the desktop app.
 2. **IDE / Terminal Integration.** VS Code / Cursor extension
    sending workspace events to a local Mori endpoint with explicit
    opt-in and scoping. Terminal integration: a shell-history
