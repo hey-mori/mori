@@ -237,11 +237,11 @@ fn parse_transcript(path: &Path, include_all_messages: bool) -> Result<Antigravi
         let Ok(value) = serde_json::from_str::<Value>(trimmed) else {
             continue;
         };
-        if let Some(ts) = value.get("created_at").and_then(Value::as_str) {
+        if let Some(ts) = timestamp_from_value(&value) {
             if started_at.is_empty() {
-                started_at = ts.to_string();
+                started_at = ts.clone();
             }
-            updated_at = ts.to_string();
+            updated_at = ts;
         }
 
         let Some(message) = message_from_value(&value, index) else {
@@ -282,14 +282,18 @@ fn parse_transcript(path: &Path, include_all_messages: bool) -> Result<Antigravi
 }
 
 fn message_from_value(value: &Value, index: usize) -> Option<AntigravityMessage> {
-    let source = value.get("source").and_then(Value::as_str).unwrap_or("");
+    let source = value
+        .get("source")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_ascii_uppercase();
     let kind = value.get("type").and_then(Value::as_str).unwrap_or("");
-    let raw_content = value.get("content").and_then(Value::as_str).unwrap_or("");
-    let content = strip_user_request(raw_content).trim().to_string();
+    let raw_content = collect_content(value);
+    let content = strip_user_request(&raw_content).trim().to_string();
     if content.is_empty() {
         return None;
     }
-    let (role, subkind) = match source {
+    let (role, subkind) = match source.as_str() {
         "USER_EXPLICIT" => ("human", ""),
         "MODEL" => (
             "assistant",
@@ -298,11 +302,7 @@ fn message_from_value(value: &Value, index: usize) -> Option<AntigravityMessage>
         "SYSTEM" => ("system", ""),
         _ => return None,
     };
-    let created_at = value
-        .get("created_at")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
+    let created_at = timestamp_from_value(value).unwrap_or_default();
     Some(AntigravityMessage {
         id: format!("antigravity-{index}"),
         role: role.to_string(),
@@ -310,6 +310,66 @@ fn message_from_value(value: &Value, index: usize) -> Option<AntigravityMessage>
         created_at,
         subkind: subkind.to_string(),
     })
+}
+
+fn timestamp_from_value(value: &Value) -> Option<String> {
+    let raw = value
+        .get("created_at")
+        .or_else(|| value.get("timestamp"))
+        .or_else(|| value.get("time"))?;
+    match raw {
+        Value::String(text) => Some(text.to_string()),
+        Value::Number(number) => {
+            let n = number.as_i64()?;
+            let seconds = if n > 1_000_000_000_000 { n / 1000 } else { n };
+            Some(crate::claude::format_unix_seconds(seconds as u64))
+        }
+        _ => None,
+    }
+}
+
+fn collect_content(value: &Value) -> String {
+    for key in ["content", "text", "message"] {
+        if let Some(raw) = value.get(key) {
+            let text = collect_text_value(raw);
+            if !text.trim().is_empty() {
+                return text;
+            }
+        }
+    }
+    String::new()
+}
+
+fn collect_text_value(value: &Value) -> String {
+    match value {
+        Value::String(text) => text.to_string(),
+        Value::Array(items) => items
+            .iter()
+            .map(collect_text_value)
+            .filter(|text| !text.trim().is_empty())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        Value::Object(map) => {
+            if map
+                .get("type")
+                .and_then(Value::as_str)
+                .map(|kind| kind != "text")
+                .unwrap_or(false)
+            {
+                return String::new();
+            }
+            for key in ["content", "text", "message"] {
+                if let Some(raw) = map.get(key) {
+                    let text = collect_text_value(raw);
+                    if !text.trim().is_empty() {
+                        return text;
+                    }
+                }
+            }
+            String::new()
+        }
+        _ => String::new(),
+    }
 }
 
 /// User input arrives wrapped in `<USER_REQUEST>…</USER_REQUEST>`; strip the
@@ -377,7 +437,8 @@ mod tests {
     const SAMPLE: &str = "{\"step_index\":0,\"source\":\"USER_EXPLICIT\",\"type\":\"USER_INPUT\",\"created_at\":\"2026-05-27T05:28:40Z\",\"content\":\"<USER_REQUEST>\\nFix the navigation\\n</USER_REQUEST>\"}\n\
 {\"step_index\":1,\"source\":\"MODEL\",\"type\":\"PLANNER_RESPONSE\",\"created_at\":\"2026-05-27T05:28:46Z\",\"content\":\"I will analyze the workspace.\"}\n\
 {\"step_index\":2,\"source\":\"MODEL\",\"type\":\"GREP_SEARCH\",\"created_at\":\"2026-05-27T05:28:52Z\",\"content\":\"searched for nav\"}\n\
-{\"step_index\":3,\"source\":\"SYSTEM\",\"type\":\"GENERIC\",\"created_at\":\"2026-05-27T05:28:55Z\",\"content\":null}\n";
+{\"step_index\":3,\"source\":\"model\",\"type\":\"PLANNER_RESPONSE\",\"timestamp\":1777520955000,\"content\":[{\"type\":\"text\",\"text\":\"Inline array response\"},{\"type\":\"tool\",\"text\":\"ignored\"}]}\n\
+{\"step_index\":4,\"source\":\"SYSTEM\",\"type\":\"GENERIC\",\"created_at\":\"2026-05-27T05:28:55Z\",\"content\":null}\n";
 
     #[test]
     fn discovers_transcripts_under_brain() {
@@ -391,8 +452,8 @@ mod tests {
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].session_id, "conv-aaa");
         assert!(sessions[0].title.contains("Fix the navigation"));
-        // user + planner + tool action = 3 messages (the null-content SYSTEM line is skipped).
-        assert_eq!(sessions[0].message_count, 3);
+        // user + planner + tool action + inline-array planner = 4 messages (the null-content SYSTEM line is skipped).
+        assert_eq!(sessions[0].message_count, 4);
     }
 
     #[test]
@@ -400,13 +461,16 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let path = write_transcript(temp.path(), "conv-aaa", SAMPLE);
         let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
-        assert_eq!(detail.messages.len(), 3);
+        assert_eq!(detail.messages.len(), 4);
         assert_eq!(detail.messages[0].role, "human");
         assert_eq!(detail.messages[0].content, "Fix the navigation");
         assert_eq!(detail.messages[1].role, "assistant");
         assert_eq!(detail.messages[1].subkind, "");
         assert_eq!(detail.messages[2].role, "assistant");
         assert_eq!(detail.messages[2].subkind, "tool_use");
+        assert_eq!(detail.messages[3].role, "assistant");
+        assert_eq!(detail.messages[3].content, "Inline array response");
+        assert_eq!(detail.messages[3].created_at, "2026-04-30T03:49:15");
     }
 
     #[test]

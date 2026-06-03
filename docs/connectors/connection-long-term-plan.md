@@ -248,7 +248,7 @@ Targets:
 
 - **In progress:** richer OpenCode transcript assembly while still avoiding
   `opencode.db`;
-- Antigravity partial-format resilience;
+- **In progress:** Antigravity partial-format resilience;
 - Cline task metadata;
 - **In progress:** Cursor title / timestamp / bubble-text fallbacks;
 - **In progress:** Continue session detail fidelity.
@@ -264,6 +264,9 @@ Shipped detail:
 - Continue detail reads now use session `dateCreated` / `lastUpdatedAt` and
   per-message timestamps when present instead of relying only on file modified
   time.
+- Antigravity transcript reads now tolerate source casing changes, numeric
+  timestamps, and text in `content`, `text`, or text-only arrays / objects while
+  keeping non-text tool payloads out of the rendered transcript.
 
 Acceptance:
 
