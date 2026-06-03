@@ -6,8 +6,9 @@
 //!   - Windows: `%USERPROFILE%\.mori\connectors\`
 //!
 //! Underneath the inbox root, Mori only inspects a fixed set of known
-//! connector subfolders (`claude-code`, `codex-cli`, `terminal`, `git`,
-//! `other`). It never recurses into arbitrary user directories, and it
+//! connector subfolders (`claude-code`, `codex-cli`, `opencode-cli`,
+//! `local-capture`, `mcp`, `terminal`, `git`, `other`). It never recurses into
+//! arbitrary user directories, and it
 //! does **not** watch the inbox for changes. Listing only happens when
 //! the user clicks Refresh in the Evidence Hub. Reading only happens when
 //! the user selects a file from that list.

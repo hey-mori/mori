@@ -196,7 +196,9 @@ helper, or desktop session discovery); each section states its actual status.
 **Available now**: `connectors/terminal-helper/` — a `mori-capture`
 shell function the user sources from their rc file. It wraps
 `mori-local-capture.py` (`git` / `commit` / `note` / `transcript`) and
-writes to `~/.mori/connectors/`, reviewed through Import Review.
+writes to `~/.mori/connectors/`, reviewed through Import Review. In the
+desktop app, the local-capture setup guide can stage this helper under
+`~/.mori/terminal-helper/` with its local-capture path already rewritten.
 
 ### 11. File System Watcher (`fileSystem`)
 
@@ -234,7 +236,9 @@ writes to `~/.mori/connectors/`, reviewed through Import Review.
 **Available now**: `connectors/vscode-task/` — `Mori:` tasks that run
 `mori-local-capture.py` (`--git-repo`, `--git-commit`, `--note`) and
 write to `~/.mori/connectors/`, reviewed through Import Review like any
-connector JSONL.
+connector JSONL. In the desktop app, the local-capture setup guide can
+stage a path-rewritten `mori-tasks.json` under `~/.mori/vscode-task/`;
+the user still merges it into a project `.vscode/tasks.json` explicitly.
 
 **Future Usage**: a VS Code extension would offer an explicit "send to
 Mori" action emitting the same connector JSONL — built only once the
@@ -514,10 +518,12 @@ bridge with no extension and no watcher:
 
 - `connectors/vscode-task/` — a VS Code task template the user adds to
   their own `.vscode/tasks.json`, capturing on an explicit **Run
-  Task** action.
+  Task** action. The desktop setup guide can stage a path-rewritten copy
+  under `~/.mori/vscode-task/`.
 - `connectors/terminal-helper/` — a `mori-capture` shell function the
   user sources from their rc file, capturing on an explicit
-  `mori-capture …` command.
+  `mori-capture …` command. The desktop setup guide can stage a
+  path-rewritten copy under `~/.mori/terminal-helper/`.
 
 A real editor / browser extension is only worth building once this
 explicit-emit contract is proven in real use.

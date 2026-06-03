@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "../../components/ui/Button";
 import {
   buildMcpConfigSnippet,
+  stageExplicitEmitters,
   stageMoriCli,
   stageMcpServer,
   type ConnectorSetupGuide,
@@ -36,6 +37,7 @@ export function ConnectorSetupGuidePanel({ guide }: { guide: ConnectorSetupGuide
         ))}
       </ol>
       {hasMoriCliStaging(guide.surfaceId) ? <MoriCliStaging /> : null}
+      {guide.surfaceId === "localCaptureBridge" ? <ExplicitEmitterStaging /> : null}
       {guide.surfaceId === "mcpServer" ? <McpServerStaging /> : null}
       <p className="source-row-setup-note">{guide.importNote}</p>
     </div>
@@ -90,6 +92,55 @@ function MoriCliStaging() {
       {status ? <span className="source-row-status tone-green">{status}</span> : null}
       {error ? <span className="source-row-status tone-orange">{error}</span> : null}
       {installCommand ? <CopyableCommand command={installCommand} /> : null}
+    </div>
+  );
+}
+
+function ExplicitEmitterStaging() {
+  const desktop = isTauriRuntime();
+  const [sourceCommand, setSourceCommand] = useState<string | null>(null);
+  const [vscodeTaskPath, setVscodeTaskPath] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function prepare() {
+    setBusy(true);
+    setError(null);
+    try {
+      const staged = await stageExplicitEmitters();
+      setStatus(`터미널 / VS Code 템플릿 ${staged.files.length}개 준비 완료`);
+      setSourceCommand(`source ${shellQuote(staged.terminalHelperPath)}`);
+      setVscodeTaskPath(staged.vscodeTasksPath);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="source-row-mcp-stage">
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => void prepare()}
+        disabled={!desktop || busy}
+        title={desktop ? undefined : "데스크톱 앱에서만 터미널 / VS Code 템플릿을 준비할 수 있습니다."}
+      >
+        {busy ? "준비 중…" : "터미널 / VS Code 준비"}
+      </Button>
+      {!desktop ? (
+        <span className="source-row-setup-text">
+          데스크톱 앱에서 셸 함수와 VS Code task 템플릿을 ~/.mori에 복사합니다.
+        </span>
+      ) : null}
+      {status ? <span className="source-row-status tone-green">{status}</span> : null}
+      {error ? <span className="source-row-status tone-orange">{error}</span> : null}
+      {sourceCommand ? <CopyableCommand command={sourceCommand} /> : null}
+      {vscodeTaskPath ? (
+        <CopyableCommand command={`VS Code tasks template: ${vscodeTaskPath}`} />
+      ) : null}
     </div>
   );
 }

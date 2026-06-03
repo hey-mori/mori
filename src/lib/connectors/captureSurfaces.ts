@@ -307,9 +307,9 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
       "계정 / API 키",
     ],
     setupRequirement:
-      "connectors/local-capture/ 의 mori-local-capture.py 실행 (Python 3.8+). 선택적으로 connectors/terminal-helper/ 셸 함수 또는 connectors/vscode-task/ 태스크 템플릿.",
+      "connectors/local-capture/ 의 mori-local-capture.py 실행 (Python 3.8+). 데스크톱 설정 가이드에서 Mori CLI / terminal-helper / vscode-task 템플릿을 ~/.mori에 stage할 수 있습니다.",
     nextStep:
-      "캡처 결과는 자료 탭의 Connector JSONL import로 검토됩니다; 더 깊은 IDE 통합은 별도 Track.",
+      "캡처 결과는 자료 탭의 Connector JSONL import로 검토됩니다; 더 깊은 IDE 확장은 별도 Track.",
     relatedIntegrationIds: ["aiConversation", "gitDiff", "manualNote"],
   },
   // ---- Claude family ----

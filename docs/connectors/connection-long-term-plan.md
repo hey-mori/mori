@@ -204,17 +204,32 @@ Acceptance:
 
 ## Phase 4. IDE and terminal explicit emitters
 
-**Status:** planned.
+**Status:** in progress.
 
 Goal: let editors and terminals send explicit summaries to the same JSONL
 pipeline.
 
 Slices:
 
-1. Terminal helper: explicit command capture, no scrollback read.
-2. VS Code task / extension: "send summary to Mori" command.
+1. **Shipped template + desktop staging:** Terminal helper: explicit command
+   capture, no scrollback read.
+2. **Shipped task template + desktop staging:** VS Code task template. A real
+   extension remains planned.
 3. Cursor extension: explicit "send to Mori" action for workspace events,
    separate from Cursor composer session discovery.
+
+Shipped detail:
+
+- Tauri command `stage_explicit_emitters` stages
+  `mori-local-capture.py`, `mori-capture.sh`, and `mori-tasks.json` under
+  `~/.mori/`.
+- Staging rewrites terminal / VS Code templates to point at the staged
+  local-capture bridge, so packaged builds do not depend on a repo checkout
+  path.
+- The local-capture setup guide exposes a desktop-only **터미널 / VS Code 준비**
+  action. Mori still does not edit shell rc files or project
+  `.vscode/tasks.json`; the user copies the source command or task template
+  path explicitly.
 
 Acceptance:
 
@@ -279,4 +294,5 @@ The next smallest valuable action is:
 
 **IDE and terminal emitters.** Move to Phase 4: make the explicit terminal /
 editor emitters easier to install and verify against the same Connector JSONL
-review pipeline.
+review pipeline. Terminal / VS Code task staging is shipped; next is richer
+fixture coverage and, later, a real explicit VS Code / Cursor extension.

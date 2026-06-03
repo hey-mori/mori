@@ -137,6 +137,13 @@ export {
   getMoriCliTargetPath,
 } from "./moriCliSetup";
 export type { MoriCliStaged, MoriCliStagedFile } from "./moriCliSetup";
+export {
+  stageExplicitEmitters,
+} from "./explicitEmitterSetup";
+export type {
+  ExplicitEmittersStaged,
+  ExplicitEmitterStagedFile,
+} from "./explicitEmitterSetup";
 export type {
   BuildControlCenterInput,
   ConnectorControlCenterViewModel,

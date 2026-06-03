@@ -67,6 +67,10 @@ ordered, copyable setup steps from
 [`getConnectorSetupGuide`](../../src/lib/connectors/connectorSetupGuide.ts),
 shared via
 [`ConnectorSetupGuidePanel`](../../src/features/sources/ConnectorSetupGuide.tsx).
+The local-capture guide has desktop-only staging actions for the Mori CLI and
+the terminal / VS Code task templates; staging copies files under `~/.mori` and
+rewrites template paths, but still never edits shell rc files or project
+`.vscode/tasks.json`.
 The MCP guide adds a desktop-only "MCP 서버 준비" affordance that stages the
 server into `~/.mori` and reveals the host-config snippet to paste; Mori never
 edits the host config itself. The closing note points the user at the row's
@@ -159,9 +163,11 @@ starting a new one (project rule, [mori-project-goal.md](../mori-project-goal.md
    avoids editing shell rc files silently.
 3. **IDE / Terminal Integration.** Explicit-emit connectors only: a VS Code /
    Cursor "send to Mori" action and a shell helper, each emitting the same
-   Connector JSONL into the inbox. No watcher, no buffer poll, no shell-history
-   scrape (see [../source-integrations.md](../source-integrations.md) "IDE /
-   Terminal integration plan").
+   Connector JSONL into the inbox. Terminal helper and VS Code task templates
+   now stage from the desktop setup guide; real extensions remain planned. No
+   watcher, no buffer poll, no shell-history scrape (see
+   [../source-integrations.md](../source-integrations.md) "IDE / Terminal
+   integration plan").
 
 The larger execution plan lives in
 [connection-long-term-plan.md](./connection-long-term-plan.md).

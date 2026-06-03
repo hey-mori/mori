@@ -127,7 +127,9 @@ Specifically:
 - **Local capture CLI bridge** — `connectors/local-capture/mori-local-capture.py`,
   run explicitly by the user (transcript / note / git / commit). The
   shipped explicit-capture path; the VS Code task template and the
-  `mori-capture` shell helper are launchers for it.
+  `mori-capture` shell helper are launchers for it. The desktop setup guide can
+  stage path-rewritten copies under `~/.mori/terminal-helper/` and
+  `~/.mori/vscode-task/`.
 - **VS Code / Cursor / browser / terminal** — explicit extensions /
   shell hooks remain Planned; the explicit-capture path today is the
   local capture bridge (via the `vscode-task` / `terminal-helper`
