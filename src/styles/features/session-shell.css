@@ -126,17 +126,24 @@
 /* Header band inside the shell is flush — the `.page-shell-top` owns the
    border / blur, so the header itself just lays out title + actions.
    Padding sits one notch tighter than before (visual-system §5 chrome-dim)
-   so the title leads and the band below it gets to breathe. */
+   so the title leads and the band below it gets to breathe.
+
+   The pinned top band sits *outside* the scroll region, but `.page-shell-scroll`
+   reserves a stable scrollbar gutter (`scrollbar-gutter: stable`), so the
+   scrolled content below is inset on the right by one scrollbar width. The band
+   adds that same width to its right padding so its trailing controls line up
+   with the content's right edge instead of overhanging into the gutter. */
 .page-shell-top .page-header {
   background: transparent;
   border-bottom: 0;
   backdrop-filter: none;
   padding: var(--base-space-6) var(--page-shell-inset) var(--base-space-5);
+  padding-right: calc(var(--page-shell-inset) + var(--base-scrollbar-size));
 }
 
 .page-shell-top .action-bar {
   padding-left: var(--page-shell-inset);
-  padding-right: var(--page-shell-inset);
+  padding-right: calc(var(--page-shell-inset) + var(--base-scrollbar-size));
 }
 
 /* Headerless surfaces: the sidebar names the destination, so there is no
