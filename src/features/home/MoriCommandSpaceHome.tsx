@@ -59,31 +59,31 @@ const COMMAND_MODES: CommandMode[] = [
     id: "find",
     label: "찾기",
     icon: Search,
-    placeholder: "인증 정책 결정 찾아줘",
+    placeholder: "인증, 라우팅 같은 키워드로 검색",
   },
   {
     id: "shape",
     label: "정리",
     icon: Layers3,
-    placeholder: "최근 대화를 스펙 초안으로 정리해줘",
+    placeholder: "정리할 대화·메모 검색",
   },
   {
     id: "create",
     label: "만들기",
     icon: Plus,
-    placeholder: "새 워크벤치 만들어줘",
+    placeholder: "새 세션 이름",
   },
   {
     id: "review",
     label: "검토",
     icon: ShieldCheck,
-    placeholder: "이 계획에서 빠진 리스크 찾아줘",
+    placeholder: "검토할 작업 검색",
   },
   {
     id: "connect",
     label: "연결",
     icon: GitBranch,
-    placeholder: "이 레포지토리를 Mori에 연결해줘",
+    placeholder: "연결할 소스 검색",
   },
 ];
 

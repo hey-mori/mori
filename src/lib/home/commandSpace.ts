@@ -8,14 +8,20 @@ import type { StoredSessionSummary } from "../storage/storageTypes";
  * engaged it becomes a small work surface. This module turns the three live
  * inputs (the active mode, the typed query, the user's real sessions) into a
  * flat, keyboard-navigable row list. Keeping it a pure derivation means the
- * interaction (filter / rank / cap / mode-action wording) is unit-testable
+ * interaction (tokenize / match / rank / cap / mode wording) is unit-testable
  * without mounting React, and the component stays a thin renderer.
+ *
+ * The search is honest and local: it tokenizes the query, drops command filler
+ * ("찾아줘", "보여줘", ...) so a typed sentence still matches, then looks for
+ * those keywords in the user's real sessions and projects. No semantic model,
+ * no network. Decision / evidence search over session bodies is a later layer
+ * that reuses these tokens.
  *
  * Two row families:
  *   - `action`: the verb the active mode performs, worded with the query.
  *     Always present, so the panel is never empty.
  *   - context: `session` / `project` rows drawn from the user's real data,
- *     filtered by the query (or the most-recent few when idle).
+ *     filtered by the keywords (or the most-recent few when idle).
  */
 
 export type CommandModeId = "find" | "shape" | "create" | "review" | "connect";
@@ -49,9 +55,9 @@ export type CommandSpaceRow =
     };
 
 export type CommandSpaceResults = {
-  /** Flat row list in display order: actions, then projects, then sessions. */
+  /** Flat row list in display order, ready for keyboard navigation. */
   rows: CommandSpaceRow[];
-  /** True when the trimmed query is non-empty (renderer labels the groups). */
+  /** True when the query carries at least one real keyword (filler removed). */
   hasQuery: boolean;
 };
 
@@ -59,42 +65,70 @@ const SESSION_LIMIT_QUERY = 5;
 const SESSION_LIMIT_RECENT = 3;
 const PROJECT_LIMIT = 3;
 
+/**
+ * Command / filler words that ride along a natural request. Dropping them
+ * before matching is what lets a typed sentence like "인증 정책 결정 찾아줘"
+ * still find work instead of matching the literal sentence (zero hits).
+ */
+const FILLER_TOKENS = new Set([
+  // Korean command verbs + polite endings, written as their own word
+  "찾아줘", "찾아", "찾아주세요", "보여줘", "보여", "보여주세요", "알려줘", "알려",
+  "알려주세요", "정리해줘", "만들어줘", "검토해줘", "연결해줘", "해줘", "해주세요",
+  "줘", "주세요", "좀", "관련", "관련된", "대한", "대해", "그리고", "또",
+  // Common standalone particles / stopwords
+  "의", "를", "을", "는", "은", "이", "가", "에", "에서",
+  // English
+  "find", "show", "me", "the", "a", "an", "please", "search", "for", "about",
+  "get", "list", "to",
+]);
+
+/** Lowercased, filler-stripped keywords from a raw query. */
+export function tokenizeQuery(query: string): string[] {
+  return query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((token) => token.length > 0 && !FILLER_TOKENS.has(token));
+}
+
 export function buildCommandSpaceResults(input: {
   modeId: CommandModeId;
   query: string;
   sessions: ReadonlyArray<StoredSessionSummary>;
 }): CommandSpaceResults {
-  const query = input.query.trim();
-  const hasQuery = query.length > 0;
+  const tokens = tokenizeQuery(input.query);
+  const hasQuery = tokens.length > 0;
+  const seed = tokens.join(" ");
 
-  const actions = buildModeActions(input.modeId, query);
+  const actions = buildModeActions(input.modeId, seed);
   const projectRows = hasQuery
-    ? matchProjects(input.sessions, query).slice(0, PROJECT_LIMIT)
+    ? matchProjects(input.sessions, tokens).slice(0, PROJECT_LIMIT)
     : [];
-  const sessionRows = matchSessions(input.sessions, query).slice(
+  const sessionRows = matchSessions(input.sessions, tokens).slice(
     0,
     hasQuery ? SESSION_LIMIT_QUERY : SESSION_LIMIT_RECENT,
   );
 
-  return { rows: [...actions, ...projectRows, ...sessionRows], hasQuery };
+  const context = [...projectRows, ...sessionRows];
+  // In 찾기 the matches are the point, so they lead and "전체 검색" trails. In
+  // the doing modes the verb leads and matches are supporting context.
+  const rows =
+    input.modeId === "find" ? [...context, ...actions] : [...actions, ...context];
+
+  return { rows, hasQuery };
 }
 
 /**
- * The mode's primary verb(s), worded with the live query. Routes to the real
- * surface that performs the intent; the query refines context, not routing, so
- * no new view plumbing is needed. Returned as `action` rows so they sit at the
- * top of the flat list and Enter always lands the obvious action.
+ * The mode's primary verb(s), worded with the cleaned keywords. Routes to the
+ * real surface that performs the intent. Returned as `action` rows so Enter
+ * always has an obvious target even when nothing matches.
  */
-function buildModeActions(
-  modeId: CommandModeId,
-  query: string,
-): CommandSpaceRow[] {
-  const q = query.trim();
-  const seed = q ? `‘${q}’` : "";
+function buildModeActions(modeId: CommandModeId, seed: string): CommandSpaceRow[] {
+  const quoted = seed ? `‘${seed}’` : "";
   switch (modeId) {
     case "find":
       return [
-        action("act-find", q ? `${seed} 전체에서 찾기` : "전체 검색 열기", {
+        action("act-find", seed ? `${quoted} 전체에서 찾기` : "전체 검색 열기", {
           hint: "세션 · 프로젝트 · 명령",
           target: { type: "palette" },
         }),
@@ -111,7 +145,7 @@ function buildModeActions(
       ];
     case "create":
       return [
-        action("act-create", q ? `${seed} 세션 시작` : "새 세션 시작", {
+        action("act-create", seed ? `${quoted} 세션 시작` : "새 세션 시작", {
           hint: "대화 불러오기 · 빈 세션",
           target: { type: "navigate", view: "start" },
         }),
@@ -141,39 +175,46 @@ function action(
   return { kind: "action", id, label, ...rest };
 }
 
+/**
+ * Sessions whose title / project / source contains the keywords, ranked by how
+ * many keywords hit (then recency). With no keywords, the most-recent sessions
+ * pass through so a focused-but-empty field still offers somewhere to resume.
+ */
 function matchSessions(
   sessions: ReadonlyArray<StoredSessionSummary>,
-  query: string,
+  tokens: readonly string[],
 ): CommandSpaceRow[] {
-  const term = query.trim().toLowerCase();
   const sorted = [...sessions].sort(
     (a, b) =>
       new Date(b.startedAt || b.savedAt).getTime() -
       new Date(a.startedAt || a.savedAt).getTime(),
   );
-  const matched = term
-    ? sorted.filter((session) => sessionHaystack(session).includes(term))
-    : sorted;
-  return matched.map((session) => ({
-    kind: "session",
-    id: `session:${session.sessionId}`,
-    label: session.title?.trim() || "제목 없음",
-    hint: session.sourceLabel || session.projectName || undefined,
-    sessionId: session.sessionId,
-  }));
+  if (tokens.length === 0) return sorted.map(toSessionRow);
+
+  const scored: { session: StoredSessionSummary; hits: number }[] = [];
+  for (const session of sorted) {
+    const haystack = sessionHaystack(session);
+    const hits = tokens.reduce(
+      (count, token) => (haystack.includes(token) ? count + 1 : count),
+      0,
+    );
+    if (hits > 0) scored.push({ session, hits });
+  }
+  // Stable sort keeps the recency order for sessions with the same hit count.
+  scored.sort((a, b) => b.hits - a.hits);
+  return scored.map((row) => toSessionRow(row.session));
 }
 
 /**
  * Distinct projects the sessions belong to, keyed by the raw `sourceLabel`
  * (falling back to `projectName`) so `openProject` resolves them the same way
- * the sidebar and workspace do. Ranked by how many sessions reference each, so
- * the project the user works in most surfaces first.
+ * the sidebar and workspace do. Kept only when a keyword hits, ranked by how
+ * many sessions reference each.
  */
 function matchProjects(
   sessions: ReadonlyArray<StoredSessionSummary>,
-  query: string,
+  tokens: readonly string[],
 ): CommandSpaceRow[] {
-  const term = query.trim().toLowerCase();
   const groups = new Map<
     string,
     { key: string; label: string; count: number }
@@ -193,9 +234,10 @@ function matchProjects(
     }
   }
   return [...groups.values()]
-    .filter((project) =>
-      `${project.label} ${project.key}`.toLowerCase().includes(term),
-    )
+    .filter((project) => {
+      const haystack = `${project.label} ${project.key}`.toLowerCase();
+      return tokens.some((token) => haystack.includes(token));
+    })
     .sort((a, b) => b.count - a.count)
     .map((project) => ({
       kind: "project",
@@ -206,6 +248,16 @@ function matchProjects(
       hint: project.key !== project.label ? project.key : undefined,
       projectKey: project.key,
     }));
+}
+
+function toSessionRow(session: StoredSessionSummary): CommandSpaceRow {
+  return {
+    kind: "session",
+    id: `session:${session.sessionId}`,
+    label: session.title?.trim() || "제목 없음",
+    hint: session.sourceLabel || session.projectName || undefined,
+    sessionId: session.sessionId,
+  };
 }
 
 function sessionHaystack(session: StoredSessionSummary): string {

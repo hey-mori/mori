@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildCommandSpaceResults, type CommandModeId } from "./commandSpace";
+import {
+  buildCommandSpaceResults,
+  tokenizeQuery,
+  type CommandModeId,
+} from "./commandSpace";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 
 function session(
@@ -39,96 +43,103 @@ const SESSIONS: StoredSessionSummary[] = [
   }),
 ];
 
+describe("tokenizeQuery", () => {
+  it("lowercases, splits, and drops command filler", () => {
+    expect(tokenizeQuery("인증 정책 결정 찾아줘")).toEqual(["인증", "정책", "결정"]);
+    expect(tokenizeQuery("  Find AUTH  ")).toEqual(["auth"]);
+    expect(tokenizeQuery("보여줘")).toEqual([]);
+    expect(tokenizeQuery("")).toEqual([]);
+  });
+});
+
 describe("buildCommandSpaceResults", () => {
-  it("always yields the mode action first, even with no query", () => {
+  it("finds work from a full typed sentence, not just a bare keyword", () => {
+    // "찾아줘" is stripped, so the keywords 인증 / 정책 / 결정 drive the match.
     const { rows, hasQuery } = buildCommandSpaceResults({
       modeId: "find",
-      query: "",
-      sessions: [],
-    });
-    expect(hasQuery).toBe(false);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ kind: "action", target: { type: "palette" } });
-  });
-
-  it("lists the most recent sessions when the query is empty", () => {
-    const { rows } = buildCommandSpaceResults({
-      modeId: "find",
-      query: "",
+      query: "인증 정책 결정 찾아줘",
       sessions: SESSIONS,
     });
-    const sessionRows = rows.filter((row) => row.kind === "session");
-    // Most-recent-first: s3 (May 20) before s2 (May 10) before s1 (May 1).
-    expect(sessionRows.map((row) => row.id)).toEqual([
+    expect(hasQuery).toBe(true);
+    const sessions = rows.filter((row) => row.kind === "session");
+    expect(sessions.map((row) => row.id)).toEqual(["session:s1"]);
+  });
+
+  it("treats a filler-only query as empty: recent sessions, no projects", () => {
+    const { rows, hasQuery } = buildCommandSpaceResults({
+      modeId: "find",
+      query: "보여줘",
+      sessions: SESSIONS,
+    });
+    expect(hasQuery).toBe(false);
+    expect(rows.some((row) => row.kind === "project")).toBe(false);
+    const sessions = rows.filter((row) => row.kind === "session");
+    expect(sessions.map((row) => row.id)).toEqual([
       "session:s3",
       "session:s2",
       "session:s1",
     ]);
-    // No project rows surface until the user types.
-    expect(rows.some((row) => row.kind === "project")).toBe(false);
   });
 
-  it("filters sessions by title, project name, and source label", () => {
-    const byTitle = buildCommandSpaceResults({
-      modeId: "find",
-      query: "라우팅",
-      sessions: SESSIONS,
-    });
-    expect(byTitle.rows.filter((r) => r.kind === "session").map((r) => r.id)).toEqual([
-      "session:s2",
-    ]);
-
-    const byProject = buildCommandSpaceResults({
-      modeId: "find",
-      query: "ng-gw",
-      sessions: SESSIONS,
-    });
-    expect(
-      byProject.rows.filter((r) => r.kind === "session").map((r) => r.id),
-    ).toEqual(["session:s2", "session:s1"]);
-  });
-
-  it("surfaces matching projects (ranked by session count) once a query is typed", () => {
+  it("ranks sessions by how many keywords hit", () => {
     const { rows } = buildCommandSpaceResults({
       modeId: "find",
-      query: "g",
+      query: "게이트웨이 라우팅",
       sessions: SESSIONS,
     });
-    const projectRows = rows.filter((row) => row.kind === "project");
-    // Both "ng-gw" and "mori" (path contains no 'g' but label match): only the
-    // ones whose label/key contains "g" survive. ng-gw matches twice → first.
-    expect(projectRows[0]).toMatchObject({
-      kind: "project",
-      projectKey: "/Users/x/dev/ng-gw",
-      hint: "/Users/x/dev/ng-gw",
-    });
+    const sessions = rows.filter((row) => row.kind === "session");
+    // s2 hits both keywords; nothing else hits, so it stands alone on top.
+    expect(sessions[0]?.id).toBe("session:s2");
   });
 
-  it("orders rows actions → projects → sessions", () => {
+  it("matches sessions across title, project, and source label", () => {
     const { rows } = buildCommandSpaceResults({
       modeId: "find",
       query: "ng-gw",
       sessions: SESSIONS,
     });
-    const kinds = rows.map((row) => row.kind);
-    const firstSession = kinds.indexOf("session");
-    const firstProject = kinds.indexOf("project");
-    expect(kinds[0]).toBe("action");
-    expect(firstProject).toBeGreaterThan(0);
-    expect(firstSession).toBeGreaterThan(firstProject);
+    const sessions = rows.filter((row) => row.kind === "session");
+    expect(sessions.map((row) => row.id)).toEqual(["session:s2", "session:s1"]);
   });
 
-  it("words the find/create actions with the query and routes each mode", () => {
-    const find = buildCommandSpaceResults({ modeId: "find", query: "인증", sessions: [] });
-    expect(find.rows[0].label).toContain("인증");
+  it("leads with matches in 찾기 and trails the full-search action", () => {
+    const { rows } = buildCommandSpaceResults({
+      modeId: "find",
+      query: "ng-gw",
+      sessions: SESSIONS,
+    });
+    expect(rows[0].kind).not.toBe("action");
+    expect(rows[rows.length - 1]).toMatchObject({
+      kind: "action",
+      target: { type: "palette" },
+    });
+  });
 
-    const create = buildCommandSpaceResults({ modeId: "create", query: "결제 모듈", sessions: [] });
-    expect(create.rows[0]).toMatchObject({
+  it("leads with the verb in the doing modes", () => {
+    const { rows } = buildCommandSpaceResults({
+      modeId: "create",
+      query: "결제 모듈",
+      sessions: SESSIONS,
+    });
+    expect(rows[0]).toMatchObject({
       kind: "action",
       target: { type: "navigate", view: "start" },
     });
-    expect(create.rows[0].label).toContain("결제 모듈");
+    expect(rows[0].label).toContain("결제 모듈");
+  });
 
+  it("words the find action with the cleaned keywords", () => {
+    const { rows } = buildCommandSpaceResults({
+      modeId: "find",
+      query: "인증 정책 찾아줘",
+      sessions: [],
+    });
+    const action = rows.find((row) => row.kind === "action");
+    expect(action?.label).toContain("인증 정책");
+    expect(action?.label).not.toContain("찾아줘");
+  });
+
+  it("routes each mode's primary action", () => {
     const routes: Record<CommandModeId, unknown> = {
       find: { type: "palette" },
       shape: { type: "navigate", view: "consolidation" },
@@ -138,15 +149,15 @@ describe("buildCommandSpaceResults", () => {
     };
     for (const modeId of Object.keys(routes) as CommandModeId[]) {
       const { rows } = buildCommandSpaceResults({ modeId, query: "", sessions: [] });
-      const first = rows[0];
-      expect(first.kind).toBe("action");
-      if (first.kind === "action") {
-        expect(first.target).toEqual(routes[modeId]);
+      const action = rows.find((row) => row.kind === "action");
+      expect(action?.kind).toBe("action");
+      if (action?.kind === "action") {
+        expect(action.target).toEqual(routes[modeId]);
       }
     }
   });
 
-  it("caps query session matches at five", () => {
+  it("caps keyword session matches at five", () => {
     const many = Array.from({ length: 9 }, (_, i) =>
       session({ sessionId: `m${i}`, title: `auth case ${i}`, projectName: "svc" }),
     );
