@@ -11,6 +11,8 @@ It is the **surface / UX** companion to the backend-model docs:
   models (config-hook · session-discovery) and the hard privacy boundary.
 - [capture-surface-matrix.md](./capture-surface-matrix.md), the per-surface
   status table.
+- [connection-long-term-plan.md](./connection-long-term-plan.md), the phased
+  execution plan from connector hardening to CLI / IDE emitters.
 - [connector-event-format.md](./connector-event-format.md), the
   `ConnectorEvent` JSONL schema.
 - [../source-integrations.md](../source-integrations.md), the source registry
@@ -126,12 +128,13 @@ the bucket is still the smallest valuable step and gets user approval before
 starting a new one (project rule, [mori-project-goal.md](../mori-project-goal.md)
 §11).
 
-1. **Local Connector Capture Bridge** *(in progress).* In-app setup guides,
-   live connection status, in-place Claude connect, and full seven-agent
-   detection have shipped. **Remaining:** a fixture test that asserts each
-   template's emitted JSONL round-trips cleanly through Import Review, so a
-   template regression surfaces in CI rather than on a user's machine. This is
-   the smallest remaining step and needs no new UI.
+1. **Local Connector Capture Bridge** *(shipped).* In-app setup guides,
+   live connection status, in-place Claude connect, full seven-agent detection,
+   and template-sample round-trip tests through the Import Review draft boundary
+   have shipped. `mori-local-capture.py` also has a generated-output smoke test
+   against temp transcript / note / git inputs. `terminal-helper` is classified
+   as a local-capture launcher, and POSIX Claude / Codex / OpenCode wrappers are
+   smoke-tested with stub inputs through the review-draft boundary.
 2. **CLI Wrapper (`mori`).** A small CLI that wraps `claude` / `codex`
    invocations and writes canonical Connector JSONL, removing the need to
    install template scripts by hand. Larger surface; new binary.
@@ -140,6 +143,9 @@ starting a new one (project rule, [mori-project-goal.md](../mori-project-goal.md
    Connector JSONL into the inbox. No watcher, no buffer poll, no shell-history
    scrape (see [../source-integrations.md](../source-integrations.md) "IDE /
    Terminal integration plan").
+
+The larger execution plan lives in
+[connection-long-term-plan.md](./connection-long-term-plan.md).
 
 ## 5. Deliberate non-goals (not "unfinished")
 

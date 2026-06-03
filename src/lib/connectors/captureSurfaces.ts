@@ -513,7 +513,7 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
   },
   {
     id: "terminalShellIntegration",
-    label: "터미널 셸 통합",
+    label: "터미널 셸 훅",
     toolFamily: "terminal",
     surface: "cli",
     status: "planned",
@@ -528,8 +528,8 @@ const CAPTURE_SURFACES: CaptureSurfaceRow[] = [
     whatMoriCanAccess: ["(구현 시) 사용자가 hook으로 등록한 명령의 메타데이터"],
     whatMoriNeverAccesses: ["bash_history 자동 스캔", "환경 변수 dump", "다른 셸 세션"],
     setupRequirement:
-      "shell hook 미구현. 명시적 캡처는 connectors/terminal-helper/ 의 mori-capture 셸 함수(localCaptureBridge 호출)로 오늘 가능.",
-    nextStep: "zsh / bash / fish preexec/precmd 후크 템플릿 정의.",
+      "진짜 shell hook은 미구현. 오늘 제공되는 connectors/terminal-helper/ 는 별도 terminalShell 이벤트를 만들지 않고 mori-local-capture.py를 호출하는 명시적 런처입니다.",
+    nextStep: "terminal-helper는 localCaptureBridge 런처로 유지. 별도 terminalShell 훅은 CLI wrapper 이후 재검토.",
     relatedIntegrationIds: ["terminal"],
   },
   {

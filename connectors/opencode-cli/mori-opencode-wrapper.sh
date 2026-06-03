@@ -71,23 +71,47 @@ TASK="$*"
 TASK_TRIMMED="${TASK:0:280}"
 
 ISO_NOW() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+json_string() {
+  python3 -c 'import json,sys; print(json.dumps(sys.stdin.read(), ensure_ascii=False))'
+}
 
 emit_session_started() {
   local now="$1"
-  printf '{"id":"opencode-start-%s","connectorId":"openCodeCli","kind":"session_started","occurredAt":"%s","sessionId":"%s","summary":"OpenCode session: %s","sourceTitle":"OpenCode: %s","privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
-    "$SESSION_ID" "$now" "$SESSION_ID" "$TASK_TRIMMED" "$TASK_TRIMMED" >> "$OUT_FILE"
+  local event_id summary title q_event_id q_session q_summary q_title
+  event_id="opencode-start-$SESSION_ID"
+  summary="OpenCode session: $TASK_TRIMMED"
+  title="OpenCode: $TASK_TRIMMED"
+  q_event_id="$(printf '%s' "$event_id" | json_string)"
+  q_session="$(printf '%s' "$SESSION_ID" | json_string)"
+  q_summary="$(printf '%s' "$summary" | json_string)"
+  q_title="$(printf '%s' "$title" | json_string)"
+  printf '{"id":%s,"connectorId":"openCodeCli","kind":"session_started","occurredAt":"%s","sessionId":%s,"summary":%s,"sourceTitle":%s,"privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
+    "$q_event_id" "$now" "$q_session" "$q_summary" "$q_title" >> "$OUT_FILE"
 }
 
 emit_prompt_submitted() {
   local now="$1"
-  printf '{"id":"opencode-prompt-%s","connectorId":"openCodeCli","kind":"prompt_submitted","occurredAt":"%s","sessionId":"%s","summary":"%s","privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
-    "$SESSION_ID" "$now" "$SESSION_ID" "$TASK_TRIMMED" >> "$OUT_FILE"
+  local event_id q_event_id q_session q_summary
+  event_id="opencode-prompt-$SESSION_ID"
+  q_event_id="$(printf '%s' "$event_id" | json_string)"
+  q_session="$(printf '%s' "$SESSION_ID" | json_string)"
+  q_summary="$(printf '%s' "$TASK_TRIMMED" | json_string)"
+  printf '{"id":%s,"connectorId":"openCodeCli","kind":"prompt_submitted","occurredAt":"%s","sessionId":%s,"summary":%s,"privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
+    "$q_event_id" "$now" "$q_session" "$q_summary" >> "$OUT_FILE"
 }
 
 emit_command_finished() {
   local now="$1" exit_code="$2" duration_ms="$3"
-  printf '{"id":"opencode-cmd-%s","connectorId":"openCodeCli","kind":"command_finished","occurredAt":"%s","sessionId":"%s","command":"opencode (%s)","summary":"OpenCode run · exit %s · %sms","privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
-    "$SESSION_ID" "$now" "$SESSION_ID" "$TASK_TRIMMED" "$exit_code" "$duration_ms" >> "$OUT_FILE"
+  local event_id command summary q_event_id q_session q_command q_summary
+  event_id="opencode-cmd-$SESSION_ID"
+  command="opencode ($TASK_TRIMMED)"
+  summary="OpenCode run · exit $exit_code · ${duration_ms}ms"
+  q_event_id="$(printf '%s' "$event_id" | json_string)"
+  q_session="$(printf '%s' "$SESSION_ID" | json_string)"
+  q_command="$(printf '%s' "$command" | json_string)"
+  q_summary="$(printf '%s' "$summary" | json_string)"
+  printf '{"id":%s,"connectorId":"openCodeCli","kind":"command_finished","occurredAt":"%s","sessionId":%s,"command":%s,"summary":%s,"privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
+    "$q_event_id" "$now" "$q_session" "$q_command" "$q_summary" >> "$OUT_FILE"
 }
 
 emit_git_diff() {
@@ -95,14 +119,28 @@ emit_git_diff() {
   local stat
   stat="$(git diff --shortstat 2>/dev/null || true)"
   if [ -z "$stat" ]; then return; fi
-  printf '{"id":"opencode-git-%s","connectorId":"openCodeCli","kind":"git_diff_captured","occurredAt":"%s","sessionId":"%s","summary":"git diff --shortstat: %s","git":{"repoPath":"%s"},"privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
-    "$SESSION_ID" "$now" "$SESSION_ID" "$stat" "$(pwd)" >> "$OUT_FILE"
+  local event_id summary repo q_event_id q_session q_summary q_repo
+  event_id="opencode-git-$SESSION_ID"
+  summary="git diff --shortstat: $stat"
+  repo="$(pwd)"
+  q_event_id="$(printf '%s' "$event_id" | json_string)"
+  q_session="$(printf '%s' "$SESSION_ID" | json_string)"
+  q_summary="$(printf '%s' "$summary" | json_string)"
+  q_repo="$(printf '%s' "$repo" | json_string)"
+  printf '{"id":%s,"connectorId":"openCodeCli","kind":"git_diff_captured","occurredAt":"%s","sessionId":%s,"summary":%s,"git":{"repoPath":%s},"privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
+    "$q_event_id" "$now" "$q_session" "$q_summary" "$q_repo" >> "$OUT_FILE"
 }
 
 emit_session_finished() {
   local now="$1" exit_code="$2"
-  printf '{"id":"opencode-finish-%s","connectorId":"openCodeCli","kind":"session_finished","occurredAt":"%s","sessionId":"%s","summary":"OpenCode session finished · exit %s","privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
-    "$SESSION_ID" "$now" "$SESSION_ID" "$exit_code" >> "$OUT_FILE"
+  local event_id summary q_event_id q_session q_summary
+  event_id="opencode-finish-$SESSION_ID"
+  summary="OpenCode session finished · exit $exit_code"
+  q_event_id="$(printf '%s' "$event_id" | json_string)"
+  q_session="$(printf '%s' "$SESSION_ID" | json_string)"
+  q_summary="$(printf '%s' "$summary" | json_string)"
+  printf '{"id":%s,"connectorId":"openCodeCli","kind":"session_finished","occurredAt":"%s","sessionId":%s,"summary":%s,"privacy":{"captureMethod":"local_cli_wrapper","rawDataPolicy":"summary_only"},"provenance":{"toolName":"mori-opencode-wrapper.sh","toolVersion":"0.1.0"}}\n' \
+    "$q_event_id" "$now" "$q_session" "$q_summary" >> "$OUT_FILE"
 }
 
 START_NOW="$(ISO_NOW)"

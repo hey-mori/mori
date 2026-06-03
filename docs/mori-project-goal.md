@@ -23,6 +23,8 @@ Companion docs (read these before changing code):
 - [connectors/connection-surface.md](connectors/connection-surface.md) covers
   the 연동 surface contract (provider grid + inspector, setup guides, live
   connection status) and the remaining connector roadmap.
+- [connectors/connection-long-term-plan.md](connectors/connection-long-term-plan.md)
+  is the phased connector execution plan from hardening to CLI / IDE emitters.
 - [persistence.md](persistence.md) — storage adapters, schema
   versions, fallback behaviour.
 - [roadmap.md](roadmap.md) — capability buckets and historical phase
@@ -907,26 +909,23 @@ before starting.
   review-on-import).
 - ~~Queryable Memory~~. Shipped (`searchAcceptedMemories`,
   `QueryableMemoryCard`, related-references search).
+- ~~Local Connector Capture Bridge~~. Shipped. In-app setup guides,
+  live per-anchor connection status, in-place Claude hook connect /
+  disconnect, seven-anchor detection, template-sample Import Review
+  draft round-trip tests, generated `mori-local-capture.py` smoke test,
+  terminal-helper classification, and POSIX Claude / Codex / OpenCode
+  wrapper smoke tests are all in place. See
+  [connectors/connection-surface.md](connectors/connection-surface.md)
+  and
+  [connectors/connection-long-term-plan.md](connectors/connection-long-term-plan.md).
 
 **Remaining:**
 
-1. **Local Connector Capture Bridge.** Make the Claude Code hook,
-   Codex CLI wrapper, terminal connector, and Git connector
-   templates reliable on a real user workflow. Document setup,
-   verify JSONL output round-trips through Import Review, and add
-   fixture tests so regressions surface.
-   - *Progress:* in-app setup guides now render inline in the 연동
-     inspector, live connection status is shown per anchor agent with
-     in-place Claude hook connect / disconnect, and
-     `detect_connector_status` covers all seven anchor agents. Still open:
-     a fixture test that asserts each template's JSONL round-trips through
-     Import Review. See
-     [connectors/connection-surface.md](connectors/connection-surface.md).
-2. **CLI Wrapper for Claude / Codex workflows.** A small `mori` CLI
+1. **CLI Wrapper for Claude / Codex workflows.** A small `mori` CLI
    that wraps `claude` / `codex` invocations and writes canonical
    Connector JSONL, removing the need to install template scripts
    manually.
-3. **IDE / Terminal Integration.** VS Code / Cursor extension
+2. **IDE / Terminal Integration.** VS Code / Cursor extension
    sending workspace events to a local Mori endpoint with explicit
    opt-in and scoping. Terminal integration: a shell-history
    connector with redaction.

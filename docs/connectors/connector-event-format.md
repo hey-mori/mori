@@ -260,9 +260,9 @@ five so the type matches the capture surface matrix:
 |---|---|
 | `claudeCodeHook` | Docs-template-only |
 | `codexCliWrapper` | Docs-template-only |
-| `terminalShell` | Planned |
+| `terminalShell` | Planned future shell-hook id. `connectors/terminal-helper/` does **not** emit this today; it launches `mori-local-capture.py`. |
 | `terminal` | Planned (legacy alias) |
-| `gitCommand` | Planned |
+| `gitCommand` | Implemented through local-capture / terminal-helper Git commands |
 | `git` | Planned (legacy alias) |
 | `desktopTranscriptImport` | Manual-only today |
 | `githubPrImport` | Planned |
