@@ -699,7 +699,7 @@
   display: grid;
   gap: clamp(18px, 3vh, 28px);
   width: min(960px, 100%);
-  min-height: min(620px, calc(100vh - 180px));
+  min-height: min(680px, calc(100vh - 170px));
   align-content: center;
 }
 
