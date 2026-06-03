@@ -93,7 +93,12 @@ is a registry entry, not a fan-out.
   command `detect_connector_status`: read-only, env-injected for tests. For a
   config-hook connector it checks the tool dir and scans `settings.json`
   hooks for the `mori-claude-hook` reference; for a session-discovery
-  connector it counts transcript files. The TS bridge is
+  connector it counts the sessions Mori can read back from the tool's local
+  store. All seven anchor agents are detected: Claude Code (config-hook) plus
+  Codex, OpenCode, Antigravity, Continue, Cline, and Cursor
+  (session-discovery). OpenCode counts `storage/session` files, Cline counts
+  task directories holding `ui_messages.json`, and Cursor counts
+  `composerData:*` rows in the read-only `state.vscdb`. The TS bridge is
   [`connectorInstallerTauri.ts`](../../src/lib/connectors/installers/connectorInstallerTauri.ts).
 
 Adding a connector: add a registry entry + a `captureModel` branch in the
