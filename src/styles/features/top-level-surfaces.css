@@ -1560,6 +1560,10 @@
 .workbench-panel-body {
   min-height: 0;
   overflow: auto;
+  /* Reserve the scroll gutter on both edges so the body content keeps equal
+     left / right whitespace whether or not the scrollbar is showing; the shared
+     base-scroll only reserves the inline-end edge, which left panels lopsided. */
+  scrollbar-gutter: stable both-edges;
 }
 
 .workbench-conversation {
@@ -2153,6 +2157,7 @@
   min-height: 0;
   padding: var(--base-space-4);
   overflow: auto;
+  scrollbar-gutter: stable both-edges;
 }
 
 /* Calm dot-status counts (launchpad cards). */
