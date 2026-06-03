@@ -22,7 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
@@ -46,6 +46,14 @@ import {
 import type { AgentWorkAgentId } from "../../lib/agents/agentRegistry";
 import type { StoredSessionImport } from "../../lib/storage/storageTypes";
 import { getConnectorSetupGuide, type CaptureSurfaceId } from "../../lib/connectors";
+import {
+  connectClaudeHook,
+  loadConnectorStatus,
+  uninstallClaudeHook,
+  type ConnectorStatusViewModel,
+} from "../../lib/connectors/installers";
+import { findConnectStatusForProvider } from "../../lib/sources/sourceConnectStatus";
+import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { ConnectorInstallModal } from "./ConnectorInstallModal";
 import { ConnectorSetupGuidePanel } from "./ConnectorSetupGuide";
 
@@ -158,6 +166,7 @@ export function SourcesView() {
     allMethods[0]?.source.id ??
     "";
   const [connectOpen, setConnectOpen] = useState(false);
+  const [connectModels, setConnectModels] = useState<ConnectorStatusViewModel[] | null>(null);
   const [selectedId, setSelectedId] = useState(defaultSelectedId);
   // Anchor agents open on their canonical way-in (기록에서 불러오기); every other
   // provider, and ChatGPT, opens on its first import method.
@@ -165,6 +174,16 @@ export function SourcesView() {
     ANCHOR_AGENT_IDS.has(groups.agents[0]?.id ?? ""),
   );
   const [query, setQuery] = useState("");
+
+  // Live connection status for anchor agents. In browser mode the adapter
+  // returns the honest desktop-only model, so the inspector never invents a
+  // connected state. Reloaded when the 연동 설정 modal closes after a change.
+  const reloadConnectStatus = useCallback(() => {
+    void loadConnectorStatus().then(setConnectModels);
+  }, []);
+  useEffect(() => {
+    reloadConnectStatus();
+  }, [reloadConnectStatus]);
 
   const needle = query.trim().toLowerCase();
   const filtered = useMemo(
@@ -239,6 +258,12 @@ export function SourcesView() {
             provider={selectedProvider}
             method={selectedMethod}
             recordsSelected={recordsSelected}
+            connectStatus={
+              connectModels
+                ? findConnectStatusForProvider(selectedProvider.id, connectModels)
+                : null
+            }
+            onReloadConnectStatus={reloadConnectStatus}
             onSelectMethod={(id) => {
               setSelectedId(id);
               setRecordsMode(false);
@@ -283,7 +308,14 @@ export function SourcesView() {
 
       {imports.length > 0 ? <RecentImports imports={imports} /> : null}
 
-      {connectOpen ? <ConnectorInstallModal onClose={() => setConnectOpen(false)} /> : null}
+      {connectOpen ? (
+        <ConnectorInstallModal
+          onClose={() => {
+            setConnectOpen(false);
+            reloadConnectStatus();
+          }}
+        />
+      ) : null}
     </PageShell>
   );
 }
@@ -406,6 +438,8 @@ function SourceInspector({
   provider,
   method,
   recordsSelected,
+  connectStatus,
+  onReloadConnectStatus,
   onSelectMethod,
   onSelectRecords,
   onAction,
@@ -414,6 +448,10 @@ function SourceInspector({
   provider: SourceProvider;
   method: SourceProviderMethod;
   recordsSelected: boolean;
+  /** Live connection status for an anchor agent, or null when none applies. */
+  connectStatus: ConnectorStatusViewModel | null;
+  /** Re-detect connection status after an inline connect / disconnect. */
+  onReloadConnectStatus: () => void;
   onSelectMethod: (id: string) => void;
   /** Select the 기록에서 불러오기 way-in (anchor agents only). */
   onSelectRecords?: () => void;
@@ -446,6 +484,10 @@ function SourceInspector({
           <p>{subtitle}</p>
         </div>
       </header>
+
+      {connectStatus ? (
+        <ConnectStatusBlock status={connectStatus} onReload={onReloadConnectStatus} />
+      ) : null}
 
       <InspectorBlock title="연동 방법" icon={Plug}>
         <ul className="sources-method-picker">
@@ -520,6 +562,69 @@ function SourceInspector({
         )}
       </div>
     </aside>
+  );
+}
+
+/**
+ * Live connection status for an anchor agent, shown inline in the inspector.
+ * Read-only for session-discovery agents (Codex / Antigravity / Continue);
+ * for the Claude config-hook it offers in-place 연결 / 연결 해제 driven by the
+ * same safe installer engine the 연동 설정 modal uses. Desktop only, in browser
+ * mode the status reads "데스크톱 앱에서만" and no action is offered.
+ */
+function ConnectStatusBlock({
+  status,
+  onReload,
+}: {
+  status: ConnectorStatusViewModel;
+  onReload: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(action: () => Promise<unknown>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      onReload();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const isHook = status.captureModel === "config-hook";
+  const connected = isHook && status.availability === "available";
+  return (
+    <InspectorBlock title="연동 상태" icon={Plug}>
+      <div className="sources-connect-status">
+        <BaseStatusBadge tone={status.display.tone}>{status.display.label}</BaseStatusBadge>
+        <span className="sources-connect-detail">{status.detail.join(" · ")}</span>
+      </div>
+      {connected ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={busy}
+          onClick={() => void run(() => uninstallClaudeHook({ scope: "global" }))}
+        >
+          연결 해제
+        </Button>
+      ) : null}
+      {isHook && status.canInstall ? (
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={busy}
+          onClick={() => void run(() => connectClaudeHook({ scope: "global" }))}
+        >
+          연결
+        </Button>
+      ) : null}
+      {error ? <p className="sources-connect-error">{error}</p> : null}
+    </InspectorBlock>
   );
 }
 

@@ -493,6 +493,27 @@
   line-height: 1.5;
 }
 
+/* Live connection status for an anchor agent, inline in the inspector. */
+.sources-connect-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sources-connect-detail {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.sources-connect-error {
+  margin: 8px 0 0;
+  color: #b46100;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
 /* Provider overview tiles — the calm "what can I connect" grid on the canvas. */
 .sources-tiles {
   display: grid;
