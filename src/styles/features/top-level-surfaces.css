@@ -32,6 +32,10 @@
   animation-delay: 100ms;
 }
 
+.dashboard-surface > *:nth-child(4) {
+  animation-delay: 150ms;
+}
+
 .dashboard-sort {
   display: inline-flex;
   gap: 2px;
@@ -66,7 +70,7 @@
 
 .dashboard-kpis {
   display: grid;
-  grid-template-columns: 1.5fr repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--base-space-2);
 }
 
@@ -134,38 +138,108 @@
   color: var(--base-status-warning);
 }
 
-.dashboard-kpi-score {
-  grid-template-columns: auto minmax(0, 1fr);
+/* ── Spotlight (lead banner) ──────────────────────────────────────────────── */
+
+.dashboard-spotlight {
+  display: flex;
   align-items: center;
-  gap: var(--base-space-3);
+  gap: var(--base-space-4);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--base-space-3) var(--base-space-4);
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background: var(--base-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
 }
 
-.dashboard-score-ring {
-  --score: 0;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  aspect-ratio: 1;
+.dashboard-spotlight.is-static {
+  cursor: default;
+}
+
+.dashboard-spotlight:hover:not(.is-static) {
+  border-color: var(--base-accent-soft);
+  box-shadow: var(--base-shadow-card);
+}
+
+.dashboard-spotlight:focus-visible {
+  outline: 2px solid var(--base-border-focus);
+  outline-offset: 2px;
+}
+
+.dashboard-spotlight-eyebrow {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
   border-radius: 999px;
-  background:
-    radial-gradient(var(--base-surface) 58%, transparent 60%),
-    conic-gradient(var(--base-accent) calc(var(--score) * 1%), var(--base-surface-subtle) 0);
+  background: var(--base-accent-soft);
+  color: var(--base-accent-strong);
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
 }
 
-.dashboard-score-ring span {
-  color: var(--base-text);
-  font-size: var(--base-font-size-sm);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+.dashboard-spotlight.tone-warning .dashboard-spotlight-eyebrow {
+  background: var(--base-status-warning-soft);
+  color: var(--base-status-warning);
 }
 
-.dashboard-kpi-status {
-  display: block;
-  margin-top: 3px;
+.dashboard-spotlight-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--base-space-2);
+  min-width: 0;
+}
+
+.dashboard-spotlight-head strong {
+  overflow: hidden;
   color: var(--base-text);
   font-size: var(--base-font-size-lg);
   font-weight: 700;
-  line-height: var(--base-line-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-spotlight-head small {
+  flex-shrink: 0;
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  white-space: nowrap;
+}
+
+.dashboard-spotlight-stats {
+  display: inline-flex;
+  gap: var(--base-space-4);
+  margin-left: auto;
+}
+
+.dashboard-spotlight-stats span {
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-xs);
+  white-space: nowrap;
+}
+
+.dashboard-spotlight-stats b {
+  color: var(--base-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-spotlight-stats .is-attention b {
+  color: var(--base-status-warning);
+}
+
+.dashboard-spotlight-cta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--base-accent);
+  font-size: var(--base-font-size-sm);
+  font-weight: 700;
 }
 
 .dashboard-charts {
@@ -178,7 +252,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--base-space-3);
-  min-height: 188px;
+  min-height: 150px;
   padding: var(--base-space-4);
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-md);
@@ -214,7 +288,7 @@
 
 .dashboard-bars {
   display: grid;
-  align-content: start;
+  align-content: space-evenly;
   gap: 5px;
   width: 100%;
   margin: 0 -6px;
@@ -2620,6 +2694,7 @@
   .workbench-panel,
   .workbench-edge,
   .dashboard-surface > *,
+  .dashboard-spotlight,
   .dashboard-bar,
   .dashboard-bar-track i,
   .dashboard-cell-bar i,
@@ -2645,10 +2720,6 @@
 @container dashboard (max-width: 1180px) {
   .dashboard-kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .dashboard-kpi-score {
-    grid-column: 1 / -1;
   }
 
   .dashboard-charts {
@@ -2702,8 +2773,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dashboard-kpi-score {
-    grid-column: 1 / -1;
+  .dashboard-spotlight-stats {
+    display: none;
   }
 
   .dashboard-matrix-head {

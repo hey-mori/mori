@@ -836,7 +836,7 @@ export function WorkbenchView() {
             <WorkbenchAttention items={attention} onJump={focusPanel} />
           ) : null}
           <div
-            className={`workbench-canvas${dragPanelId ? " is-dragging" : ""}`}
+            className={`workbench-canvas base-scroll${dragPanelId ? " is-dragging" : ""}`}
             ref={canvasRef}
           >
             <div
