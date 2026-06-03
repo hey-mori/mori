@@ -1144,24 +1144,21 @@
   align-items: stretch;
   min-width: 0;
   min-height: 0;
-  /* Room for the edge "+" controls that straddle each panel border, so a
-     layout that fits never produces phantom scrollbars. The canvas pans
-     horizontally only; each column owns its own vertical scroll. */
+  /* The board fits the screen as an up-to-4x4 grid: no canvas scroll on either
+     axis. Each panel scrolls its own body. */
   padding: var(--base-space-4);
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
 }
 
 .workbench-col {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
-  min-width: 300px;
+  min-width: 0;
   min-height: 0;
-  /* Cap each column at the canvas height so it scrolls on its own instead of
-     growing the whole canvas into one shared scroll. */
-  max-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  /* Columns split the width evenly and never scroll themselves; the panels in
+     a column split its height. */
+  overflow: hidden;
 }
 
 .workbench-gutter {
@@ -1272,11 +1269,10 @@
      track (otherwise the action buttons spill outside the panel edge). */
   grid-template-columns: minmax(0, 1fr);
   gap: var(--base-space-2);
-  /* Size to content (header + body), capped at the column so a long
-     conversation scrolls inside rather than leaving a tall empty panel. */
-  flex: 0 0 auto;
-  min-height: 132px;
-  max-height: 100%;
+  /* Panels split their column's height evenly and fill the cell; the body
+     (the second grid row) scrolls on its own when the content overruns. */
+  flex: 1 1 0;
+  min-height: 0;
   min-width: 0;
   padding: var(--base-space-3);
   border: 1px solid var(--base-border);
@@ -1862,6 +1858,8 @@
 .workbench-panel.is-collapsed {
   grid-template-rows: auto;
   gap: 0;
+  /* A collapsed panel shrinks to its header instead of taking an equal share. */
+  flex: 0 0 auto;
   min-height: 0;
 }
 

@@ -104,6 +104,10 @@ type ConversationEvent = {
 };
 
 const MIN_FLEX = 0.3;
+// The board is an up-to-4x4 grid that fills the screen without scrolling, so the
+// whole layout always fits; only each panel's body scrolls.
+const MAX_COLS = 4;
+const MAX_ROWS = 4;
 
 const EDGE_LABEL: Record<EdgeSide, string> = {
   top: "위에 패널 추가",
@@ -244,47 +248,57 @@ export function WorkbenchView() {
         })),
       );
       setFocusedPanelId(panelId);
-    } else if (launcher.kind === "panelInColumn") {
-      const panelId = nextId("panel");
+      setLauncher(null);
+      return;
+    }
+    const panelId = nextId("panel");
+    const newPanel: Panel = { id: panelId, sessionId, mode: "conversation", flex: 1 };
+    if (launcher.kind === "panelInColumn") {
       const { columnId, index } = launcher;
       setColumns((cols) =>
         cols.map((col) => {
           if (col.id !== columnId) return col;
+          if (col.panels.length >= MAX_ROWS) return col; // column already full
           const panels = [...col.panels];
-          panels.splice(Math.max(0, Math.min(index, panels.length)), 0, {
-            id: panelId,
-            sessionId,
-            mode: "conversation",
-            flex: 1,
-          });
+          panels.splice(Math.max(0, Math.min(index, panels.length)), 0, newPanel);
           return { ...col, panels };
         }),
       );
-      setFocusedPanelId(panelId);
     } else {
-      const panelId = nextId("panel");
-      const columnId = nextId("col");
       const at = launcher.index;
       setColumns((cols) => {
-        const arr = [...cols];
-        arr.splice(Math.max(0, Math.min(at, arr.length)), 0, {
-          id: columnId,
-          flex: 1,
-          panels: [{ id: panelId, sessionId, mode: "conversation", flex: 1 }],
-        });
-        return arr;
+        if (cols.length < MAX_COLS) {
+          const arr = [...cols];
+          arr.splice(Math.max(0, Math.min(at, arr.length)), 0, {
+            id: nextId("col"),
+            flex: 1,
+            panels: [newPanel],
+          });
+          return arr;
+        }
+        // Columns maxed: drop into the first column that still has room.
+        const idx = cols.findIndex((col) => col.panels.length < MAX_ROWS);
+        if (idx < 0) return cols; // board full (4x4)
+        return cols.map((col, i) => (i === idx ? { ...col, panels: [...col.panels, newPanel] } : col));
       });
-      setFocusedPanelId(panelId);
     }
+    setFocusedPanelId(panelId);
     setLauncher(null);
   };
 
+  // Add a session into the first free slot: a new column while under the column
+  // cap, otherwise the first column with room. No-op once the 4x4 board is full.
   const addSessionToNewColumn = (sessionId: string) => {
     const panelId = nextId("panel");
-    setColumns((cols) => [
-      ...cols,
-      { id: nextId("col"), flex: 1, panels: [{ id: panelId, sessionId, mode: "conversation", flex: 1 }] },
-    ]);
+    const newPanel: Panel = { id: panelId, sessionId, mode: "conversation", flex: 1 };
+    setColumns((cols) => {
+      if (cols.length < MAX_COLS) {
+        return [...cols, { id: nextId("col"), flex: 1, panels: [newPanel] }];
+      }
+      const idx = cols.findIndex((col) => col.panels.length < MAX_ROWS);
+      if (idx < 0) return cols;
+      return cols.map((col, i) => (i === idx ? { ...col, panels: [...col.panels, newPanel] } : col));
+    });
     setFocusedPanelId(panelId);
   };
 
@@ -316,22 +330,30 @@ export function WorkbenchView() {
     );
   };
 
-  // Reflow every placed panel into a canonical arrangement (single column, two
-  // columns, or a balanced grid), resetting sizes. A fast way to reset a layout
-  // that drifted during free composition.
+  // Reflow placed panels into a canonical arrangement within the 4x4 grid:
+  // "single" stacks (fewest columns, fill top-to-bottom); "columns" spreads
+  // across columns (round-robin). Both stay within MAX_COLS x MAX_ROWS.
   const applyQuickLayout = (shape: QuickLayout) => {
     setColumns((cols) => {
       const panels = cols
         .flatMap((col) => col.panels)
-        .map((panel) => ({ ...panel, flex: 1, collapsed: false }));
+        .map((panel) => ({ ...panel, flex: 1, collapsed: false }))
+        .slice(0, MAX_COLS * MAX_ROWS);
       if (panels.length === 0) return cols;
-      const colCount = shape === "single" ? 1 : Math.min(panels.length, 3);
+      const colCount =
+        shape === "single"
+          ? Math.min(Math.ceil(panels.length / MAX_ROWS), MAX_COLS)
+          : Math.min(panels.length, MAX_COLS);
       const next: Column[] = Array.from({ length: colCount }, () => ({
         id: nextId("col"),
         flex: 1,
         panels: [] as Panel[],
       }));
-      panels.forEach((panel, index) => next[index % colCount]!.panels.push(panel));
+      if (shape === "single") {
+        panels.forEach((panel, index) => next[Math.floor(index / MAX_ROWS)]!.panels.push(panel));
+      } else {
+        panels.forEach((panel, index) => next[index % colCount]!.panels.push(panel));
+      }
       return next.filter((col) => col.panels.length > 0);
     });
   };
@@ -356,6 +378,11 @@ export function WorkbenchView() {
         }
       }
       if (!moved) return cols;
+      // Block dropping into a different column that is already full (max rows).
+      if (!sameColumn) {
+        const target = cols.find((col) => col.id === columnId);
+        if (target && target.panels.length >= MAX_ROWS) return cols;
+      }
       const adjusted = sameColumn && index > srcIndex ? index - 1 : index;
       const removed = cols.map((col) => ({
         ...col,
@@ -389,12 +416,20 @@ export function WorkbenchView() {
         .filter((col) => col.panels.length > 0);
       if (!moved) return cols;
       if (target.kind === "column") {
-        const exists = stripped.some((col) => col.id === target.columnId);
-        if (!exists) return [...stripped, { id: nextId("col"), flex: 1, panels: [moved] }];
+        const dest = stripped.find((col) => col.id === target.columnId);
+        if (!dest) {
+          // Target column vanished (it only held the moved panel): keep it as its
+          // own column only if there is room for another column.
+          return stripped.length < MAX_COLS
+            ? [...stripped, { id: nextId("col"), flex: 1, panels: [moved] }]
+            : cols;
+        }
+        if (dest.panels.length >= MAX_ROWS) return cols; // destination column full
         return stripped.map((col) =>
           col.id === target.columnId ? { ...col, panels: [...col.panels, moved!] } : col,
         );
       }
+      if (stripped.length >= MAX_COLS) return cols; // no room for a new column
       const index = Math.max(0, Math.min(target.index, stripped.length));
       stripped.splice(index, 0, { id: nextId("col"), flex: 1, panels: [moved] });
       return stripped;
@@ -747,6 +782,7 @@ export function WorkbenchView() {
                 <Button
                   variant="secondary"
                   icon={Plus}
+                  disabled={panelIds.length >= MAX_COLS * MAX_ROWS}
                   onClick={() => setLauncher({ kind: "newColumn", index: columns.length })}
                 >
                   세션 추가
@@ -836,7 +872,7 @@ export function WorkbenchView() {
             <WorkbenchAttention items={attention} onJump={focusPanel} />
           ) : null}
           <div
-            className={`workbench-canvas base-scroll${dragPanelId ? " is-dragging" : ""}`}
+            className={`workbench-canvas${dragPanelId ? " is-dragging" : ""}`}
             ref={canvasRef}
           >
             <div
@@ -849,7 +885,7 @@ export function WorkbenchView() {
             {columns.map((col, colIndex) => (
               <Fragment key={col.id}>
                 <div
-                  className={`workbench-col base-scroll${dropHint === "colz:" + col.id ? " is-droptarget" : ""}`}
+                  className={`workbench-col${dropHint === "colz:" + col.id ? " is-droptarget" : ""}`}
                   style={{ flexGrow: col.flex, flexBasis: 0 }}
                   data-drop={"col:" + col.id}
                 >
