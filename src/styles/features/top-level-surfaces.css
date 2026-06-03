@@ -508,7 +508,6 @@
 .dashboard-matrix {
   display: flex;
   flex-direction: column;
-  min-height: 240px;
   overflow: hidden;
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-md);
@@ -555,6 +554,23 @@
 
 .dashboard-matrix-row:hover:not(.is-static) {
   background: var(--base-surface-subtle);
+}
+
+/* Filtered-to-nothing: a single calm row, not a tall empty block. */
+.dashboard-matrix-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--base-space-2);
+  margin: 0;
+  min-height: 52px;
+  padding: var(--base-space-3) var(--base-space-4);
+  color: var(--base-text-muted);
+  font-size: var(--base-font-size-sm);
+}
+
+.dashboard-matrix-empty svg {
+  color: var(--base-text-muted-2);
 }
 
 .dashboard-row-name {

@@ -294,12 +294,10 @@ export function DashboardView() {
             </header>
             <div className="dashboard-matrix-body base-scroll">
               {filteredProjects.length === 0 ? (
-                <EmptyState
-                  compact
-                  icon={Search}
-                  title="조건에 맞는 프로젝트가 없습니다"
-                  description="검색어를 줄이거나 위의 필터를 해제해보세요."
-                />
+                <p className="dashboard-matrix-empty">
+                  <Search size={14} aria-hidden="true" />
+                  조건에 맞는 프로젝트가 없습니다
+                </p>
               ) : (
                 filteredProjects.map((project) => (
                   <ProjectRow
