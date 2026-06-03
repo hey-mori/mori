@@ -606,6 +606,209 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── KPI deck: deltas, sparkline, interactive tiles ───────────────────────── */
+
+.dashboard-kpi-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--base-space-2);
+  min-height: 18px;
+}
+
+.dashboard-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--base-font-size-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dashboard-kpi-delta.is-up {
+  color: var(--base-status-success);
+}
+
+.dashboard-kpi-delta.is-neutral {
+  color: var(--base-text-muted);
+}
+
+.dashboard-kpi-delta.is-flat,
+.dashboard-kpi-delta.is-none {
+  color: var(--base-text-muted-2);
+  font-weight: 600;
+}
+
+.dashboard-spark {
+  display: block;
+  overflow: visible;
+  color: var(--base-text-muted);
+}
+
+.dashboard-spark.tone-accent {
+  color: var(--base-accent);
+}
+
+.dashboard-spark.tone-info {
+  color: var(--base-status-info);
+}
+
+.dashboard-spark polyline {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+.dashboard-spark-dot {
+  fill: currentColor;
+}
+
+.dashboard-kpi.is-interactive {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.dashboard-kpi.is-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--base-shadow-card);
+}
+
+.dashboard-kpi.is-interactive:focus-visible {
+  outline: 2px solid var(--base-border-focus);
+  outline-offset: 2px;
+}
+
+.dashboard-kpi.is-active {
+  border-color: var(--base-accent);
+  background: var(--base-accent-soft);
+}
+
+/* ── Toolbar filter chips ─────────────────────────────────────────────────── */
+
+.dashboard-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--base-border);
+  border-radius: 999px;
+  background: var(--base-surface-subtle);
+  color: var(--base-text);
+  font-size: var(--base-font-size-xs);
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.dashboard-chip span {
+  overflow: hidden;
+  max-width: 180px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-chip:hover {
+  background: var(--base-surface);
+}
+
+.dashboard-chip:focus-visible {
+  outline: 2px solid var(--base-border-focus);
+  outline-offset: 2px;
+}
+
+.dashboard-chip.tone-accent {
+  border-color: var(--base-accent-soft);
+  background: var(--base-accent-soft);
+  color: var(--base-accent-strong);
+}
+
+.dashboard-chip.tone-warning {
+  border-color: var(--base-status-warning-soft);
+  background: var(--base-status-warning-soft);
+}
+
+.dashboard-chip.tone-info {
+  border-color: var(--base-status-info-soft);
+  background: var(--base-status-info-soft);
+}
+
+.dashboard-chip.tone-success {
+  border-color: var(--base-status-success-soft);
+  background: var(--base-status-success-soft);
+}
+
+/* ── Token distribution: interactive bars ─────────────────────────────────── */
+
+.dashboard-bar {
+  margin: 0;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--base-radius-sm);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+  cursor: pointer;
+  transition: background 0.12s ease, opacity 0.12s ease;
+}
+
+.dashboard-bar.is-static {
+  cursor: default;
+}
+
+.dashboard-bar:hover:not(.is-static),
+.dashboard-bar.is-hover {
+  background: var(--base-surface-subtle);
+}
+
+.dashboard-bar.is-focus {
+  background: var(--base-accent-soft);
+}
+
+.dashboard-bar.is-dim {
+  opacity: 0.4;
+}
+
+.dashboard-bar:focus-visible {
+  outline: 2px solid var(--base-border-focus);
+  outline-offset: 1px;
+}
+
+.dashboard-bar.is-focus .dashboard-bar-track i,
+.dashboard-bar.is-hover .dashboard-bar-track i {
+  background: var(--base-accent-strong);
+}
+
+/* ── Project matrix: linked emphasis ──────────────────────────────────────── */
+
+.dashboard-matrix-row {
+  transition: background 0.12s ease, opacity 0.12s ease;
+}
+
+.dashboard-matrix-row.is-focus,
+.dashboard-matrix-row.is-focus:hover:not(.is-static) {
+  background: var(--base-accent-soft);
+}
+
+.dashboard-matrix-row.is-dim {
+  opacity: 0.45;
+}
+
 /* ─── Workbench ─────────────────────────────────────────────────────────── */
 
 .workbench-blank {
@@ -1781,52 +1984,10 @@
   min-width: 0;
 }
 
-.workbench-toolbar-search {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+/* Use the app's shared search field; just give it a comfortable toolbar width. */
+.workbench-search-field {
   width: 240px;
   max-width: 32vw;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-md);
-  background: var(--base-surface);
-  color: var(--base-text-muted);
-}
-
-.workbench-toolbar-search:focus-within {
-  border-color: var(--base-border-focus);
-  box-shadow: 0 0 0 3px var(--base-accent-soft);
-}
-
-.workbench-toolbar-search input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--base-text);
-  font: inherit;
-  font-size: var(--base-font-size-sm);
-}
-
-.workbench-toolbar-search input:focus {
-  outline: none;
-}
-
-.workbench-toolbar-search button {
-  display: inline-grid;
-  place-items: center;
-  border: 0;
-  background: transparent;
-  color: var(--base-text-muted);
-  cursor: pointer;
-}
-
-.workbench-toolbar-search button:hover {
-  color: var(--base-accent);
 }
 
 /* Per-panel search match count in the header. */
@@ -2459,11 +2620,17 @@
   .workbench-panel,
   .workbench-edge,
   .dashboard-surface > *,
+  .dashboard-bar,
   .dashboard-bar-track i,
   .dashboard-cell-bar i,
   .dashboard-micro i,
-  .dashboard-trend-cols span,
-  .dashboard-donut {
+  .dashboard-trend-bar,
+  .dashboard-donut-svg,
+  .dashboard-donut-arc,
+  .dashboard-donut-legend-btn,
+  .dashboard-kpi.is-interactive,
+  .dashboard-chip,
+  .dashboard-matrix-row {
     animation: none;
     transition: none;
   }
@@ -2471,7 +2638,11 @@
 
 /* ─── Responsive ──────────────────────────────────────────────────────────── */
 
-@media (max-width: 1180px) {
+/* The dashboard reacts to its own content width via container queries (see
+   container-type on .dashboard-surface), so collapsing the sidebar reflows it
+   with no viewport change. Workbench stays on viewport @media below. */
+
+@container dashboard (max-width: 1180px) {
   .dashboard-kpis {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -2489,7 +2660,7 @@
   }
 }
 
-@media (max-width: 820px) {
+@container dashboard (max-width: 860px) {
   .dashboard-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2502,18 +2673,68 @@
     grid-column: auto;
   }
 
+  .dashboard-donut-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--base-space-3);
+  }
+
+  .dashboard-donut-figure {
+    align-self: center;
+  }
+
   .dashboard-matrix-head,
   .dashboard-matrix-row {
     grid-template-columns:
-      minmax(150px, 1.5fr) 64px
-      repeat(3, minmax(78px, 1fr));
+      minmax(140px, 1.5fr) 56px
+      repeat(3, minmax(72px, 1fr));
     gap: var(--base-space-2);
   }
 
   .dashboard-matrix-body {
     max-height: none;
   }
+}
 
+/* Narrowest band: the matrix table folds into stacked per-project cards. */
+@container dashboard (max-width: 560px) {
+  .dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-kpi-score {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-matrix-head {
+    display: none;
+  }
+
+  .dashboard-matrix-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--base-space-2) var(--base-space-3);
+  }
+
+  .dashboard-row-name {
+    grid-column: 1 / -1;
+    min-height: 36px;
+  }
+
+  .dashboard-cell {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    min-height: 40px;
+  }
+
+  .dashboard-cell::before {
+    content: attr(data-label);
+    color: var(--base-text-muted);
+    font-size: var(--base-font-size-2xs);
+    font-weight: 700;
+  }
+}
+
+@media (max-width: 820px) {
   .workbench-surface {
     height: auto;
   }

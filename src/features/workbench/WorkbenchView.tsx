@@ -27,6 +27,7 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
+import { SearchField } from "../../components/ui/SearchField";
 import { useAppStore } from "../../app/store";
 import {
   selectSessionMode,
@@ -668,7 +669,7 @@ export function WorkbenchView() {
           break;
         case "/":
           event.preventDefault();
-          (document.querySelector("[data-wb-search]") as HTMLInputElement | null)?.focus();
+          (document.querySelector(".workbench-search-field input") as HTMLInputElement | null)?.focus();
           break;
       }
     };
@@ -716,7 +717,13 @@ export function WorkbenchView() {
           start={
             hasLayout ? (
               <div className="workbench-toolbar-start">
-                <WorkbenchSearch value={search} onChange={setSearch} />
+                <SearchField
+                  value={search}
+                  onChange={setSearch}
+                  ariaLabel="모든 패널에서 검색"
+                  placeholder="모든 패널 검색"
+                  className="workbench-search-field"
+                />
                 {presets.length > 0 ? (
                   <PresetBar presets={presets} onApply={applyPreset} onManage={() => setManageOpen(true)} />
                 ) : null}
@@ -1394,45 +1401,6 @@ function WorkbenchCompare({
 }
 
 // ─── Toolbar search + presets ─────────────────────────────────────────────────
-
-/**
- * Unified search across every open panel. Typing filters each panel's events to
- * the matches and dims panels with none, so several sessions can be scanned for
- * the same term at once. Press "/" to focus it, Esc to clear.
- */
-function WorkbenchSearch({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="workbench-toolbar-search">
-      <Search size={13} aria-hidden="true" />
-      <input
-        type="text"
-        value={value}
-        data-wb-search=""
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            if (value) onChange("");
-            else event.currentTarget.blur();
-          }
-        }}
-        aria-label="모든 패널에서 검색"
-        placeholder="모든 패널 검색"
-      />
-      {value ? (
-        <button type="button" aria-label="검색 지우기" onClick={() => onChange("")}>
-          <X size={12} aria-hidden="true" />
-        </button>
-      ) : null}
-    </div>
-  );
-}
 
 function PresetBar({
   presets,
