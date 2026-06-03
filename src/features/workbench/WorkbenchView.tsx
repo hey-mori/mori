@@ -4,10 +4,14 @@ import {
   Bookmark,
   ChevronDown,
   ChevronUp,
+  CircleAlert,
+  CircleCheck,
+  Code,
   Columns2,
   Command,
   FolderKanban,
   GripVertical,
+  Layers,
   LayoutGrid,
   ListTree,
   Maximize2,
@@ -41,6 +45,12 @@ import {
 } from "../../lib/demo/demoSessionFixtures";
 import { buildDemoSessionContent } from "../../lib/demo/demoSessionContent";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
+import {
+  LENS_LABEL,
+  emptyFilterLabel,
+  filterEvents,
+  type Lens,
+} from "../../lib/workbench/lens";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import {
   buildSessionsBrowserModel,
@@ -103,6 +113,15 @@ type ConversationEvent = {
   at: string;
 };
 
+// The toolbar lens options pair each lens with its icon; the filter logic and
+// labels live in lib/workbench/lens so they can be tested without the view.
+const LENS_OPTIONS: { id: Lens; label: string; icon: LucideIcon }[] = [
+  { id: "all", label: LENS_LABEL.all, icon: Layers },
+  { id: "issue", label: LENS_LABEL.issue, icon: CircleAlert },
+  { id: "decision", label: LENS_LABEL.decision, icon: CircleCheck },
+  { id: "code", label: LENS_LABEL.code, icon: Code },
+];
+
 const MIN_FLEX = 0.3;
 // The board is an up-to-4x4 grid that fills the screen without scrolling, so the
 // whole layout always fits; only each panel's body scrolls.
@@ -147,6 +166,7 @@ export function WorkbenchView() {
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [lens, setLens] = useState<Lens>("all");
   const [nameModal, setNameModal] = useState<
     { mode: "save" } | { mode: "rename"; id: string; current: string } | null
   >(null);
@@ -728,6 +748,12 @@ export function WorkbenchView() {
     { id: "clear", group: "배치", label: "비우기", run: () => setColumns([]) },
     { id: "layout-single", group: "레이아웃", label: "아래로 쌓기", run: () => applyQuickLayout("single") },
     { id: "layout-columns", group: "레이아웃", label: "옆으로 나란히", run: () => applyQuickLayout("columns") },
+    ...LENS_OPTIONS.map((option) => ({
+      id: `lens-${option.id}`,
+      group: "렌즈",
+      label: option.id === "all" ? "렌즈 끄기 (전체)" : `${option.label}만 보기`,
+      run: () => setLens(option.id),
+    })),
     { id: "density", group: "보기", label: density === "dense" ? "편안한 밀도로" : "조밀한 밀도로", run: () => setDensity((value) => (value === "dense" ? "comfortable" : "dense")) },
     { id: "help", group: "보기", label: "단축키 도움말", run: () => setHelpOpen(true) },
     ...(placedSessions.length >= 2
@@ -766,6 +792,17 @@ export function WorkbenchView() {
                   placeholder="모든 패널 검색"
                   className="workbench-search-field"
                 />
+                <span className="workbench-lens" role="group" aria-label="유형 렌즈 (모든 패널 필터)">
+                  {LENS_OPTIONS.map((option) => (
+                    <ModeButton
+                      key={option.id}
+                      icon={option.icon}
+                      label={option.id === "all" ? "전체 보기" : `${option.label}만 보기`}
+                      active={lens === option.id}
+                      onClick={() => setLens(option.id)}
+                    />
+                  ))}
+                </span>
                 {presets.length > 0 ? (
                   <PresetBar presets={presets} onApply={applyPreset} onManage={() => setManageOpen(true)} />
                 ) : null}
@@ -912,6 +949,7 @@ export function WorkbenchView() {
                           meta={meta}
                           repository={repository}
                           search={search}
+                          lens={lens}
                           focused={panel.id === focusedPanelId}
                           dragging={panel.id === dragPanelId}
                           onFocus={() => setFocusedPanelId(panel.id)}
@@ -996,6 +1034,7 @@ export function WorkbenchView() {
           meta={maximizedMeta}
           repository={repository}
           search={search}
+          lens={lens}
           onMode={(panelMode) => setPanelMode(maximizedPanel.id, panelMode)}
           onClose={() => setMaximizedId(null)}
         />
@@ -1289,6 +1328,7 @@ function WorkbenchFocus({
   meta,
   repository,
   search,
+  lens,
   onMode,
   onClose,
 }: {
@@ -1296,6 +1336,7 @@ function WorkbenchFocus({
   meta: SessionMeta;
   repository: ReturnType<typeof createBrowserDraftRepository>;
   search: string;
+  lens: Lens;
   onMode: (mode: PanelMode) => void;
   onClose: () => void;
 }) {
@@ -1306,13 +1347,8 @@ function WorkbenchFocus({
   );
   const needle = search.trim().toLowerCase();
   const matched = useMemo(
-    () =>
-      needle
-        ? events.filter((event) =>
-            `${event.title} ${event.summary} ${event.actor}`.toLowerCase().includes(needle),
-          )
-        : events,
-    [events, needle],
+    () => filterEvents(events, needle, lens),
+    [events, needle, lens],
   );
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -1357,9 +1393,18 @@ function WorkbenchFocus({
         </header>
         <div className="workbench-focus-body base-scroll">
           {panel.mode === "conversation" ? (
-            <ConversationFlow events={matched} highlight={needle} />
+            <ConversationFlow
+              events={matched}
+              highlight={needle}
+              emptyHint={matched.length === 0 ? emptyFilterLabel(needle, lens) : undefined}
+            />
           ) : (
-            <TimelineFlow events={matched} meta={meta} highlight={needle} />
+            <TimelineFlow
+              events={matched}
+              meta={meta}
+              highlight={needle}
+              emptyHint={matched.length === 0 ? emptyFilterLabel(needle, lens) : undefined}
+            />
           )}
         </div>
       </div>
@@ -1600,6 +1645,7 @@ function SessionPanel({
   meta,
   repository,
   search,
+  lens,
   focused,
   dragging,
   onFocus,
@@ -1616,6 +1662,7 @@ function SessionPanel({
   meta: SessionMeta | null;
   repository: ReturnType<typeof createBrowserDraftRepository>;
   search: string;
+  lens: Lens;
   focused: boolean;
   dragging: boolean;
   onFocus: () => void;
@@ -1636,15 +1683,11 @@ function SessionPanel({
   );
   const needle = search.trim().toLowerCase();
   const matched = useMemo(
-    () =>
-      needle
-        ? events.filter((event) =>
-            `${event.title} ${event.summary} ${event.actor}`.toLowerCase().includes(needle),
-          )
-        : events,
-    [events, needle],
+    () => filterEvents(events, needle, lens),
+    [events, needle, lens],
   );
-  const noMatch = needle.length > 0 && matched.length === 0;
+  const filtering = needle.length > 0 || lens !== "all";
+  const noMatch = filtering && matched.length === 0;
 
   if (!meta) {
     return (
@@ -1685,8 +1728,11 @@ function SessionPanel({
             {meta.savedAt ?? meta.startedAt ? ` · ${formatRelative(meta.savedAt ?? meta.startedAt!)}` : ""}
           </span>
         </div>
-        {needle ? (
-          <span className="workbench-panel-match" title={`검색 일치 ${matched.length}건`}>
+        {filtering ? (
+          <span
+            className="workbench-panel-match"
+            title={needle ? `일치 ${matched.length}건` : `해당 유형 ${matched.length}건`}
+          >
             {matched.length}
           </span>
         ) : null}
@@ -1736,9 +1782,18 @@ function SessionPanel({
       {collapsed ? null : (
         <div className="workbench-panel-body base-scroll">
           {panel.mode === "conversation" ? (
-            <ConversationFlow events={matched} highlight={needle} />
+            <ConversationFlow
+              events={matched}
+              highlight={needle}
+              emptyHint={noMatch ? emptyFilterLabel(needle, lens) : undefined}
+            />
           ) : (
-            <TimelineFlow events={matched} meta={meta} highlight={needle} />
+            <TimelineFlow
+              events={matched}
+              meta={meta}
+              highlight={needle}
+              emptyHint={noMatch ? emptyFilterLabel(needle, lens) : undefined}
+            />
           )}
         </div>
       )}
@@ -2009,15 +2064,17 @@ function WorkbenchAttention({
 function ConversationFlow({
   events,
   highlight = "",
+  emptyHint,
 }: {
   events: ConversationEvent[];
   highlight?: string;
+  emptyHint?: string;
 }) {
   if (events.length === 0) {
     return (
       <div className="workbench-flow-empty">
         <MessageSquare size={15} aria-hidden="true" />
-        <span>{highlight ? "일치하는 대화가 없습니다" : "대화 기록이 없습니다"}</span>
+        <span>{emptyHint ?? (highlight ? "일치하는 대화가 없습니다" : "대화 기록이 없습니다")}</span>
       </div>
     );
   }
@@ -2074,10 +2131,12 @@ function TimelineFlow({
   events,
   meta,
   highlight = "",
+  emptyHint,
 }: {
   events: ConversationEvent[];
   meta: SessionMeta;
   highlight?: string;
+  emptyHint?: string;
 }) {
   return (
     <div className="workbench-timeline">
@@ -2085,7 +2144,7 @@ function TimelineFlow({
       {events.length === 0 ? (
         <div className="workbench-flow-empty">
           <ListTree size={15} aria-hidden="true" />
-          <span>{highlight ? "일치하는 이벤트가 없습니다" : "타임라인 이벤트가 없습니다"}</span>
+          <span>{emptyHint ?? (highlight ? "일치하는 이벤트가 없습니다" : "타임라인 이벤트가 없습니다")}</span>
         </div>
       ) : (
         <ol className="workbench-timeline-list">

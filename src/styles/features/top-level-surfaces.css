@@ -2046,6 +2046,55 @@
   max-width: 32vw;
 }
 
+/*
+ * Type lens: filter every panel at once to one signal (issues / decisions /
+ * code). Same segmented shell as the layout control, but the active chip
+ * carries the semantic colour for that type so the filter reads at a glance.
+ */
+.workbench-lens {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+  background: var(--base-surface-subtle);
+}
+
+.workbench-lens button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--base-radius-sm);
+  background: transparent;
+  color: var(--base-text-muted);
+  cursor: pointer;
+  transition:
+    color 100ms ease,
+    background 100ms ease;
+}
+
+.workbench-lens button:hover {
+  color: var(--base-text);
+}
+
+.workbench-lens button.is-active {
+  background: var(--base-surface);
+  color: var(--base-accent);
+}
+
+/* Active issue lens reads amber, decision reads blue: the shared status colours. */
+.workbench-lens button:nth-child(2).is-active {
+  background: var(--base-status-warning-soft);
+  color: var(--base-status-warning);
+}
+
+.workbench-lens button:nth-child(3).is-active {
+  background: var(--base-status-info-soft);
+  color: var(--base-status-info);
+}
+
 /* Per-panel search match count in the header. */
 .workbench-panel-match {
   flex-shrink: 0;
