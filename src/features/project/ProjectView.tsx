@@ -15,6 +15,7 @@ import { Button } from "../../components/ui/Button";
 import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
 import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 import { BaseSection } from "../../components/ui/BaseSection";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,
@@ -40,6 +41,11 @@ import { ProjectSynthesisSection } from "./ProjectSynthesisSection";
 import { ProjectPulse } from "./ProjectPulse";
 import { ProjectStateStrip } from "./ProjectStateStrip";
 import { buildProjectStateSummary } from "../../lib/project/projectStateSummary";
+import {
+  countProjectSessionFilters,
+  filterProjectSessions,
+  type ProjectSessionStatusFilter,
+} from "../../lib/project/projectSessionFilter";
 import { useProjectSynthesis } from "./useProjectSynthesis";
 import { spanLabel } from "../../lib/session/workContext";
 
@@ -161,6 +167,18 @@ export function ProjectView() {
   const projectState = useMemo(
     () => buildProjectStateSummary({ rows: sessionRows }),
     [sessionRows],
+  );
+
+  // Status-first session filter (작업 상황실): focus the list on what needs
+  // review or what is recent, honestly derived from saved sessions only.
+  const [sessionFilter, setSessionFilter] = useState<ProjectSessionStatusFilter>("all");
+  const filterCounts = useMemo(
+    () => countProjectSessionFilters(sessionRows),
+    [sessionRows],
+  );
+  const filteredSessionRows = useMemo(
+    () => filterProjectSessions(sessionRows, { filter: sessionFilter }),
+    [sessionRows, sessionFilter],
   );
 
   // Display name + description honour a user override; whether the project is
@@ -299,7 +317,21 @@ export function ProjectView() {
           className="project-sessions"
           title="세션"
           actions={
-            <span className="project-section-count">{sessionRows.length}건</span>
+            sessionRows.length === 0 ? (
+              <span className="project-section-count">{sessionRows.length}건</span>
+            ) : (
+              <SegmentedControl
+                options={[
+                  { id: "all", label: `전체 ${filterCounts.all}` },
+                  { id: "needsReview", label: `확인 필요 ${filterCounts.needsReview}` },
+                  { id: "recent", label: `최근 ${filterCounts.recent}` },
+                ]}
+                value={sessionFilter}
+                onChange={setSessionFilter}
+                ariaLabel="세션 필터"
+                role="radiogroup"
+              />
+            )
           }
           ariaLabel="프로젝트 세션"
         >
@@ -313,9 +345,23 @@ export function ProjectView() {
                 <Button onClick={() => setCurrentView("connections")}>연동 열기</Button>
               }
             />
+          ) : filteredSessionRows.length === 0 ? (
+            <EmptyState
+              compact
+              icon={Layers}
+              title={
+                sessionFilter === "needsReview"
+                  ? "확인이 필요한 세션이 없습니다"
+                  : "최근 활동한 세션이 없습니다"
+              }
+              description="다른 필터를 선택하면 이 프로젝트의 세션을 볼 수 있습니다."
+              actions={
+                <Button onClick={() => setSessionFilter("all")}>전체 보기</Button>
+              }
+            />
           ) : (
             <ul className="project-session-list base-scroll">
-              {sessionRows.map((row) => (
+              {filteredSessionRows.map((row) => (
                 <ProjectSessionRowItem
                   key={row.sessionId}
                   row={row}
