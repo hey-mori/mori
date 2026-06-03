@@ -147,6 +147,12 @@ export function MoriCommandSpaceHome() {
   const rows = results.rows;
   const open = focused && rows.length > 0;
   const safeIndex = Math.min(activeIndex, Math.max(0, rows.length - 1));
+  // In 찾기, a query that hits nothing leaves only the full-search action. Say so
+  // plainly instead of showing a lone action that reads like the search broke.
+  const noMatches =
+    activeModeId === "find" &&
+    results.hasQuery &&
+    !rows.some((row) => row.kind !== "action");
 
   // Re-home the highlight on the top row whenever the result set changes shape.
   useEffect(() => {
@@ -294,6 +300,11 @@ export function MoriCommandSpaceHome() {
 
               {open ? (
                 <div className="mcs-results" id="mcs-results" role="listbox">
+                  {noMatches ? (
+                    <p className="mcs-result-empty">
+                      일치하는 세션·프로젝트가 없어요
+                    </p>
+                  ) : null}
                   {renderRows(rows, {
                     activeMode,
                     safeIndex,

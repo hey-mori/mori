@@ -934,6 +934,14 @@
   }
 }
 
+/* Honest empty state: the search ran and matched nothing, said plainly. */
+.mcs-result-empty {
+  margin: 0;
+  padding: 10px 12px 6px;
+  font-size: 13px;
+  color: var(--base-text-muted);
+}
+
 .mcs-result-head {
   margin: 0;
   padding: 10px 12px 4px;
