@@ -45,7 +45,9 @@ import {
 } from "../../lib/sources/sourceProviderGroups";
 import type { AgentWorkAgentId } from "../../lib/agents/agentRegistry";
 import type { StoredSessionImport } from "../../lib/storage/storageTypes";
+import { getConnectorSetupGuide, type CaptureSurfaceId } from "../../lib/connectors";
 import { ConnectorInstallModal } from "./ConnectorInstallModal";
+import { ConnectorSetupGuidePanel } from "./ConnectorSetupGuide";
 
 /**
  * 소스 — the connect-your-work overview.
@@ -422,6 +424,11 @@ function SourceInspector({
   const source = method.source;
   const Icon = providerIcon(provider);
   const detail = recordsSelected ? recordsDetail(provider.name) : null;
+  // docs-template methods (Code 훅 / CLI 래퍼 / OpenCode / 터미널 브릿지 / MCP)
+  // carry copyable in-app setup steps. The 기록에서 불러오기 way-in needs none.
+  const setupGuide = recordsSelected
+    ? null
+    : getConnectorSetupGuide(source.id as CaptureSurfaceId);
   // An AI-category provider that attaches as evidence (ChatGPT, future pasted
   // transcripts) is not an agent; label it as a pasted conversation, not "AI 에이전트".
   const subtitle =
@@ -487,6 +494,12 @@ function SourceInspector({
       <InspectorBlock title="지원 형식" icon={FileText}>
         <ChipList items={detail ? detail.formats : source.acceptedFormats} />
       </InspectorBlock>
+
+      {setupGuide ? (
+        <InspectorBlock title="연결하기" icon={Plug}>
+          <ConnectorSetupGuidePanel guide={setupGuide} />
+        </InspectorBlock>
+      ) : null}
 
       <div className="sources-inspector-actions">
         <p className="sources-inspector-note">{detail ? detail.note : source.reviewBehavior}</p>
