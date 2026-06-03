@@ -1,0 +1,82 @@
+/* ── ChartTooltip — rich data tooltip for dashboard charts ──────────────── */
+/* Portaled to <body>, fixed-positioned from JS (inline top/left), so it floats
+   above everything and is never clipped. Placement classes only set the
+   transform that anchors it above or below the cursor. Mirrors the InfoHint
+   bubble's surface so the two read as one tooltip family. */
+.chart-tooltip {
+  position: fixed;
+  z-index: 2000;
+  display: grid;
+  gap: 3px;
+  width: max-content;
+  max-width: 220px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #23232e;
+  color: #f3f3f6;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(20, 20, 35, 0.26);
+  pointer-events: none;
+  animation: info-hint-in 0.12s ease both;
+}
+
+.chart-tooltip.is-top {
+  transform: translate(-50%, -100%);
+}
+
+.chart-tooltip.is-bottom {
+  transform: translate(-50%, 0);
+}
+
+.chart-tooltip-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(243, 243, 246, 0.72);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chart-tooltip-label::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.chart-tooltip.tone-accent .chart-tooltip-label::before {
+  background: var(--base-accent);
+}
+
+.chart-tooltip.tone-warning .chart-tooltip-label::before {
+  background: var(--base-status-warning);
+}
+
+.chart-tooltip.tone-info .chart-tooltip-label::before {
+  background: var(--base-status-info);
+}
+
+.chart-tooltip.tone-success .chart-tooltip-label::before {
+  background: var(--base-status-success);
+}
+
+.chart-tooltip-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.chart-tooltip-value strong {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tooltip-value em {
+  color: rgba(243, 243, 246, 0.6);
+  font-size: 11px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}

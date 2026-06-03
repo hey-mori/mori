@@ -679,10 +679,11 @@
 
 .dashboard-kpi-foot {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--base-space-2);
   min-height: 18px;
+  margin-top: auto;
 }
 
 .dashboard-kpi-delta {
@@ -816,8 +817,7 @@
   cursor: default;
 }
 
-.dashboard-bar:hover:not(.is-static),
-.dashboard-bar.is-hover {
+.dashboard-bar:hover:not(.is-static) {
   background: var(--base-surface-subtle);
 }
 
@@ -834,24 +834,12 @@
   outline-offset: 1px;
 }
 
-.dashboard-bar.is-focus .dashboard-bar-track i,
-.dashboard-bar.is-hover .dashboard-bar-track i {
+.dashboard-bar.is-focus .dashboard-bar-track i {
   background: var(--base-accent-strong);
 }
 
-/* ── Project matrix: linked emphasis ──────────────────────────────────────── */
-
 .dashboard-matrix-row {
-  transition: background 0.12s ease, opacity 0.12s ease;
-}
-
-.dashboard-matrix-row.is-focus,
-.dashboard-matrix-row.is-focus:hover:not(.is-static) {
-  background: var(--base-accent-soft);
-}
-
-.dashboard-matrix-row.is-dim {
-  opacity: 0.45;
+  transition: background 0.12s ease;
 }
 
 /* ─── Workbench ─────────────────────────────────────────────────────────── */
@@ -2858,5 +2846,235 @@
 
   .workbench-panel {
     min-height: 280px;
+  }
+}
+
+/* ─── Dashboard insight cards (기억 상태 · 작업 흐름) ──────────────────────────
+ * Two real-data panels that complement the analytics charts: the lifecycle
+ * distribution of remembered work, and Mori's capture→memory pipeline totals.
+ * They reuse the `.dashboard-chart-card` chrome, so only the inner viz needs
+ * styling here. Colours follow the contract: brand purple = identity, status =
+ * semantic, neutral = grey. */
+.dashboard-insights {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+  gap: var(--base-space-3);
+  align-items: stretch;
+}
+
+.dashboard-insight {
+  --dash-imported: var(--base-accent);
+  --dash-review: var(--base-status-warning);
+  --dash-saved: var(--base-status-success);
+  --dash-resumable: var(--base-text-muted-2);
+}
+
+/* 기억 상태 — proportional dot field + legend */
+.dash-memory {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--base-space-3);
+  min-height: 0;
+}
+
+.dash-memory-field {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 72px;
+  overflow: hidden;
+  padding: var(--base-space-3);
+  border-radius: var(--base-radius-md);
+  background:
+    radial-gradient(
+      130% 130% at 0% 0%,
+      color-mix(in srgb, var(--base-accent) 7%, transparent),
+      transparent 55%
+    ),
+    var(--base-surface-subtle);
+}
+
+.dash-memory-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--dot, var(--base-text-muted-2));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--dot) 40%, transparent),
+    0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.dash-memory-dot.is-imported { --dot: var(--dash-imported); }
+.dash-memory-dot.is-review { --dot: var(--dash-review); }
+.dash-memory-dot.is-saved { --dot: var(--dash-saved); }
+.dash-memory-dot.is-resumable { --dot: var(--dash-resumable); }
+
+.dash-memory-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px var(--base-space-4);
+  margin: 0;
+}
+
+.dash-memory-legend-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--base-space-3);
+  min-width: 0;
+}
+
+.dash-memory-legend-item[data-zero="true"] {
+  opacity: 0.5;
+}
+
+.dash-memory-legend-item dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--base-font-size-xs);
+  color: var(--base-text-muted);
+  white-space: nowrap;
+}
+
+.dash-memory-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--swatch, var(--base-text-muted-2));
+}
+
+.dash-memory-legend-item.is-imported .dash-memory-swatch { --swatch: var(--dash-imported); }
+.dash-memory-legend-item.is-review .dash-memory-swatch { --swatch: var(--dash-review); }
+.dash-memory-legend-item.is-saved .dash-memory-swatch { --swatch: var(--dash-saved); }
+.dash-memory-legend-item.is-resumable .dash-memory-swatch { --swatch: var(--dash-resumable); }
+
+.dash-memory-legend-item dd {
+  margin: 0;
+  font-size: var(--base-font-size-md);
+  font-weight: 700;
+  color: var(--base-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-memory-note {
+  margin: 0;
+  font-size: var(--base-font-size-2xs);
+  color: var(--base-text-muted-2);
+}
+
+/* 작업 흐름 — real aggregate counts per pipeline stage */
+.dash-flow-caption {
+  font-size: var(--base-font-size-2xs);
+  color: var(--base-text-muted);
+  white-space: nowrap;
+}
+
+.dash-flow-track {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dash-flow-step {
+  flex: 1 1 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: var(--base-space-3) 6px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-md);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--base-accent) 5%, transparent),
+      transparent 70%
+    ),
+    var(--base-surface);
+  text-align: center;
+}
+
+.dash-flow-step[data-empty="true"] {
+  background: var(--base-surface-subtle);
+  opacity: 0.6;
+}
+
+.dash-flow-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--base-accent);
+  background: color-mix(in srgb, var(--base-accent) 12%, var(--base-surface));
+}
+
+.dash-flow-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.dash-flow-figure strong {
+  font-size: var(--base-font-size-md);
+  font-weight: 800;
+  color: var(--base-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.dash-flow-figure small {
+  font-size: var(--base-font-size-2xs);
+  color: var(--base-text-muted-2);
+}
+
+.dash-flow-label {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--base-font-size-xs);
+  font-weight: 600;
+  color: var(--base-text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-flow-arrow {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--base-text-muted-2);
+}
+
+@container dashboard (max-width: 1180px) {
+  .dashboard-insights {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  }
+}
+
+@container dashboard (max-width: 860px) {
+  .dashboard-insights {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container dashboard (max-width: 560px) {
+  .dash-flow-track {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .dash-flow-step {
+    flex: 0 0 32%;
   }
 }
