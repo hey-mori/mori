@@ -240,17 +240,24 @@ Acceptance:
 
 ## Phase 5. Agent import quality
 
-**Status:** planned.
+**Status:** in progress.
 
 Goal: improve the quality of session-discovery imports from anchor agents.
 
 Targets:
 
-- richer OpenCode transcript assembly while still avoiding `opencode.db`;
+- **In progress:** richer OpenCode transcript assembly while still avoiding
+  `opencode.db`;
 - Antigravity partial-format resilience;
 - Cline task metadata;
 - Cursor title / timestamp fallbacks;
 - Continue session detail fidelity.
+
+Shipped detail:
+
+- OpenCode session reads now prefer the canonical `part/<messageID>/` text
+  tree, but fall back to inline `content`, `text`, or `parts[]` on the message
+  JSON when part files are absent. Tool / non-text parts remain excluded.
 
 Acceptance:
 

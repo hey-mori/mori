@@ -311,7 +311,10 @@ fn read_session_messages(storage_root: &Path, session_id: &str) -> Vec<OpenCodeM
             .and_then(|time| time.get("created"))
             .and_then(Value::as_i64)
             .unwrap_or(0);
-        let content = read_message_text(storage_root, &message_id);
+        let mut content = read_message_text(storage_root, &message_id);
+        if content.trim().is_empty() {
+            content = read_inline_message_text(&value);
+        }
         if content.trim().is_empty() {
             continue;
         }
@@ -329,6 +332,41 @@ fn read_session_messages(storage_root: &Path, session_id: &str) -> Vec<OpenCodeM
 
     rows.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.id.cmp(&b.1.id)));
     rows.into_iter().map(|(_, message)| message).collect()
+}
+
+/// Some OpenCode versions / export shapes put text directly on the message
+/// JSON instead of in `part/<messageID>/`. Treat this as a fallback only, so
+/// the richer part tree remains canonical when it exists.
+fn read_inline_message_text(value: &Value) -> String {
+    if let Some(text) = value
+        .get("content")
+        .and_then(Value::as_str)
+        .or_else(|| value.get("text").and_then(Value::as_str))
+        .filter(|text| !text.trim().is_empty())
+    {
+        return text.to_string();
+    }
+
+    let Some(parts) = value.get("parts").and_then(Value::as_array) else {
+        return String::new();
+    };
+    parts
+        .iter()
+        .filter(|part| {
+            part.get("type")
+                .and_then(Value::as_str)
+                .map(|kind| kind == "text")
+                .unwrap_or(true)
+        })
+        .filter_map(|part| {
+            part.get("text")
+                .and_then(Value::as_str)
+                .or_else(|| part.get("content").and_then(Value::as_str))
+        })
+        .filter(|text| !text.trim().is_empty())
+        .map(str::to_string)
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Join the `type: "text"` parts of a message in id order. Tool / reasoning /
@@ -483,6 +521,10 @@ mod tests {
             &storage.join("message").join("ses_a").join("msg_2.json"),
             "{\"id\":\"msg_2\",\"sessionID\":\"ses_a\",\"role\":\"assistant\",\"time\":{\"created\":1771000001000}}",
         );
+        write(
+            &storage.join("message").join("ses_a").join("msg_3.json"),
+            "{\"id\":\"msg_3\",\"sessionID\":\"ses_a\",\"role\":\"user\",\"time\":{\"created\":1771000002000},\"parts\":[{\"type\":\"text\",\"text\":\"Inline follow-up\"},{\"type\":\"tool\",\"text\":\"ignored\"}]}",
+        );
         // parts: one text part per message, plus a tool part that must be ignored
         write(
             &storage.join("part").join("msg_1").join("prt_1.json"),
@@ -508,7 +550,7 @@ mod tests {
         assert_eq!(sessions.len(), 1);
         let session = &sessions[0];
         assert_eq!(session.session_id, "ses_a");
-        assert_eq!(session.message_count, 2);
+        assert_eq!(session.message_count, 3);
         assert_eq!(session.project_name, "demo");
         assert!(session.title.contains("Add retry"));
     }
@@ -521,12 +563,36 @@ mod tests {
 
         let session_file = storage.join("session").join("global").join("ses_a.json");
         let detail = read_session_at(&storage, session_file.to_string_lossy().as_ref()).unwrap();
-        assert_eq!(detail.messages.len(), 2);
+        assert_eq!(detail.messages.len(), 3);
         assert_eq!(detail.messages[0].role, "human");
         assert_eq!(detail.messages[0].content, "Add a retry");
         assert_eq!(detail.messages[1].role, "assistant");
         // The tool part is excluded; only the text part survives.
         assert_eq!(detail.messages[1].content, "Done");
+        assert_eq!(detail.messages[2].role, "human");
+        assert_eq!(detail.messages[2].content, "Inline follow-up");
+    }
+
+    #[test]
+    fn falls_back_to_inline_content_when_part_files_are_missing() {
+        let temp = TempDir::new().unwrap();
+        let storage = temp.path().join("storage");
+        write(
+            &storage.join("session").join("global").join("ses_inline.json"),
+            "{\"id\":\"ses_inline\",\"directory\":\"/tmp/demo\",\"time\":{\"created\":1771000000000,\"updated\":1771000005000}}",
+        );
+        write(
+            &storage.join("message").join("ses_inline").join("msg_inline.json"),
+            "{\"id\":\"msg_inline\",\"sessionID\":\"ses_inline\",\"role\":\"assistant\",\"time\":{\"created\":1771000001000},\"content\":\"Inline assistant text\"}",
+        );
+
+        let session_file = storage
+            .join("session")
+            .join("global")
+            .join("ses_inline.json");
+        let detail = read_session_at(&storage, session_file.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(detail.messages.len(), 1);
+        assert_eq!(detail.messages[0].content, "Inline assistant text");
     }
 
     #[test]
