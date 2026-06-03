@@ -76,8 +76,8 @@
 
 .dashboard-kpi {
   position: relative;
-  display: grid;
-  align-content: center;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
   min-height: 80px;
   padding: var(--base-space-3) var(--base-space-4);
@@ -98,11 +98,6 @@
 
 .dashboard-kpi.tone-warning .dashboard-kpi-icon {
   color: var(--base-status-warning);
-  opacity: 0.85;
-}
-
-.dashboard-kpi.tone-success .dashboard-kpi-icon {
-  color: var(--base-status-success);
   opacity: 0.85;
 }
 
@@ -740,30 +735,6 @@
   fill: currentColor;
 }
 
-.dashboard-kpi.is-interactive {
-  appearance: none;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease,
-    background 0.12s ease;
-}
-
-.dashboard-kpi.is-interactive:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--base-shadow-card);
-}
-
-.dashboard-kpi.is-interactive:focus-visible {
-  outline: 2px solid var(--base-border-focus);
-  outline-offset: 2px;
-}
-
-.dashboard-kpi.is-active {
-  border-color: var(--base-accent);
-  background: var(--base-accent-soft);
-}
-
 /* ── Toolbar filter chips ─────────────────────────────────────────────────── */
 
 .dashboard-chips {
@@ -1129,11 +1100,23 @@
   background: var(--base-accent-soft);
 }
 
-.workbench-surface {
+/* Fill the page content area (like the project / workspace pages) so the board
+   uses the full height instead of a fragile fixed calc that leaves a gap. The
+   board is a full-bleed grid, so trim the heavy top/bottom page padding. */
+.workbench-page .page-shell-content {
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  padding-top: var(--base-space-4);
+  padding-bottom: var(--base-space-4);
+}
+
+.workbench-surface {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: var(--base-space-2);
-  height: calc(100vh - 132px);
   min-width: 0;
   min-height: 0;
 }
@@ -2702,7 +2685,6 @@
   .dashboard-donut-svg,
   .dashboard-donut-arc,
   .dashboard-donut-legend-btn,
-  .dashboard-kpi.is-interactive,
   .dashboard-chip,
   .dashboard-matrix-row {
     animation: none;
