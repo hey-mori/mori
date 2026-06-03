@@ -249,7 +249,7 @@ Targets:
 - **In progress:** richer OpenCode transcript assembly while still avoiding
   `opencode.db`;
 - **In progress:** Antigravity partial-format resilience;
-- Cline task metadata;
+- **In progress:** Cline task metadata;
 - **In progress:** Cursor title / timestamp / bubble-text fallbacks;
 - **In progress:** Continue session detail fidelity.
 
@@ -267,6 +267,8 @@ Shipped detail:
 - Antigravity transcript reads now tolerate source casing changes, numeric
   timestamps, and text in `content`, `text`, or text-only arrays / objects while
   keeping non-text tool payloads out of the rendered transcript.
+- Cline task reads now accept numeric or string `ts` values in
+  `ui_messages.json`, preserving message timestamps across small format shifts.
 
 Acceptance:
 

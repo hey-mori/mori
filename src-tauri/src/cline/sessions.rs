@@ -180,7 +180,7 @@ fn parse_task(dir: &Path, include_all_messages: bool) -> Result<ClineSessionDeta
     let mut messages = Vec::new();
 
     for (index, entry) in entries.iter().enumerate() {
-        if let Some(ts) = entry.get("ts").and_then(Value::as_i64) {
+        if let Some(ts) = parse_millis(entry.get("ts")) {
             if first_ts.is_none() {
                 first_ts = Some(ts);
             }
@@ -197,7 +197,7 @@ fn parse_task(dir: &Path, include_all_messages: bool) -> Result<ClineSessionDeta
         }
         let created_at = entry
             .get("ts")
-            .and_then(Value::as_i64)
+            .and_then(|value| parse_millis(Some(value)))
             .map(format_millis_iso)
             .unwrap_or_default();
         let message = ClineMessage {
@@ -330,6 +330,14 @@ fn task_id_to_iso(session_id: &str) -> Option<String> {
     session_id.parse::<i64>().ok().map(format_millis_iso)
 }
 
+fn parse_millis(value: Option<&Value>) -> Option<i64> {
+    match value {
+        Some(Value::Number(number)) => number.as_i64(),
+        Some(Value::String(text)) => text.trim().parse::<i64>().ok(),
+        _ => None,
+    }
+}
+
 fn basename(path: &str) -> String {
     let normalized = path.replace('\\', "/");
     normalized
@@ -375,7 +383,7 @@ mod tests {
         write(
             &dir.join("ui_messages.json"),
             r#"[
-              {"ts":1777520955181,"type":"say","say":"task","text":"Add a retry to the upload client"},
+              {"ts":"1777520955181","type":"say","say":"task","text":"Add a retry to the upload client"},
               {"ts":1777520955200,"type":"say","say":"api_req_started","text":"{\"request\":\"noise\"}"},
               {"ts":1777520960000,"type":"say","say":"text","text":"Wrapped it in exponential backoff"},
               {"ts":1777520965000,"type":"ask","ask":"plan_mode_respond","text":"{\"response\":\"Shall I add tests?\"}"}
@@ -415,6 +423,7 @@ mod tests {
         assert_eq!(detail.messages.len(), 3);
         assert_eq!(detail.messages[0].role, "human");
         assert_eq!(detail.messages[0].content, "Add a retry to the upload client");
+        assert_eq!(detail.messages[0].created_at, "2026-04-30T03:49:15");
         assert_eq!(detail.messages[1].role, "assistant");
         assert_eq!(detail.messages[1].content, "Wrapped it in exponential backoff");
         // The plan-mode ask payload is decoded to its response text.
