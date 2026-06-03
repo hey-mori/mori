@@ -163,16 +163,29 @@ Acceptance:
 
 ## Phase 3. Desktop connector inbox polish
 
-**Status:** planned.
+**Status:** in progress.
 
 Goal: make imported connector files feel first-class without adding a watcher.
 
 Slices:
 
-1. Show recent inbox files per connector family in the 연동 inspector.
+1. **Shipped:** show recent inbox files per connector family in the 연동
+   inspector.
 2. Add "last imported" and "new events" hints from the connector identity
    history.
-3. Add a manual Refresh button scoped to the selected provider.
+3. **Shipped:** add a manual Refresh button scoped to the selected provider.
+
+Shipped detail:
+
+- `~/.mori/connectors/local-capture/` is now a first-class inbox family, matching
+  the Mori CLI and local-capture bridge output path.
+- The 연동 inspector shows a compact "최근 수신" block for providers that emit
+  Connector JSONL: Claude, Codex, OpenCode, terminal/local-capture, Git,
+  note/local-capture, IDE/local-capture, MCP, and the universal Connector JSONL
+  provider.
+- The block reads metadata only, after an explicit Refresh click, and routes the
+  user to the existing Connector JSONL import/review flow instead of reading or
+  importing files directly.
 
 Hard boundary:
 
@@ -261,5 +274,6 @@ These stay out unless the product direction is explicitly reprioritized:
 
 The next smallest valuable action is:
 
-**Connector inbox polish.** Move to Phase 3: show recent connector inbox files
-and duplicate/new-event hints per provider without adding a watcher.
+**Connector import freshness.** Finish Phase 3 by deriving "last imported" and
+"new events" hints from connector identity / import history, still without a
+watcher or automatic import.

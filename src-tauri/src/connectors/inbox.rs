@@ -10,14 +10,15 @@ use serde::{Deserialize, Serialize};
 /// the user from accidentally pointing Mori at a giant log.
 pub const MAX_FILE_BYTES: u64 = 8 * 1024 * 1024;
 
-/// Known connector subfolders. The Rust side does not invent new ones; if a
-/// user creates `~/.mori/connectors/foo/` that directory is still listed
-/// under the `other` family so the UI can surface it without misclassifying
-/// it as Claude / Codex / etc.
+/// Known connector subfolders. The Rust side does not invent new ones; loose
+/// JSONL files at `~/.mori/connectors/` are listed under `other`, while
+/// unknown subdirectories are left alone so Mori never recurses into arbitrary
+/// user-named trees.
 const KNOWN_FAMILIES: &[&str] = &[
     "claude-code",
     "codex-cli",
     "opencode-cli",
+    "local-capture",
     "mcp",
     "terminal",
     "git",
@@ -42,7 +43,7 @@ pub struct ConnectorInboxListing {
 pub struct ConnectorInboxFile {
     pub path: String,
     pub display_name: String,
-    /// One of `claude-code`, `codex-cli`, `terminal`, `git`, `other`.
+    /// One of the known connector families, or `other` for loose files.
     pub connector_family: String,
     pub size_bytes: u64,
     pub modified_at: String,
@@ -361,13 +362,14 @@ mod tests {
         write_file(&inbox.join("claude-code"), "2026-05-14.jsonl", "{}\n");
         write_file(&inbox.join("codex-cli"), "session-001.ndjson", "{}\n");
         write_file(&inbox.join("opencode-cli"), "session-002.jsonl", "{}\n");
+        write_file(&inbox.join("local-capture"), "session-003.jsonl", "{}\n");
         write_file(&inbox.join("terminal"), "events.log", "{}\n");
         // Should be skipped — wrong extension under a known family.
         write_file(&inbox.join("claude-code"), "notes.md", "irrelevant");
 
         let listing = list_inbox_at(&inbox).unwrap();
         assert!(listing.root_exists);
-        assert_eq!(listing.files.len(), 4);
+        assert_eq!(listing.files.len(), 5);
         let families: Vec<&str> = listing
             .files
             .iter()
@@ -376,6 +378,7 @@ mod tests {
         assert!(families.contains(&"claude-code"));
         assert!(families.contains(&"codex-cli"));
         assert!(families.contains(&"opencode-cli"));
+        assert!(families.contains(&"local-capture"));
         assert!(families.contains(&"terminal"));
     }
 

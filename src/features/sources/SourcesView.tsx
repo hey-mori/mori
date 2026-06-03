@@ -15,6 +15,7 @@ import {
   MousePointer2,
   Package,
   Plug,
+  RefreshCw,
   Rocket,
   Sparkles,
   Terminal,
@@ -30,7 +31,14 @@ import { Button } from "../../components/ui/Button";
 import { ToolbarSearch } from "../../components/ui/ToolbarSearch";
 import { useSessionStore } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { isTauriRuntime } from "../../lib/desktop";
+import {
+  formatConnectorFamily,
+  formatInboxFileSize,
+  formatInboxModifiedAt,
+  isTauriRuntime,
+  listConnectorJsonlInbox,
+  type ConnectorInboxListing,
+} from "../../lib/desktop";
 import { formatDateTime } from "../../lib/formatting/time";
 import {
   buildSourceWorkspace,
@@ -53,6 +61,11 @@ import {
   type ConnectorStatusViewModel,
 } from "../../lib/connectors/installers";
 import { findConnectStatusForProvider } from "../../lib/sources/sourceConnectStatus";
+import {
+  buildSourceInboxHint,
+  getInboxFamiliesForProvider,
+  type SourceInboxHint,
+} from "../../lib/sources/sourceInboxHints";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { ConnectorInstallModal } from "./ConnectorInstallModal";
 import { ConnectorSetupGuidePanel } from "./ConnectorSetupGuide";
@@ -167,6 +180,12 @@ export function SourcesView() {
     "";
   const [connectOpen, setConnectOpen] = useState(false);
   const [connectModels, setConnectModels] = useState<ConnectorStatusViewModel[] | null>(null);
+  const [connectorInbox, setConnectorInbox] = useState<ConnectorInboxListing | null>(null);
+  const [connectorInboxBusy, setConnectorInboxBusy] = useState(false);
+  const [connectorInboxStatus, setConnectorInboxStatus] = useState<{
+    tone: "info" | "error";
+    message: string;
+  } | null>(null);
   const [selectedId, setSelectedId] = useState(defaultSelectedId);
   // Anchor agents open on their canonical way-in (기록에서 불러오기); every other
   // provider, and ChatGPT, opens on its first import method.
@@ -184,6 +203,35 @@ export function SourcesView() {
   useEffect(() => {
     reloadConnectStatus();
   }, [reloadConnectStatus]);
+
+  const refreshConnectorInbox = useCallback(async () => {
+    if (!desktop) {
+      setConnectorInboxStatus({
+        tone: "info",
+        message: "Connector inbox는 Mori 데스크톱 앱에서만 파일 목록을 읽습니다.",
+      });
+      return;
+    }
+    setConnectorInboxBusy(true);
+    setConnectorInboxStatus({ tone: "info", message: "Inbox 새로고침 중..." });
+    try {
+      const listing = await listConnectorJsonlInbox();
+      setConnectorInbox(listing);
+      setConnectorInboxStatus({
+        tone: "info",
+        message: listing.rootExists
+          ? `${listing.files.length}개 파일을 찾았습니다.`
+          : "아직 ~/.mori/connectors/ 폴더가 없습니다.",
+      });
+    } catch (caught) {
+      setConnectorInboxStatus({
+        tone: "error",
+        message: caught instanceof Error ? caught.message : String(caught),
+      });
+    } finally {
+      setConnectorInboxBusy(false);
+    }
+  }, [desktop]);
 
   const needle = query.trim().toLowerCase();
   const filtered = useMemo(
@@ -209,6 +257,16 @@ export function SourcesView() {
 
   const providerIsAnchor = ANCHOR_AGENT_IDS.has(selectedProvider?.id ?? "");
   const recordsSelected = recordsMode && providerIsAnchor;
+  const selectedInboxFamilies = selectedProvider
+    ? getInboxFamiliesForProvider(selectedProvider.id)
+    : [];
+  const selectedInboxHint = useMemo(
+    () =>
+      selectedProvider && connectorInbox
+        ? buildSourceInboxHint(selectedProvider.id, connectorInbox)
+        : null,
+    [connectorInbox, selectedProvider],
+  );
 
   // Selecting a provider tile resets to its canonical way-in: records for an
   // anchor agent, the first import method otherwise.
@@ -263,7 +321,14 @@ export function SourcesView() {
                 ? findConnectStatusForProvider(selectedProvider.id, connectModels)
                 : null
             }
+            inboxAvailable={desktop}
+            inboxFamilies={selectedInboxFamilies}
+            inboxHint={selectedInboxHint}
+            inboxBusy={connectorInboxBusy}
+            inboxStatus={connectorInboxStatus}
             onReloadConnectStatus={reloadConnectStatus}
+            onRefreshInbox={() => void refreshConnectorInbox()}
+            onOpenConnectorImport={() => requestEvidenceImport("connector")}
             onSelectMethod={(id) => {
               setSelectedId(id);
               setRecordsMode(false);
@@ -439,7 +504,14 @@ function SourceInspector({
   method,
   recordsSelected,
   connectStatus,
+  inboxAvailable,
+  inboxFamilies,
+  inboxHint,
+  inboxBusy,
+  inboxStatus,
   onReloadConnectStatus,
+  onRefreshInbox,
+  onOpenConnectorImport,
   onSelectMethod,
   onSelectRecords,
   onAction,
@@ -450,8 +522,15 @@ function SourceInspector({
   recordsSelected: boolean;
   /** Live connection status for an anchor agent, or null when none applies. */
   connectStatus: ConnectorStatusViewModel | null;
+  inboxAvailable: boolean;
+  inboxFamilies: string[];
+  inboxHint: SourceInboxHint | null;
+  inboxBusy: boolean;
+  inboxStatus: { tone: "info" | "error"; message: string } | null;
   /** Re-detect connection status after an inline connect / disconnect. */
   onReloadConnectStatus: () => void;
+  onRefreshInbox: () => void;
+  onOpenConnectorImport: () => void;
   onSelectMethod: (id: string) => void;
   /** Select the 기록에서 불러오기 way-in (anchor agents only). */
   onSelectRecords?: () => void;
@@ -487,6 +566,18 @@ function SourceInspector({
 
       {connectStatus ? (
         <ConnectStatusBlock status={connectStatus} onReload={onReloadConnectStatus} />
+      ) : null}
+
+      {inboxFamilies.length > 0 ? (
+        <ConnectorInboxHintBlock
+          available={inboxAvailable}
+          families={inboxFamilies}
+          hint={inboxHint}
+          busy={inboxBusy}
+          status={inboxStatus}
+          onRefresh={onRefreshInbox}
+          onOpenImport={onOpenConnectorImport}
+        />
       ) : null}
 
       <InspectorBlock title="연동 방법" icon={Plug}>
@@ -624,6 +715,96 @@ function ConnectStatusBlock({
         </Button>
       ) : null}
       {error ? <p className="sources-connect-error">{error}</p> : null}
+    </InspectorBlock>
+  );
+}
+
+function ConnectorInboxHintBlock({
+  available,
+  families,
+  hint,
+  busy,
+  status,
+  onRefresh,
+  onOpenImport,
+}: {
+  available: boolean;
+  families: string[];
+  hint: SourceInboxHint | null;
+  busy: boolean;
+  status: { tone: "info" | "error"; message: string } | null;
+  onRefresh: () => void;
+  onOpenImport: () => void;
+}) {
+  const familyLabel = families.map(formatConnectorFamily).join(" · ");
+  const hasFiles = Boolean(hint?.files.length);
+  const hiddenCount = hint ? Math.max(0, hint.fileCount - hint.files.length) : 0;
+
+  return (
+    <InspectorBlock title="최근 수신" icon={Package}>
+      <div className="sources-inbox-head">
+        <span>{familyLabel}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={RefreshCw}
+          disabled={busy}
+          onClick={onRefresh}
+          title="Inbox 새로고침"
+        />
+      </div>
+
+      {!available ? (
+        <p className="sources-inbox-empty">
+          데스크톱 앱에서만 <code>~/.mori/connectors/</code> 파일 목록을 읽습니다.
+        </p>
+      ) : hint ? (
+        hint.rootExists ? (
+          hasFiles ? (
+            <>
+              <ul className="sources-inbox-list">
+                {hint.files.map((file) => (
+                  <li key={file.path}>
+                    <div className="sources-inbox-file-main">
+                      <Badge tone="purple">{formatConnectorFamily(file.connectorFamily)}</Badge>
+                      <strong title={file.path}>{file.displayName}</strong>
+                    </div>
+                    <div className="sources-inbox-file-meta">
+                      <span>{formatInboxFileSize(file.sizeBytes)}</span>
+                      <span>{formatInboxModifiedAt(file.modifiedAt)}</span>
+                      <small>{file.relativePath}</small>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {hiddenCount > 0 ? (
+                <p className="sources-inbox-empty">그 외 {hiddenCount}개 파일이 더 있습니다.</p>
+              ) : null}
+              <Button variant="secondary" size="sm" icon={Upload} onClick={onOpenImport}>
+                Connector JSONL 가져오기
+              </Button>
+            </>
+          ) : (
+            <p className="sources-inbox-empty">
+              해당 연동의 JSONL 파일은 아직 없습니다. 셋업 후 새로고침하세요.
+            </p>
+          )
+        ) : (
+          <p className="sources-inbox-empty">
+            Mori는 <code>{hint.rootPath}</code> 아래의 JSONL만 읽습니다. 셋업이 완료되면 이
+            폴더가 생성됩니다.
+          </p>
+        )
+      ) : (
+        <p className="sources-inbox-empty">
+          새로고침을 누르면 최근 파일 메타데이터만 확인합니다. 파일 내용은 가져오기 단계에서
+          읽습니다.
+        </p>
+      )}
+
+      {status ? (
+        <p className={`sources-inbox-status tone-${status.tone}`}>{status.message}</p>
+      ) : null}
     </InspectorBlock>
   );
 }

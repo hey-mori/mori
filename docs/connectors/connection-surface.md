@@ -32,7 +32,8 @@ so the overview never becomes a wall of rows.
 ```
 provider grid (left)                inspector (right, selected provider)
  ├─ 에이전트  Claude · Codex · …      ├─ 연동 상태   (live, anchor agents)
- ├─ 자료      Git · 터미널 · 메모 …    ├─ 연동 방법   (method picker)
+ ├─ 자료      Git · 터미널 · 메모 …    ├─ 최근 수신   (manual inbox refresh)
+                                      ├─ 연동 방법   (method picker)
  └─ 예정      Slack · Notion · …      ├─ 읽는 것 / 읽지 않는 것 / 지원 형식
                                       ├─ 연결하기   (setup guide, docs-template)
                                       └─ action     (import / records / connect)
@@ -81,6 +82,17 @@ installer engine the 연동 설정 modal uses, with a re-detect after each chang
 In browser mode the adapter reports an honest `desktopOnly` state rather than
 inventing a connected one. Evidence providers and any agent with no installer
 backing simply omit the block.
+
+**Recent connector inbox hints (최근 수신).** Providers that can emit Connector
+JSONL show a compact recent-file block in the inspector, backed by
+[`sourceInboxHints`](../../src/lib/sources/sourceInboxHints.ts) and the desktop
+`list_connector_jsonl_inbox` command. It is metadata-only and manual-refresh
+only: Mori lists `~/.mori/connectors/` after the user clicks Refresh, shows the
+latest provider-specific files, and routes the user to the existing Connector
+JSONL import/review flow. It does not watch the folder, read file contents from
+the inspector, or import anything directly. `local-capture` is a first-class
+inbox family because the Mori CLI, terminal helper, VS Code task template, and
+git/note capture commands write there.
 
 **Detection coverage.** `detect_connector_status`
 ([installer.rs](../../src-tauri/src/connectors/installer.rs)) covers all seven
@@ -134,10 +146,14 @@ starting a new one (project rule, [mori-project-goal.md](../mori-project-goal.md
    have shipped. `mori-local-capture.py` also has a generated-output smoke test
    against temp transcript / note / git inputs. `terminal-helper` is classified
    as a local-capture launcher, and POSIX Claude / Codex / OpenCode wrappers are
-   smoke-tested with stub inputs through the review-draft boundary.
-2. **CLI Wrapper (`mori`).** A small CLI that wraps `claude` / `codex`
-   invocations and writes canonical Connector JSONL, removing the need to
-   install template scripts by hand. Larger surface; new binary.
+   smoke-tested with stub inputs through the review-draft boundary. Recent
+   connector inbox hints are visible in the 연동 inspector with explicit
+   Refresh only.
+2. **CLI Wrapper (`mori`).** The first scaffold ships capture commands
+   (`note`, `transcript`, `git`, `commit`) plus run wrappers for Codex and
+   OpenCode, and the desktop setup guide can stage the CLI under `~/.mori`.
+   Remaining work is package-manager style install / PATH automation that still
+   avoids editing shell rc files silently.
 3. **IDE / Terminal Integration.** Explicit-emit connectors only: a VS Code /
    Cursor "send to Mori" action and a shell helper, each emitting the same
    Connector JSONL into the inbox. No watcher, no buffer poll, no shell-history

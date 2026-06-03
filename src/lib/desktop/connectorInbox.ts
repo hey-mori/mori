@@ -125,7 +125,8 @@ export function formatInboxModifiedAt(
 
 /**
  * Friendly label for a connector family id. The Rust side never invents new
- * families — it uses one of the five canonical names — but we centralise the
+ * families from file content, but it does classify the shipped connector
+ * folders. We centralise the
  * display copy here so feature surfaces don't redefine it.
  */
 export function formatConnectorFamily(family: string): string {
@@ -136,6 +137,8 @@ export function formatConnectorFamily(family: string): string {
       return "Codex CLI";
     case "opencode-cli":
       return "OpenCode CLI";
+    case "local-capture":
+      return "Local capture";
     case "terminal":
       return "Terminal";
     case "git":

@@ -118,6 +118,8 @@ describe("formatConnectorFamily", () => {
   it("maps the canonical family ids to display labels", () => {
     expect(formatConnectorFamily("claude-code")).toBe("Claude Code");
     expect(formatConnectorFamily("codex-cli")).toBe("Codex CLI");
+    expect(formatConnectorFamily("opencode-cli")).toBe("OpenCode CLI");
+    expect(formatConnectorFamily("local-capture")).toBe("Local capture");
     expect(formatConnectorFamily("terminal")).toBe("Terminal");
     expect(formatConnectorFamily("git")).toBe("Git");
     expect(formatConnectorFamily("other")).toBe("Other");

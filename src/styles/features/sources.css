@@ -514,6 +514,88 @@
   line-height: 1.5;
 }
 
+/* Connector JSONL inbox hints: metadata only, refreshed explicitly. */
+.sources-inbox-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sources-inbox-head span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.sources-inbox-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sources-inbox-list li {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.sources-inbox-file-main,
+.sources-inbox-file-meta {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.sources-inbox-file-main {
+  gap: 6px;
+}
+
+.sources-inbox-file-main strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 11.5px;
+}
+
+.sources-inbox-file-meta {
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.sources-inbox-file-meta small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sources-inbox-empty,
+.sources-inbox-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.sources-inbox-status.tone-error {
+  color: #b46100;
+}
+
+.sources-inbox-empty code {
+  color: var(--text);
+  font-size: 11px;
+}
+
 /* Provider overview tiles — the calm "what can I connect" grid on the canvas. */
 .sources-tiles {
   display: grid;
