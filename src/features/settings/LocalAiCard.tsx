@@ -6,20 +6,27 @@ import {
   Database,
   FlaskConical,
   Plug,
+  Plus,
   ShieldCheck,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/ui/Button";
 import {
+  captureEnginePreset,
   checkQuickPassCapability,
+  findMatchingPresetId,
+  loadEnginePresets,
   probeOllamaConnection,
   probeOpenAiCompatibleConnection,
+  saveEnginePresets,
 } from "../../lib/analysis";
 import type {
   AnalysisResult,
   AnalysisRunHistoryViewModel,
   AnalysisRunStatus,
+  EnginePreset,
   QuickPassAnalysisSettings,
   QuickPassCapabilityReport,
   QuickPassProviderKind,
@@ -102,11 +109,35 @@ export function LocalAiCard({
   const activeRow = selectableRows.find((row) => row.id === settings.provider) ?? selectableRows[0];
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
   const [capability, setCapability] = useState<CapabilityState>({ status: "idle" });
+  const [presets, setPresets] = useState<EnginePreset[]>(() => loadEnginePresets());
 
   function selectProvider(kind: QuickPassProviderKind) {
     onProviderChange(kind);
     setProbe({ status: "idle" });
     setCapability({ status: "idle" });
+  }
+
+  function applyPreset(preset: EnginePreset) {
+    onUpdateSettings(preset.settings);
+    setProbe({ status: "idle" });
+    setCapability({ status: "idle" });
+  }
+
+  function savePreset(name: string) {
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `preset-${Date.now()}`;
+    const preset = captureEnginePreset(id, name, settings);
+    const next = [...presets.filter((entry) => entry.name !== preset.name), preset];
+    setPresets(next);
+    saveEnginePresets(next);
+  }
+
+  function deletePreset(id: string) {
+    const next = presets.filter((entry) => entry.id !== id);
+    setPresets(next);
+    saveEnginePresets(next);
   }
 
   async function handleProbe(kind: QuickPassProviderKind) {
@@ -143,6 +174,14 @@ export function LocalAiCard({
       description="Quick Pass가 가져온 자료를 이슈, 결정, 다음 행동으로 정리할 때 사용할 엔진입니다."
     >
       <div className="settings-ai-layout">
+        <EnginePresetsBar
+          settings={settings}
+          presets={presets}
+          onApply={applyPreset}
+          onSave={savePreset}
+          onDelete={deletePreset}
+        />
+
         <div className="settings-ai-provider-grid" role="radiogroup" aria-label="Quick Pass 엔진">
           {selectableRows.map((row) => (
             <ProviderChoice
@@ -190,6 +229,104 @@ export function LocalAiCard({
         </details>
       ) : null}
     </SettingsSection>
+  );
+}
+
+function suggestPresetName(settings: QuickPassAnalysisSettings): string {
+  if (settings.provider === "ollama") return `Ollama · ${settings.ollamaModel}`;
+  if (settings.provider === "openAiCompatible") return `OpenAI 호환 · ${settings.openAiModel}`;
+  return "규칙 기반";
+}
+
+function EnginePresetsBar({
+  settings,
+  presets,
+  onApply,
+  onSave,
+  onDelete,
+}: {
+  settings: QuickPassAnalysisSettings;
+  presets: EnginePreset[];
+  onApply: (preset: EnginePreset) => void;
+  onSave: (name: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [naming, setNaming] = useState(false);
+  const [draft, setDraft] = useState("");
+  const activeId = findMatchingPresetId(settings, presets);
+
+  function commit() {
+    const name = draft.trim();
+    if (!name) return;
+    onSave(name);
+    setNaming(false);
+    setDraft("");
+  }
+
+  function cancel() {
+    setNaming(false);
+    setDraft("");
+  }
+
+  return (
+    <div className="settings-ai-presets" role="group" aria-label="엔진 프리셋">
+      {presets.map((preset) => (
+        <span
+          key={preset.id}
+          className={`settings-ai-preset${preset.id === activeId ? " is-active" : ""}`}
+        >
+          <button
+            type="button"
+            className="settings-ai-preset-apply"
+            aria-pressed={preset.id === activeId}
+            onClick={() => onApply(preset)}
+          >
+            {preset.name}
+          </button>
+          <button
+            type="button"
+            className="settings-ai-preset-remove"
+            aria-label={`${preset.name} 프리셋 삭제`}
+            onClick={() => onDelete(preset.id)}
+          >
+            <X size={11} aria-hidden="true" />
+          </button>
+        </span>
+      ))}
+
+      {naming ? (
+        <span className="settings-ai-preset-form">
+          <input
+            autoFocus
+            value={draft}
+            placeholder="프리셋 이름"
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") commit();
+              if (event.key === "Escape") cancel();
+            }}
+          />
+          <button type="button" onClick={commit} disabled={!draft.trim()}>
+            확인
+          </button>
+          <button type="button" className="settings-ai-preset-cancel" onClick={cancel}>
+            취소
+          </button>
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="settings-ai-preset-save"
+          onClick={() => {
+            setDraft(suggestPresetName(settings));
+            setNaming(true);
+          }}
+        >
+          <Plus size={12} aria-hidden="true" />
+          현재 설정 저장
+        </button>
+      )}
+    </div>
   );
 }
 

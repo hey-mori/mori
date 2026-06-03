@@ -63,6 +63,17 @@ export {
   type QuickPassCapabilityVerdict,
 } from "./quickPassCapability";
 export {
+  applyEnginePreset,
+  captureEnginePreset,
+  findMatchingPresetId,
+  loadEnginePresets,
+  normalizeEngineSettings,
+  saveEnginePresets,
+  ENGINE_PRESETS_KEY,
+  type EnginePreset,
+  type EnginePresetSettings,
+} from "./enginePresets";
+export {
   appendAnalysisRun,
   createAnalysisRunHistory,
   describeAnalysisRunReason,

@@ -3573,6 +3573,127 @@ button.settings-option {
   gap: 10px;
 }
 
+/* Engine presets: one-click saved engine configs. Compact pill chips so they
+   read as shortcuts above the full config, never as competing controls. */
+.settings-ai-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-ai-preset {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+}
+
+.settings-ai-preset.is-active {
+  border-color: var(--purple);
+  background: var(--purple-50);
+}
+
+.settings-ai-preset-apply {
+  padding: 3px 4px 3px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.settings-ai-preset.is-active .settings-ai-preset-apply {
+  color: var(--purple);
+}
+
+.settings-ai-preset-remove {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 24px;
+  padding: 0 6px 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: pointer;
+}
+
+.settings-ai-preset-remove:hover {
+  color: var(--red);
+}
+
+.settings-ai-preset-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.settings-ai-preset-save:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.settings-ai-preset-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings-ai-preset-form input {
+  height: 26px;
+  width: 140px;
+  padding: 0 8px;
+  border: 1px solid var(--purple);
+  border-radius: 999px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+  font-size: 11.5px;
+}
+
+.settings-ai-preset-form input:focus {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.12);
+}
+
+.settings-ai-preset-form button {
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--purple);
+  border-radius: 999px;
+  background: var(--purple);
+  color: white;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.settings-ai-preset-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-ai-preset-form button.settings-ai-preset-cancel {
+  border-color: var(--line);
+  background: white;
+  color: var(--muted);
+}
+
 .settings-ai-provider-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
