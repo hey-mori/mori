@@ -105,21 +105,26 @@ This keeps "automatic collection is not automatic application": Mori can surface
 look-alike work, but the durable grouping change still rides an explicit
 confirmation.
 
+## Shipped UI
+
+- **Project-page candidates UI.** The project workspace shows a calm 연결 후보
+  section (`ProjectConnectionCandidates` in `ProjectView`) listing look-alike
+  labels with session counts and a confirm action that writes an alias. The
+  project overview and durable-memory resolution honour confirmed aliases, so
+  confirming groups those sessions in. The section is hidden when no near-match
+  exists, so an unambiguous project shows no extra band.
+
 ## Remaining slices
 
-1. **Project-page candidates UI.** Surface `buildProjectConnectionCandidates`
-   on the project workspace: list look-alike labels with session counts, a
-   confirm action (writes an alias), and a remove action for confirmed aliases.
-   Best built once the concurrent project-page state-strip work settles, to keep
-   the two efforts from contending for `ProjectView`.
-2. **Desktop external-session linking.** Feed discovered `AgentWorkSessionMeta`
-   (Claude / Codex / OpenCode work) through the same matcher so a connected
-   project can show its not-yet-imported external AI sessions, honouring the
-   refresh-only, no-background-watcher boundary.
-3. **Workspace de-duplication.** The all-projects browser still lists
-   `basename` near-matches as separate projects; once aliases exist it can fold
-   confirmed ones together.
-4. **Richer `ConnectedProject` fields.** Add `captureMode` / `connectionStatus`
+1. **Desktop external-session linking.** The pure partition
+   (`buildProjectExternalSessions`) is shipped; the UI that surfaces a connected
+   project's discovered, not-yet-imported external AI sessions
+   (`AgentWorkSessionMeta` from Claude / Codex / OpenCode) is not. It must honour
+   the refresh-only, no-background-watcher boundary.
+2. **Workspace de-duplication.** The all-projects browser still lists `basename`
+   near-matches as separate projects; once aliases exist it can fold confirmed
+   ones together. A remove-alias affordance also belongs here.
+3. **Richer `ConnectedProject` fields.** Add `captureMode` / `connectionStatus`
    / `allowedConnectorIds` when the live-capture and status slices need them.
 
 ## Validation
