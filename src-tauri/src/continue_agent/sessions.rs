@@ -214,6 +214,19 @@ pub(crate) fn read_session_at(
         .map(|title| truncate(title, 90))
         .unwrap_or_else(|| format!("Continue session {}", short_id(&session_id)));
 
+    let created = parse_millis(value.get("dateCreated").or_else(|| value.get("createdAt")));
+    let updated = parse_millis(
+        value
+            .get("lastUpdatedAt")
+            .or_else(|| value.get("updatedAt"))
+            .or_else(|| value.get("dateUpdated")),
+    )
+    .or(created);
+    let started_at = created.map(format_millis_iso).unwrap_or_else(|| fallback.clone());
+    let updated_at = updated
+        .map(format_millis_iso)
+        .unwrap_or_else(|| started_at.clone());
+
     Ok(ContinueSessionDetail {
         session_id,
         project_path: if project_path.is_empty() {
@@ -223,8 +236,8 @@ pub(crate) fn read_session_at(
         },
         project_name,
         file_path: canonical.to_string_lossy().to_string(),
-        started_at: fallback.clone(),
-        updated_at: fallback,
+        started_at,
+        updated_at,
         message_count: messages.len(),
         title,
         messages,
@@ -253,11 +266,21 @@ fn parse_history(history: Option<&Value>) -> Vec<ContinueMessage> {
             .and_then(Value::as_str)
             .map(str::to_string)
             .unwrap_or_else(|| format!("msg-{index}"));
+        let created_at = parse_millis(
+            item.get("timestamp")
+                .or_else(|| item.get("time"))
+                .or_else(|| item.get("createdAt"))
+                .or_else(|| message.get("timestamp"))
+                .or_else(|| message.get("time"))
+                .or_else(|| message.get("createdAt")),
+        )
+        .map(format_millis_iso)
+        .unwrap_or_default();
         out.push(ContinueMessage {
             id,
             role,
             content,
-            created_at: String::new(),
+            created_at,
             subkind: String::new(),
         });
     }
@@ -402,7 +425,7 @@ mod tests {
         );
         write(
             &sessions.join("s1.json"),
-            "{\"sessionId\":\"s1\",\"title\":\"Analyze the gateway\",\"workspaceDirectory\":\"file:///c%3A/dev/ng-gw\",\"history\":[{\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Explain the routing\"}]}},{\"message\":{\"role\":\"assistant\",\"content\":\"It uses a trie matcher\"}}]}",
+            "{\"sessionId\":\"s1\",\"title\":\"Analyze the gateway\",\"workspaceDirectory\":\"file:///c%3A/dev/ng-gw\",\"dateCreated\":1776227380882,\"lastUpdatedAt\":1776227381882,\"history\":[{\"timestamp\":1776227380900,\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"Explain the routing\"}]}},{\"timestamp\":1776227381200,\"message\":{\"role\":\"assistant\",\"content\":\"It uses a trie matcher\"}}]}",
         );
     }
 
@@ -433,8 +456,11 @@ mod tests {
         assert_eq!(detail.messages.len(), 2);
         assert_eq!(detail.messages[0].role, "human");
         assert_eq!(detail.messages[0].content, "Explain the routing");
+        assert_eq!(detail.messages[0].created_at, "2026-04-15T04:29:40");
         assert_eq!(detail.messages[1].role, "assistant");
         assert_eq!(detail.messages[1].content, "It uses a trie matcher");
+        assert_eq!(detail.started_at, "2026-04-15T04:29:40");
+        assert_eq!(detail.updated_at, "2026-04-15T04:29:41");
     }
 
     #[test]

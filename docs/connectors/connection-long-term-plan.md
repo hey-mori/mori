@@ -251,7 +251,7 @@ Targets:
 - Antigravity partial-format resilience;
 - Cline task metadata;
 - **In progress:** Cursor title / timestamp / bubble-text fallbacks;
-- Continue session detail fidelity.
+- **In progress:** Continue session detail fidelity.
 
 Shipped detail:
 
@@ -261,6 +261,9 @@ Shipped detail:
 - Cursor composer reads now prefer `text`, but fall back to `richText`,
   `content`, and text-only `parts[]` / content arrays. Tool / thinking bubbles
   remain excluded, and the database is still opened read-only.
+- Continue detail reads now use session `dateCreated` / `lastUpdatedAt` and
+  per-message timestamps when present instead of relying only on file modified
+  time.
 
 Acceptance:
 
