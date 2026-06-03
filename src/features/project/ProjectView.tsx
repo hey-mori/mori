@@ -109,6 +109,11 @@ export function ProjectView() {
     [summaries],
   );
 
+  // One reference time for every recency derivation on this page (the strip's
+  // "최근 활동" and the session filter's "최근"), so the two never disagree at
+  // the 24h boundary. Stable per data load.
+  const now = useMemo(() => Date.now(), [storedSessions]);
+
   // User-confirmed connection aliases (look-alike labels the user mapped onto
   // this project). They widen grouping beyond an exact path match.
   const [connections, setConnections] = useState<ConnectedProject[]>(() =>
@@ -209,20 +214,20 @@ export function ProjectView() {
   // "현재 상황" Summary glance — derived only from saved sessions (honest basis,
   // no live tracker). Hidden for a quiet project so a calm workspace shows none.
   const projectState = useMemo(
-    () => buildProjectStateSummary({ rows: sessionRows }),
-    [sessionRows],
+    () => buildProjectStateSummary({ rows: sessionRows, now }),
+    [sessionRows, now],
   );
 
   // Status-first session filter (작업 상황실): focus the list on what needs
   // review or what is recent, honestly derived from saved sessions only.
   const [sessionFilter, setSessionFilter] = useState<ProjectSessionStatusFilter>("all");
   const filterCounts = useMemo(
-    () => countProjectSessionFilters(sessionRows),
-    [sessionRows],
+    () => countProjectSessionFilters(sessionRows, { now }),
+    [sessionRows, now],
   );
   const filteredSessionRows = useMemo(
-    () => filterProjectSessions(sessionRows, { filter: sessionFilter }),
-    [sessionRows, sessionFilter],
+    () => filterProjectSessions(sessionRows, { filter: sessionFilter, now }),
+    [sessionRows, sessionFilter, now],
   );
 
   // Display name + description honour a user override; whether the project is
