@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "../../components/ui/Button";
 import {
   buildMcpConfigSnippet,
+  stageMoriCli,
   stageMcpServer,
   type ConnectorSetupGuide,
 } from "../../lib/connectors";
@@ -34,8 +35,61 @@ export function ConnectorSetupGuidePanel({ guide }: { guide: ConnectorSetupGuide
           </li>
         ))}
       </ol>
+      {hasMoriCliStaging(guide.surfaceId) ? <MoriCliStaging /> : null}
       {guide.surfaceId === "mcpServer" ? <McpServerStaging /> : null}
       <p className="source-row-setup-note">{guide.importNote}</p>
+    </div>
+  );
+}
+
+function hasMoriCliStaging(surfaceId: ConnectorSetupGuide["surfaceId"]): boolean {
+  return surfaceId === "codexCliWrapper" || surfaceId === "openCodeCli" || surfaceId === "localCaptureBridge";
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function MoriCliStaging() {
+  const desktop = isTauriRuntime();
+  const [installCommand, setInstallCommand] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function prepare() {
+    setBusy(true);
+    setError(null);
+    try {
+      const staged = await stageMoriCli();
+      setStatus(`~/.mori에 CLI 파일 ${staged.files.length}개 준비 완료`);
+      setInstallCommand(`mkdir -p ~/.local/bin && ln -sf ${shellQuote(staged.cliPath)} ~/.local/bin/mori`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="source-row-mcp-stage">
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => void prepare()}
+        disabled={!desktop || busy}
+        title={desktop ? undefined : "데스크톱 앱에서만 Mori CLI를 준비할 수 있습니다."}
+      >
+        {busy ? "준비 중…" : "Mori CLI 준비"}
+      </Button>
+      {!desktop ? (
+        <span className="source-row-setup-text">
+          데스크톱 앱에서 CLI와 위임 스크립트를 ~/.mori에 복사합니다.
+        </span>
+      ) : null}
+      {status ? <span className="source-row-status tone-green">{status}</span> : null}
+      {error ? <span className="source-row-status tone-orange">{error}</span> : null}
+      {installCommand ? <CopyableCommand command={installCommand} /> : null}
     </div>
   );
 }

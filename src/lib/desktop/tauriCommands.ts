@@ -83,6 +83,8 @@ export type TauriCommandName =
   | "detect_connector_status"
   | "install_claude_hook"
   | "uninstall_claude_hook"
+  | "stage_mori_cli"
+  | "mori_cli_target_path"
   | "stage_mcp_server"
   | "mcp_server_target_path"
   | "discover_claude_desktop"
@@ -222,6 +224,16 @@ export type TauriCommandMap = {
     input: { scope: "global" | "project"; projectPath?: string };
     output: ClaudeHookUninstallResult;
   };
+  stage_mori_cli: {
+    input: undefined;
+    output: {
+      rootPath: string;
+      cliPath: string;
+      files: Array<{ label: string; path: string; wrote: boolean }>;
+      wroteCount: number;
+    };
+  };
+  mori_cli_target_path: { input: undefined; output: string };
   stage_mcp_server: { input: undefined; output: { scriptPath: string; wrote: boolean } };
   mcp_server_target_path: { input: undefined; output: string };
   discover_claude_desktop: { input: undefined; output: ClaudeDesktopDiscovery };

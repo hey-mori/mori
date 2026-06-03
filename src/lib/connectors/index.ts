@@ -132,6 +132,11 @@ export {
   getMcpServerTargetPath,
 } from "./mcpServerSetup";
 export type { McpServerStaged, McpConfigSnippetOptions } from "./mcpServerSetup";
+export {
+  stageMoriCli,
+  getMoriCliTargetPath,
+} from "./moriCliSetup";
+export type { MoriCliStaged, MoriCliStagedFile } from "./moriCliSetup";
 export type {
   BuildControlCenterInput,
   ConnectorControlCenterViewModel,

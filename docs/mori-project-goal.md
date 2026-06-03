@@ -933,7 +933,10 @@ before starting.
      tested. `mori run --connector codex/opencode -- <command...>` delegates
      to the hardened POSIX wrappers and is smoke-tested with stub binaries.
      Setup guides now prefer the Mori CLI commands with raw scripts as
-     fallback. Still open: package/install it with the desktop app.
+     fallback. Desktop staging (`stage_mori_cli`) embeds the CLI and delegate
+     scripts into `~/.mori` and exposes a Mori CLI 준비 action in setup guides.
+     Still open: package-manager style PATH install remains a manual user
+     step.
 2. **IDE / Terminal Integration.** VS Code / Cursor extension
    sending workspace events to a local Mori endpoint with explicit
    opt-in and scoping. Terminal integration: a shell-history

@@ -217,6 +217,11 @@ pub fn mori_inbox_dir() -> Option<PathBuf> {
     join(home_dir(), &[".mori", "connectors"])
 }
 
+/// Mori local app root: `~/.mori`.
+pub fn mori_home_dir() -> Option<PathBuf> {
+    join(home_dir(), &[".mori"])
+}
+
 /// Convert an `Option<PathBuf>` resolver result into a `Result` with a clear
 /// message, for command entry points that surface errors to the UI.
 pub fn require(path: Option<PathBuf>, what: &str) -> Result<PathBuf, String> {

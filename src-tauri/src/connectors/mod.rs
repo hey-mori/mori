@@ -28,6 +28,7 @@
 //! in TypeScript through `buildConnectorJsonlPreview` /
 //! `normalizeConnectorEventBatch`. We only deliver bytes and metadata.
 
+pub mod cli_setup;
 pub mod inbox;
 pub mod installer;
 pub mod mcp_setup;

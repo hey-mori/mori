@@ -133,9 +133,18 @@ smoke tests with stub binaries and quoted Korean text.
 The in-app setup guides now prefer the Mori CLI commands for Codex, OpenCode,
 and local capture, while retaining raw scripts as fallback.
 
+Desktop staging shipped:
+
+- Tauri command `stage_mori_cli` embeds and stages `mori.py`,
+  `mori-local-capture.py`, and the Codex / OpenCode POSIX wrappers under
+  `~/.mori/`.
+- The setup guide exposes a desktop-only **Mori CLI 준비** action and a copyable
+  `ln -sf ... ~/.local/bin/mori` command.
+
 Remaining:
 
-1. Package / install the CLI with the desktop app.
+1. Package-manager style install is still manual: Mori stages files, but does
+   not edit shell rc files or create PATH entries automatically.
 
 Design constraints:
 
@@ -252,5 +261,5 @@ These stay out unless the product direction is explicitly reprioritized:
 
 The next smallest valuable action is:
 
-**Desktop CLI packaging.** Stage `mori.py` (and the scripts it delegates to)
-from the desktop app so users do not need to know the repo checkout path.
+**Connector inbox polish.** Move to Phase 3: show recent connector inbox files
+and duplicate/new-event hints per provider without adding a watcher.

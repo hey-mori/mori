@@ -48,6 +48,8 @@ fn main() {
             connectors::inbox::list_connector_jsonl_inbox,
             connectors::inbox::read_connector_jsonl_file,
             connectors::installer::detect_connector_status,
+            connectors::cli_setup::stage_mori_cli,
+            connectors::cli_setup::mori_cli_target_path,
             connectors::mcp_setup::stage_mcp_server,
             connectors::mcp_setup::mcp_server_target_path,
             connectors::installer::install_claude_hook,
