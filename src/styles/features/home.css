@@ -688,7 +688,9 @@
   z-index: 1;
   overflow-y: auto;
   display: flex;
-  align-items: center;
+  /* Sit the cluster in the upper third rather than dead centre: it reads as a
+     confident landing and leaves the floating result panel more room below. */
+  align-items: flex-start;
   justify-content: center;
   padding: clamp(24px, 5vh, 52px) clamp(18px, 5vw, 56px);
 }
@@ -697,7 +699,7 @@
   display: grid;
   gap: clamp(18px, 3vh, 28px);
   width: min(960px, 100%);
-  min-height: min(760px, calc(100vh - 140px));
+  min-height: min(620px, calc(100vh - 180px));
   align-content: center;
 }
 
