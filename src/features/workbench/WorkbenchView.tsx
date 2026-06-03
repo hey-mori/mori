@@ -6,9 +6,11 @@ import {
   ChevronUp,
   CircleAlert,
   CircleCheck,
+  ClipboardCheck,
   Code,
   Columns2,
   Command,
+  Copy,
   FolderKanban,
   GripVertical,
   Layers,
@@ -51,6 +53,7 @@ import {
   filterEvents,
   type Lens,
 } from "../../lib/workbench/lens";
+import { buildWorkbenchDigest, digestTotal } from "../../lib/workbench/digest";
 import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import {
   buildSessionsBrowserModel,
@@ -167,6 +170,7 @@ export function WorkbenchView() {
   const [compareOpen, setCompareOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [lens, setLens] = useState<Lens>("all");
+  const [copied, setCopied] = useState(false);
   const [nameModal, setNameModal] = useState<
     { mode: "save" } | { mode: "rename"; id: string; current: string } | null
   >(null);
@@ -638,6 +642,40 @@ export function WorkbenchView() {
     return rows;
   }, [columns, sessionsById]);
 
+  // Whether a lens or search is narrowing the board, and the matched events per
+  // placed session under that filter. This powers the cross-session digest:
+  // "copy every decision across these sessions" leaves the board as markdown.
+  const boardNeedle = search.trim().toLowerCase();
+  const boardFiltering = lens !== "all" || boardNeedle.length > 0;
+  const digestSessions = useMemo(
+    () =>
+      placedSessions.map(({ meta }) => ({
+        title: meta.title,
+        source: meta.sourceLabel ? shortProjectLabel(meta.sourceLabel) : "수동 세션",
+        events: filterEvents(loadConversation(repository, meta.sessionId), boardNeedle, lens).map(
+          (event) => ({ title: event.title, summary: event.summary }),
+        ),
+      })),
+    [placedSessions, repository, boardNeedle, lens],
+  );
+  const digestCount = digestTotal(digestSessions);
+
+  const copyDigest = () => {
+    const markdown = buildWorkbenchDigest(digestSessions, {
+      lensLabel: LENS_LABEL[lens],
+      needle: boardNeedle,
+    });
+    const done = () => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    };
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(markdown).then(done).catch(done);
+    } else {
+      done();
+    }
+  };
+
   // Focus a panel and bring it into view (used by the attention strip and the
   // keyboard shortcuts / command palette).
   const focusPanel = (panelId: string) => {
@@ -759,6 +797,9 @@ export function WorkbenchView() {
     ...(placedSessions.length >= 2
       ? [{ id: "compare", group: "보기", label: "세션 비교", run: () => setCompareOpen(true) }]
       : []),
+    ...(boardFiltering && digestCount > 0
+      ? [{ id: "copy-digest", group: "보기", label: `검토 결과 복사 (${digestCount}건)`, run: copyDigest }]
+      : []),
     ...(focusedPanelId
       ? [{ id: "maximize", group: "보기", label: "현재 패널 최대화", run: () => setMaximizedId(focusedPanelId) }]
       : []),
@@ -816,6 +857,15 @@ export function WorkbenchView() {
                   <ModeButton icon={Rows2} label="아래로 쌓기" active={false} onClick={() => applyQuickLayout("single")} />
                   <ModeButton icon={Columns2} label="옆으로 나란히" active={false} onClick={() => applyQuickLayout("columns")} />
                 </span>
+                {boardFiltering && digestCount > 0 ? (
+                  <Button
+                    variant="ghost"
+                    icon={copied ? ClipboardCheck : Copy}
+                    onClick={copyDigest}
+                  >
+                    {copied ? "복사됨" : `검토 복사 ${digestCount}`}
+                  </Button>
+                ) : null}
                 <span className="workbench-seg-divider" aria-hidden="true" />
                 <Button variant="ghost" icon={Trash2} onClick={() => setColumns([])}>
                   비우기
