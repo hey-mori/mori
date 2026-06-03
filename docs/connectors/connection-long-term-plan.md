@@ -310,7 +310,6 @@ These stay out unless the product direction is explicitly reprioritized:
 
 The next smallest valuable action is:
 
-**IDE and terminal emitters.** Move to Phase 4: make the explicit terminal /
-editor emitters easier to install and verify against the same Connector JSONL
-review pipeline. Terminal / VS Code task staging is shipped; next is richer
-fixture coverage and, later, a real explicit VS Code / Cursor extension.
+**Connector diagnostics.** Move to Phase 6: add a desktop diagnostics snapshot
+that reports connector paths checked, staged template paths, inbox family file
+counts, and the last safe error, without raw transcript text or secrets.
