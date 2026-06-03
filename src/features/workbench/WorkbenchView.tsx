@@ -524,12 +524,19 @@ export function WorkbenchView() {
       const index = Number(a);
       return { hint: "col:" + index, apply: (id) => relocatePanel(id, { kind: "newColumn", index }) };
     }
-    if (type === "col") {
-      return { hint: "colz:" + a, apply: (id) => relocatePanel(id, { kind: "column", columnId: a! }) };
-    }
-    if (type === "panelat") {
-      const index = Number(b);
-      return { hint: "vg:" + a + ":" + index, apply: (id) => dropPanelAt(id, a!, index) };
+    if (type === "col" && zone) {
+      // Insert at the slot nearest the cursor so existing panels shift to make
+      // room (a natural reorder), not just append to the end.
+      const panelEls = Array.from(zone.querySelectorAll(":scope > .workbench-panel"));
+      let index = panelEls.length;
+      for (let i = 0; i < panelEls.length; i += 1) {
+        const r = panelEls[i]!.getBoundingClientRect();
+        if (y < r.top + r.height / 2) {
+          index = i;
+          break;
+        }
+      }
+      return { hint: "colz:" + a + ":" + index, apply: (id) => dropPanelAt(id, a!, index) };
     }
     return null;
   };
@@ -882,10 +889,14 @@ export function WorkbenchView() {
             >
               <Plus size={14} aria-hidden="true" />
             </div>
-            {columns.map((col, colIndex) => (
+            {columns.map((col, colIndex) => {
+              const prefix = "colz:" + col.id + ":";
+              const dropIndex =
+                dropHint && dropHint.startsWith(prefix) ? Number(dropHint.slice(prefix.length)) : -1;
+              return (
               <Fragment key={col.id}>
                 <div
-                  className={`workbench-col${dropHint === "colz:" + col.id ? " is-droptarget" : ""}`}
+                  className={`workbench-col${dropIndex >= 0 ? " is-droptarget" : ""}`}
                   style={{ flexGrow: col.flex, flexBasis: 0 }}
                   data-drop={"col:" + col.id}
                 >
@@ -893,6 +904,9 @@ export function WorkbenchView() {
                     const meta = sessionsById.get(panel.sessionId) ?? null;
                     return (
                       <Fragment key={panel.id}>
+                        {dropIndex === panelIndex ? (
+                          <div className="workbench-drop-placeholder" aria-hidden="true" />
+                        ) : null}
                         <SessionPanel
                           panel={panel}
                           meta={meta}
@@ -913,17 +927,12 @@ export function WorkbenchView() {
                           onMaximize={() => setMaximizedId(panel.id)}
                         />
                         {panelIndex < col.panels.length - 1 ? (
-                          <div
-                            className={`workbench-vgutter${hotClass("vg:" + col.id + ":" + (panelIndex + 1))}`}
-                            role="separator"
-                            aria-orientation="horizontal"
-                            data-drop={"panelat:" + col.id + ":" + (panelIndex + 1)}
-                          />
+                          <div className="workbench-vgutter" role="separator" aria-orientation="horizontal" />
                         ) : null}
                       </Fragment>
                     );
                   })}
-                  {dropHint === "colz:" + col.id ? (
+                  {dropIndex === col.panels.length ? (
                     <div className="workbench-drop-placeholder" aria-hidden="true" />
                   ) : null}
                 </div>
@@ -937,7 +946,8 @@ export function WorkbenchView() {
                   />
                 ) : null}
               </Fragment>
-            ))}
+              );
+            })}
             {/* Trailing new-column drop target, shown only while dragging a panel. */}
             <div
               className={`workbench-col-drop${hotClass("col:" + columns.length)}`}

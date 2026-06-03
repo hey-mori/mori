@@ -70,7 +70,7 @@
 
 .dashboard-kpis {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--base-space-2);
 }
 
@@ -1157,8 +1157,9 @@
   min-width: 0;
   min-height: 0;
   /* Columns split the width evenly and never scroll themselves; the panels in
-     a column split its height. */
-  overflow: hidden;
+     a column split its height. overflow stays visible so the edge "+" controls
+     that straddle a panel border are not clipped. */
+  overflow: visible;
 }
 
 .workbench-gutter {
