@@ -243,11 +243,24 @@ that is called out.
 - Timeline view with lanes, Flow Focus relationships, and a Trace
   panel.
 - Event Inspector with trust / confidence / evidence / related items.
-- Quick Pass analysis: deterministic heuristic provider (always
-  available) and an optional Ollama provider with deterministic
-  fallback. Settings persist provider configuration (`provider`,
-  `ollamaEndpoint`, `ollamaModel`, `ollamaTimeoutMs`,
-  `fallbackToDeterministic`).
+- Quick Pass analysis: three providers behind one settings → config
+  mapping (`buildProviderConfigFromSettings` / `resolveQuickPassProvider`)
+  — a deterministic rule-based provider (always available), an optional
+  Ollama provider, and an OpenAI-compatible provider — each with optional
+  deterministic fallback honestly labeled in the result. Settings persist
+  the full provider configuration (`provider`, `ollamaEndpoint`,
+  `ollamaModel`, `ollamaTimeoutMs`, `openAiBaseUrl`, `openAiModel`,
+  `openAiApiKey`, `openAiTimeoutMs`, `fallbackToDeterministic`,
+  `requestAbstractionModel`).
+- AI engine settings console (`LocalAiCard`): a purpose-first engine
+  picker, a per-engine config panel, a reachability probe, and a
+  **capability check** (`checkQuickPassCapability`) that runs a fixed
+  synthetic sample (never the user's data) through the real `analyze()`
+  path and grades whether the engine returns Mori-shaped JSON
+  (`ready` / `reachableNoStructure` / `failed`) with an actionable hint.
+  A diagnostics strip, a folded recent-runs history, and device-local
+  **engine presets** (`enginePresets.ts`, saved in localStorage) round
+  out the surface.
 
 **Reconstruction Lab (재구성)**
 
