@@ -40,9 +40,12 @@ def default_wrapper(connector: str) -> Path:
     if env:
         return Path(os.path.expanduser(env))
     base = Path(__file__).resolve().parents[1]
-    if connector == "codex":
-        return base / "codex-cli" / "mori-codex-wrapper.sh"
-    return base / "opencode-cli" / "mori-opencode-wrapper.sh"
+    folder = "codex-cli" if connector == "codex" else "opencode-cli"
+    # Pick the PowerShell wrapper on Windows and the POSIX shell wrapper
+    # elsewhere. Invoking a .sh through bash with a Windows backslash path
+    # mangles the path (bash eats the backslashes), so Windows must use .ps1.
+    ext = "ps1" if os.name == "nt" else "sh"
+    return base / folder / f"mori-{connector}-wrapper.{ext}"
 
 
 def add_common_flags(parser: argparse.ArgumentParser) -> None:
@@ -104,15 +107,39 @@ def build_run_command(args: argparse.Namespace) -> list[str]:
     if not wrapper.is_file():
         raise SystemExit(f"mori run: wrapper not found: {wrapper}")
 
-    command = ["bash", str(wrapper)]
-    if args.out:
-        command.extend(["--out", args.out])
-    if args.session:
-        command.extend(["--session", args.session])
-    if args.git:
-        command.append("--git")
-    command.append("--")
-    command.extend(wrapped)
+    # Dispatch on the wrapper's extension so an explicit --wrapper is honored
+    # too: a .ps1 runs through PowerShell with PascalCase flags, anything else
+    # (a .sh) runs through bash with --flags.
+    if wrapper.suffix.lower() == ".ps1":
+        command = [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(wrapper),
+        ]
+        if args.out:
+            command.extend(["-Out", args.out])
+        if args.session:
+            command.extend(["-Session", args.session])
+        if args.git:
+            command.append("-Git")
+        # No "--" separator on PowerShell: it reads "--" as an (empty,
+        # ambiguous) parameter name. The wrapper's $Command parameter uses
+        # ValueFromRemainingArguments, so the trailing command words bind to it
+        # directly.
+        command.extend(wrapped)
+    else:
+        command = ["bash", str(wrapper)]
+        if args.out:
+            command.extend(["--out", args.out])
+        if args.session:
+            command.extend(["--session", args.session])
+        if args.git:
+            command.append("--git")
+        command.append("--")
+        command.extend(wrapped)
     return command
 
 
