@@ -2463,6 +2463,16 @@
   cursor: default;
 }
 
+.memory-intro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6e668c;
+}
+
 .consolidation-review-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;

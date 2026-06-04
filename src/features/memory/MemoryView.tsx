@@ -5,6 +5,7 @@ import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
 import { BaseDrawer } from "../../components/ui/BaseDrawer";
+import { InfoHint } from "../../components/ui/InfoHint";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -406,6 +407,21 @@ export function MemoryView() {
         <ConsolidationReviewView embedded onBack={() => setMemoryTab("overview")} />
       ) : (
         <div className="memory-main">
+          <p className="memory-intro">
+            확정한 결정과 아직 풀리지 않은 것들이 여기에 쌓여요. 평소엔 들르지 않아도 되고,
+            작업을 이어가거나 지난 흐름을 돌아볼 때 참고하는 곳이에요.
+            <InfoHint label="메모리란">
+              <p>
+                Mori는 AI와 일하며 내린 결정, 막힌 이슈, 핵심 근거를 모아 이 프로젝트의 기억으로
+                남깁니다. 새로 쌓이는 기억은 항상 당신이 통합 검토에서 확인한 뒤에만 확정돼요.
+              </p>
+              <p>
+                이 화면은 그 확정된 기억을 들여다보는 곳입니다. 실제로 기억이 쓰이는 건 다음 세션
+                이어가기, 보고서, "Mori에게 묻기" 같은 순간이에요.
+              </p>
+            </InfoHint>
+          </p>
+
           <ProjectMemoryHero
             projectName={view.project.name}
             projectDescription={view.project.description}
@@ -438,24 +454,24 @@ export function MemoryView() {
             />
           </div>
 
-          <div className="memory-context-grid">
-            <RecentSessionsList
-              sessions={savedSessions}
-              loadStatusBySessionId={loadStatusBySessionId}
-              onOpenSession={handleOpenSession}
-              onStartNewSession={() => setCurrentView("start")}
-            />
-          </div>
-
-          {/* Secondary analysis / tools tucked behind one borderless disclosure so
-              the first screen stays calm — these are detail surfaces, not the
-              primary "what's in my memory" view. */}
+          {/* Secondary surfaces (past sessions, analysis, tools) tucked behind one
+              borderless disclosure so the first screen stays calm — these are detail
+              views, not the primary "what's in my memory" content. */}
           <details className="memory-advanced">
             <summary className="memory-advanced-summary">
               <ChevronDown size={14} aria-hidden="true" />
-              메모리 분석 · 도구
+              지난 세션 · 분석 · 도구
             </summary>
             <div className="memory-advanced-body">
+              <div className="memory-context-grid">
+                <RecentSessionsList
+                  sessions={savedSessions}
+                  loadStatusBySessionId={loadStatusBySessionId}
+                  onOpenSession={handleOpenSession}
+                  onStartNewSession={() => setCurrentView("start")}
+                />
+              </div>
+
               <DecisionTimelineCard timeline={decisionTimeline} />
 
               <div className="memory-grid-two">
