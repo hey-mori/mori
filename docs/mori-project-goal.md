@@ -613,8 +613,11 @@ back to design first.
 - **Local-first.** No cloud sync by default, no OAuth, no external
   account reading, no remote authority over the user's memory.
 - **Explicit import / capture.** Every artifact enters Mori through a
-  user action — paste, click, or explicit file pick. No background
-  watcher, no daemon, no scheduled job.
+  user action: paste, click, or explicit file pick. No hidden background
+  watcher, no scheduled job. The one narrow exception is the opt-in,
+  transparent, review-gated background reader of explicitly-connected
+  logs (the "B" surface in the Surveillance line note); it still never
+  makes memory durable without review.
 - **Review-before-apply.** Import Review and Consolidation Review are
   non-bypassable gates. AI may propose; only the user can make memory
   durable.
@@ -642,8 +645,44 @@ back to design first.
   confidential client details not marked client-safe, AI claims
   without an evidence link).
 - **No hidden capture.** No screen recording, no keylogger, no
-  always-on daemon, no app-database scraping, no browser-history
-  reading, no automatic external account reading.
+  app-database scraping, no browser-history reading, no automatic
+  external account reading, no reading the screen / filesystem / app
+  storage the user never connected.
+
+### Surveillance line: invasive capture (A) vs connected-source reading (B)
+
+"Mori does not watch you" bans **invasive capture**, not all background
+work. The earlier principle text collapsed two different things under one
+word; this note disambiguates them so future surfaces are judged correctly.
+
+- **A · Invasive capture.** Camera, screen recording, keylogging, scraping
+  app databases / browser history / any source the user never connected.
+  This touches the user's private space and creates security exposure. It
+  is **banned forever, no exceptions.** This is what "no surveillance"
+  actually protects.
+- **B · Background reading of explicitly-connected agent logs.** While the
+  Mori app is **running** (it may be minimized or unfocused), reading the
+  Claude / Codex / OpenCode session records the user *already chose to
+  connect*, to surface a "work finished" signal. This is **not A** and is
+  not categorically forbidden. It is the OS-notification extension of the
+  already-decided foreground Live Follow
+  (`design/local-llm-understanding-and-live-follow.md` §3.1). A reader that
+  runs **while the Mori app is fully closed** (tray-resident, autostart) is
+  not B; it stays a separate, identity-changing decision and a non-goal here.
+
+B is permissible only when **all three rails** hold. Absent any one, it
+falls back to foreground-only:
+
+1. **Scope.** Reads only sources the user explicitly connected. Never the
+   screen, camera, or unconnected apps (A stays banned).
+2. **Review-before-apply stays.** Background may *notice and notify*, never
+   make data durable memory without the user's review.
+3. **Transparency.** Explicit opt-in, an always-visible "watching / off"
+   state, and one-tap off. It never hides in the tray.
+
+Status: B is **designed, not built.** Today capture and live-follow are
+foreground-only (session-scoped). A transparent, opt-in background reader is
+a permissible future surface, not a shipped one.
 
 ## 7. Capture Strategy
 
@@ -950,8 +989,12 @@ still the smallest valuable next step and get user approval.
 The following must not be built or promised until the user
 explicitly reprioritises them:
 
-- Background surveillance (filesystem watchers, daemons, screen
-  recording, keylogging).
+- Invasive background surveillance: screen recording, keylogging,
+  camera access, or watching the screen / filesystem / app storage the
+  user never connected. (This is the "A" ban in Section 6. It does not,
+  by itself, forbid a transparent, opt-in, review-gated background reader
+  of explicitly-connected agent logs, the "B" surface; see the
+  Surveillance line note.)
 - Account scraping (OAuth, API-key access to Claude / ChatGPT /
   Codex / external services).
 - Cloud sync by default. Cross-device memory is `.mori v0`
@@ -963,8 +1006,11 @@ explicitly reprioritises them:
   user-invoked, read-only, `composerData:*` chat rows only, and still
   review-before-apply.
 - Unreviewed memory writes. AI proposes; user disposes.
-- Autonomous agent daemon ("Mori figures it out for you in the
-  background").
+- Autonomous agent daemon that makes memory durable or takes action
+  without review ("Mori figures it out for you in the background"). A
+  background process that only reads explicitly-connected logs and
+  surfaces a notification, with review-before-apply intact, is the "B"
+  surface in Section 6, not this.
 - Full browser extension. Browser context is paste / URL today.
 - Team / shared memory beyond explicit `.mori v0` export.
 - Embeddings / vector DB as the source of truth. Mori uses

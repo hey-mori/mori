@@ -84,6 +84,14 @@ A true always-on background watcher (runs while the app is closed)
 remains a non-goal and a separate, identity-changing decision; it is
 explicitly out of scope here.
 
+This maps onto the A-vs-B surveillance line in `mori-project-goal.md` §6:
+reading the followed session's already-connected file while the app is
+running (even minimized / unfocused), and surfacing an OS notification, is
+the permissible "B" surface, an extension of foreground Live Follow under
+the three rails (scope, review-before-apply, transparency). A reader that
+runs while the app is fully closed (tray-resident, autostart) is the still
+banned "A"-adjacent watcher above.
+
 ### 3.2 Storage vs disclosure: store full, project by level
 
 "Store everything the same, choose what's shown" is reconciled with the
