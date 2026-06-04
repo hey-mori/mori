@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Generated-output smoke test for `connectors/local-capture/mori-local-capture.py`.
  *

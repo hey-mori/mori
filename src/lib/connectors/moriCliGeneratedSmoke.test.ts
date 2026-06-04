@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Generated-output smoke test for the minimal `mori capture` CLI.
  *

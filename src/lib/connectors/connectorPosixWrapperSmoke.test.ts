@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Generated-output smoke tests for POSIX connector wrappers.
  *
