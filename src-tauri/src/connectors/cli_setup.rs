@@ -285,11 +285,18 @@ mod tests {
         );
 
         let terminal = std::fs::read_to_string(&staged.terminal_helper_path).unwrap();
-        assert!(terminal.contains(&staged.local_capture_path));
+        // The shell emitter holds the shell-escaped path (on Windows the temp
+        // path has backslashes that escape_shell_default doubles), so assert
+        // the escaped form rather than the raw path, which only coincides on
+        // POSIX where there are no backslashes to escape.
+        assert!(terminal.contains(&escape_shell_default(&staged.local_capture_path)));
         assert!(!terminal.contains("$HOME/Dev/Projects/mori"));
 
         let tasks = std::fs::read_to_string(&staged.vscode_tasks_path).unwrap();
-        assert!(tasks.contains(&staged.local_capture_path));
+        // The VS Code task holds the JSON-encoded path (backslashes doubled by
+        // serde_json on Windows), so assert the JSON-encoded form.
+        let json_path = serde_json::to_string(&staged.local_capture_path).unwrap();
+        assert!(tasks.contains(&json_path));
         assert!(!tasks.contains(TEMPLATE_LOCAL_CAPTURE_PATH));
     }
 
