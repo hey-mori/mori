@@ -36,6 +36,7 @@ import { AcceptedMemoriesCard } from "./AcceptedMemoriesCard";
 import { AcceptedMemoryDetailDrawer } from "./AcceptedMemoryDetailDrawer";
 import { MemoryAuditTrailCard } from "./MemoryAuditTrailCard";
 import { QueryableMemoryCard } from "./QueryableMemoryCard";
+import { AskMoriCard } from "./AskMoriCard";
 import {
   getAcceptedMemoryRepository,
   type AcceptedMemoryStorageSource,
@@ -75,6 +76,7 @@ export function MemoryView() {
   const mode = useSessionStore(selectSessionMode);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
+  const analysisSettings = useSessionStore((state) => state.analysisSettings);
   const sqliteSessions = useSqliteStore((state) => state.sessions);
   const sqliteKind = useSqliteStore((state) => state.kind);
   const sqliteRefresh = useSqliteStore((state) => state.refresh);
@@ -451,6 +453,14 @@ export function MemoryView() {
               </div>
 
               <ReimportHistoryCard summary={viewModel.reimportSummary} />
+
+              <AskMoriCard
+                memories={acceptedMemories}
+                timelineEvents={view.events}
+                evidenceSources={view.sources}
+                reviewActions={reviewActions}
+                settings={analysisSettings}
+              />
 
               <QueryableMemoryCard
                 memories={acceptedMemories}
