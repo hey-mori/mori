@@ -460,6 +460,11 @@ export function MemoryView() {
                 evidenceSources={view.sources}
                 reviewActions={reviewActions}
                 settings={analysisSettings}
+                onSelectMemory={setSelectedMemoryId}
+                onNavigateEvent={(eventId) => {
+                  setSelectedEventId(eventId);
+                  setCurrentView("timeline");
+                }}
               />
 
               <QueryableMemoryCard

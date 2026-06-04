@@ -33,12 +33,18 @@ export function AskMoriCard({
   evidenceSources,
   reviewActions,
   settings,
+  onSelectMemory,
+  onNavigateEvent,
 }: {
   memories: StoredAcceptedProjectMemory[];
   timelineEvents: TimelineEvent[];
   evidenceSources: SourceRef[];
   reviewActions: StoredMemoryReviewAction[];
   settings: QuickPassAnalysisSettings;
+  /** Open the accepted-memory detail drawer for a cited memory. */
+  onSelectMemory?: (memoryId: string) => void;
+  /** Jump to a cited timeline event in the session timeline. */
+  onNavigateEvent?: (eventId: string) => void;
 }) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<AskMoriAnswer | null>(null);
@@ -124,7 +130,13 @@ export function AskMoriCard({
 
           {error ? <p className="memory-search-empty">{error}</p> : null}
 
-          {answer ? <AskMoriAnswerView answer={answer} /> : null}
+          {answer ? (
+            <AskMoriAnswerView
+              answer={answer}
+              onSelectMemory={onSelectMemory}
+              onNavigateEvent={onNavigateEvent}
+            />
+          ) : null}
         </>
       )}
 
@@ -138,7 +150,15 @@ export function AskMoriCard({
   );
 }
 
-function AskMoriAnswerView({ answer }: { answer: AskMoriAnswer }) {
+function AskMoriAnswerView({
+  answer,
+  onSelectMemory,
+  onNavigateEvent,
+}: {
+  answer: AskMoriAnswer;
+  onSelectMemory?: (memoryId: string) => void;
+  onNavigateEvent?: (eventId: string) => void;
+}) {
   return (
     <div className="ask-mori-answer-block">
       <div className="ask-mori-answer-head">
@@ -154,26 +174,40 @@ function AskMoriAnswerView({ answer }: { answer: AskMoriAnswer }) {
             <Eye size={12} aria-hidden="true" /> 근거 ({answer.citations.length})
           </h4>
           <ul>
-            {answer.citations.map((citation) => (
-              <li key={`${citation.kind}:${citation.refId}`}>
-                <header>
-                  <strong title={citation.label}>
-                    [{citation.tag}] {citation.label}
-                  </strong>
-                  <span className="memory-search-meta">
-                    {citation.kind === "acceptedMemory" ? (
-                      <Badge tone="purple">{describeProposalKind(citationKindArg(citation))}</Badge>
+            {answer.citations.map((citation) => {
+              const onOpen = citationOpenHandler(citation, onSelectMemory, onNavigateEvent);
+              return (
+                <li key={`${citation.kind}:${citation.refId}`}>
+                  <header>
+                    {onOpen ? (
+                      <button
+                        type="button"
+                        className="ask-mori-cite-link"
+                        onClick={onOpen}
+                        title={`${citation.label} 열기`}
+                      >
+                        [{citation.tag}] {citation.label}
+                      </button>
                     ) : (
-                      <Badge tone="blue">{citationKindLabel(citation.kind)}</Badge>
+                      <strong title={citation.label}>
+                        [{citation.tag}] {citation.label}
+                      </strong>
                     )}
-                    <Badge tone={citation.isCurrent ? "green" : "gray"}>
-                      {citation.isCurrent ? "현재" : "비현재"}
-                    </Badge>
-                  </span>
-                </header>
-                <p className="memory-search-snippet">{citation.snippet}</p>
-              </li>
-            ))}
+                    <span className="memory-search-meta">
+                      {citation.kind === "acceptedMemory" ? (
+                        <Badge tone="purple">{describeProposalKind(citationKindArg(citation))}</Badge>
+                      ) : (
+                        <Badge tone="blue">{citationKindLabel(citation.kind)}</Badge>
+                      )}
+                      <Badge tone={citation.isCurrent ? "green" : "gray"}>
+                        {citation.isCurrent ? "현재" : "비현재"}
+                      </Badge>
+                    </span>
+                  </header>
+                  <p className="memory-search-snippet">{citation.snippet}</p>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}
@@ -181,6 +215,26 @@ function AskMoriAnswerView({ answer }: { answer: AskMoriAnswer }) {
       <small className="ask-mori-basis">{answer.dataBasis}</small>
     </div>
   );
+}
+
+/**
+ * Resolve a click handler for a citation: accepted-memory citations open
+ * the memory detail drawer; timeline-event citations jump to the event.
+ * Evidence-source and review-action citations have no single-target
+ * destination from this surface, so they render as static rows.
+ */
+function citationOpenHandler(
+  citation: AskMoriAnswer["citations"][number],
+  onSelectMemory?: (memoryId: string) => void,
+  onNavigateEvent?: (eventId: string) => void,
+): (() => void) | null {
+  if (citation.kind === "acceptedMemory" && onSelectMemory) {
+    return () => onSelectMemory(citation.refId);
+  }
+  if (citation.kind === "timelineEvent" && onNavigateEvent) {
+    return () => onNavigateEvent(citation.refId);
+  }
+  return null;
 }
 
 function basisLabel(basis: AskMoriAnswer["basis"]): string {
