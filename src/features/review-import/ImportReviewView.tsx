@@ -1,5 +1,5 @@
 import { ArrowLeft, CheckCheck, ListChecks, Sparkles, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { useSessionStore } from "../../app/sessionStore";
@@ -18,6 +18,7 @@ import {
   type ImportReviewSummaryStatus,
   type ReviewOrigin,
 } from "../../lib/review";
+import { buildImportDigest, type ImportDigest } from "../../lib/import/importDigest";
 import { SourceSummaryCard } from "./SourceSummaryCard";
 import { ExtractedEventCard } from "./ExtractedEventCard";
 import { GeneratedItemsPanel } from "./GeneratedItemsPanel";
@@ -30,6 +31,29 @@ const ORIGIN_LABEL: Record<ReviewOrigin, string> = {
   "connector-jsonl": "Connector JSONL",
   other: "출처",
 };
+
+/**
+ * A compact "this is what's going in" strip for the connect / import moment:
+ * a per-lane breakdown (대화 / 명령 / 코드·파일 / 리서치 / 빌드 …) and the span,
+ * so the review leads with insight instead of "review N events". Uses the same
+ * lane classifier as the timeline, so the two always agree.
+ */
+function ImportDigestStrip({ digest }: { digest: ImportDigest }) {
+  if (digest.eventCount === 0) return null;
+  return (
+    <div className="import-digest">
+      <span className="import-digest-lead">이렇게 들어갑니다</span>
+      {digest.lanes.map((lane) => (
+        <Badge key={lane.lane} tone="gray">
+          {lane.label} {lane.count}
+        </Badge>
+      ))}
+      {digest.span.durationLabel ? (
+        <span className="import-digest-span">· {digest.span.durationLabel}</span>
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * Import Review — the explicit accept/discard gate before evidence reaches the
@@ -67,6 +91,10 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
 
   const counts = getReviewCounts(draft);
   const applyable = isReviewApplyable(draft);
+  const digest = useMemo(
+    () => buildImportDigest(draft.events.map((item) => item.event), [draft.source]),
+    [draft.events, draft.source],
+  );
   const reviewSummary = buildImportReviewSummary({
     eventCount: draft.events.length,
     acceptedCount: counts.accepted,
@@ -130,6 +158,8 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
           <Badge tone="purple">{ORIGIN_LABEL[draft.origin] ?? draft.origin}</Badge>
         </div>
       </header>
+
+      <ImportDigestStrip digest={digest} />
 
       {draftMeta ? <ReviewDraftMetaStrip meta={draftMeta} /> : null}
 
