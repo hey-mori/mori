@@ -56,15 +56,25 @@ describe("buildQuickPassPrompt", () => {
     expect(userPrompt).toContain("actor=assistant");
   });
 
-  it("keeps tool events terse without their long output", () => {
+  it("omits tool events from the prompt and notes how many", () => {
     const { userPrompt } = build([
+      ev("c1", "결정", "JWT 채택", "assistant"),
       ev("t1", "Bash", "🔧 Bash: ".concat("x".repeat(400)), "tool", "Bash"),
+      ev("t2", "Read", "🔧 Read: file", "tool", "Read"),
     ]);
-    const toolLine = userPrompt.split("\n").find((line) => line.includes("id=t1")) ?? "";
-    expect(toolLine).toContain("actor=tool");
-    expect(toolLine).toContain("tool=Bash");
-    expect(toolLine).not.toContain("summary=");
-    expect(toolLine.length).toBeLessThan(120);
+    expect(userPrompt).not.toContain("id=t1");
+    expect(userPrompt).not.toContain("id=t2");
+    expect(userPrompt).toContain("id=c1");
+    expect(userPrompt).toContain("2 tool events omitted");
+  });
+
+  it("caps the number of conversation events and notes the omission", () => {
+    const events = Array.from({ length: 150 }, (_, i) => ev(`c${i}`, `t${i}`, `s${i}`, "assistant"));
+    const { userPrompt } = build(events);
+    // Most recent kept, earliest omitted.
+    expect(userPrompt).toContain("id=c149");
+    expect(userPrompt).not.toContain("id=c0 ");
+    expect(userPrompt).toContain("earlier turns omitted");
   });
 
   it("truncates a long conversation summary", () => {

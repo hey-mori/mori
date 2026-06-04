@@ -26,11 +26,38 @@ Rules:
 - Write titles and summaries in the language the conversation uses (Korean stays Korean).
 - Output a single JSON object with no markdown fences and no commentary.`;
 
+/**
+ * Cap on conversation events sent to the LLM. A long real session (500+
+ * turns) is mostly tool calls; sending all of them produced a ~150KB prompt
+ * that a small local model timed out on ("signal is aborted") or answered
+ * with empty arrays. We extract from conversation turns only, capped to the
+ * most recent N, and tell the model how much was omitted.
+ */
+const MAX_LLM_CONVERSATION_EVENTS = 120;
+
 export function buildQuickPassPrompt(input: AnalysisInput): QuickPassPromptParts {
-  const eventDigest = input.events.map(eventDigestLine).join("\n");
+  // Tool events are machine output and dominate a long session by volume.
+  // Drop them from the extraction prompt (the timeline still shows them) and
+  // keep only substantive conversation / decision / file turns.
+  const conversationEvents = input.events.filter((event) => event.actor !== "tool");
+  const toolCount = input.events.length - conversationEvents.length;
+  const keptEvents = conversationEvents.slice(-MAX_LLM_CONVERSATION_EVENTS);
+  const omittedConversation = conversationEvents.length - keptEvents.length;
+
+  const eventDigest = keptEvents.map(eventDigestLine).join("\n");
   const sourceDigest = input.sources
     .map((source) => `- id=${source.id} kind=${source.kind} title=${source.title} trust=${source.trustLevel}`)
     .join("\n");
+
+  const omissionNotes: string[] = [];
+  if (toolCount > 0) {
+    omissionNotes.push(`(${toolCount} tool events omitted — machine output, context only.)`);
+  }
+  if (omittedConversation > 0) {
+    omissionNotes.push(
+      `(${omittedConversation} earlier turns omitted; showing the most recent ${keptEvents.length}.)`,
+    );
+  }
 
   const userPrompt = [
     `Session: ${input.session.title} (id=${input.session.id})`,
@@ -39,8 +66,9 @@ export function buildQuickPassPrompt(input: AnalysisInput): QuickPassPromptParts
     "Sources:",
     sourceDigest || "(none)",
     "",
-    "Events:",
+    "Events (conversation turns only):",
     eventDigest || "(none)",
+    ...(omissionNotes.length > 0 ? ["", omissionNotes.join("\n")] : []),
     "",
     "Return the JSON object specified by the system instructions.",
   ].join("\n");

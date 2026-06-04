@@ -46,7 +46,6 @@ import {
   type DashboardTotals,
   type KpiDelta,
   type ProjectStatus,
-  type SortKey,
   type TrendRange,
 } from "../../lib/dashboard/dashboardModel";
 import { gatherSessionMetrics } from "../../lib/home/homeSessionMetrics";
@@ -113,7 +112,6 @@ export function DashboardView() {
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("recent");
   const [trendRange, setTrendRange] = useState<TrendRange>("month");
 
   // Click-driven filters: focus (a project) and lens (a review category), both
@@ -194,8 +192,14 @@ export function DashboardView() {
   }, [storedSessions]);
 
   const filteredProjects = useMemo(
-    () => applyDashboardFilters(projects, { query, sort, focusKey: focusProjectKey, lens: attentionLens }),
-    [projects, query, sort, focusProjectKey, attentionLens],
+    () =>
+      applyDashboardFilters(projects, {
+        query,
+        sort: "recent",
+        focusKey: focusProjectKey,
+        lens: attentionLens,
+      }),
+    [projects, query, focusProjectKey, attentionLens],
   );
 
   const focusedProject = focusProjectKey
@@ -225,7 +229,6 @@ export function DashboardView() {
               />
             </>
           }
-          end={<SortControl sort={sort} onChange={setSort} />}
         />
       }
     >
@@ -320,31 +323,6 @@ export function DashboardView() {
 }
 
 // ─── Toolbar controls ─────────────────────────────────────────────────────────
-
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "recent", label: "최근" },
-  { key: "tokens", label: "토큰" },
-  { key: "attention", label: "검토" },
-  { key: "activity", label: "활동" },
-];
-
-function SortControl({ sort, onChange }: { sort: SortKey; onChange: (key: SortKey) => void }) {
-  return (
-    <div className="dashboard-sort" role="group" aria-label="정렬 기준">
-      {SORTS.map((option) => (
-        <button
-          key={option.key}
-          type="button"
-          className={option.key === sort ? "is-active" : ""}
-          aria-pressed={option.key === sort}
-          onClick={() => onChange(option.key)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function RangeToggle({ range, onChange }: { range: TrendRange; onChange: (range: TrendRange) => void }) {
   return (
