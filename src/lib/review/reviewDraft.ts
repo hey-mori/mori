@@ -18,20 +18,29 @@ function createDraftId(): string {
 }
 
 /**
- * Build an Import Review draft from a normalized import candidate. All
- * extracted items start `pending` so the user has to explicitly accept them.
+ * Build an Import Review draft from a normalized import candidate.
+ *
+ * An explicitly-connected AI conversation (`ai-transcript`) is a low-stakes,
+ * reversible import the user already chose to bring in whole, so its events
+ * default to `accepted` — the user just applies once instead of accepting
+ * hundreds of turns. Every other origin (connector JSONL, manual note, git
+ * diff, URL) keeps per-event `pending` review so the user inspects what is
+ * written. Durable memory still requires the separate consolidation gate;
+ * this only relaxes the raw-timeline import step.
  */
 export function createImportReviewDraft(
   candidate: NormalizedImportCandidate,
   origin: ReviewOrigin,
 ): ImportReviewDraft {
+  const defaultEventStatus: ReviewItemStatus =
+    origin === "ai-transcript" ? "accepted" : "pending";
   return {
     id: createDraftId(),
     source: candidate.source,
     events: candidate.events.map<ReviewEventItem>((event) => ({
       id: event.id,
       event,
-      status: "pending",
+      status: defaultEventStatus,
     })),
     issues: [],
     decisions: [],

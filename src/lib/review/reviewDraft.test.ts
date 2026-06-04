@@ -55,12 +55,17 @@ function makeCandidate(eventCount: number): NormalizedImportCandidate {
 }
 
 describe("createImportReviewDraft", () => {
-  it("creates a draft with every event marked pending", () => {
-    const draft = createImportReviewDraft(makeCandidate(2), "ai-transcript");
+  it("marks events pending for a connector import that needs inspection", () => {
+    const draft = createImportReviewDraft(makeCandidate(2), "connector-jsonl");
     expect(draft.events).toHaveLength(2);
     expect(draft.events.every((item) => item.status === "pending")).toBe(true);
-    expect(draft.origin).toBe("ai-transcript");
+    expect(draft.origin).toBe("connector-jsonl");
     expect(draft.source.id).toBe("src-1");
+  });
+
+  it("auto-accepts events for an explicitly-connected AI conversation", () => {
+    const draft = createImportReviewDraft(makeCandidate(3), "ai-transcript");
+    expect(draft.events.every((item) => item.status === "accepted")).toBe(true);
   });
 
   it("preserves the original candidate", () => {
@@ -78,8 +83,8 @@ describe("createImportReviewDraft", () => {
 });
 
 describe("setReviewItemStatus", () => {
-  it("flips a single event to accepted without touching the others", () => {
-    const draft = createImportReviewDraft(makeCandidate(3), "ai-transcript");
+  it("flips a single event without touching the others", () => {
+    const draft = createImportReviewDraft(makeCandidate(3), "connector-jsonl");
     const next = setReviewItemStatus(draft, "event", "evt-2", "accepted");
     expect(next.events[0].status).toBe("pending");
     expect(next.events[1].status).toBe("accepted");
@@ -104,7 +109,7 @@ describe("setAllItemsStatus", () => {
 
 describe("editReviewEvent", () => {
   it("merges edits without changing status", () => {
-    const draft = createImportReviewDraft(makeCandidate(1), "ai-transcript");
+    const draft = createImportReviewDraft(makeCandidate(1), "connector-jsonl");
     const next = editReviewEvent(draft, "evt-1", { title: "  edited  " });
     expect(next.events[0].edits?.title).toBe("  edited  ");
     expect(next.events[0].status).toBe("pending");
@@ -121,7 +126,7 @@ describe("editReviewEvent", () => {
 
 describe("getReviewCounts", () => {
   it("counts pending, accepted, discarded, and total across every kind", () => {
-    let draft = createImportReviewDraft(makeCandidate(3), "ai-transcript");
+    let draft = createImportReviewDraft(makeCandidate(3), "connector-jsonl");
     draft = setReviewItemStatus(draft, "event", "evt-1", "accepted");
     draft = setReviewItemStatus(draft, "event", "evt-2", "discarded");
     const counts = getReviewCounts(draft);
@@ -131,12 +136,12 @@ describe("getReviewCounts", () => {
 
 describe("buildAcceptedCandidate", () => {
   it("returns null when nothing has been accepted yet", () => {
-    const draft = createImportReviewDraft(makeCandidate(2), "ai-transcript");
+    const draft = createImportReviewDraft(makeCandidate(2), "connector-jsonl");
     expect(buildAcceptedCandidate(draft)).toBeNull();
   });
 
   it("filters to only accepted events and keeps the source relatedEventIds in sync", () => {
-    let draft = createImportReviewDraft(makeCandidate(3), "ai-transcript");
+    let draft = createImportReviewDraft(makeCandidate(3), "connector-jsonl");
     draft = setReviewItemStatus(draft, "event", "evt-1", "accepted");
     draft = setReviewItemStatus(draft, "event", "evt-3", "accepted");
     const candidate = buildAcceptedCandidate(draft);
@@ -180,14 +185,14 @@ describe("buildAcceptedCandidate", () => {
 
 describe("isReviewApplyable", () => {
   it("is false until at least one event is accepted", () => {
-    const draft = createImportReviewDraft(makeCandidate(2), "ai-transcript");
+    const draft = createImportReviewDraft(makeCandidate(2), "connector-jsonl");
     expect(isReviewApplyable(draft)).toBe(false);
     const next = setReviewItemStatus(draft, "event", "evt-1", "accepted");
     expect(isReviewApplyable(next)).toBe(true);
   });
 
   it("is false when every accepted event is later discarded", () => {
-    let draft = createImportReviewDraft(makeCandidate(2), "ai-transcript");
+    let draft = createImportReviewDraft(makeCandidate(2), "connector-jsonl");
     draft = setReviewItemStatus(draft, "event", "evt-1", "accepted");
     draft = setReviewItemStatus(draft, "event", "evt-1", "discarded");
     expect(isReviewApplyable(draft)).toBe(false);
