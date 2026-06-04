@@ -32,6 +32,9 @@ const SessionDetailView = lazy(() =>
 const MemoryView = lazy(() =>
   import("../features/memory/MemoryView").then((m) => ({ default: m.MemoryView })),
 );
+const AskMoriView = lazy(() =>
+  import("../features/memory/AskMoriView").then((m) => ({ default: m.AskMoriView })),
+);
 const CompanionInboxView = lazy(() =>
   import("../features/companion/CompanionInboxView").then((m) => ({
     default: m.CompanionInboxView,
@@ -122,6 +125,7 @@ export default function App() {
             ) : null}
             {/* Memory is cross-session; consolidation is its 통합 segment. */}
             {currentView === "memory" || currentView === "consolidation" ? <MemoryView /> : null}
+            {currentView === "ask" ? <AskMoriView /> : null}
             {currentView === "companion" ? <CompanionInboxView /> : null}
             {currentView === "connections" ? <SourcesView /> : null}
             {currentView === "dashboard" ? <DashboardView /> : null}

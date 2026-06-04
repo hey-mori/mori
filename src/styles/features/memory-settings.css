@@ -2473,6 +2473,11 @@
   color: #6e668c;
 }
 
+.ask-mori-standalone {
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+
 .consolidation-review-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;

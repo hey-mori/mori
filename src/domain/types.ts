@@ -14,6 +14,9 @@ export type ViewKey =
   | "reports"
   | "memory"
   | "consolidation"
+  /** Ask Mori — a standalone "ask your reviewed memory" surface reached from
+   *  the command palette; consumes the memory-api facade. */
+  | "ask"
   | "companion"
   | "connections"
   | "dashboard"

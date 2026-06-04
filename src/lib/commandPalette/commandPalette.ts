@@ -48,6 +48,7 @@ const NAVIGATE_COMMANDS: ReadonlyArray<{ id: string; label: string; view: ViewKe
   { id: "nav-graph", label: "작업 그래프 열기", view: "graph", keywords: ["graph", "그래프", "맵", "map", "관계"] },
   { id: "nav-session", label: "프로젝트", view: "workspace", keywords: ["projects", "sessions", "프로젝트", "세션", "워크스페이스"] },
   { id: "nav-memory", label: "메모리", view: "memory" },
+  { id: "nav-ask", label: "Mori에게 묻기", view: "ask", keywords: ["ask", "질문", "질의", "묻기", "메모리 검색"] },
   { id: "nav-consolidation", label: "메모리 통합 검토", view: "consolidation", keywords: ["consolidation"] },
   { id: "nav-connections", label: "연동 열기", view: "connections", keywords: ["import", "connectors", "연동", "연결", "수집", "소스"] },
   { id: "nav-start", label: "새 세션 시작", view: "start", keywords: ["new"] },
