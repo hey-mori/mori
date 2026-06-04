@@ -78,6 +78,10 @@ function assertReviewDraft(jsonl: string, expectedConnectorId: string): void {
   }
 }
 
+// Spawns bash/python subprocesses; generous timeout avoids flaky timeouts on
+// Windows (git-bash) under parallel load.
+const SMOKE_TIMEOUT = 60_000;
+
 describe("POSIX connector wrappers", () => {
   it("Codex wrapper emits valid escaped JSONL for quoted / Korean args", () => {
     const root = makeTempRoot();
@@ -98,7 +102,7 @@ describe("POSIX connector wrappers", () => {
     expect(jsonl).toContain('\\"quoted\\"');
     expect(jsonl).toContain("한국어");
     assertReviewDraft(jsonl, "codexCliWrapper");
-  });
+  }, SMOKE_TIMEOUT);
 
   it("OpenCode wrapper emits valid escaped JSONL for quoted / Korean args", () => {
     const root = makeTempRoot();
@@ -118,7 +122,7 @@ describe("POSIX connector wrappers", () => {
     const jsonl = readJsonl(outDir);
     expect(jsonl).toContain('\\"업로드\\"');
     assertReviewDraft(jsonl, "openCodeCli");
-  });
+  }, SMOKE_TIMEOUT);
 
   it("Claude hook launcher maps a synthetic UTF-8 hook payload", () => {
     const root = makeTempRoot();
@@ -136,5 +140,5 @@ describe("POSIX connector wrappers", () => {
     const jsonl = readJsonl(outDir);
     expect(jsonl).toContain('\\"연동\\"');
     assertReviewDraft(jsonl, "claudeCodeHook");
-  });
+  }, SMOKE_TIMEOUT);
 });
