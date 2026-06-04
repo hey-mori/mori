@@ -1,4 +1,4 @@
-import { Archive, FileText, Play, Sparkles } from "lucide-react";
+import { Archive, FileText, Play } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { BaseFeatureStatusBadge } from "../../components/ui/BaseFeatureStatusBadge";
@@ -57,22 +57,17 @@ export function ProjectMemoryHero({
           </Button>
         </div>
       </header>
+      {/* Memory is durable understanding: lead with decisions and unresolved
+          issues, plus how many sessions feed them. Sources / reports / next
+          actions live on their own surfaces and only added density here. */}
       <dl className="memory-hero-stats">
+        <StatTile label="결정" value={stats.decisionCount} hint={`미확정 ${stats.unconfirmedDecisionCount}건`} />
+        <StatTile label="이슈" value={stats.issueCount} hint={`미처리 ${stats.openIssueCount}건`} />
         <StatTile
           label="세션"
           value={stats.sessionCount}
           hint={`${stats.aggregatedSessionCount}건 집계 / ${stats.sessionCount}건 목록`}
           icon={<Archive size={14} aria-hidden="true" />}
-        />
-        <StatTile label="결정" value={stats.decisionCount} hint={`미확정 ${stats.unconfirmedDecisionCount}건`} />
-        <StatTile label="이슈" value={stats.issueCount} hint={`미처리 ${stats.openIssueCount}건`} />
-        <StatTile label="자료" value={stats.sourceCount} hint={stats.dataBasis} />
-        <StatTile label="보고서" value={stats.reportCount} hint={stats.reportCount === 0 ? ".mori 패키지 없음" : "저장된 패키지"} />
-        <StatTile
-          label="다음 액션"
-          value={stats.nextActionCount}
-          hint="현재 세션 기준"
-          icon={<Sparkles size={14} aria-hidden="true" />}
         />
       </dl>
     </section>
