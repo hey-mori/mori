@@ -12,8 +12,9 @@ model in [`docs/source-integrations.md`](../../docs/source-integrations.md)
 
 ## What this template does
 
-[`mori-capture.sh`](mori-capture.sh) defines one shell function,
-`mori-capture`, that wraps the already-shipped local-capture bridge
+[`mori-capture.sh`](mori-capture.sh) (POSIX shells) and
+[`mori-capture.ps1`](mori-capture.ps1) (Windows PowerShell) each define one
+function, `mori-capture`, that wraps the already-shipped local-capture bridge
 ([`connectors/local-capture/mori-local-capture.py`](../local-capture/mori-local-capture.py))
 with explicit, safe inputs:
 
@@ -41,20 +42,33 @@ Consistent with Mori's hard non-goals, this helper never:
 
 ## Setup
 
-1. Source the helper from your shell rc (`~/.bashrc` or `~/.zshrc`):
+1. Load the helper from your shell startup file.
+
+   POSIX shells (`~/.bashrc` or `~/.zshrc`):
 
    ```sh
    source /path/to/mori/connectors/terminal-helper/mori-capture.sh
    ```
 
-2. If you cloned Mori somewhere other than `~/Dev/Projects/mori`, set
-   `MORI_LOCAL_CAPTURE` to the `mori-local-capture.py` path before sourcing:
+   Windows PowerShell (your `$PROFILE`):
+
+   ```powershell
+   . C:\path\to\mori\connectors\terminal-helper\mori-capture.ps1
+   ```
+
+2. If you cloned Mori somewhere other than `~/Dev/Projects/mori`, point
+   `MORI_LOCAL_CAPTURE` at the `mori-local-capture.py` path before loading:
 
    ```sh
    export MORI_LOCAL_CAPTURE="$HOME/code/mori/connectors/local-capture/mori-local-capture.py"
    ```
 
-3. Requires Python 3.8+ on `PATH` (and `git` for the Git commands).
+   ```powershell
+   $env:MORI_LOCAL_CAPTURE = "C:\code\mori\connectors\local-capture\mori-local-capture.py"
+   ```
+
+3. Requires Python 3.8+ on `PATH` as `python` or `python3` (and `git` for the
+   Git commands).
 
 ## Usage
 
