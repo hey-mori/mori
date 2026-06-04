@@ -1,7 +1,7 @@
 # Glossary — implementation audit
 
-Status: **Slice 1 implemented (deterministic extraction, lib-only).**
-Slice 2 (LLM definitions) and Slice 3 (UI) are designed, not built.
+Status: **Slice 1 (extraction) + Slice 2 (LLM definitions) implemented,
+lib-only.** Slice 3 (UI) is designed, not built.
 
 ## 1. What the Glossary is
 
@@ -44,13 +44,14 @@ never durable memory.
   salience (occurrences biased by kind), caps the result.
 - `index.ts` + colocated tests (7 green).
 
-### Slice 2 — grounded LLM definitions (designed)
+### Slice 2 — grounded LLM definitions (implemented)
 
-A pure `buildGlossaryDefinitionPrompt(term, occurrences)` + a
+`glossaryDefinition.ts`: a pure `buildGlossaryDefinitionPrompt(term)` plus a
 `defineGlossaryTerm(term, deps)` orchestrator that reuses the `AskMoriLlm`
-port. Each definition is grounded in the term's own occurrences and cited
-back to them; with no LLM the term shows its occurrences only (honest
-fallback, same pattern as Ask Mori).
+port. Unlike Ask Mori, the definition prompt may use the model's general
+knowledge for the term's standard meaning, then ties it to the work via the
+occurrence titles. With no LLM (or on error) it degrades honestly to listing
+where the term appears (`deterministicFallback`). Covered by colocated tests.
 
 ### Slice 3 — UI (designed)
 

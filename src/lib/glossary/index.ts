@@ -4,6 +4,12 @@
  */
 export { extractGlossaryTerms } from "./extractGlossaryTerms";
 export type { ExtractGlossaryInput } from "./extractGlossaryTerms";
+export { buildGlossaryDefinitionPrompt, defineGlossaryTerm } from "./glossaryDefinition";
+export type {
+  DefineGlossaryTermDeps,
+  GlossaryDefinition,
+  GlossaryDefinitionBasis,
+} from "./glossaryDefinition";
 export type {
   GlossaryEvidenceRef,
   GlossaryResult,
