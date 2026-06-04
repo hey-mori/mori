@@ -271,73 +271,18 @@ export function buildImportCandidatesFromAgentWorkSession(
     }
     return [buildImportCandidateFromClaudeCodeSession(detail.claudeDetail, input)];
   }
-  if (detail.importKind === "codex-session") {
+  if (detail.importKind !== "connector-jsonl") {
+    // Every native agent session (Codex / Antigravity / OpenCode / Continue /
+    // Cline / Cursor) renders to a transcript whose paste platform comes from
+    // the agent registry. Adding an agent needs no branch here: its
+    // descriptor's platform drives the source kind, and the agentRegistry guard
+    // test ensures that platform resolves to a registered transcript kind.
     return [
       normalizeAiTranscript({
         projectId: input.projectId,
         sessionId: input.sessionId,
         capturedAt: input.capturedAt,
-        platform: "codex",
-        title: detail.title,
-        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
-      }),
-    ];
-  }
-  if (detail.importKind === "antigravity-session") {
-    return [
-      normalizeAiTranscript({
-        projectId: input.projectId,
-        sessionId: input.sessionId,
-        capturedAt: input.capturedAt,
-        platform: "antigravity",
-        title: detail.title,
-        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
-      }),
-    ];
-  }
-  if (detail.importKind === "opencode-session") {
-    return [
-      normalizeAiTranscript({
-        projectId: input.projectId,
-        sessionId: input.sessionId,
-        capturedAt: input.capturedAt,
-        platform: "opencode",
-        title: detail.title,
-        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
-      }),
-    ];
-  }
-  if (detail.importKind === "continue-session") {
-    return [
-      normalizeAiTranscript({
-        projectId: input.projectId,
-        sessionId: input.sessionId,
-        capturedAt: input.capturedAt,
-        platform: "continue",
-        title: detail.title,
-        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
-      }),
-    ];
-  }
-  if (detail.importKind === "cline-session") {
-    return [
-      normalizeAiTranscript({
-        projectId: input.projectId,
-        sessionId: input.sessionId,
-        capturedAt: input.capturedAt,
-        platform: "cline",
-        title: detail.title,
-        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
-      }),
-    ];
-  }
-  if (detail.importKind === "cursor-session") {
-    return [
-      normalizeAiTranscript({
-        projectId: input.projectId,
-        sessionId: input.sessionId,
-        capturedAt: input.capturedAt,
-        platform: "cursor",
+        platform: getAgentDescriptor(detail.agentId).platform,
         title: detail.title,
         text: renderMessagesAsTranscript(detail.messages, detail.agentName),
       }),
