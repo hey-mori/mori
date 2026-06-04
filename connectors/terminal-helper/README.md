@@ -26,7 +26,7 @@ with explicit, safe inputs:
 | `mori-capture transcript <path>` | `--transcript` | a transcript file, or `-` for stdin |
 
 Each capture writes one JSONL line to `~/.mori/connectors/local-capture/`.
-Nothing is imported automatically — open Mori → Evidence Hub → Connector
+Nothing is imported automatically. Open Mori → Evidence Hub → Connector
 JSONL and review the events in Import Review.
 
 ## What it deliberately does not do
