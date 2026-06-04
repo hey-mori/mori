@@ -16,6 +16,7 @@
  * anything (no A-surface capture).
  */
 import type { QuickPassAnalysisSettings } from "../analysis/analysisSettings";
+import { describeOllamaFailure } from "../analysis/ollamaProvider";
 import type { OllamaProviderConfig } from "../analysis/ollamaProvider";
 import type { OpenAiCompatibleProviderConfig } from "../analysis/openAiCompatibleProvider";
 import {
@@ -63,7 +64,10 @@ function ollamaAskMoriLlm(config: OllamaProviderConfig): AskMoriLlm {
           stream: false,
         }),
       });
-      if (!response.ok) throw new Error(`Ollama request failed with HTTP ${response.status}`);
+      if (!response.ok) {
+        const bodyText = await response.text().catch(() => "");
+        throw new Error(describeOllamaFailure(response.status, bodyText));
+      }
       const payload = (await response.json()) as { response?: string };
       if (typeof payload.response !== "string") {
         throw new Error("Ollama response missing 'response' string field");

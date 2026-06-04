@@ -16,6 +16,10 @@ function stubFetch(response: {
       ok: response.ok ?? true,
       status: response.status ?? 200,
       json: () => Promise.resolve(response.json),
+      text: () =>
+        Promise.resolve(
+          typeof response.json === "string" ? response.json : JSON.stringify(response.json),
+        ),
     });
   }) as unknown as typeof fetch;
   return { fetchImpl, calls };

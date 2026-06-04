@@ -158,7 +158,8 @@ export class OllamaQuickPassProvider implements AnalysisProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`Ollama request failed with HTTP ${response.status}`);
+        const bodyText = await response.text().catch(() => "");
+        throw new Error(describeOllamaFailure(response.status, bodyText));
       }
 
       const payload = (await response.json()) as { response?: string };
@@ -300,6 +301,27 @@ function coerceTrust(value: string | undefined): TrustLevel {
 function clampNumber(value: number, min: number, max: number): number {
   if (Number.isNaN(value)) return min;
   return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * Turn a non-OK Ollama response into an informative, actionable error.
+ * Ollama returns its real reason in the body (`{"error":"…"}`) which Mori
+ * otherwise hides behind "HTTP 500". For memory / allocation failures, add a
+ * Korean hint that the model is likely too large for the machine.
+ */
+export function describeOllamaFailure(status: number, bodyText: string): string {
+  let detail = "";
+  try {
+    const parsed = JSON.parse(bodyText) as { error?: unknown };
+    if (typeof parsed.error === "string") detail = parsed.error.trim();
+  } catch {
+    detail = bodyText.trim().slice(0, 200);
+  }
+  const base = detail ? `Ollama: ${detail}` : `Ollama 요청 실패 (HTTP ${status})`;
+  if (/memory|alloc|out of memory|\boom\b|cuda/i.test(detail)) {
+    return `${base} · 모델이 이 기기 메모리에 비해 클 수 있어요. 더 작은 모델(예: gemma3:1b, qwen2.5:1.5b)로 바꾸거나 메모리를 확보한 뒤 다시 시도하세요.`;
+  }
+  return base;
 }
 
 function stripTrailingSlash(value: string): string {
