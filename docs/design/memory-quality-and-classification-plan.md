@@ -85,3 +85,25 @@ Evidence stays source of truth; durable memory still requires the
 consolidation gate (P4 only relaxes the low-stakes import step on
 explicitly-connected sources); local-first and honest-status hold (P1 makes
 the LLM-failure state *more* honest, not less).
+
+## Status (implemented)
+
+All six items plus follow-ups are shipped:
+
+- **P3** `activityModel` routes tool events by `toolName`; structural before fuzzy.
+- **P2** `deterministicQuickPassProvider` skips tool events + filters noise sentences.
+- **P1** review surface shows a failed-LLM fallback notice (`getQuickPassFallbackNotice`).
+- **P5** `buildImportDigest` + the import-review digest strip.
+- **P4** `createImportReviewDraft` auto-accepts `ai-transcript` events.
+- **P6** memory page intro + folded sessions + hero trimmed to 3 stats.
+- **LLM prompt** `promptTemplates` keeps tool events terse and tells the model
+  tool output / code comments are not issues/decisions.
+- **Ask Mori** honest `llmFailed` messaging + tool exclusion from references.
+- **Root noise fix** `claudeImport` titles tool-result turns from the reply, not
+  the dump; `queryableMemory.isToolEnvelopeText` skips tool-titled events for
+  already-imported data.
+
+Remaining (needs the user's machine / eyes): verify the local LLM produces
+quality output once the Ollama model tag is corrected, then tune the prompt
+against real output; optionally integrate Ask Mori into Home's question bar;
+finish P6 (consolidation card / warnings tone-down) against a visual pass.
