@@ -3,12 +3,11 @@ import { BookText, Sparkles } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { BaseSection } from "../../components/ui/BaseSection";
 import { createAskMoriLlmFromSettings } from "../../lib/ask-mori/askMoriLlm";
-import { extractGlossaryTerms } from "../../lib/glossary/extractGlossaryTerms";
-import { defineGlossaryTerm } from "../../lib/glossary/glossaryDefinition";
+import { memoryDefineTerm, memoryGlossary } from "../../lib/memory-api/memoryApi";
+import type { MemoryCapabilityInput } from "../../lib/memory-api/memoryApiTypes";
 import type { GlossaryDefinition } from "../../lib/glossary/glossaryDefinition";
 import type { GlossaryTerm, GlossaryTermKind } from "../../lib/glossary/glossaryTypes";
 import type { QuickPassAnalysisSettings } from "../../lib/analysis/analysisSettings";
-import type { SourceRef, TimelineEvent } from "../../domain/types";
 
 /**
  * Glossary card on the Project Memory page.
@@ -20,15 +19,13 @@ import type { SourceRef, TimelineEvent } from "../../domain/types";
  * fields only; nothing is persisted.
  */
 export function GlossaryCard({
-  events,
-  sources,
+  input,
   settings,
 }: {
-  events: TimelineEvent[];
-  sources: SourceRef[];
+  input: MemoryCapabilityInput;
   settings: QuickPassAnalysisSettings;
 }) {
-  const result = useMemo(() => extractGlossaryTerms({ events, sources }), [events, sources]);
+  const result = useMemo(() => memoryGlossary(input), [input]);
   const [definitions, setDefinitions] = useState<Record<string, GlossaryDefinition>>({});
   const [definingKey, setDefiningKey] = useState<string | null>(null);
 
@@ -40,7 +37,7 @@ export function GlossaryCard({
     setDefiningKey(key);
     try {
       const llm = createAskMoriLlmFromSettings(settings);
-      const definition = await defineGlossaryTerm(term, llm ? { llm } : {});
+      const definition = await memoryDefineTerm(term, llm ? { llm } : {});
       setDefinitions((prev) => ({ ...prev, [key]: definition }));
     } finally {
       setDefiningKey(null);

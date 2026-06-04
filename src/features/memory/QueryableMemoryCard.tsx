@@ -5,15 +5,8 @@ import { BaseSection } from "../../components/ui/BaseSection";
 import { SearchField } from "../../components/ui/SearchField";
 import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
 import { getProductMemoryStatusLabel } from "../../lib/product-state/productState";
-import {
-  searchAcceptedMemories,
-  searchProjectMemoryReferences,
-} from "../../lib/project-memory/queryableMemory";
-import type { SourceRef, TimelineEvent } from "../../domain/types";
-import type {
-  StoredAcceptedProjectMemory,
-  StoredMemoryReviewAction,
-} from "../../lib/storage/storageTypes";
+import { memorySearch } from "../../lib/memory-api/memoryApi";
+import type { MemoryCapabilityInput } from "../../lib/memory-api/memoryApiTypes";
 
 /**
  * Queryable Memory card on the Project Memory page.
@@ -25,36 +18,17 @@ import type {
  * Local-only and deterministic — no transcripts or connector logs are
  * read or shown. Non-current memory stays searchable but is marked.
  */
-export function QueryableMemoryCard({
-  memories,
-  timelineEvents,
-  evidenceSources,
-  reviewActions,
-}: {
-  memories: StoredAcceptedProjectMemory[];
-  timelineEvents: TimelineEvent[];
-  evidenceSources: SourceRef[];
-  reviewActions: StoredMemoryReviewAction[];
-}) {
+export function QueryableMemoryCard({ input }: { input: MemoryCapabilityInput }) {
   const [query, setQuery] = useState("");
-  const resultSet = useMemo(
-    () => searchAcceptedMemories(memories, { text: query }),
-    [memories, query],
-  );
-  const references = useMemo(
-    () =>
-      searchProjectMemoryReferences(
-        { timelineEvents, evidenceSources, reviewActions },
-        { text: query },
-      ),
-    [timelineEvents, evidenceSources, reviewActions, query],
-  );
+  const searchResult = useMemo(() => memorySearch(input, { text: query }), [input, query]);
+  const resultSet = searchResult.memories;
+  const references = searchResult.references;
 
   const hasSearchableData =
-    memories.length > 0 ||
-    timelineEvents.length > 0 ||
-    evidenceSources.length > 0 ||
-    reviewActions.length > 0;
+    input.acceptedMemories.length > 0 ||
+    input.events.length > 0 ||
+    input.sources.length > 0 ||
+    input.reviewActions.length > 0;
   const trimmedQuery = query.trim();
 
   return (
@@ -93,7 +67,7 @@ export function QueryableMemoryCard({
             ariaLabel="프로젝트 메모리 검색"
           />
 
-          {memories.length === 0 ? (
+          {input.acceptedMemories.length === 0 ? (
             <p className="memory-search-empty">아직 확정된 메모리가 없습니다.</p>
           ) : resultSet.results.length === 0 ? (
             <p className="memory-search-empty">

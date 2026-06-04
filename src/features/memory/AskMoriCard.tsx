@@ -3,16 +3,12 @@ import { Eye, MessageCircleQuestion, Send } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { BaseSection } from "../../components/ui/BaseSection";
 import { SearchField } from "../../components/ui/SearchField";
-import { answerFromMemory } from "../../lib/ask-mori/askMoriAnswer";
 import { createAskMoriLlmFromSettings } from "../../lib/ask-mori/askMoriLlm";
 import type { AskMoriAnswer } from "../../lib/ask-mori/askMoriTypes";
+import { memoryAsk } from "../../lib/memory-api/memoryApi";
+import type { MemoryCapabilityInput } from "../../lib/memory-api/memoryApiTypes";
 import { describeProposalKind } from "../../lib/project-memory/projectMemoryConsolidationState";
 import type { QuickPassAnalysisSettings } from "../../lib/analysis/analysisSettings";
-import type { SourceRef, TimelineEvent } from "../../domain/types";
-import type {
-  StoredAcceptedProjectMemory,
-  StoredMemoryReviewAction,
-} from "../../lib/storage/storageTypes";
 
 /**
  * Ask Mori card on the Project Memory page.
@@ -28,18 +24,12 @@ import type {
  * and no raw transcript or connector log is read or shown.
  */
 export function AskMoriCard({
-  memories,
-  timelineEvents,
-  evidenceSources,
-  reviewActions,
+  input,
   settings,
   onSelectMemory,
   onNavigateEvent,
 }: {
-  memories: StoredAcceptedProjectMemory[];
-  timelineEvents: TimelineEvent[];
-  evidenceSources: SourceRef[];
-  reviewActions: StoredMemoryReviewAction[];
+  input: MemoryCapabilityInput;
   settings: QuickPassAnalysisSettings;
   /** Open the accepted-memory detail drawer for a cited memory. */
   onSelectMemory?: (memoryId: string) => void;
@@ -52,10 +42,10 @@ export function AskMoriCard({
   const [error, setError] = useState<string | null>(null);
 
   const hasSearchableData =
-    memories.length > 0 ||
-    timelineEvents.length > 0 ||
-    evidenceSources.length > 0 ||
-    reviewActions.length > 0;
+    input.acceptedMemories.length > 0 ||
+    input.events.length > 0 ||
+    input.sources.length > 0 ||
+    input.reviewActions.length > 0;
   const llmConnected = settings.provider !== "deterministic";
 
   async function handleAsk(event: FormEvent) {
@@ -66,14 +56,7 @@ export function AskMoriCard({
     setError(null);
     try {
       const llm = createAskMoriLlmFromSettings(settings);
-      const result = await answerFromMemory(
-        {
-          question: trimmed,
-          acceptedMemories: memories,
-          references: { timelineEvents, evidenceSources, reviewActions },
-        },
-        llm ? { llm } : {},
-      );
+      const result = await memoryAsk(input, trimmed, llm ? { llm } : {});
       setAnswer(result);
     } catch {
       setError("답변 생성 중 문제가 발생했습니다. 다시 시도해 주세요.");

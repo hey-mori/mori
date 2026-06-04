@@ -38,6 +38,7 @@ import { MemoryAuditTrailCard } from "./MemoryAuditTrailCard";
 import { QueryableMemoryCard } from "./QueryableMemoryCard";
 import { AskMoriCard } from "./AskMoriCard";
 import { GlossaryCard } from "./GlossaryCard";
+import type { MemoryCapabilityInput } from "../../lib/memory-api/memoryApiTypes";
 import {
   getAcceptedMemoryRepository,
   type AcceptedMemoryStorageSource,
@@ -347,6 +348,18 @@ export function MemoryView() {
 
   const decisionTimeline = useMemo(() => getDecisionTimeline(view), [view]);
 
+  // One canonical memory-capability input for the Ask / Search / Glossary
+  // cards. They consume the memory-api facade, not raw props.
+  const memoryInput = useMemo<MemoryCapabilityInput>(
+    () => ({
+      acceptedMemories,
+      reviewActions,
+      events: view.events,
+      sources: view.sources,
+    }),
+    [acceptedMemories, reviewActions, view.events, view.sources],
+  );
+
   function handleOpenSession(entry: DerivedSession) {
     if (entry.isCurrent) {
       setCurrentView("timeline");
@@ -456,10 +469,7 @@ export function MemoryView() {
               <ReimportHistoryCard summary={viewModel.reimportSummary} />
 
               <AskMoriCard
-                memories={acceptedMemories}
-                timelineEvents={view.events}
-                evidenceSources={view.sources}
-                reviewActions={reviewActions}
+                input={memoryInput}
                 settings={analysisSettings}
                 onSelectMemory={setSelectedMemoryId}
                 onNavigateEvent={(eventId) => {
@@ -468,18 +478,9 @@ export function MemoryView() {
                 }}
               />
 
-              <QueryableMemoryCard
-                memories={acceptedMemories}
-                timelineEvents={view.events}
-                evidenceSources={view.sources}
-                reviewActions={reviewActions}
-              />
+              <QueryableMemoryCard input={memoryInput} />
 
-              <GlossaryCard
-                events={view.events}
-                sources={view.sources}
-                settings={analysisSettings}
-              />
+              <GlossaryCard input={memoryInput} settings={analysisSettings} />
 
               <MemoryAuditTrailCard
                 actions={reviewActions}
