@@ -82,8 +82,12 @@ export function AskMoriCard({
         </span>
       }
       actions={
-        <Badge tone={llmConnected ? "green" : "gray"}>
-          {llmConnected ? "로컬 LLM 연결" : "LLM 미연결 · 규칙 기반"}
+        <Badge tone={answer?.llmFailed ? "gray" : llmConnected ? "green" : "gray"}>
+          {answer?.llmFailed
+            ? "로컬 LLM 응답 실패"
+            : llmConnected
+              ? "로컬 LLM 설정됨"
+              : "LLM 미연결 · 규칙 기반"}
         </Badge>
       }
     >

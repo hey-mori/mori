@@ -63,6 +63,7 @@ export async function answerFromMemory(
       citations: [],
       basis: "noMemory",
       usedLlm: false,
+      llmFailed: false,
       containsNonCurrent: false,
       dataBasis: `${input.acceptedMemories.length} accepted memories searched · local-only · no match.`,
     };
@@ -75,6 +76,7 @@ export async function answerFromMemory(
   });
   const containsNonCurrent = citations.some((citation) => !citation.isCurrent);
 
+  let llmFailed = false;
   if (deps.llm) {
     try {
       const text = (await deps.llm(prompt)).trim();
@@ -85,20 +87,24 @@ export async function answerFromMemory(
         citations,
         basis: "llm",
         usedLlm: true,
+        llmFailed: false,
         containsNonCurrent,
         dataBasis: dataBasisLine(memoryResults.length, references.length, "llm"),
       };
     } catch {
-      // fall through to the deterministic listing, honestly labeled.
+      // An LLM was configured but errored — fall back, but flag the failure so
+      // the surface says "failed", not "not connected".
+      llmFailed = true;
     }
   }
 
   return {
     question,
-    text: deterministicAnswerText(citations),
+    text: deterministicAnswerText(citations, llmFailed),
     citations,
     basis: "deterministicFallback",
     usedLlm: false,
+    llmFailed,
     containsNonCurrent,
     dataBasis: dataBasisLine(memoryResults.length, references.length, "deterministicFallback"),
   };
@@ -173,15 +179,18 @@ function compareMemoryResults(a: QueryableMemoryResult, b: QueryableMemoryResult
 
 // ─── deterministic fallback ───────────────────────────────────────────
 
-function deterministicAnswerText(citations: readonly AskMoriCitation[]): string {
+function deterministicAnswerText(
+  citations: readonly AskMoriCitation[],
+  llmFailed: boolean,
+): string {
   const lines = citations.map((citation) => {
     const flag = citation.isCurrent ? "" : " (확정 아님)";
     return `• ${citation.label}${flag}: ${citation.snippet} [${citation.tag}]`;
   });
-  return [
-    "로컬 LLM이 연결되어 있지 않아, 질문과 관련된 검토 메모리를 정리해 보여드립니다.",
-    ...lines,
-  ].join("\n");
+  const lead = llmFailed
+    ? "로컬 LLM 분석에 실패해 규칙 기반으로 정리했습니다. 설정에서 엔진과 모델 이름을 확인하세요."
+    : "로컬 LLM이 연결되어 있지 않아, 질문과 관련된 검토 메모리를 정리해 보여드립니다.";
+  return [lead, ...lines].join("\n");
 }
 
 function dataBasisLine(

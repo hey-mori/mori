@@ -65,6 +65,12 @@ export type AskMoriAnswer = {
   citations: AskMoriCitation[];
   basis: AskMoriBasis;
   usedLlm: boolean;
+  /**
+   * True when an LLM was configured and attempted but errored, so the answer
+   * fell back to the deterministic listing. Distinct from "no LLM configured"
+   * — the message and status must not claim the LLM is simply not connected.
+   */
+  llmFailed: boolean;
   /** True when at least one citation is non-current (stale / reference). */
   containsNonCurrent: boolean;
   /** Honest one-line description of what was searched and how answered. */

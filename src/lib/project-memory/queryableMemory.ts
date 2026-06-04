@@ -301,6 +301,10 @@ export function searchProjectMemoryReferences(
   const references: QueryableMemoryReference[] = [];
 
   for (const event of input.timelineEvents ?? []) {
+    // Tool events (tool calls / results / errors) are machine output, not
+    // evidence worth citing. Their titles are raw tool dumps ("↳ 도구 결과:
+    // …"), so including them floods Ask Mori / Memory Search with noise.
+    if (event.actor === "tool") continue;
     if (normalise(event.title).includes(text)) {
       references.push(eventReference(event, "title"));
     } else if (normalise(event.summary).includes(text)) {

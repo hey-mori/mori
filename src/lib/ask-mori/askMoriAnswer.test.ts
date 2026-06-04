@@ -80,7 +80,17 @@ describe("answerFromMemory", () => {
     );
     expect(answer.basis).toBe("deterministicFallback");
     expect(answer.usedLlm).toBe(false);
-    expect(answer.text).toContain("로컬 LLM");
+    expect(answer.llmFailed).toBe(true);
+    expect(answer.text).toContain("실패");
+  });
+
+  it("does not claim LLM failure when no LLM was configured", async () => {
+    const answer = await answerFromMemory({
+      question: "인증 결정",
+      acceptedMemories: [memory("a", { title: "인증 방식 결정" })],
+    });
+    expect(answer.llmFailed).toBe(false);
+    expect(answer.text).not.toContain("실패");
   });
 
   it("flags non-current memory in the answer", async () => {
