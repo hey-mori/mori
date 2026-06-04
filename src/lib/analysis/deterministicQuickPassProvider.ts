@@ -133,9 +133,20 @@ export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
   const notes: string[] = [];
 
   input.events.forEach((event) => {
+    // Tool events are machine output (tool calls, results, errors), not human
+    // or assistant reasoning. They are where the heuristic manufactured noise
+    // ("↳ 도구 결과: warning…" became an issue), so they are excluded from
+    // issue / decision / highlight extraction. Real issues and decisions are
+    // stated in conversation turns, which keep their actor.
+    if (event.actor === "tool") return;
+
     const text = composeEventText(event);
     const tokens = text.split(/[.!?\n]+/).map((sentence) => sentence.trim()).filter(Boolean);
     tokens.forEach((sentence) => {
+      // Skip quoted tool output / error envelopes / code fragments even inside
+      // a conversation turn — these are not stated issues or decisions.
+      if (isNoiseSentence(sentence)) return;
+
       const issueMatch = matchIssue(sentence);
       if (issueMatch) {
         issueCandidates.push(buildIssueCandidate(sentence, event, issueMatch.priority));
@@ -147,7 +158,7 @@ export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
       }
     });
 
-    if (event.summary.length > 12 && highlights.length < 6) {
+    if (event.summary.length > 12 && highlights.length < 6 && !isNoiseSentence(event.summary)) {
       highlights.push(`${formatClock(event.start)} ${event.title}: ${truncate(event.summary, 110)}`);
     }
   });
@@ -215,6 +226,25 @@ export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
 
 function composeEventText(event: TimelineEvent): string {
   return [event.title, event.summary].filter(Boolean).join(". ");
+}
+
+// Machine output, error envelopes, and code fragments that the keyword
+// matcher would otherwise mistake for issues or decisions.
+const NOISE_PATTERNS: RegExp[] = [
+  /↳\s*도구\s*(결과|오류)/,
+  /tool[_\s]?(use[_\s]?error|result)/i,
+  /<\/?tool[_a-z]*/i,
+  /\b[A-Z][A-Z0-9]*_[A-Z0-9_]*ERROR\b/, // GEMINI_API_ERROR, TOOL_USE_ERROR
+  /\bHTTP\s*\d{3}\b/i,
+  /\(\d{3}\)\s*(not found|error|unauthorized|forbidden|bad request)/i,
+  /\btraceback\b|\bstderr\b|\bstdout\b/i,
+  /^\s*at\s+\S+.*:\d+/, // stack frame
+  /\/\*|\*\//, // block-comment / code fragment
+  /^\s*(const|let|var|function|class|import|export|return)\b.*[={(]/,
+];
+
+function isNoiseSentence(sentence: string): boolean {
+  return NOISE_PATTERNS.some((pattern) => pattern.test(sentence));
 }
 
 function matchIssue(sentence: string): { priority: Priority } | null {
