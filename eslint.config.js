@@ -63,4 +63,14 @@ export default [
       },
     },
   },
+  {
+    // The connector smoke tests spawn the real shell / python capture scripts
+    // and use Node APIs (node:child_process, fs, process). The app is
+    // browser-first (DOM lib, no @types/node), so these few node-dependent
+    // integration tests legitimately suppress type-checking with @ts-nocheck.
+    files: ["src/lib/connectors/*Smoke.test.ts"],
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "off",
+    },
+  },
 ];
