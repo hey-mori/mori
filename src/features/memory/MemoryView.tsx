@@ -37,6 +37,7 @@ import { AcceptedMemoryDetailDrawer } from "./AcceptedMemoryDetailDrawer";
 import { MemoryAuditTrailCard } from "./MemoryAuditTrailCard";
 import { QueryableMemoryCard } from "./QueryableMemoryCard";
 import { AskMoriCard } from "./AskMoriCard";
+import { GlossaryCard } from "./GlossaryCard";
 import {
   getAcceptedMemoryRepository,
   type AcceptedMemoryStorageSource,
@@ -472,6 +473,12 @@ export function MemoryView() {
                 timelineEvents={view.events}
                 evidenceSources={view.sources}
                 reviewActions={reviewActions}
+              />
+
+              <GlossaryCard
+                events={view.events}
+                sources={view.sources}
+                settings={analysisSettings}
               />
 
               <MemoryAuditTrailCard

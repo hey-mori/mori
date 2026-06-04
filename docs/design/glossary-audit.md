@@ -1,7 +1,7 @@
 # Glossary — implementation audit
 
-Status: **Slice 1 (extraction) + Slice 2 (LLM definitions) implemented,
-lib-only.** Slice 3 (UI) is designed, not built.
+Status: **Slice 1 (extraction) + Slice 2 (LLM definitions) + Slice 3 (UI)
+implemented.** The glossary ships as a card on the Project Memory page.
 
 ## 1. What the Glossary is
 
@@ -53,13 +53,17 @@ knowledge for the term's standard meaning, then ties it to the work via the
 occurrence titles. With no LLM (or on error) it degrades honestly to listing
 where the term appears (`deterministicFallback`). Covered by colocated tests.
 
-### Slice 3 — UI (designed)
+### Slice 3 — UI (implemented)
 
-A glossary surface (likely a card on the session / project memory page, or
-a peek in the session detail) listing terms with kind badges, occurrence
-counts, evidence links, and an on-demand "explain" action that calls Slice
-2. Korean-first copy. Placement to be confirmed against the UI bar before
-building, like the Ask Mori card.
+`src/features/memory/GlossaryCard.tsx`: a card in the Project Memory
+"메모리 분석 · 도구" disclosure, sibling to the Ask Mori and Memory Search
+cards, fed the active session's `view.events` / `view.sources` plus
+`analysisSettings`. Lists terms with a kind badge, occurrence count, and
+evidence titles; an on-demand "설명" action calls Slice 2 (`defineGlossaryTerm`)
+with the settings-derived LLM, rendering the definition inline with an honest
+"LLM 설명" / "등장 위치" basis badge. Korean-first, reuses the `memory-search`
+classes. Chosen over a session-detail peek for the lower risk and identical
+data wiring; promotion to session detail stays a later option.
 
 ## 4. Validation
 
