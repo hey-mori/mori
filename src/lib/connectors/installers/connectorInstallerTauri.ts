@@ -99,14 +99,17 @@ export async function uninstallClaudeHook(
 
 /**
  * One-click connect: resolve the bundled hook-script directory, build the
- * OS-aware command (platform inferred from the resolved path separators), and
- * install it. Desktop only; the modal drives this.
+ * OS-aware command, and install it. The platform comes from the authoritative
+ * `host_platform` command (Rust `std::env::consts::OS`) rather than inferring
+ * the OS from the shape of the resolved path. Desktop only; the modal drives
+ * this.
  */
 export async function connectClaudeHook(
   target: ClaudeHookScope,
 ): Promise<ClaudeHookInstallResult> {
   requireDesktop();
   const dir = await resolveResource("connectors/claude-code");
-  const platform = /^[a-zA-Z]:[\\/]/.test(dir) || dir.includes("\\") ? "win32" : "posix";
+  const os = await invokeTauriCommand("host_platform", undefined);
+  const platform = os === "windows" ? "win32" : "posix";
   return installClaudeHook(target, buildClaudeHookCommand(dir, platform));
 }

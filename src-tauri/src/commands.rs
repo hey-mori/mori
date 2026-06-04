@@ -22,6 +22,16 @@ pub fn get_app_info() -> AppInfo {
     }
 }
 
+/// Host OS family, so the frontend picks OS-correct launchers (e.g. the Claude
+/// hook command, python on Windows vs the .sh launcher on POSIX) from an
+/// authoritative compile-time signal instead of inferring the OS from the
+/// shape of a resolved path. Returns `std::env::consts::OS`: "windows",
+/// "macos", "linux", and so on.
+#[tauri::command]
+pub fn host_platform() -> String {
+    std::env::consts::OS.to_string()
+}
+
 #[tauri::command]
 pub fn get_storage_location() -> Result<StorageLocation, String> {
     let path = crate::package::default_storage_dir()?;
