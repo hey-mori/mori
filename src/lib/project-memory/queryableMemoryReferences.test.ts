@@ -36,4 +36,19 @@ describe("searchProjectMemoryReferences tool exclusion", () => {
     );
     expect(refs.map((r) => r.refId)).toEqual(["c1"]);
   });
+
+  it("excludes already-imported events whose title is a tool envelope even if actor is assistant", () => {
+    const refs = searchProjectMemoryReferences(
+      {
+        timelineEvents: [
+          // Leaky case: a tool-result paired with an assistant reply was
+          // imported with actor "assistant" but a "↳ 도구 결과" title.
+          event("a1", "↳ 도구 결과: RAG-only test", "assistant"),
+          event("c1", "RAG 설계 결정", "assistant"),
+        ],
+      },
+      { text: "rag" },
+    );
+    expect(refs.map((r) => r.refId)).toEqual(["c1"]);
+  });
 });

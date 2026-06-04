@@ -53,6 +53,26 @@ describe("pairMessagesIntoTurns", () => {
     // summary — the point of the test is that the human turn survives.
     expect(turns[0].summary).toContain("Question");
   });
+
+  it("titles a tool-result turn from the assistant reply, not the dump", () => {
+    const turns = pairMessagesIntoTurns([
+      {
+        id: "m1",
+        role: "human",
+        content: "↳ 도구 결과: warning: in the working copy of config.ts",
+        createdAt: "2026-05-21T00:00:00Z",
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        content: "그 경고는 무시해도 됩니다.",
+        createdAt: "2026-05-21T00:00:01Z",
+      },
+    ]);
+    expect(turns).toHaveLength(1);
+    expect(turns[0].title).not.toContain("도구 결과");
+    expect(turns[0].title).toContain("무시");
+  });
 });
 
 describe("buildImportCandidateFromClaudeConversation", () => {

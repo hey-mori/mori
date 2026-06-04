@@ -243,6 +243,11 @@ function normalise(value: string): string {
   return collapse(value).toLowerCase();
 }
 
+/** True when text is a Claude tool envelope ("🔧 …" or "↳ 도구 결과/오류 …"). */
+function isToolEnvelopeText(value: string): boolean {
+  return /^\s*(↳\s*도구\s*(결과|오류)|🔧)/.test(value);
+}
+
 function collapse(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -303,8 +308,10 @@ export function searchProjectMemoryReferences(
   for (const event of input.timelineEvents ?? []) {
     // Tool events (tool calls / results / errors) are machine output, not
     // evidence worth citing. Their titles are raw tool dumps ("↳ 도구 결과:
-    // …"), so including them floods Ask Mori / Memory Search with noise.
-    if (event.actor === "tool") continue;
+    // …"), so including them floods Ask Mori / Memory Search with noise. We
+    // skip by actor and, for already-imported data whose title is a tool
+    // envelope even though its actor is "assistant", by the title shape.
+    if (event.actor === "tool" || isToolEnvelopeText(event.title)) continue;
     if (normalise(event.title).includes(text)) {
       references.push(eventReference(event, "title"));
     } else if (normalise(event.summary).includes(text)) {

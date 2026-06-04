@@ -318,7 +318,14 @@ function messageToTurn(
   human: ClaudeMessage | null,
   assistant: ClaudeMessage | null,
 ): ConversationTurn {
-  const titleSeed = (human?.content ?? assistant?.content ?? "").trim();
+  // A tool-result human message ("↳ 도구 결과 …") is machine output, not a
+  // prompt. Title from the assistant's actual reply (or a short label) instead
+  // of the raw dump, so the timeline and memory never read tool noise as the
+  // turn's headline.
+  const humanIsToolResult = human ? classifyMessage(human) === "tool_result" : false;
+  const titleSeed = humanIsToolResult
+    ? (assistant?.content ?? "").trim() || "도구 결과"
+    : (human?.content ?? assistant?.content ?? "").trim();
   const summarySeed = (assistant?.content ?? human?.content ?? "").trim();
   const { actor, toolName } = classifyTurnActor(human, assistant);
   return {
