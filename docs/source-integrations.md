@@ -530,6 +530,8 @@ explicit-emit contract is proven in real use.
 
 ## See Also
 
+- [Anchor agents](./anchor-agents.md) — the multi-agent session-discovery layer
+  (registry, per-agent readers, store types, how to add an agent)
 - [Imports Documentation](./imports.md) — Import panel UI and normalizer architecture
 - [Architecture Documentation](./architecture.md) — Source registry and traceability helpers
 - [Connector event format](./connectors/connector-event-format.md) — Local JSONL connector spec
