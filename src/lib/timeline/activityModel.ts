@@ -307,15 +307,25 @@ export function deriveActivityKind(args: {
   const primaryFamily = families[0] ?? "unknown";
   const titleAndSummary = `${args.event.title} ${args.event.summary}`.toLocaleLowerCase();
 
+  // Structural signals from the importer are ground truth and classify before
+  // any fuzzy text match. A tool turn is routed by its tool name, so Edit /
+  // Write become file changes and WebFetch becomes research instead of every
+  // tool collapsing into the command lane — and so a keyword the work merely
+  // mentions ("memory") never hijacks a tool event.
+  if (args.event.actor === "tool") {
+    return toolActivityKind(args.event.toolName, titleAndSummary);
+  }
+  if (args.event.actor === "file") return "fileChange";
+  if (args.event.actor === "decision") return "decision";
+
+  // Fuzzy text heuristics only for conversation / unknown-actor events.
   if (looksLikeMemory(titleAndSummary)) return "memory";
   if (looksLikeHandoff(titleAndSummary)) return "handoff";
   if (looksLikeReport(titleAndSummary)) return "report";
   if (looksLikeTest(titleAndSummary)) return "testRun";
 
   if (sources.length === 0) {
-    if (args.event.actor === "tool") return "command";
-    if (args.event.actor === "file") return "fileChange";
-    if (args.event.actor === "decision") return "decision";
+    // actor tool / file / decision already returned above; classify by type.
     switch (args.event.type) {
       case "aiConversation":
         return "conversation";
@@ -351,10 +361,7 @@ export function deriveActivityKind(args: {
   if (primaryFamily === "manual") return "note";
   if (primaryFamily === "docs" || primaryFamily === "communication") return "note";
 
-  if (args.event.actor === "tool") return "command";
-  if (args.event.actor === "file") return "fileChange";
-  if (args.event.actor === "decision") return "decision";
-
+  // actor tool / file / decision already returned above; classify by type.
   switch (args.event.type) {
     case "aiConversation":
       return "conversation";
@@ -374,6 +381,24 @@ export function deriveActivityKind(args: {
     default:
       return "unknown";
   }
+}
+
+/**
+ * Map a tool event to an activity kind using the parsed `toolName` (set by
+ * the Claude import). File-mutating tools are real code/file changes; web
+ * tools are research; a shell command that looks like a test run is a test;
+ * everything else (Read / Grep / Glob / generic Bash / unnamed) is a command.
+ */
+function toolActivityKind(toolName: string | undefined, text: string): ActivityKind {
+  const name = (toolName ?? "").trim().toLowerCase();
+  if (/^(edit|write|multiedit|notebookedit|update|create|applypatch|str_replace)/.test(name)) {
+    return "fileChange";
+  }
+  if (name.startsWith("web")) return "urlReference";
+  if (/^(bash|shell|run|exec|sh)$/.test(name)) {
+    return looksLikeTest(text) ? "testRun" : "command";
+  }
+  return "command";
 }
 
 export function getTimelineLaneForEvent(args: {
