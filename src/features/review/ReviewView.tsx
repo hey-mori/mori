@@ -25,6 +25,7 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
+import { getQuickPassFallbackNotice } from "../../lib/analysis/analysisStatusDisplay";
 import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import {
   isNextActionCompleted,
@@ -68,6 +69,7 @@ export function ReviewView() {
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
   const analysisError = useSessionStore((state) => state.analysisError);
   const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
+  const analysisFallbackUsed = useSessionStore((state) => state.analysisFallbackUsed);
   const analysis = useSessionStore((state) => state.analysis);
   const runQuickPass = useSessionStore((state) => state.runQuickPass);
   const setNextActionCompletion = useSessionStore((state) => state.setNextActionCompletion);
@@ -79,6 +81,7 @@ export function ReviewView() {
   const editNextAction = useSessionStore((state) => state.editNextAction);
   const imports = useSessionStore((state) => state.imports);
   const setCurrentView = useAppStore((state) => state.navigate);
+  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
   const reviewFocus = useAppStore((state) => state.reviewFocus);
   const clearReviewFocus = useAppStore((state) => state.clearReviewFocus);
@@ -352,9 +355,12 @@ export function ReviewView() {
         providerName={analysis?.providerName ?? null}
         analysisGeneratedAt={analysis?.generatedAt ?? null}
         error={analysisError}
+        fallbackUsed={analysisFallbackUsed}
+        notes={analysis?.notes ?? []}
         importsCount={imports.length}
         dataBasis={dataBasis}
         onGoToEvidence={() => setCurrentView("evidence")}
+        onGoToSettings={() => openSettingsSheet("localAi")}
       />
 
       {toolbar}
@@ -1012,9 +1018,12 @@ function ReviewAnalysisNotice({
   providerName,
   analysisGeneratedAt,
   error,
+  fallbackUsed,
+  notes,
   importsCount,
   dataBasis,
   onGoToEvidence,
+  onGoToSettings,
 }: {
   mode: "demo" | "draft";
   hasAnalysis: boolean;
@@ -1023,9 +1032,12 @@ function ReviewAnalysisNotice({
   providerName: string | null;
   analysisGeneratedAt: string | null;
   error: string | null;
+  fallbackUsed: boolean;
+  notes: readonly string[];
   importsCount: number;
   dataBasis: string;
   onGoToEvidence: () => void;
+  onGoToSettings: () => void;
 }) {
   if (mode === "demo") return null;
 
@@ -1065,12 +1077,41 @@ function ReviewAnalysisNotice({
       : providerName === "openai-compatible-quick-pass-v1"
         ? "OpenAI 호환 LLM"
         : "휴리스틱";
+
+  // A fallback-from-failure (the local LLM errored and the run fell back to
+  // the heuristic) is surfaced as a warning, not a calm success line, so the
+  // user knows the rich output they expected did not run. Detect it from the
+  // persisted notes so it survives a reload, or from the live flag.
+  const fallbackNotice =
+    getQuickPassFallbackNotice(notes) ??
+    (fallbackUsed
+      ? "로컬 LLM 분석에 실패해 규칙 기반(휴리스틱) 결과를 표시하고 있습니다. 설정에서 엔진과 모델 이름을 확인하세요."
+      : null);
+
+  const metaLine = (
+    <span className="review-analysis-meta">
+      {providerCopy} · {providerKind}
+      {analysisGeneratedAt ? ` · ${formatDateTime(analysisGeneratedAt)}` : ""} · {dataBasis}
+    </span>
+  );
+
+  if (fallbackNotice) {
+    return (
+      <NoticeBanner
+        tone="warning"
+        title="로컬 LLM 분석 실패 · 규칙 기반으로 표시 중"
+        actions={<Button onClick={onGoToSettings}>엔진 설정 확인</Button>}
+      >
+        {fallbackNotice}
+        <br />
+        {metaLine}
+      </NoticeBanner>
+    );
+  }
+
   return (
     <NoticeBanner tone="success" icon={null}>
-      <span className="review-analysis-meta">
-        {providerCopy} · {providerKind}
-        {analysisGeneratedAt ? ` · ${formatDateTime(analysisGeneratedAt)}` : ""} · {dataBasis}
-      </span>
+      {metaLine}
     </NoticeBanner>
   );
 }

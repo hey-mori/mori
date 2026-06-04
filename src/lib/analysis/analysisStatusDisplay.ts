@@ -36,3 +36,22 @@ export function getAnalysisStatusTone(
 export function describeAnalysisStatus(status: AnalysisRunStatus): string {
   return ANALYSIS_STATUS_LABEL[status];
 }
+
+/**
+ * Detect, from a persisted analysis result's notes, that the run fell back
+ * to the heuristic because the local LLM failed, and return a prominent
+ * Korean notice (with the failure reason). Returns null when no such
+ * fallback happened — the deterministic engine chosen on purpose is not a
+ * failure. Reads the note shape the run loop writes:
+ * `<label> failed: <reason>. Fell back to <deterministic>.`
+ */
+export function getQuickPassFallbackNotice(notes: readonly string[]): string | null {
+  for (const note of notes) {
+    const match = /failed:\s*(.+?)\.\s*Fell back to/i.exec(note);
+    if (match) {
+      const reason = match[1].trim();
+      return `로컬 LLM 분석에 실패해 규칙 기반(휴리스틱) 결과를 표시하고 있습니다. 사유: ${reason}. 설정에서 엔진과 모델 이름을 확인하세요.`;
+    }
+  }
+  return null;
+}
