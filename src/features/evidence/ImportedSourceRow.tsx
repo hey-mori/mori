@@ -3,7 +3,6 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
 import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
-import { BaseFidelityBadge } from "../../components/ui/BaseFidelityBadge";
 import {
   BaseContextMenu,
   BaseOverflowMenu,
@@ -63,11 +62,6 @@ export function ImportedSourceRow({
         meta={
           <BaseMetadataLine
             items={[
-              <Badge tone="purple">{display.integrationLabel}</Badge>,
-              source.trustLevel === "inferred" ? (
-                <Badge tone={display.trustTone}>{display.trustLabel}</Badge>
-              ) : null,
-              <BaseFidelityBadge fidelity={source.captureFidelity} />,
               summaryBadge ? (
                 <Badge tone={summaryBadge.tone}>{summaryBadge.label}</Badge>
               ) : null,
