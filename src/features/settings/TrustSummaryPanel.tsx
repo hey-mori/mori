@@ -24,7 +24,7 @@ const ACCESS_ACTIVE = [
   "사용자가 직접 입력하거나 붙여넣은 메모 / URL / AI transcript / Git diff",
   "사용자가 추가한 리포지토리 경로 (Git diff / Verify 실행 시에만)",
   "사용자가 직접 설정한 Ollama endpoint",
-  "현재 세션의 Quick Pass 결과",
+  "현재 세션의 분석 결과",
 ];
 
 // The "never does" list is the shared privacy-guarantee source — see
@@ -107,9 +107,9 @@ export function TrustSummaryPanel({
 function labelForStep(id: RecommendedSetupStep["id"]): string {
   switch (id) {
     case "import-source":
-      return "1. 소스 가져오기";
+      return "1. 자료 가져오기";
     case "run-quickpass":
-      return "2. Quick Pass 실행";
+      return "2. 분석 실행";
     case "save-to-sqlite":
       return "3. SQLite에 저장";
     case "verify-repository":

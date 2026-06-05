@@ -189,7 +189,7 @@ export function OverviewView() {
             <OverviewNavCard
               icon={FileText}
               label="자료"
-              description="이 세션을 구성한 자료와 Quick Pass 분석"
+              description="이 세션을 구성한 자료와 분석"
               onOpen={() => setSessionTab("evidence")}
             />
             <OverviewNavCard

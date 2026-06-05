@@ -45,7 +45,7 @@ export function CompanionCard({
 
       {signals.length === 0 ? (
         <p className="companion-empty">
-          지금은 특별히 살펴볼 것이 없어요. 새 소스를 가져오거나 Quick Pass를
+          지금은 특별히 살펴볼 것이 없어요. 새 자료를 가져오거나 분석을
           실행하면 Mori가 다시 짚어 드립니다.
         </p>
       ) : (

@@ -457,7 +457,7 @@ describe("traceability", () => {
       expect(summary.issueCount).toBe(1);
       expect(summary.decisionCount).toBe(1);
       expect(summary.hasAnalysis).toBe(true);
-      expect(summary.dataBasis).toBe("가져온 소스 + Quick Pass 분석");
+      expect(summary.dataBasis).toBe("가져온 자료 + 분석");
       expect(summary.integrationBreakdown["직접 입력 메모"]).toBe(1);
       expect(summary.integrationBreakdown["Git Diff (붙여넣기)"]).toBe(1);
       expect(summary.trustBreakdown.verified).toBe(2);
@@ -514,7 +514,7 @@ describe("traceability", () => {
 
       expect(summary.sourceCount).toBe(1);
       expect(summary.hasAnalysis).toBe(false);
-      expect(summary.dataBasis).toBe("가져온 소스만 (분석 전)");
+      expect(summary.dataBasis).toBe("가져온 자료만 (분석 전)");
     });
 
     it("returns evidence summary for empty session", () => {

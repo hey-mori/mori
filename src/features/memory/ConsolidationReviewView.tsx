@@ -706,7 +706,7 @@ function ConsolidationEmptyHero({
         <strong>검토할 제안이 없습니다</strong>
         <p>
           {consolidationState.emptyReason ??
-            "세션을 더 저장하거나 Quick Pass를 실행하면 새 제안이 모입니다."}{" "}
+            "세션을 더 저장하거나 분석을 실행하면 새 제안이 모입니다."}{" "}
           저장 위치는 {describeAcceptedMemoryStorageSource(expectedSource)}.
         </p>
       </div>

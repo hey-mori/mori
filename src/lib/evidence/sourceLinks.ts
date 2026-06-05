@@ -183,9 +183,9 @@ export function getSessionEvidenceSummary(sessionView: MockSession): SessionEvid
   if (sources.length === 0 && events.length === 0) {
     dataBasis = "데이터 없음";
   } else if (hasAnalysis) {
-    dataBasis = "가져온 소스 + Quick Pass 분석";
+    dataBasis = "가져온 자료 + 분석";
   } else if (sources.length > 0) {
-    dataBasis = "가져온 소스만 (분석 전)";
+    dataBasis = "가져온 자료만 (분석 전)";
   }
 
   return {
