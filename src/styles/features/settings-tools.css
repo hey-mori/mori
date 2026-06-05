@@ -306,30 +306,6 @@
   font-size: 11px;
 }
 
-.settings-probe-models {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  flex-basis: 100%;
-}
-
-.settings-probe-model {
-  padding: 2px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--base-radius-pill, 999px);
-  background: #fff;
-  color: var(--text);
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.settings-probe-model.is-selected {
-  border-color: var(--purple);
-  background: var(--purple-50);
-  color: var(--purple);
-  font-weight: 600;
-}
-
 /* Capability test: a graded verdict from running a synthetic sample through
    the real analyze() path. Mirrors the probe-row look, with a hint line that
    wraps below the verdict. */
@@ -369,93 +345,6 @@
 
 .settings-capability-error {
   color: var(--muted-2);
-}
-
-/* Privacy defaults */
-
-.settings-privacy-list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.settings-privacy-list li {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 10px;
-  align-items: start;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: white;
-}
-
-.settings-privacy-icon {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--gray-50);
-  color: var(--muted);
-}
-
-.settings-privacy-icon.tone-green { background: var(--green-50); color: var(--green); }
-.settings-privacy-icon.tone-blue { background: var(--blue-50); color: var(--blue); }
-.settings-privacy-icon.tone-gray { background: var(--gray-50); color: var(--muted); }
-
-.settings-privacy-list li > div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.settings-privacy-list header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.settings-privacy-list strong {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.settings-privacy-list p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.settings-privacy-group {
-  display: grid;
-  gap: 6px;
-  margin-top: 14px;
-}
-
-.settings-privacy-group-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.settings-privacy-group-head h4 {
-  margin: 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.settings-privacy-group-note {
-  margin: 0 0 2px;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--muted);
 }
 
 /* Request disclosure level — one full-width segmented control across the
@@ -571,48 +460,6 @@
   color: var(--muted);
   font-size: 11.5px;
   line-height: 1.45;
-}
-
-.settings-privacy-never {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.settings-privacy-never li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 11px;
-  font-size: 12px;
-  color: #4b4470;
-  border: 1px solid #f0d6d6;
-  border-radius: 8px;
-  background: #fdf6f6;
-}
-
-.settings-privacy-never li svg {
-  flex-shrink: 0;
-  color: var(--red);
-}
-
-.settings-privacy-never-foot {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 12px 0 0;
-  padding: 11px 12px;
-  font-size: 11.5px;
-  line-height: 1.55;
-  color: #15955a;
-  background: var(--green-50);
-  border-radius: 8px;
-}
-
-.settings-privacy-never-foot svg {
-  flex-shrink: 0;
 }
 
 /* Storage */
@@ -794,12 +641,6 @@
 }
 
 /* Repositories */
-
-.settings-repo-summary {
-  display: inline-flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
 
 .settings-repo-add {
   display: grid;
