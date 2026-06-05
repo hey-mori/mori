@@ -12,6 +12,7 @@ import {
   Folder,
   GitBranch,
   Layers3,
+  MessageCircleQuestion,
   MessageSquare,
   Plus,
   Search,
@@ -31,6 +32,11 @@ import {
   type CommandSpaceActionTarget,
   type CommandSpaceRow,
 } from "../../lib/home/commandSpace";
+import { createAskMoriLlmFromSettings } from "../../lib/ask-mori/askMoriLlm";
+import type { AskMoriAnswer } from "../../lib/ask-mori/askMoriTypes";
+import { memoryAsk } from "../../lib/memory-api/memoryApi";
+import { useMemoryService } from "../memory/useMemoryService";
+import { AskMoriAnswerView } from "../memory/AskMoriAnswerView";
 
 type CommandMode = {
   id: CommandModeId;
@@ -60,6 +66,12 @@ const COMMAND_MODES: CommandMode[] = [
     label: "찾기",
     icon: Search,
     placeholder: "인증, 라우팅 같은 키워드로 검색",
+  },
+  {
+    id: "ask",
+    label: "묻기",
+    icon: MessageCircleQuestion,
+    placeholder: "예: 인증 방식은 어떻게 결정했나요?",
   },
   {
     id: "shape",
@@ -114,6 +126,9 @@ export function MoriCommandSpaceHome() {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [answer, setAnswer] = useState<AskMoriAnswer | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -127,6 +142,10 @@ export function MoriCommandSpaceHome() {
   const activeSessionId = useSessionStore((state) => selectSessionView(state).session.id);
   const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
+  // The Ask path runs over the same memory-api facade the warehouse uses, so a
+  // question answered from Home reads identically to one asked on the Memory
+  // page. Read + propose only — nothing here is persisted.
+  const { input: memoryInput, settings: analysisSettings } = useMemoryService();
 
   const sessions = useMemo(() => {
     const stored = loadStoredSessionSummaries();
@@ -145,7 +164,12 @@ export function MoriCommandSpaceHome() {
   );
 
   const rows = results.rows;
-  const open = focused && rows.length > 0;
+  // While an answer (or its in-flight / error state) is showing in 묻기, the
+  // answer panel below the console is the result surface, so the floating
+  // context dropdown steps aside to avoid overlapping it.
+  const showAnswerPanel =
+    activeModeId === "ask" && (asking || answer !== null || askError !== null);
+  const open = focused && rows.length > 0 && !showAnswerPanel;
   const safeIndex = Math.min(activeIndex, Math.max(0, rows.length - 1));
   // In 찾기, a query that hits nothing leaves only the full-search action. Say so
   // plainly instead of showing a lone action that reads like the search broke.
@@ -158,6 +182,23 @@ export function MoriCommandSpaceHome() {
   useEffect(() => {
     setActiveIndex(0);
   }, [query, activeModeId]);
+
+  // Leaving 묻기 clears the answer so a stale response never lingers under a
+  // different lens; switching back starts fresh.
+  useEffect(() => {
+    if (activeModeId !== "ask") {
+      setAnswer(null);
+      setAskError(null);
+      setAsking(false);
+    }
+  }, [activeModeId]);
+
+  // Editing the question retires the previous answer, so the live context
+  // dropdown returns and the next Enter asks the new question.
+  useEffect(() => {
+    setAnswer(null);
+    setAskError(null);
+  }, [query]);
 
   // Keep the keyboard-highlighted row in view when the list scrolls.
   useEffect(() => {
@@ -181,12 +222,35 @@ export function MoriCommandSpaceHome() {
     openSession(tab);
   }
 
-  function runActionTarget(target: CommandSpaceActionTarget): void {
-    if (target.type === "palette") {
-      openCommandPalette();
-      return;
+  async function runAsk(question: string): Promise<void> {
+    const trimmed = question.trim();
+    if (trimmed.length === 0 || asking) return;
+    setAsking(true);
+    setAnswer(null);
+    setAskError(null);
+    try {
+      const llm = createAskMoriLlmFromSettings(analysisSettings);
+      const result = await memoryAsk(memoryInput, trimmed, llm ? { llm } : {});
+      setAnswer(result);
+    } catch {
+      setAskError("답변 생성 중 문제가 발생했습니다. 다시 시도해 주세요.");
+    } finally {
+      setAsking(false);
     }
-    navigate(target.view);
+  }
+
+  function runActionTarget(target: CommandSpaceActionTarget): void {
+    switch (target.type) {
+      case "palette":
+        openCommandPalette();
+        return;
+      case "navigate":
+        navigate(target.view);
+        return;
+      case "ask":
+        void runAsk(target.question);
+        return;
+    }
   }
 
   function activateRow(row: CommandSpaceRow): void {
@@ -340,6 +404,22 @@ export function MoriCommandSpaceHome() {
                 })}
               </div>
             </div>
+
+            {showAnswerPanel ? (
+              <div className="mcs-answer-panel" aria-live="polite">
+                {asking ? (
+                  <p className="mcs-answer-status">메모리에서 답을 찾는 중…</p>
+                ) : askError ? (
+                  <p className="mcs-answer-status">{askError}</p>
+                ) : answer ? (
+                  <AskMoriAnswerView
+                    answer={answer}
+                    onSelectMemory={() => navigate("memory")}
+                    onNavigateEvent={() => openSession("flow")}
+                  />
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </section>
       </div>

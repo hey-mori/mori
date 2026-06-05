@@ -24,12 +24,19 @@ import type { StoredSessionSummary } from "../storage/storageTypes";
  *     filtered by the keywords (or the most-recent few when idle).
  */
 
-export type CommandModeId = "find" | "shape" | "create" | "review" | "connect";
+export type CommandModeId = "find" | "ask" | "shape" | "create" | "review" | "connect";
 
 /** Where activating an action row routes. Sessions / projects carry their own id. */
 export type CommandSpaceActionTarget =
   | { type: "palette" }
-  | { type: "navigate"; view: ViewKey };
+  | { type: "navigate"; view: ViewKey }
+  /**
+   * Ask Mori in place: answer the question from reviewed memory without
+   * leaving Home. Carries the raw (un-tokenized) question so the consumer
+   * asks the natural sentence, not the filler-stripped keywords. An empty
+   * question is a no-op the consumer guards.
+   */
+  | { type: "ask"; question: string };
 
 export type CommandSpaceRow =
   | {
@@ -100,7 +107,7 @@ export function buildCommandSpaceResults(input: {
   const hasQuery = tokens.length > 0;
   const seed = tokens.join(" ");
 
-  const actions = buildModeActions(input.modeId, seed);
+  const actions = buildModeActions(input.modeId, seed, input.query);
   const projectRows = hasQuery
     ? matchProjects(input.sessions, tokens).slice(0, PROJECT_LIMIT)
     : [];
@@ -123,7 +130,11 @@ export function buildCommandSpaceResults(input: {
  * real surface that performs the intent. Returned as `action` rows so Enter
  * always has an obvious target even when nothing matches.
  */
-function buildModeActions(modeId: CommandModeId, seed: string): CommandSpaceRow[] {
+function buildModeActions(
+  modeId: CommandModeId,
+  seed: string,
+  rawQuery: string,
+): CommandSpaceRow[] {
   const quoted = seed ? `‘${seed}’` : "";
   switch (modeId) {
     case "find":
@@ -133,6 +144,19 @@ function buildModeActions(modeId: CommandModeId, seed: string): CommandSpaceRow[
           target: { type: "palette" },
         }),
       ];
+    case "ask": {
+      // Ask uses the raw sentence, not the filler-stripped keywords: the
+      // question's grammar is what the LLM answers. Tokens still drive the
+      // supporting session/project context rows below.
+      const question = rawQuery.trim();
+      const label = question ? `‘${question}’ 물어보기` : "메모리에 무엇이든 물어보기";
+      return [
+        action("act-ask", label, {
+          hint: "검토된 메모리 · 활성 세션 근거",
+          target: { type: "ask", question },
+        }),
+      ];
+    }
     case "shape":
       return [
         action("act-shape-consolidation", "메모리 통합 검토", {

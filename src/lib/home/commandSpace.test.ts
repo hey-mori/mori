@@ -142,6 +142,7 @@ describe("buildCommandSpaceResults", () => {
   it("routes each mode's primary action", () => {
     const routes: Record<CommandModeId, unknown> = {
       find: { type: "palette" },
+      ask: { type: "ask", question: "" },
       shape: { type: "navigate", view: "consolidation" },
       create: { type: "navigate", view: "start" },
       review: { type: "navigate", view: "continue" },
@@ -155,6 +156,44 @@ describe("buildCommandSpaceResults", () => {
         expect(action.target).toEqual(routes[modeId]);
       }
     }
+  });
+
+  it("carries the raw question on the ask action, leading with the verb", () => {
+    const { rows } = buildCommandSpaceResults({
+      modeId: "ask",
+      query: "인증 방식은 어떻게 결정했나요?",
+      sessions: SESSIONS,
+    });
+    // The ask verb leads (a doing mode), and it keeps the full sentence —
+    // grammar and all — not the filler-stripped keywords.
+    expect(rows[0]).toMatchObject({
+      kind: "action",
+      target: { type: "ask", question: "인증 방식은 어떻게 결정했나요?" },
+    });
+    expect(rows[0].label).toContain("인증 방식은 어떻게 결정했나요?");
+  });
+
+  it("offers an ask action with an empty question when nothing is typed", () => {
+    const { rows } = buildCommandSpaceResults({
+      modeId: "ask",
+      query: "",
+      sessions: [],
+    });
+    expect(rows[0]).toMatchObject({
+      kind: "action",
+      target: { type: "ask", question: "" },
+    });
+  });
+
+  it("surfaces matching sessions as context under the ask action", () => {
+    const { rows } = buildCommandSpaceResults({
+      modeId: "ask",
+      query: "라우팅 관련 결정",
+      sessions: SESSIONS,
+    });
+    expect(rows[0].kind).toBe("action");
+    // s2 ("게이트웨이 라우팅 재설계") is the matching supporting context.
+    expect(rows.some((row) => row.kind === "session" && row.id === "session:s2")).toBe(true);
   });
 
   it("caps keyword session matches at five", () => {
