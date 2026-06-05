@@ -80,6 +80,9 @@ export function memoryAsk(
       question,
       acceptedMemories: input.acceptedMemories,
       references: referencesInput(input),
+      // Ask runs the multi-round "search → read → search again" retrieval so
+      // evidence phrased differently from the question still surfaces.
+      expandRounds: 2,
     },
     deps,
   );

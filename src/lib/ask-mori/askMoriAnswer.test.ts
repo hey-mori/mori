@@ -101,4 +101,40 @@ describe("answerFromMemory", () => {
     expect(answer.citations[0]?.isCurrent).toBe(false);
     expect(answer.containsNonCurrent).toBe(true);
   });
+
+  // The question only names "인증". Memory `b` never mentions 인증, but `a`'s
+  // title introduces "미들웨어", which `b` shares — so a second round reaches it.
+  const expansionMemories = [
+    memory("a", { title: "인증 미들웨어 도입", summary: "요청 가로채기" }),
+    memory("b", { title: "미들웨어 토큰 검증", summary: "검증 로직" }),
+  ];
+
+  it("finds only the directly-matching memory in a single round", async () => {
+    const answer = await answerFromMemory({
+      question: "인증",
+      acceptedMemories: expansionMemories,
+    });
+    expect(answer.citations.map((c) => c.refId)).toEqual(["a"]);
+  });
+
+  it("reaches differently-worded memory through a second retrieval round", async () => {
+    const answer = await answerFromMemory({
+      question: "인증",
+      acceptedMemories: expansionMemories,
+      expandRounds: 2,
+    });
+    const ids = answer.citations.map((c) => c.refId).sort();
+    expect(ids).toEqual(["a", "b"]);
+  });
+
+  it("terminates when a round surfaces no new terms", async () => {
+    const answer = await answerFromMemory({
+      question: "인증",
+      acceptedMemories: [memory("a", { title: "인증 방식 결정", summary: "JWT" })],
+      expandRounds: 4,
+    });
+    // Only the one matching memory exists; extra rounds add nothing and the
+    // loop stops cleanly instead of spinning.
+    expect(answer.citations.map((c) => c.refId)).toEqual(["a"]);
+  });
 });

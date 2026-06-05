@@ -28,7 +28,19 @@ export type AnswerFromMemoryInput = {
   maxMemories?: number;
   /** Max active-session references to ground on (default 4). */
   maxReferences?: number;
+  /**
+   * How many retrieval rounds to run (default 1). With `> 1`, Ask Mori does a
+   * deterministic "search → read → search again" loop: after each round it
+   * mines the hits' titles for salient terms the question never named and
+   * searches again, so evidence phrased in different words than the question
+   * still surfaces. Still local + deterministic — no LLM drives the loop, no
+   * embeddings. Capped, so it always terminates.
+   */
+  expandRounds?: number;
 };
+
+const MAX_EXPANSION_TERMS = 4;
+const MAX_ROUNDS = 4;
 
 export type AnswerFromMemoryDeps = {
   /** Optional Local LLM. Absent or throwing → deterministic fallback. */
@@ -43,18 +55,23 @@ export async function answerFromMemory(
   deps: AnswerFromMemoryDeps = {},
 ): Promise<AskMoriAnswer> {
   const question = input.question.trim();
-  const terms = queryTerms(question);
+  const maxMemories = input.maxMemories ?? DEFAULT_MAX_MEMORIES;
+  const maxReferences = input.maxReferences ?? DEFAULT_MAX_REFERENCES;
+  const rounds = Math.min(MAX_ROUNDS, Math.max(1, input.expandRounds ?? 1));
 
-  const memoryResults = retrieveMemories(
-    input.acceptedMemories,
-    terms,
-    input.maxMemories ?? DEFAULT_MAX_MEMORIES,
-  );
-  const references = retrieveReferences(
-    input.references ?? {},
-    terms,
-    input.maxReferences ?? DEFAULT_MAX_REFERENCES,
-  );
+  // Round 1: the question's own terms. Later rounds widen the term set with
+  // salient words mined from the hits so far, then re-retrieve over the union.
+  // `retrieve*` dedup and cap, so re-running with a larger set is idempotent.
+  const terms = new Set(queryTerms(question));
+  let memoryResults = retrieveMemories(input.acceptedMemories, [...terms], maxMemories);
+  let references = retrieveReferences(input.references ?? {}, [...terms], maxReferences);
+  for (let round = 1; round < rounds; round += 1) {
+    const fresh = expandTerms(terms, memoryResults, references);
+    if (fresh.length === 0) break;
+    for (const term of fresh) terms.add(term);
+    memoryResults = retrieveMemories(input.acceptedMemories, [...terms], maxMemories);
+    references = retrieveReferences(input.references ?? {}, [...terms], maxReferences);
+  }
 
   if (memoryResults.length === 0 && references.length === 0) {
     return {
@@ -135,6 +152,34 @@ function retrieveMemories(
     }
   }
   return [...byId.values()].sort(compareMemoryResults).slice(0, limit);
+}
+
+/**
+ * Mine the current hits' titles for salient terms the term set does not yet
+ * have. This is the "read" step of the search → read → search loop: a round-1
+ * hit titled "인증 미들웨어" contributes "미들웨어", which then surfaces a memory
+ * the question's word ("인증") alone would have missed. Deterministic, bounded.
+ */
+function expandTerms(
+  existing: ReadonlySet<string>,
+  memoryResults: readonly QueryableMemoryResult[],
+  references: readonly QueryableMemoryReference[],
+): string[] {
+  const seen = new Set(existing);
+  const out: string[] = [];
+  const titles = [
+    ...memoryResults.map((result) => result.title),
+    ...references.map((reference) => reference.title),
+  ];
+  for (const title of titles) {
+    for (const term of extractQueryTerms(title)) {
+      if (seen.has(term)) continue;
+      seen.add(term);
+      out.push(term);
+      if (out.length >= MAX_EXPANSION_TERMS) return out;
+    }
+  }
+  return out;
 }
 
 function retrieveReferences(

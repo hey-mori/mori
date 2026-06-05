@@ -23,9 +23,18 @@ Validation: 18 colocated lib tests green, project typecheck clean,
 stylelint clean, production build green. The UI has no pixel test (per
 working rules); its logic lives in the tested pure helpers.
 
+Shipped since: Ask Mori is surfaced on Home's command space (the 묻기 mode) and
+searches across every saved session (see
+[`cross-session-memory-search.md`](cross-session-memory-search.md)). Retrieval
+also runs a deterministic multi-round "search → read → search again" loop
+(`expandRounds`): after each round it mines the hits' titles for salient terms
+the question never named and re-retrieves, so evidence phrased differently from
+the question still surfaces. Still local + deterministic, no LLM drives the
+loop, bounded so it always terminates.
+
 Follow-ups (not in scope here): wire citation rows to the memory detail
-drawer / timeline navigation; consider surfacing Ask Mori on Home's
-question affordance; per-claim citation parsing of the LLM's inline tags.
+drawer / timeline navigation; per-claim citation parsing of the LLM's inline
+tags; carry a typed session name from the 만들기 mode into the new-session flow.
 
 ## 1. What Ask Mori is
 
