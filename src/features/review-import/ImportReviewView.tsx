@@ -116,7 +116,6 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
     <div className="page review-page">
       <header className="review-header review-header-tight">
         <h1>가져오기 검토</h1>
-        <p>반영하면 이 대화가 세션 타임라인이 됩니다. 폐기한 항목은 제외됩니다.</p>
       </header>
 
       <ImportDigestStrip digest={digest} />
@@ -209,7 +208,6 @@ function ImportDigestStrip({ digest }: { digest: ImportDigest }) {
   if (digest.eventCount === 0) return null;
   return (
     <div className="import-digest">
-      <span className="import-digest-lead">이렇게 들어갑니다</span>
       {digest.lanes.map((lane) => (
         <Badge key={lane.lane} tone="gray">
           {lane.label} {lane.count}

@@ -357,7 +357,7 @@ export function ReviewView() {
           <EmptyState
             icon={FileText}
             title="분석할 자료가 아직 없습니다"
-            description="자료 탭에서 대화를 가져오면 이슈 · 결정 · 다음 액션을 자동으로 정리합니다."
+            description="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
             actions={
               <Button variant="primary" onClick={() => setCurrentView("evidence")}>
                 자료 가져오기

@@ -36,10 +36,10 @@ export function TimelineEmptyState({
       <EmptyState
         icon={ListPlus}
         title="이 세션에는 아직 가져온 자료가 없습니다"
-        description="가져온 근거만 표시됩니다. 자료 탭에서 메모·URL·AI 대화·Git diff를 추가하세요."
+        description="자료 탭에서 대화를 가져오면 여기에 표시됩니다."
         actions={
           <Button variant="primary" icon={ListPlus} onClick={onOpenSources}>
-            자료 추가
+            자료 가져오기
           </Button>
         }
       />
