@@ -1,6 +1,5 @@
 import {
   Bot,
-  CheckCircle2,
   Cloud,
   Code2,
   Database,
@@ -44,15 +43,15 @@ const ICONS: Record<string, typeof Bot> = {
 const PROVIDER_COPY: Record<QuickPassProviderKind, { label: string; summary: string }> = {
   deterministic: {
     label: "규칙 기반",
-    summary: "모델 없이 기기 안에서 즉시 정리합니다.",
+    summary: "모델 없이 기기에서 즉시 정리",
   },
   ollama: {
     label: "Ollama",
-    summary: "로컬 LLM으로 더 깊은 이슈·결정을 추출합니다.",
+    summary: "로컬 LLM으로 더 깊게 분석",
   },
   openAiCompatible: {
     label: "OpenAI 호환",
-    summary: "LM Studio·vLLM·OpenAI 호환 API를 연결합니다.",
+    summary: "LM Studio·vLLM 등 호환 API 연결",
   },
 };
 
@@ -179,11 +178,12 @@ export function LocalAiCard({
 
   return (
     <SettingsSection title="분석 엔진">
-      {/* 설정 영역 — 엔진 선택과 연결 설정 */}
+      {/* 설정 영역 — 엔진 선택과 연결 설정. 선택 타일은 '세션 추가' 흐름의
+          pick-tile 스타일을 그대로 재사용해 앱 전체에서 일관되게 보입니다. */}
       <div className="settings-ai-layout">
-        <div className="settings-ai-provider-grid" role="radiogroup" aria-label="분석 엔진">
+        <div className="pick-grid" role="radiogroup" aria-label="분석 엔진">
           {selectableRows.map((row) => (
-            <ProviderChoice
+            <ProviderTile
               key={row.id}
               row={row}
               selected={row.id === settings.provider}
@@ -238,7 +238,7 @@ export function LocalAiCard({
   );
 }
 
-function ProviderChoice({
+function ProviderTile({
   row,
   selected,
   onSelect,
@@ -252,21 +252,19 @@ function ProviderChoice({
   return (
     <button
       type="button"
-      className={`settings-ai-provider${selected ? " is-selected" : ""}`}
+      className={`pick-tile${selected ? " is-selected" : ""}`}
       role="radio"
       aria-checked={selected}
       onClick={onSelect}
     >
-      <span className="settings-ai-provider-icon" aria-hidden="true">
-        <Icon size={15} />
+      <span className="pick-tile-icon" aria-hidden="true">
+        <Icon size={18} />
       </span>
-      <span className="settings-ai-provider-main">
-        <span className="settings-ai-provider-title">
-          <strong>{copy.label}</strong>
-          {selected ? <CheckCircle2 size={14} aria-hidden="true" /> : null}
-        </span>
-        <small>{copy.summary}</small>
+      <span className="pick-tile-body">
+        <strong>{copy.label}</strong>
+        <span>{copy.summary}</span>
       </span>
+      <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
     </button>
   );
 }
@@ -316,7 +314,7 @@ function EngineConfigPanel({
       {row.id === "ollama" ? (
         <div className="settings-ai-field-grid">
           <ProviderField
-            label="Endpoint"
+            label="엔드포인트"
             value={settings.ollamaEndpoint}
             placeholder="http://localhost:11434"
             onChange={(value) => onUpdateSettings({ ollamaEndpoint: value })}
@@ -336,7 +334,7 @@ function EngineConfigPanel({
       {row.id === "openAiCompatible" ? (
         <div className="settings-ai-field-grid">
           <ProviderField
-            label="Base URL"
+            label="엔드포인트"
             value={settings.openAiBaseUrl}
             placeholder="http://localhost:1234/v1"
             onChange={(value) => onUpdateSettings({ openAiBaseUrl: value })}
@@ -351,7 +349,7 @@ function EngineConfigPanel({
             onRefresh={onProbe}
           />
           <ProviderField
-            label="API key"
+            label="API 키"
             value={settings.openAiApiKey}
             type="password"
             placeholder="필요한 경우만"
@@ -362,13 +360,13 @@ function EngineConfigPanel({
 
       {canTest ? (
         <div className="settings-ai-verify">
-          <div className="settings-ai-verify-actions">
+          <div className="settings-ai-actions">
             <Button icon={Plug} variant="secondary" size="sm" onClick={onProbe} disabled={probing}>
               {probing ? "확인 중…" : "연결 확인"}
             </Button>
             <Button
               icon={FlaskConical}
-              variant="primary"
+              variant="secondary"
               size="sm"
               onClick={onCapabilityTest}
               disabled={testing}
@@ -376,8 +374,7 @@ function EngineConfigPanel({
               {testing ? "테스트 중…" : "응답 테스트"}
             </Button>
           </div>
-          <ProbeRow probe={probe} />
-          <CapabilityRow capability={capability} />
+          <EngineStatus provider={row.id} probe={probe} capability={capability} />
         </div>
       ) : null}
 
@@ -421,33 +418,99 @@ function EngineConfigPanel({
   );
 }
 
-function ProbeRow({ probe }: { probe: ProbeState }) {
-  if (probe.status === "idle") return null;
-  if (probe.status === "checking") {
+type StatusTone = "idle" | "ok" | "warn" | "err";
+
+/** One calm status line: a colored dot + text, with an optional muted hint
+ *  below. Replaces the heavy tinted result boxes. */
+function StatusLine({
+  tone,
+  text,
+  hint,
+  alert,
+}: {
+  tone: StatusTone;
+  text: string;
+  hint?: string | null;
+  alert?: boolean;
+}) {
+  return (
+    <p className={`settings-ai-status tone-${tone}`} role={alert ? "alert" : undefined}>
+      <span className="settings-ai-status-dot" aria-hidden="true" />
+      <span className="settings-ai-status-text">
+        {text}
+        {hint ? <small>{hint}</small> : null}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * Unified connection + response status. A successful connection is already
+ * shown by the populated model dropdown, so only the in-progress, failed, and
+ * response-test states surface here — one consistent line, never a stack of
+ * loud colored boxes.
+ */
+function EngineStatus({
+  provider,
+  probe,
+  capability,
+}: {
+  provider: QuickPassProviderKind;
+  probe: ProbeState;
+  capability: CapabilityState;
+}) {
+  if (probe.status === "checking" && probe.kind === provider) {
+    return <StatusLine tone="idle" text="엔드포인트에 연결하는 중…" />;
+  }
+  if (probe.status === "error" && probe.kind === provider) {
+    return <StatusLine tone="err" alert text={`연결할 수 없습니다 · ${probe.message}`} />;
+  }
+  if (
+    probe.status === "ok" &&
+    probe.kind === provider &&
+    probe.models.length === 0
+  ) {
     return (
-      <div className="settings-probe-row">
-        <StatusPill tone="purple">확인 중</StatusPill>
-        <span>엔드포인트에 연결하고 있습니다...</span>
-      </div>
+      <StatusLine
+        tone="warn"
+        text="연결됐지만 설치된 모델이 없습니다."
+        hint="먼저 모델을 내려받은 뒤 다시 확인하세요."
+      />
     );
   }
-  if (probe.status === "ok") {
+  return <CapabilityStatus capability={capability} provider={provider} />;
+}
+
+function CapabilityStatus({
+  capability,
+  provider,
+}: {
+  capability: CapabilityState;
+  provider: QuickPassProviderKind;
+}) {
+  if (capability.status === "idle" || capability.kind !== provider) return null;
+  if (capability.status === "running") {
+    return <StatusLine tone="idle" text="응답을 확인하는 중…" />;
+  }
+  const { report } = capability;
+  if (report.verdict === "ready") {
     return (
-      <div className="settings-probe-row tone-ok">
-        <StatusPill tone="green">연결됨</StatusPill>
-        <span>
-          {probe.models.length
-            ? `설치된 모델 ${probe.models.length}개를 찾았습니다.`
-            : "연결됐지만 설치된 모델이 없습니다. 먼저 모델을 내려받으세요."}
-        </span>
-      </div>
+      <StatusLine
+        tone="ok"
+        text={`응답 확인됨 · 이슈 ${report.counts.issues} · 결정 ${report.counts.decisions} · ${report.durationMs}ms`}
+      />
     );
+  }
+  if (report.verdict === "reachableNoStructure") {
+    return <StatusLine tone="warn" text={report.message} hint={report.hint} />;
   }
   return (
-    <div className="settings-probe-row tone-err" role="alert">
-      <StatusPill tone="red">연결 불가</StatusPill>
-      <span>{probe.message}</span>
-    </div>
+    <StatusLine
+      tone="err"
+      alert
+      text={report.message}
+      hint={report.hint ?? (report.error ? truncate(report.error, 80) : null)}
+    />
   );
 }
 
@@ -532,49 +595,6 @@ function ModelField({
         ) : null}
       </div>
     </label>
-  );
-}
-
-function CapabilityRow({ capability }: { capability: CapabilityState }) {
-  if (capability.status === "idle") return null;
-  if (capability.status === "running") {
-    return (
-      <div className="settings-capability-row">
-        <StatusPill tone="purple">테스트 중</StatusPill>
-        <span>합성 샘플로 엔진이 구조화된 응답을 내는지 확인합니다...</span>
-      </div>
-    );
-  }
-  const { report } = capability;
-  if (report.verdict === "ready") {
-    return (
-      <div className="settings-capability-row tone-ok">
-        <StatusPill tone="green">응답 확인됨</StatusPill>
-        <span>
-          {report.message} · 이슈 {report.counts.issues}개 · 결정 {report.counts.decisions}개 ·{" "}
-          {report.durationMs}ms
-        </span>
-      </div>
-    );
-  }
-  if (report.verdict === "reachableNoStructure") {
-    return (
-      <div className="settings-capability-row tone-warn">
-        <StatusPill tone="orange">부분 응답</StatusPill>
-        <span>{report.message}</span>
-        {report.hint ? <small className="settings-capability-hint">{report.hint}</small> : null}
-      </div>
-    );
-  }
-  return (
-    <div className="settings-capability-row tone-err" role="alert">
-      <StatusPill tone="red">테스트 실패</StatusPill>
-      <span>{report.message}</span>
-      {report.hint ? <small className="settings-capability-hint">{report.hint}</small> : null}
-      {report.error ? (
-        <small className="settings-capability-error">{truncate(report.error, 80)}</small>
-      ) : null}
-    </div>
   );
 }
 

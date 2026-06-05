@@ -3998,16 +3998,74 @@ button.settings-option {
   border-top: 1px solid var(--line);
 }
 
-.settings-ai-verify-actions {
+.settings-ai-actions {
   display: inline-flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
+/* One calm status line: a tone dot + text (+ optional muted hint), no heavy
+   tinted box. */
+.settings-ai-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.settings-ai-status-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--muted-2);
+}
+
+.settings-ai-status-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.settings-ai-status-text small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.settings-ai-status.tone-ok {
+  color: #1f6f3d;
+}
+.settings-ai-status.tone-ok .settings-ai-status-dot {
+  background: var(--green);
+}
+
+.settings-ai-status.tone-warn {
+  color: #9a5700;
+}
+.settings-ai-status.tone-warn .settings-ai-status-dot {
+  background: #d8923f;
+}
+
+.settings-ai-status.tone-err {
+  color: var(--red);
+}
+.settings-ai-status.tone-err .settings-ai-status-dot {
+  background: var(--red);
+}
+
+.settings-ai-status.tone-idle {
+  color: var(--muted);
+}
+
 .settings-ai-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px;
+  gap: 9px 12px;
+  align-items: start;
 }
 
 .settings-ai-field {
