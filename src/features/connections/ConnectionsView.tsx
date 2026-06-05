@@ -305,7 +305,7 @@ export function ConnectionsView() {
       isDesktop={desktopRuntime}
       hasActiveSession={!isDemoSession}
       onImport={requestEvidenceImport}
-      onOpenRepositorySettings={() => openSettingsSheet("repositories")}
+      onOpenRepositorySettings={() => openSettingsSheet("storage")}
     />
   );
 

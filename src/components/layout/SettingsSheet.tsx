@@ -23,6 +23,15 @@ export function SettingsSheet() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
+  // Retired tabs (privacy / repositories) may still be the persisted choice.
+  // Fall back to a live tab so the pane never renders blank.
+  useEffect(() => {
+    if (!open) return;
+    if (!RAIL_ITEMS.some((item) => item.id === activeTab)) {
+      setActiveTab("localAi");
+    }
+  }, [open, activeTab, setActiveTab]);
+
   useEffect(() => {
     if (!open) return;
     previousFocusRef.current = document.activeElement instanceof HTMLElement

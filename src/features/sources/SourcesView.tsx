@@ -358,7 +358,7 @@ export function SourcesView() {
       return;
     }
     if (source.action.kind === "settings") {
-      openSettingsSheet("repositories");
+      openSettingsSheet("storage");
     }
   }
 

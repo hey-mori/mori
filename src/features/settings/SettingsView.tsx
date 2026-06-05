@@ -2,9 +2,7 @@ import {
   Bell,
   Bot,
   HardDrive,
-  Lock,
   Palette,
-  ShieldCheck,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
@@ -21,7 +19,6 @@ import { buildAnalysisRunHistoryViewModel } from "../../lib/analysis";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { LocalAiCard } from "./LocalAiCard";
-import { PrivacyDefaultsCard } from "./PrivacyDefaultsCard";
 import { RequestDisclosureCard } from "./RequestDisclosureCard";
 import { StorageCard } from "./StorageCard";
 import { RepositoriesCard } from "./RepositoriesCard";
@@ -32,9 +29,7 @@ import { SettingsSection } from "./SettingsPrimitives";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "AI 엔진", icon: Bot },
-  { id: "privacy", label: "개인정보", icon: Lock },
   { id: "storage", label: "저장소", icon: HardDrive },
-  { id: "repositories", label: "리포지토리", icon: ShieldCheck },
   { id: "appearance", label: "테마", icon: Palette },
   { id: "notifications", label: "알림", icon: Bell },
 ];
@@ -106,48 +101,34 @@ export function SettingsView() {
             onUpdateSettings={(patch) => updateAnalysisSettings(patch)}
           />
         ) : null}
-        {activeTab === "privacy" ? (
+        {activeTab === "storage" ? (
           <>
-            <PrivacyDefaultsCard />
+            <DemoModeCard onGoToConnections={() => setCurrentView("connections")} />
+            <StorageCard
+              mode={mode}
+              sqliteKind={sqliteKind}
+              sqliteSessionCount={sqliteSessions.length}
+              onOpenReports={() => setCurrentView("reports")}
+            />
+            <SqliteLoadCard sessions={sqliteSessions} onLoad={loadDesktopSession} />
+            <RepositoriesCard
+              repositories={repositorySettings.repositories}
+              desktopRuntime={desktopRuntime}
+              defaultRepositoryId={activeRepository?.id ?? null}
+              verifyingId={verifyingId}
+              onAdd={({ path, label }) => addRepository({ path, label })}
+              onPickDirectory={handlePickRepository}
+              onRename={(id, label) => renameRepository(id, label)}
+              onSelect={(id) => selectRepository(id)}
+              onVerify={(id) => verifyRepository(id)}
+              onClearVerification={(id) => clearRepositoryVerification(id)}
+              onRemove={(id) => removeRepository(id)}
+            />
             <RequestDisclosureCard />
           </>
         ) : null}
-        {activeTab === "storage" ? (
-          <DemoModeCard
-            onGoToConnections={() => setCurrentView("connections")}
-          />
-        ) : null}
-        {activeTab === "storage" ? (
-          <StorageCard
-            mode={mode}
-            sqliteKind={sqliteKind}
-            sqliteSessionCount={sqliteSessions.length}
-            onOpenReports={() => setCurrentView("reports")}
-          />
-        ) : null}
-        {activeTab === "repositories" ? (
-          <RepositoriesCard
-            repositories={repositorySettings.repositories}
-            desktopRuntime={desktopRuntime}
-            defaultRepositoryId={activeRepository?.id ?? null}
-            verifyingId={verifyingId}
-            onAdd={({ path, label }) => addRepository({ path, label })}
-            onPickDirectory={handlePickRepository}
-            onRename={(id, label) => renameRepository(id, label)}
-            onSelect={(id) => selectRepository(id)}
-            onVerify={(id) => verifyRepository(id)}
-            onClearVerification={(id) => clearRepositoryVerification(id)}
-            onRemove={(id) => removeRepository(id)}
-          />
-        ) : null}
         {activeTab === "appearance" ? <ThemeCard /> : null}
         {activeTab === "notifications" ? <NotificationsCard /> : null}
-        {activeTab === "storage" ? (
-          <SqliteLoadCard
-            sessions={sqliteSessions}
-            onLoad={loadDesktopSession}
-          />
-        ) : null}
       </div>
 
     </div>
