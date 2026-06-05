@@ -303,8 +303,8 @@ export function EvidenceView() {
       ) : null}
 
       {toolbar}
-      {importedSourcesSection}
       {quickPassSection}
+      {importedSourcesSection}
     </>
   );
 
