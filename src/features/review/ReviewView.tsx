@@ -4,6 +4,7 @@ import {
   CircleDashed,
   CircleDot,
   Eye,
+  FileText,
   Filter,
   Loader2,
   RotateCcw,
@@ -34,7 +35,6 @@ import {
 import {
   getUnresolvedItems,
   issueStatusTone,
-  priorityTone,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
@@ -130,7 +130,13 @@ export function ReviewView() {
 
   const isDemo = mode === "demo";
   const canRunQuickPass = imports.length > 0 && analysisStatus !== "running";
-  const showQuickPassEmpty = mode === "draft" && !hasAnalysis;
+  // The focal empty state owns the "not analysed yet" moment; running and
+  // failed states are surfaced by the notice instead, so exclude them here.
+  const showQuickPassEmpty =
+    mode === "draft" &&
+    !hasAnalysis &&
+    analysisStatus !== "running" &&
+    analysisStatus !== "failed";
 
   const matchesQuery = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -189,17 +195,17 @@ export function ReviewView() {
       disabled={!canRunQuickPass}
       title={
         canRunQuickPass
-          ? "Quick Pass 실행"
+          ? "분석 실행"
           : imports.length === 0
-            ? "먼저 소스를 가져오세요."
+            ? "먼저 자료를 가져오세요."
             : "이미 실행 중입니다."
       }
     >
       {analysisStatus === "running"
         ? "분석 중..."
         : hasAnalysis
-          ? "Quick Pass 재실행"
-          : "Quick Pass 실행"}
+          ? "다시 분석"
+          : "분석 실행"}
     </Button>
   ) : null;
 
@@ -347,47 +353,55 @@ export function ReviewView() {
 
   const body = (
     <>
-      <ReviewAnalysisNotice
-        mode={mode}
-        hasAnalysis={hasAnalysis}
-        status={analysisStatus}
-        providerLabel={analysisProviderLabel}
-        providerName={analysis?.providerName ?? null}
-        analysisGeneratedAt={analysis?.generatedAt ?? null}
-        error={analysisError}
-        fallbackUsed={analysisFallbackUsed}
-        notes={analysis?.notes ?? []}
-        importsCount={imports.length}
-        dataBasis={dataBasis}
-        onGoToEvidence={() => setCurrentView("evidence")}
-        onGoToSettings={() => openSettingsSheet("localAi")}
-      />
+      {showQuickPassEmpty ? null : (
+        <ReviewAnalysisNotice
+          status={analysisStatus}
+          providerLabel={analysisProviderLabel}
+          providerName={analysis?.providerName ?? null}
+          analysisGeneratedAt={analysis?.generatedAt ?? null}
+          error={analysisError}
+          fallbackUsed={analysisFallbackUsed}
+          notes={analysis?.notes ?? []}
+          hasAnalysis={hasAnalysis}
+          mode={mode}
+          dataBasis={dataBasis}
+          onGoToSettings={() => openSettingsSheet("localAi")}
+        />
+      )}
 
       {toolbar}
 
       <AnalysisRunHistoryPanel />
 
       {showQuickPassEmpty ? (
-        <EmptyState
-          icon={Sparkles}
-          title="Quick Pass를 실행하면 검토 항목이 생성됩니다"
-          description={
-            imports.length > 0
-              ? "가져온 소스와 타임라인 이벤트로 이슈 · 결정 · 다음 액션을 추출합니다."
-              : "먼저 자료 탭에서 가져온 뒤 분석을 실행하세요."
-          }
-          actions={
-            imports.length > 0 ? (
-              <Button variant="primary" icon={Sparkles} onClick={() => runQuickPass()} disabled={!canRunQuickPass}>
-                Quick Pass 실행
+        imports.length > 0 ? (
+          <EmptyState
+            icon={Sparkles}
+            title="분석을 실행하면 이슈 · 결정 · 다음 액션이 정리됩니다"
+            description={`가져온 자료 ${imports.length}개를 읽고 정리합니다.`}
+            actions={
+              <Button
+                variant="primary"
+                icon={Sparkles}
+                onClick={() => runQuickPass()}
+                disabled={!canRunQuickPass}
+              >
+                분석 실행
               </Button>
-            ) : (
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={FileText}
+            title="분석할 자료가 아직 없습니다"
+            description="자료 탭에서 대화를 가져오면 이슈 · 결정 · 다음 액션을 자동으로 정리합니다."
+            actions={
               <Button variant="primary" onClick={() => setCurrentView("evidence")}>
-                자료 탭으로 이동
+                자료 가져오기
               </Button>
-            )
-          }
-        />
+            }
+          />
+        )
       ) : view.issues.length + view.decisions.length + view.nextActions.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
@@ -964,11 +978,6 @@ const ISSUE_STATUS_CARD_LABELS: Record<IssueStatus, string> = {
   resolved: "해결",
   watching: "관찰",
 };
-const PRIORITY_CARD_LABELS: Record<Priority, string> = {
-  high: "높음",
-  medium: "중간",
-  low: "낮음",
-};
 
 function isSameReviewSelection(a: ReviewSelection, b: ReviewSelection): boolean {
   if (a.kind !== b.kind) return false;
@@ -1020,9 +1029,7 @@ function ReviewAnalysisNotice({
   error,
   fallbackUsed,
   notes,
-  importsCount,
   dataBasis,
-  onGoToEvidence,
   onGoToSettings,
 }: {
   mode: "demo" | "draft";
@@ -1034,40 +1041,24 @@ function ReviewAnalysisNotice({
   error: string | null;
   fallbackUsed: boolean;
   notes: readonly string[];
-  importsCount: number;
   dataBasis: string;
-  onGoToEvidence: () => void;
   onGoToSettings: () => void;
 }) {
   if (mode === "demo") return null;
 
   if (status === "failed") {
     return (
-      <NoticeBanner tone="danger" title="Quick Pass 실패">
+      <NoticeBanner tone="danger" title="분석 실패">
         {error ?? "알 수 없는 오류"}
       </NoticeBanner>
     );
   }
   if (status === "running") {
-    return <NoticeBanner tone="info">Quick Pass 실행 중...</NoticeBanner>;
-  }
-  if (!hasAnalysis && importsCount === 0) {
-    return (
-      <NoticeBanner
-        tone="info"
-        title="아직 가져온 소스가 없습니다"
-        actions={<Button onClick={onGoToEvidence}>자료 탭으로 이동</Button>}
-      >
-        자료 탭에서 추가하고 Quick Pass를 실행하면 이슈와 결정이 정리됩니다.
-      </NoticeBanner>
-    );
+    return <NoticeBanner tone="info">분석 중...</NoticeBanner>;
   }
   if (!hasAnalysis) {
-    return (
-      <NoticeBanner tone="info">
-        가져온 소스가 있습니다. 우측 상단에서 Quick Pass를 실행하면 이슈 · 결정 후보가 생성됩니다.
-      </NoticeBanner>
-    );
+    // The focal empty state owns the not-analysed-yet messaging.
+    return null;
   }
 
   const providerCopy = providerLabel ?? "deterministic";
