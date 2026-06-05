@@ -876,7 +876,7 @@ function SessionSummary({
       footer={
         <div className="start-summary-footer">
           <Lock size={15} aria-hidden="true" />
-          <span>이 기기에만 저장 · 외부 분석은 연결할 때만</span>
+          <span>기록은 이 기기에만 저장됩니다</span>
         </div>
       }
     >
