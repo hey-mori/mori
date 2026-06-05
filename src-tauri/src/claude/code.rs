@@ -186,7 +186,9 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             } else {
                 preview.first_timestamp
             };
-            let title = if preview.first_user_text.trim().is_empty() {
+            let title = if !preview.summary.trim().is_empty() {
+                truncate(&preview.summary, 90)
+            } else if preview.first_user_text.trim().is_empty() {
                 format!("Claude Code · {}", project_label)
             } else {
                 truncate(&preview.first_user_text, 90)
@@ -290,6 +292,7 @@ pub(crate) fn read_session_at(
 struct SessionPreview {
     message_count: usize,
     first_user_text: String,
+    summary: String,
     first_timestamp: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
@@ -313,6 +316,11 @@ fn preview_session(path: &Path) -> Option<SessionPreview> {
             continue;
         };
         tokens.observe(&value);
+        if preview.summary.is_empty() {
+            if let Some(summary) = extract_summary(&value) {
+                preview.summary = summary;
+            }
+        }
         let role = detect_role(&value);
         if role == "human" && preview.first_user_text.is_empty() {
             preview.first_user_text = extract_content(&value);
@@ -390,6 +398,7 @@ impl TokenAccumulator {
 fn parse_jsonl(text: &str) -> ParsedSession {
     let mut messages: Vec<ClaudeCodeMessage> = Vec::new();
     let mut title = String::new();
+    let mut summary = String::new();
     let mut cwd = String::new();
     let mut tokens = TokenAccumulator::default();
     for (index, line) in text.lines().enumerate() {
@@ -407,6 +416,11 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         if cwd.is_empty() {
             if let Some(found) = extract_cwd(&value) {
                 cwd = found;
+            }
+        }
+        if summary.is_empty() {
+            if let Some(found) = extract_summary(&value) {
+                summary = found;
             }
         }
         let role = detect_role(&value);
@@ -438,7 +452,9 @@ fn parse_jsonl(text: &str) -> ParsedSession {
     }
     ParsedSession {
         messages,
-        title,
+        // Prefer the real conversation summary; fall back to the first user
+        // message only when the session was never summarised.
+        title: if summary.trim().is_empty() { title } else { summary },
         cwd,
         token_usage: tokens.usage,
     }
@@ -701,6 +717,22 @@ fn extract_cwd(value: &Value) -> Option<String> {
         .map(str::to_string)
 }
 
+/// Claude Code writes a `{"type":"summary","summary":"…"}` line (usually at the
+/// top of a resumed session) that holds the conversation's real title — the same
+/// label `claude --resume` lists. Prefer it over the first user message, which
+/// only happens to read like a title.
+fn extract_summary(value: &Value) -> Option<String> {
+    if value.get("type").and_then(Value::as_str) != Some("summary") {
+        return None;
+    }
+    value
+        .get("summary")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|summary| !summary.is_empty())
+        .map(str::to_string)
+}
+
 fn is_jsonl(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
@@ -785,6 +817,30 @@ mod tests {
         assert_eq!(row.message_count, 2);
         // The decoded project name should be human readable.
         assert!(row.project_name.contains("Users"));
+    }
+
+    #[test]
+    fn prefers_the_summary_line_as_the_real_title() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-Users-alice-mori");
+        write_session(
+            &project,
+            "session-sum.jsonl",
+            "{\"type\":\"summary\",\"summary\":\"Refactor the auth middleware\",\"leafUuid\":\"x\"}\n\
+             {\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"What's the plan?\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"Hi back.\"}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n",
+        );
+        let listing = list_sessions_at(temp.path()).unwrap();
+        let row = listing.iter().find(|r| r.session_id == "session-sum").unwrap();
+        // The real title wins over the first user message.
+        assert_eq!(row.title, "Refactor the auth middleware");
+        // The summary line is not counted as a conversation message.
+        assert_eq!(row.message_count, 2);
+
+        let path = project.join("session-sum.jsonl");
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(detail.title, "Refactor the auth middleware");
+        assert_eq!(detail.messages.len(), 2);
     }
 
     #[test]
