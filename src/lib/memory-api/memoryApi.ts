@@ -23,8 +23,27 @@ import {
   type QueryableMemoryQuery,
   type QueryableMemoryReference,
   type QueryableMemoryResultSet,
+  type SearchProjectMemoryReferencesInput,
 } from "../project-memory/queryableMemory";
 import type { MemoryCapabilityInput } from "./memoryApiTypes";
+
+/**
+ * Build the references-search input from the capability input. When
+ * `sessionEvidence` is present, search spans every loaded session (attributed)
+ * and the active-session top-level evidence is omitted to avoid double-counting
+ * — the active session is one entry in `sessionEvidence`. Absent → the
+ * active-session `events` / `sources`, exactly as before.
+ */
+function referencesInput(input: MemoryCapabilityInput): SearchProjectMemoryReferencesInput {
+  if (input.sessionEvidence && input.sessionEvidence.length > 0) {
+    return { reviewActions: input.reviewActions, sessions: input.sessionEvidence };
+  }
+  return {
+    timelineEvents: input.events,
+    evidenceSources: input.sources,
+    reviewActions: input.reviewActions,
+  };
+}
 
 export type MemorySearchResult = {
   /** Accepted-memory hits (title-ranked, evidence-cited). */
@@ -43,14 +62,7 @@ export function memorySearch(
 ): MemorySearchResult {
   return {
     memories: searchAcceptedMemories(input.acceptedMemories, query),
-    references: searchProjectMemoryReferences(
-      {
-        timelineEvents: input.events,
-        evidenceSources: input.sources,
-        reviewActions: input.reviewActions,
-      },
-      query,
-    ),
+    references: searchProjectMemoryReferences(referencesInput(input), query),
   };
 }
 
@@ -67,11 +79,7 @@ export function memoryAsk(
     {
       question,
       acceptedMemories: input.acceptedMemories,
-      references: {
-        timelineEvents: input.events,
-        evidenceSources: input.sources,
-        reviewActions: input.reviewActions,
-      },
+      references: referencesInput(input),
     },
     deps,
   );

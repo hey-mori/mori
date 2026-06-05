@@ -314,4 +314,47 @@ describe("searchProjectMemoryReferences", () => {
       "reviewAction",
     ]);
   });
+
+  it("attributes saved-session hits to the session they came from", () => {
+    const refs = searchProjectMemoryReferences(
+      {
+        sessions: [
+          {
+            sessionId: "s-7",
+            sessionTitle: "ng-gw 라우팅",
+            events: [timelineEvent({ id: "ev-7", title: "Auth gateway wiring" })],
+            sources: [],
+          },
+        ],
+      },
+      { text: "auth" },
+    );
+    expect(refs).toHaveLength(1);
+    expect(refs[0]?.refId).toBe("ev-7");
+    expect(refs[0]?.sessionId).toBe("s-7");
+    expect(refs[0]?.sessionLabel).toBe("ng-gw 라우팅");
+  });
+
+  it("dedupes a hit reachable through both the active path and a session", () => {
+    const shared = timelineEvent({ id: "ev-dup", title: "Auth shared" });
+    const refs = searchProjectMemoryReferences(
+      {
+        timelineEvents: [shared],
+        sessions: [{ sessionId: "s-2", sessionTitle: "Other", events: [shared], sources: [] }],
+      },
+      { text: "auth" },
+    );
+    expect(refs.map((r) => r.refId)).toEqual(["ev-dup"]);
+    // The active-path (unattributed) hit wins the dedup, so no stale label.
+    expect(refs[0]?.sessionId).toBeUndefined();
+  });
+
+  it("leaves active-session hits unattributed", () => {
+    const refs = searchProjectMemoryReferences(
+      { timelineEvents: [timelineEvent({ id: "ev-active", title: "Auth here" })] },
+      { text: "auth" },
+    );
+    expect(refs[0]?.sessionId).toBeUndefined();
+    expect(refs[0]?.sessionLabel).toBeUndefined();
+  });
 });

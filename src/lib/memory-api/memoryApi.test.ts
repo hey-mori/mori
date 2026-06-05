@@ -55,6 +55,27 @@ describe("memorySearch", () => {
     expect(result.memories.matchCount).toBeGreaterThanOrEqual(1);
     expect(result.references.some((r) => r.refId === "e1")).toBe(true);
   });
+
+  it("searches across sessionEvidence with attribution when provided", () => {
+    const crossSession: MemoryCapabilityInput = {
+      ...input,
+      // Active-session top-level evidence is ignored once sessionEvidence is set.
+      events: [event("e1", "인증 흐름 구현", "활성 세션")],
+      sessionEvidence: [
+        {
+          sessionId: "s2",
+          sessionTitle: "라우팅 세션",
+          events: [event("e9", "인증 미들웨어", "다른 세션의 근거")],
+          sources: [],
+        },
+      ],
+    };
+    const result = memorySearch(crossSession, { text: "인증" });
+    const hit = result.references.find((r) => r.refId === "e9");
+    expect(hit?.sessionLabel).toBe("라우팅 세션");
+    // The active-session top-level event is not double-counted.
+    expect(result.references.some((r) => r.refId === "e1")).toBe(false);
+  });
 });
 
 describe("memoryAsk", () => {

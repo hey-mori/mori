@@ -282,6 +282,23 @@ export type QueryableMemoryReference = {
   matchReason: string;
   /** Short context label — event type, source kind, or audit action. */
   contextLabel: string;
+  /** Session the hit came from. Absent for active-session / review-action hits. */
+  sessionId?: string;
+  /** Human session title for display. Absent when `sessionId` is. */
+  sessionLabel?: string;
+};
+
+/**
+ * One session's searchable raw evidence, carrying the attribution a
+ * cross-session hit needs to name where it came from. The bodies are the
+ * already-loaded, already-reviewed events / sources (see
+ * `loadProjectMemorySessions`) — never raw transcripts or connector logs.
+ */
+export type ProjectMemorySessionEvidence = {
+  sessionId: string;
+  sessionTitle: string;
+  events?: readonly TimelineEvent[];
+  sources?: readonly SourceRef[];
 };
 
 export type SearchProjectMemoryReferencesInput = {
@@ -289,6 +306,13 @@ export type SearchProjectMemoryReferencesInput = {
   evidenceSources?: readonly SourceRef[];
   /** Memory Audit Trail review actions — only their reviewer notes are searched. */
   reviewActions?: readonly StoredMemoryReviewAction[];
+  /**
+   * Saved sessions' evidence, searched with per-session attribution. Used to
+   * broaden search beyond the active session; the top-level `timelineEvents` /
+   * `evidenceSources` stay the active-session (unattributed) path. Hits are
+   * deduped by `refId` across both paths.
+   */
+  sessions?: readonly ProjectMemorySessionEvidence[];
 };
 
 /**
@@ -304,8 +328,47 @@ export function searchProjectMemoryReferences(
   if (text.length === 0) return [];
 
   const references: QueryableMemoryReference[] = [];
+  // Dedup by refId so the same event / source can't appear twice when a caller
+  // passes the active session through both the top-level path and `sessions`.
+  const seen = new Set<string>();
+  const push = (reference: QueryableMemoryReference): void => {
+    if (seen.has(reference.refId)) return;
+    seen.add(reference.refId);
+    references.push(reference);
+  };
 
-  for (const event of input.timelineEvents ?? []) {
+  // Active-session evidence (unattributed).
+  matchEvents(input.timelineEvents, text, undefined, push);
+  matchSources(input.evidenceSources, text, undefined, push);
+
+  // Saved sessions' evidence (attributed to the session it came from).
+  for (const session of input.sessions ?? []) {
+    const attribution = { sessionId: session.sessionId, sessionLabel: session.sessionTitle };
+    matchEvents(session.events, text, attribution, push);
+    matchSources(session.sources, text, attribution, push);
+  }
+
+  for (const action of input.reviewActions ?? []) {
+    // Only the reviewer's own note is searched — never the before /
+    // after snapshots, which can carry memory titles / summaries.
+    const note = typeof action.note === "string" ? action.note : "";
+    if (note.length > 0 && normalise(note).includes(text)) {
+      push(reviewActionReference(action, note, text));
+    }
+  }
+
+  return references.sort(compareReferences);
+}
+
+type ReferenceAttribution = { sessionId: string; sessionLabel: string };
+
+function matchEvents(
+  events: readonly TimelineEvent[] | undefined,
+  text: string,
+  attribution: ReferenceAttribution | undefined,
+  push: (reference: QueryableMemoryReference) => void,
+): void {
+  for (const event of events ?? []) {
     // Tool events (tool calls / results / errors) are machine output, not
     // evidence worth citing. Their titles are raw tool dumps ("↳ 도구 결과:
     // …"), so including them floods Ask Mori / Memory Search with noise. We
@@ -313,33 +376,32 @@ export function searchProjectMemoryReferences(
     // envelope even though its actor is "assistant", by the title shape.
     if (event.actor === "tool" || isToolEnvelopeText(event.title)) continue;
     if (normalise(event.title).includes(text)) {
-      references.push(eventReference(event, "title"));
+      push(eventReference(event, "title", attribution));
     } else if (normalise(event.summary).includes(text)) {
-      references.push(eventReference(event, "summary"));
+      push(eventReference(event, "summary", attribution));
     }
   }
-  for (const source of input.evidenceSources ?? []) {
-    if (normalise(source.title).includes(text)) {
-      references.push(sourceReference(source, "title", text));
-    } else if (normalise(source.detail).includes(text)) {
-      references.push(sourceReference(source, "detail", text));
-    }
-  }
-  for (const action of input.reviewActions ?? []) {
-    // Only the reviewer's own note is searched — never the before /
-    // after snapshots, which can carry memory titles / summaries.
-    const note = typeof action.note === "string" ? action.note : "";
-    if (note.length > 0 && normalise(note).includes(text)) {
-      references.push(reviewActionReference(action, note, text));
-    }
-  }
+}
 
-  return references.sort(compareReferences);
+function matchSources(
+  sources: readonly SourceRef[] | undefined,
+  text: string,
+  attribution: ReferenceAttribution | undefined,
+  push: (reference: QueryableMemoryReference) => void,
+): void {
+  for (const source of sources ?? []) {
+    if (normalise(source.title).includes(text)) {
+      push(sourceReference(source, "title", text, attribution));
+    } else if (normalise(source.detail).includes(text)) {
+      push(sourceReference(source, "detail", text, attribution));
+    }
+  }
 }
 
 function eventReference(
   event: TimelineEvent,
   matchedField: "title" | "summary",
+  attribution: ReferenceAttribution | undefined,
 ): QueryableMemoryReference {
   return {
     resultKind: "timelineEvent",
@@ -349,6 +411,7 @@ function eventReference(
     matchedField,
     matchReason: matchedField === "title" ? "Event title match" : "Event summary match",
     contextLabel: event.type,
+    ...attribution,
   };
 }
 
@@ -356,6 +419,7 @@ function sourceReference(
   source: SourceRef,
   matchedField: "title" | "detail",
   text: string,
+  attribution: ReferenceAttribution | undefined,
 ): QueryableMemoryReference {
   return {
     resultKind: "evidenceSource",
@@ -368,6 +432,7 @@ function sourceReference(
     matchedField,
     matchReason: matchedField === "title" ? "Source title match" : "Source detail match",
     contextLabel: source.kind,
+    ...attribution,
   };
 }
 

@@ -116,8 +116,13 @@ export function buildAskMoriContext(input: AskMoriContextInput): AskMoriContext 
   const referenceLines: string[] = [];
   input.references.forEach((reference, index) => {
     const tag = `R${index + 1}`;
+    // Name the session a cross-session hit came from, so the LLM and the cited
+    // row both show where the evidence lives (e.g. "타임라인 · ng-gw 라우팅").
+    const contextLabel = reference.sessionLabel
+      ? `${reference.contextLabel} · ${reference.sessionLabel}`
+      : reference.contextLabel;
     referenceLines.push(
-      `[${tag}] (non-current) ${reference.contextLabel}: ${reference.title}\n  ${reference.snippet}`,
+      `[${tag}] (non-current) ${contextLabel}: ${reference.title}\n  ${reference.snippet}`,
     );
     citations.push({
       kind: referenceCitationKind(reference.resultKind),
@@ -126,7 +131,7 @@ export function buildAskMoriContext(input: AskMoriContextInput): AskMoriContext 
       label: reference.title,
       snippet: reference.snippet,
       isCurrent: false,
-      contextLabel: reference.contextLabel,
+      contextLabel,
     });
   });
 
@@ -136,7 +141,7 @@ export function buildAskMoriContext(input: AskMoriContextInput): AskMoriContext 
     "Reviewed accepted memory:",
     memoryLines.length > 0 ? memoryLines.join("\n") : "(none)",
     "",
-    "Active-session references:",
+    "Reviewed session references:",
     referenceLines.length > 0 ? referenceLines.join("\n") : "(none)",
     "",
     "Answer the question per the system rules, citing tags.",
