@@ -1,6 +1,7 @@
 import { Archive, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import { EmptyState } from "../../components/layout/EmptyState";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
@@ -195,13 +196,12 @@ function ReportsAnalysisNotice({
   }
   if (!hasAnalysis && importsCount === 0) {
     return (
-      <NoticeBanner
-        tone="info"
+      <EmptyState
+        compact
+        icon={FileText}
         title="아직 가져온 자료가 없습니다"
-        actions={<Button onClick={onGoToEvidence}>자료 탭으로 이동</Button>}
-      >
-        자료 탭에서 추가하고 분석을 실행하면 보고서가 풍부해집니다.
-      </NoticeBanner>
+        actions={<Button onClick={onGoToEvidence}>자료 가져오기</Button>}
+      />
     );
   }
   if (!hasAnalysis) {

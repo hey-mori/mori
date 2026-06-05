@@ -230,7 +230,7 @@ describe("buildReportMarkdown", () => {
     expect(payload.markdown).not.toContain("**소스 목록**");
   });
 
-  it("emits a warning when the session has zero sources", () => {
+  it("does not nag about zero sources (the empty state already says so)", () => {
     const view = {
       ...mockSession,
       sources: [],
@@ -245,8 +245,7 @@ describe("buildReportMarkdown", () => {
       sections: DEFAULT_SECTIONS,
       privacy: privacy(),
     });
-    expect(payload.warnings.some((line) => /가져온 소스가 없습니다/.test(line))).toBe(true);
-    expect(payload.markdown).toContain("참고:");
+    expect(payload.warnings.some((line) => /가져온 소스가 없습니다/.test(line))).toBe(false);
   });
 
   it("collapses excessive blank lines and ends with a single trailing newline", () => {

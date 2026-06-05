@@ -195,9 +195,8 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   const summary = getReportEvidenceSummary(view);
   const warnings: string[] = [];
 
-  if (view.sources.length === 0) {
-    warnings.push("이 세션에는 가져온 소스가 없습니다. Report는 demo 또는 비어 있는 상태일 수 있습니다.");
-  }
+  // The empty-source case is already obvious from the empty state; the report
+  // does not nag about it.
   if (privacy.clientSafe) {
     warnings.push("Client-safe 모드: 원본 텍스트 / 파일 경로 / 출처 상세는 제외됩니다.");
   }
