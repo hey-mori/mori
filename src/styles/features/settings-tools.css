@@ -458,6 +458,72 @@
   color: var(--muted);
 }
 
+/* Request disclosure level — a compact 2-up radio grid, never the squished
+   single column the generic option group produced here. */
+.settings-disclosure-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .settings-disclosure-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.settings-disclosure-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.settings-disclosure-option:hover {
+  border-color: var(--line-strong);
+  background: #fbfcff;
+}
+
+.settings-disclosure-option:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+.settings-disclosure-option.is-selected {
+  border-color: var(--purple);
+  background: var(--purple-50);
+}
+
+.settings-disclosure-option-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-disclosure-option-text strong {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.settings-disclosure-option-text small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.settings-disclosure-option.is-selected svg {
+  flex-shrink: 0;
+  color: var(--purple);
+}
+
 .settings-privacy-never {
   display: grid;
   gap: 6px;

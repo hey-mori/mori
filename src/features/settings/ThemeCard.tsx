@@ -3,7 +3,6 @@ import { useThemeStore } from "../../app/themeStore";
 import type { ThemeId } from "../../lib/settings/themePreference";
 import {
   PreferenceToggle,
-  SettingsNotice,
   SettingsOption,
   SettingsOptionGroup,
   SettingsRow,
@@ -93,12 +92,8 @@ export function ThemeCard() {
         <SettingsRow
           label="데모 데이터 표시"
           description="실제 저장 세션이 없을 때만 번들 데모를 보여줍니다."
-          meta={<StatusPill tone="blue">자동</StatusPill>}
         />
       </div>
-      <SettingsNotice icon={Palette} title="로컬 표시 설정">
-        테마 선택은 동기화되지 않으며 다른 기기나 내보내기 결과를 바꾸지 않습니다.
-      </SettingsNotice>
     </SettingsSection>
   );
 }

@@ -1,5 +1,3 @@
-import { Lock, ShieldCheck, Sparkles } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { SettingsRow, SettingsSection, StatusPill } from "./SettingsPrimitives";
 import {
@@ -19,30 +17,19 @@ const STATE_LABEL: Record<PrivacyPolicyRow["state"], string> = {
   planned: "예정",
 };
 
-const STATE_ICON: Record<PrivacyPolicyRow["state"], LucideIcon> = {
-  enforced: ShieldCheck,
-  default: Lock,
-  planned: Sparkles,
-};
-
 const GROUP_TITLE: Record<PrivacyPolicyRow["state"], string> = {
   enforced: "항상 지키는 경계",
   default: "현재 기본값",
-  planned: "준비 중인 제어",
-};
-
-const GROUP_NOTE: Record<PrivacyPolicyRow["state"], string> = {
-  enforced: "토글이 아니라 제품 동작입니다.",
-  default: "관련 워크플로에서 명시적으로 선택합니다.",
-  planned: "방향만 표시하며 아직 실행되지 않습니다.",
+  planned: "준비 중",
 };
 
 /**
  * Privacy & Data Control — policy card.
  *
  * The privacy posture is baked into the app's architecture, not a set of
- * toggles. Rows are grouped by state so the surface clearly separates
- * code-guaranteed behaviour from default-on policy from planned controls.
+ * toggles. Rows are grouped by state; the group header carries the single
+ * state badge, so each row stays a calm label + one-line detail with no
+ * redundant per-row chips.
  */
 export function PrivacyDefaultsCard() {
   const groups = groupPrivacyPolicyByState();
@@ -62,26 +49,15 @@ export function PrivacyDefaultsCard() {
               <h4>{GROUP_TITLE[state]}</h4>
               <Badge tone={STATE_TONE[state]}>{STATE_LABEL[state]}</Badge>
             </header>
-            <p className="settings-privacy-group-note">{GROUP_NOTE[state]}</p>
             <div className="settings-row-list">
-              {rows.map((row) => {
-                const Icon = STATE_ICON[row.state];
-                return (
-                  <SettingsRow
-                    key={row.id}
-                    label={row.label}
-                    description={row.detail}
-                    meta={
-                      <>
-                        <span className={`settings-privacy-icon tone-${STATE_TONE[row.state]}`}>
-                          <Icon size={13} aria-hidden="true" />
-                        </span>
-                        <StatusPill tone={STATE_TONE[row.state]}>{STATE_LABEL[row.state]}</StatusPill>
-                      </>
-                    }
-                  />
-                );
-              })}
+              {rows.map((row) => (
+                <SettingsRow
+                  key={row.id}
+                  compact
+                  label={row.label}
+                  description={row.detail}
+                />
+              ))}
             </div>
           </section>
         );

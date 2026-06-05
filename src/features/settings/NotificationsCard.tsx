@@ -1,4 +1,3 @@
-import { Bell, Info } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   loadNotificationPreferences,
@@ -8,7 +7,6 @@ import {
   type NotificationPreferences,
 } from "../../lib/settings/notificationPreferences";
 import {
-  LocalOnlyNotice,
   PreferenceToggle,
   SettingsRow,
   SettingsSection,
@@ -43,7 +41,7 @@ const NOTIFICATION_ROWS: Array<{
   {
     id: "decisionIssueReviewNeeded",
     label: "결정 / 이슈 검토 필요",
-    description: "Quick Pass가 확인이 필요한 결정이나 이슈를 찾았을 때.",
+    description: "분석이 확인이 필요한 결정이나 이슈를 찾았을 때.",
   },
   {
     id: "tokenAnomaly",
@@ -89,7 +87,6 @@ export function NotificationsCard() {
             key={row.id}
             label={row.label}
             description={row.description}
-            meta={<StatusPill tone="gray">전달 예정</StatusPill>}
             control={
               <PreferenceToggle
                 label={`${row.label} 알림`}
@@ -100,12 +97,6 @@ export function NotificationsCard() {
           />
         ))}
       </div>
-      <LocalOnlyNotice icon={Info} title="알림 서비스 없음">
-        이 화면은 OS 알림 권한을 요청하지 않습니다. 지금은 향후 전달 계층이 따를 로컬 선호만 저장합니다.
-      </LocalOnlyNotice>
-      <LocalOnlyNotice icon={Bell} title="기본은 조용하게">
-        새 알림 범주는 실제 이벤트 소스가 생기기 전까지 꺼진 상태로 시작합니다.
-      </LocalOnlyNotice>
     </SettingsSection>
   );
 }
