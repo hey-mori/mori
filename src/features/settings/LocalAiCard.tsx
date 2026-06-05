@@ -19,6 +19,7 @@ import {
 } from "../../lib/analysis";
 import type {
   AnalysisRunHistoryViewModel,
+  OllamaModelInfo,
   QuickPassAnalysisSettings,
   QuickPassCapabilityReport,
   QuickPassProviderKind,
@@ -70,10 +71,18 @@ const PLANNED_COPY: Record<string, { label: string; summary: string }> = {
   },
 };
 
+type ModelOption = { value: string; label: string };
+
 type ProbeState =
   | { status: "idle" }
   | { status: "checking"; kind: QuickPassProviderKind }
-  | { status: "ok"; message: string; models: string[]; kind: QuickPassProviderKind }
+  | {
+      status: "ok";
+      message: string;
+      models: string[];
+      modelInfo?: OllamaModelInfo[];
+      kind: QuickPassProviderKind;
+    }
   | { status: "error"; message: string; kind: QuickPassProviderKind };
 
 type CapabilityState =
@@ -112,22 +121,34 @@ export function LocalAiCard({
     async (kind: QuickPassProviderKind) => {
       if (kind === "deterministic") return;
       setProbe({ status: "checking", kind });
-      const result =
-        kind === "openAiCompatible"
-          ? await probeOpenAiCompatibleConnection({
-              baseUrl: settings.openAiBaseUrl,
-              apiKey: settings.openAiApiKey,
-              timeoutMs: Math.min(settings.openAiTimeoutMs, 5_000),
-            })
-          : await probeOllamaConnection({
-              endpoint: settings.ollamaEndpoint,
-              timeoutMs: Math.min(settings.ollamaTimeoutMs, 5_000),
-            });
-      if (result.ok) {
-        setProbe({ status: "ok", message: result.message, models: result.models ?? [], kind });
-      } else {
-        setProbe({ status: "error", message: result.message, kind });
+      if (kind === "openAiCompatible") {
+        const result = await probeOpenAiCompatibleConnection({
+          baseUrl: settings.openAiBaseUrl,
+          apiKey: settings.openAiApiKey,
+          timeoutMs: Math.min(settings.openAiTimeoutMs, 5_000),
+        });
+        setProbe(
+          result.ok
+            ? { status: "ok", message: result.message, models: result.models ?? [], kind }
+            : { status: "error", message: result.message, kind },
+        );
+        return;
       }
+      const result = await probeOllamaConnection({
+        endpoint: settings.ollamaEndpoint,
+        timeoutMs: Math.min(settings.ollamaTimeoutMs, 5_000),
+      });
+      setProbe(
+        result.ok
+          ? {
+              status: "ok",
+              message: result.message,
+              models: result.models ?? [],
+              modelInfo: result.modelInfo,
+              kind,
+            }
+          : { status: "error", message: result.message, kind },
+      );
     },
     [
       settings.openAiBaseUrl,
@@ -272,8 +293,12 @@ function EngineConfigPanel({
   const probing = probe.status === "checking" && probe.kind === row.id;
   const testing = capability.status === "running" && capability.kind === row.id;
   const canTest = row.id !== "deterministic";
-  const detectedModels =
-    probe.status === "ok" && probe.kind === row.id ? probe.models : [];
+  const detected = probe.status === "ok" && probe.kind === row.id ? probe : null;
+  const detectedModels: ModelOption[] = detected
+    ? detected.modelInfo && detected.modelInfo.length
+      ? detected.modelInfo.map((info) => ({ value: info.name, label: formatModelLabel(info) }))
+      : detected.models.map((name) => ({ value: name, label: name }))
+    : [];
 
   if (row.id === "deterministic") {
     return (
@@ -442,7 +467,7 @@ function ModelField({
 }: {
   label: string;
   value: string;
-  models: string[];
+  models: ModelOption[];
   detecting: boolean;
   placeholder?: string;
   onChange: (value: string) => void;
@@ -450,21 +475,22 @@ function ModelField({
 }) {
   const [manual, setManual] = useState(false);
   const hasModels = models.length > 0;
+  const valueInList = models.some((model) => model.value === value);
   const useSelect = hasModels && !manual;
   return (
     <label className="settings-ai-field settings-ai-model-field">
       <span>{label}</span>
       <div className="settings-ai-model-input">
         {useSelect ? (
-          <select value={models.includes(value) ? value : ""} onChange={(event) => onChange(event.target.value)}>
-            {models.includes(value) ? null : (
+          <select value={valueInList ? value : ""} onChange={(event) => onChange(event.target.value)}>
+            {valueInList ? null : (
               <option value="" disabled>
                 모델 선택…
               </option>
             )}
             {models.map((model) => (
-              <option key={model} value={model}>
-                {model}
+              <option key={model.value} value={model.value}>
+                {model.label}
               </option>
             ))}
           </select>
@@ -627,6 +653,18 @@ function ProviderField({
 
 function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
+
+/** "gemma2:9b · 9.2B" or "llama3.1 · 4.7GB" — parameter count preferred. */
+function formatModelLabel(info: OllamaModelInfo): string {
+  const detail = info.parameterSize ?? (info.sizeBytes ? formatBytes(info.sizeBytes) : "");
+  return detail ? `${info.name} · ${detail}` : info.name;
+}
+
+function formatBytes(bytes: number): string {
+  const gb = bytes / 1_000_000_000;
+  if (gb >= 1) return `${gb.toFixed(1)}GB`;
+  return `${Math.max(1, Math.round(bytes / 1_000_000))}MB`;
 }
 
 function parseTimeout(value: string, fallback: number): number {

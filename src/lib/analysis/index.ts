@@ -30,6 +30,7 @@ export {
   parseOllamaQuickPassJson,
   probeOllamaConnection,
   type OllamaConnectionProbe,
+  type OllamaModelInfo,
   type OllamaProviderConfig,
 } from "./ollamaProvider";
 export {

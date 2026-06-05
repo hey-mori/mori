@@ -177,10 +177,20 @@ export function createOllamaQuickPassProvider(config: OllamaProviderConfig): Oll
   return new OllamaQuickPassProvider(config);
 }
 
+/** Per-model metadata from `/api/tags`, used to make the picker informative. */
+export type OllamaModelInfo = {
+  name: string;
+  /** On-disk size in bytes, when reported. */
+  sizeBytes?: number;
+  /** Human parameter count (e.g. "8.2B"), when reported. */
+  parameterSize?: string;
+};
+
 export type OllamaConnectionProbe = {
   ok: boolean;
   message: string;
   models?: string[];
+  modelInfo?: OllamaModelInfo[];
 };
 
 export async function probeOllamaConnection(
@@ -201,11 +211,23 @@ export async function probeOllamaConnection(
     if (!response.ok) {
       return { ok: false, message: `Ollama responded with HTTP ${response.status}` };
     }
-    const payload = (await response.json()) as { models?: Array<{ name?: string }> };
-    const models = Array.isArray(payload.models)
-      ? payload.models.map((entry) => entry.name).filter((name): name is string => Boolean(name))
+    const payload = (await response.json()) as {
+      models?: Array<{ name?: string; size?: number; details?: { parameter_size?: string } }>;
+    };
+    const modelInfo: OllamaModelInfo[] = Array.isArray(payload.models)
+      ? payload.models
+          .filter((entry): entry is { name: string; size?: number; details?: { parameter_size?: string } } =>
+            typeof entry.name === "string" && entry.name.length > 0,
+          )
+          .map((entry) => ({
+            name: entry.name,
+            sizeBytes: typeof entry.size === "number" ? entry.size : undefined,
+            parameterSize:
+              typeof entry.details?.parameter_size === "string" ? entry.details.parameter_size : undefined,
+          }))
       : [];
-    return { ok: true, message: `Reachable (${models.length} models)`, models };
+    const models = modelInfo.map((entry) => entry.name);
+    return { ok: true, message: `Reachable (${models.length} models)`, models, modelInfo };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return { ok: false, message };
