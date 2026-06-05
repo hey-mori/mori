@@ -16,6 +16,7 @@ import {
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
 import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
+import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
 import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
@@ -72,6 +73,12 @@ export function OverviewView() {
     [view.session, view.sources, view.events],
   );
 
+  const workSummary = useMemo(
+    () => buildSessionWorkSummary(view.events, view.sources),
+    [view.events, view.sources],
+  );
+  // The LLM (or saved) narrative, when one exists. The factual work summary
+  // below always shows, with no LLM, so 개요 is legible the moment it loads.
   const summaryText =
     (hasAnalysis && analysis ? analysis.summary.sessionSummary : view.summary.sessionSummary) || null;
   const duration = useMemo(
@@ -79,7 +86,6 @@ export function OverviewView() {
     [view.session.startedAt, view.session.endedAt],
   );
 
-  const eventCount = view.events.length;
   const issueCount = view.issues.length;
   const decisionCount = view.decisions.length;
   const nextActionCount = view.nextActions.length;
@@ -116,19 +122,32 @@ export function OverviewView() {
                 <span className="session-overview-context">맥락 · {projectHint.projectLabel}</span>
               ) : null}
             </div>
-            {summaryText ? (
-              <p className="session-overview-summary">{summaryText}</p>
+            {!workSummary.isEmpty ? (
+              <p className="session-overview-summary">{workSummary.headline}</p>
             ) : (
               <p className="session-overview-summary is-empty">
-                아직 요약이 없습니다. 자료 탭에서 Quick Pass를 실행하면 이 세션에서 한 작업이 요약됩니다.
+                아직 이 세션에 들어온 작업이 없습니다. 자료 탭에서 대화를 가져오면 여기에 요약됩니다.
               </p>
             )}
+            {summaryText ? (
+              <p className="session-overview-ai-summary">
+                <Badge tone="purple">AI 요약</Badge> {summaryText}
+              </p>
+            ) : null}
+            {!workSummary.isEmpty ? (
+              <div className="session-overview-shape" aria-label="작업 형태">
+                {workSummary.digest.lanes.map((lane) => (
+                  <Badge key={lane.lane} tone="gray">
+                    {lane.label} {lane.count}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
           </section>
 
           <dl className="overview-metrics" aria-label="세션 규모">
             <OverviewMetric label="기간" value={duration} />
             <OverviewMetric label="자료" value={String(sourceCount)} />
-            <OverviewMetric label="이벤트" value={String(eventCount)} />
             <OverviewMetric label="이슈" value={String(issueCount)} />
             <OverviewMetric label="결정" value={String(decisionCount)} />
             <OverviewMetric label="다음 액션" value={String(nextActionCount)} />
@@ -170,24 +189,22 @@ export function OverviewView() {
             <OverviewNavCard
               icon={GanttChartSquare}
               label="흐름"
-              count={eventCount}
               description="시간순으로 복원한 작업 타임라인"
               onOpen={() => setSessionTab("flow")}
             />
             <OverviewNavCard
               icon={FileText}
               label="자료"
-              count={sourceCount}
-              description="이 세션을 구성한 자료"
+              description="이 세션을 구성한 자료와 Quick Pass 분석"
               onOpen={() => setSessionTab("evidence")}
             />
             <OverviewNavCard
               icon={ClipboardCheck}
               label="검토"
-              count={reviewAttention}
-              countTone={reviewAttention > 0 ? "orange" : "green"}
+              count={reviewAttention > 0 ? reviewAttention : undefined}
+              countTone="orange"
               countLabel="확인 필요"
-              description={`이슈 ${issueCount} · 결정 ${decisionCount} · 다음 액션 ${nextActionCount}`}
+              description="추출된 이슈 · 결정 · 다음 액션 검토"
               onOpen={() => setSessionTab("insights")}
             />
             <OverviewNavCard

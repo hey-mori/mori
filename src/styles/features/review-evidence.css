@@ -3921,6 +3921,23 @@ td a {
   color: var(--muted);
 }
 
+.session-overview-ai-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.session-overview-shape {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
 /* 개요 tab layout — hero, scale metrics, and tab-shortcut cards. */
 .overview-main {
   display: grid;
