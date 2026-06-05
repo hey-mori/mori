@@ -882,53 +882,6 @@ td a {
   flex-wrap: nowrap;
 }
 
-.tab-toolbar-metrics {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  height: 30px;
-}
-
-.tab-toolbar-metric {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-pill);
-  background: var(--base-surface);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-
-.tab-toolbar-metric dt {
-  margin: 0;
-  color: var(--muted-2);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.tab-toolbar-metric dd {
-  margin: 0;
-  color: var(--text);
-  font-size: 12.5px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.tab-toolbar-metric.tone-orange dd,
-.tab-toolbar-metric.tone-blue dd,
-.tab-toolbar-metric.tone-green dd { color: var(--text); }
-.tab-toolbar-metric.is-zero {
-  opacity: 0.55;
-}
-
 .evidence-source-catalog.is-secondary {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: none;

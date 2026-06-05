@@ -33,7 +33,6 @@ import {
   splitNextActionsByCompletion,
 } from "../../lib/session/nextActionCompletion";
 import {
-  getUnresolvedItems,
   issueStatusTone,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
@@ -102,15 +101,6 @@ export function ReviewView() {
     clearReviewFocus();
   }, [reviewFocus, clearReviewFocus]);
 
-  const unresolved = useMemo(
-    () =>
-      getUnresolvedItems({
-        issues: view.issues,
-        decisions: view.decisions,
-        nextActions: view.nextActions,
-      }),
-    [view.issues, view.decisions, view.nextActions],
-  );
   const dataBasis = useMemo(() => getReportEvidenceSummary(view).dataBasis, [view]);
   // Keep selection in sync with the active view. The board now opens without a
   // default inspector; detail appears only after a user click or a deep link.
@@ -173,10 +163,6 @@ export function ReviewView() {
     () => view.issues.filter((issue) => issue.status === "open" || issue.status === "inProgress").length,
     [view.issues],
   );
-  const unconfirmedDecisionCount = useMemo(
-    () => view.decisions.filter((decision) => !decision.confirmed).length,
-    [view.decisions],
-  );
 
   function handleShowTimeline(eventId: string) {
     setSelectedEventId(eventId);
@@ -228,10 +214,6 @@ export function ReviewView() {
           setSearchQuery("");
           setActiveColumns([]);
         }}
-        confirmCount={unresolved.length}
-        issueCount={openIssueCount}
-        decisionCount={unconfirmedDecisionCount}
-        actionCount={pendingActionCount}
         totalIssueCount={view.issues.length}
         totalDecisionCount={view.decisions.length}
         totalNextActionCount={view.nextActions.length}
@@ -455,10 +437,6 @@ function ReviewToolbar({
   activeColumns,
   onToggleColumn,
   onClearFilters,
-  confirmCount,
-  issueCount,
-  decisionCount,
-  actionCount,
   totalIssueCount,
   totalDecisionCount,
   totalNextActionCount,
@@ -469,10 +447,6 @@ function ReviewToolbar({
   activeColumns: ReviewColumn[];
   onToggleColumn: (column: ReviewColumn) => void;
   onClearFilters: () => void;
-  confirmCount: number;
-  issueCount: number;
-  decisionCount: number;
-  actionCount: number;
   totalIssueCount: number;
   totalDecisionCount: number;
   totalNextActionCount: number;
@@ -508,24 +482,6 @@ function ReviewToolbar({
       />
       <span className="tab-toolbar-spacer" aria-hidden="true" />
       <div className="tab-toolbar-right">
-        <dl className="tab-toolbar-metrics" aria-label="검토 요약">
-          <div className={`tab-toolbar-metric ${confirmCount === 0 ? "is-zero" : "tone-orange"}`}>
-            <dt>확인</dt>
-            <dd>{confirmCount}</dd>
-          </div>
-          <div className={`tab-toolbar-metric ${issueCount === 0 ? "is-zero" : "tone-orange"}`}>
-            <dt>이슈</dt>
-            <dd>{issueCount}</dd>
-          </div>
-          <div className={`tab-toolbar-metric ${decisionCount === 0 ? "is-zero" : "tone-blue"}`}>
-            <dt>결정</dt>
-            <dd>{decisionCount}</dd>
-          </div>
-          <div className={`tab-toolbar-metric ${actionCount === 0 ? "is-zero" : "tone-green"}`}>
-            <dt>액션</dt>
-            <dd>{actionCount}</dd>
-          </div>
-        </dl>
         <div className="toolbar-pop-wrap" ref={popRef}>
           <button
             type="button"
