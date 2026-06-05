@@ -127,6 +127,16 @@ export function EventInspector({
     view: session,
   });
   const activity = inspector.activity;
+  // Flow Focus only does something when the event has relationships, which
+  // Quick Pass produces. Before analysis there are none, so the button is a
+  // dead end — hide it then rather than offer an action that does nothing.
+  const hasFlowRelations =
+    inspector.issues.length +
+      inspector.decisions.length +
+      inspector.artifacts.length +
+      inspector.nextActions.length +
+      inspector.hiddenRelationshipCount >
+    0;
 
   function handleCopy() {
     const text = `${formatTimeRange(selectedEvent.start, selectedEvent.end)}\n${selectedEvent.title}\n\n${selectedEvent.summary}`;
@@ -265,9 +275,11 @@ export function EventInspector({
       <section className="inspector-section">
         <SectionHeader title="액션" />
         <div className="inspector-actions-row">
-          <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
-            흐름 추적
-          </Button>
+          {hasFlowRelations ? (
+            <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
+              흐름 추적
+            </Button>
+          ) : null}
           <Button icon={ClipboardCopy} onClick={handleCopy}>
             요약 복사
           </Button>
