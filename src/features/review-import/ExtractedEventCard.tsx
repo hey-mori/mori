@@ -1,20 +1,22 @@
-import { Check, Edit3, RotateCcw, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Edit3, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { eventTypeLabels } from "../../domain/constants";
 import type { TimelineEvent } from "../../domain/types";
 import { formatTime } from "../../lib/formatting/time";
-import type { ReviewEventEdits, ReviewEventItem } from "../../lib/review";
+import type { ReviewEventEdits, ReviewEventItem, ReviewItemStatus } from "../../lib/review";
+
+const STATUS_LABEL: Record<ReviewItemStatus, string> = {
+  pending: "대기",
+  accepted: "포함",
+  discarded: "폐기",
+};
 
 /**
- * One extracted event, pared down to what the reviewer actually decides on:
- * when it happened, its title, a short summary, and accept / discard / edit.
- *
- * The old card also carried a type badge, a status badge, an "edited" badge,
- * and a four-cell trust / confidence / source-link / author table. That is
- * internal bookkeeping, not a decision the user makes here, so it is gone. The
- * accept / discard state now reads from the card's own tint, and a quiet dot
- * marks a hand-edited item.
+ * One extracted event as a compact, scannable row: time · title · status, on a
+ * single line. Click to expand the summary and the accept / discard / edit
+ * actions. A long import (hundreds of events) reads as a dense list instead of
+ * a wall of tall cards. A quiet dot marks a hand-edited item.
  */
 export function ExtractedEventCard({
   item,
@@ -27,6 +29,7 @@ export function ExtractedEventCard({
   onDiscard: () => void;
   onEdit: (edits: ReviewEventEdits) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const merged = mergeEvent(item.event, item.edits);
   const isAccepted = item.status === "accepted";
@@ -34,71 +37,79 @@ export function ExtractedEventCard({
 
   return (
     <article
-      className={`review-event-card status-${item.status} ${editing ? "is-editing" : ""}`}
+      className={`review-event-row status-${item.status} ${expanded ? "is-open" : ""}`}
       aria-current={isAccepted ? "true" : undefined}
     >
-      <div className="review-event-card-head">
-        <span className="review-event-card-time">{formatTime(merged.start)}</span>
-        <strong className="review-event-card-title">{merged.title}</strong>
+      <button
+        type="button"
+        className="review-event-row-head"
+        onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
+      >
+        <ChevronRight size={13} aria-hidden="true" className="review-event-row-caret" />
+        <span className="review-event-row-time">{formatTime(merged.start)}</span>
+        <span className="review-event-row-title">{merged.title}</span>
         {item.edits ? (
-          <span className="review-event-card-edited" title="직접 수정함" aria-label="직접 수정함" />
+          <span className="review-event-row-edited" title="직접 수정함" aria-label="직접 수정함" />
         ) : null}
-      </div>
+        <span className={`review-event-row-status status-${item.status}`}>
+          {STATUS_LABEL[item.status]}
+        </span>
+      </button>
 
-      <p className="review-event-card-summary">{merged.summary || "(요약 없음)"}</p>
+      {expanded ? (
+        <div className="review-event-row-body">
+          <p className="review-event-card-summary">{merged.summary || "(요약 없음)"}</p>
 
-      {editing ? (
-        <EditForm
-          event={merged}
-          onSave={(edits) => {
-            onEdit(edits);
-            setEditing(false);
-          }}
-          onCancel={() => setEditing(false)}
-        />
+          {editing ? (
+            <EditForm
+              event={merged}
+              onSave={(edits) => {
+                onEdit(edits);
+                setEditing(false);
+              }}
+              onCancel={() => setEditing(false)}
+            />
+          ) : null}
+
+          <footer className="review-event-card-actions">
+            {isDiscarded ? (
+              <Button variant="secondary" icon={RotateCcw} onClick={onAccept} title="다시 포함합니다.">
+                되돌리기
+              </Button>
+            ) : (
+              <>
+                <Button
+                  icon={Edit3}
+                  onClick={() => setEditing((value) => !value)}
+                  size="sm"
+                  title="제목 / 요약 / 유형 수정"
+                >
+                  편집
+                </Button>
+                <Button
+                  icon={Trash2}
+                  onClick={onDiscard}
+                  size="sm"
+                  title="이 이벤트를 반영에서 제외합니다."
+                >
+                  폐기
+                </Button>
+                <Button
+                  variant={isAccepted ? "secondary" : "primary"}
+                  icon={Check}
+                  onClick={onAccept}
+                  disabled={isAccepted}
+                  size="sm"
+                  title={isAccepted ? "포함됨" : "반영 시점에 이 이벤트를 세션에 추가합니다."}
+                >
+                  {isAccepted ? "포함됨" : "수락"}
+                </Button>
+              </>
+            )}
+          </footer>
+        </div>
       ) : null}
-
-      <footer className="review-event-card-actions">
-        {isDiscarded ? (
-          <Button
-            variant="secondary"
-            icon={RotateCcw}
-            onClick={onAccept}
-            title="다시 포함합니다."
-          >
-            되돌리기
-          </Button>
-        ) : (
-          <>
-            <Button
-              icon={Edit3}
-              onClick={() => setEditing((value) => !value)}
-              size="sm"
-              title="제목 / 요약 / 유형 수정"
-            >
-              편집
-            </Button>
-            <Button
-              icon={Trash2}
-              onClick={onDiscard}
-              size="sm"
-              title="이 이벤트를 반영에서 제외합니다."
-            >
-              폐기
-            </Button>
-            <Button
-              variant={isAccepted ? "secondary" : "primary"}
-              icon={Check}
-              onClick={onAccept}
-              disabled={isAccepted}
-              size="sm"
-              title={isAccepted ? "포함됨" : "반영 시점에 이 이벤트를 세션에 추가합니다."}
-            >
-              {isAccepted ? "포함됨" : "수락"}
-            </Button>
-          </>
-        )}
-      </footer>
     </article>
   );
 }
