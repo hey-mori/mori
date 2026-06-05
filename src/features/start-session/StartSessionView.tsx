@@ -35,6 +35,10 @@ import {
   type SessionStorageTarget,
 } from "../../lib/session/sessionStorageTarget";
 import { resolveStartRecordsAgentId } from "../../lib/session/startRecordsAgent";
+import {
+  getProjectForFolder,
+  rememberProjectForFolder,
+} from "../../lib/session/projectFolderLinks";
 import { isTauriRuntime } from "../../lib/desktop";
 import {
   buildStartSessionEngineOptions,
@@ -233,18 +237,33 @@ export function StartSessionView() {
     setMethod(null);
     setSelectedDetected(null);
     setPasteText("");
+    setSessionTitle("");
   }
 
   function chooseMethod(next: ImportMethod) {
     setMethod((current) => (current === next ? null : next));
     setSelectedDetected(null);
     setPasteText("");
+    setSessionTitle("");
   }
 
   function pickDetected(meta: AgentWorkSessionMeta) {
     setSelectedDetected(meta);
-    // File the import under the conversation's own project; user can change it.
-    if (existingProjects.includes(meta.projectName)) setProjectChoice(meta.projectName);
+    // Auto-fill the session name from the conversation's own title; still editable.
+    setSessionTitle(meta.title?.trim() ?? "");
+    // File the import under the project this folder was last linked to. If the
+    // folder has no remembered link, fall back to a project whose label matches
+    // the folder name; otherwise default to creating a new project prefilled
+    // with the folder name (the calm "this project doesn't exist yet" prompt).
+    const remembered = getProjectForFolder(meta.projectPath);
+    if (remembered && existingProjects.includes(remembered)) {
+      setProjectChoice(remembered);
+    } else if (existingProjects.includes(meta.projectName)) {
+      setProjectChoice(meta.projectName);
+    } else if (meta.projectName.trim()) {
+      setProjectChoice(NEW_PROJECT_VALUE);
+      setNewProjectName(meta.projectName.trim());
+    }
   }
 
   // Honour a 기록에서 불러오기 request routed from the 소스 hub: pre-select the
@@ -294,14 +313,17 @@ export function StartSessionView() {
           capturedAt,
         });
         const { startedAt, endedAt } = deriveConversationWindow(detail, capturedAt);
+        const resolvedProject = projectName || detail.projectName || undefined;
         const { candidate: rebound } = importAsNewSession({
           candidate,
-          title: detail.title,
+          title: sessionTitle.trim() || detail.title,
           startedAt,
           endedAt,
-          projectLabel: projectName || detail.projectName || undefined,
+          projectLabel: resolvedProject,
           recordingMode: "summary",
         });
+        // Remember this folder's project so the next import from it auto-links.
+        rememberProjectForFolder(selectedDetected.projectPath, resolvedProject);
         startReview(rebound, reviewOriginForAgentWorkSession(detail));
         setCurrentView("evidence");
       } catch {
@@ -341,10 +363,11 @@ export function StartSessionView() {
     }
   }
 
-  const resolvedName =
-    method === "records"
-      ? selectedDetected?.title ?? "대화 선택 필요"
-      : sessionTitle.trim() || "무제 Mori 세션";
+  const resolvedName = sessionTitle.trim()
+    ? sessionTitle.trim()
+    : method === "records" && !selectedDetected
+      ? "대화 선택 필요"
+      : "무제 Mori 세션";
 
   const createTitle = canCreate
     ? undefined
@@ -540,16 +563,18 @@ export function StartSessionView() {
           </div>
           <label>
             세션 이름
-            {method === "records" ? (
-              <input value={selectedDetected?.title ?? ""} placeholder="대화 제목에서 자동" disabled />
-            ) : (
-              <input
-                value={sessionTitle}
-                placeholder={method ? "예: Mori 앱 기획" : "방법을 먼저 선택하세요"}
-                disabled={!method}
-                onChange={(event) => setSessionTitle(event.target.value)}
-              />
-            )}
+            <input
+              value={sessionTitle}
+              placeholder={
+                method === "records"
+                  ? "대화 제목에서 자동 입력"
+                  : method
+                    ? "예: Mori 앱 기획"
+                    : "방법을 먼저 선택하세요"
+              }
+              disabled={!method}
+              onChange={(event) => setSessionTitle(event.target.value)}
+            />
           </label>
         </div>
       </FieldBlock>
