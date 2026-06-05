@@ -317,8 +317,15 @@ export function deriveActivityKind(args: {
   }
   if (args.event.actor === "file") return "fileChange";
   if (args.event.actor === "decision") return "decision";
+  // An imported user/assistant turn is conversation, full stop. A keyword the
+  // discussion merely mentions ("memory", "report", "test") must not reclassify
+  // a real chat turn — that mislabeled a memory-focused conversation as memory
+  // events. Fuzzy text heuristics apply only to events with no conversational
+  // actor (connector / demo events where actor is unset).
+  if (args.event.actor === "user" || args.event.actor === "assistant") {
+    return "conversation";
+  }
 
-  // Fuzzy text heuristics only for conversation / unknown-actor events.
   if (looksLikeMemory(titleAndSummary)) return "memory";
   if (looksLikeHandoff(titleAndSummary)) return "handoff";
   if (looksLikeReport(titleAndSummary)) return "report";

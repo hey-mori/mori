@@ -63,4 +63,17 @@ describe("tool-aware lane routing", () => {
     const ev = toolEvent("Edit", { title: "update the project memory module", summary: "🔧 Edit: memory.ts" });
     expect(getTimelineLaneForEvent({ event: ev })).toBe("files");
   });
+
+  it("keeps a conversation turn in 대화 even when it discusses memory or tests", () => {
+    // A real assistant/user turn that merely mentions memory/test keywords must
+    // stay conversation, not get reclassified into the 메모리 / 빌드 lanes.
+    const assistant = toolEvent(
+      undefined,
+      { title: "project memory를 어떻게 정리할지 논의", summary: "remember to run the test later" },
+      "assistant",
+    );
+    expect(getTimelineLaneForEvent({ event: assistant })).toBe("conversation");
+    const user = toolEvent(undefined, { title: "메모리 구조 질문", summary: "test 결과는?" }, "user");
+    expect(getTimelineLaneForEvent({ event: user })).toBe("conversation");
+  });
 });
