@@ -1,4 +1,4 @@
-import { CalendarClock, CheckCircle2, Layers, ListPlus, Pencil, ShieldCheck, Sparkles } from "lucide-react";
+import { CalendarClock, CheckCircle2, Layers, ListPlus, Pencil, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -33,7 +33,6 @@ import {
 } from "../../lib/review-workspace/reviewWorkspace";
 
 const PRIORITY_ORDER: Priority[] = ["high", "medium", "low"];
-import { getTrustDisplay, getTrustLabel } from "../../lib/evidence/trust";
 import { InlineEditForm } from "./InlineEditForm";
 import type {
   DecisionEditFields,
@@ -73,7 +72,7 @@ export function ReviewDetailPanel({
         <header className="review-detail-header">
           <Badge tone="gray">선택된 항목 없음</Badge>
           <h3>검토 상세</h3>
-          <p>왼쪽 목록에서 이슈, 결정, 또는 다음 액션을 선택하면 출처, 신뢰도, 관련 이벤트가 여기 표시됩니다.</p>
+          <p>왼쪽 목록에서 이슈, 결정, 또는 다음 액션을 선택하면 근거 출처와 관련 이벤트가 여기 표시됩니다.</p>
         </header>
         <section className="review-detail-section">
           <SectionHeader title="이 화면에서 가능한 것" />
@@ -166,7 +165,6 @@ function IssueDetail({
   const relatedDecisions = view.decisions.filter((decision) =>
     issue.relatedDecisionIds.includes(decision.id),
   );
-  const issueTrust = getTrustDisplay(issue.trustLevel);
   const canEditText = canEditStatus;
   const existingNextAction = view.nextActions.find((action) =>
     action.relatedIssueIds.includes(issue.id),
@@ -178,7 +176,6 @@ function IssueDetail({
         <div className="review-detail-badges">
           <Badge tone={issueStatusTone(issue.status)}>{issueStatusLabels[issue.status]}</Badge>
           <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
-          <Badge tone={issueTrust.tone} title={issueTrust.description}>{issueTrust.label}</Badge>
           {issue.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
         </div>
         {isEditing ? (
@@ -348,7 +345,6 @@ function DecisionDetail({
   const relatedIssues = view.issues.filter((issue) =>
     decision.relatedIssueIds.includes(issue.id),
   );
-  const decisionTrust = getTrustDisplay(decision.trustLevel);
   const canEditText = canEditConfirm;
 
   return (
@@ -359,9 +355,6 @@ function DecisionDetail({
             {decision.confirmed ? "확정됨" : "미확정"}
           </Badge>
           <Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge>
-          <Badge tone={decisionTrust.tone} title={decisionTrust.description}>
-            {decisionTrust.label}
-          </Badge>
           {decision.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
         </div>
         {isEditing ? (
@@ -693,7 +686,6 @@ function EvidenceList({ view, sourceIds }: { view: MockSession; sourceIds: strin
             <span className="review-detail-evidence-title" title={source.title}>
               {source.title}
             </span>
-            <Badge tone={display.trustTone}>{display.trustLabel}</Badge>
             <small>{display.integrationLabel}</small>
           </li>
         );
@@ -728,9 +720,6 @@ function RelatedEventList({
           >
             {event.title}
           </button>
-          <small>
-            <ShieldCheck size={10} aria-hidden="true" /> {getTrustLabel(event.trustLevel)}
-          </small>
         </li>
       ))}
       {events.length > 5 ? (
