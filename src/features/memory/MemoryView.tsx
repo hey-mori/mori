@@ -53,7 +53,10 @@ import {
   type ProjectMemoryLoadedSessionStatus,
   type ProjectMemoryWarning,
 } from "../../lib/project-memory/projectMemoryModel";
-import { loadProjectMemorySessions } from "../../lib/project-memory/loadProjectMemorySessions";
+import {
+  loadProjectMemorySessions,
+  toProjectMemorySessionEvidence,
+} from "../../lib/project-memory/loadProjectMemorySessions";
 import { ProjectMemoryHero } from "./ProjectMemoryHero";
 import { RecentSessionsList } from "./RecentSessionsList";
 import { DecisionTimelineCard } from "./DecisionTimelineCard";
@@ -351,14 +354,23 @@ export function MemoryView() {
 
   // One canonical memory-capability input for the Ask / Search / Glossary
   // cards. They consume the memory-api facade, not raw props.
+  // Cross-session search scope reuses the saved-session bodies already loaded
+  // for the rollup, so Memory Search / Ask Mori span every session (each hit
+  // attributed) without a second load. See
+  // `docs/design/cross-session-memory-search.md`.
+  const sessionEvidence = useMemo(
+    () => toProjectMemorySessionEvidence(loadedSessions),
+    [loadedSessions],
+  );
   const memoryInput = useMemo<MemoryCapabilityInput>(
     () => ({
       acceptedMemories,
       reviewActions,
       events: view.events,
       sources: view.sources,
+      sessionEvidence: sessionEvidence.length > 0 ? sessionEvidence : undefined,
     }),
-    [acceptedMemories, reviewActions, view.events, view.sources],
+    [acceptedMemories, reviewActions, view.events, view.sources, sessionEvidence],
   );
 
   function handleOpenSession(entry: DerivedSession) {

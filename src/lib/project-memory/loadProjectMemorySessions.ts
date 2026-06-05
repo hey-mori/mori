@@ -40,6 +40,7 @@ import type {
   StoredSessionSummary,
 } from "../storage/storageTypes";
 import type { ProjectMemoryLoadedSession } from "./projectMemoryModel";
+import type { ProjectMemorySessionEvidence } from "./queryableMemory";
 
 /** Maximum saved sessions the loader will pull bodies for. */
 export const DEFAULT_SAVED_SESSION_CAP = 20;
@@ -144,6 +145,31 @@ export async function loadProjectMemorySessions(
     }
   }
 
+  return out;
+}
+
+/**
+ * Map loaded sessions to the cross-session search input
+ * (`ProjectMemorySessionEvidence[]`). Only sessions whose bodies actually
+ * loaded with evidence are kept, so metadata-only / failed / empty sessions
+ * never widen the search with nothing to match. The active session is one
+ * entry like any other, so a cross-session search covers it once, attributed.
+ * See `docs/design/cross-session-memory-search.md`.
+ */
+export function toProjectMemorySessionEvidence(
+  loaded: readonly ProjectMemoryLoadedSession[],
+): ProjectMemorySessionEvidence[] {
+  const out: ProjectMemorySessionEvidence[] = [];
+  for (const session of loaded) {
+    if (session.loadStatus !== "loaded") continue;
+    if (session.events.length === 0 && session.sources.length === 0) continue;
+    out.push({
+      sessionId: session.sessionId,
+      sessionTitle: session.title,
+      events: session.events,
+      sources: session.sources,
+    });
+  }
   return out;
 }
 

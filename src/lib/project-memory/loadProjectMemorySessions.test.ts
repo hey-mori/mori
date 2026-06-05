@@ -9,8 +9,11 @@ import type {
 } from "../storage/storageTypes";
 import {
   loadProjectMemorySessions,
+  toProjectMemorySessionEvidence,
   type ProjectMemoryDesktopLoader,
 } from "./loadProjectMemorySessions";
+import type { ProjectMemoryLoadedSession } from "./projectMemoryModel";
+import type { SourceRef, TimelineEvent } from "../../domain/types";
 
 function stubRepository(overrides: Partial<DraftRepository> = {}): DraftRepository {
   const base: DraftRepository = {
@@ -370,5 +373,51 @@ describe("loadProjectMemorySessions", () => {
         savedSqliteSessions: [sqliteEntry("sq-1")],
       }),
     ).resolves.toBeDefined();
+  });
+});
+
+describe("toProjectMemorySessionEvidence", () => {
+  function loadedSession(
+    overrides: Partial<ProjectMemoryLoadedSession> & { sessionId: string },
+  ): ProjectMemoryLoadedSession {
+    return {
+      title: `Session ${overrides.sessionId}`,
+      projectId: "p-1",
+      projectName: "mori",
+      startedAt: null,
+      endedAt: null,
+      savedAt: null,
+      source: "browserLocalStorage",
+      loadStatus: "loaded",
+      isActive: false,
+      events: [],
+      sources: [],
+      issues: [],
+      decisions: [],
+      nextActions: [],
+      imports: [],
+      analysis: null,
+      ...overrides,
+    };
+  }
+
+  it("keeps only loaded sessions that carry evidence, with attribution", () => {
+    const evidence = toProjectMemorySessionEvidence([
+      loadedSession({
+        sessionId: "s-1",
+        title: "라우팅 세션",
+        events: [{ id: "e-1" } as unknown as TimelineEvent],
+      }),
+      loadedSession({ sessionId: "s-empty" }), // loaded but no evidence → dropped
+      loadedSession({ sessionId: "s-meta", loadStatus: "metadataOnly" }), // dropped
+      loadedSession({
+        sessionId: "s-failed",
+        loadStatus: "failed",
+        sources: [{ id: "src-x" } as unknown as SourceRef],
+      }), // not loaded → dropped despite a source
+    ]);
+    expect(evidence).toHaveLength(1);
+    expect(evidence[0]).toMatchObject({ sessionId: "s-1", sessionTitle: "라우팅 세션" });
+    expect(evidence[0]?.events).toHaveLength(1);
   });
 });
