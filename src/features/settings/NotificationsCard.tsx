@@ -75,10 +75,7 @@ export function NotificationsCard() {
   }
 
   return (
-    <SettingsSection
-      title="알림"
-      description="범주 설정은 이 기기에 저장됩니다. OS 알림 전달은 아직 켜져 있지 않습니다."
-    >
+    <SettingsSection title="알림">
       <div className="settings-row-list">
         {NOTIFICATION_ROWS.map((row) => (
           <SettingsRow

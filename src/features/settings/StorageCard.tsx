@@ -35,7 +35,6 @@ export function StorageCard({
   return (
     <SettingsSection
       title="저장과 백업"
-      description="데이터는 이 기기에만 저장됩니다. 자동으로 업로드되거나 동기화되지 않습니다."
       action={<SettingsInlineAction onClick={onOpenReports}>보고서 열기</SettingsInlineAction>}
     >
       <div className="settings-row-list">

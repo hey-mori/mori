@@ -12,10 +12,7 @@ import { getPrivacyPolicy } from "../../lib/settings/settingsStatus";
 export function PrivacyDefaultsCard() {
   const rows = getPrivacyPolicy();
   return (
-    <SettingsSection
-      title="데이터 흐름"
-      description="세션과 소스는 이 기기에 저장됩니다. 외부 제공자는 사용자가 직접 설정한 경우에만 사용됩니다."
-    >
+    <SettingsSection title="데이터 흐름">
       <div className="settings-row-list">
         {rows.map((row) => {
           const planned = row.state === "planned";

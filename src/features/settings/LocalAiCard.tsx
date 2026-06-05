@@ -157,10 +157,7 @@ export function LocalAiCard({
   }
 
   return (
-    <SettingsSection
-      title="분석 엔진"
-      description="가져온 자료를 이슈, 결정, 다음 행동으로 정리할 때 사용할 엔진입니다. 규칙 기반은 모델 없이 동작하고, Ollama·OpenAI 호환은 로컬 LLM으로 더 깊게 해석합니다."
-    >
+    <SettingsSection title="분석 엔진">
       {/* 설정 영역 — 엔진 선택과 연결 설정 */}
       <div className="settings-ai-layout">
         <div className="settings-ai-provider-grid" role="radiogroup" aria-label="분석 엔진">

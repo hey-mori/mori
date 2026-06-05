@@ -29,10 +29,7 @@ export function RequestDisclosureCard() {
   const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
 
   return (
-    <SettingsSection
-      title="내 요청 표시 수준"
-      description="내가 보낸 요청 메시지를 상세 보기에서 어떻게 표시할지 정합니다. 데이터는 항상 그대로 저장되고 표시 방식만 바뀝니다."
-    >
+    <SettingsSection title="내 요청 표시 수준">
       <div className="settings-disclosure">
         <SegmentedControl
           ariaLabel="요청 표시 수준"

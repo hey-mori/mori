@@ -54,11 +54,6 @@ export function DemoModeCard({
   return (
     <SettingsSection
       title="데이터 소스"
-      description={
-        isDemo
-          ? "현재 Mori 데모 데이터를 보고 있습니다."
-          : "실제 작업 데이터를 보고 있습니다. 데모는 기능 확인용으로만 전환됩니다."
-      }
       action={
         <StatusPill tone={isDemo ? "gray" : "green"}>
           {isDemo ? "데모" : "실제 세션"}

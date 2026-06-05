@@ -167,7 +167,6 @@ function SqliteLoadCard({
   return (
     <SettingsSection
       title="저장된 세션"
-      description="Desktop SQLite에 저장된 세션을 활성 세션으로 다시 불러옵니다."
       action={
         <Badge tone="purple">{sessions.length}개 세션</Badge>
       }

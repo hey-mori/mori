@@ -42,10 +42,7 @@ export function ThemeCard() {
   const setTheme = useThemeStore((state) => state.setTheme);
 
   return (
-    <SettingsSection
-      title="테마"
-      description="테마는 이 기기에만 저장됩니다. 데이터나 내보내기 결과에는 영향을 주지 않습니다."
-    >
+    <SettingsSection title="테마">
       <div className="settings-theme-grid" role="radiogroup" aria-label="테마">
         {THEME_OPTIONS.map((option) => {
           const selected = option.id === theme;

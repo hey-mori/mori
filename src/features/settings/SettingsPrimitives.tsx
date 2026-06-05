@@ -1,7 +1,6 @@
 import type { ButtonHTMLAttributes, KeyboardEvent, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
-import { InfoHint } from "../../components/ui/InfoHint";
 import { Toggle } from "../../components/ui/Toggle";
 
 export type SettingsRailItem = {
@@ -68,12 +67,10 @@ export function SettingsRail({
 
 export function SettingsSection({
   title,
-  description,
   action,
   children,
 }: {
   title: string;
-  description?: string;
   action?: ReactNode;
   children: ReactNode;
 }) {
@@ -82,9 +79,6 @@ export function SettingsSection({
       <header className="settings-section-head">
         <div className="settings-section-heading">
           <h3>{title}</h3>
-          {description ? (
-            <InfoHint label={`${title} 설명`}>{description}</InfoHint>
-          ) : null}
         </div>
         {action ? <div className="settings-section-action">{action}</div> : null}
       </header>
