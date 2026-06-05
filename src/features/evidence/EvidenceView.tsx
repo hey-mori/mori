@@ -23,6 +23,7 @@ import {
   loadEnginePresets,
   resolveQuickPassProvider,
 } from "../../lib/analysis";
+import { buildAnalysisPlan, describeAnalysisPlan } from "../../lib/analysis/analysisPlan";
 import {
   buildImportApplyCompletion,
   type ImportApplyCompletionActionId,
@@ -237,6 +238,13 @@ export function EvidenceView() {
         nextActionCount={analysis?.nextActions.length ?? 0}
         confidence={analysis?.confidence ?? null}
         notes={analysis?.notes ?? []}
+        planLine={describeAnalysisPlan(
+          buildAnalysisPlan({
+            events: view.events,
+            sourceCount: imports.length || view.sources.length,
+            settings: analysisSettings,
+          }),
+        )}
         settings={analysisSettings}
         enginePresets={enginePresets}
         runPresetId={runPresetId}
@@ -513,6 +521,7 @@ function QuickPassControl({
   nextActionCount,
   confidence,
   notes,
+  planLine,
   settings,
   enginePresets,
   runPresetId,
@@ -535,6 +544,7 @@ function QuickPassControl({
   nextActionCount: number;
   confidence: number | null;
   notes: string[];
+  planLine: string;
   settings: QuickPassAnalysisSettings;
   enginePresets: EnginePreset[];
   runPresetId: string | null;
@@ -633,6 +643,9 @@ function QuickPassControl({
         </span>
         {fallbackUsed ? <Badge tone="orange">폴백 사용됨</Badge> : null}
       </div>
+      {status !== "succeeded" ? (
+        <p className="analysis-panel-plan">{planLine}</p>
+      ) : null}
       {hasAnalysis ? (
         <>
           {summary ? <p className="analysis-panel-summary">{summary}</p> : null}

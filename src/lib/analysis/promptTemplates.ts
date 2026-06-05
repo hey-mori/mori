@@ -33,7 +33,7 @@ Rules:
  * with empty arrays. We extract from conversation turns only, capped to the
  * most recent N, and tell the model how much was omitted.
  */
-const MAX_LLM_CONVERSATION_EVENTS = 120;
+export const MAX_LLM_CONVERSATION_EVENTS = 120;
 
 export function buildQuickPassPrompt(input: AnalysisInput): QuickPassPromptParts {
   // Tool events are machine output and dominate a long session by volume.

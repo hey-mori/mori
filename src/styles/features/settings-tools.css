@@ -1395,6 +1395,17 @@
   font-size: 13px;
 }
 
+.analysis-panel-plan {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  background: var(--surface-2, #f6f4fc);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
 .analysis-panel-summary {
   margin: 0;
   padding: 10px 12px;
