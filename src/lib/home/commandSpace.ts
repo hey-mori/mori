@@ -1,5 +1,6 @@
 import type { ViewKey } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
+import { expandSemanticTerms } from "../project-memory/semanticTerms";
 
 /**
  * Mori Command Space: pure result derivation.
@@ -129,12 +130,16 @@ export function buildCommandSpaceResults(input: {
   const tokens = tokenizeQuery(input.query);
   const hasQuery = tokens.length > 0;
   const seed = tokens.join(" ");
+  // Bridge the keywords across Korean / English so "auth" finds a 인증 session
+  // and "라우팅" finds a routing one. The seed (action label) stays the user's
+  // own words; only matching widens.
+  const matchTokens = expandSemanticTerms(tokens);
 
   const actions = buildModeActions(input.modeId, seed, input.query);
   const projectRows = hasQuery
-    ? matchProjects(input.sessions, tokens).slice(0, PROJECT_LIMIT)
+    ? matchProjects(input.sessions, matchTokens).slice(0, PROJECT_LIMIT)
     : [];
-  const sessionRows = matchSessions(input.sessions, tokens).slice(
+  const sessionRows = matchSessions(input.sessions, matchTokens).slice(
     0,
     hasQuery ? SESSION_LIMIT_QUERY : SESSION_LIMIT_RECENT,
   );

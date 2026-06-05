@@ -197,6 +197,27 @@ describe("buildCommandSpaceResults", () => {
     expect(rows.some((row) => row.kind === "session" && row.id === "session:s2")).toBe(true);
   });
 
+  it("bridges English keywords to Korean session titles and back", () => {
+    // "auth" reaches "JWT 인증 미들웨어 도입" through the 인증↔auth bridge.
+    const byEnglish = buildCommandSpaceResults({
+      modeId: "find",
+      query: "auth",
+      sessions: SESSIONS,
+    });
+    expect(byEnglish.rows.some((row) => row.kind === "session" && row.id === "session:s1")).toBe(
+      true,
+    );
+    // "routing" reaches "게이트웨이 라우팅 재설계" through 라우팅↔routing.
+    const byKorean = buildCommandSpaceResults({
+      modeId: "find",
+      query: "routing",
+      sessions: SESSIONS,
+    });
+    expect(byKorean.rows.some((row) => row.kind === "session" && row.id === "session:s2")).toBe(
+      true,
+    );
+  });
+
   it("caps keyword session matches at five", () => {
     const many = Array.from({ length: 9 }, (_, i) =>
       session({ sessionId: `m${i}`, title: `auth case ${i}`, projectName: "svc" }),
