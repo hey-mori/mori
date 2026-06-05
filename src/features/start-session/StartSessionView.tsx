@@ -261,9 +261,11 @@ export function StartSessionView() {
   }
 
   function chooseMethod(next: ImportMethod) {
+    // Switching method must not throw away work: a loaded detected session, a
+    // pasted transcript, and the filled title / project all persist. Each
+    // method's panel is gated on `method`, so preserved state simply reappears
+    // when the user switches back rather than showing two sources at once.
     setMethod((current) => (current === next ? null : next));
-    setSelectedDetected(null);
-    setPasteText("");
   }
 
   function pickDetected(meta: AgentWorkSessionMeta) {

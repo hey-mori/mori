@@ -19,22 +19,26 @@ is lost; items are grouped by how they ship.
   Empty states keep one calm line.
 - **Button label consistency**: "자료 추가" → "자료 가져오기".
 
+## Shipped (Phase 1)
+
+- **Import-review events as a compact list** (`ExtractedEventCard`): one row per
+  event (time · title · status), click to expand the summary + actions.
+- **No reset on method switch** (`StartSessionView.chooseMethod`): a loaded
+  detected session, pasted transcript, and the filled title / project persist.
+- **Unified empty states**: 흐름 / 자료 / 검토 share the `EmptyState` component
+  with one calm line and a consistent 자료 가져오기 action (copy trimmed above).
+
 ## Next (UI, needs a visual pass)
 
-1. **Session title = the session's own name**, not the user's first request.
-   Fall back to the first request only when the session has no name. The title
-   comes from the agent discovery (`workSessions` → `detail.title`), which today
-   is the first message; the fix is in the discovery / a title-derivation step.
-2. **Import-review events as a compact list**, not big cards. One line per event
-   (time · title · lane), click to expand detail. Today each event is a tall
-   card; 1140 of them do not scan.
-3. **Project selection inline, not a modal** (`StartSessionView`). The picker
-   should offer "use existing" and "create <folder>" in one place.
-4. **Do not reset on method switch.** Switching 기록 ↔ 붙여넣기 ↔ 빈 세션 must
-   keep the loaded title / project / selection instead of clearing them.
-5. **Unified empty states** across 흐름 / 자료 / 검토 — one shared "아직 없음"
-   pattern and one consistent primary action.
-6. **Show "previously imported into this project"** linkage when a folder was
+1. **Session title = the session's own name** — BLOCKED on Rust. The Claude
+   Code title is "the first user message, truncated" on the Tauri side
+   (`ClaudeCodeSessionDetail.title`). The fix: in the Rust discovery, prefer the
+   Claude-generated session summary entry when present, else the first message.
+   No clean TS-only fix; do it in `src-tauri` with cargo verification.
+2. **Project selection fully inline** (`StartSessionView`). The forced modal is
+   gone; the remaining step is a picker that offers "use existing" and
+   "create <folder>" in one place without any modal.
+3. **Show "previously imported into this project"** linkage when a folder was
    already brought in.
 
 ## Big IA (design first)
