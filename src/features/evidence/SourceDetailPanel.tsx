@@ -385,8 +385,8 @@ function describeAccessible(integration: SourceIntegration): string[] {
   lines.push(`사용자가 명시적으로 ${integration.captureMode === "manual" ? "입력 또는 붙여넣기" : "가져오기"}한 데이터`);
   if (integration.outputRecords.sources) lines.push("정리된 출처");
   if (integration.outputRecords.timelineEvents) lines.push("정리된 타임라인 이벤트");
-  if (integration.outputRecords.issues) lines.push("Quick Pass로 추출한 이슈");
-  if (integration.outputRecords.decisions) lines.push("Quick Pass로 추출한 결정");
+  if (integration.outputRecords.issues) lines.push("분석으로 추출한 이슈");
+  if (integration.outputRecords.decisions) lines.push("분석으로 추출한 결정");
   if (integration.outputRecords.relationships) lines.push("이벤트·출처 간 관계");
   return lines;
 }

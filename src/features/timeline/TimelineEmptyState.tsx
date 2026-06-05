@@ -35,7 +35,7 @@ export function TimelineEmptyState({
     return (
       <EmptyState
         icon={ListPlus}
-        title="이 세션에는 아직 가져온 소스가 없습니다"
+        title="이 세션에는 아직 가져온 자료가 없습니다"
         description="가져온 근거만 표시됩니다. 자료 탭에서 메모·URL·AI 대화·Git diff를 추가하세요."
         actions={
           <Button variant="primary" icon={ListPlus} onClick={onOpenSources}>
@@ -48,21 +48,17 @@ export function TimelineEmptyState({
   return (
     <EmptyState
       icon={Sparkles}
-      title="소스를 가져왔습니다. Quick Pass를 실행하면 타임라인이 채워집니다."
-      description="Quick Pass는 가져온 소스를 이벤트 · 이슈 · 결정 · Resume 프롬프트로 변환합니다. 로컬에서 실행되며 전적으로 명시적입니다."
+      title="자료를 가져왔습니다. 분석을 실행하면 타임라인이 채워집니다."
+      description="가져온 자료를 이벤트 · 이슈 · 결정으로 정리합니다. 로컬에서만 실행됩니다."
       actions={
         <Button
           variant="primary"
           icon={Sparkles}
           onClick={onRunQuickPass}
           disabled={!canRunQuickPass}
-          title={
-            canRunQuickPass
-              ? "활성 세션에 Quick Pass 실행"
-              : "Quick Pass가 이미 실행 중입니다."
-          }
+          title={canRunQuickPass ? "분석 실행" : "분석이 이미 실행 중입니다."}
         >
-          Quick Pass 실행
+          분석 실행
         </Button>
       }
     />

@@ -185,29 +185,29 @@ function ReportsAnalysisNotice({
 
   if (status === "failed") {
     return (
-      <NoticeBanner tone="danger" title="Quick Pass 실패">
+      <NoticeBanner tone="danger" title="분석 실패">
         {error ?? "알 수 없는 오류"}
       </NoticeBanner>
     );
   }
   if (status === "running") {
-    return <NoticeBanner tone="info">Quick Pass 실행 중...</NoticeBanner>;
+    return <NoticeBanner tone="info">분석 중...</NoticeBanner>;
   }
   if (!hasAnalysis && importsCount === 0) {
     return (
       <NoticeBanner
         tone="info"
-        title="아직 가져온 소스가 없습니다"
+        title="아직 가져온 자료가 없습니다"
         actions={<Button onClick={onGoToEvidence}>자료 탭으로 이동</Button>}
       >
-        자료 탭에서 추가하고 Quick Pass를 실행하면 Resume 프롬프트와 보고서가 풍부해집니다.
+        자료 탭에서 추가하고 분석을 실행하면 보고서가 풍부해집니다.
       </NoticeBanner>
     );
   }
   if (!hasAnalysis) {
     return (
       <NoticeBanner tone="info">
-        가져온 소스가 있습니다. 검토 탭에서 Quick Pass를 실행하면 Resume 프롬프트와 보고서가 풍부해집니다.
+        가져온 자료가 있습니다. 검토 탭에서 분석을 실행하면 보고서가 풍부해집니다.
       </NoticeBanner>
     );
   }

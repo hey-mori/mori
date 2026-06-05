@@ -55,7 +55,7 @@ export function ResumePromptCard({
       ) : (
         <div className="resume-prompt-empty">
           <Sparkles size={18} aria-hidden="true" />
-          <p>{emptyHint ?? "Quick Pass를 실행하면 분석 결과 기반 프롬프트가 표시됩니다."}</p>
+          <p>{emptyHint ?? "분석을 실행하면 분석 결과 기반 프롬프트가 표시됩니다."}</p>
         </div>
       )}
     </section>

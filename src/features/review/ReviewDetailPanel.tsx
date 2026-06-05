@@ -77,7 +77,7 @@ export function ReviewDetailPanel({
         <section className="review-detail-section">
           <SectionHeader title="이 화면에서 가능한 것" />
           <ul className="review-detail-bullets">
-            <li>Quick Pass가 만든 이슈와 결정의 근거를 확인합니다.</li>
+            <li>분석이 만든 이슈와 결정의 근거를 확인합니다.</li>
             <li>관련 Timeline 이벤트로 이동합니다.</li>
             <li>다음 액션 후보를 검토합니다.</li>
           </ul>
