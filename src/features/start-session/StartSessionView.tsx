@@ -38,7 +38,6 @@ import { resolveStartRecordsAgentId } from "../../lib/session/startRecordsAgent"
 import { isTauriRuntime } from "../../lib/desktop";
 import {
   buildStartSessionEngineOptions,
-  getDefaultStartSessionEngineOption,
   type StartSessionEngineOption,
 } from "../../lib/session/startSessionEngineOptions";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
@@ -190,16 +189,14 @@ export function StartSessionView() {
     [],
   );
   const engineOptions = useMemo(() => buildStartSessionEngineOptions(), []);
-  const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider>(
-    () => getDefaultStartSessionEngineOption().provider,
-  );
+  // The engine starts unselected (미선택), like the agent and the import method:
+  // the user picks it deliberately rather than inheriting a silent default.
+  const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider | null>(null);
   const selectedEngine = useMemo(
     () =>
       engineOptions.find(
         (option) => option.provider === selectedEngineProvider && option.selectable,
-      ) ??
-      engineOptions.find((option) => option.selectable) ??
-      getDefaultStartSessionEngineOption(),
+      ) ?? null,
     [engineOptions, selectedEngineProvider],
   );
 
@@ -224,6 +221,7 @@ export function StartSessionView() {
   // method has the input it needs.
   const canCreate =
     Boolean(selectedAgent) &&
+    Boolean(selectedEngine) &&
     ((method === "records" && Boolean(selectedDetected)) ||
       (method === "paste" && pasteText.trim().length > 0) ||
       method === "fresh");
@@ -267,7 +265,7 @@ export function StartSessionView() {
   }, [startRecordsRequest]);
 
   async function handleCreate() {
-    if (creating || !canCreate || !selectedAgent) return;
+    if (creating || !canCreate || !selectedAgent || !selectedEngine) return;
 
     if (method === "fresh") {
       const draft = createSessionDraft({
@@ -354,11 +352,13 @@ export function StartSessionView() {
       ? "AI 에이전트를 먼저 선택하세요."
       : !method
         ? "대화를 가져올 방법을 선택하세요."
-        : method === "records"
+        : method === "records" && !selectedDetected
           ? "불러올 대화를 선택하세요."
-          : method === "paste"
+          : method === "paste" && pasteText.trim().length === 0
             ? "붙여넣을 대화 내용을 입력하세요."
-            : undefined;
+            : !selectedEngine
+              ? "분석 엔진을 선택하세요."
+              : undefined;
 
   return (
     <PageShell
@@ -509,7 +509,7 @@ export function StartSessionView() {
               detail={option.detail}
               disabled={!option.selectable}
               status={option.selectable ? undefined : option.statusLabel}
-              selected={selectedEngine.provider === option.provider}
+              selected={selectedEngineProvider === option.provider}
               onSelect={() => setSelectedEngineProvider(option.provider)}
             />
           ))}
@@ -552,11 +552,6 @@ export function StartSessionView() {
             )}
           </label>
         </div>
-
-        <p className="start-retention-note">
-          <Lock size={13} aria-hidden="true" />
-          요약과 메타데이터만 이 기기에 저장합니다. 원본 대화 전체는 보관하지 않습니다.
-        </p>
       </FieldBlock>
 
       {browseOpen && selectedAgent ? (
@@ -782,7 +777,7 @@ function SessionSummary({
   method: ImportMethod | null;
   sessionName: string;
   projectName: string;
-  engine: StartSessionEngineOption;
+  engine: StartSessionEngineOption | null;
   storageTarget: SessionStorageTarget;
   createAction: ReactNode;
 }) {
@@ -793,7 +788,7 @@ function SessionSummary({
       footer={
         <div className="start-summary-footer">
           <Lock size={15} aria-hidden="true" />
-          <span>모든 데이터는 로컬에 저장됩니다. Cloud API는 명시적으로 켤 때만 사용합니다.</span>
+          <span>요약·메타데이터만 로컬에 저장하고, Cloud API는 켤 때만 사용합니다.</span>
         </div>
       }
     >
@@ -804,7 +799,11 @@ function SessionSummary({
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
       <hr />
       <SummarySectionTitle>분석 및 보관</SummarySectionTitle>
-      <SummaryRow label="분석 엔진" value={engineSummaryLabel(engine)} />
+      <SummaryRow
+        label="분석 엔진"
+        value={engine ? engineSummaryLabel(engine) : "미선택"}
+        muted={!engine}
+      />
       <SummaryRow label="보관 위치" value={storageTarget.label} />
       <div className="start-summary-action">{createAction}</div>
     </InspectorPanel>
