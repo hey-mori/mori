@@ -242,7 +242,6 @@ export function EvidenceView() {
         runPresetId={runPresetId}
         onRunPresetChange={setRunPresetId}
         onProviderChange={(provider) => updateAnalysisSettings({ provider })}
-        onFallbackChange={(value) => updateAnalysisSettings({ fallbackToDeterministic: value })}
         onOpenSettings={() => setCurrentView("settings")}
         onRun={handleRunQuickPass}
         onClear={clearAnalysis}
@@ -519,7 +518,6 @@ function QuickPassControl({
   runPresetId,
   onRunPresetChange,
   onProviderChange,
-  onFallbackChange,
   onOpenSettings,
   onRun,
   onClear,
@@ -542,7 +540,6 @@ function QuickPassControl({
   runPresetId: string | null;
   onRunPresetChange: (id: string | null) => void;
   onProviderChange: (provider: QuickPassProviderKind) => void;
-  onFallbackChange: (value: boolean) => void;
   onOpenSettings: () => void;
   onRun: () => void;
   onClear: () => void;
@@ -558,11 +555,8 @@ function QuickPassControl({
     <div className={`analysis-panel status-${status}`}>
       <div className="analysis-panel-header">
         <div>
-          <h2>Quick Pass 분석</h2>
-          <p>
-            현재 세션에 가져온 소스와 이벤트로부터 이슈, 결정, 다음 액션을 추출합니다.
-            기본 제공자는 규칙 기반 로컬 엔진이며, 설정에서 Ollama 같은 로컬 LLM 제공자로 교체할 수 있습니다.
-          </p>
+          <h2>분석</h2>
+          <p>가져온 자료에서 이슈 · 결정 · 다음 액션을 추출합니다.</p>
         </div>
         <div className="analysis-panel-actions">
           {enginePresets.length > 0 ? (
@@ -616,18 +610,8 @@ function QuickPassControl({
           ]}
         />
         <small>{providerKindLabel}</small>
-        {settings.provider !== "deterministic" ? (
-          <label className="analysis-panel-fallback">
-            <input
-              type="checkbox"
-              checked={settings.fallbackToDeterministic}
-              onChange={(event) => onFallbackChange(event.target.checked)}
-            />
-            <span>실패 시 규칙 기반으로 전환</span>
-          </label>
-        ) : null}
-        <Button icon={SettingsIcon} onClick={onOpenSettings}>
-          설정으로 이동
+        <Button icon={SettingsIcon} onClick={onOpenSettings} size="sm">
+          설정
         </Button>
       </div>
       <div className="analysis-panel-status">
