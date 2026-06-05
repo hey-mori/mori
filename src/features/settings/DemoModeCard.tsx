@@ -7,7 +7,7 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { useSqliteStore } from "../../app/sqliteStore";
-import { SettingsRow, SettingsSection, StatusPill } from "./SettingsPrimitives";
+import { SettingsRow, SettingsSection } from "./SettingsPrimitives";
 
 /**
  * Demo mode toggle card for the Settings storage tab (P6).
@@ -46,33 +46,20 @@ export function DemoModeCard({
 
   const storageLabel =
     source === "desktop-sqlite"
-      ? "Desktop SQLite"
+      ? "데스크톱 저장"
       : source === "demo"
         ? "데모 데이터"
         : "브라우저 저장";
 
   return (
-    <SettingsSection
-      title="데이터 소스"
-      action={
-        <StatusPill tone={isDemo ? "gray" : "green"}>
-          {isDemo ? "데모" : "실제 세션"}
-        </StatusPill>
-      }
-    >
+    <SettingsSection title="데이터 관리">
       <div className="settings-row-list">
         <SettingsRow
-          label={isDemo ? "Mori 데모 메모리" : storageLabel}
+          label={isDemo ? "데모 보기" : storageLabel}
           description={
             isDemo
-              ? "참고용 데이터입니다. 실제 작업을 가져오면 현재 세션이 바뀝니다."
-              : `가져오기 ${imports.length}건이 현재 세션에 연결되어 있습니다.`
-          }
-          meta={
-            <span
-              className={`demo-mode-card-dot ${isDemo ? "is-demo" : "is-live"}`}
-              aria-hidden="true"
-            />
+              ? "샘플 데이터로 Mori 화면을 둘러봅니다."
+              : `이 기기에 저장된 작업 데이터입니다. 가져오기 ${imports.length}건이 현재 세션에 연결되어 있습니다.`
           }
           control={
             isDemo ? (
@@ -92,11 +79,11 @@ export function DemoModeCard({
           }
         />
         <SettingsRow
-          label="기존 데이터 모두 지우고 데모 보기"
+          label="데이터 전체 초기화"
           description={
             confirmingReset
-              ? "저장된 모든 세션·메모리·보고서 초안이 영구히 삭제됩니다. 로컬 AI·리포지토리 설정은 유지됩니다."
-              : "이 기기에 저장된 모든 세션·가져오기·프로젝트 메모리를 지우고 Mori 데모 데이터로 되돌립니다."
+              ? "저장된 세션·가져오기·프로젝트 메모리·보고서 초안이 영구히 삭제됩니다. AI 엔진·리포지토리 설정은 유지됩니다."
+              : "이 기기에 저장된 작업 데이터를 모두 삭제합니다. 설정은 유지됩니다."
           }
           control={
             confirmingReset ? (
@@ -125,7 +112,7 @@ export function DemoModeCard({
                     }
                   }}
                 >
-                  {resetting ? "지우는 중…" : "지우고 데모 보기"}
+                  {resetting ? "초기화 중…" : "초기화"}
                 </Button>
               </div>
             ) : (
@@ -133,7 +120,7 @@ export function DemoModeCard({
                 variant="ghost"
                 icon={Trash2}
                 onClick={() => setConfirmingReset(true)}
-                title="이 기기에 저장된 모든 작업 데이터를 지우고 데모로 되돌립니다. 되돌릴 수 없습니다."
+                title="이 기기에 저장된 모든 작업 데이터를 삭제합니다. 되돌릴 수 없습니다."
               >
                 전체 초기화
               </Button>

@@ -46,6 +46,12 @@ mori-opencode-wrapper.sh -- opencode run "Add retry to the upload client"
 mori-opencode-wrapper.sh --git -- opencode run "Add retry to the upload client"
 ```
 
+```powershell
+# Windows PowerShell variant. The command starts after the wrapper options.
+.\mori-opencode-wrapper.ps1 opencode run "Add retry to the upload client"
+.\mori-opencode-wrapper.ps1 -Git opencode run "Add retry to the upload client"
+```
+
 After running, open Mori → 연결 → Source Control Center → OpenCode →
 "Connector JSONL 가져오기", then paste or pick today's JSONL file. Every
 event flows through Import Review before anything is applied.

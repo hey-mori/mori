@@ -9,7 +9,7 @@ for the MCP / connector capture path (evidence, not an anchor) see
 
 ## Supported agents
 
-Seven anchor agents ship today, all read by **direct, read-only, explicit**
+Eight anchor agents ship today, all read by **direct, read-only, explicit**
 discovery (no watcher, no daemon — listing happens only on a user action):
 
 | Agent | Store type | Location | Reader |

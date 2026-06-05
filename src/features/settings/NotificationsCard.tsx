@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import { BaseSelect, type BaseSelectOption } from "../../components/ui/BaseSelect";
 import {
   loadNotificationPreferences,
   saveNotificationPreferences,
   setNotificationPreference,
+  setNotificationToastPosition,
   type NotificationCategory,
   type NotificationPreferences,
+  type NotificationToastPosition,
 } from "../../lib/settings/notificationPreferences";
 import {
   PreferenceToggle,
@@ -59,6 +62,25 @@ const NOTIFICATION_ROWS: Array<{
   },
 ];
 
+const TOAST_POSITION_OPTIONS: Array<BaseSelectOption<NotificationToastPosition>> = [
+  {
+    id: "topRight",
+    label: "오른쪽 위",
+  },
+  {
+    id: "topLeft",
+    label: "왼쪽 위",
+  },
+  {
+    id: "bottomRight",
+    label: "오른쪽 아래",
+  },
+  {
+    id: "bottomLeft",
+    label: "왼쪽 아래",
+  },
+];
+
 export function NotificationsCard() {
   const [preferences, setPreferences] = useState<NotificationPreferences>(() =>
     loadNotificationPreferences(),
@@ -74,9 +96,28 @@ export function NotificationsCard() {
     );
   }
 
+  function updateToastPosition(position: NotificationToastPosition) {
+    setPreferences((current) => setNotificationToastPosition(current, position));
+  }
+
   return (
     <SettingsSection title="알림">
       <div className="settings-row-list">
+        <SettingsRow
+          label="새 알림 위치"
+          description="새 알림 토스트가 나타나는 화면 모서리입니다."
+          control={
+            <BaseSelect
+              value={preferences.toastPosition}
+              options={TOAST_POSITION_OPTIONS}
+              onChange={updateToastPosition}
+              label="새 알림 위치"
+              className="settings-notification-position-select"
+              popoverAlign="end"
+              popoverWidth="trigger"
+            />
+          }
+        />
         {NOTIFICATION_ROWS.map((row) => (
           <SettingsRow
             key={row.id}

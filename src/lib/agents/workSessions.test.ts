@@ -27,7 +27,9 @@ function detail(
 ): AgentWorkSessionDetail {
   return {
     agentId:
-      importKind === "codex-session"
+      importKind === "claude-code" || importKind === "claude-desktop"
+        ? "claude"
+        : importKind === "codex-session"
         ? "codex"
         : importKind === "antigravity-session"
           ? "antigravity"
@@ -37,9 +39,13 @@ function detail(
               ? "cline"
               : importKind === "cursor-session"
                 ? "cursor"
-                : "opencode",
+                : importKind === "connector-jsonl"
+                  ? "codex"
+                  : "opencode",
     agentName:
-      importKind === "codex-session"
+      importKind === "claude-code" || importKind === "claude-desktop"
+        ? "Claude"
+        : importKind === "codex-session"
         ? "Codex"
         : importKind === "antigravity-session"
           ? "Antigravity"
@@ -49,7 +55,9 @@ function detail(
               ? "Cline"
               : importKind === "cursor-session"
                 ? "Cursor"
-                : "OpenCode",
+                : importKind === "connector-jsonl"
+                  ? "Codex"
+                  : "OpenCode",
     importKind,
     id: "id-1",
     sessionId: "sess-1",
@@ -76,6 +84,7 @@ describe("reviewOriginForAgentWorkSession", () => {
   it("routes native agent sessions to the ai-transcript review origin", () => {
     for (const kind of [
       "claude-code",
+      "claude-desktop",
       "codex-session",
       "antigravity-session",
       "opencode-session",
@@ -95,6 +104,15 @@ describe("buildImportCandidatesFromAgentWorkSession", () => {
       buildInput,
     );
     expect(candidate.source.kind).toBe("codexTranscript");
+    expect(candidate.source.title).toBe("Retry helper work");
+  });
+
+  it("maps a Claude Desktop session to the Claude transcript candidate", () => {
+    const [candidate] = buildImportCandidatesFromAgentWorkSession(
+      detail("claude-desktop"),
+      buildInput,
+    );
+    expect(candidate.source.kind).toBe("claudeTranscript");
     expect(candidate.source.title).toBe("Retry helper work");
   });
 

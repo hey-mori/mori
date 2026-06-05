@@ -19,7 +19,6 @@ import { buildAnalysisRunHistoryViewModel } from "../../lib/analysis";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { LocalAiCard } from "./LocalAiCard";
-import { RequestDisclosureCard } from "./RequestDisclosureCard";
 import { StorageCard } from "./StorageCard";
 import { RepositoriesCard } from "./RepositoriesCard";
 import { ThemeCard } from "./ThemeCard";
@@ -108,7 +107,6 @@ export function SettingsView() {
               mode={mode}
               sqliteKind={sqliteKind}
               sqliteSessionCount={sqliteSessions.length}
-              onOpenReports={() => setCurrentView("reports")}
             />
             <SqliteLoadCard sessions={sqliteSessions} onLoad={loadDesktopSession} />
             <RepositoriesCard
@@ -124,7 +122,6 @@ export function SettingsView() {
               onClearVerification={(id) => clearRepositoryVerification(id)}
               onRemove={(id) => removeRepository(id)}
             />
-            <RequestDisclosureCard />
           </>
         ) : null}
         {activeTab === "appearance" ? <ThemeCard /> : null}

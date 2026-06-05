@@ -18,7 +18,16 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not $Command -or $Command.Count -eq 0) {
-  Write-Error "mori-codex-wrapper.ps1: no codex command provided. Example: mori-codex-wrapper.ps1 -- codex run 'task'"
+  Write-Error "mori-codex-wrapper.ps1: no codex command provided. Example: mori-codex-wrapper.ps1 codex run 'task'"
+  exit 64
+}
+
+if ($Command[0] -eq "--") {
+  $Command = @($Command | Select-Object -Skip 1)
+}
+
+if (-not $Command -or $Command.Count -eq 0) {
+  Write-Error "mori-codex-wrapper.ps1: no codex command provided after -- separator."
   exit 64
 }
 
@@ -65,9 +74,15 @@ Emit @{
   provenance   = @{ toolName = "mori-codex-wrapper.ps1"; toolVersion = "0.1.0" }
 }
 
-# Run Codex. Forward all stdout/stderr verbatim.
-$proc = Start-Process -FilePath $Command[0] -ArgumentList ($Command[1..($Command.Count - 1)]) -NoNewWindow -PassThru -Wait
-$exitCode = $proc.ExitCode
+# Run Codex. Forward all stdout/stderr verbatim and preserve argument
+# boundaries for quotes / non-ASCII text.
+$exe = $Command[0]
+$commandArgs = @()
+if ($Command.Count -gt 1) {
+  $commandArgs = $Command[1..($Command.Count - 1)]
+}
+& $exe @commandArgs
+$exitCode = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { 0 }
 
 $startTicks.Stop()
 $durationMs = [int]$startTicks.Elapsed.TotalMilliseconds

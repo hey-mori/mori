@@ -44,6 +44,12 @@ mori-codex-wrapper.sh -- codex run "Upgrade outdated dependencies"
 mori-codex-wrapper.sh --git -- codex run "Upgrade outdated dependencies"
 ```
 
+```powershell
+# Windows PowerShell variant. The command starts after the wrapper options.
+.\mori-codex-wrapper.ps1 codex run "Upgrade outdated dependencies"
+.\mori-codex-wrapper.ps1 -Git codex run "Upgrade outdated dependencies"
+```
+
 After running, open Mori → Evidence → Import (AI 대화 or future
 "Connector JSONL") and paste the contents of today's JSONL file.
 

@@ -17,4 +17,9 @@ if (-not (Get-Command $python -ErrorAction SilentlyContinue)) {
   $python = "python3"
 }
 
+$Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[Console]::InputEncoding = $Utf8NoBom
+[Console]::OutputEncoding = $Utf8NoBom
+$OutputEncoding = $Utf8NoBom
+
 [Console]::In.ReadToEnd() | & $python $script @args

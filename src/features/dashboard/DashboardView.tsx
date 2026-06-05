@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity,
-  ArrowRight,
   BarChart3,
   CheckCircle2,
   Clock3,
@@ -34,14 +33,12 @@ import {
   buildDashboardStatus,
   buildKpiDeltas,
   buildProjectStatuses,
-  buildSpotlight,
   buildWeeklySeries,
   fraction,
   formatCount,
   summarizeProjects,
   type AttentionLens,
   type ConcreteLens,
-  type DashboardSpotlight,
   type DashboardStatus,
   type DashboardTotals,
   type KpiDelta,
@@ -160,7 +157,6 @@ export function DashboardView() {
 
   const totals = useMemo(() => summarizeProjects(projects), [projects]);
   const status = useMemo(() => buildDashboardStatus(totals, projects), [projects, totals]);
-  const spotlight = useMemo(() => buildSpotlight(projects), [projects]);
   const trend = useMemo(
     () => buildActivityTrend(storedSessions, trendRange),
     [storedSessions, trendRange],
@@ -240,7 +236,6 @@ export function DashboardView() {
         />
       ) : (
         <div className="dashboard-surface">
-          <Spotlight spotlight={spotlight} onOpen={openProject} />
           <KpiDeck
             status={status}
             totals={totals}
@@ -520,64 +515,6 @@ function Sparkline({ values, tone }: { values: number[]; tone: "accent" | "info"
       <polyline points={points} fill="none" vectorEffect="non-scaling-stroke" />
       <circle className="dashboard-spark-dot" cx={(n - 1) * step} cy={H - (lastValue / max) * H} r={1.7} />
     </svg>
-  );
-}
-
-// ─── Spotlight (lead) ─────────────────────────────────────────────────────────
-
-/**
- * The dashboard lead banner: the single project most worth acting on next. A
- * review backlog wins (검토 필요); otherwise the most recently active project
- * (최근 작업). The whole banner drills into that project. It replaces the former
- * synthetic "운영 점수" with an honest, actionable signal.
- */
-function Spotlight({
-  spotlight,
-  onOpen,
-}: {
-  spotlight: DashboardSpotlight;
-  onOpen: (sourceLabel: string) => void;
-}) {
-  const { project, reason } = spotlight;
-  if (!project) return null;
-  const drillable = Boolean(project.sourceLabel);
-  const tone = reason === "review" ? "warning" : "accent";
-  const eyebrow = reason === "review" ? "검토 필요" : "최근 작업";
-  const EyebrowIcon = reason === "review" ? TriangleAlert : Clock3;
-  const when = project.lastActiveIso ? formatRelative(project.lastActiveIso) : "활동 없음";
-  return (
-    <button
-      type="button"
-      className={`dashboard-spotlight tone-${tone}${drillable ? "" : " is-static"}`}
-      onClick={drillable && project.sourceLabel ? () => onOpen(project.sourceLabel!) : undefined}
-      aria-label={drillable ? `${project.name} 열기` : project.name}
-    >
-      <span className="dashboard-spotlight-eyebrow">
-        <EyebrowIcon size={13} aria-hidden="true" />
-        {eyebrow}
-      </span>
-      <span className="dashboard-spotlight-head">
-        <strong>{project.name}</strong>
-        <small>{when}</small>
-      </span>
-      <span className="dashboard-spotlight-stats" aria-hidden="true">
-        <span>
-          <b>{project.sessionCount}</b> 세션
-        </span>
-        <span>
-          <b>{formatCount(project.tokenTotal)}</b> 토큰
-        </span>
-        <span className={project.attentionScore > 0 ? "is-attention" : ""}>
-          <b>{project.attentionScore}</b> 검토
-        </span>
-      </span>
-      {drillable ? (
-        <span className="dashboard-spotlight-cta">
-          열기
-          <ArrowRight size={15} aria-hidden="true" />
-        </span>
-      ) : null}
-    </button>
   );
 }
 

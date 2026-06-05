@@ -3,53 +3,6 @@
    so the demo/live toggle is a deliberate mode choice, not a persistent alert.
    ─────────────────────────────────────────────────────────────────────────── */
 
-.demo-mode-card-body {
-  padding: 2px 0 4px;
-}
-
-.demo-mode-card-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel-soft);
-}
-
-.demo-mode-card-status > span:nth-child(2) {
-  display: grid;
-  gap: 2px;
-  flex: 1;
-}
-
-.demo-mode-card-status strong {
-  display: block;
-  font-size: var(--base-font-size-sm);
-  font-weight: 600;
-  color: var(--text);
-}
-
-.demo-mode-card-detail {
-  font-size: var(--base-font-size-xs);
-  color: var(--muted);
-}
-
-.demo-mode-card-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.demo-mode-card-dot.is-live {
-  background: var(--green);
-}
-
-.demo-mode-card-dot.is-demo {
-  background: var(--purple);
-}
-
 .demo-mode-card-confirm {
   display: flex;
   align-items: center;

@@ -23,6 +23,8 @@ export type BaseSelectProps<T extends string> = {
   onChange: (value: T) => void;
   label: string;
   className?: string;
+  popoverAlign?: "start" | "end";
+  popoverWidth?: "content" | "trigger";
 };
 
 export function BaseSelect<T extends string>({
@@ -31,6 +33,8 @@ export function BaseSelect<T extends string>({
   onChange,
   label,
   className = "",
+  popoverAlign = "start",
+  popoverWidth = "content",
 }: BaseSelectProps<T>) {
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -39,11 +43,17 @@ export function BaseSelect<T extends string>({
   const selected = options.find((option) => option.id === value) ?? options[0];
   const selectedIndex = Math.max(0, options.findIndex((option) => option.id === value));
   const enabledOptions = useMemo(() => options.filter((option) => !option.disabled), [options]);
+  const hasOptionIcons = useMemo(() => options.some((option) => option.icon), [options]);
 
   function openMenu() {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setPosition({ left: rect.left, top: rect.bottom + 4, width: rect.width });
+    const width = getPopoverWidth(rect, popoverWidth);
+    setPosition({
+      left: getPopoverLeft(rect, width, popoverAlign),
+      top: rect.bottom + 4,
+      width,
+    });
     setOpen(true);
   }
 
@@ -70,10 +80,13 @@ export function BaseSelect<T extends string>({
     if (!open || typeof window === "undefined") return;
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const width = Math.max(rect.width, 220);
-    const left = Math.min(Math.max(8, rect.left), Math.max(8, window.innerWidth - width - 8));
-    setPosition({ left, top: rect.bottom + 4, width });
-  }, [open]);
+    const width = getPopoverWidth(rect, popoverWidth);
+    setPosition({
+      left: getPopoverLeft(rect, width, popoverAlign),
+      top: rect.bottom + 4,
+      width,
+    });
+  }, [open, popoverAlign, popoverWidth]);
 
   useEffect(() => {
     if (!open) return;
@@ -139,7 +152,13 @@ export function BaseSelect<T extends string>({
                 role="option"
                 aria-selected={isSelected}
                 data-value={option.id}
-                className={`base-select-option ${isSelected ? "is-selected" : ""}`}
+                className={[
+                  "base-select-option",
+                  hasOptionIcons ? "has-icons" : "",
+                  isSelected ? "is-selected" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 disabled={option.disabled}
                 tabIndex={index === selectedIndex ? 0 : -1}
                 onClick={() => selectOption(option.id)}
@@ -150,7 +169,13 @@ export function BaseSelect<T extends string>({
                   }
                 }}
               >
-                {OptionIcon ? <OptionIcon size={14} aria-hidden="true" /> : <span aria-hidden="true" />}
+                {hasOptionIcons ? (
+                  OptionIcon ? (
+                    <OptionIcon size={14} aria-hidden="true" />
+                  ) : (
+                    <span aria-hidden="true" />
+                  )
+                ) : null}
                 <span>
                   <strong>{option.label}</strong>
                   {option.description ? <small>{option.description}</small> : null}
@@ -194,4 +219,21 @@ function selectFocusIndex(key: string, index: number, length: number): number | 
   if (key === "Home") return 0;
   if (key === "End") return length - 1;
   return null;
+}
+
+function getPopoverLeft(
+  rect: DOMRect,
+  width: number,
+  align: NonNullable<BaseSelectProps<string>["popoverAlign"]>,
+): number {
+  const preferred = align === "end" ? rect.right - width : rect.left;
+  return Math.min(Math.max(8, preferred), Math.max(8, window.innerWidth - width - 8));
+}
+
+function getPopoverWidth(
+  rect: DOMRect,
+  width: NonNullable<BaseSelectProps<string>["popoverWidth"]>,
+): number {
+  if (width === "trigger") return rect.width;
+  return Math.max(rect.width, 220);
 }

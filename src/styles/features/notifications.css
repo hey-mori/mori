@@ -399,12 +399,10 @@
 
 .attention-toast {
   position: fixed;
-  top: 14px;
-  left: calc(var(--base-sidebar-w, 256px) + 14px);
-  width: min(360px, calc(100vw - var(--base-sidebar-w, 256px) - 28px));
   display: grid;
   grid-template-columns: minmax(0, 1fr) 28px;
   align-items: stretch;
+  width: min(360px, calc(100vw - 28px));
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   background: var(--panel);
@@ -412,6 +410,30 @@
   overflow: hidden;
   z-index: 19000;
   animation: base-toast-in 160ms ease-out;
+}
+
+.attention-toast.toast-top-right {
+  top: 14px;
+  right: 14px;
+}
+
+.attention-toast.toast-top-left {
+  top: 14px;
+  left: calc(var(--base-sidebar-w, 256px) + 14px);
+  width: min(360px, calc(100vw - var(--base-sidebar-w, 256px) - 28px));
+}
+
+.attention-toast.toast-bottom-right {
+  right: 14px;
+  bottom: 14px;
+  animation-name: base-toast-in-up;
+}
+
+.attention-toast.toast-bottom-left {
+  bottom: 14px;
+  left: calc(var(--base-sidebar-w, 256px) + 14px);
+  width: min(360px, calc(100vw - var(--base-sidebar-w, 256px) - 28px));
+  animation-name: base-toast-in-up;
 }
 
 .attention-toast-main {
@@ -489,6 +511,21 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes base-toast-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.settings-notification-position-select {
+  width: 154px;
 }
 
 /* Companion Inbox — the Companion Layer's dedicated surface.

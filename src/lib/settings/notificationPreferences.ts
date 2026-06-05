@@ -1,6 +1,7 @@
 import type { KeyValueStorage } from "../storage/storageTypes";
 
 const NOTIFICATION_KEY = "mori.notificationPreferences";
+export const NOTIFICATION_PREFERENCES_CHANGED_EVENT = "mori:notificationPreferencesChanged";
 const NOTIFICATION_SCHEMA_VERSION = 1 as const;
 
 export const NOTIFICATION_CATEGORIES = [
@@ -16,9 +17,19 @@ export const NOTIFICATION_CATEGORIES = [
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
+export const NOTIFICATION_TOAST_POSITIONS = [
+  "topRight",
+  "topLeft",
+  "bottomRight",
+  "bottomLeft",
+] as const;
+
+export type NotificationToastPosition = (typeof NOTIFICATION_TOAST_POSITIONS)[number];
+
 export type NotificationPreferences = {
   schemaVersion: typeof NOTIFICATION_SCHEMA_VERSION;
   enabled: Record<NotificationCategory, boolean>;
+  toastPosition: NotificationToastPosition;
 };
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -33,6 +44,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
     sourceDisconnected: false,
     projectSummaryChanged: false,
   },
+  toastPosition: "topRight",
 };
 
 export function parseNotificationPreferences(raw: string | null): NotificationPreferences {
@@ -50,6 +62,7 @@ export function parseNotificationPreferences(raw: string | null): NotificationPr
           parsed.enabled?.[category] === true,
         ]),
       ) as Record<NotificationCategory, boolean>,
+      toastPosition: parseNotificationToastPosition(parsed.toastPosition),
     };
   } catch {
     return cloneDefault();
@@ -78,6 +91,7 @@ export function saveNotificationPreferences(
   if (!store) return;
   try {
     store.setItem(NOTIFICATION_KEY, serializeNotificationPreferences(preferences));
+    dispatchNotificationPreferencesChanged();
   } catch {
     // Notification settings are a UI preference; storage failure should not
     // break the preferences surface.
@@ -90,11 +104,22 @@ export function setNotificationPreference(
   enabled: boolean,
 ): NotificationPreferences {
   return {
+    ...preferences,
     schemaVersion: NOTIFICATION_SCHEMA_VERSION,
     enabled: {
       ...preferences.enabled,
       [category]: enabled,
     },
+  };
+}
+
+export function setNotificationToastPosition(
+  preferences: NotificationPreferences,
+  toastPosition: NotificationToastPosition,
+): NotificationPreferences {
+  return {
+    ...preferences,
+    toastPosition,
   };
 }
 
@@ -108,5 +133,17 @@ function cloneDefault(): NotificationPreferences {
   return {
     schemaVersion: NOTIFICATION_SCHEMA_VERSION,
     enabled: { ...DEFAULT_NOTIFICATION_PREFERENCES.enabled },
+    toastPosition: DEFAULT_NOTIFICATION_PREFERENCES.toastPosition,
   };
+}
+
+function parseNotificationToastPosition(value: unknown): NotificationToastPosition {
+  return NOTIFICATION_TOAST_POSITIONS.includes(value as NotificationToastPosition)
+    ? (value as NotificationToastPosition)
+    : DEFAULT_NOTIFICATION_PREFERENCES.toastPosition;
+}
+
+function dispatchNotificationPreferencesChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(NOTIFICATION_PREFERENCES_CHANGED_EVENT));
 }

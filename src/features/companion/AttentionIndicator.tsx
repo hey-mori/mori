@@ -10,6 +10,11 @@ import type {
   CompanionNotificationActionTarget,
 } from "../../lib/notifications/notification";
 import { notificationIcon } from "../../lib/notifications/notificationPresentation";
+import {
+  loadNotificationPreferences,
+  NOTIFICATION_PREFERENCES_CHANGED_EVENT,
+  type NotificationToastPosition,
+} from "../../lib/settings/notificationPreferences";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import { useNotifications } from "./useNotifications";
 import { NotificationFeedList } from "./NotificationFeedList";
@@ -34,6 +39,13 @@ import { NotificationFeedList } from "./NotificationFeedList";
 /** Above this, the badge shows "9+" so a busy bell never overflows its pill. */
 const BADGE_CAP = 9;
 
+const TOAST_POSITION_CLASS: Record<NotificationToastPosition, string> = {
+  topRight: "toast-top-right",
+  topLeft: "toast-top-left",
+  bottomRight: "toast-bottom-right",
+  bottomLeft: "toast-bottom-left",
+};
+
 export function AttentionIndicator({
   onNavigate,
   compact = false,
@@ -56,6 +68,9 @@ export function AttentionIndicator({
   // (the trigger is on the left), not on the opposite side of the screen.
   const [anchorLeft, setAnchorLeft] = useState(0);
   const [toast, setToast] = useState<CompanionNotification | null>(null);
+  const [toastPosition, setToastPosition] = useState<NotificationToastPosition>(
+    () => loadNotificationPreferences().toastPosition,
+  );
   const buttonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const knownNotificationIdsRef = useRef<Set<string> | null>(null);
@@ -86,6 +101,21 @@ export function AttentionIndicator({
       toastReadyRef.current = true;
     }, 1200);
     return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    function syncToastPosition() {
+      setToastPosition(loadNotificationPreferences().toastPosition);
+    }
+
+    window.addEventListener(NOTIFICATION_PREFERENCES_CHANGED_EVENT, syncToastPosition);
+    window.addEventListener("storage", syncToastPosition);
+    return () => {
+      window.removeEventListener(NOTIFICATION_PREFERENCES_CHANGED_EVENT, syncToastPosition);
+      window.removeEventListener("storage", syncToastPosition);
+    };
   }, []);
 
   // Toasts fire for *newly arriving* notifications only — initial hydration
@@ -165,7 +195,11 @@ export function AttentionIndicator({
         ? createPortal(
             <>
               {toast ? (
-                <div className="attention-toast" role="status" aria-live="polite">
+                <div
+                  className={`attention-toast ${TOAST_POSITION_CLASS[toastPosition]}`}
+                  role="status"
+                  aria-live="polite"
+                >
                   <button
                     type="button"
                     className="attention-toast-main"

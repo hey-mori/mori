@@ -89,7 +89,7 @@ export function RepositoriesCard({
 
   return (
     <SettingsSection
-      title="리포지토리"
+      title="Git 리포지토리"
       action={<span className="settings-soft-tag">{summary.total}개</span>}
     >
       <div className="settings-repo-add">
@@ -130,7 +130,7 @@ export function RepositoriesCard({
       </div>
 
       {repositories.length === 0 ? (
-        <p className="settings-empty">저장된 리포지토리가 없습니다. 위 입력란에서 직접 추가하세요.</p>
+        <p className="settings-empty">저장된 Git 리포지토리가 없습니다.</p>
       ) : (
         <ul className="settings-repo-list">
           {repositories.map((repo) => {

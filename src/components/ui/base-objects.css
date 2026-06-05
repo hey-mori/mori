@@ -426,7 +426,7 @@
 
 .base-select-option {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) 14px;
+  grid-template-columns: minmax(0, 1fr) 14px;
   gap: 10px;
   align-items: center;
   width: 100%;
@@ -438,6 +438,10 @@
   color: var(--text);
   text-align: left;
   cursor: pointer;
+}
+
+.base-select-option.has-icons {
+  grid-template-columns: 16px minmax(0, 1fr) 14px;
 }
 
 .base-select-option:hover,

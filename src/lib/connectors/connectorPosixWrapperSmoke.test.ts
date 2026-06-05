@@ -81,7 +81,20 @@ function assertReviewDraft(jsonl: string, expectedConnectorId: string): void {
 // Windows (git-bash) under parallel load.
 const SMOKE_TIMEOUT = 60_000;
 
-describe("POSIX connector wrappers", () => {
+function hasUsablePosixRuntime(): boolean {
+  try {
+    execFileSync("bash", ["-lc", "command -v python3 >/dev/null && python3 --version >/dev/null"], {
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const describeIfPosix = hasUsablePosixRuntime() ? describe : describe.skip;
+
+describeIfPosix("POSIX connector wrappers", () => {
   it("Codex wrapper emits valid escaped JSONL for quoted / Korean args", () => {
     const root = makeTempRoot();
     const outDir = join(root, "out");

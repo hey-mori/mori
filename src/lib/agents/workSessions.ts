@@ -2,10 +2,13 @@ import { buildImportCandidateFromClaudeCodeSession } from "../claude/claudeImpor
 import {
   discoverClaudeCodeSessions,
   getClaudeCodeSession,
+  getClaudeDesktopConversation,
+  listClaudeDesktopConversations,
 } from "../claude/claudeTauri";
 import type {
   ClaudeCodeSessionDetail,
   ClaudeCodeSessionMeta,
+  ClaudeConversationMeta,
   ClaudeMessage,
   ClaudeTokenUsage,
 } from "../claude/types";
@@ -61,6 +64,7 @@ export type { AgentWorkAgentId };
 
 export type AgentWorkImportKind =
   | "claude-code"
+  | "claude-desktop"
   | "codex-session"
   | "antigravity-session"
   | "opencode-session"
@@ -131,8 +135,13 @@ export async function listAgentWorkSessions(
   agentId: AgentWorkAgentId,
 ): Promise<AgentWorkSessionMeta[]> {
   if (agentId === "claude") {
-    const sessions = await discoverClaudeCodeSessions();
-    return sessions.map(mapClaudeMeta);
+    const [code, desktop] = await Promise.all([
+      discoverClaudeCodeSessions().catch(() => [] as ClaudeCodeSessionMeta[]),
+      listClaudeDesktopConversations().catch(() => [] as ClaudeConversationMeta[]),
+    ]);
+    return [...code.map(mapClaudeMeta), ...desktop.map(mapClaudeDesktopMeta)].sort(
+      (a, b) => time(b.startedAt) - time(a.startedAt),
+    );
   }
   if (agentId === "codex") {
     const [direct, connector] = await Promise.all([
@@ -200,6 +209,13 @@ export async function getAgentWorkSession(
       ...mapClaudeMeta(detail),
       messages: detail.messages,
       claudeDetail: detail,
+    };
+  }
+  if (meta.importKind === "claude-desktop") {
+    const detail = await getClaudeDesktopConversation(meta.sessionId);
+    return {
+      ...mapClaudeDesktopMeta(detail),
+      messages: detail.messages,
     };
   }
   if (meta.importKind === "codex-session") {
@@ -335,6 +351,27 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     messageCount: session.messageCount,
     title: session.title,
     tokenUsage: session.tokenUsage,
+  };
+}
+
+function mapClaudeDesktopMeta(session: ClaudeConversationMeta): AgentWorkSessionMeta {
+  const projectName = session.projectName?.trim() || "Claude Desktop";
+  const startedAt = session.createdAt || session.updatedAt;
+  const updatedAt = session.updatedAt || session.createdAt;
+  return {
+    agentId: "claude",
+    agentName: "Claude",
+    importKind: "claude-desktop",
+    id: `claude-desktop:${session.id}`,
+    sessionId: session.id,
+    projectPath: projectName,
+    projectName,
+    filePath: `Claude Desktop:${session.id}`,
+    sourceFilePath: session.id,
+    startedAt,
+    updatedAt,
+    messageCount: session.messageCount,
+    title: session.title,
   };
 }
 

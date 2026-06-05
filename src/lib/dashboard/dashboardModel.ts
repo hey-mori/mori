@@ -1,6 +1,10 @@
 import { createBrowserDraftRepository } from "../storage/localStorageAdapter";
 import { projectDisplayName } from "../projects/userProjects";
+import { buildDemoSessionContent } from "../demo/demoSessionContent";
+import { isDemoSessionId } from "../demo/demoSessionFixtures";
+import { isNextActionCompleted } from "../session/nextActionCompletion";
 import type { UserProject } from "../projects/userProjects";
+import type { Issue, Decision, NextAction } from "../../domain/types";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 import type { SessionProjectGroup, SessionRow } from "../workspace/sessionsBrowser";
 
@@ -45,6 +49,11 @@ export type AttentionLens = "all" | "issues" | "decisions" | "next";
 export type ConcreteLens = Exclude<AttentionLens, "all">;
 
 type DashboardRepository = ReturnType<typeof createBrowserDraftRepository>;
+type DashboardMemoryBody = {
+  issues: Issue[];
+  decisions: Decision[];
+  nextActions: NextAction[];
+};
 
 export function buildProjectStatuses({
   groups,
@@ -74,7 +83,9 @@ export function buildProjectStatuses({
       analyzedSessions += 1;
       openIssues += body.issues.filter((issue) => issue.status === "open").length;
       unconfirmedDecisions += body.decisions.filter((decision) => !decision.confirmed).length;
-      pendingNextActions += body.nextActions.filter((action) => !action.done).length;
+      pendingNextActions += body.nextActions.filter(
+        (action) => !isNextActionCompleted(action),
+      ).length;
     }
     const latest = latestSession(sessions);
     const sourceLabel = group.isUnsourced ? null : group.label;
@@ -419,7 +430,20 @@ function latestSession(rows: SessionRow[]): SessionRow | null {
   );
 }
 
-export function safeLoadMemoryBody(repository: DashboardRepository, sessionId: string) {
+export function safeLoadMemoryBody(
+  repository: DashboardRepository,
+  sessionId: string,
+): DashboardMemoryBody | null {
+  if (isDemoSessionId(sessionId)) {
+    const demo = buildDemoSessionContent(sessionId);
+    if (demo) {
+      return {
+        issues: demo.issues,
+        decisions: demo.decisions,
+        nextActions: demo.nextActions,
+      };
+    }
+  }
   try {
     return repository.loadSessionMemoryBody(sessionId);
   } catch {
