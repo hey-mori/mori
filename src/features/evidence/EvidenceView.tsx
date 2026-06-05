@@ -582,13 +582,13 @@ function QuickPassControl({
             disabled={!canRun}
             title={
               canRun
-                ? "현재 세션의 소스로 Quick Pass 분석을 실행합니다."
+                ? "현재 세션의 자료로 분석을 실행합니다."
                 : status === "running"
                   ? "분석이 진행 중입니다."
-                  : "분석하려면 먼저 Evidence에 소스를 가져오세요."
+                  : "분석하려면 먼저 자료를 가져오세요."
             }
           >
-            {status === "running" ? "분석 중..." : "Quick Pass 실행"}
+            {status === "running" ? "분석 중..." : "분석 실행"}
           </Button>
           {hasAnalysis ? (
             <Button icon={RotateCcw} onClick={onClear}>
@@ -622,14 +622,14 @@ function QuickPassControl({
           {status === "succeeded"
             ? `${providerLabel ?? "deterministic"} · ${describeProviderName(providerName)} · 신뢰도 ${Math.round((confidence ?? 0) * 100)}%`
             : status === "failed"
-              ? error ?? "Quick Pass 실행에 실패했습니다."
+              ? error ?? "분석 실행에 실패했습니다."
               : status === "running"
-                ? `${providerLabel ?? "Quick Pass"} 실행 중...`
+                ? `${providerLabel ?? "분석"} 실행 중...`
                 : hasAnalysis
                   ? `이전 결과: ${providerLabel ?? "deterministic"} · ${describeProviderName(providerName)}`
                   : canRun
                     ? "아직 실행하지 않음"
-                    : "아직 실행하지 않음 · 분석하려면 먼저 Evidence에 소스를 가져오세요"}
+                    : "아직 실행하지 않음 · 분석하려면 먼저 자료를 가져오세요"}
         </span>
         {fallbackUsed ? <Badge tone="orange">폴백 사용됨</Badge> : null}
       </div>
