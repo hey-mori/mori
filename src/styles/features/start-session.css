@@ -491,16 +491,17 @@ hr {
 
 .start-summary-footer {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   color: var(--purple);
   font-size: 12px;
   line-height: 1.5;
+  text-align: center;
 }
 
 .start-summary-footer svg {
   flex-shrink: 0;
-  margin-top: 1px;
 }
 
 /* 새 세션 is headerless, so give the scroll content real top/bottom breathing
