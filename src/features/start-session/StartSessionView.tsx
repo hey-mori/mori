@@ -274,14 +274,18 @@ export function StartSessionView() {
     // folder has no remembered link, fall back to a project whose label matches
     // the folder name; otherwise default to creating a new project prefilled
     // with the folder name (the calm "this project doesn't exist yet" prompt).
+    // Default the project to the folder's last segment, not the full path
+    // ("C:\\dev\\tcc-ng-gw" → "tcc-ng-gw"). Once linked the name can differ.
+    const folderName = lastFolderName(meta.projectName);
     const remembered = getProjectForFolder(meta.projectPath);
     if (remembered && existingProjects.includes(remembered)) {
       setProjectChoice(remembered);
-    } else if (existingProjects.includes(meta.projectName)) {
-      setProjectChoice(meta.projectName);
-    } else if (meta.projectName.trim()) {
-      setProjectCreateInitialName(meta.projectName.trim());
-      setProjectModalOpen(true);
+    } else if (existingProjects.includes(folderName)) {
+      setProjectChoice(folderName);
+    } else if (folderName) {
+      // Prefill a suggested new-project name but do not force the modal open —
+      // the user can keep this default, pick an existing project, or rename.
+      setProjectCreateInitialName(folderName);
     }
   }
 
@@ -601,7 +605,7 @@ export function StartSessionView() {
               variant="secondary"
               icon={FolderGit2}
               className="session-project-create"
-              onClick={() => openNewProjectModal()}
+              onClick={() => openNewProjectModal(projectCreateInitialName)}
             >
               새 프로젝트
             </Button>
@@ -641,6 +645,13 @@ export function StartSessionView() {
       ) : null}
     </PageShell>
   );
+}
+
+/** Last path segment of a folder path: "C:\\dev\\tcc-ng-gw" → "tcc-ng-gw". */
+function lastFolderName(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return trimmed.split(/[\\/]/).filter(Boolean).pop() ?? trimmed;
 }
 
 function FieldBlock({
@@ -865,7 +876,7 @@ function SessionSummary({
       footer={
         <div className="start-summary-footer">
           <Lock size={15} aria-hidden="true" />
-          <span>세션 기록은 이 기기에 보관합니다. 온라인 분석은 사용자가 연결한 경우에만 사용합니다.</span>
+          <span>이 기기에만 저장 · 외부 분석은 연결할 때만</span>
         </div>
       }
     >
