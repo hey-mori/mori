@@ -16,6 +16,7 @@ import {
   type SearchProjectMemoryReferencesInput,
 } from "../project-memory/queryableMemory";
 import type { StoredAcceptedProjectMemory } from "../storage/storageTypes";
+import { expandSemanticTerms } from "../project-memory/semanticTerms";
 import { buildAskMoriContext, extractQueryTerms } from "./askMoriContext";
 import type { AskMoriAnswer, AskMoriCitation, AskMoriLlm } from "./askMoriTypes";
 
@@ -59,10 +60,12 @@ export async function answerFromMemory(
   const maxReferences = input.maxReferences ?? DEFAULT_MAX_REFERENCES;
   const rounds = Math.min(MAX_ROUNDS, Math.max(1, input.expandRounds ?? 1));
 
-  // Round 1: the question's own terms. Later rounds widen the term set with
-  // salient words mined from the hits so far, then re-retrieve over the union.
-  // `retrieve*` dedup and cap, so re-running with a larger set is idempotent.
-  const terms = new Set(queryTerms(question));
+  // Round 1: the question's own terms, bridged with curated synonyms /
+  // translations (so a Korean question reaches English evidence and vice
+  // versa). Later rounds widen the term set with salient words mined from the
+  // hits so far, then re-retrieve over the union. `retrieve*` dedup and cap, so
+  // re-running with a larger set is idempotent.
+  const terms = new Set(expandSemanticTerms(queryTerms(question)));
   let memoryResults = retrieveMemories(input.acceptedMemories, [...terms], maxMemories);
   let references = retrieveReferences(input.references ?? {}, [...terms], maxReferences);
   for (let round = 1; round < rounds; round += 1) {

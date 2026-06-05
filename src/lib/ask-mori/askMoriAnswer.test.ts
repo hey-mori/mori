@@ -137,4 +137,14 @@ describe("answerFromMemory", () => {
     // loop stops cleanly instead of spinning.
     expect(answer.citations.map((c) => c.refId)).toEqual(["a"]);
   });
+
+  it("bridges a Korean question to English-titled memory via synonyms", async () => {
+    const answer = await answerFromMemory({
+      question: "인증은 어떻게 했나요?",
+      // The memory is titled in English; only the curated 인증→auth bridge
+      // connects the Korean question to it in a single round.
+      acceptedMemories: [memory("en", { title: "Auth rework", summary: "Moved to JWT" })],
+    });
+    expect(answer.citations.map((c) => c.refId)).toEqual(["en"]);
+  });
 });
