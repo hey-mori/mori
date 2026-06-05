@@ -655,21 +655,6 @@ hr {
 }
 
 /* Retention is one unified rule, stated as a calm fact rather than a toggle. */
-.start-retention-note {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 16px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-
-.start-retention-note svg {
-  flex-shrink: 0;
-  color: var(--muted-2, var(--muted));
-}
-
 /* Project field as a div (not a <label>) so clicking the caption never toggles
    the custom dropdown. Mirrors the form <label> typography. */
 .form-field {
