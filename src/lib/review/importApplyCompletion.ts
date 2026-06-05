@@ -20,21 +20,22 @@ export type ImportApplyCompletionViewModel = {
 export function buildImportApplyCompletion(
   input: ImportApplyCompletionInput,
 ): ImportApplyCompletionViewModel {
-  const actions: ImportApplyCompletionAction[] = [
-    { id: "timeline", label: "타임라인 열기", primary: true },
-  ];
-
-  if (!input.hasAnalysis) {
-    actions.push({ id: "quickPass", label: "Quick Pass 실행", primary: false });
-  }
-
-  actions.push({ id: "memory", label: "프로젝트 메모리 열기", primary: false });
+  // Lead with the one meaningful next step. Without analysis that is running it;
+  // once analysis exists, the only follow-up is viewing the timeline. The old
+  // banner offered up to three actions (including a project-memory jump that is
+  // always one nav click away), which buried the actual next move.
+  const actions: ImportApplyCompletionAction[] = input.hasAnalysis
+    ? [{ id: "timeline", label: "타임라인 열기", primary: true }]
+    : [
+        { id: "quickPass", label: "분석 실행", primary: true },
+        { id: "timeline", label: "타임라인 열기", primary: false },
+      ];
 
   return {
     headline: `타임라인 이벤트 ${input.appliedCount}건이 반영되었습니다.`,
     detail: input.hasAnalysis
-      ? "세션 타임라인이 업데이트되었습니다. 영구 메모리를 검토할 때 프로젝트 메모리에서 이 근거를 활용할 수 있습니다."
-      : "가져온 근거에서 이슈, 결정, 다음 액션, Resume Prompt를 도출하려면 Quick Pass를 실행하세요.",
+      ? "세션 타임라인이 업데이트되었습니다."
+      : "분석을 실행하면 이슈 · 결정 · 다음 액션이 정리됩니다.",
     actions,
   };
 }
