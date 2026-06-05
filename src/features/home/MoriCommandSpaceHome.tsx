@@ -28,6 +28,7 @@ import { DEMO_SESSION_SUMMARIES } from "../../lib/demo/demoSessionFixtures";
 import type { StoredSessionSummary } from "../../lib/storage/storageTypes";
 import {
   buildCommandSpaceResults,
+  buildModeGuide,
   type CommandModeId,
   type CommandSpaceActionTarget,
   type CommandSpaceRow,
@@ -65,19 +66,19 @@ const COMMAND_MODES: CommandMode[] = [
     id: "find",
     label: "찾기",
     icon: Search,
-    placeholder: "인증, 라우팅 같은 키워드로 검색",
+    placeholder: "찾을 세션이나 키워드",
   },
   {
     id: "ask",
     label: "묻기",
     icon: MessageCircleQuestion,
-    placeholder: "예: 인증 방식은 어떻게 결정했나요?",
+    placeholder: "메모리에 묻고 싶은 질문",
   },
   {
     id: "shape",
     label: "정리",
     icon: Layers3,
-    placeholder: "정리할 대화·메모 검색",
+    placeholder: "정리할 작업 키워드",
   },
   {
     id: "create",
@@ -89,13 +90,13 @@ const COMMAND_MODES: CommandMode[] = [
     id: "review",
     label: "검토",
     icon: ShieldCheck,
-    placeholder: "검토할 작업 검색",
+    placeholder: "이어갈 작업 키워드",
   },
   {
     id: "connect",
     label: "연결",
     icon: GitBranch,
-    placeholder: "연결할 소스 검색",
+    placeholder: "연결할 소스 이름",
   },
 ];
 
@@ -158,6 +159,10 @@ export function MoriCommandSpaceHome() {
     () => buildCommandSpaceResults({ modeId: activeModeId, query, sessions }),
     [activeModeId, query, sessions],
   );
+  const guide = useMemo(
+    () => buildModeGuide({ modeId: activeModeId, sessions }),
+    [activeModeId, sessions],
+  );
   const projectCount = useMemo(
     () => new Set(sessions.map((session) => session.sourceLabel || session.projectName)).size,
     [sessions],
@@ -169,7 +174,11 @@ export function MoriCommandSpaceHome() {
   // context dropdown steps aside to avoid overlapping it.
   const showAnswerPanel =
     activeModeId === "ask" && (asking || answer !== null || askError !== null);
-  const open = focused && rows.length > 0 && !showAnswerPanel;
+  // Idle (focused, nothing typed) shows the mode guide — what this mode does,
+  // example prompts, and its related feature — so the input's role is clear
+  // before the user commits a keystroke. Typing swaps to live results.
+  const showGuide = focused && !results.hasQuery && !showAnswerPanel;
+  const open = focused && results.hasQuery && rows.length > 0 && !showAnswerPanel;
   const safeIndex = Math.min(activeIndex, Math.max(0, rows.length - 1));
   // In 찾기, a query that hits nothing leaves only the full-search action. Say so
   // plainly instead of showing a lone action that reads like the search broke.
@@ -236,6 +245,17 @@ export function MoriCommandSpaceHome() {
       setAskError("답변 생성 중 문제가 발생했습니다. 다시 시도해 주세요.");
     } finally {
       setAsking(false);
+    }
+  }
+
+  // A guide example fills the input; in 묻기 it also asks straight away, since
+  // a question is meant to be answered, not just typed.
+  function activateGuidePrompt(text: string): void {
+    setQuery(text);
+    if (activeModeId === "ask") {
+      void runAsk(text);
+    } else {
+      inputRef.current?.focus();
     }
   }
 
@@ -352,7 +372,7 @@ export function MoriCommandSpaceHome() {
                   placeholder={activeMode.placeholder}
                   aria-label="Mori에 요청하기"
                   role="combobox"
-                  aria-expanded={open}
+                  aria-expanded={open || showGuide}
                   aria-controls="mcs-results"
                   aria-activedescendant={open ? `mcs-row-${safeIndex}` : undefined}
                   autoComplete="off"
@@ -377,6 +397,47 @@ export function MoriCommandSpaceHome() {
                     onActivate: activateRow,
                     onHover: setActiveIndex,
                   })}
+                </div>
+              ) : showGuide ? (
+                <div className="mcs-results mcs-guide" id="mcs-results" role="listbox">
+                  <p className="mcs-guide-headline">{guide.headline}</p>
+                  {guide.prompts.length > 0 ? (
+                    <>
+                      <p className="mcs-result-head">{guide.promptsLabel}</p>
+                      {guide.prompts.map((item) => (
+                        <button
+                          type="button"
+                          key={item.id}
+                          role="option"
+                          aria-selected={false}
+                          className="mcs-result-row"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => activateGuidePrompt(item.label)}
+                        >
+                          <activeMode.icon size={15} aria-hidden="true" className="mcs-result-icon" />
+                          <span className="mcs-result-label">{item.label}</span>
+                          <ArrowRight size={14} aria-hidden="true" className="mcs-result-go" />
+                        </button>
+                      ))}
+                    </>
+                  ) : null}
+                  <p className="mcs-result-head">관련 기능</p>
+                  {guide.features.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      role="option"
+                      aria-selected={false}
+                      className="mcs-result-row"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => runActionTarget(item.target)}
+                    >
+                      <activeMode.icon size={15} aria-hidden="true" className="mcs-result-icon" />
+                      <span className="mcs-result-label">{item.label}</span>
+                      {item.hint ? <span className="mcs-result-hint">{item.hint}</span> : null}
+                      <ArrowRight size={14} aria-hidden="true" className="mcs-result-go" />
+                    </button>
+                  ))}
                 </div>
               ) : null}
 

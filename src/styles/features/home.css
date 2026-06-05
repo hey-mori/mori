@@ -958,6 +958,17 @@
   font-size: 14px;
 }
 
+/* Mode guide (idle state): a one-line headline of what the mode does, sitting
+   above its example prompts and related feature. Calm and quiet, not a heading
+   that competes with the result rows below it. */
+.mcs-guide-headline {
+  margin: 2px 6px 8px;
+  color: var(--base-text-muted);
+  font-size: 13px;
+  font-weight: 560;
+  line-height: 1.4;
+}
+
 /* Honest empty state: the search ran and matched nothing, said plainly. */
 .mcs-result-empty {
   margin: 0;

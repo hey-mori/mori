@@ -68,6 +68,29 @@ export type CommandSpaceResults = {
   hasQuery: boolean;
 };
 
+/**
+ * One idle-state suggestion for a mode. A `prompt` fills the input (the mode
+ * then acts on the typed text); a `feature` runs the mode's related action.
+ * Splitting these two is what removes the old ambiguity — a mode that reads
+ * the input leads with example prompts, a mode that just navigates leads with
+ * its feature, so the input's role is never in doubt.
+ */
+export type CommandSpaceGuideItem =
+  | { kind: "prompt"; id: string; label: string }
+  | { kind: "feature"; id: string; label: string; hint?: string; target: CommandSpaceActionTarget };
+
+/** What a mode shows on focus before anything is typed: what it does + how. */
+export type CommandSpaceGuide = {
+  /** One line naming what this mode does. No trailing punctuation. */
+  headline: string;
+  /** Group label above the example prompts (mode-specific verb). */
+  promptsLabel: string;
+  /** Example prompts that fill the input (empty for feature-led modes). */
+  prompts: Extract<CommandSpaceGuideItem, { kind: "prompt" }>[];
+  /** The mode's related feature action(s). Always at least one. */
+  features: Extract<CommandSpaceGuideItem, { kind: "feature" }>[];
+};
+
 const SESSION_LIMIT_QUERY = 5;
 const SESSION_LIMIT_RECENT = 3;
 const PROJECT_LIMIT = 3;
@@ -123,6 +146,143 @@ export function buildCommandSpaceResults(input: {
     input.modeId === "find" ? [...context, ...actions] : [...actions, ...context];
 
   return { rows, hasQuery };
+}
+
+/**
+ * The idle guide for a mode: a one-line headline of what it does, example
+ * prompts for the input-led modes (찾기 / 묻기), and the related feature
+ * action for every mode. Situation-aware — examples are seeded with the
+ * user's most recent project when there is one, so the suggestions read like
+ * the user's own work rather than generic filler.
+ */
+export function buildModeGuide(input: {
+  modeId: CommandModeId;
+  sessions: ReadonlyArray<StoredSessionSummary>;
+}): CommandSpaceGuide {
+  const project = recentProjectLabel(input.sessions);
+  switch (input.modeId) {
+    case "find":
+      return {
+        headline: "세션과 프로젝트에서 키워드로 찾기",
+        promptsLabel: "이렇게 찾아보세요",
+        prompts: prompts([project, "인증", "라우팅"]),
+        features: [
+          feature("guide-find-all", "전체 검색 열기", {
+            hint: "세션 · 프로젝트 · 명령",
+            target: { type: "palette" },
+          }),
+        ],
+      };
+    case "ask":
+      return {
+        headline: "검토된 메모리에 묻고 근거와 함께 답받기",
+        promptsLabel: "이렇게 물어보세요",
+        prompts: prompts([
+          project ? `${project}에서 무엇을 결정했나요?` : "이 프로젝트에서 무엇을 결정했나요?",
+          "아직 해결되지 않은 이슈는 무엇인가요?",
+          "다음에 무엇부터 이어가면 될까요?",
+        ]),
+        features: [
+          feature("guide-ask-memory", "프로젝트 메모리 열기", {
+            hint: "확정된 기억 모아 보기",
+            target: { type: "navigate", view: "memory" },
+          }),
+        ],
+      };
+    case "shape":
+      return {
+        headline: "검토한 작업을 durable 메모리로 정리",
+        promptsLabel: "",
+        prompts: [],
+        features: [
+          feature("guide-shape-consolidation", "메모리 통합 검토", {
+            hint: "리뷰한 작업을 기억으로",
+            target: { type: "navigate", view: "consolidation" },
+          }),
+          feature("guide-shape-memory", "프로젝트 메모리 열기", {
+            target: { type: "navigate", view: "memory" },
+          }),
+        ],
+      };
+    case "create":
+      return {
+        headline: "새 작업 세션 시작",
+        promptsLabel: "",
+        prompts: [],
+        features: [
+          feature("guide-create-start", "새 세션 시작", {
+            hint: "대화 불러오기 · 빈 세션",
+            target: { type: "navigate", view: "start" },
+          }),
+        ],
+      };
+    case "review":
+      return {
+        headline: "최근 작업을 검토하고 이어가기",
+        promptsLabel: "",
+        prompts: [],
+        features: [
+          feature("guide-review-continue", "이어가기 열기", {
+            hint: "최근 작업 검토",
+            target: { type: "navigate", view: "continue" },
+          }),
+        ],
+      };
+    case "connect":
+      return {
+        headline: "Claude · Codex · Git 같은 소스 연결",
+        promptsLabel: "",
+        prompts: [],
+        features: [
+          feature("guide-connect-sources", "소스 연결 열기", {
+            hint: "Claude · Codex · Git · 메모",
+            target: { type: "navigate", view: "connections" },
+          }),
+        ],
+      };
+  }
+}
+
+function prompts(
+  labels: ReadonlyArray<string | null>,
+): Extract<CommandSpaceGuideItem, { kind: "prompt" }>[] {
+  const out: Extract<CommandSpaceGuideItem, { kind: "prompt" }>[] = [];
+  const seen = new Set<string>();
+  for (const label of labels) {
+    const text = label?.trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    out.push({ kind: "prompt", id: `prompt-${out.length}`, label: text });
+  }
+  return out;
+}
+
+function feature(
+  id: string,
+  label: string,
+  rest: { hint?: string; target: CommandSpaceActionTarget },
+): Extract<CommandSpaceGuideItem, { kind: "feature" }> {
+  return { kind: "feature", id, label, ...rest };
+}
+
+/** Most-recent session's project label, used to seed situation-aware examples. */
+function recentProjectLabel(sessions: ReadonlyArray<StoredSessionSummary>): string | null {
+  let best: StoredSessionSummary | null = null;
+  for (const session of sessions) {
+    if (!best) {
+      best = session;
+      continue;
+    }
+    const a = new Date(session.startedAt || session.savedAt).getTime();
+    const b = new Date(best.startedAt || best.savedAt).getTime();
+    if (a > b) best = session;
+  }
+  if (!best) return null;
+  const raw = best.projectName || best.sourceLabel || "";
+  // sourceLabel is often a full path ("C:/dev/ng-gw"); a seeded example reads
+  // better as the project's leaf name ("ng-gw") than the whole path.
+  const leaf = raw.split(/[/\\]/).filter(Boolean).pop();
+  return leaf ?? null;
 }
 
 /**

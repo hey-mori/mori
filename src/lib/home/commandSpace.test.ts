@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCommandSpaceResults,
+  buildModeGuide,
   tokenizeQuery,
   type CommandModeId,
 } from "./commandSpace";
@@ -206,5 +207,68 @@ describe("buildCommandSpaceResults", () => {
       sessions: many,
     });
     expect(rows.filter((row) => row.kind === "session")).toHaveLength(5);
+  });
+});
+
+describe("buildModeGuide", () => {
+  it("gives the input-led modes example prompts plus a related feature", () => {
+    for (const modeId of ["find", "ask"] as CommandModeId[]) {
+      const guide = buildModeGuide({ modeId, sessions: SESSIONS });
+      expect(guide.headline.length).toBeGreaterThan(0);
+      expect(guide.headline.endsWith(".")).toBe(false);
+      expect(guide.prompts.length).toBeGreaterThan(0);
+      expect(guide.features.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("labels the prompt group with the mode's own verb", () => {
+    expect(buildModeGuide({ modeId: "find", sessions: SESSIONS }).promptsLabel).toBe(
+      "이렇게 찾아보세요",
+    );
+    expect(buildModeGuide({ modeId: "ask", sessions: SESSIONS }).promptsLabel).toBe(
+      "이렇게 물어보세요",
+    );
+  });
+
+  it("cleans a path-shaped project label down to its leaf name", () => {
+    const guide = buildModeGuide({
+      modeId: "ask",
+      sessions: [
+        session({
+          sessionId: "only",
+          projectName: "",
+          sourceLabel: "C:/dev/ng-gw",
+          startedAt: "2026-06-01T10:00:00.000Z",
+        }),
+      ],
+    });
+    expect(guide.prompts.some((p) => p.label.includes("ng-gw"))).toBe(true);
+    expect(guide.prompts.some((p) => p.label.includes("C:/dev"))).toBe(false);
+  });
+
+  it("leads the navigation-only modes with the feature and no prompts", () => {
+    const routes: Partial<Record<CommandModeId, unknown>> = {
+      shape: { type: "navigate", view: "consolidation" },
+      create: { type: "navigate", view: "start" },
+      review: { type: "navigate", view: "continue" },
+      connect: { type: "navigate", view: "connections" },
+    };
+    for (const modeId of Object.keys(routes) as CommandModeId[]) {
+      const guide = buildModeGuide({ modeId, sessions: SESSIONS });
+      expect(guide.prompts).toHaveLength(0);
+      expect(guide.features[0]?.target).toEqual(routes[modeId]);
+    }
+  });
+
+  it("seeds examples with the most recent project so they read like the user's work", () => {
+    const guide = buildModeGuide({ modeId: "ask", sessions: SESSIONS });
+    // s3 ("타임라인 재기획", project "mori") is the most recent by startedAt.
+    expect(guide.prompts.some((p) => p.label.includes("mori"))).toBe(true);
+  });
+
+  it("falls back to generic examples with no sessions", () => {
+    const guide = buildModeGuide({ modeId: "find", sessions: [] });
+    expect(guide.prompts.length).toBeGreaterThan(0);
+    expect(guide.features[0]?.target).toEqual({ type: "palette" });
   });
 });
