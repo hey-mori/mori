@@ -40,10 +40,7 @@ export function AccountProfileView() {
 
   return (
     <div className="settings-content-stack account-profile">
-      <SettingsSection
-        title="프로필"
-        description="이름과 이니셜은 이 기기에서 Mori를 표시하는 데만 쓰입니다. 계정, 결제, 동기화 신원으로는 사용되지 않습니다."
-      >
+      <SettingsSection title="프로필">
         <div className="account-identity-row">
           <span className="account-avatar" aria-hidden="true">
             {getProfileInitials(profile.displayName)}

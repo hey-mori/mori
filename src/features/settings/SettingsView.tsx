@@ -54,10 +54,6 @@ export function SettingsView() {
   const imports = useSessionStore((state) => state.imports);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysis = useSessionStore((state) => state.analysis);
-  const analysisStatus = useSessionStore((state) => state.analysisStatus);
-  const analysisError = useSessionStore((state) => state.analysisError);
-  const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
-  const analysisFallbackUsed = useSessionStore((state) => state.analysisFallbackUsed);
   const loadAnalysisRunHistory = useSessionStore((state) => state.loadAnalysisRunHistory);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
 
@@ -138,15 +134,6 @@ export function SettingsView() {
         {activeTab === "localAi" ? (
           <LocalAiCard
             settings={settings}
-            diagnostics={{
-              analysis,
-              status: analysisStatus,
-              error: analysisError,
-              providerLabel: analysisProviderLabel,
-              fallbackUsed: analysisFallbackUsed,
-              importCount: imports.length,
-              sourceCount: sessionView.sources.length,
-            }}
             runHistory={runHistory}
             onProviderChange={(provider) => updateAnalysisSettings({ provider })}
             onUpdateSettings={(patch) => updateAnalysisSettings(patch)}

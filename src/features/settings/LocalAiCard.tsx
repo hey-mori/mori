@@ -6,28 +6,19 @@ import {
   Database,
   FlaskConical,
   Plug,
-  Plus,
   RefreshCw,
   ShieldCheck,
   Sparkles,
-  X,
 } from "lucide-react";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import {
-  captureEnginePreset,
   checkQuickPassCapability,
-  findMatchingPresetId,
-  loadEnginePresets,
   probeOllamaConnection,
   probeOpenAiCompatibleConnection,
-  saveEnginePresets,
 } from "../../lib/analysis";
 import type {
-  AnalysisResult,
   AnalysisRunHistoryViewModel,
-  AnalysisRunStatus,
-  EnginePreset,
   QuickPassAnalysisSettings,
   QuickPassCapabilityReport,
   QuickPassProviderKind,
@@ -90,25 +81,13 @@ type CapabilityState =
   | { status: "running"; kind: QuickPassProviderKind }
   | { status: "done"; kind: QuickPassProviderKind; report: QuickPassCapabilityReport };
 
-type EngineDiagnostics = {
-  analysis: AnalysisResult | null;
-  status: AnalysisRunStatus;
-  error: string | null;
-  providerLabel: string | null;
-  fallbackUsed: boolean;
-  importCount: number;
-  sourceCount: number;
-};
-
 export function LocalAiCard({
   settings,
-  diagnostics,
   runHistory,
   onProviderChange,
   onUpdateSettings,
 }: {
   settings: QuickPassAnalysisSettings;
-  diagnostics: EngineDiagnostics;
   runHistory: AnalysisRunHistoryViewModel | null;
   onProviderChange: (kind: QuickPassProviderKind) => void;
   onUpdateSettings: (patch: Partial<QuickPassAnalysisSettings>) => void;
@@ -122,7 +101,6 @@ export function LocalAiCard({
   const activeRow = selectableRows.find((row) => row.id === settings.provider) ?? selectableRows[0];
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
   const [capability, setCapability] = useState<CapabilityState>({ status: "idle" });
-  const [presets, setPresets] = useState<EnginePreset[]>(() => loadEnginePresets());
 
   function selectProvider(kind: QuickPassProviderKind) {
     onProviderChange(kind);
@@ -160,9 +138,9 @@ export function LocalAiCard({
     ],
   );
 
-  // Auto-detect installed models for endpoint-backed engines so the user never
-  // has to type a model name blind. Debounced so editing the endpoint does not
-  // fire a request on every keystroke.
+  // Auto-detect installed models for endpoint-backed engines so the user picks
+  // from a list instead of typing a model name blind. Debounced so editing the
+  // endpoint does not fire a request on every keystroke.
   useEffect(() => {
     if (settings.provider === "deterministic") return;
     const handle = setTimeout(() => {
@@ -170,29 +148,6 @@ export function LocalAiCard({
     }, 600);
     return () => clearTimeout(handle);
   }, [settings.provider, handleProbe]);
-
-  function applyPreset(preset: EnginePreset) {
-    onUpdateSettings(preset.settings);
-    setProbe({ status: "idle" });
-    setCapability({ status: "idle" });
-  }
-
-  function savePreset(name: string) {
-    const id =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `preset-${Date.now()}`;
-    const preset = captureEnginePreset(id, name, settings);
-    const next = [...presets.filter((entry) => entry.name !== preset.name), preset];
-    setPresets(next);
-    saveEnginePresets(next);
-  }
-
-  function deletePreset(id: string) {
-    const next = presets.filter((entry) => entry.id !== id);
-    setPresets(next);
-    saveEnginePresets(next);
-  }
 
   async function handleCapabilityTest(kind: QuickPassProviderKind) {
     if (kind === "deterministic") return;
@@ -206,15 +161,8 @@ export function LocalAiCard({
       title="분석 엔진"
       description="가져온 자료를 이슈, 결정, 다음 행동으로 정리할 때 사용할 엔진입니다. 규칙 기반은 모델 없이 동작하고, Ollama·OpenAI 호환은 로컬 LLM으로 더 깊게 해석합니다."
     >
+      {/* 설정 영역 — 엔진 선택과 연결 설정 */}
       <div className="settings-ai-layout">
-        <EnginePresetsBar
-          settings={settings}
-          presets={presets}
-          onApply={applyPreset}
-          onSave={savePreset}
-          onDelete={deletePreset}
-        />
-
         <div className="settings-ai-provider-grid" role="radiogroup" aria-label="분석 엔진">
           {selectableRows.map((row) => (
             <ProviderChoice
@@ -229,7 +177,6 @@ export function LocalAiCard({
         <EngineConfigPanel
           row={activeRow}
           settings={settings}
-          diagnostics={diagnostics}
           probe={probe}
           capability={capability}
           onProbe={() => handleProbe(settings.provider)}
@@ -238,9 +185,8 @@ export function LocalAiCard({
         />
       </div>
 
-      {runHistory && runHistory.runCount > 0 ? (
-        <RecentRunsDisclosure runHistory={runHistory} />
-      ) : null}
+      {/* 정보 영역 — 최근 실행 이력 */}
+      <RecentRunsPanel runHistory={runHistory} />
 
       {plannedRows.length > 0 ? (
         <details className="settings-ai-planned">
@@ -271,104 +217,6 @@ export function LocalAiCard({
         </details>
       ) : null}
     </SettingsSection>
-  );
-}
-
-function suggestPresetName(settings: QuickPassAnalysisSettings): string {
-  if (settings.provider === "ollama") return `Ollama · ${settings.ollamaModel}`;
-  if (settings.provider === "openAiCompatible") return `OpenAI 호환 · ${settings.openAiModel}`;
-  return "규칙 기반";
-}
-
-function EnginePresetsBar({
-  settings,
-  presets,
-  onApply,
-  onSave,
-  onDelete,
-}: {
-  settings: QuickPassAnalysisSettings;
-  presets: EnginePreset[];
-  onApply: (preset: EnginePreset) => void;
-  onSave: (name: string) => void;
-  onDelete: (id: string) => void;
-}) {
-  const [naming, setNaming] = useState(false);
-  const [draft, setDraft] = useState("");
-  const activeId = findMatchingPresetId(settings, presets);
-
-  function commit() {
-    const name = draft.trim();
-    if (!name) return;
-    onSave(name);
-    setNaming(false);
-    setDraft("");
-  }
-
-  function cancel() {
-    setNaming(false);
-    setDraft("");
-  }
-
-  return (
-    <div className="settings-ai-presets" role="group" aria-label="엔진 프리셋">
-      {presets.map((preset) => (
-        <span
-          key={preset.id}
-          className={`settings-ai-preset${preset.id === activeId ? " is-active" : ""}`}
-        >
-          <button
-            type="button"
-            className="settings-ai-preset-apply"
-            aria-pressed={preset.id === activeId}
-            onClick={() => onApply(preset)}
-          >
-            {preset.name}
-          </button>
-          <button
-            type="button"
-            className="settings-ai-preset-remove"
-            aria-label={`${preset.name} 프리셋 삭제`}
-            onClick={() => onDelete(preset.id)}
-          >
-            <X size={11} aria-hidden="true" />
-          </button>
-        </span>
-      ))}
-
-      {naming ? (
-        <span className="settings-ai-preset-form">
-          <input
-            autoFocus
-            value={draft}
-            placeholder="프리셋 이름"
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") commit();
-              if (event.key === "Escape") cancel();
-            }}
-          />
-          <button type="button" onClick={commit} disabled={!draft.trim()}>
-            확인
-          </button>
-          <button type="button" className="settings-ai-preset-cancel" onClick={cancel}>
-            취소
-          </button>
-        </span>
-      ) : (
-        <button
-          type="button"
-          className="settings-ai-preset-save"
-          onClick={() => {
-            setDraft(suggestPresetName(settings));
-            setNaming(true);
-          }}
-        >
-          <Plus size={12} aria-hidden="true" />
-          현재 설정 저장
-        </button>
-      )}
-    </div>
   );
 }
 
@@ -408,7 +256,6 @@ function ProviderChoice({
 function EngineConfigPanel({
   row,
   settings,
-  diagnostics,
   probe,
   capability,
   onProbe,
@@ -417,7 +264,6 @@ function EngineConfigPanel({
 }: {
   row?: ProviderRowModel & { id: QuickPassProviderKind };
   settings: QuickPassAnalysisSettings;
-  diagnostics: EngineDiagnostics;
   probe: ProbeState;
   capability: CapabilityState;
   onProbe: () => void;
@@ -431,35 +277,20 @@ function EngineConfigPanel({
   const canTest = row.id !== "deterministic";
   const detectedModels =
     probe.status === "ok" && probe.kind === row.id ? probe.models : [];
-  return (
-    <section className="settings-ai-config-panel" aria-label={`${copy.label} 설정`}>
-      <header className="settings-ai-config-head">
-        <h4>{copy.label}</h4>
-        {canTest ? (
-          <div className="settings-ai-config-actions">
-            <Button icon={Plug} variant="ghost" size="sm" onClick={onProbe} disabled={probing}>
-              {probing ? "확인 중" : "연결 확인"}
-            </Button>
-            <Button
-              icon={FlaskConical}
-              variant="primary"
-              size="sm"
-              onClick={onCapabilityTest}
-              disabled={testing}
-            >
-              {testing ? "테스트 중" : "응답 테스트"}
-            </Button>
-          </div>
-        ) : null}
-      </header>
 
-      {row.id === "deterministic" ? (
+  if (row.id === "deterministic") {
+    return (
+      <section className="settings-ai-config-panel" aria-label={`${copy.label} 설정`}>
         <div className="settings-ai-empty-config">
           <ShieldCheck size={15} aria-hidden="true" />
           <span>추가 설정 없이 이 기기 안에서 실행됩니다.</span>
         </div>
-      ) : null}
+      </section>
+    );
+  }
 
+  return (
+    <section className="settings-ai-config-panel" aria-label={`${copy.label} 설정`}>
       {row.id === "ollama" ? (
         <div className="settings-ai-field-grid">
           <ProviderField
@@ -507,214 +338,65 @@ function EngineConfigPanel({
         </div>
       ) : null}
 
-      <ProbeRow probe={probe} />
+      {canTest ? (
+        <div className="settings-ai-verify">
+          <div className="settings-ai-verify-actions">
+            <Button icon={Plug} variant="secondary" size="sm" onClick={onProbe} disabled={probing}>
+              {probing ? "확인 중…" : "연결 확인"}
+            </Button>
+            <Button
+              icon={FlaskConical}
+              variant="primary"
+              size="sm"
+              onClick={onCapabilityTest}
+              disabled={testing}
+            >
+              {testing ? "테스트 중…" : "응답 테스트"}
+            </Button>
+          </div>
+          <ProbeRow probe={probe} />
+          <CapabilityRow capability={capability} />
+        </div>
+      ) : null}
 
-      <CapabilityRow capability={capability} />
-
-      <EngineDiagnosticsPanel
-        provider={row.id}
-        probe={probe}
-        capability={capability}
-        diagnostics={diagnostics}
-        fallbackEnabled={settings.fallbackToDeterministic}
-      />
-
-      {row.id !== "deterministic" ? (
-        <details className="settings-ai-advanced">
-          <summary>고급 설정</summary>
-          <div className="settings-ai-advanced-body">
-            {row.id === "ollama" ? (
-              <ProviderField
-                label="요청 요약 모델"
-                value={settings.requestAbstractionModel}
-                placeholder="비워두면 기본 모델 사용"
-                onChange={(value) => onUpdateSettings({ requestAbstractionModel: value })}
-              />
-            ) : null}
+      <details className="settings-ai-advanced">
+        <summary>고급 설정</summary>
+        <div className="settings-ai-advanced-body">
+          {row.id === "ollama" ? (
             <ProviderField
-              label="타임아웃(ms)"
-              value={String(row.id === "openAiCompatible" ? settings.openAiTimeoutMs : settings.ollamaTimeoutMs)}
-              inputMode="numeric"
-              onChange={(value) =>
-                row.id === "openAiCompatible"
-                  ? onUpdateSettings({ openAiTimeoutMs: parseTimeout(value, settings.openAiTimeoutMs) })
-                  : onUpdateSettings({ ollamaTimeoutMs: parseTimeout(value, settings.ollamaTimeoutMs) })
+              label="요청 요약 모델"
+              value={settings.requestAbstractionModel}
+              placeholder="비워두면 기본 모델 사용"
+              onChange={(value) => onUpdateSettings({ requestAbstractionModel: value })}
+            />
+          ) : null}
+          <ProviderField
+            label="타임아웃(ms)"
+            value={String(row.id === "openAiCompatible" ? settings.openAiTimeoutMs : settings.ollamaTimeoutMs)}
+            inputMode="numeric"
+            onChange={(value) =>
+              row.id === "openAiCompatible"
+                ? onUpdateSettings({ openAiTimeoutMs: parseTimeout(value, settings.openAiTimeoutMs) })
+                : onUpdateSettings({ ollamaTimeoutMs: parseTimeout(value, settings.ollamaTimeoutMs) })
+            }
+          />
+          <div className="settings-ai-fallback">
+            <span>
+              <strong>실패 시 규칙 기반으로 전환</strong>
+              <small>엔진 연결이 실패해도 분석 결과를 비워두지 않습니다.</small>
+            </span>
+            <PreferenceToggle
+              label="실패 시 규칙 기반으로 전환"
+              active={settings.fallbackToDeterministic}
+              onToggle={() =>
+                onUpdateSettings({ fallbackToDeterministic: !settings.fallbackToDeterministic })
               }
             />
-            <div className="settings-ai-fallback">
-              <span>
-                <strong>실패 시 규칙 기반으로 전환</strong>
-                <small>엔진 연결이 실패해도 Quick Pass 결과를 비워두지 않습니다.</small>
-              </span>
-              <PreferenceToggle
-                label="실패 시 규칙 기반으로 전환"
-                active={settings.fallbackToDeterministic}
-                onToggle={() =>
-                  onUpdateSettings({ fallbackToDeterministic: !settings.fallbackToDeterministic })
-                }
-              />
-            </div>
           </div>
-        </details>
-      ) : null}
+        </div>
+      </details>
     </section>
   );
-}
-
-function EngineDiagnosticsPanel({
-  provider,
-  probe,
-  capability,
-  diagnostics,
-  fallbackEnabled,
-}: {
-  provider: QuickPassProviderKind;
-  probe: ProbeState;
-  capability: CapabilityState;
-  diagnostics: EngineDiagnostics;
-  fallbackEnabled: boolean;
-}) {
-  const items = buildDiagnosticItems({ provider, probe, capability, diagnostics, fallbackEnabled });
-  return (
-    <table className="settings-ai-diag-table" aria-label="분석 엔진 진단">
-      <tbody>
-        {items.map((item) => (
-          <tr key={item.label} className={`tone-${item.tone}`}>
-            <th scope="row">
-              <span className="settings-ai-diag-dot" aria-hidden="true" />
-              {item.label}
-            </th>
-            <td>{item.value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-type DiagnosticItem = {
-  label: string;
-  value: string;
-  tone: "ok" | "info" | "idle" | "warn" | "error";
-};
-
-function buildDiagnosticItems({
-  provider,
-  probe,
-  capability,
-  diagnostics,
-  fallbackEnabled,
-}: {
-  provider: QuickPassProviderKind;
-  probe: ProbeState;
-  capability: CapabilityState;
-  diagnostics: EngineDiagnostics;
-  fallbackEnabled: boolean;
-}): DiagnosticItem[] {
-  return [
-    {
-      label: "입력",
-      value:
-        diagnostics.importCount > 0 || diagnostics.sourceCount > 0
-          ? `가져오기 ${diagnostics.importCount}건 · 출처 ${diagnostics.sourceCount}개`
-          : "분석할 자료 없음",
-      tone: diagnostics.importCount > 0 || diagnostics.sourceCount > 0 ? "info" : "idle",
-    },
-    dataRouteDiagnostic(provider),
-    connectionDiagnostic(provider, probe),
-    capabilityDiagnostic(provider, capability),
-    fallbackDiagnostic(provider, fallbackEnabled),
-    lastRunDiagnostic(diagnostics),
-  ];
-}
-
-function capabilityDiagnostic(
-  provider: QuickPassProviderKind,
-  capability: CapabilityState,
-): DiagnosticItem {
-  if (provider === "deterministic") {
-    return { label: "응답", value: "항상 가능", tone: "ok" };
-  }
-  if (capability.status === "running" && capability.kind === provider) {
-    return { label: "응답", value: "테스트 중", tone: "idle" };
-  }
-  if (capability.status === "done" && capability.kind === provider) {
-    const { report } = capability;
-    if (report.verdict === "ready") {
-      return { label: "응답", value: `구조화 가능 · ${report.durationMs}ms`, tone: "ok" };
-    }
-    if (report.verdict === "reachableNoStructure") {
-      return { label: "응답", value: "구조 없음", tone: "warn" };
-    }
-    return { label: "응답", value: "실패", tone: "error" };
-  }
-  return { label: "응답", value: "아직 테스트 안 함", tone: "idle" };
-}
-
-function dataRouteDiagnostic(provider: QuickPassProviderKind): DiagnosticItem {
-  if (provider === "openAiCompatible") {
-    return { label: "데이터 경로", value: "입력한 base URL", tone: "warn" };
-  }
-  if (provider === "ollama") {
-    return { label: "데이터 경로", value: "입력한 로컬 endpoint", tone: "ok" };
-  }
-  return { label: "데이터 경로", value: "기기 내부", tone: "ok" };
-}
-
-function connectionDiagnostic(provider: QuickPassProviderKind, probe: ProbeState): DiagnosticItem {
-  if (provider === "deterministic") {
-    return { label: "연결", value: "필요 없음", tone: "ok" };
-  }
-  if (probe.status === "checking" && probe.kind === provider) {
-    return { label: "연결", value: "확인 중", tone: "idle" };
-  }
-  if (probe.status === "ok" && probe.kind === provider) {
-    const suffix = probe.models.length ? ` · 모델 ${probe.models.length}개` : "";
-    return { label: "연결", value: `확인됨${suffix}`, tone: "ok" };
-  }
-  if (probe.status === "error" && probe.kind === provider) {
-    return { label: "연결", value: "확인 실패", tone: "error" };
-  }
-  return { label: "연결", value: "아직 확인 안 함", tone: "idle" };
-}
-
-function fallbackDiagnostic(provider: QuickPassProviderKind, enabled: boolean): DiagnosticItem {
-  if (provider === "deterministic") {
-    return { label: "Fallback", value: "해당 없음", tone: "idle" };
-  }
-  return {
-    label: "Fallback",
-    value: enabled ? "규칙 기반으로 전환" : "실패를 그대로 표시",
-    tone: enabled ? "info" : "warn",
-  };
-}
-
-function lastRunDiagnostic(diagnostics: EngineDiagnostics): DiagnosticItem {
-  if (diagnostics.status === "running") {
-    return { label: "최근 실행", value: "실행 중", tone: "idle" };
-  }
-  if (diagnostics.status === "failed") {
-    return {
-      label: "최근 실행",
-      value: diagnostics.error ? `실패 · ${truncate(diagnostics.error, 34)}` : "실패",
-      tone: "error",
-    };
-  }
-  if (!diagnostics.analysis) {
-    return { label: "최근 실행", value: "아직 없음", tone: "idle" };
-  }
-  const provider = diagnostics.fallbackUsed
-    ? "fallback 사용"
-    : diagnostics.providerLabel ?? diagnostics.analysis.providerLabel;
-  return {
-    label: "최근 실행",
-    value: `${provider} · ${Math.round(diagnostics.analysis.confidence * 100)}% · ${diagnostics.analysis.durationMs}ms`,
-    tone: "ok",
-  };
-}
-
-function truncate(value: string, max: number): string {
-  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
 function ProbeRow({ probe }: { probe: ProbeState }) {
@@ -748,9 +430,9 @@ function ProbeRow({ probe }: { probe: ProbeState }) {
 }
 
 /**
- * Model field with installed-model autodetect. A native datalist gives a
- * dropdown of detected models while still allowing free entry, and a refresh
- * button re-probes the endpoint. No blind typing of model names.
+ * Model field with installed-model autodetect. When the endpoint reports models
+ * the field is a dropdown of those models; a "직접 입력" toggle falls back to a
+ * free-text input, and the refresh button re-probes the endpoint.
  */
 function ModelField({
   label,
@@ -769,18 +451,34 @@ function ModelField({
   onChange: (value: string) => void;
   onRefresh: () => void;
 }) {
-  const listId = useId();
+  const [manual, setManual] = useState(false);
+  const hasModels = models.length > 0;
+  const useSelect = hasModels && !manual;
   return (
     <label className="settings-ai-field settings-ai-model-field">
       <span>{label}</span>
       <div className="settings-ai-model-input">
-        <input
-          list={listId}
-          value={value}
-          placeholder={placeholder}
-          autoComplete="off"
-          onChange={(event) => onChange(event.target.value)}
-        />
+        {useSelect ? (
+          <select value={models.includes(value) ? value : ""} onChange={(event) => onChange(event.target.value)}>
+            {models.includes(value) ? null : (
+              <option value="" disabled>
+                모델 선택…
+              </option>
+            )}
+            {models.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            value={value}
+            placeholder={placeholder}
+            autoComplete="off"
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )}
         <button
           type="button"
           className="settings-ai-model-refresh"
@@ -791,19 +489,25 @@ function ModelField({
         >
           <RefreshCw size={13} className={detecting ? "is-spinning" : undefined} aria-hidden="true" />
         </button>
-        <datalist id={listId}>
-          {models.map((model) => (
-            <option key={model} value={model} />
-          ))}
-        </datalist>
       </div>
-      <small className="settings-ai-model-hint">
-        {detecting
-          ? "설치된 모델을 감지하는 중…"
-          : models.length
-            ? `설치된 모델 ${models.length}개 · 목록에서 선택하거나 직접 입력`
-            : "감지된 모델이 없습니다 · 모델 이름을 직접 입력하세요"}
-      </small>
+      <div className="settings-ai-model-meta">
+        <small>
+          {detecting
+            ? "설치된 모델 감지 중…"
+            : hasModels
+              ? `설치된 모델 ${models.length}개 감지됨`
+              : "감지된 모델 없음 · 직접 입력하세요"}
+        </small>
+        {hasModels ? (
+          <button
+            type="button"
+            className="settings-ai-model-toggle"
+            onClick={() => setManual((current) => !current)}
+          >
+            {manual ? "목록에서 선택" : "직접 입력"}
+          </button>
+        ) : null}
+      </div>
     </label>
   );
 }
@@ -853,39 +557,45 @@ function CapabilityRow({ capability }: { capability: CapabilityState }) {
 
 const MAX_RECENT_RUNS = 5;
 
-function RecentRunsDisclosure({ runHistory }: { runHistory: AnalysisRunHistoryViewModel }) {
-  const rows = runHistory.rows.slice(0, MAX_RECENT_RUNS);
+function RecentRunsPanel({ runHistory }: { runHistory: AnalysisRunHistoryViewModel | null }) {
+  const rows = runHistory ? runHistory.rows.slice(0, MAX_RECENT_RUNS) : [];
   return (
-    <details className="settings-ai-runs">
-      <summary>
-        <span>실행 기록</span>
-        <small>{runHistory.runCount}회</small>
-      </summary>
-      <ul className="settings-ai-run-list">
-        {rows.map((row) => (
-          <li
-            key={row.runId}
-            className={`settings-ai-run-row${row.isCurrent ? " is-current" : ""}`}
-          >
-            <span className="settings-ai-run-dot" aria-hidden="true" />
-            <div className="settings-ai-run-main">
-              <div className="settings-ai-run-head">
-                <strong>{row.providerLabel}</strong>
-                {row.isCurrent ? <span className="settings-ai-run-current">현재</span> : null}
-                <small>{formatRelativeKo(row.generatedAt)}</small>
+    <section className="settings-ai-info" aria-label="최근 실행">
+      <header className="settings-ai-info-head">
+        <h4>최근 실행</h4>
+        {runHistory && runHistory.runCount > 0 ? (
+          <span className="settings-ai-info-count">{runHistory.runCount}회</span>
+        ) : null}
+      </header>
+      {rows.length === 0 ? (
+        <p className="settings-ai-info-empty">아직 분석을 실행한 기록이 없습니다.</p>
+      ) : (
+        <ul className="settings-ai-run-list">
+          {rows.map((row) => (
+            <li
+              key={row.runId}
+              className={`settings-ai-run-row${row.isCurrent ? " is-current" : ""}`}
+            >
+              <span className="settings-ai-run-dot" aria-hidden="true" />
+              <div className="settings-ai-run-main">
+                <div className="settings-ai-run-head">
+                  <strong>{row.providerLabel}</strong>
+                  {row.isCurrent ? <span className="settings-ai-run-current">현재</span> : null}
+                  <small>{formatRelativeKo(row.generatedAt)}</small>
+                </div>
+                <small className="settings-ai-run-stats">
+                  이슈 {row.reason.elementCounts.issues}개 · 결정 {row.reason.elementCounts.decisions}개 ·
+                  신뢰 {Math.round(row.confidence * 100)}% · {row.durationMs}ms
+                  {row.changeSummary && row.changeSummary !== "변화 없음"
+                    ? ` · ${row.changeSummary}`
+                    : ""}
+                </small>
               </div>
-              <small className="settings-ai-run-stats">
-                이슈 {row.reason.elementCounts.issues}개 · 결정 {row.reason.elementCounts.decisions}개 ·
-                신뢰 {Math.round(row.confidence * 100)}% · {row.durationMs}ms
-                {row.changeSummary && row.changeSummary !== "변화 없음"
-                  ? ` · ${row.changeSummary}`
-                  : ""}
-              </small>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </details>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -916,6 +626,10 @@ function ProviderField({
       />
     </label>
   );
+}
+
+function truncate(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
 function parseTimeout(value: string, fallback: number): number {

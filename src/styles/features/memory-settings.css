@@ -3708,127 +3708,6 @@ button.settings-option {
   gap: 10px;
 }
 
-/* Engine presets: one-click saved engine configs. Compact pill chips so they
-   read as shortcuts above the full config, never as competing controls. */
-.settings-ai-presets {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.settings-ai-preset {
-  display: inline-flex;
-  align-items: center;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: white;
-}
-
-.settings-ai-preset.is-active {
-  border-color: var(--purple);
-  background: var(--purple-50);
-}
-
-.settings-ai-preset-apply {
-  padding: 3px 4px 3px 10px;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.settings-ai-preset.is-active .settings-ai-preset-apply {
-  color: var(--purple);
-}
-
-.settings-ai-preset-remove {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 24px;
-  padding: 0 6px 0 2px;
-  border: 0;
-  background: transparent;
-  color: var(--muted-2);
-  cursor: pointer;
-}
-
-.settings-ai-preset-remove:hover {
-  color: var(--red);
-}
-
-.settings-ai-preset-save {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: 1px dashed var(--line-strong);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.settings-ai-preset-save:hover {
-  border-color: var(--purple);
-  color: var(--purple);
-}
-
-.settings-ai-preset-form {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.settings-ai-preset-form input {
-  height: 26px;
-  width: 140px;
-  padding: 0 8px;
-  border: 1px solid var(--purple);
-  border-radius: 999px;
-  background: white;
-  color: var(--text);
-  font: inherit;
-  font-size: 11.5px;
-}
-
-.settings-ai-preset-form input:focus {
-  outline: 0;
-  box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.12);
-}
-
-.settings-ai-preset-form button {
-  height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--purple);
-  border-radius: 999px;
-  background: var(--purple);
-  color: white;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.settings-ai-preset-form button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.settings-ai-preset-form button.settings-ai-preset-cancel {
-  border-color: var(--line);
-  background: white;
-  color: var(--muted);
-}
-
 .settings-ai-provider-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3924,33 +3803,6 @@ button.settings-option {
   background: white;
 }
 
-.settings-ai-config-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.settings-ai-config-head h4 {
-  margin: 0;
-  color: var(--text);
-  font-size: 13.5px;
-  line-height: 1.25;
-}
-
-.settings-ai-config-head p {
-  margin: 3px 0 0;
-  color: var(--muted);
-  font-size: 11.5px;
-  line-height: 1.45;
-}
-
-.settings-ai-config-actions {
-  display: inline-flex;
-  flex-shrink: 0;
-  gap: 6px;
-}
-
 .settings-ai-empty-config {
   display: inline-flex;
   align-items: center;
@@ -4031,52 +3883,9 @@ button.settings-option {
   background: var(--red);
 }
 
-/* Engine diagnostics as a compact key/value table — denser and more scannable
-   than the old grid of bordered chips. */
-.settings-ai-diag-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 11.5px;
-}
-
-.settings-ai-diag-table tr + tr th,
-.settings-ai-diag-table tr + tr td {
-  border-top: 1px solid var(--line);
-}
-
-.settings-ai-diag-table th {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 132px;
-  padding: 6px 10px 6px 0;
-  color: var(--muted);
-  font-weight: 650;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.settings-ai-diag-table td {
-  padding: 6px 0;
-  color: var(--text);
-  font-weight: 650;
-}
-
-.settings-ai-diag-dot {
-  flex-shrink: 0;
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--muted-2);
-}
-
-.settings-ai-diag-table tr.tone-ok .settings-ai-diag-dot { background: var(--green); }
-.settings-ai-diag-table tr.tone-info .settings-ai-diag-dot { background: var(--blue); }
-.settings-ai-diag-table tr.tone-warn .settings-ai-diag-dot { background: #d8923f; }
-.settings-ai-diag-table tr.tone-error .settings-ai-diag-dot { background: var(--red); }
-
-/* Model field: detected-model dropdown (datalist) + refresh, with a quiet
-   helper line below. */
+/* Model field: an installed-model dropdown (or free-text input) + a refresh
+   button, with a quiet meta row carrying the detected-count and an input
+   toggle. */
 .settings-ai-model-field {
   align-self: start;
 }
@@ -4087,7 +3896,8 @@ button.settings-option {
   gap: 6px;
 }
 
-.settings-ai-model-input input {
+.settings-ai-model-input input,
+.settings-ai-model-input select {
   flex: 1;
   min-width: 0;
   height: 34px;
@@ -4100,7 +3910,12 @@ button.settings-option {
   font-size: 12px;
 }
 
-.settings-ai-model-input input:focus {
+.settings-ai-model-input select {
+  cursor: pointer;
+}
+
+.settings-ai-model-input input:focus,
+.settings-ai-model-input select:focus {
   border-color: var(--purple);
   outline: 0;
   box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.12);
@@ -4144,10 +3959,49 @@ button.settings-option {
   }
 }
 
-.settings-ai-model-hint {
+.settings-ai-model-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-ai-model-meta small {
   color: var(--muted-2);
   font-size: 11px;
   line-height: 1.4;
+}
+
+.settings-ai-model-toggle {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--purple);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.settings-ai-model-toggle:hover {
+  text-decoration: underline;
+}
+
+/* Verify block — the connection / response test actions and their inline
+   result rows, grouped so the buttons read as one verification step under the
+   config fields. */
+.settings-ai-verify {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.settings-ai-verify-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .settings-ai-field-grid {
@@ -4330,51 +4184,47 @@ button.settings-option {
   white-space: nowrap;
 }
 
-/* Recent Quick Pass runs, folded by default so the engine config leads and
-   the history stays a quiet glance. Mirrors the planned-engines disclosure. */
-.settings-ai-runs {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel-soft);
-  padding: 0 10px;
+/* Recent runs — the information region, kept separate from the engine config
+   above. Always visible (not folded) so the history reads at a glance. */
+.settings-ai-info {
+  display: grid;
+  gap: 8px;
 }
 
-.settings-ai-runs > summary {
-  display: inline-flex;
+.settings-ai-info-head {
+  display: flex;
   align-items: baseline;
-  gap: 7px;
-  list-style: none;
-  padding: 8px 0;
-  cursor: pointer;
-  color: var(--muted);
-  font-size: 12px;
+  gap: 8px;
+}
+
+.settings-ai-info-head h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
   font-weight: 700;
 }
 
-.settings-ai-runs > summary::-webkit-details-marker {
-  display: none;
-}
-
-.settings-ai-runs > summary::before {
-  content: ">";
+.settings-ai-info-count {
   color: var(--muted-2);
-  transition: transform 0.15s ease;
-}
-
-.settings-ai-runs[open] > summary::before {
-  transform: rotate(90deg);
-}
-
-.settings-ai-runs > summary small {
   font-size: 11px;
   font-weight: 600;
+}
+
+.settings-ai-info-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .settings-ai-run-list {
   display: grid;
   gap: 6px;
   margin: 0;
-  padding: 0 0 10px;
+  padding: 0;
   list-style: none;
 }
 
@@ -4662,7 +4512,6 @@ button.settings-option {
     min-height: auto;
   }
 
-  .settings-ai-config-head,
   .settings-ai-fallback {
     flex-direction: column;
     align-items: flex-start;

@@ -827,38 +827,6 @@
   color: var(--purple);
 }
 
-.settings-sheet-head-right {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Runtime indicator lives once, in the sheet header — not repeated on every
-   pane. A quiet dot + label, never a loud badge. */
-.settings-runtime-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 650;
-  color: var(--muted);
-}
-
-.settings-runtime-chip-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--muted-2);
-}
-
-.settings-runtime-chip.tone-green .settings-runtime-chip-dot {
-  background: var(--green);
-}
-
-.settings-runtime-chip.tone-blue .settings-runtime-chip-dot {
-  background: var(--blue);
-}
-
 .settings-sheet-close {
   display: inline-flex;
   align-items: center;
