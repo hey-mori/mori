@@ -9,7 +9,6 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { InfoHint } from "../../components/ui/InfoHint";
 import {
   selectHasRealAnalysis,
   selectSessionView,
@@ -34,7 +33,7 @@ import { RepositoriesCard } from "./RepositoriesCard";
 import { ThemeCard } from "./ThemeCard";
 import { DemoModeCard } from "./DemoModeCard";
 import { NotificationsCard } from "./NotificationsCard";
-import { SettingsSection, StatusPill } from "./SettingsPrimitives";
+import { SettingsSection } from "./SettingsPrimitives";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
   { id: "localAi", label: "AI 엔진", icon: Bot },
@@ -113,7 +112,7 @@ export function SettingsView() {
       ? `Ollama · ${settings.ollamaModel}`
       : settings.provider === "openAiCompatible"
         ? `OpenAI 호환 · ${settings.openAiModel}`
-      : "규칙 기반 Quick Pass";
+      : "규칙 기반";
 
   async function handlePickRepository() {
     const result = await pickRepositoryDirectory({ title: "Mori: Select repository" });
@@ -123,16 +122,6 @@ export function SettingsView() {
 
   return (
     <div className="settings-content-stack settings-page">
-      <div className="settings-pane-head">
-        <div className="settings-pane-heading">
-          <h2>{SETTINGS_TAB_DEFS.find((entry) => entry.id === activeTab)?.label ?? "설정"}</h2>
-          <InfoHint label="이 화면 설명">{sectionDescription(activeTab)}</InfoHint>
-        </div>
-        <StatusPill tone={mode === "tauri-desktop" ? "green" : "blue"}>
-          {mode === "tauri-desktop" ? "데스크톱 런타임" : "브라우저 런타임"}
-        </StatusPill>
-      </div>
-
       <div className="settings-main">
         {activeTab === "storage" ? (
           <StatusStrip
@@ -218,25 +207,6 @@ export function SettingsView() {
 
     </div>
   );
-}
-
-function sectionDescription(tab: SettingsTab): string {
-  switch (tab) {
-    case "localAi":
-      return "가져온 세션을 해석할 로컬 또는 명시적 제공자를 선택합니다.";
-    case "privacy":
-      return "Mori가 기본으로 지키는 로컬 우선 경계입니다.";
-    case "storage":
-      return "이 기기의 저장 위치, SQLite 상태, 내보내기 경로를 확인합니다.";
-    case "repositories":
-      return "Git diff 캡처와 프로젝트 분류에 사용할 경로만 직접 등록합니다.";
-    case "appearance":
-      return "이 기기에만 저장되는 화면 표시 설정입니다.";
-    case "notifications":
-      return "향후 알림 전달 계층이 사용할 로컬 범주 설정입니다.";
-    case "profile":
-      return "이 기기에서만 쓰는 Mori 표시 이름입니다.";
-  }
 }
 
 type RuntimeStatTone = "ok" | "info" | "idle" | "warn" | "error";

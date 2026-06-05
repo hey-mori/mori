@@ -1,9 +1,10 @@
 import { UserRound, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAppStore, type SettingsTab } from "../../app/store";
 import { SETTINGS_TAB_DEFS, SettingsView } from "../../features/settings/SettingsView";
 import { AccountProfileView } from "../../features/account/AccountProfileView";
 import { SettingsRail, type SettingsRailItem } from "../../features/settings/SettingsPrimitives";
+import { isTauriRuntime } from "../../lib/desktop";
 import { focusFirstElement, trapTabKey } from "../ui/focusTrap";
 
 const RAIL_ITEMS: SettingsRailItem[] = [
@@ -22,6 +23,7 @@ export function SettingsSheet() {
   const setActiveTab = useAppStore((state) => state.setSettingsTab);
   const sheetRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const desktopRuntime = useMemo(() => isTauriRuntime(), []);
 
   useEffect(() => {
     if (!open) return;
@@ -67,14 +69,22 @@ export function SettingsSheet() {
           <div className="settings-sheet-title">
             <strong id="settings-sheet-title">환경설정</strong>
           </div>
-          <button
-            type="button"
-            className="settings-sheet-close"
-            onClick={close}
-            aria-label="닫기"
-          >
-            <X size={16} aria-hidden="true" />
-          </button>
+          <div className="settings-sheet-head-right">
+            <span
+              className={`settings-runtime-chip tone-${desktopRuntime ? "green" : "blue"}`}
+            >
+              <span className="settings-runtime-chip-dot" aria-hidden="true" />
+              {desktopRuntime ? "데스크톱 런타임" : "브라우저 런타임"}
+            </span>
+            <button
+              type="button"
+              className="settings-sheet-close"
+              onClick={close}
+              aria-label="닫기"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
         </header>
         <div className="settings-sheet-body">
           <SettingsRail
