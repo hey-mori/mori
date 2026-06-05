@@ -2,8 +2,6 @@ import { CalendarClock, Lock } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { BaseInspectorPanel } from "../../components/ui/BaseInspectorPanel";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
-import { BaseTrustBadge } from "../../components/ui/BaseTrustBadge";
-import { BaseFidelityBadge } from "../../components/ui/BaseFidelityBadge";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels } from "../../domain/constants";
 import type { MockSession } from "../../domain/types";
@@ -112,8 +110,6 @@ function SourceDetailView({
       onClose={onClose}
       eyebrow={
         <>
-          <BaseTrustBadge level={source.trustLevel} />
-          <BaseFidelityBadge fidelity={source.captureFidelity} />
           <BaseStatusBadge
             tone={getProductAvailabilityTone(
               productAvailabilityFromIntegrationStatus(display.status),
@@ -130,10 +126,6 @@ function SourceDetailView({
       <section className="evidence-detail-section">
         <SectionHeader title="출처 및 캡처" />
         <dl className="evidence-detail-grid">
-          <div>
-            <dt>통합</dt>
-            <dd>{display.integrationLabel}</dd>
-          </div>
           <div>
             <dt>캡처 방식</dt>
             <dd>{display.captureMethod}</dd>
