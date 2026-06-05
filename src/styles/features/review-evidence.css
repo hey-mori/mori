@@ -3884,11 +3884,78 @@ td a {
   color: var(--text);
 }
 
-.session-overview-shape {
+.work-shape {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.work-shape-bar {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--line, #e6e3f1);
+}
+
+.work-shape-seg {
+  height: 100%;
+  min-width: 2px;
+}
+
+.work-shape-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--muted, #6e668c);
+}
+
+.work-shape-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.work-shape-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.work-shape-seg.tone-purple,
+.work-shape-dot.tone-purple {
+  background: #8b7bd8;
+}
+
+.work-shape-seg.tone-green,
+.work-shape-dot.tone-green {
+  background: #4faa84;
+}
+
+.work-shape-seg.tone-blue,
+.work-shape-dot.tone-blue {
+  background: #5b87e0;
+}
+
+.work-shape-seg.tone-cyan,
+.work-shape-dot.tone-cyan {
+  background: #4cafbf;
+}
+
+.work-shape-seg.tone-orange,
+.work-shape-dot.tone-orange {
+  background: #e0974f;
+}
+
+.work-shape-seg.tone-red,
+.work-shape-dot.tone-red {
+  background: #d76b6b;
+}
+
+.work-shape-seg.tone-gray,
+.work-shape-dot.tone-gray {
+  background: #bdb7cd;
 }
 
 /* 개요 tab layout — hero, scale metrics, and tab-shortcut cards. */

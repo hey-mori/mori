@@ -17,6 +17,8 @@ import {
 import { useAppStore } from "../../app/store";
 import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
 import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
+import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
+import type { ImportDigestLane } from "../../lib/import/importDigest";
 import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
@@ -134,15 +136,7 @@ export function OverviewView() {
                 <Badge tone="purple">AI 요약</Badge> {summaryText}
               </p>
             ) : null}
-            {!workSummary.isEmpty ? (
-              <div className="session-overview-shape" aria-label="작업 형태">
-                {workSummary.digest.lanes.map((lane) => (
-                  <Badge key={lane.lane} tone="gray">
-                    {lane.label} {lane.count}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
+            <WorkShapeBar lanes={workSummary.digest.lanes} />
           </section>
 
           <dl className="overview-metrics" aria-label="세션 규모">
@@ -225,6 +219,41 @@ function OverviewMetric({ label, value }: { label: string; value: string }) {
     <div className="overview-metric">
       <dt>{label}</dt>
       <dd>{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * The session's work composition as a calm proportional bar plus a legend,
+ * coloured by the same lane tones the timeline uses. Reads at a glance: this
+ * was mostly conversation, with a chunk of file changes and some builds.
+ */
+function WorkShapeBar({ lanes }: { lanes: ImportDigestLane[] }) {
+  const total = lanes.reduce((sum, lane) => sum + lane.count, 0);
+  if (total === 0) return null;
+  return (
+    <div className="work-shape" aria-label="작업 형태">
+      <div className="work-shape-bar">
+        {lanes.map((lane) => (
+          <span
+            key={lane.lane}
+            className={`work-shape-seg tone-${getActivityLaneVisuals(lane.lane).tone}`}
+            style={{ width: `${(lane.count / total) * 100}%` }}
+            title={`${lane.label} ${lane.count}`}
+          />
+        ))}
+      </div>
+      <div className="work-shape-legend">
+        {lanes.map((lane) => (
+          <span key={lane.lane} className="work-shape-legend-item">
+            <i
+              className={`work-shape-dot tone-${getActivityLaneVisuals(lane.lane).tone}`}
+              aria-hidden="true"
+            />
+            {lane.label} {lane.count}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
