@@ -1,11 +1,11 @@
 import {
-  ArrowRight,
   Bot,
   Braces,
   Check,
   ChevronDown,
   ClipboardPaste,
   Code2,
+  Cpu,
   FilePlus2,
   History,
   Infinity,
@@ -25,12 +25,10 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
-import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { recordingModeLabels } from "../../domain/constants";
 import { createSessionDraft } from "../../lib/session/createSessionDraft";
 import {
   describeSessionStorageTarget,
@@ -38,7 +36,6 @@ import {
 } from "../../lib/session/sessionStorageTarget";
 import { resolveStartRecordsAgentId } from "../../lib/session/startRecordsAgent";
 import { isTauriRuntime } from "../../lib/desktop";
-import { formatDateTime } from "../../lib/formatting/time";
 import {
   buildStartSessionEngineOptions,
   getDefaultStartSessionEngineOption,
@@ -51,7 +48,6 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { normalizeAiTranscript, type AiTranscriptPlatform } from "../../lib/import";
 import type { LlmProvider, SourceOption } from "../../domain/types";
 import {
-  selectSessionMode,
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
@@ -87,14 +83,16 @@ import { DetectedConversationsModal } from "./DetectedConversationsModal";
  *   2. 대화      — how this session's conversation arrives: 기록에서 불러오기
  *                  (the agent's own work records, auto-detected), 붙여넣기, or
  *                  빈 세션으로 시작 (anchor first; Mori never drives the agent).
- *   3. 세션 정보 — project + name.
+ *   3. 분석 엔진 — which local AI engine analyses the conversation, picked as a
+ *                  deliberate setup step (config still lives in settings).
+ *   4. 세션 정보 — project + name.
  *
  * Retention is deliberately one unified rule, not a per-session toggle: Mori
  * keeps the summary + metadata locally and never stores the full raw
  * transcript. A three-way choice would add complexity and dishonesty (pasted /
  * detected transcripts are summary-only no matter what the toggle said), so it
- * is stated as a fact instead. Engine choice lives in settings; the summary
- * shows the default with a 변경 link.
+ * is stated as a fact instead. The summary panel restates the chosen engine as
+ * plain text, not a second control.
  */
 
 type AgentOption = {
@@ -168,8 +166,6 @@ function methodLabel(method: ImportMethod | null): string {
 }
 
 export function StartSessionView() {
-  const storeDraft = useSessionStore((state) => state.draft);
-  const mode = useSessionStore(selectSessionMode);
   const view = useSessionStore(selectSessionView);
   const importAsNewSession = useSessionStore((state) => state.importAsNewSession);
   const setSessionDraft = useSessionStore((state) => state.setDraft);
@@ -347,12 +343,6 @@ export function StartSessionView() {
     }
   }
 
-  function handleContinueSession() {
-    setCurrentView("evidence");
-  }
-
-  const hasActiveSession = mode === "draft" && storeDraft !== null;
-
   const resolvedName =
     method === "records"
       ? selectedDetected?.title ?? "대화 선택 필요"
@@ -373,18 +363,7 @@ export function StartSessionView() {
   return (
     <PageShell
       className="start-session-page"
-      actionBar={
-        <ActionBar
-          label="새 세션"
-          end={
-            hasActiveSession ? (
-              <Button variant="secondary" icon={ArrowRight} onClick={handleContinueSession}>
-                현재 세션 계속
-              </Button>
-            ) : undefined
-          }
-        />
-      }
+      actionBar={<ActionBar label="새 세션" />}
       aside={
         <SessionSummary
           agent={selectedAgent}
@@ -392,10 +371,7 @@ export function StartSessionView() {
           sessionName={resolvedName}
           projectName={projectName}
           engine={selectedEngine}
-          engineOptions={engineOptions}
           storageTarget={storageTarget}
-          onSelectEngine={setSelectedEngineProvider}
-          onChangeEngine={() => openSettingsSheet("localAi")}
           createAction={
             <Button
               variant="primary"
@@ -410,22 +386,6 @@ export function StartSessionView() {
         />
       }
     >
-      {hasActiveSession ? (
-        <NoticeBanner
-          tone="success"
-          title="활성 세션이 이미 있습니다"
-          actions={
-            <Button variant="secondary" icon={ArrowRight} onClick={handleContinueSession}>
-              계속 작업
-            </Button>
-          }
-        >
-          {storeDraft.session.title} · {storeDraft.project.name} ·{" "}
-          {recordingModeLabels[storeDraft.session.recordingMode]} · 저장{" "}
-          {formatDateTime(storeDraft.savedAt)}
-        </NoticeBanner>
-      ) : null}
-
       <FieldBlock number="1" title="에이전트" subtitle="어떤 AI 에이전트로 한 작업인가요?">
         <div className="pick-grid">
           {AGENT_OPTIONS.map((agent) => (
@@ -535,7 +495,36 @@ export function StartSessionView() {
         )}
       </FieldBlock>
 
-      <FieldBlock number="3" title="세션 정보" subtitle="프로젝트와 이름을 정합니다.">
+      <FieldBlock
+        number="3"
+        title="분석 엔진"
+        subtitle="대화를 분석할 로컬 AI 엔진을 선택합니다."
+      >
+        <div className="pick-grid">
+          {engineOptions.map((option) => (
+            <PickTile
+              key={option.provider}
+              icon={Cpu}
+              title={engineSummaryLabel(option)}
+              detail={option.detail}
+              disabled={!option.selectable}
+              status={option.selectable ? undefined : option.statusLabel}
+              selected={selectedEngine.provider === option.provider}
+              onSelect={() => setSelectedEngineProvider(option.provider)}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          className="start-engine-settings"
+          onClick={() => openSettingsSheet("localAi")}
+        >
+          <Settings2 size={13} aria-hidden="true" />
+          설정에서 endpoint와 모델을 구성
+        </button>
+      </FieldBlock>
+
+      <FieldBlock number="4" title="세션 정보" subtitle="프로젝트와 이름을 정합니다.">
         <div className="form-row">
           <div className="form-field">
             <span className="form-field-label">프로젝트</span>
@@ -786,10 +775,7 @@ function SessionSummary({
   sessionName,
   projectName,
   engine,
-  engineOptions,
   storageTarget,
-  onSelectEngine,
-  onChangeEngine,
   createAction,
 }: {
   agent: AgentOption | null;
@@ -797,19 +783,9 @@ function SessionSummary({
   sessionName: string;
   projectName: string;
   engine: StartSessionEngineOption;
-  engineOptions: StartSessionEngineOption[];
   storageTarget: SessionStorageTarget;
-  onSelectEngine: (provider: LlmProvider) => void;
-  onChangeEngine: () => void;
   createAction: ReactNode;
 }) {
-  const engineSelectOptions = engineOptions.map((option) => ({
-    value: option.provider,
-    label: engineSummaryLabel(option),
-    disabled: !option.selectable,
-    title: option.disabledReason,
-  }));
-
   return (
     <InspectorPanel
       ariaLabel="세션 요약"
@@ -828,19 +804,7 @@ function SessionSummary({
       <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
       <hr />
       <SummarySectionTitle>분석 및 보관</SummarySectionTitle>
-      <div className="summary-row summary-row-control">
-        <span>분석 엔진</span>
-        <div className="summary-row-engine">
-          <BaseSelect
-            value={engine.provider}
-            options={engineSelectOptions}
-            onChange={(provider) => onSelectEngine(provider as LlmProvider)}
-          />
-          <button type="button" className="start-engine-change" onClick={onChangeEngine}>
-            <Settings2 size={12} aria-hidden="true" /> 설정
-          </button>
-        </div>
-      </div>
+      <SummaryRow label="분석 엔진" value={engineSummaryLabel(engine)} />
       <SummaryRow label="보관 위치" value={storageTarget.label} />
       <div className="start-summary-action">{createAction}</div>
     </InspectorPanel>

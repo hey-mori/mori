@@ -404,43 +404,6 @@ input,
   letter-spacing: 0;
 }
 
-.summary-row-control {
-  align-items: start;
-}
-
-/* The engine value carries an inline selector and settings button, so it lays
-   out as a flex row whose selector truncates while the button never clips. */
-.summary-row-engine {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  overflow: visible;
-  white-space: normal;
-}
-
-.summary-row-engine .base-select {
-  min-width: 0;
-  flex: 1;
-}
-
-.summary-row-engine .base-select-trigger {
-  height: 32px;
-  padding: 0 8px 0 10px;
-  font-size: 12.5px;
-}
-
-.summary-row-engine .base-select-menu {
-  left: auto;
-  width: min(260px, 72vw);
-}
-
-.summary-row-engine .base-select-option:disabled {
-  cursor: not-allowed;
-  color: var(--muted-2);
-  background: transparent;
-}
-
 .accent {
   color: var(--purple);
 }
@@ -1387,24 +1350,28 @@ hr {
   vertical-align: -2px;
 }
 
-/* "변경" link to engine settings, inline in the summary engine row. */
-.start-engine-change {
+/* Quiet link from the 분석 엔진 step out to full engine configuration. */
+.start-engine-settings {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  margin-left: 8px;
+  gap: 5px;
+  margin-top: 12px;
   padding: 0;
   border: 0;
   background: none;
   color: var(--purple);
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.start-engine-change:hover {
+.start-engine-settings:hover {
   text-decoration: underline;
+}
+
+.start-engine-settings svg {
+  flex-shrink: 0;
 }
 
 .start-new-project-input {
