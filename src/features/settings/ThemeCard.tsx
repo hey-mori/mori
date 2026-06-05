@@ -1,29 +1,21 @@
-import { Check, Palette } from "lucide-react";
+import { Check } from "lucide-react";
 import { useThemeStore } from "../../app/themeStore";
 import type { ThemeId } from "../../lib/settings/themePreference";
-import {
-  PreferenceToggle,
-  SettingsOption,
-  SettingsOptionGroup,
-  SettingsRow,
-  SettingsSection,
-  StatusPill,
-} from "./SettingsPrimitives";
+import { SettingsSection } from "./SettingsPrimitives";
 
 /**
- * Theme switcher card.
+ * Theme switcher.
  *
- * Lets the user pick a local appearance theme. `formal` and `forest`
- * are real Layer-3 token sets and are selectable; `nightLake` is a
- * reserved Planned theme rendered as an honest, disabled option.
- * The choice is local-only — it never syncs and never affects data
- * access, capture, or memory.
+ * A single-select grid that scales as more themes ship: each is a tappable
+ * card with a color preview, its name, and a one-line description. Selection
+ * is shown by a tinted border + check, never a toggle (which would imply an
+ * on/off per theme). The choice is local-only — it never syncs and never
+ * affects data, capture, or memory.
  */
 
 type ThemeOption = {
   id: ThemeId;
   label: string;
-  sub: string;
   description: string;
 };
 
@@ -31,20 +23,17 @@ const THEME_OPTIONS: ThemeOption[] = [
   {
     id: "formal",
     label: "기본",
-    sub: "Formal",
-    description: "차분한 흰색·회색 표면과 보라 강조색. Mori의 기본 화면입니다.",
+    description: "차분한 흰색·회색 표면과 보라 강조색.",
   },
   {
     id: "forest",
     label: "Forest",
-    sub: "Sage",
-    description: "세이지·스프루스 톤으로 살짝 따뜻하게 조정한 변형입니다.",
+    description: "세이지·스프루스 톤으로 살짝 따뜻하게.",
   },
   {
     id: "nightLake",
     label: "Night Lake",
-    sub: "Dark",
-    description: "어두운 배경에 밝은 텍스트. 야간 작업이나 저조도 환경에 적합합니다.",
+    description: "어두운 배경에 밝은 텍스트. 저조도 환경에 적합.",
   },
 ];
 
@@ -54,45 +43,30 @@ export function ThemeCard() {
 
   return (
     <SettingsSection
-      title="화면 표시"
-      description="테마는 이 기기에만 저장됩니다. 캡처, 분석, 메모리 동작에는 영향을 주지 않습니다."
-      action={<Palette size={16} aria-hidden="true" />}
+      title="테마"
+      description="테마는 이 기기에만 저장됩니다. 데이터나 내보내기 결과에는 영향을 주지 않습니다."
     >
-      <SettingsOptionGroup label="화면 테마">
+      <div className="settings-theme-grid" role="radiogroup" aria-label="테마">
         {THEME_OPTIONS.map((option) => {
           const selected = option.id === theme;
           return (
-            <SettingsOption
+            <button
               key={option.id}
-              selected={selected}
-              icon={selected ? Check : Palette}
-              label={option.label}
-              description={option.description}
-              meta={
-                <>
-                  <StatusPill tone={selected ? "purple" : "gray"}>
-                    {selected ? "선택됨" : option.sub}
-                  </StatusPill>
-                  <span className={`theme-swatch theme-${option.id}`} aria-hidden="true" />
-                </>
-              }
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              className={`settings-theme${selected ? " is-selected" : ""}`}
               onClick={() => setTheme(option.id)}
-            />
+            >
+              <span className={`settings-theme-preview theme-${option.id}`} aria-hidden="true" />
+              <span className="settings-theme-name">
+                {option.label}
+                {selected ? <Check size={14} aria-hidden="true" /> : null}
+              </span>
+              <small>{option.description}</small>
+            </button>
           );
         })}
-      </SettingsOptionGroup>
-      <div className="settings-row-list">
-        <SettingsRow
-          label="화면 밀도"
-          description="검토 작업을 위한 Compact / Comfortable 전환은 아직 구현되지 않았습니다."
-          meta={<StatusPill tone="gray">예정</StatusPill>}
-          control={<PreferenceToggle label="Compact mode" active={false} disabled />}
-          disabled
-        />
-        <SettingsRow
-          label="데모 데이터 표시"
-          description="실제 저장 세션이 없을 때만 번들 데모를 보여줍니다."
-        />
       </div>
     </SettingsSection>
   );

@@ -458,70 +458,119 @@
   color: var(--muted);
 }
 
-/* Request disclosure level — a compact 2-up radio grid, never the squished
-   single column the generic option group produced here. */
-.settings-disclosure-list {
+/* Request disclosure level — one full-width segmented control across the
+   privacy gradient, with the selected level's meaning underneath. */
+.settings-disclosure {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-@media (max-width: 640px) {
-  .settings-disclosure-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.settings-disclosure .segmented {
+  display: flex;
+  width: 100%;
 }
 
-.settings-disclosure-option {
+.settings-disclosure .segmented button {
+  flex: 1;
+}
+
+.settings-disclosure-scale {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.settings-disclosure-desc {
+  margin: 0;
   padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--panel-soft);
   color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Muted "예정" tag for not-yet-built rows — a quiet word, not a colored
+   badge. */
+.settings-soft-tag {
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Theme picker — an auto-fitting grid that grows as more themes ship. Each
+   card carries a color preview, the name, and a one-line description; the
+   selected one gets a tinted border + check (never a toggle). */
+.settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.settings-theme {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
   text-align: left;
   cursor: pointer;
   transition: border-color 120ms ease, background 120ms ease;
 }
 
-.settings-disclosure-option:hover {
+.settings-theme:hover {
   border-color: var(--line-strong);
-  background: #fbfcff;
 }
 
-.settings-disclosure-option:focus-visible {
+.settings-theme:focus-visible {
   outline: 2px solid var(--purple);
   outline-offset: 2px;
 }
 
-.settings-disclosure-option.is-selected {
+.settings-theme.is-selected {
   border-color: var(--purple);
   background: var(--purple-50);
 }
 
-.settings-disclosure-option-text {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
+.settings-theme-preview {
+  height: 38px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
 }
 
-.settings-disclosure-option-text strong {
-  font-size: 12.5px;
+.settings-theme-preview.theme-formal {
+  background: linear-gradient(120deg, #f7f7fb 0 55%, #6246f5 55%);
+}
+
+.settings-theme-preview.theme-forest {
+  background: linear-gradient(120deg, #eef5ef 0 55%, #42765d 55%);
+}
+
+.settings-theme-preview.theme-nightLake {
+  background: linear-gradient(120deg, #1a2236 0 55%, #7aa7ff 55%);
+}
+
+.settings-theme-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 13px;
   font-weight: 700;
+  color: var(--text);
 }
 
-.settings-disclosure-option-text small {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.settings-disclosure-option.is-selected svg {
-  flex-shrink: 0;
+.settings-theme.is-selected .settings-theme-name svg {
   color: var(--purple);
+}
+
+.settings-theme small {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
 }
 
 .settings-privacy-never {

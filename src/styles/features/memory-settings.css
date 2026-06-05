@@ -4651,62 +4651,6 @@ button.settings-option {
   gap: 8px;
 }
 
-/* Runtime summary — grouped, labelled stat cells instead of a flat
-   row of debug-looking chips. */
-.settings-runtime-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 4px 18px;
-  margin: 0 0 16px;
-  padding: 0 2px;
-}
-
-/* Runtime status reads as a calm data strip, not card tiles. The colored dot
-   leads, label sits muted above the value — no border, no shadow. */
-.runtime-stat {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 4px 0;
-}
-
-.runtime-stat > div {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.runtime-stat-dot {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  margin-top: 5px;
-  border-radius: 50%;
-  background: var(--muted-2);
-}
-
-.runtime-stat.tone-ok .runtime-stat-dot { background: var(--green); }
-.runtime-stat.tone-info .runtime-stat-dot { background: var(--blue); }
-.runtime-stat.tone-warn .runtime-stat-dot { background: #d8923f; }
-.runtime-stat.tone-error .runtime-stat-dot { background: var(--red); }
-.runtime-stat.tone-idle .runtime-stat-dot { background: var(--muted-2); }
-
-.runtime-stat-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted-2);
-}
-
-.runtime-stat-value {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.35;
-  color: var(--text);
-  overflow-wrap: anywhere;
-}
-
 .settings-tabs {
   display: inline-flex;
   align-items: center;
@@ -4714,14 +4658,6 @@ button.settings-option {
   padding: 0;
   margin: 0;
   flex-wrap: wrap;
-}
-
-/* In the shared PageShell the tab strip lives in the ActionBar and the
-   TrustSummaryPanel becomes the aside, so the legacy `.settings-layout`
-   two-column wrapper is no longer rendered. The runtime-summary strip and
-   section cards stack in the shell content column on their own rhythm. */
-.settings-page .settings-runtime-summary {
-  margin: 0;
 }
 
 .settings-tab {

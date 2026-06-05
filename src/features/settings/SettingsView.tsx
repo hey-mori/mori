@@ -9,11 +9,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import {
-  selectHasRealAnalysis,
-  selectSessionView,
-  useSessionStore,
-} from "../../app/sessionStore";
+import { useSessionStore } from "../../app/sessionStore";
 import { useSqliteStore } from "../../app/sqliteStore";
 import {
   selectActiveRepository,
@@ -24,7 +20,6 @@ import type { SettingsTab } from "../../app/store";
 import { buildAnalysisRunHistoryViewModel } from "../../lib/analysis";
 import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
-import { getProductRuntimeLabel } from "../../lib/product-state/productState";
 import { LocalAiCard } from "./LocalAiCard";
 import { PrivacyDefaultsCard } from "./PrivacyDefaultsCard";
 import { RequestDisclosureCard } from "./RequestDisclosureCard";
@@ -40,7 +35,7 @@ export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: ty
   { id: "privacy", label: "개인정보", icon: Lock },
   { id: "storage", label: "저장소", icon: HardDrive },
   { id: "repositories", label: "리포지토리", icon: ShieldCheck },
-  { id: "appearance", label: "화면", icon: Palette },
+  { id: "appearance", label: "테마", icon: Palette },
   { id: "notifications", label: "알림", icon: Bell },
 ];
 
@@ -49,23 +44,14 @@ export function SettingsView() {
   const initialized = useSessionStore((state) => state.initialized);
   const settings = useSessionStore((state) => state.analysisSettings);
   const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
-  const sessionView = useSessionStore(selectSessionView);
-  const sessionDraft = useSessionStore((state) => state.draft);
-  const imports = useSessionStore((state) => state.imports);
-  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysis = useSessionStore((state) => state.analysis);
   const loadAnalysisRunHistory = useSessionStore((state) => state.loadAnalysisRunHistory);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
 
   const sqliteAvailable = useSqliteStore((state) => state.available);
-  const sqliteStatus = useSqliteStore((state) => state.status);
   const sqliteSessions = useSqliteStore((state) => state.sessions);
   const sqliteKind = useSqliteStore((state) => state.kind);
-  const sqliteError = useSqliteStore((state) => state.error);
-  const lastPersist = useSqliteStore((state) => state.lastPersist);
   const refreshSqlite = useSqliteStore((state) => state.refresh);
-  const initializeSqlite = useSqliteStore((state) => state.initialize);
-  const persistSqlite = useSqliteStore((state) => state.persist);
 
   const repositorySettings = useRepositoryStore((state) => state.settings);
   const repositoriesInitialized = useRepositoryStore((state) => state.initialized);
@@ -103,13 +89,6 @@ export function SettingsView() {
     // Re-derive when a new run is adopted (analysis.runId) or after hydration.
   }, [loadAnalysisRunHistory, analysis?.runId, initialized]);
 
-  const providerLabel =
-    settings.provider === "ollama"
-      ? `Ollama · ${settings.ollamaModel}`
-      : settings.provider === "openAiCompatible"
-        ? `OpenAI 호환 · ${settings.openAiModel}`
-      : "규칙 기반";
-
   async function handlePickRepository() {
     const result = await pickRepositoryDirectory({ title: "Mori: Select repository" });
     if (result.cancelled || !result.path) return null;
@@ -119,18 +98,6 @@ export function SettingsView() {
   return (
     <div className="settings-content-stack settings-page">
       <div className="settings-main">
-        {activeTab === "storage" ? (
-          <StatusStrip
-            mode={mode}
-            sqliteKind={sqliteKind}
-            sqliteSessionCount={sqliteSessions.length}
-            repositoryCount={repositorySettings.repositories.length}
-            sourceCount={sessionView.sources.length}
-            providerLabel={providerLabel}
-            hasAnalysis={hasAnalysis}
-            importsCount={imports.length}
-          />
-        ) : null}
         {activeTab === "localAi" ? (
           <LocalAiCard
             settings={settings}
@@ -153,17 +120,8 @@ export function SettingsView() {
         {activeTab === "storage" ? (
           <StorageCard
             mode={mode}
-            sqliteAvailable={sqliteAvailable}
             sqliteKind={sqliteKind}
-            sqliteStatus={sqliteStatus}
-            sqliteSessions={sqliteSessions}
-            sqliteError={sqliteError}
-            lastPersist={lastPersist}
-            packageDraftCount={0}
-            canPersist={Boolean(sessionDraft) && sqliteKind !== "checking"}
-            onInitializeSqlite={() => initializeSqlite()}
-            onRefreshSqlite={() => refreshSqlite()}
-            onPersistSession={() => persistSqlite(sessionView)}
+            sqliteSessionCount={sqliteSessions.length}
             onOpenReports={() => setCurrentView("reports")}
           />
         ) : null}
@@ -192,83 +150,6 @@ export function SettingsView() {
         ) : null}
       </div>
 
-    </div>
-  );
-}
-
-type RuntimeStatTone = "ok" | "info" | "idle" | "warn" | "error";
-
-function StatusStrip({
-  mode,
-  sqliteKind,
-  sqliteSessionCount,
-  repositoryCount,
-  sourceCount,
-  providerLabel,
-  hasAnalysis,
-  importsCount,
-}: {
-  mode: RuntimeMode;
-  sqliteKind: "ok" | "checking" | "error" | "unavailable";
-  sqliteSessionCount: number;
-  repositoryCount: number;
-  sourceCount: number;
-  providerLabel: string;
-  hasAnalysis: boolean;
-  importsCount: number;
-}) {
-  // Honest storage language: the browser prototype's store *is*
-  // localStorage, which is not a broken SQLite, so it never reads "error".
-  // Runtime / storage names come from the shared product-state model.
-  const sqliteLabel = getProductRuntimeLabel("desktopSQLite");
-  const storage: { value: string; tone: RuntimeStatTone } =
-    mode === "tauri-desktop"
-      ? sqliteKind === "ok"
-        ? { value: `${sqliteLabel} · ${sqliteSessionCount}개 저장됨`, tone: "ok" }
-        : sqliteKind === "error"
-          ? { value: `${sqliteLabel} · 오류`, tone: "error" }
-          : sqliteKind === "checking"
-            ? { value: `${sqliteLabel} · 확인 중…`, tone: "idle" }
-            : { value: `${sqliteLabel} · 사용 불가`, tone: "warn" }
-      : { value: getProductRuntimeLabel("browserLocalStorage"), tone: "info" };
-  return (
-    <div className="settings-runtime-summary" role="region" aria-label="Mori 런타임 상태">
-      <RuntimeStat
-        label="런타임"
-        value={mode === "tauri-desktop" ? "데스크톱 (Tauri)" : "브라우저 시범판"}
-        tone="info"
-      />
-      <RuntimeStat label="저장소" value={storage.value} tone={storage.tone} />
-      <RuntimeStat
-        label="AI 제공자"
-        value={`${providerLabel}${hasAnalysis ? " · 분석 완료" : ""}`}
-        tone={hasAnalysis ? "ok" : "idle"}
-      />
-      <RuntimeStat
-        label="이번 세션"
-        value={`가져오기 ${importsCount}건 · 출처 ${sourceCount}개 · 리포지토리 ${repositoryCount}개`}
-        tone={importsCount > 0 || sourceCount > 0 ? "info" : "idle"}
-      />
-    </div>
-  );
-}
-
-function RuntimeStat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: RuntimeStatTone;
-}) {
-  return (
-    <div className={`runtime-stat tone-${tone}`}>
-      <span className="runtime-stat-dot" aria-hidden="true" />
-      <div>
-        <span className="runtime-stat-label">{label}</span>
-        <strong className="runtime-stat-value">{value}</strong>
-      </div>
     </div>
   );
 }

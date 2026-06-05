@@ -10,7 +10,6 @@ import {
   PreferenceToggle,
   SettingsRow,
   SettingsSection,
-  StatusPill,
 } from "./SettingsPrimitives";
 
 const NOTIFICATION_ROWS: Array<{
@@ -79,7 +78,6 @@ export function NotificationsCard() {
     <SettingsSection
       title="알림"
       description="범주 설정은 이 기기에 저장됩니다. OS 알림 전달은 아직 켜져 있지 않습니다."
-      action={<StatusPill tone="gray">전달 계층 예정</StatusPill>}
     >
       <div className="settings-row-list">
         {NOTIFICATION_ROWS.map((row) => (
