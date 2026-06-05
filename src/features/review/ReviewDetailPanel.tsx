@@ -27,7 +27,6 @@ import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import {
   ISSUE_STATUS_ORDER,
   findEvents,
-  issueStatusTone,
   priorityTone,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
@@ -173,11 +172,11 @@ function IssueDetail({
   return (
     <aside className="review-detail base-scroll" aria-label="이슈 상세">
       <header className="review-detail-header">
-        <div className="review-detail-badges">
-          <Badge tone={issueStatusTone(issue.status)}>{issueStatusLabels[issue.status]}</Badge>
-          <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
-          {issue.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
-        </div>
+        {issue.editedByUser ? (
+          <div className="review-detail-badges">
+            <Badge tone="blue">사용자 수정됨</Badge>
+          </div>
+        ) : null}
         {isEditing ? (
           <InlineEditForm
             fields={[
@@ -234,92 +233,64 @@ function IssueDetail({
         </section>
       ) : null}
 
-      <section className="review-detail-section">
-        <SectionHeader
-          title="상태"
-          hint={
-            canEditStatus
-              ? "이슈 상태를 바꾸면 세션에 저장됩니다."
-              : "데모 세션에서는 상태가 저장되지 않습니다."
-          }
-        />
-        <SegmentedControl
-          ariaLabel="이슈 상태"
-          role="radiogroup"
-          value={issue.status}
-          onChange={(status) => onSetStatus(issue.id, status)}
-          options={ISSUE_STATUS_ORDER.map((status) => ({
-            id: status,
-            label: issueStatusLabels[status],
-            disabled: !canEditStatus,
-            title: canEditStatus
-              ? undefined
-              : "데모 세션에서는 상태가 저장되지 않습니다.",
-          }))}
-        />
-      </section>
+      {canEditStatus ? (
+        <>
+          <section className="review-detail-section">
+            <SectionHeader title="상태" hint="이슈 상태를 바꾸면 세션에 저장됩니다." />
+            <SegmentedControl
+              ariaLabel="이슈 상태"
+              role="radiogroup"
+              value={issue.status}
+              onChange={(status) => onSetStatus(issue.id, status)}
+              options={ISSUE_STATUS_ORDER.map((status) => ({
+                id: status,
+                label: issueStatusLabels[status],
+              }))}
+            />
+          </section>
 
-      <section className="review-detail-section">
-        <SectionHeader
-          title="우선순위"
-          hint={
-            canEditStatus
-              ? "우선순위를 바꾸면 세션에 저장됩니다."
-              : "데모 세션에서는 변경이 저장되지 않습니다."
-          }
-        />
-        <SegmentedControl
-          ariaLabel="이슈 우선순위"
-          role="radiogroup"
-          value={issue.priority}
-          onChange={(priority) => onEditIssue(issue.id, { priority })}
-          options={PRIORITY_ORDER.map((p) => ({
-            id: p,
-            label: priorityLabels[p],
-            disabled: !canEditStatus,
-            title: canEditStatus ? undefined : "데모 세션에서는 저장되지 않습니다.",
-          }))}
-        />
-      </section>
+          <section className="review-detail-section">
+            <SectionHeader title="우선순위" hint="우선순위를 바꾸면 세션에 저장됩니다." />
+            <SegmentedControl
+              ariaLabel="이슈 우선순위"
+              role="radiogroup"
+              value={issue.priority}
+              onChange={(priority) => onEditIssue(issue.id, { priority })}
+              options={PRIORITY_ORDER.map((p) => ({
+                id: p,
+                label: priorityLabels[p],
+              }))}
+            />
+          </section>
 
-      <section className="review-detail-section">
-        <SectionHeader title="액션" />
-        <div className="review-detail-actions">
-          <Button
-            variant="secondary"
-            icon={Pencil}
-            disabled={!canEditText || isEditing}
-            title={
-              canEditText
-                ? "이슈 제목과 설명을 사용자 수정으로 저장합니다."
-                : "데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다."
-            }
-            onClick={() => setIsEditing(true)}
-          >
-            편집
-          </Button>
-          <Button
-            variant={existingNextAction ? "ghost" : "secondary"}
-            icon={ListPlus}
-            disabled={!canEditStatus}
-            title={
-              canEditStatus
-                ? existingNextAction
-                  ? "이미 이 이슈와 연결된 다음 액션이 있습니다."
-                  : "이 이슈를 연결된 다음 액션으로 추가합니다."
-                : "데모 또는 읽기 전용 세션에서는 다음 액션으로 승격할 수 없습니다."
-            }
-            onClick={() => onPromoteIssueToNextAction(issue.id)}
-          >
-            {existingNextAction ? "액션 보기" : "액션으로 승격"}
-          </Button>
-        </div>
-        {!canEditText ? (
-          <p className="review-detail-empty">
-            데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다.
-          </p>
-        ) : null}
-      </section>
+          <section className="review-detail-section">
+            <SectionHeader title="액션" />
+            <div className="review-detail-actions">
+              <Button
+                variant="secondary"
+                icon={Pencil}
+                disabled={!canEditText || isEditing}
+                title="이슈 제목과 설명을 사용자 수정으로 저장합니다."
+                onClick={() => setIsEditing(true)}
+              >
+                편집
+              </Button>
+              <Button
+                variant={existingNextAction ? "ghost" : "secondary"}
+                icon={ListPlus}
+                title={
+                  existingNextAction
+                    ? "이미 이 이슈와 연결된 다음 액션이 있습니다."
+                    : "이 이슈를 연결된 다음 액션으로 추가합니다."
+                }
+                onClick={() => onPromoteIssueToNextAction(issue.id)}
+              >
+                {existingNextAction ? "액션 보기" : "액션으로 승격"}
+              </Button>
+            </div>
+          </section>
+        </>
+      ) : null}
     </aside>
   );
 }
@@ -350,13 +321,11 @@ function DecisionDetail({
   return (
     <aside className="review-detail base-scroll" aria-label="결정 상세">
       <header className="review-detail-header">
-        <div className="review-detail-badges">
-          <Badge tone={decision.confirmed ? "green" : "orange"}>
-            {decision.confirmed ? "확정됨" : "미확정"}
-          </Badge>
-          <Badge tone={priorityTone(decision.importance)}>{priorityLabels[decision.importance]}</Badge>
-          {decision.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
-        </div>
+        {decision.editedByUser ? (
+          <div className="review-detail-badges">
+            <Badge tone="blue">사용자 수정됨</Badge>
+          </div>
+        ) : null}
         {isEditing ? (
           <InlineEditForm
             fields={[
@@ -438,73 +407,51 @@ function DecisionDetail({
         </section>
       ) : null}
 
-      <section className="review-detail-section">
-        <SectionHeader
-          title="중요도"
-          hint={
-            canEditConfirm
-              ? "중요도를 바꾸면 세션에 저장됩니다."
-              : "데모 세션에서는 변경이 저장되지 않습니다."
-          }
-        />
-        <SegmentedControl
-          ariaLabel="결정 중요도"
-          role="radiogroup"
-          value={decision.importance}
-          onChange={(importance) => onEditDecision(decision.id, { importance })}
-          options={PRIORITY_ORDER.map((p) => ({
-            id: p,
-            label: priorityLabels[p],
-            disabled: !canEditConfirm,
-            title: canEditConfirm ? undefined : "데모 세션에서는 저장되지 않습니다.",
-          }))}
-        />
-      </section>
+      {canEditConfirm ? (
+        <>
+          <section className="review-detail-section">
+            <SectionHeader title="중요도" hint="중요도를 바꾸면 세션에 저장됩니다." />
+            <SegmentedControl
+              ariaLabel="결정 중요도"
+              role="radiogroup"
+              value={decision.importance}
+              onChange={(importance) => onEditDecision(decision.id, { importance })}
+              options={PRIORITY_ORDER.map((p) => ({
+                id: p,
+                label: priorityLabels[p],
+              }))}
+            />
+          </section>
 
-      <section className="review-detail-section">
-        <SectionHeader
-          title="액션"
-          hint={
-            canEditConfirm
-              ? decision.confirmed
-                ? "확정된 결정입니다. 다시 검토가 필요하면 반려할 수 있습니다."
-                : "검토를 마쳤다면 이 결정을 확정 처리하세요."
-              : "데모 세션에서는 확정 상태가 저장되지 않습니다."
-          }
-        />
-        <div className="review-detail-actions">
-          <Button
-            variant={decision.confirmed ? "ghost" : "primary"}
-            disabled={!canEditConfirm}
-            title={
-              canEditConfirm
-                ? undefined
-                : "데모 세션에서는 확정 상태가 저장되지 않습니다."
-            }
-            onClick={() => onSetConfirmed(decision.id, !decision.confirmed)}
-          >
-            {decision.confirmed ? "확정 반려" : "확정 처리"}
-          </Button>
-          <Button
-            variant="secondary"
-            icon={Pencil}
-            disabled={!canEditText || isEditing}
-            title={
-              canEditText
-                ? "결정 제목, 내용, 이유를 사용자 수정으로 저장합니다."
-                : "데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다."
-            }
-            onClick={() => setIsEditing(true)}
-          >
-            편집
-          </Button>
-        </div>
-        {!canEditText ? (
-          <p className="review-detail-empty">
-            데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다.
-          </p>
-        ) : null}
-      </section>
+          <section className="review-detail-section">
+            <SectionHeader
+              title="액션"
+              hint={
+                decision.confirmed
+                  ? "확정된 결정입니다. 다시 검토가 필요하면 반려할 수 있습니다."
+                  : "검토를 마쳤다면 이 결정을 확정 처리하세요."
+              }
+            />
+            <div className="review-detail-actions">
+              <Button
+                variant={decision.confirmed ? "ghost" : "primary"}
+                onClick={() => onSetConfirmed(decision.id, !decision.confirmed)}
+              >
+                {decision.confirmed ? "확정 반려" : "확정 처리"}
+              </Button>
+              <Button
+                variant="secondary"
+                icon={Pencil}
+                disabled={!canEditText || isEditing}
+                title="결정 제목, 내용, 이유를 사용자 수정으로 저장합니다."
+                onClick={() => setIsEditing(true)}
+              >
+                편집
+              </Button>
+            </div>
+          </section>
+        </>
+      ) : null}
     </aside>
   );
 }
@@ -535,12 +482,11 @@ function NextActionDetail({
   return (
     <aside className="review-detail base-scroll" aria-label="다음 액션 상세">
       <header className="review-detail-header">
-        <div className="review-detail-badges">
-          <Badge tone={priorityTone(nextAction.priority)}>{priorityLabels[nextAction.priority]}</Badge>
-          <Badge tone="purple">다음 액션</Badge>
-          {completed ? <Badge tone="green">완료됨</Badge> : null}
-          {nextAction.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
-        </div>
+        {nextAction.editedByUser ? (
+          <div className="review-detail-badges">
+            <Badge tone="blue">사용자 수정됨</Badge>
+          </div>
+        ) : null}
         {isEditing ? (
           <InlineEditForm
             fields={[
@@ -600,73 +546,51 @@ function NextActionDetail({
         </ul>
       </section>
 
-      <section className="review-detail-section">
-        <SectionHeader
-          title="우선순위"
-          hint={
-            canEditCompletion
-              ? "우선순위를 바꾸면 세션에 저장됩니다."
-              : "데모 세션에서는 변경이 저장되지 않습니다."
-          }
-        />
-        <SegmentedControl
-          ariaLabel="다음 액션 우선순위"
-          role="radiogroup"
-          value={nextAction.priority}
-          onChange={(priority) => onEditNextAction(nextAction.id, { priority })}
-          options={PRIORITY_ORDER.map((p) => ({
-            id: p,
-            label: priorityLabels[p],
-            disabled: !canEditCompletion,
-            title: canEditCompletion ? undefined : "데모 세션에서는 저장되지 않습니다.",
-          }))}
-        />
-      </section>
+      {canEditCompletion ? (
+        <>
+          <section className="review-detail-section">
+            <SectionHeader title="우선순위" hint="우선순위를 바꾸면 세션에 저장됩니다." />
+            <SegmentedControl
+              ariaLabel="다음 액션 우선순위"
+              role="radiogroup"
+              value={nextAction.priority}
+              onChange={(priority) => onEditNextAction(nextAction.id, { priority })}
+              options={PRIORITY_ORDER.map((p) => ({
+                id: p,
+                label: priorityLabels[p],
+              }))}
+            />
+          </section>
 
-      <section className="review-detail-section">
-        <SectionHeader
-          title="액션"
-          hint={
-            canEditCompletion
-              ? completed
-                ? "완료한 다음 작업입니다. 다시 미완료로 되돌릴 수 있습니다."
-                : "이 다음 작업을 완료 처리하면 Resume 프롬프트에서 제외됩니다."
-              : "데모 세션에서는 변경이 저장되지 않습니다."
-          }
-        />
-        <div className="review-detail-actions">
-          <Button
-            variant={completed ? "ghost" : "primary"}
-            disabled={!canEditCompletion}
-            title={
-              canEditCompletion
-                ? undefined
-                : "데모 세션에서는 완료 상태가 저장되지 않습니다."
-            }
-            onClick={() => onToggleComplete(nextAction.id, !completed)}
-          >
-            {completed ? "다시 미완료로" : "완료 처리"}
-          </Button>
-          <Button
-            variant="secondary"
-            icon={Pencil}
-            disabled={!canEditText || isEditing}
-            title={
-              canEditText
-                ? "다음 액션 제목을 사용자 수정으로 저장합니다."
-                : "데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다."
-            }
-            onClick={() => setIsEditing(true)}
-          >
-            편집
-          </Button>
-        </div>
-        {!canEditText ? (
-          <p className="review-detail-empty">
-            데모 또는 읽기 전용 세션에서는 편집을 저장할 수 없습니다.
-          </p>
-        ) : null}
-      </section>
+          <section className="review-detail-section">
+            <SectionHeader
+              title="액션"
+              hint={
+                completed
+                  ? "완료한 다음 작업입니다. 다시 미완료로 되돌릴 수 있습니다."
+                  : "이 다음 작업을 완료 처리하면 Resume 프롬프트에서 제외됩니다."
+              }
+            />
+            <div className="review-detail-actions">
+              <Button
+                variant={completed ? "ghost" : "primary"}
+                onClick={() => onToggleComplete(nextAction.id, !completed)}
+              >
+                {completed ? "다시 미완료로" : "완료 처리"}
+              </Button>
+              <Button
+                variant="secondary"
+                icon={Pencil}
+                disabled={!canEditText || isEditing}
+                title="다음 액션 제목을 사용자 수정으로 저장합니다."
+                onClick={() => setIsEditing(true)}
+              >
+                편집
+              </Button>
+            </div>
+          </section>
+        </>
+      ) : null}
     </aside>
   );
 }

@@ -20,6 +20,8 @@ import type { SessionProjectGroup, SessionRow } from "../workspace/sessionsBrows
 
 export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 export const DAY_MS = 24 * 60 * 60 * 1000;
+const MONTH_MS = 30 * DAY_MS;
+const YEAR_MS = 365 * DAY_MS;
 
 export type ProjectStatus = {
   key: string;
@@ -43,6 +45,18 @@ export type DashboardTotals = ReturnType<typeof summarizeProjects>;
 export type DashboardStatus = ReturnType<typeof buildDashboardStatus>;
 export type SortKey = "recent" | "tokens" | "attention" | "activity";
 
+export type DashboardTimeRange = "week" | "month" | "year" | "all";
+
+export const DASHBOARD_TIME_RANGE_OPTIONS: readonly {
+  key: DashboardTimeRange;
+  label: string;
+}[] = [
+  { key: "week", label: "1주" },
+  { key: "month", label: "1개월" },
+  { key: "year", label: "1년" },
+  { key: "all", label: "전체" },
+];
+
 /** Which review category the dashboard is focused on, or "all" for none. */
 export type AttentionLens = "all" | "issues" | "decisions" | "next";
 /** A concrete review lens (never "all"), used by hover highlighting. */
@@ -60,11 +74,13 @@ export function buildProjectStatuses({
   storedSessions,
   repository,
   userProjects,
+  includeCreatedProjects = true,
 }: {
   groups: SessionProjectGroup[];
   storedSessions: StoredSessionSummary[];
   repository: DashboardRepository;
   userProjects: UserProject[];
+  includeCreatedProjects?: boolean;
 }): ProjectStatus[] {
   const byId = new Map(storedSessions.map((session) => [session.sessionId, session]));
   const now = Date.now();
@@ -118,25 +134,27 @@ export function buildProjectStatuses({
   const sessionProjectKeys = new Set(
     statuses.map((project) => project.sourceLabel).filter(Boolean),
   );
-  for (const project of userProjects) {
-    if (!project.created || sessionProjectKeys.has(project.key)) continue;
-    statuses.push({
-      key: `created:${project.key}`,
-      name: projectDisplayName(project.key, userProjects),
-      sourceLabel: project.key,
-      sessionCount: 0,
-      analyzedSessions: 0,
-      lastActiveIso: null,
-      eventCount: 0,
-      tokenTotal: 0,
-      openIssues: 0,
-      unconfirmedDecisions: 0,
-      pendingNextActions: 0,
-      attentionScore: 0,
-      coverageScore: 0,
-      activityScore: 0,
-      recentSessions: 0,
-    });
+  if (includeCreatedProjects) {
+    for (const project of userProjects) {
+      if (!project.created || sessionProjectKeys.has(project.key)) continue;
+      statuses.push({
+        key: `created:${project.key}`,
+        name: projectDisplayName(project.key, userProjects),
+        sourceLabel: project.key,
+        sessionCount: 0,
+        analyzedSessions: 0,
+        lastActiveIso: null,
+        eventCount: 0,
+        tokenTotal: 0,
+        openIssues: 0,
+        unconfirmedDecisions: 0,
+        pendingNextActions: 0,
+        attentionScore: 0,
+        coverageScore: 0,
+        activityScore: 0,
+        recentSessions: 0,
+      });
+    }
   }
 
   return statuses;
@@ -260,8 +278,8 @@ export function buildWeeklySeries(
   return buckets;
 }
 
-/** Activity trend range: a rolling 1-week / 1-month / 1-year window. */
-export type TrendRange = "week" | "month" | "year";
+/** Activity trend range: the same global dashboard time filter. */
+export type TrendRange = DashboardTimeRange;
 
 export type TrendPoint = {
   value: number;
@@ -280,7 +298,33 @@ const TREND_CONFIG: Record<TrendRange, { count: number; stepMs: number; unit: st
   week: { count: 7, stepMs: DAY_MS, unit: "일", endLabel: "오늘" },
   month: { count: 30, stepMs: DAY_MS, unit: "일", endLabel: "오늘" },
   year: { count: 12, stepMs: 30 * DAY_MS, unit: "개월", endLabel: "이번 달" },
+  all: { count: 12, stepMs: 30 * DAY_MS, unit: "개월", endLabel: "오늘" },
 };
+
+const RANGE_WINDOW_MS: Record<DashboardTimeRange, number | null> = {
+  week: WEEK_MS,
+  month: MONTH_MS,
+  year: YEAR_MS,
+  all: null,
+};
+
+export function dashboardRangeLabel(range: DashboardTimeRange): string {
+  return DASHBOARD_TIME_RANGE_OPTIONS.find((option) => option.key === range)?.label ?? range;
+}
+
+export function filterSessionsByDashboardRange(
+  sessions: StoredSessionSummary[],
+  range: DashboardTimeRange,
+  now: number = Date.now(),
+): StoredSessionSummary[] {
+  const windowMs = RANGE_WINDOW_MS[range];
+  if (windowMs === null) return sessions;
+  const start = now - windowMs;
+  return sessions.filter((session) => {
+    const epoch = sessionTimestamp(session);
+    return epoch !== null && epoch > start && epoch <= now;
+  });
+}
 
 /**
  * Session counts over a rolling window, oldest bucket first. The bucket unit
@@ -294,6 +338,9 @@ export function buildActivityTrend(
   range: TrendRange,
   now: number = Date.now(),
 ): ActivityTrend {
+  if (range === "all") {
+    return buildAllActivityTrend(sessions, now);
+  }
   const config = TREND_CONFIG[range];
   const buckets = new Array<number>(config.count).fill(0);
   for (const session of sessions) {
@@ -314,6 +361,59 @@ export function buildActivityTrend(
     };
   });
   return { points, startLabel: `${config.count}${config.unit} 전`, endLabel: config.endLabel };
+}
+
+function buildAllActivityTrend(
+  sessions: StoredSessionSummary[],
+  now: number,
+): ActivityTrend {
+  const epochs = sessions
+    .map(sessionTimestamp)
+    .filter((epoch): epoch is number => epoch !== null && epoch <= now);
+  if (epochs.length === 0) {
+    const config = TREND_CONFIG.all;
+    return {
+      points: Array.from({ length: config.count }, (_, index) => ({
+        value: 0,
+        label: index === config.count - 1 ? config.endLabel : `${config.count - 1 - index}${config.unit} 전`,
+        isCurrent: index === config.count - 1,
+      })),
+      startLabel: "전체",
+      endLabel: config.endLabel,
+    };
+  }
+
+  const count = TREND_CONFIG.all.count;
+  const first = Math.min(...epochs);
+  const span = Math.max(now - first, count * DAY_MS);
+  const start = now - span;
+  const stepMs = Math.max(span / count, DAY_MS);
+  const buckets = new Array<number>(count).fill(0);
+  for (const epoch of epochs) {
+    const index = Math.min(Math.floor((epoch - start) / stepMs), count - 1);
+    buckets[index] += 1;
+  }
+  const points: TrendPoint[] = buckets.map((value, index) => {
+    const bucketStart = start + stepMs * index;
+    return {
+      value,
+      label: index === count - 1 ? "오늘" : formatBucketDate(bucketStart),
+      isCurrent: index === count - 1,
+    };
+  });
+  return { points, startLabel: formatBucketDate(start), endLabel: "오늘" };
+}
+
+function sessionTimestamp(session: StoredSessionSummary): number | null {
+  const iso = session.savedAt ?? session.startedAt;
+  if (!iso) return null;
+  const epoch = new Date(iso).getTime();
+  return Number.isNaN(epoch) ? null : epoch;
+}
+
+function formatBucketDate(epoch: number): string {
+  const date = new Date(epoch);
+  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
 }
 
 export type KpiDelta = {

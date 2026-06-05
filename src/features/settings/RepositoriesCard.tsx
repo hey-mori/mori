@@ -58,7 +58,7 @@ export function RepositoriesCard({
 
   async function handlePick() {
     if (!desktopRuntime) {
-      setError("Native folder picker는 Tauri 데스크톱 앱에서만 사용할 수 있습니다.");
+      setError("폴더 선택은 데스크톱 앱에서만 사용할 수 있습니다.");
       return;
     }
     setError(null);
@@ -90,21 +90,29 @@ export function RepositoriesCard({
   return (
     <SettingsSection
       title="Git 리포지토리"
-      action={<span className="settings-soft-tag">{summary.total}개</span>}
+      action={
+        <span className="settings-soft-tag">
+          선택 사항 · {summary.total}개
+        </span>
+      }
     >
+      <p className="settings-repo-context">
+        AI 대화 세션을 가져오는 데 Git 연결은 필요하지 않습니다. 여기에 저장한 경로는 Git diff를 빠르게 가져오거나
+        기본 작업 폴더를 기억하는 데만 사용됩니다.
+      </p>
       <div className="settings-repo-add">
         <label>
           경로
           <input
-            placeholder={desktopRuntime ? "C:\\dev\\mori 또는 폴더 선택" : "C:\\dev\\mori"}
+            placeholder={desktopRuntime ? "예: C:\\dev\\mori 또는 폴더 선택" : "예: C:\\dev\\mori"}
             value={pathInput}
             onChange={(event) => setPathInput(event.target.value)}
           />
         </label>
         <label>
-          라벨 <small>(선택, 기본은 폴더명)</small>
+          라벨 <small>(선택, 기본값은 폴더명)</small>
           <input
-            placeholder="Mori"
+            placeholder={pathInput ? deriveLabelFromPath(pathInput) : "Mori"}
             value={labelInput}
             onChange={(event) => setLabelInput(event.target.value)}
           />
@@ -116,11 +124,11 @@ export function RepositoriesCard({
             disabled={!desktopRuntime || picking}
             title={
               desktopRuntime
-                ? "네이티브 폴더 선택 창 열기"
-                : "네이티브 선택 창은 Tauri 앱에서만 사용할 수 있습니다."
+                ? "폴더 선택 창 열기"
+                : "폴더 선택 창은 데스크톱 앱에서만 사용할 수 있습니다."
             }
           >
-            {picking ? "선택 중..." : "폴더 선택"}
+            {picking ? "선택 중" : "폴더 선택"}
           </Button>
           <Button variant="primary" icon={FolderPlus} onClick={handleAdd}>
             추가
@@ -130,7 +138,9 @@ export function RepositoriesCard({
       </div>
 
       {repositories.length === 0 ? (
-        <p className="settings-empty">저장된 Git 리포지토리가 없습니다.</p>
+        <p className="settings-empty">
+          저장된 Git 리포지토리가 없습니다. 필요할 때만 추가해도 됩니다.
+        </p>
       ) : (
         <ul className="settings-repo-list">
           {repositories.map((repo) => {
@@ -154,23 +164,23 @@ export function RepositoriesCard({
                     disabled={!desktopRuntime || isVerifying}
                     title={
                       desktopRuntime
-                        ? "이 경로에 git rev-parse / branch / status를 실행합니다."
-                        : "검증은 Tauri 데스크톱 앱에서만 가능합니다."
+                        ? "현재 경로에서 git rev-parse, branch, status를 확인합니다."
+                        : "검증은 데스크톱 앱에서만 가능합니다."
                     }
                   >
                     {isVerifying
-                      ? "검증 중..."
+                      ? "검증 중"
                       : repo.verification && repo.verification.status === "verified"
                         ? getRepositoryVerificationFreshness(repo.verification).isStale
                           ? "다시 검증"
-                          : "검증"
+                          : "검증됨"
                         : "검증"}
                   </Button>
                   {repo.verification && repo.verification.status !== "unverified" ? (
                     <Button
                       icon={RotateCcw}
                       onClick={() => onClearVerification(repo.id)}
-                      title="검증 메타데이터 지우기"
+                      title="검증 기록 지우기"
                       aria-label="검증 기록 지우기"
                     />
                   ) : null}
@@ -178,7 +188,7 @@ export function RepositoriesCard({
                     icon={Star}
                     onClick={() => onSelect(repo.id)}
                     disabled={isSelected}
-                    title="Git diff 캡처의 기본값으로 설정"
+                    title="Git diff 가져오기 화면의 기본 경로로 사용"
                   >
                     {isSelected ? "기본" : "기본으로"}
                   </Button>
@@ -214,7 +224,7 @@ function RepoVerificationBadge({
   }
   const freshness = getRepositoryVerificationFreshness(verification);
   const branch = verification.currentBranch ?? "detached";
-  const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "—";
+  const sha = verification.shortHeadCommit ?? verification.headCommit?.slice(0, 7) ?? "?";
   return (
     <span className="settings-repo-verify">
       <Badge tone={freshness.isStale ? "orange" : "green"}>

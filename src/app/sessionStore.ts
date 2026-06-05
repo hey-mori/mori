@@ -237,6 +237,16 @@ export type SessionState = {
   removeImport: (importId: string) => void;
   resetToDemo: () => void;
   /**
+   * Leave the bundled demo and create a real, empty local draft. This is the
+   * right target for "actual work" when there is nothing to import yet: the
+   * UI should become an empty work session, not keep showing demo data.
+   */
+  beginEmptySession: (input?: {
+    title?: string;
+    projectName?: string;
+    now?: string;
+  }) => StoredSessionDraft;
+  /**
    * Wipe all locally-persisted work data and return to the bundled demo
    * session. Unlike `resetToDemo` — which only drops the active draft and
    * leaves other saved sessions, accepted memories, and package drafts in
@@ -702,6 +712,38 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       source: "demo",
       pendingNewSession: null,
     });
+  },
+  beginEmptySession: (input) => {
+    const repository = getRepository();
+    const now = input?.now ?? new Date().toISOString();
+    const draft = createSessionDraft({
+      sessionTitle: input?.title ?? "새 Mori 작업",
+      projectName: input?.projectName ?? "내 작업",
+      selectedSources: [],
+      recordingMode: "summary",
+      llmProvider: "ollama",
+      llmModel: "llama3.1:8b",
+      storageLocation: "browser:localStorage",
+      now,
+      startedAt: now,
+      endedAt: now,
+      status: "recording",
+    });
+    const stored = repository.saveCurrentSessionDraft(draft);
+    set({
+      draft: stored,
+      demoSessionId: null,
+      imports: [],
+      analysis: null,
+      analysisStatus: "idle",
+      analysisError: null,
+      analysisProviderLabel: null,
+      analysisFallbackUsed: false,
+      initialized: true,
+      source: "browser-draft",
+      pendingNewSession: null,
+    });
+    return stored;
   },
   clearAllDataAndViewDemo: async () => {
     const repository = getRepository();

@@ -34,6 +34,9 @@ import {
   buildKpiDeltas,
   buildProjectStatuses,
   buildWeeklySeries,
+  DASHBOARD_TIME_RANGE_OPTIONS,
+  dashboardRangeLabel,
+  filterSessionsByDashboardRange,
   fraction,
   formatCount,
   summarizeProjects,
@@ -41,9 +44,9 @@ import {
   type ConcreteLens,
   type DashboardStatus,
   type DashboardTotals,
+  type DashboardTimeRange,
   type KpiDelta,
   type ProjectStatus,
-  type TrendRange,
 } from "../../lib/dashboard/dashboardModel";
 import { gatherSessionMetrics } from "../../lib/home/homeSessionMetrics";
 import {
@@ -81,12 +84,6 @@ import { DashboardInsights, type WorkFlowStage } from "./DashboardInsights";
  * `./charts`, so this file stays the composition + KPI/matrix presentation.
  */
 
-const RANGE_OPTIONS: { key: TrendRange; label: string }[] = [
-  { key: "week", label: "1주" },
-  { key: "month", label: "1개월" },
-  { key: "year", label: "1년" },
-];
-
 export function DashboardView() {
   const view = useSessionStore(selectSessionView);
   const mode = useSessionStore(selectSessionMode);
@@ -109,7 +106,7 @@ export function DashboardView() {
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const [query, setQuery] = useState("");
-  const [trendRange, setTrendRange] = useState<TrendRange>("month");
+  const [timeRange, setTimeRange] = useState<DashboardTimeRange>("month");
 
   // Click-driven filters: focus (a project) and lens (a review category), both
   // surfaced as clearable chips. The charts and the table stay independent on
@@ -125,6 +122,11 @@ export function DashboardView() {
     [repository],
   );
 
+  const rangedSessions = useMemo(
+    () => filterSessionsByDashboardRange(storedSessions, timeRange),
+    [storedSessions, timeRange],
+  );
+
   const browserModel = useMemo(
     () =>
       buildSessionsBrowserModel({
@@ -138,54 +140,63 @@ export function DashboardView() {
           isDemo: mode === "demo",
           isStored: Boolean(draft),
         },
-        storedSessions,
+        storedSessions: rangedSessions,
         filters: { query: "", origin: "all", sort: "recent" },
       }),
-    [activeSessionId, draft, mode, storedSessions, view],
+    [activeSessionId, draft, mode, rangedSessions, view],
   );
 
   const projects = useMemo(
     () =>
       buildProjectStatuses({
         groups: browserModel.groups,
-        storedSessions,
+        storedSessions: rangedSessions,
         repository,
         userProjects,
+        includeCreatedProjects: timeRange === "all",
       }),
-    [browserModel.groups, repository, storedSessions, userProjects],
+    [browserModel.groups, repository, rangedSessions, timeRange, userProjects],
   );
 
   const totals = useMemo(() => summarizeProjects(projects), [projects]);
   const status = useMemo(() => buildDashboardStatus(totals, projects), [projects, totals]);
+
+  useEffect(() => {
+    if (focusProjectKey && !projects.some((project) => project.key === focusProjectKey)) {
+      setFocusProjectKey(null);
+    }
+  }, [focusProjectKey, projects]);
+
   const trend = useMemo(
-    () => buildActivityTrend(storedSessions, trendRange),
-    [storedSessions, trendRange],
+    () => buildActivityTrend(rangedSessions, timeRange),
+    [rangedSessions, timeRange],
   );
-  const deltas = useMemo(() => buildKpiDeltas(storedSessions), [storedSessions]);
-  const sessionSpark = useMemo(() => buildWeeklySeries(storedSessions, 12, "sessions"), [storedSessions]);
-  const tokenSpark = useMemo(() => buildWeeklySeries(storedSessions, 12, "tokens"), [storedSessions]);
+  const deltas = useMemo(() => buildKpiDeltas(rangedSessions), [rangedSessions]);
+  const sessionSpark = useMemo(() => buildWeeklySeries(rangedSessions, 12, "sessions"), [rangedSessions]);
+  const tokenSpark = useMemo(() => buildWeeklySeries(rangedSessions, 12, "tokens"), [rangedSessions]);
+  const timeRangeLabel = useMemo(() => dashboardRangeLabel(timeRange), [timeRange]);
 
   // Memory-state distribution + capture→memory pipeline totals for the insight
   // cards. Reuses the home overview's honest per-session metric snapshots.
   const sessionMetrics = useMemo(
-    () => gatherSessionMetrics(storedSessions, repository),
-    [storedSessions, repository],
+    () => gatherSessionMetrics(rangedSessions, repository),
+    [rangedSessions, repository],
   );
   const memoryState = useMemo(
     () => buildHomeMemoryState(sessionMetrics),
     [sessionMetrics],
   );
   const flowStages = useMemo(
-    () => buildWorkFlowStages(storedSessions.length, sessionMetrics, memoryState.buckets),
-    [storedSessions.length, sessionMetrics, memoryState.buckets],
+    () => buildWorkFlowStages(rangedSessions.length, sessionMetrics, memoryState.buckets),
+    [rangedSessions.length, sessionMetrics, memoryState.buckets],
   );
   const lastActivityLabel = useMemo(() => {
-    const latest = storedSessions.reduce((max, session) => {
+    const latest = rangedSessions.reduce((max, session) => {
       const stamp = session.startedAt || session.savedAt || "";
       return stamp > max ? stamp : max;
     }, "");
-    return latest ? `최근 활동 ${formatRelative(latest)}` : null;
-  }, [storedSessions]);
+    return latest ? `${timeRangeLabel} · 최근 활동 ${formatRelative(latest)}` : timeRangeLabel;
+  }, [rangedSessions, timeRangeLabel]);
 
   const filteredProjects = useMemo(
     () =>
@@ -202,7 +213,7 @@ export function DashboardView() {
     ? projects.find((project) => project.key === focusProjectKey) ?? null
     : null;
 
-  const hasRealWork = browserModel.realSessionCount > 0 || projects.length > 0;
+  const hasRealWork = storedSessions.length > 0 || userProjects.some((project) => project.created);
 
   const toggleFocus = (key: string) =>
     setFocusProjectKey((current) => (current === key ? null : key));
@@ -225,6 +236,7 @@ export function DashboardView() {
               />
             </>
           }
+          end={<RangeToggle range={timeRange} onChange={setTimeRange} />}
         />
       }
     >
@@ -242,6 +254,7 @@ export function DashboardView() {
             deltas={deltas}
             sessionSpark={sessionSpark}
             tokenSpark={tokenSpark}
+            rangeLabel={timeRangeLabel}
           />
           <div className="dashboard-charts">
             <ChartCard
@@ -258,8 +271,7 @@ export function DashboardView() {
             </ChartCard>
             <ChartCard
               title="활동 추이"
-              hint="세션 저장·시작 시각으로 집계한 활동량입니다. 기간을 1주·1개월·1년으로 바꿀 수 있고, 막대에 마우스를 올리면 그 시점의 세션 수가 나타납니다."
-              action={<RangeToggle range={trendRange} onChange={setTrendRange} />}
+              hint="상단 기간 필터에 맞춰 세션 저장·시작 시각으로 집계한 활동량입니다. 막대에 마우스를 올리면 그 시점의 세션 수가 나타납니다."
             >
               <ActivityTrend trend={trend} tooltip={tooltip} />
             </ChartCard>
@@ -319,10 +331,16 @@ export function DashboardView() {
 
 // ─── Toolbar controls ─────────────────────────────────────────────────────────
 
-function RangeToggle({ range, onChange }: { range: TrendRange; onChange: (range: TrendRange) => void }) {
+function RangeToggle({
+  range,
+  onChange,
+}: {
+  range: DashboardTimeRange;
+  onChange: (range: DashboardTimeRange) => void;
+}) {
   return (
-    <div className="dashboard-sort dashboard-range" role="group" aria-label="활동 추이 기간">
-      {RANGE_OPTIONS.map((option) => (
+    <div className="dashboard-sort dashboard-range" role="group" aria-label="대시보드 기간">
+      {DASHBOARD_TIME_RANGE_OPTIONS.map((option) => (
         <button
           key={option.key}
           type="button"
@@ -397,12 +415,14 @@ function KpiDeck({
   deltas,
   sessionSpark,
   tokenSpark,
+  rangeLabel,
 }: {
   status: DashboardStatus;
   totals: DashboardTotals;
   deltas: ReturnType<typeof buildKpiDeltas>;
   sessionSpark: number[];
   tokenSpark: number[];
+  rangeLabel: string;
 }) {
   return (
     <section className="dashboard-kpis" aria-label="전체 요약">
@@ -432,7 +452,7 @@ function KpiDeck({
         value={String(status.attentionCount)}
         tone={status.attentionCount > 0 ? "warning" : "neutral"}
       />
-      <KpiTile icon={Clock3} label="최근 7일" value={String(status.recentSessions)} sub="세션" />
+      <KpiTile icon={Clock3} label="기간" value={rangeLabel} sub={`${totals.sessionCount} 세션`} />
     </section>
   );
 }

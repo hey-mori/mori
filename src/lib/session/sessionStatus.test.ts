@@ -34,6 +34,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   abandonPendingNewSessionIfEmpty: () => false,
   removeImport: () => {},
   resetToDemo: () => {},
+  beginEmptySession: () => ({} as never),
   clearAllDataAndViewDemo: async () => {},
   runQuickPass: async () => null,
   clearAnalysis: () => {},

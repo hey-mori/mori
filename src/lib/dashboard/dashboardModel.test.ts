@@ -8,6 +8,7 @@ import {
   buildKpiDeltas,
   buildSpotlight,
   buildWeeklySeries,
+  filterSessionsByDashboardRange,
   sortProjects,
   summarizeProjects,
   type ProjectStatus,
@@ -121,6 +122,48 @@ describe("buildActivityTrend", () => {
     expect(trend.points[9]).toMatchObject({ value: 1, label: "2개월 전" });
     expect(trend.points.reduce((sum, point) => sum + point.value, 0)).toBe(2);
     expect(trend.startLabel).toBe("12개월 전");
+  });
+
+  it("buckets all activity across the observed data span", () => {
+    const trend = buildActivityTrend(
+      [
+        session({ savedAt: iso(NOW - 300 * DAY) }),
+        session({ savedAt: iso(NOW - 100 * DAY) }),
+        session({ savedAt: iso(NOW) }),
+      ],
+      "all",
+      NOW,
+    );
+    expect(trend.points).toHaveLength(12);
+    expect(trend.points.reduce((sum, point) => sum + point.value, 0)).toBe(3);
+    expect(trend.points[11]).toMatchObject({ value: 1, label: "오늘", isCurrent: true });
+    expect(trend.startLabel).toMatch(/^\d+월 \d+일$/);
+    expect(trend.endLabel).toBe("오늘");
+  });
+});
+
+describe("filterSessionsByDashboardRange", () => {
+  it("keeps sessions inside the selected rolling window", () => {
+    const sessions = [
+      session({ savedAt: iso(NOW - 1 * DAY) }),
+      session({ savedAt: iso(NOW - 20 * DAY) }),
+      session({ savedAt: iso(NOW - 400 * DAY) }),
+    ];
+
+    expect(filterSessionsByDashboardRange(sessions, "week", NOW)).toHaveLength(1);
+    expect(filterSessionsByDashboardRange(sessions, "month", NOW)).toHaveLength(2);
+    expect(filterSessionsByDashboardRange(sessions, "year", NOW)).toHaveLength(2);
+    expect(filterSessionsByDashboardRange(sessions, "all", NOW)).toEqual(sessions);
+  });
+
+  it("drops future and invalid timestamps for bounded ranges", () => {
+    const sessions = [
+      session({ savedAt: iso(NOW + DAY) }),
+      session({ savedAt: "not-a-date" }),
+      session({ savedAt: iso(NOW - DAY) }),
+    ];
+
+    expect(filterSessionsByDashboardRange(sessions, "week", NOW)).toHaveLength(1);
   });
 });
 

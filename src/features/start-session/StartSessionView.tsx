@@ -7,6 +7,7 @@ import {
   Code2,
   Cpu,
   FilePlus2,
+  FolderGit2,
   History,
   Infinity,
   Lock,
@@ -25,7 +26,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { InspectorPanel } from "../../components/layout/InspectorPanel";
-import { ActionBar } from "../../components/layout/ActionBar";
 import { PageShell } from "../../components/layout/PageShell";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -56,6 +56,8 @@ import {
 } from "../../app/sessionStore";
 import { useReviewStore } from "../../app/reviewStore";
 import { useAppStore } from "../../app/store";
+import { useProjectStore } from "../../app/projectStore";
+import { projectDisplayName, type UserProject } from "../../lib/projects/userProjects";
 import {
   formatClaudeRelativeKo,
 } from "../../lib/claude/claudeTauri";
@@ -72,6 +74,7 @@ import {
   type AgentIconKey,
 } from "../../lib/agents/agentRegistry";
 import { DetectedConversationsModal } from "./DetectedConversationsModal";
+import { ProjectFormModal, type ProjectFormValues } from "../project/ProjectFormModal";
 
 /**
  * 새 세션 — create one session, the way you'd provision one real thing.
@@ -139,7 +142,6 @@ function toAgentOption(descriptor: AgentDescriptor): AgentOption {
 const AGENT_OPTIONS: AgentOption[] = AGENT_REGISTRY.map(toAgentOption);
 
 type ImportMethod = "records" | "paste" | "fresh";
-const NEW_PROJECT_VALUE = "__new__";
 
 type SelectOption = {
   value: string;
@@ -178,6 +180,10 @@ export function StartSessionView() {
   const startRecordsRequest = useAppStore((state) => state.startRecordsRequest);
   const startRecordsAgentId = useAppStore((state) => state.startRecordsAgentId);
   const clearStartRecordsRequest = useAppStore((state) => state.clearStartRecordsRequest);
+  const projectsInitialized = useProjectStore((state) => state.initialized);
+  const userProjects = useProjectStore((state) => state.projects);
+  const hydrateProjects = useProjectStore((state) => state.hydrate);
+  const createProject = useProjectStore((state) => state.createProject);
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [method, setMethod] = useState<ImportMethod | null>(null);
@@ -186,6 +192,12 @@ export function StartSessionView() {
   const [sessionTitle, setSessionTitle] = useState("");
   const [creating, setCreating] = useState(false);
   const [browseOpen, setBrowseOpen] = useState(false);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projectCreateInitialName, setProjectCreateInitialName] = useState("");
+
+  useEffect(() => {
+    if (!projectsInitialized) hydrateProjects();
+  }, [projectsInitialized, hydrateProjects]);
 
   const repository = useMemo(() => createBrowserDraftRepository(), []);
   const storageTarget = useMemo<SessionStorageTarget>(
@@ -204,19 +216,27 @@ export function StartSessionView() {
     [engineOptions, selectedEngineProvider],
   );
 
-  const existingProjects = useMemo(() => gatherExistingProjects(), []);
+  const existingProjects = useMemo(
+    () => gatherExistingProjects(userProjects),
+    [userProjects],
+  );
   const projectOptions = useMemo(
-    () => [
-      ...existingProjects.map((project) => ({ value: project, label: shortProjectLabel(project) })),
-      { value: NEW_PROJECT_VALUE, label: "+ 새 프로젝트" },
-    ],
-    [existingProjects],
+    () =>
+      existingProjects.map((project) => ({
+        value: project,
+        label: projectDisplayName(project, userProjects),
+      })),
+    [existingProjects, userProjects],
   );
   const [projectChoice, setProjectChoice] = useState<string>(
-    () => existingProjects[0] ?? NEW_PROJECT_VALUE,
+    () => existingProjects[0] ?? "",
   );
-  const [newProjectName, setNewProjectName] = useState("");
-  const projectName = projectChoice === NEW_PROJECT_VALUE ? newProjectName : projectChoice;
+  const projectName = projectChoice;
+
+  useEffect(() => {
+    if (projectChoice || existingProjects.length === 0) return;
+    setProjectChoice(existingProjects[0] ?? "");
+  }, [existingProjects, projectChoice]);
 
   const selectedAgent = AGENT_OPTIONS.find((agent) => agent.id === selectedAgentId) ?? null;
   const pastePlatform: AiTranscriptPlatform = selectedAgent?.platform ?? "claude";
@@ -226,6 +246,7 @@ export function StartSessionView() {
   const canCreate =
     Boolean(selectedAgent) &&
     Boolean(selectedEngine) &&
+    Boolean(projectName.trim()) &&
     ((method === "records" && Boolean(selectedDetected)) ||
       (method === "paste" && pasteText.trim().length > 0) ||
       method === "fresh");
@@ -237,14 +258,12 @@ export function StartSessionView() {
     setMethod(null);
     setSelectedDetected(null);
     setPasteText("");
-    setSessionTitle("");
   }
 
   function chooseMethod(next: ImportMethod) {
     setMethod((current) => (current === next ? null : next));
     setSelectedDetected(null);
     setPasteText("");
-    setSessionTitle("");
   }
 
   function pickDetected(meta: AgentWorkSessionMeta) {
@@ -261,9 +280,27 @@ export function StartSessionView() {
     } else if (existingProjects.includes(meta.projectName)) {
       setProjectChoice(meta.projectName);
     } else if (meta.projectName.trim()) {
-      setProjectChoice(NEW_PROJECT_VALUE);
-      setNewProjectName(meta.projectName.trim());
+      setProjectCreateInitialName(meta.projectName.trim());
+      setProjectModalOpen(true);
     }
+  }
+
+  function openNewProjectModal(initialName = "") {
+    setProjectCreateInitialName(initialName);
+    setProjectModalOpen(true);
+  }
+
+  function handleCreateProject(values: ProjectFormValues) {
+    const name = values.name.trim();
+    if (!name) return;
+    const key =
+      createProject({
+        key: name,
+        name,
+        description: values.description,
+      }) ?? name;
+    setProjectChoice(key);
+    setProjectModalOpen(false);
   }
 
   // Honour a 기록에서 불러오기 request routed from the 소스 hub: pre-select the
@@ -375,6 +412,8 @@ export function StartSessionView() {
       ? "AI 에이전트를 먼저 선택하세요."
       : !method
         ? "대화를 가져올 방법을 선택하세요."
+        : !projectName.trim()
+          ? "프로젝트를 선택하거나 새 프로젝트를 만드세요."
         : method === "records" && !selectedDetected
           ? "불러올 대화를 선택하세요."
           : method === "paste" && pasteText.trim().length === 0
@@ -386,7 +425,6 @@ export function StartSessionView() {
   return (
     <PageShell
       className="start-session-page"
-      actionBar={<ActionBar label="새 세션" />}
       aside={
         <SessionSummary
           agent={selectedAgent}
@@ -548,18 +586,25 @@ export function StartSessionView() {
       </FieldBlock>
 
       <FieldBlock number="4" title="세션 정보" subtitle="프로젝트와 이름을 정합니다.">
-        <div className="form-row">
-          <div className="form-field">
-            <span className="form-field-label">프로젝트</span>
-            <BaseSelect value={projectChoice} options={projectOptions} onChange={setProjectChoice} />
-            {projectChoice === NEW_PROJECT_VALUE ? (
-              <input
-                className="start-new-project-input"
-                value={newProjectName}
-                placeholder="새 프로젝트 이름"
-                onChange={(event) => setNewProjectName(event.target.value)}
+        <div className="session-info-fields">
+          <div className="session-project-line">
+            <div className="form-field">
+              <span className="form-field-label">프로젝트</span>
+              <BaseSelect
+                value={projectChoice}
+                options={projectOptions}
+                placeholder="프로젝트 선택"
+                onChange={setProjectChoice}
               />
-            ) : null}
+            </div>
+            <Button
+              variant="secondary"
+              icon={FolderGit2}
+              className="session-project-create"
+              onClick={() => openNewProjectModal()}
+            >
+              새 프로젝트
+            </Button>
           </div>
           <label>
             세션 이름
@@ -568,11 +613,8 @@ export function StartSessionView() {
               placeholder={
                 method === "records"
                   ? "대화 제목에서 자동 입력"
-                  : method
-                    ? "예: Mori 앱 기획"
-                    : "방법을 먼저 선택하세요"
+                  : "예: Mori 앱 기획"
               }
-              disabled={!method}
               onChange={(event) => setSessionTitle(event.target.value)}
             />
           </label>
@@ -587,6 +629,14 @@ export function StartSessionView() {
           initialSelectedFilePath={selectedDetected?.filePath ?? null}
           onPick={pickDetected}
           onClose={() => setBrowseOpen(false)}
+        />
+      ) : null}
+      {projectModalOpen ? (
+        <ProjectFormModal
+          mode="create"
+          initialName={projectCreateInitialName}
+          onSubmit={handleCreateProject}
+          onClose={() => setProjectModalOpen(false)}
         />
       ) : null}
     </PageShell>
@@ -679,10 +729,12 @@ function PickTile({
 function BaseSelect({
   value,
   options,
+  placeholder = "선택",
   onChange,
 }: {
   value: string;
   options: SelectOption[];
+  placeholder?: string;
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -757,7 +809,7 @@ function BaseSelect({
         onClick={() => setOpen((prev) => !prev)}
         onKeyDown={onTriggerKeyDown}
       >
-        <span>{current?.label ?? "선택"}</span>
+        <span>{current?.label ?? placeholder}</span>
         <ChevronDown size={15} aria-hidden="true" />
       </button>
       {open ? (
@@ -813,7 +865,7 @@ function SessionSummary({
       footer={
         <div className="start-summary-footer">
           <Lock size={15} aria-hidden="true" />
-          <span>요약·메타데이터만 로컬에 저장하고, Cloud API는 켤 때만 사용합니다.</span>
+          <span>세션 기록은 이 기기에 보관합니다. 온라인 분석은 사용자가 연결한 경우에만 사용합니다.</span>
         </div>
       }
     >
@@ -821,7 +873,7 @@ function SessionSummary({
       <SummaryRow label="에이전트" value={agent?.name ?? "미선택"} muted={!agent} />
       <SummaryRow label="가져오기 방식" value={methodLabel(method)} muted={!method} />
       <SummaryRow label="세션 이름" value={sessionName} />
-      <SummaryRow label="프로젝트" value={projectName || "무제 프로젝트"} />
+      <SummaryRow label="프로젝트" value={projectName || "프로젝트 선택 필요"} muted={!projectName} />
       <hr />
       <SummarySectionTitle>분석 및 보관</SummarySectionTitle>
       <SummaryRow
@@ -864,10 +916,16 @@ function engineSummaryLabel(engine: StartSessionEngineOption): string {
   return engine.model ? `${engine.label} (${engine.model})` : engine.label;
 }
 
-/** Distinct existing project labels, derived from stored + demo sessions. */
-function gatherExistingProjects(): string[] {
+/** Distinct existing project keys, derived from stored/demo sessions + user-created projects. */
+function gatherExistingProjects(userProjects: UserProject[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
+  for (const project of userProjects) {
+    const key = project.key.trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(key);
+  }
   for (const summary of safeListSessions()) {
     const label = (summary.sourceLabel ?? "").trim();
     if (!label || seen.has(label)) continue;

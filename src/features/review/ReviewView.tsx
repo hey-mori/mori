@@ -1,12 +1,9 @@
 import {
   Check,
   CheckCircle2,
-  CircleDashed,
-  CircleDot,
   Eye,
   FileText,
   Filter,
-  Loader2,
   RotateCcw,
   Sparkles,
   Square,
@@ -33,7 +30,6 @@ import {
   splitNextActionsByCompletion,
 } from "../../lib/session/nextActionCompletion";
 import {
-  issueStatusTone,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
@@ -155,15 +151,6 @@ export function ReviewView() {
   const sortedIssues = useMemo(() => sortIssues(visibleIssues), [visibleIssues]);
   const sortedDecisions = useMemo(() => sortDecisions(visibleDecisions), [visibleDecisions]);
   const sortedNextActions = useMemo(() => sortNextActions(visibleNextActions), [visibleNextActions]);
-  const pendingActionCount = useMemo(
-    () => view.nextActions.filter((action) => !isNextActionCompleted(action)).length,
-    [view.nextActions],
-  );
-  const openIssueCount = useMemo(
-    () => view.issues.filter((issue) => issue.status === "open" || issue.status === "inProgress").length,
-    [view.issues],
-  );
-
   function handleShowTimeline(eventId: string) {
     setSelectedEventId(eventId);
     setCurrentView("timeline");
@@ -246,9 +233,6 @@ export function ReviewView() {
   const showDecisionColumn = !filterColumnsActive || activeColumns.includes("decision");
   const showActionColumn = !filterColumnsActive || activeColumns.includes("nextAction");
   const canWrite = !isDemo;
-  const issueProgress = `열림 ${openIssueCount} · 해결 ${view.issues.filter((i) => i.status === "resolved").length}`;
-  const decisionProgress = `확정 ${view.decisions.filter((d) => d.confirmed).length} / ${view.decisions.length}`;
-  const actionProgress = `완료 ${view.nextActions.length - pendingActionCount} / ${view.nextActions.length}`;
   const board = (
     <section className="review-issue-board">
       <div className="review-issue-board-columns review-board-columns">
@@ -257,7 +241,6 @@ export function ReviewView() {
             label="이슈"
             tone="orange"
             count={view.issues.length}
-            progress={view.issues.length > 0 ? issueProgress : undefined}
           >
             {sortedIssues.length === 0 ? (
               <ColumnEmpty label="이슈 없음" />
@@ -281,7 +264,6 @@ export function ReviewView() {
             label="결정"
             tone="blue"
             count={view.decisions.length}
-            progress={view.decisions.length > 0 ? decisionProgress : undefined}
           >
             {sortedDecisions.length === 0 ? (
               <ColumnEmpty label="결정 없음" />
@@ -308,7 +290,6 @@ export function ReviewView() {
             label="다음 액션"
             tone="green"
             count={view.nextActions.length}
-            progress={view.nextActions.length > 0 ? actionProgress : undefined}
           >
             {sortedNextActions.length === 0 ? (
               <ColumnEmpty label="다음 액션 없음" />
@@ -579,9 +560,9 @@ function ColumnEmpty({ label }: { label: string }) {
 /**
  * Calm card primitive shared by 이슈 / 결정 / 다음 액션. Layout:
  *   ┌─────────────────────────────────────────┐
- *   │ ● 제목 (leading status glyph + title) ⚐ │
+ *   │ 제목                              높음 │
  *   │ 요약 두 줄까지                          │
- *   │ [상태 칩]   근거 N · 연결 M             │
+ *   │ 근거 N                                  │
  *   └─────────────────────────────────────────┘
  *
  * The kicker label ("검토 이슈" / "결정 후보" / "다음 작업") is removed —
@@ -594,7 +575,6 @@ function ReviewBoardCard({
   title,
   subtitle,
   leading,
-  stateChip,
   metaText,
   priority,
   edited,
@@ -605,8 +585,7 @@ function ReviewBoardCard({
 }: {
   title: string;
   subtitle?: string;
-  leading: ReactNode;
-  stateChip: ReactNode;
+  leading?: ReactNode;
   metaText?: string;
   priority?: Priority;
   edited?: boolean;
@@ -633,9 +612,11 @@ function ReviewBoardCard({
         onClick={onSelect}
       >
         <div className="review-card-head-row">
-          <span className="review-card-leading" aria-hidden="true">
-            {leading}
-          </span>
+          {leading ? (
+            <span className="review-card-leading" aria-hidden="true">
+              {leading}
+            </span>
+          ) : null}
           <span className="review-card-title">{title}</span>
           {priority === "high" ? (
             <span className="review-card-priority-flag" aria-label="우선 높음" title="우선 높음">
@@ -647,10 +628,11 @@ function ReviewBoardCard({
           ) : null}
         </div>
         {subtitle ? <p className="review-card-summary">{subtitle}</p> : null}
-        <footer className="review-card-meta-row">
-          {stateChip}
-          {metaText ? <span className="review-card-meta-text">{metaText}</span> : null}
-        </footer>
+        {metaText ? (
+          <footer className="review-card-meta-row">
+            <span className="review-card-meta-text">{metaText}</span>
+          </footer>
+        ) : null}
       </button>
       {quickActions ? (
         <div className="review-card-quick-actions" role="group" aria-label="빠른 작업">
@@ -661,36 +643,14 @@ function ReviewBoardCard({
   );
 }
 
-function IssueStatusGlyph({ status }: { status: IssueStatus }) {
-  switch (status) {
-    case "resolved":
-      return <CheckCircle2 size={14} className="status-glyph status-resolved" />;
-    case "inProgress":
-      return <Loader2 size={14} className="status-glyph status-inProgress" />;
-    case "watching":
-      return <Eye size={14} className="status-glyph status-watching" />;
-    case "open":
-    default:
-      return <CircleDot size={14} className="status-glyph status-open" />;
-  }
-}
-
 function buildIssueMeta(issue: Issue): string | undefined {
   const evidence = issue.sourceEventIds?.length ?? 0;
-  const linked = (issue.relatedDecisionIds?.length ?? 0) + (issue.relatedFileIds?.length ?? 0);
-  const parts: string[] = [];
-  if (evidence > 0) parts.push(`근거 ${evidence}`);
-  if (linked > 0) parts.push(`연결 ${linked}`);
-  return parts.length > 0 ? parts.join(" · ") : undefined;
+  return evidence > 0 ? `근거 ${evidence}` : undefined;
 }
 
 function buildDecisionMeta(decision: Decision): string | undefined {
   const evidence = decision.sourceEventIds?.length ?? 0;
-  const impact = decision.impact?.length ?? 0;
-  const parts: string[] = [];
-  if (evidence > 0) parts.push(`근거 ${evidence}`);
-  if (impact > 0) parts.push(`영향 ${impact}`);
-  return parts.length > 0 ? parts.join(" · ") : undefined;
+  return evidence > 0 ? `근거 ${evidence}` : undefined;
 }
 
 function buildActionMeta(action: NextAction): string | undefined {
@@ -718,15 +678,6 @@ function IssueBoardCard({
   onSelect: () => void;
   onSetStatus: (status: IssueStatus) => void;
 }) {
-  // "open" is the column's default state — the leading status glyph already
-  // says so, and the column header carries the count. Skip the chip for
-  // default state so each card only flags genuinely informative transitions
-  // (진행 · 관찰 · 해결).
-  const stateChip = issue.status === "open" ? null : (
-    <span className={`review-card-state tone-${issueStatusTone(issue.status)}`}>
-      {ISSUE_STATUS_CARD_LABELS[issue.status]}
-    </span>
-  );
   const isResolved = issue.status === "resolved";
   const quickActions = canWrite ? (
     isResolved ? (
@@ -768,8 +719,6 @@ function IssueBoardCard({
     <ReviewBoardCard
       title={issue.title}
       subtitle={issue.description}
-      leading={<IssueStatusGlyph status={issue.status} />}
-      stateChip={stateChip}
       metaText={buildIssueMeta(issue)}
       priority={issue.priority}
       edited={issue.editedByUser}
@@ -794,11 +743,6 @@ function DecisionBoardCard({
   onSelect: () => void;
   onSetConfirmed: (confirmed: boolean) => void;
 }) {
-  // Unconfirmed is the column default ("확정 0/N"). Only flag the confirmed
-  // transition so the chip carries new information.
-  const stateChip = decision.confirmed ? (
-    <span className="review-card-state tone-green">확정</span>
-  ) : null;
   const quickActions = canWrite ? (
     decision.confirmed ? (
       <button
@@ -826,14 +770,6 @@ function DecisionBoardCard({
     <ReviewBoardCard
       title={decision.title}
       subtitle={decision.decision}
-      leading={
-        decision.confirmed ? (
-          <CheckCircle2 size={14} className="status-glyph status-confirmed" />
-        ) : (
-          <CircleDashed size={14} className="status-glyph status-pending" />
-        )
-      }
-      stateChip={stateChip}
       metaText={buildDecisionMeta(decision)}
       priority={decision.importance}
       edited={decision.editedByUser}
@@ -859,11 +795,6 @@ function NextActionBoardCard({
   onSetCompletion: (completed: boolean) => void;
 }) {
   const done = isNextActionCompleted(action);
-  // 할 일 is the column default ("완료 0/N"). Only flag the completed state so
-  // the chip is a transition signal, not noise.
-  const stateChip = done ? (
-    <span className="review-card-state tone-green">완료</span>
-  ) : null;
   // The leading affordance for a next action is the checkbox itself — clicking
   // it toggles completion without opening the inspector.
   const leading = canWrite ? (
@@ -907,7 +838,6 @@ function NextActionBoardCard({
     <ReviewBoardCard
       title={action.title}
       leading={leading}
-      stateChip={stateChip}
       metaText={buildActionMeta(action)}
       priority={action.priority}
       edited={action.editedByUser}
@@ -928,13 +858,6 @@ const ISSUE_STATUS_RANK: Record<IssueStatus, number> = {
   resolved: 3,
 };
 const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
-const ISSUE_STATUS_CARD_LABELS: Record<IssueStatus, string> = {
-  open: "열림",
-  inProgress: "진행",
-  resolved: "해결",
-  watching: "관찰",
-};
-
 function isSameReviewSelection(a: ReviewSelection, b: ReviewSelection): boolean {
   if (a.kind !== b.kind) return false;
   if (a.kind === "issue" && b.kind === "issue") return a.issueId === b.issueId;

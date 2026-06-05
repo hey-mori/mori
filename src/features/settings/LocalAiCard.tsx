@@ -6,10 +6,11 @@ import {
   FlaskConical,
   Plug,
   RefreshCw,
-  ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BaseSelect, type BaseSelectOption } from "../../components/ui/BaseSelect";
+import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import {
   checkQuickPassCapability,
@@ -24,53 +25,13 @@ import type {
   QuickPassProviderKind,
 } from "../../lib/analysis";
 import { formatRelativeKo } from "../../lib/home/homeOverview";
-import { getProviderRows, type ProviderRow as ProviderRowModel } from "../../lib/settings/settingsStatus";
 import {
   PreferenceToggle,
   SettingsSection,
-  StatusPill,
 } from "./SettingsPrimitives";
 
-const ICONS: Record<string, typeof Bot> = {
-  deterministic: Sparkles,
-  ollama: Bot,
-  lmStudio: Database,
-  openAiCompatible: Code2,
-  toolNativeApi: Plug,
-  cloudApi: Cloud,
-};
-
-const PROVIDER_COPY: Record<QuickPassProviderKind, { label: string; summary: string }> = {
-  deterministic: {
-    label: "규칙 기반",
-    summary: "모델 없이 기기에서 즉시 정리",
-  },
-  ollama: {
-    label: "Ollama",
-    summary: "로컬 LLM으로 더 깊게 분석",
-  },
-  openAiCompatible: {
-    label: "OpenAI 호환",
-    summary: "LM Studio·vLLM 등 호환 API 연결",
-  },
-};
-
-const PLANNED_COPY: Record<string, { label: string; summary: string }> = {
-  lmStudio: {
-    label: "LM Studio",
-    summary: "전용 LM Studio 연결. 지금은 OpenAI 호환으로 연결할 수 있습니다.",
-  },
-  toolNativeApi: {
-    label: "Claude · Codex · OpenCode",
-    summary: "도구 계정을 분석 제공자로 직접 연결합니다.",
-  },
-  cloudApi: {
-    label: "Cloud API",
-    summary: "Anthropic·OpenAI 등 외부 API. 명시적 동의 후에만 사용합니다.",
-  },
-};
-
-type ModelOption = { value: string; label: string };
+type EngineChoice = QuickPassProviderKind | "lmStudio" | "cloudApi";
+type ModelOption = { id: string; label: string; description?: string };
 
 type ProbeState =
   | { status: "idle" }
@@ -89,6 +50,39 @@ type CapabilityState =
   | { status: "running"; kind: QuickPassProviderKind }
   | { status: "done"; kind: QuickPassProviderKind; report: QuickPassCapabilityReport };
 
+const ENGINE_OPTIONS: Array<BaseSelectOption<EngineChoice>> = [
+  {
+    id: "deterministic",
+    label: "규칙 기반",
+    description: "모델 없이 즉시 정리",
+    icon: Sparkles,
+  },
+  {
+    id: "ollama",
+    label: "Ollama",
+    description: "로컬 LLM 엔드포인트",
+    icon: Bot,
+  },
+  {
+    id: "lmStudio",
+    label: "LM Studio",
+    description: "OpenAI 호환 로컬 서버",
+    icon: Database,
+  },
+  {
+    id: "openAiCompatible",
+    label: "OpenAI 호환",
+    description: "vLLM, LocalAI, 사용자 서버",
+    icon: Code2,
+  },
+  {
+    id: "cloudApi",
+    label: "Cloud API",
+    description: "OpenAI 호환 외부 API",
+    icon: Cloud,
+  },
+];
+
 export function LocalAiCard({
   settings,
   runHistory,
@@ -100,24 +94,35 @@ export function LocalAiCard({
   onProviderChange: (kind: QuickPassProviderKind) => void;
   onUpdateSettings: (patch: Partial<QuickPassAnalysisSettings>) => void;
 }) {
-  const rows = getProviderRows(settings);
-  const selectableRows = rows.filter((row): row is ProviderRowModel & { id: QuickPassProviderKind } =>
-    row.status === "implemented" &&
-    (row.id === "deterministic" || row.id === "ollama" || row.id === "openAiCompatible"),
-  );
-  const plannedRows = rows.filter((row) => row.status !== "implemented");
-  const activeRow = selectableRows.find((row) => row.id === settings.provider) ?? selectableRows[0];
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
   const [capability, setCapability] = useState<CapabilityState>({ status: "idle" });
+  const activeChoice = useMemo(() => inferEngineChoice(settings), [settings]);
+  const providerKind = toProviderKind(activeChoice);
 
-  function selectProvider(kind: QuickPassProviderKind) {
-    onProviderChange(kind);
+  function selectEngine(choice: EngineChoice) {
     setProbe({ status: "idle" });
     setCapability({ status: "idle" });
+    if (choice === "lmStudio") {
+      onUpdateSettings({
+        provider: "openAiCompatible",
+        openAiBaseUrl: "http://localhost:1234/v1",
+        openAiModel: settings.openAiModel === "local-model" ? "lm-studio" : settings.openAiModel,
+      });
+      return;
+    }
+    if (choice === "cloudApi") {
+      onUpdateSettings({
+        provider: "openAiCompatible",
+        openAiBaseUrl: "https://api.openai.com/v1",
+        openAiModel: settings.openAiModel === "local-model" ? "gpt-4.1-mini" : settings.openAiModel,
+      });
+      return;
+    }
+    onProviderChange(choice);
   }
 
   const handleProbe = useCallback(
-    async (kind: QuickPassProviderKind) => {
+    async (kind: QuickPassProviderKind = providerKind) => {
       if (kind === "deterministic") return;
       setProbe({ status: "checking", kind });
       if (kind === "openAiCompatible") {
@@ -150,6 +155,7 @@ export function LocalAiCard({
       );
     },
     [
+      providerKind,
       settings.openAiBaseUrl,
       settings.openAiApiKey,
       settings.openAiTimeoutMs,
@@ -158,119 +164,90 @@ export function LocalAiCard({
     ],
   );
 
-  // Auto-detect installed models for endpoint-backed engines so the user picks
-  // from a list instead of typing a model name blind. Debounced so editing the
-  // endpoint does not fire a request on every keystroke.
   useEffect(() => {
-    if (settings.provider === "deterministic") return;
+    if (providerKind === "deterministic") return;
     const handle = setTimeout(() => {
-      void handleProbe(settings.provider);
+      void handleProbe(providerKind);
     }, 600);
     return () => clearTimeout(handle);
-  }, [settings.provider, handleProbe]);
+  }, [providerKind, handleProbe]);
 
-  async function handleCapabilityTest(kind: QuickPassProviderKind) {
-    if (kind === "deterministic") return;
-    setCapability({ status: "running", kind });
+  async function handleCapabilityTest() {
+    if (providerKind === "deterministic") return;
+    setCapability({ status: "running", kind: providerKind });
     const report = await checkQuickPassCapability(settings);
-    setCapability({ status: "done", kind, report });
+    setCapability({ status: "done", kind: providerKind, report });
   }
 
   return (
     <SettingsSection title="분석 엔진">
-      {/* 설정 영역 — 엔진 선택과 연결 설정. 선택 타일은 '세션 추가' 흐름의
-          pick-tile 스타일을 그대로 재사용해 앱 전체에서 일관되게 보입니다. */}
       <div className="settings-ai-layout">
-        <div className="pick-grid" role="radiogroup" aria-label="분석 엔진">
-          {selectableRows.map((row) => (
-            <ProviderTile
-              key={row.id}
-              row={row}
-              selected={row.id === settings.provider}
-              onSelect={() => selectProvider(row.id)}
+        <div className="settings-ai-engine-row">
+          <label className="settings-ai-engine-select">
+            <span>엔진</span>
+            <BaseSelect
+              value={activeChoice}
+              options={ENGINE_OPTIONS}
+              onChange={selectEngine}
+              label="분석 엔진 선택"
+              popoverWidth="trigger"
             />
-          ))}
+          </label>
+          <EngineSummary choice={activeChoice} />
         </div>
 
         <EngineConfigPanel
-          row={activeRow}
+          choice={activeChoice}
+          providerKind={providerKind}
           settings={settings}
           probe={probe}
           capability={capability}
-          onProbe={() => handleProbe(settings.provider)}
-          onCapabilityTest={() => handleCapabilityTest(settings.provider)}
+          onProbe={() => handleProbe(providerKind)}
+          onCapabilityTest={handleCapabilityTest}
           onUpdateSettings={onUpdateSettings}
         />
       </div>
 
-      {/* 정보 영역 — 최근 실행 이력 */}
       <RecentRunsPanel runHistory={runHistory} />
-
-      {plannedRows.length > 0 ? (
-        <details className="settings-ai-planned">
-          <summary>
-            <span>향후 지원 엔진</span>
-            <small>{plannedRows.length}개</small>
-          </summary>
-          <table className="settings-ai-planned-table">
-            <tbody>
-              {plannedRows.map((row) => {
-                const Icon = ICONS[row.id] ?? Bot;
-                const copy = PLANNED_COPY[row.id];
-                return (
-                  <tr key={row.id}>
-                    <th scope="row">
-                      <Icon size={14} aria-hidden="true" />
-                      {copy?.label ?? row.label}
-                    </th>
-                    <td>{copy?.summary ?? row.description}</td>
-                    <td>
-                      <StatusPill tone="gray">예정</StatusPill>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </details>
-      ) : null}
+      <EngineSourceNote />
     </SettingsSection>
   );
 }
 
-function ProviderTile({
-  row,
-  selected,
-  onSelect,
-}: {
-  row: ProviderRowModel & { id: QuickPassProviderKind };
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  const Icon = ICONS[row.id] ?? Bot;
-  const copy = PROVIDER_COPY[row.id];
+function EngineSummary({ choice }: { choice: EngineChoice }) {
+  const copy = {
+    deterministic: {
+      tone: "gray",
+      text: "기기 안에서만 동작합니다. 빠르지만 깊은 추론은 제한적입니다.",
+    },
+    ollama: {
+      tone: "green",
+      text: "사용자가 실행 중인 로컬 Ollama 서버로만 요청을 보냅니다.",
+    },
+    lmStudio: {
+      tone: "green",
+      text: "LM Studio의 로컬 OpenAI 호환 서버를 사용합니다.",
+    },
+    openAiCompatible: {
+      tone: "blue",
+      text: "입력한 base URL로만 요청합니다. 로컬 또는 사설 서버에 맞습니다.",
+    },
+    cloudApi: {
+      tone: "orange",
+      text: "외부 API로 데이터가 전송될 수 있으므로 API 키와 URL을 직접 확인하세요.",
+    },
+  }[choice];
   return (
-    <button
-      type="button"
-      className={`pick-tile${selected ? " is-selected" : ""}`}
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-    >
-      <span className="pick-tile-icon" aria-hidden="true">
-        <Icon size={18} />
-      </span>
-      <span className="pick-tile-body">
-        <strong>{copy.label}</strong>
-        <span>{copy.summary}</span>
-      </span>
-      <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
-    </button>
+    <p className="settings-ai-engine-summary">
+      <Badge tone={copy.tone}>{choice === "deterministic" ? "기본" : "실행 가능"}</Badge>
+      <span>{copy.text}</span>
+    </p>
   );
 }
 
 function EngineConfigPanel({
-  row,
+  choice,
+  providerKind,
   settings,
   probe,
   capability,
@@ -278,7 +255,8 @@ function EngineConfigPanel({
   onCapabilityTest,
   onUpdateSettings,
 }: {
-  row?: ProviderRowModel & { id: QuickPassProviderKind };
+  choice: EngineChoice;
+  providerKind: QuickPassProviderKind;
   settings: QuickPassAnalysisSettings;
   probe: ProbeState;
   capability: CapabilityState;
@@ -286,32 +264,32 @@ function EngineConfigPanel({
   onCapabilityTest: () => void;
   onUpdateSettings: (patch: Partial<QuickPassAnalysisSettings>) => void;
 }) {
-  if (!row) return null;
-  const copy = PROVIDER_COPY[row.id];
-  const probing = probe.status === "checking" && probe.kind === row.id;
-  const testing = capability.status === "running" && capability.kind === row.id;
-  const canTest = row.id !== "deterministic";
-  const detected = probe.status === "ok" && probe.kind === row.id ? probe : null;
+  const probing = probe.status === "checking" && probe.kind === providerKind;
+  const testing = capability.status === "running" && capability.kind === providerKind;
+  const detected = probe.status === "ok" && probe.kind === providerKind ? probe : null;
   const detectedModels: ModelOption[] = detected
     ? detected.modelInfo && detected.modelInfo.length
-      ? detected.modelInfo.map((info) => ({ value: info.name, label: formatModelLabel(info) }))
-      : detected.models.map((name) => ({ value: name, label: name }))
+      ? detected.modelInfo.map((info) => ({
+          id: info.name,
+          label: info.name,
+          description: formatModelDetail(info),
+        }))
+      : detected.models.map((name) => ({ id: name, label: name }))
     : [];
 
-  if (row.id === "deterministic") {
+  if (providerKind === "deterministic") {
     return (
-      <section className="settings-ai-config-panel" aria-label={`${copy.label} 설정`}>
-        <div className="settings-ai-empty-config">
-          <ShieldCheck size={15} aria-hidden="true" />
-          <span>추가 설정 없이 이 기기 안에서 실행됩니다.</span>
-        </div>
+      <section className="settings-ai-config-panel" aria-label="규칙 기반 설정">
+        <p className="settings-ai-empty-config">
+          규칙 기반 엔진은 endpoint, 모델, API 키가 없습니다. 필요할 때 즉시 Quick Pass를 실행합니다.
+        </p>
       </section>
     );
   }
 
   return (
-    <section className="settings-ai-config-panel" aria-label={`${copy.label} 설정`}>
-      {row.id === "ollama" ? (
+    <section className="settings-ai-config-panel" aria-label="분석 엔진 설정">
+      {providerKind === "ollama" ? (
         <div className="settings-ai-field-grid">
           <ProviderField
             label="엔드포인트"
@@ -329,14 +307,12 @@ function EngineConfigPanel({
             onRefresh={onProbe}
           />
         </div>
-      ) : null}
-
-      {row.id === "openAiCompatible" ? (
+      ) : (
         <div className="settings-ai-field-grid">
           <ProviderField
-            label="엔드포인트"
+            label="Base URL"
             value={settings.openAiBaseUrl}
-            placeholder="http://localhost:1234/v1"
+            placeholder={choice === "cloudApi" ? "https://api.openai.com/v1" : "http://localhost:1234/v1"}
             onChange={(value) => onUpdateSettings({ openAiBaseUrl: value })}
           />
           <ModelField
@@ -344,7 +320,7 @@ function EngineConfigPanel({
             value={settings.openAiModel}
             models={detectedModels}
             detecting={probing}
-            placeholder="local-model"
+            placeholder={choice === "cloudApi" ? "gpt-4.1-mini" : "local-model"}
             onChange={(value) => onUpdateSettings({ openAiModel: value })}
             onRefresh={onProbe}
           />
@@ -352,36 +328,34 @@ function EngineConfigPanel({
             label="API 키"
             value={settings.openAiApiKey}
             type="password"
-            placeholder="필요한 경우만"
+            placeholder={choice === "cloudApi" ? "필수" : "필요한 경우만"}
             onChange={(value) => onUpdateSettings({ openAiApiKey: value })}
           />
         </div>
-      ) : null}
+      )}
 
-      {canTest ? (
-        <div className="settings-ai-verify">
-          <div className="settings-ai-actions">
-            <Button icon={Plug} variant="secondary" size="sm" onClick={onProbe} disabled={probing}>
-              {probing ? "확인 중…" : "연결 확인"}
-            </Button>
-            <Button
-              icon={FlaskConical}
-              variant="secondary"
-              size="sm"
-              onClick={onCapabilityTest}
-              disabled={testing}
-            >
-              {testing ? "테스트 중…" : "응답 테스트"}
-            </Button>
-          </div>
-          <EngineStatus provider={row.id} probe={probe} capability={capability} />
+      <div className="settings-ai-verify">
+        <div className="settings-ai-actions">
+          <Button icon={Plug} variant="secondary" size="sm" onClick={onProbe} disabled={probing}>
+            {probing ? "확인 중" : "연결 확인"}
+          </Button>
+          <Button
+            icon={FlaskConical}
+            variant="secondary"
+            size="sm"
+            onClick={onCapabilityTest}
+            disabled={testing}
+          >
+            {testing ? "테스트 중" : "응답 테스트"}
+          </Button>
         </div>
-      ) : null}
+        <EngineStatus provider={providerKind} probe={probe} capability={capability} />
+      </div>
 
       <details className="settings-ai-advanced">
         <summary>고급 설정</summary>
         <div className="settings-ai-advanced-body">
-          {row.id === "ollama" ? (
+          {providerKind === "ollama" ? (
             <ProviderField
               label="요청 요약 모델"
               value={settings.requestAbstractionModel}
@@ -391,10 +365,10 @@ function EngineConfigPanel({
           ) : null}
           <ProviderField
             label="타임아웃(ms)"
-            value={String(row.id === "openAiCompatible" ? settings.openAiTimeoutMs : settings.ollamaTimeoutMs)}
+            value={String(providerKind === "openAiCompatible" ? settings.openAiTimeoutMs : settings.ollamaTimeoutMs)}
             inputMode="numeric"
             onChange={(value) =>
-              row.id === "openAiCompatible"
+              providerKind === "openAiCompatible"
                 ? onUpdateSettings({ openAiTimeoutMs: parseTimeout(value, settings.openAiTimeoutMs) })
                 : onUpdateSettings({ ollamaTimeoutMs: parseTimeout(value, settings.ollamaTimeoutMs) })
             }
@@ -420,8 +394,6 @@ function EngineConfigPanel({
 
 type StatusTone = "idle" | "ok" | "warn" | "err";
 
-/** One calm status line: a colored dot + text, with an optional muted hint
- *  below. Replaces the heavy tinted result boxes. */
 function StatusLine({
   tone,
   text,
@@ -444,12 +416,6 @@ function StatusLine({
   );
 }
 
-/**
- * Unified connection + response status. A successful connection is already
- * shown by the populated model dropdown, so only the in-progress, failed, and
- * response-test states surface here — one consistent line, never a stack of
- * loud colored boxes.
- */
 function EngineStatus({
   provider,
   probe,
@@ -460,7 +426,7 @@ function EngineStatus({
   capability: CapabilityState;
 }) {
   if (probe.status === "checking" && probe.kind === provider) {
-    return <StatusLine tone="idle" text="엔드포인트에 연결하는 중…" />;
+    return <StatusLine tone="idle" text="엔드포인트에 연결하는 중입니다." />;
   }
   if (probe.status === "error" && probe.kind === provider) {
     return <StatusLine tone="err" alert text={`연결할 수 없습니다 · ${probe.message}`} />;
@@ -473,8 +439,8 @@ function EngineStatus({
     return (
       <StatusLine
         tone="warn"
-        text="연결됐지만 설치된 모델이 없습니다."
-        hint="먼저 모델을 내려받은 뒤 다시 확인하세요."
+        text="연결됐지만 모델 목록이 비어 있습니다."
+        hint="모델을 내려받았는지 확인하거나 직접 입력하세요."
       />
     );
   }
@@ -490,7 +456,7 @@ function CapabilityStatus({
 }) {
   if (capability.status === "idle" || capability.kind !== provider) return null;
   if (capability.status === "running") {
-    return <StatusLine tone="idle" text="응답을 확인하는 중…" />;
+    return <StatusLine tone="idle" text="응답 구조를 확인하는 중입니다." />;
   }
   const { report } = capability;
   if (report.verdict === "ready") {
@@ -514,11 +480,6 @@ function CapabilityStatus({
   );
 }
 
-/**
- * Model field with installed-model autodetect. When the endpoint reports models
- * the field is a dropdown of those models; a "직접 입력" toggle falls back to a
- * free-text input, and the refresh button re-probes the endpoint.
- */
 function ModelField({
   label,
   value,
@@ -538,25 +499,21 @@ function ModelField({
 }) {
   const [manual, setManual] = useState(false);
   const hasModels = models.length > 0;
-  const valueInList = models.some((model) => model.value === value);
+  const valueInList = models.some((model) => model.id === value);
   const useSelect = hasModels && !manual;
   return (
     <label className="settings-ai-field settings-ai-model-field">
       <span>{label}</span>
       <div className="settings-ai-model-input">
         {useSelect ? (
-          <select value={valueInList ? value : ""} onChange={(event) => onChange(event.target.value)}>
-            {valueInList ? null : (
-              <option value="" disabled>
-                모델 선택…
-              </option>
-            )}
-            {models.map((model) => (
-              <option key={model.value} value={model.value}>
-                {model.label}
-              </option>
-            ))}
-          </select>
+          <BaseSelect
+            value={valueInList ? value : models[0]!.id}
+            options={models}
+            onChange={onChange}
+            label={`${label} 선택`}
+            className="settings-ai-model-select"
+            popoverWidth="trigger"
+          />
         ) : (
           <input
             value={value}
@@ -579,7 +536,7 @@ function ModelField({
       <div className="settings-ai-model-meta">
         <small>
           {detecting
-            ? "설치된 모델 감지 중…"
+            ? "설치된 모델 감지 중"
             : hasModels
               ? `설치된 모델 ${models.length}개 감지됨`
               : "감지된 모델 없음 · 직접 입력하세요"}
@@ -629,7 +586,7 @@ function RecentRunsPanel({ runHistory }: { runHistory: AnalysisRunHistoryViewMod
                 <small className="settings-ai-run-stats">
                   이슈 {row.reason.elementCounts.issues}개 · 결정 {row.reason.elementCounts.decisions}개 ·
                   신뢰 {Math.round(row.confidence * 100)}% · {row.durationMs}ms
-                  {row.changeSummary && row.changeSummary !== "변화 없음"
+                  {row.changeSummary && row.changeSummary !== "변경 없음"
                     ? ` · ${row.changeSummary}`
                     : ""}
                 </small>
@@ -638,6 +595,19 @@ function RecentRunsPanel({ runHistory }: { runHistory: AnalysisRunHistoryViewMod
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+function EngineSourceNote() {
+  return (
+    <section className="settings-ai-source-note">
+      <strong>Claude · Codex · OpenCode</strong>
+      <span>
+        이 도구들은 분석 엔진이 아니라 작업 소스입니다. 연결 화면에서 실제 대화나 JSONL 기록을 가져오면,
+        위에서 선택한 엔진으로 그 세션을 분석합니다.
+      </span>
+      <Badge tone="green">가져오기 구현됨</Badge>
     </section>
   );
 }
@@ -671,14 +641,27 @@ function ProviderField({
   );
 }
 
+function inferEngineChoice(settings: QuickPassAnalysisSettings): EngineChoice {
+  if (settings.provider !== "openAiCompatible") return settings.provider;
+  const baseUrl = settings.openAiBaseUrl.trim().toLowerCase();
+  if (baseUrl.includes("localhost:1234") || baseUrl.includes("127.0.0.1:1234")) {
+    return "lmStudio";
+  }
+  if (baseUrl.includes("api.openai.com")) return "cloudApi";
+  return "openAiCompatible";
+}
+
+function toProviderKind(choice: EngineChoice): QuickPassProviderKind {
+  if (choice === "lmStudio" || choice === "cloudApi") return "openAiCompatible";
+  return choice;
+}
+
 function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
-/** "gemma2:9b · 9.2B" or "llama3.1 · 4.7GB" — parameter count preferred. */
-function formatModelLabel(info: OllamaModelInfo): string {
-  const detail = info.parameterSize ?? (info.sizeBytes ? formatBytes(info.sizeBytes) : "");
-  return detail ? `${info.name} · ${detail}` : info.name;
+function formatModelDetail(info: OllamaModelInfo): string | undefined {
+  return info.parameterSize ?? (info.sizeBytes ? formatBytes(info.sizeBytes) : undefined);
 }
 
 function formatBytes(bytes: number): string {

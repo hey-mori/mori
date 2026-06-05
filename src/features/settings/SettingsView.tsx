@@ -102,7 +102,10 @@ export function SettingsView() {
         ) : null}
         {activeTab === "storage" ? (
           <>
-            <DemoModeCard onGoToConnections={() => setCurrentView("connections")} />
+            <DemoModeCard
+              onGoToConnections={() => setCurrentView("connections")}
+              onOpenSession={() => setCurrentView("session")}
+            />
             <StorageCard
               mode={mode}
               sqliteKind={sqliteKind}

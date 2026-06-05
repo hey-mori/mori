@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Trash2 } from "lucide-react";
+import { FilePlus2, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import {
   selectSessionMode,
@@ -9,32 +9,18 @@ import {
 import { useSqliteStore } from "../../app/sqliteStore";
 import { SettingsRow, SettingsSection } from "./SettingsPrimitives";
 
-/**
- * Demo mode toggle card for the Settings storage tab (P6).
- *
- * Replaces the old `SessionModeBanner` that appeared as a persistent
- * band on every page. The banner's problem: it framed demo mode as a
- * persistent alert the user had to dismiss or live with on every surface,
- * and it duplicated the "데모 보기" affordance on unrelated pages.
- *
- * This card gathers that control in one deliberate place — Settings →
- * 저장소 — so it reads as a mode choice rather than a warning. The user
- * can switch to demo at any time without losing their current draft; the
- * switch resets the active session to the bundled demo data. Returning to
- * real work is as simple as importing a session again.
- *
- * In demo mode the card surface changes to nudge toward the import flow
- * instead of re-offering the same toggle (circular UX).
- */
 export function DemoModeCard({
   onGoToConnections,
+  onOpenSession,
 }: {
   onGoToConnections: () => void;
+  onOpenSession: () => void;
 }) {
   const mode = useSessionStore(selectSessionMode);
   const source = useSessionStore(selectSessionSource);
   const imports = useSessionStore((state) => state.imports);
   const resetToDemo = useSessionStore((state) => state.resetToDemo);
+  const beginEmptySession = useSessionStore((state) => state.beginEmptySession);
   const clearAllDataAndViewDemo = useSessionStore(
     (state) => state.clearAllDataAndViewDemo,
   );
@@ -43,35 +29,49 @@ export function DemoModeCard({
   const [resetting, setResetting] = useState(false);
 
   const isDemo = mode === "demo";
-
   const storageLabel =
     source === "desktop-sqlite"
       ? "데스크톱 저장"
-      : source === "demo"
-        ? "데모 데이터"
-        : "브라우저 저장";
+      : source === "browser-draft"
+        ? "로컬 초안"
+        : "데모 데이터";
+
+  function handleBeginEmptySession() {
+    beginEmptySession();
+    onOpenSession();
+  }
+
+  function handleGoToRealImport() {
+    if (isDemo) beginEmptySession();
+    onGoToConnections();
+  }
 
   return (
     <SettingsSection title="데이터 관리">
       <div className="settings-row-list">
         <SettingsRow
-          label={isDemo ? "데모 보기" : storageLabel}
+          label={isDemo ? "현재: 데모 보기" : storageLabel}
           description={
             isDemo
-              ? "샘플 데이터로 Mori 화면을 둘러봅니다."
-              : `이 기기에 저장된 작업 데이터입니다. 가져오기 ${imports.length}건이 현재 세션에 연결되어 있습니다.`
+              ? "샘플 데이터만 보고 있습니다. 실제 작업을 가져오거나, 가져올 항목이 없으면 빈 실제 세션으로 시작할 수 있습니다."
+              : `이 기기에 저장된 실제 작업 세션입니다. 현재 세션에 연결된 가져오기 기록은 ${imports.length}건입니다.`
           }
           control={
             isDemo ? (
-              <Button variant="primary" icon={Sparkles} onClick={onGoToConnections}>
-                실제 작업 가져오기
-              </Button>
+              <div className="demo-mode-card-actions">
+                <Button variant="primary" icon={Sparkles} onClick={handleGoToRealImport}>
+                  실제 작업 가져오기
+                </Button>
+                <Button variant="secondary" icon={FilePlus2} onClick={handleBeginEmptySession}>
+                  빈 실제 세션
+                </Button>
+              </div>
             ) : (
               <Button
                 variant="ghost"
                 icon={Sparkles}
                 onClick={resetToDemo}
-                title="데모 세션 메모리로 돌아가기. 현재 초안은 저장된 경우 그대로 유지됩니다."
+                title="샘플 데이터로 잠시 돌아갑니다. 저장된 실제 작업은 삭제되지 않습니다."
               >
                 데모 보기
               </Button>
@@ -82,7 +82,7 @@ export function DemoModeCard({
           label="데이터 전체 초기화"
           description={
             confirmingReset
-              ? "저장된 세션·가져오기·프로젝트 메모리·보고서 초안이 영구히 삭제됩니다. AI 엔진·리포지토리 설정은 유지됩니다."
+              ? "저장된 세션, 가져오기, 프로젝트 메모리, 보고서 초안을 영구 삭제합니다. AI 엔진과 Git 저장소 설정은 유지됩니다."
               : "이 기기에 저장된 작업 데이터를 모두 삭제합니다. 설정은 유지됩니다."
           }
           control={
@@ -112,7 +112,7 @@ export function DemoModeCard({
                     }
                   }}
                 >
-                  {resetting ? "초기화 중…" : "초기화"}
+                  {resetting ? "초기화 중" : "초기화"}
                 </Button>
               </div>
             ) : (
@@ -120,7 +120,7 @@ export function DemoModeCard({
                 variant="ghost"
                 icon={Trash2}
                 onClick={() => setConfirmingReset(true)}
-                title="이 기기에 저장된 모든 작업 데이터를 삭제합니다. 되돌릴 수 없습니다."
+                title="이 기기에 저장된 작업 데이터를 삭제합니다. 되돌릴 수 없습니다."
               >
                 전체 초기화
               </Button>

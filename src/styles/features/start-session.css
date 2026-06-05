@@ -64,6 +64,10 @@ button.start-entry-card:focus-visible {
   .start-session-page .form-row {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .session-project-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .setup-block,
@@ -466,6 +470,23 @@ hr {
 .start-session-page .form-row {
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: var(--base-space-4);
+}
+
+.session-info-fields {
+  display: grid;
+  gap: var(--base-space-4);
+}
+
+.session-project-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--base-space-3);
+  align-items: end;
+}
+
+.session-project-create {
+  min-height: 46px;
+  white-space: nowrap;
 }
 
 .start-summary-footer {

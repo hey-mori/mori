@@ -36,6 +36,7 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     abandonPendingNewSessionIfEmpty: () => false,
     removeImport: () => undefined,
     resetToDemo: () => undefined,
+    beginEmptySession: () => ({} as never),
     clearAllDataAndViewDemo: async () => undefined,
     runQuickPass: async () => null,
     clearAnalysis: () => undefined,
