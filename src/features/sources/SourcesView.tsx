@@ -711,7 +711,7 @@ function SourceInspector({
       </InspectorBlock>
 
       {setupGuide ? (
-        <InspectorBlock title="연결하기" icon={Plug}>
+        <InspectorBlock title="연결하기" icon={Plug} collapsible>
           <ConnectorSetupGuidePanel guide={setupGuide} />
         </InspectorBlock>
       ) : null}
@@ -921,11 +921,27 @@ function InspectorBlock({
   title,
   icon: Icon,
   children,
+  collapsible = false,
 }: {
   title: string;
   icon: LucideIcon;
   children: ReactNode;
+  /** Render as a collapsed-by-default disclosure (for long, optional detail). */
+  collapsible?: boolean;
 }) {
+  if (collapsible) {
+    return (
+      <details className="sources-inspector-block is-collapsible">
+        <summary>
+          <h3>
+            <Icon size={14} aria-hidden="true" />
+            {title}
+          </h3>
+        </summary>
+        {children}
+      </details>
+    );
+  }
   return (
     <section className="sources-inspector-block">
       <h3>

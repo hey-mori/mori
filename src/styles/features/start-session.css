@@ -503,6 +503,13 @@ hr {
   margin-top: 1px;
 }
 
+/* 새 세션 is headerless, so give the scroll content real top/bottom breathing
+   room instead of sitting flush against the window chrome. */
+.start-session-page .page-shell-content {
+  padding-top: var(--base-space-9);
+  padding-bottom: var(--base-space-10);
+}
+
 /* 새 세션 — agent-first session setup. Each numbered block reads as a soft
    card (crafted setup, not a flat form), with neutral pick tiles that adopt
    the brand lavender only in their selected state. */

@@ -329,6 +329,19 @@
   display: grid;
   gap: 10px;
   padding: 12px;
+  /* The aside track is a fixed width; without this the min-content of a long
+     setup command would spill the panel past the viewport edge. */
+  min-width: 0;
+}
+
+/* Let every nesting level shrink so long commands scroll inside their own
+   code box instead of blowing the fixed-width rail out. */
+.sources-inspector-block,
+.source-row-setup,
+.source-row-setup-steps,
+.source-row-setup-steps > li,
+.source-row-command {
+  min-width: 0;
 }
 
 .sources-inspector-head {
@@ -371,6 +384,43 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-soft);
+}
+
+/* Collapsible variant — long, optional detail (e.g. 연결하기 setup) folds away
+   by default so the inspector stays compact and never overflows on open. */
+details.sources-inspector-block {
+  display: block;
+}
+
+details.sources-inspector-block[open] {
+  display: grid;
+}
+
+.sources-inspector-block.is-collapsible > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sources-inspector-block.is-collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sources-inspector-block.is-collapsible > summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted-2);
+  border-bottom: 1.5px solid var(--muted-2);
+  transform: rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+.sources-inspector-block.is-collapsible[open] > summary::after {
+  transform: rotate(225deg);
 }
 
 .sources-inspector-block h3,
