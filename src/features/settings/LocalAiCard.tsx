@@ -7,11 +7,12 @@ import {
   FlaskConical,
   Plug,
   Plus,
+  RefreshCw,
   ShieldCheck,
   Sparkles,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import {
   captureEnginePreset,
@@ -48,21 +49,33 @@ const ICONS: Record<string, typeof Bot> = {
   cloudApi: Cloud,
 };
 
-const PROVIDER_COPY: Record<QuickPassProviderKind, { label: string; summary: string; data: string }> = {
+const PROVIDER_COPY: Record<QuickPassProviderKind, { label: string; summary: string }> = {
   deterministic: {
     label: "규칙 기반",
-    summary: "모델 없이 제목과 요약의 신호를 빠르게 정리합니다.",
-    data: "네트워크 호출 없음",
+    summary: "모델 없이 기기 안에서 즉시 정리합니다.",
   },
   ollama: {
     label: "Ollama",
-    summary: "로컬 LLM으로 더 풍부한 이슈와 결정을 추출합니다.",
-    data: "입력한 로컬 endpoint만 사용",
+    summary: "로컬 LLM으로 더 깊은 이슈·결정을 추출합니다.",
   },
   openAiCompatible: {
     label: "OpenAI 호환",
-    summary: "LM Studio, vLLM, LocalAI, OpenAI 호환 API를 연결합니다.",
-    data: "입력한 base URL로 전송",
+    summary: "LM Studio·vLLM·OpenAI 호환 API를 연결합니다.",
+  },
+};
+
+const PLANNED_COPY: Record<string, { label: string; summary: string }> = {
+  lmStudio: {
+    label: "LM Studio",
+    summary: "전용 LM Studio 연결. 지금은 OpenAI 호환으로 연결할 수 있습니다.",
+  },
+  toolNativeApi: {
+    label: "Claude · Codex · OpenCode",
+    summary: "도구 계정을 분석 제공자로 직접 연결합니다.",
+  },
+  cloudApi: {
+    label: "Cloud API",
+    summary: "Anthropic·OpenAI 등 외부 API. 명시적 동의 후에만 사용합니다.",
   },
 };
 
@@ -117,6 +130,47 @@ export function LocalAiCard({
     setCapability({ status: "idle" });
   }
 
+  const handleProbe = useCallback(
+    async (kind: QuickPassProviderKind) => {
+      if (kind === "deterministic") return;
+      setProbe({ status: "checking", kind });
+      const result =
+        kind === "openAiCompatible"
+          ? await probeOpenAiCompatibleConnection({
+              baseUrl: settings.openAiBaseUrl,
+              apiKey: settings.openAiApiKey,
+              timeoutMs: Math.min(settings.openAiTimeoutMs, 5_000),
+            })
+          : await probeOllamaConnection({
+              endpoint: settings.ollamaEndpoint,
+              timeoutMs: Math.min(settings.ollamaTimeoutMs, 5_000),
+            });
+      if (result.ok) {
+        setProbe({ status: "ok", message: result.message, models: result.models ?? [], kind });
+      } else {
+        setProbe({ status: "error", message: result.message, kind });
+      }
+    },
+    [
+      settings.openAiBaseUrl,
+      settings.openAiApiKey,
+      settings.openAiTimeoutMs,
+      settings.ollamaEndpoint,
+      settings.ollamaTimeoutMs,
+    ],
+  );
+
+  // Auto-detect installed models for endpoint-backed engines so the user never
+  // has to type a model name blind. Debounced so editing the endpoint does not
+  // fire a request on every keystroke.
+  useEffect(() => {
+    if (settings.provider === "deterministic") return;
+    const handle = setTimeout(() => {
+      void handleProbe(settings.provider);
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [settings.provider, handleProbe]);
+
   function applyPreset(preset: EnginePreset) {
     onUpdateSettings(preset.settings);
     setProbe({ status: "idle" });
@@ -140,27 +194,6 @@ export function LocalAiCard({
     saveEnginePresets(next);
   }
 
-  async function handleProbe(kind: QuickPassProviderKind) {
-    if (kind === "deterministic") return;
-    setProbe({ status: "checking", kind });
-    const result =
-      kind === "openAiCompatible"
-        ? await probeOpenAiCompatibleConnection({
-            baseUrl: settings.openAiBaseUrl,
-            apiKey: settings.openAiApiKey,
-            timeoutMs: Math.min(settings.openAiTimeoutMs, 5_000),
-          })
-        : await probeOllamaConnection({
-            endpoint: settings.ollamaEndpoint,
-            timeoutMs: Math.min(settings.ollamaTimeoutMs, 5_000),
-          });
-    if (result.ok) {
-      setProbe({ status: "ok", message: result.message, models: result.models ?? [], kind });
-    } else {
-      setProbe({ status: "error", message: result.message, kind });
-    }
-  }
-
   async function handleCapabilityTest(kind: QuickPassProviderKind) {
     if (kind === "deterministic") return;
     setCapability({ status: "running", kind });
@@ -170,8 +203,8 @@ export function LocalAiCard({
 
   return (
     <SettingsSection
-      title="Quick Pass 엔진"
-      description="Quick Pass가 가져온 자료를 이슈, 결정, 다음 행동으로 정리할 때 사용할 엔진입니다."
+      title="분석 엔진"
+      description="가져온 자료를 이슈, 결정, 다음 행동으로 정리할 때 사용할 엔진입니다. 규칙 기반은 모델 없이 동작하고, Ollama·OpenAI 호환은 로컬 LLM으로 더 깊게 해석합니다."
     >
       <div className="settings-ai-layout">
         <EnginePresetsBar
@@ -182,7 +215,7 @@ export function LocalAiCard({
           onDelete={deletePreset}
         />
 
-        <div className="settings-ai-provider-grid" role="radiogroup" aria-label="Quick Pass 엔진">
+        <div className="settings-ai-provider-grid" role="radiogroup" aria-label="분석 엔진">
           {selectableRows.map((row) => (
             <ProviderChoice
               key={row.id}
@@ -212,20 +245,29 @@ export function LocalAiCard({
       {plannedRows.length > 0 ? (
         <details className="settings-ai-planned">
           <summary>
-            <span>향후 지원</span>
-            <small>{plannedRows.length}개 엔진</small>
+            <span>향후 지원 엔진</span>
+            <small>{plannedRows.length}개</small>
           </summary>
-          <div className="settings-ai-planned-list">
-            {plannedRows.map((row) => {
-              const Icon = ICONS[row.id] ?? Bot;
-              return (
-                <span key={row.id}>
-                  <Icon size={13} aria-hidden="true" />
-                  {row.label}
-                </span>
-              );
-            })}
-          </div>
+          <table className="settings-ai-planned-table">
+            <tbody>
+              {plannedRows.map((row) => {
+                const Icon = ICONS[row.id] ?? Bot;
+                const copy = PLANNED_COPY[row.id];
+                return (
+                  <tr key={row.id}>
+                    <th scope="row">
+                      <Icon size={14} aria-hidden="true" />
+                      {copy?.label ?? row.label}
+                    </th>
+                    <td>{copy?.summary ?? row.description}</td>
+                    <td>
+                      <StatusPill tone="gray">예정</StatusPill>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </details>
       ) : null}
     </SettingsSection>
@@ -359,7 +401,6 @@ function ProviderChoice({
         </span>
         <small>{copy.summary}</small>
       </span>
-      <span className="settings-ai-provider-data">{copy.data}</span>
     </button>
   );
 }
@@ -388,13 +429,12 @@ function EngineConfigPanel({
   const probing = probe.status === "checking" && probe.kind === row.id;
   const testing = capability.status === "running" && capability.kind === row.id;
   const canTest = row.id !== "deterministic";
+  const detectedModels =
+    probe.status === "ok" && probe.kind === row.id ? probe.models : [];
   return (
     <section className="settings-ai-config-panel" aria-label={`${copy.label} 설정`}>
       <header className="settings-ai-config-head">
-        <div>
-          <h4>{copy.label}</h4>
-          <p>{row.id === "deterministic" ? "즉시 사용 가능. 가볍지만 LLM처럼 문맥을 깊게 추론하지는 않습니다." : row.setupRequirement}</p>
-        </div>
+        <h4>{copy.label}</h4>
         {canTest ? (
           <div className="settings-ai-config-actions">
             <Button icon={Plug} variant="ghost" size="sm" onClick={onProbe} disabled={probing}>
@@ -428,11 +468,14 @@ function EngineConfigPanel({
             placeholder="http://localhost:11434"
             onChange={(value) => onUpdateSettings({ ollamaEndpoint: value })}
           />
-          <ProviderField
+          <ModelField
             label="모델"
             value={settings.ollamaModel}
+            models={detectedModels}
+            detecting={probing}
             placeholder="llama3.1:8b"
             onChange={(value) => onUpdateSettings({ ollamaModel: value })}
+            onRefresh={onProbe}
           />
         </div>
       ) : null}
@@ -445,11 +488,14 @@ function EngineConfigPanel({
             placeholder="http://localhost:1234/v1"
             onChange={(value) => onUpdateSettings({ openAiBaseUrl: value })}
           />
-          <ProviderField
+          <ModelField
             label="모델"
             value={settings.openAiModel}
+            models={detectedModels}
+            detecting={probing}
             placeholder="local-model"
             onChange={(value) => onUpdateSettings({ openAiModel: value })}
+            onRefresh={onProbe}
           />
           <ProviderField
             label="API key"
@@ -461,22 +507,7 @@ function EngineConfigPanel({
         </div>
       ) : null}
 
-      <ProbeRow
-        probe={probe}
-        selectedModel={
-          probe.status === "ok"
-            ? probe.kind === "openAiCompatible"
-              ? settings.openAiModel
-              : settings.ollamaModel
-            : ""
-        }
-        onSelectModel={(model) => {
-          if (probe.status !== "ok") return;
-          onUpdateSettings(
-            probe.kind === "openAiCompatible" ? { openAiModel: model } : { ollamaModel: model },
-          );
-        }}
-      />
+      <ProbeRow probe={probe} />
 
       <CapabilityRow capability={capability} />
 
@@ -545,17 +576,19 @@ function EngineDiagnosticsPanel({
 }) {
   const items = buildDiagnosticItems({ provider, probe, capability, diagnostics, fallbackEnabled });
   return (
-    <div className="settings-ai-diagnostics" aria-label="AI 엔진 진단">
-      {items.map((item) => (
-        <div key={item.label} className={`settings-ai-diagnostic tone-${item.tone}`}>
-          <span className="settings-ai-diagnostic-dot" aria-hidden="true" />
-          <span>
-            <small>{item.label}</small>
-            <strong>{item.value}</strong>
-          </span>
-        </div>
-      ))}
-    </div>
+    <table className="settings-ai-diag-table" aria-label="분석 엔진 진단">
+      <tbody>
+        {items.map((item) => (
+          <tr key={item.label} className={`tone-${item.tone}`}>
+            <th scope="row">
+              <span className="settings-ai-diag-dot" aria-hidden="true" />
+              {item.label}
+            </th>
+            <td>{item.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -684,15 +717,7 @@ function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
-function ProbeRow({
-  probe,
-  selectedModel = "",
-  onSelectModel,
-}: {
-  probe: ProbeState;
-  selectedModel?: string;
-  onSelectModel?: (model: string) => void;
-}) {
+function ProbeRow({ probe }: { probe: ProbeState }) {
   if (probe.status === "idle") return null;
   if (probe.status === "checking") {
     return (
@@ -706,22 +731,11 @@ function ProbeRow({
     return (
       <div className="settings-probe-row tone-ok">
         <StatusPill tone="green">연결됨</StatusPill>
-        <span>{probe.message}</span>
-        {probe.models.length ? (
-          <div className="settings-probe-models" aria-label="발견된 모델">
-            {probe.models.map((model) => (
-              <button
-                key={model}
-                type="button"
-                className={`settings-probe-model${model === selectedModel ? " is-selected" : ""}`}
-                aria-pressed={model === selectedModel}
-                onClick={() => onSelectModel?.(model)}
-              >
-                {model}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <span>
+          {probe.models.length
+            ? `설치된 모델 ${probe.models.length}개를 찾았습니다.`
+            : "연결됐지만 설치된 모델이 없습니다. 먼저 모델을 내려받으세요."}
+        </span>
       </div>
     );
   }
@@ -730,6 +744,67 @@ function ProbeRow({
       <StatusPill tone="red">연결 불가</StatusPill>
       <span>{probe.message}</span>
     </div>
+  );
+}
+
+/**
+ * Model field with installed-model autodetect. A native datalist gives a
+ * dropdown of detected models while still allowing free entry, and a refresh
+ * button re-probes the endpoint. No blind typing of model names.
+ */
+function ModelField({
+  label,
+  value,
+  models,
+  detecting,
+  placeholder,
+  onChange,
+  onRefresh,
+}: {
+  label: string;
+  value: string;
+  models: string[];
+  detecting: boolean;
+  placeholder?: string;
+  onChange: (value: string) => void;
+  onRefresh: () => void;
+}) {
+  const listId = useId();
+  return (
+    <label className="settings-ai-field settings-ai-model-field">
+      <span>{label}</span>
+      <div className="settings-ai-model-input">
+        <input
+          list={listId}
+          value={value}
+          placeholder={placeholder}
+          autoComplete="off"
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button
+          type="button"
+          className="settings-ai-model-refresh"
+          onClick={onRefresh}
+          disabled={detecting}
+          aria-label="설치된 모델 다시 감지"
+          title="설치된 모델 다시 감지"
+        >
+          <RefreshCw size={13} className={detecting ? "is-spinning" : undefined} aria-hidden="true" />
+        </button>
+        <datalist id={listId}>
+          {models.map((model) => (
+            <option key={model} value={model} />
+          ))}
+        </datalist>
+      </div>
+      <small className="settings-ai-model-hint">
+        {detecting
+          ? "설치된 모델을 감지하는 중…"
+          : models.length
+            ? `설치된 모델 ${models.length}개 · 목록에서 선택하거나 직접 입력`
+            : "감지된 모델이 없습니다 · 모델 이름을 직접 입력하세요"}
+      </small>
+    </label>
   );
 }
 

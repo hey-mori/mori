@@ -53,6 +53,13 @@
   flex-wrap: wrap;
 }
 
+.account-sync-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
 /* Report builder panel */
 
 /* Outer wrapper that holds the toolbar band + preview shell as separate
@@ -3834,7 +3841,7 @@ button.settings-option {
   gap: 9px;
   align-items: start;
   min-width: 0;
-  min-height: 96px;
+  min-height: 70px;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -4024,6 +4031,125 @@ button.settings-option {
   background: var(--red);
 }
 
+/* Engine diagnostics as a compact key/value table — denser and more scannable
+   than the old grid of bordered chips. */
+.settings-ai-diag-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.settings-ai-diag-table tr + tr th,
+.settings-ai-diag-table tr + tr td {
+  border-top: 1px solid var(--line);
+}
+
+.settings-ai-diag-table th {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 132px;
+  padding: 6px 10px 6px 0;
+  color: var(--muted);
+  font-weight: 650;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.settings-ai-diag-table td {
+  padding: 6px 0;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.settings-ai-diag-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--muted-2);
+}
+
+.settings-ai-diag-table tr.tone-ok .settings-ai-diag-dot { background: var(--green); }
+.settings-ai-diag-table tr.tone-info .settings-ai-diag-dot { background: var(--blue); }
+.settings-ai-diag-table tr.tone-warn .settings-ai-diag-dot { background: #d8923f; }
+.settings-ai-diag-table tr.tone-error .settings-ai-diag-dot { background: var(--red); }
+
+/* Model field: detected-model dropdown (datalist) + refresh, with a quiet
+   helper line below. */
+.settings-ai-model-field {
+  align-self: start;
+}
+
+.settings-ai-model-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-ai-model-input input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.settings-ai-model-input input:focus {
+  border-color: var(--purple);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.12);
+}
+
+.settings-ai-model-refresh {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.settings-ai-model-refresh:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.settings-ai-model-refresh:disabled {
+  cursor: progress;
+}
+
+.settings-ai-model-refresh .is-spinning {
+  animation: settings-ai-spin 0.8s linear infinite;
+}
+
+@keyframes settings-ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-ai-model-refresh .is-spinning {
+    animation: none;
+  }
+}
+
+.settings-ai-model-hint {
+  color: var(--muted-2);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .settings-ai-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4164,25 +4290,44 @@ button.settings-option {
   font-weight: 600;
 }
 
-.settings-ai-planned-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 0 10px;
+.settings-ai-planned-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 10px;
+  font-size: 11.5px;
 }
 
-.settings-ai-planned-list span {
-  display: inline-flex;
+.settings-ai-planned-table tr + tr th,
+.settings-ai-planned-table tr + tr td {
+  border-top: 1px solid var(--line);
+}
+
+.settings-ai-planned-table th {
+  display: flex;
   align-items: center;
-  gap: 5px;
-  min-height: 24px;
-  padding: 3px 7px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: white;
+  gap: 7px;
+  padding: 7px 12px 7px 0;
+  color: var(--text);
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.settings-ai-planned-table th svg {
+  color: var(--muted-2);
+}
+
+.settings-ai-planned-table td {
+  padding: 7px 0;
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 650;
+  line-height: 1.45;
+}
+
+.settings-ai-planned-table td:last-child {
+  width: 1%;
+  padding-left: 12px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* Recent Quick Pass runs, folded by default so the engine config leads and

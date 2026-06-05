@@ -8,9 +8,7 @@ import {
 } from "../../lib/profile/localProfile";
 import {
   SettingsInlineAction,
-  SettingsRow,
   SettingsSection,
-  StatusPill,
 } from "../settings/SettingsPrimitives";
 
 /**
@@ -43,9 +41,8 @@ export function AccountProfileView() {
   return (
     <div className="settings-content-stack account-profile">
       <SettingsSection
-        title="로컬 프로필"
-        description="이름과 이니셜은 이 기기에서 Mori를 표시하는 데만 사용됩니다."
-        action={<StatusPill tone="green">로컬 전용</StatusPill>}
+        title="프로필"
+        description="이름과 이니셜은 이 기기에서 Mori를 표시하는 데만 쓰입니다. 계정, 결제, 동기화 신원으로는 사용되지 않습니다."
       >
         <div className="account-identity-row">
           <span className="account-avatar" aria-hidden="true">
@@ -79,40 +76,9 @@ export function AccountProfileView() {
             </div>
           </div>
         </div>
-        <div className="settings-row-list">
-          <SettingsRow
-            compact
-            label="프로필 범위"
-            description="계정, 결제, 동기화 신원으로 쓰이지 않습니다."
-            meta={<StatusPill tone="green">이 기기</StatusPill>}
-          />
-          <SettingsRow
-            compact
-            label="저장 위치"
-            description="브라우저 localStorage 또는 데스크톱 fallback 저장소에 남습니다."
-            meta={<StatusPill tone="blue">로컬 설정</StatusPill>}
-          />
-        </div>
-      </SettingsSection>
-      <SettingsSection
-        title="계정과 동기화"
-        description="Mori Account는 아직 구현되지 않았습니다. 이 화면은 로컬 모드의 경계를 명확히 보여줍니다."
-        action={<StatusPill tone="green">로그인 없이 열림</StatusPill>}
-      >
-        <div className="settings-row-list">
-          <SettingsRow
-            compact
-            label="Mori Account"
-            meta={<StatusPill tone="gray">예정</StatusPill>}
-            disabled
-          />
-          <SettingsRow
-            compact
-            label="동기화"
-            meta={<StatusPill tone="gray">비활성</StatusPill>}
-            disabled
-          />
-        </div>
+        <p className="account-sync-note">
+          계정과 동기화는 예정입니다. 지금은 로그인 없이 이 기기에서만 동작합니다.
+        </p>
       </SettingsSection>
     </div>
   );
