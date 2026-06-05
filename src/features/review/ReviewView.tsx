@@ -316,7 +316,32 @@ export function ReviewView() {
 
   const body = (
     <>
-      {showQuickPassEmpty ? null : (
+      {showQuickPassEmpty ? (
+        <NoticeBanner
+          tone="info"
+          title="분석할 항목이 아직 없습니다"
+          actions={
+            imports.length > 0 ? (
+              <Button
+                variant="primary"
+                icon={Sparkles}
+                onClick={() => runQuickPass()}
+                disabled={!canRunQuickPass}
+              >
+                분석 실행
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={() => setCurrentView("evidence")}>
+                자료 가져오기
+              </Button>
+            )
+          }
+        >
+          {imports.length > 0
+            ? `가져온 자료 ${imports.length}개를 읽고 이슈 · 결정 · 다음 액션을 정리합니다.`
+            : "자료 탭에서 대화를 가져오면 여기에 정리됩니다."}
+        </NoticeBanner>
+      ) : (
         <ReviewAnalysisNotice
           status={analysisStatus}
           providerLabel={analysisProviderLabel}
@@ -336,44 +361,9 @@ export function ReviewView() {
 
       <AnalysisRunHistoryPanel />
 
-      {showQuickPassEmpty ? (
-        imports.length > 0 ? (
-          <EmptyState
-            icon={Sparkles}
-            title="분석을 실행하면 이슈 · 결정 · 다음 액션이 정리됩니다"
-            description={`가져온 자료 ${imports.length}개를 읽고 정리합니다.`}
-            actions={
-              <Button
-                variant="primary"
-                icon={Sparkles}
-                onClick={() => runQuickPass()}
-                disabled={!canRunQuickPass}
-              >
-                분석 실행
-              </Button>
-            }
-          />
-        ) : (
-          <EmptyState
-            icon={FileText}
-            title="분석할 자료가 아직 없습니다"
-            description="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
-            actions={
-              <Button variant="primary" onClick={() => setCurrentView("evidence")}>
-                자료 가져오기
-              </Button>
-            }
-          />
-        )
-      ) : view.issues.length + view.decisions.length + view.nextActions.length === 0 ? (
-        <EmptyState
-          icon={CheckCircle2}
-          title="검토할 항목이 없습니다"
-          description="이슈 · 결정 · 다음 액션이 추출되면 여기에 칸반으로 정리됩니다."
-        />
-      ) : (
-        board
-      )}
+      {/* The board (the 3 columns) always renders, empty or not, so the tab
+          shows its shape; the banner above prompts to import / analyze. */}
+      {board}
     </>
   );
 
