@@ -1,25 +1,21 @@
-import { Check, Edit3, Trash2 } from "lucide-react";
+import { Check, Edit3, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { eventTypeLabels } from "../../domain/constants";
 import type { TimelineEvent } from "../../domain/types";
 import { formatTime } from "../../lib/formatting/time";
-import { getTrustDisplay } from "../../lib/evidence/trust";
 import type { ReviewEventEdits, ReviewEventItem } from "../../lib/review";
 
-const STATUS_TONE: Record<ReviewEventItem["status"], "green" | "red" | "gray"> = {
-  accepted: "green",
-  discarded: "red",
-  pending: "gray",
-};
-
-const STATUS_LABEL: Record<ReviewEventItem["status"], string> = {
-  accepted: "수락됨",
-  discarded: "폐기됨",
-  pending: "검토 대기",
-};
-
+/**
+ * One extracted event, pared down to what the reviewer actually decides on:
+ * when it happened, its title, a short summary, and accept / discard / edit.
+ *
+ * The old card also carried a type badge, a status badge, an "edited" badge,
+ * and a four-cell trust / confidence / source-link / author table. That is
+ * internal bookkeeping, not a decision the user makes here, so it is gone. The
+ * accept / discard state now reads from the card's own tint, and a quiet dot
+ * marks a hand-edited item.
+ */
 export function ExtractedEventCard({
   item,
   onAccept,
@@ -33,7 +29,6 @@ export function ExtractedEventCard({
 }) {
   const [editing, setEditing] = useState(false);
   const merged = mergeEvent(item.event, item.edits);
-  const confidencePct = Math.round(merged.confidence * 100);
   const isAccepted = item.status === "accepted";
   const isDiscarded = item.status === "discarded";
 
@@ -42,40 +37,15 @@ export function ExtractedEventCard({
       className={`review-event-card status-${item.status} ${editing ? "is-editing" : ""}`}
       aria-current={isAccepted ? "true" : undefined}
     >
-      <header className="review-event-card-head">
-        <div className="review-event-card-titles">
-          <span className="review-event-card-time">{formatTime(merged.start)}</span>
-          <strong>{merged.title}</strong>
-        </div>
-        <div className="review-event-card-badges">
-          <Badge tone="purple">{eventTypeLabels[merged.type] ?? merged.type}</Badge>
-          <Badge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</Badge>
-          {item.edits ? <Badge tone="orange">수정됨</Badge> : null}
-        </div>
-      </header>
+      <div className="review-event-card-head">
+        <span className="review-event-card-time">{formatTime(merged.start)}</span>
+        <strong className="review-event-card-title">{merged.title}</strong>
+        {item.edits ? (
+          <span className="review-event-card-edited" title="직접 수정함" aria-label="직접 수정함" />
+        ) : null}
+      </div>
 
       <p className="review-event-card-summary">{merged.summary || "(요약 없음)"}</p>
-
-      <dl className="review-event-card-meta">
-        <div>
-          <dt>신뢰 수준</dt>
-          <dd className={`trust-${merged.trustLevel}`}>
-            {getTrustDisplay(merged.trustLevel).label}
-          </dd>
-        </div>
-        <div>
-          <dt>확신도</dt>
-          <dd>{confidencePct}%</dd>
-        </div>
-        <div>
-          <dt>출처 연결</dt>
-          <dd>{merged.sourceRefs.length}개</dd>
-        </div>
-        <div>
-          <dt>작성 주체</dt>
-          <dd>{merged.createdBy}</dd>
-        </div>
-      </dl>
 
       {editing ? (
         <EditForm
@@ -89,30 +59,45 @@ export function ExtractedEventCard({
       ) : null}
 
       <footer className="review-event-card-actions">
-        <Button
-          variant={isAccepted ? "primary" : "secondary"}
-          icon={Check}
-          onClick={onAccept}
-          disabled={isAccepted}
-          title={isAccepted ? "이미 수락한 항목입니다." : "반영 시점에 이 이벤트를 세션에 추가합니다."}
-        >
-          수락
-        </Button>
-        <Button
-          icon={Trash2}
-          onClick={onDiscard}
-          disabled={isDiscarded}
-          title={isDiscarded ? "이미 폐기한 항목입니다." : "이 이벤트를 반영에서 제외합니다."}
-        >
-          폐기
-        </Button>
-        <Button
-          icon={Edit3}
-          onClick={() => setEditing((value) => !value)}
-          title="제목 / 요약 / 유형 수정"
-        >
-          편집
-        </Button>
+        {isDiscarded ? (
+          <Button
+            variant="secondary"
+            icon={RotateCcw}
+            onClick={onAccept}
+            title="다시 포함합니다."
+          >
+            되돌리기
+          </Button>
+        ) : (
+          <>
+            <Button
+              icon={Edit3}
+              onClick={() => setEditing((value) => !value)}
+              size="sm"
+              title="제목 / 요약 / 유형 수정"
+            >
+              편집
+            </Button>
+            <Button
+              icon={Trash2}
+              onClick={onDiscard}
+              size="sm"
+              title="이 이벤트를 반영에서 제외합니다."
+            >
+              폐기
+            </Button>
+            <Button
+              variant={isAccepted ? "secondary" : "primary"}
+              icon={Check}
+              onClick={onAccept}
+              disabled={isAccepted}
+              size="sm"
+              title={isAccepted ? "포함됨" : "반영 시점에 이 이벤트를 세션에 추가합니다."}
+            >
+              {isAccepted ? "포함됨" : "수락"}
+            </Button>
+          </>
+        )}
       </footer>
     </article>
   );
