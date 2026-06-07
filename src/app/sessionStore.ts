@@ -92,7 +92,9 @@ import type {
   StoredSessionSummary,
 } from "../lib/storage/storageTypes";
 import {
+  buildAcceptedCandidate,
   editReviewEvent,
+  isReviewApplyable,
   setAllItemsStatus,
   setReviewItemStatus,
   type ImportReviewDraft,
@@ -115,6 +117,15 @@ export type SessionSource = "demo" | "browser-draft" | "desktop-sqlite";
 export type SessionViewModel = MockSession & {
   isDemo: boolean;
 };
+
+/**
+ * Outcome of applying the active session's pending import review. On success it
+ * carries the applied event count and the first applied event id so the caller
+ * can select it in the inspector.
+ */
+export type ApplyPendingReviewResult =
+  | { ok: true; appliedCount: number; firstEventId: string | null }
+  | { ok: false; reason: string };
 
 export type SessionState = {
   initialized: boolean;
@@ -146,6 +157,12 @@ export type SessionState = {
    * no pending review. On apply it converts to a `StoredSessionImport`.
    */
   pendingReview: StoredPendingReview | null;
+  /**
+   * Set when the user just applied a pending review, so the 자료 tab can show a
+   * "N건 반영됨" completion banner without keeping the review card open.
+   * Cleared by `clearLastApplied` (banner dismiss) and on every session switch.
+   */
+  lastApplied: { sourceId: string; appliedCount: number; appliedAt: string } | null;
   analysis: AnalysisResult | null;
   analysisStatus: AnalysisRunStatus;
   analysisError: string | null;
@@ -273,6 +290,21 @@ export type SessionState = {
   setAllPendingReviewStatus: (status: ReviewItemStatus) => void;
   /** Apply an inline edit to one pending-review event and persist. */
   editPendingReviewEvent: (itemId: string, edits: ReviewEventEdits) => void;
+  /**
+   * Apply the active session's pending review: accepted events become a
+   * `StoredSessionImport`, the pending review is cleared, and `lastApplied` is
+   * set. A pending import-created session becomes real (its cleanup bookkeeping
+   * is dropped). Returns a failure result when nothing is applyable.
+   */
+  applyPendingReview: () => ApplyPendingReviewResult;
+  /**
+   * Discard the active session's pending review without applying. If this was a
+   * freshly-created import session that never received an applied import, the
+   * empty session is discarded and the prior one restored.
+   */
+  cancelPendingReview: () => void;
+  /** Dismiss the "N건 반영됨" completion banner. */
+  clearLastApplied: () => void;
   resetToDemo: () => void;
   /**
    * Leave the bundled demo and create a real, empty local draft. This is the
@@ -470,6 +502,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   pendingNewSession: null,
   imports: [],
   pendingReview: null,
+  lastApplied: null,
   analysis: null,
   analysisStatus: "idle",
   analysisError: null,
@@ -507,6 +540,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         demoSessionId: null,
         imports: localImports,
         pendingReview: localDraft ? repository.loadPendingReview(localDraft.session.id) : null,
+        lastApplied: null,
         analysis: localAnalysisRecord?.result ?? null,
         analysisStatus: localAnalysisRecord ? "succeeded" : "idle",
         analysisError: null,
@@ -565,6 +599,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       imports,
       pendingReview: draft ? repository.loadPendingReview(draft.session.id) : null,
+      lastApplied: null,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,
@@ -585,6 +620,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       imports,
       pendingReview: repository.loadPendingReview(draft.session.id),
+      lastApplied: null,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,
@@ -661,6 +697,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       imports: repository.listSessionImports(stored.session.id),
       pendingReview: null,
+      lastApplied: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -707,6 +744,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           demoSessionId: null,
           imports: restoredImports,
           pendingReview: repository.loadPendingReview(restored.session.id),
+          lastApplied: null,
           analysis: restoredAnalysis?.result ?? null,
           analysisStatus: restoredAnalysis ? "succeeded" : "idle",
           analysisError: null,
@@ -725,6 +763,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       imports: [],
       pendingReview: null,
+      lastApplied: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -788,6 +827,54 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     );
     set({ pendingReview: stored });
   },
+  applyPendingReview: () => {
+    const { draft: session, pendingReview } = get();
+    if (!session || !pendingReview) {
+      return { ok: false, reason: "반영할 검토가 없습니다." };
+    }
+    const reviewDraft = pendingReview.draft;
+    if (!isReviewApplyable(reviewDraft)) {
+      return { ok: false, reason: "최소 1개 이상의 이벤트를 수락해야 반영할 수 있습니다." };
+    }
+    const candidate = buildAcceptedCandidate(reviewDraft);
+    if (!candidate) {
+      return { ok: false, reason: "수락된 이벤트로 자료를 만들 수 없습니다." };
+    }
+    const repository = getRepository();
+    const summary = pendingReview.meta?.sourceImportSummary;
+    const stored = repository.addSessionImport(
+      session.session.id,
+      candidate,
+      summary ? { importSummary: summary } : undefined,
+    );
+    repository.clearPendingReview(session.session.id);
+    set({
+      imports: repository.listSessionImports(session.session.id),
+      pendingReview: null,
+      lastApplied: {
+        sourceId: stored.id,
+        appliedCount: candidate.events.length,
+        appliedAt: new Date().toISOString(),
+      },
+    });
+    // Applied work means a pending import-created session is now real — drop
+    // the empty-session cleanup bookkeeping so it is never discarded.
+    if (get().pendingNewSession) set({ pendingNewSession: null });
+    return {
+      ok: true,
+      appliedCount: candidate.events.length,
+      firstEventId: stored.events[0]?.id ?? null,
+    };
+  },
+  cancelPendingReview: () => {
+    const session = get().draft;
+    if (session) getRepository().clearPendingReview(session.session.id);
+    set({ pendingReview: null });
+    // If this review was for a freshly-created import session and nothing was
+    // applied, discard the empty session and restore the prior one.
+    get().abandonPendingNewSessionIfEmpty();
+  },
+  clearLastApplied: () => set({ lastApplied: null }),
   resetToDemo: () => {
     const repository = getRepository();
     repository.clearCurrentSessionDraft();
@@ -796,6 +883,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       imports: [],
       pendingReview: null,
+      lastApplied: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -827,6 +915,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       imports: [],
       pendingReview: null,
+      lastApplied: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -858,6 +947,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft: null,
       imports: [],
       pendingReview: null,
+      lastApplied: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -1329,6 +1419,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           demoSessionId: sessionId,
           imports: [],
           pendingReview: null,
+          lastApplied: null,
           analysis: null,
           analysisStatus: "idle",
           analysisError: null,
@@ -1351,6 +1442,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       imports,
       pendingReview: repository.loadPendingReview(sessionId),
+      lastApplied: null,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,
@@ -1399,6 +1491,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       demoSessionId: null,
       imports: refreshedImports,
       pendingReview: repository.loadPendingReview(storedDraft.session.id),
+      lastApplied: null,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,

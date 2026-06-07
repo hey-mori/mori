@@ -69,6 +69,7 @@ function resetStore() {
     pendingNewSession: null,
     imports: [],
     pendingReview: null,
+    lastApplied: null,
     analysis: null,
     analysisStatus: "idle",
     analysisError: null,
@@ -1276,5 +1277,66 @@ describe("useSessionStore pending import review", () => {
 
     useSessionStore.getState().loadBrowserSession(session.session.id);
     expect(useSessionStore.getState().pendingReview).toBeNull();
+  });
+
+  it("applyPendingReview converts the review into an applied import", () => {
+    const store = useSessionStore.getState();
+    const session = store.beginEmptySession({ title: "A", projectName: "P", now: fixedNow });
+    const draft = buildReviewDraft(session.session.id, session.project.id);
+    useSessionStore.getState().savePendingReview(draft);
+    // Manual-note drafts land pending, so accept them before applying.
+    useSessionStore.getState().setAllPendingReviewStatus("accepted");
+
+    const result = useSessionStore.getState().applyPendingReview();
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.appliedCount).toBeGreaterThan(0);
+
+    const state = useSessionStore.getState();
+    expect(state.pendingReview).toBeNull();
+    expect(state.imports.length).toBe(1);
+    expect(state.lastApplied?.appliedCount).toBeGreaterThan(0);
+
+    // The applied import persists across reload; the pending review does not.
+    useSessionStore.getState().loadBrowserSession(session.session.id);
+    expect(useSessionStore.getState().imports.length).toBe(1);
+    expect(useSessionStore.getState().pendingReview).toBeNull();
+  });
+
+  it("applyPendingReview refuses when nothing is accepted", () => {
+    const store = useSessionStore.getState();
+    const session = store.beginEmptySession({ title: "A", projectName: "P", now: fixedNow });
+    const draft = buildReviewDraft(session.session.id, session.project.id);
+    useSessionStore.getState().savePendingReview(draft);
+    useSessionStore.getState().setAllPendingReviewStatus("discarded");
+
+    const result = useSessionStore.getState().applyPendingReview();
+    expect(result.ok).toBe(false);
+    expect(useSessionStore.getState().imports.length).toBe(0);
+    expect(useSessionStore.getState().pendingReview).not.toBeNull();
+  });
+
+  it("cancelPendingReview clears the review and discards an empty import session", () => {
+    const store = useSessionStore.getState();
+    const note = normalizeManualNote({
+      projectId: "p-imp",
+      sessionId: "placeholder",
+      title: "AI 대화",
+      note: "User: hi\nAssistant: hello",
+      capturedAt: fixedNow,
+    });
+    const { sessionId } = store.importAsNewSession({
+      candidate: note,
+      title: "가져온 세션",
+      startedAt: fixedNow,
+      endedAt: fixedNow,
+    });
+    const created = useSessionStore.getState();
+    created.savePendingReview(buildReviewDraft(sessionId, created.draft!.project.id));
+    expect(useSessionStore.getState().pendingReview).not.toBeNull();
+
+    useSessionStore.getState().cancelPendingReview();
+    expect(useSessionStore.getState().pendingReview).toBeNull();
+    // The empty import-created session was discarded (no applied imports).
+    expect(useSessionStore.getState().draft?.session.id).not.toBe(sessionId);
   });
 });
