@@ -1,4 +1,4 @@
-import { Filter, ListPlus, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { Filter, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -181,7 +181,7 @@ export function EvidenceView() {
 
   const importedSourcesSection =
     importedSources.length === 0 ? (
-      <EvidenceEmptyState isDemo={isDemoSession} onImport={() => setCurrentView("connections")} />
+      <EvidenceEmptyState isDemo={isDemoSession} />
     ) : filteredSources.length === 0 ? (
       <EvidenceFilteredEmpty
         onClear={() => {
@@ -501,18 +501,14 @@ function EvidenceFilteredEmpty({ onClear }: { onClear: () => void }) {
   );
 }
 
-function EvidenceEmptyState({ isDemo, onImport }: { isDemo: boolean; onImport: () => void }) {
+// The 자료 tab is the home of a session's evidence, so its own empty state does
+// not repeat the "자료 가져오기" button the other tabs use to send you *here*.
+// It stays a calm prompt that explains how evidence arrives (via 연동).
+function EvidenceEmptyState({ isDemo }: { isDemo: boolean }) {
   return (
     <SessionEmptyPrompt
       title="세션에 가져온 자료 없음"
       hint={isDemo ? "데모 세션은 미리 정의된 소스만 보여줍니다." : "연동에서 대화를 가져오면 여기에 모입니다."}
-      action={
-        isDemo ? undefined : (
-          <Button variant="primary" size="sm" icon={ListPlus} onClick={onImport}>
-            자료 가져오기
-          </Button>
-        )
-      }
     />
   );
 }
