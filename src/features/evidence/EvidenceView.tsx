@@ -302,9 +302,18 @@ export function EvidenceView() {
         </NoticeBanner>
       ) : null}
 
-      {toolbar}
-      {quickPassSection}
-      {importedSourcesSection}
+      {importedSources.length === 0 ? (
+        <>
+          {importedSourcesSection}
+          {quickPassSection}
+        </>
+      ) : (
+        <>
+          {toolbar}
+          {quickPassSection}
+          {importedSourcesSection}
+        </>
+      )}
     </>
   );
 

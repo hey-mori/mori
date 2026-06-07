@@ -3836,7 +3836,9 @@ textarea {
    shape (the canonical lanes) instead of a centered takeover. */
 .timeline-scaffold {
   display: grid;
-  gap: 14px;
+  /* Match `.session-tab-main` so the prompt-to-content gap is identical to the
+     other tabs (the banner carries no own margin; the parent gap owns it). */
+  gap: var(--base-space-7);
 }
 
 .timeline-scaffold-lanes {

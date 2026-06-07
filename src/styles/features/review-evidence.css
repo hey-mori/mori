@@ -2327,10 +2327,12 @@ td a {
 
 /* Issue Garden */
 
-/* The 검토 split inherits the shared `.session-tab-split` padding — no extra
-   top inset, so every tab pane lands at the same y-coordinate. */
+/* The 검토 split inherits the shared `.session-tab-split` padding, no extra
+   top inset, so every tab pane lands at the same y-coordinate. Use the default
+   tab-main gap so the empty-state banner sits the same distance above the board
+   as it does on every other tab. */
 .review-tab-canvas .session-tab-main {
-  gap: var(--base-space-5);
+  gap: var(--base-space-7);
 }
 
 .review-issue-board {
@@ -3873,8 +3875,10 @@ td a {
   color: var(--base-text-muted);
 }
 
+/* Match the shared top inset so the empty-state banner lands at the same
+   y-coordinate as the other tabs; keep the tighter bottom for this short pane. */
 .reports-embedded .session-tab-split {
-  padding-top: var(--base-space-6);
+  padding-top: var(--base-space-5);
   padding-bottom: var(--base-space-6);
 }
 
