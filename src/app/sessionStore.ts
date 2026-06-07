@@ -86,10 +86,21 @@ import {
 import type {
   ConnectorEventIdentitySnapshot,
   DraftRepository,
+  StoredPendingReview,
   StoredSessionDraft,
   StoredSessionImport,
   StoredSessionSummary,
 } from "../lib/storage/storageTypes";
+import {
+  editReviewEvent,
+  setAllItemsStatus,
+  setReviewItemStatus,
+  type ImportReviewDraft,
+  type ReviewDraftMeta,
+  type ReviewEventEdits,
+  type ReviewItemKind,
+  type ReviewItemStatus,
+} from "../lib/review";
 import type {
   ConnectorImportHistorySavedSession,
   ConnectorSourceImportSummary,
@@ -126,6 +137,15 @@ export type SessionState = {
    */
   pendingNewSession: { sessionId: string; previousSessionId: string | null } | null;
   imports: StoredSessionImport[];
+  /**
+   * The active session's parsed-but-not-yet-applied import review, loaded from
+   * persistence whenever a session is opened so it survives navigation and
+   * reload and stays reachable in the 자료 tab. A separate stream from
+   * `imports`: never fed to the session view / timeline / analysis / memory, so
+   * unreviewed events cannot leak in before 반영. `null` when the session has
+   * no pending review. On apply it converts to a `StoredSessionImport`.
+   */
+  pendingReview: StoredPendingReview | null;
   analysis: AnalysisResult | null;
   analysisStatus: AnalysisRunStatus;
   analysisError: string | null;
@@ -235,6 +255,24 @@ export type SessionState = {
    */
   abandonPendingNewSessionIfEmpty: () => boolean;
   removeImport: (importId: string) => void;
+  /**
+   * Persist a parsed import review for the active session and hold it in
+   * memory. Replaces any existing pending review for the session. Returns the
+   * stored record, or `null` when no session is active.
+   */
+  savePendingReview: (draft: ImportReviewDraft, meta?: ReviewDraftMeta) => StoredPendingReview | null;
+  /** Drop the active session's pending review from memory and storage. */
+  clearPendingReview: () => void;
+  /** Flip one pending-review item's status (accept / discard) and persist. */
+  setPendingReviewItemStatus: (
+    kind: ReviewItemKind,
+    itemId: string,
+    status: ReviewItemStatus,
+  ) => void;
+  /** Flip every pending-review item to one status (accept-all / discard-all). */
+  setAllPendingReviewStatus: (status: ReviewItemStatus) => void;
+  /** Apply an inline edit to one pending-review event and persist. */
+  editPendingReviewEvent: (itemId: string, edits: ReviewEventEdits) => void;
   resetToDemo: () => void;
   /**
    * Leave the bundled demo and create a real, empty local draft. This is the
@@ -431,6 +469,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   demoSessionId: null,
   pendingNewSession: null,
   imports: [],
+  pendingReview: null,
   analysis: null,
   analysisStatus: "idle",
   analysisError: null,
@@ -467,6 +506,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         draft: localDraft,
         demoSessionId: null,
         imports: localImports,
+        pendingReview: localDraft ? repository.loadPendingReview(localDraft.session.id) : null,
         analysis: localAnalysisRecord?.result ?? null,
         analysisStatus: localAnalysisRecord ? "succeeded" : "idle",
         analysisError: null,
@@ -524,6 +564,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft,
       demoSessionId: null,
       imports,
+      pendingReview: draft ? repository.loadPendingReview(draft.session.id) : null,
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,
@@ -543,6 +584,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft,
       demoSessionId: null,
       imports,
+      pendingReview: repository.loadPendingReview(draft.session.id),
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,
@@ -618,6 +660,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft: stored,
       demoSessionId: null,
       imports: repository.listSessionImports(stored.session.id),
+      pendingReview: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -663,6 +706,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           draft: restored,
           demoSessionId: null,
           imports: restoredImports,
+          pendingReview: repository.loadPendingReview(restored.session.id),
           analysis: restoredAnalysis?.result ?? null,
           analysisStatus: restoredAnalysis ? "succeeded" : "idle",
           analysisError: null,
@@ -680,6 +724,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft: null,
       demoSessionId: null,
       imports: [],
+      pendingReview: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -697,6 +742,52 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     repository.removeSessionImport(draft.session.id, importId);
     set({ imports: repository.listSessionImports(draft.session.id) });
   },
+  savePendingReview: (draft, meta) => {
+    const session = get().draft;
+    if (!session) return null;
+    const repository = getRepository();
+    const stored = repository.savePendingReview(session.session.id, draft, meta);
+    set({ pendingReview: stored });
+    return stored;
+  },
+  clearPendingReview: () => {
+    const session = get().draft;
+    if (session) getRepository().clearPendingReview(session.session.id);
+    set({ pendingReview: null });
+  },
+  setPendingReviewItemStatus: (kind, itemId, status) => {
+    const { draft: session, pendingReview } = get();
+    if (!session || !pendingReview) return;
+    const nextDraft = setReviewItemStatus(pendingReview.draft, kind, itemId, status);
+    const stored = getRepository().savePendingReview(
+      session.session.id,
+      nextDraft,
+      pendingReview.meta,
+    );
+    set({ pendingReview: stored });
+  },
+  setAllPendingReviewStatus: (status) => {
+    const { draft: session, pendingReview } = get();
+    if (!session || !pendingReview) return;
+    const nextDraft = setAllItemsStatus(pendingReview.draft, status);
+    const stored = getRepository().savePendingReview(
+      session.session.id,
+      nextDraft,
+      pendingReview.meta,
+    );
+    set({ pendingReview: stored });
+  },
+  editPendingReviewEvent: (itemId, edits) => {
+    const { draft: session, pendingReview } = get();
+    if (!session || !pendingReview) return;
+    const nextDraft = editReviewEvent(pendingReview.draft, itemId, edits);
+    const stored = getRepository().savePendingReview(
+      session.session.id,
+      nextDraft,
+      pendingReview.meta,
+    );
+    set({ pendingReview: stored });
+  },
   resetToDemo: () => {
     const repository = getRepository();
     repository.clearCurrentSessionDraft();
@@ -704,6 +795,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft: null,
       demoSessionId: null,
       imports: [],
+      pendingReview: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -734,6 +826,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft: stored,
       demoSessionId: null,
       imports: [],
+      pendingReview: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -764,6 +857,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({
       draft: null,
       imports: [],
+      pendingReview: null,
       analysis: null,
       analysisStatus: "idle",
       analysisError: null,
@@ -1234,6 +1328,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           draft: null,
           demoSessionId: sessionId,
           imports: [],
+          pendingReview: null,
           analysis: null,
           analysisStatus: "idle",
           analysisError: null,
@@ -1255,6 +1350,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft,
       demoSessionId: null,
       imports,
+      pendingReview: repository.loadPendingReview(sessionId),
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,
@@ -1302,6 +1398,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       draft: storedDraft,
       demoSessionId: null,
       imports: refreshedImports,
+      pendingReview: repository.loadPendingReview(storedDraft.session.id),
       analysis: analysisRecord?.result ?? null,
       analysisStatus: analysisRecord ? "succeeded" : "idle",
       analysisError: null,

@@ -7,6 +7,7 @@ import {
 } from "./sessionStore";
 import { createSessionDraft } from "../lib/session/createSessionDraft";
 import { normalizeManualNote } from "../lib/import";
+import { createImportReviewDraft } from "../lib/review";
 import { buildImportCandidateFromClaudeCodeSession } from "../lib/claude/claudeImport";
 import type { ClaudeCodeSessionDetail } from "../lib/claude/types";
 import { BrowserDraftRepository } from "../lib/storage/localStorageAdapter";
@@ -67,6 +68,7 @@ function resetStore() {
     draft: null,
     pendingNewSession: null,
     imports: [],
+    pendingReview: null,
     analysis: null,
     analysisStatus: "idle",
     analysisError: null,
@@ -1186,5 +1188,93 @@ describe("useSessionStore live follow orchestration", () => {
     expect(useSessionStore.getState().follow.status).toBe("following");
     useSessionStore.getState().stopFollow();
     expect(useSessionStore.getState().follow.status).toBe("stopped");
+  });
+});
+
+describe("useSessionStore pending import review", () => {
+  beforeEach(() => {
+    const storage = new MemoryKeyValueStorage();
+    const repository = new BrowserDraftRepository(storage);
+    setSessionRepositoryForTesting(repository);
+    setSessionPersistenceServiceForSessionStore(
+      new SessionPersistenceService({ runtime: "browser", repository }),
+    );
+    resetStore();
+  });
+
+  afterEach(() => {
+    setSessionRepositoryForTesting(null);
+    setSessionPersistenceServiceForSessionStore(null);
+    resetStore();
+  });
+
+  function buildReviewDraft(sessionId: string, projectId: string) {
+    const note = normalizeManualNote({
+      projectId,
+      sessionId,
+      title: "검토 대기",
+      note: "위험: 토큰 회전 미정. TODO: rotate.",
+      capturedAt: fixedNow,
+    });
+    return createImportReviewDraft(note, "manual-note");
+  }
+
+  it("persists a pending review and restores it on reload", async () => {
+    const store = useSessionStore.getState();
+    const session = store.beginEmptySession({ title: "A", projectName: "P", now: fixedNow });
+    const draft = buildReviewDraft(session.session.id, session.project.id);
+
+    useSessionStore.getState().savePendingReview(draft);
+    expect(useSessionStore.getState().pendingReview?.draft.id).toBe(draft.id);
+
+    resetStore();
+    await useSessionStore.getState().hydrate();
+    expect(useSessionStore.getState().pendingReview?.draft.id).toBe(draft.id);
+  });
+
+  it("does not leak one session's pending review into another", () => {
+    const store = useSessionStore.getState();
+    const a = store.beginEmptySession({ title: "A", projectName: "P", now: fixedNow });
+    const draftA = buildReviewDraft(a.session.id, a.project.id);
+    useSessionStore.getState().savePendingReview(draftA);
+
+    // Opening a second session must not carry session A's pending review.
+    const b = useSessionStore.getState().beginEmptySession({ title: "B", projectName: "P", now: fixedNow });
+    expect(b.session.id).not.toBe(a.session.id);
+    expect(useSessionStore.getState().pendingReview).toBeNull();
+
+    // Switching back to A restores its pending review.
+    useSessionStore.getState().loadBrowserSession(a.session.id);
+    expect(useSessionStore.getState().pendingReview?.draft.id).toBe(draftA.id);
+  });
+
+  it("persists per-item accept / discard across reload", async () => {
+    const store = useSessionStore.getState();
+    const session = store.beginEmptySession({ title: "A", projectName: "P", now: fixedNow });
+    const draft = buildReviewDraft(session.session.id, session.project.id);
+    const eventId = draft.events[0]!.id;
+
+    useSessionStore.getState().savePendingReview(draft);
+    useSessionStore.getState().setPendingReviewItemStatus("event", eventId, "discarded");
+
+    resetStore();
+    await useSessionStore.getState().hydrate();
+    const restored = useSessionStore
+      .getState()
+      .pendingReview?.draft.events.find((item) => item.id === eventId);
+    expect(restored?.status).toBe("discarded");
+  });
+
+  it("clearPendingReview removes it from memory and storage", () => {
+    const store = useSessionStore.getState();
+    const session = store.beginEmptySession({ title: "A", projectName: "P", now: fixedNow });
+    useSessionStore.getState().savePendingReview(buildReviewDraft(session.session.id, session.project.id));
+    expect(useSessionStore.getState().pendingReview).not.toBeNull();
+
+    useSessionStore.getState().clearPendingReview();
+    expect(useSessionStore.getState().pendingReview).toBeNull();
+
+    useSessionStore.getState().loadBrowserSession(session.session.id);
+    expect(useSessionStore.getState().pendingReview).toBeNull();
   });
 });
