@@ -28,6 +28,18 @@ is lost; items are grouped by how they ship.
 - **Unified empty states**: 흐름 / 자료 / 검토 share the `EmptyState` component
   with one calm line and a consistent 자료 가져오기 action (copy trimmed above).
 
+## Shipped (Phase 2a + empty-state pattern)
+
+- **Analysis panel above the source list** in the 자료 tab (no longer buried).
+- **Report empty state unified** to `EmptyState`; the report builder no longer
+  warns about zero sources.
+- **"Show the layout, prompt above" empty states** (the user's "공유처럼"):
+  - 검토: the 이슈 / 결정 / 다음 액션 columns always render (empty placeholders)
+    under a banner that prompts to import or run analysis.
+  - 흐름: the canonical lane rows render as an empty scaffold under a prompt
+    banner, so the tab keeps its shape.
+  - These replace the centered full-screen takeovers.
+
 ## Next (UI, needs a visual pass)
 
 1. **Session title = the session's own name** — BLOCKED on Rust. The Claude
