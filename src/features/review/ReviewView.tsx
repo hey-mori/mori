@@ -32,6 +32,7 @@ import {
 import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
+import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
 import { AnalysisRunHistoryPanel } from "./AnalysisRunHistoryPanel";
 import { formatDateTime } from "../../lib/formatting/time";
@@ -317,30 +318,33 @@ export function ReviewView() {
   const body = (
     <>
       {showQuickPassEmpty ? (
-        <NoticeBanner
-          tone="info"
-          title="분석할 항목이 아직 없습니다"
-          actions={
-            imports.length > 0 ? (
+        imports.length > 0 ? (
+          <SessionEmptyPrompt
+            title="분석 전 · 아직 정리된 항목 없음"
+            hint="분석을 실행하면 이슈 · 결정 · 다음 액션으로 정리됩니다."
+            action={
               <Button
                 variant="primary"
+                size="sm"
                 icon={Sparkles}
                 onClick={() => runQuickPass()}
                 disabled={!canRunQuickPass}
               >
                 분석 실행
               </Button>
-            ) : (
-              <Button variant="primary" onClick={() => setCurrentView("evidence")}>
+            }
+          />
+        ) : (
+          <SessionEmptyPrompt
+            title="세션에 가져온 자료 없음"
+            hint="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
+            action={
+              <Button variant="primary" size="sm" onClick={() => setCurrentView("evidence")}>
                 자료 가져오기
               </Button>
-            )
-          }
-        >
-          {imports.length > 0
-            ? `가져온 자료 ${imports.length}개를 읽고 이슈 · 결정 · 다음 액션을 정리합니다.`
-            : "자료 탭에서 대화를 가져오면 여기에 정리됩니다."}
-        </NoticeBanner>
+            }
+          />
+        )
       ) : (
         <ReviewAnalysisNotice
           status={analysisStatus}

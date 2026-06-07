@@ -47,7 +47,7 @@ describe("composeSessionView", () => {
     expect(view.events).toHaveLength(0);
     expect(view.issues).toHaveLength(0);
     expect(view.session.startedAt).toBe(baseDraft.session.startedAt);
-    expect(view.summary.sessionSummary).toContain("No imports yet");
+    expect(view.summary.sessionSummary).toContain("세션에 가져온 자료 없음");
   });
 
   it("composes imports into sources and events and updates the session window", () => {
@@ -86,7 +86,7 @@ describe("composeSessionView", () => {
     expect(view.events).toHaveLength(3);
     expect(view.session.startedAt).toBe("2026-05-12T13:10:00+09:00");
     expect(view.session.endedAt).toBe("2026-05-12T15:30:00+09:00");
-    expect(view.summary.sessionSummary).toContain("3 imported events");
+    expect(view.summary.sessionSummary).toContain("가져온 이벤트 3개");
     expect(view.events.map((event) => event.type)).toEqual(
       expect.arrayContaining(["documentNote", "webResearch", "aiConversation"]),
     );

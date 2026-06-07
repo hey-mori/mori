@@ -29,9 +29,9 @@ export function composeSessionView(input: {
     id: `summary-${input.draft.session.id}`,
     sessionId: input.draft.session.id,
     sessionSummary: events.length
-      ? `${events.length} imported event${events.length === 1 ? "" : "s"} awaiting Quick Pass analysis.`
-      : "No imports yet. Add a manual note, URL, or AI conversation to populate this session.",
-    resumePrompt: "Run Quick Pass to generate a resume prompt for this session.",
+      ? `가져온 이벤트 ${events.length}개 · 분석 대기 중`
+      : "세션에 가져온 자료 없음. 자료 탭에서 메모·URL·AI 대화를 추가하세요.",
+    resumePrompt: "분석을 실행하면 이 세션의 이어가기 프롬프트가 생성됩니다.",
     reportMarkdown: "",
     nextActionIds: [],
     generatedAt: input.draft.savedAt,

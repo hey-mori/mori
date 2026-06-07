@@ -8,6 +8,8 @@ import {
   type LucideProps,
 } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { SessionEmptyPrompt } from "./SessionEmptyPrompt";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -79,10 +81,11 @@ export function OverviewView() {
     () => buildSessionWorkSummary(view.events, view.sources),
     [view.events, view.sources],
   );
-  // The LLM (or saved) narrative, when one exists. The factual work summary
-  // below always shows, with no LLM, so 개요 is legible the moment it loads.
-  const summaryText =
-    (hasAnalysis && analysis ? analysis.summary.sessionSummary : view.summary.sessionSummary) || null;
+  // The LLM narrative, only when a real analysis exists. The factual work
+  // summary below always shows, with no LLM, so 개요 is legible the moment it
+  // loads. We never surface the pre-analysis placeholder as an "AI 요약".
+  const summaryText = hasAnalysis && analysis ? analysis.summary.sessionSummary : null;
+  const sessionEmpty = workSummary.isEmpty;
   const duration = useMemo(
     () => formatDuration(view.session.startedAt, view.session.endedAt),
     [view.session.startedAt, view.session.endedAt],
@@ -116,6 +119,17 @@ export function OverviewView() {
     <div className="session-tab-pane session-tab-overview">
       <div className="session-tab-split is-collapsed">
         <div className="session-tab-main overview-main">
+          {sessionEmpty ? (
+            <SessionEmptyPrompt
+              title="세션에 가져온 자료 없음"
+              hint="자료 탭에서 대화를 가져오면 개요가 채워집니다."
+              action={
+                <Button variant="primary" size="sm" onClick={() => setSessionTab("evidence")}>
+                  자료 가져오기
+                </Button>
+              }
+            />
+          ) : null}
           <section className="session-overview-hero" aria-label="세션 개요">
             <div className="session-overview-origin">
               <Badge tone="purple">{originSummary.boundaryLabel}</Badge>
@@ -124,13 +138,9 @@ export function OverviewView() {
                 <span className="session-overview-context">맥락 · {projectHint.projectLabel}</span>
               ) : null}
             </div>
-            {!workSummary.isEmpty ? (
+            {!sessionEmpty ? (
               <p className="session-overview-summary">{workSummary.headline}</p>
-            ) : (
-              <p className="session-overview-summary is-empty">
-                아직 이 세션에 들어온 작업이 없습니다. 자료 탭에서 대화를 가져오면 여기에 요약됩니다.
-              </p>
-            )}
+            ) : null}
             {summaryText ? (
               <p className="session-overview-ai-summary">
                 <Badge tone="purple">AI 요약</Badge> {summaryText}

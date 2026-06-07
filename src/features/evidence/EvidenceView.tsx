@@ -1,11 +1,11 @@
-import { FileText, Filter, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { Filter, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { SearchField } from "../../components/ui/SearchField";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
-import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import type { SourceKind } from "../../domain/types";
 import {
   selectHasRealAnalysis,
@@ -181,7 +181,7 @@ export function EvidenceView() {
 
   const importedSourcesSection =
     importedSources.length === 0 ? (
-      <EvidenceEmptyState isDemo={isDemoSession} />
+      <EvidenceEmptyState isDemo={isDemoSession} onImport={() => setCurrentView("connections")} />
     ) : filteredSources.length === 0 ? (
       <EvidenceFilteredEmpty
         onClear={() => {
@@ -492,13 +492,18 @@ function EvidenceFilteredEmpty({ onClear }: { onClear: () => void }) {
   );
 }
 
-function EvidenceEmptyState({ isDemo }: { isDemo: boolean }) {
+function EvidenceEmptyState({ isDemo, onImport }: { isDemo: boolean; onImport: () => void }) {
   return (
-    <EmptyState
-      compact
-      icon={FileText}
-      title="이 세션을 구성한 소스가 아직 없습니다"
-      description={isDemo ? "데모 세션은 미리 정의된 소스만 보여줍니다." : "연동에서 대화를 가져오면 여기에 모입니다."}
+    <SessionEmptyPrompt
+      title="세션에 가져온 자료 없음"
+      hint={isDemo ? "데모 세션은 미리 정의된 소스만 보여줍니다." : "연동에서 대화를 가져오면 여기에 모입니다."}
+      action={
+        isDemo ? undefined : (
+          <Button variant="primary" size="sm" onClick={onImport}>
+            자료 가져오기
+          </Button>
+        )
+      }
     />
   );
 }

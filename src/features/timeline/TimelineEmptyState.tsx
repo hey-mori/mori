@@ -2,7 +2,7 @@ import { ListPlus, Play, SearchX, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import {
   CANONICAL_TIMELINE_LANES,
   getActivityLaneVisuals,
@@ -26,9 +26,7 @@ function TimelineLaneScaffold({
 }) {
   return (
     <div className="timeline-scaffold">
-      <NoticeBanner tone="info" title={title} actions={action}>
-        {description}
-      </NoticeBanner>
+      <SessionEmptyPrompt title={title} hint={description} action={action} />
       <div className="timeline-scaffold-lanes" aria-hidden="true">
         {CANONICAL_TIMELINE_LANES.map((lane) => (
           <div key={lane} className="timeline-scaffold-lane">
@@ -73,10 +71,10 @@ export function TimelineEmptyState({
   if (variant === "draft-no-imports") {
     return (
       <TimelineLaneScaffold
-        title="이 세션에는 아직 가져온 자료가 없습니다"
-        description="자료 탭에서 대화를 가져오면 여기에 시간순으로 그려집니다."
+        title="세션에 가져온 자료 없음"
+        description="자료 탭에서 대화를 가져오면 시간순으로 그려집니다."
         action={
-          <Button variant="primary" icon={ListPlus} onClick={onOpenSources}>
+          <Button variant="primary" size="sm" icon={ListPlus} onClick={onOpenSources}>
             자료 가져오기
           </Button>
         }
@@ -85,11 +83,12 @@ export function TimelineEmptyState({
   }
   return (
     <TimelineLaneScaffold
-      title="자료를 가져왔습니다. 분석을 실행하면 타임라인이 채워집니다."
-      description="가져온 자료를 이벤트 · 이슈 · 결정으로 정리합니다. 로컬에서만 실행됩니다."
+      title="분석 전 · 타임라인 비어 있음"
+      description="분석을 실행하면 가져온 자료가 이벤트로 정리됩니다."
       action={
         <Button
           variant="primary"
+          size="sm"
           icon={Sparkles}
           onClick={onRunQuickPass}
           disabled={!canRunQuickPass}

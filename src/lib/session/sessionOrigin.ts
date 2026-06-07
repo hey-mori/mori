@@ -159,7 +159,7 @@ function familyRank(family: SourceFamily): number {
 }
 
 function sourceMixLabelFor(families: SourceFamily[]): string {
-  if (families.length === 0) return "No sources yet";
+  if (families.length === 0) return "자료 없음";
   if (families.length === 1) return SOURCE_FAMILY_LABEL[families[0]!];
   const firstTwo = families.slice(0, 2).map((family) => SOURCE_FAMILY_LABEL[family]);
   const overflow = families.length - firstTwo.length;

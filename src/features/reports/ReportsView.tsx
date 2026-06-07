@@ -1,7 +1,7 @@
 import { Archive, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
-import { EmptyState } from "../../components/layout/EmptyState";
+import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
@@ -196,11 +196,14 @@ function ReportsAnalysisNotice({
   }
   if (!hasAnalysis && importsCount === 0) {
     return (
-      <EmptyState
-        compact
-        icon={FileText}
-        title="아직 가져온 자료가 없습니다"
-        actions={<Button onClick={onGoToEvidence}>자료 가져오기</Button>}
+      <SessionEmptyPrompt
+        title="세션에 가져온 자료 없음"
+        hint="자료 탭에서 대화를 가져오면 보고서를 만들 수 있습니다."
+        action={
+          <Button variant="primary" size="sm" onClick={onGoToEvidence}>
+            자료 가져오기
+          </Button>
+        }
       />
     );
   }
@@ -241,7 +244,7 @@ async function writeMoriZipPackage(
       });
       return saved.cancelled
         ? { status: "cancelled", message: "내보내기를 취소했습니다. Browser draft는 저장되었습니다." }
-        : { status: "saved", message: `데스크톱 .mori 패키지를 저장했습니다 — ${saved.path}` };
+        : { status: "saved", message: `데스크톱 .mori 패키지를 저장했습니다 · ${saved.path}` };
     } catch (error) {
       return {
         status: "error",
