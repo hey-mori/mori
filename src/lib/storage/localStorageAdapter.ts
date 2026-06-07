@@ -12,6 +12,7 @@ import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 import type { RepositorySettings } from "../repositories";
 import { DEFAULT_REPOSITORY_SETTINGS, sanitizeRepositorySettings } from "../repositories";
+import type { ImportReviewDraft, ReviewDraftMeta } from "../review";
 import { deriveSessionSummaryMetrics } from "./sessionSummaryMetrics";
 import type {
   ConnectorEventIdentitySnapshot,
@@ -20,6 +21,7 @@ import type {
   StoredAcceptedProjectMemory,
   StoredMemoryReviewAction,
   StoredMoriPackageDraft,
+  StoredPendingReview,
   StoredSessionAnalysis,
   StoredSessionAnalysisHistory,
   StoredSessionDraft,
@@ -35,12 +37,14 @@ const IMPORTS_PREFIX = "mori.sessionImports.";
 const ANALYSIS_PREFIX = "mori.sessionAnalysis.";
 const ANALYSIS_HISTORY_PREFIX = "mori.sessionAnalysisHistory.";
 const MEMORY_PREFIX = "mori.sessionMemory.";
+const PENDING_REVIEW_PREFIX = "mori.sessionPendingReview.";
 const ACCEPTED_MEMORY_PREFIX = "mori.consolidatedMemory.";
 const REVIEW_ACTION_PREFIX = "mori.consolidatedMemoryAudit.";
 const QUICK_PASS_SETTINGS_KEY = "mori.quickPassSettings";
 const REPOSITORY_SETTINGS_KEY = "mori.repositorySettings";
 
 const MEMORY_BODY_SCHEMA_VERSION = 1 as const;
+const PENDING_REVIEW_SCHEMA_VERSION = 1 as const;
 const ANALYSIS_HISTORY_SCHEMA_VERSION = 1 as const;
 const ACCEPTED_MEMORY_SCHEMA_VERSION = 1 as const;
 const REVIEW_ACTION_SCHEMA_VERSION = 1 as const;
@@ -169,6 +173,7 @@ export class BrowserDraftRepository implements DraftRepository {
     this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
     this.storage.removeItem(`${ANALYSIS_HISTORY_PREFIX}${sessionId}`);
     this.storage.removeItem(`${MEMORY_PREFIX}${sessionId}`);
+    this.storage.removeItem(`${PENDING_REVIEW_PREFIX}${sessionId}`);
     const current = this.loadCurrentSessionDraft();
     if (current?.session.id === sessionId) {
       this.storage.removeItem(CURRENT_SESSION_KEY);
@@ -184,6 +189,7 @@ export class BrowserDraftRepository implements DraftRepository {
       this.storage.removeItem(`${ANALYSIS_PREFIX}${current.session.id}`);
       this.storage.removeItem(`${ANALYSIS_HISTORY_PREFIX}${current.session.id}`);
       this.storage.removeItem(`${MEMORY_PREFIX}${current.session.id}`);
+      this.storage.removeItem(`${PENDING_REVIEW_PREFIX}${current.session.id}`);
     }
   }
 
@@ -409,6 +415,42 @@ export class BrowserDraftRepository implements DraftRepository {
 
   clearSessionMemoryBody(sessionId: string): void {
     this.storage.removeItem(`${MEMORY_PREFIX}${sessionId}`);
+  }
+
+  // ─── Pending Import Review Persistence ───────────────────────────────
+
+  savePendingReview(
+    sessionId: string,
+    draft: ImportReviewDraft,
+    meta?: ReviewDraftMeta,
+  ): StoredPendingReview {
+    const stored: StoredPendingReview = {
+      id: draft.id,
+      sessionId,
+      draft,
+      savedAt: new Date().toISOString(),
+      adapter: "browser-local-storage",
+      schemaVersion: PENDING_REVIEW_SCHEMA_VERSION,
+      ...(meta ? { meta } : {}),
+    };
+    this.write(`${PENDING_REVIEW_PREFIX}${sessionId}`, stored);
+    return stored;
+  }
+
+  loadPendingReview(sessionId: string): StoredPendingReview | null {
+    const raw = this.read<StoredPendingReview>(`${PENDING_REVIEW_PREFIX}${sessionId}`);
+    if (!raw) return null;
+    // Refuse an unknown schema version so callers fall back to "no pending
+    // review" instead of consuming a record they cannot interpret.
+    if (raw.schemaVersion !== PENDING_REVIEW_SCHEMA_VERSION) return null;
+    // Validate the minimal shape so a hand-edited storage value cannot crash
+    // the loader.
+    if (!raw.draft || !Array.isArray(raw.draft.events)) return null;
+    return raw;
+  }
+
+  clearPendingReview(sessionId: string): void {
+    this.storage.removeItem(`${PENDING_REVIEW_PREFIX}${sessionId}`);
   }
 
   // ─── Accepted Memory Persistence ─────────────────────────────────────

@@ -3,6 +3,7 @@ import { mockSession } from "../../domain/mock-data";
 import type { AnalysisResult } from "../analysis";
 import { DEFAULT_QUICK_PASS_SETTINGS, createDeterministicQuickPassProvider } from "../analysis";
 import { normalizeAiConversationText, normalizeManualNote, normalizeUrlSource } from "../import";
+import { createImportReviewDraft } from "../review";
 import { createMoriPackageFromSession } from "../mori-package";
 import { createSessionDraft } from "../session/createSessionDraft";
 import { BrowserDraftRepository } from "./localStorageAdapter";
@@ -335,6 +336,78 @@ describe("BrowserDraftRepository", () => {
     expect(repository.loadSessionMemoryBody(sessionId)).not.toBeNull();
     repository.clearStoredSession(sessionId);
     expect(repository.loadSessionMemoryBody(sessionId)).toBeNull();
+  });
+
+  it("persists, loads, and clears a pending import review", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    const note = normalizeManualNote({
+      projectId: "p-pending",
+      sessionId: "sess-pending",
+      title: "Pending",
+      note: "검토 대기 중 자료.",
+      capturedAt: "2026-05-12T13:05:00+09:00",
+    });
+    const draft = createImportReviewDraft(note, "manual-note");
+
+    const stored = repository.savePendingReview("sess-pending", draft, {
+      duplicateSkippedCount: 2,
+    });
+    expect(stored.adapter).toBe("browser-local-storage");
+    expect(stored.schemaVersion).toBe(1);
+    expect(stored.id).toBe(draft.id);
+
+    const loaded = repository.loadPendingReview("sess-pending");
+    expect(loaded?.draft.id).toBe(draft.id);
+    expect(loaded?.draft.events.length).toBe(draft.events.length);
+    expect(loaded?.meta?.duplicateSkippedCount).toBe(2);
+
+    repository.clearPendingReview("sess-pending");
+    expect(repository.loadPendingReview("sess-pending")).toBeNull();
+  });
+
+  it("returns null for a pending review with an unknown schema version", () => {
+    const storage = new MemoryKeyValueStorage();
+    storage.setItem(
+      "mori.sessionPendingReview.sess-future",
+      JSON.stringify({
+        id: "rev-1",
+        sessionId: "sess-future",
+        draft: { id: "rev-1", events: [] },
+        savedAt: "2026-06-01T00:00:00Z",
+        adapter: "browser-local-storage",
+        schemaVersion: 99,
+      }),
+    );
+    const repository = new BrowserDraftRepository(storage);
+    expect(repository.loadPendingReview("sess-future")).toBeNull();
+  });
+
+  it("clearStoredSession also removes a pending review", () => {
+    const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "T",
+        projectName: "P",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-15T13:00:00Z",
+      }),
+    );
+    const sessionId = repository.loadCurrentSessionDraft()!.session.id;
+    const note = normalizeManualNote({
+      projectId: "p1",
+      sessionId,
+      title: "Pending",
+      note: "검토 대기.",
+      capturedAt: "2026-05-12T13:05:00+09:00",
+    });
+    repository.savePendingReview(sessionId, createImportReviewDraft(note, "manual-note"));
+    expect(repository.loadPendingReview(sessionId)).not.toBeNull();
+    repository.clearStoredSession(sessionId);
+    expect(repository.loadPendingReview(sessionId)).toBeNull();
   });
 
   it("clears the active session draft including its imports", () => {

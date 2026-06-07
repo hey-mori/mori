@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { NormalizedImportCandidate } from "../lib/import";
-import type { ConnectorSourceImportSummary } from "../lib/connectors";
 import {
   buildAcceptedCandidate,
   createImportReviewDraft,
@@ -9,6 +8,7 @@ import {
   setAllItemsStatus,
   setReviewItemStatus,
   type ImportReviewDraft,
+  type ReviewDraftMeta,
   type ReviewEventEdits,
   type ReviewItemKind,
   type ReviewItemStatus,
@@ -21,40 +21,10 @@ export type ApplyImportFn = (
 
 export type ApplyResult = { ok: true; appliedCount: number } | { ok: false; reason: string };
 
-/**
- * Optional meta the boundary (Evidence Hub Connector JSONL import) passes
- * to Import Review so the Review surface can show "Skipped N duplicates"
- * alongside the source title. Today only the connector path produces
- * non-zero values; other import kinds pass nothing.
- */
-export type ReviewDraftMeta = {
-  newEventCount?: number;
-  duplicateSkippedCount?: number;
-  duplicateIncludedCount?: number;
-  invalidLineCount?: number;
-  includeDuplicates?: boolean;
-  /**
-   * Split of the duplicate count across detection sources so the Import
-   * Review meta strip can show "Saved-session N" alongside the legacy
-   * "Skipped duplicates" cell. Filled by the cross-session preview path.
-   */
-  currentSessionDuplicateCount?: number;
-  savedSessionDuplicateCount?: number;
-  inBatchDuplicateCount?: number;
-  /**
-   * False when the preview ran without saved-session history (browser
-   * fallback). The meta strip uses this to render an honesty note instead
-   * of pretending cross-session detection happened.
-   */
-  savedSessionHistoryAvailable?: boolean;
-  /**
-   * Source-level re-import summary derived from the preview. The Import
-   * Review meta strip renders this as a single status line ("Partial
-   * re-import · 3 new / 8 already imported") so the user understands
-   * what's about to be applied without re-deriving counts.
-   */
-  sourceImportSummary?: ConnectorSourceImportSummary;
-};
+// `ReviewDraftMeta` now lives in `lib/review` so the storage layer can persist
+// it without an upward dependency on this app store. Re-exported here so
+// existing importers (e.g. ImportReviewView) keep their import path.
+export type { ReviewDraftMeta };
 
 export type ImportReviewState = {
   draft: ImportReviewDraft | null;

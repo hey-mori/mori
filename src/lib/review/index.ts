@@ -2,6 +2,7 @@ export type {
   ImportReviewDraft,
   ReviewCounts,
   ReviewDecisionItem,
+  ReviewDraftMeta,
   ReviewEventEdits,
   ReviewEventItem,
   ReviewIssueItem,

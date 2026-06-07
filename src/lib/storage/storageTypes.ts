@@ -13,6 +13,7 @@ import type { ConnectorSourceImportSummary } from "../connectors";
 import type { NormalizedImportCandidate } from "../import";
 import type { MoriPackageV0 } from "../mori-package";
 import type { RepositorySettings } from "../repositories";
+import type { ImportReviewDraft, ReviewDraftMeta } from "../review";
 
 export type StoredSessionDraft = {
   project: Project;
@@ -96,6 +97,28 @@ export type StoredSessionImport = {
    * beyond what `StoredSessionImport.events` already holds).
    */
   importSummary?: ConnectorSourceImportSummary;
+};
+
+/**
+ * A parsed-but-not-yet-applied import review, persisted per session so the
+ * review survives navigation and reload and stays reachable in the 자료 tab.
+ * This is a SEPARATE stream from `StoredSessionImport`: a pending review is
+ * never read by the session view, timeline, analysis, or memory consumers, so
+ * unreviewed events can never leak in before the user applies. On 반영 the
+ * draft is converted to a `StoredSessionImport` and this record is cleared.
+ */
+export type StoredPendingReview = {
+  /** Mirrors `draft.id`. One pending review per session today; the id leaves
+   *  room for a future queue without a shape change. */
+  id: string;
+  sessionId: string;
+  draft: ImportReviewDraft;
+  /** Optional duplicate / re-import context shown by the review header. */
+  meta?: ReviewDraftMeta;
+  savedAt: string;
+  adapter: "browser-local-storage";
+  /** Bumped when the on-disk shape changes incompatibly. Loader rejects unknown majors. */
+  schemaVersion: 1;
 };
 
 /**
@@ -295,6 +318,22 @@ export type DraftRepository = {
   ) => StoredSessionMemoryBody;
   loadSessionMemoryBody: (sessionId: string) => StoredSessionMemoryBody | null;
   clearSessionMemoryBody: (sessionId: string) => void;
+  /**
+   * Persist a session's in-flight import review (parsed but not yet applied)
+   * so it survives navigation / reload and stays reachable in the 자료 tab.
+   * A separate stream from `addSessionImport`: this is NOT read by the session
+   * view, timeline, analysis, or memory, so unreviewed events never leak in
+   * before 반영. Replaces any existing pending review for the session.
+   */
+  savePendingReview: (
+    sessionId: string,
+    draft: ImportReviewDraft,
+    meta?: ReviewDraftMeta,
+  ) => StoredPendingReview;
+  /** Read the session's pending review, or `null` when none / schema-mismatched. */
+  loadPendingReview: (sessionId: string) => StoredPendingReview | null;
+  /** Drop the session's pending review (on apply or cancel). */
+  clearPendingReview: (sessionId: string) => void;
   saveQuickPassSettings: (settings: QuickPassAnalysisSettings) => QuickPassAnalysisSettings;
   loadQuickPassSettings: () => QuickPassAnalysisSettings;
   saveRepositorySettings: (settings: RepositorySettings) => RepositorySettings;
