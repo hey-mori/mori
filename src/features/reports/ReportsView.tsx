@@ -1,4 +1,4 @@
-import { Archive, FileText } from "lucide-react";
+import { Archive, FileText, ListPlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
@@ -200,7 +200,7 @@ function ReportsAnalysisNotice({
         title="세션에 가져온 자료 없음"
         hint="자료 탭에서 대화를 가져오면 보고서를 만들 수 있습니다."
         action={
-          <Button variant="primary" size="sm" onClick={onGoToEvidence}>
+          <Button variant="primary" size="sm" icon={ListPlus} onClick={onGoToEvidence}>
             자료 가져오기
           </Button>
         }

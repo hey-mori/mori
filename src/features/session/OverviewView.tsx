@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   FileText,
   GanttChartSquare,
+  ListPlus,
   ScrollText,
   type LucideProps,
 } from "lucide-react";
@@ -124,7 +125,12 @@ export function OverviewView() {
               title="세션에 가져온 자료 없음"
               hint="자료 탭에서 대화를 가져오면 개요가 채워집니다."
               action={
-                <Button variant="primary" size="sm" onClick={() => setSessionTab("evidence")}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={ListPlus}
+                  onClick={() => setSessionTab("evidence")}
+                >
                   자료 가져오기
                 </Button>
               }

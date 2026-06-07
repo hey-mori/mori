@@ -4,6 +4,7 @@ import {
   Eye,
   FileText,
   Filter,
+  ListPlus,
   RotateCcw,
   Sparkles,
   Square,
@@ -339,7 +340,12 @@ export function ReviewView() {
             title="세션에 가져온 자료 없음"
             hint="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
             action={
-              <Button variant="primary" size="sm" onClick={() => setCurrentView("evidence")}>
+              <Button
+                variant="primary"
+                size="sm"
+                icon={ListPlus}
+                onClick={() => setCurrentView("evidence")}
+              >
                 자료 가져오기
               </Button>
             }

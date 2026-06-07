@@ -1,4 +1,4 @@
-import { Filter, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { Filter, ListPlus, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -508,7 +508,7 @@ function EvidenceEmptyState({ isDemo, onImport }: { isDemo: boolean; onImport: (
       hint={isDemo ? "데모 세션은 미리 정의된 소스만 보여줍니다." : "연동에서 대화를 가져오면 여기에 모입니다."}
       action={
         isDemo ? undefined : (
-          <Button variant="primary" size="sm" onClick={onImport}>
+          <Button variant="primary" size="sm" icon={ListPlus} onClick={onImport}>
             자료 가져오기
           </Button>
         )
