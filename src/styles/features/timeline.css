@@ -3831,3 +3831,49 @@ textarea {
   padding-left: var(--page-inset);
   padding-right: var(--page-inset);
 }
+
+/* Empty 흐름 tab: the lane scaffold under a prompt banner, so the tab keeps its
+   shape (the canonical lanes) instead of a centered takeover. */
+.timeline-scaffold {
+  display: grid;
+  gap: 14px;
+}
+
+.timeline-scaffold-lanes {
+  display: grid;
+  gap: 1px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--line);
+  opacity: 0.65;
+}
+
+.timeline-scaffold-lane {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--panel, #fff);
+}
+
+.timeline-scaffold-lane-label {
+  width: 84px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.timeline-scaffold-lane-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 5px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--line) 0,
+    var(--line) 22px,
+    transparent 22px,
+    transparent 40px
+  );
+}

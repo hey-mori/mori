@@ -1,8 +1,47 @@
 import { ListPlus, Play, SearchX, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { NoticeBanner } from "../../components/layout/NoticeBanner";
+import {
+  CANONICAL_TIMELINE_LANES,
+  getActivityLaneVisuals,
+} from "../../lib/timeline/activityModel";
 
 export type TimelineEmptyVariant = "demo-empty" | "draft-no-imports" | "draft-needs-quick-pass";
+
+/**
+ * Empty 흐름 tab: instead of a centered takeover, show the lane scaffold (the
+ * canonical lanes, empty) under a prompt banner, so the tab keeps its shape and
+ * the user sees what the timeline will look like once data arrives.
+ */
+function TimelineLaneScaffold({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action: ReactNode;
+}) {
+  return (
+    <div className="timeline-scaffold">
+      <NoticeBanner tone="info" title={title} actions={action}>
+        {description}
+      </NoticeBanner>
+      <div className="timeline-scaffold-lanes" aria-hidden="true">
+        {CANONICAL_TIMELINE_LANES.map((lane) => (
+          <div key={lane} className="timeline-scaffold-lane">
+            <span className="timeline-scaffold-lane-label">
+              {getActivityLaneVisuals(lane).label}
+            </span>
+            <span className="timeline-scaffold-lane-track" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function TimelineEmptyState({
   variant,
@@ -33,11 +72,10 @@ export function TimelineEmptyState({
   }
   if (variant === "draft-no-imports") {
     return (
-      <EmptyState
-        icon={ListPlus}
+      <TimelineLaneScaffold
         title="이 세션에는 아직 가져온 자료가 없습니다"
-        description="자료 탭에서 대화를 가져오면 여기에 표시됩니다."
-        actions={
+        description="자료 탭에서 대화를 가져오면 여기에 시간순으로 그려집니다."
+        action={
           <Button variant="primary" icon={ListPlus} onClick={onOpenSources}>
             자료 가져오기
           </Button>
@@ -46,11 +84,10 @@ export function TimelineEmptyState({
     );
   }
   return (
-    <EmptyState
-      icon={Sparkles}
+    <TimelineLaneScaffold
       title="자료를 가져왔습니다. 분석을 실행하면 타임라인이 채워집니다."
       description="가져온 자료를 이벤트 · 이슈 · 결정으로 정리합니다. 로컬에서만 실행됩니다."
-      actions={
+      action={
         <Button
           variant="primary"
           icon={Sparkles}
