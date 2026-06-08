@@ -152,6 +152,7 @@ function SessionTabBar({
   const view = useSessionStore(selectSessionView);
   const mode = useSessionStore(selectSessionMode);
   const imports = useSessionStore((state) => state.imports);
+  const pendingReview = useSessionStore((state) => state.pendingReview);
 
   const counts: Record<SessionTab, number | null> = useMemo(() => {
     const sources = mode === "demo" ? view.sources.length : imports.length;
@@ -205,7 +206,11 @@ function SessionTabBar({
           >
             <Icon size={14} aria-hidden="true" />
             <span>{tab.label}</span>
-            {count && count > 0 ? <b className="session-tab-count">{count}</b> : null}
+            {tab.id === "evidence" && pendingReview ? (
+              <b className="session-tab-dot" title="검토 대기" aria-label="검토 대기" />
+            ) : count && count > 0 ? (
+              <b className="session-tab-count">{count}</b>
+            ) : null}
           </button>
         );
       })}

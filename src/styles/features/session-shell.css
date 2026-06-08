@@ -417,6 +417,17 @@
   flex-shrink: 0;
 }
 
+/* A calm dot on the 자료 tab when a parsed import is awaiting review, so a
+   pending review is discoverable from any tab. Not a number: a review is a
+   single pending thing, and the tab's source count means something else. */
+.session-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--base-accent, #6b54d3);
+  flex-shrink: 0;
+}
+
 /* ── Embedded tab panes ─────────────────────────────────────────────────────
    Each tab view renders here in `embedded` mode: a thin action-bar row, then a
    main + inspector split that mirrors `page-shell-split`. The Session Detail
