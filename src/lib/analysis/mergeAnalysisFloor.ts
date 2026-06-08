@@ -27,16 +27,33 @@ export function mergeAnalysisFloor(primary: AnalysisResult, floor: AnalysisResul
     (decisions.length - primary.decisions.length) +
     (nextActions.length - primary.nextActions.length);
 
+  // When the primary (LLM) contributed no findings of its own, the floor is the
+  // real source of what is on the board, so its summary and confidence are the
+  // honest reflection — an empty-LLM run should not keep claiming a high
+  // confidence over an empty extraction. The primary still keeps its provider
+  // identity, timing, and the stored-summary id / session so persistence stays
+  // stable.
+  const primaryHadFindings =
+    primary.issues.length > 0 ||
+    primary.decisions.length > 0 ||
+    primary.nextActions.length > 0;
+  const summarySource = primaryHadFindings ? primary : floor;
+
   return {
     ...primary,
+    confidence: summarySource.confidence,
     issues,
     decisions,
     relationships,
     nextActions,
+    summary: summarySource.summary,
     rendered: {
       ...primary.rendered,
       summary: {
-        ...primary.rendered.summary,
+        ...summarySource.rendered.summary,
+        id: primary.rendered.summary.id,
+        sessionId: primary.rendered.summary.sessionId,
+        generatedAt: primary.rendered.summary.generatedAt,
         nextActionIds: nextActions.map((action) => action.id),
       },
     },

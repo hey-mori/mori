@@ -61,10 +61,27 @@ function result(overrides: Partial<AnalysisResult>): AnalysisResult {
 }
 
 describe("mergeAnalysisFloor", () => {
-  it("fills an empty primary with the deterministic floor and keeps the primary summary", () => {
-    const primary = result({ providerLabel: "Ollama", summary: { sessionSummary: "LLM said", resumePrompt: "", highlights: [] } });
+  it("uses the floor's summary and confidence when the LLM found nothing", () => {
+    const primary = result({
+      providerLabel: "Ollama",
+      summary: { sessionSummary: "LLM said nothing useful", resumePrompt: "", highlights: [] },
+      confidence: 0.75,
+    });
     const floor = result({
       providerName: "deterministic-heuristic-v1",
+      summary: { sessionSummary: "규칙 기반: 이슈 1건", resumePrompt: "floor prompt", highlights: [] },
+      rendered: {
+        summary: {
+          id: "summary-floor",
+          sessionId: "s",
+          sessionSummary: "규칙 기반: 이슈 1건",
+          resumePrompt: "floor prompt",
+          reportMarkdown: "",
+          nextActionIds: [],
+          generatedAt: "2026-06-08T00:00:00Z",
+        },
+      },
+      confidence: 0.4,
       issues: [issue("d-i1", "Floor issue")],
       nextActions: [nextAction("d-n1", "Floor action")],
     });
@@ -73,10 +90,36 @@ describe("mergeAnalysisFloor", () => {
 
     expect(merged.issues).toHaveLength(1);
     expect(merged.nextActions).toHaveLength(1);
-    expect(merged.summary.sessionSummary).toBe("LLM said");
+    // The empty LLM run no longer claims its summary / confidence over the floor.
+    expect(merged.summary.sessionSummary).toBe("규칙 기반: 이슈 1건");
+    expect(merged.rendered.summary.sessionSummary).toBe("규칙 기반: 이슈 1건");
+    expect(merged.confidence).toBe(0.4);
+    // Provider identity, stored-summary id, and timing stay the primary's.
     expect(merged.providerLabel).toBe("Ollama");
+    expect(merged.providerName).toBe("ollama-quick-pass-v1");
+    expect(merged.rendered.summary.id).toBe("summary-run");
     expect(merged.rendered.summary.nextActionIds).toEqual(["d-n1"]);
     expect(merged.notes.some((n) => n.includes("보강"))).toBe(true);
+  });
+
+  it("keeps the primary summary and confidence when the LLM found its own items", () => {
+    const primary = result({
+      summary: { sessionSummary: "LLM rich summary", resumePrompt: "", highlights: [] },
+      confidence: 0.9,
+      issues: [issue("llm-i1", "LLM issue")],
+    });
+    const floor = result({
+      providerName: "deterministic-heuristic-v1",
+      summary: { sessionSummary: "Floor summary", resumePrompt: "", highlights: [] },
+      confidence: 0.3,
+      issues: [issue("d-i1", "Floor extra")],
+    });
+
+    const merged = mergeAnalysisFloor(primary, floor);
+
+    expect(merged.summary.sessionSummary).toBe("LLM rich summary");
+    expect(merged.confidence).toBe(0.9);
+    expect(merged.issues).toHaveLength(2);
   });
 
   it("does not duplicate items the primary already has by title", () => {
