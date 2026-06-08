@@ -16,6 +16,7 @@
 
 import type { EventActor, FileTouch, TimelineEvent } from "../../domain/types";
 import { createImportId } from "../import/id";
+import { cleanImportedTitle } from "../import/sanitizeTitle";
 import type { NormalizedImportCandidate } from "../import/types";
 import { classifyMessage } from "./conversationStats";
 import {
@@ -104,7 +105,9 @@ function buildCandidate(
   input: BuildClaudeImportInput,
 ): NormalizedImportCandidate {
   const capturedAt = input.capturedAt ?? new Date().toISOString();
-  const title = subject.title.trim() || fallbackTitle(subject);
+  // Drop agent-injected boilerplate (the "continued from a previous
+  // conversation" compaction notice) so it never becomes the title.
+  const title = cleanImportedTitle(subject.title) || fallbackTitle(subject);
   const sourceId = createImportId("src-claude", `${subject.source}-${subject.id || title}`, capturedAt);
   const turns = pairMessagesIntoTurns(subject.messages);
   // File touches, mapped once to the domain shape and grouped by the assistant

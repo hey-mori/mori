@@ -46,6 +46,7 @@ export type RequestAbstractionEntry = {
   note?: string;
 };
 import type { NormalizedImportCandidate } from "../lib/import";
+import { cleanImportedTitle, firstMeaningfulTitle } from "../lib/import/sanitizeTitle";
 import { createSessionDraft } from "../lib/session/createSessionDraft";
 import {
   applySessionRename,
@@ -694,7 +695,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       previous?.project.name ?? params.projectLabel ?? "Claude 가져오기";
 
     const built = createSessionDraft({
-      sessionTitle: params.title.trim() || "제목 없는 Claude 대화",
+      // Drop agent boilerplate (e.g. Claude's "continued from a previous
+      // conversation" notice) and fall back to the first real turn, then the
+      // project, so the session never reads as the compaction message.
+      sessionTitle:
+        cleanImportedTitle(params.title) ||
+        firstMeaningfulTitle(params.candidate.events.map((event) => event.title)) ||
+        projectName ||
+        "제목 없는 Claude 대화",
       projectName,
       selectedSources: [],
       recordingMode: params.recordingMode ?? previous?.session.recordingMode ?? "summary",
