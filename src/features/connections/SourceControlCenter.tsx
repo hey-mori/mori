@@ -9,7 +9,6 @@ import {
   FolderOpen,
   GitBranch,
   Plus,
-  Settings as SettingsIcon,
   Sparkles,
   Terminal,
   type LucideIcon,
@@ -37,8 +36,6 @@ export type SourceControlCenterProps = {
   hasActiveSession: boolean;
   /** Open the Evidence import drawer on the requested tab. */
   onImport: (kind: ControlCenterImportKind, platform?: ControlCenterAiPlatform) => void;
-  /** Open Settings → Repositories (the git-capture setup surface). */
-  onOpenRepositorySettings: () => void;
   /**
    * Optional controlled selection. When provided, the parent owns which source
    * family is open so the same selection can drive a sibling surface (the
@@ -100,7 +97,6 @@ export function SourceControlCenter({
   isDesktop,
   hasActiveSession,
   onImport,
-  onOpenRepositorySettings,
   selectedFamily: controlledFamily,
   onSelectFamily,
 }: SourceControlCenterProps) {
@@ -173,7 +169,6 @@ export function SourceControlCenter({
                 key={surface.id}
                 surface={surface}
                 onImport={onImport}
-                onOpenRepositorySettings={onOpenRepositorySettings}
               />
             ))}
           </div>
@@ -282,11 +277,9 @@ function CategoryTile({
 function SourceRow({
   surface,
   onImport,
-  onOpenRepositorySettings,
 }: {
   surface: ControlCenterSurface;
   onImport: (kind: ControlCenterImportKind, platform?: ControlCenterAiPlatform) => void;
-  onOpenRepositorySettings: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const availability = describeControlCenterAvailability(surface.availability);
@@ -326,7 +319,6 @@ function SourceRow({
           <RowAction
             surface={surface}
             onImport={onImport}
-            onOpenRepositorySettings={onOpenRepositorySettings}
           />
         </div>
       </div>
@@ -396,11 +388,9 @@ function importVerb(kind: ControlCenterImportKind | undefined): string {
 function RowAction({
   surface,
   onImport,
-  onOpenRepositorySettings,
 }: {
   surface: ControlCenterSurface;
   onImport: (kind: ControlCenterImportKind, platform?: ControlCenterAiPlatform) => void;
-  onOpenRepositorySettings: () => void;
 }) {
   const { action } = surface;
   if (action.kind === "evidenceImport") {
@@ -414,20 +404,6 @@ function RowAction({
         onClick={() => action.importKind && onImport(action.importKind, action.importPlatform)}
       >
         {importVerb(action.importKind)}
-      </Button>
-    );
-  }
-  if (action.kind === "repositorySettings") {
-    return (
-      <Button
-        variant="secondary"
-        size="sm"
-        icon={SettingsIcon}
-        disabled={!action.enabled}
-        title={action.disabledReason ?? action.label}
-        onClick={onOpenRepositorySettings}
-      >
-        설정
       </Button>
     );
   }

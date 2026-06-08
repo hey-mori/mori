@@ -172,10 +172,10 @@ describe("action honesty invariants", () => {
     }
   });
 
-  it("points repository metadata at Settings → Repositories", () => {
-    expect(findSurface(DESKTOP_WITH_SESSION, "repositoryMetadata").action.kind).toBe(
-      "repositorySettings",
-    );
+  it("keeps repository metadata informational instead of routing to settings", () => {
+    const action = findSurface(DESKTOP_WITH_SESSION, "repositoryMetadata").action;
+    expect(action.kind).toBe("none");
+    expect(action.label).toContain("Git");
   });
 
   it("carries an AI platform hint into the AI transcript tab", () => {

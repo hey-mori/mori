@@ -53,8 +53,6 @@ export type ControlCenterAiPlatform = "claude" | "chatgpt" | "codex" | "other";
 export type ControlCenterActionKind =
   /** Open the Evidence import drawer on a specific tab. */
   | "evidenceImport"
-  /** Open Settings → Repositories (the git-capture setup surface). */
-  | "repositorySettings"
   /** No action — planned / unavailable surfaces stay inert and honest. */
   | "none";
 
@@ -267,14 +265,14 @@ function resolveAction(
   availability: ControlCenterAvailability,
   input: BuildControlCenterInput,
 ): ControlCenterAction {
-  // Repository metadata is a desktop verify/setup flow, not an import — point
-  // the user at Settings → Repositories where paths are added and verified.
+  // Repository metadata is only a background convenience for Git diff capture.
+  // The user-facing Git action is the import flow, where a path can be typed
+  // or picked directly; Settings should not carry a separate repository setup.
   if (row.id === "repositoryMetadata") {
     return {
-      kind: "repositorySettings",
-      label: "리포지토리 설정",
-      enabled: input.isDesktop,
-      disabledReason: input.isDesktop ? undefined : DESKTOP_REASON,
+      kind: "none",
+      label: "Git 가져오기에서 직접 입력",
+      enabled: false,
     };
   }
 
