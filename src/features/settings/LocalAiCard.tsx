@@ -6,8 +6,9 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BaseSelect, type BaseSelectOption } from "../../components/ui/BaseSelect";
+import { BaseSelect } from "../../components/ui/BaseSelect";
 import { Button } from "../../components/ui/Button";
 import {
   checkQuickPassCapability,
@@ -27,7 +28,7 @@ import {
   SettingsSection,
 } from "./SettingsPrimitives";
 
-type EngineChoice = QuickPassProviderKind | "lmStudio" | "cloudApi";
+type EngineChoice = QuickPassProviderKind;
 type ModelOption = { id: string; label: string; description?: string };
 
 type ProbeState =
@@ -47,24 +48,37 @@ type CapabilityState =
   | { status: "running"; kind: QuickPassProviderKind }
   | { status: "done"; kind: QuickPassProviderKind; report: QuickPassCapabilityReport };
 
-const ENGINE_OPTIONS: Array<BaseSelectOption<EngineChoice>> = [
+/**
+ * The engine roster is ordered and worded to match the canonical analysis
+ * vocabulary used on the Evidence screen: a no-model baseline first, then the
+ * two model protocols. The subtitle states where each engine's data goes,
+ * which is the real axis a user picks on. We deliberately do not split by
+ * "local vs cloud" because an OpenAI-compatible endpoint can be either a local
+ * server (LM Studio, llama.cpp) or a remote API.
+ */
+const ENGINE_OPTIONS: Array<{
+  id: EngineChoice;
+  label: string;
+  detail: string;
+  icon: LucideIcon;
+}> = [
+  {
+    id: "deterministic",
+    label: "규칙 기반",
+    detail: "모델 없이 · 외부 전송 없음",
+    icon: Sparkles,
+  },
   {
     id: "ollama",
     label: "Ollama",
-    description: "로컬 모델",
+    detail: "로컬 LLM · 외부 전송 없음",
     icon: Bot,
   },
   {
     id: "openAiCompatible",
     label: "OpenAI 호환",
-    description: "사용자 endpoint",
+    detail: "로컬 서버 또는 원격 API",
     icon: Code2,
-  },
-  {
-    id: "deterministic",
-    label: "규칙 기반",
-    description: "모델 없음",
-    icon: Sparkles,
   },
 ];
 
@@ -82,27 +96,11 @@ export function LocalAiCard({
   const [probe, setProbe] = useState<ProbeState>({ status: "idle" });
   const [capability, setCapability] = useState<CapabilityState>({ status: "idle" });
   const activeChoice = useMemo(() => inferEngineChoice(settings), [settings]);
-  const providerKind = toProviderKind(activeChoice);
+  const providerKind = activeChoice;
 
   function selectEngine(choice: EngineChoice) {
     setProbe({ status: "idle" });
     setCapability({ status: "idle" });
-    if (choice === "lmStudio") {
-      onUpdateSettings({
-        provider: "openAiCompatible",
-        openAiBaseUrl: "http://localhost:1234/v1",
-        openAiModel: settings.openAiModel === "local-model" ? "lm-studio" : settings.openAiModel,
-      });
-      return;
-    }
-    if (choice === "cloudApi") {
-      onUpdateSettings({
-        provider: "openAiCompatible",
-        openAiBaseUrl: "https://api.openai.com/v1",
-        openAiModel: settings.openAiModel === "local-model" ? "gpt-4.1-mini" : settings.openAiModel,
-      });
-      return;
-    }
     onProviderChange(choice);
   }
 
@@ -167,96 +165,71 @@ export function LocalAiCard({
   return (
     <SettingsSection title="분석 엔진">
       <div className="settings-ai-layout">
-        <div className="settings-ai-engine-row">
-          <label className="settings-ai-engine-select">
-            <span>엔진</span>
-            <BaseSelect
-              value={activeChoice}
-              options={ENGINE_OPTIONS}
-              onChange={selectEngine}
-              label="분석 엔진 선택"
-              popoverWidth="trigger"
-            />
-          </label>
+        <div className="settings-ai-engine-grid" role="radiogroup" aria-label="분석 엔진">
+          {ENGINE_OPTIONS.map((option) => {
+            const Icon = option.icon;
+            const selected = option.id === activeChoice;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                className={`settings-ai-engine-tile${selected ? " is-selected" : ""}`}
+                role="radio"
+                aria-checked={selected}
+                onClick={() => selectEngine(option.id)}
+              >
+                <span className="settings-ai-engine-icon" aria-hidden="true">
+                  <Icon size={17} />
+                </span>
+                <span className="settings-ai-engine-body">
+                  <strong>{option.label}</strong>
+                  <span>{option.detail}</span>
+                </span>
+                <span
+                  className={`settings-ai-engine-mark${selected ? " is-selected" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+            );
+          })}
         </div>
 
-        <EngineProfile
-          choice={activeChoice}
-          providerKind={providerKind}
-          settings={settings}
-          probe={probe}
-          capability={capability}
-          runHistory={runHistory}
-        />
+        <EngineDescription providerKind={providerKind} />
 
-        <EngineConfigPanel
-          choice={activeChoice}
-          providerKind={providerKind}
-          settings={settings}
-          probe={probe}
-          capability={capability}
-          onProbe={() => handleProbe(providerKind)}
-          onCapabilityTest={handleCapabilityTest}
-          onUpdateSettings={onUpdateSettings}
-        />
+        {providerKind === "deterministic" ? null : (
+          <EngineConfigPanel
+            providerKind={providerKind}
+            settings={settings}
+            probe={probe}
+            capability={capability}
+            onProbe={() => handleProbe(providerKind)}
+            onCapabilityTest={handleCapabilityTest}
+            onUpdateSettings={onUpdateSettings}
+          />
+        )}
+
+        <RecentRunsPanel runHistory={runHistory} />
       </div>
-
-      <RecentRunsPanel runHistory={runHistory} />
-      <EngineSourceNote />
     </SettingsSection>
   );
 }
 
-function EngineProfile({
-  choice,
-  providerKind,
-  settings,
-  probe,
-  capability,
-  runHistory,
-}: {
-  choice: EngineChoice;
-  providerKind: QuickPassProviderKind;
-  settings: QuickPassAnalysisSettings;
-  probe: ProbeState;
-  capability: CapabilityState;
-  runHistory: AnalysisRunHistoryViewModel | null;
-}) {
-  const profile = getEngineProfile(choice, settings);
-  const verification = describeEngineVerification(providerKind, probe, capability);
-  const currentRun = runHistory?.rows.find((row) => row.isCurrent) ?? runHistory?.rows[0] ?? null;
+const ENGINE_DESCRIPTION: Record<QuickPassProviderKind, string> = {
+  deterministic:
+    "네트워크 없이 기기에서 대화를 분석합니다. 모델 설치나 연결 없이 즉시 동작하지만, 요약은 규칙 기반이라 단순합니다.",
+  ollama:
+    "기기에서 실행되는 로컬 LLM으로 분석합니다. 자료가 외부로 전송되지 않으며, 선택한 모델 성능에 따라 요약 품질이 달라집니다.",
+  openAiCompatible:
+    "OpenAI 형식 HTTP API로 분석합니다. 로컬 서버(LM Studio·llama.cpp)일 수도, 원격 API일 수도 있어 원격 주소면 자료가 외부로 전송됩니다.",
+};
+
+function EngineDescription({ providerKind }: { providerKind: QuickPassProviderKind }) {
   return (
-    <section className="settings-ai-profile" aria-label="분석 엔진 요약">
-      <dl>
-        <div>
-          <dt>모드</dt>
-          <dd>{profile.mode}</dd>
-        </div>
-        <div>
-          <dt>모델</dt>
-          <dd>{profile.model}</dd>
-        </div>
-        <div>
-          <dt>상태</dt>
-          <dd className={`settings-ai-profile-status tone-${verification.tone}`}>
-            <span aria-hidden="true" />
-            {verification.text}
-          </dd>
-        </div>
-      </dl>
-      <p>
-        <span>
-          {currentRun
-            ? `최근 실행: ${currentRun.providerLabel} · ${formatRelativeKo(currentRun.generatedAt)} · 신뢰도 ${Math.round(currentRun.confidence * 100)}%`
-            : "아직 실행 기록이 없습니다. 연결 확인 뒤 응답 테스트를 실행하면 품질 판단이 쉬워집니다."}
-        </span>
-      </p>
-    </section>
+    <p className="settings-ai-desc">{ENGINE_DESCRIPTION[providerKind]}</p>
   );
 }
 
 function EngineConfigPanel({
-  choice,
   providerKind,
   settings,
   probe,
@@ -265,7 +238,6 @@ function EngineConfigPanel({
   onCapabilityTest,
   onUpdateSettings,
 }: {
-  choice: EngineChoice;
   providerKind: QuickPassProviderKind;
   settings: QuickPassAnalysisSettings;
   probe: ProbeState;
@@ -287,16 +259,6 @@ function EngineConfigPanel({
       : detected.models.map((name) => ({ id: name, label: name }))
     : [];
 
-  if (providerKind === "deterministic") {
-    return (
-      <section className="settings-ai-config-panel" aria-label="규칙 기반 설정">
-        <p className="settings-ai-empty-config">
-          규칙 기반 엔진은 endpoint, 모델, API 키가 없습니다. 필요할 때 즉시 Quick Pass를 실행합니다.
-        </p>
-      </section>
-    );
-  }
-
   return (
     <section className="settings-ai-config-panel" aria-label="분석 엔진 설정">
       {providerKind === "ollama" ? (
@@ -312,7 +274,7 @@ function EngineConfigPanel({
             value={settings.ollamaModel}
             models={detectedModels}
             detecting={probing}
-            placeholder="llama3.1:8b"
+            placeholder="모델 이름"
             onChange={(value) => onUpdateSettings({ ollamaModel: value })}
             onRefresh={onProbe}
           />
@@ -322,7 +284,7 @@ function EngineConfigPanel({
           <ProviderField
             label="Base URL"
             value={settings.openAiBaseUrl}
-            placeholder={choice === "cloudApi" ? "https://api.openai.com/v1" : "http://localhost:1234/v1"}
+            placeholder="http://localhost:1234/v1"
             onChange={(value) => onUpdateSettings({ openAiBaseUrl: value })}
           />
           <ModelField
@@ -330,7 +292,7 @@ function EngineConfigPanel({
             value={settings.openAiModel}
             models={detectedModels}
             detecting={probing}
-            placeholder={choice === "cloudApi" ? "gpt-4.1-mini" : "local-model"}
+            placeholder="모델 이름"
             onChange={(value) => onUpdateSettings({ openAiModel: value })}
             onRefresh={onProbe}
           />
@@ -338,7 +300,7 @@ function EngineConfigPanel({
             label="API 키"
             value={settings.openAiApiKey}
             type="password"
-            placeholder={choice === "cloudApi" ? "필수" : "필요한 경우만"}
+            placeholder="필요한 경우만"
             onChange={(value) => onUpdateSettings({ openAiApiKey: value })}
           />
         </div>
@@ -549,7 +511,7 @@ function ModelField({
             ? "설치된 모델 감지 중"
             : hasModels
               ? `설치된 모델 ${models.length}개 감지됨`
-              : "감지된 모델 없음 · 직접 입력하세요"}
+              : "모델을 감지하지 못했습니다"}
         </small>
         {hasModels ? (
           <button
@@ -557,7 +519,7 @@ function ModelField({
             className="settings-ai-model-toggle"
             onClick={() => setManual((current) => !current)}
           >
-            {manual ? "목록에서 선택" : "직접 입력"}
+            {manual ? "목록에서 선택" : "수동 입력"}
           </button>
         ) : null}
       </div>
@@ -565,58 +527,50 @@ function ModelField({
   );
 }
 
-const MAX_RECENT_RUNS = 5;
-
-function RecentRunsPanel({ runHistory }: { runHistory: AnalysisRunHistoryViewModel | null }) {
-  const rows = runHistory ? runHistory.rows.slice(0, MAX_RECENT_RUNS) : [];
-  return (
-    <section className="settings-ai-info" aria-label="최근 실행">
-      <header className="settings-ai-info-head">
-        <h4>최근 실행</h4>
-        {runHistory && runHistory.runCount > 0 ? (
-          <span className="settings-ai-info-count">{runHistory.runCount}회</span>
-        ) : null}
-      </header>
-      {rows.length === 0 ? (
-        <p className="settings-ai-info-empty">아직 분석을 실행한 기록이 없습니다.</p>
-      ) : (
-        <ul className="settings-ai-run-list">
-          {rows.map((row) => (
-            <li
-              key={row.runId}
-              className={`settings-ai-run-row${row.isCurrent ? " is-current" : ""}`}
-            >
-              <span className="settings-ai-run-dot" aria-hidden="true" />
-              <div className="settings-ai-run-main">
-                <div className="settings-ai-run-head">
-                  <strong>{row.providerLabel}</strong>
-                  {row.isCurrent ? <span className="settings-ai-run-current">현재</span> : null}
-                  <small>{formatRelativeKo(row.generatedAt)}</small>
-                </div>
-                <small className="settings-ai-run-stats">
-                  이슈 {row.reason.elementCounts.issues}개 · 결정 {row.reason.elementCounts.decisions}개 ·
-                  신뢰 {Math.round(row.confidence * 100)}% · {row.durationMs}ms
-                  {row.changeSummary && row.changeSummary !== "변경 없음"
-                    ? ` · ${row.changeSummary}`
-                    : ""}
-                </small>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
+function runStatsLabel(row: AnalysisRunHistoryViewModel["rows"][number]): string {
+  const base = `이슈 ${row.reason.elementCounts.issues}개 · 결정 ${row.reason.elementCounts.decisions}개 · ${row.durationMs}ms`;
+  return row.changeSummary && row.changeSummary !== "변경 없음"
+    ? `${base} · ${row.changeSummary}`
+    : base;
 }
 
-function EngineSourceNote() {
+function RecentRunsPanel({ runHistory }: { runHistory: AnalysisRunHistoryViewModel | null }) {
+  const rows = runHistory?.rows ?? [];
+  const latest = rows[0] ?? null;
+  const older = rows.slice(1, 5);
+
   return (
-    <section className="settings-ai-source-note">
-      <strong>Claude · Codex · OpenCode</strong>
-      <span>
-        이 도구들은 분석 엔진이 아니라 작업 소스입니다. 연결 화면에서 실제 대화나 JSONL 기록을 가져오면,
-        위에서 선택한 엔진으로 그 세션을 분석합니다.
-      </span>
+    <section className="settings-ai-runs" aria-label="최근 실행">
+      <header className="settings-ai-runs-head">
+        <h4>최근 실행</h4>
+        {older.length > 0 ? <span>이전 {older.length}건</span> : null}
+      </header>
+      {latest ? (
+        <>
+          <div className="settings-ai-run-latest">
+            <div className="settings-ai-run-latest-top">
+              <strong>{latest.providerLabel}</strong>
+              <small>{formatRelativeKo(latest.generatedAt)}</small>
+            </div>
+            <p>{runStatsLabel(latest)}</p>
+          </div>
+          {older.length > 0 ? (
+            <ul className="settings-ai-runs-list base-scroll">
+              {older.map((row) => (
+                <li key={row.runId}>
+                  <span className="settings-ai-runs-list-label">
+                    {row.providerLabel}
+                    <small>{formatRelativeKo(row.generatedAt)}</small>
+                  </span>
+                  <small className="settings-ai-runs-list-stats">{runStatsLabel(row)}</small>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      ) : (
+        <p className="settings-ai-runs-empty">아직 분석을 실행한 기록이 없습니다.</p>
+      )}
     </section>
   );
 }
@@ -650,83 +604,8 @@ function ProviderField({
   );
 }
 
-function getEngineProfile(
-  choice: EngineChoice,
-  settings: QuickPassAnalysisSettings,
-): {
-  mode: string;
-  model: string;
-} {
-  if (choice === "deterministic") {
-    return {
-      mode: "규칙 기반",
-      model: "모델 없음",
-    };
-  }
-  if (choice === "ollama") {
-    return {
-      mode: "로컬",
-      model: settings.ollamaModel || "미설정",
-    };
-  }
-  if (choice === "lmStudio") {
-    return {
-      mode: "로컬",
-      model: settings.openAiModel || "미설정",
-    };
-  }
-  if (choice === "cloudApi") {
-    return {
-      mode: "외부 API",
-      model: settings.openAiModel || "미설정",
-    };
-  }
-  return {
-    mode: "사용자 endpoint",
-    model: settings.openAiModel || "미설정",
-  };
-}
-
-function describeEngineVerification(
-  provider: QuickPassProviderKind,
-  probe: ProbeState,
-  capability: CapabilityState,
-): { text: string; tone: "idle" | "ok" | "warn" | "err" } {
-  if (provider === "deterministic") {
-    return { text: "연결 확인 필요 없음", tone: "ok" };
-  }
-  if (probe.status === "checking" && probe.kind === provider) {
-    return { text: "연결 확인 중", tone: "idle" };
-  }
-  if (probe.status === "error" && probe.kind === provider) {
-    return { text: "연결 실패", tone: "err" };
-  }
-  if (capability.status === "running" && capability.kind === provider) {
-    return { text: "응답 테스트 중", tone: "idle" };
-  }
-  if (capability.status === "done" && capability.kind === provider) {
-    if (capability.report.verdict === "ready") {
-      return { text: "응답 구조 확인됨", tone: "ok" };
-    }
-    if (capability.report.verdict === "reachableNoStructure") {
-      return { text: "연결됨, 구조 확인 필요", tone: "warn" };
-    }
-    return { text: "응답 테스트 실패", tone: "err" };
-  }
-  if (probe.status === "ok" && probe.kind === provider) {
-    return { text: "연결됨", tone: "ok" };
-  }
-  return { text: "아직 확인하지 않음", tone: "idle" };
-}
-
 function inferEngineChoice(settings: QuickPassAnalysisSettings): EngineChoice {
-  if (settings.provider !== "openAiCompatible") return settings.provider;
-  return "openAiCompatible";
-}
-
-function toProviderKind(choice: EngineChoice): QuickPassProviderKind {
-  if (choice === "lmStudio" || choice === "cloudApi") return "openAiCompatible";
-  return choice;
+  return settings.provider;
 }
 
 function truncate(value: string, max: number): string {

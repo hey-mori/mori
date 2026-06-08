@@ -2,61 +2,71 @@ import type { FeatureId, FeatureStatus } from "../../app/featureStatus";
 import { FEATURE_STATUS_LABEL, getFeature } from "../../app/featureStatus";
 import type { LlmProvider } from "../../domain/types";
 
+/**
+ * The Start Session engine picker offers the same three analysis engines as
+ * Settings → 분석 엔진, in the same order and vocabulary: a no-model baseline
+ * first, then the two model protocols. Engines are categorized by how Mori
+ * connects (protocol), not by where they run — an OpenAI-compatible endpoint
+ * can be a local server (LM Studio, llama.cpp) or a remote API. 규칙 기반 needs
+ * no connection so it is always selectable; the model engines follow the
+ * feature-status registry.
+ */
 export type StartSessionEngineOption = {
   provider: LlmProvider;
   label: string;
   detail: string;
   model: string;
-  featureId: FeatureId;
+  featureId?: FeatureId;
   status: FeatureStatus;
   statusLabel: string;
   selectable: boolean;
   disabledReason?: string;
 };
 
-const ENGINE_ROWS: Array<
-  Omit<
-    StartSessionEngineOption,
-    "status" | "statusLabel" | "selectable" | "disabledReason"
-  >
-> = [
+type EngineRow = {
+  provider: LlmProvider;
+  label: string;
+  detail: string;
+  model: string;
+  featureId?: FeatureId;
+  /** 규칙 기반 runs without any connection, so it is always available. */
+  alwaysSelectable?: boolean;
+};
+
+const ENGINE_ROWS: EngineRow[] = [
+  {
+    provider: "deterministic",
+    label: "규칙 기반",
+    detail: "모델 없이 · 외부 전송 없음",
+    model: "",
+    alwaysSelectable: true,
+  },
   {
     provider: "ollama",
     label: "Ollama",
-    detail: "로컬 모델",
-    model: "",
+    detail: "로컬 LLM · 외부 전송 없음",
+    model: "llama3.1:8b",
     featureId: "settings.localAi.ollama",
-  },
-  {
-    provider: "lmStudio",
-    label: "LM Studio",
-    detail: "로컬 서버",
-    model: "",
-    featureId: "settings.localAi.lmStudio",
   },
   {
     provider: "openAiCompatible",
     label: "OpenAI 호환",
-    detail: "고급 endpoint",
-    model: "",
+    detail: "로컬 서버 또는 원격 API",
+    model: "local-model",
     featureId: "settings.localAi.openAiCompatible",
-  },
-  {
-    provider: "cloudApi",
-    label: "Cloud API",
-    detail: "외부 API",
-    model: "",
-    featureId: "settings.localAi.cloudApi",
   },
 ];
 
-const START_SESSION_DISABLED_REASON: Partial<Record<LlmProvider, string>> = {
-  lmStudio: "아직 연결되지 않았습니다.",
-  cloudApi: "명시적 opt-in 설계가 필요합니다.",
-};
-
 export function buildStartSessionEngineOptions(): StartSessionEngineOption[] {
   return ENGINE_ROWS.map((row) => {
+    if (row.alwaysSelectable || !row.featureId) {
+      return {
+        ...row,
+        status: "implemented",
+        statusLabel: FEATURE_STATUS_LABEL.implemented,
+        selectable: true,
+      };
+    }
     const feature = getFeature(row.featureId);
     return {
       ...row,
@@ -65,9 +75,7 @@ export function buildStartSessionEngineOptions(): StartSessionEngineOption[] {
       selectable: feature.actionEnabled,
       disabledReason: feature.actionEnabled
         ? undefined
-        : START_SESSION_DISABLED_REASON[row.provider] ??
-          feature.disabledReason ??
-          FEATURE_STATUS_LABEL[feature.status],
+        : feature.disabledReason ?? FEATURE_STATUS_LABEL[feature.status],
     };
   });
 }

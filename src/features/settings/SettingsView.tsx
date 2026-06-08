@@ -44,9 +44,7 @@ export function SettingsView() {
   const sqliteKind = useSqliteStore((state) => state.kind);
   const refreshSqlite = useSqliteStore((state) => state.refresh);
 
-  const setCurrentView = useAppStore((state) => state.navigate);
   const activeTab = useAppStore((state) => state.settingsTab);
-  const closeSettingsSheet = useAppStore((state) => state.closeSettingsSheet);
 
   useEffect(() => {
     if (!initialized) hydrate();
@@ -78,30 +76,15 @@ export function SettingsView() {
         ) : null}
         {activeTab === "storage" ? (
           <>
-            <DemoModeCard
-              onGoToConnections={() => setCurrentView("connections")}
-              onOpenSession={() => setCurrentView("session")}
-            />
-            <StorageCard
-              mode={mode}
-              sqliteKind={sqliteKind}
-              sqliteSessionCount={sqliteSessions.length}
-            />
+            <DemoModeCard />
+            <StorageCard />
             <SqliteLoadCard sessions={sqliteSessions} onLoad={loadDesktopSession} />
           </>
         ) : null}
         {activeTab === "appearance" ? <ThemeCard /> : null}
         {activeTab === "notifications" ? <NotificationsCard /> : null}
         {activeTab === "about" ? (
-          <AboutCard
-            mode={mode}
-            sqliteKind={sqliteKind}
-            sqliteSessionCount={sqliteSessions.length}
-            onOpenConnections={() => {
-              closeSettingsSheet();
-              setCurrentView("connections");
-            }}
-          />
+          <AboutCard mode={mode} sqliteSessionCount={sqliteSessions.length} />
         ) : null}
       </div>
 

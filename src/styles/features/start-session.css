@@ -68,6 +68,14 @@ button.start-entry-card:focus-visible {
   .session-project-line {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .pick-grid.engine-pick-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .start-engine-footer {
+    justify-self: flex-start;
+  }
 }
 
 .setup-block,
@@ -347,8 +355,11 @@ input,
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
-.engine-pick-grid {
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+/* Two classes so this wins over `.pick-grid`'s auto-fit regardless of source
+   order: the three analysis engines stay one even row on desktop (the ≤760px
+   media query below collapses them to a single column). */
+.pick-grid.engine-pick-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -363,7 +374,7 @@ input,
 }
 
 .engine-pick-tile {
-  min-height: 74px;
+  min-height: 72px;
   grid-template-columns: 34px minmax(0, 1fr) 18px;
 }
 
@@ -381,6 +392,12 @@ input,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.start-engine-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 
 .setup-actions {
@@ -1395,7 +1412,7 @@ hr {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 12px;
+  justify-self: end;
   padding: 0;
   border: 0;
   background: none;

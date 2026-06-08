@@ -15,7 +15,7 @@
 import type { KeyValueStorage } from "../storage/storageTypes";
 
 const THEME_KEY = "mori.themePreference";
-const THEME_SCHEMA_VERSION = 1 as const;
+const THEME_SCHEMA_VERSION = 2 as const;
 
 /** Runtime-selectable themes — all three are real token sets today. */
 export const SELECTABLE_THEMES = ["formal", "forest", "nightLake"] as const;
@@ -23,6 +23,10 @@ export const SELECTABLE_THEMES = ["formal", "forest", "nightLake"] as const;
 export type ThemeId = (typeof SELECTABLE_THEMES)[number];
 
 export type ThemeColorScheme = "light" | "dark";
+export type ThemeFontScale = "small" | "normal" | "large" | "xlarge";
+
+/** Ordered font-scale steps, smallest to largest, for slider-style controls. */
+export const FONT_SCALE_STEPS = ["small", "normal", "large", "xlarge"] as const;
 
 /** Returns the color-scheme (light/dark) for a given theme. */
 export function getThemeColorScheme(theme: ThemeId): ThemeColorScheme {
@@ -34,12 +38,18 @@ export const DEFAULT_THEME: ThemeId = "formal";
 export type ThemePreference = {
   schemaVersion: typeof THEME_SCHEMA_VERSION;
   theme: ThemeId;
+  fontScale: ThemeFontScale;
 };
 
 export const DEFAULT_THEME_PREFERENCE: ThemePreference = {
   schemaVersion: THEME_SCHEMA_VERSION,
   theme: DEFAULT_THEME,
+  fontScale: "normal",
 };
+
+function isThemeFontScale(value: unknown): value is ThemeFontScale {
+  return (FONT_SCALE_STEPS as readonly string[]).includes(value as string);
+}
 
 /** Type guard: is `value` one of the runtime-selectable theme ids. */
 export function isSelectableTheme(value: unknown): value is ThemeId {
@@ -58,13 +68,17 @@ export function parseThemePreference(raw: string | null): ThemePreference {
   if (!raw) return DEFAULT_THEME_PREFERENCE;
   try {
     const parsed = JSON.parse(raw) as Partial<ThemePreference>;
-    if (parsed.schemaVersion !== THEME_SCHEMA_VERSION) {
+    if (parsed.schemaVersion !== THEME_SCHEMA_VERSION && parsed.schemaVersion !== 1) {
       return DEFAULT_THEME_PREFERENCE;
     }
     if (!isSelectableTheme(parsed.theme)) {
       return DEFAULT_THEME_PREFERENCE;
     }
-    return { schemaVersion: THEME_SCHEMA_VERSION, theme: parsed.theme };
+    return {
+      schemaVersion: THEME_SCHEMA_VERSION,
+      theme: parsed.theme,
+      fontScale: isThemeFontScale(parsed.fontScale) ? parsed.fontScale : DEFAULT_THEME_PREFERENCE.fontScale,
+    };
   } catch {
     return DEFAULT_THEME_PREFERENCE;
   }
@@ -121,4 +135,10 @@ export function saveThemePreference(
 export function applyThemeToDocument(theme: ThemeId): void {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute("data-base-theme", theme);
+}
+
+export function applyThemePreferenceToDocument(preference: ThemePreference): void {
+  if (typeof document === "undefined") return;
+  applyThemeToDocument(preference.theme);
+  document.documentElement.setAttribute("data-font-scale", preference.fontScale);
 }

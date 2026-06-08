@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import {
   DEFAULT_THEME_PREFERENCE,
-  applyThemeToDocument,
+  applyThemePreferenceToDocument,
   loadThemePreference,
   saveThemePreference,
+  type ThemeFontScale,
   type ThemeId,
 } from "../lib/settings/themePreference";
 
@@ -18,23 +19,46 @@ import {
 export type ThemeState = {
   initialized: boolean;
   theme: ThemeId;
+  fontScale: ThemeFontScale;
   hydrate: () => void;
   setTheme: (theme: ThemeId) => void;
+  setFontScale: (fontScale: ThemeFontScale) => void;
 };
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
   initialized: false,
   theme: DEFAULT_THEME_PREFERENCE.theme,
+  fontScale: DEFAULT_THEME_PREFERENCE.fontScale,
   hydrate: () => {
     if (get().initialized) return;
     const preference = loadThemePreference();
-    applyThemeToDocument(preference.theme);
-    set({ theme: preference.theme, initialized: true });
+    applyThemePreferenceToDocument(preference);
+    set({
+      theme: preference.theme,
+      fontScale: preference.fontScale,
+      initialized: true,
+    });
   },
   setTheme: (theme) => {
     if (get().theme === theme) return;
-    saveThemePreference({ ...DEFAULT_THEME_PREFERENCE, theme });
-    applyThemeToDocument(theme);
+    const preference = {
+      ...DEFAULT_THEME_PREFERENCE,
+      theme,
+      fontScale: get().fontScale,
+    };
+    saveThemePreference(preference);
+    applyThemePreferenceToDocument(preference);
     set({ theme });
+  },
+  setFontScale: (fontScale) => {
+    if (get().fontScale === fontScale) return;
+    const preference = {
+      ...DEFAULT_THEME_PREFERENCE,
+      theme: get().theme,
+      fontScale,
+    };
+    saveThemePreference(preference);
+    applyThemePreferenceToDocument(preference);
+    set({ fontScale });
   },
 }));

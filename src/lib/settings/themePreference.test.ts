@@ -46,13 +46,40 @@ describe("parseThemePreference", () => {
   });
 
   it("round-trips a valid preference — forest", () => {
-    const stored = serializeThemePreference({ schemaVersion: 1, theme: "forest" });
+    const stored = serializeThemePreference({
+      ...DEFAULT_THEME_PREFERENCE,
+      theme: "forest",
+      fontScale: "small",
+    });
     expect(parseThemePreference(stored).theme).toBe("forest");
+    expect(parseThemePreference(stored).fontScale).toBe("small");
   });
 
   it("round-trips a valid preference — nightLake", () => {
-    const stored = serializeThemePreference({ schemaVersion: 1, theme: "nightLake" });
+    const stored = serializeThemePreference({
+      ...DEFAULT_THEME_PREFERENCE,
+      theme: "nightLake",
+      fontScale: "xlarge",
+    });
     expect(parseThemePreference(stored).theme).toBe("nightLake");
+    expect(parseThemePreference(stored).fontScale).toBe("xlarge");
+  });
+
+  it("falls back to the default font scale for an unknown value", () => {
+    const stored = JSON.stringify({
+      schemaVersion: 2,
+      theme: "forest",
+      fontScale: "gigantic",
+    });
+    expect(parseThemePreference(stored).fontScale).toBe("normal");
+  });
+
+  it("migrates v1 theme-only preferences", () => {
+    const stored = JSON.stringify({ schemaVersion: 1, theme: "forest" });
+    expect(parseThemePreference(stored)).toEqual({
+      ...DEFAULT_THEME_PREFERENCE,
+      theme: "forest",
+    });
   });
 });
 
@@ -65,13 +92,13 @@ describe("loadThemePreference / saveThemePreference", () => {
 
   it("persists and reloads the forest theme", () => {
     const storage = new MemoryKeyValueStorage();
-    saveThemePreference({ schemaVersion: 1, theme: "forest" }, storage);
+    saveThemePreference({ ...DEFAULT_THEME_PREFERENCE, theme: "forest" }, storage);
     expect(loadThemePreference(storage).theme).toBe("forest");
   });
 
   it("persists and reloads the nightLake dark theme", () => {
     const storage = new MemoryKeyValueStorage();
-    saveThemePreference({ schemaVersion: 1, theme: "nightLake" }, storage);
+    saveThemePreference({ ...DEFAULT_THEME_PREFERENCE, theme: "nightLake" }, storage);
     expect(loadThemePreference(storage).theme).toBe("nightLake");
   });
 
@@ -79,7 +106,7 @@ describe("loadThemePreference / saveThemePreference", () => {
     const storage = new MemoryKeyValueStorage();
     storage.setItem(
       "mori.themePreference",
-      JSON.stringify({ schemaVersion: 1, theme: "unknownFutureDarkMode" }),
+      JSON.stringify({ schemaVersion: 2, theme: "unknownFutureDarkMode" }),
     );
     expect(loadThemePreference(storage).theme).toBe("formal");
   });

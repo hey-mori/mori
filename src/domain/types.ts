@@ -33,7 +33,12 @@ export type ViewKey =
 
 export type TrustLevel = "verified" | "observed" | "inferred";
 export type RecordingMode = "summary" | "full" | "ephemeral";
-export type LlmProvider = "ollama" | "lmStudio" | "openAiCompatible" | "cloudApi";
+export type LlmProvider =
+  | "deterministic"
+  | "ollama"
+  | "lmStudio"
+  | "openAiCompatible"
+  | "cloudApi";
 export type SourceKind = 
   | "aiConversation" 
   | "claudeTranscript" 

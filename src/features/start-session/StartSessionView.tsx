@@ -42,6 +42,7 @@ import {
 import { isTauriRuntime } from "../../lib/desktop";
 import {
   buildStartSessionEngineOptions,
+  coerceStartSessionEngineProvider,
   type StartSessionEngineOption,
 } from "../../lib/session/startSessionEngineOptions";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
@@ -174,6 +175,8 @@ export function StartSessionView() {
     (state) => state.importAndOpenAsNewSession,
   );
   const setSessionDraft = useSessionStore((state) => state.setDraft);
+  const analysisSettings = useSessionStore((state) => state.analysisSettings);
+  const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
   const setCurrentView = useAppStore((state) => state.navigate);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const startRecordsRequest = useAppStore((state) => state.startRecordsRequest);
@@ -203,13 +206,13 @@ export function StartSessionView() {
     () => describeSessionStorageTarget({ isDesktop: isTauriRuntime() }),
     [],
   );
-  const engineOptions = useMemo(
-    () => buildStartSessionEngineOptions().filter((option) => option.selectable),
-    [],
+  const engineOptions = useMemo(() => buildStartSessionEngineOptions(), []);
+  // The engine picker mirrors Settings → 분석 엔진: it seeds from the live
+  // analysis provider and writes the chosen engine back on create, so the two
+  // surfaces stay one setting rather than drifting.
+  const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider>(
+    () => coerceStartSessionEngineProvider(analysisSettings.provider),
   );
-  // The engine starts unselected (미선택), like the agent and the import method:
-  // the user picks it deliberately rather than inheriting a silent default.
-  const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider | null>(null);
   const selectedEngine = useMemo(
     () =>
       engineOptions.find(
@@ -330,6 +333,17 @@ export function StartSessionView() {
 
   async function handleCreate() {
     if (creating || !canCreate || !selectedAgent || !selectedEngine) return;
+
+    // Choosing an engine here configures the analysis provider that reads this
+    // session, so Start Session and Settings → 분석 엔진 stay one setting.
+    const provider = selectedEngine.provider;
+    if (
+      provider === "deterministic" ||
+      provider === "ollama" ||
+      provider === "openAiCompatible"
+    ) {
+      updateAnalysisSettings({ provider });
+    }
 
     if (method === "fresh") {
       const draft = createSessionDraft({
@@ -573,18 +587,22 @@ export function StartSessionView() {
               key={option.provider}
               option={option}
               selected={selectedEngineProvider === option.provider}
-              onSelect={() => setSelectedEngineProvider(option.provider)}
+              onSelect={() => {
+                if (option.selectable) setSelectedEngineProvider(option.provider);
+              }}
             />
           ))}
         </div>
-        <button
-          type="button"
-          className="start-engine-settings"
-          onClick={() => openSettingsSheet("localAi")}
-        >
-          <Settings2 size={13} aria-hidden="true" />
-          설정에서 모델과 endpoint 조정
-        </button>
+        <div className="start-engine-footer">
+          <button
+            type="button"
+            className="start-engine-settings"
+            onClick={() => openSettingsSheet("localAi")}
+          >
+            <Settings2 size={13} aria-hidden="true" />
+            설정
+          </button>
+        </div>
       </FieldBlock>
 
       <FieldBlock number="4" title="세션 정보" subtitle="프로젝트와 이름을 정합니다.">
@@ -714,20 +732,27 @@ function PickTile({
         <Icon size={18} />
       </span>
       <span className="pick-tile-body">
-        <strong>
-          {title}
-          {recommended ? <em className="pick-tile-rec">추천</em> : null}
-        </strong>
+        <strong>{title}</strong>
         <span>{detail}</span>
       </span>
       {status ? (
         <Badge tone="gray">{status}</Badge>
       ) : (
-        <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
+        <span className="pick-tile-side">
+          {recommended ? <em className="pick-tile-rec">추천</em> : null}
+          <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
+        </span>
       )}
     </button>
   );
 }
+
+/** Per-engine glyphs, matching Settings → 분석 엔진 for cross-surface identity. */
+const ENGINE_ICON: Partial<Record<LlmProvider, LucideIcon>> = {
+  deterministic: Sparkles,
+  ollama: Bot,
+  openAiCompatible: Code2,
+};
 
 function EngineTile({
   option,
@@ -738,19 +763,23 @@ function EngineTile({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const disabled = !option.selectable;
+  const Icon = ENGINE_ICON[option.provider] ?? Cpu;
   return (
     <button
       type="button"
-      className={`pick-tile engine-pick-tile${selected ? " is-selected" : ""}`}
+      className={`pick-tile engine-pick-tile${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}`}
       aria-pressed={selected}
+      disabled={disabled}
+      title={disabled ? option.disabledReason : undefined}
       onClick={onSelect}
     >
       <span className="pick-tile-icon" aria-hidden="true">
-        <Cpu size={18} />
+        <Icon size={18} />
       </span>
       <span className="pick-tile-body">
         <strong>{option.label}</strong>
-        <span>{option.detail}</span>
+        <span>{disabled ? "설정 준비 중" : option.detail}</span>
       </span>
       <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
     </button>

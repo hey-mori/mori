@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { FilePlus2, Sparkles, Trash2 } from "lucide-react";
+import { Database, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import {
+  loadStoredSessionSummaries,
   selectSessionMode,
   selectSessionSource,
   useSessionStore,
@@ -9,17 +10,12 @@ import {
 import { useSqliteStore } from "../../app/sqliteStore";
 import { SettingsRow, SettingsSection } from "./SettingsPrimitives";
 
-export function DemoModeCard({
-  onGoToConnections,
-  onOpenSession,
-}: {
-  onGoToConnections: () => void;
-  onOpenSession: () => void;
-}) {
+export function DemoModeCard() {
   const mode = useSessionStore(selectSessionMode);
   const source = useSessionStore(selectSessionSource);
   const imports = useSessionStore((state) => state.imports);
   const resetToDemo = useSessionStore((state) => state.resetToDemo);
+  const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
   const beginEmptySession = useSessionStore((state) => state.beginEmptySession);
   const clearAllDataAndViewDemo = useSessionStore(
     (state) => state.clearAllDataAndViewDemo,
@@ -36,46 +32,46 @@ export function DemoModeCard({
         ? "로컬 초안"
         : "데모 데이터";
 
-  function handleBeginEmptySession() {
+  // Switching to real data exits demo in place (no navigation), so the toggle
+  // stays a simple two-way view switch. Demo never deletes saved real work.
+  function showRealData() {
+    if (!isDemo) return;
+    const latest = loadStoredSessionSummaries()[0];
+    if (latest && loadBrowserSession(latest.sessionId)) return;
     beginEmptySession();
-    onOpenSession();
-  }
-
-  function handleGoToRealImport() {
-    if (isDemo) beginEmptySession();
-    onGoToConnections();
   }
 
   return (
     <SettingsSection title="데이터 관리">
       <div className="settings-row-list">
         <SettingsRow
-          label={isDemo ? "현재: 데모 보기" : storageLabel}
+          label="보기 모드"
           description={
             isDemo
-              ? "샘플 데이터만 보고 있습니다. 실제 작업을 가져오거나, 가져올 항목이 없으면 빈 실제 세션으로 시작할 수 있습니다."
-              : `이 기기에 저장된 실제 작업 세션입니다. 현재 세션에 연결된 가져오기 기록은 ${imports.length}건입니다.`
+              ? "데모 데이터는 보기용입니다. 실제 데이터로 전환해도 저장된 작업은 삭제되지 않습니다."
+              : `${storageLabel} · 가져오기 기록 ${imports.length}건`
           }
           control={
-            isDemo ? (
-              <div className="demo-mode-card-actions">
-                <Button variant="primary" icon={Sparkles} onClick={handleGoToRealImport}>
-                  실제 작업 가져오기
-                </Button>
-                <Button variant="secondary" icon={FilePlus2} onClick={handleBeginEmptySession}>
-                  빈 실제 세션
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="ghost"
-                icon={Sparkles}
-                onClick={resetToDemo}
-                title="샘플 데이터로 잠시 돌아갑니다. 저장된 실제 작업은 삭제되지 않습니다."
+            <div className="demo-mode-switch" role="group" aria-label="데이터 보기 모드">
+              <button
+                type="button"
+                className={!isDemo ? "is-selected" : ""}
+                aria-pressed={!isDemo}
+                onClick={showRealData}
               >
-                데모 보기
-              </Button>
-            )
+                <Database size={13} aria-hidden="true" />
+                실제 데이터
+              </button>
+              <button
+                type="button"
+                className={isDemo ? "is-selected" : ""}
+                aria-pressed={isDemo}
+                onClick={resetToDemo}
+              >
+                <Sparkles size={13} aria-hidden="true" />
+                데모
+              </button>
+            </div>
           }
         />
         <SettingsRow

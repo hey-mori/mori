@@ -141,6 +141,38 @@
   --base-line-relaxed: 1.6;  /* long-form paragraphs */
 }
 
+:root[data-font-scale="small"] {
+  --base-font-size-2xs: 9.5px;
+  --base-font-size-xs: 10.5px;
+  --base-font-size-sm: 11.5px;
+  --base-font-size-md: 12.5px;
+  --base-font-size-lg: 13.5px;
+  --base-font-size-xl: 14.5px;
+  --base-font-size-2xl: 15px;
+  --base-font-size-3xl: 17px;
+}
+
+:root[data-font-scale="large"] {
+  --base-font-size-xs: 11.5px;
+  --base-font-size-sm: 12.5px;
+  --base-font-size-md: 13.5px;
+  --base-font-size-lg: 14.5px;
+  --base-font-size-xl: 15.5px;
+  --base-font-size-2xl: 17px;
+  --base-font-size-3xl: 19px;
+}
+
+:root[data-font-scale="xlarge"] {
+  --base-font-size-2xs: 11px;
+  --base-font-size-xs: 12px;
+  --base-font-size-sm: 13.5px;
+  --base-font-size-md: 14.5px;
+  --base-font-size-lg: 15.5px;
+  --base-font-size-xl: 16.5px;
+  --base-font-size-2xl: 18px;
+  --base-font-size-3xl: 21px;
+}
+
 /**
  * Layout. One shared width for the right-hand detail / inspector rail so
  * every "main + rail" surface (Timeline, Evidence, Review, Reports) lines
