@@ -248,6 +248,28 @@ describe("OllamaQuickPassProvider response parsing", () => {
     expect(parsed.decisions).toHaveLength(0);
   });
 
+  it("drops items with an empty or missing title", () => {
+    const raw =
+      '{"issues": [{"title": "real"}, {"title": "   "}, {"description": "no title"}], "decisions": []}';
+    const parsed = parseOllamaQuickPassJson(raw);
+    expect(parsed.issues).toHaveLength(1);
+    expect(parsed.issues[0]?.title).toBe("real");
+  });
+
+  it("dedupes items that repeat the same title", () => {
+    const raw =
+      '{"issues": [{"title": "Fix auth"}, {"title": "fix auth"}, {"title": "Fix Auth "}], "decisions": []}';
+    const parsed = parseOllamaQuickPassJson(raw);
+    expect(parsed.issues).toHaveLength(1);
+  });
+
+  it("drops relationships missing an endpoint or type", () => {
+    const raw =
+      '{"issues": [], "decisions": [], "relationships": [{"fromId": "a", "toId": "b", "type": "relates"}, {"fromId": "a"}]}';
+    const parsed = parseOllamaQuickPassJson(raw);
+    expect(parsed.relationships).toHaveLength(1);
+  });
+
   it("throws when the response is not a JSON object", () => {
     expect(() => parseOllamaQuickPassJson("not json at all")).toThrow();
   });

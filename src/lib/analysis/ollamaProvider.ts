@@ -280,18 +280,58 @@ type ParsedQuickPass = {
 
 export function parseOllamaQuickPassJson(rawText: string): ParsedQuickPass {
   const json = extractJson(rawText);
-  if (!json || typeof json !== "object") {
+  if (!json) {
     throw new Error("Ollama Quick Pass response is not a JSON object");
   }
 
+  // Sanitize at the parse boundary so a weak model's noise (title-less items,
+  // duplicates, half-formed relationships) never reaches the review board. This
+  // is a model-independent quality floor: the same garbage from any engine is
+  // dropped identically here.
   const candidate = json as Partial<ParsedQuickPass>;
   return {
     summary: candidate.summary,
-    issues: Array.isArray(candidate.issues) ? candidate.issues : [],
-    decisions: Array.isArray(candidate.decisions) ? candidate.decisions : [],
-    relationships: Array.isArray(candidate.relationships) ? candidate.relationships : [],
-    nextActions: Array.isArray(candidate.nextActions) ? candidate.nextActions : [],
+    issues: keepTitled<ParsedQuickPass["issues"][number]>(candidate.issues),
+    decisions: keepTitled<ParsedQuickPass["decisions"][number]>(candidate.decisions),
+    relationships: keepRelationships(candidate.relationships),
+    nextActions: keepTitled<NonNullable<ParsedQuickPass["nextActions"]>[number]>(
+      candidate.nextActions,
+    ),
   };
+}
+
+/**
+ * Keep only array items with a usable non-empty title, deduped by normalized
+ * title (first occurrence wins). Drops the empty / whitespace / repeated items a
+ * weak model commonly emits, so they never become blank or duplicate cards.
+ */
+function keepTitled<T extends { title: string }>(value: unknown): T[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const title = (item as { title?: unknown }).title;
+    if (typeof title !== "string" || title.trim().length === 0) continue;
+    const key = title.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item as T);
+  }
+  return out;
+}
+
+/** Keep only relationships that name both endpoints and a type. */
+function keepRelationships(value: unknown): ParsedQuickPass["relationships"] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is NonNullable<ParsedQuickPass["relationships"]>[number] =>
+      !!item &&
+      typeof item === "object" &&
+      typeof (item as { fromId?: unknown }).fromId === "string" &&
+      typeof (item as { toId?: unknown }).toId === "string" &&
+      typeof (item as { type?: unknown }).type === "string",
+  );
 }
 
 /**
