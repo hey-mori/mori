@@ -40,6 +40,25 @@ const DECISION_PATTERNS: RegExp[] = [
   /(decid(?:e|ed|ing)|agreed\s+on)/i,
 ];
 
+/**
+ * Upper bound on heuristic issue candidates. The keyword patterns are broad
+ * (need / fix / error), so a long session can match dozens of low-value lines,
+ * flooding the board and the LLM floor. We keep the highest-priority ones and
+ * note how many were dropped, mirroring the prompt's "a few high-quality over
+ * many noisy" rule. Decisions use tighter patterns and are not capped.
+ */
+const MAX_DETERMINISTIC_ISSUES = 20;
+const ISSUE_PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
+
+function capIssuesByPriority(issues: AnalysisIssueCandidate[]): AnalysisIssueCandidate[] {
+  if (issues.length <= MAX_DETERMINISTIC_ISSUES) return issues;
+  // Stable sort keeps same-priority candidates in their original (chronological)
+  // order, so the cap takes the highest-priority, earliest matches.
+  return [...issues]
+    .sort((a, b) => ISSUE_PRIORITY_RANK[a.priority] - ISSUE_PRIORITY_RANK[b.priority])
+    .slice(0, MAX_DETERMINISTIC_ISSUES);
+}
+
 export class DeterministicQuickPassProvider implements AnalysisProvider {
   readonly name = PROVIDER_NAME;
   readonly label = PROVIDER_LABEL;
@@ -163,8 +182,10 @@ export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
     }
   });
 
-  // Deduplicate issue candidates by title to avoid noise from repeated phrases.
-  const dedupedIssues = dedupeByTitle(issueCandidates);
+  // Deduplicate issue candidates by title to avoid noise from repeated phrases,
+  // then cap to the highest-priority few so a long session does not flood.
+  const allIssues = dedupeByTitle(issueCandidates);
+  const dedupedIssues = capIssuesByPriority(allIssues);
   const dedupedDecisions = dedupeByTitle(decisionCandidates);
 
   // Link issues back to source ids when an event has a source ref.
@@ -211,6 +232,11 @@ export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
   }
   if (input.events.length && !dedupedIssues.length && !dedupedDecisions.length) {
     notes.push("Heuristic pass did not find issue or decision keywords. Try a real local LLM for richer output.");
+  }
+  if (allIssues.length > dedupedIssues.length) {
+    notes.push(
+      `이슈 후보 ${allIssues.length}개 중 우선순위 상위 ${dedupedIssues.length}개만 유지했습니다.`,
+    );
   }
 
   return {

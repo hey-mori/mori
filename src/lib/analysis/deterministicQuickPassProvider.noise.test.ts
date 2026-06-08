@@ -86,4 +86,23 @@ describe("deterministic Quick Pass noise filtering", () => {
     ]);
     expect(result.decisions.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("caps a flood of issue candidates and keeps the highest priority", () => {
+    const events: TimelineEvent[] = [];
+    // 30 low/medium "need/fix" lines (medium) ...
+    for (let i = 0; i < 30; i += 1) {
+      events.push(ev(`m${i}`, `need item ${i}`, `이 기능이 필요하다 ${i}`, "assistant"));
+    }
+    // ... plus a couple of genuine high-priority error lines.
+    events.push(ev("h1", "Build broken", "the build crashed on CI", "assistant"));
+    events.push(ev("h2", "Risk", "위험: 토큰 회전 미정", "assistant"));
+
+    const result = run(events);
+
+    expect(result.issues.length).toBeLessThanOrEqual(20);
+    // The high-priority issues survive the cap.
+    expect(result.issues.some((issue) => issue.priority === "high")).toBe(true);
+    // The cap is disclosed, never silent.
+    expect(result.notes.some((note) => note.includes("상위"))).toBe(true);
+  });
 });
