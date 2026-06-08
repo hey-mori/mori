@@ -2,35 +2,32 @@ import {
   Bell,
   Bot,
   HardDrive,
+  Info,
   Palette,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { useSessionStore } from "../../app/sessionStore";
 import { useSqliteStore } from "../../app/sqliteStore";
-import {
-  selectActiveRepository,
-  useRepositoryStore,
-} from "../../app/repositoryStore";
 import { useAppStore } from "../../app/store";
 import type { SettingsTab } from "../../app/store";
 import { buildAnalysisRunHistoryViewModel } from "../../lib/analysis";
-import { isTauriRuntime, pickRepositoryDirectory } from "../../lib/desktop";
+import { isTauriRuntime } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { LocalAiCard } from "./LocalAiCard";
 import { StorageCard } from "./StorageCard";
-import { RepositoriesCard } from "./RepositoriesCard";
 import { ThemeCard } from "./ThemeCard";
 import { DemoModeCard } from "./DemoModeCard";
 import { NotificationsCard } from "./NotificationsCard";
 import { SettingsSection } from "./SettingsPrimitives";
+import { AboutCard } from "./AboutCard";
 
 export const SETTINGS_TAB_DEFS: Array<{ id: SettingsTab; label: string; icon: typeof Bot }> = [
-  { id: "localAi", label: "AI 엔진", icon: Bot },
+  { id: "localAi", label: "분석 엔진", icon: Bot },
   { id: "storage", label: "저장소", icon: HardDrive },
   { id: "appearance", label: "테마", icon: Palette },
   { id: "notifications", label: "알림", icon: Bell },
+  { id: "about", label: "정보", icon: Info },
 ];
 
 export function SettingsView() {
@@ -47,28 +44,13 @@ export function SettingsView() {
   const sqliteKind = useSqliteStore((state) => state.kind);
   const refreshSqlite = useSqliteStore((state) => state.refresh);
 
-  const repositorySettings = useRepositoryStore((state) => state.settings);
-  const repositoriesInitialized = useRepositoryStore((state) => state.initialized);
-  const hydrateRepositories = useRepositoryStore((state) => state.hydrate);
-  const addRepository = useRepositoryStore((state) => state.addRepository);
-  const removeRepository = useRepositoryStore((state) => state.removeRepository);
-  const renameRepository = useRepositoryStore((state) => state.renameRepository);
-  const selectRepository = useRepositoryStore((state) => state.selectRepository);
-  const verifyRepository = useRepositoryStore((state) => state.verifyRepository);
-  const clearRepositoryVerification = useRepositoryStore((state) => state.clearRepositoryVerification);
-  const verifyingId = useRepositoryStore((state) => state.verifyingId);
-  const activeRepository = useRepositoryStore(selectActiveRepository);
-
   const setCurrentView = useAppStore((state) => state.navigate);
   const activeTab = useAppStore((state) => state.settingsTab);
+  const closeSettingsSheet = useAppStore((state) => state.closeSettingsSheet);
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
-
-  useEffect(() => {
-    if (!repositoriesInitialized) hydrateRepositories();
-  }, [repositoriesInitialized, hydrateRepositories]);
 
   useEffect(() => {
     if (sqliteAvailable && sqliteKind !== "ok") void refreshSqlite();
@@ -82,12 +64,6 @@ export function SettingsView() {
     return history ? buildAnalysisRunHistoryViewModel(history) : null;
     // Re-derive when a new run is adopted (analysis.runId) or after hydration.
   }, [loadAnalysisRunHistory, analysis?.runId, initialized]);
-
-  async function handlePickRepository() {
-    const result = await pickRepositoryDirectory({ title: "Mori: Select repository" });
-    if (result.cancelled || !result.path) return null;
-    return result.path;
-  }
 
   return (
     <div className="settings-content-stack settings-page">
@@ -112,23 +88,21 @@ export function SettingsView() {
               sqliteSessionCount={sqliteSessions.length}
             />
             <SqliteLoadCard sessions={sqliteSessions} onLoad={loadDesktopSession} />
-            <RepositoriesCard
-              repositories={repositorySettings.repositories}
-              desktopRuntime={desktopRuntime}
-              defaultRepositoryId={activeRepository?.id ?? null}
-              verifyingId={verifyingId}
-              onAdd={({ path, label }) => addRepository({ path, label })}
-              onPickDirectory={handlePickRepository}
-              onRename={(id, label) => renameRepository(id, label)}
-              onSelect={(id) => selectRepository(id)}
-              onVerify={(id) => verifyRepository(id)}
-              onClearVerification={(id) => clearRepositoryVerification(id)}
-              onRemove={(id) => removeRepository(id)}
-            />
           </>
         ) : null}
         {activeTab === "appearance" ? <ThemeCard /> : null}
         {activeTab === "notifications" ? <NotificationsCard /> : null}
+        {activeTab === "about" ? (
+          <AboutCard
+            mode={mode}
+            sqliteKind={sqliteKind}
+            sqliteSessionCount={sqliteSessions.length}
+            onOpenConnections={() => {
+              closeSettingsSheet();
+              setCurrentView("connections");
+            }}
+          />
+        ) : null}
       </div>
 
     </div>
@@ -146,12 +120,7 @@ function SqliteLoadCard({
   const [error, setError] = useState<string | null>(null);
   if (sessions.length === 0) return null;
   return (
-    <SettingsSection
-      title="저장된 세션"
-      action={
-        <Badge tone="purple">{sessions.length}개 세션</Badge>
-      }
-    >
+    <SettingsSection title="저장된 세션">
       <ul className="settings-sqlite-saved-list">
         {sessions.map((entry) => (
           <li key={entry.sessionId}>
@@ -161,9 +130,6 @@ function SqliteLoadCard({
                 {entry.projectName} · 이벤트 {entry.eventCount}개 · 출처 {entry.sourceCount}개
               </small>
             </div>
-            <Badge tone={entry.status === "complete" ? "gray" : "green"}>
-              {entry.status === "complete" ? "완료" : "진행 중"}
-            </Badge>
             <Button
               disabled={loadingId === entry.sessionId}
               onClick={async () => {

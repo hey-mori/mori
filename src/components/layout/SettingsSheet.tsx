@@ -74,7 +74,7 @@ export function SettingsSheet() {
       >
         <header className="settings-sheet-head">
           <div className="settings-sheet-title">
-            <strong id="settings-sheet-title">환경설정</strong>
+            <strong id="settings-sheet-title">설정</strong>
           </div>
           <button
             type="button"

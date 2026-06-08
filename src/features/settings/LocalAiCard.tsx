@@ -1,8 +1,6 @@
 import {
   Bot,
-  Cloud,
   Code2,
-  Database,
   FlaskConical,
   Plug,
   RefreshCw,
@@ -10,7 +8,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BaseSelect, type BaseSelectOption } from "../../components/ui/BaseSelect";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import {
   checkQuickPassCapability,
@@ -52,34 +49,22 @@ type CapabilityState =
 
 const ENGINE_OPTIONS: Array<BaseSelectOption<EngineChoice>> = [
   {
-    id: "deterministic",
-    label: "규칙 기반",
-    description: "모델 없이 즉시 정리",
-    icon: Sparkles,
-  },
-  {
     id: "ollama",
     label: "Ollama",
-    description: "로컬 LLM 엔드포인트",
+    description: "로컬 모델",
     icon: Bot,
-  },
-  {
-    id: "lmStudio",
-    label: "LM Studio",
-    description: "OpenAI 호환 로컬 서버",
-    icon: Database,
   },
   {
     id: "openAiCompatible",
     label: "OpenAI 호환",
-    description: "vLLM, LocalAI, 사용자 서버",
+    description: "사용자 endpoint",
     icon: Code2,
   },
   {
-    id: "cloudApi",
-    label: "Cloud API",
-    description: "OpenAI 호환 외부 API",
-    icon: Cloud,
+    id: "deterministic",
+    label: "규칙 기반",
+    description: "모델 없음",
+    icon: Sparkles,
   },
 ];
 
@@ -193,8 +178,16 @@ export function LocalAiCard({
               popoverWidth="trigger"
             />
           </label>
-          <EngineSummary choice={activeChoice} />
         </div>
+
+        <EngineProfile
+          choice={activeChoice}
+          providerKind={providerKind}
+          settings={settings}
+          probe={probe}
+          capability={capability}
+          runHistory={runHistory}
+        />
 
         <EngineConfigPanel
           choice={activeChoice}
@@ -214,34 +207,51 @@ export function LocalAiCard({
   );
 }
 
-function EngineSummary({ choice }: { choice: EngineChoice }) {
-  const copy = {
-    deterministic: {
-      tone: "gray",
-      text: "기기 안에서만 동작합니다. 빠르지만 깊은 추론은 제한적입니다.",
-    },
-    ollama: {
-      tone: "green",
-      text: "사용자가 실행 중인 로컬 Ollama 서버로만 요청을 보냅니다.",
-    },
-    lmStudio: {
-      tone: "green",
-      text: "LM Studio의 로컬 OpenAI 호환 서버를 사용합니다.",
-    },
-    openAiCompatible: {
-      tone: "blue",
-      text: "입력한 base URL로만 요청합니다. 로컬 또는 사설 서버에 맞습니다.",
-    },
-    cloudApi: {
-      tone: "orange",
-      text: "외부 API로 데이터가 전송될 수 있으므로 API 키와 URL을 직접 확인하세요.",
-    },
-  }[choice];
+function EngineProfile({
+  choice,
+  providerKind,
+  settings,
+  probe,
+  capability,
+  runHistory,
+}: {
+  choice: EngineChoice;
+  providerKind: QuickPassProviderKind;
+  settings: QuickPassAnalysisSettings;
+  probe: ProbeState;
+  capability: CapabilityState;
+  runHistory: AnalysisRunHistoryViewModel | null;
+}) {
+  const profile = getEngineProfile(choice, settings);
+  const verification = describeEngineVerification(providerKind, probe, capability);
+  const currentRun = runHistory?.rows.find((row) => row.isCurrent) ?? runHistory?.rows[0] ?? null;
   return (
-    <p className="settings-ai-engine-summary">
-      <Badge tone={copy.tone}>{choice === "deterministic" ? "기본" : "실행 가능"}</Badge>
-      <span>{copy.text}</span>
-    </p>
+    <section className="settings-ai-profile" aria-label="분석 엔진 요약">
+      <dl>
+        <div>
+          <dt>모드</dt>
+          <dd>{profile.mode}</dd>
+        </div>
+        <div>
+          <dt>모델</dt>
+          <dd>{profile.model}</dd>
+        </div>
+        <div>
+          <dt>상태</dt>
+          <dd className={`settings-ai-profile-status tone-${verification.tone}`}>
+            <span aria-hidden="true" />
+            {verification.text}
+          </dd>
+        </div>
+      </dl>
+      <p>
+        <span>
+          {currentRun
+            ? `최근 실행: ${currentRun.providerLabel} · ${formatRelativeKo(currentRun.generatedAt)} · 신뢰도 ${Math.round(currentRun.confidence * 100)}%`
+            : "아직 실행 기록이 없습니다. 연결 확인 뒤 응답 테스트를 실행하면 품질 판단이 쉬워집니다."}
+        </span>
+      </p>
+    </section>
   );
 }
 
@@ -607,7 +617,6 @@ function EngineSourceNote() {
         이 도구들은 분석 엔진이 아니라 작업 소스입니다. 연결 화면에서 실제 대화나 JSONL 기록을 가져오면,
         위에서 선택한 엔진으로 그 세션을 분석합니다.
       </span>
-      <Badge tone="green">가져오기 구현됨</Badge>
     </section>
   );
 }
@@ -641,13 +650,77 @@ function ProviderField({
   );
 }
 
+function getEngineProfile(
+  choice: EngineChoice,
+  settings: QuickPassAnalysisSettings,
+): {
+  mode: string;
+  model: string;
+} {
+  if (choice === "deterministic") {
+    return {
+      mode: "규칙 기반",
+      model: "모델 없음",
+    };
+  }
+  if (choice === "ollama") {
+    return {
+      mode: "로컬",
+      model: settings.ollamaModel || "미설정",
+    };
+  }
+  if (choice === "lmStudio") {
+    return {
+      mode: "로컬",
+      model: settings.openAiModel || "미설정",
+    };
+  }
+  if (choice === "cloudApi") {
+    return {
+      mode: "외부 API",
+      model: settings.openAiModel || "미설정",
+    };
+  }
+  return {
+    mode: "사용자 endpoint",
+    model: settings.openAiModel || "미설정",
+  };
+}
+
+function describeEngineVerification(
+  provider: QuickPassProviderKind,
+  probe: ProbeState,
+  capability: CapabilityState,
+): { text: string; tone: "idle" | "ok" | "warn" | "err" } {
+  if (provider === "deterministic") {
+    return { text: "연결 확인 필요 없음", tone: "ok" };
+  }
+  if (probe.status === "checking" && probe.kind === provider) {
+    return { text: "연결 확인 중", tone: "idle" };
+  }
+  if (probe.status === "error" && probe.kind === provider) {
+    return { text: "연결 실패", tone: "err" };
+  }
+  if (capability.status === "running" && capability.kind === provider) {
+    return { text: "응답 테스트 중", tone: "idle" };
+  }
+  if (capability.status === "done" && capability.kind === provider) {
+    if (capability.report.verdict === "ready") {
+      return { text: "응답 구조 확인됨", tone: "ok" };
+    }
+    if (capability.report.verdict === "reachableNoStructure") {
+      return { text: "연결됨, 구조 확인 필요", tone: "warn" };
+    }
+    return { text: "응답 테스트 실패", tone: "err" };
+  }
+  if (probe.status === "ok" && probe.kind === provider) {
+    return { text: "연결됨", tone: "ok" };
+  }
+  return { text: "아직 확인하지 않음", tone: "idle" };
+}
+
 function inferEngineChoice(settings: QuickPassAnalysisSettings): EngineChoice {
   if (settings.provider !== "openAiCompatible") return settings.provider;
-  const baseUrl = settings.openAiBaseUrl.trim().toLowerCase();
-  if (baseUrl.includes("localhost:1234") || baseUrl.includes("127.0.0.1:1234")) {
-    return "lmStudio";
-  }
-  if (baseUrl.includes("api.openai.com")) return "cloudApi";
   return "openAiCompatible";
 }
 

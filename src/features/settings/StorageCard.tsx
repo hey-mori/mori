@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FolderCog } from "lucide-react";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
-import { SettingsRow, SettingsSection, StatusPill } from "./SettingsPrimitives";
+import { SettingsRow, SettingsSection } from "./SettingsPrimitives";
 
 type StoragePathState =
   | { status: "idle" | "loading"; path: string | null }
@@ -62,14 +62,7 @@ export function StorageCard({
       : "브라우저 localStorage";
 
   return (
-    <SettingsSection
-      title="저장 위치"
-      action={
-        <StatusPill tone={mode === "tauri-desktop" && sqliteKind === "ok" ? "green" : "gray"}>
-          {mode === "tauri-desktop" ? "이 기기" : "브라우저"}
-        </StatusPill>
-      }
-    >
+    <SettingsSection title="저장 위치">
       <div className="settings-row-list">
         <SettingsRow
           compact

@@ -574,7 +574,7 @@
 
 .settings-sqlite-saved-list li {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
   padding: 8px 10px;
@@ -622,6 +622,43 @@
   background: var(--red-50);
   color: var(--red);
   font-size: 12px;
+}
+
+/* About */
+
+.settings-about-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-about-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.settings-about-meta svg {
+  flex-shrink: 0;
+  color: var(--purple);
+}
+
+.settings-about-diagnostics {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
 
 /* Repositories */
