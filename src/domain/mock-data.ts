@@ -1,6 +1,7 @@
 import type {
   Artifact,
   Decision,
+  FileTouch,
   Issue,
   MockSession,
   NextAction,
@@ -123,6 +124,47 @@ const events: TimelineEvent[] = [
   event("evt-report-issue", "16:25", "issue", "리포트 템플릿 구조 정의", "공유 대상별 리포트 포함 항목과 프라이버시 옵션을 명확히 해야 함.", ["src-claude", "src-git"], "inferred", 0.8, ["iss-report-template"]),
   event("evt-meeting-note", "16:30", "documentNote", "회의 메모", "내부 공유용 결정 요약과 다음 액션을 기록.", ["src-manual"], "verified", 0.96, []),
 ];
+
+// Demo file provenance — attach representative file touches to the file-code
+// turns so the timeline card diffstat chip, the event inspector's "이 턴이 만진
+// 파일" section, and the session file panel all show real-looking provenance in
+// the demo session. `messageId` ties each touch to its own event id.
+function demoTouch(
+  eventId: string,
+  path: string,
+  tool: string,
+  changeKind: FileTouch["changeKind"],
+  additions: number,
+  deletions: number,
+): FileTouch {
+  return { path, tool, changeKind, at: "", additions, deletions, messageId: eventId };
+}
+
+const demoFileTouches: Record<string, FileTouch[]> = {
+  "evt-readme": [demoTouch("evt-readme", "C:/dev/mori/README.md", "Write", "wrote", 48, 0)],
+  "evt-architecture": [
+    demoTouch("evt-architecture", "C:/dev/mori/docs/mori_architecture.md", "Write", "wrote", 132, 0),
+  ],
+  "evt-parser": [
+    demoTouch("evt-parser", "C:/dev/mori/src/timeline_parser.py", "Edit", "edited", 64, 12),
+    demoTouch("evt-parser", "C:/dev/mori/src/normalize.py", "Read", "read", 0, 0),
+  ],
+  "evt-report-template": [
+    demoTouch("evt-report-template", "C:/dev/mori/docs/report_template.md", "Write", "wrote", 90, 4),
+  ],
+};
+
+for (const timelineEvent of events) {
+  const touches = demoFileTouches[timelineEvent.id];
+  if (touches) timelineEvent.fileTouches = touches;
+}
+
+// The same touches roll up onto the git-diff source so the session file panel
+// (which reads `SourceRef.fileTouches`) shows them too.
+const gitSource = sources.find((source) => source.id === "src-git");
+if (gitSource) {
+  gitSource.fileTouches = Object.values(demoFileTouches).flat();
+}
 
 const issues: Issue[] = [
   issue("iss-local-llm", "로컬 LLM 연결 방식 미정", "Ollama, LM Studio, OpenAI-compatible endpoint 중 기본 연결 방식을 정해야 함.", "open", "high", ["evt-local-llm-issue", "evt-local-llm-priority"], ["dec-local-llm"], "MVP에서는 Ollama를 기본값으로 두고 LM Studio는 선택 옵션으로 제공한다."),

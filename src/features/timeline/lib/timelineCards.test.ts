@@ -5,6 +5,7 @@ import {
   buildTimelineBundleViewModel,
   buildTimelineEventCardViewModel,
   buildTrustGlyph,
+  formatFileActivityDiff,
 } from "./timelineCards";
 
 describe("buildTimelineEventCardViewModel", () => {
@@ -35,6 +36,31 @@ describe("buildTimelineEventCardViewModel", () => {
     const vm = buildTimelineEventCardViewModel(pointEvent);
     expect(vm.hasTimeRange).toBe(false);
     expect(vm.timeLabel).not.toMatch(/-/);
+  });
+
+  it("derives file activity from event fileTouches: changes lead, diffstat summed", () => {
+    const withFiles = {
+      ...event,
+      fileTouches: [
+        { path: "/repo/src/commandSpace.ts", tool: "Edit", changeKind: "edited", at: "", additions: 10, deletions: 2 },
+        { path: "/repo/src/commandSpace.ts", tool: "Edit", changeKind: "edited", at: "", additions: 5, deletions: 1 },
+        { path: "/repo/src/notes.md", tool: "Read", changeKind: "read", at: "" },
+      ],
+    };
+    const vm = buildTimelineEventCardViewModel(withFiles);
+    expect(vm.fileActivity).not.toBeNull();
+    expect(vm.fileActivity?.filesChanged).toBe(1);
+    expect(vm.fileActivity?.filesRead).toBe(1);
+    expect(vm.fileActivity?.additions).toBe(15);
+    expect(vm.fileActivity?.deletions).toBe(3);
+    expect(vm.fileActivity?.leadFile).toBe("commandSpace.ts");
+    expect(vm.fileActivity?.filesLabel).toContain("commandSpace.ts");
+    expect(formatFileActivityDiff(vm.fileActivity!)).toBe("+15 -3");
+  });
+
+  it("returns null file activity when the event touched no files", () => {
+    const vm = buildTimelineEventCardViewModel({ ...event, fileTouches: undefined });
+    expect(vm.fileActivity).toBeNull();
   });
 
   it("emits no footer meta when the event has no sources or links", () => {

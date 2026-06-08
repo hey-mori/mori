@@ -4,7 +4,10 @@ import type { LucideIcon } from "lucide-react";
 import type { LaidOutTimelineItem, TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { focusStateClassName, type EventFocusState } from "../../lib/timeline/focusState";
 import type { SourceKind, SourceRef, TimelineEvent } from "../../domain/types";
-import { buildTimelineEventCardViewModel } from "./lib/timelineCards";
+import {
+  buildTimelineEventCardViewModel,
+  formatFileActivityDiff,
+} from "./lib/timelineCards";
 import { activityKindIcons, sourceFamilyIcons } from "./lib/activityIcons";
 import type { TimelineSourceFamily } from "../../lib/timeline/activityModel";
 import {
@@ -38,9 +41,15 @@ export function TimelineEventCard({
   const MarkIcon = sourceMark.icon;
   const [hoverAnchor, setHoverAnchor] = useState<DOMRect | null>(null);
   const densityClass = densityClassName(density);
+  const fileDiff = vm.fileActivity ? formatFileActivityDiff(vm.fileActivity) : "";
+  const fileLine = vm.fileActivity
+    ? vm.fileActivity.filesChanged > 0
+      ? `${vm.fileActivity.filesLabel}${fileDiff ? ` · ${fileDiff}` : ""}`
+      : `${vm.fileActivity.filesLabel} 읽기`
+    : null;
   const preview: TimelineHoverPreview = {
-    meta: [vm.timeLabel, sourceMark.label, vm.primaryMeta].filter((item): item is string =>
-      Boolean(item),
+    meta: [vm.timeLabel, sourceMark.label, fileLine, vm.primaryMeta].filter(
+      (item): item is string => Boolean(item),
     ),
     title: vm.title,
     summary: event.summary,
@@ -90,6 +99,15 @@ export function TimelineEventCard({
           </span>
           <span className="event-card-time">{vm.timeLabel}</span>
           <strong className="event-card-title">{vm.title}</strong>
+          {vm.fileActivity && vm.fileActivity.filesChanged > 0 ? (
+            <span
+              className="event-card-files"
+              aria-hidden="true"
+              title={fileLine ?? undefined}
+            >
+              {fileDiff || `${vm.fileActivity.filesChanged}파일`}
+            </span>
+          ) : null}
         </span>
         {menuItems ? (
           <BaseContextMenu

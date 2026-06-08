@@ -257,8 +257,20 @@ The themes depend on each other; the spine is data first.
     lines). The panel is desktop + real-data gated (it reads
     `SourceRef.fileTouches`, populated only by the Rust agent read), so it
     renders nothing in the browser prototype / demo.
-- **Next:** timeline card action glyphs (this is where provenance feeds the
-  visualization, §3) — needs per-turn touch attribution first; a diff peek
-  (view the actual hunk lines, already captured in the result); persisting
-  `fileTouches` so browser-saved sessions keep the panel after reload (today it
-  is live-read on desktop).
+- **Per-turn attribution + inspector. SHIPPED (2026-06-08).** Each
+  `ClaudeFileTouch` carries its originating assistant message id
+  (`src-tauri/src/claude/code.rs`); `claudeImport` groups touches by message id
+  and attaches them to the matching turn's event (`TimelineEvent.fileTouches`);
+  the **Event Inspector** renders a calm "이 턴이 만진 파일" section
+  (`src/features/timeline/EventInspector.tsx`) with per-file change counts and
+  `+N / -M`. This is the first place file provenance reaches the timeline (A→B).
+- **Timeline card chip. SHIPPED (2026-06-08).** The event card carries a calm
+  trailing diffstat chip (`+N -M`, muted, dense-tier hidden) when its turn
+  changed files, and the hover names the lead file
+  (`src/features/timeline/lib/timelineCards.ts` `buildCardFileActivity` +
+  `TimelineEventCard.tsx`). The demo session seeds `fileTouches` on its file-code
+  turns so all three surfaces (card chip, inspector section, session file panel)
+  demo without desktop data.
+- **Next:** a diff peek (view the actual hunk lines, already captured in the
+  result); persisting `fileTouches` so browser-saved sessions keep it after
+  reload (today live-read on desktop); extending provenance to Codex / OpenCode.

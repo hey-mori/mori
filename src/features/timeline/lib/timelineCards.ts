@@ -18,9 +18,10 @@
  * is the boundary for the cards rendered INSIDE the lanes.
  */
 import { eventTypeLabels } from "../../../domain/constants";
-import type { SourceRef, TimelineEvent, TrustLevel } from "../../../domain/types";
+import type { FileTouch, SourceRef, TimelineEvent, TrustLevel } from "../../../domain/types";
 import { formatTime, formatTimeRange, minutesBetween } from "../../../lib/formatting/time";
 import { getTrustDisplay } from "../../../lib/evidence/trust";
+import { rollUpFileTouches } from "../../../lib/file-provenance/fileProvenance";
 import {
   buildEventActivityDescriptor,
   getActivityLaneVisuals,
@@ -30,6 +31,43 @@ import {
 import { buildBundleDensityProfile, type TimelineDisplayBundle } from "../../../lib/timeline/displayItems";
 
 export type TimelineCardTrustTone = "verified" | "observed" | "inferred";
+
+export type TimelineCardFileActivity = {
+  /** Files the turn wrote or edited. */
+  filesChanged: number;
+  /** Files the turn only read. */
+  filesRead: number;
+  /** Lines added / removed across the turn's changes (0 when no patch). */
+  additions: number;
+  deletions: number;
+  /** Basename of the lead file (the most-changed, else the first touched). */
+  leadFile: string;
+  /** Compact "lead 외 N" label naming the lead file and how many more. */
+  filesLabel: string;
+};
+
+/**
+ * Roll a turn's file touches into the compact signal the card shows. Returns
+ * null when there are none, so the card stays clean for plain asks / replies.
+ */
+export function buildCardFileActivity(
+  touches: readonly FileTouch[] | undefined,
+): TimelineCardFileActivity | null {
+  if (!touches || touches.length === 0) return null;
+  const entries = rollUpFileTouches(touches);
+  if (entries.length === 0) return null;
+  const changed = entries.filter((entry) => entry.changeCount > 0);
+  const lead = changed[0] ?? entries[0];
+  const extra = entries.length - 1;
+  return {
+    filesChanged: changed.length,
+    filesRead: entries.length - changed.length,
+    additions: entries.reduce((sum, entry) => sum + entry.additions, 0),
+    deletions: entries.reduce((sum, entry) => sum + entry.deletions, 0),
+    leadFile: lead.fileName,
+    filesLabel: extra > 0 ? `${lead.fileName} 외 ${extra}` : lead.fileName,
+  };
+}
 
 export type TimelineCardTrustGlyph = {
   level: TrustLevel;
@@ -68,6 +106,13 @@ export type TimelineEventCardViewModel = {
    * per-category counts live in the inspector, never on the card.
    */
   primaryMeta: string | null;
+  /**
+   * Compact file-activity signal for the turn, derived from `event.fileTouches`
+   * (Claude Code today). Drives the card-face diffstat chip and the hover line
+   * so a turn that changed code reads as such at a glance. Null when the turn
+   * touched no files. This is where file provenance reaches the timeline card.
+   */
+  fileActivity: TimelineCardFileActivity | null;
   /** ARIA label for the rendered button. */
   ariaLabel: string;
   /** HTML `title` attribute (short summary). */
@@ -129,6 +174,8 @@ export function buildTimelineEventCardViewModel(
         ? `연결 ${linkCount}`
         : null;
 
+  const fileActivity = buildCardFileActivity(event.fileTouches);
+
   const ariaLabel = `${laneLabel} · ${event.title} · ${trust.label}`;
   const buttonTitle = `${laneLabel} · ${event.title}`;
 
@@ -148,10 +195,20 @@ export function buildTimelineEventCardViewModel(
     title: event.title,
     trust,
     primaryMeta,
+    fileActivity,
     ariaLabel,
     buttonTitle,
     event,
   };
+}
+
+/** Compact diffstat string for the card chip / hover, e.g. "+12 -3". Empty when
+ *  the activity carried no line counts (a read, or an uncorrelated change). */
+export function formatFileActivityDiff(activity: TimelineCardFileActivity): string {
+  const parts: string[] = [];
+  if (activity.additions > 0) parts.push(`+${activity.additions}`);
+  if (activity.deletions > 0) parts.push(`-${activity.deletions}`);
+  return parts.join(" ");
 }
 
 export function buildTimelineBundleViewModel(bundle: TimelineDisplayBundle): TimelineBundleViewModel {

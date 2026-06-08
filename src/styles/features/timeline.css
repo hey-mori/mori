@@ -2245,6 +2245,24 @@ kbd {
   gap: 4px;
 }
 
+/* Card-face file-activity chip — the turn's diffstat, pushed to the trailing
+   edge. Calm: muted single tone (weight before colour), tabular figures, never
+   wraps. Hidden on the dense pill tier where there is no room. Driven by
+   `event.fileTouches`; see timelineCards.ts / EventInspector for the detail. */
+.event-card-files {
+  flex: none;
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.event-card.is-dense .event-card-files {
+  display: none;
+}
+
 .event-card.is-dense .event-card-kind {
   gap: 4px;
 }
