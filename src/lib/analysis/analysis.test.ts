@@ -173,7 +173,7 @@ describe("DeterministicQuickPassProvider", () => {
     });
 
     expect(extraction.summary.highlights.length).toBeGreaterThan(0);
-    expect(extraction.summary.sessionSummary).toMatch(/2 imported events/);
+    expect(extraction.summary.sessionSummary).toMatch(/가져온 이벤트 2개/);
   });
 
   it("runs cleanly when a Git diff event is included in the input", async () => {

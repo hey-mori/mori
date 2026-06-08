@@ -21,7 +21,7 @@ suspect; Ollama tags read like `gemma3:4b`.)
   high-priority *issues*.
 - `DECISION_PATTERNS` match `Decides|choose`, so a code comment
   ("* Decides which AI provider…") becomes a *decision*.
-- Every unresolved issue spawns an "Investigate or resolve: …" next action,
+- Every unresolved issue spawns a "확인 또는 해결: …" next action,
   amplifying the noise.
 
 **P3 · Timeline lanes are mis-routed**

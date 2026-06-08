@@ -217,7 +217,7 @@ export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
   dedupedIssues.forEach((issue, index) => {
     if (issue.status === "resolved") return;
     nextActionCandidates.push({
-      title: issue.suggestedNextAction || `Resolve: ${issue.title}`,
+      title: issue.suggestedNextAction || `해결: ${issue.title}`,
       priority: issue.priority,
       relatedIssueIds: [String(index)],
       relatedEventIds: issue.sourceEventIds,
@@ -228,10 +228,10 @@ export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
   const confidence = computeConfidence(input.events.length, dedupedIssues.length, dedupedDecisions.length);
 
   if (!input.events.length) {
-    notes.push("No imported events to analyze. Add manual notes, URLs, or AI conversation text first.");
+    notes.push("분석할 가져온 이벤트가 없습니다. 메모·URL·AI 대화를 먼저 추가하세요.");
   }
   if (input.events.length && !dedupedIssues.length && !dedupedDecisions.length) {
-    notes.push("Heuristic pass did not find issue or decision keywords. Try a real local LLM for richer output.");
+    notes.push("규칙 기반에서 이슈·결정 키워드를 찾지 못했습니다. 더 풍부한 결과는 로컬 LLM을 사용하세요.");
   }
   if (allIssues.length > dedupedIssues.length) {
     notes.push(
@@ -296,10 +296,10 @@ function buildIssueCandidate(sentence: string, event: TimelineEvent, priority: P
     sourceEventIds: [event.id],
     relatedDecisionIds: [],
     relatedFileIds: [],
-    suggestedNextAction: `Investigate or resolve: ${title}`,
+    suggestedNextAction: `확인 또는 해결: ${title}`,
     confidence: 0.55,
     trustLevel: "inferred",
-    rationale: `Matched issue keyword in event ${event.id}`,
+    rationale: `이벤트 ${event.id}에서 이슈 키워드 매칭`,
   };
 }
 
@@ -308,7 +308,7 @@ function buildDecisionCandidate(sentence: string, event: TimelineEvent): Analysi
   return {
     title,
     decision: truncate(sentence, 240),
-    rationale: `Heuristic match in event ${event.id}: "${truncate(sentence, 120)}"`,
+    rationale: `이벤트 ${event.id} 규칙 기반 매칭: "${truncate(sentence, 120)}"`,
     rejectedOptions: [],
     impact: [],
     sourceEventIds: [event.id],
@@ -336,7 +336,7 @@ function buildIssueEventRelationships(
         toType: "issue",
         type: "createdIssue",
         confidence: 0.5,
-        reason: "Heuristic Quick Pass linked event to extracted issue",
+        reason: "규칙 기반이 이벤트를 추출된 이슈에 연결했습니다.",
       });
     });
   });
@@ -359,7 +359,7 @@ function buildDecisionEventRelationships(
         toType: "decision",
         type: "influencedDecision",
         confidence: 0.5,
-        reason: "Heuristic Quick Pass linked event to extracted decision",
+        reason: "규칙 기반이 이벤트를 추출된 결정에 연결했습니다.",
       });
     });
   });
@@ -373,14 +373,14 @@ function buildSummary(
   highlights: string[],
 ): AnalysisSummary {
   const eventLine = input.events.length
-    ? `${input.events.length} imported events spanning ${input.sources.length} source${input.sources.length === 1 ? "" : "s"}.`
-    : "No events imported yet.";
+    ? `가져온 이벤트 ${input.events.length}개 · 소스 ${input.sources.length}개.`
+    : "아직 가져온 이벤트가 없습니다.";
   const issueLine = issues.length
-    ? `Heuristic Quick Pass found ${issues.length} issue candidate${issues.length === 1 ? "" : "s"}.`
-    : "No issue candidates from heuristic Quick Pass.";
+    ? `규칙 기반에서 이슈 후보 ${issues.length}개를 찾았습니다.`
+    : "규칙 기반에서 찾은 이슈 후보 없음.";
   const decisionLine = decisions.length
-    ? `Detected ${decisions.length} decision candidate${decisions.length === 1 ? "" : "s"} from imported text.`
-    : "No decision candidates from heuristic Quick Pass.";
+    ? `결정 후보 ${decisions.length}개를 찾았습니다.`
+    : "규칙 기반에서 찾은 결정 후보 없음.";
 
   const sessionSummary = [eventLine, issueLine, decisionLine].join(" ");
   const resumePrompt = buildResumePromptText(input, issues, decisions, highlights);
@@ -395,32 +395,32 @@ function buildResumePromptText(
   highlights: string[],
 ): string {
   const lines: string[] = [];
-  lines.push(`You are resuming the Mori session "${input.session.title}".`);
+  lines.push(`Mori 세션 "${input.session.title}"을(를) 이어서 진행합니다.`);
   lines.push("");
-  lines.push("Highlights:");
+  lines.push("하이라이트:");
   if (highlights.length) {
     highlights.forEach((line) => lines.push(`- ${line}`));
   } else {
-    lines.push("- (no highlights yet)");
+    lines.push("- (아직 없음)");
   }
   lines.push("");
-  lines.push("Open issues to resolve:");
+  lines.push("해결할 이슈:");
   if (issues.length) {
     issues.slice(0, 6).forEach((issue, index) => {
       lines.push(`${index + 1}. ${issue.title} (${issue.priority})`);
     });
   } else {
-    lines.push("- (none extracted)");
+    lines.push("- (추출된 항목 없음)");
   }
   lines.push("");
-  lines.push("Recent decisions to honor:");
+  lines.push("반영할 최근 결정:");
   if (decisions.length) {
     decisions.slice(0, 6).forEach((decision) => lines.push(`- ${decision.title}`));
   } else {
-    lines.push("- (none extracted)");
+    lines.push("- (추출된 항목 없음)");
   }
   lines.push("");
-  lines.push(`Provider: ${PROVIDER_LABEL}. Treat all output as inferred until a real local LLM Quick Pass runs.`);
+  lines.push(`제공자: ${PROVIDER_LABEL}. 실제 로컬 LLM 분석 전까지 모든 결과는 추정으로 간주하세요.`);
   return lines.join("\n");
 }
 
