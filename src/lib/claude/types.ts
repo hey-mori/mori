@@ -103,6 +103,48 @@ export type ClaudeCodeSessionMeta = {
   tokenUsage?: ClaudeTokenUsage;
 };
 
+/**
+ * One file a Claude Code session's tool calls touched. Mirrors the Rust
+ * `ClaudeFileTouch`. Extracted from a `tool_use` block's structured `input`
+ * before the block is flattened into the rendered message text, so the file
+ * provenance survives ("🔧 Edit: …" used to be all that reached the frontend).
+ *
+ * Faithful and minimal: one entry per touch (a file read three times appears
+ * three times). The per-file rollup, and reconciling `path` against the
+ * current filesystem to detect moves / deletions, are pure derivations done
+ * downstream — not baked in here.
+ */
+export type ClaudeFileTouch = {
+  /** Absolute path exactly as the tool recorded it. Not validated. */
+  path: string;
+  /** The tool, e.g. "Edit", "Write", "Read", "MultiEdit", "NotebookEdit". */
+  tool: string;
+  /** Coarse change kind: "wrote" | "edited" | "read" | "touched". */
+  changeKind: ClaudeFileChangeKind;
+  /** Timestamp of the enclosing JSONL line, or "" when absent. */
+  at: string;
+  /** Lines added, counted from the correlated result's `structuredPatch`. 0 when no patch. */
+  additions: number;
+  /** Lines removed, counted from `structuredPatch`. 0 when no patch. */
+  deletions: number;
+  /** Id of the assistant message (JSONL line) this touch came from — matches
+   *  `ClaudeMessage.id`, so the import can attribute it to a turn / event. */
+  messageId: string;
+};
+
+export type ClaudeFileChangeKind =
+  | "wrote"
+  | "edited"
+  | "read"
+  | "touched"
+  | (string & {});
+
 export type ClaudeCodeSessionDetail = ClaudeCodeSessionMeta & {
   messages: ClaudeMessage[];
+  /**
+   * Files this session's tool calls touched, in order. Older reads (before
+   * this field shipped) and Claude Desktop conversations omit it; treat an
+   * absent value as an empty list.
+   */
+  fileTouches?: ClaudeFileTouch[];
 };

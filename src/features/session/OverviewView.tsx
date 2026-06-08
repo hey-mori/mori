@@ -11,6 +11,7 @@ import {
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { SessionEmptyPrompt } from "./SessionEmptyPrompt";
+import { SessionFilesPanel } from "./SessionFilesPanel";
 import {
   selectHasRealAnalysis,
   selectSessionMode,
@@ -162,6 +163,8 @@ export function OverviewView() {
             <OverviewMetric label="결정" value={String(decisionCount)} />
             <OverviewMetric label="다음 액션" value={String(nextActionCount)} />
           </dl>
+
+          <SessionFilesPanel sources={view.sources} />
 
           {unresolved.length > 0 ? (
             <section className="overview-attention" aria-label="확인이 필요한 항목">

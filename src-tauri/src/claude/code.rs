@@ -71,6 +71,45 @@ pub struct ClaudeCodeSessionDetail {
     pub title: String,
     pub messages: Vec<ClaudeCodeMessage>,
     pub token_usage: ClaudeTokenUsage,
+    /// Every file the session's tool calls touched, in order, faithful to the
+    /// raw `tool_use` blocks. One entry per touch (a file read three times
+    /// appears three times); the per-file rollup is a pure derivation done on
+    /// the TypeScript side. This is the structured provenance that the flat
+    /// `content` string ("🔧 Edit: …") used to discard.
+    pub file_touches: Vec<ClaudeFileTouch>,
+}
+
+/// One file a tool call touched. Extracted from a `tool_use` block's `input`
+/// (`file_path` / `notebook_path`) before the block is flattened into the
+/// rendered `content` string. Faithful and minimal: it records what was
+/// touched, by which tool, how, and when. Line-level change counts are a
+/// later refinement that correlates the call with its `toolUseResult`.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaudeFileTouch {
+    /// Absolute path exactly as the tool recorded it (not validated against
+    /// the current filesystem — move/deletion detection is a later slice).
+    pub path: String,
+    /// The tool that touched it, e.g. "Edit", "Write", "Read", "MultiEdit",
+    /// "NotebookEdit".
+    pub tool: String,
+    /// Coarse change kind derived from the tool: "wrote", "edited", "read",
+    /// or "touched" for a path-bearing tool we don't specifically map.
+    pub change_kind: String,
+    /// Timestamp of the enclosing JSONL line, when present. Empty otherwise.
+    pub at: String,
+    /// Lines added by this change, counted from the result's `structuredPatch`
+    /// (`+` lines). `0` when the tool produced no patch (reads, or a result
+    /// Mori could not correlate). Honest minimum, never an estimate.
+    pub additions: u32,
+    /// Lines removed by this change (`-` lines in `structuredPatch`). `0` when
+    /// no patch was correlated.
+    pub deletions: u32,
+    /// Id of the JSONL line (assistant message) this touch came from — the same
+    /// id used for `ClaudeCodeMessage.id`, so the import can attribute a touch
+    /// to the exact turn / timeline event it belongs to. Empty when the line
+    /// carried no id.
+    pub message_id: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -284,6 +323,7 @@ pub(crate) fn read_session_at(
         message_count: parsed.messages.len(),
         title,
         token_usage: parsed.token_usage,
+        file_touches: parsed.file_touches,
         messages: parsed.messages,
     })
 }
@@ -348,6 +388,7 @@ struct ParsedSession {
     title: String,
     cwd: String,
     token_usage: ClaudeTokenUsage,
+    file_touches: Vec<ClaudeFileTouch>,
 }
 
 /// Accumulates token usage across a session, deduping by assistant
@@ -401,6 +442,10 @@ fn parse_jsonl(text: &str) -> ParsedSession {
     let mut summary = String::new();
     let mut cwd = String::new();
     let mut tokens = TokenAccumulator::default();
+    let mut file_touches: Vec<ClaudeFileTouch> = Vec::new();
+    let mut touch_ids: Vec<Option<String>> = Vec::new();
+    let mut patches: std::collections::HashMap<String, (u32, u32)> =
+        std::collections::HashMap::new();
     for (index, line) in text.lines().enumerate() {
         let trimmed = line.trim();
         if trimmed.is_empty() {
@@ -413,6 +458,13 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         // streaming chunks that carry no displayable content), independent
         // of whether the message survives the content filter below.
         tokens.observe(&value);
+        // File provenance is collected before the content filter: a tool-only
+        // assistant line still records which file it touched even though its
+        // rendered content may be dropped as noise downstream.
+        collect_file_touches(&value, &mut file_touches, &mut touch_ids);
+        if let Some((id, counts)) = tool_result_patch(&value) {
+            patches.insert(id, counts);
+        }
         if cwd.is_empty() {
             if let Some(found) = extract_cwd(&value) {
                 cwd = found;
@@ -450,6 +502,18 @@ fn parse_jsonl(text: &str) -> ParsedSession {
             subkind,
         });
     }
+    // Attach line counts to each touch from its correlated result. The result
+    // line usually arrives after its call, so this join happens once the whole
+    // file has been read.
+    for (index, id) in touch_ids.iter().enumerate() {
+        if let Some(id) = id {
+            if let Some((additions, deletions)) = patches.get(id) {
+                file_touches[index].additions = *additions;
+                file_touches[index].deletions = *deletions;
+            }
+        }
+    }
+
     ParsedSession {
         messages,
         // Prefer the real conversation summary; fall back to the first user
@@ -457,6 +521,7 @@ fn parse_jsonl(text: &str) -> ParsedSession {
         title: if summary.trim().is_empty() { title } else { summary },
         cwd,
         token_usage: tokens.usage,
+        file_touches,
     }
 }
 
@@ -584,6 +649,130 @@ fn is_recognized_noise_block(item: &Value) -> bool {
         }
     }
     false
+}
+
+/// Collect every file a JSONL line's tool calls touched, appending the touch to
+/// `out` and its originating `tool_use` id (parallel index) to `ids`, so a
+/// later pass can attach the matching result's line counts.
+///
+/// Mirrors how `extract_content` reaches the content array, but instead of
+/// rendering blocks to a string it pulls the structured file path out of each
+/// `tool_use` block. Only assistant lines carry `tool_use` blocks; non-array
+/// content (a plain string reply) contributes nothing and is skipped.
+fn collect_file_touches(value: &Value, out: &mut Vec<ClaudeFileTouch>, ids: &mut Vec<Option<String>>) {
+    let content = value
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .or_else(|| value.get("content"));
+    let Some(Value::Array(items)) = content else {
+        return;
+    };
+    let at = extract_timestamp(value).unwrap_or_default();
+    // The line's id, derived the same way as `ClaudeCodeMessage.id`, so a touch
+    // can be attributed to the exact assistant turn it came from.
+    let message_id = value
+        .get("uuid")
+        .or_else(|| value.get("id"))
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    for item in items {
+        if let Some((touch, id)) = file_touch_from_tool_use(item, &at, message_id) {
+            out.push(touch);
+            ids.push(id);
+        }
+    }
+}
+
+/// Map a single `tool_use` block to a `ClaudeFileTouch` (plus its `id`) when it
+/// names a file. Returns `None` for non-tool blocks, tools that touch no file
+/// (Bash, Grep, Glob, MCP calls, …), or a tool whose path input is empty. Line
+/// counts start at zero and are filled in later from the correlated result.
+fn file_touch_from_tool_use(
+    item: &Value,
+    at: &str,
+    message_id: &str,
+) -> Option<(ClaudeFileTouch, Option<String>)> {
+    if item.get("type").and_then(Value::as_str) != Some("tool_use") {
+        return None;
+    }
+    let tool = item.get("name").and_then(Value::as_str).unwrap_or("tool");
+    let (change_kind, path_key) = match tool {
+        "Write" => ("wrote", "file_path"),
+        "Edit" | "MultiEdit" => ("edited", "file_path"),
+        "Read" => ("read", "file_path"),
+        "NotebookEdit" => ("edited", "notebook_path"),
+        _ => ("touched", "file_path"),
+    };
+    let input = item.get("input")?;
+    let path = input
+        .get(path_key)
+        // A tool we don't specifically map may still carry a `file_path`; the
+        // "touched" fallback above already covers it. NotebookEdit is the only
+        // tool whose path lives under a different key, handled by `path_key`.
+        .or_else(|| input.get("file_path"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|p| !p.is_empty())?;
+    let id = item
+        .get("id")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+    Some((
+        ClaudeFileTouch {
+            path: path.to_string(),
+            tool: tool.to_string(),
+            change_kind: change_kind.to_string(),
+            at: at.to_string(),
+            additions: 0,
+            deletions: 0,
+            message_id: message_id.to_string(),
+        },
+        id,
+    ))
+}
+
+/// Pull `(tool_use_id, (additions, deletions))` from a result line. Claude Code
+/// writes the diff under a top-level `toolUseResult.structuredPatch`, while the
+/// `tool_use_id` that ties it back to the call lives on the line's
+/// `tool_result` content block. Additions / deletions are counted from the
+/// hunk lines (`+` / `-` prefixes), so the count is exact, never estimated.
+fn tool_result_patch(value: &Value) -> Option<(String, (u32, u32))> {
+    let content = value
+        .get("message")
+        .and_then(|m| m.get("content"))
+        .or_else(|| value.get("content"));
+    let Some(Value::Array(items)) = content else {
+        return None;
+    };
+    let tool_use_id = items.iter().find_map(|item| {
+        if item.get("type").and_then(Value::as_str) == Some("tool_result") {
+            item.get("tool_use_id").and_then(Value::as_str).map(str::to_string)
+        } else {
+            None
+        }
+    })?;
+    let patch = value.get("toolUseResult").and_then(|r| r.get("structuredPatch"));
+    let Some(Value::Array(hunks)) = patch else {
+        // A correlated result with no structured patch (e.g. a Write) still
+        // registers, contributing zero counts rather than being dropped.
+        return Some((tool_use_id, (0, 0)));
+    };
+    let mut additions = 0u32;
+    let mut deletions = 0u32;
+    for hunk in hunks {
+        if let Some(Value::Array(lines)) = hunk.get("lines") {
+            for line in lines {
+                if let Some(text) = line.as_str() {
+                    match text.as_bytes().first() {
+                        Some(b'+') => additions += 1,
+                        Some(b'-') => deletions += 1,
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+    Some((tool_use_id, (additions, deletions)))
 }
 
 /// Render one Claude Code content block (object form). Returns `None` if
@@ -912,6 +1101,110 @@ mod tests {
         std::fs::write(&path, "hi").unwrap();
         let err = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap_err();
         assert!(err.contains("JSONL"), "error: {err}");
+    }
+
+    #[test]
+    fn collects_file_touches_from_tool_use_blocks() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori");
+        let path = write_session(
+            &project,
+            "session-touch.jsonl",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"Edit the file\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Edit\",\"input\":{\"file_path\":\"/repo/src/a.ts\",\"old_string\":\"x\",\"new_string\":\"y\"}}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Write\",\"input\":{\"file_path\":\"/repo/src/b.ts\",\"content\":\"new\"}},{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"/repo/src/a.ts\"}}]},\"timestamp\":\"2026-01-01T00:00:02Z\"}\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls\"}},{\"type\":\"tool_use\",\"name\":\"NotebookEdit\",\"input\":{\"notebook_path\":\"/repo/nb.ipynb\"}}]},\"timestamp\":\"2026-01-01T00:00:03Z\"}\n",
+        );
+
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        let touches = &detail.file_touches;
+
+        // Edit, Write, Read, NotebookEdit are recorded; Bash (no file) is not.
+        assert_eq!(touches.len(), 4, "touches: {touches:?}");
+
+        assert_eq!(touches[0].path, "/repo/src/a.ts");
+        assert_eq!(touches[0].tool, "Edit");
+        assert_eq!(touches[0].change_kind, "edited");
+        assert_eq!(touches[0].at, "2026-01-01T00:00:01Z");
+
+        assert_eq!(touches[1].tool, "Write");
+        assert_eq!(touches[1].change_kind, "wrote");
+
+        // A file read after being written appears as its own faithful touch.
+        assert_eq!(touches[2].path, "/repo/src/a.ts");
+        assert_eq!(touches[2].change_kind, "read");
+
+        // NotebookEdit reads its path from the notebook_path key.
+        assert_eq!(touches[3].path, "/repo/nb.ipynb");
+        assert_eq!(touches[3].tool, "NotebookEdit");
+        assert_eq!(touches[3].change_kind, "edited");
+    }
+
+    #[test]
+    fn attaches_line_counts_from_tool_result_patch() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori");
+        let path = write_session(
+            &project,
+            "session-patch.jsonl",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"Edit it\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu_1\",\"name\":\"Edit\",\"input\":{\"file_path\":\"/repo/a.ts\"}}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n\
+             {\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"tu_1\"}]},\"toolUseResult\":{\"structuredPatch\":[{\"lines\":[\" ctx\",\"-old\",\"+new1\",\"+new2\"]}]},\"timestamp\":\"2026-01-01T00:00:02Z\"}\n",
+        );
+
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        let touch = detail
+            .file_touches
+            .iter()
+            .find(|t| t.path == "/repo/a.ts")
+            .expect("touch recorded");
+        assert_eq!(touch.additions, 2);
+        assert_eq!(touch.deletions, 1);
+    }
+
+    #[test]
+    fn file_touch_carries_the_originating_message_id() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori");
+        let path = write_session(
+            &project,
+            "session-mid.jsonl",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"go\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"assistant\",\"uuid\":\"asst-uuid-1\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Edit\",\"input\":{\"file_path\":\"/r/a.ts\"}}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n",
+        );
+        let detail = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        let touch = detail
+            .file_touches
+            .iter()
+            .find(|t| t.path == "/r/a.ts")
+            .expect("touch recorded");
+        // The line's uuid is the message id used to attribute the touch to a turn.
+        assert_eq!(touch.message_id, "asst-uuid-1");
+    }
+
+    #[test]
+    fn ignores_tool_use_without_a_file_path() {
+        let mut out = Vec::new();
+        let mut ids = Vec::new();
+        let block = serde_json::json!({
+            "type": "tool_use",
+            "name": "Grep",
+            "input": { "pattern": "TODO" }
+        });
+        collect_file_touches(
+            &serde_json::json!({ "message": { "content": [block] } }),
+            &mut out,
+            &mut ids,
+        );
+        assert!(out.is_empty(), "Grep has no file path: {out:?}");
+
+        // An empty path string is skipped too.
+        let empty = serde_json::json!({
+            "type": "tool_use",
+            "name": "Edit",
+            "input": { "file_path": "   " }
+        });
+        assert!(file_touch_from_tool_use(&empty, "t", "m").is_none());
     }
 
     #[test]

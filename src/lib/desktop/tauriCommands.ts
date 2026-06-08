@@ -34,6 +34,7 @@ import type {
   ClaudeDesktopDiscovery,
 } from "../claude/types";
 import type { LocalAiToolReport } from "../claude/installations";
+import type { ResolvedFileLocation } from "../file-provenance/fileProvenance";
 import type { CodexSessionDetail, CodexSessionMeta } from "../codex/types";
 import type { AntigravitySessionDetail, AntigravitySessionMeta } from "../antigravity/types";
 import type { OpenCodeSessionDetail, OpenCodeSessionMeta } from "../opencode/types";
@@ -94,6 +95,8 @@ export type TauriCommandName =
   | "get_claude_desktop_conversation"
   | "discover_claude_code_sessions"
   | "get_claude_code_session"
+  | "resolve_file_locations"
+  | "reveal_path_in_os"
   | "discover_local_ai_tools"
   | "discover_codex_sessions"
   | "get_codex_session"
@@ -261,6 +264,11 @@ export type TauriCommandMap = {
     input: { sessionPath: string };
     output: ClaudeCodeSessionDetail;
   };
+  resolve_file_locations: {
+    input: { paths: string[]; searchRoot?: string };
+    output: ResolvedFileLocation[];
+  };
+  reveal_path_in_os: { input: { path: string }; output: null };
   discover_local_ai_tools: { input: undefined; output: LocalAiToolReport };
   discover_codex_sessions: { input: undefined; output: CodexSessionMeta[] };
   get_codex_session: {

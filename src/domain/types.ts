@@ -178,6 +178,50 @@ export type CaptureFidelity = {
   reasons: string[];
 };
 
+/**
+ * Coarse kind of change a tool made to a file. `wrote` is a fresh create /
+ * overwrite, `edited` an in-place modification, `read` a consult (no change),
+ * `touched` a path-bearing tool we do not specifically map. Kept as a small
+ * open union so a new tool maps without a type change.
+ */
+export type FileChangeKind = "wrote" | "edited" | "read" | "touched" | (string & {});
+
+/**
+ * One file an agent's tool call touched, recovered from the structured tool
+ * payload (e.g. a Claude Code `tool_use` block's `file_path`) before it is
+ * flattened into rendered text. Faithful and minimal: one entry per touch, so
+ * a file read three times appears three times. The per-file rollup, and
+ * reconciling `path` against the current filesystem to detect moves /
+ * deletions, are pure derivations done downstream, never baked in here.
+ *
+ * This is the source of truth for "what files did this session use, and how
+ * did they change" and the foundation the timeline glyphs and the file panel
+ * read from. See `docs/design/agent-work-visibility-vision.md` §1.
+ */
+export type FileTouch = {
+  /** Absolute path exactly as the tool recorded it. Not validated. */
+  path: string;
+  /** The tool, e.g. "Edit", "Write", "Read", "MultiEdit", "NotebookEdit". */
+  tool: string;
+  changeKind: FileChangeKind;
+  /** Timestamp of the originating event, or "" when unknown. */
+  at: string;
+  /**
+   * Lines added / removed by this change, counted exactly from the tool
+   * result's structured patch. Both 0 for a read or a change whose patch could
+   * not be correlated. Optional — sources captured before line counts existed
+   * omit them; consumers treat a missing value as 0.
+   */
+  additions?: number;
+  deletions?: number;
+  /**
+   * Id of the agent turn / message this touch came from, used to attribute it
+   * to a specific timeline event. Optional — present for agent sources whose
+   * raw log exposes per-message ids (Claude Code today).
+   */
+  messageId?: string;
+};
+
 export type SourceRef = {
   id: string;
   sessionId: string;
@@ -197,6 +241,14 @@ export type SourceRef = {
    * a missing value as `unknown` and never overclaim. See {@link CaptureFidelity}.
    */
   captureFidelity?: CaptureFidelity;
+  /**
+   * Files this source's tool calls touched, in order. Present on agent
+   * sources whose raw log carries structured tool payloads (Claude Code
+   * today). Additive — sources imported before this field, and sources with
+   * no file activity, omit it; consumers treat a missing value as an empty
+   * list. See {@link FileTouch}.
+   */
+  fileTouches?: FileTouch[];
 };
 
 export type TimelineEvent = {
@@ -267,6 +319,14 @@ export type TimelineEvent = {
    * tool could not be named.
    */
   toolName?: string;
+  /**
+   * Files this turn's tool calls touched, attributed from the source's
+   * `fileTouches` by message id. Present on agent-conversation events whose
+   * turn ran file tools (Claude Code today); additive — omitted otherwise.
+   * Lets the inspector and timeline show what a turn did to the codebase. See
+   * {@link FileTouch}.
+   */
+  fileTouches?: FileTouch[];
 };
 
 export type Issue = {

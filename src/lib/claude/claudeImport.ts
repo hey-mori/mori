@@ -14,7 +14,7 @@
  * downstream.
  */
 
-import type { EventActor, TimelineEvent } from "../../domain/types";
+import type { EventActor, FileTouch, TimelineEvent } from "../../domain/types";
 import { createImportId } from "../import/id";
 import type { NormalizedImportCandidate } from "../import/types";
 import { classifyMessage } from "./conversationStats";
@@ -25,6 +25,7 @@ import {
 import type {
   ClaudeCodeSessionDetail,
   ClaudeConversationDetail,
+  ClaudeFileTouch,
   ClaudeMessage,
   ClaudeSource,
   ClaudeTokenUsage,
@@ -45,6 +46,13 @@ type ClaudeImportSubject = {
    * Absent for Claude Desktop conversations, which report no usage.
    */
   tokenUsage?: ClaudeTokenUsage;
+  /**
+   * Files the session's tool calls touched (Claude Code only). Carried onto
+   * the resulting `SourceRef` so per-file provenance survives import instead
+   * of being lost with the rendered tool text. Absent for Claude Desktop
+   * conversations, which expose no tool payloads.
+   */
+  fileTouches?: ClaudeFileTouch[];
 };
 
 export type BuildClaudeImportInput = {
@@ -85,6 +93,7 @@ export function buildImportCandidateFromClaudeCodeSession(
       projectName: session.projectName,
       messages: session.messages,
       tokenUsage: session.tokenUsage,
+      fileTouches: session.fileTouches,
     },
     input,
   );
@@ -98,6 +107,13 @@ function buildCandidate(
   const title = subject.title.trim() || fallbackTitle(subject);
   const sourceId = createImportId("src-claude", `${subject.source}-${subject.id || title}`, capturedAt);
   const turns = pairMessagesIntoTurns(subject.messages);
+  // File touches, mapped once to the domain shape and grouped by the assistant
+  // message they came from, so each turn's event gets exactly its own touches.
+  const allFileTouches =
+    subject.fileTouches && subject.fileTouches.length > 0
+      ? toFileTouches(subject.fileTouches)
+      : [];
+  const touchesByMessage = groupFileTouchesByMessage(allFileTouches);
   const events: TimelineEvent[] = [];
 
   // The only token usage Mori receives is a session-level aggregate, so it
@@ -119,6 +135,9 @@ function buildCandidate(
     // they can be folded back together by `turnId` (see `buildTurns`).
     const turnId = createImportId("turn-claude", `${subject.id}-${index}`, start);
     const tokenUsage = tokenUsageForMessage(usageByMessageId, turn.assistantMessageId ?? undefined);
+    const eventFileTouches = turn.assistantMessageId
+      ? touchesByMessage.get(turn.assistantMessageId)
+      : undefined;
     events.push({
       id: eventId,
       sessionId: input.sessionId,
@@ -141,6 +160,9 @@ function buildCandidate(
       turnIndex: index,
       ...(turn.toolName ? { toolName: turn.toolName } : {}),
       ...(tokenUsage ? { tokenUsage } : {}),
+      ...(eventFileTouches && eventFileTouches.length > 0
+        ? { fileTouches: eventFileTouches }
+        : {}),
     });
   }
 
@@ -186,9 +208,44 @@ function buildCandidate(
       rawRetention: "summaryOnly",
       capturedAt,
       relatedEventIds: events.map((event) => event.id),
+      ...(allFileTouches.length > 0 ? { fileTouches: allFileTouches } : {}),
     },
     events,
   };
+}
+
+/**
+ * Map Claude Code's `ClaudeFileTouch[]` onto the source-agnostic domain
+ * `FileTouch[]`. The shapes match field-for-field today; the explicit map
+ * keeps the domain type the single contract so a future agent source (Codex /
+ * OpenCode connector file changes) can feed the same `SourceRef.fileTouches`.
+ */
+function toFileTouches(touches: ClaudeFileTouch[]): FileTouch[] {
+  return touches.map((touch) => ({
+    path: touch.path,
+    tool: touch.tool,
+    changeKind: touch.changeKind,
+    at: touch.at,
+    additions: touch.additions,
+    deletions: touch.deletions,
+    messageId: touch.messageId,
+  }));
+}
+
+/**
+ * Group file touches by the assistant message id they came from, so each turn's
+ * event can be handed exactly the touches its tool calls produced.
+ */
+function groupFileTouchesByMessage(touches: FileTouch[]): Map<string, FileTouch[]> {
+  const byMessage = new Map<string, FileTouch[]>();
+  for (const touch of touches) {
+    const key = touch.messageId;
+    if (!key) continue;
+    const list = byMessage.get(key);
+    if (list) list.push(touch);
+    else byMessage.set(key, [touch]);
+  }
+  return byMessage;
 }
 
 /**

@@ -8,6 +8,7 @@ mod commands;
 mod continue_agent;
 mod connectors;
 mod db;
+mod files;
 mod git;
 mod opencode;
 mod package;
@@ -61,6 +62,8 @@ fn main() {
             claude::desktop::get_claude_desktop_conversation,
             claude::code::discover_claude_code_sessions,
             claude::code::get_claude_code_session,
+            files::resolve_file_locations,
+            files::reveal_path_in_os,
             claude::installations::discover_local_ai_tools,
             codex::sessions::discover_codex_sessions,
             codex::sessions::get_codex_session,
