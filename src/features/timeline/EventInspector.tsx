@@ -20,12 +20,17 @@ import { eventTypeLabels, eventTypeTone } from "../../domain/constants";
 import type {
   Artifact,
   Decision,
+  FileTouch,
   Issue,
   MockSession,
   NextAction,
   SourceRef,
   TimelineEvent,
 } from "../../domain/types";
+import {
+  rollUpFileTouches,
+  type FileProvenanceEntry,
+} from "../../lib/file-provenance/fileProvenance";
 import { formatTime, formatTimeRange } from "../../lib/formatting/time";
 import {
   getTimelineInspectorReviewLinks,
@@ -229,6 +234,8 @@ export function EventInspector({
         )}
       </section>
 
+      <EventFilesSection touches={selectedEvent.fileTouches} />
+
       <section className="inspector-section">
         <SectionHeader
           title="근거 / 신뢰도"
@@ -423,6 +430,54 @@ function EventEvidenceChips({ sources }: { sources: SourceRef[] }) {
       {sources.length > 4 ? <span className="timeline-evidence-chip">+{sources.length - 4}</span> : null}
     </div>
   );
+}
+
+/**
+ * "이 턴이 만진 파일" — the files this turn's tool calls touched, rolled up per
+ * file from the event's attributed `fileTouches`. Renders nothing when the turn
+ * touched no files (the common case for a plain ask / reply), so it never adds
+ * an empty section. This is where file provenance reaches the timeline.
+ */
+function EventFilesSection({ touches }: { touches?: FileTouch[] }) {
+  if (!touches || touches.length === 0) return null;
+  const entries = rollUpFileTouches(touches);
+  if (entries.length === 0) return null;
+  return (
+    <section className="inspector-section">
+      <SectionHeader title="이 턴이 만진 파일" hint={`${entries.length}개`} />
+      <ul className="inspector-files" aria-label="이 턴이 만진 파일">
+        {entries.map((entry) => (
+          <li key={entry.path} className={`inspector-file kind-${entry.primaryChangeKind}`}>
+            <span className="inspector-file-name" title={entry.path}>
+              {entry.fileName}
+            </span>
+            <span className="inspector-file-meta">
+              <span className="inspector-file-counts">{fileCountsLabel(entry)}</span>
+              {entry.additions > 0 || entry.deletions > 0 ? (
+                <span className="inspector-file-diff">
+                  {entry.additions > 0 ? (
+                    <span className="add">+{entry.additions}</span>
+                  ) : null}
+                  {entry.deletions > 0 ? (
+                    <span className="del">-{entry.deletions}</span>
+                  ) : null}
+                </span>
+              ) : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function fileCountsLabel(entry: FileProvenanceEntry): string {
+  const parts: string[] = [];
+  if (entry.wrote > 0) parts.push("생성");
+  if (entry.edited > 0) parts.push("편집");
+  if (entry.read > 0) parts.push("읽기");
+  if (entry.touched > 0) parts.push("기타");
+  return parts.join(" · ");
 }
 
 /** How many linked items to list per group before collapsing to "+N개 더". */

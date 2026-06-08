@@ -3879,3 +3879,59 @@ textarea {
     transparent 40px
   );
 }
+
+/* Inspector "이 턴이 만진 파일" — file provenance attributed to a turn, rolled up
+   per file. Calm rows (full subtle border, no accent bar); the change kind is
+   carried as text, the +/- line deltas as the only colour. See
+   EventInspector.tsx. */
+.inspector-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.inspector-file {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--gray-50);
+}
+
+.inspector-file-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.inspector-file-meta {
+  flex: none;
+  display: inline-flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.inspector-file-diff {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.inspector-file-diff .add {
+  color: var(--green);
+}
+
+.inspector-file-diff .del {
+  color: var(--red);
+}
