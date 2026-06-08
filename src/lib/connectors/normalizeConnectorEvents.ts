@@ -2,6 +2,8 @@ import type {
   CaptureFidelity,
   CreatedBy,
   EventType,
+  FileChangeKind,
+  FileTouch,
   SourceKind,
   SourceRef,
   TimelineEvent,
@@ -111,6 +113,10 @@ function buildCandidate(
   const trustLevel = deriveSourceTrust(sortedEvents);
   const detail = describeBucket(bucket.connectorId, sortedEvents, bucket.externalSessionId);
 
+  // Roll every event's file touches onto the source so the session file panel
+  // (which reads `SourceRef.fileTouches`) shows them for connector imports too.
+  const sourceFileTouches = sortedEvents.flatMap(fileTouchesFromConnectorEvent);
+
   const source: SourceRef = {
     id: sourceId,
     sessionId,
@@ -123,6 +129,7 @@ function buildCandidate(
     capturedAt: bucket.capturedAt,
     relatedEventIds: timelineEvents.map((event) => event.id),
     captureFidelity: deriveSourceFidelity(sortedEvents),
+    ...(sourceFileTouches.length > 0 ? { fileTouches: sourceFileTouches } : {}),
   };
 
   return { source, events: timelineEvents };
@@ -334,6 +341,57 @@ function anyRedacted(events: ConnectorEvent[], applyRedaction: boolean): boolean
   return events.some((event) => event.privacy.redacted === true);
 }
 
+/** Map a git change type to the file provenance change kind. A removal still
+ *  counts as a change so the rollup surfaces it. */
+function connectorChangeKind(changeType: string | undefined): FileChangeKind {
+  switch (changeType) {
+    case "added":
+      return "wrote";
+    case "modified":
+    case "deleted":
+    case "renamed":
+      return "edited";
+    default:
+      return "edited";
+  }
+}
+
+/**
+ * Derive file touches from a connector event's structured fields — the same
+ * provenance the Claude reader produces, but from the connector's own
+ * `git.files[]` (path + change type + line counts) or a lone `filePath`. Lets
+ * the file panel, inspector, and timeline chip light up for Codex / OpenCode /
+ * hook captures, not only Claude Code. Empty for events with no file activity.
+ */
+export function fileTouchesFromConnectorEvent(event: ConnectorEvent): FileTouch[] {
+  const touches: FileTouch[] = [];
+  for (const file of event.git?.files ?? []) {
+    const path = file.path?.trim();
+    if (!path) continue;
+    touches.push({
+      path,
+      tool: file.changeType ?? "change",
+      changeKind: connectorChangeKind(file.changeType),
+      at: event.occurredAt ?? "",
+      additions: file.additions ?? 0,
+      deletions: file.deletions ?? 0,
+      messageId: event.id,
+    });
+  }
+  if (touches.length === 0 && event.filePath?.trim()) {
+    touches.push({
+      path: event.filePath.trim(),
+      tool: event.kind === "file_changed" ? "file_changed" : "change",
+      changeKind: "edited",
+      at: event.occurredAt ?? "",
+      additions: 0,
+      deletions: 0,
+      messageId: event.id,
+    });
+  }
+  return touches;
+}
+
 function mapConnectorEventToTimelineEvent({
   event,
   sourceId,
@@ -376,6 +434,7 @@ function mapConnectorEventToTimelineEvent({
 
   const trustLevel = trustForEvent(event);
   const createdBy: CreatedBy = "import";
+  const fileTouches = fileTouchesFromConnectorEvent(event);
 
   return {
     id: eventId,
@@ -396,6 +455,7 @@ function mapConnectorEventToTimelineEvent({
     // Preserve the connector identity so subsequent imports can detect
     // duplicates without re-parsing the original connector event id.
     connectorEventId: getConnectorEventIdentity(event),
+    ...(fileTouches.length > 0 ? { fileTouches } : {}),
   };
 }
 

@@ -64,6 +64,54 @@ describe("normalizeConnectorEventBatch", () => {
     expect(candidate.source.capturedAt).toBe("2026-05-14T09:30:00Z");
   });
 
+  it("derives file touches from git.files onto the event and the source", () => {
+    const events = [
+      event({
+        id: "g",
+        kind: "git_diff_captured",
+        connectorId: "codexCliWrapper",
+        sessionId: "codex-1",
+        git: {
+          repoPath: "/repo",
+          additions: 9,
+          deletions: 2,
+          files: [
+            { path: "src/sync/queue.ts", changeType: "modified", additions: 7, deletions: 2 },
+            { path: "src/sync/new.ts", changeType: "added", additions: 2, deletions: 0 },
+          ],
+        },
+      }),
+    ];
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events,
+      applyRedaction: false,
+    });
+
+    // The source carries both files; the event that produced them does too.
+    expect(candidate.source.fileTouches).toHaveLength(2);
+    const gitEvent = candidate.events.find((e) => (e.fileTouches?.length ?? 0) > 0);
+    expect(gitEvent?.fileTouches).toHaveLength(2);
+    const modified = candidate.source.fileTouches?.find((t) => t.path === "src/sync/queue.ts");
+    expect(modified?.changeKind).toBe("edited");
+    expect(modified?.additions).toBe(7);
+    const added = candidate.source.fileTouches?.find((t) => t.path === "src/sync/new.ts");
+    expect(added?.changeKind).toBe("wrote");
+  });
+
+  it("derives a file touch from a lone file_changed path", () => {
+    const [candidate] = normalizeConnectorEventBatch({
+      projectId: "proj-1",
+      sessionId: "active",
+      events: [event({ id: "f", kind: "file_changed", filePath: "src/foo.ts" })],
+      applyRedaction: false,
+    });
+    expect(candidate.source.fileTouches).toHaveLength(1);
+    expect(candidate.source.fileTouches?.[0]?.path).toBe("src/foo.ts");
+    expect(candidate.source.fileTouches?.[0]?.changeKind).toBe("edited");
+  });
+
   it("emits a TimelineEvent for each non-session-started event", () => {
     const events = [
       event({ id: "start", kind: "session_started", summary: "Mori claude session start" }),
