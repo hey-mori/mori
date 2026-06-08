@@ -31,7 +31,6 @@ import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { PageShell } from "../../components/layout/PageShell";
 import { selectSessionView, useSessionStore } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { useReviewStore } from "../../app/reviewStore";
 import {
   formatClaudeRelativeKo,
   isClaudeBridgeAvailable,
@@ -122,7 +121,7 @@ export function ConnectionsView() {
   const draft = useSessionStore((state) => state.draft);
   const view = useSessionStore(selectSessionView);
   const importAsNewSession = useSessionStore((state) => state.importAsNewSession);
-  const startReview = useReviewStore((state) => state.startReview);
+  const beginPendingReview = useSessionStore((state) => state.beginPendingReview);
   // `navigate` routes the post-import "evidence" landing into the unified
   // Session Detail workspace (its 증거 tab), where Import Review renders.
   const setCurrentView = useAppStore((state) => state.navigate);
@@ -230,7 +229,7 @@ export function ConnectionsView() {
         endedAt,
         projectLabel: detail.projectName || undefined,
       });
-      startReview(reboundCandidate, reviewOriginForAgentWorkSession(detail));
+      beginPendingReview(reboundCandidate, reviewOriginForAgentWorkSession(detail));
       setImportStatus({
         tone: "ok",
         message:
@@ -264,7 +263,7 @@ export function ConnectionsView() {
       // The import is committed by Import Review's Apply (the review's
       // commit callback calls addImport with the accepted subset), so we
       // only open the review here — no eager write to the session.
-      startReview(candidate, reviewOriginForAgentWorkSession(selection.detail));
+      beginPendingReview(candidate, reviewOriginForAgentWorkSession(selection.detail));
       setImportStatus({
         tone: "ok",
         message: "현재 세션의 Import Review로 이동했습니다. 반영하면 타임라인에 추가됩니다.",

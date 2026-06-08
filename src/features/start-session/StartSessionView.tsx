@@ -54,7 +54,6 @@ import {
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
-import { useReviewStore } from "../../app/reviewStore";
 import { useAppStore } from "../../app/store";
 import { useProjectStore } from "../../app/projectStore";
 import { projectDisplayName, type UserProject } from "../../lib/projects/userProjects";
@@ -174,7 +173,7 @@ export function StartSessionView() {
   const view = useSessionStore(selectSessionView);
   const importAsNewSession = useSessionStore((state) => state.importAsNewSession);
   const setSessionDraft = useSessionStore((state) => state.setDraft);
-  const startReview = useReviewStore((state) => state.startReview);
+  const beginPendingReview = useSessionStore((state) => state.beginPendingReview);
   const setCurrentView = useAppStore((state) => state.navigate);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const startRecordsRequest = useAppStore((state) => state.startRecordsRequest);
@@ -367,7 +366,7 @@ export function StartSessionView() {
         });
         // Remember this folder's project so the next import from it auto-links.
         rememberProjectForFolder(selectedDetected.projectPath, resolvedProject);
-        startReview(rebound, reviewOriginForAgentWorkSession(detail));
+        beginPendingReview(rebound, reviewOriginForAgentWorkSession(detail));
         setCurrentView("evidence");
       } catch {
         setCreating(false);
@@ -398,7 +397,7 @@ export function StartSessionView() {
           projectLabel: projectName || undefined,
           recordingMode: "summary",
         });
-        startReview(rebound, "ai-transcript");
+        beginPendingReview(rebound, "ai-transcript");
         setCurrentView("evidence");
       } catch {
         setCreating(false);

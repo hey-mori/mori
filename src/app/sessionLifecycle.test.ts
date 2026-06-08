@@ -38,6 +38,7 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     abandonPendingNewSessionIfEmpty: () => false,
     removeImport: () => undefined,
     savePendingReview: () => null,
+    beginPendingReview: () => null,
     clearPendingReview: () => undefined,
     setPendingReviewItemStatus: () => undefined,
     setAllPendingReviewStatus: () => undefined,

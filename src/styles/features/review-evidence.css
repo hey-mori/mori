@@ -1727,6 +1727,17 @@ td a {
   padding-bottom: 28px;
 }
 
+/* The review hosted inline inside the 자료 tab: no standalone-page inset, since
+   the tab's own split padding already owns the x / y. The header, digest,
+   source card, events, and sticky footer read as one section within the tab. */
+.review-embedded {
+  padding: 0;
+}
+
+.review-embedded .review-header-tight {
+  padding-top: 0;
+}
+
 .review-header {
   display: grid;
   grid-template-columns: auto 1fr auto;

@@ -55,7 +55,6 @@ import {
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
 import { selectActiveRepository, useRepositoryStore } from "../../app/repositoryStore";
-import { useReviewStore } from "../../app/reviewStore";
 import type { ReviewOrigin } from "../../lib/review";
 import { isTauriRuntime, pickRepositoryDirectory, runGitDiff } from "../../lib/desktop";
 
@@ -94,7 +93,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
   const removeImport = useSessionStore((state) => state.removeImport);
   const setCurrentView = useAppStore((state) => state.setCurrentView);
   const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
-  const startReview = useReviewStore((state) => state.startReview);
+  const beginPendingReview = useSessionStore((state) => state.beginPendingReview);
 
   const [kind, setKind] = useState<ImportKind>(initialKind ?? "note");
   const [title, setTitle] = useState("");
@@ -379,7 +378,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
     // remains the right default for them.
     if (kind === "ai" || kind === "git") {
       const origin: ReviewOrigin = kind === "ai" ? "ai-transcript" : "git-diff";
-      startReview(candidate, origin);
+      beginPendingReview(candidate, origin);
       setStatus({
         tone: "info",
         message: `'${candidate.source.title}' 가져오기 후보를 Import Review에서 확인하세요.`,
@@ -560,7 +559,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
       return;
     }
     const sourceImportSummary = buildConnectorSourceImportSummary(preview);
-    startReview(merged, "connector-jsonl", {
+    beginPendingReview(merged, "connector-jsonl", {
       newEventCount: preview.newEventCount,
       duplicateSkippedCount: connectorIncludeDuplicates ? 0 : preview.duplicateEventCount,
       duplicateIncludedCount: connectorIncludeDuplicates ? preview.duplicateEventCount : 0,

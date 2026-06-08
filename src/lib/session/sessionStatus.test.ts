@@ -36,6 +36,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   abandonPendingNewSessionIfEmpty: () => false,
   removeImport: () => {},
   savePendingReview: () => null,
+  beginPendingReview: () => null,
   clearPendingReview: () => {},
   setPendingReviewItemStatus: () => {},
   setAllPendingReviewStatus: () => {},

@@ -14,7 +14,6 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { useReviewStore } from "../../app/reviewStore";
 import {
   applyEnginePreset,
   buildProviderConfigFromSettings,
@@ -94,9 +93,9 @@ export function EvidenceView() {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
 
-  const reviewDraft = useReviewStore((state) => state.draft);
-  const lastApplied = useReviewStore((state) => state.lastApplied);
-  const clearLastApplied = useReviewStore((state) => state.clearLastApplied);
+  const pendingReview = useSessionStore((state) => state.pendingReview);
+  const lastApplied = useSessionStore((state) => state.lastApplied);
+  const clearLastApplied = useSessionStore((state) => state.clearLastApplied);
 
   const integrationLookup = useMemo(() => {
     const map = new Map<string, (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY]>();
@@ -157,12 +156,6 @@ export function EvidenceView() {
       default:
         return;
     }
-  }
-
-  // Defer to the review screen if a draft is in flight. Cancel / apply on the
-  // review screen clears the draft and falls back to the Evidence Hub.
-  if (reviewDraft) {
-    return <ImportReviewView embedded />;
   }
 
   const aside = (
@@ -302,7 +295,12 @@ export function EvidenceView() {
         </NoticeBanner>
       ) : null}
 
-      {importedSources.length === 0 ? (
+      {pendingReview ? (
+        // A parsed import awaiting review is hosted inline here (not a
+        // full-screen takeover), so the 자료 tab keeps its shape and the review
+        // survives navigation. Applied sources / analysis appear once 반영 runs.
+        <ImportReviewView embedded />
+      ) : importedSources.length === 0 ? (
         <>
           {importedSourcesSection}
           {quickPassSection}

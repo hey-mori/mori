@@ -93,6 +93,7 @@ import type {
 } from "../lib/storage/storageTypes";
 import {
   buildAcceptedCandidate,
+  createImportReviewDraft,
   editReviewEvent,
   isReviewApplyable,
   setAllItemsStatus,
@@ -102,6 +103,7 @@ import {
   type ReviewEventEdits,
   type ReviewItemKind,
   type ReviewItemStatus,
+  type ReviewOrigin,
 } from "../lib/review";
 import type {
   ConnectorImportHistorySavedSession,
@@ -278,6 +280,17 @@ export type SessionState = {
    * stored record, or `null` when no session is active.
    */
   savePendingReview: (draft: ImportReviewDraft, meta?: ReviewDraftMeta) => StoredPendingReview | null;
+  /**
+   * Build a pending review from a normalized import candidate and persist it
+   * for the active session. The import entry points call this instead of an
+   * ephemeral in-memory review, so the parsed import lands persistently in the
+   * 자료 tab. Returns the stored record, or `null` when no session is active.
+   */
+  beginPendingReview: (
+    candidate: NormalizedImportCandidate,
+    origin: ReviewOrigin,
+    meta?: ReviewDraftMeta,
+  ) => StoredPendingReview | null;
   /** Drop the active session's pending review from memory and storage. */
   clearPendingReview: () => void;
   /** Flip one pending-review item's status (accept / discard) and persist. */
@@ -787,6 +800,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const repository = getRepository();
     const stored = repository.savePendingReview(session.session.id, draft, meta);
     set({ pendingReview: stored });
+    return stored;
+  },
+  beginPendingReview: (candidate, origin, meta) => {
+    const session = get().draft;
+    if (!session) return null;
+    const draft = createImportReviewDraft(candidate, origin);
+    const stored = getRepository().savePendingReview(session.session.id, draft, meta);
+    // Starting a fresh review clears any prior completion banner.
+    set({ pendingReview: stored, lastApplied: null });
     return stored;
   },
   clearPendingReview: () => {

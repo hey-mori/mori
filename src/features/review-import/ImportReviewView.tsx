@@ -4,7 +4,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { useSessionStore } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { useReviewStore, type ReviewDraftMeta } from "../../app/reviewStore";
+import type { ReviewDraftMeta } from "../../lib/review";
 import {
   buildImportReviewSummary,
   getReviewCounts,
@@ -29,23 +29,17 @@ import { ExtractedEventCard } from "./ExtractedEventCard";
  * confirm the import. AI transcripts (the common path) land already accepted so
  * 반영 is one click; anything can still be discarded first.
  */
-export function ImportReviewView(_props: { embedded?: boolean } = {}) {
-  const draft = useReviewStore((state) => state.draft);
-  const draftMeta = useReviewStore((state) => state.draftMeta);
-  const setItemStatus = useReviewStore((state) => state.setItemStatus);
-  const setAllStatus = useReviewStore((state) => state.setAllStatus);
-  const editEvent = useReviewStore((state) => state.editEvent);
-  const apply = useReviewStore((state) => state.apply);
-  const cancel = useReviewStore((state) => state.cancel);
-  const addImport = useSessionStore((state) => state.addImport);
-  const commitPendingNewSession = useSessionStore(
-    (state) => state.commitPendingNewSession,
-  );
-  const abandonPendingNewSessionIfEmpty = useSessionStore(
-    (state) => state.abandonPendingNewSessionIfEmpty,
-  );
+export function ImportReviewView({ embedded = false }: { embedded?: boolean } = {}) {
+  const pendingReview = useSessionStore((state) => state.pendingReview);
+  const setItemStatus = useSessionStore((state) => state.setPendingReviewItemStatus);
+  const setAllStatus = useSessionStore((state) => state.setAllPendingReviewStatus);
+  const editEvent = useSessionStore((state) => state.editPendingReviewEvent);
+  const applyPendingReview = useSessionStore((state) => state.applyPendingReview);
+  const cancelPendingReview = useSessionStore((state) => state.cancelPendingReview);
   const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
 
+  const draft = pendingReview?.draft ?? null;
+  const draftMeta = pendingReview?.meta ?? null;
   const draftId = draft?.source.id ?? null;
   const allPending = Boolean(draft) && draft!.events.length > 0 &&
     draft!.events.every((item) => item.status === "pending");
@@ -87,33 +81,23 @@ export function ImportReviewView(_props: { embedded?: boolean } = {}) {
     draft.events.length > 0 && draft.events.every((item) => item.status === "discarded");
 
   function handleApply() {
-    if (!draft) return;
-    const summary = draftMeta?.sourceImportSummary;
-    const outcome = apply((candidate) => {
-      const stored = addImport(candidate, summary ? { importSummary: summary } : undefined);
-      if (!stored) {
-        return { ok: false, reason: "세션을 찾을 수 없어 반영하지 못했습니다." };
-      }
-      const firstEventId = stored.events[0]?.id;
-      if (firstEventId) setSelectedEventId(firstEventId);
-      return { ok: true };
-    });
+    // The store owns the apply path: accepted events become a persisted import,
+    // the pending review is cleared, and a pending import-created session is
+    // promoted to real. We only reflect the first applied event in the inspector.
+    const outcome = applyPendingReview();
     if (!outcome.ok) return;
-    // Applied work means a pending import-created session is now real — keep
-    // it and clear the empty-session cleanup bookkeeping.
-    commitPendingNewSession();
+    if (outcome.firstEventId) setSelectedEventId(outcome.firstEventId);
   }
 
   function handleCancel() {
-    cancel();
-    // If this review was for a freshly-created import session and nothing
-    // was applied, discard the empty session and restore the prior one so
-    // we never leave an empty "제목 없는 세션" behind.
-    abandonPendingNewSessionIfEmpty();
+    // The store clears the persisted pending review and, if this was a
+    // freshly-created import session with nothing applied, discards the empty
+    // session and restores the prior one.
+    cancelPendingReview();
   }
 
   return (
-    <div className="page review-page">
+    <div className={embedded ? "review-page review-embedded" : "page review-page"}>
       <header className="review-header review-header-tight">
         <h1>가져오기 검토</h1>
       </header>
