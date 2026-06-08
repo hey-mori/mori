@@ -24,6 +24,7 @@ fn main() {
             commands::get_app_info,
             commands::host_platform,
             commands::get_storage_location,
+            sqlite::set_storage_location,
             package::save_mori_package_json,
             package::save_mori_package_json_as,
             package::save_mori_package_zip_as,

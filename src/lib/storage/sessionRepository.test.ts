@@ -410,7 +410,7 @@ describe("BrowserDraftRepository", () => {
     expect(repository.loadPendingReview(sessionId)).toBeNull();
   });
 
-  it("clears the active session draft including its imports", () => {
+  it("clears only the active session pointer and preserves stored work", () => {
     const repository = new BrowserDraftRepository(new MemoryKeyValueStorage());
     const draft = repository.saveCurrentSessionDraft(
       createSessionDraft({
@@ -439,9 +439,11 @@ describe("BrowserDraftRepository", () => {
     repository.clearCurrentSessionDraft();
 
     expect(repository.loadCurrentSessionDraft()).toBeNull();
-    expect(repository.listSessionImports(draft.session.id)).toHaveLength(0);
-    expect(repository.listStoredSessions()).toHaveLength(0);
-    expect(repository.loadSessionAnalysis(draft.session.id)).toBeNull();
+    expect(repository.listSessionImports(draft.session.id)).toHaveLength(1);
+    expect(repository.listStoredSessions()).toHaveLength(1);
+    expect(repository.loadStoredSessionDraft(draft.session.id)?.session.title).toBe(
+      "Reset target",
+    );
   });
 
   it("clearAllLocalData wipes every work record but preserves settings", () => {

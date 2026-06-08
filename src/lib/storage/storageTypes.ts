@@ -206,6 +206,11 @@ export type StoredSessionMemoryBody = {
 export type DraftRepository = {
   saveCurrentSessionDraft: (draft: Omit<StoredSessionDraft, "savedAt" | "adapter">) => StoredSessionDraft;
   loadCurrentSessionDraft: () => StoredSessionDraft | null;
+  /**
+   * Clear only the "currently open session" pointer. The per-session draft,
+   * imports, analysis, pending review, and memory body remain stored and can
+   * be reopened from `listStoredSessions` / `setCurrentSession`.
+   */
   clearCurrentSessionDraft: () => void;
   /**
    * Wipe every locally-persisted work record — all session drafts and

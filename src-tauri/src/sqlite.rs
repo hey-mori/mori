@@ -1,7 +1,12 @@
+use std::path::{Path, PathBuf};
+use std::sync::mpsc;
 use std::sync::Mutex;
+use std::time::Duration;
 
 use rusqlite::Connection;
 use serde::Serialize;
+use tauri::AppHandle;
+use tauri_plugin_dialog::DialogExt;
 
 use crate::db::{
     append_memory_review_actions, apply_migrations, applied_migrations, clear_all_data,
@@ -13,6 +18,7 @@ use crate::db::{
     MIGRATION_TABLE_NAME,
 };
 use crate::db::records::{SessionListEntry, SessionSnapshot, SnapshotPersistResult};
+use crate::package::default_storage_dir;
 
 /// State container shared across Tauri commands. Holds a single mutex-guarded
 /// SQLite connection. Mori is a desktop app with one user, one DB file.
@@ -258,5 +264,112 @@ fn list_tables(conn: &Connection) -> Result<Vec<String>, String> {
         out.push(row.map_err(|error| error.to_string())?);
     }
     Ok(out)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageRelocation {
+    /// The new storage directory, or `None` when the user cancelled the picker.
+    pub path: Option<String>,
+    pub cancelled: bool,
+    /// Whether an existing `mori.sqlite` was carried over to the new location.
+    pub moved_db: bool,
+}
+
+/// Let the user choose a new storage directory through a native folder picker,
+/// then point Mori's data there. The cached connection is dropped first so the
+/// SQLite file unlocks (WAL checkpoints on close); the existing database is
+/// carried over so data follows the user rather than starting empty. The next
+/// DB call reopens at the new path via the persisted override.
+#[tauri::command]
+pub fn set_storage_location(
+    app: AppHandle,
+    state: tauri::State<'_, SqliteState>,
+) -> Result<StorageRelocation, String> {
+    let mut builder = app.dialog().file();
+    if let Ok(dir) = default_storage_dir() {
+        let _ = std::fs::create_dir_all(&dir);
+        if dir.is_dir() {
+            builder = builder.set_directory(dir);
+        }
+    }
+
+    let (tx, rx) = mpsc::channel();
+    builder.pick_folder(move |selection| {
+        let _ = tx.send(selection.map(|folder| folder.to_string()));
+    });
+
+    let chosen = match rx.recv_timeout(Duration::from_secs(600)) {
+        Ok(Some(path)) => PathBuf::from(path),
+        Ok(None) => {
+            return Ok(StorageRelocation {
+                path: None,
+                cancelled: true,
+                moved_db: false,
+            })
+        }
+        Err(_) => return Err("Folder dialog timed out without a response.".to_string()),
+    };
+
+    // Resolve the old database path before the override changes what
+    // `default_storage_dir()` returns.
+    let old_db = database_path()?;
+    let new_db = chosen.join("mori.sqlite");
+
+    // Drop the cached connection so the file unlocks (WAL checkpoints on the
+    // last close) before anything moves; the next command reopens it.
+    {
+        let mut guard = state.0.lock().map_err(|error| error.to_string())?;
+        *guard = None;
+    }
+
+    std::fs::create_dir_all(&chosen)
+        .map_err(|error| format!("Failed to create {}: {error}", chosen.display()))?;
+    crate::package::apply_storage_override(&chosen)?;
+
+    let mut moved_db = false;
+    if old_db != new_db && old_db.exists() && !new_db.exists() {
+        move_sqlite_files(&old_db, &new_db)?;
+        moved_db = true;
+    }
+
+    Ok(StorageRelocation {
+        path: Some(chosen.to_string_lossy().to_string()),
+        cancelled: false,
+        moved_db,
+    })
+}
+
+/// Carry a SQLite database (and any WAL/SHM sidecars) to a new path. Copies
+/// every file first and only removes the originals once all copies succeed, so
+/// a mid-move failure leaves the source intact.
+fn move_sqlite_files(old_db: &Path, new_db: &Path) -> Result<(), String> {
+    const SUFFIXES: [&str; 3] = ["", "-wal", "-shm"];
+    for suffix in SUFFIXES {
+        let from = sidecar_path(old_db, suffix);
+        if !from.exists() {
+            continue;
+        }
+        let to = sidecar_path(new_db, suffix);
+        std::fs::copy(&from, &to)
+            .map_err(|error| format!("Failed to copy {}: {error}", from.display()))?;
+    }
+    for suffix in SUFFIXES {
+        let from = sidecar_path(old_db, suffix);
+        if from.exists() {
+            let _ = std::fs::remove_file(&from);
+        }
+    }
+    Ok(())
+}
+
+/// Append a WAL/SHM suffix to a database path: `mori.sqlite` -> `mori.sqlite-wal`.
+fn sidecar_path(db: &Path, suffix: &str) -> PathBuf {
+    if suffix.is_empty() {
+        return db.to_path_buf();
+    }
+    let mut name = db.file_name().map(|n| n.to_os_string()).unwrap_or_default();
+    name.push(suffix);
+    db.with_file_name(name)
 }
 

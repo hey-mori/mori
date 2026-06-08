@@ -6,6 +6,7 @@
 //! skips large files, and renders user/assistant message rows plus the
 //! session metadata Mori needs to create an import review.
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -81,6 +82,7 @@ pub(crate) fn codex_sessions_dir() -> Result<PathBuf, String> {
 pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<CodexSessionMeta>, String> {
     let mut files = Vec::new();
     collect_jsonl_files(root, &mut files)?;
+    let thread_titles = load_codex_thread_titles(root);
     let mut out = Vec::new();
     for path in files {
         let Ok(metadata) = fs::metadata(&path) else {
@@ -101,7 +103,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<CodexSessionMeta>, Str
             ));
             continue;
         }
-        match parse_session_file(&path, false) {
+        match parse_session_file(&path, false, &thread_titles) {
             Ok(detail) => {
                 out.push(CodexSessionMeta {
                     session_id: detail.session_id,
@@ -171,7 +173,8 @@ pub(crate) fn read_session_at(
             MAX_FILE_BYTES
         ));
     }
-    parse_session_file(&canonical, true)
+    let thread_titles = load_codex_thread_titles(&root);
+    parse_session_file(&canonical, true, &thread_titles)
 }
 
 fn collect_jsonl_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
@@ -188,7 +191,11 @@ fn collect_jsonl_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String>
     Ok(())
 }
 
-fn parse_session_file(path: &Path, include_all_messages: bool) -> Result<CodexSessionDetail, String> {
+fn parse_session_file(
+    path: &Path,
+    include_all_messages: bool,
+    thread_titles: &HashMap<String, String>,
+) -> Result<CodexSessionDetail, String> {
     let text = fs::read_to_string(path)
         .map_err(|error| format!("Failed to read {}: {error}", path.display()))?;
     let modified = fs::metadata(path)
@@ -205,7 +212,8 @@ fn parse_session_file(path: &Path, include_all_messages: bool) -> Result<CodexSe
     let mut originator = "Codex".to_string();
     let mut started_at = String::new();
     let mut updated_at = String::new();
-    let mut title = String::new();
+    let mut meta_title = String::new();
+    let mut first_user_title = String::new();
     let mut messages = Vec::new();
     let mut message_count = 0usize;
 
@@ -235,6 +243,13 @@ fn parse_session_file(path: &Path, include_all_messages: bool) -> Result<CodexSe
                 if let Some(origin) = payload.get("originator").and_then(Value::as_str) {
                     originator = origin.to_string();
                 }
+                if meta_title.is_empty() {
+                    meta_title = first_nonempty_payload_string(
+                        payload,
+                        &["thread_name", "title", "name", "summary"],
+                    )
+                    .unwrap_or_default();
+                }
                 if let Some(ts) = payload.get("timestamp").and_then(Value::as_str) {
                     if started_at.is_empty() {
                         started_at = ts.to_string();
@@ -248,8 +263,8 @@ fn parse_session_file(path: &Path, include_all_messages: bool) -> Result<CodexSe
             continue;
         };
         message_count += 1;
-        if title.is_empty() && message.role == "human" {
-            title = truncate(&message.content, 90);
+        if first_user_title.is_empty() && message.role == "human" {
+            first_user_title = truncate(&message.content, 90);
         }
         if include_all_messages {
             messages.push(message);
@@ -267,9 +282,14 @@ fn parse_session_file(path: &Path, include_all_messages: bool) -> Result<CodexSe
     if project_path.is_empty() {
         project_path = "Codex".to_string();
     }
-    if title.is_empty() {
-        title = format!("Codex session {}", short_id(&session_id));
-    }
+    let index_title = thread_titles.get(&session_id).map(String::as_str).unwrap_or("");
+    let title = first_nonempty_string(&[
+        index_title,
+        meta_title.as_str(),
+        first_user_title.as_str(),
+    ])
+    .map(|value| truncate(value, 90))
+    .unwrap_or_else(|| format!("Codex session {}", short_id(&session_id)));
 
     Ok(CodexSessionDetail {
         session_id,
@@ -319,6 +339,52 @@ fn codex_message_from_value(value: &Value, index: usize) -> Option<CodexMessage>
         created_at,
         subkind: String::new(),
     })
+}
+
+fn load_codex_thread_titles(root: &Path) -> HashMap<String, String> {
+    let Some(index_path) = root.parent().map(|parent| parent.join("session_index.jsonl")) else {
+        return HashMap::new();
+    };
+    let Ok(text) = fs::read_to_string(index_path) else {
+        return HashMap::new();
+    };
+    let mut titles = HashMap::new();
+    for line in text.lines() {
+        let Ok(value) = serde_json::from_str::<Value>(line.trim()) else {
+            continue;
+        };
+        let Some(id) = value.get("id").and_then(Value::as_str).map(str::trim) else {
+            continue;
+        };
+        let Some(title) = value
+            .get("thread_name")
+            .or_else(|| value.get("title"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+        else {
+            continue;
+        };
+        if !id.is_empty() && !title.is_empty() {
+            titles.insert(id.to_string(), title.to_string());
+        }
+    }
+    titles
+}
+
+fn first_nonempty_payload_string(payload: &Value, keys: &[&str]) -> Option<String> {
+    for key in keys {
+        let value = payload.get(*key).and_then(Value::as_str).map(str::trim);
+        if let Some(value) = value {
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn first_nonempty_string<'a>(values: &[&'a str]) -> Option<&'a str> {
+    values.iter().map(|value| value.trim()).find(|value| !value.is_empty())
 }
 
 fn collect_content(value: &Value) -> String {
@@ -411,6 +477,32 @@ mod tests {
         assert_eq!(sessions[0].session_id, "s1");
         assert_eq!(sessions[0].message_count, 2);
         assert!(sessions[0].title.contains("Fix import"));
+    }
+
+    #[test]
+    fn prefers_codex_session_index_thread_name_over_first_user_message() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path().join("sessions");
+        let dir = root.join("2026").join("06").join("08");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("rollout-2026-06-08T00-00-00-019ea602-ef09.jsonl");
+        std::fs::write(
+            temp.path().join("session_index.jsonl"),
+            "{\"id\":\"019ea602-ef09\",\"thread_name\":\"Full-page UX redesign\",\"updated_at\":\"2026-06-08T00:00:04Z\"}\n",
+        )
+        .unwrap();
+        std::fs::write(
+            &path,
+            "{\"timestamp\":\"2026-06-08T00:00:00Z\",\"type\":\"session_meta\",\"payload\":{\"id\":\"019ea602-ef09\",\"cwd\":\"C:\\\\dev\\\\mori\",\"originator\":\"Codex Desktop\"}}\n\
+             {\"timestamp\":\"2026-06-08T00:00:01Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"Can you look at this awkward alignment?\"}]}}\n",
+        )
+        .unwrap();
+
+        let sessions = list_sessions_at(&root).unwrap();
+        assert_eq!(sessions[0].title, "Full-page UX redesign");
+
+        let detail = read_session_at(&root, path.to_string_lossy().as_ref()).unwrap();
+        assert_eq!(detail.title, "Full-page UX redesign");
     }
 
     #[test]

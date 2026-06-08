@@ -104,7 +104,7 @@ export function SettingsRow({
 }) {
   return (
     <div
-      className={`settings-row${disabled ? " is-disabled" : ""}${compact ? " is-compact" : ""}`}
+      className={`settings-row${control ? " has-control" : ""}${disabled ? " is-disabled" : ""}${compact ? " is-compact" : ""}`}
     >
       <div className="settings-row-main">
         <strong>{label}</strong>

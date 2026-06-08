@@ -32,9 +32,11 @@ export function buildAnalysisPlan(args: {
 }): AnalysisPlan {
   const targetTurns = args.events.filter((event) => event.actor !== "tool").length;
   const omittedToolEvents = args.events.length - targetTurns;
-  const isLlm = args.settings.provider !== "deterministic";
+  const usesSingleLlmPrompt = args.settings.provider === "openAiCompatible";
   const cappedAt =
-    isLlm && targetTurns > MAX_LLM_CONVERSATION_EVENTS ? MAX_LLM_CONVERSATION_EVENTS : null;
+    usesSingleLlmPrompt && targetTurns > MAX_LLM_CONVERSATION_EVENTS
+      ? MAX_LLM_CONVERSATION_EVENTS
+      : null;
 
   return {
     engineLabel: engineLabel(args.settings),

@@ -230,12 +230,49 @@ pub fn list_recent_mori_packages() -> Result<Vec<RecentMoriPackage>, String> {
 }
 
 pub fn default_storage_dir() -> Result<PathBuf, String> {
+    if let Some(dir) = read_storage_override() {
+        return Ok(dir);
+    }
+
     let home = std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
         .ok_or_else(|| "Unable to determine home directory for Mori storage".to_string())?;
 
     Ok(home.join("Mori").join("Records"))
+}
+
+/// Path to the small config file that records a user-chosen storage directory.
+/// It lives in `~/.mori` (outside the storage dir itself) so it survives a
+/// relocation and stays the single source the resolver reads.
+fn storage_override_path() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)?;
+    Some(home.join(".mori").join("storage_location"))
+}
+
+/// Read the persisted storage override, if any. A missing, empty, or
+/// unreadable file means "no override" and the default location applies.
+fn read_storage_override() -> Option<PathBuf> {
+    let path = storage_override_path()?;
+    let raw = fs::read_to_string(&path).ok()?;
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    Some(PathBuf::from(trimmed))
+}
+
+/// Persist a user-chosen storage directory so every future
+/// `default_storage_dir()` (and the DB path derived from it) points there.
+pub fn apply_storage_override(dir: &std::path::Path) -> Result<(), String> {
+    let config = storage_override_path()
+        .ok_or_else(|| "Unable to resolve the storage config path.".to_string())?;
+    if let Some(parent) = config.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    fs::write(&config, dir.to_string_lossy().as_bytes()).map_err(|error| error.to_string())
 }
 
 fn default_package_filename() -> String {

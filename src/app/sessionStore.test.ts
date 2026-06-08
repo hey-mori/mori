@@ -425,6 +425,33 @@ describe("useSessionStore loadBrowserSession", () => {
     expect(repository.loadCurrentSessionDraft()?.session.id).toBe(earlier.session.id);
   });
 
+  it("switching to demo preserves the current real session for later reopening", () => {
+    const session = seedSession("Real session", "2026-05-12T13:00:00+09:00");
+    repository.addSessionImport(
+      session.session.id,
+      normalizeManualNote({
+        projectId: session.project.id,
+        sessionId: session.session.id,
+        title: "Imported note",
+        note: "real work",
+        capturedAt: "2026-05-12T13:05:00+09:00",
+      }),
+    );
+    useSessionStore.getState().loadBrowserSession(session.session.id);
+
+    useSessionStore.getState().resetToDemo();
+
+    expect(useSessionStore.getState().draft).toBeNull();
+    expect(repository.loadCurrentSessionDraft()).toBeNull();
+    expect(repository.loadStoredSessionDraft(session.session.id)).not.toBeNull();
+    expect(repository.listSessionImports(session.session.id)).toHaveLength(1);
+
+    const reopened = useSessionStore.getState().loadBrowserSession(session.session.id);
+    expect(reopened).toBe(true);
+    expect(useSessionStore.getState().draft?.session.id).toBe(session.session.id);
+    expect(useSessionStore.getState().imports).toHaveLength(1);
+  });
+
   it("returns false for an unknown session id and leaves the store untouched", () => {
     const opened = useSessionStore.getState().loadBrowserSession("missing-session");
     expect(opened).toBe(false);

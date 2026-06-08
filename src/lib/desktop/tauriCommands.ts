@@ -54,6 +54,7 @@ export type TauriCommandName =
   | "get_app_info"
   | "host_platform"
   | "get_storage_location"
+  | "set_storage_location"
   | "save_mori_package_json"
   | "save_mori_package_json_as"
   | "save_mori_package_zip_as"
@@ -124,6 +125,14 @@ export type StorageLocation = {
   exists: boolean;
 };
 
+export type StorageRelocation = {
+  /** The new storage directory, or `null` when the user cancelled the picker. */
+  path: string | null;
+  cancelled: boolean;
+  /** Whether an existing `mori.sqlite` was carried over to the new location. */
+  movedDb: boolean;
+};
+
 export type SavedMoriPackage = {
   path: string;
   bytes_written: number;
@@ -163,6 +172,7 @@ export type TauriCommandMap = {
   get_app_info: { input: undefined; output: AppInfo };
   host_platform: { input: undefined; output: string };
   get_storage_location: { input: undefined; output: StorageLocation };
+  set_storage_location: { input: undefined; output: StorageRelocation };
   save_mori_package_json: { input: SaveMoriPackageJsonInput; output: SavedMoriPackage };
   save_mori_package_json_as: {
     input: SaveMoriPackageJsonInput;
@@ -343,6 +353,9 @@ export const tauriCommands = {
   },
   getStorageLocation(): Promise<StorageLocation> {
     return invokeTauriCommand("get_storage_location", undefined);
+  },
+  setStorageLocation(): Promise<StorageRelocation> {
+    return invokeTauriCommand("set_storage_location", undefined);
   },
   saveMoriPackageJson(input: SaveMoriPackageJsonInput): Promise<SavedMoriPackage> {
     return invokeTauriCommand("save_mori_package_json", input);

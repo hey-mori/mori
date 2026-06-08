@@ -34,15 +34,25 @@ describe("buildAnalysisPlan", () => {
     expect(plan.cappedAt).toBeNull();
   });
 
-  it("caps for an LLM engine when there are many turns", () => {
+  it("does not cap Ollama because it uses chunked local passes", () => {
     const events = Array.from({ length: 150 }, (_, i) => ev(`c${i}`, "assistant"));
     const plan = buildAnalysisPlan({
       events,
       sourceCount: 1,
       settings: { ...DEFAULT_QUICK_PASS_SETTINGS, provider: "ollama", ollamaModel: "gemma4:e4b" },
     });
-    expect(plan.cappedAt).toBe(120);
+    expect(plan.cappedAt).toBeNull();
     expect(plan.engineLabel).toContain("gemma4:e4b");
+  });
+
+  it("still caps single-prompt OpenAI-compatible runs", () => {
+    const events = Array.from({ length: 150 }, (_, i) => ev(`c${i}`, "assistant"));
+    const plan = buildAnalysisPlan({
+      events,
+      sourceCount: 1,
+      settings: { ...DEFAULT_QUICK_PASS_SETTINGS, provider: "openAiCompatible" },
+    });
+    expect(plan.cappedAt).toBe(120);
   });
 
   it("describes the plan as one line", () => {

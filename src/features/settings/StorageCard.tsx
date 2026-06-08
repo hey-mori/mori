@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { FolderCog } from "lucide-react";
+import { FolderCog, FolderInput } from "lucide-react";
+import { Button } from "../../components/ui/Button";
+import { useSqliteStore } from "../../app/sqliteStore";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { SettingsRow, SettingsSection } from "./SettingsPrimitives";
 
@@ -13,6 +15,10 @@ export function StorageCard() {
     status: "idle",
     path: null,
   });
+  const [changing, setChanging] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const refreshSqlite = useSqliteStore((state) => state.refresh);
+  const isDesktop = isTauriRuntime();
 
   useEffect(() => {
     if (!isTauriRuntime()) return;
@@ -43,6 +49,30 @@ export function StorageCard() {
       ? storagePath.path
       : storagePath.path ?? fallbackPath;
 
+  async function handleChange() {
+    if (changing) return;
+    setChanging(true);
+    setNotice(null);
+    try {
+      const result = await tauriCommands.setStorageLocation();
+      if (result.cancelled || !result.path) return;
+      setStoragePath({ status: "ready", path: result.path });
+      setNotice(
+        result.movedDb
+          ? "저장 위치를 옮기고 기존 데이터도 이동했습니다."
+          : "저장 위치를 변경했습니다.",
+      );
+      // The backend reopened the database at the new path, so re-read sessions.
+      await refreshSqlite();
+    } catch (error) {
+      setNotice(
+        `위치를 변경하지 못했습니다: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setChanging(false);
+    }
+  }
+
   return (
     <SettingsSection title="저장 위치">
       <div className="settings-row-list">
@@ -55,7 +85,21 @@ export function StorageCard() {
               <code>{pathLabel}</code>
             </span>
           }
+          control={
+            isDesktop ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={FolderInput}
+                disabled={changing}
+                onClick={() => void handleChange()}
+              >
+                {changing ? "변경 중" : "변경"}
+              </Button>
+            ) : undefined
+          }
         />
+        {notice ? <p className="settings-storage-notice">{notice}</p> : null}
         {storagePath.status === "error" ? (
           <p className="settings-storage-error" role="alert">
             저장 위치를 확인하지 못했습니다. 예상 경로를 표시합니다: {storagePath.message}

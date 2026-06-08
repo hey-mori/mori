@@ -674,8 +674,6 @@ hr {
 
 .pick-tile-rec {
   display: inline-block;
-  vertical-align: middle;
-  margin-left: 6px;
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--base-accent-soft, var(--purple-50));
@@ -684,6 +682,14 @@ hr {
   font-style: normal;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.pick-tile-side {
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  gap: 6px;
+  min-width: 18px;
 }
 
 /* Selection mark — a radio dot, filled when selected (never a checkmark). */

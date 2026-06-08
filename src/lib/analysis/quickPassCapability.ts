@@ -235,6 +235,9 @@ export function deriveFailureHint(
   if (/http 5\d\d/.test(text)) {
     return "엔드포인트 서버 오류입니다. 서버 로그를 확인하세요.";
   }
+  if (/truncated|context\/output|context window|output limit|done_reason.*length/.test(text)) {
+    return "모델의 컨텍스트 또는 출력 예산이 부족합니다. 더 작은 청크/모델 프로파일을 쓰거나 컨텍스트가 큰 모델을 선택해 보세요.";
+  }
   if (/json|missing .*field|response is not/.test(text)) {
     return "모델이 JSON 형식 응답을 만들지 못했습니다. JSON을 지원하는 더 큰 모델을 사용해 보세요.";
   }

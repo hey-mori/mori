@@ -10,7 +10,6 @@ import {
   Globe,
   History,
   Infinity,
-  Lock,
   MessageSquare,
   MousePointer2,
   Package,
@@ -77,8 +76,6 @@ import {
   type SourceInboxFreshness,
   type SourceInboxHint,
 } from "../../lib/sources/sourceInboxHints";
-import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
-import { ConnectorInstallModal } from "./ConnectorInstallModal";
 import { ConnectorSetupGuidePanel } from "./ConnectorSetupGuide";
 
 /**
@@ -205,7 +202,6 @@ export function SourcesView() {
     groups.agents[0]?.methods[0]?.source.id ??
     allMethods[0]?.source.id ??
     "";
-  const [connectOpen, setConnectOpen] = useState(false);
   const [connectModels, setConnectModels] = useState<ConnectorStatusViewModel[] | null>(null);
   const [connectorInbox, setConnectorInbox] = useState<ConnectorInboxListing | null>(null);
   const [connectorInboxBusy, setConnectorInboxBusy] = useState(false);
@@ -378,9 +374,11 @@ export function SourcesView() {
             />
           }
           end={
-            <Button variant="secondary" icon={Plug} onClick={() => setConnectOpen(true)}>
-              연동 설정
-            </Button>
+            selectedProvider ? (
+              <span className="sources-action-context">
+                {selectedProvider.name} 연동
+              </span>
+            ) : null
           }
         />
       }
@@ -449,14 +447,6 @@ export function SourcesView() {
 
       {imports.length > 0 ? <RecentImports imports={imports} /> : null}
 
-      {connectOpen ? (
-        <ConnectorInstallModal
-          onClose={() => {
-            setConnectOpen(false);
-            reloadConnectStatus();
-          }}
-        />
-      ) : null}
     </PageShell>
   );
 }
@@ -505,25 +495,37 @@ function ProviderTile({
   onSelect: () => void;
 }) {
   const Icon = providerIcon(provider);
+  const showStatus = provider.status !== "available";
   return (
     <button
       type="button"
-      className={`sources-tile${active ? " is-active" : ""}`}
+      className={`sources-tile pick-tile${active ? " is-active is-selected" : ""}`}
       onClick={onSelect}
       aria-pressed={active}
     >
-      <span className="sources-tile-icon">
+      <span className="sources-tile-icon pick-tile-icon">
         <Icon size={18} aria-hidden="true" />
       </span>
-      <strong className="sources-tile-name">{provider.name}</strong>
+      <span className="sources-tile-body pick-tile-body">
+        <strong className="sources-tile-name">
+          {provider.name}
+          {provider.recommended ? <em className="pick-tile-rec">추천</em> : null}
+        </strong>
+        <span>{provider.methods.map((method) => method.connectLabel).join(" · ")}</span>
+      </span>
+      {showStatus ? (
+        <Badge tone={provider.statusTone}>{provider.statusLabel}</Badge>
+      ) : (
+        <span className={`pick-mark${active ? " is-selected" : ""}`} aria-hidden="true" />
+      )}
     </button>
   );
 }
 
 function PlannedRow({
   providers,
-  selectedId,
-  onSelect,
+  selectedId: _selectedId,
+  onSelect: _onSelect,
 }: {
   providers: SourceProvider[];
   selectedId: string;
@@ -531,25 +533,22 @@ function PlannedRow({
 }) {
   if (providers.length === 0) return null;
   return (
-    <section className="sources-group" aria-label="지원 예정">
+    <section className="sources-group sources-planned-group" aria-label="지원 예정">
       <header className="sources-group-head">
-        <h2>예정</h2>
+        <h2>확장 예정</h2>
+        <span>아직 선택할 수 없는 항목</span>
       </header>
       <div className="sources-planned-chips">
         {providers.map((provider) => {
           const Icon = providerIcon(provider);
-          const firstId = provider.methods[0]?.source.id;
-          const active = provider.methods.some((method) => method.source.id === selectedId);
           return (
-            <button
+            <span
               key={provider.id}
-              type="button"
-              className={`sources-planned-chip${active ? " is-selected" : ""}`}
-              onClick={() => firstId && onSelect(firstId)}
+              className="sources-planned-chip"
             >
               <Icon size={13} aria-hidden="true" />
               <span>{provider.name}</span>
-            </button>
+            </span>
           );
         })}
       </div>
@@ -644,6 +643,57 @@ function SourceInspector({
         </div>
       </header>
 
+      <InspectorBlock title="연동 방법" icon={Plug}>
+        <ul className="sources-method-picker">
+          {onSelectRecords ? (
+            <li>
+              <button
+                type="button"
+                className={`sources-method-pick pick-tile${recordsSelected ? " is-active is-selected" : ""}`}
+                onClick={onSelectRecords}
+                aria-pressed={recordsSelected}
+              >
+                <span className="sources-method-icon" aria-hidden="true">
+                  <History size={16} />
+                </span>
+                <span className="sources-method-pick-body">
+                  <span className="sources-method-pick-label">기록에서 불러오기</span>
+                  <span>이 에이전트의 로컬 작업 기록을 선택합니다</span>
+                </span>
+                <span className={`pick-mark${recordsSelected ? " is-selected" : ""}`} aria-hidden="true" />
+              </button>
+            </li>
+          ) : null}
+          {provider.methods.map((entry) => {
+            const selected = !recordsSelected && entry.source.id === source.id;
+            const showStatus = entry.source.status !== "available";
+            return (
+              <li key={entry.source.id}>
+                <button
+                  type="button"
+                  className={`sources-method-pick pick-tile${selected ? " is-active is-selected" : ""}`}
+                  onClick={() => onSelectMethod(entry.source.id)}
+                  aria-pressed={selected}
+                >
+                  <span className="sources-method-icon" aria-hidden="true">
+                    <Plug size={16} />
+                  </span>
+                  <span className="sources-method-pick-body">
+                    <span className="sources-method-pick-label">{entry.methodLabel}</span>
+                    <span>{entry.connectLabel}</span>
+                  </span>
+                  {showStatus ? (
+                    <Badge tone={entry.source.statusTone}>{entry.source.statusLabel}</Badge>
+                  ) : (
+                    <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </InspectorBlock>
+
       {connectStatus ? (
         <ConnectStatusBlock status={connectStatus} onReload={onReloadConnectStatus} />
       ) : null}
@@ -662,51 +712,18 @@ function SourceInspector({
         />
       ) : null}
 
-      <InspectorBlock title="연동 방법" icon={Plug}>
-        <ul className="sources-method-picker">
-          {onSelectRecords ? (
-            <li>
-              <button
-                type="button"
-                className={`sources-method-pick${recordsSelected ? " is-active" : ""}`}
-                onClick={onSelectRecords}
-                aria-pressed={recordsSelected}
-              >
-                <span className="sources-method-pick-label">기록에서 불러오기</span>
-              </button>
-            </li>
-          ) : null}
-          {provider.methods.map((entry) => {
-            const selected = !recordsSelected && entry.source.id === source.id;
-            const showStatus = entry.source.status !== "available";
-            return (
-              <li key={entry.source.id}>
-                <button
-                  type="button"
-                  className={`sources-method-pick${selected ? " is-active" : ""}`}
-                  onClick={() => onSelectMethod(entry.source.id)}
-                  aria-pressed={selected}
-                >
-                  <span className="sources-method-pick-label">{entry.methodLabel}</span>
-                  {showStatus ? (
-                    <Badge tone={entry.source.statusTone}>{entry.source.statusLabel}</Badge>
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </InspectorBlock>
-
-      <InspectorBlock title="읽는 것" icon={Database}>
-        <CheckList items={detail ? detail.canAccess : source.whatMoriCanAccess} tone="ok" />
-      </InspectorBlock>
-
-      <InspectorBlock title="읽지 않는 것" icon={Lock}>
-        <CheckList items={detail ? detail.cannotAccess : source.whatMoriCannotAccess} tone="no" />
-      </InspectorBlock>
-
-      <InspectorBlock title="지원 형식" icon={FileText}>
+      <InspectorBlock title="세부 범위" icon={Database} collapsible>
+        <div className="sources-scope-grid">
+          <div>
+            <h4>가져오는 정보</h4>
+            <CheckList items={detail ? detail.canAccess : source.whatMoriCanAccess} tone="ok" />
+          </div>
+          <div>
+            <h4>가져오지 않는 정보</h4>
+            <CheckList items={detail ? detail.cannotAccess : source.whatMoriCannotAccess} tone="no" />
+          </div>
+        </div>
+        <h4 className="sources-scope-format-title">지원 형식</h4>
         <ChipList items={detail ? detail.formats : source.acceptedFormats} />
       </InspectorBlock>
 
@@ -770,10 +787,12 @@ function ConnectStatusBlock({
 
   const isHook = status.captureModel === "config-hook";
   const connected = isHook && status.availability === "available";
+  const presentation = connectorStatusPresentation(status);
   return (
-    <InspectorBlock title="연동 상태" icon={Plug}>
+    <InspectorBlock title="연결" icon={Plug}>
       <div className="sources-connect-status">
-        <BaseStatusBadge tone={status.display.tone}>{status.display.label}</BaseStatusBadge>
+        <span className={`sources-connect-dot tone-${presentation.tone}`} aria-hidden="true" />
+        <strong>{presentation.label}</strong>
         <span className="sources-connect-detail">{status.detail.join(" · ")}</span>
       </div>
       {connected ? (
@@ -799,6 +818,22 @@ function ConnectStatusBlock({
       {error ? <p className="sources-connect-error">{error}</p> : null}
     </InspectorBlock>
   );
+}
+
+function connectorStatusPresentation(status: ConnectorStatusViewModel): {
+  label: string;
+  tone: "green" | "orange" | "blue" | "gray";
+} {
+  if (status.captureModel === "session-discovery") {
+    if (status.availability === "available") return { label: "기록 감지됨", tone: "green" };
+    if (status.availability === "partial") return { label: "기록 없음", tone: "orange" };
+    if (status.availability === "desktopOnly") return { label: "데스크톱 필요", tone: "blue" };
+    return { label: "감지 불가", tone: "gray" };
+  }
+  if (status.availability === "available") return { label: "연결됨", tone: "green" };
+  if (status.availability === "requiresSetup") return { label: "연결 필요", tone: "orange" };
+  if (status.availability === "desktopOnly") return { label: "데스크톱 필요", tone: "blue" };
+  return { label: "연결 불가", tone: "gray" };
 }
 
 function ConnectorInboxHintBlock({

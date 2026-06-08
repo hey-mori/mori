@@ -181,16 +181,7 @@ export class BrowserDraftRepository implements DraftRepository {
   }
 
   clearCurrentSessionDraft(): void {
-    const current = this.loadCurrentSessionDraft();
     this.storage.removeItem(CURRENT_SESSION_KEY);
-    if (current) {
-      this.storage.removeItem(`${SESSION_PREFIX}${current.session.id}`);
-      this.storage.removeItem(`${IMPORTS_PREFIX}${current.session.id}`);
-      this.storage.removeItem(`${ANALYSIS_PREFIX}${current.session.id}`);
-      this.storage.removeItem(`${ANALYSIS_HISTORY_PREFIX}${current.session.id}`);
-      this.storage.removeItem(`${MEMORY_PREFIX}${current.session.id}`);
-      this.storage.removeItem(`${PENDING_REVIEW_PREFIX}${current.session.id}`);
-    }
   }
 
   clearAllLocalData(): void {
