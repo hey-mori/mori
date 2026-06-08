@@ -373,3 +373,56 @@ fn sidecar_path(db: &Path, suffix: &str) -> PathBuf {
     db.with_file_name(name)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{move_sqlite_files, sidecar_path};
+    use tempfile::TempDir;
+
+    #[test]
+    fn sidecar_path_appends_the_wal_and_shm_suffixes() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        assert_eq!(sidecar_path(&db, ""), db);
+        assert_eq!(sidecar_path(&db, "-wal"), temp.path().join("mori.sqlite-wal"));
+        assert_eq!(sidecar_path(&db, "-shm"), temp.path().join("mori.sqlite-shm"));
+    }
+
+    #[test]
+    fn move_sqlite_files_carries_the_db_and_sidecars_then_clears_the_source() {
+        let temp = TempDir::new().unwrap();
+        let old_dir = temp.path().join("old");
+        let new_dir = temp.path().join("new");
+        std::fs::create_dir_all(&old_dir).unwrap();
+        std::fs::create_dir_all(&new_dir).unwrap();
+        let old_db = old_dir.join("mori.sqlite");
+        std::fs::write(&old_db, b"main").unwrap();
+        std::fs::write(old_dir.join("mori.sqlite-wal"), b"wal").unwrap();
+        let new_db = new_dir.join("mori.sqlite");
+
+        move_sqlite_files(&old_db, &new_db).unwrap();
+
+        assert_eq!(std::fs::read(&new_db).unwrap(), b"main");
+        assert_eq!(
+            std::fs::read(new_dir.join("mori.sqlite-wal")).unwrap(),
+            b"wal"
+        );
+        assert!(!old_db.exists());
+        assert!(!old_dir.join("mori.sqlite-wal").exists());
+    }
+
+    #[test]
+    fn move_sqlite_files_skips_absent_sidecars() {
+        let temp = TempDir::new().unwrap();
+        let old_db = temp.path().join("mori.sqlite");
+        std::fs::write(&old_db, b"main").unwrap();
+        let new_db = temp.path().join("moved").join("mori.sqlite");
+        std::fs::create_dir_all(new_db.parent().unwrap()).unwrap();
+
+        move_sqlite_files(&old_db, &new_db).unwrap();
+
+        assert_eq!(std::fs::read(&new_db).unwrap(), b"main");
+        assert!(!new_db.with_file_name("mori.sqlite-wal").exists());
+        assert!(!old_db.exists());
+    }
+}
+
