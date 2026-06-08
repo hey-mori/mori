@@ -222,6 +222,32 @@ describe("OllamaQuickPassProvider response parsing", () => {
     expect(parsed.issues).toHaveLength(1);
   });
 
+  it("recovers JSON from a markdown code fence", () => {
+    const raw = '```json\n{"issues": [{"title": "fenced"}], "decisions": []}\n```';
+    const parsed = parseOllamaQuickPassJson(raw);
+    expect(parsed.issues[0]?.title).toBe("fenced");
+  });
+
+  it("recovers JSON after a <think> reasoning block", () => {
+    const raw =
+      '<think>Let me find the issues and decisions in this session.</think>\n{"issues": [], "decisions": [{"title": "decided"}]}';
+    const parsed = parseOllamaQuickPassJson(raw);
+    expect(parsed.decisions[0]?.title).toBe("decided");
+  });
+
+  it("tolerates a trailing comma before a closing brace", () => {
+    const raw = '{"issues": [{"title": "A"}], "decisions": [],}';
+    const parsed = parseOllamaQuickPassJson(raw);
+    expect(parsed.issues).toHaveLength(1);
+  });
+
+  it("does not over-extend past the object when prose with braces trails it", () => {
+    const raw = '{"issues": [{"title": "A"}], "decisions": []}\nNote: use {braces} carefully.';
+    const parsed = parseOllamaQuickPassJson(raw);
+    expect(parsed.issues).toHaveLength(1);
+    expect(parsed.decisions).toHaveLength(0);
+  });
+
   it("throws when the response is not a JSON object", () => {
     expect(() => parseOllamaQuickPassJson("not json at all")).toThrow();
   });

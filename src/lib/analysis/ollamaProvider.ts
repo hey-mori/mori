@@ -294,20 +294,77 @@ export function parseOllamaQuickPassJson(rawText: string): ParsedQuickPass {
   };
 }
 
-function extractJson(text: string): unknown {
+/**
+ * Pull a JSON object out of a local model's reply. Small local models rarely
+ * return clean JSON: they wrap it in a ```json code fence, prepend a
+ * <think> reasoning block, add prose around it, or leave a trailing comma. This
+ * tries increasingly forgiving strategies so a usable object survives all of
+ * those, instead of failing the whole run on a cosmetic wrapper. Returns the
+ * parsed object, or `null` when no object can be recovered.
+ */
+function extractJson(text: string): Record<string, unknown> | null {
+  // Drop <think>...</think> reasoning some models emit before the answer.
+  const withoutThink = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+
+  const candidates: string[] = [];
+  // Prefer the contents of a fenced code block when present.
+  const fence = withoutThink.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence?.[1]) candidates.push(fence[1]);
+  // The whole de-fenced reply.
+  candidates.push(withoutThink);
+  // The first balanced { ... } span, string-aware so braces inside strings or
+  // trailing prose never truncate or over-extend the object.
+  const balanced = firstBalancedObject(withoutThink);
+  if (balanced) candidates.push(balanced);
+
+  for (const candidate of candidates) {
+    const parsed = tryParseObject(candidate);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+function tryParseObject(text: string): Record<string, unknown> | null {
   const trimmed = text.trim();
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const start = trimmed.indexOf("{");
-    const end = trimmed.lastIndexOf("}");
-    if (start === -1 || end === -1 || end <= start) return null;
+  if (!trimmed) return null;
+  // Second attempt tolerates a trailing comma before } or ], a common small-
+  // model slip that is otherwise valid JSON.
+  for (const attempt of [trimmed, trimmed.replace(/,(\s*[}\]])/g, "$1")]) {
     try {
-      return JSON.parse(trimmed.slice(start, end + 1));
+      const value = JSON.parse(attempt);
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        return value as Record<string, unknown>;
+      }
     } catch {
-      return null;
+      // Fall through to the next, more forgiving attempt.
     }
   }
+  return null;
+}
+
+/** The first brace-balanced object substring, ignoring braces inside strings. */
+function firstBalancedObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
 }
 
 function coercePriority(value: string | undefined): Priority {
