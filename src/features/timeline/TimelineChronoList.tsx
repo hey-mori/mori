@@ -13,6 +13,8 @@ import {
   buildTimelineBundleViewModel,
   buildTimelineEventCardViewModel,
   buildTrustGlyph,
+  formatFileActivityDiff,
+  type TimelineCardFileActivity,
 } from "./lib/timelineCards";
 import { activityKindIcons } from "./lib/activityIcons";
 import {
@@ -157,6 +159,9 @@ function TimelineChronoEventRow({
         <span className="timeline-chrono-body">
           <strong>{vm.title}</strong>
           {snippet ? <span className="timeline-chrono-snippet">{snippet}</span> : null}
+          {vm.fileActivity && vm.fileActivity.filesChanged > 0 ? (
+            <span className="timeline-chrono-files">{fileActivityLine(vm.fileActivity)}</span>
+          ) : null}
           <small>
             {vm.categoryLabel} · {vm.trust.label}
             {vm.primaryMeta ? ` · ${vm.primaryMeta}` : ""}
@@ -184,6 +189,13 @@ function TimelineChronoEventRow({
       ) : null}
     </li>
   );
+}
+
+/** "commandSpace.ts 외 2 · +64 -12" — what the turn did to the codebase, the
+ *  signal the read view adds over a bare summary. Diff omitted when no counts. */
+function fileActivityLine(activity: TimelineCardFileActivity): string {
+  const diff = formatFileActivityDiff(activity);
+  return diff ? `${activity.filesLabel} · ${diff}` : activity.filesLabel;
 }
 
 /** Collapse a summary to a single readable preview line for a list row. */
