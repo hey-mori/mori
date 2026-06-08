@@ -40,6 +40,29 @@ is lost; items are grouped by how they ship.
     banner, so the tab keeps its shape.
   - These replace the centered full-screen takeovers.
 
+## Shipped (Phase 3: persistent import review)
+
+- **Import review is persisted per session and absorbed into the 자료 tab**
+  (Big IA item 7). The parsed import (rule-based timeline events) used to live
+  only in an in-memory store and a full-screen takeover, so navigating away lost
+  it with no way back, leaving an empty session. Now:
+  - a new `StoredPendingReview` localStorage stream
+    (`mori.sessionPendingReview.<sessionId>`) persists the review, keyed per
+    session, schema-versioned, and cleared when its session is cleared.
+  - the session store owns it (`pendingReview`), loading it on every session
+    load and resetting it on every switch, so a review survives navigation and
+    reload and never leaks across sessions.
+  - the review renders as a section INSIDE the 자료 tab (not a takeover), via
+    the `review-embedded` layout.
+  - the in-memory `reviewStore` is retired; `beginPendingReview` /
+    `applyPendingReview` / `cancelPendingReview` on the session store own the
+    lifecycle. Apply turns accepted events into a `StoredSessionImport`.
+  - this also resolves item 10's root cause (a freshly-imported session could
+    land with 0 sources because the review was never applied / was reset).
+  - Persistence is localStorage-only for v1 in both runtimes (no SQLite parity);
+    applied imports keep their existing SQLite parity. A pending review is a
+    pre-commit, local artifact, so cross-device pending state is out of scope.
+
 ## Next (UI, needs a visual pass)
 
 1. **Session title = the session's own name** — BLOCKED on Rust. The Claude
@@ -55,24 +78,21 @@ is lost; items are grouped by how they ship.
 
 ## Big IA (design first)
 
-7. **Absorb import-review into the 자료 tab.** The review screen should not be a
-   separate, unreachable surface (after navigating away there is no way back).
-   The 자료 tab is the home for: the imported sources/conversations, the
-   original preview (like the detect modal), the import-review/accept step, and
-   the analysis — all in one place, analysis prominent (not buried at the
-   bottom).
-8. **The 자료 tab must show what was imported**, not just a lone analysis card:
-   which conversation/session, the source list, and the original (the modal
-   preview, brought inline).
+7. ~~**Absorb import-review into the 자료 tab.**~~ SHIPPED (Phase 3 above): the
+   review is persisted per session and hosted inline in the 자료 tab, so it
+   survives navigation / reload and is always reachable.
+8. **The 자료 tab must show what was imported**, not just a lone analysis card.
+   PARTIAL: the review now shows the source card + extracted events inline. STILL
+   TODO: bring the original-conversation preview (the detect-modal preview)
+   inline, reading `pendingReview.draft.candidate` / `source`.
 9. **Analysis screen, heavily upgraded** (continues the analysis-plan +
    transparency work): explain the engines plainly (규칙 기반 = local heuristic,
    no network; Ollama = local LLM; OpenAI 호환 = an OpenAI-style HTTP API,
    local or remote), show a real run log/stream, and make "what gets analyzed"
-   and "how it was produced" legible. Today a fresh session shows 분석 대상:
-   대화 0턴 because it has no sources — tie this to (7).
-10. **Diagnose "분석 실행 안 됨".** A freshly created session can land with 0
-    sources (import not applied / state reset), so analysis has nothing to run.
-    Resolve via (4) and (7) so the imported work actually reaches the session.
+   and "how it was produced" legible.
+10. ~~**Diagnose "분석 실행 안 됨".**~~ Root cause RESOLVED by item 7: a freshly
+    imported session no longer lands with 0 sources from a lost / unapplied
+    review. The review persists and applying it lands the sources.
 
 ## Principles
 
