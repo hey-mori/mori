@@ -259,6 +259,23 @@ export type SessionState = {
     recordingMode?: RecordingMode;
   }) => { sessionId: string; candidate: NormalizedImportCandidate };
   /**
+   * Import a conversation as a brand-new session AND materialize it
+   * immediately, with no Import Review gate. The deterministic parse is
+   * applied at once (the events are the user's own conversation, not an AI
+   * proposal), the session is committed as real work, and a completion banner
+   * is primed. Evidence appears the moment you open the session and analysis is
+   * then always runnable; the trust gate lives at durable memory, not at
+   * evidence display. See docs/design/import-into-evidence-tab.md.
+   */
+  importAndOpenAsNewSession: (params: {
+    candidate: NormalizedImportCandidate;
+    title: string;
+    startedAt: string;
+    endedAt: string;
+    projectLabel?: string;
+    recordingMode?: RecordingMode;
+  }) => { sessionId: string; firstEventId: string | null };
+  /**
    * Mark the pending new session (created by `importAsNewSession`) as
    * committed — called when an Import Review for it is applied. Clears the
    * cleanup bookkeeping so a later cancel won't delete a session that now
@@ -726,6 +743,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
 
     return { sessionId: stored.session.id, candidate: reboundCandidate };
+  },
+  importAndOpenAsNewSession: (params) => {
+    const { sessionId, candidate } = get().importAsNewSession(params);
+    // Materialize the parse straight away — no pending review. The events are
+    // a faithful, deterministic projection of the user's own conversation, so
+    // they are evidence, not a proposal to gate.
+    const stored = get().addImport(candidate);
+    // The session now holds applied work, so it is real — clear the
+    // empty-session cleanup bookkeeping (mirrors what apply did via review).
+    get().commitPendingNewSession();
+    if (stored) {
+      set({
+        lastApplied: {
+          sourceId: stored.id,
+          appliedCount: candidate.events.length,
+          appliedAt: new Date().toISOString(),
+        },
+      });
+    }
+    return { sessionId, firstEventId: stored?.events[0]?.id ?? null };
   },
   commitPendingNewSession: () => {
     if (!get().pendingNewSession) return;

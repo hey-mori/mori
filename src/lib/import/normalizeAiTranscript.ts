@@ -1,3 +1,4 @@
+import type { EventActor, TimelineEvent } from "../../domain/types";
 import type {
   AiTranscriptPlatform,
   AiTranscriptParseSummary,
@@ -184,6 +185,88 @@ function summarizeTranscript(turns: AiTranscriptTurn[], text: string): string {
   return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
 }
 
+function truncate(value: string, max: number): string {
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (compact.length <= max) return compact;
+  return `${compact.slice(0, max - 3)}...`;
+}
+
+type TranscriptEventBuild = {
+  sessionId: string;
+  projectId: string;
+  sourceId: string;
+  capturedAt: string;
+  title: string;
+};
+
+/**
+ * Build one timeline event per Q&A turn, pairing a user / system / unknown
+ * message with the assistant reply that follows it — the same "1 turn = 1
+ * event" shape the detected-import path produces, so a pasted conversation
+ * reads as a structured timeline instead of one opaque blob. A stray message
+ * (an assistant with no preceding ask, a user with no answer) still becomes its
+ * own event so nothing is dropped. Pasted transcripts carry no per-message
+ * timestamps, so every event shares the capture time.
+ */
+function buildTranscriptEvents(
+  turns: AiTranscriptTurn[],
+  build: TranscriptEventBuild,
+): TimelineEvent[] {
+  const events: TimelineEvent[] = [];
+
+  const emit = (ask: AiTranscriptTurn | null, reply: AiTranscriptTurn | null) => {
+    const askText = ask?.content?.trim() ?? "";
+    const replyText = reply?.content?.trim() ?? "";
+    if (!askText && !replyText) return;
+    const index = events.length;
+    const titleSeed = askText || replyText;
+    const summarySeed = replyText || askText;
+    const actor: EventActor = reply
+      ? "assistant"
+      : ask?.role === "system"
+        ? "system"
+        : "user";
+    const eventId = createImportId("evt-ai", `${build.title}-${index}`, build.capturedAt);
+    const turnId = createImportId("turn-ai", `${build.title}-${index}`, build.capturedAt);
+    events.push({
+      id: eventId,
+      sessionId: build.sessionId,
+      projectId: build.projectId,
+      start: build.capturedAt,
+      type: "aiConversation",
+      title: truncate(titleSeed, 90),
+      summary: truncate(summarySeed, 160),
+      sourceRefs: [build.sourceId],
+      linkedIssueIds: [],
+      linkedDecisionIds: [],
+      relationshipIds: [],
+      trustLevel: "verified",
+      confidence: 0.88,
+      createdBy: "import",
+      userModified: false,
+      actor,
+      turnId,
+      turnIndex: index,
+    });
+  };
+
+  let buffered: AiTranscriptTurn | null = null;
+  for (const turn of turns) {
+    if (turn.role === "assistant") {
+      emit(buffered, turn);
+      buffered = null;
+      continue;
+    }
+    // A new ask before the previous one was answered: flush the previous as its
+    // own (unanswered) event, then buffer this one.
+    if (buffered) emit(buffered, null);
+    buffered = turn;
+  }
+  if (buffered) emit(buffered, null);
+
+  return events;
+}
+
 /**
  * Normalize AI transcript import with platform-specific handling
  */
@@ -199,7 +282,39 @@ export function normalizeAiTranscript(input: NormalizeAiTranscriptInput): Normal
   const parseSummary = generateParseSummary(input.platform, turns, input.text);
 
   const sourceId = createImportId("src-ai", title, capturedAt);
-  const eventId = createImportId("evt-ai", title, capturedAt);
+
+  // One event per Q&A turn (detected-import parity). Fall back to a single
+  // representative event when the transcript produced no turns, so the source
+  // always has an anchor on the timeline.
+  const turnEvents = buildTranscriptEvents(turns, {
+    sessionId: input.sessionId,
+    projectId: input.projectId,
+    sourceId,
+    capturedAt,
+    title,
+  });
+  const events: TimelineEvent[] =
+    turnEvents.length > 0
+      ? turnEvents
+      : [
+          {
+            id: createImportId("evt-ai", title, capturedAt),
+            sessionId: input.sessionId,
+            projectId: input.projectId,
+            start: capturedAt,
+            type: "aiConversation",
+            title,
+            summary: summarizeTranscript(turns, input.text),
+            sourceRefs: [sourceId],
+            linkedIssueIds: [],
+            linkedDecisionIds: [],
+            relationshipIds: [],
+            trustLevel: "verified",
+            confidence: 0.88,
+            createdBy: "import",
+            userModified: false,
+          },
+        ];
 
   // Build detail string
   const detailParts: string[] = [];
@@ -226,27 +341,9 @@ export function normalizeAiTranscript(input: NormalizeAiTranscriptInput): Normal
       redactionStatus: "notNeeded",
       rawRetention: "summaryOnly",
       capturedAt,
-      relatedEventIds: [eventId],
+      relatedEventIds: events.map((event) => event.id),
       captureFidelity: assessTranscriptFidelity(input.text),
     },
-    events: [
-      {
-        id: eventId,
-        sessionId: input.sessionId,
-        projectId: input.projectId,
-        start: capturedAt,
-        type: "aiConversation",
-        title,
-        summary: summarizeTranscript(turns, input.text),
-        sourceRefs: [sourceId],
-        linkedIssueIds: [],
-        linkedDecisionIds: [],
-        relationshipIds: [],
-        trustLevel: "verified",
-        confidence: 0.88,
-        createdBy: "import",
-        userModified: false,
-      },
-    ],
+    events,
   };
 }

@@ -34,7 +34,8 @@ export type SettingsTab =
   | "storage"
   | "repositories"
   | "appearance"
-  | "notifications";
+  | "notifications"
+  | "about";
 
 /**
  * Active segment inside the Memory surface. Memory is cross-session, so it

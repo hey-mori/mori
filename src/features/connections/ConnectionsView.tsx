@@ -120,13 +120,12 @@ export function ConnectionsView() {
   const bridgeAvailable = isClaudeBridgeAvailable();
   const draft = useSessionStore((state) => state.draft);
   const view = useSessionStore(selectSessionView);
-  const importAsNewSession = useSessionStore((state) => state.importAsNewSession);
+  const importAndOpenAsNewSession = useSessionStore((state) => state.importAndOpenAsNewSession);
   const beginPendingReview = useSessionStore((state) => state.beginPendingReview);
   // `navigate` routes the post-import "evidence" landing into the unified
   // Session Detail workspace (its 증거 tab), where Import Review renders.
   const setCurrentView = useAppStore((state) => state.navigate);
   const requestEvidenceImport = useAppStore((state) => state.requestEvidenceImport);
-  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const isDemoSession = !draft;
   const desktopRuntime = isTauriRuntime();
 
@@ -222,18 +221,16 @@ export function ConnectionsView() {
         capturedAt,
       });
       const { startedAt, endedAt } = deriveConversationWindow(detail, capturedAt);
-      const { candidate: reboundCandidate } = importAsNewSession({
+      importAndOpenAsNewSession({
         candidate,
         title: detail.title,
         startedAt,
         endedAt,
         projectLabel: detail.projectName || undefined,
       });
-      beginPendingReview(reboundCandidate, reviewOriginForAgentWorkSession(detail));
       setImportStatus({
         tone: "ok",
-        message:
-          "새 세션을 만들고 Import Review로 이동했습니다. 반영 전까지 세션은 비어 있으며, 취소하면 빈 세션은 자동으로 정리됩니다.",
+        message: "새 세션으로 가져왔습니다. 자료 탭에서 바로 확인하고 분석할 수 있어요.",
       });
       setViewerOpen(false);
       setCurrentView("evidence");
@@ -304,7 +301,6 @@ export function ConnectionsView() {
       isDesktop={desktopRuntime}
       hasActiveSession={!isDemoSession}
       onImport={requestEvidenceImport}
-      onOpenRepositorySettings={() => openSettingsSheet("storage")}
     />
   );
 

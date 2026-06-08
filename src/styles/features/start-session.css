@@ -347,6 +347,11 @@ input,
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
+.engine-pick-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
 .engine-card {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) auto;
@@ -355,6 +360,27 @@ input,
   min-height: 58px;
   padding: var(--base-space-3);
   text-align: left;
+}
+
+.engine-pick-tile {
+  min-height: 74px;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+}
+
+.engine-pick-tile .pick-tile-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.engine-pick-tile .pick-tile-body {
+  gap: 4px;
+}
+
+.engine-pick-tile .pick-tile-body strong,
+.engine-pick-tile .pick-tile-body span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .setup-actions {

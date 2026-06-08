@@ -281,16 +281,18 @@ function cleanTitle(value: string): string {
 
 /**
  * Propose a single work-unit title. Prefer the goal expressed by the first AI
- * turn (its summary is the first user message), then a connector session
- * title, then a family-based fallback so the title is never empty.
+ * turn (now the event title — the user's ask — with the assistant reply in the
+ * summary), then a connector session title, then a family-based fallback so the
+ * title is never empty.
  */
 function proposeWorkBundleTitle(
   items: WorkBundleItem[],
   familyLabels: string[],
 ): string {
   const aiItem = items.find((item) => item.origin === "ai-transcript");
-  const aiEventSummary = aiItem?.candidate.events[0]?.summary?.trim();
-  if (aiEventSummary) return cleanTitle(aiEventSummary);
+  const aiFirst = aiItem?.candidate.events[0];
+  const aiGoal = aiFirst?.title?.trim() || aiFirst?.summary?.trim();
+  if (aiGoal) return cleanTitle(aiGoal);
 
   const connectorItem = items.find((item) => item.origin === "connector-jsonl");
   const connectorTitle = connectorItem?.candidate.source.title?.trim();

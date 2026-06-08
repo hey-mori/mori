@@ -700,7 +700,7 @@ export function ImportPanel(props: ImportPanelProps = {}) {
                   </label>
                 ) : (
                   <p className="git-fetch-help">
-                    저장된 리포지토리가 없습니다. <b>Settings → Repositories</b>에서 추가하거나 아래에 경로를 직접 입력하세요.
+                    저장된 리포지토리가 없습니다. 아래에 경로를 직접 입력하거나 찾아보기로 선택하세요.
                   </p>
                 )}
                 <label>
@@ -900,7 +900,7 @@ function RepoVerificationHint({ repo }: { repo: import("../../lib/repositories")
   if (!verification || verification.status === "unverified") {
     return (
       <small className="git-fetch-help">
-        이 리포지토리는 아직 검증되지 않았습니다. Settings에서 Verify를 실행하면 branch/SHA가 표시됩니다.
+        이 리포지토리는 아직 검증되지 않았습니다. Git diff를 가져오면 branch/SHA 정보가 함께 갱신됩니다.
       </small>
     );
   }

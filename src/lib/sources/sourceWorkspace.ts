@@ -306,14 +306,6 @@ function actionFromSurface(surface: ControlCenterSurface): SourceWorkspaceAction
       disabledReason: surface.action.disabledReason,
     };
   }
-  if (surface.action.kind === "repositorySettings") {
-    return {
-      kind: "settings",
-      label: surface.action.label,
-      enabled: surface.action.enabled,
-      disabledReason: surface.action.disabledReason,
-    };
-  }
   return {
     kind: "none",
     label: surface.action.label,

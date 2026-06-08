@@ -617,6 +617,34 @@ describe("useSessionStore importAsNewSession", () => {
     ).toBe(true);
   });
 
+  it("importAndOpenAsNewSession materializes the import at once, no review gate", () => {
+    const { sessionId, firstEventId } = useSessionStore
+      .getState()
+      .importAndOpenAsNewSession({
+        candidate: buildCandidate(),
+        title: "Wire the Connections page",
+        startedAt: "2026-05-20T12:00:00Z",
+        endedAt: "2026-05-20T12:30:00Z",
+        projectLabel: "C:/dev/mori",
+      });
+
+    const state = useSessionStore.getState();
+    // The new session is active and already holds the applied import — no
+    // pending review, no empty-session bookkeeping.
+    expect(state.draft?.session.id).toBe(sessionId);
+    expect(state.imports.length).toBeGreaterThan(0);
+    expect(state.pendingReview).toBeNull();
+    expect(state.pendingNewSession).toBeNull();
+    // Completion banner is primed and the first event is addressable.
+    expect(state.lastApplied?.appliedCount).toBeGreaterThan(0);
+    expect(firstEventId).toBeTruthy();
+    // It is real applied work, so a later abandon must keep it.
+    expect(useSessionStore.getState().abandonPendingNewSessionIfEmpty()).toBe(false);
+    expect(
+      repository.listStoredSessions().some((s) => s.sessionId === sessionId),
+    ).toBe(true);
+  });
+
   it("does not discard a pending session that already received an import", () => {
     const { sessionId, candidate: rebound } = useSessionStore.getState().importAsNewSession({
       candidate: buildCandidate(),

@@ -5709,6 +5709,22 @@ td a {
   font-variant-numeric: tabular-nums;
 }
 
+.session-file-diff {
+  flex: none;
+  display: inline-flex;
+  gap: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-file-add {
+  color: var(--green);
+}
+
+.session-file-del {
+  color: var(--red);
+}
+
 .session-file-row.status-missing .session-file-name strong {
   color: var(--muted);
   text-decoration: line-through;

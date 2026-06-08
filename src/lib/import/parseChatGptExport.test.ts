@@ -122,8 +122,10 @@ describe("normalizeAiTranscript with ChatGPT export input", () => {
     // The detail line reflects the two extracted turns (1 user, 1 assistant).
     expect(candidate.source.detail).toMatch(/2 turns/);
     expect(candidate.source.detail).toMatch(/1 user, 1 assistant/);
-    // The summary leads with the first user message, not raw JSON.
-    expect(candidate.events[0]?.summary).toContain("exponential backoff");
+    // One event per turn: the ask heads the event, the reply is its summary —
+    // and neither is raw JSON.
+    expect(candidate.events[0]?.title).toContain("exponential backoff");
+    expect(candidate.events[0]?.summary).toContain("retry wrapper");
     expect(candidate.events[0]?.summary).not.toContain("{");
   });
 
@@ -136,6 +138,8 @@ describe("normalizeAiTranscript with ChatGPT export input", () => {
       capturedAt: "2026-05-26T00:00:00Z",
     });
     expect(candidate.source.kind).toBe("chatgptTranscript");
-    expect(candidate.events[0]?.summary).toContain("hello");
+    // Paired into one event: ask in the title, reply in the summary.
+    expect(candidate.events[0]?.title).toContain("hello");
+    expect(candidate.events[0]?.summary).toContain("hi there");
   });
 });

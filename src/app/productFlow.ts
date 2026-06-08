@@ -198,7 +198,7 @@ export const PRODUCT_SURFACES: Record<ProductSurfaceId, ProductSurfaceDescriptor
   startSession: {
     id: "startSession",
     label: "Start Session",
-    description: "세션 스코프 + 소스 선택 + 로컬 AI 엔진 선택.",
+    description: "세션 스코프 + 소스 선택 + 분석 엔진 선택.",
     ownedFeatureIds: [
       "startSession.savePersistedDraft",
       "startSession.sourceTileSelection",

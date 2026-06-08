@@ -7,6 +7,7 @@ import { useRepositoryStore } from "./repositoryStore";
 import { useProfileStore } from "./profileStore";
 import { useThemeStore } from "./themeStore";
 import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
+import { isImportFlowView } from "../lib/session/importFlowView";
 // HomeView is the landing surface — stay eager so first paint never waits
 // on a chunk fetch. Every other surface is loaded on demand; Vite emits a
 // separate chunk per dynamic import, shrinking the entry bundle.
@@ -80,10 +81,26 @@ export default function App() {
   const profileInitialized = useProfileStore((state) => state.initialized);
   const hydrateTheme = useThemeStore((state) => state.hydrate);
   const themeInitialized = useThemeStore((state) => state.initialized);
+  const pendingNewSession = useSessionStore((state) => state.pendingNewSession);
+  const abandonPendingNewSessionIfEmpty = useSessionStore(
+    (state) => state.abandonPendingNewSessionIfEmpty,
+  );
 
   useEffect(() => {
     if (!initialized) hydrate();
   }, [initialized, hydrate]);
+
+  // Importing a conversation eagerly creates the session before the user
+  // confirms the review. The explicit 취소 cleans up that empty session, but
+  // simply navigating away (to Home, a project, Memory, …) used to leave it
+  // behind as an orphan with a dangling review. When the user leaves the
+  // import / review flow without applying anything, abandon the empty session
+  // here, mirroring 취소. Applied sessions are real work and are kept.
+  useEffect(() => {
+    if (pendingNewSession && !isImportFlowView(currentView)) {
+      abandonPendingNewSessionIfEmpty();
+    }
+  }, [currentView, pendingNewSession, abandonPendingNewSessionIfEmpty]);
 
   useEffect(() => {
     if (!repositoriesInitialized) hydrateRepositories();

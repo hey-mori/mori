@@ -32,6 +32,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   addImport: () => null,
   addImportBatch: () => [],
   importAsNewSession: () => ({ sessionId: "", candidate: { source: {} as never, events: [] } }),
+  importAndOpenAsNewSession: () => ({ sessionId: "", firstEventId: null }),
   commitPendingNewSession: () => {},
   abandonPendingNewSessionIfEmpty: () => false,
   removeImport: () => {},

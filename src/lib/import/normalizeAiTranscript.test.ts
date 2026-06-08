@@ -222,7 +222,7 @@ describe("normalizeAiTranscript", () => {
       expect(result.source.detail).toMatch(/~\d+ tokens/);
     });
 
-    it("creates one timeline event per transcript", () => {
+    it("creates one event per Q&A turn (a single pair is one event)", () => {
       const input: NormalizeAiTranscriptInput = {
         ...mockBase,
         platform: "claude",
@@ -234,6 +234,30 @@ describe("normalizeAiTranscript", () => {
       expect(result.events).toHaveLength(1);
       expect(result.events[0].type).toBe("aiConversation");
       expect(result.events[0].sourceRefs).toContain(result.source.id);
+    });
+
+    it("splits a multi-turn transcript into one event per turn", () => {
+      const input: NormalizeAiTranscriptInput = {
+        ...mockBase,
+        platform: "claude",
+        text:
+          "User: First ask\nAssistant: First reply\n" +
+          "User: Second ask\nAssistant: Second reply\n" +
+          "User: Third ask\nAssistant: Third reply",
+      };
+
+      const result = normalizeAiTranscript(input);
+
+      // Three Q&A pairs become three timeline events, not one blob.
+      expect(result.events).toHaveLength(3);
+      expect(result.events[0].title).toContain("First ask");
+      expect(result.events[0].summary).toContain("First reply");
+      expect(result.events[2].title).toContain("Third ask");
+      // Every event is back-referenced by the source and turn-ordered.
+      expect(result.source.relatedEventIds).toHaveLength(3);
+      expect(result.events.map((e) => e.turnIndex)).toEqual([0, 1, 2]);
+      // Event ids are distinct so dedupe / selection never collide.
+      expect(new Set(result.events.map((e) => e.id)).size).toBe(3);
     });
   });
 
@@ -247,7 +271,9 @@ describe("normalizeAiTranscript", () => {
 
       const result = normalizeAiTranscript(input);
 
-      expect(result.events[0].summary).toContain("How do I use TypeScript?");
+      // The ask heads the event (title); the reply is the summary.
+      expect(result.events[0].title).toContain("How do I use TypeScript?");
+      expect(result.events[0].summary).toContain("TypeScript is great!");
     });
 
     it("truncates long summaries to 160 characters", () => {

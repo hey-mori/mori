@@ -63,7 +63,6 @@ import {
 import {
   buildPrimaryImportCandidateFromAgentWorkSession,
   getAgentWorkSession,
-  reviewOriginForAgentWorkSession,
   type AgentWorkAgentId,
   type AgentWorkSessionMeta,
 } from "../../lib/agents/workSessions";
@@ -171,9 +170,10 @@ function methodLabel(method: ImportMethod | null): string {
 
 export function StartSessionView() {
   const view = useSessionStore(selectSessionView);
-  const importAsNewSession = useSessionStore((state) => state.importAsNewSession);
+  const importAndOpenAsNewSession = useSessionStore(
+    (state) => state.importAndOpenAsNewSession,
+  );
   const setSessionDraft = useSessionStore((state) => state.setDraft);
-  const beginPendingReview = useSessionStore((state) => state.beginPendingReview);
   const setCurrentView = useAppStore((state) => state.navigate);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const startRecordsRequest = useAppStore((state) => state.startRecordsRequest);
@@ -203,7 +203,10 @@ export function StartSessionView() {
     () => describeSessionStorageTarget({ isDesktop: isTauriRuntime() }),
     [],
   );
-  const engineOptions = useMemo(() => buildStartSessionEngineOptions(), []);
+  const engineOptions = useMemo(
+    () => buildStartSessionEngineOptions().filter((option) => option.selectable),
+    [],
+  );
   // The engine starts unselected (미선택), like the agent and the import method:
   // the user picks it deliberately rather than inheriting a silent default.
   const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider | null>(null);
@@ -356,7 +359,7 @@ export function StartSessionView() {
         });
         const { startedAt, endedAt } = deriveConversationWindow(detail, capturedAt);
         const resolvedProject = projectName || detail.projectName || undefined;
-        const { candidate: rebound } = importAsNewSession({
+        importAndOpenAsNewSession({
           candidate,
           title: sessionTitle.trim() || detail.title,
           startedAt,
@@ -366,7 +369,6 @@ export function StartSessionView() {
         });
         // Remember this folder's project so the next import from it auto-links.
         rememberProjectForFolder(selectedDetected.projectPath, resolvedProject);
-        beginPendingReview(rebound, reviewOriginForAgentWorkSession(detail));
         setCurrentView("evidence");
       } catch {
         setCreating(false);
@@ -389,7 +391,7 @@ export function StartSessionView() {
         const title = sessionTitle.trim() || candidate.events[0]?.title || "가져온 대화";
         // A pasted transcript carries no per-message timestamps, so the capture
         // time stands in for both ends of the window.
-        const { candidate: rebound } = importAsNewSession({
+        importAndOpenAsNewSession({
           candidate,
           title,
           startedAt: capturedAt,
@@ -397,7 +399,6 @@ export function StartSessionView() {
           projectLabel: projectName || undefined,
           recordingMode: "summary",
         });
-        beginPendingReview(rebound, "ai-transcript");
         setCurrentView("evidence");
       } catch {
         setCreating(false);
@@ -564,17 +565,13 @@ export function StartSessionView() {
       <FieldBlock
         number="3"
         title="분석 엔진"
-        subtitle="대화를 분석할 로컬 AI 엔진을 선택합니다."
+        subtitle="대화를 분석할 엔진을 선택합니다."
       >
-        <div className="pick-grid">
+        <div className="pick-grid engine-pick-grid">
           {engineOptions.map((option) => (
-            <PickTile
+            <EngineTile
               key={option.provider}
-              icon={Cpu}
-              title={engineSummaryLabel(option)}
-              detail={option.detail}
-              disabled={!option.selectable}
-              status={option.selectable ? undefined : option.statusLabel}
+              option={option}
               selected={selectedEngineProvider === option.provider}
               onSelect={() => setSelectedEngineProvider(option.provider)}
             />
@@ -586,7 +583,7 @@ export function StartSessionView() {
           onClick={() => openSettingsSheet("localAi")}
         >
           <Settings2 size={13} aria-hidden="true" />
-          설정에서 endpoint와 모델을 구성
+          설정에서 모델과 endpoint 조정
         </button>
       </FieldBlock>
 
@@ -728,6 +725,34 @@ function PickTile({
       ) : (
         <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
       )}
+    </button>
+  );
+}
+
+function EngineTile({
+  option,
+  selected,
+  onSelect,
+}: {
+  option: StartSessionEngineOption;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`pick-tile engine-pick-tile${selected ? " is-selected" : ""}`}
+      aria-pressed={selected}
+      onClick={onSelect}
+    >
+      <span className="pick-tile-icon" aria-hidden="true">
+        <Cpu size={18} />
+      </span>
+      <span className="pick-tile-body">
+        <strong>{option.label}</strong>
+        <span>{option.detail}</span>
+      </span>
+      <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
     </button>
   );
 }
@@ -925,7 +950,7 @@ function SummarySectionTitle({ children }: { children: ReactNode }) {
 }
 
 function engineSummaryLabel(engine: StartSessionEngineOption): string {
-  return engine.model ? `${engine.label} (${engine.model})` : engine.label;
+  return engine.label;
 }
 
 /** Distinct existing project keys, derived from stored/demo sessions + user-created projects. */
