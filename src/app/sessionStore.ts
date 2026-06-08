@@ -22,6 +22,7 @@ import {
   buildProviderConfigFromSettings,
   createDeterministicQuickPassProvider,
   getCurrentRun,
+  mergeAnalysisFloor,
   resolveQuickPassProvider,
   resolveTaskModel,
   sanitizeQuickPassSettings,
@@ -1026,7 +1027,28 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
 
     try {
-      const result = await primary.analyze(analysisInput);
+      let result = await primary.analyze(analysisInput);
+      // Rule-based floor: when an LLM run succeeds but extracts nothing, merge
+      // in the deterministic engine's findings so a weak model never leaves the
+      // session with an empty analysis. Only triggers on a genuinely empty LLM
+      // result, so a rich result is never diluted with heuristic items. Gated by
+      // the same deterministic safety-net opt-in as the failure fallback.
+      const llmFoundNothing =
+        result.issues.length === 0 &&
+        result.decisions.length === 0 &&
+        result.nextActions.length === 0;
+      if (
+        llmFoundNothing &&
+        effective.fallbackToDeterministic &&
+        primary.name !== "deterministic-heuristic-v1"
+      ) {
+        try {
+          const floor = await getDefaultProvider().analyze(analysisInput);
+          result = mergeAnalysisFloor(result, floor);
+        } catch {
+          // The floor is best-effort; keep the primary result if it fails.
+        }
+      }
       repository.saveSessionAnalysis(draft.session.id, result);
       persistMemoryBodyFromAnalysis(repository, draft.session.id, result);
       set({

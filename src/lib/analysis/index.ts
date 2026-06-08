@@ -24,6 +24,7 @@ export {
   DeterministicQuickPassProvider,
   extractFromInput,
 } from "./deterministicQuickPassProvider";
+export { mergeAnalysisFloor } from "./mergeAnalysisFloor";
 export {
   createOllamaQuickPassProvider,
   OllamaQuickPassProvider,
