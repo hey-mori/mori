@@ -4,6 +4,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { SearchField } from "../../components/ui/SearchField";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import { InfoHint } from "../../components/ui/InfoHint";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import type { SourceKind } from "../../domain/types";
@@ -623,6 +624,16 @@ function QuickPassControl({
             { id: "openAiCompatible", label: "OpenAI 호환" },
           ]}
         />
+        <InfoHint label="분석 엔진 설명">
+          <strong>규칙 기반</strong> · 네트워크 없이 기기에서 도는 휴리스틱. 빠르고 비공개이지만
+          요약은 단순합니다.
+          <br />
+          <strong>Ollama</strong> · 기기에서 도는 로컬 LLM. 비공개로 더 풍부하게 요약하며, 모델
+          설치가 필요합니다.
+          <br />
+          <strong>OpenAI 호환</strong> · OpenAI 형식 HTTP API(로컬 또는 원격). 원격 주소면 자료가
+          외부로 전송될 수 있습니다.
+        </InfoHint>
         <small>{providerKindLabel}</small>
         <Button icon={SettingsIcon} onClick={onOpenSettings} size="sm">
           설정
