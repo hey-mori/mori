@@ -87,4 +87,26 @@ describe("buildQuickPassPrompt", () => {
     expect(systemPrompt).toContain("Tool events (actor=tool) are machine output");
     expect(systemPrompt).toContain("not a code comment");
   });
+
+  it("lists the allowed enum values so a weak model emits valid fields", () => {
+    const { systemPrompt } = build([]);
+    expect(systemPrompt).toContain('"high" | "medium" | "low"');
+    expect(systemPrompt).toContain('"open" | "inProgress" | "resolved" | "watching"');
+    expect(systemPrompt).toContain('"verified" | "observed" | "inferred"');
+  });
+
+  it("requires non-empty, non-duplicate titles", () => {
+    const { systemPrompt } = build([]);
+    expect(systemPrompt).toContain("non-empty title");
+    expect(systemPrompt).toContain("Do not repeat the same title");
+  });
+
+  it("includes a concrete output shape the model can mimic", () => {
+    const { systemPrompt } = build([]);
+    const exampleStart = systemPrompt.indexOf('{"summary":');
+    expect(exampleStart).toBeGreaterThanOrEqual(0);
+    // The example must itself be valid JSON so we never ship a malformed sample.
+    const example = systemPrompt.slice(exampleStart);
+    expect(() => JSON.parse(example)).not.toThrow();
+  });
 });
