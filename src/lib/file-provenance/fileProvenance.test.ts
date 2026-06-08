@@ -91,6 +91,15 @@ describe("rollUpFileTouches", () => {
     expect(entry.deletions).toBe(5);
   });
 
+  it("accumulates bounded diff previews per file, skipping empty ones", () => {
+    const [entry] = rollUpFileTouches([
+      { path: "/r/a.ts", tool: "Edit", changeKind: "edited", at: "", additions: 1, deletions: 1, diffPreview: "+a\n-b" },
+      { path: "/r/a.ts", tool: "Read", changeKind: "read", at: "", additions: 0, deletions: 0, diffPreview: "" },
+      { path: "/r/a.ts", tool: "Edit", changeKind: "edited", at: "", additions: 1, deletions: 0, diffPreview: "+c" },
+    ]);
+    expect(entry.diffPreview).toBe("+a\n-b\n+c");
+  });
+
   it("counts an unmapped change kind as a generic touch", () => {
     const [entry] = rollUpFileTouches([touch("/repo/x", "Future", "renamed")]);
     expect(entry.touched).toBe(1);

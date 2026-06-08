@@ -136,21 +136,32 @@ function demoTouch(
   changeKind: FileTouch["changeKind"],
   additions: number,
   deletions: number,
+  diffPreview = "",
 ): FileTouch {
-  return { path, tool, changeKind, at: "", additions, deletions, messageId: eventId };
+  return { path, tool, changeKind, at: "", additions, deletions, messageId: eventId, diffPreview };
 }
 
 const demoFileTouches: Record<string, FileTouch[]> = {
-  "evt-readme": [demoTouch("evt-readme", "C:/dev/mori/README.md", "Write", "wrote", 48, 0)],
+  "evt-readme": [
+    demoTouch("evt-readme", "C:/dev/mori/README.md", "Write", "wrote", 48, 0, "+# Mori\n+Local-first AI work memory."),
+  ],
   "evt-architecture": [
-    demoTouch("evt-architecture", "C:/dev/mori/docs/mori_architecture.md", "Write", "wrote", 132, 0),
+    demoTouch("evt-architecture", "C:/dev/mori/docs/mori_architecture.md", "Write", "wrote", 132, 0, "+## Storage\n+Tauri + SQLite + local LLM."),
   ],
   "evt-parser": [
-    demoTouch("evt-parser", "C:/dev/mori/src/timeline_parser.py", "Edit", "edited", 64, 12),
+    demoTouch(
+      "evt-parser",
+      "C:/dev/mori/src/timeline_parser.py",
+      "Edit",
+      "edited",
+      64,
+      12,
+      "-def parse(events):\n+def parse(events, relationships):\n+    link_related(events, relationships)",
+    ),
     demoTouch("evt-parser", "C:/dev/mori/src/normalize.py", "Read", "read", 0, 0),
   ],
   "evt-report-template": [
-    demoTouch("evt-report-template", "C:/dev/mori/docs/report_template.md", "Write", "wrote", 90, 4),
+    demoTouch("evt-report-template", "C:/dev/mori/docs/report_template.md", "Write", "wrote", 90, 4, "+## Summary\n+## Decisions\n-## TODO"),
   ],
 };
 

@@ -220,6 +220,12 @@ export type FileTouch = {
    * raw log exposes per-message ids (Claude Code today).
    */
   messageId?: string;
+  /**
+   * A bounded preview of the change — the added / removed lines only, capped to
+   * a handful of short lines (summary-level, never the full file). Optional and
+   * empty for reads or uncorrelated changes. Drives the inspector's diff peek.
+   */
+  diffPreview?: string;
 };
 
 export type SourceRef = {

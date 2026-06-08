@@ -44,6 +44,7 @@ describe("buildImportCandidateFromClaudeCodeSession - file touch attribution", (
           additions: 3,
           deletions: 1,
           messageId: "m1",
+          diffPreview: "+const x = 1;\n-const x = 0;",
         },
       ],
     );

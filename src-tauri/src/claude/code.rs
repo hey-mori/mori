@@ -110,6 +110,11 @@ pub struct ClaudeFileTouch {
     /// to the exact turn / timeline event it belongs to. Empty when the line
     /// carried no id.
     pub message_id: String,
+    /// A bounded preview of the change: just the added / removed lines from the
+    /// result's `structuredPatch` (no context), capped to a handful of short
+    /// lines. Summary-level (like an event summary), never the full file. Empty
+    /// for reads or changes Mori could not correlate.
+    pub diff_preview: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -444,7 +449,7 @@ fn parse_jsonl(text: &str) -> ParsedSession {
     let mut tokens = TokenAccumulator::default();
     let mut file_touches: Vec<ClaudeFileTouch> = Vec::new();
     let mut touch_ids: Vec<Option<String>> = Vec::new();
-    let mut patches: std::collections::HashMap<String, (u32, u32)> =
+    let mut patches: std::collections::HashMap<String, (u32, u32, String)> =
         std::collections::HashMap::new();
     for (index, line) in text.lines().enumerate() {
         let trimmed = line.trim();
@@ -507,9 +512,10 @@ fn parse_jsonl(text: &str) -> ParsedSession {
     // file has been read.
     for (index, id) in touch_ids.iter().enumerate() {
         if let Some(id) = id {
-            if let Some((additions, deletions)) = patches.get(id) {
+            if let Some((additions, deletions, preview)) = patches.get(id) {
                 file_touches[index].additions = *additions;
                 file_touches[index].deletions = *deletions;
+                file_touches[index].diff_preview = preview.clone();
             }
         }
     }
@@ -726,6 +732,7 @@ fn file_touch_from_tool_use(
             additions: 0,
             deletions: 0,
             message_id: message_id.to_string(),
+            diff_preview: String::new(),
         },
         id,
     ))
@@ -736,7 +743,7 @@ fn file_touch_from_tool_use(
 /// `tool_use_id` that ties it back to the call lives on the line's
 /// `tool_result` content block. Additions / deletions are counted from the
 /// hunk lines (`+` / `-` prefixes), so the count is exact, never estimated.
-fn tool_result_patch(value: &Value) -> Option<(String, (u32, u32))> {
+fn tool_result_patch(value: &Value) -> Option<(String, (u32, u32, String))> {
     let content = value
         .get("message")
         .and_then(|m| m.get("content"))
@@ -755,25 +762,39 @@ fn tool_result_patch(value: &Value) -> Option<(String, (u32, u32))> {
     let Some(Value::Array(hunks)) = patch else {
         // A correlated result with no structured patch (e.g. a Write) still
         // registers, contributing zero counts rather than being dropped.
-        return Some((tool_use_id, (0, 0)));
+        return Some((tool_use_id, (0, 0, String::new())));
     };
     let mut additions = 0u32;
     let mut deletions = 0u32;
+    // A bounded preview of just the changed lines (no context), so the user can
+    // see *what* changed without storing the whole file.
+    let mut preview_lines: Vec<String> = Vec::new();
     for hunk in hunks {
         if let Some(Value::Array(lines)) = hunk.get("lines") {
             for line in lines {
                 if let Some(text) = line.as_str() {
-                    match text.as_bytes().first() {
+                    let first = text.as_bytes().first();
+                    match first {
                         Some(b'+') => additions += 1,
                         Some(b'-') => deletions += 1,
                         _ => {}
+                    }
+                    if matches!(first, Some(b'+') | Some(b'-'))
+                        && preview_lines.len() < MAX_DIFF_PREVIEW_LINES
+                    {
+                        preview_lines.push(truncate(text, MAX_DIFF_PREVIEW_LINE_CHARS));
                     }
                 }
             }
         }
     }
-    Some((tool_use_id, (additions, deletions)))
+    Some((tool_use_id, (additions, deletions, preview_lines.join("\n"))))
 }
+
+/// How many changed lines a diff preview keeps, and how wide each may be —
+/// enough to read the gist, bounded so it stays summary-level.
+const MAX_DIFF_PREVIEW_LINES: usize = 12;
+const MAX_DIFF_PREVIEW_LINE_CHARS: usize = 120;
 
 /// Render one Claude Code content block (object form). Returns `None` if
 /// the block contributes nothing visible (e.g. `thinking`, which we skip
@@ -1160,6 +1181,11 @@ mod tests {
             .expect("touch recorded");
         assert_eq!(touch.additions, 2);
         assert_eq!(touch.deletions, 1);
+        // The preview keeps the changed lines (no context), so the user sees
+        // what changed without the whole file.
+        assert!(touch.diff_preview.contains("-old"), "preview: {}", touch.diff_preview);
+        assert!(touch.diff_preview.contains("+new1"), "preview: {}", touch.diff_preview);
+        assert!(!touch.diff_preview.contains("ctx"), "context dropped: {}", touch.diff_preview);
     }
 
     #[test]

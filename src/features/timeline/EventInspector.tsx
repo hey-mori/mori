@@ -448,27 +448,57 @@ function EventFilesSection({ touches }: { touches?: FileTouch[] }) {
       <ul className="inspector-files" aria-label="이 턴이 만진 파일">
         {entries.map((entry) => (
           <li key={entry.path} className={`inspector-file kind-${entry.primaryChangeKind}`}>
-            <span className="inspector-file-name" title={entry.path}>
-              {entry.fileName}
-            </span>
-            <span className="inspector-file-meta">
-              <span className="inspector-file-counts">{fileCountsLabel(entry)}</span>
-              {entry.additions > 0 || entry.deletions > 0 ? (
-                <span className="inspector-file-diff">
-                  {entry.additions > 0 ? (
-                    <span className="add">+{entry.additions}</span>
-                  ) : null}
-                  {entry.deletions > 0 ? (
-                    <span className="del">-{entry.deletions}</span>
-                  ) : null}
-                </span>
-              ) : null}
-            </span>
+            <div className="inspector-file-head">
+              <span className="inspector-file-name" title={entry.path}>
+                {entry.fileName}
+              </span>
+              <span className="inspector-file-meta">
+                <span className="inspector-file-counts">{fileCountsLabel(entry)}</span>
+                {entry.additions > 0 || entry.deletions > 0 ? (
+                  <span className="inspector-file-diff">
+                    {entry.additions > 0 ? (
+                      <span className="add">+{entry.additions}</span>
+                    ) : null}
+                    {entry.deletions > 0 ? (
+                      <span className="del">-{entry.deletions}</span>
+                    ) : null}
+                  </span>
+                ) : null}
+              </span>
+            </div>
+            {entry.diffPreview ? <FileDiffPeek diff={entry.diffPreview} /> : null}
           </li>
         ))}
       </ul>
     </section>
   );
+}
+
+/**
+ * A collapsed peek at the changed lines (added / removed only, already bounded
+ * at capture). Folded by default so the inspector stays calm; opening it shows
+ * the gist of the edit without leaving the timeline.
+ */
+function FileDiffPeek({ diff }: { diff: string }) {
+  const lines = diff.split("\n");
+  return (
+    <details className="inspector-file-diffpeek">
+      <summary>변경 미리보기</summary>
+      <pre aria-label="변경된 줄 미리보기">
+        {lines.map((line, index) => (
+          <span key={index} className={diffLineClass(line)}>
+            {line}
+          </span>
+        ))}
+      </pre>
+    </details>
+  );
+}
+
+function diffLineClass(line: string): string {
+  if (line.startsWith("+")) return "diff-add";
+  if (line.startsWith("-")) return "diff-del";
+  return "diff-ctx";
 }
 
 function fileCountsLabel(entry: FileProvenanceEntry): string {

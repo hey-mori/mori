@@ -3912,13 +3912,20 @@ textarea {
 
 .inspector-file {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
   padding: 4px 8px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--gray-50);
+}
+
+.inspector-file-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 
 .inspector-file-name {
@@ -3952,4 +3959,44 @@ textarea {
 
 .inspector-file-diff .del {
   color: var(--red);
+}
+
+.inspector-file-diffpeek > summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.inspector-file-diffpeek[open] > summary {
+  margin-bottom: 4px;
+}
+
+.inspector-file-diffpeek pre {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--base-surface, #fff);
+  border: 1px solid var(--line);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.inspector-file-diffpeek pre span {
+  display: block;
+}
+
+.inspector-file-diffpeek .diff-add {
+  color: var(--green);
+}
+
+.inspector-file-diffpeek .diff-del {
+  color: var(--red);
+}
+
+.inspector-file-diffpeek .diff-ctx {
+  color: var(--muted);
 }

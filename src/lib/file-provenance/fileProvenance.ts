@@ -38,6 +38,8 @@ export type FileProvenanceEntry = {
   /** Lines added / removed across this file's changes (summed from patches). */
   additions: number;
   deletions: number;
+  /** Bounded changed-line preview(s) for this file, joined. Empty when none. */
+  diffPreview: string;
   /** Earliest / latest non-empty timestamp seen across this file's touches. */
   firstAt: string;
   lastAt: string;
@@ -118,6 +120,7 @@ export function rollUpFileTouches(touches: readonly FileTouch[]): FileProvenance
         totalCount: 0,
         additions: 0,
         deletions: 0,
+        diffPreview: "",
         firstAt: "",
         lastAt: "",
         primaryChangeKind: "touched",
@@ -129,6 +132,11 @@ export function rollUpFileTouches(touches: readonly FileTouch[]): FileProvenance
     entry.totalCount += 1;
     entry.additions += touch.additions ?? 0;
     entry.deletions += touch.deletions ?? 0;
+    if (touch.diffPreview) {
+      entry.diffPreview = entry.diffPreview
+        ? `${entry.diffPreview}\n${touch.diffPreview}`
+        : touch.diffPreview;
+    }
     foldTimestamp(entry, touch.at);
   }
 

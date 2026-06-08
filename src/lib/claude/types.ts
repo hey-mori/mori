@@ -130,6 +130,8 @@ export type ClaudeFileTouch = {
   /** Id of the assistant message (JSONL line) this touch came from — matches
    *  `ClaudeMessage.id`, so the import can attribute it to a turn / event. */
   messageId: string;
+  /** Bounded preview of the change (changed lines only, capped). Empty when no patch. */
+  diffPreview: string;
 };
 
 export type ClaudeFileChangeKind =

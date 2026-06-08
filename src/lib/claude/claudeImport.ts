@@ -229,6 +229,7 @@ function toFileTouches(touches: ClaudeFileTouch[]): FileTouch[] {
     additions: touch.additions,
     deletions: touch.deletions,
     messageId: touch.messageId,
+    diffPreview: touch.diffPreview,
   }));
 }
 
