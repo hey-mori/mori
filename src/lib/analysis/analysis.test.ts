@@ -176,6 +176,37 @@ describe("DeterministicQuickPassProvider", () => {
     expect(extraction.summary.sessionSummary).toMatch(/가져온 이벤트 2개/);
   });
 
+  it("filters markdown table / header / code noise and dedupes real decisions", () => {
+    const events: TimelineEvent[] = [
+      // A markdown header + table — the inner "위험" must NOT leak as an issue.
+      event("e1", "aiConversation", "비교표", "## 왜 1년이 나은가 | 측면 | 만료 없음 | 1년 | |---|---|---| | 보안 | 위험 | 안전 |", "src-1"),
+      // A fenced code block — must not become an item.
+      event("e2", "aiConversation", "코드", "```ts\nconst x = required();\n```", "src-1"),
+      // A real decision stated with a markdown link + leading symbol — kept, cleaned.
+      event("e3", "aiConversation", "방향", "이제 [Survey.md](wiki/Survey.md) 기준으로 캐시를 Redis로 채택하기로 결정했어요", "src-1"),
+      // The same decision twice, differing only by a trailing period — dedupes to one.
+      event("e4", "aiConversation", "재확인", "PG에서 MySQL로 전환하기로 결정했어요.", "src-1"),
+      event("e5", "aiConversation", "정리", "PG에서 MySQL로 전환하기로 결정했어요", "src-1"),
+    ];
+    const extraction = extractFromInput({
+      project,
+      session,
+      sources: [source("src-1", "aiConversation", "chat", "e1")],
+      events,
+    });
+
+    const titles = [...extraction.issues, ...extraction.decisions].map((x) => x.title);
+    // No table row, heading, code fence, or markdown link markup leaks into a title.
+    expect(titles.some((t) => /\|.*\|.*\|/.test(t))).toBe(false);
+    expect(titles.some((t) => t.startsWith("#") || t.includes("```") || t.includes("]("))).toBe(false);
+
+    const decisionTitles = extraction.decisions.map((d) => d.title);
+    // The linked decision survives, with the link unwrapped (no URL markup).
+    expect(decisionTitles.some((t) => t.includes("Redis로 채택"))).toBe(true);
+    // The trailing-period twin dedupes to a single decision.
+    expect(decisionTitles.filter((t) => t.includes("MySQL로 전환"))).toHaveLength(1);
+  });
+
   it("runs cleanly when a Git diff event is included in the input", async () => {
     const events: TimelineEvent[] = [
       event(

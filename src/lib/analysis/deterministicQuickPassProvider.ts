@@ -160,7 +160,10 @@ export function extractFromInput(input: AnalysisInput): AnalysisExtraction {
     if (event.actor === "tool") return;
 
     const text = composeEventText(event);
-    const tokens = text.split(/[.!?\n]+/).map((sentence) => sentence.trim()).filter(Boolean);
+    // Split on sentence-ending punctuation FOLLOWED BY whitespace, or newlines —
+    // never on a bare "." so a token like "AGENTS.md)" or "v1.2" stays whole
+    // instead of leaking a fragment ("md) …") as a decision title.
+    const tokens = text.split(/[.!?]+\s+|\n+/).map((sentence) => sentence.trim()).filter(Boolean);
     tokens.forEach((sentence) => {
       // Skip quoted tool output / error envelopes / code fragments even inside
       // a conversation turn — these are not stated issues or decisions.
@@ -267,6 +270,10 @@ const NOISE_PATTERNS: RegExp[] = [
   /^\s*at\s+\S+.*:\d+/, // stack frame
   /\/\*|\*\//, // block-comment / code fragment
   /^\s*(const|let|var|function|class|import|export|return)\b.*[={(]/,
+  /^\s*#{1,6}\s/, // markdown heading
+  /\|.*\|.*\|/, // markdown table row (two+ internal pipes)
+  /```/, // fenced code block
+  /^\s*[-*]\s+\|/, // list item that is actually a table cell
 ];
 
 function isNoiseSentence(sentence: string): boolean {
@@ -444,7 +451,8 @@ function computeConfidence(eventCount: number, issueCount: number, decisionCount
 function dedupeByTitle<T extends { title: string; sourceEventIds: string[] }>(items: T[]): T[] {
   const map = new Map<string, T>();
   items.forEach((item) => {
-    const key = item.title.trim().toLowerCase();
+    // Normalize trailing punctuation so "…묶어서" and "…묶어서." dedupe to one.
+    const key = item.title.trim().toLowerCase().replace(/[\s.,!?·;:)\]]+$/, "");
     if (!key) return;
     const existing = map.get(key);
     if (existing) {
@@ -458,7 +466,15 @@ function dedupeByTitle<T extends { title: string; sourceEventIds: string[] }>(it
 }
 
 function toTitle(sentence: string): string {
-  const cleaned = sentence.replace(/\s+/g, " ").trim();
+  const cleaned = sentence
+    .replace(/\s+/g, " ")
+    // Unwrap markdown links to their text: "[Survey.md](path)" -> "Survey.md".
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    // Strip leading markdown / list / quote / fence symbols so a title never
+    // begins with "#", ">", "* ", "- ", "`", or a stray ")"/"|" fragment.
+    .replace(/^[\s>#*`)|\-]+/, "")
+    .replace(/`+/g, "")
+    .trim();
   if (cleaned.length <= 80) return cleaned;
   const truncated = cleaned.slice(0, 77);
   return `${truncated}...`;
