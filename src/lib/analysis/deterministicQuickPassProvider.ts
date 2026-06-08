@@ -375,17 +375,28 @@ function buildSummary(
   const eventLine = input.events.length
     ? `가져온 이벤트 ${input.events.length}개 · 소스 ${input.sources.length}개.`
     : "아직 가져온 이벤트가 없습니다.";
-  const issueLine = issues.length
-    ? `규칙 기반에서 이슈 후보 ${issues.length}개를 찾았습니다.`
-    : "규칙 기반에서 찾은 이슈 후보 없음.";
+  // Surface the actual top decision / issue titles, not just counts, so even
+  // without an LLM the summary says *what* was decided and *what* needs
+  // attention. Decisions lead (the higher-signal extraction); a few titles, the
+  // rest folded into a "외 N건".
   const decisionLine = decisions.length
-    ? `결정 후보 ${decisions.length}개를 찾았습니다.`
+    ? `주요 결정: ${topTitles(decisions.map((d) => d.title))}.`
     : "규칙 기반에서 찾은 결정 후보 없음.";
+  const issueLine = issues.length
+    ? `주의가 필요한 항목: ${topTitles(issues.map((i) => i.title))}.`
+    : "규칙 기반에서 찾은 이슈 후보 없음.";
 
-  const sessionSummary = [eventLine, issueLine, decisionLine].join(" ");
+  const sessionSummary = [eventLine, decisionLine, issueLine].join(" ");
   const resumePrompt = buildResumePromptText(input, issues, decisions, highlights);
 
   return { sessionSummary, resumePrompt, highlights };
+}
+
+/** Join the first few titles (truncated) and fold the rest into "외 N건". */
+function topTitles(titles: string[], take = 2, max = 56): string {
+  const top = titles.slice(0, take).map((title) => truncate(title, max));
+  const rest = titles.length - top.length;
+  return rest > 0 ? `${top.join(" · ")} 외 ${rest}건` : top.join(" · ");
 }
 
 function buildResumePromptText(
