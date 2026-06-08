@@ -195,6 +195,27 @@ describe("useSessionStore Quick Pass provider flow", () => {
     expect(state.analysisProviderLabel).toBe("Ollama ok");
   });
 
+  it("merges the deterministic floor when the LLM returns nothing, even with fallback off", async () => {
+    seedDraftWithImport(); // the note states a 위험 / 미정 / TODO
+    useSessionStore.getState().updateAnalysisSettings({
+      provider: "ollama",
+      fallbackToDeterministic: false,
+    });
+
+    // The weak-model case: the LLM succeeds but extracts nothing.
+    const emptyOllama = buildProvider("ollama-quick-pass-v1", { label: "Ollama empty" });
+    const result = await useSessionStore.getState().runQuickPass(emptyOllama);
+
+    expect(result).not.toBeNull();
+    const state = useSessionStore.getState();
+    expect(state.analysisStatus).toBe("succeeded");
+    // The LLM keeps its identity, but the empty board is filled by the floor —
+    // unconditionally, even though fallbackToDeterministic is off.
+    expect(state.analysis?.providerName).toBe("ollama-quick-pass-v1");
+    expect(state.analysis?.issues.length ?? 0).toBeGreaterThan(0);
+    expect(state.analysis?.notes.some((note) => note.includes("규칙 기반에서"))).toBe(true);
+  });
+
   it("falls back to deterministic when an OpenAI-compatible provider fails and fallback is enabled", async () => {
     seedDraftWithImport();
     useSessionStore.getState().updateAnalysisSettings({
@@ -309,14 +330,15 @@ describe("useSessionStore desktop persistence", () => {
     expect(state.source).toBe("desktop-sqlite");
   });
 
-  it("clearAllDataAndViewDemo wipes SQLite and returns to demo in desktop mode", async () => {
+  it("clearAllDataAndViewDemo wipes SQLite and returns to an empty real session", async () => {
     const before = useSessionStore.getState().dataResetNonce;
     await useSessionStore.getState().clearAllDataAndViewDemo();
 
     expect(desktopClearCalls).toBe(1);
     const state = useSessionStore.getState();
-    expect(state.draft).toBeNull();
-    expect(state.source).toBe("demo");
+    expect(state.draft?.session.title).toBe("새 Mori 작업");
+    expect(state.imports).toEqual([]);
+    expect(state.source).toBe("browser-draft");
     expect(state.dataResetNonce).toBe(before + 1);
   });
 

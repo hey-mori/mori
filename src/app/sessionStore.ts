@@ -349,8 +349,8 @@ export type SessionState = {
     now?: string;
   }) => StoredSessionDraft;
   /**
-   * Wipe all locally-persisted work data and return to the bundled demo
-   * session. Unlike `resetToDemo` — which only drops the active draft and
+   * Wipe all locally-persisted work data and return to a blank real session.
+   * Unlike `resetToDemo` — which only drops the active draft and
    * leaves other saved sessions, accepted memories, and package drafts in
    * place — this clears every session and its analyses / memory bodies,
    * accepted Project Memory, the audit log, and saved packages. Quick Pass
@@ -1002,7 +1002,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (service.isDesktop()) {
       // Desktop sessions live in SQLite, not localStorage — wipe them too.
       // A failure here is non-fatal: localStorage is already cleared and the
-      // demo view still shows; the SQLite list refresh will reveal any rows
+      // new empty local session still opens; the SQLite list refresh will reveal any rows
       // that survived so the state stays honest rather than silently wrong.
       try {
         await service.clearAllDesktopData();
@@ -1011,8 +1011,23 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         // surfaces the real post-clear state.
       }
     }
+    const now = new Date().toISOString();
+    const emptyDraft = createSessionDraft({
+      sessionTitle: "새 Mori 작업",
+      projectName: "내 작업",
+      selectedSources: [],
+      recordingMode: "summary",
+      llmProvider: "ollama",
+      llmModel: "llama3.1:8b",
+      storageLocation: "browser:localStorage",
+      now,
+      startedAt: now,
+      endedAt: now,
+      status: "recording",
+    });
+    const stored = repository.saveCurrentSessionDraft(emptyDraft);
     set({
-      draft: null,
+      draft: stored,
       imports: [],
       pendingReview: null,
       lastApplied: null,
@@ -1021,7 +1036,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       analysisError: null,
       analysisProviderLabel: null,
       analysisFallbackUsed: false,
-      source: "demo",
+      source: "browser-draft",
       pendingNewSession: null,
       demoSessionId: null,
       dataResetNonce: get().dataResetNonce + 1,
@@ -1075,18 +1090,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       let result = await primary.analyze(analysisInput);
       // Rule-based floor: when an LLM run succeeds but extracts nothing, merge
       // in the deterministic engine's findings so a weak model never leaves the
-      // session with an empty analysis. Only triggers on a genuinely empty LLM
-      // result, so a rich result is never diluted with heuristic items. Gated by
-      // the same deterministic safety-net opt-in as the failure fallback.
+      // session with an empty analysis. This runs UNCONDITIONALLY — it is not
+      // gated by `fallbackToDeterministic` (which governs the failure fallback).
+      // An empty board is strictly worse than heuristics, and the merge only
+      // adds items the LLM lacked, so a rich result is never diluted. A real
+      // Claude / Codex session always states issues and decisions in its turns,
+      // so this is what takes the common "830 turns, 0 issues" case to a
+      // populated board.
       const llmFoundNothing =
         result.issues.length === 0 &&
         result.decisions.length === 0 &&
         result.nextActions.length === 0;
-      if (
-        llmFoundNothing &&
-        effective.fallbackToDeterministic &&
-        primary.name !== "deterministic-heuristic-v1"
-      ) {
+      if (llmFoundNothing && primary.name !== "deterministic-heuristic-v1") {
         try {
           const floor = await getDefaultProvider().analyze(analysisInput);
           result = mergeAnalysisFloor(result, floor);
