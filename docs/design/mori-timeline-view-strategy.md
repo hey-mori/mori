@@ -69,3 +69,42 @@ Future path:
   docs, and URLs.
 - Add phase clustering and outcome/milestone summaries once real mixed-source
   sessions expose the right grouping pressure.
+
+## Two altitudes: scan and read (direction, deferred)
+
+User direction (2026-06-08), prompted by comparing the swimlane 흐름 view with
+the Workbench message feed. The same work-memory model deserves two reading
+altitudes, not two separate timelines:
+
+- **Scan altitude** (today's 흐름 swimlane): when and in what shape the work
+  flowed, density and rhythm over the time axis. Calm, compact, bundled.
+- **Read altitude** (the Workbench-style linear feed): what actually happened,
+  message by message, with the real tool calls / files / prose. Content-first.
+
+Key realisation: the read altitude already has a seed. The 흐름 toolbar already
+offers `타임라인 | 목록 | 연결`. So the path is to **grow the `목록` mode into a
+strong read altitude and unify it with the Workbench feed**, not to add a third
+view. One model, two altitudes; the user picks by intent (scan vs read) and by
+situation (calm overview vs a big readable trace).
+
+Hard parts, deliberately deferred until designed properly (getting these wrong
+makes the surface worse, not better):
+
+1. **Workbench ↔ Timeline unification.** Both are projections of the same
+   session model at different altitudes; they should share one source of truth,
+   not diverge into two feeds.
+2. **Real time.** New events arrive while either altitude is open; both must
+   update smoothly (slide-in / settle, no jarring reflow, no fake spinners).
+   Builds on the foreground Live Follow already specified.
+3. **Default altitude + switch UX.** Which altitude leads, per person and per
+   situation, and how switching preserves focus / scroll position.
+
+Smaller, safe steps that move toward this without the hard architecture:
+
+- Enrich the `목록` (read) mode with the per-turn provenance already captured
+  (`event.fileTouches`): a compact "this turn touched X · +N -M" line, so the
+  read altitude shows what each turn did, closer to the Workbench feed.
+- Make actor (user / assistant / tool) legible at a glance in the read mode.
+
+Not now: a brand-new third view, a Gantt/kanban board, or a real-time engine
+rebuild. Capture pressure from real mixed-source sessions first.
