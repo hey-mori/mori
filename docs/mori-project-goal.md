@@ -211,14 +211,32 @@ that is called out.
   The other two methods are 붙여넣기 (paste a transcript, platform follows the
   agent), or 빈 세션으로 시작 (anchor first, since Mori never starts or drives
   the agent). Retention is one unified rule (summary + metadata only, no
-  per-session toggle); detected / pasted imports route through Import Review
-  like every other import. Owned by `src/features/start-session/`
+  per-session toggle). Detected / pasted imports that create a **new** session
+  now materialize immediately (`importAndOpenAsNewSession`): the deterministic
+  parse is applied at once and the session opens populated, with no Import
+  Review gate in front of evidence display. Import Review remains the gate for
+  adding evidence to an existing session and for other evidence families; the
+  durable-memory gate (consolidation) is unchanged. See
+  `docs/design/import-into-evidence-tab.md`. Owned by `src/features/start-session/`
   (`StartSessionView` + `DetectedConversationsModal`).
 - Repository settings with explicit user-added paths, optional
   on-demand `verify_repository_path` Tauri command, and verification
   freshness labels (no background re-verification).
 - `SourceRef` with typed `trustLevel`, `redactionStatus`,
   `rawRetention`, and `relatedEventIds`.
+- File provenance from agent tool calls. The Claude Code reader preserves
+  structured `tool_use` file payloads as `ClaudeFileTouch` /
+  `SourceRef.fileTouches` (`src-tauri/src/claude/code.rs`,
+  `src/domain/types.ts`) instead of flattening them to rendered text, carried
+  through import (`src/lib/claude/claudeImport.ts`). Pure rollup + filesystem
+  reconciliation helpers (`src/lib/file-provenance/fileProvenance.ts`), Tauri
+  `resolve_file_locations` (present / moved / missing, move detected by bounded
+  basename search) + `reveal_path_in_os` (`src-tauri/src/files.rs`), per-file
+  `+N / -M` line counts correlated from each tool call's
+  `toolUseResult.structuredPatch`, and the "이 세션이 만진 파일" panel in Session
+  개요 (`src/features/session/SessionFilesPanel.tsx`). Desktop + real-data
+  gated; timeline glyphs (per-turn attribution) are a follow-up. See
+  `docs/design/agent-work-visibility-vision.md`.
 - Stable `connectorEventId` (`<connectorId>::<externalSession>::<eventId>`)
   for identity-based deduplication.
 - Source-level re-import summary
