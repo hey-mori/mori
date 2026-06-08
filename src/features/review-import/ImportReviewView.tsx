@@ -4,12 +4,19 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { useSessionStore } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import type { ReviewDraftMeta } from "../../lib/review";
+import type { ReviewDraftMeta, ReviewEventItem } from "../../lib/review";
 import {
   buildImportReviewSummary,
   getReviewCounts,
   isReviewApplyable,
 } from "../../lib/review";
+import {
+  DISCLOSURE_LABELS,
+  projectEventRequestSummary,
+  type DisclosureLevel,
+} from "../../lib/disclosure";
+import type { EventActor } from "../../domain/types";
+import { formatTime } from "../../lib/formatting/time";
 import { buildImportDigest, type ImportDigest } from "../../lib/import/importDigest";
 import { SourceSummaryCard } from "./SourceSummaryCard";
 import { ExtractedEventCard } from "./ExtractedEventCard";
@@ -36,6 +43,9 @@ export function ImportReviewView({ embedded = false }: { embedded?: boolean } = 
   const editEvent = useSessionStore((state) => state.editPendingReviewEvent);
   const applyPendingReview = useSessionStore((state) => state.applyPendingReview);
   const cancelPendingReview = useSessionStore((state) => state.cancelPendingReview);
+  const disclosureLevel = useSessionStore(
+    (state) => state.analysisSettings.requestDisclosureLevel,
+  );
   const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
 
   const draft = pendingReview?.draft ?? null;
@@ -112,6 +122,8 @@ export function ImportReviewView({ embedded = false }: { embedded?: boolean } = 
       ) : null}
 
       <SourceSummaryCard source={draft.source} />
+
+      <OriginalConversation events={draft.events} level={disclosureLevel} />
 
       <section className="review-events" aria-label="추출된 타임라인 이벤트">
         <header className="review-events-head">
@@ -201,6 +213,68 @@ function ImportDigestStrip({ digest }: { digest: ImportDigest }) {
         <span className="import-digest-span">· {digest.span.durationLabel}</span>
       ) : null}
     </div>
+  );
+}
+
+const ORIGINAL_ACTOR_LABEL: Partial<Record<EventActor, string>> = {
+  user: "나",
+  assistant: "AI",
+};
+
+const ORIGINAL_PREVIEW_CAP = 60;
+
+/**
+ * A read-only preview of the imported conversation itself, distinct from the
+ * accept / discard event rows below. It renders the user / assistant turns as a
+ * transcript, projected through the user's disclosure level
+ * (`analysisSettings.requestDisclosureLevel`), so what is shown follows the
+ * same "store everything, show by setting" rule as every other surface: at 원문
+ * the user's own requests show in full, at 요약 / 요지 they are condensed, at
+ * 숨김 they are withheld. Folded behind a `<details>` so the curation list stays
+ * the lead, and capped so a huge import does not render thousands of nodes.
+ */
+function OriginalConversation({
+  events,
+  level,
+}: {
+  events: ReviewEventItem[];
+  level: DisclosureLevel;
+}) {
+  const turns = events.filter(
+    (item) => item.event.actor === "user" || item.event.actor === "assistant",
+  );
+  if (turns.length === 0) return null;
+  const shown = turns.slice(0, ORIGINAL_PREVIEW_CAP);
+  const hiddenCount = turns.length - shown.length;
+
+  return (
+    <details className="review-original">
+      <summary>
+        <span className="review-original-title">원본 대화 {turns.length}턴</span>
+        <span className="review-original-scope">표시 범위 · {DISCLOSURE_LABELS[level]}</span>
+      </summary>
+      <ol className="review-original-turns">
+        {shown.map((item) => {
+          const projection = projectEventRequestSummary(item.event, level);
+          const actor = item.event.actor ?? "assistant";
+          return (
+            <li key={item.id} className={`review-original-turn actor-${actor}`}>
+              <span className="review-original-turn-meta">
+                {formatTime(item.event.start)} · {ORIGINAL_ACTOR_LABEL[actor] ?? "기타"}
+              </span>
+              <p className="review-original-turn-body">
+                {projection.text || (level === "hidden" ? "(공개 설정에 따라 숨김)" : "(내용 없음)")}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+      {hiddenCount > 0 ? (
+        <p className="review-original-more">
+          전체 {turns.length}턴 중 {shown.length}턴 표시 · 나머지 {hiddenCount}턴은 아래 목록에서 확인
+        </p>
+      ) : null}
+    </details>
   );
 }
 
