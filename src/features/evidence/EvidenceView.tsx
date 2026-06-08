@@ -35,6 +35,7 @@ import type {
   QuickPassProviderKind,
 } from "../../lib/analysis";
 import { SOURCE_REGISTRY } from "../../lib/sources/sourceRegistry";
+import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import { ImportReviewView } from "../review-import/ImportReviewView";
 import { ImportedSourceRow } from "./ImportedSourceRow";
 import {
@@ -231,6 +232,10 @@ export function EvidenceView() {
         decisionCount={analysis?.decisions.length ?? 0}
         nextActionCount={analysis?.nextActions.length ?? 0}
         confidence={analysis?.confidence ?? null}
+        generatedAt={analysis?.generatedAt ?? null}
+        durationMs={analysis?.durationMs ?? null}
+        inputEventCount={analysis?.inputEventCount ?? null}
+        inputSourceCount={analysis?.inputSourceCount ?? null}
         notes={analysis?.notes ?? []}
         planLine={describeAnalysisPlan(
           buildAnalysisPlan({
@@ -525,6 +530,10 @@ function QuickPassControl({
   decisionCount,
   nextActionCount,
   confidence,
+  generatedAt,
+  durationMs,
+  inputEventCount,
+  inputSourceCount,
   notes,
   planLine,
   settings,
@@ -548,6 +557,10 @@ function QuickPassControl({
   decisionCount: number;
   nextActionCount: number;
   confidence: number | null;
+  generatedAt: string | null;
+  durationMs: number | null;
+  inputEventCount: number | null;
+  inputSourceCount: number | null;
   notes: string[];
   planLine: string;
   settings: QuickPassAnalysisSettings;
@@ -678,6 +691,16 @@ function QuickPassControl({
               <span>다음 액션</span>
             </li>
           </ul>
+          {generatedAt ? (
+            <p className="analysis-panel-produced">
+              {describeAnalysisProduction({
+                inputEventCount,
+                inputSourceCount,
+                durationMs,
+                generatedAt,
+              })}
+            </p>
+          ) : null}
           {notes.length ? (
             <ul className="analysis-panel-notes">
               {notes.map((note) => (
@@ -696,4 +719,33 @@ function describeProviderName(name: string | null): string {
   if (name === "openai-compatible-quick-pass-v1") return "OpenAI 호환 LLM";
   if (name === "deterministic-heuristic-v1") return "휴리스틱 (LLM 미사용)";
   return "알 수 없는 제공자";
+}
+
+/**
+ * One quiet "how it was produced" line for a finished analysis: what was fed in
+ * (turns · sources), how long it took, and when it ran. Pure factual
+ * transparency from the run result, so the user can judge the output's basis.
+ */
+function describeAnalysisProduction({
+  inputEventCount,
+  inputSourceCount,
+  durationMs,
+  generatedAt,
+}: {
+  inputEventCount: number | null;
+  inputSourceCount: number | null;
+  durationMs: number | null;
+  generatedAt: string;
+}): string {
+  const parts: string[] = [];
+  if (inputEventCount != null) parts.push(`대화 ${inputEventCount}턴`);
+  if (inputSourceCount != null) parts.push(`소스 ${inputSourceCount}개`);
+  const basis = parts.length > 0 ? `${parts.join(" · ")} 분석` : "분석";
+  const segments = [basis];
+  if (durationMs != null && durationMs > 0) {
+    segments.push(durationMs < 1000 ? "1초 미만" : `${(durationMs / 1000).toFixed(1)}초`);
+  }
+  const when = formatSidebarRelative(generatedAt);
+  if (when) segments.push(when);
+  return segments.join(" · ");
 }
