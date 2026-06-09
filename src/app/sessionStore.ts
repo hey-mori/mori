@@ -1065,10 +1065,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
 
     const settings = state.analysisSettings;
-    // A one-off run (e.g. an engine preset chosen for this run only) passes the
-    // provider it built plus the engine settings it was built from, so the
-    // fallback decision reflects that engine rather than the persisted one.
-    const effective = fallbackSettings ?? settings;
     const primary = provider ?? resolveProviderFromSettings(settings);
     const events = imports.flatMap((entry) => entry.events);
     const sources = imports.map((entry) => entry.source);
@@ -1122,18 +1118,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     } catch (primaryError) {
       const primaryMessage = primaryError instanceof Error ? primaryError.message : "Quick Pass failed";
 
-      if (
-        effective.provider !== "deterministic" &&
-        effective.fallbackToDeterministic &&
-        primary.name !== "deterministic-heuristic-v1"
-      ) {
+      // When the chosen LLM engine FAILS (e.g. Ollama unreachable, "Failed to
+      // fetch"), always fall back to the deterministic engine — it runs offline
+      // and cannot fail to fetch, so the board is never left at "분석 실패 · 0".
+      // The failure is surfaced honestly as a note + the 폴백 사용됨 flag, not
+      // hidden. Not gated by `fallbackToDeterministic`: an empty failed board
+      // helps no one. Only a deterministic-primary failure (nothing left to fall
+      // back to) reaches the hard-failure path below.
+      if (primary.name !== "deterministic-heuristic-v1") {
         const deterministic = getDefaultProvider();
         try {
           const fallbackResult = await deterministic.analyze(analysisInput);
           const annotated: AnalysisResult = {
             ...fallbackResult,
             notes: [
-              `${primary.label} failed: ${primaryMessage}. Fell back to ${deterministic.label}.`,
+              `${primary.label} 분석 실패: ${primaryMessage} · 규칙 기반으로 대체했습니다.`,
               ...fallbackResult.notes,
             ],
           };

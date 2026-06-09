@@ -12,6 +12,16 @@ describe("getQuickPassFallbackNotice", () => {
     expect(notice).toContain("설정");
   });
 
+  it("reads the Korean note shape the run loop now writes", () => {
+    const notice = getQuickPassFallbackNotice([
+      "Ollama (gemma4:e4b) 분석 실패: Failed to fetch · 규칙 기반으로 대체했습니다.",
+      "규칙 기반에서 이슈 3건을 찾았습니다.",
+    ]);
+    expect(notice).not.toBeNull();
+    expect(notice).toContain("Failed to fetch");
+    expect(notice).toContain("설정");
+  });
+
   it("returns null when there was no fallback", () => {
     expect(getQuickPassFallbackNotice(["Heuristic pass found 3 issues."])).toBeNull();
     expect(getQuickPassFallbackNotice([])).toBeNull();

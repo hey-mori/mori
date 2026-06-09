@@ -162,22 +162,27 @@ describe("useSessionStore Quick Pass provider flow", () => {
     expect(state.analysisStatus).toBe("succeeded");
     expect(state.analysisFallbackUsed).toBe(true);
     expect(state.analysis?.providerName).toBe("deterministic-heuristic-v1");
-    expect(state.analysis?.notes.some((note) => note.includes("Fell back"))).toBe(true);
+    expect(state.analysis?.notes.some((note) => note.includes("규칙 기반으로 대체"))).toBe(true);
   });
 
-  it("surfaces the error and does not pretend success when fallback is disabled", async () => {
-    seedDraftWithImport();
+  it("falls back to deterministic even when fallback is disabled, surfacing the LLM failure", async () => {
+    seedDraftWithImport(); // the note states a 위험 / 미정 / TODO the floor can extract
     useSessionStore.getState().updateAnalysisSettings({ provider: "ollama", fallbackToDeterministic: false });
 
     const failingOllama = buildProvider("ollama-quick-pass-v1", { fail: true, label: "Ollama fail" });
     const result = await useSessionStore.getState().runQuickPass(failingOllama);
 
-    expect(result).toBeNull();
+    // The deterministic engine runs offline and cannot fail-to-fetch, so a failed
+    // LLM (e.g. Ollama unreachable, "Failed to fetch") never leaves the board at
+    // "분석 실패 · 0" — it falls back unconditionally and surfaces the failure as a
+    // note, even though fallbackToDeterministic is off.
+    expect(result).not.toBeNull();
     const state = useSessionStore.getState();
-    expect(state.analysisStatus).toBe("failed");
-    expect(state.analysisFallbackUsed).toBe(false);
-    expect(state.analysisError).toContain("provider boom");
-    expect(selectHasRealAnalysis(state)).toBe(false);
+    expect(state.analysisStatus).toBe("succeeded");
+    expect(state.analysisFallbackUsed).toBe(true);
+    expect(state.analysis?.providerName).toBe("deterministic-heuristic-v1");
+    expect(state.analysis?.notes.some((note) => note.includes("provider boom"))).toBe(true);
+    expect(selectHasRealAnalysis(state)).toBe(true);
   });
 
   it("succeeds without fallback when the chosen provider works", async () => {
@@ -236,10 +241,10 @@ describe("useSessionStore Quick Pass provider flow", () => {
     expect(state.analysis?.providerName).toBe("deterministic-heuristic-v1");
   });
 
-  it("uses the per-run engine override for the fallback decision, not the persisted settings", async () => {
+  it("falls back to deterministic for a one-off engine override run too", async () => {
     seedDraftWithImport();
-    // Persisted engine is deterministic and would never fall back, but the
-    // one-off run is an Ollama engine with fallback enabled.
+    // A one-off Ollama run is passed explicitly while the persisted engine is
+    // deterministic; a failing one-off LLM still falls back to the floor.
     useSessionStore.getState().updateAnalysisSettings({ provider: "deterministic" });
 
     const failingOllama = buildProvider("ollama-quick-pass-v1", { fail: true, label: "Ollama once" });
