@@ -161,6 +161,7 @@ function buildCandidate(
       actor: turn.actor,
       turnId,
       turnIndex: index,
+      ...(turn.openedByUser ? { openedByUser: true } : {}),
       ...(turn.toolName ? { toolName: turn.toolName } : {}),
       ...(tokenUsage ? { tokenUsage } : {}),
       ...(eventFileTouches && eventFileTouches.length > 0
@@ -329,6 +330,8 @@ type ConversationTurn = {
   actor: EventActor;
   /** Tool name when `actor` is `'tool'` and one could be parsed, else null. */
   toolName: string | null;
+  /** Whether this turn opened with a real human prompt (not a tool result). */
+  openedByUser: boolean;
 };
 
 /**
@@ -394,6 +397,9 @@ function messageToTurn(
       : (human?.content ?? assistant?.content ?? "").trim();
   const summarySeed = (assistant?.content ?? human?.content ?? "").trim();
   const { actor, toolName } = classifyTurnActor(human, assistant);
+  // A real human prompt (not a tool-result envelope) opens a request unit — even
+  // when the same turn then runs a tool, so `actor` may be 'tool' here.
+  const openedByUser = human?.role === "human" && !humanIsToolResult;
   return {
     title: summarize(titleSeed || "Untitled Claude turn", 90),
     summary: summarize(summarySeed || "(no response captured)", 220),
@@ -404,6 +410,7 @@ function messageToTurn(
     assistantMessageId: assistant?.id ?? null,
     actor,
     toolName,
+    openedByUser,
   };
 }
 

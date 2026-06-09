@@ -19,6 +19,7 @@ export type TimelineSourceFamily =
 
 export type ActivityKind =
   | "conversation"
+  | "explore"
   | "command"
   | "fileChange"
   | "commit"
@@ -42,6 +43,7 @@ export type ActivityKind =
 
 export type ActivityLaneId =
   | "conversation"
+  | "explore"
   | "command"
   | "files"
   | "git"
@@ -96,6 +98,7 @@ export type EventActivityDescriptor = {
 
 export const timelineActivityLaneOrder: ActivityLaneId[] = [
   "conversation",
+  "explore",
   "command",
   "files",
   "git",
@@ -126,6 +129,7 @@ export const timelineActivityLaneOrder: ActivityLaneId[] = [
  */
 export const CANONICAL_TIMELINE_LANES: ActivityLaneId[] = [
   "conversation",
+  "explore",
   "command",
   "files",
   "research",
@@ -182,6 +186,7 @@ const SOURCE_FAMILY_VISUALS: Record<TimelineSourceFamily, ActivityVisuals> = {
 
 const ACTIVITY_VISUALS: Record<ActivityKind, ActivityVisuals> = {
   conversation: { label: "대화", shortLabel: "대화", tone: "purple", description: "사람·AI·토론 발언" },
+  explore: { label: "탐색", shortLabel: "탐색", tone: "cyan", description: "파일 읽기·검색 (Read·Grep·Glob·LS)" },
   command: { label: "명령", shortLabel: "명령", tone: "gray", description: "터미널 또는 도구 명령 활동" },
   fileChange: { label: "파일 변경", shortLabel: "파일", tone: "blue", description: "파일·에디터·코드 변경" },
   commit: { label: "커밋", shortLabel: "커밋", tone: "green", description: "Git 커밋 또는 저장소 체크포인트" },
@@ -208,6 +213,7 @@ const ACTIVITY_VISUALS: Record<ActivityKind, ActivityVisuals> = {
 // labels, so a lane / conversation-flow group header reads as one calm word.
 const LANE_VISUALS: Record<ActivityLaneId, ActivityVisuals> = {
   conversation: { label: "대화", shortLabel: "대화", tone: "purple", description: "사람·AI·토론 발언" },
+  explore: { label: "탐색", shortLabel: "탐색", tone: "cyan", description: "파일 읽기·검색 (Read·Grep·Glob·LS)" },
   command: { label: "명령", shortLabel: "명령", tone: "gray", description: "터미널 또는 도구 명령" },
   files: { label: "파일", shortLabel: "파일", tone: "blue", description: "파일·코드·문서 변경, Git diff·커밋 포함" },
   git: { label: "Git", shortLabel: "Git", tone: "green", description: "Diff·커밋·저장소 맥락" },
@@ -405,6 +411,11 @@ function toolActivityKind(toolName: string | undefined, text: string): ActivityK
   if (/^(bash|shell|run|exec|sh)$/.test(name)) {
     return looksLikeTest(text) ? "testRun" : "command";
   }
+  // Read-only exploration tools — the agent looking around, not running or
+  // changing anything — read as their own "탐색" activity.
+  if (/^(read|grep|glob|ls|list|find|cat|search|view|tree|head|tail)/.test(name)) {
+    return "explore";
+  }
   return "command";
 }
 
@@ -416,6 +427,8 @@ export function getTimelineLaneForEvent(args: {
   switch (kind) {
     case "conversation":
       return "conversation";
+    case "explore":
+      return "explore";
     case "command":
       return "command";
     case "fileChange":

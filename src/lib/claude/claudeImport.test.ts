@@ -136,4 +136,30 @@ describe("buildImportCandidateFromClaudeCodeSession - turn titles", () => {
 
     expect(candidate.events[0].title).toBe("세션 이어가기");
   });
+
+  it("marks a user-opened turn with openedByUser even when it runs a tool", () => {
+    const detail = codeSession(
+      [
+        { id: "u1", role: "human", content: "벡터스토어 확인해줘", createdAt: "2026-01-01T00:00:00Z" },
+        {
+          id: "m1",
+          role: "assistant",
+          content: "🔧 Grep: vectorstore",
+          createdAt: "2026-01-01T00:00:01Z",
+          subkind: "tool_use",
+        },
+      ],
+      [],
+    );
+
+    const candidate = buildImportCandidateFromClaudeCodeSession(detail, {
+      projectId: "proj",
+      sessionId: "sess",
+    });
+
+    // The turn ran a tool (actor 'tool') yet was opened by the user's request,
+    // so openedByUser anchors it as a request unit — actor alone would miss it.
+    expect(candidate.events[0].actor).toBe("tool");
+    expect(candidate.events[0].openedByUser).toBe(true);
+  });
 });

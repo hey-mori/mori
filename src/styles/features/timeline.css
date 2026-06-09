@@ -1972,6 +1972,19 @@ kbd {
 .event-card.card-orange { background: #fff9f1; }
 .event-card.card-gray   { background: white; }
 
+/* A card that opened a request → work unit (a user ask). Marked with a calm
+   full purple-tinted border and a faintly bolder title, never a left bar, so
+   the eye can find where each request starts in the swimlane without the
+   chip shouting over the work around it. */
+.event-card.is-request {
+  border-color: rgba(124, 92, 255, 0.42);
+  background: #f9f7ff;
+}
+
+.event-card.is-request .event-card-title {
+  font-weight: 750;
+}
+
 .event-card.is-compact {
   padding: 0 7px;
 }

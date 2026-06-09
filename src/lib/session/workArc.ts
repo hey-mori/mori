@@ -35,6 +35,7 @@ type PhaseSeedEvent = {
   start: string;
   title: string;
   actor?: string;
+  openedByUser?: boolean;
   fileTouches?: readonly { path: string; changeKind: string }[];
 };
 
@@ -140,7 +141,7 @@ function phaseLabel(segment: PhaseSeedEvent[]): string {
   // first clause so a run-on opener does not become a messy label, and fall back
   // to a neutral "이어서 작업" when the opener is boilerplate or a contentless
   // continuation prompt (those read worse than an honest neutral label).
-  const request = segment.find((event) => event.actor === "user");
+  const request = segment.find((event) => event.openedByUser);
   const seed = (request ?? segment[0])?.title ?? "";
   if (isAgentBoilerplateTitle(seed)) return "이어서 작업";
   // First sentence, keeping its terminator (so "왜 이렇게?" stays a question).

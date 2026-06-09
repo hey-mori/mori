@@ -12,6 +12,7 @@ import {
   PackageCheck,
   PenTool,
   Rocket,
+  Search,
   Terminal,
   Ticket,
   Workflow,
@@ -21,6 +22,7 @@ import type { ActivityLaneId, ActivityKind, TimelineSourceFamily } from "../../.
 
 export const activityLaneIcons: Record<ActivityLaneId, LucideIcon> = {
   conversation: Bot,
+  explore: Search,
   command: Terminal,
   files: FileCode2,
   git: GitBranch,
@@ -40,6 +42,7 @@ export const activityLaneIcons: Record<ActivityLaneId, LucideIcon> = {
 
 export const activityKindIcons: Record<ActivityKind, LucideIcon> = {
   conversation: Bot,
+  explore: Search,
   command: Terminal,
   fileChange: FileCode2,
   commit: GitBranch,

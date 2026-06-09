@@ -51,9 +51,10 @@ describe("tool-aware lane routing", () => {
     ).toBe("command");
   });
 
-  it("routes read-only tools to the command lane", () => {
-    expect(getTimelineLaneForEvent({ event: toolEvent("Read") })).toBe("command");
-    expect(getTimelineLaneForEvent({ event: toolEvent("Grep") })).toBe("command");
+  it("routes read-only exploration tools to the 탐색 lane, generic tools to 명령", () => {
+    expect(getTimelineLaneForEvent({ event: toolEvent("Read") })).toBe("explore");
+    expect(getTimelineLaneForEvent({ event: toolEvent("Grep") })).toBe("explore");
+    expect(getTimelineLaneForEvent({ event: toolEvent("Glob") })).toBe("explore");
     expect(getTimelineLaneForEvent({ event: toolEvent(undefined) })).toBe("command");
   });
 

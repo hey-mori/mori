@@ -115,7 +115,7 @@ export function TimelineChronoList({
             key={item.id}
             event={item.event}
             selected={selected}
-            isRequest={item.event.actor === "user"}
+            isRequest={item.event.openedByUser === true}
             onSelect={() => onSelect(item.id)}
             menuItems={eventMenuItems?.(item.event)}
             sourceIndex={model.sourceIndex}

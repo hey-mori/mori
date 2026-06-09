@@ -315,6 +315,15 @@ export type TimelineEvent = {
    */
   actor?: EventActor;
   /**
+   * Whether this turn was opened by a real user request (a human prompt, not a
+   * tool result). Distinct from `actor`: a turn can run tools (so `actor` is
+   * `'tool'`) yet still be the one the user kicked off. Marks the boundary of a
+   * "request → AI work" unit and drives the 요청 affordance. Additive — omitted
+   * on events that did not open with a user prompt, and on non-conversation
+   * sources.
+   */
+  openedByUser?: boolean;
+  /**
    * Stable id of the conversation turn this event belongs to. A captured
    * Claude conversation is a sequence of turns; one imported turn becomes one
    * event today, but the id is carried as data so future per-message events

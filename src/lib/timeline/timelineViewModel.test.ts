@@ -116,6 +116,7 @@ describe("buildTimelineRenderModel", () => {
     const model = buildModel(mockSession);
     expect(model.lanes.map((lane) => lane.type)).toEqual([
       "conversation",
+      "explore",
       "command",
       "files",
       "git",

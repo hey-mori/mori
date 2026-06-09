@@ -71,7 +71,9 @@ export function TimelineEventCard({
   return (
     <>
       <button
-        className={`event-card card-${vm.tone} ${focusStateClassName(focusState)} ${densityClass}`}
+        className={`event-card card-${vm.tone} ${focusStateClassName(focusState)} ${densityClass}${
+          event.openedByUser ? " is-request" : ""
+        }`}
         onClick={() => onSelect(event.id)}
         onContextMenu={menuItems ? menu.onContextMenu : undefined}
         onKeyDown={menuItems ? menu.onKeyDown : undefined}
