@@ -1,4 +1,4 @@
-import { Filter, List, MoreHorizontal, Route, Rows3, Sparkles } from "lucide-react";
+import { Filter, List, Route, Rows3, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { SearchField } from "../../components/ui/SearchField";
 import {
@@ -7,12 +7,9 @@ import {
   type ActivityLaneId,
 } from "../../lib/timeline/activityModel";
 
-/** The views the 흐름 tab leads with directly: the raw conversation stream, the
- *  AI work-flow, and the time-axis swimlane. */
-export type TimelinePrimaryMode = "stream" | "workflow" | "swimlane";
-/** The experimental causal map, reachable through the "고급" affordance. */
-export type TimelineAdvancedMode = "causal";
-export type TimelineReadingMode = TimelinePrimaryMode | TimelineAdvancedMode;
+/** The 흐름 tab's reading views, all directly selectable: the raw conversation
+ *  stream, the AI work-flow, the time-axis swimlane, and the causal map. */
+export type TimelineReadingMode = "stream" | "workflow" | "swimlane" | "causal";
 
 export type TimelineToolbarProps = {
   activeFilters: ActivityLaneId[];
@@ -46,12 +43,8 @@ export function TimelineToolbar({
 }: TimelineToolbarProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterPopRef = useRef<HTMLDivElement | null>(null);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const advancedPopRef = useRef<HTMLDivElement | null>(null);
-  const isAdvancedMode = readingMode === "causal";
 
   useClickOutside(filterPopRef, filterOpen, () => setFilterOpen(false));
-  useClickOutside(advancedPopRef, advancedOpen, () => setAdvancedOpen(false));
 
   return (
     <div className="timeline-toolbar" role="toolbar" aria-label="타임라인 컨트롤">
@@ -93,47 +86,15 @@ export function TimelineToolbar({
             <Rows3 size={14} aria-hidden="true" />
             타임라인
           </button>
-        </div>
-        <div className="toolbar-pop-wrap" ref={advancedPopRef}>
           <button
             type="button"
-            className={`toolbar-toggle ${isAdvancedMode ? "is-active" : ""}`}
-            onClick={() => setAdvancedOpen((open) => !open)}
-            aria-expanded={advancedOpen}
-            aria-controls="timeline-advanced-popover"
-            aria-label="고급 보기"
+            className={`timeline-mode-option ${readingMode === "causal" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "causal"}
+            onClick={() => onReadingModeChange("causal")}
           >
-            <MoreHorizontal size={14} aria-hidden="true" />
-            고급
+            <Route size={14} aria-hidden="true" />
+            연결
           </button>
-          {advancedOpen ? (
-            <div
-              className="filter-popover"
-              id="timeline-advanced-popover"
-              role="dialog"
-              aria-label="고급 보기"
-            >
-              <header>
-                <span>고급 보기</span>
-              </header>
-              <ul>
-                <li>
-                  <button
-                    type="button"
-                    className={`filter-pop-item ${readingMode === "causal" ? "active" : ""}`}
-                    aria-pressed={readingMode === "causal"}
-                    onClick={() => {
-                      onReadingModeChange("causal");
-                      setAdvancedOpen(false);
-                    }}
-                  >
-                    <Route size={14} aria-hidden="true" />
-                    <span className="filter-pop-label">연결</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
-          ) : null}
         </div>
         <div className="toolbar-pop-wrap" ref={filterPopRef}>
           <button

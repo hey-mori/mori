@@ -38,6 +38,24 @@ describe("buildWorkPhases", () => {
     expect(buildWorkPhases([{ start: at(1, 0), title: "혼자", actor: "user" }])).toEqual([]);
   });
 
+  it("cleans a run-on opener to its first sentence and neutralizes contentless openers", () => {
+    const events = [
+      { id: "e1", start: at(1, 0), title: "이제 어떻게 하면 돼? 잘 되는 거 같아 -- 세 가지 모드 정상", actor: "user" },
+      { id: "e2", start: at(1, 2), title: "확인", actor: "assistant" },
+      { id: "e3", start: at(1, 4), title: "진행", actor: "assistant" },
+      { id: "e4", start: at(1, 6), title: "더", actor: "assistant" },
+      // break opens phase 2 with a contentless continuation prompt
+      { id: "e5", start: at(1, 50), title: "Continue from where you left off.", actor: "user" },
+      { id: "e6", start: at(1, 52), title: "작업", actor: "assistant" },
+      { id: "e7", start: at(1, 54), title: "완료", actor: "assistant" },
+      { id: "e8", start: at(1, 56), title: "끝", actor: "assistant" },
+    ];
+    const phases = buildWorkPhases(events);
+    expect(phases).toHaveLength(2);
+    expect(phases[0].label).toBe("이제 어떻게 하면 돼?");
+    expect(phases[1].label).toBe("이어서 작업");
+  });
+
   it("attaches the decisions and changed files inside each phase's time window", () => {
     const events = [
       { id: "e1", start: at(1, 0), title: "벡터스토어 확인해줘", actor: "user" },

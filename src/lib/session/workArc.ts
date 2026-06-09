@@ -131,13 +131,26 @@ function decisionTime(
   return Number.isFinite(earliest) ? earliest : null;
 }
 
+/** A bare continuation prompt that carries no real intent (Claude's resumed
+ *  sessions open with these), so it should not become a phase label. */
+const GENERIC_REQUEST = /continue from where you left off|^\s*(계속|이어서)(\s*진행)?\s*[.!?]*\s*$/i;
+
 function phaseLabel(segment: PhaseSeedEvent[]): string {
-  // The human request that opened the phase frames its intent; fall back to the
-  // first event's title when the phase has no user turn.
+  // The human request that opened the phase frames its intent. Take only its
+  // first clause so a run-on opener does not become a messy label, and fall back
+  // to a neutral "이어서 작업" when the opener is boilerplate or a contentless
+  // continuation prompt (those read worse than an honest neutral label).
   const request = segment.find((event) => event.actor === "user");
   const seed = (request ?? segment[0])?.title ?? "";
-  const cleaned = isAgentBoilerplateTitle(seed) ? "세션 이어가기" : seed.replace(/\s+/g, " ").trim();
-  return cleaned.length > 64 ? `${cleaned.slice(0, 63)}…` : cleaned || "작업";
+  if (isAgentBoilerplateTitle(seed)) return "이어서 작업";
+  // First sentence, keeping its terminator (so "왜 이렇게?" stays a question).
+  const firstClause = seed.match(/^[^.!?。\n]*[.!?。]?/)?.[0] ?? seed;
+  const cleaned = firstClause
+    .replace(/\s+/g, " ")
+    .replace(/[`*#>]+/g, "")
+    .trim();
+  if (!cleaned || GENERIC_REQUEST.test(cleaned)) return "이어서 작업";
+  return cleaned.length > 64 ? `${cleaned.slice(0, 63)}…` : cleaned;
 }
 
 export function buildWorkArc(summary: string | null | undefined, max = 6): string[] {
