@@ -21,7 +21,6 @@ import {
 import { useAppStore } from "../../app/store";
 import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
 import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
-import { buildWorkArc, buildWorkPhases } from "../../lib/session/workArc";
 import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import type { ImportDigestLane } from "../../lib/import/importDigest";
 import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
@@ -88,28 +87,6 @@ export function OverviewView() {
   // summary below always shows, with no LLM, so 개요 is legible the moment it
   // loads. We never surface the pre-analysis placeholder as an "AI 요약".
   const summaryText = hasAnalysis && analysis ? analysis.summary.sessionSummary : null;
-  // The work-flow arc, preferring time-grounded phases reconstructed from the
-  // real event timeline (with "when" + the opening request per phase); falling
-  // back to the AI summary reshaped into ordered steps when the session has no
-  // clear breaks.
-  const workArc = useMemo<{ caption: string; steps: WorkArcStep[] }>(() => {
-    const phases = buildWorkPhases(view.events, view.decisions);
-    if (phases.length >= 2) {
-      return {
-        caption: `작업 세션 ${phases.length}개`,
-        steps: phases.map((phase) => ({
-          label: phase.label,
-          timeLabel: formatPhaseStart(phase.startIso),
-          decisions: phase.decisions,
-          changedFiles: phase.changedFiles,
-        })),
-      };
-    }
-    return {
-      caption: "AI가 복원한 단계",
-      steps: buildWorkArc(summaryText).map((label) => ({ label })),
-    };
-  }, [view.events, view.decisions, summaryText]);
   const sessionEmpty = workSummary.isEmpty;
   const duration = useMemo(
     () => formatDuration(view.session.startedAt, view.session.endedAt),
@@ -171,9 +148,7 @@ export function OverviewView() {
             {!sessionEmpty ? (
               <p className="session-overview-summary">{workSummary.headline}</p>
             ) : null}
-            {workArc.steps.length >= 2 ? (
-              <WorkArc caption={workArc.caption} steps={workArc.steps} />
-            ) : summaryText ? (
+            {summaryText ? (
               <p className="session-overview-ai-summary">
                 <Badge tone="purple">AI 요약</Badge> {summaryText}
               </p>
@@ -265,89 +240,6 @@ function OverviewMetric({ label, value }: { label: string; value: string }) {
       <dd>{value}</dd>
     </div>
   );
-}
-
-type WorkArcStep = {
-  label: string;
-  timeLabel?: string;
-  decisions?: string[];
-  changedFiles?: number;
-};
-
-/**
- * The session's work-flow arc: an ordered "how the work progressed" sequence —
- * the first slice of the AI work-flow view. Time-grounded phases carry a "when"
- * per step (the work session that opened it); the summary fallback carries just
- * the narrative steps. Only rendered with two or more steps.
- */
-function WorkArc({ caption, steps }: { caption: string; steps: WorkArcStep[] }) {
-  return (
-    <div className="work-arc" aria-label="작업 흐름">
-      <div className="work-arc-head">
-        <Badge tone="purple">작업 흐름</Badge>
-        <span className="work-arc-caption">{caption}</span>
-      </div>
-      <ol className="work-arc-steps">
-        {steps.map((step, index) => (
-          <li key={index} className="work-arc-step">
-            <span className="work-arc-marker" aria-hidden="true">
-              {index + 1}
-            </span>
-            <span className="work-arc-body">
-              {step.timeLabel ? <span className="work-arc-time">{step.timeLabel}</span> : null}
-              <span className="work-arc-text">{step.label}</span>
-              <WorkArcEvidence decisions={step.decisions} changedFiles={step.changedFiles} />
-            </span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-/**
- * What a work phase produced: the key decision made in its window plus the
- * count of files it changed — tied to the phase by time, so the arc answers
- * "what came out of this work session", not just "when".
- */
-function WorkArcEvidence({
-  decisions,
-  changedFiles,
-}: {
-  decisions?: string[];
-  changedFiles?: number;
-}) {
-  const hasDecisions = Boolean(decisions && decisions.length > 0);
-  const hasFiles = typeof changedFiles === "number" && changedFiles > 0;
-  if (!hasDecisions && !hasFiles) return null;
-  return (
-    <span className="work-arc-evidence">
-      {hasDecisions ? (
-        <span className="work-arc-ev work-arc-ev-decision">
-          결정 {truncateLabel(decisions![0], 30)}
-          {decisions!.length > 1 ? ` 외 ${decisions!.length - 1}건` : ""}
-        </span>
-      ) : null}
-      {hasFiles ? <span className="work-arc-ev work-arc-ev-files">파일 {changedFiles}개</span> : null}
-    </span>
-  );
-}
-
-function truncateLabel(text: string, max: number): string {
-  const compact = text.replace(/\s+/g, " ").trim();
-  return compact.length > max ? `${compact.slice(0, max - 1)}…` : compact;
-}
-
-/** "06-01 01:17" — a compact phase-start stamp for the work arc. */
-function formatPhaseStart(iso: string): string {
-  const date = new Date(iso);
-  const time = date.getTime();
-  if (!Number.isFinite(time)) return "";
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${mm}-${dd} ${hh}:${min}`;
 }
 
 /**
