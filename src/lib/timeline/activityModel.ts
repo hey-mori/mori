@@ -133,13 +133,11 @@ export const CANONICAL_TIMELINE_LANES: ActivityLaneId[] = [
 ];
 
 /**
- * The lane order to render in the swimlane for a given event set: only the
- * lanes that actually carry an event, in canonical order then any extra lane,
- * following `timelineActivityLaneOrder`. Empty lanes are dropped so a session's
- * swimlane is not padded with blank 리서치 / 이슈 / 검토 rows — the full
- * canonical taxonomy still lives in `CANONICAL_TIMELINE_LANES` (the category
- * filter and the empty-state scaffold key off that), so no category is lost,
- * just hidden when it has nothing to show.
+ * The lane order to render in the swimlane: every canonical (raw-activity) lane,
+ * ALWAYS — so the timeline has the same stable shape in every session, not lanes
+ * that appear and vanish session to session — followed by any non-canonical lane
+ * that actually carries an event. The canonical set is raw activity only, so for
+ * a normal agent session the timeline is exactly those lanes, every time.
  */
 export function resolveTimelineLaneOrder(
   events: readonly TimelineEvent[],
@@ -154,11 +152,10 @@ export function resolveTimelineLaneOrder(
   for (const event of events) {
     populated.add(getTimelineLaneForEvent({ event, sources: sourceIndex }));
   }
-  const canonical = CANONICAL_TIMELINE_LANES.filter((lane) => populated.has(lane));
   const extras = timelineActivityLaneOrder.filter(
     (lane) => !CANONICAL_TIMELINE_LANES.includes(lane) && populated.has(lane),
   );
-  return [...canonical, ...extras];
+  return [...CANONICAL_TIMELINE_LANES, ...extras];
 }
 
 // Korean-first labels. Mori is a Korean-first product; these visuals feed the
@@ -212,7 +209,7 @@ const ACTIVITY_VISUALS: Record<ActivityKind, ActivityVisuals> = {
 const LANE_VISUALS: Record<ActivityLaneId, ActivityVisuals> = {
   conversation: { label: "대화", shortLabel: "대화", tone: "purple", description: "사람·AI·토론 발언" },
   command: { label: "명령", shortLabel: "명령", tone: "gray", description: "터미널 또는 도구 명령" },
-  files: { label: "코드·파일", shortLabel: "코드", tone: "blue", description: "파일·코드 변경, Git diff·커밋" },
+  files: { label: "파일", shortLabel: "파일", tone: "blue", description: "파일·코드·문서 변경, Git diff·커밋 포함" },
   git: { label: "Git", shortLabel: "Git", tone: "green", description: "Diff·커밋·저장소 맥락" },
   design: { label: "디자인", shortLabel: "디자인", tone: "cyan", description: "디자인 산출물 및 프레임 변경" },
   tracker: { label: "이슈", shortLabel: "이슈", tone: "orange", description: "이슈·티켓·트래커 업데이트" },
