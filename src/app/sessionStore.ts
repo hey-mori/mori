@@ -1088,10 +1088,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     try {
       let result = await primary.analyze(analysisInput);
-      // Rule-based floor: when an LLM run succeeds but extracts nothing, merge
-      // in the deterministic engine's findings so a weak model never leaves the
-      // session with an empty analysis. This runs UNCONDITIONALLY — it is not
-      // gated by `fallbackToDeterministic` (which governs the failure fallback).
+      // Rule-based floor for an empty LLM result is OPT-IN, the same principle as
+      // the failure fallback: when the user has not enabled
+      // `fallbackToDeterministic`, an LLM that genuinely extracts nothing is
+      // shown honestly as 0 — not papered over with weaker heuristic output the
+      // user never asked for. Substituting rule-based for a non-delivering LLM is
+      // never automatic.
       // An empty board is strictly worse than heuristics, and the merge only
       // adds items the LLM lacked, so a rich result is never diluted. A real
       // Claude / Codex session always states issues and decisions in its turns,
@@ -1101,7 +1103,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         result.issues.length === 0 &&
         result.decisions.length === 0 &&
         result.nextActions.length === 0;
-      if (llmFoundNothing && primary.name !== "deterministic-heuristic-v1") {
+      if (
+        llmFoundNothing &&
+        effective.fallbackToDeterministic &&
+        effective.provider !== "deterministic" &&
+        primary.name !== "deterministic-heuristic-v1"
+      ) {
         try {
           const floor = await getDefaultProvider().analyze(analysisInput);
           result = mergeAnalysisFloor(result, floor);

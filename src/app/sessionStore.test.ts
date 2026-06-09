@@ -198,22 +198,41 @@ describe("useSessionStore Quick Pass provider flow", () => {
     expect(state.analysisProviderLabel).toBe("Ollama ok");
   });
 
-  it("merges the deterministic floor when the LLM returns nothing, even with fallback off", async () => {
-    seedDraftWithImport(); // the note states a 위험 / 미정 / TODO
+  it("shows an empty LLM result honestly as 0 when fallback is off", async () => {
+    seedDraftWithImport();
     useSessionStore.getState().updateAnalysisSettings({
       provider: "ollama",
       fallbackToDeterministic: false,
     });
 
-    // The weak-model case: the LLM succeeds but extracts nothing.
+    // The weak-model case: the LLM succeeds but extracts nothing. With fallback
+    // off, that is shown honestly as 0 — not papered over with rule-based output
+    // the user did not ask for.
     const emptyOllama = buildProvider("ollama-quick-pass-v1", { label: "Ollama empty" });
     const result = await useSessionStore.getState().runQuickPass(emptyOllama);
 
     expect(result).not.toBeNull();
     const state = useSessionStore.getState();
     expect(state.analysisStatus).toBe("succeeded");
-    // The LLM keeps its identity, but the empty board is filled by the floor —
-    // unconditionally, even though fallbackToDeterministic is off.
+    expect(state.analysis?.providerName).toBe("ollama-quick-pass-v1");
+    expect(state.analysis?.issues.length ?? 0).toBe(0);
+    expect(state.analysis?.decisions.length ?? 0).toBe(0);
+  });
+
+  it("fills an empty LLM result from the deterministic floor when fallback is on", async () => {
+    seedDraftWithImport(); // the note states a 위험 / 미정 / TODO the floor can extract
+    useSessionStore.getState().updateAnalysisSettings({
+      provider: "ollama",
+      fallbackToDeterministic: true,
+    });
+
+    const emptyOllama = buildProvider("ollama-quick-pass-v1", { label: "Ollama empty" });
+    const result = await useSessionStore.getState().runQuickPass(emptyOllama);
+
+    expect(result).not.toBeNull();
+    const state = useSessionStore.getState();
+    expect(state.analysisStatus).toBe("succeeded");
+    // The LLM keeps its identity; the opted-in floor fills the empty board.
     expect(state.analysis?.providerName).toBe("ollama-quick-pass-v1");
     expect(state.analysis?.issues.length ?? 0).toBeGreaterThan(0);
     expect(state.analysis?.notes.some((note) => note.includes("규칙 기반에서"))).toBe(true);
