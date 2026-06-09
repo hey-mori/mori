@@ -7,11 +7,11 @@ import {
   type ActivityLaneId,
 } from "../../lib/timeline/activityModel";
 
-/** The two views the 흐름 tab leads with: the raw conversation stream and the
- *  AI work-flow. */
-export type TimelinePrimaryMode = "stream" | "workflow";
-/** Retired views, still reachable through the "고급" affordance. */
-export type TimelineAdvancedMode = "swimlane" | "causal";
+/** The views the 흐름 tab leads with directly: the raw conversation stream, the
+ *  AI work-flow, and the time-axis swimlane. */
+export type TimelinePrimaryMode = "stream" | "workflow" | "swimlane";
+/** The experimental causal map, reachable through the "고급" affordance. */
+export type TimelineAdvancedMode = "causal";
 export type TimelineReadingMode = TimelinePrimaryMode | TimelineAdvancedMode;
 
 export type TimelineToolbarProps = {
@@ -48,7 +48,7 @@ export function TimelineToolbar({
   const filterPopRef = useRef<HTMLDivElement | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const advancedPopRef = useRef<HTMLDivElement | null>(null);
-  const isAdvancedMode = readingMode === "swimlane" || readingMode === "causal";
+  const isAdvancedMode = readingMode === "causal";
 
   useClickOutside(filterPopRef, filterOpen, () => setFilterOpen(false));
   useClickOutside(advancedPopRef, advancedOpen, () => setAdvancedOpen(false));
@@ -84,6 +84,15 @@ export function TimelineToolbar({
             <Sparkles size={14} aria-hidden="true" />
             AI 흐름
           </button>
+          <button
+            type="button"
+            className={`timeline-mode-option ${readingMode === "swimlane" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "swimlane"}
+            onClick={() => onReadingModeChange("swimlane")}
+          >
+            <Rows3 size={14} aria-hidden="true" />
+            타임라인
+          </button>
         </div>
         <div className="toolbar-pop-wrap" ref={advancedPopRef}>
           <button
@@ -108,20 +117,6 @@ export function TimelineToolbar({
                 <span>고급 보기</span>
               </header>
               <ul>
-                <li>
-                  <button
-                    type="button"
-                    className={`filter-pop-item ${readingMode === "swimlane" ? "active" : ""}`}
-                    aria-pressed={readingMode === "swimlane"}
-                    onClick={() => {
-                      onReadingModeChange("swimlane");
-                      setAdvancedOpen(false);
-                    }}
-                  >
-                    <Rows3 size={14} aria-hidden="true" />
-                    <span className="filter-pop-label">타임라인</span>
-                  </button>
-                </li>
                 <li>
                   <button
                     type="button"
