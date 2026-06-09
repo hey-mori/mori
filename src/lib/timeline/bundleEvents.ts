@@ -414,6 +414,10 @@ function countEventTypes(events: TimelineEvent[]): Partial<Record<EventType, num
 }
 
 function isImportantEvent(event: TimelineEvent, decisionsById: Map<string, Decision>): boolean {
+  // A user request is the anchor that opens a "request → work" unit, so it is
+  // never folded into a bundle — it stays an individual row/chip in both the
+  // stream (where it heads a request group) and the swimlane.
+  if (event.actor === "user") return true;
   if (event.type === "decision") return true;
   if (event.linkedDecisionIds.some((decisionId) => decisionsById.get(decisionId)?.importance === "high")) {
     return true;

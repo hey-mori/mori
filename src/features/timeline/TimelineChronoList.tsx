@@ -115,6 +115,7 @@ export function TimelineChronoList({
             key={item.id}
             event={item.event}
             selected={selected}
+            isRequest={item.event.actor === "user"}
             onSelect={() => onSelect(item.id)}
             menuItems={eventMenuItems?.(item.event)}
             sourceIndex={model.sourceIndex}
@@ -189,6 +190,7 @@ function ToolRunRow({ run }: { run: Extract<StreamRow, { kind: "toolRun" }> }) {
 function TimelineChronoEventRow({
   event,
   selected,
+  isRequest = false,
   onSelect,
   menuItems,
   sourceIndex,
@@ -196,6 +198,7 @@ function TimelineChronoEventRow({
 }: {
   event: TimelineEvent;
   selected: boolean;
+  isRequest?: boolean;
   onSelect: () => void;
   menuItems?: BaseMenuItemSpec[];
   sourceIndex?: ReadonlyMap<string, SourceRef>;
@@ -209,7 +212,8 @@ function TimelineChronoEventRow({
   const requestProjection = projectEventRequestSummary(event, requestDisclosureLevel);
   const snippet = oneLine(requestProjection.text);
   return (
-    <li>
+    <li className={isRequest ? "is-request" : undefined}>
+      {isRequest ? <span className="timeline-chrono-request-tag">요청</span> : null}
       <button
         type="button"
         className={`timeline-chrono-row card-${vm.tone} ${selected ? "is-selected" : ""}`}

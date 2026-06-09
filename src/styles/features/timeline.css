@@ -4257,3 +4257,35 @@ button.timeline-chrono-toolrun:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 원본 stream — a user request opens a new "request → work" unit: a divider and
+ * a 요청 tag mark where one ask ends and the next begins, so the rows beneath
+ * read as the work done for that request. */
+.timeline-chrono-list li.is-request {
+  margin-top: 16px;
+  padding-top: 13px;
+  border-top: 1px solid var(--base-border, #e6e3f1);
+}
+
+.timeline-chrono-list li.is-request:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.timeline-chrono-request-tag {
+  display: inline-block;
+  margin: 0 0 4px 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(124, 92, 255, 0.1);
+  color: var(--purple, #7c5cff);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.timeline-chrono-list li.is-request .timeline-chrono-row strong {
+  font-size: 13.5px;
+  font-weight: 750;
+}
