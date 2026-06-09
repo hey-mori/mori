@@ -344,11 +344,16 @@ type OllamaModelProfile = {
 // the chunk's input digest plus that output ceiling. `numCtx` 8192 was verified
 // to load and run at full GPU speed on an 8 GB card, so the bump is memory-safe.
 function getOllamaModelProfile(model: string): OllamaModelProfile {
+  // maxEventsPerChunk is kept conservative on purpose: a chunk whose extraction
+  // JSON overruns `numPredict` is TRUNCATED — the model spends the full output
+  // budget (the slowest possible pass) and the result is discarded. Smaller
+  // chunks complete under the ceiling, so they are both faster per pass and
+  // actually kept. Fewer, larger chunks looked cheaper but lost most passes.
   const billions = inferModelBillions(model);
   if (billions !== null && billions <= 2) {
     return {
       label: "tiny local model",
-      maxEventsPerChunk: 18,
+      maxEventsPerChunk: 12,
       eventDigestBudgetChars: 4_800,
       sourceDigestBudgetChars: 1_000,
       numCtx: 6_144,
@@ -358,7 +363,7 @@ function getOllamaModelProfile(model: string): OllamaModelProfile {
   if (billions !== null && billions <= 4.5) {
     return {
       label: "small local model",
-      maxEventsPerChunk: 28,
+      maxEventsPerChunk: 16,
       eventDigestBudgetChars: 6_400,
       sourceDigestBudgetChars: 1_200,
       numCtx: 8_192,
@@ -368,7 +373,7 @@ function getOllamaModelProfile(model: string): OllamaModelProfile {
   if (billions !== null && billions >= 14) {
     return {
       label: "large local model",
-      maxEventsPerChunk: 64,
+      maxEventsPerChunk: 44,
       eventDigestBudgetChars: 12_000,
       sourceDigestBudgetChars: 1_800,
       numCtx: 12_288,
@@ -377,7 +382,7 @@ function getOllamaModelProfile(model: string): OllamaModelProfile {
   }
   return {
     label: "standard local model",
-    maxEventsPerChunk: 44,
+    maxEventsPerChunk: 28,
     eventDigestBudgetChars: 8_800,
     sourceDigestBudgetChars: 1_600,
     numCtx: 8_192,

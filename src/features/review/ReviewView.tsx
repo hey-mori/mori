@@ -600,10 +600,15 @@ function ReviewBoardCard({
         "review-issue-card" +
         (priority ? ` priority-${priority}` : "") +
         (muted ? " is-muted" : "") +
-        (selected ? " is-selected" : "")
+        (selected ? " is-selected" : "") +
+        (leading ? " has-leading" : "")
       }
       aria-current={selected ? "true" : undefined}
     >
+      {/* The leading control (e.g. a next-action checkbox button) sits OUTSIDE
+          the card button: a button cannot nest inside a button. It is absolutely
+          positioned over the title row so the layout still reads as inline. */}
+      {leading ? <div className="review-card-leading-slot">{leading}</div> : null}
       <button
         type="button"
         className="review-board-card-button"
@@ -612,11 +617,6 @@ function ReviewBoardCard({
         onClick={onSelect}
       >
         <div className="review-card-head-row">
-          {leading ? (
-            <span className="review-card-leading" aria-hidden="true">
-              {leading}
-            </span>
-          ) : null}
           <span className="review-card-title">{title}</span>
           {priority === "high" ? (
             <span className="review-card-priority-flag" aria-label="우선 높음" title="우선 높음">

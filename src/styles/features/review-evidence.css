@@ -2806,6 +2806,22 @@ td a {
   flex-shrink: 0;
 }
 
+/* Leading control pulled out of the card button (a button cannot nest a button).
+ * Positioned over the title row's start; the head row pads left to make room so
+ * the checkbox still reads as inline with the title. */
+.review-card-leading-slot {
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.review-issue-card.has-leading .review-card-head-row {
+  padding-left: 26px;
+}
+
 .status-glyph { color: #8792a6; }
 .status-glyph.status-open { color: #8792a6; }
 .status-glyph.status-inProgress {
