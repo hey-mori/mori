@@ -126,9 +126,9 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   // user-facing density control.
   const density: TimelineDensity = "compact";
 
-  // The always-visible canonical lane set plus any extra lane the session's
-  // events actually populate. Passed as the layout's lane order so the
-  // swimlane structure is stable and complete (empty lanes show as slim bands).
+  // Only the lanes this session's events actually populate, in canonical order.
+  // Empty lanes are dropped so the swimlane is not padded with blank rows; the
+  // full taxonomy still lives in the category filter.
   const laneOrder = useMemo(
     () => resolveTimelineLaneOrder(view.events, view.sources),
     [view.events, view.sources],

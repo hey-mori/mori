@@ -133,11 +133,13 @@ export const CANONICAL_TIMELINE_LANES: ActivityLaneId[] = [
 ];
 
 /**
- * The effective lane order to render for a given event set: every canonical
- * lane (always, even empty) followed by any non-canonical lane that actually
- * carries an event, kept in `timelineActivityLaneOrder` sequence. This is what
- * the swimlane canvas and the category filter both key off, so the lanes the
- * user sees and the categories they can filter are one and the same taxonomy.
+ * The lane order to render in the swimlane for a given event set: only the
+ * lanes that actually carry an event, in canonical order then any extra lane,
+ * following `timelineActivityLaneOrder`. Empty lanes are dropped so a session's
+ * swimlane is not padded with blank 리서치 / 이슈 / 검토 rows — the full
+ * canonical taxonomy still lives in `CANONICAL_TIMELINE_LANES` (the category
+ * filter and the empty-state scaffold key off that), so no category is lost,
+ * just hidden when it has nothing to show.
  */
 export function resolveTimelineLaneOrder(
   events: readonly TimelineEvent[],
@@ -152,10 +154,11 @@ export function resolveTimelineLaneOrder(
   for (const event of events) {
     populated.add(getTimelineLaneForEvent({ event, sources: sourceIndex }));
   }
+  const canonical = CANONICAL_TIMELINE_LANES.filter((lane) => populated.has(lane));
   const extras = timelineActivityLaneOrder.filter(
     (lane) => !CANONICAL_TIMELINE_LANES.includes(lane) && populated.has(lane),
   );
-  return [...CANONICAL_TIMELINE_LANES, ...extras];
+  return [...canonical, ...extras];
 }
 
 // Korean-first labels. Mori is a Korean-first product; these visuals feed the
