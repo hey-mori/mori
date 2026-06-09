@@ -7,7 +7,7 @@ import type {
   Priority,
   TimelineEvent,
 } from "../../domain/types";
-import { eventTypeLabels } from "../../domain/constants";
+import { eventDisplayLabel } from "../../domain/constants";
 import {
   projectEventRequestSummary,
   resolveDisclosureLevel,
@@ -407,7 +407,7 @@ function renderTimelineLine(
   requestDisclosureLevel: DisclosureLevel,
 ): string {
   const time = formatIso(event.start);
-  const typeLabel = eventTypeLabels[event.type] ?? event.type;
+  const typeLabel = eventDisplayLabel(event);
   const title = event.title;
   if (privacy.clientSafe) {
     return `- \`${time}\` **${title}** _(${typeLabel})_`;

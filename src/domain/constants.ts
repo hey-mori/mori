@@ -1,5 +1,5 @@
 import { Bell, CheckCircle2, Code2, FileText, MoreHorizontal, Sparkles, TreePine, type LucideIcon } from "lucide-react";
-import type { EventType, IssueStatus, Priority, RecordingMode, TrustLevel } from "./types";
+import type { EventActor, EventType, IssueStatus, Priority, RecordingMode, TrustLevel } from "./types";
 
 export const eventTypeLabels: Record<EventType, string> = {
   aiConversation: "대화",
@@ -11,6 +11,38 @@ export const eventTypeLabels: Record<EventType, string> = {
   artifact: "산출물",
   other: "기타",
 };
+
+/**
+ * Actor labels for a timeline turn. Imported turns are all type
+ * `aiConversation`, so the type label alone reads everything as "대화"; the
+ * actor distinguishes a tool call or a bare user request from a real exchange.
+ * `assistant` stays "대화" because such a turn is a full question+answer pair.
+ */
+export const eventActorLabels: Record<EventActor, string> = {
+  user: "요청",
+  assistant: "대화",
+  tool: "도구",
+  file: "파일",
+  decision: "결정",
+  system: "시스템",
+};
+
+/**
+ * The honest label for a timeline event. Prefers the actor (so a tool call is
+ * not mislabeled "대화"), naming the specific tool when known ("Grep"), and
+ * falls back to the event-type label for events that carry no actor.
+ */
+export function eventDisplayLabel(event: {
+  type: EventType;
+  actor?: EventActor;
+  toolName?: string;
+}): string {
+  if (event.actor) {
+    if (event.actor === "tool" && event.toolName) return event.toolName;
+    return eventActorLabels[event.actor];
+  }
+  return eventTypeLabels[event.type] ?? event.type;
+}
 
 export const laneOrder: EventType[] = [
   "aiConversation",

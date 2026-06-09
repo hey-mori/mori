@@ -16,7 +16,7 @@
 
 import type { EventActor, FileTouch, TimelineEvent } from "../../domain/types";
 import { createImportId } from "../import/id";
-import { cleanImportedTitle } from "../import/sanitizeTitle";
+import { cleanImportedTitle, isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import type { NormalizedImportCandidate } from "../import/types";
 import { classifyMessage } from "./conversationStats";
 import {
@@ -382,11 +382,16 @@ function messageToTurn(
   // A tool-result human message ("↳ 도구 결과 …") is machine output, not a
   // prompt. Title from the assistant's actual reply (or a short label) instead
   // of the raw dump, so the timeline and memory never read tool noise as the
-  // turn's headline.
+  // turn's headline. The same applies to an agent-injected boilerplate message
+  // (Claude's "This session is being continued …" compaction preamble): it must
+  // never become a turn's headline, so title from the assistant's reply.
   const humanIsToolResult = human ? classifyMessage(human) === "tool_result" : false;
-  const titleSeed = humanIsToolResult
-    ? (assistant?.content ?? "").trim() || "도구 결과"
-    : (human?.content ?? assistant?.content ?? "").trim();
+  const humanIsBoilerplate = human ? isAgentBoilerplateTitle(human.content) : false;
+  const titleSeed =
+    humanIsToolResult || humanIsBoilerplate
+      ? (assistant?.content ?? "").trim() ||
+        (humanIsBoilerplate ? "세션 이어가기" : "도구 결과")
+      : (human?.content ?? assistant?.content ?? "").trim();
   const summarySeed = (assistant?.content ?? human?.content ?? "").trim();
   const { actor, toolName } = classifyTurnActor(human, assistant);
   return {

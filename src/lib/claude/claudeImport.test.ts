@@ -83,3 +83,57 @@ describe("buildImportCandidateFromClaudeCodeSession - file touch attribution", (
     expect(candidate.events.every((event) => event.fileTouches === undefined)).toBe(true);
   });
 });
+
+describe("buildImportCandidateFromClaudeCodeSession - turn titles", () => {
+  it("titles a boilerplate-prefixed first turn from the assistant reply", () => {
+    const detail = codeSession(
+      [
+        {
+          id: "u1",
+          role: "human",
+          content:
+            "This session is being continued from a previous conversation that ran out of context. Summary follows...",
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+        {
+          id: "m1",
+          role: "assistant",
+          content: "좋은 지적입니다. 이어서 마이그레이션을 확인하겠습니다.",
+          createdAt: "2026-01-01T00:00:01Z",
+        },
+      ],
+      [],
+    );
+
+    const candidate = buildImportCandidateFromClaudeCodeSession(detail, {
+      projectId: "proj",
+      sessionId: "sess",
+    });
+
+    // The compaction preamble must never become a turn's headline.
+    expect(candidate.events[0].title).not.toContain("This session is being continued");
+    expect(candidate.events[0].title).toContain("좋은 지적입니다");
+  });
+
+  it("falls back to a short label when a boilerplate turn has no assistant reply", () => {
+    const detail = codeSession(
+      [
+        {
+          id: "u1",
+          role: "human",
+          content:
+            "This session is being continued from a previous conversation that ran out of context.",
+          createdAt: "2026-01-01T00:00:00Z",
+        },
+      ],
+      [],
+    );
+
+    const candidate = buildImportCandidateFromClaudeCodeSession(detail, {
+      projectId: "proj",
+      sessionId: "sess",
+    });
+
+    expect(candidate.events[0].title).toBe("세션 이어가기");
+  });
+});
