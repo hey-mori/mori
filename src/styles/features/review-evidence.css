@@ -4136,6 +4136,33 @@ td a {
   color: var(--text);
 }
 
+.work-arc-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.work-arc-ev {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.work-arc-ev-files {
+  color: var(--muted-2);
+}
+
+.work-arc-ev + .work-arc-ev::before {
+  content: "·";
+  margin-right: 6px;
+  color: var(--muted-2);
+}
+
 .work-shape {
   display: grid;
   gap: 8px;

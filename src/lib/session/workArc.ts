@@ -20,23 +20,41 @@ export type WorkPhase = {
   /** What opened the phase — the human request that framed it. */
   label: string;
   eventCount: number;
+  /** Titles of the decisions made within the phase's time window. */
+  decisions: string[];
+  /** Distinct files created or edited within the phase's time window. */
+  changedFiles: number;
 };
 
 /** A gap this long between events reads as a break, so the next event opens a
  *  new work session / phase. */
 const PHASE_BREAK_MS = 20 * 60 * 1000;
 
-type PhaseSeedEvent = { start: string; title: string; actor?: string };
+type PhaseSeedEvent = {
+  id?: string;
+  start: string;
+  title: string;
+  actor?: string;
+  fileTouches?: readonly { path: string; changeKind: string }[];
+};
+
+type PhaseSeedDecision = { title: string; sourceEventIds?: readonly string[] };
 
 /**
  * Reconstruct the session's work phases from the actual event timeline, so the
  * arc is grounded in WHEN things happened rather than in a parsed summary. The
  * meaningful spine (conversation, not tool noise) is split at the largest real
  * breaks, lining each phase up with a work session, and each phase is labelled
- * by the human request that opened it. Returns `[]` when the session is too
- * small or has no real breaks, so the caller can fall back to the text arc.
+ * by the human request that opened it. Each phase also carries the decisions
+ * and file changes that fall inside its time window — tied by WHEN, not by
+ * fuzzy text matching — so the arc shows what each work session produced.
+ * Returns `[]` when the session is too small or has no real breaks.
  */
-export function buildWorkPhases(events: readonly PhaseSeedEvent[], max = 6): WorkPhase[] {
+export function buildWorkPhases(
+  events: readonly PhaseSeedEvent[],
+  decisions: readonly PhaseSeedDecision[] = [],
+  max = 6,
+): WorkPhase[] {
   const spine = events
     .filter((event) => event.actor !== "tool" && event.actor !== "system" && Boolean(event.start))
     .map((event) => ({ time: new Date(event.start).getTime(), event }))
@@ -56,19 +74,61 @@ export function buildWorkPhases(events: readonly PhaseSeedEvent[], max = 6): Wor
     .map((candidate) => candidate.at)
     .sort((a, b) => a - b);
 
+  // Every event's time, keyed by id, so a decision lands in the phase that
+  // contains the earliest event it cites.
+  const datedEvents = events
+    .map((event) => ({ event, time: new Date(event.start).getTime() }))
+    .filter((entry) => Number.isFinite(entry.time));
+  const idToTime = new Map<string, number>();
+  for (const { event, time } of datedEvents) {
+    if (event.id) idToTime.set(event.id, time);
+  }
+  const datedDecisions = decisions
+    .map((decision) => ({ decision, time: decisionTime(decision, idToTime) }))
+    .filter((entry): entry is { decision: PhaseSeedDecision; time: number } => entry.time !== null);
+
   const bounds = [0, ...cuts, spine.length];
   const phases: WorkPhase[] = [];
   for (let i = 0; i < bounds.length - 1; i += 1) {
     const segment = spine.slice(bounds[i], bounds[i + 1]);
     if (segment.length === 0) continue;
+    const startT = segment[0].time;
+    const endT = segment[segment.length - 1].time;
+
+    const changed = new Set<string>();
+    for (const { event, time } of datedEvents) {
+      if (time < startT || time > endT) continue;
+      for (const touch of event.fileTouches ?? []) {
+        if (touch.changeKind === "edited" || touch.changeKind === "wrote") changed.add(touch.path);
+      }
+    }
+    const phaseDecisions = datedDecisions
+      .filter((entry) => entry.time >= startT && entry.time <= endT)
+      .map((entry) => entry.decision.title.trim())
+      .filter(Boolean);
+
     phases.push({
       startIso: segment[0].event.start,
       endIso: segment[segment.length - 1].event.start,
       label: phaseLabel(segment.map((entry) => entry.event)),
       eventCount: segment.length,
+      decisions: phaseDecisions,
+      changedFiles: changed.size,
     });
   }
   return phases.length >= 2 ? phases : [];
+}
+
+function decisionTime(
+  decision: PhaseSeedDecision,
+  idToTime: ReadonlyMap<string, number>,
+): number | null {
+  let earliest = Number.POSITIVE_INFINITY;
+  for (const id of decision.sourceEventIds ?? []) {
+    const time = idToTime.get(id);
+    if (time !== undefined && time < earliest) earliest = time;
+  }
+  return Number.isFinite(earliest) ? earliest : null;
 }
 
 function phaseLabel(segment: PhaseSeedEvent[]): string {

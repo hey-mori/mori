@@ -93,13 +93,15 @@ export function OverviewView() {
   // back to the AI summary reshaped into ordered steps when the session has no
   // clear breaks.
   const workArc = useMemo<{ caption: string; steps: WorkArcStep[] }>(() => {
-    const phases = buildWorkPhases(view.events);
+    const phases = buildWorkPhases(view.events, view.decisions);
     if (phases.length >= 2) {
       return {
         caption: `작업 세션 ${phases.length}개`,
         steps: phases.map((phase) => ({
           label: phase.label,
           timeLabel: formatPhaseStart(phase.startIso),
+          decisions: phase.decisions,
+          changedFiles: phase.changedFiles,
         })),
       };
     }
@@ -107,7 +109,7 @@ export function OverviewView() {
       caption: "AI가 복원한 단계",
       steps: buildWorkArc(summaryText).map((label) => ({ label })),
     };
-  }, [view.events, summaryText]);
+  }, [view.events, view.decisions, summaryText]);
   const sessionEmpty = workSummary.isEmpty;
   const duration = useMemo(
     () => formatDuration(view.session.startedAt, view.session.endedAt),
@@ -265,7 +267,12 @@ function OverviewMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-type WorkArcStep = { label: string; timeLabel?: string };
+type WorkArcStep = {
+  label: string;
+  timeLabel?: string;
+  decisions?: string[];
+  changedFiles?: number;
+};
 
 /**
  * The session's work-flow arc: an ordered "how the work progressed" sequence —
@@ -289,12 +296,46 @@ function WorkArc({ caption, steps }: { caption: string; steps: WorkArcStep[] }) 
             <span className="work-arc-body">
               {step.timeLabel ? <span className="work-arc-time">{step.timeLabel}</span> : null}
               <span className="work-arc-text">{step.label}</span>
+              <WorkArcEvidence decisions={step.decisions} changedFiles={step.changedFiles} />
             </span>
           </li>
         ))}
       </ol>
     </div>
   );
+}
+
+/**
+ * What a work phase produced: the key decision made in its window plus the
+ * count of files it changed — tied to the phase by time, so the arc answers
+ * "what came out of this work session", not just "when".
+ */
+function WorkArcEvidence({
+  decisions,
+  changedFiles,
+}: {
+  decisions?: string[];
+  changedFiles?: number;
+}) {
+  const hasDecisions = Boolean(decisions && decisions.length > 0);
+  const hasFiles = typeof changedFiles === "number" && changedFiles > 0;
+  if (!hasDecisions && !hasFiles) return null;
+  return (
+    <span className="work-arc-evidence">
+      {hasDecisions ? (
+        <span className="work-arc-ev work-arc-ev-decision">
+          결정 {truncateLabel(decisions![0], 30)}
+          {decisions!.length > 1 ? ` 외 ${decisions!.length - 1}건` : ""}
+        </span>
+      ) : null}
+      {hasFiles ? <span className="work-arc-ev work-arc-ev-files">파일 {changedFiles}개</span> : null}
+    </span>
+  );
+}
+
+function truncateLabel(text: string, max: number): string {
+  const compact = text.replace(/\s+/g, " ").trim();
+  return compact.length > max ? `${compact.slice(0, max - 1)}…` : compact;
 }
 
 /** "06-01 01:17" — a compact phase-start stamp for the work arc. */

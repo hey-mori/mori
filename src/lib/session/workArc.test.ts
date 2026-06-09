@@ -37,6 +37,30 @@ describe("buildWorkPhases", () => {
   it("returns [] for a too-small session", () => {
     expect(buildWorkPhases([{ start: at(1, 0), title: "혼자", actor: "user" }])).toEqual([]);
   });
+
+  it("attaches the decisions and changed files inside each phase's time window", () => {
+    const events = [
+      { id: "e1", start: at(1, 0), title: "벡터스토어 확인해줘", actor: "user" },
+      { id: "e2", start: at(1, 2), title: "확인했습니다", actor: "assistant" },
+      { id: "e3", start: at(1, 4), title: "Edit", actor: "tool", fileTouches: [{ path: "a.kt", changeKind: "edited" }] },
+      { id: "e4", start: at(1, 6), title: "더 진행", actor: "assistant" },
+      // a 44-minute break opens phase 2
+      { id: "e5", start: at(1, 50), title: "Wiki 삭제 만들자", actor: "user" },
+      { id: "e6", start: at(1, 52), title: "Write", actor: "tool", fileTouches: [{ path: "b.kt", changeKind: "wrote" }] },
+      { id: "e7", start: at(1, 54), title: "완료", actor: "assistant" },
+      { id: "e8", start: at(1, 56), title: "커밋", actor: "assistant" },
+    ];
+    const decisions = [
+      { title: "임베딩 어댑터 도입", sourceEventIds: ["e2"] },
+      { title: "삭제 엔드포인트 추가", sourceEventIds: ["e6"] },
+    ];
+    const phases = buildWorkPhases(events, decisions);
+    expect(phases).toHaveLength(2);
+    expect(phases[0].decisions).toEqual(["임베딩 어댑터 도입"]);
+    expect(phases[0].changedFiles).toBe(1);
+    expect(phases[1].decisions).toEqual(["삭제 엔드포인트 추가"]);
+    expect(phases[1].changedFiles).toBe(1);
+  });
 });
 
 describe("buildWorkArc", () => {
