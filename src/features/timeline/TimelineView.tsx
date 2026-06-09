@@ -40,6 +40,8 @@ import { TimelineMiniMap } from "./TimelineMiniMap";
 import { FlowFocusHeader } from "../flow-focus/FlowFocusHeader";
 import { TracePanel } from "../flow-focus/TracePanel";
 import { CausalMapView } from "../timeline-lab/CausalMapView";
+import { AiWorkflowView } from "./AiWorkflowView";
+import type { WorkPhase } from "../../lib/session/workArc";
 import type { TimelineReadingMode } from "./TimelineHeader";
 
 const FILTERED_EMPTY_SETTLE_MS = 260;
@@ -141,13 +143,13 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const [zoomFactor, setZoomFactor] = useState<number>(1);
   const canvasRef = useRef<TimelineCanvasHandle>(null);
 
-  // The 흐름 tab opens on the timeline canvas by default. The overview tab is
-  // still the first session page; once the user enters 흐름, the time map should
-  // be the primary view and 목록 is an alternate reading mode.
+  // The 흐름 tab opens on the 원본 (raw conversation stream) by default — the
+  // honest, readable view. AI 흐름 is the other primary view; the dense swimlane
+  // and the causal map are retired behind the 고급 affordance.
   const [readingModeOverride, setReadingModeOverride] = useState<
     TimelineReadingMode | null
   >(null);
-  const readingMode: TimelineReadingMode = readingModeOverride ?? "swimlane";
+  const readingMode: TimelineReadingMode = readingModeOverride ?? "stream";
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.
@@ -379,14 +381,33 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   }
 
   const selectedItem = renderModel.selectedItem;
-  const useListView = mode === "timeline" && readingMode === "flow";
+  const useStreamView = mode === "timeline" && readingMode === "stream";
+  const useWorkflowView = mode === "timeline" && readingMode === "workflow";
   const useCausalView = mode === "timeline" && readingMode === "causal";
   const inspectorHidden = shouldHideInspector({ mode, inspectorCollapsed, viewportWidth });
   // The inspector is a detail panel for the *selected* item — there is nothing
   // to inspect with no selection, so the column is only reserved when something
   // is selected. Otherwise an "open" inspector with no selection is just an
-  // empty band of whitespace.
-  const inspectorVisible = !useCausalView && !inspectorHidden && Boolean(selectedItem);
+  // empty band of whitespace. The full-width AI 흐름 / 연결 views reserve no
+  // inspector band of their own.
+  const inspectorVisible =
+    !useCausalView && !useWorkflowView && !inspectorHidden && Boolean(selectedItem);
+
+  // Drill from an AI 흐름 phase into the 원본 stream: select the first event at
+  // or after the phase start and switch to the stream, which auto-highlights and
+  // scrolls to it. Reuses the shared selection rail — no new global state.
+  const selectPhaseInStream = useCallback(
+    (phase: WorkPhase) => {
+      const phaseStart = new Date(phase.startIso).getTime();
+      const target = renderModel.visibleDisplayItems.find((item) => {
+        const at = new Date(item.start).getTime();
+        return Number.isFinite(at) && at >= phaseStart;
+      });
+      if (target) setSelectedEventId(target.id);
+      setReadingModeOverride("stream");
+    },
+    [renderModel.visibleDisplayItems, setSelectedEventId],
+  );
   // The 흐름 tab offers two reading modes: the swimlane canvas (시간 축) and a
   // content-rich chronological 목록. The swimlane never auto-degrades to a list
   // on narrow screens; the 목록 appears only when the user picks it (or when a
@@ -423,13 +444,22 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
               setSearchQuery("");
             }}
           />
-        ) : useListView ? (
+        ) : useStreamView ? (
           <TimelineChronoList
             model={renderModel}
             selectedItemId={selectedItem?.id ?? null}
             onSelect={selectAndShowInspector}
             density={density}
             eventMenuItems={buildEventMenuItems}
+          />
+        ) : useWorkflowView ? (
+          <AiWorkflowView
+            view={view}
+            analysis={analysis}
+            selectedItemId={selectedItem?.id ?? null}
+            onSelectPhase={selectPhaseInStream}
+            onRunQuickPass={() => void runQuickPass()}
+            canRunQuickPass={analysisStatus !== "running"}
           />
         ) : useCausalView ? (
           <div className="timeline-causal-mode timeline-lab">

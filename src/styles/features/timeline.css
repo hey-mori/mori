@@ -4017,3 +4017,175 @@ textarea {
 .inspector-file-diffpeek .diff-ctx {
   color: var(--muted);
 }
+
+/* ============================================================================
+ * AI 흐름 view — analysis narrative + a time-grounded, clickable phase arc.
+ * One of the two primary 흐름-tab views (the other is 원본). The phase arc is
+ * built from real event timestamps (buildWorkPhases); each step drills into the
+ * 원본 stream for that window.
+ * ========================================================================== */
+.ai-workflow {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 16px 18px 24px;
+  overflow-y: auto;
+}
+
+.ai-workflow-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-workflow-head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.ai-workflow-narrative {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.ai-workflow-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ai-workflow-empty {
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 220px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.ai-workflow-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.ai-workflow-empty svg {
+  color: var(--purple, #7c5cff);
+}
+
+.work-arc-steps {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 74ch;
+}
+
+.work-arc-step {
+  position: relative;
+}
+
+/* The connecting rail runs through the marker centres, stopping at the last. */
+.work-arc-step::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  left: 12px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--line, #e6e3f1);
+}
+
+.work-arc-step:last-child::before {
+  display: none;
+}
+
+.work-arc-step-btn {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  width: 100%;
+  padding: 3px 8px 14px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.work-arc-step-btn:hover {
+  background: var(--base-surface-2, rgba(124, 92, 255, 0.05));
+}
+
+.work-arc-step-btn.is-active {
+  background: rgba(124, 92, 255, 0.1);
+}
+
+.work-arc-step-btn:focus-visible {
+  outline: 2px solid var(--purple, #7c5cff);
+  outline-offset: 2px;
+}
+
+.work-arc-marker {
+  z-index: 1;
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--base-surface, #fff);
+  border: 1.5px solid var(--purple, #7c5cff);
+  color: var(--purple, #7c5cff);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.work-arc-body {
+  align-self: start;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.work-arc-time {
+  color: var(--muted-2);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.work-arc-text {
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.work-arc-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.work-arc-ev {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.work-arc-ev + .work-arc-ev::before {
+  content: "·";
+  margin-right: 6px;
+  color: var(--muted-2);
+}

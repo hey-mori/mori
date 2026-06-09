@@ -1,4 +1,4 @@
-import { Filter, List, Route, Rows3 } from "lucide-react";
+import { Filter, List, MoreHorizontal, Route, Rows3, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { SearchField } from "../../components/ui/SearchField";
 import {
@@ -7,7 +7,12 @@ import {
   type ActivityLaneId,
 } from "../../lib/timeline/activityModel";
 
-export type TimelineReadingMode = "swimlane" | "flow" | "causal";
+/** The two views the 흐름 tab leads with: the raw conversation stream and the
+ *  AI work-flow. */
+export type TimelinePrimaryMode = "stream" | "workflow";
+/** Retired views, still reachable through the "고급" affordance. */
+export type TimelineAdvancedMode = "swimlane" | "causal";
+export type TimelineReadingMode = TimelinePrimaryMode | TimelineAdvancedMode;
 
 export type TimelineToolbarProps = {
   activeFilters: ActivityLaneId[];
@@ -41,8 +46,12 @@ export function TimelineToolbar({
 }: TimelineToolbarProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterPopRef = useRef<HTMLDivElement | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const advancedPopRef = useRef<HTMLDivElement | null>(null);
+  const isAdvancedMode = readingMode === "swimlane" || readingMode === "causal";
 
   useClickOutside(filterPopRef, filterOpen, () => setFilterOpen(false));
+  useClickOutside(advancedPopRef, advancedOpen, () => setAdvancedOpen(false));
 
   return (
     <div className="timeline-toolbar" role="toolbar" aria-label="타임라인 컨트롤">
@@ -59,31 +68,77 @@ export function TimelineToolbar({
         <div className="timeline-mode-switch" role="group" aria-label="흐름 보기 방식">
           <button
             type="button"
-            className={`timeline-mode-option ${readingMode === "swimlane" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "swimlane"}
-            onClick={() => onReadingModeChange("swimlane")}
-          >
-            <Rows3 size={14} aria-hidden="true" />
-            타임라인
-          </button>
-          <button
-            type="button"
-            className={`timeline-mode-option ${readingMode === "flow" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "flow"}
-            onClick={() => onReadingModeChange("flow")}
+            className={`timeline-mode-option ${readingMode === "stream" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "stream"}
+            onClick={() => onReadingModeChange("stream")}
           >
             <List size={14} aria-hidden="true" />
-            목록
+            원본
           </button>
           <button
             type="button"
-            className={`timeline-mode-option ${readingMode === "causal" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "causal"}
-            onClick={() => onReadingModeChange("causal")}
+            className={`timeline-mode-option ${readingMode === "workflow" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "workflow"}
+            onClick={() => onReadingModeChange("workflow")}
           >
-            <Route size={14} aria-hidden="true" />
-            연결
+            <Sparkles size={14} aria-hidden="true" />
+            AI 흐름
           </button>
+        </div>
+        <div className="toolbar-pop-wrap" ref={advancedPopRef}>
+          <button
+            type="button"
+            className={`toolbar-toggle ${isAdvancedMode ? "is-active" : ""}`}
+            onClick={() => setAdvancedOpen((open) => !open)}
+            aria-expanded={advancedOpen}
+            aria-controls="timeline-advanced-popover"
+            aria-label="고급 보기"
+          >
+            <MoreHorizontal size={14} aria-hidden="true" />
+            고급
+          </button>
+          {advancedOpen ? (
+            <div
+              className="filter-popover"
+              id="timeline-advanced-popover"
+              role="dialog"
+              aria-label="고급 보기"
+            >
+              <header>
+                <span>고급 보기</span>
+              </header>
+              <ul>
+                <li>
+                  <button
+                    type="button"
+                    className={`filter-pop-item ${readingMode === "swimlane" ? "active" : ""}`}
+                    aria-pressed={readingMode === "swimlane"}
+                    onClick={() => {
+                      onReadingModeChange("swimlane");
+                      setAdvancedOpen(false);
+                    }}
+                  >
+                    <Rows3 size={14} aria-hidden="true" />
+                    <span className="filter-pop-label">타임라인</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className={`filter-pop-item ${readingMode === "causal" ? "active" : ""}`}
+                    aria-pressed={readingMode === "causal"}
+                    onClick={() => {
+                      onReadingModeChange("causal");
+                      setAdvancedOpen(false);
+                    }}
+                  >
+                    <Route size={14} aria-hidden="true" />
+                    <span className="filter-pop-label">연결</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          ) : null}
         </div>
         <div className="toolbar-pop-wrap" ref={filterPopRef}>
           <button
