@@ -33,7 +33,9 @@ const ISSUE_PATTERNS: Array<{ regex: RegExp; priority: Priority }> = [
 
 const DECISION_PATTERNS: RegExp[] = [
   /(결정|결정함|결정했|결정한다)/i,
-  /(채택|선택)/i,
+  // "선택" but not the noun forms 선택사항 / 선택지 / 선택적 / 선택권 ("optional"),
+  // which are not decisions.
+  /(채택|선택(?!사항|지|적|권))/i,
   /(우선|priority\s+is|prefer)/i,
   /default(?:s)?\s+to/i,
   /(choose|chose|chosen)/i,
@@ -470,10 +472,12 @@ function toTitle(sentence: string): string {
     .replace(/\s+/g, " ")
     // Unwrap markdown links to their text: "[Survey.md](path)" -> "Survey.md".
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-    // Strip leading markdown / list / quote / fence symbols so a title never
-    // begins with "#", ">", "* ", "- ", "`", or a stray ")"/"|" fragment.
-    .replace(/^[\s>#*`)|\-]+/, "")
+    // Drop emphasis / code markup anywhere so a title never carries "**" or "`".
+    .replace(/\*+/g, "")
     .replace(/`+/g, "")
+    // Strip leading markdown / list / quote / fence symbols so a title never
+    // begins with "#", ">", "- ", or a stray ")"/"|" fragment.
+    .replace(/^[\s>#)|\-]+/, "")
     .trim();
   if (cleaned.length <= 80) return cleaned;
   const truncated = cleaned.slice(0, 77);

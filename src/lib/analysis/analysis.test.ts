@@ -207,6 +207,27 @@ describe("DeterministicQuickPassProvider", () => {
     expect(decisionTitles.filter((t) => t.includes("MySQL로 전환"))).toHaveLength(1);
   });
 
+  it("strips emphasis markup and ignores 선택사항 (optional), not a decision", () => {
+    const events: TimelineEvent[] = [
+      event("d1", "aiConversation", "굵게", "**채택**: 캐싱을 적용하기로 결정했어요.**", "src-1"),
+      event("d2", "aiConversation", "옵션", "이 기능은 선택사항이에요. 나중에 켜도 됩니다.", "src-1"),
+    ];
+    const extraction = extractFromInput({
+      project,
+      session,
+      sources: [source("src-1", "aiConversation", "chat", "d1")],
+      events,
+    });
+    const decisionTitles = extraction.decisions.map((d) => d.title);
+    // The real decision is kept with the bold markers stripped.
+    expect(decisionTitles.some((t) => t.includes("캐싱을 적용하기로 결정"))).toBe(true);
+    expect(decisionTitles.every((t) => !t.includes("*"))).toBe(true);
+    // "선택사항" (optional) is a noun, not a decision — it must not be extracted.
+    expect(
+      [...extraction.decisions, ...extraction.issues].some((x) => x.title.includes("선택사항")),
+    ).toBe(false);
+  });
+
   it("runs cleanly when a Git diff event is included in the input", async () => {
     const events: TimelineEvent[] = [
       event(
