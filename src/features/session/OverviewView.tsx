@@ -201,8 +201,8 @@ export function OverviewView() {
           <nav className="overview-nav-cards" aria-label="세션 탭 바로가기">
             <OverviewNavCard
               icon={GanttChartSquare}
-              label="흐름"
-              description="시간순으로 복원한 작업 타임라인"
+              label="활동"
+              description="흐름 · 타임라인 · 원본 · 연결로 보는 작업 활동"
               onOpen={() => setSessionTab("flow")}
             />
             <OverviewNavCard

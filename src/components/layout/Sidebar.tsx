@@ -719,7 +719,7 @@ function buildSidebarSessionMenuItems({
     },
     {
       id: "open-flow",
-      label: "흐름 열기",
+      label: "활동 열기",
       icon: GanttChartSquare,
       onSelect: () => onOpenTab("flow"),
     },

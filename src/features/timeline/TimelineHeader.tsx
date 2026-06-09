@@ -58,16 +58,7 @@ export function TimelineToolbar({
       <span className="timeline-toolbar-spacer" aria-hidden="true" />
 
       <div className="timeline-toolbar-right">
-        <div className="timeline-mode-switch" role="group" aria-label="흐름 보기 방식">
-          <button
-            type="button"
-            className={`timeline-mode-option ${readingMode === "stream" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "stream"}
-            onClick={() => onReadingModeChange("stream")}
-          >
-            <List size={14} aria-hidden="true" />
-            원본
-          </button>
+        <div className="timeline-mode-switch" role="group" aria-label="보기 방식">
           <button
             type="button"
             className={`timeline-mode-option ${readingMode === "workflow" ? "is-active" : ""}`}
@@ -75,7 +66,7 @@ export function TimelineToolbar({
             onClick={() => onReadingModeChange("workflow")}
           >
             <Sparkles size={14} aria-hidden="true" />
-            AI 흐름
+            흐름
           </button>
           <button
             type="button"
@@ -85,6 +76,15 @@ export function TimelineToolbar({
           >
             <Rows3 size={14} aria-hidden="true" />
             타임라인
+          </button>
+          <button
+            type="button"
+            className={`timeline-mode-option ${readingMode === "stream" ? "is-active" : ""}`}
+            aria-pressed={readingMode === "stream"}
+            onClick={() => onReadingModeChange("stream")}
+          >
+            <List size={14} aria-hidden="true" />
+            원본
           </button>
           <button
             type="button"

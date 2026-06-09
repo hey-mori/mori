@@ -61,8 +61,8 @@ export function AiWorkflowView({
   return (
     <div className="ai-workflow">
       <header className="ai-workflow-head">
-        <h4>AI 흐름</h4>
-        <InfoHint label="AI 흐름 설명">
+        <h4>흐름</h4>
+        <InfoHint label="흐름 설명">
           AI가 이해한 작업 진행 순서입니다. 시간 구간별로 무엇을 결정하고 어떤 파일을 바꿨는지 보여주고,
           단계를 누르면 그 구간의 원본 대화로 이동합니다.
         </InfoHint>

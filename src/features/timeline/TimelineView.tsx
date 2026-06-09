@@ -143,13 +143,13 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const [zoomFactor, setZoomFactor] = useState<number>(1);
   const canvasRef = useRef<TimelineCanvasHandle>(null);
 
-  // The 흐름 tab opens on the 원본 (raw conversation stream) by default — the
-  // honest, readable view. AI 흐름 is the other primary view; the dense swimlane
-  // and the causal map are retired behind the 고급 affordance.
+  // The tab opens on the 흐름 (AI work-flow) view by default — the AI's reading
+  // of how the work progressed. 타임라인 / 원본 / 연결 are the other views; an
+  // unanalyzed session shows the 흐름 view's "분석 실행" prompt.
   const [readingModeOverride, setReadingModeOverride] = useState<
     TimelineReadingMode | null
   >(null);
-  const readingMode: TimelineReadingMode = readingModeOverride ?? "stream";
+  const readingMode: TimelineReadingMode = readingModeOverride ?? "workflow";
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.

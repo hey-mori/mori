@@ -125,7 +125,7 @@ type SessionTabSpec = {
 
 const SESSION_TABS: SessionTabSpec[] = [
   { id: "overview", label: "개요", icon: LayoutDashboard },
-  { id: "flow", label: "흐름", icon: GanttChartSquare },
+  { id: "flow", label: "활동", icon: GanttChartSquare },
   { id: "evidence", label: "자료", icon: FileText },
   { id: "insights", label: "검토", icon: Sparkles },
   { id: "report", label: "공유", icon: ScrollText },
