@@ -18,6 +18,7 @@
  * is the boundary for the cards rendered INSIDE the lanes.
  */
 import { eventTypeLabels } from "../../../domain/constants";
+import { isAgentBoilerplateTitle } from "../../../lib/import/sanitizeTitle";
 import type { FileTouch, SourceRef, TimelineEvent, TrustLevel } from "../../../domain/types";
 import { formatTime, formatTimeRange, minutesBetween } from "../../../lib/formatting/time";
 import { getTrustDisplay } from "../../../lib/evidence/trust";
@@ -176,8 +177,12 @@ export function buildTimelineEventCardViewModel(
 
   const fileActivity = buildCardFileActivity(event.fileTouches);
 
-  const ariaLabel = `${laneLabel} · ${event.title} · ${trust.label}`;
-  const buttonTitle = `${laneLabel} · ${event.title}`;
+  // Sessions imported before the boilerplate-aware titler stored the agent's
+  // "continued from a previous conversation" preamble as the title; clean it at
+  // render so an already-imported session reads right without a re-import.
+  const displayTitle = isAgentBoilerplateTitle(event.title) ? "세션 이어가기" : event.title;
+  const ariaLabel = `${laneLabel} · ${displayTitle} · ${trust.label}`;
+  const buttonTitle = `${laneLabel} · ${displayTitle}`;
 
   return {
     kind: "event",
@@ -192,7 +197,7 @@ export function buildTimelineEventCardViewModel(
     evidenceChips: descriptor.evidenceChips,
     timeLabel,
     hasTimeRange: hasRange,
-    title: event.title,
+    title: displayTitle,
     trust,
     primaryMeta,
     fileActivity,

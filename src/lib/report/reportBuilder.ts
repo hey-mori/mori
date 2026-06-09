@@ -8,6 +8,7 @@ import type {
   TimelineEvent,
 } from "../../domain/types";
 import { eventDisplayLabel } from "../../domain/constants";
+import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
   projectEventRequestSummary,
   resolveDisclosureLevel,
@@ -258,7 +259,14 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   if (sections.has("timeline")) {
     lines.push("## 타임라인");
     lines.push("");
-    const timelineEvents = orderEvents(view.events).slice(0, type === "workLog" ? 30 : 12);
+    // A report timeline reads as a narrative, so drop tool-call / system noise
+    // (Grep / Bash / Read turns) and lead with the conversation and outcomes.
+    // Fall back to the raw order only if filtering would empty the section.
+    const conversation = orderEvents(view.events).filter(
+      (event) => event.actor !== "tool" && event.actor !== "system",
+    );
+    const ordered = conversation.length > 0 ? conversation : orderEvents(view.events);
+    const timelineEvents = ordered.slice(0, type === "workLog" ? 30 : 12);
     if (timelineEvents.length === 0) {
       lines.push("_타임라인 이벤트가 없습니다._");
     } else {
@@ -408,7 +416,10 @@ function renderTimelineLine(
 ): string {
   const time = formatIso(event.start);
   const typeLabel = eventDisplayLabel(event);
-  const title = event.title;
+  // Sessions imported before the boilerplate-aware titler stored the agent's
+  // "continued from a previous conversation" preamble as the title; clean it at
+  // render so an already-imported session reads right without a re-import.
+  const title = isAgentBoilerplateTitle(event.title) ? "세션 이어가기" : event.title;
   if (privacy.clientSafe) {
     return `- \`${time}\` **${title}** _(${typeLabel})_`;
   }
