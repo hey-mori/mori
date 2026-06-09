@@ -1,4 +1,5 @@
-import { Layers3 } from "lucide-react";
+import { ChevronDown, Layers3, Wrench } from "lucide-react";
+import { useState } from "react";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
 import { useSessionStore } from "../../app/sessionStore";
 import {
@@ -8,6 +9,8 @@ import {
 } from "../../lib/disclosure";
 import type { TimelineDensity } from "../../lib/timeline/collisionLayout";
 import { sortDisplayItemsChronologically } from "../../lib/timeline/displayItems";
+import { foldStreamRows, type StreamRow } from "../../lib/timeline/streamRows";
+import { formatTime } from "../../lib/formatting/time";
 import type { TimelineRenderModel } from "../../lib/timeline/timelineViewModel";
 import {
   buildTimelineBundleViewModel,
@@ -50,12 +53,18 @@ export function TimelineChronoList({
     (state) => state.analysisSettings.requestDisclosureLevel,
   );
   const requestDisclosureOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
-  const items = sortDisplayItemsChronologically(model.visibleDisplayItems);
-  if (items.length === 0) return null;
+  // Fold runs of tool calls so the stream reads as conversation, not a wall of
+  // Grep / Bash / Read rows.
+  const rows = foldStreamRows(sortDisplayItemsChronologically(model.visibleDisplayItems));
+  if (rows.length === 0) return null;
 
   return (
     <ol className={`timeline-chrono-list is-${density}`} aria-label="활동 목록">
-      {items.map((item) => {
+      {rows.map((row) => {
+        if (row.kind === "toolRun") {
+          return <ToolRunRow key={row.id} run={row} />;
+        }
+        const item = row.item;
         const selected =
           item.id === selectedItemId ||
           (selectedItemId != null && item.memberEventIds.includes(selectedItemId));
@@ -117,6 +126,63 @@ export function TimelineChronoList({
         );
       })}
     </ol>
+  );
+}
+
+/**
+ * A folded run of tool calls. A single call reads as one quiet line; a run of
+ * several collapses to "도구 N개 · Grep · Bash" that expands to list each call —
+ * so the conversation stays the spine of the stream.
+ */
+function ToolRunRow({ run }: { run: Extract<StreamRow, { kind: "toolRun" }> }) {
+  const [expanded, setExpanded] = useState(false);
+  const count = run.events.length;
+  const first = run.events[0];
+  const timeLabel = formatTime(first.event.start);
+
+  if (count === 1) {
+    return (
+      <li>
+        <div className="timeline-chrono-toolrun is-single">
+          <span className="timeline-chrono-time">{timeLabel}</span>
+          <Wrench size={13} aria-hidden="true" />
+          <span className="timeline-chrono-toolrun-label">{oneLine(first.event.title, 90)}</span>
+        </div>
+      </li>
+    );
+  }
+
+  const toolsLabel = run.tools.length > 0 ? run.tools.join(" · ") : "도구";
+  return (
+    <li>
+      <button
+        type="button"
+        className="timeline-chrono-toolrun"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((open) => !open)}
+      >
+        <span className="timeline-chrono-time">{timeLabel}</span>
+        <Wrench size={13} aria-hidden="true" />
+        <span className="timeline-chrono-toolrun-label">
+          도구 {count}개 · {toolsLabel}
+        </span>
+        <ChevronDown
+          size={13}
+          className={`timeline-chrono-toolrun-chevron${expanded ? " is-open" : ""}`}
+          aria-hidden="true"
+        />
+      </button>
+      {expanded ? (
+        <ul className="timeline-chrono-toolrun-list" role="region">
+          {run.events.map((toolEvent) => (
+            <li key={toolEvent.id}>
+              <span className="timeline-chrono-time">{formatTime(toolEvent.event.start)}</span>
+              <span className="timeline-chrono-toolrun-item">{oneLine(toolEvent.event.title, 100)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
   );
 }
 
