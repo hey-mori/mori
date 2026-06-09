@@ -112,9 +112,46 @@ describe("Ollama Quick Pass harness recovery", () => {
 
     expect(calls.length).toBeGreaterThan(1);
     expect(result.issues.length).toBe(calls.length);
-    expect(calls.every((body) => (body as { options?: { num_ctx?: number } }).options?.num_ctx === 4096)).toBe(
+    expect(calls.every((body) => (body as { options?: { num_ctx?: number } }).options?.num_ctx === 8192)).toBe(
       true,
     );
+  });
+
+  it("keeps partial results when some chunks fail instead of sinking the whole run", async () => {
+    let call = 0;
+    const validBody = JSON.stringify({
+      response: JSON.stringify({ issues: [{ title: "살아남은 이슈", priority: "high" }], decisions: [] }),
+    });
+    const truncatedBody = JSON.stringify({ response: '{"issues":[', done_reason: "length" });
+    const fetchImpl = (async () => {
+      call += 1;
+      return new Response(call === 1 ? validBody : truncatedBody, {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    const longInput = {
+      ...buildQuickPassSampleInput(),
+      events: Array.from({ length: 70 }, (_, index) => ({
+        ...buildQuickPassSampleInput().events[0]!,
+        id: `evt-${index}`,
+        title: `대화 ${index}`,
+        summary: `결정과 TODO가 섞인 긴 대화 조각 ${index}`,
+      })),
+    };
+
+    const result = await createOllamaQuickPassProvider({
+      endpoint: "http://localhost:11434",
+      model: "gemma4:e4b",
+      fetchImpl,
+    }).analyze(longInput);
+
+    // The first chunk's findings survive; the truncated chunks are skipped, and
+    // the partial-result note tells the user the run was not complete.
+    expect(call).toBeGreaterThan(1);
+    expect(result.issues.length).toBeGreaterThan(0);
+    expect(result.notes.some((note) => note.includes("부분 결과"))).toBe(true);
   });
 
   it("surfaces Ollama length stops as context/output budget failures", async () => {

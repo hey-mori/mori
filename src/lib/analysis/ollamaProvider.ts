@@ -39,9 +39,22 @@ export class OllamaQuickPassProvider implements AnalysisProvider {
     });
 
     const parsedChunks: ParsedQuickPass[] = [];
+    const chunkErrors: string[] = [];
     for (const chunk of chunks) {
-      const responseText = await this.callOllama(chunk.systemPrompt, chunk.userPrompt, profile);
-      parsedChunks.push(parseOllamaQuickPassJson(responseText));
+      try {
+        const responseText = await this.callOllama(chunk.systemPrompt, chunk.userPrompt, profile);
+        parsedChunks.push(parseOllamaQuickPassJson(responseText));
+      } catch (error) {
+        // One bad chunk (e.g. an output that still overran the token ceiling, or
+        // a malformed JSON reply) must not sink the whole run — record it and
+        // keep the findings from the chunks that succeeded.
+        chunkErrors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+    // Only when EVERY chunk failed do we surface the failure, so the run falls
+    // to the honest "분석 실패" path rather than a misleading empty success.
+    if (parsedChunks.length === 0) {
+      throw new Error(chunkErrors[0] ?? "Ollama Quick Pass produced no usable output.");
     }
     const parsed = mergeParsedQuickPassChunks(parsedChunks);
 
@@ -141,6 +154,11 @@ export class OllamaQuickPassProvider implements AnalysisProvider {
         chunks.length > 1
           ? `Chunked local analysis: ${chunks.length} passes using ${profile.label}.`
           : `Local analysis profile: ${profile.label}.`,
+        ...(chunkErrors.length > 0
+          ? [
+              `${chunks.length}개 중 ${chunkErrors.length}개 청크를 건너뛴 부분 결과입니다 (예: 출력 길이 초과). 더 작은 모델 프로파일이나 더 짧은 세션으로 다시 시도하면 완전해집니다.`,
+            ]
+          : []),
       ],
     };
   }
@@ -318,6 +336,13 @@ type OllamaModelProfile = {
   numPredict: number;
 };
 
+// `numPredict` is the OUTPUT token ceiling, not a target — the model stops once
+// the JSON is complete, so a generous ceiling only prevents truncation
+// (`done_reason: "length"`) and never pads or slows a short answer. The earlier
+// 900–1600 ceilings were below a real chunk's JSON: a 12-issue extraction
+// already needs ~1180 tokens (measured on gemma e4b). `numCtx` is sized to fit
+// the chunk's input digest plus that output ceiling. `numCtx` 8192 was verified
+// to load and run at full GPU speed on an 8 GB card, so the bump is memory-safe.
 function getOllamaModelProfile(model: string): OllamaModelProfile {
   const billions = inferModelBillions(model);
   if (billions !== null && billions <= 2) {
@@ -326,8 +351,8 @@ function getOllamaModelProfile(model: string): OllamaModelProfile {
       maxEventsPerChunk: 18,
       eventDigestBudgetChars: 4_800,
       sourceDigestBudgetChars: 1_000,
-      numCtx: 4_096,
-      numPredict: 900,
+      numCtx: 6_144,
+      numPredict: 3_072,
     };
   }
   if (billions !== null && billions <= 4.5) {
@@ -336,8 +361,8 @@ function getOllamaModelProfile(model: string): OllamaModelProfile {
       maxEventsPerChunk: 28,
       eventDigestBudgetChars: 6_400,
       sourceDigestBudgetChars: 1_200,
-      numCtx: 4_096,
-      numPredict: 1_000,
+      numCtx: 8_192,
+      numPredict: 4_096,
     };
   }
   if (billions !== null && billions >= 14) {
@@ -346,8 +371,8 @@ function getOllamaModelProfile(model: string): OllamaModelProfile {
       maxEventsPerChunk: 64,
       eventDigestBudgetChars: 12_000,
       sourceDigestBudgetChars: 1_800,
-      numCtx: 8_192,
-      numPredict: 1_600,
+      numCtx: 12_288,
+      numPredict: 5_120,
     };
   }
   return {
@@ -356,7 +381,7 @@ function getOllamaModelProfile(model: string): OllamaModelProfile {
     eventDigestBudgetChars: 8_800,
     sourceDigestBudgetChars: 1_600,
     numCtx: 8_192,
-    numPredict: 1_300,
+    numPredict: 4_096,
   };
 }
 
