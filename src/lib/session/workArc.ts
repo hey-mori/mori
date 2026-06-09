@@ -11,6 +11,75 @@
  * caller can fall back to showing the plain paragraph. Pure and deterministic:
  * it only reshapes text the analysis already produced, with no new model call.
  */
+import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
+
+/** One time-grounded phase of work, derived from real event timestamps. */
+export type WorkPhase = {
+  startIso: string;
+  endIso: string;
+  /** What opened the phase — the human request that framed it. */
+  label: string;
+  eventCount: number;
+};
+
+/** A gap this long between events reads as a break, so the next event opens a
+ *  new work session / phase. */
+const PHASE_BREAK_MS = 20 * 60 * 1000;
+
+type PhaseSeedEvent = { start: string; title: string; actor?: string };
+
+/**
+ * Reconstruct the session's work phases from the actual event timeline, so the
+ * arc is grounded in WHEN things happened rather than in a parsed summary. The
+ * meaningful spine (conversation, not tool noise) is split at the largest real
+ * breaks, lining each phase up with a work session, and each phase is labelled
+ * by the human request that opened it. Returns `[]` when the session is too
+ * small or has no real breaks, so the caller can fall back to the text arc.
+ */
+export function buildWorkPhases(events: readonly PhaseSeedEvent[], max = 6): WorkPhase[] {
+  const spine = events
+    .filter((event) => event.actor !== "tool" && event.actor !== "system" && Boolean(event.start))
+    .map((event) => ({ time: new Date(event.start).getTime(), event }))
+    .filter((entry) => Number.isFinite(entry.time))
+    .sort((a, b) => a.time - b.time);
+  if (spine.length < 4) return [];
+
+  const breaks = spine
+    .slice(1)
+    .map((entry, index) => ({ at: index + 1, gap: entry.time - spine[index].time }))
+    .filter((candidate) => candidate.gap >= PHASE_BREAK_MS);
+  if (breaks.length === 0) return [];
+
+  const cuts = breaks
+    .sort((a, b) => b.gap - a.gap)
+    .slice(0, max - 1)
+    .map((candidate) => candidate.at)
+    .sort((a, b) => a - b);
+
+  const bounds = [0, ...cuts, spine.length];
+  const phases: WorkPhase[] = [];
+  for (let i = 0; i < bounds.length - 1; i += 1) {
+    const segment = spine.slice(bounds[i], bounds[i + 1]);
+    if (segment.length === 0) continue;
+    phases.push({
+      startIso: segment[0].event.start,
+      endIso: segment[segment.length - 1].event.start,
+      label: phaseLabel(segment.map((entry) => entry.event)),
+      eventCount: segment.length,
+    });
+  }
+  return phases.length >= 2 ? phases : [];
+}
+
+function phaseLabel(segment: PhaseSeedEvent[]): string {
+  // The human request that opened the phase frames its intent; fall back to the
+  // first event's title when the phase has no user turn.
+  const request = segment.find((event) => event.actor === "user");
+  const seed = (request ?? segment[0])?.title ?? "";
+  const cleaned = isAgentBoilerplateTitle(seed) ? "세션 이어가기" : seed.replace(/\s+/g, " ").trim();
+  return cleaned.length > 64 ? `${cleaned.slice(0, 63)}…` : cleaned || "작업";
+}
+
 export function buildWorkArc(summary: string | null | undefined, max = 6): string[] {
   const text = (summary ?? "").replace(/\s+/g, " ").trim();
   if (!text) return [];

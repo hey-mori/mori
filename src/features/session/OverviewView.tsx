@@ -21,7 +21,7 @@ import {
 import { useAppStore } from "../../app/store";
 import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
 import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
-import { buildWorkArc } from "../../lib/session/workArc";
+import { buildWorkArc, buildWorkPhases } from "../../lib/session/workArc";
 import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import type { ImportDigestLane } from "../../lib/import/importDigest";
 import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
@@ -88,8 +88,26 @@ export function OverviewView() {
   // summary below always shows, with no LLM, so 개요 is legible the moment it
   // loads. We never surface the pre-analysis placeholder as an "AI 요약".
   const summaryText = hasAnalysis && analysis ? analysis.summary.sessionSummary : null;
-  // The AI narrative, reshaped into ordered work-phase steps when it has them.
-  const workArc = useMemo(() => buildWorkArc(summaryText), [summaryText]);
+  // The work-flow arc, preferring time-grounded phases reconstructed from the
+  // real event timeline (with "when" + the opening request per phase); falling
+  // back to the AI summary reshaped into ordered steps when the session has no
+  // clear breaks.
+  const workArc = useMemo<{ caption: string; steps: WorkArcStep[] }>(() => {
+    const phases = buildWorkPhases(view.events);
+    if (phases.length >= 2) {
+      return {
+        caption: `작업 세션 ${phases.length}개`,
+        steps: phases.map((phase) => ({
+          label: phase.label,
+          timeLabel: formatPhaseStart(phase.startIso),
+        })),
+      };
+    }
+    return {
+      caption: "AI가 복원한 단계",
+      steps: buildWorkArc(summaryText).map((label) => ({ label })),
+    };
+  }, [view.events, summaryText]);
   const sessionEmpty = workSummary.isEmpty;
   const duration = useMemo(
     () => formatDuration(view.session.startedAt, view.session.endedAt),
@@ -151,14 +169,12 @@ export function OverviewView() {
             {!sessionEmpty ? (
               <p className="session-overview-summary">{workSummary.headline}</p>
             ) : null}
-            {summaryText ? (
-              workArc.length >= 2 ? (
-                <WorkArc steps={workArc} />
-              ) : (
-                <p className="session-overview-ai-summary">
-                  <Badge tone="purple">AI 요약</Badge> {summaryText}
-                </p>
-              )
+            {workArc.steps.length >= 2 ? (
+              <WorkArc caption={workArc.caption} steps={workArc.steps} />
+            ) : summaryText ? (
+              <p className="session-overview-ai-summary">
+                <Badge tone="purple">AI 요약</Badge> {summaryText}
+              </p>
             ) : null}
             <WorkShapeBar lanes={workSummary.digest.lanes} />
           </section>
@@ -249,18 +265,20 @@ function OverviewMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+type WorkArcStep = { label: string; timeLabel?: string };
+
 /**
- * The AI narrative reshaped into an ordered arc of work phases. Turns the
- * Quick Pass summary's wall of text into a scannable "how the work progressed"
- * sequence — the first slice of the AI work-flow view. Only rendered when the
- * summary actually has multiple steps (see `buildWorkArc`).
+ * The session's work-flow arc: an ordered "how the work progressed" sequence —
+ * the first slice of the AI work-flow view. Time-grounded phases carry a "when"
+ * per step (the work session that opened it); the summary fallback carries just
+ * the narrative steps. Only rendered with two or more steps.
  */
-function WorkArc({ steps }: { steps: string[] }) {
+function WorkArc({ caption, steps }: { caption: string; steps: WorkArcStep[] }) {
   return (
     <div className="work-arc" aria-label="작업 흐름">
       <div className="work-arc-head">
         <Badge tone="purple">작업 흐름</Badge>
-        <span className="work-arc-caption">AI가 복원한 단계</span>
+        <span className="work-arc-caption">{caption}</span>
       </div>
       <ol className="work-arc-steps">
         {steps.map((step, index) => (
@@ -268,12 +286,27 @@ function WorkArc({ steps }: { steps: string[] }) {
             <span className="work-arc-marker" aria-hidden="true">
               {index + 1}
             </span>
-            <span className="work-arc-text">{step}</span>
+            <span className="work-arc-body">
+              {step.timeLabel ? <span className="work-arc-time">{step.timeLabel}</span> : null}
+              <span className="work-arc-text">{step.label}</span>
+            </span>
           </li>
         ))}
       </ol>
     </div>
   );
+}
+
+/** "06-01 01:17" — a compact phase-start stamp for the work arc. */
+function formatPhaseStart(iso: string): string {
+  const date = new Date(iso);
+  const time = date.getTime();
+  if (!Number.isFinite(time)) return "";
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${mm}-${dd} ${hh}:${min}`;
 }
 
 /**
