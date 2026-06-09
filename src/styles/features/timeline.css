@@ -1985,6 +1985,17 @@ kbd {
   font-weight: 750;
 }
 
+/* The source-mark badge is the only card element rendered at every density
+   tier (title + meta hide on compact/dense), so the request anchor lives here:
+   a filled purple dot marks where a user ask opens its work unit, legible even
+   when the card collapses to a pill where the bolder title and border tint
+   above no longer show. Higher specificity than the tone-/mark- fills below, so
+   it wins for a request card whatever its agent. */
+.event-card.is-request .event-card-source-mark {
+  color: #fff;
+  background: var(--purple);
+}
+
 .event-card.is-compact {
   padding: 0 7px;
 }

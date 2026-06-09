@@ -181,7 +181,10 @@ export function buildTimelineEventCardViewModel(
   // "continued from a previous conversation" preamble as the title; clean it at
   // render so an already-imported session reads right without a re-import.
   const displayTitle = isAgentBoilerplateTitle(event.title) ? "세션 이어가기" : event.title;
-  const ariaLabel = `${laneLabel} · ${displayTitle} · ${trust.label}`;
+  // A request opener (a user ask) is the anchor of its work unit; name it first
+  // so the signal is not visual-only (the swimlane marks it with a filled dot).
+  const requestPrefix = event.openedByUser ? "요청 · " : "";
+  const ariaLabel = `${requestPrefix}${laneLabel} · ${displayTitle} · ${trust.label}`;
   const buttonTitle = `${laneLabel} · ${displayTitle}`;
 
   return {
