@@ -114,11 +114,14 @@ export const timelineActivityLaneOrder: ActivityLaneId[] = [
 ];
 
 /**
- * The stable, always-visible lane set for the Timeline. A session's lane
- * structure should not jump around as events come and go — these lanes are
- * always rendered (as a slim band when empty) so the user reads one consistent
- * structure. Rarer activity (design / docs / build / deploy / automation /
- * memory / unknown) only earns a lane when it actually has events; see
+ * The Timeline's category set — RAW agent activity only: what Claude / Codex
+ * actually did. These are the kinds the swimlane lanes and the category filter
+ * draw from. The analysis / curation lanes (tracker=이슈, review=검토,
+ * handoff=이어가기, notes=노트, memory=메모리) are deliberately NOT here: those
+ * are a derived layer the user does not hand-curate, and they live in the AI 흐름
+ * view instead — but their lane definitions stay in `LANE_VISUALS` so the
+ * direction is retained, not deleted. Situational raw activity (git / deploy /
+ * automation / design / docs) earns a lane only when it has events; see
  * `resolveTimelineLaneOrder`.
  */
 export const CANONICAL_TIMELINE_LANES: ActivityLaneId[] = [
@@ -126,10 +129,7 @@ export const CANONICAL_TIMELINE_LANES: ActivityLaneId[] = [
   "command",
   "files",
   "research",
-  "tracker",
-  "review",
-  "handoff",
-  "notes",
+  "build",
 ];
 
 /**
