@@ -47,6 +47,7 @@ import type {
   ConnectorDetectionResult,
 } from "../connectors/installers/connectorInstaller";
 import { createDesktopUnavailableError, isTauriRuntime } from "./environment";
+import type { LlmHttpRequest, LlmHttpResponse } from "./llmHttp";
 import type { GitDiffCaptureRequest, GitDiffCaptureResult } from "./gitCommands";
 import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./repositoryCommands";
 
@@ -98,6 +99,7 @@ export type TauriCommandName =
   | "get_claude_code_session"
   | "resolve_file_locations"
   | "reveal_path_in_os"
+  | "llm_http_request"
   | "discover_local_ai_tools"
   | "discover_codex_sessions"
   | "get_codex_session"
@@ -279,6 +281,7 @@ export type TauriCommandMap = {
     output: ResolvedFileLocation[];
   };
   reveal_path_in_os: { input: { path: string }; output: null };
+  llm_http_request: { input: { request: LlmHttpRequest }; output: LlmHttpResponse };
   discover_local_ai_tools: { input: undefined; output: LocalAiToolReport };
   discover_codex_sessions: { input: undefined; output: CodexSessionMeta[] };
   get_codex_session: {

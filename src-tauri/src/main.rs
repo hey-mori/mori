@@ -10,6 +10,7 @@ mod connectors;
 mod db;
 mod files;
 mod git;
+mod llm_http;
 mod opencode;
 mod package;
 mod repositories;
@@ -65,6 +66,7 @@ fn main() {
             claude::code::get_claude_code_session,
             files::resolve_file_locations,
             files::reveal_path_in_os,
+            llm_http::llm_http_request,
             claude::installations::discover_local_ai_tools,
             codex::sessions::discover_codex_sessions,
             codex::sessions::get_codex_session,

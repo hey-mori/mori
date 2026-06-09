@@ -14,6 +14,7 @@ import {
 } from "./openAiCompatibleProvider";
 import type { QuickPassAnalysisSettings } from "./analysisSettings";
 import type { AnalysisProvider, AnalysisProviderName } from "./analysisTypes";
+import { getDefaultLlmFetch } from "../desktop/llmHttp";
 
 export type QuickPassProviderConfig =
   | { kind: "deterministic" }
@@ -46,6 +47,10 @@ export function buildProviderConfigFromSettings(
   settings: QuickPassAnalysisSettings,
   overrides: ProviderConfigOverrides = {},
 ): QuickPassProviderConfig {
+  // In the desktop app, default to the native HTTP bridge so local-LLM calls
+  // bypass the webview CORS preflight ("Failed to fetch"). An explicit override
+  // (tests, probes) still wins; the browser falls back to the global fetch.
+  const fetchImpl = overrides.fetchImpl ?? getDefaultLlmFetch();
   if (settings.provider === "ollama") {
     return {
       kind: "ollama",
@@ -53,7 +58,7 @@ export function buildProviderConfigFromSettings(
         endpoint: settings.ollamaEndpoint,
         model: settings.ollamaModel,
         timeoutMs: overrides.timeoutMs ?? settings.ollamaTimeoutMs,
-        ...(overrides.fetchImpl ? { fetchImpl: overrides.fetchImpl } : {}),
+        ...(fetchImpl ? { fetchImpl } : {}),
       },
     };
   }
@@ -65,7 +70,7 @@ export function buildProviderConfigFromSettings(
         model: settings.openAiModel,
         apiKey: settings.openAiApiKey,
         timeoutMs: overrides.timeoutMs ?? settings.openAiTimeoutMs,
-        ...(overrides.fetchImpl ? { fetchImpl: overrides.fetchImpl } : {}),
+        ...(fetchImpl ? { fetchImpl } : {}),
       },
     };
   }

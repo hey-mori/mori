@@ -23,6 +23,7 @@ import type {
   QuickPassProviderKind,
 } from "../../lib/analysis";
 import { formatRelativeKo } from "../../lib/home/homeOverview";
+import { getDefaultLlmFetch } from "../../lib/desktop/llmHttp";
 import {
   PreferenceToggle,
   SettingsSection,
@@ -113,6 +114,7 @@ export function LocalAiCard({
           baseUrl: settings.openAiBaseUrl,
           apiKey: settings.openAiApiKey,
           timeoutMs: Math.min(settings.openAiTimeoutMs, 5_000),
+          ...(getDefaultLlmFetch() ? { fetchImpl: getDefaultLlmFetch() } : {}),
         });
         setProbe(
           result.ok
@@ -124,6 +126,7 @@ export function LocalAiCard({
       const result = await probeOllamaConnection({
         endpoint: settings.ollamaEndpoint,
         timeoutMs: Math.min(settings.ollamaTimeoutMs, 5_000),
+        ...(getDefaultLlmFetch() ? { fetchImpl: getDefaultLlmFetch() } : {}),
       });
       setProbe(
         result.ok
