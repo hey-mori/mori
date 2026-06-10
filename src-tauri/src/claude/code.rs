@@ -235,7 +235,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
             } else if preview.first_user_text.trim().is_empty() {
                 format!("Claude Code · {}", project_label)
             } else {
-                truncate(&preview.first_user_text, 90)
+                distill_title(&preview.first_user_text, 90)
             };
 
             out.push(ClaudeCodeSessionMeta {
@@ -316,7 +316,7 @@ pub(crate) fn read_session_at(
     let title = if parsed.title.trim().is_empty() {
         format!("Claude Code · {}", project_name)
     } else {
-        truncate(&parsed.title, 90)
+        distill_title(&parsed.title, 90)
     };
 
     Ok(ClaudeCodeSessionDetail {
@@ -990,6 +990,66 @@ fn truncate(input: &str, max: usize) -> String {
     out
 }
 
+/// Distill a clean session title from a raw first user message.
+///
+/// Claude Code stores no session title of its own (no `summary` line in the
+/// JSONL), so the first user request is the only available signal. But a real
+/// first request is often a long prompt with pasted file dumps after a `---`
+/// fence and several sentences, which makes a blunt 90-char truncation read as
+/// noise in the sidebar. We keep the first sentence of the first real line
+/// (everything before any horizontal-rule fence), strip leading markdown
+/// markers, then truncate — turning a messy paste into a scannable title. Falls
+/// back to a plain truncation when there is no clean headline to find.
+fn distill_title(raw: &str, max: usize) -> String {
+    // Take lines until a horizontal-rule fence (--- or longer), where a pasted
+    // document / screenshot dump typically begins rather than the actual ask.
+    let mut headline = String::new();
+    for line in raw.lines() {
+        let trimmed = line.trim();
+        if trimmed.len() >= 3 && trimmed.chars().all(|c| c == '-') {
+            break;
+        }
+        let stripped = strip_markdown_lead(trimmed);
+        if !stripped.is_empty() {
+            headline = stripped;
+            break;
+        }
+    }
+    if headline.is_empty() {
+        return truncate(raw, max);
+    }
+    truncate(&first_sentence(&headline), max)
+}
+
+/// Strip leading markdown markers (heading, quote, bullet, code fence) and
+/// surrounding whitespace from a single line.
+fn strip_markdown_lead(line: &str) -> String {
+    line.trim_start_matches(|c: char| {
+        matches!(c, '#' | '>' | '-' | '*' | '`' | ' ' | '\t')
+    })
+    .trim()
+    .to_string()
+}
+
+/// The first sentence of a line: text up to and including the first terminator
+/// (`.`, `!`, `?`, and their CJK forms) that is followed by whitespace or the
+/// end of the line, so a decimal like "v1.2" is not mistaken for a break.
+fn first_sentence(line: &str) -> String {
+    let chars: Vec<char> = line.chars().collect();
+    for (i, &c) in chars.iter().enumerate() {
+        if matches!(c, '.' | '!' | '?' | '。' | '！' | '？') {
+            let followed_by_break = chars
+                .get(i + 1)
+                .map(|next| next.is_whitespace())
+                .unwrap_or(true);
+            if followed_by_break {
+                return chars[..=i].iter().collect::<String>().trim().to_string();
+            }
+        }
+    }
+    line.trim().to_string()
+}
+
 fn format_modified_iso(when: SystemTime) -> String {
     let duration = when.duration_since(UNIX_EPOCH).unwrap_or_default();
     crate::claude::format_unix_seconds(duration.as_secs())
@@ -1007,6 +1067,42 @@ mod tests {
         let mut file = std::fs::File::create(&path).unwrap();
         file.write_all(body.as_bytes()).unwrap();
         path
+    }
+
+    #[test]
+    fn distill_title_cuts_pasted_dump_after_a_fence() {
+        let raw = "이거에 대해서 어떻게 생각해? 코덱스에서 이렇게 해왔었거든\n\n---\n파일편집보기창도움말\n홈 대시보드 기획";
+        // The headline keeps only the first sentence before the --- fence.
+        assert_eq!(distill_title(raw, 90), "이거에 대해서 어떻게 생각해?");
+    }
+
+    #[test]
+    fn distill_title_keeps_a_short_single_line_request() {
+        assert_eq!(distill_title("RAG과 LLM-Wiki 관련해서 작업중", 90), "RAG과 LLM-Wiki 관련해서 작업중");
+    }
+
+    #[test]
+    fn distill_title_strips_a_leading_markdown_marker() {
+        assert_eq!(distill_title("## 홈 화면 개선해줘", 90), "홈 화면 개선해줘");
+    }
+
+    #[test]
+    fn distill_title_does_not_break_on_a_decimal_point() {
+        assert_eq!(distill_title("v1.2 업데이트 반영해줘", 90), "v1.2 업데이트 반영해줘");
+    }
+
+    #[test]
+    fn distill_title_truncates_a_long_run_on_request() {
+        let raw = "가".repeat(200);
+        let out = distill_title(&raw, 90);
+        assert!(out.chars().count() <= 93, "title was {} chars", out.chars().count());
+        assert!(out.ends_with("..."));
+    }
+
+    #[test]
+    fn distill_title_falls_back_when_there_is_no_clean_headline() {
+        // A message that is only a fence + dump has no headline line; fall back.
+        assert_eq!(distill_title("---\n붙여넣은 내용", 90), truncate("---\n붙여넣은 내용", 90));
     }
 
     #[test]
