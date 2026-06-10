@@ -41,12 +41,10 @@ import {
   rememberProjectForFolder,
 } from "../../lib/session/projectFolderLinks";
 import { isTauriRuntime } from "../../lib/desktop";
-import { loadEnginePresets } from "../../lib/analysis/enginePresets";
 import {
-  listEngineProfiles,
-  settingsForEngine,
-  type EngineProfileView,
-} from "../../lib/analysis/engineProfiles";
+  buildStartSessionEngineOptions,
+  type StartSessionEngineOption,
+} from "../../lib/session/startSessionEngineOptions";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
 import { loadStoredSessionSummaries } from "../../app/sessionStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
@@ -207,18 +205,16 @@ export function StartSessionView() {
     () => describeSessionStorageTarget({ isDesktop: isTauriRuntime() }),
     [],
   );
-  const analysisSettings = useSessionStore((state) => state.analysisSettings);
-  const enginePresets = useMemo(() => loadEnginePresets(), []);
-  const engineProfiles = useMemo(
-    () => listEngineProfiles(analysisSettings, enginePresets),
-    [analysisSettings, enginePresets],
-  );
-  // Keep this screen opt-in: an engine is applied only after the user explicitly
-  // picks one (from the saved library) for the new session.
-  const [selectedEngineId, setSelectedEngineId] = useState<string | null>(null);
+  const engineOptions = useMemo(() => buildStartSessionEngineOptions(), []);
+  // Keep this screen opt-in: saved settings are applied only after the user
+  // explicitly chooses an engine for the new session.
+  const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider | null>(null);
   const selectedEngine = useMemo(
-    () => engineProfiles.find((profile) => profile.id === selectedEngineId) ?? null,
-    [engineProfiles, selectedEngineId],
+    () =>
+      engineOptions.find(
+        (option) => option.provider === selectedEngineProvider && option.selectable,
+      ) ?? null,
+    [engineOptions, selectedEngineProvider],
   );
 
   const existingProjects = useMemo(
@@ -334,10 +330,16 @@ export function StartSessionView() {
   async function handleCreate() {
     if (creating || !canCreate || !selectedAgent || !selectedEngine) return;
 
-    // Choosing an engine here applies that saved profile's full configuration to
-    // the analysis provider that reads this session, so Start Session and
-    // Settings → 분석 엔진 stay one setting.
-    updateAnalysisSettings(settingsForEngine(analysisSettings, selectedEngine.id, enginePresets));
+    // Choosing an engine here configures the analysis provider that reads this
+    // session, so Start Session and Settings → 분석 엔진 stay one setting.
+    const provider = selectedEngine.provider;
+    if (
+      provider === "deterministic" ||
+      provider === "ollama" ||
+      provider === "openAiCompatible"
+    ) {
+      updateAnalysisSettings({ provider });
+    }
 
     if (method === "fresh") {
       const draft = createSessionDraft({
@@ -345,7 +347,7 @@ export function StartSessionView() {
         projectName: projectName || "제목 없는 프로젝트",
         selectedSources: [agentSourceOption(selectedAgent)],
         recordingMode: "summary",
-        llmProvider: selectedEngine.providerKind,
+        llmProvider: selectedEngine.provider,
         llmModel: selectedEngine.model,
         storageLocation: storageTarget.location,
       });
@@ -585,12 +587,14 @@ export function StartSessionView() {
         }
       >
         <div className="pick-grid engine-pick-grid">
-          {engineProfiles.map((profile) => (
+          {engineOptions.map((option) => (
             <EngineTile
-              key={profile.id}
-              profile={profile}
-              selected={selectedEngineId === profile.id}
-              onSelect={() => setSelectedEngineId(profile.id)}
+              key={option.provider}
+              option={option}
+              selected={selectedEngineProvider === option.provider}
+              onSelect={() => {
+                if (option.selectable) setSelectedEngineProvider(option.provider);
+              }}
             />
           ))}
         </div>
@@ -761,38 +765,34 @@ const ENGINE_ICON: Partial<Record<LlmProvider, LucideIcon>> = {
 };
 
 function EngineTile({
-  profile,
+  option,
   selected,
   onSelect,
 }: {
-  profile: EngineProfileView;
+  option: StartSessionEngineOption;
   selected: boolean;
   onSelect: () => void;
 }) {
-  const Icon = ENGINE_ICON[profile.providerKind] ?? Cpu;
+  const disabled = !option.selectable;
+  const Icon = ENGINE_ICON[option.provider] ?? Cpu;
   return (
     <button
       type="button"
-      className={`pick-tile engine-pick-tile${selected ? " is-selected" : ""}`}
+      className={`pick-tile engine-pick-tile${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}`}
       aria-pressed={selected}
+      disabled={disabled}
+      title={disabled ? option.disabledReason : undefined}
       onClick={onSelect}
     >
       <span className="pick-tile-icon" aria-hidden="true">
         <Icon size={18} />
       </span>
       <span className="pick-tile-body">
-        <strong>{profile.name}</strong>
-        <span className="engine-tile-meta">{engineTileMeta(profile)}</span>
+        <strong>{option.label}</strong>
       </span>
       <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
     </button>
   );
-}
-
-/** Compact identity line for an engine tile: the provider, and model when set. */
-function engineTileMeta(profile: EngineProfileView): string {
-  if (!profile.isLlm) return "내장";
-  return profile.model ? `${profile.providerLabel} · ${profile.model}` : profile.providerLabel;
 }
 
 /**
@@ -929,7 +929,7 @@ function SessionSummary({
   method: ImportMethod | null;
   sessionName: string;
   projectName: string;
-  engine: EngineProfileView | null;
+  engine: StartSessionEngineOption | null;
   storageTarget: SessionStorageTarget;
   createAction: ReactNode;
 }) {
@@ -987,8 +987,8 @@ function SummarySectionTitle({ children }: { children: ReactNode }) {
   return <div className="summary-section-title">{children}</div>;
 }
 
-function engineSummaryLabel(engine: EngineProfileView): string {
-  return engine.isLlm ? `${engine.name} · ${engine.providerLabel}` : engine.name;
+function engineSummaryLabel(engine: StartSessionEngineOption): string {
+  return engine.label;
 }
 
 /** Distinct existing project keys, derived from stored/demo sessions + user-created projects. */

@@ -3,10 +3,8 @@ import {
   Code2,
   FlaskConical,
   Plug,
-  Plus,
   RefreshCw,
   Sparkles,
-  Trash2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -27,23 +25,6 @@ import type {
 } from "../../lib/analysis";
 import { formatRelativeKo } from "../../lib/home/homeOverview";
 import { endpointLocalityLabel } from "../../lib/analysis/endpointLocality";
-import {
-  loadEnginePresets,
-  saveEnginePresets,
-  captureEnginePreset,
-  type EnginePreset,
-} from "../../lib/analysis/enginePresets";
-import {
-  listEngineProfiles,
-  settingsForEngine,
-  newEngineProfile,
-  upsertEngineProfile,
-  removeEngineProfile,
-  BUILTIN_ENGINE_ID,
-  CUSTOM_ENGINE_ID,
-  type EngineProfileView,
-} from "../../lib/analysis/engineProfiles";
-import { getEngineProvider, llmEngineProviders } from "../../lib/analysis/engineProviders";
 import { getDefaultLlmFetch } from "../../lib/desktop/llmHttp";
 import {
   PreferenceToggle,
@@ -70,124 +51,39 @@ type CapabilityState =
   | { status: "running"; kind: QuickPassProviderKind }
   | { status: "done"; kind: QuickPassProviderKind; report: QuickPassCapabilityReport };
 
-/** Provider icon for an engine row. Brand glyphs match the rest of the app. */
-const ENGINE_ICON: Record<QuickPassProviderKind, LucideIcon> = {
-  deterministic: Sparkles,
-  ollama: Bot,
-  openAiCompatible: Code2,
-};
-
-function createEngineId(): string {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return `engine-${Date.now().toString(36)}-${Math.round(Math.random() * 1e6).toString(36)}`;
-  }
-}
-
 /**
- * The engine library: the built-in baseline, the live unsaved config (when it
- * matches nothing), and every saved profile. Selecting a row makes it the active
- * engine; saved rows can be deleted; "엔진 추가" seeds a new LLM connection.
+ * The engine roster is ordered and worded to match the canonical analysis
+ * vocabulary used on the Evidence screen: a no-model baseline first, then the
+ * two model protocols. The subtitle states where each engine's data goes,
+ * which is the real axis a user picks on. We deliberately do not split by
+ * "local vs cloud" because an OpenAI-compatible endpoint can be either a local
+ * server (LM Studio, llama.cpp) or a remote API.
  */
-function EngineLibrary({
-  profiles,
-  onSelect,
-  onAdd,
-  onDelete,
-}: {
-  profiles: EngineProfileView[];
-  onSelect: (view: EngineProfileView) => void;
-  onAdd: (kind: QuickPassProviderKind) => void;
-  onDelete: (id: string) => void;
-}) {
-  const [adding, setAdding] = useState(false);
-  return (
-    <div className="settings-ai-engine-list" role="radiogroup" aria-label="분석 엔진">
-      {profiles.map((view) => {
-        const Icon = ENGINE_ICON[view.providerKind] ?? Sparkles;
-        return (
-          <div
-            key={view.id}
-            className={`settings-ai-engine-row${view.active ? " is-active" : ""}`}
-          >
-            <button
-              type="button"
-              className="settings-ai-engine-pick"
-              role="radio"
-              aria-checked={view.active}
-              onClick={() => onSelect(view)}
-            >
-              <span className="settings-ai-engine-icon" aria-hidden="true">
-                <Icon size={16} />
-              </span>
-              <span className="settings-ai-engine-body">
-                <span className="settings-ai-engine-name">
-                  <strong>{view.name}</strong>
-                  {view.active ? <span className="settings-ai-engine-badge">사용 중</span> : null}
-                </span>
-                <span className="settings-ai-engine-meta">{engineRowMeta(view)}</span>
-              </span>
-            </button>
-            {!view.builtin && !view.unsaved ? (
-              <button
-                type="button"
-                className="settings-ai-engine-del"
-                aria-label={`${view.name} 삭제`}
-                title="삭제"
-                onClick={() => onDelete(view.id)}
-              >
-                <Trash2 size={14} />
-              </button>
-            ) : null}
-          </div>
-        );
-      })}
-      {adding ? (
-        <div className="settings-ai-engine-add-row">
-          {llmEngineProviders().map((provider) => (
-            <Button
-              key={provider.kind}
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                onAdd(provider.kind);
-                setAdding(false);
-              }}
-            >
-              {provider.label}
-            </Button>
-          ))}
-          <button
-            type="button"
-            className="settings-ai-engine-add-cancel"
-            onClick={() => setAdding(false)}
-          >
-            취소
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="settings-ai-engine-add"
-          onClick={() => setAdding(true)}
-        >
-          <Plus size={14} aria-hidden="true" /> 엔진 추가
-        </button>
-      )}
-    </div>
-  );
-}
-
-/** One calm meta line for an engine row: provider · model · locality. */
-function engineRowMeta(view: EngineProfileView): string {
-  if (!view.isLlm) return "내장 · 모델 없음";
-  const parts = [view.providerLabel];
-  if (view.model) parts.push(view.model);
-  if (view.locality === "local") parts.push("로컬");
-  else if (view.locality === "external") parts.push("외부");
-  return parts.join(" · ");
-}
+const ENGINE_OPTIONS: Array<{
+  id: EngineChoice;
+  label: string;
+  detail: string;
+  icon: LucideIcon;
+}> = [
+  {
+    id: "deterministic",
+    label: "규칙 기반",
+    detail: "모델 없이 · 외부 전송 없음",
+    icon: Sparkles,
+  },
+  {
+    id: "ollama",
+    label: "Ollama",
+    detail: "기기에서 도는 로컬 LLM 런타임",
+    icon: Bot,
+  },
+  {
+    id: "openAiCompatible",
+    label: "OpenAI 호환",
+    detail: "OpenAI 호환 엔드포인트 · 로컬 또는 외부",
+    icon: Code2,
+  },
+];
 
 export function LocalAiCard({
   settings,
@@ -205,59 +101,10 @@ export function LocalAiCard({
   const activeChoice = useMemo(() => inferEngineChoice(settings), [settings]);
   const providerKind = activeChoice;
 
-  const [presets, setPresets] = useState<EnginePreset[]>(() => loadEnginePresets());
-  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
-  const [nameDraft, setNameDraft] = useState("");
-
-  const profiles = useMemo(() => listEngineProfiles(settings, presets), [settings, presets]);
-  const activeProfile = profiles.find((profile) => profile.active) ?? null;
-  const editingPreset = editingProfileId
-    ? presets.find((preset) => preset.id === editingProfileId) ?? null
-    : null;
-  const nameChanged = editingPreset
-    ? nameDraft.trim() !== editingPreset.name
-    : nameDraft.trim().length > 0;
-  const canSaveProfile = Boolean(activeProfile?.isLlm) && Boolean(activeProfile?.unsaved || nameChanged);
-
-  function persistPresets(next: EnginePreset[]) {
-    setPresets(next);
-    saveEnginePresets(next);
-  }
-
-  function activateEngine(view: EngineProfileView) {
+  function selectEngine(choice: EngineChoice) {
     setProbe({ status: "idle" });
     setCapability({ status: "idle" });
-    setEditingProfileId(view.builtin || view.unsaved ? null : view.id);
-    setNameDraft(view.builtin || view.unsaved ? "" : view.name);
-    onUpdateSettings(settingsForEngine(settings, view.id, presets));
-  }
-
-  function addEngine(kind: QuickPassProviderKind) {
-    setProbe({ status: "idle" });
-    setCapability({ status: "idle" });
-    setEditingProfileId(null);
-    setNameDraft("");
-    onUpdateSettings(newEngineProfile("seed", "", kind).settings);
-  }
-
-  function saveActiveProfile() {
-    if (settings.provider === "deterministic") return;
-    const fallbackName = `${getEngineProvider(settings.provider).label} 엔진`;
-    const id = editingProfileId ?? createEngineId();
-    const profile = captureEnginePreset(id, nameDraft.trim() || fallbackName, settings);
-    persistPresets(upsertEngineProfile(presets, profile));
-    setEditingProfileId(id);
-    setNameDraft(profile.name);
-  }
-
-  function deleteProfile(id: string) {
-    const next = removeEngineProfile(presets, id);
-    persistPresets(next);
-    if (activeProfile?.id === id) {
-      setEditingProfileId(null);
-      setNameDraft("");
-      onUpdateSettings(settingsForEngine(settings, BUILTIN_ENGINE_ID, next));
-    }
+    onProviderChange(choice);
   }
 
   const handleProbe = useCallback(
@@ -334,32 +181,33 @@ export function LocalAiCard({
       }
     >
       <div className="settings-ai-layout">
-        <EngineLibrary
-          profiles={profiles}
-          onSelect={activateEngine}
-          onAdd={addEngine}
-          onDelete={deleteProfile}
-        />
-
-        {activeProfile?.isLlm ? (
-          <div className="settings-ai-save-bar">
-            <input
-              className="settings-ai-name-field"
-              value={nameDraft}
-              placeholder="엔진 이름 (예: 로컬 Qwen)"
-              aria-label="엔진 이름"
-              onChange={(event) => setNameDraft(event.target.value)}
-            />
-            <Button
-              size="sm"
-              variant={canSaveProfile ? "primary" : "secondary"}
-              disabled={!canSaveProfile}
-              onClick={saveActiveProfile}
-            >
-              {editingProfileId ? "변경 저장" : "프로필로 저장"}
-            </Button>
-          </div>
-        ) : null}
+        <div className="settings-ai-engine-grid" role="radiogroup" aria-label="분석 엔진">
+          {ENGINE_OPTIONS.map((option) => {
+            const Icon = option.icon;
+            const selected = option.id === activeChoice;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                className={`settings-ai-engine-tile${selected ? " is-selected" : ""}`}
+                role="radio"
+                aria-checked={selected}
+                onClick={() => selectEngine(option.id)}
+              >
+                <span className="settings-ai-engine-icon" aria-hidden="true">
+                  <Icon size={17} />
+                </span>
+                <span className="settings-ai-engine-body">
+                  <strong>{option.label}</strong>
+                </span>
+                <span
+                  className={`settings-ai-engine-mark${selected ? " is-selected" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+            );
+          })}
+        </div>
 
         {providerKind === "deterministic" ? null : (
           <EngineConfigPanel
