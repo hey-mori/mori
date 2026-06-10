@@ -39,6 +39,7 @@ describe("timelineLanes", () => {
     const labels = listLaneLabels();
     expect(labels.map((entry) => entry.type)).toEqual([
       "conversation",
+      "explore",
       "command",
       "files",
       "git",
