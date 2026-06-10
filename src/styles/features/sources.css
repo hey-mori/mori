@@ -888,43 +888,10 @@ details.sources-inspector-block[open] {
   padding-top: var(--base-space-4);
 }
 
-.sources-recent-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sources-recent-list li {
-  display: grid;
-  gap: 3px;
-  padding: 9px 0;
-  border-top: 1px solid var(--line);
-}
-
-.sources-recent-list li:first-child {
-  border-top: 0;
-}
-
-.sources-recent-list strong {
-  color: var(--text);
-  font-size: 12.5px;
-}
-
-.sources-recent-list span,
-.sources-panel-empty,
 .sources-panel small {
   color: var(--muted);
   font-size: 11.5px;
   line-height: 1.45;
-}
-
-.sources-panel-empty p {
-  margin: 0 0 3px;
-  color: var(--text);
-  font-size: 12.5px;
-  font-weight: 650;
 }
 
 .sources-format-tabs {

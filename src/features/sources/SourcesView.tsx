@@ -43,7 +43,6 @@ import {
   readConnectorJsonlFile,
   type ConnectorInboxListing,
 } from "../../lib/desktop";
-import { formatDateTime } from "../../lib/formatting/time";
 import {
   buildSourceWorkspace,
   type SourceWorkspaceCategory,
@@ -56,7 +55,6 @@ import {
   type SourceProviderMethod,
 } from "../../lib/sources/sourceProviderGroups";
 import type { AgentWorkAgentId } from "../../lib/agents/agentRegistry";
-import type { StoredSessionImport } from "../../lib/storage/storageTypes";
 import {
   buildConnectorJsonlPreviewWithHistory,
   getConnectorSetupGuide,
@@ -180,7 +178,6 @@ function flattenProviders(groups: ReturnType<typeof buildSourceProviderGroups>):
 export function SourcesView() {
   const draft = useSessionStore((state) => state.draft);
   const sessionView = useSessionStore(selectSessionView);
-  const imports = useSessionStore((state) => state.imports);
   const requestEvidenceImport = useAppStore((state) => state.requestEvidenceImport);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const requestStartRecords = useAppStore((state) => state.requestStartRecords);
@@ -445,8 +442,6 @@ export function SourcesView() {
         <p className="sources-empty">검색 결과가 없습니다.</p>
       )}
 
-      {imports.length > 0 ? <RecentImports imports={imports} /> : null}
-
     </PageShell>
   );
 }
@@ -511,7 +506,6 @@ function ProviderTile({
           {provider.name}
           {provider.recommended ? <em className="pick-tile-rec">추천</em> : null}
         </strong>
-        <span>{provider.methods.map((method) => method.connectLabel).join(" · ")}</span>
       </span>
       <span className={`pick-mark${active ? " is-selected" : ""}`} aria-hidden="true" />
     </button>
@@ -1019,26 +1013,5 @@ function ChipList({ items }: { items: string[] }) {
         <span key={item}>{item}</span>
       ))}
     </div>
-  );
-}
-
-function RecentImports({ imports }: { imports: StoredSessionImport[] }) {
-  return (
-    <section className="sources-panel" aria-label="최근 불러온 소스">
-      <header className="sources-group-head">
-        <h2>최근 불러온 소스</h2>
-        <span>{imports.length}건</span>
-      </header>
-      <ul className="sources-recent-list">
-        {imports.slice(0, 5).map((entry) => (
-          <li key={entry.id}>
-            <strong>{entry.source.title}</strong>
-            <span>
-              {entry.source.kind} · 이벤트 {entry.events.length}개 · {formatDateTime(entry.savedAt)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

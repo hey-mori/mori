@@ -82,22 +82,18 @@ export function TimelineEmptyState({
     );
   }
   return (
-    <TimelineLaneScaffold
-      title="분석 전 · 타임라인 비어 있음"
-      description="분석을 실행하면 가져온 자료가 이벤트로 정리됩니다."
-      action={
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Sparkles}
-          onClick={onRunQuickPass}
-          disabled={!canRunQuickPass}
-          title={canRunQuickPass ? "분석 실행" : "분석이 이미 실행 중입니다."}
-        >
-          분석 실행
-        </Button>
-      }
-    />
+    <div className="timeline-scaffold">
+      <div className="timeline-scaffold-lanes" aria-hidden="true">
+        {CANONICAL_TIMELINE_LANES.map((lane) => (
+          <div key={lane} className="timeline-scaffold-lane">
+            <span className="timeline-scaffold-lane-label">
+              {getActivityLaneVisuals(lane).label}
+            </span>
+            <span className="timeline-scaffold-lane-track" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

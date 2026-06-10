@@ -463,14 +463,13 @@ export function StartSessionView() {
         />
       }
     >
-      <FieldBlock number="1" title="에이전트" subtitle="어떤 AI 에이전트로 한 작업인가요?">
+      <FieldBlock number="1" title="에이전트">
         <div className="pick-grid">
           {AGENT_OPTIONS.map((agent) => (
             <PickTile
               key={agent.id}
               icon={agent.icon}
               title={agent.name}
-              detail={agent.detail}
               selected={selectedAgentId === agent.id}
               onSelect={() => chooseAgent(agent.id)}
             />
@@ -723,7 +722,7 @@ function PickTile({
 }: {
   icon: LucideIcon;
   title: string;
-  detail: string;
+  detail?: string;
   selected: boolean;
   recommended?: boolean;
   disabled?: boolean;
@@ -743,7 +742,7 @@ function PickTile({
       </span>
       <span className="pick-tile-body">
         <strong>{title}</strong>
-        <span>{detail}</span>
+        {detail ? <span>{detail}</span> : null}
       </span>
       {status ? (
         <Badge tone="gray">{status}</Badge>

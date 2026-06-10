@@ -573,19 +573,12 @@ function QuickPassControl({
   onRun: () => void;
   onClear: () => void;
 }) {
-  const providerSummary =
-    settings.provider === "ollama"
-      ? `${providerKindLabel("ollama")} · ${settings.ollamaModel} (${settings.ollamaEndpoint})`
-      : settings.provider === "openAiCompatible"
-        ? `${providerKindLabel("openAiCompatible")} · ${settings.openAiModel} (${settings.openAiBaseUrl})`
-      : `${providerKindLabel("deterministic")} 로컬 엔진 (네트워크 없음)`;
 
   return (
     <div className={`analysis-panel status-${status}`}>
       <div className="analysis-panel-header">
         <div>
           <h2>분석</h2>
-          <p>가져온 자료에서 이슈 · 결정 · 다음 액션을 추출합니다.</p>
         </div>
         <div className="analysis-panel-actions">
           {enginePresets.length > 0 ? (
@@ -627,6 +620,7 @@ function QuickPassControl({
         </div>
       </div>
       <div className="analysis-panel-provider">
+        <span className="analysis-panel-provider-label">엔진</span>
         <SegmentedControl<QuickPassProviderKind>
           ariaLabel="분석 제공자"
           role="radiogroup"
@@ -648,8 +642,12 @@ function QuickPassControl({
           <strong>OpenAI 호환</strong> · OpenAI 형식 HTTP API(로컬 또는 원격). 원격 주소면 자료가
           외부로 전송될 수 있습니다.
         </InfoHint>
-        <small>{providerSummary}</small>
-        <Button icon={SettingsIcon} onClick={onOpenSettings} size="sm">
+        <Button
+          className="analysis-panel-settings"
+          icon={SettingsIcon}
+          onClick={onOpenSettings}
+          size="sm"
+        >
           설정
         </Button>
       </div>

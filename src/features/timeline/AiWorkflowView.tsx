@@ -1,6 +1,4 @@
 import { useMemo } from "react";
-import { Sparkles } from "lucide-react";
-import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import type { Decision, Issue, TimelineEvent } from "../../domain/types";
 import type { AnalysisResult } from "../../lib/analysis/analysisTypes";
@@ -22,8 +20,8 @@ export function AiWorkflowView({
   analysis,
   selectedItemId,
   onSelectPhase,
-  onRunQuickPass,
-  canRunQuickPass,
+  onRunQuickPass: _onRunQuickPass,
+  canRunQuickPass: _canRunQuickPass,
 }: {
   view: { events: TimelineEvent[]; decisions: Decision[]; issues: Issue[] };
   analysis: AnalysisResult | null;
@@ -39,22 +37,7 @@ export function AiWorkflowView({
   );
 
   if (!summary) {
-    return (
-      <div className="ai-workflow ai-workflow-empty">
-        <Sparkles size={22} aria-hidden="true" />
-        <p>AI 흐름은 분석 후 표시됩니다.</p>
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Sparkles}
-          onClick={onRunQuickPass}
-          disabled={!canRunQuickPass}
-          title={canRunQuickPass ? "분석 실행" : "분석이 이미 실행 중입니다."}
-        >
-          분석 실행
-        </Button>
-      </div>
-    );
+    return <div className="ai-workflow ai-workflow-empty" aria-label="AI 흐름 없음" />;
   }
 
   const selectedAt = phaseTimeForSelection(view.events, selectedItemId);

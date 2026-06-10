@@ -5762,3 +5762,17 @@ td a {
   color: var(--text);
 }
 
+/* Analysis panel engine row: a leading "엔진" label and the settings shortcut
+   pushed to the trailing edge, so the choice reads left-to-right (label,
+   segments, info, then the way out to full settings) instead of a cramped
+   cluster. The rest of .analysis-panel-* lives in settings-tools.css. */
+.analysis-panel-provider-label {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.analysis-panel-settings {
+  margin-left: auto;
+}
+
