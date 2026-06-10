@@ -7,7 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { BaseSelect } from "../../components/ui/BaseSelect";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
@@ -24,7 +24,6 @@ import type {
   QuickPassProviderKind,
 } from "../../lib/analysis";
 import { formatRelativeKo } from "../../lib/home/homeOverview";
-import { endpointLocalityLabel } from "../../lib/analysis/endpointLocality";
 import { getDefaultLlmFetch } from "../../lib/desktop/llmHttp";
 import {
   PreferenceToggle,
@@ -151,14 +150,6 @@ export function LocalAiCard({
       settings.ollamaTimeoutMs,
     ],
   );
-
-  useEffect(() => {
-    if (providerKind === "deterministic") return;
-    const handle = setTimeout(() => {
-      void handleProbe(providerKind);
-    }, 600);
-    return () => clearTimeout(handle);
-  }, [providerKind, handleProbe]);
 
   async function handleCapabilityTest() {
     if (providerKind === "deterministic") return;
@@ -301,9 +292,6 @@ function EngineConfigPanel({
             placeholder="필요한 경우만"
             onChange={(value) => onUpdateSettings({ openAiApiKey: value })}
           />
-          <p className="settings-ai-desc">
-            이 엔드포인트는 {endpointLocalityLabel(settings.openAiBaseUrl)}
-          </p>
         </div>
       )}
 
