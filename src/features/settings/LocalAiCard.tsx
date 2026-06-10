@@ -525,38 +525,24 @@ function runStatsLabel(row: AnalysisRunHistoryViewModel["rows"][number]): string
 
 function RecentRunsPanel({ runHistory }: { runHistory: AnalysisRunHistoryViewModel | null }) {
   const rows = runHistory?.rows ?? [];
-  const latest = rows[0] ?? null;
-  const older = rows.slice(1, 5);
 
   return (
     <section className="settings-ai-runs" aria-label="최근 실행">
       <header className="settings-ai-runs-head">
         <h4>최근 실행</h4>
-        {older.length > 0 ? <span>이전 {older.length}건</span> : null}
       </header>
-      {latest ? (
-        <>
-          <div className="settings-ai-run-latest">
-            <div className="settings-ai-run-latest-top">
-              <strong>{latest.providerLabel}</strong>
-              <small>{formatRelativeKo(latest.generatedAt)}</small>
-            </div>
-            <p>{runStatsLabel(latest)}</p>
-          </div>
-          {older.length > 0 ? (
-            <ul className="settings-ai-runs-list base-scroll">
-              {older.map((row) => (
-                <li key={row.runId}>
-                  <span className="settings-ai-runs-list-label">
-                    {row.providerLabel}
-                    <small>{formatRelativeKo(row.generatedAt)}</small>
-                  </span>
-                  <small className="settings-ai-runs-list-stats">{runStatsLabel(row)}</small>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </>
+      {rows.length > 0 ? (
+        <ul className="settings-ai-runs-list base-scroll">
+          {rows.map((row) => (
+            <li key={row.runId} className="settings-ai-run-item">
+              <div className="settings-ai-run-item-top">
+                <strong>{row.providerLabel}</strong>
+                <small>{formatRelativeKo(row.generatedAt)}</small>
+              </div>
+              <p>{runStatsLabel(row)}</p>
+            </li>
+          ))}
+        </ul>
       ) : (
         <p className="settings-ai-runs-empty">아직 분석을 실행한 기록이 없습니다.</p>
       )}

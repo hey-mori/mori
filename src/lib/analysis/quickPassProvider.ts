@@ -78,9 +78,9 @@ export function buildProviderConfigFromSettings(
 }
 
 export function providerNameLabel(name: AnalysisProviderName): string {
-  if (name === "ollama-quick-pass-v1") return "Ollama Quick Pass";
-  if (name === "openai-compatible-quick-pass-v1") return "OpenAI-compatible Quick Pass";
-  return "규칙 기반 Quick Pass";
+  if (name === "ollama-quick-pass-v1") return "Ollama 분석";
+  if (name === "openai-compatible-quick-pass-v1") return "OpenAI 호환 분석";
+  return "규칙 기반 분석";
 }
 
 export {

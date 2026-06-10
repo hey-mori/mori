@@ -549,21 +549,23 @@
 }
 
 .settings-font-tick:nth-child(1) {
-  left: 0;
+  left: 8px;
+  transform: translateX(-50%);
 }
 
 .settings-font-tick:nth-child(2) {
-  left: 33.333%;
+  left: calc(8px + (100% - 16px) * 0.33333);
   transform: translateX(-50%);
 }
 
 .settings-font-tick:nth-child(3) {
-  left: 66.667%;
+  left: calc(8px + (100% - 16px) * 0.66667);
   transform: translateX(-50%);
 }
 
 .settings-font-tick:nth-child(4) {
-  right: 0;
+  left: calc(100% - 8px);
+  transform: translateX(-50%);
 }
 
 .settings-font-tick:hover {

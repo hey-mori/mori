@@ -484,11 +484,6 @@ export function StartSessionView() {
               <PickTile
                 icon={History}
                 title="기록에서 불러오기"
-                detail={
-                  selectedAgent.detect
-                    ? "에이전트 작업 기록에서 자동으로 찾습니다"
-                    : `${selectedAgent.name} 기록 자동 감지는 준비 중입니다`
-                }
                 recommended={selectedAgent.detect}
                 disabled={!selectedAgent.detect}
                 status={selectedAgent.detect ? undefined : "곧"}
@@ -498,14 +493,206 @@ export function StartSessionView() {
               <PickTile
                 icon={ClipboardPaste}
                 title="붙여넣기"
-                detail="대화를 복사해 직접 붙여넣습니다"
                 selected={method === "paste"}
                 onSelect={() => chooseMethod("paste")}
               />
               <PickTile
                 icon={FilePlus2}
                 title="빈 세션으로 시작"
-                detail="지금부터 할 작업을 위한 세션"
+                selected={method === "fresh"}
+                onSelect={() => chooseMethod("fresh")}
+              />
+            </div>
+
+            {method === "records" ? (
+              <div className="method-detail">
+                {selectedDetected ? (
+                  <div className="records-chosen">
+                    <span className="records-chosen-icon" aria-hidden="true">
+                      <History size={16} />
+                    </span>
+                    <span className="records-chosen-main">
+                      <strong>{selectedDetected.title}</strong>
+                      <span>
+                        {shortProjectLabel(selectedDetected.projectName)} · 메시지{" "}
+                        {selectedDetected.messageCount} ·{" "}
+                        {formatClaudeRelativeKo(selectedDetected.startedAt)}
+                      </span>
+                    </span>
+                    <Button variant="secondary" onClick={() => setBrowseOpen(true)}>
+                      다시 고르기
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="records-browse-btn"
+                    onClick={() => setBrowseOpen(true)}
+                  >
+                    <History size={16} aria-hidden="true" />
+                    <span>기록에서 불러오기</span>
+                  </button>
+                )}
+              </div>
+            ) : null}
+
+            {method === "paste" ? (
+              <div className="method-detail">
+                <textarea
+                  className="start-paste-text"
+                  value={pasteText}
+                  placeholder={`${selectedAgent.name} 대화를 붙여넣으세요. User: / Assistant: 형식이면 턴을 자동으로 나눕니다.`}
+                  onChange={(event) => setPasteText(event.target.value)}
+                />
+                <p className="start-import-note">
+                  붙여넣은 텍스트만 사용합니다. Mori가 브라우저나 앱을 들여다보지 않습니다.
+                </p>
+              </div>
+            ) : null}
+
+            {method === "fresh" ? (
+              <div className="method-detail">
+                <p className="start-import-note">
+                  대화는 {selectedAgent.name}에서 직접 하면 됩니다. 빈 세션을 만들어 두면, 작업한
+                  대화를 나중에 자료 탭에서 가져와 채울 수 있습니다.
+                </p>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <p className="start-import-note">위에서 AI 에이전트를 먼저 선택하세요.</p>
+        )}
+      </FieldBlock>
+
+      <FieldBlock
+        number="3"
+        title="분석 엔진"
+        subtitle="대화를 분석할 엔진을 선택합니다."
+        hint={
+          <InfoHint label="분석 엔진 설명">
+            <strong>규칙 기반</strong> · 네트워크 없이 기기에서 도는 휴리스틱. 빠르고 비공개이지만 요약은 단순합니다.
+            <br />
+            <strong>Ollama</strong> · 기기에서 도는 로컬 LLM 런타임. 비공개로 더 풍부하게 요약합니다.
+            <br />
+            <strong>OpenAI 호환</strong> · OpenAI 형식 API(로컬 또는 원격). 원격 주소면 자료가 외부로 전송될 수 있습니다.
+          </InfoHint>
+        }
+      >
+        <div className="pick-grid engine-pick-grid">
+          {engineOptions.map((option) => (
+            <EngineTile
+              key={option.provider}
+              option={option}
+              selected={selectedEngineProvider === option.provider}
+              onSelect={() => {
+                if (option.selectable) setSelectedEngineProvider(option.provider);
+              }}
+            />
+          ))}
+        </div>
+        <div className="start-engine-footer">
+          <button
+            type="button"
+            className="start-engine-settings"
+            onClick={() => openSettingsSheet("localAi")}
+          >
+            <Settings2 size={13} aria-hidden="true" />
+            설정
+          </button>
+        </div>
+      </FieldBlock>
+
+      <FieldBlock number="4" title="세션 정보" subtitle="프로젝트와 이름을 정합니다.">
+        <div className="session-info-fields">
+          <div className="session-project-line">
+            <div className="form-field">
+              <span className="form-field-label">프로젝트</span>
+              <BaseSelect
+                value={projectChoice}
+                options={projectOptions}
+                placeholder="프로젝트 선택"
+                onChange={setProjectChoice}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              icon={FolderGit2}
+              className="session-project-create"
+              onClick={() => openNewProjectModal(projectCreateInitialName)}
+            >
+              새 프로젝트
+            </Button>
+          </div>
+          <label>
+            세션 이름
+            <input
+              value={sessionTitle}
+              placeholder={
+                method === "records"
+                  ? "대화 제목에서 자동 입력"
+                  : "예: Mori 앱 기획"
+              }
+              onChange={(event) => setSessionTitle(event.target.value)}
+            />
+          </label>
+        </div>
+      </FieldBlock>
+
+      {browseOpen && selectedAgent ? (
+        <DetectedConversationsModal
+          agentName={selectedAgent.name}
+          agentId={selectedAgent.agentId}
+          supported={selectedAgent.detect}
+          initialSelectedFilePath={selectedDetected?.filePath ?? null}
+          onPick={pickDetected}
+          onClose={() => setBrowseOpen(false)}
+        />
+      ) : null}
+      {projectModalOpen ? (
+        <ProjectFormModal
+          mode="create"
+          initialName={projectCreateInitialName}
+          onSubmit={handleCreateProject}
+          onClose={() => setProjectModalOpen(false)}
+        />
+      ) : null}
+    </PageShell>
+  );
+}
+
+/** Last path segment of a folder path: "C:\\dev\\tcc-ng-gw" → "tcc-ng-gw". */
+function lastFolderName(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return trimmed.split(/[\\/]/).filter(Boolean).pop() ?? trimmed;
+}
+
+function FieldBlock({
+  number,
+  title,
+  subtitle,
+<FieldBlock number="2" title="대화" subtitle="이 세션의 대화를 어떻게 준비할까요?">
+        {selectedAgent ? (
+          <>
+            <div className="pick-grid">
+              <PickTile
+                icon={History}
+                title="기록에서 불러오기"
+                recommended={selectedAgent.detect}
+                disabled={!selectedAgent.detect}
+                status={selectedAgent.detect ? undefined : "곧"}
+                selected={method === "records"}
+                onSelect={() => chooseMethod("records")}
+              />
+              <PickTile
+                icon={ClipboardPaste}
+                title="붙여넣기"
+                selected={method === "paste"}
+                onSelect={() => chooseMethod("paste")}
+              />
+              <PickTile
+                icon={FilePlus2}
+                title="빈 세션으로 시작"
                 selected={method === "fresh"}
                 onSelect={() => chooseMethod("fresh")}
               />
@@ -736,26 +923,27 @@ function PickTile({
       aria-pressed={selected}
       disabled={disabled}
       onClick={onSelect}
+  status?: string;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`pick-tile${selected ? " is-selected" : ""}${disabled ? " is-disabled" : ""}`}
+      aria-pressed={selected}
+      disabled={disabled}
+      onClick={onSelect}
     >
       <span className="pick-tile-icon" aria-hidden="true">
         <Icon size={18} />
       </span>
       <span className="pick-tile-body">
-        <strong>{title}</strong>
+        <strong style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          {title}
+          {recommended ? <em className="pick-tile-rec">추천</em> : null}
+        </strong>
         {detail ? <span>{detail}</span> : null}
       </span>
-      {status ? (
-        <Badge tone="gray">{status}</Badge>
-      ) : (
-        <span className="pick-tile-side">
-          {recommended ? <em className="pick-tile-rec">추천</em> : null}
-          <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
-        </span>
-      )}
-    </button>
-  );
-}
-
 /** Per-engine glyphs, matching Settings → 분석 엔진 for cross-surface identity. */
 const ENGINE_ICON: Partial<Record<LlmProvider, LucideIcon>> = {
   deterministic: Sparkles,

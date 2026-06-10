@@ -54,7 +54,7 @@ export function AttentionIndicator({
   /** Icon-only quick-action button (sidebar head) when true; labelled pill otherwise. */
   compact?: boolean;
 }) {
-  const { notifications, isDemo } = useNotifications();
+  const { notifications } = useNotifications();
   const openReviewItem = useAppStore((state) => state.openReviewItem);
   const openSession = useAppStore((state) => state.openSession);
   const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
@@ -64,6 +64,7 @@ export function AttentionIndicator({
   const markAllRead = useNotificationReadStore((state) => state.markAllRead);
 
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   // The drawer docks to the sidebar's right edge so it opens *next to* the bell
   // (the trigger is on the left), not on the opposite side of the screen.
   const [anchorLeft, setAnchorLeft] = useState(0);
@@ -82,14 +83,26 @@ export function AttentionIndicator({
   );
   const badgeLabel = unreadCount > BADGE_CAP ? `${BADGE_CAP}+` : String(unreadCount);
 
+  /** Start the close animation; the `animationend` handler will unmount. */
+  function closeDrawer(): void {
+    if (!open || closing) return;
+    setClosing(true);
+  }
+
+  /** Called when the fade-out animation finishes — actually remove the drawer. */
+  function handleDrawerAnimationEnd(e: React.AnimationEvent): void {
+    if (e.animationName === "noti-drawer-out") {
+      setOpen(false);
+      setClosing(false);
+      buttonRef.current?.focus();
+    }
+  }
+
   // Close on Escape; focus the drawer for keyboard users when it opens.
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        buttonRef.current?.focus();
-      }
+      if (event.key === "Escape") closeDrawer();
     };
     document.addEventListener("keydown", onKey);
     drawerRef.current?.focus();
@@ -141,19 +154,21 @@ export function AttentionIndicator({
   // Measure the sidebar's right edge on open so the drawer docks flush against
   // it — correct whether the sidebar is expanded or collapsed.
   function toggleOpen(): void {
-    if (!open) {
-      const sidebar = buttonRef.current?.closest(".sidebar");
-      const rect = (sidebar ?? buttonRef.current)?.getBoundingClientRect();
-      if (rect) setAnchorLeft(Math.round(rect.right));
+    if (open) {
+      closeDrawer();
+      return;
     }
-    setOpen((v) => !v);
+    const sidebar = buttonRef.current?.closest(".sidebar");
+    const rect = (sidebar ?? buttonRef.current)?.getBoundingClientRect();
+    if (rect) setAnchorLeft(Math.round(rect.right));
+    setOpen(true);
   }
 
   function dispatchTarget(
     target: CompanionNotificationActionTarget,
     notificationId?: string,
   ): void {
-    setOpen(false);
+    closeDrawer();
     setToast(null);
     if (notificationId) markRead(notificationId);
     if (!target) return;
@@ -234,11 +249,12 @@ export function AttentionIndicator({
                   <div
                     className="noti-drawer-scrim"
                     aria-hidden="true"
-                    onClick={() => setOpen(false)}
+                    onClick={closeDrawer}
                   />
                   <aside
                     ref={drawerRef}
-                    className="noti-drawer"
+                    className={`noti-drawer${closing ? " is-closing" : ""}`}
+                    onAnimationEnd={handleDrawerAnimationEnd}
                     style={{ left: anchorLeft }}
                     role="dialog"
                     aria-label="알림"
@@ -264,7 +280,7 @@ export function AttentionIndicator({
                       <button
                         type="button"
                         className="noti-drawer-close"
-                        onClick={() => setOpen(false)}
+                        onClick={closeDrawer}
                         aria-label="알림 닫기"
                       >
                         <X size={16} aria-hidden="true" />
@@ -286,11 +302,6 @@ export function AttentionIndicator({
                       )}
                     </div>
 
-                    <p className="noti-drawer-privacy">
-                      {isDemo
-                        ? "데모 데이터 기준입니다."
-                        : "가져온 소스에서만 생성됩니다."}
-                    </p>
                   </aside>
                 </>
               ) : null}

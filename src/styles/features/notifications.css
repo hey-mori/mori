@@ -312,6 +312,19 @@
   }
 }
 
+@keyframes noti-drawer-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.noti-drawer.is-closing {
+  animation: noti-drawer-out 150ms ease-in forwards;
+}
+
 .noti-drawer-head {
   display: flex;
   align-items: center;

@@ -24,7 +24,7 @@ export class OllamaQuickPassProvider implements AnalysisProvider {
   readonly requiresNetwork = true;
 
   constructor(private readonly config: OllamaProviderConfig) {
-    this.label = config.label ?? `Ollama Quick Pass (${config.model})`;
+    this.label = config.label ?? `Ollama 분석 (${config.model})`;
   }
 
   async analyze(input: AnalysisInput): Promise<AnalysisResult> {

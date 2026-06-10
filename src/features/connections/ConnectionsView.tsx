@@ -318,14 +318,12 @@ export function ConnectionsView() {
     tools.report?.tools.filter((tool) => tool.canImport).length ?? 0;
   const detectedCount =
     tools.report?.tools.filter((tool) => tool.status !== "not-found").length ?? 0;
-
   return (
     <PageShell
       className="connections-page"
       maxWidth="detail"
       actionBar={
         <ActionBar
-          label="연동"
           start={
             <>
               {tools.report ? (

@@ -28,7 +28,7 @@ export class OpenAiCompatibleQuickPassProvider implements AnalysisProvider {
   readonly requiresNetwork = true;
 
   constructor(private readonly config: OpenAiCompatibleProviderConfig) {
-    this.label = config.label ?? `OpenAI-compatible Quick Pass (${config.model})`;
+    this.label = config.label ?? `OpenAI 호환 분석 (${config.model})`;
   }
 
   async analyze(input: AnalysisInput): Promise<AnalysisResult> {

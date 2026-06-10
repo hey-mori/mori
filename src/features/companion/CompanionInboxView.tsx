@@ -21,7 +21,7 @@ import { NotificationFeedList } from "./NotificationFeedList";
  * shared `NotificationFeedList`, so this page and the drawer never drift.
  */
 export function CompanionInboxView() {
-  const { notifications, isDemo } = useNotifications();
+  const { notifications } = useNotifications();
   const navigate = useAppStore((state) => state.navigate);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
   const openSession = useAppStore((state) => state.openSession);
@@ -90,11 +90,6 @@ export function CompanionInboxView() {
         />
       )}
 
-      <p className="noti-privacy">
-        {isDemo
-          ? "데모 데이터 기준입니다. 실제 세션에서는 가져온 소스와 검토 상태에서만 알림이 만들어집니다."
-          : "알림은 가져온 소스와 검토 상태에서만 만들어집니다. Mori가 배경에서 무언가를 감시하지 않습니다."}
-      </p>
     </PageShell>
   );
 }

@@ -19,7 +19,7 @@ import type {
 } from "./analysisTypes";
 
 const PROVIDER_NAME = "deterministic-heuristic-v1" as const;
-const PROVIDER_LABEL = "규칙 기반 Quick Pass";
+const PROVIDER_LABEL = "규칙 기반 분석";
 
 const ISSUE_PATTERNS: Array<{ regex: RegExp; priority: Priority }> = [
   { regex: /(위험|risk|warning)/i, priority: "high" },
