@@ -4391,9 +4391,10 @@ button.settings-option {
   font-size: 12px;
 }
 
-.settings-ai-runs-list {
+.settings-ai-runs-grid {
   display: grid;
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 8px;
   max-height: 240px;
   margin: 0;
   padding: 0;

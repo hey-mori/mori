@@ -390,7 +390,13 @@ function EngineStatus({
     return <StatusLine tone="idle" text="엔드포인트에 연결하는 중입니다." />;
   }
   if (probe.status === "error" && probe.kind === provider) {
-    return <StatusLine tone="err" alert text={`연결할 수 없습니다 · ${probe.message}`} />;
+    const hint =
+      provider === "ollama"
+        ? "Ollama가 실행 중인지 확인한 뒤 다시 연결 확인을 눌러 주세요."
+        : "Base URL과 서버 상태를 확인한 뒤 다시 연결 확인을 눌러 주세요.";
+    return (
+      <StatusLine tone="err" alert text={`연결할 수 없습니다 · ${probe.message}`} hint={hint} />
+    );
   }
   if (
     probe.status === "ok" &&
@@ -523,6 +529,15 @@ function runStatsLabel(row: AnalysisRunHistoryViewModel["rows"][number]): string
     : base;
 }
 
+/**
+ * Older runs were stamped with the legacy "Quick Pass" wording before the
+ * engines were renamed to "분석". Normalise it at display so the history reads
+ * consistently with the current labels without rewriting stored records.
+ */
+function cleanProviderLabel(label: string): string {
+  return label.replace(/\s*Quick Pass/gi, " 분석").replace(/\s{2,}/g, " ").trim();
+}
+
 function RecentRunsPanel({ runHistory }: { runHistory: AnalysisRunHistoryViewModel | null }) {
   const rows = runHistory?.rows ?? [];
 
@@ -532,11 +547,11 @@ function RecentRunsPanel({ runHistory }: { runHistory: AnalysisRunHistoryViewMod
         <h4>최근 실행</h4>
       </header>
       {rows.length > 0 ? (
-        <ul className="settings-ai-runs-list base-scroll">
+        <ul className="settings-ai-runs-grid base-scroll">
           {rows.map((row) => (
             <li key={row.runId} className="settings-ai-run-item">
               <div className="settings-ai-run-item-top">
-                <strong>{row.providerLabel}</strong>
+                <strong>{cleanProviderLabel(row.providerLabel)}</strong>
                 <small>{formatRelativeKo(row.generatedAt)}</small>
               </div>
               <p>{runStatsLabel(row)}</p>

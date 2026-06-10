@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Check } from "lucide-react";
 import { useThemeStore } from "../../app/themeStore";
 import {
@@ -83,11 +84,17 @@ function FontSizeControl({
         }}
       />
       <div className="settings-font-ticks" aria-hidden="true">
-        {FONT_SCALE_STEPS.map((step) => (
+        {FONT_SCALE_STEPS.map((step, i) => (
           <button
             key={step}
             type="button"
             className={`settings-font-tick${step === value ? " is-selected" : ""}`}
+            style={
+              {
+                "--frac":
+                  FONT_SCALE_STEPS.length > 1 ? i / (FONT_SCALE_STEPS.length - 1) : 0,
+              } as CSSProperties
+            }
             onClick={() => onChange(step)}
           >
             {FONT_SCALE_LABEL[step]}

@@ -506,6 +506,7 @@
 .settings-font-slider::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
+  box-sizing: border-box;
   width: 16px;
   height: 16px;
   border: 2px solid white;
@@ -515,6 +516,7 @@
 }
 
 .settings-font-slider::-moz-range-thumb {
+  box-sizing: border-box;
   width: 16px;
   height: 16px;
   border: 2px solid white;
@@ -527,14 +529,21 @@
   outline-offset: 4px;
 }
 
+/* The tick row shares the slider's width, so a label's centre lands exactly
+   under the thumb at that step. The thumb centre travels from `--thumb / 2` to
+   `100% - --thumb / 2`; each tick sets `--frac` (0 → 1 across the steps) inline,
+   so this stays correct for any number of steps without per-index rules. */
 .settings-font-ticks {
   position: relative;
   height: 22px;
+  --thumb: 16px;
 }
 
 .settings-font-tick {
   position: absolute;
   top: 0;
+  left: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--frac, 0));
+  transform: translateX(-50%);
   padding: 3px 4px;
   border: 0;
   border-radius: 6px;
@@ -546,26 +555,6 @@
   text-align: center;
   white-space: nowrap;
   cursor: pointer;
-}
-
-.settings-font-tick:nth-child(1) {
-  left: 8px;
-  transform: translateX(-50%);
-}
-
-.settings-font-tick:nth-child(2) {
-  left: calc(8px + (100% - 16px) * 0.33333);
-  transform: translateX(-50%);
-}
-
-.settings-font-tick:nth-child(3) {
-  left: calc(8px + (100% - 16px) * 0.66667);
-  transform: translateX(-50%);
-}
-
-.settings-font-tick:nth-child(4) {
-  left: calc(100% - 8px);
-  transform: translateX(-50%);
 }
 
 .settings-font-tick:hover {

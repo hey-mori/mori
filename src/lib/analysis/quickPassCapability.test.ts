@@ -77,7 +77,7 @@ describe("checkQuickPassCapability", () => {
       fetchImpl: openAiFetch(GOOD_JSON),
     });
     expect(report.verdict).toBe("ready");
-    expect(report.providerLabel).toContain("OpenAI-compatible");
+    expect(report.providerLabel).toContain("OpenAI 호환");
   });
 
   it("flags a parseable-but-empty response as reachableNoStructure", async () => {
