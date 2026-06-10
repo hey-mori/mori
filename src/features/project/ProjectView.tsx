@@ -57,6 +57,7 @@ import {
   type ProjectSessionStatusFilter,
 } from "../../lib/project/projectSessionFilter";
 import { useProjectSynthesis } from "./useProjectSynthesis";
+import { ProjectTimelineSection } from "./ProjectTimelineSection";
 import { spanLabel } from "../../lib/session/workContext";
 
 /**
@@ -426,6 +427,12 @@ export function ProjectView() {
             </ul>
           )}
         </BaseSection>
+
+        <ProjectTimelineSection
+          projectId={projectId}
+          sessions={storedSessions}
+          onOpenSession={(sessionId) => openSessionId(sessionId, "flow")}
+        />
 
         <ProjectMemoryList memories={memories} />
       </div>

@@ -625,3 +625,190 @@
   }
 }
 
+
+/* ── 프로젝트 타임라인 ─────────────────────────────────────────────────────────
+   The project-scoped temporal view: saved sessions as calm bands on a shared
+   axis, empty stretches collapsed to a quiet "3일 후" marker. Bands tint on
+   hover, metadata-only bands dim honestly, the gap marker is a quiet center
+   rule, never a hard divider. Per project-aggregate-timeline-spec §7. */
+.project-timeline {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-soft);
+}
+
+.project-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-timeline-head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.project-timeline-basis {
+  color: var(--muted-2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.project-timeline-status {
+  margin: 18px 0;
+  color: var(--muted-2);
+  font-size: 12.5px;
+}
+
+/* Pulse — a few big quiet numbers + the honest span, no gamification. */
+.project-timeline-pulse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 18px;
+  padding-bottom: 4px;
+}
+
+.project-timeline-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.project-timeline-stat strong {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-timeline-stat span {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.project-timeline-span {
+  margin-left: auto;
+  color: var(--muted-2);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.project-timeline-track {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-timeline-gap {
+  display: grid;
+  place-items: center;
+  padding: 1px 0;
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.project-timeline-band {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: white;
+  transition:
+    border-color 130ms ease,
+    background 130ms ease;
+}
+
+.project-timeline-band:hover {
+  border-color: var(--line-strong);
+  background: #fbfcff;
+}
+
+.project-timeline-band.is-partial {
+  opacity: 0.62;
+}
+
+.project-timeline-band-btn {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-timeline-band-btn:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: -2px;
+  border-radius: 9px;
+}
+
+.project-timeline-band-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.project-timeline-band-head strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-timeline-band-date {
+  flex-shrink: 0;
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-timeline-lanes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.project-timeline-lane {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--panel-soft, #f4f4f7);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-timeline-lane.tone-purple { color: var(--purple); background: #f4f0ff; }
+.project-timeline-lane.tone-green { color: var(--green); background: #edf8f1; }
+.project-timeline-lane.tone-blue { color: var(--blue); background: #eef5ff; }
+.project-timeline-lane.tone-cyan { color: var(--cyan); background: #ecfbfc; }
+.project-timeline-lane.tone-orange { color: #b46100; background: #fff2dc; }
+.project-timeline-lane.tone-red { color: var(--red); background: #fff0f0; }
+
+.project-timeline-band-meta {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.project-timeline-dropped {
+  margin: 0;
+  color: var(--muted-2);
+  font-size: 11px;
+}

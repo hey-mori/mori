@@ -37,6 +37,12 @@ export type AggregateLane = {
   count: number;
 };
 
+/** The slice of a session body the builder reads to aggregate a band. */
+export type ProjectTimelineSessionBody = Pick<
+  MockSession,
+  "events" | "sources" | "issues" | "decisions"
+>;
+
 /**
  * A session as handed to the builder. `view` is the loaded body; `null` means
  * only metadata is available, in which case the optional counts on `meta` carry
@@ -52,7 +58,7 @@ export type LoadedProjectSession = {
     decisionCount?: number;
     openIssueCount?: number;
   };
-  view: MockSession | null;
+  view: ProjectTimelineSessionBody | null;
 };
 
 export type ProjectTimelineSessionSegment = {
