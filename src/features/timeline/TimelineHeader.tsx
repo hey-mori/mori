@@ -1,6 +1,7 @@
 import { Filter, List, Route, Rows3, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { SearchField } from "../../components/ui/SearchField";
+import { FollowControl } from "../live-follow/FollowControl";
 import {
   CANONICAL_TIMELINE_LANES,
   getActivityLaneVisuals,
@@ -56,6 +57,8 @@ export function TimelineToolbar({
       />
 
       <span className="timeline-toolbar-spacer" aria-hidden="true" />
+
+      <FollowControl />
 
       <div className="timeline-toolbar-right">
         <div className="timeline-mode-switch" role="group" aria-label="보기 방식">
