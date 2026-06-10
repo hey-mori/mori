@@ -99,6 +99,120 @@
 }
 
 /**
+ * Canonical application tokens.
+ *
+ * The older raw names (`--bg`, `--panel`, `--purple`, ...) are still present
+ * because much of the product CSS predates the semantic layer. New and
+ * migrated CSS should read the role tokens below; theme presets update both
+ * layers so legacy and semantic surfaces move together.
+ */
+:root {
+  --color-app-bg: var(--base-bg);
+  --color-app-foreground: var(--base-text);
+
+  --color-surface-base: var(--base-surface);
+  --color-surface-subtle: var(--base-surface-subtle);
+  --color-surface-muted: var(--gray-50);
+  --color-surface-elevated: var(--base-surface);
+  --color-surface-overlay: var(--base-surface-overlay);
+  --color-surface-inverse: #111827;
+
+  --color-text-primary: var(--base-text);
+  --color-text-secondary: var(--base-text-muted);
+  --color-text-muted: var(--base-text-muted-2);
+  --color-text-disabled: var(--base-text-muted-2);
+  --color-text-inverse: var(--base-text-inverse);
+  --color-text-accent: var(--base-accent);
+
+  --color-border-default: var(--base-border);
+  --color-border-subtle: color-mix(in srgb, var(--base-border) 68%, transparent);
+  --color-border-strong: var(--base-border-strong);
+  --color-border-accent: var(--base-accent);
+  --color-border-focus: var(--base-border-focus);
+
+  --color-accent-base: var(--base-accent);
+  --color-accent-hover: color-mix(in srgb, var(--base-accent) 88%, #000000);
+  --color-accent-active: color-mix(in srgb, var(--base-accent) 78%, #000000);
+  --color-accent-subtle: var(--base-accent-soft);
+  --color-accent-muted: var(--base-accent-strong);
+  --color-accent-foreground: var(--base-text-inverse);
+
+  --color-success-base: var(--base-status-success);
+  --color-success-subtle: var(--base-status-success-soft);
+  --color-warning-base: var(--base-status-warning);
+  --color-warning-subtle: var(--base-status-warning-soft);
+  --color-warning-foreground: #8a5a08;
+  --color-danger-base: var(--base-status-danger);
+  --color-danger-subtle: var(--base-status-danger-soft);
+  --color-info-base: var(--base-status-info);
+  --color-info-subtle: var(--base-status-info-soft);
+  --color-neutral-base: var(--base-status-neutral);
+  --color-neutral-subtle: var(--base-status-neutral-soft);
+
+  --button-primary-background: var(--color-accent-base);
+  --button-primary-background-hover: var(--color-accent-hover);
+  --button-primary-background-active: var(--color-accent-active);
+  --button-primary-foreground: var(--color-accent-foreground);
+  --button-secondary-background: var(--color-surface-base);
+  --button-secondary-background-hover: var(--color-surface-muted);
+  --button-secondary-foreground: var(--color-text-primary);
+  --button-ghost-background-hover: var(--color-surface-muted);
+  --button-disabled-background: var(--color-surface-subtle);
+  --button-disabled-foreground: var(--color-text-disabled);
+
+  --input-background: var(--color-surface-base);
+  --input-foreground: var(--color-text-primary);
+  --input-border: var(--color-border-default);
+  --input-placeholder: var(--color-text-muted);
+
+  --card-background: var(--color-surface-base);
+  --card-background-subtle: var(--color-surface-subtle);
+  --card-border: var(--color-border-default);
+  --popover-background: var(--color-surface-overlay);
+  --popover-border: var(--color-border-default);
+  --modal-background: var(--color-surface-base);
+  --modal-scrim-background: rgba(15, 18, 28, 0.32);
+
+  --sidebar-background: var(--color-surface-overlay);
+  --sidebar-item-hover: var(--color-surface-muted);
+  --sidebar-item-active: var(--color-accent-subtle);
+
+  --timeline-background: var(--color-app-bg);
+  --timeline-lane-background: var(--color-surface-subtle);
+  --timeline-event-background: var(--color-surface-base);
+  --timeline-event-border: var(--color-border-default);
+  --timeline-event-foreground: var(--color-text-primary);
+
+  --tone-accent-surface: color-mix(in srgb, var(--color-accent-subtle) 76%, var(--color-surface-base));
+  --tone-success-surface: color-mix(in srgb, var(--color-success-subtle) 76%, var(--color-surface-base));
+  --tone-info-surface: color-mix(in srgb, var(--color-info-subtle) 76%, var(--color-surface-base));
+  --tone-warning-surface: color-mix(in srgb, var(--color-warning-subtle) 76%, var(--color-surface-base));
+  --tone-danger-surface: color-mix(in srgb, var(--color-danger-subtle) 76%, var(--color-surface-base));
+  --tone-neutral-surface: var(--color-neutral-subtle);
+
+  --accent: var(--color-accent-base);
+  --brand: var(--color-accent-base);
+  --chip: var(--color-neutral-subtle);
+  --surface-2: var(--color-surface-subtle);
+  --bg-subtle: var(--color-surface-subtle);
+  --base-purple: var(--color-accent-base);
+  --base-purple-soft: var(--color-accent-muted);
+  --base-purple-tint: var(--color-accent-subtle);
+  --gray-100: color-mix(in srgb, var(--color-surface-muted) 88%, var(--color-border-default));
+  --gray-200: color-mix(in srgb, var(--color-border-default) 70%, var(--color-text-muted));
+  --gray-300: color-mix(in srgb, var(--color-border-strong) 72%, var(--color-text-muted));
+  --purple-200: var(--color-accent-muted);
+  --purple-500: var(--color-accent-base);
+  --purple-700: var(--color-accent-base);
+  --green-200: var(--color-success-subtle);
+  --green-500: var(--color-success-base);
+  --green-700: var(--color-success-base);
+  --orange-200: var(--color-warning-subtle);
+  --orange-500: var(--color-warning-base);
+  --orange-700: var(--color-warning-foreground);
+}
+
+/**
  * Spacing tokens. The Mori product surfaces use only these step values so a
  * future visual refresh can adjust density in one place.
  */
@@ -201,6 +315,40 @@
 }
 
 [data-base-theme="forest"] {
+  color-scheme: light;
+
+  --bg: #f4f6f1;
+  --panel: #ffffff;
+  --panel-soft: #f8faf5;
+  --line: #dde3d3;
+  --line-strong: #c4cdb2;
+  --text: #172018;
+  --muted: #64725d;
+  --muted-2: #8a967f;
+
+  --purple: #2f6f3c;
+  --purple-50: #e8f3e6;
+  --purple-100: #d3e8cf;
+
+  --blue: #2a6c8c;
+  --blue-50: #e6f1f7;
+
+  --green: #2f6f3c;
+  --green-50: #e8f3e6;
+
+  --red: #c75050;
+  --red-50: #fff0ee;
+
+  --orange: #b87812;
+  --orange-50: #fff7e4;
+
+  --cyan: #287b73;
+  --cyan-50: #e6f4f2;
+
+  --gray-50: #edf2e8;
+  --shadow: 0 18px 54px rgba(31, 47, 26, 0.08);
+  --shadow-soft: 0 10px 28px rgba(31, 47, 26, 0.06);
+
   --base-bg: #f4f6f1;
   --base-surface: #ffffff;
   --base-surface-subtle: #f8faf5;
@@ -215,6 +363,12 @@
   --base-status-success-soft: #e8f3e6;
   --base-status-info: #2a6c8c;
   --base-status-info-soft: #e6f1f7;
+  --base-status-warning: #b87812;
+  --base-status-warning-soft: #fff7e4;
+  --base-status-danger: #c75050;
+  --base-status-danger-soft: #fff0ee;
+  --base-status-neutral: #64725d;
+  --base-status-neutral-soft: #edf2e8;
   --base-trust-verified: var(--base-status-success);
   --base-trust-verified-soft: var(--base-status-success-soft);
   --base-trust-observed: var(--base-status-info);
@@ -300,6 +454,14 @@
 
   --base-scrollbar-thumb: rgba(180, 190, 220, 0.12);
   --base-scrollbar-thumb-hover: rgba(180, 190, 220, 0.24);
+
+  --color-surface-inverse: #f8fafc;
+  --color-accent-hover: #aa91ff;
+  --color-accent-active: #bdaaff;
+  --color-warning-foreground: #f6c15d;
+  --color-accent-foreground: #0f1117;
+  --button-primary-foreground: #0f1117;
+  --modal-scrim-background: rgba(0, 0, 0, 0.52);
 }
 
 /**
@@ -362,7 +524,7 @@
 
 .base-status-badge[data-base-tone="warning"] {
   background: var(--base-status-warning-soft);
-  color: #8a5a08;
+  color: var(--color-warning-foreground);
 }
 
 .base-status-badge[data-base-tone="danger"] {
@@ -426,7 +588,7 @@
 
 .base-feature-status-chip[data-base-tone="warning"] {
   background: var(--base-status-warning-soft);
-  color: #8a5a08;
+  color: var(--color-warning-foreground);
   border-color: rgba(245, 158, 11, 0.18);
 }
 
@@ -1039,7 +1201,7 @@
 
 .review-meta-cell.tone-orange {
   background: var(--base-status-warning-soft);
-  color: #8a5a08;
+  color: var(--color-warning-foreground);
 }
 
 .review-meta-cell.tone-blue {

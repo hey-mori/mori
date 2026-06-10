@@ -1,112 +1,81 @@
 # Mori Theme System
 
-Mori uses a three-layer token system so future themes can land without
-rewriting every surface CSS rule.
+Mori uses a layered theme system so each screen can share one color contract
+instead of carrying page-specific light/dark overrides.
 
-## Layers
+## Runtime Flow
 
-```
-┌────────────────────────────────────────────────────────────┐
-│ Layer 1 — Raw values                  src/styles/tokens.css │
-│   --bg, --panel, --text, --purple, --green, --shadow, ...  │
-└────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────┐
-│ Layer 2 — Semantic roles              src/styles/theme.css  │
-│   --mori-surface, --mori-text-muted, --mori-status-success │
-│   --mori-trust-verified, --mori-radius-md, --mori-shadow-* │
-│   --mori-space-1..12 (spacing scale)                        │
-└────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────────┐
-│ Layer 3 — Themes                                            │
-│   [data-mori-theme="formal"]   — default (Mori product look)│
-│   [data-mori-theme="forest"]   — token-only sage variant    │
-│   [data-mori-theme="nightLake"] — Planned                   │
-└────────────────────────────────────────────────────────────┘
-```
+1. `src/lib/settings/themePreference.ts` owns selectable theme ids, display
+   metadata, color scheme, storage parsing, persistence, and DOM attributes.
+2. `src/main.tsx` calls `applyThemePreferenceToDocument(loadThemePreference())`
+   before React mounts, so the saved color theme and font scale are present
+   before first paint.
+3. `src/app/themeStore.ts` hydrates the same preference into Zustand and applies
+   changes immediately when Settings changes theme or font scale.
+4. `src/styles/tokens.css` provides the default raw token values.
+5. `src/styles/theme.css` maps raw tokens to semantic and component role tokens.
+6. `src/styles/theme-application.css` loads last and remaps legacy hard-coded
+   surfaces onto the role tokens.
 
-## Adoption guideline
+The document root receives:
 
-- **New CSS** should reference `--mori-*` variables (Layer 2), never the raw
-  Layer-1 tokens. The point of Layer 2 is to make theme overrides cheap.
-- **Component primitives** (`MoriCard`, `MoriStatusBadge`, `MoriTrustBadge`,
-  `MoriFeatureStatusBadge`, `MoriPlannedAction`, `MoriScrollArea`,
-  `MoriStatCard`, `MoriToolbar`, `MoriEmptyState`) all consume Layer 2 only.
-- **Legacy CSS** still using Layer 1 keeps working — Layer 2 references the
-  same values. Migrate opportunistically when the surface is being touched
-  for other reasons.
+- `data-base-theme="formal | forest | nightLake"`
+- `data-mori-theme="formal | forest | nightLake"` as a compatibility alias
+- `data-color-scheme="light | dark"`
+- `data-font-scale="small | normal | large | xlarge"`
 
-## Spacing
+## Token Layers
 
-The `--mori-space-{0..12}` ramp replaces hard-coded `px` paddings inside the
-new primitives. The ramp values:
+Layer 1, raw compatibility tokens:
 
-| Token | px |
-|---|---|
-| `--mori-space-0` | 0 |
-| `--mori-space-1` | 4 |
-| `--mori-space-2` | 6 |
-| `--mori-space-3` | 8 |
-| `--mori-space-4` | 10 |
-| `--mori-space-5` | 12 |
-| `--mori-space-6` | 14 |
-| `--mori-space-7` | 16 |
-| `--mori-space-8` | 20 |
-| `--mori-space-9` | 24 |
-| `--mori-space-10` | 32 |
-| `--mori-space-12` | 40 |
+- `--bg`, `--panel`, `--panel-soft`
+- `--line`, `--line-strong`
+- `--text`, `--muted`, `--muted-2`
+- `--purple`, `--green`, `--blue`, `--orange`, `--red`, `--cyan`
 
-## Themes today
+Layer 2, semantic base tokens:
 
-### `formal` (default)
+- `--base-bg`
+- `--base-surface`, `--base-surface-subtle`, `--base-surface-overlay`
+- `--base-text`, `--base-text-muted`, `--base-text-muted-2`
+- `--base-border`, `--base-border-strong`, `--base-border-focus`
+- `--base-accent`, `--base-accent-soft`, `--base-accent-strong`
+- `--base-status-*`, `--base-trust-*`, `--base-shadow-*`
 
-Calm white / soft-gray surfaces, purple accent, formal productivity feel.
-The default Mori look. Token overrides are empty because the Layer-2 base
-already describes it.
+Layer 3, canonical role tokens for new CSS:
 
-### `forest`
+- `--color-app-bg`, `--color-app-foreground`
+- `--color-surface-*`
+- `--color-text-*`
+- `--color-border-*`
+- `--color-accent-*`
+- `--color-success-*`, `--color-warning-*`, `--color-danger-*`, `--color-info-*`
+- `--button-*`, `--input-*`, `--card-*`, `--popover-*`, `--modal-*`
+- `--sidebar-*`, `--timeline-*`
 
-A sage variant. The selector `[data-mori-theme="forest"]` is active when
-present. Selectable at runtime from Settings → 화면 (registry id
-`settings.themeSwitcher`).
+New CSS should prefer Layer 3. Layer 1 remains for old stylesheets, and theme
+presets update it so older screens still change consistently.
 
-### `nightLake` (Planned)
+## Theme Presets
 
-Reserved selector with no token overrides. The Settings → 화면 switcher
-renders it as a disabled, honestly-labelled Planned option — it is never
-a valid stored preference, because selecting it would render nothing.
-The selector exists so the future dark theme can ship without re-plumbing
-every surface.
+`formal` is the default light theme. Its values come from `tokens.css`.
 
-## Reusable theme-driven classes
+`forest` is a light sage/spruce variant. It updates both raw and semantic tokens,
+which keeps older `var(--panel)` and newer `var(--color-surface-base)` users in
+sync.
 
-| Class | Purpose |
-|---|---|
-| `.mori-scroll` | Subtle scrollbar styling matching `--mori-scrollbar-*`. |
-| `.mori-status-badge` | Compact tone-colored pill (`data-mori-tone="success/info/warning/danger/accent/neutral"` or `"verified/observed/inferred"`). |
-| `.mori-feature-status-chip` | Larger feature-status chip with a leading dot. |
-| `.mori-card` | Surface container with semantic border + shadow tokens. Variants: `default`, `subtle`, `accent`, `outline`. |
-| `.mori-stat-card` | KPI cell for surface honesty strips. |
-| `.mori-toolbar` | Horizontal flex strip with calm spacing tokens. |
-| `.mori-empty-state` | Calm empty-state surface. |
-| `.mori-planned-action` | Disabled-with-tooltip button used by `MoriPlannedAction`. |
+`nightLake` is the dark theme. It updates raw, semantic, and dark-specific role
+tokens such as primary button foreground and modal scrim.
 
-## The runtime switcher
+## Migration Rule
 
-The runtime theme switcher is **implemented** (registry id
-`settings.themeSwitcher`). It lives at Settings → 화면 and switches
-between `formal` and `forest`. The selected theme is a local-only
-preference (`mori.themePreference` in browser storage); it never syncs
-and never affects data access, capture, or memory. `applyThemeToDocument`
-sets `data-mori-theme` on `<html>`, and `src/main.tsx` applies the saved
-theme before the first paint so a non-default theme does not flash on
-reload.
+When touching CSS:
 
-## Related
-
-- [UX Reference](./ux-reference.md)
-- [Modular Architecture](./modular-architecture.md)
-- [Roadmap](./roadmap.md)
+- Use role tokens such as `--color-surface-base`, `--color-text-primary`,
+  `--color-border-default`, `--button-primary-background`, and
+  `--timeline-event-background`.
+- Do not add new `white`, slate/gray hex values, or theme-specific selectors
+  inside feature stylesheets unless the color is genuine content data.
+- If a legacy hard-coded selector affects many surfaces, add the bridge in
+  `src/styles/theme-application.css` instead of patching only the visible page.
+- Keep brand gradient usage limited to the Mori mark and brand-only surfaces.

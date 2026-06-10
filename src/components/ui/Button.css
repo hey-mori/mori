@@ -8,10 +8,10 @@
   gap: 7px;
   min-height: 30px;
   padding: 0 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--color-border-default);
   border-radius: 8px;
-  background: white;
-  color: var(--text);
+  background: var(--button-secondary-background);
+  color: var(--button-secondary-foreground);
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
@@ -36,50 +36,50 @@
 }
 
 .btn:hover:not(:disabled) {
-  background: var(--gray-50);
-  border-color: var(--line-strong);
+  background: var(--button-secondary-background-hover);
+  border-color: var(--color-border-strong);
 }
 
 .btn:active:not(:disabled) {
-  background: var(--gray-100, #e8eaf0);
+  background: var(--color-surface-muted);
   transform: translateY(0.5px);
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--purple);
+  outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
 }
 
 .btn:disabled {
-  color: var(--muted-2);
-  background: var(--panel-soft);
+  color: var(--button-disabled-foreground);
+  background: var(--button-disabled-background);
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .btn-primary:disabled {
-  background: var(--gray-50);
-  color: var(--muted-2);
+  background: var(--button-disabled-background);
+  color: var(--button-disabled-foreground);
   box-shadow: none;
 }
 
 .btn-primary {
-  color: white;
+  color: var(--button-primary-foreground);
   border-color: transparent;
-  background: var(--base-accent, #6246f5);
+  background: var(--button-primary-background);
   /* Subtle lift so the primary CTA reads slightly above secondary
    * buttons without competing with content elevation. */
   box-shadow: 0 1px 0 rgba(20, 18, 50, 0.04), 0 1px 2px rgba(98, 70, 245, 0.18);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #5238df;
+  background: var(--button-primary-background-hover);
   border-color: transparent;
   box-shadow: 0 1px 0 rgba(20, 18, 50, 0.06), 0 2px 6px rgba(98, 70, 245, 0.25);
 }
 
 .btn-primary:active:not(:disabled) {
-  background: #4830c7;
+  background: var(--button-primary-background-active);
   transform: translateY(0.5px);
   box-shadow: 0 1px 0 rgba(20, 18, 50, 0.04);
 }
@@ -88,17 +88,17 @@
   border-color: transparent;
   background: transparent;
   box-shadow: none;
-  color: var(--text);
+  color: var(--color-text-primary);
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: var(--gray-50);
+  background: var(--button-ghost-background-hover);
   border-color: transparent;
-  color: var(--text);
+  color: var(--color-text-primary);
 }
 
 .btn-ghost:active:not(:disabled) {
-  background: var(--gray-100, #e8eaf0);
+  background: var(--color-surface-muted);
   border-color: transparent;
 }
 

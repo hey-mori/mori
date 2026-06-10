@@ -2,44 +2,12 @@ import { Check } from "lucide-react";
 import { useThemeStore } from "../../app/themeStore";
 import {
   FONT_SCALE_STEPS,
+  THEME_DEFINITIONS,
   type ThemeFontScale,
-  type ThemeId,
 } from "../../lib/settings/themePreference";
 import { SettingsSection } from "./SettingsPrimitives";
 
-/**
- * Theme switcher + typography.
- *
- * A single-select grid of color themes that scales as more ship: each is a
- * tappable card with a color preview, name, and one-line description.
- * Selection is shown by a tinted border + check, never a toggle. Below it a
- * font-size control (slider over four steps) with a live preview line. The
- * choice is local-only — it never syncs and never affects data or memory.
- */
-
-type ThemeOption = {
-  id: ThemeId;
-  label: string;
-  description: string;
-};
-
-const THEME_OPTIONS: ThemeOption[] = [
-  {
-    id: "formal",
-    label: "기본",
-    description: "차분한 흰색·회색 표면과 보라 강조색.",
-  },
-  {
-    id: "forest",
-    label: "Forest",
-    description: "세이지·스프루스 톤으로 살짝 따뜻하게.",
-  },
-  {
-    id: "nightLake",
-    label: "Night Lake",
-    description: "어두운 배경에 밝은 텍스트. 저조도 환경에 적합.",
-  },
-];
+const THEME_OPTIONS = Object.values(THEME_DEFINITIONS);
 
 const FONT_SCALE_LABEL: Record<ThemeFontScale, string> = {
   small: "작게",
@@ -127,7 +95,7 @@ function FontSizeControl({
         ))}
       </div>
       <p className="settings-font-preview">
-        Mori가 대화에서 이슈·결정·다음 액션을 정리합니다.
+        Mori가 요청, 결정, 다음 작업을 한 흐름으로 정리합니다.
       </p>
     </section>
   );

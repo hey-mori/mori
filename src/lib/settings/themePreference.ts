@@ -25,12 +25,40 @@ export type ThemeId = (typeof SELECTABLE_THEMES)[number];
 export type ThemeColorScheme = "light" | "dark";
 export type ThemeFontScale = "small" | "normal" | "large" | "xlarge";
 
+export type ThemeDefinition = {
+  id: ThemeId;
+  label: string;
+  description: string;
+  colorScheme: ThemeColorScheme;
+};
+
+export const THEME_DEFINITIONS: Record<ThemeId, ThemeDefinition> = {
+  formal: {
+    id: "formal",
+    label: "Default",
+    description: "Neutral workspace surfaces with Mori's standard accent.",
+    colorScheme: "light",
+  },
+  forest: {
+    id: "forest",
+    label: "Forest",
+    description: "A warmer light theme with sage surfaces and spruce accent.",
+    colorScheme: "light",
+  },
+  nightLake: {
+    id: "nightLake",
+    label: "Night Lake",
+    description: "A dark workspace theme for lower-glare sessions.",
+    colorScheme: "dark",
+  },
+};
+
 /** Ordered font-scale steps, smallest to largest, for slider-style controls. */
 export const FONT_SCALE_STEPS = ["small", "normal", "large", "xlarge"] as const;
 
 /** Returns the color-scheme (light/dark) for a given theme. */
 export function getThemeColorScheme(theme: ThemeId): ThemeColorScheme {
-  return theme === "nightLake" ? "dark" : "light";
+  return THEME_DEFINITIONS[theme].colorScheme;
 }
 
 export const DEFAULT_THEME: ThemeId = "formal";
@@ -46,6 +74,11 @@ export const DEFAULT_THEME_PREFERENCE: ThemePreference = {
   theme: DEFAULT_THEME,
   fontScale: "normal",
 };
+
+export const THEME_DOM_ATTRIBUTE = "data-base-theme";
+export const LEGACY_THEME_DOM_ATTRIBUTE = "data-mori-theme";
+export const FONT_SCALE_DOM_ATTRIBUTE = "data-font-scale";
+export const COLOR_SCHEME_DOM_ATTRIBUTE = "data-color-scheme";
 
 function isThemeFontScale(value: unknown): value is ThemeFontScale {
   return (FONT_SCALE_STEPS as readonly string[]).includes(value as string);
@@ -134,11 +167,16 @@ export function saveThemePreference(
  */
 export function applyThemeToDocument(theme: ThemeId): void {
   if (typeof document === "undefined") return;
-  document.documentElement.setAttribute("data-base-theme", theme);
+  const root = document.documentElement;
+  const colorScheme = getThemeColorScheme(theme);
+  root.setAttribute(THEME_DOM_ATTRIBUTE, theme);
+  root.setAttribute(LEGACY_THEME_DOM_ATTRIBUTE, theme);
+  root.setAttribute(COLOR_SCHEME_DOM_ATTRIBUTE, colorScheme);
+  root.style.colorScheme = colorScheme;
 }
 
 export function applyThemePreferenceToDocument(preference: ThemePreference): void {
   if (typeof document === "undefined") return;
   applyThemeToDocument(preference.theme);
-  document.documentElement.setAttribute("data-font-scale", preference.fontScale);
+  document.documentElement.setAttribute(FONT_SCALE_DOM_ATTRIBUTE, preference.fontScale);
 }

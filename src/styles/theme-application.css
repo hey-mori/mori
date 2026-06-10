@@ -1,0 +1,517 @@
+/**
+ * Global theme application bridge.
+ *
+ * This file is loaded after every feature stylesheet. It is the one central
+ * place where legacy hard-coded white/gray surfaces are remapped onto the
+ * canonical role tokens from `theme.css`.
+ */
+
+html[data-base-theme] body {
+  background: var(--color-app-bg);
+  color: var(--color-text-primary);
+}
+
+html[data-base-theme] :where(
+  .workspace,
+  .page,
+  .page-shell,
+  .page-shell-top,
+  .page-shell-scroll,
+  .settings-sheet-body,
+  .content-grid,
+  .timeline-main,
+  .ai-workflow,
+  .session-tab-main,
+  .dashboard-surface,
+  .workbench-surface
+) {
+  background: var(--color-app-bg);
+  color: var(--color-text-primary);
+}
+
+html[data-base-theme] :where(
+  .sidebar,
+  .settings-sheet,
+  .settings-sheet-head,
+  .settings-section,
+  .settings-inline-card,
+  .settings-option,
+  .settings-provider-card,
+  .settings-theme,
+  .settings-font,
+  .settings-storage-list li,
+  .settings-sqlite-panel,
+  .settings-sqlite-meta > div,
+  .settings-sqlite-saved-list li,
+  .settings-repo-list li,
+  .settings-trust,
+  .analysis-banner,
+  .analysis-panel,
+  .issue-card,
+  .source-card,
+  .engine-card,
+  .active-session-banner,
+  .timeline-scroller,
+  .timeline-chrono-row,
+  .event-card,
+  .timeline-bundle-card,
+  .timeline-empty,
+  .evidence-empty,
+  .inspector,
+  .inspector-panel,
+  .inspector-summary-card,
+  .inspector-trust-card,
+  .timeline-evidence-chip,
+  .inspector-source-list li,
+  .related-list button,
+  .trace .selected-summary,
+  .trace-stack,
+  .trace-icons span,
+  .git-fetch-card,
+  .repository-list li,
+  .import-history li,
+  .toolbar-menu,
+  .filter-popover,
+  .base-action-menu,
+  .base-drawer-content,
+  .base-card,
+  .base-stat-card
+) {
+  background: var(--card-background);
+  border-color: var(--card-border);
+  color: var(--color-text-primary);
+}
+
+html[data-base-theme] :where(
+  .sidebar,
+  .settings-sheet-head
+) {
+  background: var(--sidebar-background);
+}
+
+html[data-base-theme] :where(
+  .settings-sheet-content,
+  .settings-rail,
+  .settings-empty,
+  .settings-probe-row,
+  .settings-capability-row,
+  .settings-disclosure-desc,
+  .settings-sqlite-meta > div,
+  .settings-font-tick:hover,
+  .demo-mode-switch,
+  .segmented,
+  .timeline-toolbar,
+  .timeline-density-switch,
+  .review-tabs,
+  .tab-toolbar,
+  .timeline-lane,
+  .timeline-frame,
+  .time-axis,
+  .timeline-axis,
+  .inspector-meta-strip span,
+  .timeline-scaffold-lane,
+  .trust-box,
+  .import-panel,
+  .git-fetch-help code
+) {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-primary);
+}
+
+html[data-base-theme] :where(
+  .sidebar-nav,
+  .sidebar-foot,
+  .settings-sheet,
+  .settings-sheet-head,
+  .settings-sheet-body,
+  .settings-rail,
+  .settings-section,
+  .settings-row,
+  .settings-option,
+  .settings-provider-card,
+  .settings-theme,
+  .settings-font,
+  .settings-storage-list li,
+  .settings-sqlite-panel,
+  .settings-repo-list li,
+  .timeline-toolbar,
+  .timeline-scroller,
+  .timeline-axis,
+  .timeline-chrono-row,
+  .event-card,
+  .timeline-bundle-card,
+  .toolbar-menu,
+  .filter-popover,
+  .analysis-banner,
+  .analysis-panel,
+  .import-panel,
+  .inspector,
+  .inspector-panel,
+  .inspector-summary-card,
+  .inspector-trust-card,
+  .timeline-evidence-chip,
+  .related-list button
+) {
+  border-color: var(--color-border-default);
+}
+
+html[data-base-theme] :where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select,
+  .search,
+  .sidebar-search,
+  .timeline-search-input,
+  .base-search-field,
+  .toolbar-select,
+  .toolbar-toggle,
+  .filter-pop-item,
+  .filter-popover-clear,
+  .toolbar-menu-item,
+  .settings-inline-action,
+  .settings-repo-label-input,
+  .repository-label-input,
+  .git-fetch-select,
+  .import-kind-tab
+) {
+  background: var(--input-background);
+  border-color: var(--input-border);
+  color: var(--input-foreground);
+}
+
+html[data-base-theme] :where(input, textarea)::placeholder {
+  color: var(--input-placeholder);
+}
+
+html[data-base-theme] :where(
+  .btn,
+  .sidebar-head-action,
+  .sidebar-grouping-toggle,
+  .sidebar-collapse-toggle,
+  .settings-sheet-close,
+  .base-overflow-menu-trigger
+) {
+  background: var(--button-secondary-background);
+  border-color: var(--color-border-default);
+  color: var(--button-secondary-foreground);
+}
+
+html[data-base-theme] .btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+html[data-base-theme] .btn-ghost:hover:not(:disabled) {
+  background: var(--button-ghost-background-hover);
+  border-color: transparent;
+}
+
+html[data-base-theme] :where(
+  .btn:hover:not(:disabled),
+  .toolbar-toggle:hover,
+  .toolbar-select:hover,
+  .filter-pop-item:hover,
+  .toolbar-menu-item:hover:not(:disabled),
+  .sidebar-nav-item:hover,
+  .sidebar-head-action:hover,
+  .sidebar-grouping-toggle:hover,
+  .sidebar-collapse-toggle:hover,
+  .sidebar-user:hover,
+  .sidebar-row:hover,
+  .sidebar-folder-head:hover,
+  .sidebar-folder-name-btn:hover,
+  .settings-sheet-tab:hover,
+  .settings-sheet-close:hover,
+  .settings-rail-item:hover:not(:disabled),
+  .settings-option.is-clickable:hover,
+  .settings-font-tick:hover,
+  .review-tab:hover,
+  .segmented button:hover:not(:disabled):not(.active)
+) {
+  background: var(--button-ghost-background-hover);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+html[data-base-theme] .btn-ghost:hover:not(:disabled) {
+  background: var(--button-ghost-background-hover);
+  border-color: transparent;
+}
+
+html[data-base-theme] :where(
+  .btn-primary,
+  .sidebar-empty button
+) {
+  background: var(--button-primary-background);
+  border-color: var(--button-primary-background);
+  color: var(--button-primary-foreground);
+}
+
+html[data-base-theme] :where(
+  .btn-primary:hover:not(:disabled),
+  .sidebar-empty button:hover
+) {
+  background: var(--button-primary-background-hover);
+  border-color: var(--button-primary-background-hover);
+  color: var(--button-primary-foreground);
+}
+
+html[data-base-theme] :where(
+  .btn:disabled,
+  .toolbar-menu-item:disabled,
+  .filter-popover-clear:disabled,
+  .settings-option.is-disabled,
+  .settings-theme:disabled
+) {
+  background: var(--button-disabled-background);
+  color: var(--button-disabled-foreground);
+}
+
+html[data-base-theme] :where(
+  .sidebar-nav-item.is-active,
+  .sidebar-head-action.is-active,
+  .sidebar-grouping-toggle.is-active,
+  .sidebar-row.is-active,
+  .sidebar-folder-head.is-current,
+  .sidebar-folder.is-open .sidebar-folder-count,
+  .settings-sheet-tab.is-active,
+  .settings-rail-item.is-active,
+  .settings-option.is-selected,
+  .settings-theme.is-selected,
+  .theme-option.selected,
+  .source-card.selected,
+  .engine-card.selected,
+  .demo-mode-switch > button.is-selected,
+  .segmented button.active,
+  .review-tab.active,
+  .timeline-density-option.is-active,
+  .toolbar-toggle.is-active,
+  .filter-pop-item.active,
+  .timeline-chrono-row.is-selected,
+  .session-switcher-item.is-active,
+  .work-arc-step-btn.is-active,
+  .timeline-chrono-request-tag
+) {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-border-accent);
+  color: var(--color-text-accent);
+}
+
+html[data-base-theme] :where(
+  .sidebar-nav-item,
+  .sidebar-row-meta,
+  .sidebar-group-label,
+  .sidebar-folder-head,
+  .settings-row p,
+  .settings-option small,
+  .settings-provider-meta,
+  .settings-provider-privacy,
+  .settings-repo-info small,
+  .settings-storage-list p,
+  .settings-font-tick,
+  .timeline-chrono-time,
+  .timeline-chrono-toolrun,
+  .timeline-chrono-toolrun-list li,
+  .event-card-meta,
+  .event-card-signals span,
+  .inspector-meta-strip span,
+  .timeline-evidence-chip,
+  .muted,
+  .base-list-row-meta,
+  .base-object-row-subtitle,
+  .base-metadata-line
+) {
+  color: var(--color-text-secondary);
+}
+
+html[data-base-theme] :where(
+  .settings-theme-name,
+  .settings-font-head strong,
+  .settings-section h3,
+  .settings-row strong,
+  .settings-option strong,
+  .timeline-chrono-row strong,
+  .event-card-title,
+  .inspector-summary,
+  .inspector-summary-card p,
+  .inspector-trust-card span,
+  .base-list-row-title,
+  .base-object-row-title
+) {
+  color: var(--color-text-primary);
+}
+
+html[data-base-theme] :where(
+  .btn:focus-visible,
+  .sidebar-head-action:focus-visible,
+  .sidebar-collapse-toggle:focus-visible,
+  .sidebar-grouping-toggle:focus-visible,
+  .sidebar-nav-item:focus-visible,
+  .sidebar-user:focus-visible,
+  .settings-theme:focus-visible,
+  .settings-font-slider:focus-visible,
+  .toolbar-toggle:focus-visible,
+  .toolbar-select:focus-visible,
+  .filter-pop-item:focus-visible,
+  .timeline-chrono-row:focus-visible,
+  .event-card:focus-visible,
+  .base-list-row:focus-visible,
+  .base-object-row:focus-visible
+) {
+  outline-color: var(--color-border-focus);
+}
+
+html[data-base-theme] .settings-sheet-scrim {
+  background: var(--modal-scrim-background);
+}
+
+html[data-base-theme] .settings-font-slider {
+  background: var(--color-border-default);
+}
+
+html[data-base-theme] .settings-font-slider::-webkit-slider-thumb {
+  background: var(--color-accent-base);
+  border-color: var(--color-surface-base);
+}
+
+html[data-base-theme] .settings-font-slider::-moz-range-thumb {
+  background: var(--color-accent-base);
+  border-color: var(--color-surface-base);
+}
+
+html[data-base-theme] .timeline-frame {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--timeline-lane-background) 78%, transparent) 0%,
+      transparent 92px
+    ),
+    var(--timeline-background);
+}
+
+html[data-base-theme] :where(.time-axis, .timeline-axis) {
+  background: var(--color-surface-overlay);
+  border-bottom-color: var(--color-border-default);
+}
+
+html[data-base-theme] :where(
+  .card-purple,
+  .event-card.card-purple,
+  .event-card-source-mark.tone-purple
+) {
+  background: var(--tone-accent-surface);
+  border-color: color-mix(in srgb, var(--color-accent-base) 26%, var(--color-border-default));
+}
+
+html[data-base-theme] :where(
+  .card-green,
+  .event-card.card-green,
+  .event-card-source-mark.tone-green
+) {
+  background: var(--tone-success-surface);
+  border-color: color-mix(in srgb, var(--color-success-base) 26%, var(--color-border-default));
+}
+
+html[data-base-theme] :where(
+  .card-blue,
+  .event-card.card-blue,
+  .event-card-source-mark.tone-blue
+) {
+  background: var(--tone-info-surface);
+  border-color: color-mix(in srgb, var(--color-info-base) 26%, var(--color-border-default));
+}
+
+html[data-base-theme] :where(
+  .card-orange,
+  .event-card.card-orange,
+  .event-card-source-mark.tone-orange
+) {
+  background: var(--tone-warning-surface);
+  border-color: color-mix(in srgb, var(--color-warning-base) 26%, var(--color-border-default));
+}
+
+html[data-base-theme] :where(
+  .card-red,
+  .event-card.card-red,
+  .event-card-source-mark.tone-red
+) {
+  background: var(--tone-danger-surface);
+  border-color: color-mix(in srgb, var(--color-danger-base) 26%, var(--color-border-default));
+}
+
+html[data-base-theme] :where(
+  .card-cyan,
+  .event-card.card-cyan,
+  .event-card-source-mark.tone-cyan
+) {
+  background: var(--tone-info-surface);
+  border-color: color-mix(in srgb, var(--cyan) 26%, var(--color-border-default));
+}
+
+html[data-base-theme] :where(
+  .card-gray,
+  .event-card.card-gray,
+  .event-card-source-mark.tone-gray
+) {
+  background: var(--tone-neutral-surface);
+  border-color: var(--color-border-default);
+}
+
+html[data-base-theme] :where(.tone-purple) {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-base);
+}
+
+html[data-base-theme] :where(.tone-green) {
+  background: var(--color-success-subtle);
+  color: var(--color-success-base);
+}
+
+html[data-base-theme] :where(.tone-blue) {
+  background: var(--color-info-subtle);
+  color: var(--color-info-base);
+}
+
+html[data-base-theme] :where(.tone-orange) {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning-foreground);
+}
+
+html[data-base-theme] :where(.tone-red) {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger-base);
+}
+
+html[data-base-theme] :where(.tone-gray) {
+  background: var(--color-neutral-subtle);
+  color: var(--color-neutral-base);
+}
+
+html[data-base-theme] .contrib-cell.lvl-0 {
+  background: var(--color-surface-subtle);
+  box-shadow: inset 0 0 0 1px var(--color-border-default);
+}
+
+html[data-base-theme] .contrib-cell.lvl-1 {
+  background: color-mix(in srgb, var(--color-success-base) 24%, var(--color-surface-base));
+}
+
+html[data-base-theme] .contrib-cell.lvl-2 {
+  background: color-mix(in srgb, var(--color-success-base) 44%, var(--color-surface-base));
+}
+
+html[data-base-theme] .contrib-cell.lvl-3 {
+  background: color-mix(in srgb, var(--color-success-base) 68%, var(--color-surface-base));
+}
+
+html[data-base-theme] .contrib-cell.lvl-4 {
+  background: var(--color-success-base);
+}
+
+html[data-base-theme] progress {
+  background: var(--color-border-default);
+}
+
+html[data-base-theme] progress::-webkit-progress-value {
+  background: var(--color-accent-base);
+}

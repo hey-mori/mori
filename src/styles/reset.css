@@ -20,8 +20,8 @@
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--color-app-bg);
+  color: var(--color-text-primary);
   /* Explicit base size - without this the app inherited the browser
      default 16px, which made every surface read oversized. */
   font-size: var(--base-font-size-md);

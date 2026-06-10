@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_THEME_PREFERENCE,
+  SELECTABLE_THEMES,
+  THEME_DEFINITIONS,
+  getThemeColorScheme,
   isSelectableTheme,
   loadThemePreference,
   parseThemePreference,
@@ -20,6 +23,18 @@ describe("isSelectableTheme", () => {
     expect(isSelectableTheme("bogus")).toBe(false);
     expect(isSelectableTheme(42)).toBe(false);
     expect(isSelectableTheme(null)).toBe(false);
+  });
+});
+
+describe("theme definitions", () => {
+  it("defines display metadata for every selectable theme", () => {
+    expect(Object.keys(THEME_DEFINITIONS).sort()).toEqual([...SELECTABLE_THEMES].sort());
+  });
+
+  it("exposes the color scheme from the central theme definition", () => {
+    expect(getThemeColorScheme("formal")).toBe("light");
+    expect(getThemeColorScheme("forest")).toBe("light");
+    expect(getThemeColorScheme("nightLake")).toBe("dark");
   });
 });
 
