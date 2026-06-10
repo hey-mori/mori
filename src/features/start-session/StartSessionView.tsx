@@ -16,7 +16,6 @@ import {
   Settings2,
   Sparkles,
 } from "lucide-react";
-import "../../styles/features/start-session.css";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {

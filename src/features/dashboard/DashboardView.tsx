@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import "../../styles/features/top-level-surfaces.css";
 import {
   Activity,
   BarChart3,

@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from "react";
 import { Network } from "lucide-react";
-import "../../styles/features/graph.css";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { useAppStore } from "../../app/store";

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import "../../styles/features/top-level-surfaces.css";
 import {
   ArrowRight,
   FolderGit2,

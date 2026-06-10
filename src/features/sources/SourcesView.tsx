@@ -21,8 +21,6 @@ import {
   Upload,
   type LucideIcon,
 } from "lucide-react";
-import "../../styles/features/sources.css";
-import "../../styles/features/connections.css";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";

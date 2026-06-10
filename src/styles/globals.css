@@ -7,6 +7,30 @@
 @import "../components/ui/InfoHint.css";
 @import "../components/ui/ChartTooltip.css";
 @import "../components/ui/BaseTooltip.css";
+@import "../components/ui/BaseInspectorPanel.css";
 @import "../components/ui/base-objects.css";
 @import "../components/ui/layout-components.css";
 @import "../components/ui/Modal.css";
+/* Feature sheets load here in one deterministic order. They share selectors
+   (e.g. .event-card-title, .lane, .tabs are defined in several sheets), so the
+   cascade winner is order-dependent — CLAUDE.md: "source order is load-bearing".
+   Splitting these into per-route imports made the order navigation-dependent and
+   broke styling, so they live here, in the original order, until a future @layer
+   pass makes the cascade explicit enough to safely code-split again. JS routes
+   stay lazy-loaded regardless; only the CSS is reunified. */
+@import "./features/timeline.css";
+@import "./features/start-session.css";
+@import "./features/session-shell.css";
+@import "./features/home.css";
+@import "./features/top-level-surfaces.css";
+@import "./features/review-evidence.css";
+@import "./features/notifications.css";
+@import "./features/memory-settings.css";
+@import "./features/settings-tools.css";
+@import "./features/timeline-responsive.css";
+@import "./features/connections.css";
+@import "./features/command-palette.css";
+@import "./features/project-page.css";
+@import "./features/sources.css";
+@import "./features/graph.css";
+@import "./features/timeline-lab.css";

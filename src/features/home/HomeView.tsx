@@ -1,5 +1,4 @@
 import { MoriCommandSpaceHome } from "./MoriCommandSpaceHome";
-import "../../styles/features/home.css";
 
 /**
  * Home experiment slot.

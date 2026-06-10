@@ -23,11 +23,6 @@ import { EvidenceView } from "../evidence/EvidenceView";
 import { ReviewView } from "../review/ReviewView";
 import { ReportsView } from "../reports/ReportsView";
 import { OverviewView } from "./OverviewView";
-import "../../components/ui/BaseInspectorPanel.css";
-import "../../styles/features/session-shell.css";
-import "../../styles/features/timeline.css";
-import "../../styles/features/timeline-responsive.css";
-import "../../styles/features/review-evidence.css";
 
 /**
  * Session Detail — the unified, tabbed workspace for one session.
