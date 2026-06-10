@@ -136,6 +136,14 @@ button.start-entry-card:focus-visible {
   font-weight: 650;
 }
 
+/* Title + its info tooltip sit on one line; the hint icon is the only place the
+   per-engine explanation lives now (no always-visible card descriptions). */
+.setup-block-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1.2fr 1fr auto;

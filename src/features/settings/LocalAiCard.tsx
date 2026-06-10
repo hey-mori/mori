@@ -10,6 +10,7 @@ import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BaseSelect } from "../../components/ui/BaseSelect";
 import { Button } from "../../components/ui/Button";
+import { InfoHint } from "../../components/ui/InfoHint";
 import {
   checkQuickPassCapability,
   probeOllamaConnection,
@@ -167,7 +168,18 @@ export function LocalAiCard({
   }
 
   return (
-    <SettingsSection title="분석 엔진">
+    <SettingsSection
+      title="분석 엔진"
+      action={
+        <InfoHint label="분석 엔진 설명">
+          <strong>규칙 기반</strong> · 네트워크 없이 기기에서 도는 휴리스틱. 빠르고 비공개이지만 요약은 단순합니다.
+          <br />
+          <strong>Ollama</strong> · 기기에서 도는 로컬 LLM 런타임. 비공개로 더 풍부하게 요약합니다.
+          <br />
+          <strong>OpenAI 호환</strong> · OpenAI 형식 API(로컬 또는 원격). 원격 주소면 자료가 외부로 전송될 수 있습니다.
+        </InfoHint>
+      }
+    >
       <div className="settings-ai-layout">
         <div className="settings-ai-engine-grid" role="radiogroup" aria-label="분석 엔진">
           {ENGINE_OPTIONS.map((option) => {
@@ -187,7 +199,6 @@ export function LocalAiCard({
                 </span>
                 <span className="settings-ai-engine-body">
                   <strong>{option.label}</strong>
-                  <span>{option.detail}</span>
                 </span>
                 <span
                   className={`settings-ai-engine-mark${selected ? " is-selected" : ""}`}
@@ -197,8 +208,6 @@ export function LocalAiCard({
             );
           })}
         </div>
-
-        <EngineDescription providerKind={providerKind} />
 
         {providerKind === "deterministic" ? null : (
           <EngineConfigPanel
@@ -215,21 +224,6 @@ export function LocalAiCard({
         <RecentRunsPanel runHistory={runHistory} />
       </div>
     </SettingsSection>
-  );
-}
-
-const ENGINE_DESCRIPTION: Record<QuickPassProviderKind, string> = {
-  deterministic:
-    "네트워크 없이 기기에서 대화를 분석합니다. 모델 설치나 연결 없이 즉시 동작하지만, 요약은 규칙 기반이라 단순합니다.",
-  ollama:
-    "기기에서 실행되는 모델로 분석합니다. Ollama 같은 로컬 런타임을 연결하며 자료가 외부로 전송되지 않습니다.",
-  openAiCompatible:
-    "HTTP API로 모델을 호출합니다. LM Studio 같은 로컬 서버도, 원격 API도 같은 방식으로 연결할 수 있습니다.",
-};
-
-function EngineDescription({ providerKind }: { providerKind: QuickPassProviderKind }) {
-  return (
-    <p className="settings-ai-desc">{ENGINE_DESCRIPTION[providerKind]}</p>
   );
 }
 

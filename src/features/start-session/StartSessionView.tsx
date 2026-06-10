@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { InfoHint } from "../../components/ui/InfoHint";
 import {
   useEffect,
   useMemo,
@@ -575,6 +576,15 @@ export function StartSessionView() {
         number="3"
         title="분석 엔진"
         subtitle="대화를 분석할 엔진을 선택합니다."
+        hint={
+          <InfoHint label="분석 엔진 설명">
+            <strong>규칙 기반</strong> · 네트워크 없이 기기에서 도는 휴리스틱. 빠르고 비공개이지만 요약은 단순합니다.
+            <br />
+            <strong>Ollama</strong> · 기기에서 도는 로컬 LLM 런타임. 비공개로 더 풍부하게 요약합니다.
+            <br />
+            <strong>OpenAI 호환</strong> · OpenAI 형식 API(로컬 또는 원격). 원격 주소면 자료가 외부로 전송될 수 있습니다.
+          </InfoHint>
+        }
       >
         <div className="pick-grid engine-pick-grid">
           {engineOptions.map((option) => (
@@ -669,11 +679,13 @@ function FieldBlock({
   number,
   title,
   subtitle,
+  hint,
   children,
 }: {
   number: string;
   title: string;
   subtitle?: string;
+  hint?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -681,7 +693,10 @@ function FieldBlock({
       <header>
         <span className="setup-block-num">{number}</span>
         <div>
-          <h2>{title}</h2>
+          <h2 className="setup-block-title">
+            {title}
+            {hint}
+          </h2>
           {subtitle ? <p className="setup-block-sub">{subtitle}</p> : null}
         </div>
       </header>
@@ -774,7 +789,6 @@ function EngineTile({
       </span>
       <span className="pick-tile-body">
         <strong>{option.label}</strong>
-        <span>{disabled ? "설정 준비 중" : option.detail}</span>
       </span>
       <span className={`pick-mark${selected ? " is-selected" : ""}`} aria-hidden="true" />
     </button>
