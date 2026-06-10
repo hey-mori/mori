@@ -128,7 +128,7 @@ describe("StoredSessionSummary metric round-trip", () => {
     ]);
 
     const summary = repository
-      .listStoredSessions()
+      .listStoredSessionsWithMetrics()
       .find((s) => s.sessionId === draft.session.id)!;
     expect(summary.eventCount).toBe(2);
     expect(summary.tokenTotal).toBe(2_400);
@@ -137,7 +137,7 @@ describe("StoredSessionSummary metric round-trip", () => {
 
     // A fresh repository over the same storage reloads identically.
     const reloaded = new BrowserDraftRepository(storage)
-      .listStoredSessions()
+      .listStoredSessionsWithMetrics()
       .find((s) => s.sessionId === draft.session.id)!;
     expect(reloaded.tokenTotal).toBe(2_400);
   });
@@ -150,7 +150,7 @@ describe("StoredSessionSummary metric round-trip", () => {
     ]);
 
     const summary = repository
-      .listStoredSessions()
+      .listStoredSessionsWithMetrics()
       .find((s) => s.sessionId === draft.session.id)!;
     expect(summary.eventCount).toBe(2);
     expect("tokenTotal" in summary).toBe(false);

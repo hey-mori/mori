@@ -412,6 +412,7 @@ function connectorJsonlSource(input: BuildControlCenterInput): SourceWorkspaceSo
 type DiscoveryAgentSpec = {
   id: string;
   name: string;
+  planned?: boolean;
   acquisitionMethod: string;
   acceptedFormats: string[];
   setupMethod: string;
@@ -499,13 +500,31 @@ const DISCOVERY_AGENT_SPECS: readonly DiscoveryAgentSpec[] = [
     likelyFiles: ["src-tauri/src/cursor/sessions.rs", "src/lib/cursor/"],
     testsNeeded: ["cursorDiskKV reader", "split + inline bubble formats"],
   },
+  {
+    id: "manusDiscovery",
+    name: "Manus",
+    planned: true,
+    acquisitionMethod: "Manus work record import is planned.",
+    acceptedFormats: ["Manus work records"],
+    setupMethod: "A Manus local-history or export format needs to be confirmed first.",
+    privacyNote: "Not implemented yet. Mori will not read Manus accounts or remote sessions automatically.",
+    whatMoriCanAccess: ["User-selected Manus work records after implementation"],
+    whatMoriCannotAccess: ["Manus account", "remote sessions", "background monitoring"],
+    reviewBehavior: "Future Manus imports will still pass through Import Review before timeline changes.",
+    likelyFiles: ["src/lib/agents/agentRegistry.ts", "src/lib/sources/sourceWorkspace.ts"],
+    testsNeeded: ["Manus discovery adapter", "privacy boundary"],
+  },
 ];
 
 function discoveryAgentSource(
   spec: DiscoveryAgentSpec,
   input: BuildControlCenterInput,
 ): SourceWorkspaceSource {
-  const status: SourceWorkspaceStatus = input.isDesktop ? "available" : "needsDesktopApp";
+  const status: SourceWorkspaceStatus = spec.planned
+    ? "planned"
+    : input.isDesktop
+      ? "available"
+      : "needsDesktopApp";
   const display = statusLabel(status);
   return {
     id: spec.id,
@@ -531,7 +550,7 @@ function discoveryAgentSource(
     action: { kind: "none", label: "기록에서 불러오기", enabled: false },
     likelyFiles: spec.likelyFiles,
     testsNeeded: spec.testsNeeded,
-    safeToImplementNow: true,
+    safeToImplementNow: !spec.planned,
   };
 }
 

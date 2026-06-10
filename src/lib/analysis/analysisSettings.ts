@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { DisclosureLevel } from "../disclosure";
 
 export type QuickPassProviderKind = "deterministic" | "ollama" | "openAiCompatible";
@@ -51,35 +50,49 @@ const ALLOWED_PROVIDERS = [
   "openAiCompatible",
 ] as const satisfies readonly [QuickPassProviderKind, ...QuickPassProviderKind[]];
 
-const QuickPassSettingsSchema = z.object({
-  provider: z.enum(ALLOWED_PROVIDERS).catch(DEFAULT_QUICK_PASS_SETTINGS.provider),
-  ollamaEndpoint: trimmedNonEmptyString(DEFAULT_QUICK_PASS_SETTINGS.ollamaEndpoint),
-  ollamaModel: trimmedNonEmptyString(DEFAULT_QUICK_PASS_SETTINGS.ollamaModel),
-  ollamaTimeoutMs: boundedNumber(
-    DEFAULT_QUICK_PASS_SETTINGS.ollamaTimeoutMs,
-    1_000,
-    300_000,
-  ),
-  openAiBaseUrl: trimmedNonEmptyString(DEFAULT_QUICK_PASS_SETTINGS.openAiBaseUrl),
-  openAiModel: trimmedNonEmptyString(DEFAULT_QUICK_PASS_SETTINGS.openAiModel),
-  openAiApiKey: trimmedString(DEFAULT_QUICK_PASS_SETTINGS.openAiApiKey),
-  openAiTimeoutMs: boundedNumber(
-    DEFAULT_QUICK_PASS_SETTINGS.openAiTimeoutMs,
-    1_000,
-    300_000,
-  ),
-  fallbackToDeterministic: z
-    .boolean()
-    .catch(DEFAULT_QUICK_PASS_SETTINGS.fallbackToDeterministic),
-  requestDisclosureLevel: z
-    .enum(["raw", "summary", "abstract", "hidden"])
-    .catch(DEFAULT_QUICK_PASS_SETTINGS.requestDisclosureLevel),
-  requestAbstractionModel: trimmedString(DEFAULT_QUICK_PASS_SETTINGS.requestAbstractionModel),
-});
-
 export function sanitizeQuickPassSettings(input: unknown): QuickPassAnalysisSettings {
-  const parsed = QuickPassSettingsSchema.safeParse(input);
-  return parsed.success ? parsed.data : { ...DEFAULT_QUICK_PASS_SETTINGS };
+  if (!isRecord(input)) return { ...DEFAULT_QUICK_PASS_SETTINGS };
+  return {
+    provider: parseProvider(input.provider),
+    ollamaEndpoint: parseNonEmptyString(
+      input.ollamaEndpoint,
+      DEFAULT_QUICK_PASS_SETTINGS.ollamaEndpoint,
+    ),
+    ollamaModel: parseNonEmptyString(
+      input.ollamaModel,
+      DEFAULT_QUICK_PASS_SETTINGS.ollamaModel,
+    ),
+    ollamaTimeoutMs: parseBoundedNumber(
+      input.ollamaTimeoutMs,
+      DEFAULT_QUICK_PASS_SETTINGS.ollamaTimeoutMs,
+      1_000,
+      300_000,
+    ),
+    openAiBaseUrl: parseNonEmptyString(
+      input.openAiBaseUrl,
+      DEFAULT_QUICK_PASS_SETTINGS.openAiBaseUrl,
+    ),
+    openAiModel: parseNonEmptyString(
+      input.openAiModel,
+      DEFAULT_QUICK_PASS_SETTINGS.openAiModel,
+    ),
+    openAiApiKey: parseString(input.openAiApiKey, DEFAULT_QUICK_PASS_SETTINGS.openAiApiKey),
+    openAiTimeoutMs: parseBoundedNumber(
+      input.openAiTimeoutMs,
+      DEFAULT_QUICK_PASS_SETTINGS.openAiTimeoutMs,
+      1_000,
+      300_000,
+    ),
+    fallbackToDeterministic:
+      typeof input.fallbackToDeterministic === "boolean"
+        ? input.fallbackToDeterministic
+        : DEFAULT_QUICK_PASS_SETTINGS.fallbackToDeterministic,
+    requestDisclosureLevel: parseDisclosureLevel(input.requestDisclosureLevel),
+    requestAbstractionModel: parseString(
+      input.requestAbstractionModel,
+      DEFAULT_QUICK_PASS_SETTINGS.requestAbstractionModel,
+    ),
+  };
 }
 
 /**
@@ -102,24 +115,37 @@ function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function trimmedNonEmptyString(fallback: string) {
-  return z.preprocess(
-    (value) => (typeof value === "string" ? value.trim() : value),
-    z.string().min(1).catch(fallback),
-  );
+function parseProvider(value: unknown): QuickPassProviderKind {
+  return typeof value === "string" && isAllowedProvider(value)
+    ? value
+    : DEFAULT_QUICK_PASS_SETTINGS.provider;
 }
 
-function trimmedString(fallback: string) {
-  return z.preprocess(
-    (value) => (typeof value === "string" ? value.trim() : value),
-    z.string().catch(fallback),
-  );
+function parseDisclosureLevel(value: unknown): DisclosureLevel {
+  return value === "raw" || value === "summary" || value === "abstract" || value === "hidden"
+    ? value
+    : DEFAULT_QUICK_PASS_SETTINGS.requestDisclosureLevel;
 }
 
-function boundedNumber(fallback: number, min: number, max: number) {
-  return z
-    .number()
-    .finite()
-    .transform((value) => clampNumber(value, min, max))
-    .catch(fallback);
+function parseNonEmptyString(value: unknown, fallback: string): string {
+  const trimmed = parseString(value, fallback);
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function parseString(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value.trim() : fallback;
+}
+
+function parseBoundedNumber(value: unknown, fallback: number, min: number, max: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? clampNumber(value, min, max)
+    : fallback;
+}
+
+function isAllowedProvider(value: string): value is QuickPassProviderKind {
+  return (ALLOWED_PROVIDERS as readonly string[]).includes(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
 }

@@ -23,6 +23,7 @@ import type {
   QuickPassProviderKind,
 } from "../../lib/analysis";
 import { formatRelativeKo } from "../../lib/home/homeOverview";
+import { endpointLocalityLabel } from "../../lib/analysis/endpointLocality";
 import { getDefaultLlmFetch } from "../../lib/desktop/llmHttp";
 import {
   PreferenceToggle,
@@ -72,13 +73,13 @@ const ENGINE_OPTIONS: Array<{
   {
     id: "ollama",
     label: "Ollama",
-    detail: "로컬 LLM · 외부 전송 없음",
+    detail: "기기에서 도는 로컬 LLM 런타임",
     icon: Bot,
   },
   {
     id: "openAiCompatible",
     label: "OpenAI 호환",
-    detail: "로컬 서버 또는 원격 API",
+    detail: "OpenAI 호환 엔드포인트 · 로컬 또는 외부",
     icon: Code2,
   },
 ];
@@ -221,9 +222,9 @@ const ENGINE_DESCRIPTION: Record<QuickPassProviderKind, string> = {
   deterministic:
     "네트워크 없이 기기에서 대화를 분석합니다. 모델 설치나 연결 없이 즉시 동작하지만, 요약은 규칙 기반이라 단순합니다.",
   ollama:
-    "기기에서 실행되는 로컬 LLM으로 분석합니다. 자료가 외부로 전송되지 않으며, 선택한 모델 성능에 따라 요약 품질이 달라집니다.",
+    "기기에서 실행되는 모델로 분석합니다. Ollama 같은 로컬 런타임을 연결하며 자료가 외부로 전송되지 않습니다.",
   openAiCompatible:
-    "OpenAI 형식 HTTP API로 분석합니다. 로컬 서버(LM Studio·llama.cpp)일 수도, 원격 API일 수도 있어 원격 주소면 자료가 외부로 전송됩니다.",
+    "HTTP API로 모델을 호출합니다. LM Studio 같은 로컬 서버도, 원격 API도 같은 방식으로 연결할 수 있습니다.",
 };
 
 function EngineDescription({ providerKind }: { providerKind: QuickPassProviderKind }) {
@@ -306,6 +307,9 @@ function EngineConfigPanel({
             placeholder="필요한 경우만"
             onChange={(value) => onUpdateSettings({ openAiApiKey: value })}
           />
+          <p className="settings-ai-desc">
+            이 엔드포인트는 {endpointLocalityLabel(settings.openAiBaseUrl)}
+          </p>
         </div>
       )}
 

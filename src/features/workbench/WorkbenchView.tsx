@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import "../../styles/features/top-level-surfaces.css";
 import {
   ArrowUpRight,
   Bookmark,
@@ -192,7 +193,7 @@ export function WorkbenchView() {
   }, [density]);
 
   const storedSessions = useMemo(
-    () => mergeDemoSessionSummaries(repository.listStoredSessions()),
+    () => mergeDemoSessionSummaries(repository.listStoredSessionsWithMetrics()),
     [repository],
   );
 

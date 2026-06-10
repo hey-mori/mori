@@ -22,6 +22,14 @@ describe("resolveStartRecordsAgentId", () => {
     expect(resolveStartRecordsAgentId("claude", roster)).toBe("codex");
   });
 
+  it("falls back when the requested agent is not detectable yet", () => {
+    const roster: Array<{ agentId: AgentWorkAgentId; detect: boolean }> = [
+      { agentId: "manus", detect: false },
+      { agentId: "claude", detect: true },
+    ];
+    expect(resolveStartRecordsAgentId("manus", roster)).toBe("claude");
+  });
+
   it("prefers a detection-capable agent over an earlier non-detectable one", () => {
     const roster: Array<{ agentId: AgentWorkAgentId; detect: boolean }> = [
       { agentId: "claude", detect: false },

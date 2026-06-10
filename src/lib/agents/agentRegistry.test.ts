@@ -20,6 +20,7 @@ describe("agentRegistry", () => {
       "continue",
       "cline",
       "cursor",
+      "manus",
     ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -94,12 +95,13 @@ describe("agentRegistry", () => {
     }
   });
 
-  it("marks every agent auto-detectable so it reaches the 새 세션 picker", () => {
+  it("marks every supported records agent auto-detectable", () => {
     // Regression guard: Antigravity was previously discoverable everywhere
     // except the start-session roster. Deriving the roster from this
     // registry means a detect:true agent can never be silently dropped.
-    for (const descriptor of AGENT_REGISTRY) {
+    for (const descriptor of AGENT_REGISTRY.filter((entry) => entry.agentId !== "manus")) {
       expect(descriptor.detect).toBe(true);
     }
+    expect(getAgentDescriptor("manus").detect).toBe(false);
   });
 });

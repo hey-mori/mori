@@ -755,6 +755,16 @@ details.sources-inspector-block[open] {
   color: var(--text);
 }
 
+.sources-tile .pick-tile-rec,
+.sources-tile-body > span:not(.sources-tile-name),
+.sources-planned-group .sources-group-head span,
+.sources-method-pick-body > span:last-child,
+.sources-method-pick .pill,
+.sources-inspector-block.is-collapsible,
+.sources-inspector-note {
+  display: none;
+}
+
 /* Inspector method picker — the selected provider's ways in. */
 .sources-method-picker {
   display: grid;

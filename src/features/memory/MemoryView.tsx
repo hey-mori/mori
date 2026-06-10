@@ -1,5 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import "../../styles/features/memory-settings.css";
+import "../../styles/features/review-evidence.css";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
@@ -107,7 +109,7 @@ export function MemoryView() {
   const browserSessionSummaries = useMemo<StoredSessionSummary[]>(
     () => {
       void activeSessionId;
-      return repository.listStoredSessions();
+      return repository.listStoredSessionsWithMetrics();
     },
     [repository, activeSessionId],
   );

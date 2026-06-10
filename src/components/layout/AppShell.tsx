@@ -1,14 +1,19 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
-import { SettingsSheet } from "./SettingsSheet";
-import { CommandPalette } from "./CommandPalette";
 import { useAppStore } from "../../app/store";
 import {
   loadCollapsePreference,
   saveCollapsePreference,
 } from "../../lib/sidebar/collapsePreference";
 import type { ViewKey } from "../../domain/types";
+
+const SettingsSheet = lazy(() =>
+  import("./SettingsSheet").then((module) => ({ default: module.SettingsSheet })),
+);
+const CommandPalette = lazy(() =>
+  import("./CommandPalette").then((module) => ({ default: module.CommandPalette })),
+);
 
 /**
  * Outer app shell — a session-list sidebar on the left, the workspace on the
@@ -25,6 +30,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const toggleCommandPalette = useAppStore(
     (state) => state.toggleCommandPalette,
   );
+  const settingsSheetOpen = useAppStore((state) => state.settingsSheetOpen);
+  const commandPaletteOpen = useAppStore((state) => state.commandPaletteOpen);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Desktop-only "narrow" mode — independent from the mobile off-canvas
   // drawer state above. When collapsed, the sidebar shrinks to its icon
@@ -90,10 +97,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         onClick={() => setSidebarOpen(false)}
       />
       <main className="workspace">{children}</main>
-      <SettingsSheet />
-      <CommandPalette
-        onToggleSidebarCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
+      <Suspense fallback={null}>
+        {settingsSheetOpen ? <SettingsSheet /> : null}
+        {commandPaletteOpen ? (
+          <CommandPalette
+            onToggleSidebarCollapsed={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        ) : null}
+      </Suspense>
     </div>
   );
 }

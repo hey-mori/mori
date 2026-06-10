@@ -24,6 +24,7 @@ import {
   resolveQuickPassProvider,
 } from "../../lib/analysis";
 import { buildAnalysisPlan, describeAnalysisPlan } from "../../lib/analysis/analysisPlan";
+import { providerKindLabel, providerNameLabel } from "../../lib/analysis/providerLabels";
 import {
   buildImportApplyCompletion,
   type ImportApplyCompletionActionId,
@@ -572,12 +573,12 @@ function QuickPassControl({
   onRun: () => void;
   onClear: () => void;
 }) {
-  const providerKindLabel =
+  const providerSummary =
     settings.provider === "ollama"
-      ? `Ollama · ${settings.ollamaModel} (${settings.ollamaEndpoint})`
+      ? `${providerKindLabel("ollama")} · ${settings.ollamaModel} (${settings.ollamaEndpoint})`
       : settings.provider === "openAiCompatible"
-        ? `OpenAI 호환 · ${settings.openAiModel} (${settings.openAiBaseUrl})`
-      : "규칙 기반 로컬 엔진 (네트워크 없음)";
+        ? `${providerKindLabel("openAiCompatible")} · ${settings.openAiModel} (${settings.openAiBaseUrl})`
+      : `${providerKindLabel("deterministic")} 로컬 엔진 (네트워크 없음)`;
 
   return (
     <div className={`analysis-panel status-${status}`}>
@@ -632,9 +633,9 @@ function QuickPassControl({
           value={settings.provider}
           onChange={onProviderChange}
           options={[
-            { id: "deterministic", label: "규칙 기반" },
-            { id: "ollama", label: "Ollama (로컬 LLM)" },
-            { id: "openAiCompatible", label: "OpenAI 호환" },
+            { id: "deterministic", label: providerKindLabel("deterministic") },
+            { id: "ollama", label: providerKindLabel("ollama") },
+            { id: "openAiCompatible", label: providerKindLabel("openAiCompatible") },
           ]}
         />
         <InfoHint label="분석 엔진 설명">
@@ -647,7 +648,7 @@ function QuickPassControl({
           <strong>OpenAI 호환</strong> · OpenAI 형식 HTTP API(로컬 또는 원격). 원격 주소면 자료가
           외부로 전송될 수 있습니다.
         </InfoHint>
-        <small>{providerKindLabel}</small>
+        <small>{providerSummary}</small>
         <Button icon={SettingsIcon} onClick={onOpenSettings} size="sm">
           설정
         </Button>
@@ -715,10 +716,7 @@ function QuickPassControl({
 }
 
 function describeProviderName(name: string | null): string {
-  if (name === "ollama-quick-pass-v1") return "실제 로컬 LLM";
-  if (name === "openai-compatible-quick-pass-v1") return "OpenAI 호환 LLM";
-  if (name === "deterministic-heuristic-v1") return "휴리스틱 (LLM 미사용)";
-  return "알 수 없는 제공자";
+  return providerNameLabel(name);
 }
 
 /**

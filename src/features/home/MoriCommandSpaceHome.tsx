@@ -6,7 +6,7 @@ import type {
   MutableRefObject,
   ReactNode,
 } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Folder,
@@ -33,11 +33,10 @@ import {
   type CommandSpaceActionTarget,
   type CommandSpaceRow,
 } from "../../lib/home/commandSpace";
-import { createAskMoriLlmFromSettings } from "../../lib/ask-mori/askMoriLlm";
-import type { AskMoriAnswer } from "../../lib/ask-mori/askMoriTypes";
-import { memoryAsk } from "../../lib/memory-api/memoryApi";
-import { useMemoryService } from "../memory/useMemoryService";
-import { AskMoriAnswerView } from "../memory/AskMoriAnswerView";
+
+const HomeAskMoriPanel = lazy(() =>
+  import("./HomeAskMoriPanel").then((module) => ({ default: module.HomeAskMoriPanel })),
+);
 
 type CommandMode = {
   id: CommandModeId;
@@ -127,9 +126,7 @@ export function MoriCommandSpaceHome() {
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [answer, setAnswer] = useState<AskMoriAnswer | null>(null);
-  const [asking, setAsking] = useState(false);
-  const [askError, setAskError] = useState<string | null>(null);
+  const [askRequest, setAskRequest] = useState<{ question: string; id: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -143,10 +140,6 @@ export function MoriCommandSpaceHome() {
   const activeSessionId = useSessionStore((state) => selectSessionView(state).session.id);
   const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);
   const loadDesktopSession = useSessionStore((state) => state.loadDesktopSession);
-  // The Ask path runs over the same memory-api facade the warehouse uses, so a
-  // question answered from Home reads identically to one asked on the Memory
-  // page. Read + propose only — nothing here is persisted.
-  const { input: memoryInput, settings: analysisSettings } = useMemoryService();
 
   const sessions = useMemo(() => {
     const stored = loadStoredSessionSummaries();
@@ -173,7 +166,7 @@ export function MoriCommandSpaceHome() {
   // answer panel below the console is the result surface, so the floating
   // context dropdown steps aside to avoid overlapping it.
   const showAnswerPanel =
-    activeModeId === "ask" && (asking || answer !== null || askError !== null);
+    activeModeId === "ask" && askRequest !== null;
   // Idle (focused, nothing typed) shows the mode guide — what this mode does,
   // example prompts, and its related feature — so the input's role is clear
   // before the user commits a keystroke. Typing swaps to live results.
@@ -196,17 +189,14 @@ export function MoriCommandSpaceHome() {
   // different lens; switching back starts fresh.
   useEffect(() => {
     if (activeModeId !== "ask") {
-      setAnswer(null);
-      setAskError(null);
-      setAsking(false);
+      setAskRequest(null);
     }
   }, [activeModeId]);
 
   // Editing the question retires the previous answer, so the live context
   // dropdown returns and the next Enter asks the new question.
   useEffect(() => {
-    setAnswer(null);
-    setAskError(null);
+    setAskRequest(null);
   }, [query]);
 
   // Keep the keyboard-highlighted row in view when the list scrolls.
@@ -231,21 +221,10 @@ export function MoriCommandSpaceHome() {
     openSession(tab);
   }
 
-  async function runAsk(question: string): Promise<void> {
+  function runAsk(question: string): void {
     const trimmed = question.trim();
-    if (trimmed.length === 0 || asking) return;
-    setAsking(true);
-    setAnswer(null);
-    setAskError(null);
-    try {
-      const llm = createAskMoriLlmFromSettings(analysisSettings);
-      const result = await memoryAsk(memoryInput, trimmed, llm ? { llm } : {});
-      setAnswer(result);
-    } catch {
-      setAskError("답변 생성 중 문제가 발생했습니다. 다시 시도해 주세요.");
-    } finally {
-      setAsking(false);
-    }
+    if (trimmed.length === 0) return;
+    setAskRequest((previous) => ({ question: trimmed, id: (previous?.id ?? 0) + 1 }));
   }
 
   // A guide example fills the input; in 묻기 it also asks straight away, since
@@ -253,7 +232,7 @@ export function MoriCommandSpaceHome() {
   function activateGuidePrompt(text: string): void {
     setQuery(text);
     if (activeModeId === "ask") {
-      void runAsk(text);
+      runAsk(text);
     } else {
       inputRef.current?.focus();
     }
@@ -268,7 +247,7 @@ export function MoriCommandSpaceHome() {
         navigate(target.view);
         return;
       case "ask":
-        void runAsk(target.question);
+        runAsk(target.question);
         return;
     }
   }
@@ -468,16 +447,15 @@ export function MoriCommandSpaceHome() {
 
             {showAnswerPanel ? (
               <div className="mcs-answer-panel" aria-live="polite">
-                {asking ? (
-                  <p className="mcs-answer-status">메모리에서 답을 찾는 중…</p>
-                ) : askError ? (
-                  <p className="mcs-answer-status">{askError}</p>
-                ) : answer ? (
-                  <AskMoriAnswerView
-                    answer={answer}
-                    onSelectMemory={() => navigate("memory")}
-                    onNavigateEvent={() => openSession("flow")}
-                  />
+                {askRequest ? (
+                  <Suspense fallback={<p className="mcs-answer-status">메모리에서 답을 찾는 중...</p>}>
+                    <HomeAskMoriPanel
+                      question={askRequest.question}
+                      requestId={askRequest.id}
+                      onSelectMemory={() => navigate("memory")}
+                      onNavigateEvent={() => openSession("flow")}
+                    />
+                  </Suspense>
                 ) : null}
               </div>
             ) : null}

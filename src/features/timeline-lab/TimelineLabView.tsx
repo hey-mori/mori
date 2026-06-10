@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, GitBranch, Milestone, ScrollText, SearchX, Workflow } from "lucide-react";
+import "../../styles/features/timeline-lab.css";
 import { selectSessionView, useSessionStore } from "../../app/sessionStore";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import {

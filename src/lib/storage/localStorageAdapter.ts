@@ -106,6 +106,14 @@ export class BrowserDraftRepository implements DraftRepository {
   }
 
   listStoredSessions(): StoredSessionSummary[] {
+    return this.listStoredSessionDrafts(false);
+  }
+
+  listStoredSessionsWithMetrics(): StoredSessionSummary[] {
+    return this.listStoredSessionDrafts(true);
+  }
+
+  private listStoredSessionDrafts(includeMetrics: boolean): StoredSessionSummary[] {
     const sessions: StoredSessionSummary[] = [];
 
     for (let index = 0; index < this.storage.length; index += 1) {
@@ -114,10 +122,9 @@ export class BrowserDraftRepository implements DraftRepository {
       const draft = this.read<StoredSessionDraft>(key);
       if (!draft) continue;
 
-      // Derive event/token metrics once from the session's persisted imports.
-      // Token usage lives only on imported events, so this is the cheapest
-      // honest source — sessions with no usage simply omit the token fields.
-      const metrics = deriveSessionSummaryMetrics(this.listSessionImports(draft.session.id));
+      const metrics = includeMetrics
+        ? deriveSessionSummaryMetrics(this.listSessionImports(draft.session.id))
+        : {};
 
       sessions.push({
         sessionId: draft.session.id,

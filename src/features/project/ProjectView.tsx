@@ -9,6 +9,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import "../../styles/features/project-page.css";
+import "../../styles/features/top-level-surfaces.css";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { PageShell } from "../../components/layout/PageShell";
 import { Button } from "../../components/ui/Button";
@@ -18,7 +20,7 @@ import { BaseSection } from "../../components/ui/BaseSection";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useAppStore } from "../../app/store";
 import {
-  loadStoredSessionSummaries,
+  loadStoredSessionSummariesWithMetrics,
   selectSessionSource,
   useSessionStore,
 } from "../../app/sessionStore";
@@ -537,14 +539,14 @@ function ProjectSessionRowItem({
 
 function safeListSessions() {
   try {
-    return loadStoredSessionSummaries();
+    return loadStoredSessionSummariesWithMetrics();
   } catch {
     return [];
   }
 }
 
 function gatherProjectSessionInsights(
-  summaries: ReturnType<typeof loadStoredSessionSummaries>,
+  summaries: ReturnType<typeof loadStoredSessionSummariesWithMetrics>,
   repository: ReturnType<typeof createBrowserDraftRepository>,
 ): ProjectSessionInsightSnapshot[] {
   let reportSessionIds = new Map<string, number>();

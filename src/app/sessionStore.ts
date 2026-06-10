@@ -113,6 +113,7 @@ import type {
 } from "../lib/connectors";
 import { isTauriRuntime } from "../lib/desktop";
 import { getSessionImportRepository } from "../lib/storage/sessionImportRepository";
+import { persistMemoryBodyFromAnalysis } from "./sessionMemoryPersistence";
 
 export type SessionMode = "demo" | "draft";
 
@@ -1750,6 +1751,11 @@ export function loadStoredSessionSummaries(): StoredSessionSummary[] {
   return getRepository().listStoredSessions();
 }
 
+export function loadStoredSessionSummariesWithMetrics(): StoredSessionSummary[] {
+  const repository = getRepository();
+  return repository.listStoredSessionsWithMetrics?.() ?? repository.listStoredSessions();
+}
+
 /**
  * Desktop-aware connector import history. In Tauri mode it reads
  * cross-session connector identities from the SQLite `session_imports`
@@ -1768,34 +1774,6 @@ export async function loadConnectorImportHistorySavedSessionsAsync(options: {
     options,
   );
   return result.data.map((snapshot) => savedSessionFromSnapshot(snapshot));
-}
-
-/**
- * Snapshot the active session view's *memory body* (issues, decisions,
- * next-actions, summary snapshot) to durable storage so saved sessions
- * can contribute to Project Memory aggregation later. The view is
- * derived from analysis when analysis is present; this helper accepts
- * the analysis result directly so callers don't have to re-derive the
- * view first.
- *
- * Intentionally minimal — events / sources are NOT written here.
- * They already live in `StoredSessionImport[]` for the session.
- */
-export function persistMemoryBodyFromAnalysis(
-  repository: DraftRepository,
-  sessionId: string,
-  analysis: AnalysisResult,
-): void {
-  repository.saveSessionMemoryBody(sessionId, {
-    issues: analysis.issues,
-    decisions: analysis.decisions,
-    nextActions: analysis.nextActions,
-    summarySnapshot: {
-      sessionSummary: analysis.summary.sessionSummary,
-      resumePrompt: analysis.summary.resumePrompt,
-      generatedAt: analysis.generatedAt,
-    },
-  });
 }
 
 function savedSessionFromSnapshot(

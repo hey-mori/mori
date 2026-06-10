@@ -16,6 +16,7 @@ import {
   Settings2,
   Sparkles,
 } from "lucide-react";
+import "../../styles/features/start-session.css";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
@@ -42,7 +43,6 @@ import {
 import { isTauriRuntime } from "../../lib/desktop";
 import {
   buildStartSessionEngineOptions,
-  coerceStartSessionEngineProvider,
   type StartSessionEngineOption,
 } from "../../lib/session/startSessionEngineOptions";
 import { createBrowserDraftRepository } from "../../lib/storage/localStorageAdapter";
@@ -175,7 +175,6 @@ export function StartSessionView() {
     (state) => state.importAndOpenAsNewSession,
   );
   const setSessionDraft = useSessionStore((state) => state.setDraft);
-  const analysisSettings = useSessionStore((state) => state.analysisSettings);
   const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
   const setCurrentView = useAppStore((state) => state.navigate);
   const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
@@ -207,12 +206,9 @@ export function StartSessionView() {
     [],
   );
   const engineOptions = useMemo(() => buildStartSessionEngineOptions(), []);
-  // The engine picker mirrors Settings → 분석 엔진: it seeds from the live
-  // analysis provider and writes the chosen engine back on create, so the two
-  // surfaces stay one setting rather than drifting.
-  const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider>(
-    () => coerceStartSessionEngineProvider(analysisSettings.provider),
-  );
+  // Keep this screen opt-in: saved settings are applied only after the user
+  // explicitly chooses an engine for the new session.
+  const [selectedEngineProvider, setSelectedEngineProvider] = useState<LlmProvider | null>(null);
   const selectedEngine = useMemo(
     () =>
       engineOptions.find(

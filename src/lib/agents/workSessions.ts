@@ -1,4 +1,7 @@
-import { buildImportCandidateFromClaudeCodeSession } from "../claude/claudeImport";
+import {
+  buildImportCandidateFromClaudeCodeSession,
+  pairMessagesIntoTurns,
+} from "../claude/claudeImport";
 import {
   discoverClaudeCodeSessions,
   getClaudeCodeSession,
@@ -52,7 +55,9 @@ import {
   readConnectorJsonlFile,
   type ConnectorInboxFile,
 } from "../desktop/connectorInbox";
-import { normalizeAiTranscript, type NormalizedImportCandidate } from "../import";
+import type { NormalizedImportCandidate } from "../import";
+import { createImportId } from "../import/id";
+import type { TimelineEvent } from "../../domain/types";
 import {
   getAgentConnectorBinding,
   getAgentDescriptor,
@@ -134,6 +139,9 @@ function connectorConfigFor(agentId: AgentWorkAgentId): AgentConnectorConfig {
 export async function listAgentWorkSessions(
   agentId: AgentWorkAgentId,
 ): Promise<AgentWorkSessionMeta[]> {
+  if (!getAgentDescriptor(agentId).detect) {
+    return [];
+  }
   if (agentId === "claude") {
     const [code, desktop] = await Promise.all([
       discoverClaudeCodeSessions().catch(() => [] as ClaudeCodeSessionMeta[]),
@@ -293,16 +301,7 @@ export function buildImportCandidatesFromAgentWorkSession(
     // the agent registry. Adding an agent needs no branch here: its
     // descriptor's platform drives the source kind, and the agentRegistry guard
     // test ensures that platform resolves to a registered transcript kind.
-    return [
-      normalizeAiTranscript({
-        projectId: input.projectId,
-        sessionId: input.sessionId,
-        capturedAt: input.capturedAt,
-        platform: getAgentDescriptor(detail.agentId).platform,
-        title: detail.title,
-        text: renderMessagesAsTranscript(detail.messages, detail.agentName),
-      }),
-    ];
+    return [buildNativeAgentImportCandidate(detail, input)];
   }
 
   const connectorEvents = detail.connectorEvents ?? [];
@@ -351,6 +350,85 @@ function mapClaudeMeta(session: ClaudeCodeSessionMeta): AgentWorkSessionMeta {
     messageCount: session.messageCount,
     title: session.title,
     tokenUsage: session.tokenUsage,
+  };
+}
+
+function buildNativeAgentImportCandidate(
+  detail: AgentWorkSessionDetail,
+  input: BuildAgentWorkImportInput,
+): NormalizedImportCandidate {
+  const capturedAt = input.capturedAt ?? new Date().toISOString();
+  const descriptor = getAgentDescriptor(detail.agentId);
+  const sourceKind =
+    descriptor.platform === "other" ? "aiConversation" : `${descriptor.platform}Transcript`;
+  const sourceId = createImportId(
+    "src-ai",
+    `${detail.agentId}-${detail.sessionId || detail.title}`,
+    capturedAt,
+  );
+  const turns = pairMessagesIntoTurns(detail.messages);
+  const events: TimelineEvent[] = turns.map((turn, index) => {
+    const start = turn.timestamp || capturedAt;
+    return {
+      id: createImportId("evt-ai", `${detail.agentId}-${detail.sessionId}-${index}`, start),
+      sessionId: input.sessionId,
+      projectId: input.projectId,
+      start,
+      type: "aiConversation" as const,
+      title: turn.title,
+      summary: turn.summary,
+      sourceRefs: [sourceId],
+      linkedIssueIds: [],
+      linkedDecisionIds: [],
+      relationshipIds: [],
+      trustLevel: "observed" as const,
+      confidence: 0.9,
+      createdBy: "import" as const,
+      userModified: false,
+      connectorEventId: `${detail.agentId}::${detail.sessionId}::${index}`,
+      actor: turn.actor,
+      turnId: createImportId("turn-ai", `${detail.agentId}-${detail.sessionId}-${index}`, start),
+      turnIndex: index,
+      ...(turn.openedByUser ? { openedByUser: true } : {}),
+      ...(turn.toolName ? { toolName: turn.toolName } : {}),
+    };
+  });
+
+  if (events.length === 0) {
+    events.push({
+      id: createImportId("evt-ai", `${detail.agentId}-${detail.sessionId}-empty`, capturedAt),
+      sessionId: input.sessionId,
+      projectId: input.projectId,
+      start: capturedAt,
+      type: "aiConversation",
+      title: detail.title,
+      summary: `${detail.agentName} session imported without conversation turns.`,
+      sourceRefs: [sourceId],
+      linkedIssueIds: [],
+      linkedDecisionIds: [],
+      relationshipIds: [],
+      trustLevel: "observed",
+      confidence: 0.6,
+      createdBy: "import",
+      userModified: false,
+      connectorEventId: `${detail.agentId}::${detail.sessionId}::empty`,
+    });
+  }
+
+  return {
+    source: {
+      id: sourceId,
+      sessionId: input.sessionId,
+      kind: sourceKind as any,
+      title: detail.title,
+      detail: `${detail.agentName} transcript: ${turns.length} turns, ${detail.messages.length} messages`,
+      trustLevel: "observed",
+      redactionStatus: "pending",
+      rawRetention: "summaryOnly",
+      capturedAt,
+      relatedEventIds: events.map((event) => event.id),
+    },
+    events,
   };
 }
 
@@ -616,15 +694,6 @@ function renderConnectorEventMessage(event: ConnectorEvent): string {
   if (event.command) parts.push(`Command: ${event.command}`);
   if (event.git?.repoPath) parts.push(`Repo: ${event.git.repoPath}`);
   return parts.filter(Boolean).join("\n");
-}
-
-function renderMessagesAsTranscript(messages: ClaudeMessage[], assistantLabel: string): string {
-  return messages
-    .map((message) => {
-      const role = message.role === "human" ? "User" : message.role === "assistant" ? assistantLabel : "System";
-      return `${role}: ${message.content}`;
-    })
-    .join("\n\n");
 }
 
 function truncate(value: string, max: number): string {

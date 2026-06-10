@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import "../../styles/features/top-level-surfaces.css";
 import {
   Activity,
   BarChart3,
@@ -118,7 +119,7 @@ export function DashboardView() {
   const activeSessionId = draft?.session.id ?? view.session.id;
 
   const storedSessions = useMemo(
-    () => mergeDemoSessionSummaries(repository.listStoredSessions()),
+    () => mergeDemoSessionSummaries(repository.listStoredSessionsWithMetrics()),
     [repository],
   );
 

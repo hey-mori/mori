@@ -20,7 +20,7 @@ export function resolveStartRecordsAgentId(
   requested: AgentWorkAgentId | null,
   registry: readonly Pick<AgentDescriptor, "agentId" | "detect">[] = AGENT_REGISTRY,
 ): AgentWorkAgentId | null {
-  if (requested && registry.some((agent) => agent.agentId === requested)) {
+  if (requested && registry.some((agent) => agent.agentId === requested && agent.detect)) {
     return requested;
   }
   const firstDetectable = registry.find((agent) => agent.detect);

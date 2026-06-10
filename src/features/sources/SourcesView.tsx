@@ -21,6 +21,8 @@ import {
   Upload,
   type LucideIcon,
 } from "lucide-react";
+import "../../styles/features/sources.css";
+import "../../styles/features/connections.css";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionBar } from "../../components/layout/ActionBar";
@@ -495,13 +497,13 @@ function ProviderTile({
   onSelect: () => void;
 }) {
   const Icon = providerIcon(provider);
-  const showStatus = provider.status !== "available";
   return (
     <button
       type="button"
       className={`sources-tile pick-tile${active ? " is-active is-selected" : ""}`}
       onClick={onSelect}
       aria-pressed={active}
+      aria-label={provider.name}
     >
       <span className="sources-tile-icon pick-tile-icon">
         <Icon size={18} aria-hidden="true" />
@@ -513,11 +515,7 @@ function ProviderTile({
         </strong>
         <span>{provider.methods.map((method) => method.connectLabel).join(" · ")}</span>
       </span>
-      {showStatus ? (
-        <Badge tone={provider.statusTone}>{provider.statusLabel}</Badge>
-      ) : (
-        <span className={`pick-mark${active ? " is-selected" : ""}`} aria-hidden="true" />
-      )}
+      <span className={`pick-mark${active ? " is-selected" : ""}`} aria-hidden="true" />
     </button>
   );
 }
@@ -572,6 +570,22 @@ function recordsDetail(agentName: string) {
     formats: ["데스크톱 자동 감지 (로컬 작업 기록)"],
     note: `감지한 ${agentName} 대화는 세션 생성 후 Import Review를 거쳐 타임라인에 반영됩니다.`,
   };
+}
+
+function displayMethodLabel(entry: SourceProviderMethod): string {
+  const id = entry.source.id;
+  if (id === "manualNote") return "메모 추가";
+  if (id === "urlImport") return "URL 추가";
+  if (id === "gitDiffPaste" || id === "tauriGitDiff") return "변경 내용 추가";
+  if (id === "connectorJsonl" || id === "localCaptureBridge") return "파일에서 가져오기";
+  if (
+    id === "aiTranscriptPaste" ||
+    id === "chatgptTranscript" ||
+    id.endsWith("Transcript")
+  ) {
+    return "직접 추가";
+  }
+  return entry.source.action.kind === "import" ? "가져오기" : "준비 중";
 }
 
 function SourceInspector({
@@ -652,6 +666,7 @@ function SourceInspector({
                 className={`sources-method-pick pick-tile${recordsSelected ? " is-active is-selected" : ""}`}
                 onClick={onSelectRecords}
                 aria-pressed={recordsSelected}
+                aria-label="기록에서 불러오기"
               >
                 <span className="sources-method-icon" aria-hidden="true">
                   <History size={16} />
@@ -664,7 +679,7 @@ function SourceInspector({
               </button>
             </li>
           ) : null}
-          {provider.methods.map((entry) => {
+          {provider.methods.filter((entry) => entry.source.status === "available").map((entry) => {
             const selected = !recordsSelected && entry.source.id === source.id;
             const showStatus = entry.source.status !== "available";
             return (
@@ -674,12 +689,13 @@ function SourceInspector({
                   className={`sources-method-pick pick-tile${selected ? " is-active is-selected" : ""}`}
                   onClick={() => onSelectMethod(entry.source.id)}
                   aria-pressed={selected}
+                  aria-label={displayMethodLabel(entry)}
                 >
                   <span className="sources-method-icon" aria-hidden="true">
                     <Plug size={16} />
                   </span>
                   <span className="sources-method-pick-body">
-                    <span className="sources-method-pick-label">{entry.methodLabel}</span>
+                    <span className="sources-method-pick-label">{displayMethodLabel(entry)}</span>
                     <span>{entry.connectLabel}</span>
                   </span>
                   {showStatus ? (
@@ -698,7 +714,7 @@ function SourceInspector({
         <ConnectStatusBlock status={connectStatus} onReload={onReloadConnectStatus} />
       ) : null}
 
-      {inboxFamilies.length > 0 ? (
+      {false && inboxFamilies.length > 0 ? (
         <ConnectorInboxHintBlock
           available={inboxAvailable}
           families={inboxFamilies}

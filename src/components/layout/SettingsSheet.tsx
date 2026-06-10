@@ -1,5 +1,6 @@
 import { UserRound, X } from "lucide-react";
 import { useEffect, useRef } from "react";
+import "../../styles/features/settings-tools.css";
 import { useAppStore, type SettingsTab } from "../../app/store";
 import { SETTINGS_TAB_DEFS, SettingsView } from "../../features/settings/SettingsView";
 import { AccountProfileView } from "../../features/account/AccountProfileView";

@@ -250,6 +250,12 @@ export type DraftRepository = {
     draft: StoredSessionDraft,
   ) => StoredSessionDraft | null;
   listStoredSessions: () => StoredSessionSummary[];
+  /**
+   * Optional heavier summary path. It opens each session's stored imports to
+   * derive event/token metrics, so startup surfaces should use
+   * `listStoredSessions` and reserve this for analytics-heavy routes.
+   */
+  listStoredSessionsWithMetrics?: () => StoredSessionSummary[];
   saveMoriPackageDraft: (pkg: MoriPackageV0) => StoredMoriPackageDraft;
   loadMoriPackageDraft: (packageId: string) => StoredMoriPackageDraft | null;
   /**

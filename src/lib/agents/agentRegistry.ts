@@ -29,7 +29,8 @@ export type AgentWorkAgentId =
   | "antigravity"
   | "continue"
   | "cline"
-  | "cursor";
+  | "cursor"
+  | "manus";
 
 /**
  * Stable glyph key. UI surfaces map this to a concrete icon component so
@@ -134,6 +135,14 @@ export const AGENT_REGISTRY: readonly AgentDescriptor[] = [
     iconKey: "cursor",
     platform: "cursor",
     detect: true,
+  },
+  {
+    agentId: "manus",
+    agentName: "Manus",
+    detail: "Manus",
+    iconKey: "bot",
+    platform: "other",
+    detect: false,
   },
 ];
 

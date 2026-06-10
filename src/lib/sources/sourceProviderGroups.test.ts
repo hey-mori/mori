@@ -76,6 +76,7 @@ describe("buildSourceProviderGroups", () => {
     const plannedIds = groups.planned.map((provider) => provider.id);
     // Future integrations and planned-only surfaces live here.
     expect(plannedIds).toContain("ide");
+    expect(plannedIds).toContain("manus");
     expect(plannedIds.length).toBeGreaterThan(0);
     // MCP is now a docs-template capture path (a local server writing connector
     // JSONL), so it is a live evidence provider, not a planned chip.

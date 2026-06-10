@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import "../../styles/features/command-palette.css";
 import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummaries,

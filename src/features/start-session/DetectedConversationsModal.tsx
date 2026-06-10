@@ -11,8 +11,6 @@ import {
 import {
   AlertCircle,
   Clock,
-  Code2,
-  Cpu,
   ChevronDown,
   ChevronRight,
   FolderGit2,
@@ -28,12 +26,9 @@ import {
   formatClaudeRelativeKo,
   isClaudeBridgeAvailable,
 } from "../../lib/claude/claudeTauri";
-import type { ClaudeMessage } from "../../lib/claude/types";
 import {
-  getAgentWorkSession,
   listAgentWorkSessions,
   type AgentWorkAgentId,
-  type AgentWorkSessionDetail,
   type AgentWorkSessionMeta,
 } from "../../lib/agents/workSessions";
 
@@ -55,16 +50,6 @@ const time = (value?: string) => {
   const parsed = value ? Date.parse(value) : Number.NaN;
   return Number.isFinite(parsed) ? parsed : 0;
 };
-
-/** A real user turn — excludes tool-result envelopes that arrive as `human`. */
-function isUserTurn(message: ClaudeMessage): boolean {
-  return message.role === "human" && message.subkind !== "tool_result";
-}
-
-/** A real assistant turn — excludes tool-call envelopes. */
-function isReplyTurn(message: ClaudeMessage): boolean {
-  return message.role === "assistant" && message.subkind !== "tool_use";
-}
 
 /** Centre a list-pane state (spinner / empty / error) both ways. */
 const LIST_STATE_STYLE: CSSProperties = {
@@ -99,8 +84,6 @@ export function DetectedConversationsModal({
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [query, setQuery] = useState("");
   const [activePath, setActivePath] = useState<string | null>(initialSelectedFilePath);
-  const [detail, setDetail] = useState<AgentWorkSessionDetail | null>(null);
-  const [detailStatus, setDetailStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -141,37 +124,6 @@ export function DetectedConversationsModal({
       window.cancelAnimationFrame(raf);
     };
   }, []);
-
-  // Load the highlighted conversation's content for the preview pane.
-  useEffect(() => {
-    if (!activePath) {
-      setDetail(null);
-      setDetailStatus("idle");
-      return;
-    }
-    let cancelled = false;
-    setDetailStatus("loading");
-    const activeMeta = sessions.find((session) => session.filePath === activePath);
-    if (!activeMeta) {
-      setDetail(null);
-      setDetailStatus("idle");
-      return;
-    }
-    getAgentWorkSession(activeMeta)
-      .then((loaded) => {
-        if (cancelled) return;
-        setDetail(loaded);
-        setDetailStatus("ready");
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setDetail(null);
-        setDetailStatus("error");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activePath, sessions]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -266,10 +218,7 @@ export function DetectedConversationsModal({
 
           <div className="detected-modal-preview">
             <ConversationPreview
-              agentName={agentName}
-              hasSelection={Boolean(activeMeta)}
-              status={detailStatus}
-              detail={detail}
+              session={activeMeta}
             />
           </div>
         </div>
@@ -431,96 +380,32 @@ function ConversationList({
   );
 }
 
-function ConversationPreview({
-  agentName,
-  hasSelection,
-  status,
-  detail,
-}: {
-  agentName: string;
-  hasSelection: boolean;
-  status: "idle" | "loading" | "ready" | "error";
-  detail: AgentWorkSessionDetail | null;
-}) {
-  if (!hasSelection) {
+function ConversationPreview({ session }: { session: AgentWorkSessionMeta | null }) {
+  if (!session) {
     return (
       <div className="detected-preview-empty">
         <MessageSquare size={24} aria-hidden="true" />
       </div>
     );
   }
-  if (status === "loading" || status === "idle") {
-    return (
-      <div className="detected-preview-empty">
-        <RefreshCw size={20} aria-hidden="true" className="start-import-spin" />
-        <p>대화를 불러오는 중...</p>
-      </div>
-    );
-  }
-  if (status === "error" || !detail) {
-    return (
-      <div className="detected-preview-empty">
-        <AlertCircle size={20} aria-hidden="true" />
-        <p>대화를 불러오지 못했습니다.</p>
-      </div>
-    );
-  }
-
-  const turns = detail.messages.filter((message) => isUserTurn(message) || isReplyTurn(message));
-  const codeBlocks = detail.messages.filter((message) => message.content.includes("```")).length;
-  const lastStamp = [...detail.messages].reverse().find((message) => message.createdAt)?.createdAt;
-  const model = detail.tokenUsage?.model;
 
   return (
     <div className="detected-preview">
       <header className="detected-preview-head">
-        <h3>{detail.title}</h3>
-        <p className="detected-preview-project" title={detail.projectPath}>
-          <FolderGit2 size={12} aria-hidden="true" /> {shortProjectLabel(detail.projectName)}
+        <h3>{session.title}</h3>
+        <p className="detected-preview-project" title={session.projectPath}>
+          <FolderGit2 size={12} aria-hidden="true" /> {shortProjectLabel(session.projectName)}
         </p>
       </header>
 
       <div className="detected-preview-stats">
         <span>
-          <MessageSquare size={12} aria-hidden="true" /> 메시지 {detail.messageCount}
+          <MessageSquare size={12} aria-hidden="true" /> 메시지 {session.messageCount}
         </span>
         <span>
-          <Clock size={12} aria-hidden="true" /> {formatClaudeRelativeKo(detail.startedAt)}
-          {lastStamp && lastStamp !== detail.startedAt ? ` ~ ${formatClaudeRelativeKo(lastStamp)}` : ""}
+          <Clock size={12} aria-hidden="true" /> {formatClaudeRelativeKo(session.startedAt)}
         </span>
-        {codeBlocks > 0 ? (
-          <span>
-            <Code2 size={12} aria-hidden="true" /> 코드블록 {codeBlocks}
-          </span>
-        ) : null}
-        {model ? (
-          <span>
-            <Cpu size={12} aria-hidden="true" /> {model}
-          </span>
-        ) : null}
       </div>
-
-      {turns.length > 0 ? (
-        <section className="detected-preview-thread">
-          <h4>
-            대화 전문{" "}
-            <span className="detected-preview-thread-count">{turns.length}턴</span>
-          </h4>
-          <ul>
-            {turns.map((message, index) => {
-              const mine = isUserTurn(message);
-              return (
-                <li key={message.id || index} className={mine ? "is-user" : "is-reply"}>
-                  <span className="detected-preview-role">{mine ? "나" : agentName}</span>
-                  <span className="detected-preview-text" style={{ whiteSpace: "pre-wrap" }}>
-                    {message.content.trim()}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
     </div>
   );
 }

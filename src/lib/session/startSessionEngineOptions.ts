@@ -44,14 +44,14 @@ const ENGINE_ROWS: EngineRow[] = [
   {
     provider: "ollama",
     label: "Ollama",
-    detail: "로컬 LLM · 외부 전송 없음",
+    detail: "기기에서 도는 로컬 LLM 런타임",
     model: "llama3.1:8b",
     featureId: "settings.localAi.ollama",
   },
   {
     provider: "openAiCompatible",
     label: "OpenAI 호환",
-    detail: "로컬 서버 또는 원격 API",
+    detail: "OpenAI 호환 엔드포인트 · 로컬 또는 외부",
     model: "local-model",
     featureId: "settings.localAi.openAiCompatible",
   },

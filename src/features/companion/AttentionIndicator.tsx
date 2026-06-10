@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowRight, Bell, CheckCheck, X } from "lucide-react";
+import "../../styles/features/notifications.css";
 import { useAppStore } from "../../app/store";
 import { useSessionStore } from "../../app/sessionStore";
 import { useNotificationReadStore } from "../../app/notificationReadStore";

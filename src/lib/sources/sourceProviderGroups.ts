@@ -106,6 +106,7 @@ const PROVIDER_SPEC_BY_ID: Record<string, ProviderSpec> = {
   continueDiscovery: { id: "continue", name: "Continue" },
   clineDiscovery: { id: "cline", name: "Cline" },
   cursorDiscovery: { id: "cursor", name: "Cursor" },
+  manusDiscovery: { id: "manus", name: "Manus" },
   // The universal paste surface ("Claude / ChatGPT / Codex / Other") gives
   // OpenCode and any unlisted agent a paste path; the named anchors above
   // already carry their own transcript paste.
