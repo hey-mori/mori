@@ -25,6 +25,7 @@ import {
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
 import { getQuickPassFallbackNotice } from "../../lib/analysis/analysisStatusDisplay";
+import { providerNameLabel } from "../../lib/analysis/providerLabels";
 import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import {
   isNextActionCompleted,
@@ -941,12 +942,7 @@ function ReviewAnalysisNotice({
   }
 
   const providerCopy = providerLabel ?? "deterministic";
-  const providerKind =
-    providerName === "ollama-quick-pass-v1"
-      ? "로컬 LLM"
-      : providerName === "openai-compatible-quick-pass-v1"
-        ? "OpenAI 호환 LLM"
-        : "휴리스틱";
+  const providerKind = providerNameLabel(providerName);
 
   // A fallback-from-failure (the local LLM errored and the run fell back to
   // the heuristic) is surfaced as a warning, not a calm success line, so the

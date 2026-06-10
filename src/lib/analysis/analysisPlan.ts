@@ -6,6 +6,7 @@
  */
 import type { TimelineEvent } from "../../domain/types";
 import type { QuickPassAnalysisSettings } from "./analysisSettings";
+import { providerKindLabel } from "./providerLabels";
 import { MAX_LLM_CONVERSATION_EVENTS } from "./promptTemplates";
 
 export type AnalysisPlan = {
@@ -49,9 +50,13 @@ export function buildAnalysisPlan(args: {
 }
 
 function engineLabel(settings: QuickPassAnalysisSettings): string {
-  if (settings.provider === "ollama") return `Ollama · ${settings.ollamaModel}`;
-  if (settings.provider === "openAiCompatible") return `OpenAI 호환 · ${settings.openAiModel}`;
-  return "규칙 기반 (로컬)";
+  if (settings.provider === "ollama") {
+    return `${providerKindLabel("ollama")} · ${settings.ollamaModel}`;
+  }
+  if (settings.provider === "openAiCompatible") {
+    return `${providerKindLabel("openAiCompatible")} · ${settings.openAiModel}`;
+  }
+  return `${providerKindLabel("deterministic")} (로컬)`;
 }
 
 /** One-line Korean summary of the plan for the analysis panel. */

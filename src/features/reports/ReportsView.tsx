@@ -14,6 +14,7 @@ import {
 } from "../../lib/mori-package";
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
+import { providerNameLabel } from "../../lib/analysis/providerLabels";
 import {
   phaseForWriteResult,
   type MoriExportPhase,
@@ -216,12 +217,7 @@ function ReportsAnalysisNotice({
   }
 
   const providerCopy = providerLabel ?? "deterministic";
-  const providerKind =
-    providerName === "ollama-quick-pass-v1"
-      ? "로컬 LLM"
-      : providerName === "openai-compatible-quick-pass-v1"
-        ? "OpenAI 호환 LLM"
-        : "휴리스틱";
+  const providerKind = providerNameLabel(providerName);
   return (
     <NoticeBanner tone="success" icon={null}>
       <span className="reports-analysis-meta">
