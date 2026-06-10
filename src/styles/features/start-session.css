@@ -692,12 +692,14 @@ hr {
   white-space: nowrap;
 }
 
+/* 추천 badge + selection mark sit side by side in one vertically-centred cell at
+   the tile's right edge. The mark is always last (flush right), so its position
+   is identical whether or not the badge is present, and the badge never wraps
+   into the title. */
 .pick-tile-side {
-  display: grid;
-  justify-items: end;
-  align-content: center;
-  gap: 6px;
-  min-width: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Selection mark — a radio dot, filled when selected (never a checkmark). */

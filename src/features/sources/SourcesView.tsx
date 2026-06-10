@@ -370,13 +370,6 @@ export function SourcesView() {
               ariaLabel="소스 검색"
             />
           }
-          end={
-            selectedProvider ? (
-              <span className="sources-action-context">
-                {selectedProvider.name} 연동
-              </span>
-            ) : null
-          }
         />
       }
       aside={
@@ -502,12 +495,12 @@ function ProviderTile({
         <Icon size={18} aria-hidden="true" />
       </span>
       <span className="sources-tile-body pick-tile-body">
-        <strong className="sources-tile-name">
-          {provider.name}
-          {provider.recommended ? <em className="pick-tile-rec">추천</em> : null}
-        </strong>
+        <strong className="sources-tile-name">{provider.name}</strong>
       </span>
-      <span className={`pick-mark${active ? " is-selected" : ""}`} aria-hidden="true" />
+      <span className="pick-tile-side">
+        {provider.recommended ? <em className="pick-tile-rec">추천</em> : null}
+        <span className={`pick-mark${active ? " is-selected" : ""}`} aria-hidden="true" />
+      </span>
     </button>
   );
 }
