@@ -11,6 +11,12 @@ export {
 } from "./followController";
 export { selectNewFollowEventIds } from "./followSource";
 export {
+  decideFollowCadence,
+  type FollowCadenceOptions,
+  type FollowCadenceInput,
+  type FollowCadenceDecision,
+} from "./followCadence";
+export {
   runFollowPoll,
   type FollowPollDeps,
   type FollowPollOutcome,
