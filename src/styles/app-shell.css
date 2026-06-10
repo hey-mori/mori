@@ -143,7 +143,6 @@
 
 .sidebar-head-action:hover {
   background: var(--gray-50);
-  border-color: var(--line);
   color: var(--text);
 }
 
@@ -580,7 +579,6 @@
 
 .sidebar-collapse-toggle:hover {
   background: var(--gray-50);
-  border-color: var(--line);
   color: var(--text);
 }
 

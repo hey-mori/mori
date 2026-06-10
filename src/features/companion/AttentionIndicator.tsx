@@ -83,20 +83,32 @@ export function AttentionIndicator({
   );
   const badgeLabel = unreadCount > BADGE_CAP ? `${BADGE_CAP}+` : String(unreadCount);
 
-  /** Start the close animation; the `animationend` handler will unmount. */
+  /** Start the close animation; the exit finishes via animationend or the timer. */
   function closeDrawer(): void {
     if (!open || closing) return;
     setClosing(true);
   }
 
-  /** Called when the fade-out animation finishes — actually remove the drawer. */
-  function handleDrawerAnimationEnd(e: React.AnimationEvent): void {
-    if (e.animationName === "noti-drawer-out") {
-      setOpen(false);
-      setClosing(false);
-      buttonRef.current?.focus();
-    }
+  /** Tear the drawer down once the exit animation is done. Idempotent. */
+  function finishClose(): void {
+    setOpen(false);
+    setClosing(false);
+    buttonRef.current?.focus();
   }
+
+  /** animationend is the precise trigger; the effect below is the fallback. */
+  function handleDrawerAnimationEnd(e: React.AnimationEvent): void {
+    if (e.animationName === "noti-drawer-out") finishClose();
+  }
+
+  // Guarantee teardown even if animationend never arrives (e.g. the tab is
+  // backgrounded so CSS animations are frozen, or the animation is interrupted):
+  // unmount after the exit animation's duration so the drawer can never stick.
+  useEffect(() => {
+    if (!closing) return;
+    const timeout = window.setTimeout(finishClose, 220);
+    return () => window.clearTimeout(timeout);
+  }, [closing]);
 
   // Close on Escape; focus the drawer for keyboard users when it opens.
   useEffect(() => {

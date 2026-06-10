@@ -55,7 +55,6 @@
 
 .attention-indicator.is-compact:hover {
   background: var(--gray-50);
-  border-color: var(--line);
   color: var(--text);
 }
 
@@ -268,13 +267,6 @@
   color: var(--purple);
 }
 
-.noti-privacy {
-  margin: var(--base-space-6) 0 0;
-  font-size: var(--base-font-size-xs);
-  color: var(--muted-2);
-  line-height: 1.5;
-}
-
 /* ── Notification drawer — right-docked, full-height, non-blocking ──────────── */
 .noti-drawer-scrim {
   position: fixed;
@@ -300,29 +292,43 @@
   border-right: 1px solid var(--line-strong);
   box-shadow: 8px 0 32px rgba(24, 28, 42, 0.06);
   outline: none;
-  animation: noti-drawer-in 180ms ease-out;
+  /* Open and close share one gentle slide+fade so the exit is as legible as
+     the entrance. The drawer docks at the sidebar's right edge, so it slides in
+     from a few pixels left and slides back the same way on close. */
+  animation: noti-drawer-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes noti-drawer-in {
   from {
     opacity: 0;
+    transform: translateX(-12px);
   }
   to {
     opacity: 1;
+    transform: translateX(0);
   }
 }
 
 @keyframes noti-drawer-out {
   from {
     opacity: 1;
+    transform: translateX(0);
   }
   to {
     opacity: 0;
+    transform: translateX(-12px);
   }
 }
 
 .noti-drawer.is-closing {
-  animation: noti-drawer-out 150ms ease-in forwards;
+  animation: noti-drawer-out 180ms cubic-bezier(0.55, 0, 0.68, 0.4) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .noti-drawer,
+  .noti-drawer.is-closing {
+    animation-duration: 1ms;
+  }
 }
 
 .noti-drawer-head {
@@ -398,16 +404,6 @@
 
 .noti-drawer .noti-row {
   padding: 11px 6px;
-}
-
-.noti-drawer-privacy {
-  flex-shrink: 0;
-  margin: 0;
-  padding: 10px 16px 14px;
-  border-top: 1px solid var(--line);
-  font-size: var(--base-font-size-xs);
-  color: var(--muted-2);
-  line-height: 1.4;
 }
 
 .attention-toast {
