@@ -13,6 +13,9 @@
  */
 import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 
+/** A decision made or an issue surfaced within a phase's time window. */
+export type PhaseMoment = { kind: "decision" | "issue"; title: string };
+
 /** One time-grounded phase of work, derived from real event timestamps. */
 export type WorkPhase = {
   startIso: string;
@@ -20,8 +23,12 @@ export type WorkPhase = {
   /** What opened the phase — the human request that framed it. */
   label: string;
   eventCount: number;
-  /** Titles of the decisions made within the phase's time window. */
-  decisions: string[];
+  /**
+   * Decisions made and issues surfaced within the phase's time window, in the
+   * order they happened — so the arc reads "what issues and decisions there
+   * were", not decisions alone.
+   */
+  moments: PhaseMoment[];
   /** Distinct files created or edited within the phase's time window. */
   changedFiles: number;
 };
@@ -39,21 +46,23 @@ type PhaseSeedEvent = {
   fileTouches?: readonly { path: string; changeKind: string }[];
 };
 
-type PhaseSeedDecision = { title: string; sourceEventIds?: readonly string[] };
+/** A decision or issue seed — grounded in time by the events it cites. */
+type PhaseSeedRef = { title: string; sourceEventIds?: readonly string[] };
 
 /**
  * Reconstruct the session's work phases from the actual event timeline, so the
  * arc is grounded in WHEN things happened rather than in a parsed summary. The
  * meaningful spine (conversation, not tool noise) is split at the largest real
  * breaks, lining each phase up with a work session, and each phase is labelled
- * by the human request that opened it. Each phase also carries the decisions
- * and file changes that fall inside its time window — tied by WHEN, not by
- * fuzzy text matching — so the arc shows what each work session produced.
+ * by the human request that opened it. Each phase also carries the decisions,
+ * issues, and file changes that fall inside its time window — tied by WHEN, not
+ * by fuzzy text matching — so the arc shows what each work session produced.
  * Returns `[]` when the session is too small or has no real breaks.
  */
 export function buildWorkPhases(
   events: readonly PhaseSeedEvent[],
-  decisions: readonly PhaseSeedDecision[] = [],
+  decisions: readonly PhaseSeedRef[] = [],
+  issues: readonly PhaseSeedRef[] = [],
   max = 6,
 ): WorkPhase[] {
   const spine = events
@@ -84,9 +93,8 @@ export function buildWorkPhases(
   for (const { event, time } of datedEvents) {
     if (event.id) idToTime.set(event.id, time);
   }
-  const datedDecisions = decisions
-    .map((decision) => ({ decision, time: decisionTime(decision, idToTime) }))
-    .filter((entry): entry is { decision: PhaseSeedDecision; time: number } => entry.time !== null);
+  const datedDecisions = dateRefs(decisions, idToTime);
+  const datedIssues = dateRefs(issues, idToTime);
 
   const bounds = [0, ...cuts, spine.length];
   const phases: WorkPhase[] = [];
@@ -103,29 +111,45 @@ export function buildWorkPhases(
         if (touch.changeKind === "edited" || touch.changeKind === "wrote") changed.add(touch.path);
       }
     }
-    const phaseDecisions = datedDecisions
+    // Decisions and issues interleave in true time order within the phase, so
+    // the arc reads as what happened, not "every decision then every issue".
+    const phaseMoments = [
+      ...datedDecisions.map((entry) => ({ kind: "decision" as const, ...entry })),
+      ...datedIssues.map((entry) => ({ kind: "issue" as const, ...entry })),
+    ]
       .filter((entry) => entry.time >= startT && entry.time <= endT)
-      .map((entry) => entry.decision.title.trim())
-      .filter(Boolean);
+      .sort((a, b) => a.time - b.time)
+      .map((entry): PhaseMoment => ({ kind: entry.kind, title: entry.ref.title.trim() }))
+      .filter((moment) => moment.title);
 
     phases.push({
       startIso: segment[0].event.start,
       endIso: segment[segment.length - 1].event.start,
       label: phaseLabel(segment.map((entry) => entry.event)),
       eventCount: segment.length,
-      decisions: phaseDecisions,
+      moments: phaseMoments,
       changedFiles: changed.size,
     });
   }
   return phases.length >= 2 ? phases : [];
 }
 
-function decisionTime(
-  decision: PhaseSeedDecision,
+/** Date each ref by the earliest event it cites, dropping refs we can't place. */
+function dateRefs(
+  refs: readonly PhaseSeedRef[],
+  idToTime: ReadonlyMap<string, number>,
+): { ref: PhaseSeedRef; time: number }[] {
+  return refs
+    .map((ref) => ({ ref, time: groundTime(ref, idToTime) }))
+    .filter((entry): entry is { ref: PhaseSeedRef; time: number } => entry.time !== null);
+}
+
+function groundTime(
+  ref: PhaseSeedRef,
   idToTime: ReadonlyMap<string, number>,
 ): number | null {
   let earliest = Number.POSITIVE_INFINITY;
-  for (const id of decision.sourceEventIds ?? []) {
+  for (const id of ref.sourceEventIds ?? []) {
     const time = idToTime.get(id);
     if (time !== undefined && time < earliest) earliest = time;
   }

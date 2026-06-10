@@ -4214,6 +4214,56 @@ textarea {
   color: var(--muted-2);
 }
 
+/* The phase's issues and decisions in time order — each a calm tagged line so
+   "what issues and decisions there were" reads at a glance under the headline.
+   Tag tones reuse the activity palette (결정 green, 이슈 orange); no left bar. */
+.work-arc-moments {
+  display: grid;
+  gap: 3px;
+  margin: 4px 0 1px;
+  padding: 0;
+  list-style: none;
+}
+
+.work-arc-moment {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.work-arc-moment-tag {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+}
+
+.work-arc-moment.is-decision .work-arc-moment-tag {
+  color: var(--green);
+  background: #edf8f1;
+}
+
+.work-arc-moment.is-issue .work-arc-moment-tag {
+  color: #b46100;
+  background: #fff2dc;
+}
+
+.work-arc-moment-text {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 원본 stream — folded tool runs. Quiet, secondary to the conversation rows. */
 .timeline-chrono-toolrun {
   display: flex;

@@ -74,10 +74,38 @@ describe("buildWorkPhases", () => {
     ];
     const phases = buildWorkPhases(events, decisions);
     expect(phases).toHaveLength(2);
-    expect(phases[0].decisions).toEqual(["임베딩 어댑터 도입"]);
+    expect(phases[0].moments).toEqual([{ kind: "decision", title: "임베딩 어댑터 도입" }]);
     expect(phases[0].changedFiles).toBe(1);
-    expect(phases[1].decisions).toEqual(["삭제 엔드포인트 추가"]);
+    expect(phases[1].moments).toEqual([{ kind: "decision", title: "삭제 엔드포인트 추가" }]);
     expect(phases[1].changedFiles).toBe(1);
+  });
+
+  it("interleaves issues and decisions in time order within each phase", () => {
+    const events = [
+      { id: "e1", start: at(1, 0), title: "검색이 느려", actor: "user", openedByUser: true },
+      { id: "e2", start: at(1, 2), title: "원인 분석", actor: "assistant" },
+      { id: "e3", start: at(1, 4), title: "인덱스 추가", actor: "assistant" },
+      { id: "e4", start: at(1, 6), title: "확인", actor: "assistant" },
+      // a 44-minute break opens phase 2
+      { id: "e5", start: at(1, 50), title: "다음 작업", actor: "user", openedByUser: true },
+      { id: "e6", start: at(1, 52), title: "구현", actor: "assistant" },
+      { id: "e7", start: at(1, 54), title: "완료", actor: "assistant" },
+      { id: "e8", start: at(1, 56), title: "커밋", actor: "assistant" },
+    ];
+    // In phase 1 the issue (e2) is surfaced before the decision (e3); the moment
+    // list must preserve that chronological order, not group by kind.
+    const decisions = [{ title: "복합 인덱스 도입", sourceEventIds: ["e3"] }];
+    const issues = [
+      { title: "N+1 쿼리", sourceEventIds: ["e2"] },
+      { title: "캐시 미스 잦음", sourceEventIds: ["e6"] },
+    ];
+    const phases = buildWorkPhases(events, decisions, issues);
+    expect(phases).toHaveLength(2);
+    expect(phases[0].moments).toEqual([
+      { kind: "issue", title: "N+1 쿼리" },
+      { kind: "decision", title: "복합 인덱스 도입" },
+    ]);
+    expect(phases[1].moments).toEqual([{ kind: "issue", title: "캐시 미스 잦음" }]);
   });
 });
 

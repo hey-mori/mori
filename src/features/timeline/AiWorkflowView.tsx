@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import { Sparkles } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
-import type { Decision, TimelineEvent } from "../../domain/types";
+import type { Decision, Issue, TimelineEvent } from "../../domain/types";
 import type { AnalysisResult } from "../../lib/analysis/analysisTypes";
-import { buildWorkPhases, type WorkPhase } from "../../lib/session/workArc";
+import { buildWorkPhases, type PhaseMoment, type WorkPhase } from "../../lib/session/workArc";
 
 /**
  * AI 흐름 — one of the two primary 흐름-tab views.
@@ -13,8 +13,9 @@ import { buildWorkPhases, type WorkPhase } from "../../lib/session/workArc";
  * HOW the work progressed: the analysis narrative leads, then the work is split
  * into time-grounded phases (real event timestamps, via `buildWorkPhases`). Each
  * phase is headlined by the KEY DECISION made in its window — the AI-understood
- * outcome — not the raw user request, and carries the decisions + files it
- * produced. Clicking a phase drills into 원본 for that moment.
+ * outcome — not the raw user request, and lists the issues and decisions it
+ * surfaced in time order plus the files it changed. Clicking a phase drills into
+ * 원본 for that moment.
  */
 export function AiWorkflowView({
   view,
@@ -24,7 +25,7 @@ export function AiWorkflowView({
   onRunQuickPass,
   canRunQuickPass,
 }: {
-  view: { events: TimelineEvent[]; decisions: Decision[] };
+  view: { events: TimelineEvent[]; decisions: Decision[]; issues: Issue[] };
   analysis: AnalysisResult | null;
   selectedItemId: string | null;
   onSelectPhase: (phase: WorkPhase) => void;
@@ -33,8 +34,8 @@ export function AiWorkflowView({
 }) {
   const summary = analysis?.summary.sessionSummary?.trim() ?? "";
   const phases = useMemo(
-    () => buildWorkPhases(view.events, view.decisions, 6),
-    [view.events, view.decisions],
+    () => buildWorkPhases(view.events, view.decisions, view.issues, 6),
+    [view.events, view.decisions, view.issues],
   );
 
   if (!summary) {
@@ -91,6 +92,7 @@ export function AiWorkflowView({
                   <span className="work-arc-body">
                     <span className="work-arc-time">{formatPhaseRange(phase)}</span>
                     <span className="work-arc-text">{headline}</span>
+                    <PhaseMoments phase={phase} />
                     <PhaseEvidence phase={phase} />
                   </span>
                 </button>
@@ -110,18 +112,45 @@ export function AiWorkflowView({
 /**
  * A phase's headline: the KEY DECISION made in its window (the AI-understood
  * outcome) wins over the raw opening request — the request read as mechanical
- * when it was the headline. Falls back to the cleaned request only when the
- * phase produced no decision.
+ * when it was the headline. Falls back to the first moment (an issue, when the
+ * phase surfaced one but made no decision), then to the cleaned request.
  */
-export function phaseHeadline(phase: Pick<WorkPhase, "decisions" | "label">): string {
-  return phase.decisions[0] ?? phase.label;
+export function phaseHeadline(phase: Pick<WorkPhase, "moments" | "label">): string {
+  return headlineMoment(phase)?.title ?? phase.label;
 }
 
-/** Decisions made and files changed in the phase's window — what it produced. */
+/** The moment that leads the phase: the first decision (the AI-understood
+ *  outcome) if any, else the first thing that happened in the window. */
+function headlineMoment(phase: Pick<WorkPhase, "moments">): PhaseMoment | null {
+  return phase.moments.find((moment) => moment.kind === "decision") ?? phase.moments[0] ?? null;
+}
+
+/**
+ * The phase's issues and decisions in time order, minus the one already shown
+ * as the headline — so the arc lists what issues and decisions there were, each
+ * tagged 결정 / 이슈, without repeating the lead.
+ */
+function PhaseMoments({ phase }: { phase: WorkPhase }) {
+  const lead = headlineMoment(phase);
+  const rest = phase.moments.filter((moment) => moment !== lead);
+  if (rest.length === 0) return null;
+  return (
+    <ul className="work-arc-moments">
+      {rest.map((moment, index) => (
+        <li key={index} className={`work-arc-moment is-${moment.kind}`}>
+          <span className="work-arc-moment-tag" aria-hidden="true">
+            {moment.kind === "decision" ? "결정" : "이슈"}
+          </span>
+          <span className="work-arc-moment-text">{moment.title}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Files changed and moment count in the phase's window — what it produced. */
 function PhaseEvidence({ phase }: { phase: WorkPhase }) {
-  const moreDecisions = Math.max(0, phase.decisions.length - 1);
   const chips: string[] = [];
-  if (moreDecisions > 0) chips.push(`결정 외 ${moreDecisions}건`);
   if (phase.changedFiles > 0) chips.push(`파일 ${phase.changedFiles}개`);
   chips.push(`모먼트 ${phase.eventCount}개`);
   return (
