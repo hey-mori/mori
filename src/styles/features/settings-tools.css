@@ -1498,6 +1498,114 @@
   border-color: #f3b9b1;
 }
 
+/* ── Analysis strip (자료 tab Quick Pass control) ───────────────────────── */
+
+.analysis-strip {
+  display: grid;
+  gap: 0;
+  padding: 0 0 2px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+
+.analysis-strip-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.analysis-strip-title {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.analysis-strip-engine select,
+.analysis-strip-preset {
+  height: 28px;
+  padding: 0 24px 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--base-bg, #fff);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.analysis-strip-engine select:focus,
+.analysis-strip-preset:focus {
+  border-color: var(--purple);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(98, 70, 245, 0.12);
+}
+
+.analysis-strip-spacer {
+  flex: 1;
+}
+
+.analysis-strip-status {
+  margin: 0;
+  padding: 4px 0 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.analysis-strip.status-failed .analysis-strip-status {
+  color: #c0392b;
+}
+
+.analysis-strip-results {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0 12px;
+}
+
+.analysis-strip-summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  max-width: 80ch;
+}
+
+.analysis-strip-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  font-size: 13px;
+  color: var(--text);
+  align-items: baseline;
+}
+
+.analysis-strip-metrics strong {
+  font-weight: 700;
+}
+
+.analysis-strip-produced {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.analysis-strip-fallback {
+  margin: 0;
+  font-size: 12.5px;
+  color: #b46100;
+}
+
+.analysis-strip-notes {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .issue-column-empty,
 .decision-empty {
   padding: 12px;

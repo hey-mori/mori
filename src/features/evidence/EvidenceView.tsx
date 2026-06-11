@@ -1,11 +1,8 @@
 import { Filter, RotateCcw, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { SearchField } from "../../components/ui/SearchField";
-import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { InfoHint } from "../../components/ui/InfoHint";
-import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import type { SourceKind } from "../../domain/types";
 import {
@@ -18,17 +15,10 @@ import { useAppStore } from "../../app/store";
 import {
   applyEnginePreset,
   buildProviderConfigFromSettings,
-  describeAnalysisStatus,
-  getAnalysisStatusTone,
   loadEnginePresets,
   resolveQuickPassProvider,
 } from "../../lib/analysis";
-import { buildAnalysisPlan, describeAnalysisPlan } from "../../lib/analysis/analysisPlan";
 import { providerKindLabel, providerNameLabel } from "../../lib/analysis/providerLabels";
-import {
-  buildImportApplyCompletion,
-  type ImportApplyCompletionActionId,
-} from "../../lib/review/importApplyCompletion";
 import type {
   AnalysisRunStatus,
   EnginePreset,
@@ -101,8 +91,6 @@ export function EvidenceView() {
   }, [initialized, hydrate]);
 
   const pendingReview = useSessionStore((state) => state.pendingReview);
-  const lastApplied = useSessionStore((state) => state.lastApplied);
-  const clearLastApplied = useSessionStore((state) => state.clearLastApplied);
 
   const integrationLookup = useMemo(() => {
     const map = new Map<string, (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY]>();
@@ -138,32 +126,6 @@ export function EvidenceView() {
   }, [importedSources, searchQuery, activeFamilies]);
   const filterActive = searchQuery.trim().length > 0 || activeFamilies.length > 0;
   const isDemoSession = mode === "demo";
-  const importCompletion = useMemo(
-    () =>
-      lastApplied
-        ? buildImportApplyCompletion({
-            appliedCount: lastApplied.appliedCount,
-            hasAnalysis,
-          })
-        : null,
-    [lastApplied, hasAnalysis],
-  );
-
-  function handleImportCompletionAction(actionId: ImportApplyCompletionActionId) {
-    switch (actionId) {
-      case "timeline":
-        setCurrentView("timeline");
-        return;
-      case "quickPass":
-        void runQuickPass();
-        return;
-      case "memory":
-        setCurrentView("memory");
-        return;
-      default:
-        return;
-    }
-  }
 
   const aside = (
     <SourceDetailPanel
@@ -252,13 +214,6 @@ export function EvidenceView() {
         inputEventCount={analysis?.inputEventCount ?? null}
         inputSourceCount={analysis?.inputSourceCount ?? null}
         notes={analysis?.notes ?? []}
-        planLine={describeAnalysisPlan(
-          buildAnalysisPlan({
-            events: view.events,
-            sourceCount: imports.length || view.sources.length,
-            settings: analysisSettings,
-          }),
-        )}
         settings={analysisSettings}
         enginePresets={enginePresets}
         runPresetId={runPresetId}
@@ -294,28 +249,6 @@ export function EvidenceView() {
 
   const body = (
     <>
-      {lastApplied && importCompletion ? (
-        <NoticeBanner
-          tone="success"
-          title={importCompletion.headline}
-          onDismiss={clearLastApplied}
-          actions={importCompletion.actions.map((action) => (
-            <Button
-              key={action.id}
-              variant={action.primary ? "primary" : "secondary"}
-              onClick={() => handleImportCompletionAction(action.id)}
-              disabled={action.id === "quickPass" && analysisStatus === "running"}
-            >
-              {action.id === "quickPass" && analysisStatus === "running"
-                ? "분석 중..."
-                : action.label}
-            </Button>
-          ))}
-        >
-          {importCompletion.detail}
-        </NoticeBanner>
-      ) : null}
-
       {pendingReview ? (
         // A parsed import awaiting review is hosted inline here (not a
         // full-screen takeover), so the 자료 tab keeps its shape and the review
@@ -546,13 +479,12 @@ function QuickPassControl({
   issueCount,
   decisionCount,
   nextActionCount,
-  confidence,
+  confidence: _confidence,
   generatedAt,
   durationMs,
   inputEventCount,
   inputSourceCount,
   notes,
-  planLine,
   settings,
   enginePresets,
   runPresetId,
@@ -579,7 +511,6 @@ function QuickPassControl({
   inputEventCount: number | null;
   inputSourceCount: number | null;
   notes: string[];
-  planLine: string;
   settings: QuickPassAnalysisSettings;
   enginePresets: EnginePreset[];
   runPresetId: string | null;
@@ -589,65 +520,24 @@ function QuickPassControl({
   onRun: () => void;
   onClear: () => void;
 }) {
+  const statusText = buildAnalysisStatusText(
+    status, providerLabel, providerName, error, hasAnalysis, canRun,
+  );
 
   return (
-    <div className={`analysis-panel status-${status}`}>
-      <div className="analysis-panel-header">
-        <div>
-          <h2>분석</h2>
-        </div>
-        <div className="analysis-panel-actions">
-          {enginePresets.length > 0 ? (
-            <label className="analysis-panel-run-engine">
-              <span>이번 실행</span>
-              <select
-                value={runPresetId ?? ""}
-                onChange={(event) => onRunPresetChange(event.target.value || null)}
-              >
-                <option value="">현재 설정</option>
-                {enginePresets.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <Button
-            variant="primary"
-            icon={Sparkles}
-            onClick={onRun}
-            disabled={!canRun}
-            title={
-              canRun
-                ? "현재 세션의 자료로 분석을 실행합니다."
-                : status === "running"
-                  ? "분석이 진행 중입니다."
-                  : "분석하려면 먼저 자료를 가져오세요."
-            }
+    <div className={`analysis-strip status-${status}`}>
+      <div className="analysis-strip-bar">
+        <span className="analysis-strip-title">분석</span>
+        <label className="analysis-strip-engine">
+          <select
+            value={settings.provider}
+            onChange={(e) => onProviderChange(e.target.value as QuickPassProviderKind)}
           >
-            {status === "running" ? "분석 중..." : "분석 실행"}
-          </Button>
-          {hasAnalysis ? (
-            <Button icon={RotateCcw} onClick={onClear}>
-              분석 초기화
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      <div className="analysis-panel-provider">
-        <span className="analysis-panel-provider-label">엔진</span>
-        <SegmentedControl<QuickPassProviderKind>
-          ariaLabel="분석 제공자"
-          role="radiogroup"
-          value={settings.provider}
-          onChange={onProviderChange}
-          options={[
-            { id: "deterministic", label: providerKindLabel("deterministic") },
-            { id: "ollama", label: providerKindLabel("ollama") },
-            { id: "openAiCompatible", label: providerKindLabel("openAiCompatible") },
-          ]}
-        />
+            <option value="deterministic">{providerKindLabel("deterministic")}</option>
+            <option value="ollama">{providerKindLabel("ollama")}</option>
+            <option value="openAiCompatible">{providerKindLabel("openAiCompatible")}</option>
+          </select>
+        </label>
         <InfoHint label="분석 엔진 설명">
           <strong>규칙 기반</strong> · 네트워크 없이 기기에서 도는 휴리스틱. 빠르고 비공개이지만
           요약은 단순합니다.
@@ -658,80 +548,88 @@ function QuickPassControl({
           <strong>OpenAI 호환</strong> · OpenAI 형식 HTTP API(로컬 또는 원격). 원격 주소면 자료가
           외부로 전송될 수 있습니다.
         </InfoHint>
+        {enginePresets.length > 0 ? (
+          <select
+            className="analysis-strip-preset"
+            value={runPresetId ?? ""}
+            onChange={(e) => onRunPresetChange(e.target.value || null)}
+            aria-label="이번 실행에 사용할 프리셋"
+          >
+            <option value="">현재 설정</option>
+            {enginePresets.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        <span className="analysis-strip-spacer" aria-hidden="true" />
         <Button
-          className="analysis-panel-settings"
-          icon={SettingsIcon}
-          onClick={onOpenSettings}
+          variant="primary"
+          icon={Sparkles}
           size="sm"
+          onClick={onRun}
+          disabled={!canRun}
         >
-          설정
+          {status === "running" ? "분석 중..." : "분석 실행"}
         </Button>
+        {hasAnalysis ? (
+          <Button icon={RotateCcw} size="sm" onClick={onClear}>초기화</Button>
+        ) : null}
+        <Button icon={SettingsIcon} size="sm" onClick={onOpenSettings}>설정</Button>
       </div>
-      <div className="analysis-panel-status">
-        <Badge tone={getAnalysisStatusTone(status)}>
-          {describeAnalysisStatus(status)}
-        </Badge>
-        <span>
-          {status === "succeeded"
-            ? `${providerLabel ?? "deterministic"} · ${describeProviderName(providerName)} · 신뢰도 ${Math.round((confidence ?? 0) * 100)}%`
-            : status === "failed"
-              ? error ?? "분석 실행에 실패했습니다."
-              : status === "running"
-                ? `${providerLabel ?? "분석"} 실행 중...`
-                : hasAnalysis
-                  ? `이전 결과: ${providerLabel ?? "deterministic"} · ${describeProviderName(providerName)}`
-                  : canRun
-                    ? "아직 실행하지 않음"
-                    : "아직 실행하지 않음 · 분석하려면 먼저 자료를 가져오세요"}
-        </span>
-        {fallbackUsed ? <Badge tone="orange">폴백 사용됨</Badge> : null}
-      </div>
-      {status !== "succeeded" ? (
-        <p className="analysis-panel-plan">{planLine}</p>
+      {statusText ? (
+        <p className="analysis-strip-status">{statusText}</p>
       ) : null}
       {hasAnalysis ? (
-        <>
-          {summary ? <p className="analysis-panel-summary">{summary}</p> : null}
-          <ul className="analysis-panel-metrics">
-            <li>
-              <strong>{issueCount}</strong>
-              <span>이슈</span>
-            </li>
-            <li>
-              <strong>{decisionCount}</strong>
-              <span>결정</span>
-            </li>
-            <li>
-              <strong>{nextActionCount}</strong>
-              <span>다음 액션</span>
-            </li>
-          </ul>
-          {generatedAt ? (
-            <p className="analysis-panel-produced">
-              {describeAnalysisProduction({
-                inputEventCount,
-                inputSourceCount,
-                durationMs,
-                generatedAt,
-              })}
+        <div className="analysis-strip-results">
+          {summary ? <p className="analysis-strip-summary">{summary}</p> : null}
+          <div className="analysis-strip-metrics">
+            <span><strong>{issueCount}</strong> 이슈</span>
+            <span><strong>{decisionCount}</strong> 결정</span>
+            <span><strong>{nextActionCount}</strong> 다음 액션</span>
+            {generatedAt ? (
+              <span className="analysis-strip-produced">
+                {describeAnalysisProduction({ inputEventCount, inputSourceCount, durationMs, generatedAt })}
+              </span>
+            ) : null}
+          </div>
+          {fallbackUsed ? (
+            <p className="analysis-strip-fallback">
+              로컬 LLM 분석에 실패해 규칙 기반 결과를 표시하고 있습니다.
             </p>
           ) : null}
-          {notes.length ? (
-            <ul className="analysis-panel-notes">
+          {notes.length > 0 ? (
+            <ul className="analysis-strip-notes">
               {notes.map((note) => (
                 <li key={note}>{note}</li>
               ))}
             </ul>
           ) : null}
-        </>
+        </div>
       ) : null}
     </div>
   );
 }
 
-function describeProviderName(name: string | null): string {
-  return providerNameLabel(name);
+function buildAnalysisStatusText(
+  status: AnalysisRunStatus,
+  providerLabel: string | null,
+  providerName: string | null,
+  error: string | null,
+  hasAnalysis: boolean,
+  canRun: boolean,
+): string | null {
+  if (status === "running") return `${providerLabel ?? "분석"} 실행 중...`;
+  if (status === "failed") return error ?? "분석 실행에 실패했습니다.";
+  if (status === "succeeded") return null;
+  if (hasAnalysis) {
+    return `이전 결과: ${providerLabel ?? "deterministic"} · ${providerNameLabel(providerName)}`;
+  }
+  if (!canRun) return "분석하려면 먼저 자료를 가져오세요.";
+  return null;
 }
+
 
 /**
  * One quiet "how it was produced" line for a finished analysis: what was fed in

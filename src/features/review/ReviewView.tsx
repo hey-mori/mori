@@ -933,33 +933,18 @@ function ReviewAnalysisNotice({
       </NoticeBanner>
     );
   }
-  if (status === "running") {
-    return <NoticeBanner tone="info">분석 중...</NoticeBanner>;
-  }
   if (!hasAnalysis) {
-    // The focal empty state owns the not-analysed-yet messaging.
     return null;
   }
 
   const providerCopy = providerLabel ?? "deterministic";
   const providerKind = providerNameLabel(providerName);
 
-  // A fallback-from-failure (the local LLM errored and the run fell back to
-  // the heuristic) is surfaced as a warning, not a calm success line, so the
-  // user knows the rich output they expected did not run. Detect it from the
-  // persisted notes so it survives a reload, or from the live flag.
   const fallbackNotice =
     getQuickPassFallbackNotice(notes) ??
     (fallbackUsed
       ? "로컬 LLM 분석에 실패해 규칙 기반(휴리스틱) 결과를 표시하고 있습니다. 설정에서 엔진과 모델 이름을 확인하세요."
       : null);
-
-  const metaLine = (
-    <span className="review-analysis-meta">
-      {providerCopy} · {providerKind}
-      {analysisGeneratedAt ? ` · ${formatDateTime(analysisGeneratedAt)}` : ""} · {dataBasis}
-    </span>
-  );
 
   if (fallbackNotice) {
     return (
@@ -969,15 +954,14 @@ function ReviewAnalysisNotice({
         actions={<Button onClick={onGoToSettings}>엔진 설정 확인</Button>}
       >
         {fallbackNotice}
-        <br />
-        {metaLine}
       </NoticeBanner>
     );
   }
 
   return (
-    <NoticeBanner tone="success" icon={null}>
-      {metaLine}
-    </NoticeBanner>
+    <p className="review-analysis-meta-line">
+      {providerCopy} · {providerKind}
+      {analysisGeneratedAt ? ` · ${formatDateTime(analysisGeneratedAt)}` : ""} · {dataBasis}
+    </p>
   );
 }

@@ -651,41 +651,27 @@
   justify-content: flex-end;
 }
 
-/* Preview shell — no card chrome, just a bounded scroll area. The toolbar
-   band above already names the surface; wrapping the preview in another
-   bordered + shadowed box reads as a double-wrapped panel and other tabs
-   (흐름 / 자료 / 검토) do not shadow their content surfaces either. */
+/* Preview shell — no card chrome, just a clean content area. The page
+   shell scrolls to reveal the full report; no inner max-height clipping. */
 .report-preview-shell {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
-  min-height: 320px;
-  /* Bounded to the viewport: shrinks on small screens, never spills past the
-     fold on tall ones. The preview inside takes the slack and scrolls. */
-  max-height: calc(100vh - 280px);
   padding: 0;
 }
 
 .report-preview-shell .report-preview {
   /* Strip the base `.report-preview` paper chrome (border + #fbfcff bg +
      rounded corners): the toolbar band above is the only bordered surface
-     on this tab. The preview just renders markdown directly on the page;
-     the inner overflow handles the scroll. */
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: none;
+     on this tab. */
   margin: 0;
   padding: 4px 2px;
   border: 0;
   border-radius: 0;
   background: transparent;
-}
-
-@media (max-width: 1180px) {
-  .report-preview-shell {
-    max-height: calc(100vh - 260px);
-  }
+  max-height: none;
+  overflow: visible;
 }
 
 .report-rendered-preview {

@@ -4050,10 +4050,25 @@ textarea {
  * ========================================================================== */
 .ai-workflow {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   align-content: start;
   padding: 16px 18px 24px;
   overflow-y: auto;
+}
+
+/* Two-column layout when phases are present: narrative on the left,
+   steps list on the right — uses the available width instead of leaving
+   a blank right half on wide screens. */
+.ai-workflow.has-phases {
+  grid-template-columns: minmax(220px, 400px) 1fr;
+  column-gap: 36px;
+  row-gap: 0;
+}
+
+.ai-workflow-left {
+  display: grid;
+  gap: 12px;
+  align-content: start;
 }
 
 .ai-workflow-head {
@@ -4071,7 +4086,6 @@ textarea {
 
 .ai-workflow-narrative {
   margin: 0;
-  max-width: 72ch;
   font-size: 13px;
   line-height: 1.6;
   color: var(--text);
@@ -4107,7 +4121,6 @@ textarea {
   margin: 0;
   padding: 0;
   list-style: none;
-  max-width: 74ch;
 }
 
 .work-arc-step {

@@ -195,9 +195,6 @@ function ReportsAnalysisNotice({
       </NoticeBanner>
     );
   }
-  if (status === "running") {
-    return <NoticeBanner tone="info">분석 중...</NoticeBanner>;
-  }
   if (!hasAnalysis && importsCount === 0) {
     return (
       <SessionEmptyPrompt
@@ -212,22 +209,16 @@ function ReportsAnalysisNotice({
     );
   }
   if (!hasAnalysis) {
-    return (
-      <NoticeBanner tone="info">
-        가져온 자료가 있습니다. 검토 탭에서 분석을 실행하면 보고서가 풍부해집니다.
-      </NoticeBanner>
-    );
+    return null;
   }
 
   const providerCopy = providerLabel ?? "deterministic";
   const providerKind = providerNameLabel(providerName);
   return (
-    <NoticeBanner tone="success" icon={null}>
-      <span className="reports-analysis-meta">
-        {providerCopy} · {providerKind}
-        {generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""}
-      </span>
-    </NoticeBanner>
+    <p className="reports-analysis-meta-line">
+      {providerCopy} · {providerKind}
+      {generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""}
+    </p>
   );
 }
 
