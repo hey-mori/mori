@@ -71,8 +71,6 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const analysis = useSessionStore((state) => state.analysis);
   const createIssueFromEvent = useSessionStore((state) => state.createIssueFromEvent);
   const updateSessionEvent = useSessionStore((state) => state.updateSessionEvent);
-  const splitSessionEvent = useSessionStore((state) => state.splitSessionEvent);
-  const mergeSessionEvent = useSessionStore((state) => state.mergeSessionEvent);
   const addEventRelationship = useSessionStore((state) => state.addEventRelationship);
   const removeRelationship = useSessionStore((state) => state.removeRelationship);
 
@@ -532,26 +530,10 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           key={selectedItem.event.id}
           selectedEvent={selectedItem.event}
           session={view}
-          onTrace={() => goToMode("flow")}
           onOpenReviewItem={openReviewItem}
           onClose={closeInspector}
           canWrite={sessionMode === "draft" && hasAnalysis}
           onEditEvent={(edits) => updateSessionEvent(selectedItem.event.id, edits)}
-          onSplitEvent={() => splitSessionEvent(selectedItem.event.id)}
-          onMergeEvent={() => mergeSessionEvent(selectedItem.event.id)}
-          issueCreated={
-            analysis
-              ? isEventPromotedToIssue(analysis, selectedItem.event.id)
-              : false
-          }
-          onCreateIssue={() => {
-            const event = selectedItem.event;
-            if (createIssueFromEvent(event)) {
-              // openReviewItem routes to the Insights surface (the session
-              // 인사이트 tab when embedded) — no separate navigation needed.
-              openReviewItem({ kind: "issue", issueId: eventIssueId(event.id) });
-            }
-          }}
         />
       ) : null}
     </div>

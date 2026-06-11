@@ -1,22 +1,11 @@
-import {
-  ClipboardCopy,
-  Link as LinkIcon,
-  Pencil,
-  Split,
-  Combine,
-  PlusCircle,
-  StickyNote,
-} from "lucide-react";
+import { StickyNote } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { BaseInspectorPanel } from "../../components/ui/BaseInspectorPanel";
 import { InlineEditForm } from "../review/InlineEditForm";
 import type { TimelineEventEdits } from "../../lib/timeline/eventEdits";
-import { canSplitEvent } from "../../lib/timeline/eventSplit";
-import { findMergeTarget } from "../../lib/timeline/eventMerge";
 import { Button } from "../../components/ui/Button";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { eventTypeLabels, eventTypeTone } from "../../domain/constants";
 import type {
   Artifact,
   Decision,
@@ -24,7 +13,6 @@ import type {
   Issue,
   MockSession,
   NextAction,
-  SourceRef,
   TimelineEvent,
 } from "../../domain/types";
 import {
@@ -37,8 +25,6 @@ import {
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
 import { buildInspectorViewModel } from "../../lib/timeline/timelineViewModel";
-import { deriveSourceFamily } from "../../lib/timeline/activityModel";
-import { sourceFamilyIcons } from "./lib/activityIcons";
 import { useSessionStore } from "../../app/sessionStore";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import {
@@ -59,37 +45,25 @@ const DISCLOSURE_OPTIONS: { id: DisclosureLevel; label: string }[] = [
 export function EventInspector({
   selectedEvent,
   session,
-  onTrace,
   onOpenReviewItem,
-  onCreateIssue,
-  issueCreated = false,
   canWrite = false,
   onEditEvent,
-  onSplitEvent,
-  onMergeEvent,
   onClose,
 }: {
   selectedEvent: TimelineEvent;
   session: MockSession;
-  onTrace: () => void;
   /** Deep-link a linked issue / decision / next action into the Review surface. */
   onOpenReviewItem?: (selection: ReviewSelection) => void;
-  /** Promote this event to a Review issue. Absent ⇒ control hidden. */
-  onCreateIssue?: () => void;
-  /** True once this event already has a derived issue. */
-  issueCreated?: boolean;
   /** True when the active session can persist Timeline writes (real draft). */
   canWrite?: boolean;
-  /** Correct this event's title / summary. Absent ⇒ control hidden. */
+  /** Persist a user note on this event. Absent ⇒ the note editor is hidden.
+   *  This panel reads an AI-produced event; structural edits (제목/요약 수정,
+   *  분할·병합, 이슈 생성) are intentionally retired from here — they live in the
+   *  row right-click menu and the 검토 surface — so only the note write stays. */
   onEditEvent?: (edits: TimelineEventEdits) => void;
-  /** Split this event at its temporal midpoint. Absent ⇒ control hidden. */
-  onSplitEvent?: () => void;
-  /** Merge this event with its next neighbour. Absent ⇒ control hidden. */
-  onMergeEvent?: () => void;
   /** Close the inspector from within the panel. Absent ⇒ the X is hidden. */
   onClose?: () => void;
 }) {
-  const [editing, setEditing] = useState(false);
   const [noteEditing, setNoteEditing] = useState(false);
   const requestDisclosureDefault = useSessionStore(
     (state) => state.analysisSettings.requestDisclosureLevel,
@@ -126,29 +100,18 @@ export function EventInspector({
       setGeneratingAbstraction(false);
     }
   }
-  const mergeTarget = findMergeTarget(session.events, selectedEvent.id);
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
     view: session,
   });
   const activity = inspector.activity;
-  // Flow Focus only does something when the event has relationships, which
-  // Quick Pass produces. Before analysis there are none, so the button is a
-  // dead end — hide it then rather than offer an action that does nothing.
-  const hasFlowRelations =
+  const hasLinks =
     inspector.issues.length +
       inspector.decisions.length +
       inspector.artifacts.length +
       inspector.nextActions.length +
       inspector.hiddenRelationshipCount >
     0;
-
-  function handleCopy() {
-    const text = `${formatTimeRange(selectedEvent.start, selectedEvent.end)}\n${selectedEvent.title}\n\n${selectedEvent.summary}`;
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      void navigator.clipboard.writeText(text);
-    }
-  }
 
   return (
     <BaseInspectorPanel
@@ -158,29 +121,14 @@ export function EventInspector({
       eyebrow={
         <>
           <Badge tone={activity.laneVisuals.tone}>{activity.laneVisuals.label}</Badge>
-          <Badge tone={activity.activityVisuals.tone}>{activity.activityVisuals.label}</Badge>
-          <Badge tone={eventTypeTone[selectedEvent.type]}>{eventTypeLabels[selectedEvent.type]}</Badge>
           {selectedEvent.userModified ? <Badge tone="orange">사용자 수정</Badge> : null}
         </>
       }
-      title={editing ? "이벤트 편집" : selectedEvent.title}
+      title={selectedEvent.title}
       meta={formatTimeRange(selectedEvent.start, selectedEvent.end)}
-      description={activity.sourceVisuals.label}
     >
       <section className="inspector-section">
-        {editing && onEditEvent ? (
-          <InlineEditForm
-            fields={[
-              { id: "title", label: "제목", value: selectedEvent.title, required: true },
-              { id: "summary", label: "요약", value: selectedEvent.summary, multiline: true },
-            ]}
-            onSave={(values) => {
-              onEditEvent({ title: values.title, summary: values.summary });
-              setEditing(false);
-            }}
-            onCancel={() => setEditing(false)}
-          />
-        ) : isUserRequest ? (
+        {isUserRequest ? (
           <div className="inspector-summary-card">
             <div className="inspector-summary-head">
               <span>요약</span>
@@ -236,34 +184,21 @@ export function EventInspector({
 
       <EventFilesSection touches={selectedEvent.fileTouches} />
 
-      <section className="inspector-section">
-        <SectionHeader
-          title="근거 / 신뢰도"
-          hint={`${inspector.sources.length}개 출처`}
-        />
-        <EventEvidenceChips sources={inspector.sources} />
-      </section>
-
-      <section className="inspector-section">
-        <SectionHeader
-          title="연결된 항목"
-          hint={inspector.hiddenRelationshipCount > 0 ? `+${inspector.hiddenRelationshipCount}개 숨김` : undefined}
-        />
-        <LinkedRows
-          issues={inspector.issues}
-          decisions={inspector.decisions}
-          artifacts={inspector.artifacts}
-          nextActions={inspector.nextActions}
-          onOpenReviewItem={onOpenReviewItem}
-        />
-        {inspector.hiddenRelationshipCount > 0 ? (
-          <p className="inspector-hidden-note">
-            연결된 이벤트 {inspector.hiddenRelationshipCount}건이 현재 포커스
-            범위 밖에 있습니다. <strong>흐름 추적</strong>을 열면 전체
-            관계 그래프를 볼 수 있습니다.
-          </p>
-        ) : null}
-      </section>
+      {hasLinks ? (
+        <section className="inspector-section">
+          <SectionHeader
+            title="연결된 항목"
+            hint={inspector.hiddenRelationshipCount > 0 ? `+${inspector.hiddenRelationshipCount}개 숨김` : undefined}
+          />
+          <LinkedRows
+            issues={inspector.issues}
+            decisions={inspector.decisions}
+            artifacts={inspector.artifacts}
+            nextActions={inspector.nextActions}
+            onOpenReviewItem={onOpenReviewItem}
+          />
+        </section>
+      ) : null}
 
       {inspector.decisions.length > 0 ? (
         <section className="inspector-section">
@@ -278,86 +213,6 @@ export function EventInspector({
           </ul>
         </section>
       ) : null}
-
-      <section className="inspector-section">
-        <SectionHeader title="액션" />
-        <div className="inspector-actions-row">
-          {hasFlowRelations ? (
-            <Button variant="primary" icon={LinkIcon} onClick={onTrace}>
-              흐름 추적
-            </Button>
-          ) : null}
-          <Button icon={ClipboardCopy} onClick={handleCopy}>
-            요약 복사
-          </Button>
-        </div>
-        {canWrite && (onEditEvent || onCreateIssue || onSplitEvent || onMergeEvent) ? (
-          <div className="inspector-actions-row">
-            {onEditEvent ? (
-              <Button
-                icon={Pencil}
-                onClick={() => setEditing(true)}
-                disabled={!canWrite || editing}
-                title={
-                  canWrite
-                    ? "이 이벤트의 제목과 요약을 수정합니다."
-                    : "실제 세션에서 사용할 수 있습니다."
-                }
-              >
-                이벤트 편집
-              </Button>
-            ) : null}
-            {onSplitEvent ? (
-              <Button
-                icon={Split}
-                onClick={onSplitEvent}
-                disabled={!canWrite || !canSplitEvent(selectedEvent)}
-                title={
-                  !canSplitEvent(selectedEvent)
-                    ? "끝 시각이 없는 이벤트는 분할할 수 없습니다."
-                    : canWrite
-                      ? "이 이벤트를 시간 중점에서 둘로 나눕니다."
-                      : "실제 세션에서 사용할 수 있습니다."
-                }
-              >
-                이벤트 분할
-              </Button>
-            ) : null}
-            {onMergeEvent ? (
-              <Button
-                icon={Combine}
-                onClick={onMergeEvent}
-                disabled={!canWrite || !mergeTarget}
-                title={
-                  !mergeTarget
-                    ? "다음 이벤트가 없어 병합할 수 없습니다."
-                    : canWrite
-                      ? `다음 이벤트 '${mergeTarget.title}'와 병합합니다.`
-                      : "실제 세션에서 사용할 수 있습니다."
-                }
-              >
-                이벤트 병합
-              </Button>
-            ) : null}
-            {onCreateIssue ? (
-              <Button
-                icon={PlusCircle}
-                onClick={onCreateIssue}
-                disabled={!canWrite || issueCreated}
-                title={
-                  issueCreated
-                    ? "이 이벤트는 이미 이슈로 만들어졌습니다."
-                    : canWrite
-                      ? "이 이벤트를 Review 이슈로 만듭니다."
-                      : "실제 세션에서 사용할 수 있습니다."
-                }
-              >
-                {issueCreated ? "이슈 생성됨" : "이슈 생성"}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </section>
 
       {selectedEvent.userNote || (canWrite && onEditEvent) ? (
       <section className="inspector-section">
@@ -409,26 +264,6 @@ export function EventInspector({
       </section>
       ) : null}
     </BaseInspectorPanel>
-  );
-}
-
-function EventEvidenceChips({ sources }: { sources: SourceRef[] }) {
-  if (sources.length === 0) return null;
-  return (
-    <div className="timeline-evidence-chips" aria-label="자료 출처">
-      {sources.slice(0, 4).map((source) => {
-        const family = deriveSourceFamily(source.kind);
-        const Icon = sourceFamilyIcons[family] ?? sourceFamilyIcons.unknown;
-        return (
-          <span key={source.id} className="timeline-evidence-chip" title={source.title}>
-            <Icon size={11} aria-hidden="true" />
-            <strong>{source.title}</strong>
-            <small>{source.trustLevel}</small>
-          </span>
-        );
-      })}
-      {sources.length > 4 ? <span className="timeline-evidence-chip">+{sources.length - 4}</span> : null}
-    </div>
   );
 }
 
