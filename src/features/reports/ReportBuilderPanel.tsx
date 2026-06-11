@@ -72,7 +72,7 @@ const FORMAT_OPTIONS: Array<BaseSelectOption<ReportFormat>> = FORMAT_DEFS.map((d
   return {
     id: def.id,
     label: def.label,
-    description: feature.statusLabel,
+    description: undefined,
     icon: FileText,
     disabled: !feature.enabled,
   };

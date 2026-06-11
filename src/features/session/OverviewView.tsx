@@ -13,17 +13,14 @@ import { Button } from "../../components/ui/Button";
 import { SessionEmptyPrompt } from "./SessionEmptyPrompt";
 import { SessionFilesPanel } from "./SessionFilesPanel";
 import {
-  selectHasRealAnalysis,
   selectSessionMode,
   selectSessionView,
   useSessionStore,
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { buildSessionOriginSummary } from "../../lib/session/sessionOrigin";
 import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
 import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import type { ImportDigestLane } from "../../lib/import/importDigest";
-import { deriveProjectIdentityHint } from "../../lib/session/projectIdentity";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
   getUnresolvedItems,
@@ -45,8 +42,6 @@ export function OverviewView() {
   const initialized = useSessionStore((state) => state.initialized);
   const view = useSessionStore(selectSessionView);
   const mode = useSessionStore(selectSessionMode);
-  const hasAnalysis = useSessionStore(selectHasRealAnalysis);
-  const analysis = useSessionStore((state) => state.analysis);
   const imports = useSessionStore((state) => state.imports);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
@@ -58,35 +53,10 @@ export function OverviewView() {
   const isDemo = mode === "demo";
   const sourceCount = isDemo ? view.sources.length : imports.length || view.sources.length;
 
-  const originSummary = useMemo(
-    () =>
-      buildSessionOriginSummary({
-        session: view.session,
-        sources: view.sources,
-        events: view.events,
-        importCount: isDemo ? 0 : imports.length,
-        isDemo,
-      }),
-    [view.session, view.sources, view.events, imports.length, isDemo],
-  );
-  const projectHint = useMemo(
-    () =>
-      deriveProjectIdentityHint({
-        session: view.session,
-        sources: view.sources,
-        events: view.events,
-      }),
-    [view.session, view.sources, view.events],
-  );
-
   const workSummary = useMemo(
     () => buildSessionWorkSummary(view.events, view.sources),
     [view.events, view.sources],
   );
-  // The LLM narrative, only when a real analysis exists. The factual work
-  // summary below always shows, with no LLM, so 개요 is legible the moment it
-  // loads. We never surface the pre-analysis placeholder as an "AI 요약".
-  const summaryText = hasAnalysis && analysis ? analysis.summary.sessionSummary : null;
   const sessionEmpty = workSummary.isEmpty;
   const duration = useMemo(
     () => formatDuration(view.session.startedAt, view.session.endedAt),
@@ -138,20 +108,8 @@ export function OverviewView() {
             />
           ) : null}
           <section className="session-overview-hero" aria-label="세션 개요">
-            <div className="session-overview-origin">
-              <Badge tone="purple">{originSummary.boundaryLabel}</Badge>
-              <span className="session-overview-mix">{originSummary.sourceMixLabel}</span>
-              {projectHint.projectLabel ? (
-                <span className="session-overview-context">맥락 · {projectHint.projectLabel}</span>
-              ) : null}
-            </div>
             {!sessionEmpty ? (
               <p className="session-overview-summary">{workSummary.headline}</p>
-            ) : null}
-            {summaryText ? (
-              <p className="session-overview-ai-summary">
-                <Badge tone="purple">AI 요약</Badge> {summaryText}
-              </p>
             ) : null}
             <WorkShapeBar lanes={workSummary.digest.lanes} />
           </section>
@@ -202,7 +160,7 @@ export function OverviewView() {
             <OverviewNavCard
               icon={GanttChartSquare}
               label="활동"
-              description="흐름 · 타임라인 · 원본 · 연결로 보는 작업 활동"
+              description="흐름 · 타임라인 · 원본 · 연결로 보는 활동"
               onOpen={() => setSessionTab("flow")}
             />
             <OverviewNavCard

@@ -4056,20 +4056,6 @@ textarea {
   overflow-y: auto;
 }
 
-/* Two-column layout when phases are present: narrative on the left,
-   steps list on the right — uses the available width instead of leaving
-   a blank right half on wide screens. */
-.ai-workflow.has-phases {
-  grid-template-columns: minmax(220px, 400px) 1fr;
-  column-gap: 36px;
-  row-gap: 0;
-}
-
-.ai-workflow-left {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-}
 
 .ai-workflow-head {
   display: flex;

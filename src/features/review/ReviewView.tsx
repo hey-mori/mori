@@ -25,7 +25,6 @@ import {
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
 import { getQuickPassFallbackNotice } from "../../lib/analysis/analysisStatusDisplay";
-import { providerNameLabel } from "../../lib/analysis/providerLabels";
 import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import {
   isNextActionCompleted,
@@ -37,7 +36,6 @@ import {
 import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
 import { AnalysisRunHistoryPanel } from "./AnalysisRunHistoryPanel";
-import { formatDateTime } from "../../lib/formatting/time";
 
 type ReviewColumn = "issue" | "decision" | "nextAction";
 
@@ -163,27 +161,7 @@ export function ReviewView() {
     setSelection(isSameReviewSelection(activeSelection, next) ? null : next);
   }
 
-  const quickPassButton = !isDemo ? (
-    <Button
-      variant="primary"
-      icon={Sparkles}
-      onClick={() => runQuickPass()}
-      disabled={!canRunQuickPass}
-      title={
-        canRunQuickPass
-          ? "분석 실행"
-          : imports.length === 0
-            ? "먼저 자료를 가져오세요."
-            : "이미 실행 중입니다."
-      }
-    >
-      {analysisStatus === "running"
-        ? "분석 중..."
-        : hasAnalysis
-          ? "다시 분석"
-          : "분석 실행"}
-    </Button>
-  ) : null;
+  const quickPassButton = null;
 
   const totalReviewItems =
     view.issues.length + view.decisions.length + view.nextActions.length;
@@ -619,11 +597,6 @@ function ReviewBoardCard({
       >
         <div className="review-card-head-row">
           <span className="review-card-title">{title}</span>
-          {priority === "high" ? (
-            <span className="review-card-priority-flag" aria-label="우선 높음" title="우선 높음">
-              높음
-            </span>
-          ) : null}
           {edited ? (
             <span className="review-card-edited" aria-label="사용자가 수정함" title="사용자가 수정함" />
           ) : null}
@@ -644,20 +617,6 @@ function ReviewBoardCard({
   );
 }
 
-function buildIssueMeta(issue: Issue): string | undefined {
-  const evidence = issue.sourceEventIds?.length ?? 0;
-  return evidence > 0 ? `근거 ${evidence}` : undefined;
-}
-
-function buildDecisionMeta(decision: Decision): string | undefined {
-  const evidence = decision.sourceEventIds?.length ?? 0;
-  return evidence > 0 ? `근거 ${evidence}` : undefined;
-}
-
-function buildActionMeta(action: NextAction): string | undefined {
-  const issues = action.relatedIssueIds?.length ?? 0;
-  return issues > 0 ? `이슈 ${issues}` : undefined;
-}
 
 function stopAnd(handler: () => void) {
   return (event: ReactMouseEvent) => {
@@ -720,7 +679,6 @@ function IssueBoardCard({
     <ReviewBoardCard
       title={issue.title}
       subtitle={issue.description}
-      metaText={buildIssueMeta(issue)}
       priority={issue.priority}
       edited={issue.editedByUser}
       muted={isResolved}
@@ -771,7 +729,6 @@ function DecisionBoardCard({
     <ReviewBoardCard
       title={decision.title}
       subtitle={decision.decision}
-      metaText={buildDecisionMeta(decision)}
       priority={decision.importance}
       edited={decision.editedByUser}
       muted={false}
@@ -839,7 +796,6 @@ function NextActionBoardCard({
     <ReviewBoardCard
       title={action.title}
       leading={leading}
-      metaText={buildActionMeta(action)}
       priority={action.priority}
       edited={action.editedByUser}
       muted={done}
@@ -937,9 +893,6 @@ function ReviewAnalysisNotice({
     return null;
   }
 
-  const providerCopy = providerLabel ?? "deterministic";
-  const providerKind = providerNameLabel(providerName);
-
   const fallbackNotice =
     getQuickPassFallbackNotice(notes) ??
     (fallbackUsed
@@ -958,10 +911,5 @@ function ReviewAnalysisNotice({
     );
   }
 
-  return (
-    <p className="review-analysis-meta-line">
-      {providerCopy} · {providerKind}
-      {analysisGeneratedAt ? ` · ${formatDateTime(analysisGeneratedAt)}` : ""} · {dataBasis}
-    </p>
-  );
+  return null;
 }

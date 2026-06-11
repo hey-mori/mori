@@ -76,9 +76,9 @@ export function SessionFilesPanel({ sources }: { sources: SourceRef[] }) {
   const readOnly = reconciled.filter((entry) => entry.changeCount === 0);
 
   return (
-    <section className="session-files" aria-label="이 세션이 만진 파일">
+    <section className="session-files" aria-label="파일 활동">
       <header className="session-files-head">
-        <h2>이 세션이 만진 파일</h2>
+        <h2>파일 활동</h2>
         <Badge tone="gray">{summary.fileCount}</Badge>
         <InfoHint>
           에이전트의 도구 호출 기록에서 추출한 파일입니다. 변경된 파일을 먼저
@@ -88,7 +88,7 @@ export function SessionFilesPanel({ sources }: { sources: SourceRef[] }) {
         <span className="session-files-summary">
           변경 {summary.changedFileCount}
           {summary.movedFileCount > 0 ? ` · 이동 ${summary.movedFileCount}` : ""}
-          {summary.missingFileCount > 0 ? ` · 사라짐 ${summary.missingFileCount}` : ""}
+          {summary.missingFileCount > 0 ? ` · 없어짐 ${summary.missingFileCount}` : ""}
         </span>
       </header>
 
@@ -155,7 +155,7 @@ function FileRow({ entry }: { entry: ReconciledFileEntry }) {
 
 function LocationBadge({ entry }: { entry: ReconciledFileEntry }) {
   if (entry.location.status === "moved") return <Badge tone="orange">이동됨</Badge>;
-  if (entry.location.status === "missing") return <Badge tone="red">사라짐</Badge>;
+  if (entry.location.status === "missing") return <Badge tone="red">없어짐</Badge>;
   return null;
 }
 
