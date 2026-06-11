@@ -17,6 +17,7 @@ import {
 } from "../../lib/settings/notificationPreferences";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import { useNotifications } from "./useNotifications";
+import { useOsNotifications } from "./useOsNotifications";
 import { NotificationFeedList } from "./NotificationFeedList";
 
 /**
@@ -55,6 +56,7 @@ export function AttentionIndicator({
   compact?: boolean;
 }) {
   const { notifications } = useNotifications();
+  useOsNotifications(notifications);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
   const openSession = useAppStore((state) => state.openSession);
   const loadBrowserSession = useSessionStore((state) => state.loadBrowserSession);

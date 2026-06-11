@@ -54,6 +54,7 @@ import type { RepositoryVerificationResult, VerifyRepositoryRequest } from "./re
 export type TauriCommandName =
   | "get_app_info"
   | "host_platform"
+  | "send_os_notification"
   | "get_storage_location"
   | "set_storage_location"
   | "save_mori_package_json"
@@ -173,6 +174,7 @@ export type SaveMoriPackageZipInput = {
 export type TauriCommandMap = {
   get_app_info: { input: undefined; output: AppInfo };
   host_platform: { input: undefined; output: string };
+  send_os_notification: { input: { title: string; body: string }; output: null };
   get_storage_location: { input: undefined; output: StorageLocation };
   set_storage_location: { input: undefined; output: StorageRelocation };
   save_mori_package_json: { input: SaveMoriPackageJsonInput; output: SavedMoriPackage };

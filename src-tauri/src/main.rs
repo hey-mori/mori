@@ -20,10 +20,12 @@ mod sqlite;
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(sqlite::SqliteState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
             commands::host_platform,
+            commands::send_os_notification,
             commands::get_storage_location,
             sqlite::set_storage_location,
             package::save_mori_package_json,
