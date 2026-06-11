@@ -107,12 +107,12 @@ export function OverviewView() {
               }
             />
           ) : null}
-          <section className="session-overview-hero" aria-label="세션 개요">
-            {!sessionEmpty ? (
+          {!sessionEmpty ? (
+            <section className="session-overview-hero" aria-label="세션 개요">
               <p className="session-overview-summary">{workSummary.headline}</p>
-            ) : null}
-            <WorkShapeBar lanes={workSummary.digest.lanes} />
-          </section>
+              <WorkShapeBar lanes={workSummary.digest.lanes} />
+            </section>
+          ) : null}
 
           <dl className="overview-metrics" aria-label="세션 규모">
             <OverviewMetric label="기간" value={duration} />

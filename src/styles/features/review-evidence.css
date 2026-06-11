@@ -2842,42 +2842,12 @@ td a {
   .status-glyph.status-inProgress { animation: none; }
 }
 
-.review-card-priority-flag {
-  flex-shrink: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #8a4500;
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  line-height: 1.5;
-}
-
 .review-card-edited {
   flex-shrink: 0;
   width: 7px;
   height: 7px;
   border-radius: 999px;
   background: var(--muted-2);
-}
-
-.review-card-meta-row {
-  display: flex;
-  align-items: center;
-  align-self: end;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-}
-
-.review-card-meta-text {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Resolved issues / completed actions read as already-done: muted background,
@@ -3994,8 +3964,8 @@ td a {
   min-width: 0;
 }
 
-/* Session overview hero — the 개요 tab's opening at-a-glance band: work-unit
-   identity (boundary · source mix · project context) and a one-line summary. */
+/* Session overview hero — the 개요 tab's opening at-a-glance band: a one-line
+   factual work summary and the proportional work-shape bar. */
 .session-overview-hero {
   display: grid;
   gap: 8px;
@@ -4003,24 +3973,6 @@ td a {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--base-accent-soft, var(--purple-50));
-}
-
-.session-overview-origin {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 10px;
-}
-
-.session-overview-mix {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.session-overview-context {
-  font-size: 12px;
-  color: var(--muted-2);
 }
 
 .session-overview-summary {
@@ -4032,16 +3984,6 @@ td a {
 
 .session-overview-summary.is-empty {
   color: var(--muted);
-}
-
-.session-overview-ai-summary {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text);
 }
 
 .work-shape {
@@ -5762,14 +5704,6 @@ td a {
 
 .session-files-readonly[open] > summary {
   color: var(--text);
-}
-
-/* Quiet one-line analysis provenance shown below the 검토 board header. */
-.review-analysis-meta-line {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.5;
 }
 
 /* Quiet one-line analysis provenance shown above the 공유 report builder. */

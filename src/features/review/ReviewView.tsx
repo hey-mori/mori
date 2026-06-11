@@ -25,7 +25,6 @@ import {
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
 import { getQuickPassFallbackNotice } from "../../lib/analysis/analysisStatusDisplay";
-import { getReportEvidenceSummary } from "../../lib/sources/traceability";
 import {
   isNextActionCompleted,
   splitNextActionsByCompletion,
@@ -64,7 +63,6 @@ export function ReviewView() {
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
   const analysisError = useSessionStore((state) => state.analysisError);
-  const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
   const analysisFallbackUsed = useSessionStore((state) => state.analysisFallbackUsed);
   const analysis = useSessionStore((state) => state.analysis);
   const runQuickPass = useSessionStore((state) => state.runQuickPass);
@@ -98,7 +96,6 @@ export function ReviewView() {
     clearReviewFocus();
   }, [reviewFocus, clearReviewFocus]);
 
-  const dataBasis = useMemo(() => getReportEvidenceSummary(view).dataBasis, [view]);
   // Keep selection in sync with the active view. The board now opens without a
   // default inspector; detail appears only after a user click or a deep link.
   const activeSelection: ReviewSelection = (() => {
@@ -161,8 +158,6 @@ export function ReviewView() {
     setSelection(isSameReviewSelection(activeSelection, next) ? null : next);
   }
 
-  const quickPassButton = null;
-
   const totalReviewItems =
     view.issues.length + view.decisions.length + view.nextActions.length;
   const toolbar =
@@ -185,7 +180,6 @@ export function ReviewView() {
         totalIssueCount={view.issues.length}
         totalDecisionCount={view.decisions.length}
         totalNextActionCount={view.nextActions.length}
-        quickPassButton={quickPassButton}
       />
     ) : null;
 
@@ -333,15 +327,11 @@ export function ReviewView() {
       ) : (
         <ReviewAnalysisNotice
           status={analysisStatus}
-          providerLabel={analysisProviderLabel}
-          providerName={analysis?.providerName ?? null}
-          analysisGeneratedAt={analysis?.generatedAt ?? null}
           error={analysisError}
           fallbackUsed={analysisFallbackUsed}
           notes={analysis?.notes ?? []}
           hasAnalysis={hasAnalysis}
           mode={mode}
-          dataBasis={dataBasis}
           onGoToSettings={() => openSettingsSheet("localAi")}
         />
       )}
@@ -400,7 +390,6 @@ function ReviewToolbar({
   totalIssueCount,
   totalDecisionCount,
   totalNextActionCount,
-  quickPassButton,
 }: {
   searchQuery: string;
   onSearchChange: (value: string) => void;
@@ -410,7 +399,6 @@ function ReviewToolbar({
   totalIssueCount: number;
   totalDecisionCount: number;
   totalNextActionCount: number;
-  quickPassButton: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement | null>(null);
@@ -496,7 +484,6 @@ function ReviewToolbar({
             </div>
           ) : null}
         </div>
-        {quickPassButton}
       </div>
     </div>
   );
@@ -554,7 +541,6 @@ function ReviewBoardCard({
   title,
   subtitle,
   leading,
-  metaText,
   priority,
   edited,
   muted,
@@ -565,7 +551,6 @@ function ReviewBoardCard({
   title: string;
   subtitle?: string;
   leading?: ReactNode;
-  metaText?: string;
   priority?: Priority;
   edited?: boolean;
   muted?: boolean;
@@ -602,11 +587,6 @@ function ReviewBoardCard({
           ) : null}
         </div>
         {subtitle ? <p className="review-card-summary">{subtitle}</p> : null}
-        {metaText ? (
-          <footer className="review-card-meta-row">
-            <span className="review-card-meta-text">{metaText}</span>
-          </footer>
-        ) : null}
       </button>
       {quickActions ? (
         <div className="review-card-quick-actions" role="group" aria-label="빠른 작업">
@@ -859,25 +839,17 @@ function ReviewAnalysisNotice({
   mode,
   hasAnalysis,
   status,
-  providerLabel,
-  providerName,
-  analysisGeneratedAt,
   error,
   fallbackUsed,
   notes,
-  dataBasis,
   onGoToSettings,
 }: {
   mode: "demo" | "draft";
   hasAnalysis: boolean;
   status: string;
-  providerLabel: string | null;
-  providerName: string | null;
-  analysisGeneratedAt: string | null;
   error: string | null;
   fallbackUsed: boolean;
   notes: readonly string[];
-  dataBasis: string;
   onGoToSettings: () => void;
 }) {
   if (mode === "demo") return null;
