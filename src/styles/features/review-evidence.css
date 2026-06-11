@@ -5776,3 +5776,87 @@ td a {
   margin-left: auto;
 }
 
+
+/* 작업 로그 — client-safe scope + billable work log, shown in Reports when
+   external sharing is on. Calm panel: a scope line, dated entries with real
+   spans/durations, and one quiet total. Honest numbers from buildClientWorkLog. */
+.client-work-log {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-soft);
+}
+
+.client-work-log-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.client-work-log-head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.client-work-log-total {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.client-work-log-scope {
+  margin: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.client-work-log-scope strong {
+  margin-right: 6px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.client-work-log-entries {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.client-work-log-entry {
+  display: grid;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.client-work-log-when {
+  color: var(--muted-2);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.client-work-log-summary {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.client-work-log-meta {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}

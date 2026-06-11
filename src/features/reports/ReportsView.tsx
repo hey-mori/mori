@@ -15,6 +15,7 @@ import {
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { providerNameLabel } from "../../lib/analysis/providerLabels";
+import { ClientWorkLogCard } from "./ClientWorkLogCard";
 import {
   phaseForWriteResult,
   type MoriExportPhase,
@@ -134,6 +135,8 @@ export function ReportsView() {
               externalShare={externalShare}
               onToggleExternalShare={() => setExternalShare((current) => !current)}
             />
+
+            {externalShare ? <ClientWorkLogCard view={view} /> : null}
 
             <MoriPackageStrip
               view={view}
