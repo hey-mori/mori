@@ -22,7 +22,7 @@ describe("timeline workflow bundles", () => {
     const researchBundle = items.find((item) => item.id.includes("bundle-research"));
     expect(researchBundle && isTimelineBundle(researchBundle)).toBe(true);
     expect(researchBundle && isTimelineBundle(researchBundle) ? researchBundle.count : 0).toBeGreaterThanOrEqual(3);
-    expect(researchBundle && isTimelineBundle(researchBundle) ? researchBundle.title : "").toContain("조사");
+    expect(researchBundle && isTimelineBundle(researchBundle) ? researchBundle.title : "").toContain("리서치");
   });
 
   it("preserves the selected event as an individual card", () => {
@@ -81,7 +81,7 @@ describe("timeline workflow bundles", () => {
     expect(researchBundle.sourceCount).toBe(1);
     expect(researchBundle.eventTypeCounts.webResearch).toBe(4);
     expect(researchBundle.reason.message).not.toContain("+");
-    expect(researchBundle.summary).toContain("research burst");
+    expect(researchBundle.summary).toContain("조사 4건");
   });
 });
 

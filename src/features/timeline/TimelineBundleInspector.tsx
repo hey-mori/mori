@@ -63,7 +63,7 @@ export function TimelineBundleInspector({
 
       <section className="inspector-section">
         <div className="inspector-summary-card">
-          <span>워크플로 묶음</span>
+          <span>묶음 요약</span>
           <p>{bundle.summary}</p>
         </div>
       </section>
@@ -157,7 +157,7 @@ export function TimelineBundleInspector({
         <SectionHeader title="액션" />
         <div className="inspector-actions-row">
           <Button variant="primary" icon={ArrowRightLeft} onClick={onTrace}>
-            Flow Focus 열기
+            연결로 보기
           </Button>
           <BasePlannedAction
             icon={ClipboardList}

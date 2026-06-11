@@ -235,7 +235,7 @@ function createBundle(
     laneType,
     start: first.start,
     end: last.end ?? last.start,
-    title: buildBundleTitle(laneType, first.type, bundleKind, cluster),
+    title: buildBundleTitle(laneType, first.type, cluster),
     summary: buildBundleSummary(first.type, dominantEventNames, cluster, representedDecisionIds.length, representedIssueIds.length),
     bundleKind,
     dominantType: first.type,
@@ -255,8 +255,8 @@ function createBundle(
       code: "preserveSingleRow",
       message:
         laneType === "conversation"
-          ? `${cluster.length}개의 대화 턴이 ${options.timeWindowMinutes}분 이내로 가깝게 이어져, 한눈에 보이도록 하나로 묶었습니다. 펼치면 각 턴을 순서대로 읽을 수 있습니다.`
-          : `${cluster.length}개의 ${eventTypeLabels[first.type]} 이벤트가 ${options.timeWindowMinutes}분 이내에 몰려 있어 single-row lane을 유지하기 위해 하나의 work-flow bundle로 표시합니다.`,
+          ? `대화 턴 ${cluster.length}개가 ${options.timeWindowMinutes}분 안에 이어져 하나로 묶었습니다.`
+          : `${eventTypeLabels[first.type]} 이벤트 ${cluster.length}개가 ${options.timeWindowMinutes}분 안에 몰려 하나로 묶었습니다.`,
       timeWindowMinutes: options.timeWindowMinutes,
       laneType,
     },
@@ -284,23 +284,24 @@ export function deriveBundleConnectorSource(events: TimelineEvent[]): string | n
   return connectors.size === 1 ? [...connectors][0]! : null;
 }
 
+/**
+ * A bundle's title reads as "{무엇} {몇 건} · {언제}", the same shape for every
+ * lane: a conversation cluster leads with turn count + range (and a topic hint
+ * when short), everything else with its lane label + event count + range. No
+ * invented burst names ("경쟁 제품 조사 흐름") and no English ("work-flow
+ * bundle") — the card already carries the real counts.
+ */
 function buildBundleTitle(
   laneType: ActivityLaneId,
   dominantType: EventType,
-  bundleKind: TimelineBundleKind,
   cluster: TimelineEvent[],
 ): string {
   if (laneType === "conversation") return buildConversationBundleTitle(cluster);
-  if (bundleKind === "researchBurst") return "경쟁 제품 조사 흐름";
-  if (bundleKind === "issueBurst") return "이슈 생성 흐름";
-  if (bundleKind === "decisionBurst") return "결정 정리 흐름";
-  if (bundleKind === "codeBurst") {
-    const documentation = cluster.some((event) =>
-      /README|report|architecture|문서/i.test(event.title),
-    );
-    return documentation ? "문서/구조 작업 묶음" : "코드 변경 묶음";
-  }
-  return `${getActivityLaneVisuals(laneType).label || eventTypeLabels[dominantType]} work-flow bundle`;
+  const label = getActivityLaneVisuals(laneType).label || eventTypeLabels[dominantType];
+  const first = cluster[0]!;
+  const last = cluster[cluster.length - 1]!;
+  const range = `${formatTime(first.start)}–${formatTime(last.end ?? last.start)}`;
+  return `${label} ${cluster.length}건 · ${range}`;
 }
 
 /**
@@ -339,23 +340,21 @@ function buildBundleSummary(
 ): string {
   const names = eventNames.join(", ");
   if (laneType === "aiConversation") {
-    const first = cluster[0]!;
-    const last = cluster[cluster.length - 1]!;
-    return `${formatTime(first.start)}부터 ${formatTime(last.end ?? last.start)}까지 이어진 ${cluster.length}개의 대화 턴입니다. 카드를 펼치면 사용자 발화와 Claude 응답을 순서대로 읽을 수 있습니다.`;
+    return `대화 턴 ${cluster.length}개가 연속으로 이어진 구간입니다.`;
   }
   if (laneType === "webResearch") {
-    return `${names} 등 ${cluster.length}개의 조사 이벤트를 하나의 research burst로 묶어, 같은 탐색 모멘텀으로 읽히게 합니다.`;
+    return `${names} 등 조사 ${cluster.length}건이 이어진 구간입니다.`;
   }
   if (laneType === "issue") {
-    return `${cluster.length}개의 이슈 후보가 가까운 시간에 생성되어 하나의 issue burst로 정리됩니다.`;
+    return `이슈 후보 ${cluster.length}개가 가까운 시간에 만들어졌습니다.`;
   }
   if (laneType === "fileCode") {
-    return `${cluster.length}개의 파일/코드 변경이 짧은 작업 스파이크 안에서 이어졌습니다.`;
+    return `파일·코드 변경 ${cluster.length}건이 짧게 이어진 구간입니다.`;
   }
   if (decisionCount > 0 || issueCount > 0) {
-    return `${cluster.length}개의 ${eventTypeLabels[laneType]} 이벤트가 결정 ${decisionCount}개, 이슈 ${issueCount}개와 맞물린 흐름입니다.`;
+    return `${eventTypeLabels[laneType]} 이벤트 ${cluster.length}개가 결정 ${decisionCount}개, 이슈 ${issueCount}개와 맞물린 구간입니다.`;
   }
-  return `${cluster.length}개의 ${eventTypeLabels[laneType]} 이벤트가 짧은 시간 안에 이어져 하나의 흐름으로 묶입니다.`;
+  return `${eventTypeLabels[laneType]} 이벤트 ${cluster.length}개가 짧은 시간 안에 이어진 구간입니다.`;
 }
 
 function inferBundleKind(

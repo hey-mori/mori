@@ -176,13 +176,13 @@ export function buildBundleDensityProfile(
 export function describeBundleReason(code: TimelineBundleReasonCode): string {
   switch (code) {
     case "laneDensity":
-      return "레인 밀도";
+      return "구간 밀도";
     case "timeWindow":
-      return "근접 작업 모멘트";
+      return "근접 작업";
     case "microSequence":
-      return "마이크로 시퀀스";
+      return "연속 동작";
     case "preserveSingleRow":
-      return "단일 행 유지";
+      return "근접 시간 묶음";
     default:
       return "작업 묶음";
   }

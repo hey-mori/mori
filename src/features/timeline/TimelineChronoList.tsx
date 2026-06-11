@@ -71,10 +71,12 @@ export function TimelineChronoList({
 
         if (item.kind === "bundle") {
           const vm = buildTimelineBundleViewModel(item);
-          const memberList = item.members
-            .slice(0, 5)
-            .map((member) => member.title)
-            .join(", ");
+          // The title already carries "{무엇} {몇 건} · {언제}", so the card needs
+          // no summary line and no "N개 이벤트" echo. The type-mix meta shows only
+          // when the bundle actually mixes lanes ("대화 5 · 코드 2"); a single-lane
+          // bundle would just repeat the title. Detail lives in the inspector — no
+          // inline dropdown, so the card never opens in two places at once.
+          const showMix = vm.typeMixLabel.includes("·");
           return (
             <li key={item.id}>
               <button
@@ -83,29 +85,17 @@ export function TimelineChronoList({
                 aria-current={selected ? "true" : undefined}
                 onClick={() => onSelect(item.id)}
               >
-                <span className="timeline-chrono-time">{vm.timeLabel}</span>
+                {/* Start time only — the title already carries the full range,
+                    so the column stays narrow and never repeats it. */}
+                <span className="timeline-chrono-time">{formatTime(item.start)}</span>
                 <span className={`timeline-chrono-icon tone-${vm.tone}`}>
                   <Layers3 size={14} aria-hidden="true" />
                 </span>
                 <span className="timeline-chrono-body">
                   <strong>{vm.title}</strong>
-                  {item.summary ? (
-                    <span className="timeline-chrono-snippet">{oneLine(item.summary)}</span>
-                  ) : null}
-                  <small>
-                    {vm.typeMixLabel} · {item.count}개 이벤트
-                  </small>
+                  {showMix ? <small>{vm.typeMixLabel}</small> : null}
                 </span>
               </button>
-              {selected ? (
-                <div className="timeline-chrono-detail" role="region">
-                  <p>{item.summary}</p>
-                  <small>
-                    포함된 이벤트: {memberList}
-                    {item.members.length > 5 ? ` 외 ${item.members.length - 5}건` : ""}
-                  </small>
-                </div>
-              ) : null}
             </li>
           );
         }
