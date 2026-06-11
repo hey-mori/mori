@@ -3,6 +3,7 @@ import {
   composeNotifications,
   type CompanionNotification,
 } from "../../lib/notifications/notification";
+import { buildBackgroundAnalysisNotifications } from "../../lib/notifications/backgroundAnalysisNotifications";
 import { buildBackgroundDetectionNotifications } from "../../lib/notifications/backgroundDetectionNotifications";
 import { buildImportFinishedNotifications } from "../../lib/notifications/importFinishedNotifications";
 import { buildMemoryHealthNotifications } from "../../lib/notifications/memoryHealthNotifications";
@@ -53,6 +54,7 @@ export function useNotifications(): {
   );
   const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
   const backgroundDetections = useBackgroundWatchStore((state) => state.detections);
+  const backgroundAnalysisResults = useBackgroundWatchStore((state) => state.analysisResults);
 
   // Cross-session feed source: every stored session becomes a timestamped
   // event. Re-read when work changes (active session / new import / reset) so
@@ -112,6 +114,13 @@ export function useNotifications(): {
     [backgroundDetections],
   );
 
+  // Seventh producer: completed background analyses — each result is a
+  // reviewable finding, pointing at the 자료 surface. Nothing was applied.
+  const backgroundAnalysisNotifications = useMemo<CompanionNotification[]>(
+    () => buildBackgroundAnalysisNotifications(backgroundAnalysisResults),
+    [backgroundAnalysisResults],
+  );
+
   // Compose order = compose-time dedupe priority (a notification raised by two
   // producers in one tick appears once, taking the earlier producer's copy).
   // The *display* order is recency — set below — so the feed reads as a stream.
@@ -125,6 +134,7 @@ export function useNotifications(): {
           packageExportNotifications,
           sessionFeedNotifications,
           backgroundDetectionNotifications,
+          backgroundAnalysisNotifications,
         ]),
       ),
     [
@@ -134,6 +144,7 @@ export function useNotifications(): {
       packageExportNotifications,
       sessionFeedNotifications,
       backgroundDetectionNotifications,
+      backgroundAnalysisNotifications,
     ],
   );
 

@@ -4,6 +4,7 @@ import {
   saveBackgroundWatchSettings,
   type BackgroundWatchSettings,
 } from "../lib/background-watch/backgroundWatchSettings";
+import type { BackgroundAnalysisResult } from "../lib/background-watch/backgroundAnalysis";
 import type { InboxChange } from "../lib/background-watch/inboxWatch";
 
 /**
@@ -27,16 +28,21 @@ export type DetectedInboxItem = {
 type BackgroundWatchState = {
   settings: BackgroundWatchSettings;
   detections: DetectedInboxItem[];
+  /** Completed background analysis results, newest first. */
+  analysisResults: BackgroundAnalysisResult[];
   setEnabled: (enabled: boolean) => void;
   setAutoAnalyze: (autoAnalyze: boolean) => void;
   addDetections: (changes: readonly InboxChange[], at: string) => void;
   dismissDetection: (path: string) => void;
   clearDetections: () => void;
+  addAnalysisResult: (result: BackgroundAnalysisResult) => void;
+  dismissAnalysisResult: (sessionId: string) => void;
 };
 
 export const useBackgroundWatchStore = create<BackgroundWatchState>((set, get) => ({
   settings: loadBackgroundWatchSettings(),
   detections: [],
+  analysisResults: [],
   setEnabled: (enabled) => {
     const settings: BackgroundWatchSettings = {
       enabled,
@@ -71,6 +77,12 @@ export const useBackgroundWatchStore = create<BackgroundWatchState>((set, get) =
   dismissDetection: (path) =>
     set({ detections: get().detections.filter((item) => item.path !== path) }),
   clearDetections: () => set({ detections: [] }),
+  addAnalysisResult: (result) => {
+    const prev = get().analysisResults.filter((r) => r.sessionId !== result.sessionId);
+    set({ analysisResults: [result, ...prev].slice(0, 20) });
+  },
+  dismissAnalysisResult: (sessionId) =>
+    set({ analysisResults: get().analysisResults.filter((r) => r.sessionId !== sessionId) }),
 }));
 
 function basename(path: string): string {

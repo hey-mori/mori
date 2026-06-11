@@ -15,7 +15,9 @@ import { PreferenceToggle, SettingsRow, SettingsSection } from "./SettingsPrimit
  */
 export function BackgroundWatchCard() {
   const enabled = useBackgroundWatchStore((state) => state.settings.enabled);
+  const autoAnalyze = useBackgroundWatchStore((state) => state.settings.autoAnalyze);
   const setEnabled = useBackgroundWatchStore((state) => state.setEnabled);
+  const setAutoAnalyze = useBackgroundWatchStore((state) => state.setAutoAnalyze);
   const desktop = isTauriRuntime();
 
   return (
@@ -47,15 +49,28 @@ export function BackgroundWatchCard() {
           }
         />
         {enabled ? (
-          <SettingsRow
-            label="감지된 작업"
-            description="감지된 새 작업은 오른쪽 위 알림과 소스 화면에서 검토할 수 있습니다."
-            meta={
-              <span className="settings-row-meta-icon">
-                <Radar size={13} aria-hidden="true" /> 감시 중
-              </span>
-            }
-          />
+          <>
+            <SettingsRow
+              label="자동 분석"
+              description="새 작업이 감지되면 설정된 분석 엔진으로 바로 분석합니다. 결과는 검토 후 적용됩니다."
+              control={
+                <PreferenceToggle
+                  label="자동 분석"
+                  active={autoAnalyze}
+                  onToggle={() => setAutoAnalyze(!autoAnalyze)}
+                />
+              }
+            />
+            <SettingsRow
+              label="상태"
+              meta={
+                <span className="settings-row-meta-icon">
+                  <Radar size={13} aria-hidden="true" />
+                  {autoAnalyze ? "감시 중 · 자동 분석 켜짐" : "감시 중"}
+                </span>
+              }
+            />
+          </>
         ) : null}
       </div>
     </SettingsSection>

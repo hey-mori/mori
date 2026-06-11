@@ -46,6 +46,7 @@ export function notificationIcon(kind: CompanionNotificationKind): LucideIcon {
     case "live_follow_update":
       return Activity;
     case "background_detection":
+    case "background_analysis_ready":
       return Radar;
     case "demo_mode_notice":
     default:

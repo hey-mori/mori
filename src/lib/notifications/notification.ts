@@ -60,7 +60,8 @@ export type CompanionNotificationKind =
   | "import_finished"
   | "package_export_ready"
   | "live_follow_update"
-  | "background_detection";
+  | "background_detection"
+  | "background_analysis_ready";
 
 export type CompanionNotificationSeverity = CompanionSignalSeverity;
 export type CompanionNotificationBasis = CompanionSignalBasis;
