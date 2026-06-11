@@ -3,6 +3,7 @@ import {
   composeNotifications,
   type CompanionNotification,
 } from "../../lib/notifications/notification";
+import { buildBackgroundDetectionNotifications } from "../../lib/notifications/backgroundDetectionNotifications";
 import { buildImportFinishedNotifications } from "../../lib/notifications/importFinishedNotifications";
 import { buildMemoryHealthNotifications } from "../../lib/notifications/memoryHealthNotifications";
 import { buildPackageExportNotifications } from "../../lib/notifications/packageExportNotifications";
@@ -17,6 +18,7 @@ import type {
   StoredMoriPackageDraft,
   StoredSessionSummary,
 } from "../../lib/storage/storageTypes";
+import { useBackgroundWatchStore } from "../../app/backgroundWatchStore";
 import { useCompanionSignals } from "./useCompanionSignals";
 
 /**
@@ -50,6 +52,7 @@ export function useNotifications(): {
     (state) => state.draft?.session.id ?? null,
   );
   const dataResetNonce = useSessionStore((state) => state.dataResetNonce);
+  const backgroundDetections = useBackgroundWatchStore((state) => state.detections);
 
   // Cross-session feed source: every stored session becomes a timestamped
   // event. Re-read when work changes (active session / new import / reset) so
@@ -101,6 +104,14 @@ export function useNotifications(): {
     [summaries],
   );
 
+  // Sixth producer: the background watch's inbox detections — newly-arrived or
+  // grown connector files surfaced while the app is open, deep-linking into the
+  // 소스 surface where the review-gated import lives.
+  const backgroundDetectionNotifications = useMemo<CompanionNotification[]>(
+    () => buildBackgroundDetectionNotifications(backgroundDetections),
+    [backgroundDetections],
+  );
+
   // Compose order = compose-time dedupe priority (a notification raised by two
   // producers in one tick appears once, taking the earlier producer's copy).
   // The *display* order is recency — set below — so the feed reads as a stream.
@@ -113,6 +124,7 @@ export function useNotifications(): {
           importFinishedNotifications,
           packageExportNotifications,
           sessionFeedNotifications,
+          backgroundDetectionNotifications,
         ]),
       ),
     [
@@ -121,6 +133,7 @@ export function useNotifications(): {
       memoryHealthNotifications,
       packageExportNotifications,
       sessionFeedNotifications,
+      backgroundDetectionNotifications,
     ],
   );
 

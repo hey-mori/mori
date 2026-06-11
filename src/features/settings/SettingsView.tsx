@@ -14,6 +14,7 @@ import type { SettingsTab } from "../../app/store";
 import { buildAnalysisRunHistoryViewModel } from "../../lib/analysis";
 import { isTauriRuntime } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
+import { BackgroundWatchCard } from "./BackgroundWatchCard";
 import { LocalAiCard } from "./LocalAiCard";
 import { StorageCard } from "./StorageCard";
 import { ThemeCard } from "./ThemeCard";
@@ -67,12 +68,15 @@ export function SettingsView() {
     <div className="settings-content-stack settings-page">
       <div className="settings-main">
         {activeTab === "localAi" ? (
-          <LocalAiCard
-            settings={settings}
-            runHistory={runHistory}
-            onProviderChange={(provider) => updateAnalysisSettings({ provider })}
-            onUpdateSettings={(patch) => updateAnalysisSettings(patch)}
-          />
+          <>
+            <LocalAiCard
+              settings={settings}
+              runHistory={runHistory}
+              onProviderChange={(provider) => updateAnalysisSettings({ provider })}
+              onUpdateSettings={(patch) => updateAnalysisSettings(patch)}
+            />
+            <BackgroundWatchCard />
+          </>
         ) : null}
         {activeTab === "storage" ? (
           <>

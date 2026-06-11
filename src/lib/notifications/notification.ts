@@ -59,7 +59,8 @@ export type CompanionNotificationKind =
   | "memory_contradiction_detected"
   | "import_finished"
   | "package_export_ready"
-  | "live_follow_update";
+  | "live_follow_update"
+  | "background_detection";
 
 export type CompanionNotificationSeverity = CompanionSignalSeverity;
 export type CompanionNotificationBasis = CompanionSignalBasis;

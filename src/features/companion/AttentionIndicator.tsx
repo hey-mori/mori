@@ -16,6 +16,7 @@ import {
   type NotificationToastPosition,
 } from "../../lib/settings/notificationPreferences";
 import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
+import { useBackgroundWatch } from "../background-watch/useBackgroundWatch";
 import { useNotifications } from "./useNotifications";
 import { useOsNotifications } from "./useOsNotifications";
 import { NotificationFeedList } from "./NotificationFeedList";
@@ -55,6 +56,9 @@ export function AttentionIndicator({
   /** Icon-only quick-action button (sidebar head) when true; labelled pill otherwise. */
   compact?: boolean;
 }) {
+  // Opt-in background watch: while enabled (and on desktop), watch the connector
+  // inbox and feed detections into the notification feed below. No-op otherwise.
+  useBackgroundWatch();
   const { notifications } = useNotifications();
   useOsNotifications(notifications);
   const openReviewItem = useAppStore((state) => state.openReviewItem);

@@ -48,6 +48,7 @@ export const OS_ELIGIBLE_KINDS: ReadonlySet<CompanionNotificationKind> = new Set
   "package_export_ready",
   "live_follow_update",
   "memory_contradiction_detected",
+  "background_detection",
 ]);
 
 /** How old (ms) an eligible notice may be and still earn an OS ping. Beyond

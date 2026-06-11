@@ -5,6 +5,7 @@ import {
   FileText,
   Lightbulb,
   PackageCheck,
+  Radar,
   ShieldAlert,
   Sparkles,
   type LucideIcon,
@@ -44,6 +45,8 @@ export function notificationIcon(kind: CompanionNotificationKind): LucideIcon {
       return Sparkles;
     case "live_follow_update":
       return Activity;
+    case "background_detection":
+      return Radar;
     case "demo_mode_notice":
     default:
       return Bell;

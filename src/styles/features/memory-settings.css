@@ -3656,6 +3656,14 @@
   flex-wrap: wrap;
 }
 
+.settings-row-meta-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
 .settings-row-control {
   display: inline-flex;
   justify-content: flex-end;
