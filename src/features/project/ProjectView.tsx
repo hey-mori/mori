@@ -57,7 +57,6 @@ import {
   type ProjectSessionStatusFilter,
 } from "../../lib/project/projectSessionFilter";
 import { useProjectSynthesis } from "./useProjectSynthesis";
-import { ProjectTimelineSection } from "./ProjectTimelineSection";
 import { spanLabel } from "../../lib/session/workContext";
 
 /**
@@ -428,11 +427,8 @@ export function ProjectView() {
           )}
         </BaseSection>
 
-        <ProjectTimelineSection
-          projectId={projectId}
-          sessions={storedSessions}
-          onOpenSession={(sessionId) => openSessionId(sessionId, "flow")}
-        />
+        {/* 프로젝트 타임라인은 화면에서 내려둠 (retire, not delete) — 컴포넌트와
+            buildProjectTimeline 코어는 보존되어 언제든 다시 배선 가능. */}
 
         <ProjectMemoryList memories={memories} />
       </div>
