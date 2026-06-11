@@ -35,6 +35,38 @@ const FORMAT_DEFS: Array<{
   { id: "html", label: "HTML", ext: ".html", featureId: "reports.export.html" },
 ];
 
+/**
+ * Print a standalone report HTML document to PDF via a hidden iframe — no PDF
+ * library, no popup window. The browser / Tauri webview print dialog's "Save as
+ * PDF" writes the file; the iframe is torn down after. Robust across the browser
+ * prototype and the desktop webview, where a popup `window.open` can be blocked.
+ */
+function printReportDocument(html: string): void {
+  if (typeof document === "undefined") return;
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  document.body.appendChild(frame);
+  const frameDoc = frame.contentWindow?.document;
+  if (!frameDoc) {
+    frame.remove();
+    return;
+  }
+  frameDoc.open();
+  frameDoc.write(html);
+  frameDoc.close();
+  const trigger = () => {
+    try {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+    } finally {
+      setTimeout(() => frame.remove(), 1000);
+    }
+  };
+  if (frameDoc.readyState === "complete") setTimeout(trigger, 200);
+  else frame.onload = () => setTimeout(trigger, 200);
+}
+
 const FORMAT_OPTIONS: Array<BaseSelectOption<ReportFormat>> = FORMAT_DEFS.map((def) => {
   const feature = getFeatureControlProps(def.featureId);
   return {
@@ -144,6 +176,15 @@ export function ReportBuilderPanel({
 
   function handleDownload() {
     if (typeof window === "undefined") return;
+    if (format === "pdf") {
+      // No PDF library: render the standalone report HTML in a hidden frame and
+      // hand it to the browser / webview print dialog, where "PDF로 저장" writes
+      // the file. Reuses the exact HTML export, so the PDF matches it.
+      printReportDocument(
+        buildReportHtmlDocument({ markdown: payload.markdown, title: view.session.title }),
+      );
+      return;
+    }
     const isHtml = format === "html";
     const isText = format === "txt";
     const content = isHtml

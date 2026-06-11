@@ -230,7 +230,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   // ─────────────────────────── Reports ───────────────────────────
   { id: "reports.export.markdown", label: "Copy / download Markdown", status: "implemented", description: "Render the report as Markdown and copy or download it." },
   { id: "reports.export.txt", label: "Text export", status: "implemented", description: "Render the report as a plain text file for lightweight sharing." },
-  { id: "reports.export.pdf", label: "PDF export", status: PLANNED, description: "Render the report as a PDF document.", disabledReason: "PDF 내보내기는 예정 마일스톤입니다." },
+  { id: "reports.export.pdf", label: "PDF export", status: "implemented", description: "Render the report through the print dialog so it can be saved as a PDF." },
   { id: "reports.export.html", label: "HTML export", status: "implemented", description: "Render the report as a standalone, self-contained HTML document." },
   { id: "reports.export.moriPackage", label: "Export .mori v0 JSON", status: "implemented", description: "Serialise the session to a .mori v0 JSON package." },
   { id: "reports.copyResumePrompt", label: "Copy resume prompt", status: "implemented", description: "Copy the generated resume prompt." },
@@ -267,7 +267,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "rollup.flowFocus", label: "Flow Focus", status: "partial", description: "Upstream / downstream trace view.", userFacingStatus: "부분 구현 — 수동 관계 편집은 예정." },
   { id: "rollup.reviewWorkspace", label: "Review workspace", status: "implemented", description: "Issue Garden / Decision Log / Next Actions / Unresolved / Suggestions. Issue / decision / next-action editing, status change, confirmation, completion toggle, and promotion all write through to session storage." },
   { id: "rollup.reportsMarkdown", label: "Markdown reports", status: "implemented", description: "Copy or download report as Markdown." },
-  { id: "rollup.reportsPdf", label: "PDF reports", status: PLANNED, description: "Render report as PDF.", disabledReason: "PDF 내보내기는 예정 마일스톤입니다." },
+  { id: "rollup.reportsPdf", label: "PDF reports", status: "implemented", description: "Render the report via the print dialog to save as PDF." },
   { id: "rollup.reportsHtml", label: "HTML reports", status: "implemented", description: "Render the report as a standalone, self-contained HTML document." },
   { id: "rollup.projectMemoryCurrentSession", label: "Project Memory — current session", status: "implemented", description: "Aggregate the active session into a project memory snapshot." },
   { id: "rollup.projectMemoryCrossSession", label: "Project Memory — cross-session", status: "implemented", description: "Aggregate decisions / issues / evidence across browser-saved and SQLite-saved sessions via buildProjectMemoryViewModel." },
