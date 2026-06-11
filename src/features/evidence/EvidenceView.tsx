@@ -37,7 +37,9 @@ import type {
 } from "../../lib/analysis";
 import { SOURCE_REGISTRY } from "../../lib/sources/sourceRegistry";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
+import { useBackgroundWatchStore } from "../../app/backgroundWatchStore";
 import { ImportReviewView } from "../review-import/ImportReviewView";
+import { BackgroundAnalysisResultsPanel } from "./BackgroundAnalysisResultsPanel";
 import { ImportedSourceRow } from "./ImportedSourceRow";
 import {
   SourceDetailPanel,
@@ -73,6 +75,8 @@ export function EvidenceView() {
   const clearAnalysis = useSessionStore((state) => state.clearAnalysis);
   const updateAnalysisSettings = useSessionStore((state) => state.updateAnalysisSettings);
   const removeImport = useSessionStore((state) => state.removeImport);
+  const applyBackgroundAnalysis = useSessionStore((state) => state.applyBackgroundAnalysis);
+  const backgroundAnalysisResults = useBackgroundWatchStore((state) => state.analysisResults);
   // `navigate` routes legacy session-surface keys (timeline) into the unified
   // Session Detail workspace; other keys (memory / settings) pass through.
   const setCurrentView = useAppStore((state) => state.navigate);
@@ -218,6 +222,16 @@ export function EvidenceView() {
       </div>
     );
 
+  const bgAnalysisSection =
+    mode === "draft" && backgroundAnalysisResults.length > 0 ? (
+      <BackgroundAnalysisResultsPanel
+        results={backgroundAnalysisResults}
+        onApply={(result) =>
+          applyBackgroundAnalysis(result.analysis, result.analysis.providerName ?? undefined)
+        }
+      />
+    ) : null;
+
   const quickPassSection =
     mode === "draft" ? (
       <QuickPassControl
@@ -309,12 +323,14 @@ export function EvidenceView() {
         <ImportReviewView embedded />
       ) : importedSources.length === 0 ? (
         <>
+          {bgAnalysisSection}
           {importedSourcesSection}
           {quickPassSection}
         </>
       ) : (
         <>
           {toolbar}
+          {bgAnalysisSection}
           {quickPassSection}
           {importedSourcesSection}
         </>

@@ -132,7 +132,10 @@ export type FeatureId =
   | "connector.terminalShellIntegration"
   | "connector.browserExtension"
   | "connector.githubPrImport"
-  | "connector.fileDocumentImport";
+  | "connector.fileDocumentImport"
+  // Background watch
+  | "backgroundWatch.detection"
+  | "backgroundWatch.autoAnalyze";
 
 /**
  * One capability row.
@@ -286,6 +289,9 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "connector.browserExtension", label: "Browser extension", status: PLANNED, description: "Per-site browser extension that adds explicit URLs to the session.", disabledReason: "브라우저 확장은 예정 connector입니다 — Mori는 탭을 자동으로 읽지 않습니다." },
   { id: "connector.githubPrImport", label: "GitHub PR import", status: PLANNED, description: "Manual PR description / diff / review paste.", disabledReason: "현재는 AI 대화 + Git diff 붙여넣기로 사용 가능합니다. 전용 GitHub PR connector는 예정입니다." },
   { id: "connector.fileDocumentImport", label: "File / document import", status: PLANNED, description: "Open a local file (Markdown / PDF / DOCX) as a manual source.", disabledReason: "파일 / 문서 가져오기는 예정 마일스톤입니다 — 붙여넣기는 현재 지원됩니다." },
+  // Background watch
+  { id: "backgroundWatch.detection", label: "백그라운드 감지", status: "implemented", description: "Opt-in (off by default) connector-inbox watcher: surfaces newly-arrived agent work into the notification feed and fires a native OS ping while the app is open. Desktop-only.", userFacingStatus: "구현됨 — 설정 · 분석 엔진 탭에서 켤 수 있습니다. 기본 OFF · 데스크톱 전용." },
+  { id: "backgroundWatch.autoAnalyze", label: "백그라운드 자동 분석", status: "implemented", description: "When detection is on, runs the configured analysis engine on newly-detected inbox files headlessly and surfaces the result in the Evidence Hub for review. Review-gated: nothing is applied automatically.", userFacingStatus: "구현됨 — 감지 ON일 때 설정 카드에서 켤 수 있습니다. 결과는 검토 후 적용." },
 ];
 
 function buildRegistry(): Record<FeatureId, FeatureCapability> {

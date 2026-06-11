@@ -616,9 +616,14 @@ against the repository.
   Run Task template) and `connectors/terminal-helper/` (a
   `mori-capture` shell function), both wrapping `mori-local-capture.py`.
   A real editor / browser extension does not exist yet.
-- **Optional watched inbox.** Refresh-only desktop inbox is shipped;
-  an opt-in background watcher that loads new files into a "pending
-  review" tray is not implemented.
+- **Optional watched inbox.** Shipped. An opt-in background watcher
+  (off by default, desktop-only) watches the connector inbox while the
+  app is open, surfaces new or updated files into the notification feed,
+  and optionally runs a headless Quick Pass on newly-detected sessions,
+  placing the result in the Evidence Hub for review. Settings: 분석 엔진
+  tab, "백그라운드 감지" card. See `src/lib/background-watch/`,
+  `src/app/backgroundWatchStore.ts`, `src/features/background-watch/`,
+  `src/features/evidence/BackgroundAnalysisResultsPanel.tsx`.
 - **Team / shared memory.** The design is specified in
   `docs/team-shared-memory.md` (roles, privacy boundaries,
   client-safe export rules, conflict / duplicate review model). No
@@ -701,9 +706,10 @@ falls back to foreground-only:
 3. **Transparency.** Explicit opt-in, an always-visible "watching / off"
    state, and one-tap off. It never hides in the tray.
 
-Status: B is **designed, not built.** Today capture and live-follow are
-foreground-only (session-scoped). A transparent, opt-in background reader is
-a permissible future surface, not a shipped one.
+Status: B is **designed and shipped.** Live-follow remains foreground-only
+(session-scoped); the opt-in background inbox watcher (Section 5, "Optional
+watched inbox") is now implemented — detection only while the app is open,
+review-gated, off by default.
 
 ## 7. Capture Strategy
 
@@ -734,9 +740,8 @@ evidence without surveillance:
 - Terminal integration (shell history connector with redaction).
 - Browser extension that explicitly adds the active tab / selected
   text to a session.
-- Optional watched inbox: a Tauri-side service loads new
-  `~/.mori/connectors/` files into a "pending review" tray. Review
-  remains required.
+- ~~Optional watched inbox~~ — shipped (opt-in detection + headless
+  analysis while the app is open; review gate unchanged).
 
 **Avoid (non-goals).** Account scraping, hidden app database reading
 (Claude Desktop SQLite, ChatGPT browser storage, arbitrary Cursor app

@@ -365,6 +365,13 @@ export type SessionState = {
   ) => Promise<AnalysisResult | null>;
   clearAnalysis: () => void;
   /**
+   * Apply a background analysis result to the active session — the review
+   * gate for the "자동 분석" feature. Writes the result to the session's
+   * analysis store (same path as a manual Quick Pass) and marks the analysis
+   * as succeeded. Does nothing when no session is active.
+   */
+  applyBackgroundAnalysis: (result: AnalysisResult, providerName?: string) => void;
+  /**
    * Read the active session's append-only analysis run history (every
    * Quick Pass run plus the adopted-run pointer). Returns `null` when no
    * session is active or the session has no analysis. A read, not a
@@ -1191,6 +1198,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       analysisStatus: "idle",
       analysisError: null,
       analysisProviderLabel: null,
+      analysisFallbackUsed: false,
+    });
+  },
+  applyBackgroundAnalysis: (result, providerName) => {
+    const draft = get().draft;
+    if (!draft) return;
+    const repository = getRepository();
+    repository.saveSessionAnalysis(draft.session.id, result);
+    persistMemoryBodyFromAnalysis(repository, draft.session.id, result);
+    set({
+      analysis: result,
+      analysisStatus: "succeeded",
+      analysisError: null,
+      analysisProviderLabel: providerName ?? "백그라운드 분석",
       analysisFallbackUsed: false,
     });
   },

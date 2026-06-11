@@ -80,6 +80,7 @@ function buildState(overrides: Partial<SessionState> = {}): SessionState {
     editDecision: () => false,
     editNextAction: () => false,
     markPersistedToDesktop: () => undefined,
+    applyBackgroundAnalysis: () => undefined,
     ...overrides,
   };
 }

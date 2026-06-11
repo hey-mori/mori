@@ -78,6 +78,7 @@ const createMockState = (overrides?: Partial<SessionState>): SessionState => ({
   editDecision: () => false,
   editNextAction: () => false,
   markPersistedToDesktop: () => {},
+  applyBackgroundAnalysis: () => {},
   ...overrides,
 });
 
