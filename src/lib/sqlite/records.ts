@@ -83,6 +83,18 @@ export type EventRow = {
    * duplicate detection survives reload.
    */
   connector_event_id: string | null;
+  /**
+   * Per-file diff provenance (serialised `FileTouch[]`). NULL when the turn
+   * touched no files. Persisted via V007 so file provenance survives a SQLite
+   * round-trip instead of being dropped.
+   */
+  file_touches_json: string | null;
+  /** Event actor — drives lane classification on reload. Persisted via V007. */
+  actor: string | null;
+  /** Tool name for a tool turn. Persisted via V007. */
+  tool_name: string | null;
+  /** 1/0 whether a user request opened this turn's unit. Persisted via V007. */
+  opened_by_user: 0 | 1 | null;
 };
 
 export type IssueRow = {
@@ -258,6 +270,11 @@ function eventToRow(event: TimelineEvent): EventRow {
     created_by: event.createdBy,
     user_modified: event.userModified ? 1 : 0,
     connector_event_id: event.connectorEventId ?? null,
+    file_touches_json:
+      event.fileTouches && event.fileTouches.length > 0 ? json(event.fileTouches) : null,
+    actor: event.actor ?? null,
+    tool_name: event.toolName ?? null,
+    opened_by_user: event.openedByUser === undefined ? null : event.openedByUser ? 1 : 0,
   };
 }
 

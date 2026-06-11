@@ -2,6 +2,7 @@ import type {
   Artifact,
   Decision,
   EventType,
+  FileTouch,
   Issue,
   IssueStatus,
   MockSession,
@@ -122,7 +123,22 @@ function reconstructEvent(row: SqlitePersistenceSnapshot["events"][number]): Tim
     createdBy: row.created_by as TimelineEvent["createdBy"],
     userModified: row.user_modified === 1,
     connectorEventId: row.connector_event_id ?? undefined,
+    actor: (row.actor ?? undefined) as TimelineEvent["actor"],
+    toolName: row.tool_name ?? undefined,
+    openedByUser: row.opened_by_user === null ? undefined : row.opened_by_user === 1,
+    fileTouches: parseFileTouches(row.file_touches_json),
   };
+}
+
+/** Parse the serialised `FileTouch[]` provenance, dropping a malformed value. */
+function parseFileTouches(value: string | null): FileTouch[] | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) && parsed.length > 0 ? (parsed as FileTouch[]) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function reconstructIssue(row: SqlitePersistenceSnapshot["issues"][number]): Issue {

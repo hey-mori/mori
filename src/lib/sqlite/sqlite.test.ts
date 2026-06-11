@@ -132,6 +132,37 @@ describe("SQLite persistence foundation", () => {
     }
   });
 
+  it("round-trips event provenance fields (file touches, actor, tool, request anchor)", () => {
+    const [firstEvent, ...restEvents] = mockSession.events;
+    const session = {
+      ...mockSession,
+      events: [
+        {
+          ...firstEvent!,
+          actor: "tool" as const,
+          toolName: "Edit",
+          openedByUser: true,
+          fileTouches: [
+            { path: "src/app.ts", tool: "Edit", changeKind: "edited" as const, at: "", additions: 12, deletions: 3 },
+          ],
+        },
+        ...restEvents,
+      ],
+    };
+    const snapshot = createSqlitePersistenceSnapshot(session);
+    expect(snapshot.events[0]?.file_touches_json).toContain("src/app.ts");
+    expect(snapshot.events[0]?.actor).toBe("tool");
+    expect(snapshot.events[0]?.tool_name).toBe("Edit");
+    expect(snapshot.events[0]?.opened_by_user).toBe(1);
+
+    const rebuilt = reconstructMoriSession(snapshot);
+    expect(rebuilt.events[0]?.actor).toBe("tool");
+    expect(rebuilt.events[0]?.toolName).toBe("Edit");
+    expect(rebuilt.events[0]?.openedByUser).toBe(true);
+    expect(rebuilt.events[0]?.fileTouches?.[0]?.path).toBe("src/app.ts");
+    expect(rebuilt.events[0]?.fileTouches?.[0]?.additions).toBe(12);
+  });
+
   it("validates snapshot foreign keys and JSON array columns before persistence", () => {
     const snapshot = createSqlitePersistenceSnapshot(mockSession);
 

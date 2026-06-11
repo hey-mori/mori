@@ -153,6 +153,23 @@ pub struct EventRow {
     /// snapshots without it deserialize unchanged.
     #[serde(default)]
     pub connector_event_id: Option<String>,
+    /// Per-file diff provenance (serialised `FileTouch[]`) — which files the
+    /// turn wrote / edited / read. NULL when the turn touched no files. Added in
+    /// V007; old snapshots default to NULL.
+    #[serde(default)]
+    pub file_touches_json: Option<String>,
+    /// Event actor ("user" / "assistant" / "tool" / "file" …) — drives timeline
+    /// lane classification on reload. Added in V007.
+    #[serde(default)]
+    pub actor: Option<String>,
+    /// Tool name for a tool turn (Edit / Write / Bash …) — refines the lane.
+    /// Added in V007.
+    #[serde(default)]
+    pub tool_name: Option<String>,
+    /// Whether a user request opened this turn's work unit (1 / 0 / NULL).
+    /// Added in V007.
+    #[serde(default)]
+    pub opened_by_user: Option<i64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

@@ -248,7 +248,7 @@ fn replace_events(
         .map_err(|error| error.to_string())?;
     let mut stmt = tx
         .prepare(
-            "INSERT INTO events (id, session_id, project_id, start_at, end_at, type, title, summary, source_refs_json, linked_issue_ids_json, linked_decision_ids_json, relationship_ids_json, artifact_ids_json, trust_level, confidence, created_by, user_modified, connector_event_id)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+            "INSERT INTO events (id, session_id, project_id, start_at, end_at, type, title, summary, source_refs_json, linked_issue_ids_json, linked_decision_ids_json, relationship_ids_json, artifact_ids_json, trust_level, confidence, created_by, user_modified, connector_event_id, file_touches_json, actor, tool_name, opened_by_user)\nVALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
         )
         .map_err(|error| error.to_string())?;
     for row in rows {
@@ -271,6 +271,10 @@ fn replace_events(
             row.created_by,
             row.user_modified,
             row.connector_event_id,
+            row.file_touches_json,
+            row.actor,
+            row.tool_name,
+            row.opened_by_user,
         ])
         .map_err(|error| error.to_string())?;
     }
@@ -549,7 +553,7 @@ fn load_sources(conn: &Connection, session_id: &str) -> Result<Vec<SourceRow>, S
 fn load_events(conn: &Connection, session_id: &str) -> Result<Vec<EventRow>, String> {
     let mut stmt = conn
         .prepare(
-            "SELECT id, session_id, project_id, start_at, end_at, type, title, summary, source_refs_json, linked_issue_ids_json, linked_decision_ids_json, relationship_ids_json, artifact_ids_json, trust_level, confidence, created_by, user_modified, connector_event_id FROM events WHERE session_id = ?1 ORDER BY start_at",
+            "SELECT id, session_id, project_id, start_at, end_at, type, title, summary, source_refs_json, linked_issue_ids_json, linked_decision_ids_json, relationship_ids_json, artifact_ids_json, trust_level, confidence, created_by, user_modified, connector_event_id, file_touches_json, actor, tool_name, opened_by_user FROM events WHERE session_id = ?1 ORDER BY start_at",
         )
         .map_err(|error| error.to_string())?;
     let rows = stmt
@@ -573,6 +577,10 @@ fn load_events(conn: &Connection, session_id: &str) -> Result<Vec<EventRow>, Str
                 created_by: row.get(15)?,
                 user_modified: row.get(16)?,
                 connector_event_id: row.get(17)?,
+                file_touches_json: row.get(18)?,
+                actor: row.get(19)?,
+                tool_name: row.get(20)?,
+                opened_by_user: row.get(21)?,
             })
         })
         .map_err(|error| error.to_string())?;
@@ -822,6 +830,10 @@ mod tests {
                 created_by: "import".into(),
                 user_modified: 0,
                 connector_event_id: None,
+                file_touches_json: None,
+                actor: None,
+                tool_name: None,
+                opened_by_user: None,
             }],
             issues: Vec::new(),
             decisions: Vec::new(),
