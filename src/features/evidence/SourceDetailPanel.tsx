@@ -1,8 +1,16 @@
 import { CalendarClock, Lock } from "lucide-react";
+import type { ReactNode } from "react";
 import { Badge } from "../../components/ui/Badge";
-import { BaseInspectorPanel } from "../../components/ui/BaseInspectorPanel";
+import {
+  BaseInspectorPanel,
+  InspectorSection,
+  InspectorFields,
+  InspectorRows,
+  InspectorRow,
+  InspectorNote,
+  InspectorEmpty,
+} from "../../components/ui/BaseInspectorPanel";
 import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
-import { SectionHeader } from "../../components/ui/SectionHeader";
 import { eventTypeLabels } from "../../domain/constants";
 import type { MockSession } from "../../domain/types";
 import { getEventEvidenceSources, getSourceDisplayStatus } from "../../lib/sources/traceability";
@@ -103,6 +111,31 @@ function SourceDetailView({
   const integration = integrationLookup.get(source.kind);
   const relatedEvents = view.events.filter((event) => event.sourceRefs.includes(source.id));
 
+  const captureFields: Array<{ label: ReactNode; value: ReactNode; mono?: boolean }> = [
+    { label: "캡처 방식", value: display.captureMethod },
+  ];
+  if (fidelityDisplay && fidelityDisplay.shouldSurface) {
+    captureFields.push({
+      label: "캡처 완전성",
+      value:
+        fidelityDisplay.label +
+        (fidelityDisplay.reasonLabels.length > 0
+          ? ` · ${fidelityDisplay.reasonLabels.join(", ")}`
+          : ""),
+    });
+  }
+  captureFields.push({
+    label: (
+      <>
+        <CalendarClock size={11} /> 가져온 시각
+      </>
+    ),
+    value: formatTime(source.capturedAt),
+  });
+  if (source.uri) {
+    captureFields.push({ label: "URI / 출처", value: source.uri, mono: true });
+  }
+
   return (
     <BaseInspectorPanel
       className="evidence-detail"
@@ -123,42 +156,12 @@ function SourceDetailView({
       title={source.title}
       description={source.detail}
     >
-      <section className="inspector-section">
-        <SectionHeader title="출처 및 캡처" />
-        <dl className="evidence-detail-grid">
-          <div>
-            <dt>캡처 방식</dt>
-            <dd>{display.captureMethod}</dd>
-          </div>
-          {fidelityDisplay && fidelityDisplay.shouldSurface ? (
-            <div>
-              <dt>캡처 완전성</dt>
-              <dd>
-                {fidelityDisplay.label}
-                {fidelityDisplay.reasonLabels.length > 0
-                  ? ` · ${fidelityDisplay.reasonLabels.join(", ")}`
-                  : ""}
-              </dd>
-            </div>
-          ) : null}
-          <div>
-            <dt>
-              <CalendarClock size={11} /> 가져온 시각
-            </dt>
-            <dd>{formatTime(source.capturedAt)}</dd>
-          </div>
-          {source.uri ? (
-            <div>
-              <dt>URI / 출처</dt>
-              <dd className="evidence-detail-uri">{source.uri}</dd>
-            </div>
-          ) : null}
-        </dl>
-      </section>
+      <InspectorSection title="출처 및 캡처">
+        <InspectorFields items={captureFields} />
+      </InspectorSection>
 
       {importSummary && importSummary.status !== "unknown" ? (
-        <section className="inspector-section">
-          <SectionHeader title="재import 상태" />
+        <InspectorSection title="재import 상태">
           <div className="evidence-detail-reimport">
             <Badge tone={getConnectorSourceImportBadgeTone(importSummary)}>
               {describeConnectorSourceImportBadge(importSummary)}
@@ -183,49 +186,49 @@ function SourceDetailView({
                   : ""}
               </p>
             ) : null}
-            <p className="evidence-detail-reimport-privacy muted">
-              Mori 는 로컬에 저장된 Mori 세션만 기준으로 재import 를 판단합니다.
-              connectorEventId 가 없는 옛 import 는 소급 검사되지 않습니다.
-            </p>
           </div>
-        </section>
+          <InspectorNote>
+            Mori 는 로컬에 저장된 Mori 세션만 기준으로 재import 를 판단합니다.
+            connectorEventId 가 없는 옛 import 는 소급 검사되지 않습니다.
+          </InspectorNote>
+        </InspectorSection>
       ) : null}
 
-      <section className="inspector-section">
-        <SectionHeader
-          title="연결된 타임라인 이벤트"
-          hint={`${relatedEvents.length}개 이벤트`}
-        />
+      <InspectorSection
+        title="연결된 타임라인 이벤트"
+        hint={`${relatedEvents.length}개`}
+      >
         {relatedEvents.length === 0 ? (
-          <p className="evidence-detail-empty">아직 연결된 이벤트가 없습니다.</p>
+          <InspectorEmpty>아직 연결된 이벤트가 없습니다.</InspectorEmpty>
         ) : (
-          <ul className="evidence-detail-events">
-            {relatedEvents.slice(0, 6).map((event) => (
-              <li key={event.id}>
-                <Badge tone="purple">{eventTypeLabels[event.type] ?? event.type}</Badge>
-                <strong title={event.title}>{event.title}</strong>
-                <span className="evidence-detail-event-summary">{event.summary}</span>
-              </li>
-            ))}
+          <>
+            <InspectorRows>
+              {relatedEvents.slice(0, 6).map((event) => (
+                <InspectorRow
+                  key={event.id}
+                  leading={<Badge tone="purple">{eventTypeLabels[event.type] ?? event.type}</Badge>}
+                  title={event.title}
+                  meta={event.summary}
+                />
+              ))}
+            </InspectorRows>
             {relatedEvents.length > 6 ? (
-              <li className="evidence-detail-more">+ {relatedEvents.length - 6}건 더</li>
+              <InspectorEmpty>+ {relatedEvents.length - 6}건 더</InspectorEmpty>
             ) : null}
-          </ul>
+          </>
         )}
-      </section>
+      </InspectorSection>
 
-      <section className="inspector-section">
-        <SectionHeader title="개인정보 정책" />
-        <p className="evidence-detail-privacy">
-          <Lock size={12} aria-hidden="true" />
-          <span>{display.privacyNote}</span>
-        </p>
+      <InspectorSection title="개인정보 정책">
+        <InspectorNote icon={<Lock size={12} aria-hidden="true" />}>
+          {display.privacyNote}
+        </InspectorNote>
         {integration ? (
-          <p className="evidence-detail-pledge muted">
+          <InspectorNote>
             Mori가 이 소스에 추가로 접근하는 일은 없습니다. 다음 캡처는 사용자가 직접 시작할 때만 일어납니다.
-          </p>
+          </InspectorNote>
         ) : null}
-      </section>
+      </InspectorSection>
 
       <RelatedRecordsSection sourceId={source.id} view={view} relatedEvents={relatedEvents} />
     </BaseInspectorPanel>
@@ -280,51 +283,44 @@ function IntegrationDetailView({
       title={integration.label}
       description={integration.description}
     >
-      <section className="inspector-section">
-        <SectionHeader title="현재 상태" />
-        <dl className="evidence-detail-grid">
-          <div>
-            <dt>상태</dt>
-            <dd>{getIntegrationStatusLabel(integration.status)}</dd>
-          </div>
-          <div>
-            <dt>캡처 방식</dt>
-            <dd>{getCaptureMethodLabel(integration.captureMode)}</dd>
-          </div>
-          <div>
-            <dt>기본 신뢰도</dt>
-            <dd className={`trust-${integration.trustDefault}`}>
-              {getTrustDisplay(integration.trustDefault).label}
-            </dd>
-          </div>
-        </dl>
-      </section>
+      <InspectorSection title="현재 상태">
+        <InspectorFields
+          items={[
+            { label: "상태", value: getIntegrationStatusLabel(integration.status) },
+            { label: "캡처 방식", value: getCaptureMethodLabel(integration.captureMode) },
+            {
+              label: "기본 신뢰도",
+              value: (
+                <span className={`trust-${integration.trustDefault}`}>
+                  {getTrustDisplay(integration.trustDefault).label}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </InspectorSection>
 
-      <section className="inspector-section">
-        <SectionHeader title="사용하는 데이터" />
-        <ul className="evidence-detail-bullets">
+      <InspectorSection title="사용하는 데이터">
+        <ul className="ins-bullets">
           {accessible.map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
-      </section>
+      </InspectorSection>
 
-      <section className="inspector-section">
-        <SectionHeader title="사용하지 않는 데이터" />
-        <ul className="evidence-detail-bullets muted">
+      <InspectorSection title="사용하지 않는 데이터">
+        <ul className="ins-bullets is-muted">
           {inaccessible.map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
-      </section>
+      </InspectorSection>
 
-      <section className="inspector-section">
-        <SectionHeader title="개인정보 정책" />
-        <p className="evidence-detail-privacy">
-          <Lock size={12} aria-hidden="true" />
-          <span>{integration.privacyNote}</span>
-        </p>
-      </section>
+      <InspectorSection title="개인정보 정책">
+        <InspectorNote icon={<Lock size={12} aria-hidden="true" />}>
+          {integration.privacyNote}
+        </InspectorNote>
+      </InspectorSection>
     </BaseInspectorPanel>
   );
 }
@@ -351,29 +347,24 @@ function RelatedRecordsSection({
   if (linkedIssues.length === 0 && linkedDecisions.length === 0) return null;
 
   return (
-    <section className="inspector-section">
-      <SectionHeader title="이슈 / 결정으로의 연결" />
-      <ul className="evidence-detail-links">
+    <InspectorSection title="이슈 / 결정으로의 연결">
+      <InspectorRows>
         {linkedIssues.length > 0 ? (
-          <li>
-            <Badge tone="red">이슈</Badge>
-            <span>
-              {linkedIssues.length}건 · {linkedIssues[0].title}
-              {linkedIssues.length > 1 ? ` 외 ${linkedIssues.length - 1}건` : ""}
-            </span>
-          </li>
+          <InspectorRow
+            leading={<Badge tone="red">이슈</Badge>}
+            title={linkedIssues[0].title}
+            meta={linkedIssues.length > 1 ? `${linkedIssues.length}건` : undefined}
+          />
         ) : null}
         {linkedDecisions.length > 0 ? (
-          <li>
-            <Badge tone="green">결정</Badge>
-            <span>
-              {linkedDecisions.length}건 · {linkedDecisions[0].title}
-              {linkedDecisions.length > 1 ? ` 외 ${linkedDecisions.length - 1}건` : ""}
-            </span>
-          </li>
+          <InspectorRow
+            leading={<Badge tone="green">결정</Badge>}
+            title={linkedDecisions[0].title}
+            meta={linkedDecisions.length > 1 ? `${linkedDecisions.length}건` : undefined}
+          />
         ) : null}
-      </ul>
-    </section>
+      </InspectorRows>
+    </InspectorSection>
   );
 }
 

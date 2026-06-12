@@ -218,8 +218,9 @@
   gap: 8px;
 }
 
-/* Impact bullets — a decision's downstream effects. */
-.ins-impact {
+/* Impact / generic bullet lists — downstream effects, data-use lines, etc. */
+.ins-impact,
+.ins-bullets {
   display: grid;
   gap: 4px;
   margin: 0;
@@ -227,6 +228,10 @@
   font-size: 12px;
   line-height: 1.55;
   color: var(--text);
+}
+
+.ins-bullets.is-muted {
+  color: var(--muted);
 }
 
 /* Fields — a two-column label/value metadata grid. */
