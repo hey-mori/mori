@@ -1,13 +1,5 @@
-import { useEffect, useMemo, type ComponentType } from "react";
-import {
-  ArrowRight,
-  ClipboardCheck,
-  FileText,
-  GanttChartSquare,
-  ListPlus,
-  ScrollText,
-  type LucideProps,
-} from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { ArrowRight, ListPlus } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { SessionEmptyPrompt } from "./SessionEmptyPrompt";
@@ -21,7 +13,6 @@ import { useAppStore } from "../../app/store";
 import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
 import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import type { ImportDigestLane } from "../../lib/import/importDigest";
-import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
 import {
   getUnresolvedItems,
   UNRESOLVED_REASON_LABEL,
@@ -66,10 +57,6 @@ export function OverviewView() {
   const issueCount = view.issues.length;
   const decisionCount = view.decisions.length;
   const nextActionCount = view.nextActions.length;
-  const reviewAttention =
-    view.issues.filter((issue) => issue.status !== "resolved").length +
-    view.decisions.filter((decision) => !decision.confirmed).length +
-    view.nextActions.filter((action) => !isNextActionCompleted(action)).length;
 
   const unresolved = useMemo(
     () =>
@@ -155,36 +142,6 @@ export function OverviewView() {
               ) : null}
             </section>
           ) : null}
-
-          <nav className="overview-nav-cards" aria-label="세션 탭 바로가기">
-            <OverviewNavCard
-              icon={GanttChartSquare}
-              label="활동"
-              description="흐름 · 타임라인 · 원본 · 연결로 보는 활동"
-              onOpen={() => setSessionTab("flow")}
-            />
-            <OverviewNavCard
-              icon={FileText}
-              label="자료"
-              description="이 세션을 구성한 자료와 분석"
-              onOpen={() => setSessionTab("evidence")}
-            />
-            <OverviewNavCard
-              icon={ClipboardCheck}
-              label="검토"
-              count={reviewAttention > 0 ? reviewAttention : undefined}
-              countTone="orange"
-              countLabel="확인 필요"
-              description="추출된 이슈 · 결정 · 다음 액션 검토"
-              onOpen={() => setSessionTab("insights")}
-            />
-            <OverviewNavCard
-              icon={ScrollText}
-              label="공유"
-              description="이어가기 컨텍스트 · 보고서 · .mori 내보내기"
-              onOpen={() => setSessionTab("report")}
-            />
-          </nav>
         </div>
       </div>
     </div>
@@ -232,39 +189,6 @@ function WorkShapeBar({ lanes }: { lanes: ImportDigestLane[] }) {
         ))}
       </div>
     </div>
-  );
-}
-
-function OverviewNavCard({
-  icon: Icon,
-  label,
-  count,
-  countTone = "gray",
-  countLabel,
-  description,
-  onOpen,
-}: {
-  icon: ComponentType<LucideProps>;
-  label: string;
-  count?: number;
-  countTone?: "gray" | "orange" | "green" | "purple";
-  countLabel?: string;
-  description: string;
-  onOpen: () => void;
-}) {
-  return (
-    <button type="button" className="overview-nav-card" onClick={onOpen}>
-      <span className="overview-nav-card-head">
-        <span className="overview-nav-card-icon" aria-hidden="true">
-          <Icon size={16} />
-        </span>
-        <strong>{label}</strong>
-        {typeof count === "number" ? (
-          <Badge tone={countTone}>{countLabel ? `${countLabel} ${count}` : count}</Badge>
-        ) : null}
-      </span>
-      <span className="overview-nav-card-desc">{description}</span>
-    </button>
   );
 }
 

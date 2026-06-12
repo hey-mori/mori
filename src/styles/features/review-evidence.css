@@ -846,16 +846,21 @@ td a {
  * The filter button is always the rightmost control on every tab.
  * ============================ */
 
-/* No wrapping band: the toolbar is just the controls on the page, not a boxed
-   panel. Height + bottom margin keep the row aligned and spaced from the body;
-   border / background / padding are gone so it reads as part of the surface. */
+/* A calm boxed band so the toolbar reads as a distinct region above the body
+   (borderless blended into the surface too much). Search is ~160px and button
+   labels stay on one line. */
 .tab-toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 44px;
+  height: 48px;
   margin-bottom: var(--base-space-3);
+  padding: 0 14px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface-subtle);
   flex-wrap: nowrap;
+  /* Stay `visible` so the 필터 popover below the band is never clipped. */
   overflow: visible;
 }
 
@@ -2510,9 +2515,10 @@ td a {
 
 .review-board-card-button {
   display: grid;
-  gap: 5px;
+  align-content: center;
   width: 100%;
-  padding: 11px 13px;
+  min-height: 46px;
+  padding: 10px 12px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -2577,14 +2583,29 @@ td a {
 
 .review-card-head-row {
   display: flex;
-  align-items: center;
-  gap: 9px;
+  align-items: flex-start;
+  gap: 8px;
   min-width: 0;
 }
 
 .review-card-head-row .review-card-title {
   flex: 1;
   min-width: 0;
+}
+
+/* The status / kind glyph left of the title (issue status, decision
+   confirmation). Calm and monochrome — the icon shape carries the state, not
+   colour — so the column of cards reads as one quiet ledger. */
+.review-card-glyph {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--muted-2);
+}
+
+.review-issue-card.is-muted .review-card-glyph {
+  color: var(--muted-2);
+  opacity: 0.7;
 }
 
 .review-card-leading {
@@ -4957,11 +4978,11 @@ td a {
 .analysis-runs {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: var(--base-space-4) 0;
-  padding: var(--base-space-4) var(--base-space-5);
+  gap: 6px;
+  margin: 0 0 var(--base-space-3);
+  padding: 10px 14px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--panel-soft);
 }
 

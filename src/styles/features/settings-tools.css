@@ -1966,14 +1966,18 @@
   overflow: visible;
 }
 
-/* Compact one-row toolbar. Filter chips moved into a popover. Like the shared
-   `.tab-toolbar`, it is no longer a boxed band — just the controls on the
-   surface, wrapping button-by-button when the rail gets narrow. */
+/* Compact one-row toolbar. Filter chips moved into a popover. Boxed like the
+   shared `.tab-toolbar` so it reads as a distinct region, but wrapping
+   button-by-button when the rail gets narrow. */
 .timeline-toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
+  min-height: 48px;
+  padding: 7px 14px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: var(--base-surface-subtle);
   flex-wrap: wrap;
   /* Keep `visible` so the 필터 popover is not clipped. */
   overflow: visible;
