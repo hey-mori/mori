@@ -18,6 +18,16 @@ import { InfoHint } from "../../components/ui/InfoHint";
  * state. Renders nothing when the session has no analysis, so it never
  * competes with the Quick Pass empty state.
  */
+/**
+ * Drop the legacy "Quick Pass" wording from a stored engine label so the UI
+ * reads "규칙 기반 분석" / "Ollama 분석 (…)" — the product no longer uses the
+ * "Quick Pass" name on user surfaces. Labels stamped before this change still
+ * render cleanly without re-running analysis.
+ */
+function cleanEngineLabel(label: string): string {
+  return label.replace(/\s*Quick Pass/g, " 분석").trim();
+}
+
 export function AnalysisRunHistoryPanel() {
   const analysis = useSessionStore((state) => state.analysis);
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
@@ -43,10 +53,10 @@ export function AnalysisRunHistoryPanel() {
   return (
     <section className="analysis-runs" aria-label="분석 실행 기록">
       <div className="analysis-runs-current">
-        <span className="analysis-runs-provider">{current.providerLabel}</span>
+        <span className="analysis-runs-provider">{cleanEngineLabel(current.providerLabel)}</span>
         <span className="analysis-runs-meta">
-          {formatClaudeRelativeKo(current.generatedAt)} · 이슈{" "}
-          {current.reason.elementCounts.issues} · 결정 {current.reason.elementCounts.decisions}
+          이슈 {current.reason.elementCounts.issues} · 결정{" "}
+          {current.reason.elementCounts.decisions}
         </span>
         <InfoHint label="분석 기록 설명">
           분석을 다시 실행해도 이전 분석은 사라지지 않고 기록으로 남습니다. 각 실행은 사용한 모델,
@@ -65,7 +75,7 @@ export function AnalysisRunHistoryPanel() {
                 className={`analysis-run-row${row.isCurrent ? " is-current" : ""}`}
               >
                 <div className="analysis-run-row-head">
-                  <span className="analysis-run-row-provider">{row.providerLabel}</span>
+                  <span className="analysis-run-row-provider">{cleanEngineLabel(row.providerLabel)}</span>
                   {row.isCurrent ? (
                     <span className="analysis-run-row-badge">사용 중</span>
                   ) : (

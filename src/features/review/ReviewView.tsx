@@ -1,8 +1,6 @@
 import {
   Check,
-  CheckCircle2,
   Eye,
-  FileText,
   Filter,
   ListPlus,
   RotateCcw,
@@ -12,7 +10,6 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { EmptyState } from "../../components/layout/EmptyState";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
 import { Button } from "../../components/ui/Button";
 import { SearchField } from "../../components/ui/SearchField";
@@ -24,7 +21,6 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { getQuickPassFallbackNotice } from "../../lib/analysis/analysisStatusDisplay";
 import {
   isNextActionCompleted,
   splitNextActionsByCompletion,
@@ -63,8 +59,6 @@ export function ReviewView() {
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
   const analysisError = useSessionStore((state) => state.analysisError);
-  const analysisFallbackUsed = useSessionStore((state) => state.analysisFallbackUsed);
-  const analysis = useSessionStore((state) => state.analysis);
   const runQuickPass = useSessionStore((state) => state.runQuickPass);
   const setNextActionCompletion = useSessionStore((state) => state.setNextActionCompletion);
   const promoteIssueToNextAction = useSessionStore((state) => state.promoteIssueToNextAction);
@@ -75,7 +69,6 @@ export function ReviewView() {
   const editNextAction = useSessionStore((state) => state.editNextAction);
   const imports = useSessionStore((state) => state.imports);
   const setCurrentView = useAppStore((state) => state.navigate);
-  const openSettingsSheet = useAppStore((state) => state.openSettingsSheet);
   const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
   const reviewFocus = useAppStore((state) => state.reviewFocus);
   const clearReviewFocus = useAppStore((state) => state.clearReviewFocus);
@@ -325,15 +318,7 @@ export function ReviewView() {
           />
         )
       ) : (
-        <ReviewAnalysisNotice
-          status={analysisStatus}
-          error={analysisError}
-          fallbackUsed={analysisFallbackUsed}
-          notes={analysis?.notes ?? []}
-          hasAnalysis={hasAnalysis}
-          mode={mode}
-          onGoToSettings={() => openSettingsSheet("localAi")}
-        />
+        <ReviewAnalysisNotice status={analysisStatus} error={analysisError} mode={mode} />
       )}
 
       {toolbar}
@@ -831,29 +816,20 @@ function sortNextActions(actions: NextAction[]): NextAction[] {
 // ─── Analysis notice ─────────────────────────────────────────────────────────
 
 /**
- * Compact analysis-state notice. Surfaces only when there is something worth
- * saying: a failure, a run in progress, an empty real session, or the
- * provider/timestamp once results exist. Stays quiet otherwise.
+ * Analysis-state notice. Speaks up only on a hard failure; a fallback to the
+ * rule-based engine is conveyed quietly by the run header's engine label
+ * ("규칙 기반 분석"), not a warning banner the user has to dismiss.
  */
 function ReviewAnalysisNotice({
   mode,
-  hasAnalysis,
   status,
   error,
-  fallbackUsed,
-  notes,
-  onGoToSettings,
 }: {
   mode: "demo" | "draft";
-  hasAnalysis: boolean;
   status: string;
   error: string | null;
-  fallbackUsed: boolean;
-  notes: readonly string[];
-  onGoToSettings: () => void;
 }) {
   if (mode === "demo") return null;
-
   if (status === "failed") {
     return (
       <NoticeBanner tone="danger" title="분석 실패">
@@ -861,27 +837,5 @@ function ReviewAnalysisNotice({
       </NoticeBanner>
     );
   }
-  if (!hasAnalysis) {
-    return null;
-  }
-
-  const fallbackNotice =
-    getQuickPassFallbackNotice(notes) ??
-    (fallbackUsed
-      ? "로컬 LLM 분석에 실패해 규칙 기반(휴리스틱) 결과를 표시하고 있습니다. 설정에서 엔진과 모델 이름을 확인하세요."
-      : null);
-
-  if (fallbackNotice) {
-    return (
-      <NoticeBanner
-        tone="warning"
-        title="로컬 LLM 분석 실패 · 규칙 기반으로 표시 중"
-        actions={<Button onClick={onGoToSettings}>엔진 설정 확인</Button>}
-      >
-        {fallbackNotice}
-      </NoticeBanner>
-    );
-  }
-
   return null;
 }

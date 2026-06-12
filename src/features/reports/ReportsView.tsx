@@ -14,7 +14,6 @@ import {
 } from "../../lib/mori-package";
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
-import { providerNameLabel } from "../../lib/analysis/providerLabels";
 import { ClientWorkLogCard } from "./ClientWorkLogCard";
 import {
   phaseForWriteResult,
@@ -35,7 +34,6 @@ import {
   useSessionStore,
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
-import { formatDateTime } from "../../lib/formatting/time";
 import { ReportBuilderPanel } from "./ReportBuilderPanel";
 
 export function ReportsView() {
@@ -49,7 +47,6 @@ export function ReportsView() {
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysis = useSessionStore((state) => state.analysis);
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
-  const analysisProviderLabel = useSessionStore((state) => state.analysisProviderLabel);
   const analysisError = useSessionStore((state) => state.analysisError);
   const imports = useSessionStore((state) => state.imports);
 
@@ -118,9 +115,6 @@ export function ReportsView() {
             mode={mode}
             hasAnalysis={hasAnalysis}
             status={analysisStatus}
-            providerLabel={analysisProviderLabel}
-            providerName={analysis?.providerName ?? null}
-            generatedAt={analysis?.generatedAt ?? null}
             error={analysisError}
             importsCount={imports.length}
             onGoToEvidence={() => setCurrentView("evidence")}
@@ -160,18 +154,14 @@ export function ReportsView() {
  * tab opens by telling the user what they are looking at before the metrics.
  */
 /**
- * Compact analysis-state notice. The Quick Pass action lives in the action bar,
- * so this only surfaces when there is a meaningful state to report — a failure,
- * a run, an empty real session, or the provider line once results exist. Stays
- * quiet otherwise.
+ * Analysis-state notice for the 공유 tab. Surfaces only a hard failure or the
+ * "import something first" empty state. The engine/timestamp provenance line was
+ * removed: it repeats what 개요 already says and is noise above the report.
  */
 function ReportsAnalysisNotice({
   mode,
   hasAnalysis,
   status,
-  providerLabel,
-  providerName,
-  generatedAt,
   error,
   importsCount,
   onGoToEvidence,
@@ -179,9 +169,6 @@ function ReportsAnalysisNotice({
   mode: "demo" | "draft";
   hasAnalysis: boolean;
   status: string;
-  providerLabel: string | null;
-  providerName: string | null;
-  generatedAt: string | null;
   error: string | null;
   importsCount: number;
   onGoToEvidence: () => void;
@@ -208,18 +195,7 @@ function ReportsAnalysisNotice({
       />
     );
   }
-  if (!hasAnalysis) {
-    return null;
-  }
-
-  const providerCopy = providerLabel ?? "deterministic";
-  const providerKind = providerNameLabel(providerName);
-  return (
-    <p className="reports-analysis-meta-line">
-      {providerCopy} · {providerKind}
-      {generatedAt ? ` · ${formatDateTime(generatedAt)}` : ""}
-    </p>
-  );
+  return null;
 }
 
 async function writeMoriZipPackage(
