@@ -18,9 +18,9 @@
 .base-inspector-panel-head {
   position: relative;
   display: grid;
-  gap: 6px;
-  padding: 13px 16px 12px;
-  padding-right: 40px;
+  gap: 5px;
+  padding: 11px 14px 10px;
+  padding-right: 38px;
   border-bottom: 1px solid var(--line);
   background: white;
 }
@@ -90,9 +90,9 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 14px 16px 16px;
+  padding: 11px 14px 14px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: start;
 }
 
@@ -117,7 +117,7 @@
 
 .ins-section {
   display: grid;
-  gap: 9px;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -159,10 +159,10 @@
 /* Card — a bordered content box for a summary or a highlighted block. */
 .ins-card {
   display: grid;
-  gap: 5px;
-  padding: 11px 12px;
+  gap: 4px;
+  padding: 9px 11px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 9px;
   background: linear-gradient(180deg, #fff, #fbfbfe);
 }
 
