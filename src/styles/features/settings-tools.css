@@ -1966,29 +1966,17 @@
   overflow: visible;
 }
 
-/* Compact one-row toolbar. Filter chips moved into a popover.
-   Matches the shared `.tab-toolbar` band used by 자료 / 검토 — fixed 52px
-   height, fixed 320px search width, mode switch + 필터 anchored to the right
-   so the search column lands at the same x-coordinate on every tab. */
+/* Compact one-row toolbar. Filter chips moved into a popover. Like the shared
+   `.tab-toolbar`, it is no longer a boxed band — just the controls on the
+   surface, wrapping button-by-button when the rail gets narrow. */
 .timeline-toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 52px;
-  padding: 0 var(--base-space-5);
-  border: 1px solid var(--base-border);
-  border-radius: var(--base-radius-lg);
-  background: var(--base-surface-subtle);
-  flex-wrap: nowrap;
-  /* See `.tab-toolbar` — keep `visible` so the 필터 popover is not clipped. */
+  min-height: 44px;
+  flex-wrap: wrap;
+  /* Keep `visible` so the 필터 popover is not clipped. */
   overflow: visible;
-}
-
-/* Search field uses the shared `.tab-toolbar-search` width rule (see
-   review-evidence.css). The mode switch reads as a raised white pill on the
-   inset band. */
-.timeline-toolbar .timeline-mode-switch {
-  background: var(--base-surface);
 }
 
 .timeline-toolbar-left,

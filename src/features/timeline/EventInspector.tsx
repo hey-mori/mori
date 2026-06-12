@@ -6,7 +6,6 @@ import {
   InspectorSection,
   InspectorCard,
   InspectorActions,
-  InspectorEmpty,
 } from "../../components/ui/BaseInspectorPanel";
 import { InlineEditForm } from "../review/InlineEditForm";
 import type { TimelineEventEdits } from "../../lib/timeline/eventEdits";
@@ -245,9 +244,7 @@ export function EventInspector({
               <InspectorCard>
                 <p>{selectedEvent.userNote}</p>
               </InspectorCard>
-            ) : (
-              <InspectorEmpty>메모가 없습니다.</InspectorEmpty>
-            )}
+            ) : null}
             {onEditEvent ? (
               <InspectorActions>
                 <Button

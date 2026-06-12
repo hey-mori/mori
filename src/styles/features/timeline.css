@@ -657,6 +657,12 @@ kbd {
   flex-wrap: wrap;
 }
 
+/* Toolbar control labels never wrap to two lines at an awkward width — the
+   button keeps its single-line size and the row wraps button-by-button. */
+.timeline-toolbar button {
+  white-space: nowrap;
+}
+
 .timeline-toolbar-row {
   display: flex;
   align-items: center;
