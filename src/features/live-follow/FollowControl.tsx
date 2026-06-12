@@ -60,7 +60,7 @@ export function FollowControl() {
         className={`follow-toggle-icon${status === "following" ? " is-spinning" : ""}`}
         aria-hidden="true"
       />
-      <span>동기화</span>
+      <span className="sr-only">{active ? "자동 동기화 중" : "자동 동기화"}</span>
       {pending > 0 ? <span className="follow-toggle-badge">{pending}</span> : null}
     </button>
   );

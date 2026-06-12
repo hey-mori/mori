@@ -4199,16 +4199,15 @@ button.timeline-chrono-toolrun:hover {
 .follow-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 5px;
   height: 30px;
-  padding: 0 11px;
+  min-width: 30px;
+  padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--base-surface, white);
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
-  white-space: nowrap;
   cursor: pointer;
   transition:
     border-color 120ms ease,
