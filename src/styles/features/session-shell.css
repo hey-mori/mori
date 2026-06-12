@@ -430,10 +430,23 @@
    Each tab view renders here in `embedded` mode: a thin action-bar row, then a
    main + inspector split that mirrors `page-shell-split`. The Session Detail
    owns the single shell, so these never re-add a header. */
+/* Session detail fills the viewport. page-shell-content lays its two rows
+   (the sticky tab bar, then the active tab pane) so the pane row flexes to the
+   remaining height; the pane then stretches its single child (split / grid) to
+   full height instead of collapsing to content. */
+.session-detail-page .page-shell-content {
+  padding: 0;
+  gap: 0;
+  min-height: 100%;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
 .session-tab-pane {
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   gap: 0;
   min-width: 0;
+  min-height: 0;
 }
 
 .session-tab-actionbar {
@@ -451,8 +464,9 @@
   grid-template-columns: minmax(0, 1fr) var(--base-rail);
   gap: var(--base-space-6);
   align-items: stretch;
-  padding: var(--base-space-5) var(--page-shell-inset) var(--base-space-9);
+  padding: var(--base-space-4) var(--page-shell-inset) var(--base-space-4);
   min-width: 0;
+  min-height: 0;
 }
 
 /* On-demand inspector: when nothing is selected, the aside is dropped and the
@@ -474,9 +488,9 @@
   position: sticky;
   top: 56px;
   align-self: stretch;
-  height: calc(100vh - 210px);
-  max-height: calc(100vh - 210px);
-  min-height: 360px;
+  height: calc(100vh - 96px);
+  max-height: calc(100vh - 96px);
+  min-height: 420px;
   overflow: hidden;
 }
 
