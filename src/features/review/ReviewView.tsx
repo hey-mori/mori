@@ -32,7 +32,6 @@ import {
 } from "../../lib/review-workspace/reviewWorkspace";
 import { SessionEmptyPrompt } from "../session/SessionEmptyPrompt";
 import { ReviewDetailPanel } from "./ReviewDetailPanel";
-import { AnalysisRunHistoryPanel } from "./AnalysisRunHistoryPanel";
 
 type ReviewColumn = "issue" | "decision" | "nextAction";
 
@@ -325,8 +324,6 @@ export function ReviewView() {
       )}
 
       {toolbar}
-
-      <AnalysisRunHistoryPanel />
 
       {/* The board (the 3 columns) always renders, empty or not, so the tab
           shows its shape; the banner above prompts to import / analyze. */}
