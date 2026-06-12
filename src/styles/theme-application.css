@@ -59,10 +59,6 @@ html[data-base-theme] :where(
   .evidence-empty,
   .inspector,
   .inspector-panel,
-  .inspector-summary-card,
-  .inspector-trust-card,
-  .timeline-evidence-chip,
-  .inspector-source-list li,
   .related-list button,
   .trace .selected-summary,
   .trace-stack,
@@ -145,9 +141,6 @@ html[data-base-theme] :where(
   .import-panel,
   .inspector,
   .inspector-panel,
-  .inspector-summary-card,
-  .inspector-trust-card,
-  .timeline-evidence-chip,
   .related-list button
 ) {
   border-color: var(--color-border-default);
@@ -313,7 +306,6 @@ html[data-base-theme] :where(
   .event-card-meta,
   .event-card-signals span,
   .inspector-meta-strip span,
-  .timeline-evidence-chip,
   .muted,
   .base-list-row-meta,
   .base-object-row-subtitle,
@@ -330,9 +322,6 @@ html[data-base-theme] :where(
   .settings-option strong,
   .timeline-chrono-row strong,
   .event-card-title,
-  .inspector-summary,
-  .inspector-summary-card p,
-  .inspector-trust-card span,
   .base-list-row-title,
   .base-object-row-title
 ) {

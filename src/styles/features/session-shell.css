@@ -101,7 +101,6 @@
 .page-shell-split > .inspector-panel,
 .page-shell-split > .base-inspector-panel,
 .page-shell-split > .evidence-detail,
-.page-shell-split > .review-detail,
 .page-shell-split > .settings-trust,
 .page-shell-split > .companion-inbox-rail {
   position: sticky;
@@ -114,7 +113,6 @@
 @media (max-width: 1180px) {
   .page-shell-split > .inspector-panel,
   .page-shell-split > .evidence-detail,
-  .page-shell-split > .review-detail,
   .page-shell-split > .settings-trust,
   .page-shell-split > .companion-inbox-rail {
     position: static;
@@ -472,7 +470,6 @@
 
 /* The inspector rail sticks within the shell scroll region, like other rails. */
 .session-tab-split > .evidence-detail,
-.session-tab-split > .review-detail,
 .session-tab-split > .base-inspector-panel {
   position: sticky;
   top: 56px;
@@ -489,7 +486,6 @@
   }
 
   .session-tab-split > .evidence-detail,
-  .session-tab-split > .review-detail,
   .session-tab-split > .base-inspector-panel {
     position: static;
     height: auto;
