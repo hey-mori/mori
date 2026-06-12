@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { ChevronRight, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Children, Fragment, isValidElement } from "react";
 
@@ -73,6 +73,191 @@ export function BaseInspectorPanel({
       <div className="base-inspector-panel-body">{children}</div>
     </aside>
   );
+}
+
+/* ── Inspector content kit ───────────────────────────────────────────────────
+ * A small set of primitives for composing an inspector body. Every panel
+ * (event, bundle, source, review) builds from these so the right rail reads as
+ * ONE design system: consistent section rhythm, card treatment, label/value
+ * fields, clickable list rows, expand-in-place disclosure, action clusters, and
+ * quiet notes. Larger drill-downs open a BaseDrawer; this kit covers everything
+ * that stays inside the rail.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/** A titled block. `hint` is a quiet count/aside next to the title; `action` is
+ *  a control pinned to the title's right (a select, a small button). With no
+ *  title it is just a spacing group. */
+export function InspectorSection({
+  title,
+  hint,
+  action,
+  children,
+}: {
+  title?: ReactNode;
+  hint?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="ins-section">
+      {title || action ? (
+        <div className="ins-section-head">
+          <div className="ins-section-headings">
+            {title ? <h4 className="ins-section-title">{title}</h4> : null}
+            {hint ? <span className="ins-section-hint">{hint}</span> : null}
+          </div>
+          {action ? <div className="ins-section-action">{action}</div> : null}
+        </div>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
+/** A bordered content box. `label` renders an uppercase kicker; `action` pins a
+ *  control (e.g. a disclosure-level toggle) to the label's right. `tone="accent"`
+ *  tints it for the one block that should lead the eye. */
+export function InspectorCard({
+  label,
+  action,
+  tone = "default",
+  children,
+}: {
+  label?: ReactNode;
+  action?: ReactNode;
+  tone?: "default" | "accent";
+  children: ReactNode;
+}) {
+  return (
+    <div className={`ins-card${tone === "accent" ? " is-accent" : ""}`}>
+      {label || action ? (
+        <div className="ins-card-head">
+          {label ? <span className="ins-card-label">{label}</span> : null}
+          {action ? <div className="ins-card-action">{action}</div> : null}
+        </div>
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
+/** A two-column label/value metadata grid (dt/dd). Values can opt into a
+ *  monospace treatment for paths / IDs. */
+export function InspectorFields({
+  items,
+}: {
+  items: Array<{ label: ReactNode; value: ReactNode; mono?: boolean }>;
+}) {
+  return (
+    <dl className="ins-fields">
+      {items.map((item, index) => (
+        <div key={index} className="ins-field">
+          <dt>{item.label}</dt>
+          <dd className={item.mono ? "is-mono" : undefined}>{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** A list container for InspectorRow children. */
+export function InspectorRows({ children }: { children: ReactNode }) {
+  return <ul className="ins-rows">{children}</ul>;
+}
+
+/** One row: optional leading glyph, a title + meta stack, optional trailing
+ *  node. When `onClick` is set the whole row is a button. */
+export function InspectorRow({
+  leading,
+  title,
+  meta,
+  trailing,
+  onClick,
+}: {
+  leading?: ReactNode;
+  title: ReactNode;
+  meta?: ReactNode;
+  trailing?: ReactNode;
+  onClick?: () => void;
+}) {
+  const inner = (
+    <>
+      {leading ? <span className="ins-row-leading">{leading}</span> : null}
+      <span className="ins-row-main">
+        <span className="ins-row-title">{title}</span>
+        {meta ? <span className="ins-row-meta">{meta}</span> : null}
+      </span>
+      {trailing ? <span className="ins-row-trailing">{trailing}</span> : null}
+    </>
+  );
+  return (
+    <li className={`ins-row${onClick ? " is-clickable" : ""}`}>
+      {onClick ? (
+        <button type="button" className="ins-row-btn" onClick={onClick}>
+          {inner}
+        </button>
+      ) : (
+        <div className="ins-row-static">{inner}</div>
+      )}
+    </li>
+  );
+}
+
+/** Expand-in-place disclosure for secondary detail (read-only files, the long
+ *  tail of a list). Uses native <details> so it is keyboard- and SSR-safe. */
+export function InspectorDisclosure({
+  summary,
+  count,
+  defaultOpen = false,
+  children,
+}: {
+  summary: ReactNode;
+  count?: number;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="ins-disclosure" open={defaultOpen}>
+      <summary className="ins-disclosure-summary">
+        <ChevronRight size={13} className="ins-disclosure-chevron" aria-hidden="true" />
+        <span>{summary}</span>
+        {typeof count === "number" ? (
+          <span className="ins-disclosure-count">{count}</span>
+        ) : null}
+      </summary>
+      <div className="ins-disclosure-body">{children}</div>
+    </details>
+  );
+}
+
+/** A horizontal cluster of action buttons. Wraps on narrow rails. */
+export function InspectorActions({ children }: { children: ReactNode }) {
+  return <div className="ins-actions">{children}</div>;
+}
+
+/** A quiet one-or-two-line note with an optional leading icon (privacy, hint). */
+export function InspectorNote({
+  icon,
+  children,
+}: {
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <p className="ins-note">
+      {icon ? (
+        <span className="ins-note-icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/** The empty-state line for a section with nothing to show. */
+export function InspectorEmpty({ children }: { children: ReactNode }) {
+  return <p className="ins-empty">{children}</p>;
 }
 
 function dedupeBadges(eyebrow: ReactNode): ReactNode[] {

@@ -1,11 +1,16 @@
 import { StickyNote } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../components/ui/Badge";
-import { BaseInspectorPanel } from "../../components/ui/BaseInspectorPanel";
+import {
+  BaseInspectorPanel,
+  InspectorSection,
+  InspectorCard,
+  InspectorActions,
+  InspectorEmpty,
+} from "../../components/ui/BaseInspectorPanel";
 import { InlineEditForm } from "../review/InlineEditForm";
 import type { TimelineEventEdits } from "../../lib/timeline/eventEdits";
 import { Button } from "../../components/ui/Button";
-import { SectionHeader } from "../../components/ui/SectionHeader";
 import type {
   Artifact,
   Decision,
@@ -127,11 +132,11 @@ export function EventInspector({
       title={selectedEvent.title}
       meta={formatTimeRange(selectedEvent.start, selectedEvent.end)}
     >
-      <section className="inspector-section">
-        {isUserRequest ? (
-          <div className="inspector-summary-card">
-            <div className="inspector-summary-head">
-              <span>요약</span>
+      <InspectorSection>
+        <InspectorCard
+          label="요약"
+          action={
+            isUserRequest ? (
               <SegmentedControl
                 ariaLabel="이 요청 표시 수준"
                 role="radiogroup"
@@ -141,55 +146,58 @@ export function EventInspector({
                 }
                 options={DISCLOSURE_OPTIONS}
               />
-            </div>
-            {requestProjection.text ? (
-              <p>{requestProjection.text}</p>
-            ) : (
-              <p className="inspector-summary-withheld">
-                원문이 표시되지 않도록 설정되어 있습니다. 데이터는 그대로 저장됩니다.
-              </p>
-            )}
-            {requestProjection.isWithheld && requestProjection.text ? (
-              <span className="inspector-summary-note">
-                원문 비공개 · 데이터는 그대로 저장됩니다
-              </span>
-            ) : null}
-            {effectiveDisclosureLevel !== "raw" && provider === "ollama" ? (
-              <div className="inspector-abstraction-row">
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={handleGenerateAbstraction}
-                  disabled={generatingAbstraction}
-                >
-                  {generatingAbstraction ? "생성 중..." : "로컬 LLM으로 요지 생성"}
-                </button>
-                {abstractionEntry ? (
-                  <span className="inspector-summary-note">
-                    {abstractionEntry.source === "llm"
-                      ? "로컬 LLM이 생성한 요지"
-                      : `기본 요지 사용${abstractionEntry.note ? ` · ${abstractionEntry.note}` : ""}`}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="inspector-summary-card">
-            <span>요약</span>
+            ) : undefined
+          }
+        >
+          {isUserRequest ? (
+            <>
+              {requestProjection.text ? (
+                <p>{requestProjection.text}</p>
+              ) : (
+                <p className="ins-withheld">
+                  원문이 표시되지 않도록 설정되어 있습니다. 데이터는 그대로 저장됩니다.
+                </p>
+              )}
+              {requestProjection.isWithheld && requestProjection.text ? (
+                <span className="ins-subnote">원문 비공개 · 데이터는 그대로 저장됩니다</span>
+              ) : null}
+              {effectiveDisclosureLevel !== "raw" && provider === "ollama" ? (
+                <div className="ins-inline-row">
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={handleGenerateAbstraction}
+                    disabled={generatingAbstraction}
+                  >
+                    {generatingAbstraction ? "생성 중..." : "로컬 LLM으로 요지 생성"}
+                  </button>
+                  {abstractionEntry ? (
+                    <span className="ins-subnote">
+                      {abstractionEntry.source === "llm"
+                        ? "로컬 LLM이 생성한 요지"
+                        : `기본 요지 사용${abstractionEntry.note ? ` · ${abstractionEntry.note}` : ""}`}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          ) : (
             <p>{selectedEvent.summary}</p>
-          </div>
-        )}
-      </section>
+          )}
+        </InspectorCard>
+      </InspectorSection>
 
       <EventFilesSection touches={selectedEvent.fileTouches} />
 
       {hasLinks ? (
-        <section className="inspector-section">
-          <SectionHeader
-            title="연결된 항목"
-            hint={inspector.hiddenRelationshipCount > 0 ? `+${inspector.hiddenRelationshipCount}개 숨김` : undefined}
-          />
+        <InspectorSection
+          title="연결된 항목"
+          hint={
+            inspector.hiddenRelationshipCount > 0
+              ? `+${inspector.hiddenRelationshipCount}개 숨김`
+              : undefined
+          }
+        >
           <LinkedRows
             issues={inspector.issues}
             decisions={inspector.decisions}
@@ -197,13 +205,12 @@ export function EventInspector({
             nextActions={inspector.nextActions}
             onOpenReviewItem={onOpenReviewItem}
           />
-        </section>
+        </InspectorSection>
       ) : null}
 
       {inspector.decisions.length > 0 ? (
-        <section className="inspector-section">
-          <SectionHeader title="영향" />
-          <ul className="inspector-impact-list">
+        <InspectorSection title="영향">
+          <ul className="ins-impact">
             {inspector.decisions
               .flatMap((decision) => decision.impact)
               .slice(0, 3)
@@ -211,12 +218,11 @@ export function EventInspector({
                 <li key={impact}>{impact}</li>
               ))}
           </ul>
-        </section>
+        </InspectorSection>
       ) : null}
 
       {selectedEvent.userNote || (canWrite && onEditEvent) ? (
-      <section className="inspector-section">
-        <SectionHeader title="메모" />
+      <InspectorSection title="메모">
         {noteEditing && onEditEvent ? (
           <InlineEditForm
             fields={[
@@ -236,15 +242,14 @@ export function EventInspector({
         ) : (
           <>
             {selectedEvent.userNote ? (
-              <div className="inspector-summary-card">
-                <span>메모</span>
+              <InspectorCard>
                 <p>{selectedEvent.userNote}</p>
-              </div>
+              </InspectorCard>
             ) : (
-              <p className="inspector-empty">메모가 없습니다.</p>
+              <InspectorEmpty>메모가 없습니다.</InspectorEmpty>
             )}
             {onEditEvent ? (
-              <div className="inspector-actions-row">
+              <InspectorActions>
                 <Button
                   icon={StickyNote}
                   onClick={() => setNoteEditing(true)}
@@ -257,11 +262,11 @@ export function EventInspector({
                 >
                   {selectedEvent.userNote ? "메모 편집" : "메모 추가"}
                 </Button>
-              </div>
+              </InspectorActions>
             ) : null}
           </>
         )}
-      </section>
+      </InspectorSection>
       ) : null}
     </BaseInspectorPanel>
   );
@@ -278,8 +283,7 @@ function EventFilesSection({ touches }: { touches?: FileTouch[] }) {
   const entries = rollUpFileTouches(touches);
   if (entries.length === 0) return null;
   return (
-    <section className="inspector-section">
-      <SectionHeader title="이 턴이 만진 파일" hint={`${entries.length}개`} />
+    <InspectorSection title="이 턴이 만진 파일" hint={`${entries.length}개`}>
       <ul className="inspector-files" aria-label="이 턴이 만진 파일">
         {entries.map((entry) => (
           <li key={entry.path} className={`inspector-file kind-${entry.primaryChangeKind}`}>
@@ -305,7 +309,7 @@ function EventFilesSection({ touches }: { touches?: FileTouch[] }) {
           </li>
         ))}
       </ul>
-    </section>
+    </InspectorSection>
   );
 }
 

@@ -58,6 +58,15 @@ export { BaseSectionHeader, type BaseSectionHeaderProps } from "./BaseSectionHea
 export {
   BaseInspectorPanel,
   type BaseInspectorPanelProps,
+  InspectorSection,
+  InspectorCard,
+  InspectorFields,
+  InspectorRows,
+  InspectorRow,
+  InspectorDisclosure,
+  InspectorActions,
+  InspectorNote,
+  InspectorEmpty,
 } from "./BaseInspectorPanel";
 export { BaseMetricStrip, type BaseMetricStripProps, type BaseMetricItem } from "./BaseMetricStrip";
 export {

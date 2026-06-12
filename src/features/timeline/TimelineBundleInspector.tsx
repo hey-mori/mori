@@ -1,6 +1,10 @@
 import { Badge } from "../../components/ui/Badge";
-import { BaseInspectorPanel } from "../../components/ui/BaseInspectorPanel";
-import { SectionHeader } from "../../components/ui/SectionHeader";
+import {
+  BaseInspectorPanel,
+  InspectorSection,
+  InspectorRows,
+  InspectorRow,
+} from "../../components/ui/BaseInspectorPanel";
 import { eventTypeLabels } from "../../domain/constants";
 import type { MockSession } from "../../domain/types";
 import { formatTimeRange } from "../../lib/formatting/time";
@@ -8,12 +12,10 @@ import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import type { TimelineDisplayBundle } from "../../lib/timeline/displayItems";
 
 /**
- * The read panel for a bundle (a folded run of nearby events), built on the same
- * BaseInspectorPanel shell as the single-event inspector so the right side reads
- * as one surface, not two. A bundle is just "these events, folded together" — so
- * the panel answers exactly that: what it is (title + lane) and what is inside
- * it. The earlier density chart, type-mix, "묶인 이유", evidence rollup and action
- * row were inspector-for-its-own-sake; they are gone.
+ * The read panel for a bundle (a folded run of nearby events), composed from the
+ * shared inspector kit so the right rail reads as one system. A bundle only
+ * needs to say what it is (title + lane) and what it contains, so the body is a
+ * single "포함된 이벤트" section of calm rows.
  */
 export function TimelineBundleInspector({
   bundle,
@@ -39,19 +41,17 @@ export function TimelineBundleInspector({
       title={bundle.title}
       meta={formatTimeRange(bundle.start, bundle.end)}
     >
-      <section className="inspector-section">
-        <SectionHeader title="포함된 이벤트" hint={`${includedEvents.length}건`} />
-        <ul className="inspector-bundle-events">
+      <InspectorSection title="포함된 이벤트" hint={`${includedEvents.length}건`}>
+        <InspectorRows>
           {includedEvents.map((event) => (
-            <li key={event.id}>
-              <strong>{event.title}</strong>
-              <small>
-                {eventTypeLabels[event.type]} · {formatTimeRange(event.start, event.end)}
-              </small>
-            </li>
+            <InspectorRow
+              key={event.id}
+              title={event.title}
+              meta={`${eventTypeLabels[event.type]} · ${formatTimeRange(event.start, event.end)}`}
+            />
           ))}
-        </ul>
-      </section>
+        </InspectorRows>
+      </InspectorSection>
     </BaseInspectorPanel>
   );
 }
