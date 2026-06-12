@@ -571,7 +571,9 @@ function ReviewBoardCard({
             <span className="review-card-edited" aria-label="사용자가 수정함" title="사용자가 수정함" />
           ) : null}
         </div>
-        {subtitle ? <p className="review-card-summary">{subtitle}</p> : null}
+        {subtitle && !isRedundantSubtitle(title, subtitle) ? (
+          <p className="review-card-summary">{subtitle}</p>
+        ) : null}
       </button>
       {quickActions ? (
         <div className="review-card-quick-actions" role="group" aria-label="빠른 작업">
@@ -582,6 +584,34 @@ function ReviewBoardCard({
   );
 }
 
+
+/**
+ * The rule-based engine often sets an item's summary to (nearly) its title, so
+ * the card would print the same sentence twice. Treat the summary as redundant
+ * when, stripped of markdown and spacing, the two are equal, or one all but
+ * contains the other (the shorter covers >60% of the longer). The coverage gate
+ * keeps a genuinely longer summary — where the title is just a short truncation —
+ * visible rather than hiding its extra detail.
+ */
+function isRedundantSubtitle(title: string, subtitle: string): boolean {
+  const norm = (text: string) => text.replace(/[\s*`#_>-]+/g, "").toLowerCase();
+  const a = norm(title);
+  const b = norm(subtitle);
+  if (!b) return true;
+  if (a === b) return true;
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+  return (
+    shorter.length >= 12 &&
+    longer.includes(shorter) &&
+    shorter.length / longer.length > 0.6
+  );
+}
+
+/** Strip the rule-based "확인 또는 해결: " prefix the engine prepends to a
+ *  next-action it derived from an issue, so the card reads as the work itself. */
+function stripNextActionPrefix(title: string): string {
+  return title.replace(/^확인 또는 해결:\s*/, "");
+}
 
 function stopAnd(handler: () => void) {
   return (event: ReactMouseEvent) => {
@@ -759,7 +789,7 @@ function NextActionBoardCard({
   ) : null;
   return (
     <ReviewBoardCard
-      title={action.title}
+      title={stripNextActionPrefix(action.title)}
       leading={leading}
       priority={action.priority}
       edited={action.editedByUser}

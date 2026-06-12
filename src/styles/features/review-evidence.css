@@ -2684,7 +2684,7 @@ td a {
 .review-issue-column-list {
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 8px;
   min-height: 40px;
 }
 
@@ -2722,10 +2722,9 @@ td a {
 
 .review-board-card-button {
   display: grid;
-  gap: 10px;
+  gap: 5px;
   width: 100%;
-  min-height: 108px;
-  padding: 15px 16px;
+  padding: 11px 13px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -2811,8 +2810,8 @@ td a {
  * the checkbox still reads as inline with the title. */
 .review-card-leading-slot {
   position: absolute;
-  top: 13px;
-  left: 14px;
+  top: 10px;
+  left: 12px;
   z-index: 1;
   display: inline-flex;
   align-items: center;
