@@ -4226,8 +4226,8 @@ button.timeline-chrono-toolrun:hover {
   background: var(--purple-50);
 }
 
-.follow-toggle-icon.is-spinning {
-  animation: follow-spin 1.8s linear infinite;
+.follow-toggle-icon.is-live {
+  animation: follow-live-pulse 1.8s ease-in-out infinite;
 }
 
 .follow-toggle-badge {
@@ -4244,8 +4244,12 @@ button.timeline-chrono-toolrun:hover {
   font-variant-numeric: tabular-nums;
 }
 
-@keyframes follow-spin {
-  to {
-    transform: rotate(360deg);
+@keyframes follow-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
   }
 }

@@ -1,4 +1,4 @@
-import { CalendarClock, Lock } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "../../components/ui/Badge";
 import {
@@ -10,7 +10,6 @@ import {
   InspectorNote,
   InspectorEmpty,
 } from "../../components/ui/BaseInspectorPanel";
-import { BaseStatusBadge } from "../../components/ui/BaseStatusBadge";
 import { eventTypeLabels } from "../../domain/constants";
 import type { MockSession } from "../../domain/types";
 import { getEventEvidenceSources, getSourceDisplayStatus } from "../../lib/sources/traceability";
@@ -22,10 +21,6 @@ import {
 } from "../../lib/evidence/provenance";
 import { getTrustDisplay } from "../../lib/evidence/trust";
 import { formatDateTime } from "../../lib/formatting/time";
-import {
-  getProductAvailabilityTone,
-  productAvailabilityFromIntegrationStatus,
-} from "../../lib/product-state/productState";
 import {
   describeConnectorSourceImportBadge,
   getConnectorSourceImportBadgeTone,
@@ -59,7 +54,6 @@ export function SourceDetailPanel({
       <SourceDetailView
         selection={selection}
         view={view}
-        integrationLookup={integrationLookup}
         importSummary={importSummary}
         onClose={onClose}
       />
@@ -78,13 +72,11 @@ export function SourceDetailPanel({
 function SourceDetailView({
   selection,
   view,
-  integrationLookup,
   importSummary,
   onClose,
 }: {
   selection: { kind: "source"; sourceId: string };
   view: MockSession;
-  integrationLookup: Map<string, SourceIntegration>;
   importSummary?: ConnectorSourceImportSummary;
   onClose?: () => void;
 }) {
@@ -108,7 +100,6 @@ function SourceDetailView({
   const fidelityDisplay = source.captureFidelity
     ? getCaptureFidelityDisplay(source.captureFidelity)
     : null;
-  const integration = integrationLookup.get(source.kind);
   const relatedEvents = view.events.filter((event) => event.sourceRefs.includes(source.id));
 
   const captureFields: Array<{ label: ReactNode; value: ReactNode; mono?: boolean }> = [
@@ -141,18 +132,6 @@ function SourceDetailView({
       className="evidence-detail"
       ariaLabel="자료 상세"
       onClose={onClose}
-      eyebrow={
-        <>
-          <BaseStatusBadge
-            tone={getProductAvailabilityTone(
-              productAvailabilityFromIntegrationStatus(display.status),
-            )}
-          >
-            {display.statusLabel}
-          </BaseStatusBadge>
-          <Badge tone="purple">{display.integrationLabel}</Badge>
-        </>
-      }
       title={source.title}
       description={source.detail}
     >
@@ -219,17 +198,6 @@ function SourceDetailView({
         )}
       </InspectorSection>
 
-      <InspectorSection title="개인정보 정책">
-        <InspectorNote icon={<Lock size={12} aria-hidden="true" />}>
-          {display.privacyNote}
-        </InspectorNote>
-        {integration ? (
-          <InspectorNote>
-            Mori가 이 소스에 추가로 접근하는 일은 없습니다. 다음 캡처는 사용자가 직접 시작할 때만 일어납니다.
-          </InspectorNote>
-        ) : null}
-      </InspectorSection>
-
       <RelatedRecordsSection sourceId={source.id} view={view} relatedEvents={relatedEvents} />
     </BaseInspectorPanel>
   );
@@ -268,18 +236,6 @@ function IntegrationDetailView({
       className="evidence-detail"
       ariaLabel="통합 상세"
       onClose={onClose}
-      eyebrow={
-        <>
-          <BaseStatusBadge
-            tone={getProductAvailabilityTone(
-              productAvailabilityFromIntegrationStatus(integration.status),
-            )}
-          >
-            {getIntegrationStatusLabel(integration.status)}
-          </BaseStatusBadge>
-          <Badge tone="purple">{integration.id}</Badge>
-        </>
-      }
       title={integration.label}
       description={integration.description}
     >
@@ -316,11 +272,6 @@ function IntegrationDetailView({
         </ul>
       </InspectorSection>
 
-      <InspectorSection title="개인정보 정책">
-        <InspectorNote icon={<Lock size={12} aria-hidden="true" />}>
-          {integration.privacyNote}
-        </InspectorNote>
-      </InspectorSection>
     </BaseInspectorPanel>
   );
 }

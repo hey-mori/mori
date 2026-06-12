@@ -9,7 +9,7 @@
  * button. While syncing the icon spins and a pending-event badge counts new
  * events the loop has seen.
  */
-import { RefreshCw } from "lucide-react";
+import { Radio } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { selectSessionView, useSessionStore } from "../../app/sessionStore";
 import { isConnectorInboxAvailable } from "../../lib/desktop/connectorInbox";
@@ -55,9 +55,9 @@ export function FollowControl() {
       aria-pressed={active}
       title={active ? "자동 동기화 중 · 눌러서 멈춤" : "자동 동기화 시작"}
     >
-      <RefreshCw
+      <Radio
         size={14}
-        className={`follow-toggle-icon${status === "following" ? " is-spinning" : ""}`}
+        className={`follow-toggle-icon${status === "following" ? " is-live" : ""}`}
         aria-hidden="true"
       />
       <span className="sr-only">{active ? "자동 동기화 중" : "자동 동기화"}</span>
