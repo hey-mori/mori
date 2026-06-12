@@ -4192,113 +4192,61 @@ button.timeline-chrono-toolrun:hover {
   font-weight: 750;
 }
 
-/* ── Live Follow control ──────────────────────────────────────────────────────
-   Sits in the 활동 toolbar. Desktop-only (the browser renders nothing): start
-   following the live session, then a pulsing dot + new-event badge + pause/stop.
-   Calm — a small inline control, never a banner. */
-.follow-control {
+/* 자동 동기화 토글 — sits in the 활동 toolbar. Desktop-only (the browser
+   renders nothing): a sync toggle for the active session, press to follow and
+   press again to stop. The icon spins while syncing; a badge counts pending
+   events. */
+.follow-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.follow-control-start {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
+  height: 30px;
+  padding: 0 11px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: var(--base-surface, white);
   color: var(--muted);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 650;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     border-color 120ms ease,
-    color 120ms ease;
+    color 120ms ease,
+    background 120ms ease;
 }
 
-.follow-control-start:hover {
+.follow-toggle:hover {
+  border-color: var(--line-strong, var(--muted-2));
+  color: var(--text);
+}
+
+.follow-toggle.is-active {
   border-color: var(--purple);
   color: var(--purple);
-}
-
-.follow-control.is-following,
-.follow-control.is-paused {
-  padding: 3px 5px 3px 9px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
-}
-
-.follow-control.is-following {
-  border-color: rgba(124, 92, 255, 0.4);
-  background: #faf9ff;
-}
-
-.follow-control-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.follow-control-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--green);
-}
-
-.follow-control.is-following .follow-control-dot {
-  animation: follow-pulse 1.6s ease-in-out infinite;
-}
-
-.follow-control.is-paused .follow-control-dot {
-  background: var(--muted-2);
-}
-
-.follow-control-badge {
-  padding: 1px 6px;
-  border-radius: 999px;
   background: var(--purple-50);
-  color: var(--purple);
-  font-size: 10.5px;
-  font-weight: 700;
+}
+
+.follow-toggle-icon.is-spinning {
+  animation: follow-spin 1.8s linear infinite;
+}
+
+.follow-toggle-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--purple);
+  color: white;
+  font-size: 10px;
+  font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
 
-.follow-control-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 7px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    color 120ms ease;
-}
-
-.follow-control-btn:hover {
-  background: var(--panel-soft, #f4f4f7);
-  color: var(--text);
-}
-
-@keyframes follow-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
+@keyframes follow-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
