@@ -3327,10 +3327,12 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
+/* Section spacing is owned by the panel body's grid gap (BaseInspectorPanel);
+   a per-section margin here would double it. Sections only set their own
+   inner gap (label → content). */
 .inspector-section {
   display: grid;
   gap: 8px;
-  margin-bottom: 13px;
 }
 
 .inspector-summary {

@@ -123,7 +123,7 @@ function SourceDetailView({
       title={source.title}
       description={source.detail}
     >
-      <section className="evidence-detail-section">
+      <section className="inspector-section">
         <SectionHeader title="출처 및 캡처" />
         <dl className="evidence-detail-grid">
           <div>
@@ -157,7 +157,7 @@ function SourceDetailView({
       </section>
 
       {importSummary && importSummary.status !== "unknown" ? (
-        <section className="evidence-detail-section">
+        <section className="inspector-section">
           <SectionHeader title="재import 상태" />
           <div className="evidence-detail-reimport">
             <Badge tone={getConnectorSourceImportBadgeTone(importSummary)}>
@@ -191,7 +191,7 @@ function SourceDetailView({
         </section>
       ) : null}
 
-      <section className="evidence-detail-section">
+      <section className="inspector-section">
         <SectionHeader
           title="연결된 타임라인 이벤트"
           hint={`${relatedEvents.length}개 이벤트`}
@@ -214,7 +214,7 @@ function SourceDetailView({
         )}
       </section>
 
-      <section className="evidence-detail-section">
+      <section className="inspector-section">
         <SectionHeader title="개인정보 정책" />
         <p className="evidence-detail-privacy">
           <Lock size={12} aria-hidden="true" />
@@ -280,7 +280,7 @@ function IntegrationDetailView({
       title={integration.label}
       description={integration.description}
     >
-      <section className="evidence-detail-section">
+      <section className="inspector-section">
         <SectionHeader title="현재 상태" />
         <dl className="evidence-detail-grid">
           <div>
@@ -300,7 +300,7 @@ function IntegrationDetailView({
         </dl>
       </section>
 
-      <section className="evidence-detail-section">
+      <section className="inspector-section">
         <SectionHeader title="사용하는 데이터" />
         <ul className="evidence-detail-bullets">
           {accessible.map((line) => (
@@ -309,7 +309,7 @@ function IntegrationDetailView({
         </ul>
       </section>
 
-      <section className="evidence-detail-section">
+      <section className="inspector-section">
         <SectionHeader title="사용하지 않는 데이터" />
         <ul className="evidence-detail-bullets muted">
           {inaccessible.map((line) => (
@@ -318,7 +318,7 @@ function IntegrationDetailView({
         </ul>
       </section>
 
-      <section className="evidence-detail-section">
+      <section className="inspector-section">
         <SectionHeader title="개인정보 정책" />
         <p className="evidence-detail-privacy">
           <Lock size={12} aria-hidden="true" />
@@ -351,7 +351,7 @@ function RelatedRecordsSection({
   if (linkedIssues.length === 0 && linkedDecisions.length === 0) return null;
 
   return (
-    <section className="evidence-detail-section">
+    <section className="inspector-section">
       <SectionHeader title="이슈 / 결정으로의 연결" />
       <ul className="evidence-detail-links">
         {linkedIssues.length > 0 ? (

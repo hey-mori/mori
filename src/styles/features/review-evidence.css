@@ -1287,11 +1287,6 @@ td a {
   margin-bottom: 4px;
 }
 
-.evidence-detail-section {
-  display: grid;
-  gap: 8px;
-}
-
 .evidence-detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
