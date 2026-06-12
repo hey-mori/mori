@@ -3495,6 +3495,40 @@ kbd {
   font-size: 11px;
 }
 
+/* The bundle inspector's member list — one calm row per folded event:
+   title on top, type · time beneath. No trailing badge (the type already
+   reads in the meta line), so the rows stay compact and quiet. */
+.inspector-bundle-events {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inspector-bundle-events li {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.inspector-bundle-events strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-bundle-events small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .inspector-linked-rows {
   display: grid;
   gap: 6px;

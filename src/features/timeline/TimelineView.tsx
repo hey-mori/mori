@@ -496,7 +496,6 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
         <TimelineBundleInspector
           bundle={selectedItem}
           session={view}
-          onTrace={() => goToMode("flow")}
           onClose={closeInspector}
         />
       ) : mode === "flow" && selectedItem && selectedItem.kind === "event" ? (
