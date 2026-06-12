@@ -7,7 +7,6 @@ import {
   Filter,
   ListPlus,
   RotateCcw,
-  Sparkles,
   Square,
   SquareCheck,
 } from "lucide-react";
@@ -60,7 +59,6 @@ export function ReviewView() {
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
   const analysisError = useSessionStore((state) => state.analysisError);
-  const runQuickPass = useSessionStore((state) => state.runQuickPass);
   const setNextActionCompletion = useSessionStore((state) => state.setNextActionCompletion);
   const promoteIssueToNextAction = useSessionStore((state) => state.promoteIssueToNextAction);
   const setIssueStatus = useSessionStore((state) => state.setIssueStatus);
@@ -107,7 +105,6 @@ export function ReviewView() {
   })();
 
   const isDemo = mode === "demo";
-  const canRunQuickPass = imports.length > 0 && analysisStatus !== "running";
   // The focal empty state owns the "not analysed yet" moment; running and
   // failed states are surfaced by the notice instead, so exclude them here.
   const showQuickPassEmpty =
@@ -286,39 +283,23 @@ export function ReviewView() {
 
   const body = (
     <>
-      {showQuickPassEmpty ? (
-        imports.length > 0 ? (
-          <SessionEmptyPrompt
-            title="분석 전 · 아직 정리된 항목 없음"
-            hint="분석을 실행하면 이슈 · 결정 · 다음 액션으로 정리됩니다."
-            action={
-              <Button
-                variant="primary"
-                size="sm"
-                icon={Sparkles}
-                onClick={() => runQuickPass()}
-                disabled={!canRunQuickPass}
-              >
-                분석 실행
-              </Button>
-            }
-          />
-        ) : (
-          <SessionEmptyPrompt
-            title="세션에 가져온 자료 없음"
-            hint="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
-            action={
-              <Button
-                variant="primary"
-                size="sm"
-                icon={ListPlus}
-                onClick={() => setCurrentView("evidence")}
-              >
-                자료 가져오기
-              </Button>
-            }
-          />
-        )
+      {/* No "아직 분석 전" banner — the empty board itself is the not-yet-analyzed
+          state. Only prompt when the session truly has no imported material. */}
+      {showQuickPassEmpty && imports.length === 0 ? (
+        <SessionEmptyPrompt
+          title="세션에 가져온 자료 없음"
+          hint="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
+          action={
+            <Button
+              variant="primary"
+              size="sm"
+              icon={ListPlus}
+              onClick={() => setCurrentView("evidence")}
+            >
+              자료 가져오기
+            </Button>
+          }
+        />
       ) : (
         <ReviewAnalysisNotice status={analysisStatus} error={analysisError} mode={mode} />
       )}
@@ -326,7 +307,7 @@ export function ReviewView() {
       {toolbar}
 
       {/* The board (the 3 columns) always renders, empty or not, so the tab
-          shows its shape; the banner above prompts to import / analyze. */}
+          shows its shape. */}
       {board}
     </>
   );

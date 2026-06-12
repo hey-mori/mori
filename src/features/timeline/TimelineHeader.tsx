@@ -1,4 +1,4 @@
-import { Filter, List, Route, Rows3, Sparkles } from "lucide-react";
+import { Filter, List, Rows3, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { SearchField } from "../../components/ui/SearchField";
 import { FollowControl } from "../live-follow/FollowControl";
@@ -89,15 +89,8 @@ export function TimelineToolbar({
             <List size={14} aria-hidden="true" />
             원본
           </button>
-          <button
-            type="button"
-            className={`timeline-mode-option ${readingMode === "causal" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "causal"}
-            onClick={() => onReadingModeChange("causal")}
-          >
-            <Route size={14} aria-hidden="true" />
-            연결
-          </button>
+          {/* 연결(causal) view retired from the switch — CausalMapView stays in
+              the code, just unwired here. Re-add this button to surface it. */}
         </div>
         <div className="toolbar-pop-wrap" ref={filterPopRef}>
           <button

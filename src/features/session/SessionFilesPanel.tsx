@@ -88,7 +88,7 @@ export function SessionFilesPanel({ sources }: { sources: SourceRef[] }) {
         <span className="session-files-summary">
           변경 {summary.changedFileCount}
           {summary.movedFileCount > 0 ? ` · 이동 ${summary.movedFileCount}` : ""}
-          {summary.missingFileCount > 0 ? ` · 없어짐 ${summary.missingFileCount}` : ""}
+          {summary.missingFileCount > 0 ? ` · 유실 ${summary.missingFileCount}` : ""}
         </span>
       </header>
 
@@ -155,7 +155,7 @@ function FileRow({ entry }: { entry: ReconciledFileEntry }) {
 
 function LocationBadge({ entry }: { entry: ReconciledFileEntry }) {
   if (entry.location.status === "moved") return <Badge tone="orange">이동됨</Badge>;
-  if (entry.location.status === "missing") return <Badge tone="red">없어짐</Badge>;
+  if (entry.location.status === "missing") return <Badge tone="red">유실</Badge>;
   return null;
 }
 
