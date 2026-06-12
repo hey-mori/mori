@@ -7,7 +7,6 @@ import {
   Sparkles,
   Square,
   SquareCheck,
-  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
@@ -180,6 +179,7 @@ export function ReviewView() {
     <ReviewDetailPanel
       selection={activeSelection}
       view={view}
+      onClose={() => setSelection(null)}
       onShowTimeline={handleShowTimeline}
       onToggleNextActionComplete={(id, completed) => setNextActionCompletion(id, completed)}
       onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
@@ -337,22 +337,7 @@ export function ReviewView() {
     <div className="session-tab-pane session-tab-insights">
       <div className={`session-tab-split review-tab-canvas${showAside ? "" : " is-collapsed"}`}>
         <div className="session-tab-main">{body}</div>
-        {showAside ? (
-          <div className="review-inspector-shell" aria-label="선택 항목 상세">
-            <header className="review-inspector-shell-head">
-              <span>선택 항목</span>
-              <button
-                type="button"
-                className="review-inspector-close"
-                aria-label="상세 닫기"
-                onClick={() => setSelection(null)}
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            </header>
-            {aside}
-          </div>
-        ) : null}
+        {showAside ? aside : null}
       </div>
     </div>
   );

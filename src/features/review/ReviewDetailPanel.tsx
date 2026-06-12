@@ -1,8 +1,16 @@
-import { CalendarClock, CheckCircle2, Layers, ListPlus, Pencil, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, Layers, ListPlus, Pencil, Sparkles } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
-import { SectionHeader } from "../../components/ui/SectionHeader";
+import {
+  BaseInspectorPanel,
+  InspectorSection,
+  InspectorRows,
+  InspectorRow,
+  InspectorActions,
+  InspectorNote,
+  InspectorEmpty,
+} from "../../components/ui/BaseInspectorPanel";
 import {
   eventTypeLabels,
   issueStatusLabels,
@@ -30,8 +38,6 @@ import {
   priorityTone,
   type ReviewSelection,
 } from "../../lib/review-workspace/reviewWorkspace";
-
-const PRIORITY_ORDER: Priority[] = ["high", "medium", "low"];
 import { InlineEditForm } from "./InlineEditForm";
 import type {
   DecisionEditFields,
@@ -39,9 +45,12 @@ import type {
   NextActionEditFields,
 } from "../../lib/session/reviewItemEdit";
 
+const PRIORITY_ORDER: Priority[] = ["high", "medium", "low"];
+
 export function ReviewDetailPanel({
   selection,
   view,
+  onClose,
   onShowTimeline,
   onToggleNextActionComplete,
   onSetIssueStatus,
@@ -54,6 +63,8 @@ export function ReviewDetailPanel({
 }: {
   selection: ReviewSelection;
   view: MockSession;
+  /** Close the panel from within (renders the X). */
+  onClose?: () => void;
   onShowTimeline: (eventId: string) => void;
   onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
   onSetIssueStatus: (issueId: string, status: IssueStatus) => void;
@@ -67,31 +78,33 @@ export function ReviewDetailPanel({
 }) {
   if (selection.kind === "none") {
     return (
-      <aside className="review-detail base-scroll" aria-label="검토 상세">
-        <header className="review-detail-header">
-          <Badge tone="gray">선택된 항목 없음</Badge>
-          <h3>검토 상세</h3>
-          <p>왼쪽 목록에서 이슈, 결정, 또는 다음 액션을 선택하면 근거 출처와 관련 이벤트가 여기 표시됩니다.</p>
-        </header>
-        <section className="review-detail-section">
-          <SectionHeader title="이 화면에서 가능한 것" />
-          <ul className="review-detail-bullets">
+      <BaseInspectorPanel
+        className="inspector"
+        ariaLabel="검토 상세"
+        onClose={onClose}
+        eyebrow={<Badge tone="gray">선택된 항목 없음</Badge>}
+        title="검토 상세"
+        description="왼쪽 목록에서 이슈, 결정, 또는 다음 액션을 선택하면 근거 출처와 관련 이벤트가 여기 표시됩니다."
+      >
+        <InspectorSection title="이 화면에서 가능한 것">
+          <ul className="ins-bullets">
             <li>분석이 만든 이슈와 결정의 근거를 확인합니다.</li>
             <li>관련 Timeline 이벤트로 이동합니다.</li>
             <li>다음 액션 후보를 검토합니다.</li>
           </ul>
-        </section>
-      </aside>
+        </InspectorSection>
+      </BaseInspectorPanel>
     );
   }
 
   if (selection.kind === "issue") {
     const issue = view.issues.find((entry) => entry.id === selection.issueId);
-    if (!issue) return <MissingItem label="이슈" />;
+    if (!issue) return <MissingItem label="이슈" onClose={onClose} />;
     return (
       <IssueDetail
         issue={issue}
         view={view}
+        onClose={onClose}
         onShowTimeline={onShowTimeline}
         onSetStatus={onSetIssueStatus}
         onEditIssue={onEditIssue}
@@ -103,11 +116,12 @@ export function ReviewDetailPanel({
 
   if (selection.kind === "decision") {
     const decision = view.decisions.find((entry) => entry.id === selection.decisionId);
-    if (!decision) return <MissingItem label="결정" />;
+    if (!decision) return <MissingItem label="결정" onClose={onClose} />;
     return (
       <DecisionDetail
         decision={decision}
         view={view}
+        onClose={onClose}
         onShowTimeline={onShowTimeline}
         onSetConfirmed={onSetDecisionConfirmed}
         onEditDecision={onEditDecision}
@@ -117,11 +131,12 @@ export function ReviewDetailPanel({
   }
 
   const nextAction = view.nextActions.find((entry) => entry.id === selection.nextActionId);
-  if (!nextAction) return <MissingItem label="다음 액션" />;
+  if (!nextAction) return <MissingItem label="다음 액션" onClose={onClose} />;
   return (
     <NextActionDetail
       nextAction={nextAction}
       view={view}
+      onClose={onClose}
       onShowTimeline={onShowTimeline}
       onToggleComplete={onToggleNextActionComplete}
       onEditNextAction={onEditNextAction}
@@ -130,20 +145,25 @@ export function ReviewDetailPanel({
   );
 }
 
-function MissingItem({ label }: { label: string }) {
+function MissingItem({ label, onClose }: { label: string; onClose?: () => void }) {
   return (
-    <aside className="review-detail base-scroll" aria-label="검토 상세">
-      <header className="review-detail-header">
-        <Badge tone="gray">선택된 {label}을 찾을 수 없음</Badge>
-        <p>이 세션에는 이 ID에 해당하는 {label}이 더 이상 없습니다.</p>
-      </header>
-    </aside>
+    <BaseInspectorPanel
+      className="inspector"
+      ariaLabel="검토 상세"
+      onClose={onClose}
+      eyebrow={<Badge tone="gray">선택된 {label}을 찾을 수 없음</Badge>}
+      title={`이 ${label}을 찾을 수 없습니다`}
+      description={`이 세션에는 이 ID에 해당하는 ${label}이 더 이상 없습니다.`}
+    >
+      {null}
+    </BaseInspectorPanel>
   );
 }
 
 function IssueDetail({
   issue,
   view,
+  onClose,
   onShowTimeline,
   onSetStatus,
   onEditIssue,
@@ -152,6 +172,7 @@ function IssueDetail({
 }: {
   issue: Issue;
   view: MockSession;
+  onClose?: () => void;
   onShowTimeline: (eventId: string) => void;
   onSetStatus: (issueId: string, status: IssueStatus) => void;
   onEditIssue: (issueId: string, fields: IssueEditFields) => boolean;
@@ -164,79 +185,75 @@ function IssueDetail({
   const relatedDecisions = view.decisions.filter((decision) =>
     issue.relatedDecisionIds.includes(decision.id),
   );
-  const canEditText = canEditStatus;
   const existingNextAction = view.nextActions.find((action) =>
     action.relatedIssueIds.includes(issue.id),
   );
 
+  if (isEditing) {
+    return (
+      <EditPanel ariaLabel="이슈 편집" title="이슈 편집" onClose={onClose}>
+        <InlineEditForm
+          fields={[
+            { id: "title", label: "제목", value: issue.title, required: true },
+            { id: "description", label: "설명", value: issue.description, multiline: true },
+          ]}
+          onSave={(values) => {
+            if (onEditIssue(issue.id, values)) setIsEditing(false);
+          }}
+          onCancel={() => setIsEditing(false)}
+        />
+      </EditPanel>
+    );
+  }
+
   return (
-    <aside className="review-detail base-scroll" aria-label="이슈 상세">
-      <header className="review-detail-header">
-        {issue.editedByUser ? (
-          <div className="review-detail-badges">
-            <Badge tone="blue">사용자 수정됨</Badge>
-          </div>
-        ) : null}
-        {isEditing ? (
-          <InlineEditForm
-            fields={[
-              { id: "title", label: "제목", value: issue.title, required: true },
-              { id: "description", label: "설명", value: issue.description, multiline: true },
-            ]}
-            onSave={(values) => {
-              if (onEditIssue(issue.id, values)) setIsEditing(false);
-            }}
-            onCancel={() => setIsEditing(false)}
-          />
-        ) : (
-          <>
-            <h3>{issue.title}</h3>
-            <p className="review-detail-detail">{issue.description}</p>
-            {issue.editedByUser && issue.editedAt ? (
-              <p className="review-detail-time">
-                <CalendarClock size={11} aria-hidden="true" /> 마지막 수정 {formatDate(issue.editedAt)}
-              </p>
-            ) : null}
-          </>
-        )}
-      </header>
+    <BaseInspectorPanel
+      className="inspector"
+      ariaLabel="이슈 상세"
+      onClose={onClose}
+      eyebrow={issue.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : undefined}
+      title={issue.title}
+      description={issue.description}
+      meta={
+        issue.editedByUser && issue.editedAt
+          ? `마지막 수정 ${formatDate(issue.editedAt)}`
+          : undefined
+      }
+    >
+      <InspectorSection title="제안된 다음 액션">
+        <InspectorNote icon={<Sparkles size={12} aria-hidden="true" />}>
+          {issue.suggestedNextAction || "(제안된 액션 없음)"}
+        </InspectorNote>
+      </InspectorSection>
 
-      <section className="review-detail-section">
-        <SectionHeader title="제안된 다음 액션" />
-        <p className="review-detail-suggestion">
-          <Sparkles size={12} aria-hidden="true" />
-          <span>{issue.suggestedNextAction || "(제안된 액션 없음)"}</span>
-        </p>
-      </section>
-
-      <section className="review-detail-section">
-        <SectionHeader title="근거" hint={`출처 ${evidence.sourceCount}개 · 이벤트 ${evidence.eventCount}건`} />
+      <InspectorSection
+        title="근거"
+        hint={`출처 ${evidence.sourceCount} · 이벤트 ${evidence.eventCount}`}
+      >
         <EvidenceList view={view} sourceIds={evidence.sources.map((source) => source.id)} />
-      </section>
+      </InspectorSection>
 
-      <section className="review-detail-section">
-        <SectionHeader title="관련 Timeline 이벤트" hint={`${relatedEvents.length}건`} />
+      <InspectorSection title="관련 Timeline 이벤트" hint={`${relatedEvents.length}건`}>
         <RelatedEventList events={relatedEvents} onShowTimeline={onShowTimeline} />
-      </section>
+      </InspectorSection>
 
       {relatedDecisions.length > 0 ? (
-        <section className="review-detail-section">
-          <SectionHeader title="관련 결정" hint={`${relatedDecisions.length}건`} />
-          <ul className="review-detail-links">
+        <InspectorSection title="관련 결정" hint={`${relatedDecisions.length}건`}>
+          <InspectorRows>
             {relatedDecisions.map((decision) => (
-              <li key={decision.id}>
-                <Badge tone="green">결정</Badge>
-                <span>{decision.title}</span>
-              </li>
+              <InspectorRow
+                key={decision.id}
+                leading={<Badge tone="green">결정</Badge>}
+                title={decision.title}
+              />
             ))}
-          </ul>
-        </section>
+          </InspectorRows>
+        </InspectorSection>
       ) : null}
 
       {canEditStatus ? (
         <>
-          <section className="review-detail-section">
-            <SectionHeader title="상태" hint="이슈 상태를 바꾸면 세션에 저장됩니다." />
+          <InspectorSection title="상태" hint="바꾸면 세션에 저장됩니다">
             <SegmentedControl
               ariaLabel="이슈 상태"
               role="radiogroup"
@@ -247,29 +264,24 @@ function IssueDetail({
                 label: issueStatusLabels[status],
               }))}
             />
-          </section>
+          </InspectorSection>
 
-          <section className="review-detail-section">
-            <SectionHeader title="우선순위" hint="우선순위를 바꾸면 세션에 저장됩니다." />
+          <InspectorSection title="우선순위" hint="바꾸면 세션에 저장됩니다">
             <SegmentedControl
               ariaLabel="이슈 우선순위"
               role="radiogroup"
               value={issue.priority}
               onChange={(priority) => onEditIssue(issue.id, { priority })}
-              options={PRIORITY_ORDER.map((p) => ({
-                id: p,
-                label: priorityLabels[p],
-              }))}
+              options={PRIORITY_ORDER.map((p) => ({ id: p, label: priorityLabels[p] }))}
             />
-          </section>
+          </InspectorSection>
 
-          <section className="review-detail-section">
-            <SectionHeader title="액션" />
-            <div className="review-detail-actions">
+          <InspectorSection title="액션">
+            <InspectorActions>
               <Button
                 variant="secondary"
                 icon={Pencil}
-                disabled={!canEditText || isEditing}
+                disabled={isEditing}
                 title="이슈 제목과 설명을 사용자 수정으로 저장합니다."
                 onClick={() => setIsEditing(true)}
               >
@@ -287,17 +299,18 @@ function IssueDetail({
               >
                 {existingNextAction ? "액션 보기" : "액션으로 승격"}
               </Button>
-            </div>
-          </section>
+            </InspectorActions>
+          </InspectorSection>
         </>
       ) : null}
-    </aside>
+    </BaseInspectorPanel>
   );
 }
 
 function DecisionDetail({
   decision,
   view,
+  onClose,
   onShowTimeline,
   onSetConfirmed,
   onEditDecision,
@@ -305,6 +318,7 @@ function DecisionDetail({
 }: {
   decision: Decision;
   view: MockSession;
+  onClose?: () => void;
   onShowTimeline: (eventId: string) => void;
   onSetConfirmed: (decisionId: string, confirmed: boolean) => void;
   onEditDecision: (decisionId: string, fields: DecisionEditFields) => boolean;
@@ -316,123 +330,101 @@ function DecisionDetail({
   const relatedIssues = view.issues.filter((issue) =>
     decision.relatedIssueIds.includes(issue.id),
   );
-  const canEditText = canEditConfirm;
+
+  if (isEditing) {
+    return (
+      <EditPanel ariaLabel="결정 편집" title="결정 편집" onClose={onClose}>
+        <InlineEditForm
+          fields={[
+            { id: "title", label: "제목", value: decision.title, required: true },
+            { id: "decision", label: "결정 내용", value: decision.decision, multiline: true },
+            { id: "rationale", label: "이유", value: decision.rationale, multiline: true },
+          ]}
+          onSave={(values) => {
+            if (onEditDecision(decision.id, values)) setIsEditing(false);
+          }}
+          onCancel={() => setIsEditing(false)}
+        />
+      </EditPanel>
+    );
+  }
 
   return (
-    <aside className="review-detail base-scroll" aria-label="결정 상세">
-      <header className="review-detail-header">
-        {decision.editedByUser ? (
-          <div className="review-detail-badges">
-            <Badge tone="blue">사용자 수정됨</Badge>
-          </div>
-        ) : null}
-        {isEditing ? (
-          <InlineEditForm
-            fields={[
-              { id: "title", label: "제목", value: decision.title, required: true },
-              { id: "decision", label: "결정 내용", value: decision.decision, multiline: true },
-              { id: "rationale", label: "이유", value: decision.rationale, multiline: true },
-            ]}
-            onSave={(values) => {
-              if (onEditDecision(decision.id, values)) setIsEditing(false);
-            }}
-            onCancel={() => setIsEditing(false)}
-          />
-        ) : (
-          <>
-            <h3>{decision.title}</h3>
-            <p className="review-detail-detail">{decision.decision}</p>
-            <p className="review-detail-time">
-              <CalendarClock size={11} aria-hidden="true" /> {formatTime(decision.createdAt)}
-            </p>
-            {decision.editedByUser && decision.editedAt ? (
-              <p className="review-detail-time">
-                <CalendarClock size={11} aria-hidden="true" /> 마지막 수정 {formatDate(decision.editedAt)}
-              </p>
-            ) : null}
-          </>
-        )}
-      </header>
-
-      {!isEditing ? (
-        <section className="review-detail-section">
-          <SectionHeader title="이유" />
-          <p className="review-detail-rationale">{decision.rationale || "(이유 기록 없음)"}</p>
-        </section>
-      ) : null}
+    <BaseInspectorPanel
+      className="inspector"
+      ariaLabel="결정 상세"
+      onClose={onClose}
+      eyebrow={decision.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : undefined}
+      title={decision.title}
+      description={decision.decision}
+      meta={formatTime(decision.createdAt)}
+    >
+      <InspectorSection title="이유">
+        <InspectorNote>{decision.rationale || "(이유 기록 없음)"}</InspectorNote>
+      </InspectorSection>
 
       {decision.rejectedOptions.length > 0 ? (
-        <section className="review-detail-section">
-          <SectionHeader title="폐기한 대안" hint={`${decision.rejectedOptions.length}건`} />
-          <ul className="review-detail-bullets">
+        <InspectorSection title="폐기한 대안" hint={`${decision.rejectedOptions.length}건`}>
+          <ul className="ins-bullets is-muted">
             {decision.rejectedOptions.map((option) => (
               <li key={option}>{option}</li>
             ))}
           </ul>
-        </section>
+        </InspectorSection>
       ) : null}
 
       {decision.impact.length > 0 ? (
-        <section className="review-detail-section">
-          <SectionHeader title="영향" />
-          <ul className="review-detail-bullets">
+        <InspectorSection title="영향">
+          <ul className="ins-bullets">
             {decision.impact.map((impact) => (
               <li key={impact}>{impact}</li>
             ))}
           </ul>
-        </section>
+        </InspectorSection>
       ) : null}
 
-      <section className="review-detail-section">
-        <SectionHeader title="근거" hint={`출처 ${evidence.sourceCount}개 · 이벤트 ${evidence.eventCount}건`} />
+      <InspectorSection
+        title="근거"
+        hint={`출처 ${evidence.sourceCount} · 이벤트 ${evidence.eventCount}`}
+      >
         <EvidenceList view={view} sourceIds={evidence.sources.map((source) => source.id)} />
-      </section>
+      </InspectorSection>
 
-      <section className="review-detail-section">
-        <SectionHeader title="관련 Timeline 이벤트" hint={`${relatedEvents.length}건`} />
+      <InspectorSection title="관련 Timeline 이벤트" hint={`${relatedEvents.length}건`}>
         <RelatedEventList events={relatedEvents} onShowTimeline={onShowTimeline} />
-      </section>
+      </InspectorSection>
 
       {relatedIssues.length > 0 ? (
-        <section className="review-detail-section">
-          <SectionHeader title="관련 이슈" hint={`${relatedIssues.length}건`} />
-          <ul className="review-detail-links">
+        <InspectorSection title="관련 이슈" hint={`${relatedIssues.length}건`}>
+          <InspectorRows>
             {relatedIssues.map((issue) => (
-              <li key={issue.id}>
-                <Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>
-                <span>{issue.title}</span>
-              </li>
+              <InspectorRow
+                key={issue.id}
+                leading={<Badge tone={priorityTone(issue.priority)}>{priorityLabels[issue.priority]}</Badge>}
+                title={issue.title}
+              />
             ))}
-          </ul>
-        </section>
+          </InspectorRows>
+        </InspectorSection>
       ) : null}
 
       {canEditConfirm ? (
         <>
-          <section className="review-detail-section">
-            <SectionHeader title="중요도" hint="중요도를 바꾸면 세션에 저장됩니다." />
+          <InspectorSection title="중요도" hint="바꾸면 세션에 저장됩니다">
             <SegmentedControl
               ariaLabel="결정 중요도"
               role="radiogroup"
               value={decision.importance}
               onChange={(importance) => onEditDecision(decision.id, { importance })}
-              options={PRIORITY_ORDER.map((p) => ({
-                id: p,
-                label: priorityLabels[p],
-              }))}
+              options={PRIORITY_ORDER.map((p) => ({ id: p, label: priorityLabels[p] }))}
             />
-          </section>
+          </InspectorSection>
 
-          <section className="review-detail-section">
-            <SectionHeader
-              title="액션"
-              hint={
-                decision.confirmed
-                  ? "확정된 결정입니다. 다시 검토가 필요하면 반려할 수 있습니다."
-                  : "검토를 마쳤다면 이 결정을 확정 처리하세요."
-              }
-            />
-            <div className="review-detail-actions">
+          <InspectorSection
+            title="액션"
+            hint={decision.confirmed ? "확정됨 · 반려 가능" : "검토를 마쳤다면 확정하세요"}
+          >
+            <InspectorActions>
               <Button
                 variant={decision.confirmed ? "ghost" : "primary"}
                 onClick={() => onSetConfirmed(decision.id, !decision.confirmed)}
@@ -442,23 +434,24 @@ function DecisionDetail({
               <Button
                 variant="secondary"
                 icon={Pencil}
-                disabled={!canEditText || isEditing}
+                disabled={isEditing}
                 title="결정 제목, 내용, 이유를 사용자 수정으로 저장합니다."
                 onClick={() => setIsEditing(true)}
               >
                 편집
               </Button>
-            </div>
-          </section>
+            </InspectorActions>
+          </InspectorSection>
         </>
       ) : null}
-    </aside>
+    </BaseInspectorPanel>
   );
 }
 
 function NextActionDetail({
   nextAction,
   view,
+  onClose,
   onShowTimeline,
   onToggleComplete,
   onEditNextAction,
@@ -466,6 +459,7 @@ function NextActionDetail({
 }: {
   nextAction: NextAction;
   view: MockSession;
+  onClose?: () => void;
   onShowTimeline: (eventId: string) => void;
   onToggleComplete: (nextActionId: string, completed: boolean) => void;
   onEditNextAction: (nextActionId: string, fields: NextActionEditFields) => boolean;
@@ -475,103 +469,92 @@ function NextActionDetail({
   const relatedIssues = view.issues.filter((issue) =>
     nextAction.relatedIssueIds.includes(issue.id),
   );
-  const relatedEvents = view.events.filter((event) => nextAction.relatedEventIds.includes(event.id));
+  const relatedEvents = view.events.filter((event) =>
+    nextAction.relatedEventIds.includes(event.id),
+  );
   const completed = isNextActionCompleted(nextAction);
-  const canEditText = canEditCompletion;
+
+  if (isEditing) {
+    return (
+      <EditPanel ariaLabel="다음 액션 편집" title="다음 액션 편집" onClose={onClose}>
+        <InlineEditForm
+          fields={[{ id: "title", label: "제목", value: nextAction.title, required: true }]}
+          onSave={(values) => {
+            if (onEditNextAction(nextAction.id, values)) setIsEditing(false);
+          }}
+          onCancel={() => setIsEditing(false)}
+        />
+      </EditPanel>
+    );
+  }
 
   return (
-    <aside className="review-detail base-scroll" aria-label="다음 액션 상세">
-      <header className="review-detail-header">
-        {nextAction.editedByUser ? (
-          <div className="review-detail-badges">
-            <Badge tone="blue">사용자 수정됨</Badge>
-          </div>
-        ) : null}
-        {isEditing ? (
-          <InlineEditForm
-            fields={[
-              { id: "title", label: "제목", value: nextAction.title, required: true },
-            ]}
-            onSave={(values) => {
-              if (onEditNextAction(nextAction.id, values)) setIsEditing(false);
-            }}
-            onCancel={() => setIsEditing(false)}
-          />
+    <BaseInspectorPanel
+      className="inspector"
+      ariaLabel="다음 액션 상세"
+      onClose={onClose}
+      eyebrow={
+        <>
+          {nextAction.editedByUser ? <Badge tone="blue">사용자 수정됨</Badge> : null}
+          {completed ? <Badge tone="green">완료</Badge> : null}
+        </>
+      }
+      title={nextAction.title}
+      meta={
+        completed && nextAction.completedAt
+          ? `완료 처리 ${formatDate(nextAction.completedAt)}`
+          : nextAction.editedByUser && nextAction.editedAt
+            ? `마지막 수정 ${formatDate(nextAction.editedAt)}`
+            : undefined
+      }
+    >
+      <InspectorSection title="근거" hint="연결된 출처 · 이슈 · 이벤트">
+        {relatedIssues.length === 0 && relatedEvents.length === 0 ? (
+          <InspectorEmpty>연결된 이슈나 Timeline 이벤트가 없습니다.</InspectorEmpty>
         ) : (
-          <>
-            <h3>{nextAction.title}</h3>
-            {completed && nextAction.completedAt ? (
-              <p className="review-detail-completed-at">
-                <CheckCircle2 size={13} aria-hidden="true" />
-                <span>완료 처리 {formatDate(nextAction.completedAt)}</span>
-              </p>
-            ) : null}
-            {nextAction.editedByUser && nextAction.editedAt ? (
-              <p className="review-detail-time">
-                <CalendarClock size={11} aria-hidden="true" /> 마지막 수정 {formatDate(nextAction.editedAt)}
-              </p>
-            ) : null}
-          </>
-        )}
-      </header>
-
-      <section className="review-detail-section">
-        <SectionHeader title="근거" hint="이 액션과 직접 연결된 출처 / 이슈 / 이벤트" />
-        <ul className="review-detail-links">
-          {relatedIssues.length === 0 && relatedEvents.length === 0 ? (
-            <li>
-              <Badge tone="gray">근거</Badge>
-              <span>연결된 이슈나 Timeline 이벤트가 없습니다.</span>
-            </li>
-          ) : null}
-          {relatedIssues.map((issue) => (
-            <li key={issue.id}>
-              <Badge tone={priorityTone(issue.priority)}>이슈</Badge>
-              <span>{issue.title}</span>
-            </li>
-          ))}
-          {relatedEvents.map((event) => (
-            <li key={event.id}>
-              <Badge tone="purple">{eventTypeLabels[event.type] ?? event.type}</Badge>
-              <button
-                type="button"
-                className="review-detail-event-link"
+          <InspectorRows>
+            {relatedIssues.map((issue) => (
+              <InspectorRow
+                key={issue.id}
+                leading={<Badge tone={priorityTone(issue.priority)}>이슈</Badge>}
+                title={issue.title}
+              />
+            ))}
+            {relatedEvents.map((event) => (
+              <InspectorRow
+                key={event.id}
+                leading={<Badge tone="purple">{eventTypeLabels[event.type] ?? event.type}</Badge>}
+                title={event.title}
                 onClick={() => onShowTimeline(event.id)}
-                title="타임라인에서 이 이벤트 보기"
-              >
-                {event.title}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+              />
+            ))}
+          </InspectorRows>
+        )}
+      </InspectorSection>
+
+      {completed ? (
+        <InspectorNote icon={<CheckCircle2 size={13} aria-hidden="true" />}>
+          이 액션은 완료 처리되어 Resume 프롬프트에서 제외됩니다.
+        </InspectorNote>
+      ) : null}
 
       {canEditCompletion ? (
         <>
-          <section className="review-detail-section">
-            <SectionHeader title="우선순위" hint="우선순위를 바꾸면 세션에 저장됩니다." />
+          <InspectorSection title="우선순위" hint="바꾸면 세션에 저장됩니다">
             <SegmentedControl
               ariaLabel="다음 액션 우선순위"
               role="radiogroup"
               value={nextAction.priority}
               onChange={(priority) => onEditNextAction(nextAction.id, { priority })}
-              options={PRIORITY_ORDER.map((p) => ({
-                id: p,
-                label: priorityLabels[p],
-              }))}
+              options={PRIORITY_ORDER.map((p) => ({ id: p, label: priorityLabels[p] }))}
             />
-          </section>
+          </InspectorSection>
 
-          <section className="review-detail-section">
-            <SectionHeader
-              title="액션"
-              hint={
-                completed
-                  ? "완료한 다음 작업입니다. 다시 미완료로 되돌릴 수 있습니다."
-                  : "이 다음 작업을 완료 처리하면 Resume 프롬프트에서 제외됩니다."
-              }
-            />
-            <div className="review-detail-actions">
+          <InspectorSection
+            title="액션"
+            hint={completed ? "완료됨 · 되돌릴 수 있습니다" : "완료하면 Resume에서 제외됩니다"}
+          >
+            <InspectorActions>
               <Button
                 variant={completed ? "ghost" : "primary"}
                 onClick={() => onToggleComplete(nextAction.id, !completed)}
@@ -581,43 +564,67 @@ function NextActionDetail({
               <Button
                 variant="secondary"
                 icon={Pencil}
-                disabled={!canEditText || isEditing}
+                disabled={isEditing}
                 title="다음 액션 제목을 사용자 수정으로 저장합니다."
                 onClick={() => setIsEditing(true)}
               >
                 편집
               </Button>
-            </div>
-          </section>
+            </InspectorActions>
+          </InspectorSection>
         </>
       ) : null}
-    </aside>
+    </BaseInspectorPanel>
+  );
+}
+
+/** A minimal panel shell for the inline edit form — just the kit header + the
+ *  form, so editing reads as a focused mode of the same surface. */
+function EditPanel({
+  ariaLabel,
+  title,
+  onClose,
+  children,
+}: {
+  ariaLabel: string;
+  title: string;
+  onClose?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <BaseInspectorPanel
+      className="inspector"
+      ariaLabel={ariaLabel}
+      onClose={onClose}
+      title={title}
+    >
+      <InspectorSection>{children}</InspectorSection>
+    </BaseInspectorPanel>
   );
 }
 
 function EvidenceList({ view, sourceIds }: { view: MockSession; sourceIds: string[] }) {
   const sources = view.sources.filter((source) => sourceIds.includes(source.id));
   if (sources.length === 0) {
-    return <p className="review-detail-empty">연결된 출처가 없습니다.</p>;
+    return <InspectorEmpty>연결된 출처가 없습니다.</InspectorEmpty>;
   }
   return (
-    <ul className="review-detail-evidence">
-      {sources.slice(0, 5).map((source) => {
-        const display = getSourceDisplayStatus(source);
-        return (
-          <li key={source.id}>
-            <Layers size={11} aria-hidden="true" />
-            <span className="review-detail-evidence-title" title={source.title}>
-              {source.title}
-            </span>
-            <small>{display.integrationLabel}</small>
-          </li>
-        );
-      })}
-      {sources.length > 5 ? (
-        <li className="review-detail-evidence-more">+ {sources.length - 5}건 더</li>
-      ) : null}
-    </ul>
+    <>
+      <InspectorRows>
+        {sources.slice(0, 5).map((source) => {
+          const display = getSourceDisplayStatus(source);
+          return (
+            <InspectorRow
+              key={source.id}
+              leading={<Layers size={13} aria-hidden="true" />}
+              title={source.title}
+              meta={display.integrationLabel}
+            />
+          );
+        })}
+      </InspectorRows>
+      {sources.length > 5 ? <InspectorEmpty>+ {sources.length - 5}건 더</InspectorEmpty> : null}
+    </>
   );
 }
 
@@ -629,26 +636,21 @@ function RelatedEventList({
   onShowTimeline: (eventId: string) => void;
 }) {
   if (events.length === 0) {
-    return <p className="review-detail-empty">연결된 Timeline 이벤트가 없습니다.</p>;
+    return <InspectorEmpty>연결된 Timeline 이벤트가 없습니다.</InspectorEmpty>;
   }
   return (
-    <ul className="review-detail-events">
-      {events.slice(0, 5).map((event) => (
-        <li key={event.id}>
-          <Badge tone="purple">{eventTypeLabels[event.type] ?? event.type}</Badge>
-          <button
-            type="button"
-            className="review-detail-event-link"
+    <>
+      <InspectorRows>
+        {events.slice(0, 5).map((event) => (
+          <InspectorRow
+            key={event.id}
+            leading={<Badge tone="purple">{eventTypeLabels[event.type] ?? event.type}</Badge>}
+            title={event.title}
             onClick={() => onShowTimeline(event.id)}
-            title="타임라인에서 이 이벤트 보기"
-          >
-            {event.title}
-          </button>
-        </li>
-      ))}
-      {events.length > 5 ? (
-        <li className="review-detail-event-more">+ {events.length - 5}건 더</li>
-      ) : null}
-    </ul>
+          />
+        ))}
+      </InspectorRows>
+      {events.length > 5 ? <InspectorEmpty>+ {events.length - 5}건 더</InspectorEmpty> : null}
+    </>
   );
 }
