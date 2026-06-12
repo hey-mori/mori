@@ -1,5 +1,8 @@
 import {
   Check,
+  Circle,
+  CircleCheck,
+  CircleDashed,
   Eye,
   Filter,
   ListPlus,
@@ -509,7 +512,7 @@ function ColumnEmpty({ label }: { label: string }) {
  */
 function ReviewBoardCard({
   title,
-  subtitle,
+  glyph,
   leading,
   priority,
   edited,
@@ -519,7 +522,9 @@ function ReviewBoardCard({
   onSelect,
 }: {
   title: string;
-  subtitle?: string;
+  /** A small status / kind glyph shown left of the title (issue status,
+   *  decision confirmation). Next-action cards use `leading` instead. */
+  glyph?: ReactNode;
   leading?: ReactNode;
   priority?: Priority;
   edited?: boolean;
@@ -539,8 +544,8 @@ function ReviewBoardCard({
       }
       aria-current={selected ? "true" : undefined}
     >
-      {/* The leading control (e.g. a next-action checkbox button) sits OUTSIDE
-          the card button: a button cannot nest inside a button. It is absolutely
+      {/* The leading control (a next-action checkbox button) sits OUTSIDE the
+          card button: a button cannot nest inside a button. It is absolutely
           positioned over the title row so the layout still reads as inline. */}
       {leading ? <div className="review-card-leading-slot">{leading}</div> : null}
       <button
@@ -551,14 +556,16 @@ function ReviewBoardCard({
         onClick={onSelect}
       >
         <div className="review-card-head-row">
+          {glyph ? (
+            <span className="review-card-glyph" aria-hidden="true">
+              {glyph}
+            </span>
+          ) : null}
           <span className="review-card-title">{title}</span>
           {edited ? (
             <span className="review-card-edited" aria-label="사용자가 수정함" title="사용자가 수정함" />
           ) : null}
         </div>
-        {subtitle && !isRedundantSubtitle(title, subtitle) ? (
-          <p className="review-card-summary">{subtitle}</p>
-        ) : null}
       </button>
       {quickActions ? (
         <div className="review-card-quick-actions" role="group" aria-label="빠른 작업">
@@ -569,33 +576,24 @@ function ReviewBoardCard({
   );
 }
 
-
-/**
- * The rule-based engine often sets an item's summary to (nearly) its title, so
- * the card would print the same sentence twice. Treat the summary as redundant
- * when, stripped of markdown and spacing, the two are equal, or one all but
- * contains the other (the shorter covers >60% of the longer). The coverage gate
- * keeps a genuinely longer summary — where the title is just a short truncation —
- * visible rather than hiding its extra detail.
- */
-function isRedundantSubtitle(title: string, subtitle: string): boolean {
-  const norm = (text: string) => text.replace(/[\s*`#_>-]+/g, "").toLowerCase();
-  const a = norm(title);
-  const b = norm(subtitle);
-  if (!b) return true;
-  if (a === b) return true;
-  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
-  return (
-    shorter.length >= 12 &&
-    longer.includes(shorter) &&
-    shorter.length / longer.length > 0.6
-  );
-}
-
 /** Strip the rule-based "확인 또는 해결: " prefix the engine prepends to a
  *  next-action it derived from an issue, so the card reads as the work itself. */
 function stripNextActionPrefix(title: string): string {
   return title.replace(/^확인 또는 해결:\s*/, "");
+}
+
+/** The status glyph for an issue card — open / 진행 중 / 관찰 / 해결, so the
+ *  card's state reads at a glance without a status chip. */
+function IssueGlyph({ status }: { status: IssueStatus }) {
+  if (status === "resolved") return <CircleCheck size={15} />;
+  if (status === "watching") return <Eye size={15} />;
+  if (status === "inProgress") return <CircleDashed size={15} />;
+  return <Circle size={15} />;
+}
+
+/** The status glyph for a decision card — confirmed vs still under review. */
+function DecisionGlyph({ confirmed }: { confirmed: boolean }) {
+  return confirmed ? <CircleCheck size={15} /> : <Circle size={15} />;
 }
 
 function stopAnd(handler: () => void) {
@@ -658,7 +656,7 @@ function IssueBoardCard({
   return (
     <ReviewBoardCard
       title={issue.title}
-      subtitle={issue.description}
+      glyph={<IssueGlyph status={issue.status} />}
       priority={issue.priority}
       edited={issue.editedByUser}
       muted={isResolved}
@@ -708,7 +706,7 @@ function DecisionBoardCard({
   return (
     <ReviewBoardCard
       title={decision.title}
-      subtitle={decision.decision}
+      glyph={<DecisionGlyph confirmed={decision.confirmed} />}
       priority={decision.importance}
       edited={decision.editedByUser}
       muted={false}
