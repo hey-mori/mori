@@ -69,7 +69,7 @@ export function ReviewView() {
   const editNextAction = useSessionStore((state) => state.editNextAction);
   const imports = useSessionStore((state) => state.imports);
   const setCurrentView = useAppStore((state) => state.navigate);
-  const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
+  const focusTimelineEvent = useAppStore((state) => state.focusTimelineEvent);
   const reviewFocus = useAppStore((state) => state.reviewFocus);
   const clearReviewFocus = useAppStore((state) => state.clearReviewFocus);
 
@@ -142,8 +142,9 @@ export function ReviewView() {
   const sortedDecisions = useMemo(() => sortDecisions(visibleDecisions), [visibleDecisions]);
   const sortedNextActions = useMemo(() => sortNextActions(visibleNextActions), [visibleNextActions]);
   function handleShowTimeline(eventId: string) {
-    setSelectedEventId(eventId);
-    setCurrentView("timeline");
+    // Land on the event in the 원본 stream (highlighted + scrolled to), not the
+    // AI 흐름 summary the 활동 tab would otherwise open on.
+    focusTimelineEvent(eventId);
   }
 
   function toggleSelection(next: ReviewSelection) {

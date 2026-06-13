@@ -90,6 +90,28 @@ describe("app store — session-centric routing", () => {
     expect(state.reviewFocus).toEqual({ kind: "issue", issueId: "issue-1" });
   });
 
+  it("focusTimelineEvent() selects the event and routes to the 활동 tab with a one-shot", () => {
+    useAppStore.setState({
+      currentView: "home",
+      sessionTab: "overview",
+      selectedEventId: "",
+      timelineFocus: null,
+    });
+    useAppStore.getState().focusTimelineEvent("evt-42");
+    const state = useAppStore.getState();
+    expect(state.currentView).toBe("session");
+    expect(state.sessionTab).toBe("flow");
+    expect(state.selectedEventId).toBe("evt-42");
+    expect(state.timelineFocus).toEqual({ eventId: "evt-42" });
+    expect(state.inspectorCollapsed).toBe(false);
+  });
+
+  it("clearTimelineFocus() consumes the focus one-shot", () => {
+    useAppStore.setState({ timelineFocus: { eventId: "evt-42" } });
+    useAppStore.getState().clearTimelineFocus();
+    expect(useAppStore.getState().timelineFocus).toBeNull();
+  });
+
   it("setSessionTab() switches tabs without leaving the session workspace", () => {
     useAppStore.setState({ currentView: "session", sessionTab: "flow" });
     useAppStore.getState().setSessionTab("evidence");

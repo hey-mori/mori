@@ -92,6 +92,8 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const inspectorCollapsed = useAppStore((state) => state.inspectorCollapsed);
   const setInspectorCollapsed = useAppStore((state) => state.setInspectorCollapsed);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
+  const timelineFocus = useAppStore((state) => state.timelineFocus);
+  const clearTimelineFocus = useAppStore((state) => state.clearTimelineFocus);
 
   // Selecting an item opens the inspector; clicking the same item again clears
   // the selection and folds the inspector away.
@@ -148,6 +150,17 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
     TimelineReadingMode | null
   >(null);
   const readingMode: TimelineReadingMode = readingModeOverride ?? "workflow";
+
+  // A deep-link to a specific event (the overview reopen anchor, a review item's
+  // related event) arms `timelineFocus`. The 활동 tab defaults to the AI 흐름
+  // summary, which does not surface an individual event, so honour the focus by
+  // opening the 원본 stream, where the selected event is highlighted and scrolled
+  // into view. Consume the one-shot so a later manual mode switch is not undone.
+  useEffect(() => {
+    if (!timelineFocus) return;
+    setReadingModeOverride("stream");
+    clearTimelineFocus();
+  }, [timelineFocus, clearTimelineFocus]);
 
   // Track the viewport width so the inspector can auto-hide on narrow
   // screens, where a side column would otherwise crush the canvas.

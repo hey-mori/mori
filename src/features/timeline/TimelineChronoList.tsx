@@ -1,5 +1,5 @@
 import { ChevronDown, Layers3, Wrench } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SourceRef, TimelineEvent } from "../../domain/types";
 import { useSessionStore } from "../../app/sessionStore";
 import {
@@ -53,13 +53,25 @@ export function TimelineChronoList({
     (state) => state.analysisSettings.requestDisclosureLevel,
   );
   const requestDisclosureOverrides = useSessionStore((state) => state.requestDisclosureOverrides);
+  const listRef = useRef<HTMLOListElement | null>(null);
+  // Bring the selected row into view when the selection changes, so a deep-link
+  // to an event (the overview reopen anchor, a review item's related event) or
+  // keyboard navigation lands on a row that is actually on screen. `nearest`
+  // never jumps when the row is already visible, so clicking a visible row stays
+  // put.
+  useEffect(() => {
+    if (selectedItemId == null) return;
+    listRef.current
+      ?.querySelector(".timeline-chrono-row.is-selected")
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selectedItemId]);
   // Fold runs of tool calls so the stream reads as conversation, not a wall of
   // Grep / Bash / Read rows.
   const rows = foldStreamRows(sortDisplayItemsChronologically(model.visibleDisplayItems));
   if (rows.length === 0) return null;
 
   return (
-    <ol className={`timeline-chrono-list is-${density}`} aria-label="활동 목록">
+    <ol ref={listRef} className={`timeline-chrono-list is-${density}`} aria-label="활동 목록">
       {rows.map((row) => {
         if (row.kind === "toolRun") {
           return <ToolRunRow key={row.id} run={row} />;

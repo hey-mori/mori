@@ -37,7 +37,7 @@ export function OverviewView() {
   const mode = useSessionStore(selectSessionMode);
   const imports = useSessionStore((state) => state.imports);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
-  const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
+  const focusTimelineEvent = useAppStore((state) => state.focusTimelineEvent);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
 
   useEffect(() => {
@@ -88,8 +88,9 @@ export function OverviewView() {
 
   function resumeFromLastRequest() {
     if (!lastRequest) return;
-    setSelectedEventId(lastRequest.id);
-    setSessionTab("flow");
+    // Focus the event in the 원본 stream so reopening lands on the actual last
+    // work, highlighted and scrolled to, not the AI 흐름 summary.
+    focusTimelineEvent(lastRequest.id);
   }
 
   function openUnresolved(item: UnresolvedItem) {

@@ -86,6 +86,15 @@ type AppState = {
    */
   evidenceImportRequest: EvidenceImportRequest | null;
   /**
+   * A one-shot request to focus a specific event in the 활동 timeline. Set when
+   * another surface (the overview reopen anchor, a review item's related
+   * event) deep-links to an event: the 활동 tab defaults to the AI 흐름 summary,
+   * which does not surface an individual event, so the focus signal tells the
+   * timeline to open the 원본 stream, where the selected event is highlighted
+   * and scrolled into view. `TimelineView` consumes and clears it.
+   */
+  timelineFocus: { eventId: string } | null;
+  /**
    * Active tab on the Review surface. Stored here so the user returns to
    * the same tab when navigating away and back. Deep-link overrides via
    * `openReviewItem` still win and update this value.
@@ -149,6 +158,14 @@ type AppState = {
   /** Deep-link into Review focused on a specific issue / decision / next action. */
   openReviewItem: (selection: ReviewSelection) => void;
   clearReviewFocus: () => void;
+  /**
+   * Deep-link to a specific event in the 활동 timeline. Selects the event,
+   * routes to the session workspace's 활동 tab, and arms a one-shot so the
+   * timeline opens the 원본 stream with that event highlighted instead of the
+   * AI 흐름 summary, which would not show the event at all.
+   */
+  focusTimelineEvent: (eventId: string) => void;
+  clearTimelineFocus: () => void;
   /** Deep-link into Project Memory with one accepted memory's drawer open. */
   openAcceptedMemory: (memoryId: string) => void;
   clearMemoryFocus: () => void;
@@ -214,6 +231,7 @@ export const useAppStore = create<AppState>((set) => ({
   reviewFocus: null,
   memoryFocus: null,
   evidenceImportRequest: null,
+  timelineFocus: null,
   reviewTab: "issues",
   sessionTab: "overview",
   settingsTab: "profile",
@@ -242,6 +260,15 @@ export const useAppStore = create<AppState>((set) => ({
   openReviewItem: (selection) =>
     set({ reviewFocus: selection, currentView: "session", sessionTab: "insights" }),
   clearReviewFocus: () => set({ reviewFocus: null }),
+  focusTimelineEvent: (eventId) =>
+    set({
+      selectedEventId: eventId,
+      inspectorCollapsed: false,
+      timelineFocus: { eventId },
+      currentView: "session",
+      sessionTab: "flow",
+    }),
+  clearTimelineFocus: () => set({ timelineFocus: null }),
   openAcceptedMemory: (memoryId) =>
     set({ memoryFocus: { memoryId }, currentView: "memory" }),
   clearMemoryFocus: () => set({ memoryFocus: null }),
