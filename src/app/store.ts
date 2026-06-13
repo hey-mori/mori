@@ -95,6 +95,13 @@ type AppState = {
    */
   timelineFocus: { eventId: string } | null;
   /**
+   * A one-shot request to open a specific source in the 자료 evidence hub. Set
+   * when a review item's grounds list deep-links to the source its analysis was
+   * drawn from, completing the 검토 → 자료 direction of the evidence link.
+   * `EvidenceView` consumes and clears it.
+   */
+  evidenceFocus: { sourceId: string } | null;
+  /**
    * Active tab on the Review surface. Stored here so the user returns to
    * the same tab when navigating away and back. Deep-link overrides via
    * `openReviewItem` still win and update this value.
@@ -166,6 +173,13 @@ type AppState = {
    */
   focusTimelineEvent: (eventId: string) => void;
   clearTimelineFocus: () => void;
+  /**
+   * Deep-link to a source in the 자료 evidence hub, routing to the session
+   * workspace's 자료 tab and arming a one-shot the Evidence Hub reads to open
+   * that source's inspector. The 검토 → 자료 counterpart of `openReviewItem`.
+   */
+  openEvidenceSource: (sourceId: string) => void;
+  clearEvidenceFocus: () => void;
   /** Deep-link into Project Memory with one accepted memory's drawer open. */
   openAcceptedMemory: (memoryId: string) => void;
   clearMemoryFocus: () => void;
@@ -232,6 +246,7 @@ export const useAppStore = create<AppState>((set) => ({
   memoryFocus: null,
   evidenceImportRequest: null,
   timelineFocus: null,
+  evidenceFocus: null,
   reviewTab: "issues",
   sessionTab: "overview",
   settingsTab: "profile",
@@ -269,6 +284,13 @@ export const useAppStore = create<AppState>((set) => ({
       sessionTab: "flow",
     }),
   clearTimelineFocus: () => set({ timelineFocus: null }),
+  openEvidenceSource: (sourceId) =>
+    set({
+      evidenceFocus: { sourceId },
+      currentView: "session",
+      sessionTab: "evidence",
+    }),
+  clearEvidenceFocus: () => set({ evidenceFocus: null }),
   openAcceptedMemory: (memoryId) =>
     set({ memoryFocus: { memoryId }, currentView: "memory" }),
   clearMemoryFocus: () => set({ memoryFocus: null }),

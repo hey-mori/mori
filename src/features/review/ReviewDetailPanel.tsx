@@ -54,6 +54,7 @@ export function ReviewDetailPanel({
   view,
   onClose,
   onShowTimeline,
+  onOpenEvidenceSource,
   onToggleNextActionComplete,
   onSetIssueStatus,
   onEditIssue,
@@ -68,6 +69,8 @@ export function ReviewDetailPanel({
   /** Close the panel from within (renders the X). */
   onClose?: () => void;
   onShowTimeline: (eventId: string) => void;
+  /** Jump into 자료 focused on the source an item's analysis was drawn from. */
+  onOpenEvidenceSource?: (sourceId: string) => void;
   onToggleNextActionComplete: (nextActionId: string, completed: boolean) => void;
   onSetIssueStatus: (issueId: string, status: IssueStatus) => void;
   onEditIssue: (issueId: string, fields: IssueEditFields) => boolean;
@@ -108,6 +111,7 @@ export function ReviewDetailPanel({
         view={view}
         onClose={onClose}
         onShowTimeline={onShowTimeline}
+        onOpenEvidenceSource={onOpenEvidenceSource}
         onSetStatus={onSetIssueStatus}
         onEditIssue={onEditIssue}
         onPromoteIssueToNextAction={onPromoteIssueToNextAction}
@@ -125,6 +129,7 @@ export function ReviewDetailPanel({
         view={view}
         onClose={onClose}
         onShowTimeline={onShowTimeline}
+        onOpenEvidenceSource={onOpenEvidenceSource}
         onSetConfirmed={onSetDecisionConfirmed}
         onEditDecision={onEditDecision}
         canEditConfirm={canEditReview}
@@ -167,6 +172,7 @@ function IssueDetail({
   view,
   onClose,
   onShowTimeline,
+  onOpenEvidenceSource,
   onSetStatus,
   onEditIssue,
   onPromoteIssueToNextAction,
@@ -176,6 +182,7 @@ function IssueDetail({
   view: MockSession;
   onClose?: () => void;
   onShowTimeline: (eventId: string) => void;
+  onOpenEvidenceSource?: (sourceId: string) => void;
   onSetStatus: (issueId: string, status: IssueStatus) => void;
   onEditIssue: (issueId: string, fields: IssueEditFields) => boolean;
   onPromoteIssueToNextAction: (issueId: string) => NextAction | null;
@@ -232,7 +239,11 @@ function IssueDetail({
         title="근거"
         hint={`출처 ${evidence.sourceCount} · 이벤트 ${evidence.eventCount}`}
       >
-        <EvidenceList view={view} sourceIds={evidence.sources.map((source) => source.id)} />
+        <EvidenceList
+          view={view}
+          sourceIds={evidence.sources.map((source) => source.id)}
+          onOpenEvidenceSource={onOpenEvidenceSource}
+        />
       </InspectorSection>
 
       <InspectorSection title="관련 Timeline 이벤트" hint={`${relatedEvents.length}건`}>
@@ -314,6 +325,7 @@ function DecisionDetail({
   view,
   onClose,
   onShowTimeline,
+  onOpenEvidenceSource,
   onSetConfirmed,
   onEditDecision,
   canEditConfirm,
@@ -322,6 +334,7 @@ function DecisionDetail({
   view: MockSession;
   onClose?: () => void;
   onShowTimeline: (eventId: string) => void;
+  onOpenEvidenceSource?: (sourceId: string) => void;
   onSetConfirmed: (decisionId: string, confirmed: boolean) => void;
   onEditDecision: (decisionId: string, fields: DecisionEditFields) => boolean;
   canEditConfirm: boolean;
@@ -389,7 +402,11 @@ function DecisionDetail({
         title="근거"
         hint={`출처 ${evidence.sourceCount} · 이벤트 ${evidence.eventCount}`}
       >
-        <EvidenceList view={view} sourceIds={evidence.sources.map((source) => source.id)} />
+        <EvidenceList
+          view={view}
+          sourceIds={evidence.sources.map((source) => source.id)}
+          onOpenEvidenceSource={onOpenEvidenceSource}
+        />
       </InspectorSection>
 
       <InspectorSection title="관련 Timeline 이벤트" hint={`${relatedEvents.length}건`}>
@@ -605,7 +622,15 @@ function EditPanel({
   );
 }
 
-function EvidenceList({ view, sourceIds }: { view: MockSession; sourceIds: string[] }) {
+function EvidenceList({
+  view,
+  sourceIds,
+  onOpenEvidenceSource,
+}: {
+  view: MockSession;
+  sourceIds: string[];
+  onOpenEvidenceSource?: (sourceId: string) => void;
+}) {
   const sources = view.sources.filter((source) => sourceIds.includes(source.id));
   if (sources.length === 0) {
     return <InspectorEmpty>연결된 출처가 없습니다.</InspectorEmpty>;
@@ -614,14 +639,22 @@ function EvidenceList({ view, sourceIds }: { view: MockSession; sourceIds: strin
     <>
       <InspectorRows>
         {sources.slice(0, 5).map((source) => (
-          <EvidenceSourceRow key={source.id} source={source} />
+          <EvidenceSourceRow
+            key={source.id}
+            source={source}
+            onOpen={onOpenEvidenceSource}
+          />
         ))}
       </InspectorRows>
       {sources.length > 5 ? (
         <InspectorDisclosure summary="나머지 출처" count={sources.length - 5}>
           <InspectorRows>
             {sources.slice(5).map((source) => (
-              <EvidenceSourceRow key={source.id} source={source} />
+              <EvidenceSourceRow
+                key={source.id}
+                source={source}
+                onOpen={onOpenEvidenceSource}
+              />
             ))}
           </InspectorRows>
         </InspectorDisclosure>
@@ -630,13 +663,20 @@ function EvidenceList({ view, sourceIds }: { view: MockSession; sourceIds: strin
   );
 }
 
-function EvidenceSourceRow({ source }: { source: SourceRef }) {
+function EvidenceSourceRow({
+  source,
+  onOpen,
+}: {
+  source: SourceRef;
+  onOpen?: (sourceId: string) => void;
+}) {
   const display = getSourceDisplayStatus(source);
   return (
     <InspectorRow
       leading={<Layers size={13} aria-hidden="true" />}
       title={source.title}
       meta={display.integrationLabel}
+      onClick={onOpen ? () => onOpen(source.id) : undefined}
     />
   );
 }

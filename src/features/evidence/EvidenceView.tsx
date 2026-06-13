@@ -103,6 +103,18 @@ export function EvidenceView() {
   }, []);
 
   const [selection, setSelection] = useState<EvidenceDetailSelection>({ kind: "empty" });
+
+  // Consume a 검토 → 자료 deep-link: a review item's grounds list can open the
+  // source its analysis was drawn from. Select that source's inspector and
+  // clear the one-shot so a later manual selection is not overridden.
+  const evidenceFocus = useAppStore((state) => state.evidenceFocus);
+  const clearEvidenceFocus = useAppStore((state) => state.clearEvidenceFocus);
+  useEffect(() => {
+    if (!evidenceFocus) return;
+    setSelection({ kind: "source", sourceId: evidenceFocus.sourceId });
+    clearEvidenceFocus();
+  }, [evidenceFocus, clearEvidenceFocus]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFamilies, setActiveFamilies] = useState<SourceFamily[]>([]);
 

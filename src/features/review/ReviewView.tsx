@@ -70,6 +70,7 @@ export function ReviewView() {
   const imports = useSessionStore((state) => state.imports);
   const setCurrentView = useAppStore((state) => state.navigate);
   const focusTimelineEvent = useAppStore((state) => state.focusTimelineEvent);
+  const openEvidenceSource = useAppStore((state) => state.openEvidenceSource);
   const reviewFocus = useAppStore((state) => state.reviewFocus);
   const clearReviewFocus = useAppStore((state) => state.clearReviewFocus);
 
@@ -182,6 +183,7 @@ export function ReviewView() {
       view={view}
       onClose={() => setSelection(null)}
       onShowTimeline={handleShowTimeline}
+      onOpenEvidenceSource={openEvidenceSource}
       onToggleNextActionComplete={(id, completed) => setNextActionCompletion(id, completed)}
       onSetIssueStatus={(id, status) => setIssueStatus(id, status)}
       onEditIssue={(id, fields) => editIssue(id, fields)}
