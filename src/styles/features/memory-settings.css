@@ -651,60 +651,108 @@
   justify-content: flex-end;
 }
 
-/* Preview shell — no card chrome, just a clean content area. The page
-   shell scrolls to reveal the full report; no inner max-height clipping. */
+/* Preview shell — the report renders on a "paper" surface so it reads as a
+   real, shareable document, not a raw markdown dump. The paper fills the
+   available width (no narrow column with wasted right space) but keeps a
+   document margin so the text never runs edge-to-edge. */
 .report-preview-shell {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
-  padding: 0;
 }
 
 .report-preview-shell .report-preview {
-  /* Strip the base `.report-preview` paper chrome (border + #fbfcff bg +
-     rounded corners): the toolbar band above is the only bordered surface
-     on this tab. */
   margin: 0;
-  padding: 4px 2px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  max-height: none;
+  padding: 30px 40px 36px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-lg);
+  background: white;
+  box-shadow: var(--shadow-soft);
+  min-height: 460px;
   overflow: visible;
 }
 
+.report-rendered-preview {
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.report-rendered-preview > :first-child {
+  margin-top: 0;
+}
+
 .report-rendered-preview h1 {
-  margin: 0 0 14px;
-  font-size: 18px;
-  line-height: 1.35;
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
 .report-rendered-preview h2 {
-  margin: 22px 0 9px;
-  padding-bottom: 5px;
+  margin: 28px 0 12px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--line);
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 650;
   line-height: 1.35;
+  color: var(--text);
 }
 
 .report-rendered-preview h3 {
-  margin: 16px 0 7px;
-  font-size: 13px;
-  line-height: 1.35;
+  margin: 18px 0 8px;
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--text);
 }
 
 .report-rendered-preview p {
-  margin: 8px 0;
+  margin: 10px 0;
 }
 
-.report-rendered-preview ul {
-  margin: 8px 0;
-  padding-left: 20px;
+.report-rendered-preview ul,
+.report-rendered-preview ol {
+  margin: 10px 0;
+  padding-left: 22px;
 }
 
 .report-rendered-preview li {
-  margin: 4px 0;
+  margin: 5px 0;
+}
+
+.report-rendered-preview li::marker {
+  color: var(--muted-2);
+}
+
+.report-rendered-preview strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.report-rendered-preview a {
+  color: var(--purple);
+  text-decoration: none;
+}
+
+.report-rendered-preview a:hover {
+  text-decoration: underline;
+}
+
+.report-rendered-preview hr {
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.report-rendered-preview blockquote {
+  margin: 12px 0;
+  padding: 4px 0 4px 14px;
+  border-left: 3px solid var(--line-strong, var(--muted-2));
+  color: var(--muted);
 }
 
 .report-rendered-preview code {
@@ -712,7 +760,21 @@
   border-radius: 4px;
   background: var(--gray-50);
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.9em;
+  font-size: 0.88em;
+}
+
+.report-rendered-preview pre {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--gray-50);
+  overflow-x: auto;
+}
+
+.report-rendered-preview pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 12px;
 }
 
 .report-preview-hidden {
