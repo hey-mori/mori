@@ -3945,7 +3945,9 @@ textarea {
   color: var(--text);
 }
 
-.ai-workflow-empty svg {
+/* Direct child only, so the primary "분석 실행" button keeps its own icon
+   colour instead of being tinted purple on a purple background. */
+.ai-workflow-empty > svg {
   color: var(--purple, #7c5cff);
 }
 

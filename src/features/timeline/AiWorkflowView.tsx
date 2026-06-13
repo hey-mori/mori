@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { Sparkles } from "lucide-react";
+import { Button } from "../../components/ui/Button";
 import { InfoHint } from "../../components/ui/InfoHint";
 import type { Decision, Issue, NextAction, TimelineEvent } from "../../domain/types";
 import type { AnalysisResult } from "../../lib/analysis/analysisTypes";
@@ -25,8 +27,8 @@ export function AiWorkflowView({
   analysis,
   selectedItemId,
   onSelectPhase,
-  onRunQuickPass: _onRunQuickPass,
-  canRunQuickPass: _canRunQuickPass,
+  onRunQuickPass,
+  canRunQuickPass,
 }: {
   view: {
     events: TimelineEvent[];
@@ -71,6 +73,15 @@ export function AiWorkflowView({
           분석을 실행하면 AI가 이해한 작업 흐름이 단계별로 정리됩니다. 그 전에도 위의 원본
           보기에서 실제 대화 흐름을 확인할 수 있습니다.
         </p>
+        <Button
+          variant="primary"
+          size="sm"
+          icon={Sparkles}
+          onClick={onRunQuickPass}
+          disabled={!canRunQuickPass}
+        >
+          {canRunQuickPass ? "분석 실행" : "분석 중..."}
+        </Button>
       </div>
     );
   }
