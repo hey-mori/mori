@@ -13,6 +13,7 @@ import {
 } from "../../components/ui/BaseInspectorPanel";
 import { eventTypeLabels } from "../../domain/constants";
 import type { MockSession } from "../../domain/types";
+import type { ReviewSelection } from "../../lib/review-workspace/reviewWorkspace";
 import { getEventEvidenceSources, getSourceDisplayStatus } from "../../lib/sources/traceability";
 import { getCaptureFidelityDisplay } from "../../lib/evidence/fidelityDisplay";
 import type { SourceIntegration } from "../../lib/sources/sourceRegistry";
@@ -39,6 +40,7 @@ export function SourceDetailPanel({
   integrationLookup,
   importSummary,
   onClose,
+  onOpenReviewItem,
 }: {
   selection: EvidenceDetailSelection;
   view: MockSession;
@@ -47,6 +49,9 @@ export function SourceDetailPanel({
   importSummary?: ConnectorSourceImportSummary;
   /** Close the panel from within (renders the X). */
   onClose?: () => void;
+  /** Jump into 검토 focused on a linked issue / decision. Omitted disables the
+   *  link (rows stay read-only). */
+  onOpenReviewItem?: (selection: ReviewSelection) => void;
 }) {
   if (selection.kind === "empty") return null;
 
@@ -57,6 +62,7 @@ export function SourceDetailPanel({
         view={view}
         importSummary={importSummary}
         onClose={onClose}
+        onOpenReviewItem={onOpenReviewItem}
       />
     );
   }
@@ -75,11 +81,13 @@ function SourceDetailView({
   view,
   importSummary,
   onClose,
+  onOpenReviewItem,
 }: {
   selection: { kind: "source"; sourceId: string };
   view: MockSession;
   importSummary?: ConnectorSourceImportSummary;
   onClose?: () => void;
+  onOpenReviewItem?: (selection: ReviewSelection) => void;
 }) {
   const source = view.sources.find((entry) => entry.id === selection.sourceId);
   if (!source) {
@@ -212,7 +220,12 @@ function SourceDetailView({
         )}
       </InspectorSection>
 
-      <RelatedRecordsSection sourceId={source.id} view={view} relatedEvents={relatedEvents} />
+      <RelatedRecordsSection
+        sourceId={source.id}
+        view={view}
+        relatedEvents={relatedEvents}
+        onOpenReviewItem={onOpenReviewItem}
+      />
     </BaseInspectorPanel>
   );
 }
@@ -290,14 +303,30 @@ function IntegrationDetailView({
   );
 }
 
+type LinkedRecord = {
+  key: string;
+  kind: "issue" | "decision";
+  title: string;
+  selection: ReviewSelection;
+};
+
+/**
+ * The issues and decisions this source's events fed into, as the evidence ->
+ * analysis link. Every linked record is listed (not just the first behind a
+ * count badge), with the long tail folded into a disclosure so nothing is
+ * hidden, and each row jumps into 검토 focused on that record so the source is a
+ * live path into review, not a read-only dead end.
+ */
 function RelatedRecordsSection({
   sourceId,
   view,
   relatedEvents,
+  onOpenReviewItem,
 }: {
   sourceId: string;
   view: MockSession;
   relatedEvents: ReturnType<typeof getEventEvidenceSources>["sources"] | typeof view.events;
+  onOpenReviewItem?: (selection: ReviewSelection) => void;
 }) {
   const eventIds = new Set(relatedEvents.map((event) => ("id" in event ? event.id : "")));
   const linkedIssues = view.issues.filter((issue) =>
@@ -311,24 +340,45 @@ function RelatedRecordsSection({
 
   if (linkedIssues.length === 0 && linkedDecisions.length === 0) return null;
 
+  const records: LinkedRecord[] = [
+    ...linkedIssues.map((issue) => ({
+      key: `issue:${issue.id}`,
+      kind: "issue" as const,
+      title: issue.title,
+      selection: { kind: "issue" as const, issueId: issue.id },
+    })),
+    ...linkedDecisions.map((decision) => ({
+      key: `decision:${decision.id}`,
+      kind: "decision" as const,
+      title: decision.title,
+      selection: { kind: "decision" as const, decisionId: decision.id },
+    })),
+  ];
+
+  const renderRow = (record: LinkedRecord) => (
+    <InspectorRow
+      key={record.key}
+      leading={
+        record.kind === "issue" ? (
+          <Badge tone="red">이슈</Badge>
+        ) : (
+          <Badge tone="green">결정</Badge>
+        )
+      }
+      title={record.title}
+      onClick={onOpenReviewItem ? () => onOpenReviewItem(record.selection) : undefined}
+    />
+  );
+
+  const INLINE = 5;
   return (
-    <InspectorSection title="이슈 / 결정으로의 연결">
-      <InspectorRows>
-        {linkedIssues.length > 0 ? (
-          <InspectorRow
-            leading={<Badge tone="red">이슈</Badge>}
-            title={linkedIssues[0].title}
-            meta={linkedIssues.length > 1 ? `${linkedIssues.length}건` : undefined}
-          />
-        ) : null}
-        {linkedDecisions.length > 0 ? (
-          <InspectorRow
-            leading={<Badge tone="green">결정</Badge>}
-            title={linkedDecisions[0].title}
-            meta={linkedDecisions.length > 1 ? `${linkedDecisions.length}건` : undefined}
-          />
-        ) : null}
-      </InspectorRows>
+    <InspectorSection title="이슈 / 결정으로의 연결" hint={`${records.length}개`}>
+      <InspectorRows>{records.slice(0, INLINE).map(renderRow)}</InspectorRows>
+      {records.length > INLINE ? (
+        <InspectorDisclosure summary="나머지" count={records.length - INLINE}>
+          <InspectorRows>{records.slice(INLINE).map(renderRow)}</InspectorRows>
+        </InspectorDisclosure>
+      ) : null}
     </InspectorSection>
   );
 }

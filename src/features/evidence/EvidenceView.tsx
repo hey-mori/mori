@@ -71,6 +71,7 @@ export function EvidenceView() {
   // Session Detail workspace; other keys (memory / settings) pass through.
   const setCurrentView = useAppStore((state) => state.navigate);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
+  const openReviewItem = useAppStore((state) => state.openReviewItem);
 
   // Engine presets saved in AI engine settings can drive a one-off run without
   // changing the persisted engine. `null` runs with the current settings.
@@ -161,6 +162,7 @@ export function EvidenceView() {
           : undefined
       }
       onClose={() => setSelection({ kind: "empty" })}
+      onOpenReviewItem={openReviewItem}
     />
   );
 
