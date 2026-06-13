@@ -15,6 +15,7 @@ import {
 import type { MoriPackageV0 } from "../../lib/mori-package";
 import { buildResumePrompt } from "../../lib/report/resume-prompt";
 import { ClientWorkLogCard } from "./ClientWorkLogCard";
+import { ResumePromptCard } from "./ResumePromptCard";
 import {
   phaseForWriteResult,
   type MoriExportPhase,
@@ -121,6 +122,14 @@ export function ReportsView() {
           />
 
           <div className="reports-main">
+            {/* 이어가기 leads the handoff surface: the resume prompt is the one
+                output meant for a *new* AI session, so it gets a first-class
+                copy action instead of being buried as a report section. */}
+            <ResumePromptCard
+              prompt={resumePromptText}
+              emptyHint="자료 탭에서 분석을 실행하면 이어가기 프롬프트가 만들어집니다."
+            />
+
             <ReportBuilderPanel
               id="reports-builder"
               view={view}
