@@ -1,9 +1,13 @@
 # Mori Development Continuity Guide
 
-> **Read this first if you are an LLM or a new contributor picking up Mori on a
-> fresh machine or in a new session.** It carries the product direction, the
-> judgment model, the recent development context, and the open risks and
-> opportunities, so the work does not restart from zero.
+> **When to read this:** on onboarding or handoff, when you need the judgment
+> context behind Mori, not on every turn. It is deliberately **not** in
+> CLAUDE.md's mandatory read list, so it does not cost tokens each session. Its
+> sharpest value is cross-machine: the auto-memory lives on one machine, but
+> this doc is version-controlled and travels with the repo, so it carries the
+> product direction and judgment flow where local memory does not. On a machine
+> where memory is intact it overlaps with CLAUDE.md and the memory notes, so
+> skim, do not re-read in full.
 >
 > **This is context, not a checklist.** Its purpose is not "do only what is
 > written here." Its purpose is to let you understand *how to keep judging*, not
@@ -126,34 +130,32 @@ repeated, direct user feedback. Treat them as direction, not as immutable law.
 
 ---
 
-## 5. Recent completed work and why (product meaning, not just commits)
+## 5. How recent work was judged (snapshot, not a changelog)
 
-Each line is *what changed* and *what it was for in the flow*. This is the
-narrative thread the next session should continue.
+> **This is a point-in-time snapshot to illustrate the *judgment style*, not a
+> maintained log.** `git log` is the authoritative history. Do not grow this
+> into a changelog; when it goes stale, prune it back to the durable thread
+> below. Read it for the *pattern* (each change framed by what it did for the
+> flow), not for an accurate list of the latest commits.
 
-- **Rendered the share report preview as a real document.**
-  → so 공유 reads as an actual deliverable, not a markdown dump.
-- **Promoted source rows to evidence cards in 자료.**
-  → so 자료 is an evidence hub (trust + what each source contributed to
-  analysis), not a bare source list.
-- **Replaced "+N건 더" truncation with real disclosures** (source detail, review
-  detail, event inspector).
-  → so the product never looks like it is hiding data behind a dead label.
-- **Added a reopen anchor to 개요** (the "마지막으로 진행한 작업" row; click jumps
-  into 활동 at that event).
-  → so reopening a session restores where the work was left off (priority #1).
-- **Disambiguated the not-yet-analyzed 검토 board from an empty result.**
-  → so empty columns mean "analyzed, none found", while a focal state guides the
-  user to run analysis when material exists but none has run.
-- **Gave the AI 흐름 view a real empty state before analysis.**
-  → so the Activity tab's default view explains itself instead of rendering a
-  blank div on a freshly imported session.
-- **Restored the 이어가기 resume prompt card as a first-class action in 공유.**
-  → so Mori's core value (continuing the work in a new session) is a direct copy
-  action, not a buried report section.
+**The durable thread:** connect 자료 → 분석 → 검토 → 공유 → 이어가기 into one
+evidence-based flow, and make every surface honest about its state. Recent work
+followed two moves that are worth repeating:
 
-The common thread: connect 자료 → 분석 → 검토 → 공유 → 이어가기 into one
-evidence-based flow, and make every surface honest about its state.
+- **Each surface should earn its place in the flow.** Example framing: source
+  rows were promoted to evidence cards so 자료 reads as an evidence hub (trust +
+  what each source contributed), not a bare list; the resume prompt was raised
+  to a first-class 이어가기 action so the core "continue in a new session" value
+  is a direct action, not a buried report section.
+- **Empty and overflow states must be honest.** Example framing: the
+  not-yet-analyzed board was separated from an "analyzed, found nothing" board;
+  the default 활동 view got a real empty state instead of a blank div; dead
+  "+N건 더" truncation was replaced with real disclosures so nothing is hidden
+  behind an unreachable label.
+
+When you finish a meaningful unit, you may replace the examples above with a
+fresher one in the same "what it did for the flow" style. Keep it to a couple of
+lines, not a running list.
 
 ---
 
@@ -228,6 +230,11 @@ short note on why.
 These are **not** "do not touch." They are "set a verification strategy before
 you change them." The standing analysis is also kept in the memory note
 `project_deferred_risky_work`.
+
+> Snapshot caveat: the specific items below are current as of this writing. If
+> one gets done (for example the gantt ships), remove it; if a new risky area
+> appears, add it with the same "why it is risky + how to verify" shape. The
+> durable point is the *general rule* at the end of this section, not the list.
 
 - **Timeline swimlane request gantt** (요청 단위 간트). Important and repeatedly
   requested, but the swimlane is absolutely positioned and a request band needs
