@@ -12,7 +12,9 @@ import {
 import { useAppStore } from "../../app/store";
 import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
 import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
+import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import type { ImportDigestLane } from "../../lib/import/importDigest";
+import type { TimelineEvent } from "../../domain/types";
 import {
   getUnresolvedItems,
   UNRESOLVED_REASON_LABEL,
@@ -22,11 +24,11 @@ import {
 /**
  * Session 개요 — the at-a-glance landing tab for one session.
  *
- * Pure orientation, no outputs: it answers "what is this session, how big is
- * it, and where do I go next?" The work-unit identity + a one-line summary sit
- * up top, a calm metric strip gives scale, and a row of navigation cards jumps
- * into 흐름 / 증거 / 검토 / 보고서. Handoff artifacts (continue-context, report,
- * .mori export) live in the 보고서 tab, not here.
+ * Pure orientation, no outputs: it answers "what is this session, where did I
+ * leave off, and what still needs attention?" A one-line summary plus the work
+ * shape sit up top, then the reopen anchor (마지막으로 진행한 작업 → 활동), a calm
+ * scale-metric strip, the touched files, and the unresolved items. Handoff
+ * artifacts (continue-context, report, .mori export) live in the 보고서 tab.
  */
 export function OverviewView() {
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -35,6 +37,7 @@ export function OverviewView() {
   const mode = useSessionStore(selectSessionMode);
   const imports = useSessionStore((state) => state.imports);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
+  const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
 
   useEffect(() => {
@@ -68,6 +71,27 @@ export function OverviewView() {
     [view.issues, view.decisions, view.nextActions],
   );
 
+  // The single most useful thing on reopen: where the work was left off. The
+  // last user request (a human prompt that kicked off a unit of work) is the
+  // resume anchor; fall back to the latest event when no request is marked.
+  const lastRequest = useMemo(() => {
+    let latestRequest: TimelineEvent | null = null;
+    let latestEvent: TimelineEvent | null = null;
+    for (const event of view.events) {
+      if (!latestEvent || event.start > latestEvent.start) latestEvent = event;
+      if (event.openedByUser && (!latestRequest || event.start > latestRequest.start)) {
+        latestRequest = event;
+      }
+    }
+    return latestRequest ?? latestEvent;
+  }, [view.events]);
+
+  function resumeFromLastRequest() {
+    if (!lastRequest) return;
+    setSelectedEventId(lastRequest.id);
+    setSessionTab("flow");
+  }
+
   function openUnresolved(item: UnresolvedItem) {
     if (item.kind === "issue") openReviewItem({ kind: "issue", issueId: item.issue.id });
     else if (item.kind === "decision") openReviewItem({ kind: "decision", decisionId: item.decision.id });
@@ -99,6 +123,22 @@ export function OverviewView() {
               <p className="session-overview-summary">{workSummary.headline}</p>
               <WorkShapeBar lanes={workSummary.digest.lanes} />
             </section>
+          ) : null}
+
+          {!sessionEmpty && lastRequest ? (
+            <button
+              type="button"
+              className="overview-resume"
+              onClick={resumeFromLastRequest}
+              title="활동에서 이 지점 열기"
+            >
+              <span className="overview-resume-label">마지막으로 진행한 작업</span>
+              <span className="overview-resume-title">{lastRequest.title}</span>
+              <span className="overview-resume-meta">
+                {formatSidebarRelative(lastRequest.start)}
+                <ArrowRight size={14} aria-hidden="true" />
+              </span>
+            </button>
           ) : null}
 
           <dl className="overview-metrics" aria-label="세션 규모">

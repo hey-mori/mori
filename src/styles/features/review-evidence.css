@@ -3693,6 +3693,60 @@ td a {
   background: #bdb7cd;
 }
 
+/* 마지막으로 진행한 작업 — the reopen anchor. A calm, full-width row that
+   restores "where was I" at a glance and jumps into 활동 at that event. */
+.overview-resume {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel, white);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.overview-resume:hover {
+  border-color: var(--purple);
+  box-shadow: 0 6px 18px rgba(98, 70, 245, 0.12);
+}
+
+.overview-resume-label {
+  grid-column: 1;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.overview-resume-title {
+  grid-column: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-resume-meta {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted-2);
+}
+
+.overview-resume:hover .overview-resume-meta svg {
+  color: var(--purple);
+}
+
 /* 개요 tab layout — hero, scale metrics, and tab-shortcut cards. */
 .overview-main {
   display: grid;
