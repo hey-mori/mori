@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { InfoHint } from "../../components/ui/InfoHint";
-import type { Decision, Issue, TimelineEvent } from "../../domain/types";
+import type { Decision, Issue, NextAction, TimelineEvent } from "../../domain/types";
 import type { AnalysisResult } from "../../lib/analysis/analysisTypes";
 import { buildWorkPhases, type PhaseMoment, type WorkPhase } from "../../lib/session/workArc";
 
@@ -23,14 +23,29 @@ export function AiWorkflowView({
   onRunQuickPass: _onRunQuickPass,
   canRunQuickPass: _canRunQuickPass,
 }: {
-  view: { events: TimelineEvent[]; decisions: Decision[]; issues: Issue[] };
+  view: {
+    events: TimelineEvent[];
+    decisions: Decision[];
+    issues: Issue[];
+    nextActions: NextAction[];
+    summary?: { sessionSummary?: string };
+  };
   analysis: AnalysisResult | null;
   selectedItemId: string | null;
   onSelectPhase: (phase: WorkPhase) => void;
   onRunQuickPass: () => void;
   canRunQuickPass: boolean;
 }) {
-  const summary = analysis?.summary.sessionSummary?.trim() ?? "";
+  // A session has an analysed flow to show when a live Quick Pass produced a
+  // summary, OR when the session already carries analysis outputs (a demo
+  // session, or a persisted analysed draft reopened without a live run object).
+  // An un-analysed draft carries only a placeholder summary and zero outputs,
+  // so it still falls through to the honest "분석 전" empty state below.
+  const liveSummary = analysis?.summary.sessionSummary?.trim() ?? "";
+  const storedSummary = view.summary?.sessionSummary?.trim() ?? "";
+  const hasStoredAnalysis =
+    view.decisions.length > 0 || view.issues.length > 0 || view.nextActions.length > 0;
+  const summary = liveSummary || (hasStoredAnalysis ? storedSummary : "");
   const phases = useMemo(
     () => buildWorkPhases(view.events, view.decisions, view.issues, 6),
     [view.events, view.decisions, view.issues],
