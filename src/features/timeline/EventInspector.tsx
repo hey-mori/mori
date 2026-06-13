@@ -368,13 +368,15 @@ function LinkedRows({
   const groups = getTimelineInspectorReviewLinks({ issues, decisions, nextActions, artifacts }).filter(
     (group) => group.items.length > 0,
   );
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   if (groups.length === 0) {
     return <p className="inspector-empty">연결된 항목이 없습니다.</p>;
   }
   return (
     <ul className="inspector-linked-rows">
       {groups.map((group) => {
-        const visible = group.items.slice(0, LINKED_ITEMS_VISIBLE);
+        const isExpanded = expanded.has(group.kind);
+        const visible = isExpanded ? group.items : group.items.slice(0, LINKED_ITEMS_VISIBLE);
         const overflow = group.items.length - visible.length;
         return (
           <li key={group.kind} className="inspector-linked-group">
@@ -404,7 +406,33 @@ function LinkedRows({
                   ),
                 )}
                 {overflow > 0 ? (
-                  <span className="inspector-linked-more">+{overflow}개 더</span>
+                  <button
+                    type="button"
+                    className="inspector-linked-more"
+                    onClick={() =>
+                      setExpanded((prev) => {
+                        const next = new Set(prev);
+                        next.add(group.kind);
+                        return next;
+                      })
+                    }
+                  >
+                    +{overflow}개 더
+                  </button>
+                ) : isExpanded && group.items.length > LINKED_ITEMS_VISIBLE ? (
+                  <button
+                    type="button"
+                    className="inspector-linked-more"
+                    onClick={() =>
+                      setExpanded((prev) => {
+                        const next = new Set(prev);
+                        next.delete(group.kind);
+                        return next;
+                      })
+                    }
+                  >
+                    접기
+                  </button>
                 ) : null}
               </div>
             )}
