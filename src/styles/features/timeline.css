@@ -4111,6 +4111,47 @@ textarea {
   white-space: nowrap;
 }
 
+/* AI 흐름 flat arc — shown when a continuous session has no phase breaks. The
+   decisions and issues in time order, each with its own timestamp, so the arc
+   reads as how the work progressed even without distinct phases. */
+.work-arc-flow {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.work-arc-flow-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+  align-items: baseline;
+  min-width: 0;
+  padding: 5px 2px;
+  border-top: 1px solid var(--line);
+}
+
+.work-arc-flow-item:first-child {
+  border-top: none;
+}
+
+.work-arc-flow-time {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.work-arc-flow-text {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.4;
+}
+
 /* 원본 stream — folded tool runs. Quiet, secondary to the conversation rows. */
 .timeline-chrono-toolrun {
   display: flex;

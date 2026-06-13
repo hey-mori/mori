@@ -2,7 +2,12 @@ import { useMemo } from "react";
 import { InfoHint } from "../../components/ui/InfoHint";
 import type { Decision, Issue, NextAction, TimelineEvent } from "../../domain/types";
 import type { AnalysisResult } from "../../lib/analysis/analysisTypes";
-import { buildWorkPhases, type PhaseMoment, type WorkPhase } from "../../lib/session/workArc";
+import {
+  buildWorkMoments,
+  buildWorkPhases,
+  type PhaseMoment,
+  type WorkPhase,
+} from "../../lib/session/workArc";
 
 /**
  * AI 흐름 — one of the two primary 흐름-tab views.
@@ -48,6 +53,13 @@ export function AiWorkflowView({
   const summary = liveSummary || (hasStoredAnalysis ? storedSummary : "");
   const phases = useMemo(
     () => buildWorkPhases(view.events, view.decisions, view.issues, 6),
+    [view.events, view.decisions, view.issues],
+  );
+  // A steady continuous session has no long pauses to split into phases, but it
+  // still has a real progression: the decisions and issues in time order. The
+  // collapsed branch below shows that flat arc instead of a bare note.
+  const moments = useMemo(
+    () => buildWorkMoments(view.events, view.decisions, view.issues, 12),
     [view.events, view.decisions, view.issues],
   );
 
@@ -108,10 +120,20 @@ export function AiWorkflowView({
             );
           })}
         </ol>
+      ) : moments.length > 0 ? (
+        <ol className="work-arc-flow" aria-label="결정과 이슈 흐름">
+          {moments.map((moment, index) => (
+            <li key={index} className={`work-arc-flow-item is-${moment.kind}`}>
+              <span className="work-arc-flow-time">{stamp(new Date(moment.at), false)}</span>
+              <span className="work-arc-moment-tag" aria-hidden="true">
+                {moment.kind === "decision" ? "결정" : "이슈"}
+              </span>
+              <span className="work-arc-flow-text">{moment.title}</span>
+            </li>
+          ))}
+        </ol>
       ) : (
-        <p className="ai-workflow-note">
-          이 세션은 하나의 연속된 흐름이라 단계로 나뉘지 않았습니다.
-        </p>
+        <p className="ai-workflow-note">이 세션은 하나의 연속된 흐름입니다.</p>
       )}
     </div>
   );

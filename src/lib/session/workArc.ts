@@ -134,6 +134,43 @@ export function buildWorkPhases(
   return phases.length >= 2 ? phases : [];
 }
 
+/** A decision or issue placed on the timeline by the events it cites. */
+export type WorkMoment = { kind: "decision" | "issue"; title: string; at: number };
+
+/**
+ * The session's decisions and issues in true time order, each grounded by the
+ * earliest event it cites. Where {@link buildWorkPhases} needs real time breaks
+ * to split work into phases, a steady continuous session (no long pauses) has
+ * none, yet it still has a real progression: which decisions were made and which
+ * issues surfaced, in order. This is that flat arc, so the AI 흐름 view can show
+ * how a continuous session progressed instead of collapsing to a single note.
+ * Ungroundable refs (no citable event) are dropped, since they cannot be placed
+ * in time; the review board still lists every one of them.
+ */
+export function buildWorkMoments(
+  events: readonly PhaseSeedEvent[],
+  decisions: readonly PhaseSeedRef[] = [],
+  issues: readonly PhaseSeedRef[] = [],
+  max = 12,
+): WorkMoment[] {
+  const idToTime = new Map<string, number>();
+  for (const event of events) {
+    const time = new Date(event.start).getTime();
+    if (event.id && Number.isFinite(time)) idToTime.set(event.id, time);
+  }
+  const placed = [
+    ...decisions.map((ref) => ({ kind: "decision" as const, ref })),
+    ...issues.map((ref) => ({ kind: "issue" as const, ref })),
+  ]
+    .map((entry) => ({
+      kind: entry.kind,
+      title: entry.ref.title.trim(),
+      at: groundTime(entry.ref, idToTime),
+    }))
+    .filter((moment): moment is WorkMoment => moment.title.length > 0 && moment.at !== null);
+  return placed.sort((a, b) => a.at - b.at).slice(0, max);
+}
+
 /** Date each ref by the earliest event it cites, dropping refs we can't place. */
 function dateRefs(
   refs: readonly PhaseSeedRef[],

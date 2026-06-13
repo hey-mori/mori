@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWorkArc, buildWorkPhases } from "./workArc";
+import { buildWorkArc, buildWorkMoments, buildWorkPhases } from "./workArc";
 
 const at = (hour: number, minute: number) =>
   `2026-06-01T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00Z`;
@@ -106,6 +106,44 @@ describe("buildWorkPhases", () => {
       { kind: "decision", title: "복합 인덱스 도입" },
     ]);
     expect(phases[1].moments).toEqual([{ kind: "issue", title: "캐시 미스 잦음" }]);
+  });
+});
+
+describe("buildWorkMoments", () => {
+  const events = [
+    { id: "e1", start: at(1, 0), title: "검색이 느려", actor: "user" },
+    { id: "e2", start: at(1, 4), title: "원인 분석", actor: "assistant" },
+    { id: "e3", start: at(1, 8), title: "인덱스 추가", actor: "assistant" },
+    { id: "e4", start: at(1, 12), title: "확인", actor: "assistant" },
+  ];
+
+  it("interleaves decisions and issues in true time order, grounded by cited events", () => {
+    const decisions = [{ title: "복합 인덱스 도입", sourceEventIds: ["e3"] }];
+    const issues = [{ title: "N+1 쿼리", sourceEventIds: ["e2"] }];
+    const moments = buildWorkMoments(events, decisions, issues);
+    expect(moments.map((m) => ({ kind: m.kind, title: m.title }))).toEqual([
+      { kind: "issue", title: "N+1 쿼리" },
+      { kind: "decision", title: "복합 인덱스 도입" },
+    ]);
+    expect(moments[0].at).toBeLessThan(moments[1].at);
+  });
+
+  it("drops refs that cite no resolvable event", () => {
+    const decisions = [
+      { title: "근거 있음", sourceEventIds: ["e2"] },
+      { title: "근거 없음", sourceEventIds: ["missing"] },
+      { title: "근거 비어있음" },
+    ];
+    const moments = buildWorkMoments(events, decisions, []);
+    expect(moments.map((m) => m.title)).toEqual(["근거 있음"]);
+  });
+
+  it("caps the number of moments", () => {
+    const issues = Array.from({ length: 8 }, (_, i) => ({
+      title: `이슈 ${i}`,
+      sourceEventIds: ["e1"],
+    }));
+    expect(buildWorkMoments(events, [], issues, 3)).toHaveLength(3);
   });
 });
 
