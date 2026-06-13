@@ -70,6 +70,7 @@ export function EvidenceView() {
   // `navigate` routes legacy session-surface keys (timeline) into the unified
   // Session Detail workspace; other keys (memory / settings) pass through.
   const setCurrentView = useAppStore((state) => state.navigate);
+  const setSessionTab = useAppStore((state) => state.setSessionTab);
 
   // Engine presets saved in AI engine settings can drive a one-off run without
   // changing the persisted engine. `null` runs with the current settings.
@@ -220,6 +221,7 @@ export function EvidenceView() {
         onRunPresetChange={setRunPresetId}
         onProviderChange={(provider) => updateAnalysisSettings({ provider })}
         onOpenSettings={() => setCurrentView("settings")}
+        onOpenReview={() => setSessionTab("insights")}
         onRun={handleRunQuickPass}
         onClear={clearAnalysis}
       />
@@ -263,6 +265,11 @@ export function EvidenceView() {
       ) : (
         <>
           {toolbar}
+          <EvidenceComposition
+            familyCounts={familyCounts}
+            sourceCount={importedSources.length}
+            eventCount={view.events.length}
+          />
           {bgAnalysisSection}
           {quickPassSection}
           {importedSourcesSection}
@@ -444,6 +451,56 @@ function EvidenceToolbar({
   );
 }
 
+/**
+ * Evidence composition — the at-a-glance "what is this session built from"
+ * band at the top of the 자료 tab. A Mori session is one AI conversation (the
+ * spine) with Git / files / notes / terminal hanging off it as evidence; this
+ * shows that makeup as a proportional bar + per-family legend, so the user
+ * reads the evidence base before the source list. Distinct from 개요's activity
+ * shape (what was *done*) — this is what the work is *sourced from*.
+ */
+function EvidenceComposition({
+  familyCounts,
+  sourceCount,
+  eventCount,
+}: {
+  familyCounts: Map<SourceFamily, number>;
+  sourceCount: number;
+  eventCount: number;
+}) {
+  const families = FAMILY_ORDER.filter((family) => (familyCounts.get(family) ?? 0) > 0);
+  const total = families.reduce((sum, family) => sum + (familyCounts.get(family) ?? 0), 0);
+  if (total === 0) return null;
+  return (
+    <section className="evidence-composition" aria-label="증거 구성">
+      <header className="evidence-composition-head">
+        <h2>이 세션의 증거</h2>
+        <span className="evidence-composition-scale">
+          소스 {sourceCount} · 이벤트 {eventCount}
+        </span>
+      </header>
+      <div className="evidence-composition-bar" aria-hidden="true">
+        {families.map((family) => (
+          <span
+            key={family}
+            className={`evidence-composition-seg family-${family}`}
+            style={{ width: `${((familyCounts.get(family) ?? 0) / total) * 100}%` }}
+            title={`${FAMILY_LABELS[family]} ${familyCounts.get(family)}`}
+          />
+        ))}
+      </div>
+      <div className="evidence-composition-legend">
+        {families.map((family) => (
+          <span key={family} className="evidence-composition-legend-item">
+            <i className={`evidence-composition-dot family-${family}`} aria-hidden="true" />
+            {FAMILY_LABELS[family]} <strong>{familyCounts.get(family)}</strong>
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function EvidenceFilteredEmpty({ onClear }: { onClear: () => void }) {
   return (
     <div className="evidence-empty">
@@ -491,6 +548,7 @@ function QuickPassControl({
   onRunPresetChange,
   onProviderChange,
   onOpenSettings,
+  onOpenReview,
   onRun,
   onClear,
 }: {
@@ -517,6 +575,7 @@ function QuickPassControl({
   onRunPresetChange: (id: string | null) => void;
   onProviderChange: (provider: QuickPassProviderKind) => void;
   onOpenSettings: () => void;
+  onOpenReview: () => void;
   onRun: () => void;
   onClear: () => void;
 }) {
@@ -588,6 +647,9 @@ function QuickPassControl({
             <span><strong>{issueCount}</strong> 이슈</span>
             <span><strong>{decisionCount}</strong> 결정</span>
             <span><strong>{nextActionCount}</strong> 다음 액션</span>
+            <button type="button" className="analysis-strip-review" onClick={onOpenReview}>
+              검토에서 자세히 보기 →
+            </button>
             {generatedAt ? (
               <span className="analysis-strip-produced">
                 {describeAnalysisProduction({ inputEventCount, inputSourceCount, durationMs, generatedAt })}
