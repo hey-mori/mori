@@ -8,6 +8,7 @@ import type {
   TimelineEvent,
 } from "../../domain/types";
 import { eventDisplayLabel } from "../../domain/constants";
+import { formatDateTime } from "../formatting/time";
 import { isAgentBoilerplateTitle } from "../import/sanitizeTitle";
 import {
   projectEventRequestSummary,
@@ -215,8 +216,8 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
   lines.push(`# ${view.session.title} · ${typeDef.label}`);
   lines.push("");
   lines.push(`- 대상: **${typeDef.audience}**`);
-  lines.push(`- 생성 시각: ${formatIso(generatedAt)}`);
-  lines.push(`- 세션 기간: ${formatIso(view.session.startedAt)} → ${formatIso(view.session.endedAt)}`);
+  lines.push(`- 생성 시각: ${formatStamp(generatedAt)}`);
+  lines.push(`- 세션 기간: ${formatStamp(view.session.startedAt)} → ${formatStamp(view.session.endedAt)}`);
   lines.push(`- 데이터 기반: ${summary.dataBasis}`);
   if (privacy.clientSafe) {
     lines.push(`- Privacy: 클라이언트 안전 모드`);
@@ -336,7 +337,7 @@ export function buildReportMarkdown(input: ReportInput): ReportPayload {
         lines.push("");
         lines.push("**소스 목록**");
         for (const source of view.sources) {
-          const captured = formatIso(source.capturedAt);
+          const captured = formatStamp(source.capturedAt);
           const fidelity = source.captureFidelity
             ? getCaptureFidelityDisplay(source.captureFidelity)
             : null;
@@ -414,7 +415,7 @@ function renderTimelineLine(
   privacy: ReportPrivacyOptions,
   requestDisclosureLevel: DisclosureLevel,
 ): string {
-  const time = formatIso(event.start);
+  const time = formatStamp(event.start);
   const typeLabel = eventDisplayLabel(event);
   // Sessions imported before the boilerplate-aware titler stored the agent's
   // "continued from a previous conversation" preamble as the title; clean it at
@@ -580,9 +581,14 @@ function truncate(text: string, max: number): string {
   return `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
-function formatIso(iso: string): string {
+// The report is a shared document, so its timestamps must read in the same
+// Asia/Seoul wall-clock the rest of the app shows. The old formatter sliced a
+// raw `toISOString()`, which printed UTC, so a session that ran at 14:33 local
+// appeared as 05:33 in the report, a 9-hour contradiction with every other
+// surface. Route through the canonical formatter instead.
+function formatStamp(iso: string): string {
   try {
-    return new Date(iso).toISOString().slice(0, 19).replace("T", " ");
+    return formatDateTime(iso);
   } catch {
     return iso;
   }
