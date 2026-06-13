@@ -8,6 +8,7 @@ import {
   InspectorRows,
   InspectorRow,
   InspectorActions,
+  InspectorDisclosure,
   InspectorNote,
   InspectorEmpty,
 } from "../../components/ui/BaseInspectorPanel";
@@ -23,6 +24,7 @@ import type {
   MockSession,
   NextAction,
   Priority,
+  SourceRef,
 } from "../../domain/types";
 import { formatDate, formatTime } from "../../lib/formatting/time";
 import { isNextActionCompleted } from "../../lib/session/nextActionCompletion";
@@ -611,20 +613,31 @@ function EvidenceList({ view, sourceIds }: { view: MockSession; sourceIds: strin
   return (
     <>
       <InspectorRows>
-        {sources.slice(0, 5).map((source) => {
-          const display = getSourceDisplayStatus(source);
-          return (
-            <InspectorRow
-              key={source.id}
-              leading={<Layers size={13} aria-hidden="true" />}
-              title={source.title}
-              meta={display.integrationLabel}
-            />
-          );
-        })}
+        {sources.slice(0, 5).map((source) => (
+          <EvidenceSourceRow key={source.id} source={source} />
+        ))}
       </InspectorRows>
-      {sources.length > 5 ? <InspectorEmpty>+ {sources.length - 5}건 더</InspectorEmpty> : null}
+      {sources.length > 5 ? (
+        <InspectorDisclosure summary="나머지 출처" count={sources.length - 5}>
+          <InspectorRows>
+            {sources.slice(5).map((source) => (
+              <EvidenceSourceRow key={source.id} source={source} />
+            ))}
+          </InspectorRows>
+        </InspectorDisclosure>
+      ) : null}
     </>
+  );
+}
+
+function EvidenceSourceRow({ source }: { source: SourceRef }) {
+  const display = getSourceDisplayStatus(source);
+  return (
+    <InspectorRow
+      leading={<Layers size={13} aria-hidden="true" />}
+      title={source.title}
+      meta={display.integrationLabel}
+    />
   );
 }
 
@@ -650,7 +663,20 @@ function RelatedEventList({
           />
         ))}
       </InspectorRows>
-      {events.length > 5 ? <InspectorEmpty>+ {events.length - 5}건 더</InspectorEmpty> : null}
+      {events.length > 5 ? (
+        <InspectorDisclosure summary="나머지 이벤트" count={events.length - 5}>
+          <InspectorRows>
+            {events.slice(5).map((event) => (
+              <InspectorRow
+                key={event.id}
+                leading={<Badge tone="purple">{eventTypeLabels[event.type] ?? event.type}</Badge>}
+                title={event.title}
+                onClick={() => onShowTimeline(event.id)}
+              />
+            ))}
+          </InspectorRows>
+        </InspectorDisclosure>
+      ) : null}
     </>
   );
 }

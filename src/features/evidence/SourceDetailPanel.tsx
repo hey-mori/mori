@@ -7,6 +7,7 @@ import {
   InspectorFields,
   InspectorRows,
   InspectorRow,
+  InspectorDisclosure,
   InspectorNote,
   InspectorEmpty,
 } from "../../components/ui/BaseInspectorPanel";
@@ -192,7 +193,20 @@ function SourceDetailView({
               ))}
             </InspectorRows>
             {relatedEvents.length > 6 ? (
-              <InspectorEmpty>+ {relatedEvents.length - 6}건 더</InspectorEmpty>
+              <InspectorDisclosure summary="나머지 이벤트" count={relatedEvents.length - 6}>
+                <InspectorRows>
+                  {relatedEvents.slice(6).map((event) => (
+                    <InspectorRow
+                      key={event.id}
+                      leading={
+                        <Badge tone="purple">{eventTypeLabels[event.type] ?? event.type}</Badge>
+                      }
+                      title={event.title}
+                      meta={event.summary}
+                    />
+                  ))}
+                </InspectorRows>
+              </InspectorDisclosure>
             ) : null}
           </>
         )}
