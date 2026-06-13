@@ -37,7 +37,15 @@ export function AiWorkflowView({
   );
 
   if (!summary) {
-    return <div className="ai-workflow ai-workflow-empty" aria-label="AI 흐름 없음" />;
+    return (
+      <div className="ai-workflow ai-workflow-empty" aria-label="AI 흐름 없음">
+        <p className="ai-workflow-empty-title">아직 분석 전입니다</p>
+        <p>
+          분석을 실행하면 AI가 이해한 작업 흐름이 단계별로 정리됩니다. 그 전에도 위의 원본
+          보기에서 실제 대화 흐름을 확인할 수 있습니다.
+        </p>
+      </div>
+    );
   }
 
   const selectedAt = phaseTimeForSelection(view.events, selectedItemId);

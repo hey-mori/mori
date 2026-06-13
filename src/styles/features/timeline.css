@@ -3936,6 +3936,13 @@ textarea {
 .ai-workflow-empty p {
   margin: 0;
   font-size: 13px;
+  max-width: 360px;
+  line-height: 1.55;
+}
+
+.ai-workflow-empty-title {
+  font-weight: 700;
+  color: var(--text);
 }
 
 .ai-workflow-empty svg {
