@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   Check,
   Circle,
   CircleCheck,
@@ -281,33 +282,52 @@ export function ReviewView() {
     </section>
   );
 
-  const body = (
+  // An empty board reads as "analyzed, nothing found" — which is wrong before
+  // any analysis has run. So the not-yet-analyzed moment gets its own focal
+  // empty state instead of the board: either "import something" (no material)
+  // or "run analysis in 자료" (material present, not analysed). Once analysis
+  // has run, the board shows even when a column is empty, so "이슈 없음" then
+  // honestly means "analysed, none found".
+  const body = showQuickPassEmpty ? (
+    imports.length === 0 ? (
+      <SessionEmptyPrompt
+        title="세션에 가져온 자료 없음"
+        hint="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            icon={ListPlus}
+            onClick={() => setCurrentView("evidence")}
+          >
+            자료 가져오기
+          </Button>
+        }
+      />
+    ) : (
+      <SessionEmptyPrompt
+        title="아직 분석하지 않았습니다"
+        hint="자료 탭에서 분석을 실행하면 이슈·결정·다음 액션이 여기에 정리됩니다."
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            icon={ArrowRight}
+            onClick={() => setCurrentView("evidence")}
+          >
+            자료에서 분석 실행
+          </Button>
+        }
+      />
+    )
+  ) : (
     <>
-      {/* No "아직 분석 전" banner — the empty board itself is the not-yet-analyzed
-          state. Only prompt when the session truly has no imported material. */}
-      {showQuickPassEmpty && imports.length === 0 ? (
-        <SessionEmptyPrompt
-          title="세션에 가져온 자료 없음"
-          hint="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
-          action={
-            <Button
-              variant="primary"
-              size="sm"
-              icon={ListPlus}
-              onClick={() => setCurrentView("evidence")}
-            >
-              자료 가져오기
-            </Button>
-          }
-        />
-      ) : (
-        <ReviewAnalysisNotice status={analysisStatus} error={analysisError} mode={mode} />
-      )}
+      <ReviewAnalysisNotice status={analysisStatus} error={analysisError} mode={mode} />
 
       {toolbar}
 
-      {/* The board (the 3 columns) always renders, empty or not, so the tab
-          shows its shape. */}
+      {/* The board (the 3 columns) always renders once analysed, empty or not,
+          so the tab shows its shape and an empty column reads honestly. */}
       {board}
     </>
   );
