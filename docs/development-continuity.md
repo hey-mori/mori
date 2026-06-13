@@ -142,16 +142,20 @@ repeated, direct user feedback. Treat them as direction, not as immutable law.
 evidence-based flow, and make every surface honest about its state. Recent work
 followed two moves that are worth repeating:
 
-- **Each surface should earn its place in the flow.** Example framing: source
-  rows were promoted to evidence cards so 자료 reads as an evidence hub (trust +
-  what each source contributed), not a bare list; the resume prompt was raised
-  to a first-class 이어가기 action so the core "continue in a new session" value
-  is a direct action, not a buried report section.
-- **Empty and overflow states must be honest.** Example framing: the
-  not-yet-analyzed board was separated from an "analyzed, found nothing" board;
-  the default 활동 view got a real empty state instead of a blank div; dead
-  "+N건 더" truncation was replaced with real disclosures so nothing is hidden
-  behind an unreachable label.
+- **The evidence link must be navigable both directions.** Example framing: a
+  source in 자료 now lists every issue / decision it fed and each row jumps into
+  검토; a review item's 근거 lists every source it was drawn from and each row
+  jumps back into 자료; a review item's related event, and the overview reopen
+  anchor, land on the 원본 stream with that event highlighted and scrolled into
+  view (not the AI 흐름 summary, which never showed the individual event). The
+  goal: from any analysis result you can reach the raw evidence, and back.
+- **A surface must show its real state, honestly.** Example framing: the default
+  AI 흐름 view rendered "분석 전" on an analysed demo because it gated on the live
+  run object, not the session's stored analysis; a steady continuous session
+  with no time-gap phases collapsed to a bare note instead of showing its
+  decisions and issues in time order; the report printed UTC timestamps that
+  contradicted every other surface by nine hours; the fallback resume prompt
+  hardcoded "you are continuing a session for Mori" for non-Mori sessions.
 
 When you finish a meaningful unit, you may replace the examples above with a
 fresher one in the same "what it did for the flow" style. Keep it to a couple of
