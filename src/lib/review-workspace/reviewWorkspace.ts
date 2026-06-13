@@ -359,7 +359,7 @@ export function issueStatusTone(status: IssueStatus): "red" | "orange" | "green"
  * the row renderer never invents new copy.
  */
 export const UNRESOLVED_REASON_LABEL: Record<UnresolvedReason, string> = {
-  "open-issue": "Open 이슈",
+  "open-issue": "열린 이슈",
   "in-progress-issue": "진행 중 이슈",
   "low-confidence-issue": "낮은 신뢰도 이슈",
   "unconfirmed-decision": "미확정 결정",
