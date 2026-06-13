@@ -128,6 +128,28 @@ export function EvidenceView() {
   const filterActive = searchQuery.trim().length > 0 || activeFamilies.length > 0;
   const isDemoSession = mode === "demo";
 
+  // What each source's events fed into the analysis — so a source row reads as
+  // evidence that produced issues / decisions, surfacing the evidence → analysis
+  // link right on the source list. Empty until an analysis exists.
+  const sourceContributions = useMemo(() => {
+    const map = new Map<string, { issues: number; decisions: number }>();
+    if (!analysis) return map;
+    for (const source of importedSources) {
+      const sourceEventIds = new Set(
+        view.events.filter((event) => event.sourceRefs.includes(source.id)).map((event) => event.id),
+      );
+      if (sourceEventIds.size === 0) continue;
+      const issues = analysis.issues.filter((issue) =>
+        (issue.sourceEventIds ?? []).some((id) => sourceEventIds.has(id)),
+      ).length;
+      const decisions = analysis.decisions.filter((decision) =>
+        (decision.sourceEventIds ?? []).some((id) => sourceEventIds.has(id)),
+      ).length;
+      if (issues + decisions > 0) map.set(source.id, { issues, decisions });
+    }
+    return map;
+  }, [analysis, importedSources, view.events]);
+
   const aside = (
     <SourceDetailPanel
       selection={selection}
@@ -164,6 +186,7 @@ export function EvidenceView() {
               events={view.events}
               selected={selected}
               importSummary={importEntry?.importSummary}
+              contribution={sourceContributions.get(source.id)}
               onSelect={() =>
                 setSelection(
                   selected

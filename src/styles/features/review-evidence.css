@@ -1216,6 +1216,27 @@ td a {
   box-shadow: 0 6px 18px rgba(98, 70, 245, 0.14);
 }
 
+.imported-source-trust {
+  font-weight: 650;
+}
+
+.imported-source-trust.tone-green {
+  color: var(--green);
+}
+
+.imported-source-trust.tone-blue {
+  color: var(--blue);
+}
+
+.imported-source-trust.tone-purple {
+  color: var(--purple);
+}
+
+.imported-source-contribution {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .imported-source-icon {
   display: inline-grid;
   place-items: center;

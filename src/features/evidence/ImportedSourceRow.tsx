@@ -23,6 +23,7 @@ export function ImportedSourceRow({
   events,
   selected,
   importSummary,
+  contribution,
   onSelect,
   onRemove,
 }: {
@@ -30,6 +31,9 @@ export function ImportedSourceRow({
   events: TimelineEvent[];
   selected: boolean;
   importSummary?: ConnectorSourceImportSummary;
+  /** What analysis extracted from this source's events — surfaced so the row
+   *  reads as evidence that fed the analysis, not just a file in a list. */
+  contribution?: { issues: number; decisions: number };
   onSelect: () => void;
   onRemove?: () => void;
 }) {
@@ -44,6 +48,8 @@ export function ImportedSourceRow({
           label: describeConnectorSourceImportBadge(importSummary),
         }
       : null;
+  const contributed =
+    contribution && contribution.issues + contribution.decisions > 0 ? contribution : null;
   const menuItems = buildSourceMenuItems({ source, onSelect, onRemove });
 
   return (
@@ -62,10 +68,18 @@ export function ImportedSourceRow({
         meta={
           <BaseMetadataLine
             items={[
+              <span className={`imported-source-trust tone-${display.trustTone}`}>
+                {display.trustLabel}
+              </span>,
+              <span>관련 이벤트 {relatedEventCount}</span>,
+              contributed ? (
+                <span className="imported-source-contribution">
+                  추출 이슈 {contributed.issues} · 결정 {contributed.decisions}
+                </span>
+              ) : null,
               summaryBadge ? (
                 <Badge tone={summaryBadge.tone}>{summaryBadge.label}</Badge>
               ) : null,
-              <span>관련 이벤트 {relatedEventCount}</span>,
             ]}
           />
         }
