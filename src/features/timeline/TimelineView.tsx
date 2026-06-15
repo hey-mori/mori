@@ -402,7 +402,7 @@ export function TimelineView({
         <TimelineEmptyState
           variant={model.emptyVariant}
           onStartSession={() => setCurrentView("start")}
-          onOpenSources={() => setSessionTab("analysis")}
+          onOpenSources={() => setCurrentView("connections")}
           onRunQuickPass={() => runQuickPass()}
           canRunQuickPass={analysisStatus !== "running"}
         />

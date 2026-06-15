@@ -21,7 +21,7 @@ export function DecisionTimelineCard({ timeline }: { timeline: DecisionTimelineP
         <Badge tone={timeline.length ? "purple" : "gray"}>{timeline.length}건 결정</Badge>
       </header>
       {timeline.length === 0 ? (
-        <p className="memory-empty">결정 후보가 없습니다. 검토에서 결정을 확인하거나 분석을 실행하세요.</p>
+        <p className="memory-empty">결정 후보가 없습니다. 정리에서 결정을 확인하거나 분석을 실행하세요.</p>
       ) : (
         <ol className="memory-decisions-list">
           {timeline.map((point) => (

@@ -8,7 +8,7 @@ import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import { InfoHint } from "../../components/ui/InfoHint";
 
 /**
- * Surfaces the active session's analysis run history on the Review tab:
+ * Surfaces the active session's analysis run history on the Analysis diagnostics view:
  * the adopted run's reason (model, time, confidence, counts) always, and
  * a disclosure listing every run with the change-versus-previous and an
  * adopt action once a re-analysis has produced more than one run.
@@ -25,7 +25,7 @@ import { InfoHint } from "../../components/ui/InfoHint";
  * render cleanly without re-running analysis.
  */
 function cleanEngineLabel(label: string): string {
-  return label.replace(/\s*Quick Pass/g, " 분석").trim();
+  return label.replace(/\s*Quick Pass/gi, " 분석").replace(/\s{2,}/g, " ").trim();
 }
 
 export function AnalysisRunHistoryPanel() {

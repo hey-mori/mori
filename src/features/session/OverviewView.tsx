@@ -35,6 +35,7 @@ export function OverviewView() {
   const view = useSessionStore(selectSessionView);
   const mode = useSessionStore(selectSessionMode);
   const imports = useSessionStore((state) => state.imports);
+  const navigate = useAppStore((state) => state.navigate);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
   const focusTimelineEvent = useAppStore((state) => state.focusTimelineEvent);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
@@ -104,16 +105,16 @@ export function OverviewView() {
         <div className="session-tab-main overview-main">
           {sessionEmpty ? (
             <SessionEmptyPrompt
-              title="세션에 가져온 자료 없음"
-              hint="자료 탭에서 대화를 가져오면 개요가 채워집니다."
+              title="세션에 가져온 소스 없음"
+              hint="소스에서 대화를 가져오면 개요가 채워집니다."
               action={
                 <Button
                   variant="primary"
                   size="sm"
                   icon={ListPlus}
-                  onClick={() => setSessionTab("analysis")}
+                  onClick={() => navigate("connections")}
                 >
-                  자료 가져오기
+                  소스에서 가져오기
                 </Button>
               }
             />
@@ -174,7 +175,7 @@ export function OverviewView() {
                   className="overview-attention-more"
                   onClick={() => setSessionTab("analysis")}
                 >
-                  검토에서 {unresolved.length - 4}건 더 보기
+                  정리에서 {unresolved.length - 4}건 더 보기
                 </button>
               ) : null}
             </section>

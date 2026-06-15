@@ -2328,14 +2328,24 @@ td a {
   gap: 6px;
 }
 
-/* 분석 tab — a header row (section switch 흐름 / 검토 on the left, the analysis
+/* 분석 tab — a header row (section switch 흐름 / 정리 / 진단 on the left, the analysis
    run controls on the right) above the active section. The header sits at the
    page inset so it aligns with the content below it, and the section fills the
-   remaining height so 검토's per-column scroll still works. */
+   remaining height so 정리's per-column scroll still works. */
 .analysis-view {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.session-detail-page .page-shell-scroll:has(.analysis-view.is-organize) {
+  overflow: hidden;
+}
+
+.session-detail-page .page-shell-content:has(.analysis-view.is-organize),
+.analysis-view.is-organize {
+  height: 100%;
+  overflow: hidden;
 }
 
 .analysis-view > :not(.analysis-header) {
@@ -2420,9 +2430,193 @@ td a {
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.08);
 }
 
+/* Analysis diagnostics */
+.analysis-diagnostics {
+  gap: var(--base-space-4);
+}
+
+.analysis-diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--base-space-3);
+  min-width: 0;
+}
+
+.analysis-diagnostic-card {
+  --diagnostic-tone: var(--muted-2);
+  --diagnostic-tint: var(--gray-50);
+  display: grid;
+  gap: var(--base-space-3);
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel, white);
+}
+
+.analysis-diagnostic-card.tone-green {
+  --diagnostic-tone: var(--green);
+  --diagnostic-tint: var(--green-50);
+}
+
+.analysis-diagnostic-card.tone-blue {
+  --diagnostic-tone: var(--blue);
+  --diagnostic-tint: var(--blue-50);
+}
+
+.analysis-diagnostic-card.tone-warning {
+  --diagnostic-tone: #b46100;
+  --diagnostic-tint: var(--orange-50);
+}
+
+.analysis-diagnostic-card.tone-neutral {
+  --diagnostic-tone: var(--muted);
+  --diagnostic-tint: var(--gray-50);
+}
+
+.analysis-diagnostic-card header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.analysis-diagnostic-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--diagnostic-tint);
+  color: var(--diagnostic-tone);
+}
+
+.analysis-diagnostic-card header strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analysis-diagnostic-card header small {
+  color: var(--diagnostic-tone);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.analysis-diagnostic-metrics {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.analysis-diagnostic-metrics div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.analysis-diagnostic-metrics dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.analysis-diagnostic-metrics dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-diagnostic-status-copy,
+.analysis-diagnostic-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.analysis-diagnostic-section {
+  display: grid;
+  gap: var(--base-space-3);
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel, white);
+}
+
+.analysis-diagnostic-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analysis-diagnostic-section-head strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.analysis-diagnostic-section-icon {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.analysis-diagnostic-note-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.analysis-diagnostic-note-list li {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.analysis-diagnostic-section .analysis-runs {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 1180px) {
+  .analysis-diagnostic-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .analysis-diagnostic-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Issue Garden */
 
-/* The 검토 split inherits the shared `.session-tab-split` padding, no extra
+/* The 정리 split inherits the shared `.session-tab-split` padding, no extra
    top inset, so every tab pane lands at the same y-coordinate. Use the default
    tab-main gap so the empty-state banner sits the same distance above the board
    as it does on every other tab. */
@@ -2431,7 +2625,26 @@ td a {
   flex-direction: column;
   gap: var(--base-space-5);
   min-height: 0;
+  overflow: visible;
+}
+
+.analysis-view.is-organize > .session-tab-pane,
+.analysis-view.is-organize .review-tab-canvas,
+.analysis-view.is-organize .review-tab-canvas .session-tab-main,
+.analysis-view.is-organize .review-issue-board,
+.analysis-view.is-organize .review-board-columns,
+.analysis-view.is-organize .review-issue-column {
+  height: 100%;
+  min-height: 0;
+}
+
+.analysis-view.is-organize .review-tab-canvas,
+.analysis-view.is-organize .review-issue-board {
   overflow: hidden;
+}
+
+.analysis-view.is-organize .tab-toolbar {
+  flex: 0 0 auto;
 }
 
 .review-issue-board {
@@ -2583,7 +2796,7 @@ td a {
   align-items: start;
 }
 
-/* The 검토 board is a three-bucket Kanban (이슈 / 결정 / 다음 액션), so it
+/* The 정리 board is a three-bucket Kanban (이슈 / 결정 / 다음 액션), so it
    overrides the four-column issue-status grid with three equal tracks at wide
    widths. Narrow-width collapses (2 / 1 column) inherit from the base
    .review-issue-board-columns media queries below. */
@@ -2599,6 +2812,23 @@ td a {
    arbitrary viewport width. At that point the fixed-height per-column scroll is
    released so the page scrolls naturally instead. */
 @media (max-width: 1180px) {
+  .session-detail-page .page-shell-scroll:has(.analysis-view.is-organize) {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .session-detail-page .page-shell-content:has(.analysis-view.is-organize),
+  .analysis-view.is-organize,
+  .analysis-view.is-organize > .session-tab-pane,
+  .analysis-view.is-organize .review-tab-canvas,
+  .analysis-view.is-organize .review-tab-canvas .session-tab-main,
+  .analysis-view.is-organize .review-issue-board,
+  .analysis-view.is-organize .review-board-columns,
+  .analysis-view.is-organize .review-issue-column {
+    height: auto;
+    overflow: visible;
+  }
+
   .review-tab-canvas .session-tab-main {
     overflow: visible;
   }
@@ -2719,7 +2949,7 @@ td a {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 2px;
+  padding: 0 2px var(--base-space-3) 0;
 }
 
 .review-issue-column-empty {

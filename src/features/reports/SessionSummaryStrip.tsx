@@ -136,7 +136,7 @@ function UnresolvedPreview({
         ))}
       </ul>
       {unresolved.hiddenCount > 0 ? (
-        <p>검토에서 {unresolved.hiddenCount}건 더 확인할 수 있습니다.</p>
+        <p>정리에서 {unresolved.hiddenCount}건 더 확인할 수 있습니다.</p>
       ) : null}
     </div>
   );

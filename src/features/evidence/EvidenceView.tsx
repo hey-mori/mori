@@ -685,7 +685,7 @@ function QuickPassControl({
             <span><strong>{decisionCount}</strong> 결정</span>
             <span><strong>{nextActionCount}</strong> 다음 액션</span>
             <button type="button" className="analysis-strip-review" onClick={onOpenReview}>
-              검토에서 자세히 보기 →
+              정리에서 자세히 보기 →
             </button>
             {generatedAt ? (
               <span className="analysis-strip-produced">

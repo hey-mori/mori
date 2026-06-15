@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GitBranch, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { Activity, ListChecks, Settings as SettingsIcon, Sparkles } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useAppStore } from "../../app/store";
 import {
@@ -11,8 +11,9 @@ import { providerKindLabel } from "../../lib/analysis/providerLabels";
 import type { QuickPassProviderKind } from "../../lib/analysis/analysisSettings";
 import { TimelineView } from "../timeline/TimelineView";
 import { ReviewView } from "../review/ReviewView";
+import { AnalysisDiagnosticsView } from "./AnalysisDiagnosticsView";
 
-type AnalysisSection = "flow" | "review";
+type AnalysisSection = "flow" | "organize" | "diagnostics";
 
 /**
  * 분석 — the unified analysis surface.
@@ -23,7 +24,8 @@ type AnalysisSection = "flow" | "review";
  *     separate 자료 tab,
  *   - **흐름**  the AI's reading of how the work progressed (the workflow view,
  *               which carries the analysis summary),
- *   - **검토**  the issues / decisions / next actions to confirm.
+ *   - **정리**  the issues / decisions / next actions extracted from analysis,
+ *   - **진단**  the run, input scope, confidence, notes, and re-analysis history.
  *
  * It replaces the separate 자료 + 검토 tabs and absorbs the 흐름 reading that
  * used to live under 활동, so the analysis input, narrative, and review work read
@@ -40,19 +42,19 @@ export function AnalysisView() {
   const imports = useSessionStore((state) => state.imports);
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
 
-  const [section, setSection] = useState<AnalysisSection>(reviewFocus ? "review" : "flow");
+  const [section, setSection] = useState<AnalysisSection>(reviewFocus ? "organize" : "flow");
 
   // A deep-link into a review item (from 개요 or a 흐름 ground link) arms
-  // `reviewFocus`; honour it by opening the 검토 section.
+  // `reviewFocus`; honour it by opening the 정리 section.
   useEffect(() => {
-    if (reviewFocus) setSection("review");
+    if (reviewFocus) setSection("organize");
   }, [reviewFocus]);
 
   const running = analysisStatus === "running";
   const canRun = imports.length > 0 && !running;
 
   return (
-    <div className="analysis-view">
+    <div className={`analysis-view is-${section}`}>
       <div className="analysis-header">
         <div className="analysis-section-switch" role="tablist" aria-label="분석 보기">
           <button
@@ -68,12 +70,22 @@ export function AnalysisView() {
           <button
             type="button"
             role="tab"
-            aria-selected={section === "review"}
-            className={`analysis-section-option ${section === "review" ? "is-active" : ""}`}
-            onClick={() => setSection("review")}
+            aria-selected={section === "organize"}
+            className={`analysis-section-option ${section === "organize" ? "is-active" : ""}`}
+            onClick={() => setSection("organize")}
           >
-            <GitBranch size={14} aria-hidden="true" />
-            검토
+            <ListChecks size={14} aria-hidden="true" />
+            정리
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={section === "diagnostics"}
+            className={`analysis-section-option ${section === "diagnostics" ? "is-active" : ""}`}
+            onClick={() => setSection("diagnostics")}
+          >
+            <Activity size={14} aria-hidden="true" />
+            진단
           </button>
         </div>
 
@@ -113,11 +125,9 @@ export function AnalysisView() {
         ) : null}
       </div>
 
-      {section === "flow" ? (
-        <TimelineView mode="timeline" readingModes={["workflow"]} />
-      ) : (
-        <ReviewView />
-      )}
+      {section === "flow" ? <TimelineView mode="timeline" readingModes={["workflow"]} /> : null}
+      {section === "organize" ? <ReviewView /> : null}
+      {section === "diagnostics" ? <AnalysisDiagnosticsView /> : null}
     </div>
   );
 }

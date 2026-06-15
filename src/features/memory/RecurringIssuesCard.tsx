@@ -26,7 +26,7 @@ export function RecurringIssuesCard({
         <Badge tone={rows.length ? "red" : "gray"}>{rows.length}개 신호</Badge>
       </header>
       {rows.length === 0 ? (
-        <p className="memory-empty">반복적으로 나타나는 이슈가 없습니다. 검토에서 신규 이슈를 확인하세요.</p>
+        <p className="memory-empty">반복적으로 나타나는 이슈가 없습니다. 정리에서 신규 이슈를 확인하세요.</p>
       ) : (
         <ul className="memory-recurring-list">
           {rows.map((row) => (

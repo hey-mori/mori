@@ -230,7 +230,7 @@ export function ConnectionsView() {
       });
       setImportStatus({
         tone: "ok",
-        message: "새 세션으로 가져왔습니다. 자료 탭에서 바로 확인하고 분석할 수 있어요.",
+        message: "새 세션으로 가져왔습니다. 분석 탭에서 바로 확인하고 분석할 수 있어요.",
       });
       setViewerOpen(false);
       setCurrentView("evidence");

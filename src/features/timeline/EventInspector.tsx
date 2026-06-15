@@ -395,7 +395,7 @@ function LinkedRows({
                       type="button"
                       className="inspector-linked-item is-linkable"
                       onClick={() => onOpenReviewItem(item.selection as ReviewSelection)}
-                      title="검토에서 이 항목 열기"
+                      title="정리에서 이 항목 열기"
                     >
                       {item.title}
                     </button>

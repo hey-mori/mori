@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   Check,
   Circle,
   CircleCheck,
@@ -8,6 +7,7 @@ import {
   Filter,
   ListPlus,
   RotateCcw,
+  Sparkles,
   Square,
   SquareCheck,
 } from "lucide-react";
@@ -42,7 +42,7 @@ const REVIEW_COLUMN_LABELS: Record<ReviewColumn, string> = {
 };
 
 /**
- * Review workspace — the **검토** tab inside the unified Session Detail workspace.
+ * Review workspace — the **정리** section inside the unified Analysis surface.
  *
  * One calm Kanban: three columns — 이슈 / 결정 / 다음 액션 — each a stack of
  * compact cards. That is the whole session's review work at a glance; the old
@@ -60,6 +60,7 @@ export function ReviewView() {
   const hasAnalysis = useSessionStore(selectHasRealAnalysis);
   const analysisStatus = useSessionStore((state) => state.analysisStatus);
   const analysisError = useSessionStore((state) => state.analysisError);
+  const runQuickPass = useSessionStore((state) => state.runQuickPass);
   const setNextActionCompletion = useSessionStore((state) => state.setNextActionCompletion);
   const promoteIssueToNextAction = useSessionStore((state) => state.promoteIssueToNextAction);
   const setIssueStatus = useSessionStore((state) => state.setIssueStatus);
@@ -107,12 +108,14 @@ export function ReviewView() {
   })();
 
   const isDemo = mode === "demo";
+  const running = analysisStatus === "running";
+  const canRunAnalysis = mode === "draft" && imports.length > 0 && !running;
   // The focal empty state owns the "not analysed yet" moment; running and
   // failed states are surfaced by the notice instead, so exclude them here.
   const showQuickPassEmpty =
     mode === "draft" &&
     !hasAnalysis &&
-    analysisStatus !== "running" &&
+    !running &&
     analysisStatus !== "failed";
 
   const matchesQuery = useMemo(() => {
@@ -288,37 +291,38 @@ export function ReviewView() {
   // An empty board reads as "analyzed, nothing found" — which is wrong before
   // any analysis has run. So the not-yet-analyzed moment gets its own focal
   // empty state instead of the board: either "import something" (no material)
-  // or "run analysis in 자료" (material present, not analysed). Once analysis
+  // or "run analysis" (material present, not analysed). Once analysis
   // has run, the board shows even when a column is empty, so "이슈 없음" then
   // honestly means "analysed, none found".
   const body = showQuickPassEmpty ? (
     imports.length === 0 ? (
       <SessionEmptyPrompt
-        title="세션에 가져온 자료 없음"
-        hint="자료 탭에서 대화를 가져오면 여기에 정리됩니다."
+        title="정리할 소스가 없습니다"
+        hint="소스에서 대화를 가져오면 이슈·결정·다음 액션을 추출할 수 있습니다."
         action={
           <Button
             variant="primary"
             size="sm"
             icon={ListPlus}
-            onClick={() => setCurrentView("evidence")}
+            onClick={() => setCurrentView("connections")}
           >
-            자료 가져오기
+            소스에서 가져오기
           </Button>
         }
       />
     ) : (
       <SessionEmptyPrompt
         title="아직 분석하지 않았습니다"
-        hint="자료 탭에서 분석을 실행하면 이슈·결정·다음 액션이 여기에 정리됩니다."
+        hint="분석을 실행하면 이슈·결정·다음 액션이 여기에 정리됩니다."
         action={
           <Button
             variant="primary"
             size="sm"
-            icon={ArrowRight}
-            onClick={() => setCurrentView("evidence")}
+            icon={Sparkles}
+            onClick={() => void runQuickPass()}
+            disabled={!canRunAnalysis}
           >
-            자료에서 분석 실행
+            분석 실행
           </Button>
         }
       />
@@ -350,7 +354,7 @@ export function ReviewView() {
 // ─── Tab toolbar ──────────────────────────────────────────────────────────────
 
 /**
- * Replaces the deprecated ActionBar + "검토 보드 / N개 항목" header. Search and a
+ * Replaces the deprecated ActionBar + "정리 보드 / N개 항목" header. Search and a
  * column filter live on the left, the confirm / issue / decision / action
  * counts (formerly the dl strip) live on the right, the Quick Pass button
  * stays anchored to the far end so it never moves.
@@ -395,11 +399,11 @@ function ReviewToolbar({
   ];
 
   return (
-    <div className="tab-toolbar" role="toolbar" aria-label="검토 도구">
+    <div className="tab-toolbar" role="toolbar" aria-label="정리 도구">
       <SearchField
         value={searchQuery}
         onChange={onSearchChange}
-        ariaLabel="검토 항목 검색"
+        ariaLabel="정리 항목 검색"
         className="tab-toolbar-search"
       />
       <span className="tab-toolbar-spacer" aria-hidden="true" />
@@ -411,7 +415,7 @@ function ReviewToolbar({
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
             aria-controls="review-filter-popover"
-            aria-label="검토 카테고리 필터"
+            aria-label="정리 카테고리 필터"
           >
             <Filter size={14} aria-hidden="true" />
             {activeColumns.length ? `필터 · ${activeColumns.length}` : "필터"}
@@ -421,7 +425,7 @@ function ReviewToolbar({
               className="filter-popover"
               id="review-filter-popover"
               role="dialog"
-              aria-label="검토 카테고리 필터"
+              aria-label="정리 카테고리 필터"
             >
               <header>
                 <span>카테고리</span>
@@ -488,7 +492,7 @@ function ReviewBoardColumn({
         </span>
         {progress ? <small className="review-issue-column-progress">{progress}</small> : null}
       </header>
-      <div className="review-issue-column-list">{children}</div>
+      <div className="review-issue-column-list base-scroll">{children}</div>
     </article>
   );
 }
@@ -505,7 +509,7 @@ function ColumnEmpty({ label }: { label: string }) {
  *   │ 근거 N                                  │
  *   └─────────────────────────────────────────┘
  *
- * The kicker label ("검토 이슈" / "결정 후보" / "다음 작업") is removed —
+ * The kicker label ("정리된 이슈" / "결정 후보" / "다음 작업") is removed —
  * the column header already says what kind a card is, so repeating it on
  * every card is duplicated chrome.
  * Quick actions float at the top-right of the card on hover for one-click

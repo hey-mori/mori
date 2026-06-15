@@ -106,8 +106,8 @@ export function ReportsView() {
   // The 보고서 tab is the session's handoff / output surface — three stacked
   // sections: the continue-context, the report builder, and the .mori export.
   // Session identity, scale metrics, and the wrap-up checklist live in the
-  // 개요 tab, not here. The Quick Pass re-run lives in the 검토 tab where the
-  // proposals it produces are reviewed; this surface is output-only.
+  // 개요 tab, not here. The analysis re-run lives in the 분석 tab where the
+  // produced 흐름 / 정리 / 진단 views are read; this surface is output-only.
   return (
     <div className="session-tab-pane reports-embedded">
       <div className="session-tab-split is-collapsed">
@@ -118,7 +118,7 @@ export function ReportsView() {
             status={analysisStatus}
             error={analysisError}
             importsCount={imports.length}
-            onGoToEvidence={() => setCurrentView("evidence")}
+            onOpenSources={() => setCurrentView("connections")}
           />
 
           <div className="reports-main">
@@ -173,14 +173,14 @@ function ReportsAnalysisNotice({
   status,
   error,
   importsCount,
-  onGoToEvidence,
+  onOpenSources,
 }: {
   mode: "demo" | "draft";
   hasAnalysis: boolean;
   status: string;
   error: string | null;
   importsCount: number;
-  onGoToEvidence: () => void;
+  onOpenSources: () => void;
 }) {
   if (mode === "demo") return null;
 
@@ -194,11 +194,11 @@ function ReportsAnalysisNotice({
   if (!hasAnalysis && importsCount === 0) {
     return (
       <SessionEmptyPrompt
-        title="세션에 가져온 자료 없음"
-        hint="자료 탭에서 대화를 가져오면 보고서를 만들 수 있습니다."
+        title="세션에 가져온 소스 없음"
+        hint="소스에서 대화를 가져오면 보고서를 만들 수 있습니다."
         action={
-          <Button variant="primary" size="sm" icon={ListPlus} onClick={onGoToEvidence}>
-            자료 가져오기
+          <Button variant="primary" size="sm" icon={ListPlus} onClick={onOpenSources}>
+            소스에서 가져오기
           </Button>
         }
       />

@@ -107,7 +107,7 @@ export function TrustSummaryPanel({
 function labelForStep(id: RecommendedSetupStep["id"]): string {
   switch (id) {
     case "import-source":
-      return "1. 자료 가져오기";
+      return "1. 소스 가져오기";
     case "run-quickpass":
       return "2. 분석 실행";
     case "save-to-sqlite":

@@ -1029,7 +1029,7 @@ function ConnectorSourceImportSummaryBlock({
     <section
       className={`connector-jsonl-source-summary tone-${summary.status}`}
       role="status"
-      aria-label="Connector 자료 가져오기 요약"
+      aria-label="Connector 소스 가져오기 요약"
     >
       <header className="connector-jsonl-source-summary-head">
         <Badge tone={tone}>{describeConnectorSourceImportBadge(summary)}</Badge>

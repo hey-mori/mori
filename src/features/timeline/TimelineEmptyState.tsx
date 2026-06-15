@@ -45,8 +45,8 @@ export function TimelineEmptyState({
   variant,
   onStartSession,
   onOpenSources,
-  onRunQuickPass,
-  canRunQuickPass,
+  onRunQuickPass: _onRunQuickPass,
+  canRunQuickPass: _canRunQuickPass,
 }: {
   variant: TimelineEmptyVariant;
   onStartSession: () => void;
@@ -71,11 +71,11 @@ export function TimelineEmptyState({
   if (variant === "draft-no-imports") {
     return (
       <TimelineLaneScaffold
-        title="세션에 가져온 자료 없음"
-        description="자료 탭에서 대화를 가져오면 시간순으로 그려집니다."
+        title="세션에 가져온 소스 없음"
+        description="소스에서 대화를 가져오면 시간순으로 그려집니다."
         action={
           <Button variant="primary" size="sm" icon={ListPlus} onClick={onOpenSources}>
-            자료 가져오기
+            소스에서 가져오기
           </Button>
         }
       />

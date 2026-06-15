@@ -85,10 +85,10 @@ export function ReviewDetailPanel({
     return (
       <BaseInspectorPanel
         className="inspector"
-        ariaLabel="검토 상세"
+        ariaLabel="항목 상세"
         onClose={onClose}
         eyebrow={<Badge tone="gray">선택된 항목 없음</Badge>}
-        title="검토 상세"
+        title="항목 상세"
         description="왼쪽 목록에서 이슈, 결정, 또는 다음 액션을 선택하면 근거 출처와 관련 이벤트가 여기 표시됩니다."
       >
         <InspectorSection title="이 화면에서 가능한 것">
@@ -156,7 +156,7 @@ function MissingItem({ label, onClose }: { label: string; onClose?: () => void }
   return (
     <BaseInspectorPanel
       className="inspector"
-      ariaLabel="검토 상세"
+      ariaLabel="항목 상세"
       onClose={onClose}
       eyebrow={<Badge tone="gray">선택된 {label}을 찾을 수 없음</Badge>}
       title={`이 ${label}을 찾을 수 없습니다`}
