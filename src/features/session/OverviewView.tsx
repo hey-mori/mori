@@ -17,7 +17,6 @@ import type { ImportDigestLane } from "../../lib/import/importDigest";
 import type { TimelineEvent } from "../../domain/types";
 import {
   getUnresolvedItems,
-  UNRESOLVED_REASON_LABEL,
   type UnresolvedItem,
 } from "../../lib/review-workspace/reviewWorkspace";
 
@@ -164,9 +163,6 @@ export function OverviewView() {
                     <button type="button" onClick={() => openUnresolved(item)}>
                       <span className="overview-attention-kind">{unresolvedKindLabel(item)}</span>
                       <span className="overview-attention-title">{unresolvedItemTitle(item)}</span>
-                      <span className="overview-attention-reason">
-                        {UNRESOLVED_REASON_LABEL[item.reason]}
-                      </span>
                       <ArrowRight size={13} aria-hidden="true" />
                     </button>
                   </li>

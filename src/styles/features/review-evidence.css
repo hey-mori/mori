@@ -2344,8 +2344,10 @@ td a {
 
 .review-issue-board {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--base-space-4);
+  /* The board holds only the 3-column grid (the head lives in the toolbar
+     above), so it is a single full-height row: the columns fill the board, and
+     each column's inner list owns the scroll. */
+  grid-template-rows: minmax(0, 1fr);
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -2550,7 +2552,7 @@ td a {
   padding: 14px;
   border: 1px solid var(--base-border);
   border-radius: var(--radius-md);
-  background: var(--base-surface);
+  background: var(--panel, white);
 }
 
 .review-issue-column.review-tone-orange {
@@ -2690,9 +2692,9 @@ td a {
   display: -webkit-box;
   overflow: hidden;
   color: var(--text);
-  font-size: 14px;
-  font-weight: 750;
-  line-height: 1.32;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -3631,7 +3633,7 @@ td a {
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--base-accent-soft, var(--purple-50));
+  background: var(--panel, white);
 }
 
 .session-overview-summary {
@@ -3933,12 +3935,6 @@ td a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.overview-attention-reason {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--muted-2);
 }
 
 .overview-attention-list button svg {

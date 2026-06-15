@@ -25,6 +25,17 @@
   min-height: 0;
 }
 
+/* A shell with no pinned top band (no header and no action bar) has only the
+   scroll region as a child. The default `auto minmax(0,1fr)` template would then
+   drop that scroll region into the content-sized `auto` row and leave the `1fr`
+   row empty below it, so the region never fills the viewport and a tab that
+   wants to own its own scroll (e.g. the 검토 board) cannot reach the bottom of
+   the screen. With no top band there is nothing for the `auto` row to hold, so
+   collapse to a single full-height row. */
+.page-shell:not(:has(> .page-shell-top)) {
+  grid-template-rows: minmax(0, 1fr);
+}
+
 /* Pinned header band: header + optional action bar never scroll away. */
 /* The pinned top region blends into the page background instead of reading as
    a separate white header bar — controls (tabs, segmented switch, actions)
