@@ -2335,13 +2335,20 @@ td a {
    tab-main gap so the empty-state banner sits the same distance above the board
    as it does on every other tab. */
 .review-tab-canvas .session-tab-main {
-  gap: var(--base-space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-space-5);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .review-issue-board {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--base-space-4);
+  flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
 }
 
 .review-board-head {
@@ -2489,15 +2496,29 @@ td a {
 .review-board-columns {
   grid-template-columns: repeat(3, minmax(220px, 1fr));
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
+  min-height: 0;
 }
 
 /* The board lives inside the shell's constrained main column, so it drops to a
    two-column grid only when the column itself gets narrow — not at an
-   arbitrary viewport width. */
+   arbitrary viewport width. At that point the fixed-height per-column scroll is
+   released so the page scrolls naturally instead. */
 @media (max-width: 1180px) {
+  .review-tab-canvas .session-tab-main {
+    overflow: visible;
+  }
+
+  .review-issue-board {
+    flex: initial;
+  }
+
   .review-issue-board-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-issue-column-list {
+    overflow: visible;
   }
 }
 
@@ -2522,12 +2543,14 @@ td a {
   --review-column-tone: var(--muted-2);
   --review-column-tint: var(--gray-50);
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--base-space-3);
   min-width: 0;
-  padding: 16px;
+  min-height: 0;
+  padding: 14px;
   border: 1px solid var(--base-border);
   border-radius: var(--radius-md);
-  background: #f7f8fb;
+  background: var(--base-surface);
 }
 
 .review-issue-column.review-tone-orange {
@@ -2599,7 +2622,10 @@ td a {
   display: grid;
   align-content: start;
   gap: 8px;
-  min-height: 40px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
 }
 
 .review-issue-column-empty {
