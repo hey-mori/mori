@@ -669,8 +669,14 @@
   border-radius: var(--base-radius-lg);
   background: white;
   box-shadow: var(--shadow-soft);
-  min-height: 460px;
-  overflow: visible;
+  /* The rendered report is a long document. Bound it to the viewport and scroll
+     it INSIDE the paper, so a long report no longer spills out of its box and
+     overlaps the .mori 패키지 strip below (the generic `.report-preview` rule
+     above leaves only a 240px cap, which `min-height` then fought). */
+  min-height: 360px;
+  max-height: calc(100vh - 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .report-rendered-preview {
