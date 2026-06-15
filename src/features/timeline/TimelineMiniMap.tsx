@@ -3,7 +3,6 @@ import { getActivityLaneVisuals, timelineActivityLaneOrder } from "../../lib/tim
 import { focusStateClassName, getEventFocusState } from "../../lib/timeline/focusState";
 import { timestampToXPercent, type TimelineRange } from "../../lib/timeline/layout";
 import type { TimelineDisplayItem } from "../../lib/timeline/displayItems";
-import type { AxisTick } from "../../lib/timeline/timeScale";
 import {
   brushWidthToZoom,
   FULL_MINIMAP_VIEWPORT,
@@ -23,7 +22,6 @@ type DragState = {
 export function TimelineMiniMap({
   items,
   range,
-  ticks,
   selectedItemId,
   focusedSet,
   focusActive,
@@ -33,7 +31,6 @@ export function TimelineMiniMap({
 }: {
   items: TimelineDisplayItem[];
   range: TimelineRange;
-  ticks: AxisTick[];
   selectedItemId: string | null;
   focusedSet: Set<string>;
   focusActive: boolean;
@@ -126,27 +123,10 @@ export function TimelineMiniMap({
 
   return (
     <div className={`mini-map${focusActive ? " is-focus-active" : ""}`} aria-label="타임라인 개요">
-      <div className="mini-map-axis" aria-hidden="true">
-        {ticks.map((tick) => {
-          const atStart = tick.xPercent <= 4;
-          const atEnd = tick.xPercent >= 96;
-          return (
-            <span
-              key={tick.iso}
-              className={`mini-map-tick${atStart ? " is-start" : ""}${atEnd ? " is-end" : ""}`}
-              style={
-                atStart
-                  ? { left: 0 }
-                  : atEnd
-                    ? { right: 0 }
-                    : { left: `${tick.xPercent}%` }
-              }
-            >
-              {tick.label}
-            </span>
-          );
-        })}
-      </div>
+      {/* No time-label row here: the sticky top axis is the swimlane's single
+          time reference. The minimap is the spatial overview — the scrubber
+          shows which slice is in view and the dots show where activity sits, so
+          a second strip of timestamps would just repeat the axis. */}
       <div
         ref={trackRef}
         className={`mini-track${interactive ? " is-seekable" : ""}`}

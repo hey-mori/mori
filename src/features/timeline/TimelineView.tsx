@@ -493,7 +493,6 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
               <TimelineMiniMap
                 items={renderModel.visibleDisplayItems}
                 range={renderModel.range}
-                ticks={renderModel.ticks}
                 selectedItemId={selectedItem?.id ?? null}
                 focusedSet={renderModel.focusedSet}
                 focusActive={renderModel.focusActive}

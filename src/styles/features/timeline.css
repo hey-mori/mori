@@ -1779,6 +1779,61 @@ kbd {
 .connector.gray { stroke: #b7bdcb; }
 .connector.orange { stroke: #ffba4a; }
 
+/* Request-grouping band — a slim strip above the lanes where each request
+   (a user ask → the work it triggered) is one bar spanning its time range. It
+   brackets the swimlane into requests, the way a Gantt summary row ties a group
+   of tasks together. Purple is the established "request" identity here (it
+   matches the user-ask anchor on the cards), kept low-alpha so it reads as a
+   calm backbone, not loud chrome; it tints up on hover / when it owns the
+   selection. The container is a pure positioning context (pointer-events pass
+   through to anything beneath); only the bars are interactive. */
+.timeline-request-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.timeline-request-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid rgba(124, 92, 255, 0.26);
+  border-radius: 7px;
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.1), rgba(124, 92, 255, 0.045));
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  overflow: hidden;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.timeline-request-bar-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.timeline-request-bar:hover,
+.timeline-request-bar:focus-visible {
+  border-color: rgba(124, 92, 255, 0.5);
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.16), rgba(124, 92, 255, 0.08));
+}
+
+.timeline-request-bar.is-active {
+  border-color: var(--purple);
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.22), rgba(124, 92, 255, 0.11));
+}
+
 .lanes {
   position: absolute;
   inset: 0;
@@ -1959,7 +2014,11 @@ kbd {
   color: #172033;
   text-align: left;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  /* A box, not a pill: in a time-positioned swimlane the card's color (lane
+     tone), x-position (time) and width (duration) carry the signal, so it reads
+     as a calm colour box. The timestamp is no longer printed on the face — the
+     axis already states it — and full detail lives in the hover card. */
+  border-radius: 7px;
   background: white;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.03);
   transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
@@ -1970,13 +2029,13 @@ kbd {
 /* Tone is carried as a soft fill (very low-alpha tint) — no left bar, no
    colored text. The lane icon at the left of the row already names the
    type; a faint background hint is enough at scale. */
-.event-card.card-purple { background: #fbfaff; }
-.event-card.card-green  { background: #f7fbf7; }
-.event-card.card-red    { background: #fff8f8; }
-.event-card.card-blue   { background: #f8faff; }
-.event-card.card-cyan   { background: #f6fcfc; }
-.event-card.card-orange { background: #fff9f1; }
-.event-card.card-gray   { background: white; }
+.event-card.card-purple { background: #f1eefc; }
+.event-card.card-green  { background: #ecf7ef; }
+.event-card.card-red    { background: #fcecec; }
+.event-card.card-blue   { background: #ebf3ff; }
+.event-card.card-cyan   { background: #e8f8fa; }
+.event-card.card-orange { background: #fff1de; }
+.event-card.card-gray   { background: #f3f4f8; }
 
 /* A card that opened a request → work unit (a user ask). Marked with a calm
    full purple-tinted border and a faintly bolder title, never a left bar, so
@@ -2589,27 +2648,6 @@ kbd {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: none;
-}
-
-.mini-map-axis {
-  position: relative;
-  height: 14px;
-}
-
-.mini-map-tick {
-  position: absolute;
-  bottom: 0;
-  color: var(--muted-2);
-  font-size: 10px;
-  font-weight: 600;
-  transform: translateX(-50%);
-  white-space: nowrap;
-}
-
-/* Edge ticks anchor to the container so labels never spill past the frame. */
-.mini-map-tick.is-start,
-.mini-map-tick.is-end {
-  transform: none;
 }
 
 .mini-track {
@@ -3893,7 +3931,11 @@ textarea {
   display: grid;
   gap: 16px;
   align-content: start;
-  padding: 16px 18px 24px;
+  padding: 22px 24px 28px;
+  border: 1px solid var(--base-border, var(--line));
+  border-radius: var(--base-radius-lg, 12px);
+  background: var(--base-surface, var(--panel));
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.03);
   overflow-y: auto;
 }
 

@@ -37,6 +37,11 @@ import {
 import { isTimelineBundle, type TimelineDisplayItem } from "./displayItems";
 import { getTimelineRange, type TimelineRange } from "./layout";
 import { computeAxisTicks, type AxisTick } from "./timeScale";
+import {
+  buildRequestSpans,
+  REQUEST_BAND_LANE_OFFSET,
+  type RequestSpan,
+} from "./requestSpans";
 
 export type TimelineMode = "timeline" | "flow";
 
@@ -80,6 +85,12 @@ export type TimelineRenderModel = {
   lanes: LaneRenderModel[];
   /** Computed time range (clamped to fallback when empty). */
   range: TimelineRange;
+  /**
+   * Per-request spans (a user ask → its work) for the swimlane grouping band.
+   * Empty when the session has no turn structure, in which case no band renders
+   * and the lanes keep their default offset.
+   */
+  requestSpans: RequestSpan[];
   /** Axis ticks for the time ruler. */
   ticks: AxisTick[];
   /** Long pauses between visible events, rendered as phase/gap markers. */
@@ -210,23 +221,32 @@ export function buildTimelineRenderModel(
     },
   );
 
-  // 5. Layout (always — even for empty views, since callers may render lanes).
+  // 5. Request spans — derived from ALL events (not the filtered set) so the
+  //    grouping band stays a stable backbone even when a lane filter hides some
+  //    of a request's members. Empty for flat sessions, which then keep the
+  //    default lane offset (no reserved band strip).
+  const requestSpans = buildRequestSpans(input.view.events);
+
+  // 6. Layout (always — even for empty views, since callers may render lanes).
+  //    When requests exist, push the lanes down by the band's footprint so the
+  //    grouping bars have a reserved strip above the first lane.
   const layout = computeSingleRowLaneLayout(visibleDisplayItems, range, {
     frameWidth: input.frameWidth,
     density: input.density,
     laneOrder: visibleLaneOrder,
     laneLabelWidthPx: input.laneLabelWidthPx,
+    laneOffsetPx: requestSpans.length > 0 ? REQUEST_BAND_LANE_OFFSET : undefined,
   });
   const layoutIndex = indexLayout(layout);
   const eventAnchorIndex = indexEventAnchors(layout);
 
-  // 6. Selection resolution.
+  // 7. Selection resolution.
   const selectedItem = resolveSelectedItem({
     items: visibleDisplayItems,
     selectedEventId: input.selectedEventId,
   });
 
-  // 7. Focus seeding.
+  // 8. Focus seeding.
   const focusedSet = computeFocusedSet({
     selectedItem,
     hoveredEventId: input.hoveredEventId,
@@ -236,11 +256,11 @@ export function buildTimelineRenderModel(
   });
   const focusActive = input.mode === "flow" || focusedSet.size > 1;
 
-  // 8. Axis ticks.
+  // 9. Axis ticks.
   const ticks = computeAxisTicks(range, { maxTicks: 6 });
   const timeGapMarkers = buildTimelineGapMarkers(visibleEvents, input.density);
 
-  // 9. Per-lane breakdown — carries each lane's event count and whether the
+  // 10. Per-lane breakdown — carries each lane's event count and whether the
   //    active category filter dims it.
   const lanes = buildLaneRenderModels({
     laneOrder: visibleLaneOrder,
@@ -266,6 +286,7 @@ export function buildTimelineRenderModel(
     visibleDisplayItems,
     lanes,
     range,
+    requestSpans,
     ticks,
     timeGapMarkers,
     layout,

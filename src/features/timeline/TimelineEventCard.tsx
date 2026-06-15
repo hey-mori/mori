@@ -99,7 +99,6 @@ export function TimelineEventCard({
           >
             {sourceMark.text ? sourceMark.text : <MarkIcon size={12} strokeWidth={2.2} />}
           </span>
-          <span className="event-card-time">{vm.timeLabel}</span>
           <strong className="event-card-title">{vm.title}</strong>
           {vm.fileActivity && vm.fileActivity.filesChanged > 0 ? (
             <span

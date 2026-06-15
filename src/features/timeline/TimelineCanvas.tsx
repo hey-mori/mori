@@ -18,6 +18,7 @@ import {
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
 import { TimelineAxis } from "./TimelineAxis";
+import { TimelineRequestBand } from "./TimelineRequestBand";
 import { TimelineGridLines } from "./TimelineGridLines";
 import { TimelineLane } from "./TimelineLane";
 import { RelationshipLineLayer } from "./RelationshipLineLayer";
@@ -217,6 +218,14 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
             frameWidth={layout.frameWidth}
             contentLeftPx={layout.contentLeftPx}
             contentWidthPx={layout.contentWidthPx}
+          />
+          <TimelineRequestBand
+            requests={model.requestSpans}
+            range={model.range}
+            contentLeftPx={layout.contentLeftPx}
+            contentWidthPx={layout.contentWidthPx}
+            selectedEventIds={model.focusedSet}
+            onSelect={onSelect}
           />
           <RelationshipLineLayer
             itemLayouts={layoutIndex}
