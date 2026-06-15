@@ -258,7 +258,7 @@ export function EvidenceView() {
         onRunPresetChange={setRunPresetId}
         onProviderChange={(provider) => updateAnalysisSettings({ provider })}
         onOpenSettings={() => setCurrentView("settings")}
-        onOpenReview={() => setSessionTab("insights")}
+        onOpenReview={() => setSessionTab("analysis")}
         onRun={handleRunQuickPass}
         onClear={clearAnalysis}
       />

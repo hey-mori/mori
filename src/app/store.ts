@@ -20,6 +20,7 @@ export type SessionTab =
   | "reconstruct"
   | "evidence"
   | "insights"
+  | "analysis"
   | "report";
 
 /**
@@ -273,7 +274,7 @@ export const useAppStore = create<AppState>((set) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setInspectorCollapsed: (inspectorCollapsed) => set({ inspectorCollapsed }),
   openReviewItem: (selection) =>
-    set({ reviewFocus: selection, currentView: "session", sessionTab: "insights" }),
+    set({ reviewFocus: selection, currentView: "session", sessionTab: "analysis" }),
   clearReviewFocus: () => set({ reviewFocus: null }),
   focusTimelineEvent: (eventId) =>
     set({
@@ -288,7 +289,7 @@ export const useAppStore = create<AppState>((set) => ({
     set({
       evidenceFocus: { sourceId },
       currentView: "session",
-      sessionTab: "evidence",
+      sessionTab: "analysis",
     }),
   clearEvidenceFocus: () => set({ evidenceFocus: null }),
   openAcceptedMemory: (memoryId) =>
@@ -298,7 +299,7 @@ export const useAppStore = create<AppState>((set) => ({
     set({
       evidenceImportRequest: { kind, platform },
       currentView: "session",
-      sessionTab: "evidence",
+      sessionTab: "analysis",
     }),
   clearEvidenceImportRequest: () => set({ evidenceImportRequest: null }),
   setReviewTab: (reviewTab) => set({ reviewTab }),
@@ -314,9 +315,9 @@ export const useAppStore = create<AppState>((set) => ({
         case "flow":
           return { currentView: "session", sessionTab: "flow" };
         case "evidence":
-          return { currentView: "session", sessionTab: "evidence" };
+          return { currentView: "session", sessionTab: "analysis" };
         case "review":
-          return { currentView: "session", sessionTab: "insights" };
+          return { currentView: "session", sessionTab: "analysis" };
         case "reports":
           // The per-session report / handoff outputs live in their own 리포트 tab.
           return { currentView: "session", sessionTab: "report" };

@@ -2328,6 +2328,53 @@ td a {
   gap: 6px;
 }
 
+/* 분석 tab — a slim section switch (흐름 / 검토) above the active section. The
+   switch sits at the page inset so it aligns with the content below it, and the
+   section fills the remaining height so 검토's per-column scroll still works. */
+.analysis-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.analysis-view > :not(.analysis-section-switch) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.analysis-section-switch {
+  display: inline-flex;
+  gap: 2px;
+  width: max-content;
+  margin: var(--base-space-4) var(--page-shell-inset) 0;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-soft, var(--gray-50));
+}
+
+.analysis-section-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.analysis-section-option.is-active {
+  background: white;
+  color: var(--purple);
+  box-shadow: 0 1px 2px rgba(20, 25, 36, 0.08);
+}
+
 /* Issue Garden */
 
 /* The 검토 split inherits the shared `.session-tab-split` padding, no extra

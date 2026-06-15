@@ -33,11 +33,12 @@ describe("app store — session-centric routing", () => {
   });
 
   it("navigate() folds the legacy session surfaces into the matching tab", () => {
-    const expectations: Array<["timeline" | "flow" | "evidence" | "review" | "reports", "flow" | "evidence" | "insights" | "report"]> = [
+    const expectations: Array<["timeline" | "flow" | "evidence" | "review" | "reports", "flow" | "analysis" | "report"]> = [
       ["timeline", "flow"],
       ["flow", "flow"],
-      ["evidence", "evidence"],
-      ["review", "insights"],
+      // 자료 + 검토 are folded into the unified 분석 tab.
+      ["evidence", "analysis"],
+      ["review", "analysis"],
       // The per-session report opens the session workspace's 리포트 tab.
       ["reports", "report"],
     ];
@@ -82,11 +83,11 @@ describe("app store — session-centric routing", () => {
     expect(state.currentView).toBe("home");
   });
 
-  it("openReviewItem() deep-links into the session insights tab", () => {
+  it("openReviewItem() deep-links into the session 분석 tab", () => {
     useAppStore.getState().openReviewItem({ kind: "issue", issueId: "issue-1" });
     const state = useAppStore.getState();
     expect(state.currentView).toBe("session");
-    expect(state.sessionTab).toBe("insights");
+    expect(state.sessionTab).toBe("analysis");
     expect(state.reviewFocus).toEqual({ kind: "issue", issueId: "issue-1" });
   });
 
@@ -119,7 +120,7 @@ describe("app store — session-centric routing", () => {
     expect(useAppStore.getState().sessionTab).toBe("evidence");
   });
 
-  it("requestEvidenceImport() routes to the 증거 tab and arms a one-shot", () => {
+  it("requestEvidenceImport() routes to the 분석 tab and arms a one-shot", () => {
     useAppStore.setState({
       currentView: "connections",
       sessionTab: "flow",
@@ -128,7 +129,7 @@ describe("app store — session-centric routing", () => {
     useAppStore.getState().requestEvidenceImport("ai", "claude");
     const state = useAppStore.getState();
     expect(state.currentView).toBe("session");
-    expect(state.sessionTab).toBe("evidence");
+    expect(state.sessionTab).toBe("analysis");
     expect(state.evidenceImportRequest).toEqual({ kind: "ai", platform: "claude" });
   });
 

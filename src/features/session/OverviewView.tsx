@@ -111,7 +111,7 @@ export function OverviewView() {
                   variant="primary"
                   size="sm"
                   icon={ListPlus}
-                  onClick={() => setSessionTab("evidence")}
+                  onClick={() => setSessionTab("analysis")}
                 >
                   자료 가져오기
                 </Button>
@@ -172,7 +172,7 @@ export function OverviewView() {
                 <button
                   type="button"
                   className="overview-attention-more"
-                  onClick={() => setSessionTab("insights")}
+                  onClick={() => setSessionTab("analysis")}
                 >
                   검토에서 {unresolved.length - 4}건 더 보기
                 </button>

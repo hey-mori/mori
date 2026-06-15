@@ -22,7 +22,16 @@ export type TimelineToolbarProps = {
   onSearchChange: (query: string) => void;
   readingMode: TimelineReadingMode;
   onReadingModeChange: (mode: TimelineReadingMode) => void;
+  /** Which reading modes to offer. A single entry hides the switch entirely. */
+  availableModes?: TimelineReadingMode[];
 };
+
+/** The reading-mode switch options, in display order. */
+const READING_MODE_OPTIONS: { id: TimelineReadingMode; label: string; icon: typeof Sparkles }[] = [
+  { id: "workflow", label: "흐름", icon: Sparkles },
+  { id: "swimlane", label: "타임라인", icon: Rows3 },
+  { id: "stream", label: "원본", icon: List },
+];
 
 /**
  * Timeline toolbar. Deliberately spare: a reading-mode switch (time map,
@@ -41,11 +50,16 @@ export function TimelineToolbar({
   onSearchChange,
   readingMode,
   onReadingModeChange,
+  availableModes = ["workflow", "swimlane", "stream"],
 }: TimelineToolbarProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterPopRef = useRef<HTMLDivElement | null>(null);
 
   useClickOutside(filterPopRef, filterOpen, () => setFilterOpen(false));
+
+  const modeOptions = READING_MODE_OPTIONS.filter((option) =>
+    availableModes.includes(option.id),
+  );
 
   return (
     <div className="timeline-toolbar" role="toolbar" aria-label="타임라인 컨트롤">
@@ -61,37 +75,24 @@ export function TimelineToolbar({
       <FollowControl />
 
       <div className="timeline-toolbar-right">
-        <div className="timeline-mode-switch" role="group" aria-label="보기 방식">
-          <button
-            type="button"
-            className={`timeline-mode-option ${readingMode === "workflow" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "workflow"}
-            onClick={() => onReadingModeChange("workflow")}
-          >
-            <Sparkles size={14} aria-hidden="true" />
-            흐름
-          </button>
-          <button
-            type="button"
-            className={`timeline-mode-option ${readingMode === "swimlane" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "swimlane"}
-            onClick={() => onReadingModeChange("swimlane")}
-          >
-            <Rows3 size={14} aria-hidden="true" />
-            타임라인
-          </button>
-          <button
-            type="button"
-            className={`timeline-mode-option ${readingMode === "stream" ? "is-active" : ""}`}
-            aria-pressed={readingMode === "stream"}
-            onClick={() => onReadingModeChange("stream")}
-          >
-            <List size={14} aria-hidden="true" />
-            원본
-          </button>
-          {/* 연결(causal) view retired from the switch — CausalMapView stays in
-              the code, just unwired here. Re-add this button to surface it. */}
-        </div>
+        {/* A single offered mode locks the view, so the switch is hidden.
+            연결(causal) stays in the code, just not offered here. */}
+        {modeOptions.length > 1 ? (
+          <div className="timeline-mode-switch" role="group" aria-label="보기 방식">
+            {modeOptions.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                className={`timeline-mode-option ${readingMode === id ? "is-active" : ""}`}
+                aria-pressed={readingMode === id}
+                onClick={() => onReadingModeChange(id)}
+              >
+                <Icon size={14} aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="toolbar-pop-wrap" ref={filterPopRef}>
           <button
             type="button"

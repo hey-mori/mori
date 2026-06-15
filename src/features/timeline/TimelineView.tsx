@@ -59,7 +59,19 @@ const FILTERED_EMPTY_SETTLE_MS = 260;
  * only its content and toggles Timeline ↔ Flow Focus through internal state
  * (no separate `flow` route, no double header).
  */
-export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) {
+export function TimelineView({
+  mode: modeProp,
+  readingModes = ["swimlane", "stream"],
+}: {
+  mode: "timeline" | "flow";
+  /**
+   * Which reading modes this mount offers, in order. The first is the default.
+   * A single-entry list locks the view to that mode and hides the switch — the
+   * 분석 tab uses `["workflow"]` to host the AI 흐름 on its own, while the 활동
+   * tab uses the raw-activity pair `["swimlane", "stream"]`.
+   */
+  readingModes?: TimelineReadingMode[];
+}) {
   const hydrate = useSessionStore((state) => state.hydrate);
   const initialized = useSessionStore((state) => state.initialized);
   const view = useSessionStore(selectSessionView);
@@ -149,7 +161,13 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
   const [readingModeOverride, setReadingModeOverride] = useState<
     TimelineReadingMode | null
   >(null);
-  const readingMode: TimelineReadingMode = readingModeOverride ?? "workflow";
+  // The first offered mode is the default; a manual override only applies while
+  // it is one of the offered modes, so a locked mount (single entry) always
+  // resolves to that one mode.
+  const readingMode: TimelineReadingMode =
+    readingModeOverride && readingModes.includes(readingModeOverride)
+      ? readingModeOverride
+      : readingModes[0];
 
   // A deep-link to a specific event (the overview reopen anchor, a review item's
   // related event) arms `timelineFocus`. The 활동 tab defaults to the AI 흐름
@@ -334,7 +352,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
           id: "open-evidence",
           label: "관련 자료 열기",
           icon: FileText,
-          onSelect: () => setSessionTab("evidence"),
+          onSelect: () => setSessionTab("analysis"),
         });
       }
       if (issueCreated) {
@@ -383,7 +401,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
         <TimelineEmptyState
           variant={model.emptyVariant}
           onStartSession={() => setCurrentView("start")}
-          onOpenSources={() => setSessionTab("evidence")}
+          onOpenSources={() => setSessionTab("analysis")}
           onRunQuickPass={() => runQuickPass()}
           canRunQuickPass={analysisStatus !== "running"}
         />
@@ -446,6 +464,7 @@ export function TimelineView({ mode: modeProp }: { mode: "timeline" | "flow" }) 
             onSearchChange={setSearchQuery}
             readingMode={readingMode}
             onReadingModeChange={setReadingModeOverride}
+            availableModes={readingModes}
           />
         )}
         {showNoResults ? (

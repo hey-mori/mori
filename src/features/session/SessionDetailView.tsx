@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from "react";
 import {
   ChevronRight,
-  FileText,
   FolderGit2,
   GanttChartSquare,
   LayoutDashboard,
@@ -23,6 +22,7 @@ import { EvidenceView } from "../evidence/EvidenceView";
 import { ReviewView } from "../review/ReviewView";
 import { ReportsView } from "../reports/ReportsView";
 import { OverviewView } from "./OverviewView";
+import { AnalysisView } from "./AnalysisView";
 
 /**
  * Session Detail — the unified, tabbed workspace for one session.
@@ -49,8 +49,11 @@ export function SessionDetailView() {
   const sessionTab = useAppStore((state) => state.sessionTab);
   const setSessionTab = useAppStore((state) => state.setSessionTab);
 
+  // Retired tabs redirect to their new homes: the raw-activity alias to 활동,
+  // and the former 자료 / 검토 surfaces into the unified 분석 tab.
   useEffect(() => {
     if (sessionTab === "reconstruct") setSessionTab("flow");
+    else if (sessionTab === "evidence" || sessionTab === "insights") setSessionTab("analysis");
   }, [sessionTab, setSessionTab]);
 
   return (
@@ -126,8 +129,7 @@ type SessionTabSpec = {
 const SESSION_TABS: SessionTabSpec[] = [
   { id: "overview", label: "개요", icon: LayoutDashboard },
   { id: "flow", label: "활동", icon: GanttChartSquare },
-  { id: "evidence", label: "자료", icon: FileText },
-  { id: "insights", label: "검토", icon: Sparkles },
+  { id: "analysis", label: "분석", icon: Sparkles },
   { id: "report", label: "공유", icon: ScrollText },
 ];
 
@@ -159,12 +161,16 @@ function SessionTabBar({
     const openIssues = view.issues.filter((issue) => issue.status !== "resolved").length;
     const unconfirmedDecisions = view.decisions.filter((d) => !d.confirmed).length;
     const pendingNextActions = view.nextActions.filter((a) => !isNextActionCompleted(a)).length;
+    const reviewCount = openIssues + unconfirmedDecisions + pendingNextActions;
     return {
       overview: null,
       flow: view.events.length,
       reconstruct: null,
       evidence: sources,
-      insights: openIssues + unconfirmedDecisions + pendingNextActions,
+      insights: reviewCount,
+      // 분석 carries the review backlog (open issues + unconfirmed decisions +
+      // pending next actions) — the work still to confirm.
+      analysis: reviewCount,
       report: null,
     };
   }, [view, imports, mode]);
@@ -206,7 +212,7 @@ function SessionTabBar({
           >
             <Icon size={14} aria-hidden="true" />
             <span>{tab.label}</span>
-            {tab.id === "evidence" && pendingReview ? (
+            {tab.id === "analysis" && pendingReview ? (
               <b className="session-tab-dot" title="검토 대기" aria-label="검토 대기" />
             ) : count && count > 0 ? (
               <b className="session-tab-count">{count}</b>
@@ -223,6 +229,9 @@ function SessionTabBar({
 function SessionTabContent({ tab }: { tab: SessionTab }) {
   if (tab === "overview") return <OverviewView />;
   if (tab === "reconstruct") return <TimelineView mode="timeline" />;
+  if (tab === "analysis") return <AnalysisView />;
+  // 자료 / 검토 are retired from the tab bar (folded into 분석) but kept reachable
+  // in code; the redirect effect routes a stale tab here to 분석.
   if (tab === "evidence") return <EvidenceView />;
   if (tab === "insights") return <ReviewView />;
   if (tab === "report") return <ReportsView />;
