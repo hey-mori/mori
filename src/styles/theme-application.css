@@ -20,7 +20,6 @@ html[data-base-theme] :where(
   .settings-sheet-body,
   .content-grid,
   .timeline-main,
-  .ai-workflow,
   .session-tab-main,
   .dashboard-surface,
   .workbench-surface
@@ -47,6 +46,7 @@ html[data-base-theme] :where(
   .settings-trust,
   .analysis-banner,
   .analysis-panel,
+  .ai-workflow,
   .issue-card,
   .source-card,
   .engine-card,
