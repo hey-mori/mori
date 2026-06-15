@@ -33,9 +33,9 @@ import { AnalysisView } from "./AnalysisView";
  * old "이벤트 24 · 소스 5 · 결정 7 …" metric strip. Tabs:
  *
  *   - **개요**    — session at a glance (identity · summary · scale · quick nav)
- *   - **흐름**    — Timeline + conversation thread
- *   - **증거**    — imported sources / evidence
- *   - **검토**    — issues / decisions / next actions to confirm
+ *   - **활동**    — raw agent activity: the 타임라인 swimlane + the 원본 stream
+ *   - **분석**    — the analysis surface: run controls + 흐름 (AI workflow) + 검토
+ *                  (issues / decisions / next actions); absorbs the old 자료 + 검토
  *   - **공유**    — handoff outputs: continue-context, report, .mori export
  */
 export function SessionDetailView() {
@@ -136,9 +136,9 @@ const SESSION_TABS: SessionTabSpec[] = [
 /**
  * Tab strip with count badges in place of the deprecated metric strip.
  *  - 개요:    no count (the at-a-glance summary, not a counted collection)
- *  - 흐름:    timeline event count
- *  - 증거:    imported source count
- *  - 검토:    open issues + unconfirmed decisions + pending next actions
+ *  - 활동:    timeline event count
+ *  - 분석:    open issues + unconfirmed decisions + pending next actions (the
+ *             review backlog still to confirm)
  *  - 공유:    no count (it is an output, not a counted collection)
  *
  * A zero count is hidden rather than rendered as "(0)" so the bar stays calm

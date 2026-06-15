@@ -2328,29 +2328,74 @@ td a {
   gap: 6px;
 }
 
-/* 분석 tab — a slim section switch (흐름 / 검토) above the active section. The
-   switch sits at the page inset so it aligns with the content below it, and the
-   section fills the remaining height so 검토's per-column scroll still works. */
+/* 분석 tab — a header row (section switch 흐름 / 검토 on the left, the analysis
+   run controls on the right) above the active section. The header sits at the
+   page inset so it aligns with the content below it, and the section fills the
+   remaining height so 검토's per-column scroll still works. */
 .analysis-view {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.analysis-view > :not(.analysis-section-switch) {
+.analysis-view > :not(.analysis-header) {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.analysis-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--base-space-4);
+  margin: var(--base-space-4) var(--page-shell-inset) 0;
 }
 
 .analysis-section-switch {
   display: inline-flex;
   gap: 2px;
   width: max-content;
-  margin: var(--base-space-4) var(--page-shell-inset) 0;
   padding: 2px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--panel-soft, var(--gray-50));
+}
+
+.analysis-run-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analysis-engine-select {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel, white);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.analysis-settings-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel, white);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.analysis-settings-link:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
 }
 
 .analysis-section-option {

@@ -98,6 +98,7 @@ export function TimelineView({
   const setHoveredEventId = useAppStore((state) => state.setHoveredEventId);
   const setCurrentView = useAppStore((state) => state.setCurrentView);
   const openReviewItem = useAppStore((state) => state.openReviewItem);
+  const focusTimelineEvent = useAppStore((state) => state.focusTimelineEvent);
   const toggleFilter = useAppStore((state) => state.toggleFilter);
   const clearFilters = useAppStore((state) => state.clearFilters);
   const setSearchQuery = useAppStore((state) => state.setSearchQuery);
@@ -432,10 +433,18 @@ export function TimelineView({
         const at = new Date(item.start).getTime();
         return Number.isFinite(at) && at >= phaseStart;
       });
-      if (target) setSelectedEventId(target.id);
-      setReadingModeOverride("stream");
+      if (!target) return;
+      if (readingModes.includes("stream")) {
+        // In-place drill (활동 context): select + switch to the 원본 stream here.
+        setSelectedEventId(target.id);
+        setReadingModeOverride("stream");
+      } else {
+        // Locked to 흐름 (the 분석 tab): 원본 lives in the 활동 tab, so cross-navigate
+        // there with the event focused rather than a dead in-place mode switch.
+        focusTimelineEvent(target.id);
+      }
     },
-    [renderModel.visibleDisplayItems, setSelectedEventId],
+    [renderModel.visibleDisplayItems, setSelectedEventId, readingModes, focusTimelineEvent],
   );
   // The 흐름 tab offers two reading modes: the swimlane canvas (시간 축) and a
   // content-rich chronological 목록. The swimlane never auto-degrades to a list
@@ -454,6 +463,11 @@ export function TimelineView({
             hasFocus={Boolean(selectedEventId)}
             onClearFocus={() => setSelectedEventId(view.events[0]?.id ?? "")}
           />
+        ) : readingModes.length <= 1 ? (
+          // A locked single mode (the 분석 tab's 흐름) has no mode switch and the
+          // workflow view ignores search / filter / follow, so the toolbar would
+          // be inert chrome — drop it entirely.
+          null
         ) : (
           <TimelineToolbar
             activeFilters={activeFilters}
