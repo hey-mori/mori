@@ -8,7 +8,7 @@ import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import { InfoHint } from "../../components/ui/InfoHint";
 
 /**
- * Surfaces the active session's analysis run history on the Analysis diagnostics view:
+ * Surfaces the active session's analysis run history on the Analysis status view:
  * the adopted run's reason (model, time, confidence, counts) always, and
  * a disclosure listing every run with the change-versus-previous and an
  * adopt action once a re-analysis has produced more than one run.
@@ -16,7 +16,7 @@ import { InfoHint } from "../../components/ui/InfoHint";
  * Re-reads the history whenever `analysis` changes (a new run or an
  * adoption) so the panel stays in step without holding history in store
  * state. Renders nothing when the session has no analysis, so it never
- * competes with the Quick Pass empty state.
+ * competes with the analysis empty state.
  */
 /**
  * Drop the legacy "Quick Pass" wording from a stored engine label so the UI

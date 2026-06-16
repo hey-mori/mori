@@ -111,11 +111,11 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
       status: input.analysisRunning ? "waiting" : hasReviewedWork ? "done" : hasEvidence ? "ready" : "attention",
       statusLabel: input.analysisRunning ? "실행 중" : hasReviewedWork ? "검토됨" : hasEvidence ? "준비됨" : "대기 중",
       detail: input.analysisRunning
-        ? "Quick Pass 실행 중 — 완료되면 검토 결과가 표시됩니다."
+        ? "분석 실행 중 — 완료되면 정리 결과가 표시됩니다."
         : hasReviewedWork
           ? `이슈 ${input.issueCount}개, 결정 ${input.decisionCount}개, 다음 액션 ${input.nextActionCount}개가 있습니다.`
           : hasEvidence
-            ? "캡처된 자료를 이슈·결정·다음 액션으로 변환하려면 Quick Pass를 실행하세요."
+            ? "캡처된 자료를 이슈·결정·다음 액션으로 변환하려면 분석을 실행하세요."
             : "자료를 가져온 후 검토를 시작할 수 있습니다.",
     },
     {
@@ -153,7 +153,7 @@ export function buildSessionWrapUp(input: SessionWrapUpInput): SessionWrapUpView
       statusLabel: input.resumePromptReady ? "준비됨" : hasEvidence ? "검토 필요" : "대기 중",
       detail: input.resumePromptReady
         ? "Resume 프롬프트와 .mori 내보내기가 준비되었습니다."
-        : "유용한 인계 자료를 만들려면 자료와 Quick Pass 또는 데모 요약 데이터가 필요합니다.",
+        : "유용한 인계 자료를 만들려면 자료와 분석 결과 또는 데모 요약 데이터가 필요합니다.",
     },
   ];
 
@@ -180,7 +180,7 @@ function choosePrimaryAction(
   if (input.analysisRunning) {
     return {
       id: "waitForAnalysis",
-      label: "Quick Pass 실행 중",
+      label: "분석 실행 중",
       detail: "Mori가 캡처된 자료에서 검토 자료를 도출하는 중입니다.",
       enabled: false,
     };
@@ -188,7 +188,7 @@ function choosePrimaryAction(
   if (!derived.hasReviewedWork) {
     return {
       id: "runQuickPass",
-      label: "Quick Pass 실행",
+      label: "분석 실행",
       detail: "이슈, 결정, 다음 액션을 생성하고 Resume 프롬프트를 강화합니다.",
       enabled: input.canRunQuickPass,
     };

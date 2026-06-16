@@ -29,6 +29,7 @@ export function AiWorkflowView({
   onSelectPhase,
   onRunQuickPass,
   canRunQuickPass,
+  analysisRunning,
 }: {
   view: {
     events: TimelineEvent[];
@@ -42,8 +43,9 @@ export function AiWorkflowView({
   onSelectPhase: (phase: WorkPhase) => void;
   onRunQuickPass: () => void;
   canRunQuickPass: boolean;
+  analysisRunning: boolean;
 }) {
-  // A session has an analysed flow to show when a live Quick Pass produced a
+  // A session has an analysed flow to show when a live analysis produced a
   // summary, OR when the session already carries analysis outputs (a demo
   // session, or a persisted analysed draft reopened without a live run object).
   // An un-analysed draft carries only a placeholder summary and zero outputs,
@@ -61,9 +63,13 @@ export function AiWorkflowView({
   // still has a real progression: the decisions and issues in time order. The
   // collapsed branch below shows that flat arc instead of a bare note.
   const moments = useMemo(
-    () => buildWorkMoments(view.events, view.decisions, view.issues, 12),
+    () => buildWorkMoments(view.events, view.decisions, view.issues, 8),
     [view.events, view.decisions, view.issues],
   );
+  const summaryParts = summary.split(/\s*\/\s+/).map((part) => part.trim()).filter(Boolean);
+  const summaryLead = summaryParts[0] ?? summary;
+  const summaryDetail = summaryParts.slice(1, 4);
+  const phaseCount = phases.length >= 2 ? phases.length : moments.length;
 
   if (!summary) {
     return (
@@ -80,7 +86,7 @@ export function AiWorkflowView({
           onClick={onRunQuickPass}
           disabled={!canRunQuickPass}
         >
-          {canRunQuickPass ? "분석 실행" : "분석 중..."}
+          {analysisRunning ? "분석 중..." : "분석 실행"}
         </Button>
       </div>
     );
@@ -91,58 +97,98 @@ export function AiWorkflowView({
   return (
     <div className="ai-workflow">
       <header className="ai-workflow-head">
-        <h4>흐름</h4>
+        <div>
+          <span>분석 흐름</span>
+          <h4>작업의 전개를 시간 순서로 정리했습니다</h4>
+        </div>
         <InfoHint label="흐름 설명">
-          AI가 이해한 작업 진행 순서입니다. 시간 구간별로 무엇을 결정하고 어떤 파일을 바꿨는지 보여주고,
-          단계를 누르면 그 구간의 원본 대화로 이동합니다.
+          분석이 이해한 작업 진행 순서입니다. 단계는 실제 이벤트 시간에 맞춰 나뉘며, 선택하면 해당 원본
+          대화로 이동합니다.
         </InfoHint>
       </header>
-      {summary.split(/\s*\/\s+/).map((part, i) => (
-        <p key={i} className="ai-workflow-narrative">{part.trim()}</p>
-      ))}
+
+      <section className="ai-workflow-brief" aria-label="분석 흐름 요약">
+        <div className="ai-workflow-narrative-block">
+          <p className="ai-workflow-narrative">{summaryLead}</p>
+          {summaryDetail.length > 0 ? (
+            <details className="ai-workflow-more">
+              <summary>요약 더 보기</summary>
+              {summaryDetail.map((part, i) => (
+                <p key={i}>{part}</p>
+              ))}
+            </details>
+          ) : null}
+        </div>
+        <dl className="ai-workflow-stats">
+          <div>
+            <dt>단계</dt>
+            <dd>{phaseCount || 1}</dd>
+          </div>
+          <div>
+            <dt>결정</dt>
+            <dd>{view.decisions.length}</dd>
+          </div>
+          <div>
+            <dt>이슈</dt>
+            <dd>{view.issues.length}</dd>
+          </div>
+        </dl>
+      </section>
 
       {phases.length >= 2 ? (
-        <ol className="work-arc-steps" aria-label="작업 단계">
-          {phases.map((phase, index) => {
-            const headline = phaseHeadline(phase);
-            const active =
-              selectedAt !== null &&
-              selectedAt >= new Date(phase.startIso).getTime() &&
-              selectedAt <= new Date(phase.endIso).getTime();
-            return (
-              <li key={index} className="work-arc-step">
-                <button
-                  type="button"
-                  className={`work-arc-step-btn${active ? " is-active" : ""}`}
-                  aria-current={active ? "true" : undefined}
-                  onClick={() => onSelectPhase(phase)}
-                >
-                  <span className="work-arc-marker" aria-hidden="true">
-                    {index + 1}
-                  </span>
-                  <span className="work-arc-body">
-                    <span className="work-arc-time">{formatPhaseRange(phase)}</span>
-                    <span className="work-arc-text">{headline}</span>
-                    <PhaseMoments phase={phase} />
-                    <PhaseEvidence phase={phase} />
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
+        <section className="work-arc-section" aria-label="작업 단계">
+          <header className="work-arc-section-head">
+            <strong>주요 단계</strong>
+            <span>{phases.length}개 구간</span>
+          </header>
+          <ol className="work-arc-steps">
+            {phases.map((phase, index) => {
+              const headline = phaseHeadline(phase);
+              const active =
+                selectedAt !== null &&
+                selectedAt >= new Date(phase.startIso).getTime() &&
+                selectedAt <= new Date(phase.endIso).getTime();
+              return (
+                <li key={index} className="work-arc-step">
+                  <button
+                    type="button"
+                    className={`work-arc-step-btn${active ? " is-active" : ""}`}
+                    aria-current={active ? "true" : undefined}
+                    onClick={() => onSelectPhase(phase)}
+                  >
+                    <span className="work-arc-marker" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <span className="work-arc-body">
+                      <span className="work-arc-time">{formatPhaseRange(phase)}</span>
+                      <span className="work-arc-text">{headline}</span>
+                      <PhaseHighlights phase={phase} />
+                      <PhaseEvidence phase={phase} />
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
       ) : moments.length > 0 ? (
-        <ol className="work-arc-flow" aria-label="결정과 이슈 흐름">
-          {moments.map((moment, index) => (
-            <li key={index} className={`work-arc-flow-item is-${moment.kind}`}>
-              <span className="work-arc-flow-time">{stamp(new Date(moment.at), false)}</span>
-              <span className="work-arc-moment-tag" aria-hidden="true">
-                {moment.kind === "decision" ? "결정" : "이슈"}
-              </span>
-              <span className="work-arc-flow-text">{moment.title}</span>
-            </li>
-          ))}
-        </ol>
+        <section className="work-arc-section" aria-label="결정과 이슈 흐름">
+          <header className="work-arc-section-head">
+            <strong>핵심 흐름</strong>
+            <span>{moments.length}개 모먼트</span>
+          </header>
+          <ol className="work-arc-flow">
+            {moments.map((moment, index) => (
+              <li key={index} className={`work-arc-flow-item is-${moment.kind}`}>
+                <span className="work-arc-flow-time">{stamp(new Date(moment.at), false)}</span>
+                <span className="work-arc-moment-tag" aria-hidden="true">
+                  {moment.kind === "decision" ? "결정" : "이슈"}
+                </span>
+                <span className="work-arc-flow-text">{moment.title}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
       ) : (
         <p className="ai-workflow-note">이 세션은 하나의 연속된 흐름입니다.</p>
       )}
@@ -171,13 +217,15 @@ function headlineMoment(phase: Pick<WorkPhase, "moments">): PhaseMoment | null {
  * as the headline — so the arc lists what issues and decisions there were, each
  * tagged 결정 / 이슈, without repeating the lead.
  */
-function PhaseMoments({ phase }: { phase: WorkPhase }) {
+function PhaseHighlights({ phase }: { phase: WorkPhase }) {
   const lead = headlineMoment(phase);
   const rest = phase.moments.filter((moment) => moment !== lead);
   if (rest.length === 0) return null;
+  const visible = rest.slice(0, 2);
+  const hidden = rest.length - visible.length;
   return (
     <ul className="work-arc-moments">
-      {rest.map((moment, index) => (
+      {visible.map((moment, index) => (
         <li key={index} className={`work-arc-moment is-${moment.kind}`}>
           <span className="work-arc-moment-tag" aria-hidden="true">
             {moment.kind === "decision" ? "결정" : "이슈"}
@@ -185,6 +233,9 @@ function PhaseMoments({ phase }: { phase: WorkPhase }) {
           <span className="work-arc-moment-text">{moment.title}</span>
         </li>
       ))}
+      {hidden > 0 ? (
+        <li className="work-arc-moment-more">그 외 {hidden}개 항목</li>
+      ) : null}
     </ul>
   );
 }
@@ -192,8 +243,12 @@ function PhaseMoments({ phase }: { phase: WorkPhase }) {
 /** Files changed and moment count in the phase's window — what it produced. */
 function PhaseEvidence({ phase }: { phase: WorkPhase }) {
   const chips: string[] = [];
+  const decisionCount = phase.moments.filter((moment) => moment.kind === "decision").length;
+  const issueCount = phase.moments.filter((moment) => moment.kind === "issue").length;
+  if (decisionCount > 0) chips.push(`결정 ${decisionCount}`);
+  if (issueCount > 0) chips.push(`이슈 ${issueCount}`);
   if (phase.changedFiles > 0) chips.push(`파일 ${phase.changedFiles}개`);
-  chips.push(`모먼트 ${phase.eventCount}개`);
+  chips.push(`이벤트 ${phase.eventCount}개`);
   return (
     <span className="work-arc-evidence">
       {chips.map((chip, index) => (

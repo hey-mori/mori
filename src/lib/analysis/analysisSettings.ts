@@ -39,7 +39,7 @@ export const DEFAULT_QUICK_PASS_SETTINGS: QuickPassAnalysisSettings = {
   openAiModel: "local-model",
   openAiApiKey: "",
   openAiTimeoutMs: 120_000,
-  fallbackToDeterministic: true,
+  fallbackToDeterministic: false,
   requestDisclosureLevel: "raw",
   requestAbstractionModel: "",
 };

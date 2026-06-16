@@ -130,9 +130,9 @@ function buildResumeItem(
       title: "Resume 프롬프트",
       status: "waiting",
       statusLabel: "실행 중",
-      detail: "Quick Pass가 검토 자료를 도출하는 중입니다.",
+      detail: "분석이 정리 자료를 도출하는 중입니다.",
       basis: ["분석이 완료되면 프롬프트가 더 강화됩니다."],
-      action: { id: "runQuickPass", label: "Quick Pass 실행 중", enabled: false },
+      action: { id: "runQuickPass", label: "분석 실행 중", enabled: false },
     };
   }
 
@@ -142,9 +142,9 @@ function buildResumeItem(
       title: "Resume 프롬프트",
       status: "attention",
       statusLabel: "검토 필요",
-      detail: "Quick Pass를 실행하여 자료 기반 연속 프롬프트를 강화하세요.",
+      detail: "분석을 실행하여 자료 기반 연속 프롬프트를 강화하세요.",
       basis: [`출처 ${input.sourceCount}개와 이벤트 ${input.eventCount}개가 캡처되었습니다.`],
-      action: { id: "runQuickPass", label: "Quick Pass 실행", enabled: input.canRunQuickPass },
+      action: { id: "runQuickPass", label: "분석 실행", enabled: input.canRunQuickPass },
     };
   }
 
@@ -184,7 +184,7 @@ function buildReportItem(
       detail: "Markdown 및 HTML 내보내기를 사용할 수 있지만, 검토된 이슈나 결정이 아직 없습니다.",
       basis: [
         `출처 ${input.sourceCount}개와 이벤트 ${input.eventCount}개가 포함되어 있습니다.`,
-        "결정 중심 보고서를 공유하기 전에 Quick Pass를 실행하세요.",
+        "결정 중심 보고서를 공유하기 전에 분석을 실행하세요.",
       ],
       action: { id: "openReportBuilder", label: "빌더 열기", enabled: true },
     };

@@ -3929,37 +3929,121 @@ textarea {
  * ========================================================================== */
 .ai-workflow {
   display: grid;
-  gap: 16px;
+  gap: 24px;
   align-content: start;
-  padding: 22px 24px 28px;
-  border: 1px solid var(--base-border, var(--line));
-  border-radius: var(--base-radius-lg, 12px);
-  /* Background (white card surface) is owned by the theme bridge
-     (`theme-application.css`), where `.ai-workflow` is grouped with the other
-     cards, so the summary panel reads as one block against the page tint. */
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.03);
+  padding: 20px 24px 32px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   overflow-y: auto;
 }
 
-
 .ai-workflow-head {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ai-workflow-head > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ai-workflow-head span {
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .ai-workflow-head h4 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 750;
+  font-size: 18px;
+  font-weight: 760;
   color: var(--text);
+}
+
+.ai-workflow-brief {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: start;
+  min-width: 0;
+  padding: 18px 0 20px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.ai-workflow-narrative-block {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
 }
 
 .ai-workflow-narrative {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+  max-width: 920px;
   color: var(--text);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.ai-workflow-more {
+  margin-top: 2px;
+}
+
+.ai-workflow-more > summary {
+  width: max-content;
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-workflow-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-workflow-more p {
+  max-width: 880px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.58;
+}
+
+.ai-workflow-more p:first-of-type {
+  margin-top: 10px;
+}
+
+.ai-workflow-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(58px, auto));
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+}
+
+.ai-workflow-stats div {
+  min-width: 0;
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+}
+
+.ai-workflow-stats dt {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.ai-workflow-stats dd {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 760;
 }
 
 .ai-workflow-note {
@@ -4003,6 +4087,32 @@ textarea {
   list-style: none;
 }
 
+.work-arc-section {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.work-arc-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.work-arc-section-head strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 740;
+}
+
+.work-arc-section-head span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
 .work-arc-step {
   position: relative;
 }
@@ -4011,9 +4121,9 @@ textarea {
 .work-arc-step::before {
   content: "";
   position: absolute;
-  top: 24px;
+  top: 34px;
   left: 12px;
-  bottom: -2px;
+  bottom: -10px;
   width: 2px;
   background: var(--line, #e6e3f1);
 }
@@ -4025,9 +4135,9 @@ textarea {
 .work-arc-step-btn {
   display: grid;
   grid-template-columns: 24px 1fr;
-  gap: 10px;
+  gap: 14px;
   width: 100%;
-  padding: 3px 8px 14px 0;
+  padding: 8px 8px 22px 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -4037,11 +4147,11 @@ textarea {
 }
 
 .work-arc-step-btn:hover {
-  background: var(--base-surface-2, rgba(124, 92, 255, 0.05));
+  background: var(--panel-soft, rgba(124, 92, 255, 0.05));
 }
 
 .work-arc-step-btn.is-active {
-  background: rgba(124, 92, 255, 0.1);
+  background: rgba(124, 92, 255, 0.08);
 }
 
 .work-arc-step-btn:focus-visible {
@@ -4069,7 +4179,7 @@ textarea {
 .work-arc-body {
   align-self: start;
   display: grid;
-  gap: 2px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -4081,7 +4191,8 @@ textarea {
 }
 
 .work-arc-text {
-  font-size: 13px;
+  max-width: 980px;
+  font-size: 14px;
   font-weight: 650;
   line-height: 1.45;
   color: var(--text);
@@ -4091,8 +4202,8 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 8px;
+  margin-top: 1px;
 }
 
 .work-arc-ev {
@@ -4112,8 +4223,8 @@ textarea {
    Tag tones reuse the activity palette (결정 green, 이슈 orange); no left bar. */
 .work-arc-moments {
   display: grid;
-  gap: 3px;
-  margin: 4px 0 1px;
+  gap: 5px;
+  margin: 5px 0 1px;
   padding: 0;
   list-style: none;
 }
@@ -4157,13 +4268,19 @@ textarea {
   white-space: nowrap;
 }
 
+.work-arc-moment-more {
+  color: var(--muted-2);
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
 /* AI 흐름 flat arc — shown when a continuous session has no phase breaks. The
    decisions and issues in time order, each with its own timestamp, so the arc
    reads as how the work progressed even without distinct phases. */
 .work-arc-flow {
   display: grid;
-  gap: 6px;
-  margin: 6px 0 0;
+  gap: 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -4174,7 +4291,7 @@ textarea {
   gap: 8px;
   align-items: baseline;
   min-width: 0;
-  padding: 5px 2px;
+  padding: 8px 2px;
   border-top: 1px solid var(--line);
 }
 
@@ -4196,6 +4313,22 @@ textarea {
   font-size: 13px;
   font-weight: 550;
   line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+  .ai-workflow-brief {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-workflow-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .ai-workflow-stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 원본 stream — folded tool runs. Quiet, secondary to the conversation rows. */

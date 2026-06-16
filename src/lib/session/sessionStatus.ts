@@ -78,7 +78,7 @@ export function deriveSessionStatus(
     dataBasisLabel = "Demo data";
     dataBasisTone = "purple";
   } else if (hasAnalysis) {
-    dataBasisLabel = `${analysisProviderLabel ?? "Quick Pass"} analysis`;
+    dataBasisLabel = `${analysisProviderLabel ?? "분석"} analysis`;
     dataBasisTone = "green";
   } else {
     dataBasisLabel = "Imported data (no analysis)";

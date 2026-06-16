@@ -138,7 +138,7 @@ function buildScopeCaveat({
     parts.push("저장된 세션이 없습니다. Settings 또는 Reports에서 .mori v0로 내보내면 목록에 추가됩니다.");
   }
   if (!hasAnalysis) {
-    parts.push("Quick Pass를 아직 실행하지 않았습니다.");
+    parts.push("분석을 아직 실행하지 않았습니다.");
   }
   if (reportCount === 0) {
     parts.push("저장된 .mori 패키지 / 보고서가 없습니다.");

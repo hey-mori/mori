@@ -45,7 +45,7 @@ export function getProviderRows(
   return [
     {
       id: "deterministic",
-      label: "규칙 기반 Quick Pass",
+      label: "규칙 기반 분석",
       description: "로컬 규칙 엔진 — 네트워크 없음, LLM 없음.",
       status: "implemented",
       isLocal: true,
@@ -95,7 +95,7 @@ export function getProviderRows(
     {
       id: "toolNativeApi",
       label: "Claude / Codex / OpenCode 제공자",
-      description: "현재는 가져오기 소스입니다. Quick Pass 제공자로 직접 연결하는 기능은 없습니다.",
+      description: "현재는 가져오기 소스입니다. 분석 제공자로 직접 연결하는 기능은 없습니다.",
       status: "planned",
       isLocal: false,
       privacyNote: "구현 전까지 Mori는 해당 도구 계정이나 API에 연결하지 않습니다.",
@@ -437,7 +437,7 @@ export function getRecommendedSetupStep({
     return { id: "import-source", label: "세션의 자료 탭에서 가져오기를 시작하세요." };
   }
   if (!hasAnalysis) {
-    return { id: "run-quickpass", label: "검토 또는 보고서에서 Quick Pass를 실행하세요." };
+    return { id: "run-quickpass", label: "정리 또는 보고서에서 분석을 실행하세요." };
   }
   if (mode === "tauri-desktop" && sqliteKind === "ok" && hasUnsavedDraft) {
     return { id: "save-to-sqlite", label: "현재 세션을 SQLite에 저장하면 Project Memory가 영속됩니다." };

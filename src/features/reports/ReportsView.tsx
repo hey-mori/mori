@@ -107,7 +107,7 @@ export function ReportsView() {
   // sections: the continue-context, the report builder, and the .mori export.
   // Session identity, scale metrics, and the wrap-up checklist live in the
   // 개요 tab, not here. The analysis re-run lives in the 분석 tab where the
-  // produced 흐름 / 정리 / 진단 views are read; this surface is output-only.
+  // produced 흐름 / 정리 / 상태 views are read; this surface is output-only.
   return (
     <div className="session-tab-pane reports-embedded">
       <div className="session-tab-split is-collapsed">

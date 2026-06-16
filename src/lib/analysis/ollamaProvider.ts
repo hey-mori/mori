@@ -54,7 +54,7 @@ export class OllamaQuickPassProvider implements AnalysisProvider {
     // Only when EVERY chunk failed do we surface the failure, so the run falls
     // to the honest "분석 실패" path rather than a misleading empty success.
     if (parsedChunks.length === 0) {
-      throw new Error(chunkErrors[0] ?? "Ollama Quick Pass produced no usable output.");
+      throw new Error(chunkErrors[0] ?? "Ollama 분석이 사용할 수 있는 결과를 만들지 못했습니다.");
     }
     const parsed = mergeParsedQuickPassChunks(parsedChunks);
 
@@ -104,7 +104,7 @@ export class OllamaQuickPassProvider implements AnalysisProvider {
       toType: candidate.toType,
       type: candidate.type,
       confidence: clampNumber(candidate.confidence ?? 0.5, 0, 1),
-      reason: candidate.reason ?? "Ollama Quick Pass output",
+      reason: candidate.reason ?? "Ollama 분석 결과",
     }));
 
     const nextActions: NextAction[] = (parsed.nextActions ?? []).map((candidate, index) => ({
@@ -212,7 +212,7 @@ export class OllamaQuickPassProvider implements AnalysisProvider {
       }
       if (payload.done_reason === "length") {
         throw new Error(
-          "Ollama response was truncated before Quick Pass JSON finished. Mori already split the session into smaller chunks; try a smaller model profile, a model with a larger context window, or increase the Ollama timeout.",
+          "Ollama 응답이 분석 JSON을 끝내기 전에 잘렸습니다(truncated). Mori가 이미 세션을 작은 조각으로 나눴으니 더 작은 모델 프로필, 더 큰 컨텍스트 창을 가진 모델, 또는 더 긴 Ollama 타임아웃을 사용해 보세요.",
         );
       }
       return payload.response;
@@ -483,7 +483,7 @@ function uniqueStrings(values: string[]): string[] {
 export function parseOllamaQuickPassJson(rawText: string): ParsedQuickPass {
   const json = extractJson(rawText);
   if (!json) {
-    throw new Error("Ollama Quick Pass response is not a JSON object");
+    throw new Error("Ollama 분석 응답이 JSON 객체가 아닙니다");
   }
 
   // Sanitize at the parse boundary so a weak model's noise (title-less items,

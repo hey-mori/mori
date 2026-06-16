@@ -60,6 +60,13 @@ export function OverviewView() {
   const issueCount = view.issues.length;
   const decisionCount = view.decisions.length;
   const nextActionCount = view.nextActions.length;
+  const fileCount = useMemo(
+    () =>
+      new Set(
+        view.sources.flatMap((source) => (source.fileTouches ?? []).map((touch) => touch.path)),
+      ).size,
+    [view.sources],
+  );
 
   const unresolved = useMemo(
     () =>
@@ -145,6 +152,7 @@ export function OverviewView() {
           <dl className="overview-metrics" aria-label="세션 규모">
             <OverviewMetric label="기간" value={duration} />
             <OverviewMetric label="자료" value={String(sourceCount)} />
+            <OverviewMetric label="파일" value={String(fileCount)} />
             <OverviewMetric label="이슈" value={String(issueCount)} />
             <OverviewMetric label="결정" value={String(decisionCount)} />
             <OverviewMetric label="다음 액션" value={String(nextActionCount)} />

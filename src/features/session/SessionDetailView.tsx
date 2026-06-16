@@ -35,7 +35,7 @@ import { AnalysisView } from "./AnalysisView";
  *   - **개요**    — session at a glance (identity · summary · scale · quick nav)
  *   - **활동**    — raw agent activity: the 타임라인 swimlane + the 원본 stream
  *   - **분석**    — the analysis surface: run controls + 흐름 (AI workflow) + 정리
- *                  (issues / decisions / next actions) + 진단; absorbs the old 자료 + 검토
+ *                  (issues / decisions / next actions) + 상태; absorbs the old 자료 + 검토
  *   - **공유**    — handoff outputs: continue-context, report, .mori export
  */
 export function SessionDetailView() {

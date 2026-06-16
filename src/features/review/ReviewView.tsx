@@ -207,6 +207,12 @@ export function ReviewView() {
   const showDecisionColumn = !filterColumnsActive || activeColumns.includes("decision");
   const showActionColumn = !filterColumnsActive || activeColumns.includes("nextAction");
   const canWrite = !isDemo;
+  const resolvedIssueCount = view.issues.filter((issue) => issue.status === "resolved").length;
+  const openIssueCount = view.issues.length - resolvedIssueCount;
+  const confirmedDecisionCount = view.decisions.filter((decision) => decision.confirmed).length;
+  const unconfirmedDecisionCount = view.decisions.length - confirmedDecisionCount;
+  const completedActionCount = view.nextActions.filter(isNextActionCompleted).length;
+  const pendingActionCount = view.nextActions.length - completedActionCount;
   const board = (
     <section className="review-issue-board">
       <div className="review-issue-board-columns review-board-columns">
@@ -215,6 +221,7 @@ export function ReviewView() {
             label="이슈"
             tone="orange"
             count={view.issues.length}
+            progress={`${openIssueCount} 열림 · ${resolvedIssueCount} 해결`}
           >
             {sortedIssues.length === 0 ? (
               <ColumnEmpty label="이슈 없음" />
@@ -238,6 +245,7 @@ export function ReviewView() {
             label="결정"
             tone="blue"
             count={view.decisions.length}
+            progress={`${unconfirmedDecisionCount} 확인 필요 · ${confirmedDecisionCount} 확정`}
           >
             {sortedDecisions.length === 0 ? (
               <ColumnEmpty label="결정 없음" />
@@ -264,6 +272,7 @@ export function ReviewView() {
             label="다음 액션"
             tone="green"
             count={view.nextActions.length}
+            progress={`${pendingActionCount} 대기 · ${completedActionCount} 완료`}
           >
             {sortedNextActions.length === 0 ? (
               <ColumnEmpty label="다음 액션 없음" />
@@ -517,6 +526,8 @@ function ColumnEmpty({ label }: { label: string }) {
  */
 function ReviewBoardCard({
   title,
+  summary,
+  meta,
   glyph,
   leading,
   priority,
@@ -527,6 +538,8 @@ function ReviewBoardCard({
   onSelect,
 }: {
   title: string;
+  summary?: string;
+  meta?: string[];
   /** A small status / kind glyph shown left of the title (issue status,
    *  decision confirmation). Next-action cards use `leading` instead. */
   glyph?: ReactNode;
@@ -571,6 +584,14 @@ function ReviewBoardCard({
             <span className="review-card-edited" aria-label="사용자가 수정함" title="사용자가 수정함" />
           ) : null}
         </div>
+        {summary ? <span className="review-card-summary">{summary}</span> : null}
+        {meta?.length ? (
+          <span className="review-card-meta-row">
+            {meta.map((entry) => (
+              <span key={entry}>{entry}</span>
+            ))}
+          </span>
+        ) : null}
       </button>
       {quickActions ? (
         <div className="review-card-quick-actions" role="group" aria-label="빠른 작업">
@@ -585,6 +606,29 @@ function ReviewBoardCard({
  *  next-action it derived from an issue, so the card reads as the work itself. */
 function stripNextActionPrefix(title: string): string {
   return title.replace(/^확인 또는 해결:\s*/, "");
+}
+
+function compactText(value: string | undefined): string | undefined {
+  const trimmed = value?.replace(/\s+/g, " ").trim();
+  if (!trimmed) return undefined;
+  return trimmed.length > 140 ? `${trimmed.slice(0, 137)}...` : trimmed;
+}
+
+function priorityLabel(priority: Priority): string {
+  if (priority === "high") return "높음";
+  if (priority === "medium") return "보통";
+  return "낮음";
+}
+
+function statusLabel(status: IssueStatus): string {
+  if (status === "resolved") return "해결";
+  if (status === "inProgress") return "진행 중";
+  if (status === "watching") return "관찰";
+  return "열림";
+}
+
+function evidenceLabel(count: number): string {
+  return count > 0 ? `근거 ${count}개` : "근거 없음";
 }
 
 /** The status glyph for an issue card — open / 진행 중 / 관찰 / 해결, so the
@@ -661,6 +705,12 @@ function IssueBoardCard({
   return (
     <ReviewBoardCard
       title={issue.title}
+      summary={compactText(issue.description)}
+      meta={[
+        priorityLabel(issue.priority),
+        statusLabel(issue.status),
+        evidenceLabel(issue.sourceEventIds.length),
+      ]}
       glyph={<IssueGlyph status={issue.status} />}
       priority={issue.priority}
       edited={issue.editedByUser}
@@ -711,6 +761,12 @@ function DecisionBoardCard({
   return (
     <ReviewBoardCard
       title={decision.title}
+      summary={compactText(decision.decision || decision.rationale)}
+      meta={[
+        priorityLabel(decision.importance),
+        decision.confirmed ? "확정됨" : "확인 필요",
+        evidenceLabel(decision.sourceEventIds.length),
+      ]}
       glyph={<DecisionGlyph confirmed={decision.confirmed} />}
       priority={decision.importance}
       edited={decision.editedByUser}
@@ -778,6 +834,11 @@ function NextActionBoardCard({
   return (
     <ReviewBoardCard
       title={stripNextActionPrefix(action.title)}
+      meta={[
+        priorityLabel(action.priority),
+        done ? "완료" : "대기",
+        action.relatedIssueIds.length > 0 ? `이슈 ${action.relatedIssueIds.length}개` : "직접 액션",
+      ]}
       leading={leading}
       priority={action.priority}
       edited={action.editedByUser}

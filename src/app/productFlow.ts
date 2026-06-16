@@ -129,7 +129,7 @@ export const PRODUCT_STAGE_CATALOG: Record<ProductStage, ProductStageDescriptor>
   extract: {
     id: "extract",
     label: "Extract",
-    description: "Quick Pass 분석으로 이슈 / 결정 / 다음 액션을 추출합니다.",
+    description: "분석으로 이슈 / 결정 / 다음 액션을 추출합니다.",
     requiredFeatureIds: ["evidence.runQuickPass", "settings.localAi.deterministic"],
     optionalFeatureIds: ["settings.localAi.ollama"],
   },
@@ -208,7 +208,7 @@ export const PRODUCT_SURFACES: Record<ProductSurfaceId, ProductSurfaceDescriptor
   evidenceHub: {
     id: "evidenceHub",
     label: "Evidence",
-    description: "Available + Planned 통합 카드 + 가져온 소스 + Quick Pass.",
+    description: "Available + Planned 통합 카드 + 가져온 소스 + 분석.",
     ownedFeatureIds: [
       "evidence.addSource.manualNote",
       "evidence.addSource.urlImport",
@@ -534,7 +534,7 @@ export function getRecommendedNextStep(args: {
       return {
         stage: "extract",
         feature: FEATURE_REGISTRY["evidence.runQuickPass"],
-        message: "Evidence / Reports에서 Quick Pass를 실행하세요.",
+        message: "Evidence / Reports에서 분석을 실행하세요.",
       };
     }
   }

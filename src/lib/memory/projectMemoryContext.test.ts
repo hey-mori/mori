@@ -40,7 +40,7 @@ describe("deriveProjectMemoryContext", () => {
       scope: "current-session",
       hasAnalysis: false,
     });
-    expect(snap.scopeCaveat).toMatch(/Quick Pass/);
+    expect(snap.scopeCaveat).toMatch(/분석/);
     expect(snap.scopeCaveat).toMatch(/저장된 세션/);
   });
 

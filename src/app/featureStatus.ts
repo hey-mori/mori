@@ -156,7 +156,7 @@ export type FeatureCapability = {
   actionEnabled: boolean;
   /** Tooltip used when actionEnabled is false. */
   disabledReason?: string;
-  /** Optional concrete next step (e.g. "Run Quick Pass on Reports"). */
+  /** Optional concrete next step (e.g. "Run analysis on Reports"). */
   nextStep?: string;
   /** Optional doc path that explains the capability in depth. */
   docsPath?: string;
@@ -222,7 +222,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "evidence.addSource.tauriGitDiff", label: "Tauri Git diff capture", status: "implemented", description: "Capture git diff against a saved repo path.", disabledReason: "데스크톱 런타임(Tauri)이 필요합니다." },
   { id: "evidence.addSource.connectorJsonl", label: "Connector JSONL import", status: "implemented", description: "Import the JSONL produced by the Claude Code hook, Codex CLI wrapper, terminal, or git connector tools via paste in Evidence Hub." },
   { id: "evidence.removeImport", label: "Remove import", status: "implemented", description: "Delete an imported source from the session." },
-  { id: "evidence.runQuickPass", label: "Run Quick Pass", status: "implemented", description: "Run the Quick Pass analysis against imported sources." },
+  { id: "evidence.runQuickPass", label: "Run Analysis", status: "implemented", description: "Run analysis against imported sources." },
   // ─────────────────────────── Review ────────────────────────────
   { id: "review.statusChange", label: "Change issue status", status: "implemented", description: "Move issues across Open / In-Progress / Resolved / Watching from the Review detail panel." },
   { id: "review.editIssue", label: "Edit issue", status: "implemented", description: "Inline edit issue title and description from the Review detail panel." },
@@ -237,7 +237,7 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "reports.export.html", label: "HTML export", status: "implemented", description: "Render the report as a standalone, self-contained HTML document." },
   { id: "reports.export.moriPackage", label: "Export .mori v0 JSON", status: "implemented", description: "Serialise the session to a .mori v0 JSON package." },
   { id: "reports.copyResumePrompt", label: "Copy resume prompt", status: "implemented", description: "Copy the generated resume prompt." },
-  { id: "reports.rerunQuickPass", label: "Re-run Quick Pass", status: "implemented", description: "Trigger a new Quick Pass run from the analysis strip." },
+  { id: "reports.rerunQuickPass", label: "Re-run Analysis", status: "implemented", description: "Trigger a new analysis run from the analysis strip." },
   // ─────────────────────────── Memory ────────────────────────────
   { id: "memory.crossSessionAggregation", label: "Cross-session memory aggregation", status: "implemented", description: "Aggregate decisions / issues / evidence across saved sessions via loadProjectMemorySessions." },
   { id: "memory.savedSessions", label: "Saved sessions list", status: "partial", description: "List sessions saved to browser draft or SQLite.", userFacingStatus: "부분 구현 — 목록만; 페이로드는 세션 단위." },
@@ -247,8 +247,8 @@ const REGISTRY_DATA: Array<Omit<FeatureCapability, "actionEnabled">> = [
   { id: "startSession.savePersistedDraft", label: "Save persisted draft", status: "implemented", description: "Persist the new session draft locally." },
   { id: "startSession.sourceTileSelection", label: "Source tile selection", status: "implemented", description: "Choose which sources to scope the session to. Selection is persisted in the session draft and restored on return." },
   // ─────────────────────────── Settings ──────────────────────────
-  { id: "settings.localAi.deterministic", label: "Deterministic Quick Pass", status: "implemented", description: "Local heuristic Quick Pass — no LLM." },
-  { id: "settings.localAi.ollama", label: "Ollama (Local LLM)", status: "implemented", description: "Quick Pass via a user-run Ollama instance." },
+  { id: "settings.localAi.deterministic", label: "Deterministic Analysis", status: "implemented", description: "Local heuristic analysis — no LLM." },
+  { id: "settings.localAi.ollama", label: "Ollama (Local LLM)", status: "implemented", description: "Analysis via a user-run Ollama instance." },
   { id: "settings.localAi.lmStudio", label: "LM Studio", status: PLANNED, description: "OpenAI-compatible endpoint via LM Studio.", disabledReason: "LM Studio 제공자는 예정 마일스톤입니다." },
   { id: "settings.localAi.openAiCompatible", label: "OpenAI-compatible endpoint", status: "implemented", description: "Custom /v1/chat/completions endpoint with optional API key." },
   { id: "settings.localAi.cloudApi", label: "Cloud API (opt-in)", status: PLANNED, description: "Explicit opt-in cloud API integration.", disabledReason: "Cloud API 연동은 명시적 옵트인이 필요한 예정 마일스톤입니다." },

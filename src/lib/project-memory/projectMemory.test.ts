@@ -173,7 +173,7 @@ describe("getProjectMemorySummary", () => {
     }
   });
 
-  it("includes a scope caveat about Quick Pass when analysis has not run", () => {
+  it("includes a scope caveat when analysis has not run", () => {
     const summary = getProjectMemorySummary({
       view: mockSession,
       scope: "current-session",
@@ -181,7 +181,7 @@ describe("getProjectMemorySummary", () => {
       reportCount: 0,
       hasAnalysis: false,
     });
-    expect(summary.scopeCaveat).toMatch(/Quick Pass/);
+    expect(summary.scopeCaveat).toMatch(/분석/);
   });
 
   it("uses Demo-specific copy when scope is demo", () => {

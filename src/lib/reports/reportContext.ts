@@ -62,7 +62,7 @@ export function deriveReportContext(args: {
     dataBasisTone = "purple";
   } else if (analysis) {
     dataBasis = "imports-plus-analysis";
-    dataBasisLabel = `${analysis.providerLabel ?? "Quick Pass"} analysis`;
+    dataBasisLabel = `${analysis.providerLabel ?? "분석"} analysis`;
     dataBasisTone = "green";
   } else if (evidence.sourceCount > 0) {
     dataBasis = "imports-only";

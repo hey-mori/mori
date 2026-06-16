@@ -216,7 +216,7 @@ function buildApplyItem(input: ImportReviewSummaryInput): ImportReviewSummaryIte
     title: "반영 효과",
     status: "ready",
     statusLabel: "기록 예정",
-    detail: `수락된 ${input.acceptedCount}개 이벤트가 세션 Timeline에 추가됩니다. 이슈 · 결정 · 다음 액션은 이후 Quick Pass에서 도출됩니다.`,
+    detail: `수락된 ${input.acceptedCount}개 이벤트가 세션 Timeline에 추가됩니다. 이슈 · 결정 · 다음 액션은 이후 분석에서 도출됩니다.`,
   };
 }
 

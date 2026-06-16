@@ -503,7 +503,8 @@ export function TimelineView({
             selectedItemId={selectedItem?.id ?? null}
             onSelectPhase={selectPhaseInStream}
             onRunQuickPass={() => void runQuickPass()}
-            canRunQuickPass={analysisStatus !== "running"}
+            canRunQuickPass={sessionMode === "draft" && imports.length > 0 && analysisStatus !== "running"}
+            analysisRunning={analysisStatus === "running"}
           />
         ) : useCausalView ? (
           <div className="timeline-causal-mode timeline-lab">

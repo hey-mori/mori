@@ -210,7 +210,7 @@ export const SOURCE_REGISTRY: Record<string, SourceIntegration> = {
 
   quickPass: {
     id: "quickPass",
-    label: "Quick Pass 분석",
+    label: "분석",
     description: "가져온 소스에서 이슈 · 결정 · 관계를 추출하는 로컬 분석",
     status: "implemented",
     trustDefault: "inferred",

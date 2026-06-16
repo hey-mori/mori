@@ -22,7 +22,6 @@ import {
   buildProviderConfigFromSettings,
   createDeterministicQuickPassProvider,
   getCurrentRun,
-  mergeAnalysisFloor,
   resolveQuickPassProvider,
   resolveTaskModel,
   sanitizeQuickPassSettings,
@@ -361,19 +360,19 @@ export type SessionState = {
   clearAllDataAndViewDemo: () => Promise<void>;
   runQuickPass: (
     provider?: AnalysisProvider,
-    fallbackSettings?: QuickPassAnalysisSettings,
+    runSettings?: QuickPassAnalysisSettings,
   ) => Promise<AnalysisResult | null>;
   clearAnalysis: () => void;
   /**
    * Apply a background analysis result to the active session — the review
    * gate for the "자동 분석" feature. Writes the result to the session's
-   * analysis store (same path as a manual Quick Pass) and marks the analysis
+   * analysis store (same path as a manual analysis run) and marks the analysis
    * as succeeded. Does nothing when no session is active.
    */
   applyBackgroundAnalysis: (result: AnalysisResult, providerName?: string) => void;
   /**
    * Read the active session's append-only analysis run history (every
-   * Quick Pass run plus the adopted-run pointer). Returns `null` when no
+   * analysis run plus the adopted-run pointer). Returns `null` when no
    * session is active or the session has no analysis. A read, not a
    * subscription — callers re-read when `analysis` changes.
    */
@@ -1050,14 +1049,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       dataResetNonce: get().dataResetNonce + 1,
     });
   },
-  runQuickPass: async (provider, fallbackSettings) => {
+  runQuickPass: async (provider, runSettings) => {
     const repository = getRepository();
     const state = get();
     const draft = state.draft;
     if (!draft) {
       set({
         analysisStatus: "failed",
-        analysisError: "Start a session and import data before running Quick Pass.",
+        analysisError: "세션을 시작하고 소스를 가져온 뒤 분석을 실행하세요.",
         analysisFallbackUsed: false,
       });
       return null;
@@ -1066,18 +1065,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!imports.length) {
       set({
         analysisStatus: "failed",
-        analysisError: "Import a note, URL, or AI conversation before running Quick Pass.",
+        analysisError: "분석하려면 먼저 노트, URL, AI 대화 같은 소스를 가져오세요.",
         analysisFallbackUsed: false,
       });
       return null;
     }
 
     const settings = state.analysisSettings;
-    // A one-off run (e.g. an engine preset chosen for this run only) passes the
-    // provider it built plus the engine settings it was built from, so the
-    // fallback decision reflects that engine rather than the persisted one.
-    const effective = fallbackSettings ?? settings;
-    const primary = provider ?? resolveProviderFromSettings(settings);
+    const primary = provider ?? resolveProviderFromSettings(runSettings ?? settings);
     const events = imports.flatMap((entry) => entry.events);
     const sources = imports.map((entry) => entry.source);
     const analysisInput = {
@@ -1095,35 +1090,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
 
     try {
-      let result = await primary.analyze(analysisInput);
-      // Rule-based floor for an empty LLM result is OPT-IN, the same principle as
-      // the failure fallback: when the user has not enabled
-      // `fallbackToDeterministic`, an LLM that genuinely extracts nothing is
-      // shown honestly as 0 — not papered over with weaker heuristic output the
-      // user never asked for. Substituting rule-based for a non-delivering LLM is
-      // never automatic.
-      // An empty board is strictly worse than heuristics, and the merge only
-      // adds items the LLM lacked, so a rich result is never diluted. A real
-      // Claude / Codex session always states issues and decisions in its turns,
-      // so this is what takes the common "830 turns, 0 issues" case to a
-      // populated board.
-      const llmFoundNothing =
-        result.issues.length === 0 &&
-        result.decisions.length === 0 &&
-        result.nextActions.length === 0;
-      if (
-        llmFoundNothing &&
-        effective.fallbackToDeterministic &&
-        effective.provider !== "deterministic" &&
-        primary.name !== "deterministic-heuristic-v1"
-      ) {
-        try {
-          const floor = await getDefaultProvider().analyze(analysisInput);
-          result = mergeAnalysisFloor(result, floor);
-        } catch {
-          // The floor is best-effort; keep the primary result if it fails.
-        }
-      }
+      const result = await primary.analyze(analysisInput);
       repository.saveSessionAnalysis(draft.session.id, result);
       persistMemoryBodyFromAnalysis(repository, draft.session.id, result);
       set({
@@ -1135,50 +1102,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       });
       return result;
     } catch (primaryError) {
-      const primaryMessage = primaryError instanceof Error ? primaryError.message : "Quick Pass failed";
-
-      // A failed LLM run falls back to the deterministic engine ONLY when the
-      // user opted into it (`fallbackToDeterministic`). Substituting rule-based
-      // output for a failed LLM is NOT automatic — when fallback is off, the
-      // failure is surfaced honestly ("분석 실패") so the user fixes the engine
-      // (e.g. Ollama "Failed to fetch") instead of silently getting weaker
-      // heuristic results they never asked for.
-      if (
-        effective.provider !== "deterministic" &&
-        effective.fallbackToDeterministic &&
-        primary.name !== "deterministic-heuristic-v1"
-      ) {
-        const deterministic = getDefaultProvider();
-        try {
-          const fallbackResult = await deterministic.analyze(analysisInput);
-          const annotated: AnalysisResult = {
-            ...fallbackResult,
-            notes: [
-              `${primary.label} 분석 실패: ${primaryMessage} · 규칙 기반으로 대체했습니다.`,
-              ...fallbackResult.notes,
-            ],
-          };
-          repository.saveSessionAnalysis(draft.session.id, annotated);
-          persistMemoryBodyFromAnalysis(repository, draft.session.id, annotated);
-          set({
-            analysis: annotated,
-            analysisStatus: "succeeded",
-            analysisError: null,
-            analysisProviderLabel: deterministic.label,
-            analysisFallbackUsed: true,
-          });
-          return annotated;
-        } catch (fallbackError) {
-          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : "Fallback failed";
-          set({
-            analysisStatus: "failed",
-            analysisError: `Primary failed: ${primaryMessage}. Fallback failed: ${fallbackMessage}.`,
-            analysisProviderLabel: deterministic.label,
-            analysisFallbackUsed: true,
-          });
-          return null;
-        }
-      }
+      const primaryMessage = primaryError instanceof Error ? primaryError.message : "분석 실패";
 
       set({
         analysisStatus: "failed",

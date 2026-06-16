@@ -222,19 +222,19 @@ function collectCompanionSignals(input: CompanionSignalInput): CompanionSignal[]
       audience: "real",
     });
   } else if (!input.hasAnalysis) {
-    // Imports exist but Quick Pass has not run — without this the companion
+    // Imports exist but analysis has not run — without this the companion
     // is silent at exactly the point the user needs the next step.
     signals.push({
       id: "companion-import-ready",
       type: "import_ready",
       severity: "suggestion",
-      title: "Quick Pass 실행 가능",
+      title: "분석 실행 가능",
       message: "가져온 소스를 이슈 · 결정 · 다음 액션으로 정리합니다.",
       sourceSurface: "evidence",
       linkedItemIds: [],
       evidenceRefs: [],
       basis: "state",
-      actionLabel: "Quick Pass 실행",
+      actionLabel: "분석 실행",
       destination: "evidence",
       audience: "real",
     });

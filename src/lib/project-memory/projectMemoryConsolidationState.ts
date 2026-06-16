@@ -142,7 +142,7 @@ export function buildProjectMemoryConsolidationState(
       dataBasis: preview.dataBasis,
       warnings: preview.warnings,
       emptyReason: describeEmptyReason(memory),
-      nextStepLabel: "Quick Pass를 실행하거나 세션을 더 가져오면 제안이 나타납니다.",
+      nextStepLabel: "분석을 실행하거나 세션을 더 가져오면 제안이 나타납니다.",
       generatedAt: deriveGeneratedAt(memory),
     };
   }
@@ -158,7 +158,7 @@ export function buildProjectMemoryConsolidationState(
     warnings: preview.warnings,
     emptyReason: null,
     nextStepLabel: partial
-      ? "현재 집계 범위가 좁습니다 — 저장 세션을 더 불러오거나 Quick Pass를 실행하면 제안이 풍부해집니다."
+    ? "현재 집계 범위가 좁습니다 — 저장 세션을 더 불러오거나 분석을 실행하면 제안이 풍부해집니다."
       : "‘제안 검토’에서 각 제안을 검토할 수 있습니다. 승인하기 전까지는 어떤 메모리도 저장되지 않습니다.",
     generatedAt: deriveGeneratedAt(memory),
   };
@@ -233,7 +233,7 @@ function describeUnavailableReason(warnings: ProjectMemoryWarning[]): string {
 
 function describeEmptyReason(memory: ProjectMemoryViewModel): string {
   if (memory.summaryStats.decisionCount === 0 && memory.summaryStats.issueCount === 0) {
-    return "아직 기록된 결정이나 이슈가 없습니다. 가져온 세션에 Quick Pass를 실행하면 제안이 나타납니다.";
+    return "아직 기록된 결정이나 이슈가 없습니다. 가져온 세션에 분석을 실행하면 제안이 나타납니다.";
   }
   if (memory.recentSessions.every((session) => session.isCurrent)) {
     return "현재 세션만 보입니다. 세션을 더 저장하면 세션 간 제안이 생성됩니다.";

@@ -11,9 +11,9 @@ import { providerKindLabel } from "../../lib/analysis/providerLabels";
 import type { QuickPassProviderKind } from "../../lib/analysis/analysisSettings";
 import { TimelineView } from "../timeline/TimelineView";
 import { ReviewView } from "../review/ReviewView";
-import { AnalysisDiagnosticsView } from "./AnalysisDiagnosticsView";
+import { AnalysisStatusView } from "./AnalysisStatusView";
 
-type AnalysisSection = "flow" | "organize" | "diagnostics";
+type AnalysisSection = "flow" | "organize" | "status";
 
 /**
  * 분석 — the unified analysis surface.
@@ -25,7 +25,7 @@ type AnalysisSection = "flow" | "organize" | "diagnostics";
  *   - **흐름**  the AI's reading of how the work progressed (the workflow view,
  *               which carries the analysis summary),
  *   - **정리**  the issues / decisions / next actions extracted from analysis,
- *   - **진단**  the run, input scope, confidence, notes, and re-analysis history.
+ *   - **상태**  the run, input scope, confidence, notes, and re-analysis history.
  *
  * It replaces the separate 자료 + 검토 tabs and absorbs the 흐름 reading that
  * used to live under 활동, so the analysis input, narrative, and review work read
@@ -80,12 +80,12 @@ export function AnalysisView() {
           <button
             type="button"
             role="tab"
-            aria-selected={section === "diagnostics"}
-            className={`analysis-section-option ${section === "diagnostics" ? "is-active" : ""}`}
-            onClick={() => setSection("diagnostics")}
+            aria-selected={section === "status"}
+            className={`analysis-section-option ${section === "status" ? "is-active" : ""}`}
+            onClick={() => setSection("status")}
           >
             <Activity size={14} aria-hidden="true" />
-            진단
+            상태
           </button>
         </div>
 
@@ -127,7 +127,7 @@ export function AnalysisView() {
 
       {section === "flow" ? <TimelineView mode="timeline" readingModes={["workflow"]} /> : null}
       {section === "organize" ? <ReviewView /> : null}
-      {section === "diagnostics" ? <AnalysisDiagnosticsView /> : null}
+      {section === "status" ? <AnalysisStatusView /> : null}
     </div>
   );
 }

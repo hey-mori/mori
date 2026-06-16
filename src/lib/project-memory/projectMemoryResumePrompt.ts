@@ -698,7 +698,7 @@ function describeWarning(warning: ProjectMemoryWarning): string {
     case "old-imports-without-identity":
       return `${warning.importCount} legacy imports do not carry connector identities and are excluded from the rollup.`;
     case "old-sessions-without-analysis":
-      return `${warning.sessionCount} saved sessions have no Quick Pass analysis and contribute limited memory.`;
+      return `${warning.sessionCount} saved sessions have no analysis result and contribute limited memory.`;
     case "demo-mode":
       return "Demo mode — saved sessions not aggregated.";
     case "storage-unavailable":

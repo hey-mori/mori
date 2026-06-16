@@ -215,7 +215,7 @@ function buildOpenAiCompatibleResult({
     toType: candidate.toType,
     type: candidate.type,
     confidence: clampNumber(candidate.confidence ?? 0.5, 0, 1),
-    reason: candidate.reason ?? "OpenAI-compatible Quick Pass output",
+      reason: candidate.reason ?? "OpenAI 호환 분석 결과",
   }));
 
   const nextActions: NextAction[] = (parsed.nextActions ?? []).map((candidate, index) => ({

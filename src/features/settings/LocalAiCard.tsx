@@ -25,10 +25,7 @@ import type {
 } from "../../lib/analysis";
 import { formatRelativeKo } from "../../lib/home/homeOverview";
 import { getDefaultLlmFetch } from "../../lib/desktop/llmHttp";
-import {
-  PreferenceToggle,
-  SettingsSection,
-} from "./SettingsPrimitives";
+import { SettingsSection } from "./SettingsPrimitives";
 
 type EngineChoice = QuickPassProviderKind;
 type ModelOption = { id: string; label: string; description?: string };
@@ -336,16 +333,9 @@ function EngineConfigPanel({
           />
           <div className="settings-ai-fallback">
             <span>
-              <strong>실패 시 규칙 기반으로 전환</strong>
-              <small>엔진 연결이 실패해도 분석 결과를 비워두지 않습니다.</small>
+              <strong>실패는 실패로 표시</strong>
+              <small>규칙 기반은 직접 선택했을 때만 실행됩니다. AI 엔진 오류는 분석 실패로 남깁니다.</small>
             </span>
-            <PreferenceToggle
-              label="실패 시 규칙 기반으로 전환"
-              active={settings.fallbackToDeterministic}
-              onToggle={() =>
-                onUpdateSettings({ fallbackToDeterministic: !settings.fallbackToDeterministic })
-              }
-            />
           </div>
         </div>
       </details>
