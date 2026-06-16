@@ -651,10 +651,10 @@ kbd {
 
 .timeline-toolbar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   padding: 10px 0 8px;
-  flex-wrap: wrap;
 }
 
 /* Toolbar control labels never wrap to two lines at an awkward width — the
@@ -2408,7 +2408,10 @@ kbd {
   color: #172033;
   text-align: left;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  /* Same 7px box radius as `.event-card`: a bundle is just a stacked run of the
+     same kind of card, so it must read identically. Was 999px (a capsule),
+     which clashed with the single cards' box corners in the compact tier. */
+  border-radius: 7px;
   background: white;
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.04), 0 4px 12px rgba(20, 25, 36, 0.04);
   /* No `transform` in the transition list. */
@@ -2652,7 +2655,7 @@ kbd {
 
 .mini-track {
   position: relative;
-  height: 42px;
+  height: 52px;
   overflow: hidden;
   border-radius: 7px;
   background: linear-gradient(180deg, #fbfcff, #f6f8fc);

@@ -153,7 +153,9 @@ export function TimelineView({
   );
   // Time-axis zoom. 1 = the whole span fits; >1 widens the layout frame so
   // the canvas scrolls horizontally. Driven by the minimap brush handles.
-  const [zoomFactor, setZoomFactor] = useState<number>(1);
+  // Defaults to 2x so dense spans open spread out rather than overlapping; the
+  // minimap brush snaps back to 1 (whole span) on demand.
+  const [zoomFactor, setZoomFactor] = useState<number>(2);
   const canvasRef = useRef<TimelineCanvasHandle>(null);
 
   // The tab opens on the 흐름 (AI work-flow) view by default — the AI's reading

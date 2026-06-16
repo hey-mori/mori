@@ -1980,21 +1980,36 @@
   overflow: visible;
 }
 
-/* Compact one-row toolbar. Filter chips moved into a popover. Boxed like the
-   shared `.tab-toolbar` so it reads as a distinct region, but wrapping
-   button-by-button when the rail gets narrow. */
+/* Two stacked rows, mirroring the 분석 tab: a transparent top row (the
+   reading-mode switch on the left, the auto-sync toggle on the right) and a
+   boxed search / filter band below it. Filter chips live in a popover. */
 .timeline-toolbar {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  /* Keep `visible` so the 필터 popover is not clipped. */
+  overflow: visible;
+}
+
+/* Each row splits its left and right groups to the two ends. */
+.timeline-toolbar-row {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
+  min-height: 36px;
+  flex-wrap: wrap;
+}
+
+/* The search / filter row reuses the shared `.tab-toolbar` lavender band so it
+   reads as a distinct region under the mode-switch row. */
+.timeline-toolbar-search-row {
   min-height: 48px;
   padding: 7px 14px;
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-lg);
   background: var(--base-surface-subtle);
-  flex-wrap: wrap;
-  /* Keep `visible` so the 필터 popover is not clipped. */
-  overflow: visible;
 }
 
 .timeline-toolbar-left,
@@ -2003,15 +2018,6 @@
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
-}
-
-.timeline-toolbar-spacer {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.timeline-toolbar-right {
-  margin-left: auto;
 }
 
 .toolbar-toggle {

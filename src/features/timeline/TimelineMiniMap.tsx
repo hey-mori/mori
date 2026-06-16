@@ -173,7 +173,11 @@ export function TimelineMiniMap({
             selectedItemId,
             focusedSet,
           });
-          const topPercent = (laneIndex / Math.max(1, totalLanes - 1)) * 80 + 10;
+          // Sit the dots lower in the track: the populated lanes (대화·탐색·명령·
+          // 파일) are the first few, so a top-anchored band reads top-heavy with
+          // the usually-empty 리서치·빌드 lanes leaving dead space below. Map the
+          // lanes into the lower-centre band [26%, 90%] instead of [10%, 90%].
+          const topPercent = (laneIndex / Math.max(1, totalLanes - 1)) * 64 + 26;
           return (
             <i
               key={item.id}

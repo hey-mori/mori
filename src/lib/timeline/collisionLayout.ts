@@ -58,7 +58,7 @@ export type TimelineLayout = {
 // cards are one-line time tokens; prose lives in the hover preview.
 const DENSITY_CARD_HEIGHT: Record<TimelineDensity, number> = {
   comfortable: 68,
-  compact: 34,
+  compact: 56,
   dense: 28,
 };
 
@@ -79,7 +79,7 @@ const DENSITY_WIDTH_BOUNDS: Record<
 const DEFAULT_LANE_OFFSET = 38;
 const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
-const LANE_VERTICAL_PADDING = 7;
+const LANE_VERTICAL_PADDING = 8;
 
 export function computeTimelineLayout(
   items: TimelineDisplayItem[],
