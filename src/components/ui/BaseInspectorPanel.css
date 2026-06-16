@@ -195,6 +195,10 @@
   font-size: 12.5px;
   line-height: 1.55;
   color: #2a3349;
+  /* Long unbroken tokens (paths, commands, URLs) wrap instead of overflowing
+     the rail; newlines in a retained turn body are preserved. */
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 /* A withheld-summary placeholder and the small sub-notes under a card body. */

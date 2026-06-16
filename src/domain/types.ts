@@ -347,6 +347,20 @@ export type TimelineEvent = {
    * {@link FileTouch}.
    */
   fileTouches?: FileTouch[];
+  /**
+   * Full text of the user's request for this turn, retained verbatim so the
+   * inspector can show what was actually sent (the card `title` / `summary`
+   * stay truncated for the dense timeline). The user's own words, so it is
+   * privacy-gated by the same disclosure level as a request event. Additive —
+   * omitted on events whose import keeps only a summary, or that carry no ask.
+   */
+  requestText?: string;
+  /**
+   * Full text of the assistant's reply for this turn, retained verbatim so the
+   * inspector can show how it was answered in full. Additive — omitted when the
+   * import keeps only a summary, or the turn has no reply.
+   */
+  responseText?: string;
 };
 
 export type Issue = {

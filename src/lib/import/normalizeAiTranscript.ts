@@ -236,6 +236,10 @@ function buildTranscriptEvents(
       type: "aiConversation",
       title: truncate(titleSeed, 90),
       summary: truncate(summarySeed, 160),
+      // Keep the full turn text so the inspector can show the request and reply
+      // verbatim (the title / summary above stay truncated for the timeline).
+      requestText: askText || undefined,
+      responseText: replyText || undefined,
       sourceRefs: [build.sourceId],
       linkedIssueIds: [],
       linkedDecisionIds: [],

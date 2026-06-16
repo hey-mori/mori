@@ -6,6 +6,7 @@ import {
   computeItemWidth,
   computeTimelineLayout,
   indexEventAnchors,
+  ITEM_TICK_WIDTH,
 } from "./collisionLayout";
 import type { TimelineDisplayItem } from "./displayItems";
 
@@ -158,47 +159,41 @@ describe("computeItemWidth", () => {
     return { kind: "event", start, end } as unknown as TimelineDisplayItem;
   }
 
-  it("collapses a short or end-less event to the minimum cardlet width", () => {
+  it("floors a zero-duration or end-less event to the tick width", () => {
     const noEnd = computeItemWidth(
       widthItem("2026-05-14T10:00:00Z", undefined),
       range,
       contentWidthPx,
-      "comfortable",
     );
+    expect(noEnd).toBe(ITEM_TICK_WIDTH);
+  });
+
+  it("renders width at the true pixel span of the duration, no inflating minimum", () => {
+    // Range is 5h over 1100px → 3.667px per minute.
     const fiveMinutes = computeItemWidth(
       widthItem("2026-05-14T10:00:00Z", "2026-05-14T10:05:00Z"),
       range,
       contentWidthPx,
-      "comfortable",
     );
-    expect(noEnd).toBe(120);
-    expect(fiveMinutes).toBe(120);
-  });
-
-  it("makes a longer event render a wider card than a short one", () => {
-    const short = computeItemWidth(
-      widthItem("2026-05-14T10:00:00Z", "2026-05-14T10:05:00Z"),
-      range,
-      contentWidthPx,
-      "comfortable",
-    );
-    const long = computeItemWidth(
+    const ninetyMinutes = computeItemWidth(
       widthItem("2026-05-14T10:00:00Z", "2026-05-14T11:30:00Z"),
       range,
       contentWidthPx,
-      "comfortable",
     );
-    expect(long).toBeGreaterThan(short);
+    expect(fiveMinutes).toBeCloseTo((5 / 300) * contentWidthPx, 1);
+    expect(ninetyMinutes).toBeCloseTo((90 / 300) * contentWidthPx, 1);
+    expect(ninetyMinutes).toBeGreaterThan(fiveMinutes);
   });
 
-  it("clamps a very long event to the per-density maximum width", () => {
+  it("does not cap a long event — width stays an honest read of duration", () => {
     const allDay = computeItemWidth(
       widthItem("2026-05-14T09:00:00Z", "2026-05-14T14:00:00Z"),
       range,
       contentWidthPx,
-      "comfortable",
     );
-    expect(allDay).toBe(300);
+    // The event fills the whole range, so it spans the full content width
+    // rather than being clamped to an old per-density maximum.
+    expect(allDay).toBeCloseTo(contentWidthPx, 1);
   });
 
   it("places cards inside the content area to the right of the lane label column", () => {

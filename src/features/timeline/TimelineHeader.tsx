@@ -1,7 +1,8 @@
-import { Filter, List, Rows3, Sparkles } from "lucide-react";
+import { Filter, List, Minus, Plus, Rows3, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { SearchField } from "../../components/ui/SearchField";
 import { FollowControl } from "../live-follow/FollowControl";
+import { MAX_ZOOM, MIN_ZOOM } from "../../lib/timeline/minimapViewport";
 import {
   CANONICAL_TIMELINE_LANES,
   getActivityLaneVisuals,
@@ -24,6 +25,11 @@ export type TimelineToolbarProps = {
   onReadingModeChange: (mode: TimelineReadingMode) => void;
   /** Which reading modes to offer. A single entry hides the switch entirely. */
   availableModes?: TimelineReadingMode[];
+  /** Current time-axis zoom (1 = whole span). Drives the zoom stepper. */
+  zoomFactor?: number;
+  /** Set a new (unclamped) zoom factor; the parent clamps it. Omit to hide the
+   *  zoom stepper (e.g. in the 원본 stream, which has no time axis). */
+  onZoomChange?: (zoom: number) => void;
 };
 
 /** The reading-mode switch options, in display order. */
@@ -51,6 +57,8 @@ export function TimelineToolbar({
   readingMode,
   onReadingModeChange,
   availableModes = ["workflow", "swimlane", "stream"],
+  zoomFactor = 1,
+  onZoomChange,
 }: TimelineToolbarProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterPopRef = useRef<HTMLDivElement | null>(null);
@@ -60,6 +68,12 @@ export function TimelineToolbar({
   const modeOptions = READING_MODE_OPTIONS.filter((option) =>
     availableModes.includes(option.id),
   );
+
+  // The zoom stepper only makes sense on the time-positioned swimlane; the
+  // 원본 stream has no time axis to stretch. Each step scales by 1.5x.
+  const showZoom = onZoomChange && readingMode === "swimlane";
+  const zoomOut = () => onZoomChange?.(zoomFactor / 1.5);
+  const zoomIn = () => onZoomChange?.(zoomFactor * 1.5);
 
   return (
     <div className="timeline-toolbar" role="toolbar" aria-label="타임라인 컨트롤">
@@ -87,6 +101,31 @@ export function TimelineToolbar({
           ) : null}
         </div>
         <div className="timeline-toolbar-right">
+          {showZoom ? (
+            <div className="timeline-zoom" role="group" aria-label="확대 / 축소">
+              <button
+                type="button"
+                className="timeline-zoom-step"
+                onClick={zoomOut}
+                disabled={zoomFactor <= MIN_ZOOM + 0.001}
+                aria-label="축소"
+              >
+                <Minus size={14} aria-hidden="true" />
+              </button>
+              <span className="timeline-zoom-value" aria-live="polite">
+                {Math.round(zoomFactor * 100)}%
+              </span>
+              <button
+                type="button"
+                className="timeline-zoom-step"
+                onClick={zoomIn}
+                disabled={zoomFactor >= MAX_ZOOM - 0.001}
+                aria-label="확대"
+              >
+                <Plus size={14} aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
           <FollowControl />
         </div>
       </div>

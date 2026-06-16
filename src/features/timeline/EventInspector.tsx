@@ -80,18 +80,24 @@ export function EventInspector({
   const requestAbstractions = useSessionStore((state) => state.requestAbstractions);
   const generateRequestAbstraction = useSessionStore((state) => state.generateRequestAbstraction);
   const [generatingAbstraction, setGeneratingAbstraction] = useState(false);
-  // The user's own request text is the privacy-sensitive content; other
-  // actors' events render their summary as before. The effective level is
-  // this event's override, falling back to the global default. A stored
-  // local-LLM abstraction (if any) enriches the withheld projection.
-  const isUserRequest = isUserRequestEvent(selectedEvent);
+  // Full turn text retained at import: the request (the user's words, always
+  // privacy-gated) and the assistant's reply (shown in full). Falls back to the
+  // truncated summary for events that kept no full text (tools, old imports).
+  const fullRequest = selectedEvent.requestText?.trim() ?? "";
+  const fullResponse = selectedEvent.responseText?.trim() ?? "";
+  const hasTurnText = Boolean(fullRequest || fullResponse);
+  // The request is privacy-sensitive whether it is a lone ask (actor "user") or
+  // the ask side of a Q&A pair (actor "assistant"), so gate it whenever present.
+  const isUserRequest = isUserRequestEvent(selectedEvent) || Boolean(fullRequest);
   const effectiveDisclosureLevel = resolveDisclosureLevel(
     requestDisclosureOverrides[selectedEvent.id],
     requestDisclosureDefault,
   );
   const abstractionEntry = requestAbstractions[selectedEvent.id];
+  // Project the request from its full retained text when present, else summary.
+  const requestSource = fullRequest || selectedEvent.summary;
   const requestProjection = projectEventRequestSummary(
-    selectedEvent,
+    { actor: "user", summary: requestSource },
     effectiveDisclosureLevel,
     abstractionEntry,
   );
@@ -99,11 +105,56 @@ export function EventInspector({
   async function handleGenerateAbstraction() {
     setGeneratingAbstraction(true);
     try {
-      await generateRequestAbstraction(selectedEvent.id, selectedEvent.summary);
+      await generateRequestAbstraction(selectedEvent.id, requestSource);
     } finally {
       setGeneratingAbstraction(false);
     }
   }
+
+  // The disclosure toggle and the gated request body, shared by the structured
+  // "보낸 요청" card and the summary fallback so request text hides identically.
+  const disclosureControl = (
+    <SegmentedControl
+      ariaLabel="이 요청 표시 수준"
+      role="radiogroup"
+      value={effectiveDisclosureLevel}
+      onChange={(level) => setRequestDisclosureOverride(selectedEvent.id, level)}
+      options={DISCLOSURE_OPTIONS}
+    />
+  );
+  const gatedRequestBody = (
+    <>
+      {requestProjection.text ? (
+        <p>{requestProjection.text}</p>
+      ) : (
+        <p className="ins-withheld">
+          원문이 표시되지 않도록 설정되어 있습니다. 데이터는 그대로 저장됩니다.
+        </p>
+      )}
+      {requestProjection.isWithheld && requestProjection.text ? (
+        <span className="ins-subnote">원문 비공개 · 데이터는 그대로 저장됩니다</span>
+      ) : null}
+      {effectiveDisclosureLevel !== "raw" && provider === "ollama" ? (
+        <div className="ins-inline-row">
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={handleGenerateAbstraction}
+            disabled={generatingAbstraction}
+          >
+            {generatingAbstraction ? "생성 중..." : "로컬 LLM으로 요지 생성"}
+          </button>
+          {abstractionEntry ? (
+            <span className="ins-subnote">
+              {abstractionEntry.source === "llm"
+                ? "로컬 LLM이 생성한 요지"
+                : `기본 요지 사용${abstractionEntry.note ? ` · ${abstractionEntry.note}` : ""}`}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
   const inspector = buildInspectorViewModel({
     event: selectedEvent,
     view: session,
@@ -132,58 +183,24 @@ export function EventInspector({
       meta={formatTimeRange(selectedEvent.start, selectedEvent.end)}
     >
       <InspectorSection>
-        <InspectorCard
-          label="요약"
-          action={
-            isUserRequest ? (
-              <SegmentedControl
-                ariaLabel="이 요청 표시 수준"
-                role="radiogroup"
-                value={effectiveDisclosureLevel}
-                onChange={(level) =>
-                  setRequestDisclosureOverride(selectedEvent.id, level)
-                }
-                options={DISCLOSURE_OPTIONS}
-              />
-            ) : undefined
-          }
-        >
-          {isUserRequest ? (
-            <>
-              {requestProjection.text ? (
-                <p>{requestProjection.text}</p>
-              ) : (
-                <p className="ins-withheld">
-                  원문이 표시되지 않도록 설정되어 있습니다. 데이터는 그대로 저장됩니다.
-                </p>
-              )}
-              {requestProjection.isWithheld && requestProjection.text ? (
-                <span className="ins-subnote">원문 비공개 · 데이터는 그대로 저장됩니다</span>
-              ) : null}
-              {effectiveDisclosureLevel !== "raw" && provider === "ollama" ? (
-                <div className="ins-inline-row">
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    onClick={handleGenerateAbstraction}
-                    disabled={generatingAbstraction}
-                  >
-                    {generatingAbstraction ? "생성 중..." : "로컬 LLM으로 요지 생성"}
-                  </button>
-                  {abstractionEntry ? (
-                    <span className="ins-subnote">
-                      {abstractionEntry.source === "llm"
-                        ? "로컬 LLM이 생성한 요지"
-                        : `기본 요지 사용${abstractionEntry.note ? ` · ${abstractionEntry.note}` : ""}`}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <p>{selectedEvent.summary}</p>
-          )}
-        </InspectorCard>
+        {hasTurnText ? (
+          <>
+            {fullRequest ? (
+              <InspectorCard label="보낸 요청" action={disclosureControl}>
+                {gatedRequestBody}
+              </InspectorCard>
+            ) : null}
+            {fullResponse ? (
+              <InspectorCard label="받은 답변">
+                <p>{fullResponse}</p>
+              </InspectorCard>
+            ) : null}
+          </>
+        ) : (
+          <InspectorCard label="요약" action={isUserRequest ? disclosureControl : undefined}>
+            {isUserRequest ? gatedRequestBody : <p>{selectedEvent.summary}</p>}
+          </InspectorCard>
+        )}
       </InspectorSection>
 
       <EventFilesSection touches={selectedEvent.fileTouches} />

@@ -76,7 +76,7 @@ const DENSITY_WIDTH_BOUNDS: Record<
   dense: { eventMin: 58, eventMax: 124, bundleMin: 74, bundleMax: 140 },
 };
 
-const DEFAULT_LANE_OFFSET = 38;
+const DEFAULT_LANE_OFFSET = 48;
 const DEFAULT_LANE_LABEL_WIDTH = 148;
 const DEFAULT_CONTENT_RIGHT_PADDING = 20;
 const LANE_VERTICAL_PADDING = 8;
@@ -127,7 +127,6 @@ export function computeTimelineLayout(
     const placements = layoutLaneRow(
       laneItems,
       range,
-      density,
       contentLeftPx,
       contentWidthPx,
     );
@@ -206,14 +205,13 @@ type RowPlacement = {
 function layoutLaneRow(
   items: TimelineDisplayItem[],
   range: TimelineRange,
-  density: TimelineDensity,
   contentLeftPx: number,
   contentWidthPx: number,
 ): RowPlacement[] {
   if (items.length === 0) return [];
 
   const initial = items.map((item) => {
-    const width = computeItemWidth(item, range, contentWidthPx, density);
+    const width = computeItemWidth(item, range, contentWidthPx);
     const x = computeItemLeft(item.start, range, contentLeftPx, contentWidthPx, width);
     return { item, x, width };
   });
@@ -222,25 +220,31 @@ function layoutLaneRow(
 }
 
 /**
- * Duration-aware item width. The width is the pixel span of the item's
- * [start, end] on the time scale, clamped to the per-density readable range.
- * An item with no end (or an end before its start) collapses to the minimum
- * cardlet width.
+ * Zero / sub-pixel-duration events still need a small, clickable footprint, so
+ * widths floor at this tick. Everything is otherwise drawn at its true pixel
+ * span (see below).
+ */
+export const ITEM_TICK_WIDTH = 6;
+
+/**
+ * Honest item width: the exact pixel span of the item's [start, end] on the
+ * time scale. There is deliberately NO inflating minimum and NO maximum cap —
+ * a card's width is a faithful read of how long the work actually took, so a
+ * 30-second command is a thin tick and a two-hour run is a long bar. Only a
+ * zero-duration (or end-less) event floors to ITEM_TICK_WIDTH so it stays
+ * visible and clickable. Readable detail lives in the card body when there is
+ * room, and in the hover preview otherwise; zoom in to give short events space.
  */
 export function computeItemWidth(
   item: TimelineDisplayItem,
   range: TimelineRange,
   contentWidthPx: number,
-  density: TimelineDensity,
 ): number {
-  const bounds = DENSITY_WIDTH_BOUNDS[density];
-  const min = item.kind === "bundle" ? bounds.bundleMin : bounds.eventMin;
-  const max = item.kind === "bundle" ? bounds.bundleMax : bounds.eventMax;
   const startPct = timestampToXPercent(item.start, range);
   const endPct = timestampToXPercent(item.end ?? item.start, range);
   const spanPx = ((endPct - startPct) / 100) * contentWidthPx;
-  if (!Number.isFinite(spanPx) || spanPx <= min) return min;
-  return Math.min(max, spanPx);
+  if (!Number.isFinite(spanPx) || spanPx <= ITEM_TICK_WIDTH) return ITEM_TICK_WIDTH;
+  return spanPx;
 }
 
 function computeItemLeft(

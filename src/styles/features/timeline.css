@@ -608,6 +608,10 @@ kbd {
 
 .content-grid {
   display: grid;
+  /* Pin the inspector rail to one fixed, comfortable width so it reads the
+     same at every window size (and is wide enough for full request / reply
+     text). Scoped to the timeline grid; other rails keep the global value. */
+  --base-rail: 420px;
   grid-template-columns: minmax(680px, 1fr) var(--base-rail);
   /* Columns keep their own height: a tall inspector must NOT stretch the
      timeline column, which would balloon the canvas card with empty space. */
@@ -1178,6 +1182,54 @@ kbd {
   background: white;
   color: var(--purple);
   box-shadow: 0 1px 2px rgba(20, 25, 36, 0.08);
+}
+
+/* ── Zoom stepper ──────────────────────────────────────────────────────────
+   −  150%  +  : widens / narrows the time axis so dense bursts spread apart.
+   Shown only on the swimlane; the minimap brush is the other way to zoom. */
+.timeline-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-soft);
+}
+
+.timeline-zoom-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.timeline-zoom-step:hover:not(:disabled) {
+  background: white;
+  color: var(--purple);
+}
+
+.timeline-zoom-step:disabled {
+  color: var(--muted-2);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.timeline-zoom-value {
+  min-width: 40px;
+  text-align: center;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 .timeline-density-switch {
@@ -2223,6 +2275,19 @@ kbd {
   gap: 6px;
   min-width: 0;
   width: 100%;
+  /* Clip the icon + label to the card's true (duration-accurate) width so a
+     short card never spills its content over its neighbours. */
+  overflow: hidden;
+}
+
+/* A duration-accurate card too narrow for any content: show just the tone bar
+   (a tick). The full detail is one hover away. */
+.event-card.is-narrow {
+  padding: 0;
+}
+
+.event-card.is-narrow .event-card-row {
+  display: none;
 }
 
 .event-card-source-mark {
@@ -2669,12 +2734,16 @@ kbd {
    scroll geometry (see computeMinimapViewport). */
 .mini-map-viewport {
   position: absolute;
-  top: 7px;
-  bottom: 7px;
-  min-width: 28px;
-  border: 1px solid rgba(98, 70, 245, 0.36);
-  border-radius: 7px;
-  background: rgba(98, 70, 245, 0.08);
+  top: 5px;
+  bottom: 5px;
+  /* Stays a readable, grabbable lens even at extreme zoom, where the true
+     visible slice (1 / zoom) would otherwise shrink to a few pixels. */
+  min-width: 44px;
+  z-index: 2;
+  border: 1.5px solid rgba(98, 70, 245, 0.55);
+  border-radius: 8px;
+  background: rgba(98, 70, 245, 0.12);
+  box-shadow: 0 1px 5px rgba(98, 70, 245, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   transition: left 0.08s linear, width 0.08s linear;
 }
 
@@ -2683,9 +2752,14 @@ kbd {
   touch-action: none;
 }
 
+.mini-map-viewport.is-draggable:hover {
+  border-color: rgba(98, 70, 245, 0.7);
+  background: rgba(98, 70, 245, 0.16);
+}
+
 .mini-map-viewport.is-draggable:active {
   cursor: grabbing;
-  background: rgba(98, 70, 245, 0.14);
+  background: rgba(98, 70, 245, 0.2);
 }
 
 /* Edge grips — drag to resize the brush, which zooms the time axis. */
@@ -2703,11 +2777,11 @@ kbd {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 3px;
-  height: 16px;
+  width: 3.5px;
+  height: 60%;
   transform: translate(-50%, -50%);
   border-radius: 2px;
-  background: rgba(98, 70, 245, 0.55);
+  background: rgba(98, 70, 245, 0.8);
 }
 
 .mini-map-handle.is-left {

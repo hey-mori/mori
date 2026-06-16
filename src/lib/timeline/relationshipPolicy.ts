@@ -99,9 +99,10 @@ export function buildVisibleConnectors(args: {
 }
 
 /**
- * Connector cap by mode. Flow Focus can afford a wider subgraph; the Timeline
- * keeps the surface calm even with several focused neighbours.
+ * Connector cap by mode. The Timeline now draws the deterministic activity-flow
+ * lines in overview, so it needs enough headroom to show the handoffs across
+ * lanes (not just a handful); Flow Focus stays a tighter subgraph.
  */
 export function defaultConnectorCap(mode: "timeline" | "flow"): number {
-  return mode === "flow" ? 16 : 8;
+  return mode === "flow" ? 16 : 40;
 }

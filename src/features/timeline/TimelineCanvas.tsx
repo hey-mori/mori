@@ -224,6 +224,7 @@ export const TimelineCanvas = forwardRef<TimelineCanvasHandle, TimelineCanvasPro
             range={model.range}
             contentLeftPx={layout.contentLeftPx}
             contentWidthPx={layout.contentWidthPx}
+            eventLayouts={eventAnchorIndex}
             selectedEventIds={model.focusedSet}
             onSelect={onSelect}
           />

@@ -30,9 +30,11 @@ import {
   type TimelineCanvasHandle,
 } from "./TimelineCanvas";
 import {
+  clampZoom,
   FULL_MINIMAP_VIEWPORT,
   type MinimapViewport,
 } from "../../lib/timeline/minimapViewport";
+import { buildFlowRelationships } from "../../lib/timeline/flowConnectors";
 import { TimelineChronoList } from "./TimelineChronoList";
 import { TimelineEmptyState, TimelineNoResultsState } from "./TimelineEmptyState";
 import { TimelineToolbar } from "./TimelineHeader";
@@ -153,9 +155,10 @@ export function TimelineView({
   );
   // Time-axis zoom. 1 = the whole span fits; >1 widens the layout frame so
   // the canvas scrolls horizontally. Driven by the minimap brush handles.
-  // Defaults to 2x so dense spans open spread out rather than overlapping; the
-  // minimap brush snaps back to 1 (whole span) on demand.
-  const [zoomFactor, setZoomFactor] = useState<number>(2);
+  // Defaults to 8x so dense spans open fine-grained rather than overlapping;
+  // the zoom stepper and minimap brush reach much further in (up to MAX_ZOOM)
+  // or snap back to 1 (whole span) on demand.
+  const [zoomFactor, setZoomFactor] = useState<number>(8);
   const canvasRef = useRef<TimelineCanvasHandle>(null);
 
   // The tab opens on the 흐름 (AI work-flow) view by default — the AI's reading
@@ -273,6 +276,18 @@ export function TimelineView({
     }
     return counts;
   }, [view.events, view.sources]);
+
+  // Deterministic activity-flow lines (대화 → 명령 → 파일 …) derived from the raw
+  // event order, merged with any analysis relationships. A raw import has almost
+  // no analysis relationships, so without this the connection layer stays empty.
+  const flowRelationships = useMemo(
+    () => buildFlowRelationships(view.events, view.sources),
+    [view.events, view.sources],
+  );
+  const timelineRelationships = useMemo(
+    () => [...view.relationships, ...flowRelationships],
+    [view.relationships, flowRelationships],
+  );
 
   const handleFrameWidth = useCallback((width: number) => {
     setFrameWidth((current) => (current === width ? current : width));
@@ -481,6 +496,8 @@ export function TimelineView({
             readingMode={readingMode}
             onReadingModeChange={setReadingModeOverride}
             availableModes={readingModes}
+            zoomFactor={zoomFactor}
+            onZoomChange={(zoom) => setZoomFactor(clampZoom(zoom))}
           />
         )}
         {showNoResults ? (
@@ -517,7 +534,7 @@ export function TimelineView({
             <TimelineCanvas
               ref={canvasRef}
               model={renderModel}
-              relationships={view.relationships}
+              relationships={timelineRelationships}
               density={density}
               onFrameWidth={handleFrameWidth}
               onViewportChange={setMinimapViewport}

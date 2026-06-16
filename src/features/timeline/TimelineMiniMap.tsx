@@ -45,12 +45,30 @@ export function TimelineMiniMap({
   const dragRef = useRef<DragState | null>(null);
 
   const placed = useMemo(() => {
-    return items.map((item) => {
+    const all = items.map((item) => {
       const xPercent = timestampToXPercent(item.start, range);
       const laneIndex = Math.max(0, timelineActivityLaneOrder.indexOf(item.laneType));
       return { item, xPercent, laneIndex };
     });
-  }, [items, range]);
+    // Thin near-coincident dots within a lane so the strip does not collapse
+    // into solid blobs where activity is dense. Bundles and the selected item
+    // always survive the thinning.
+    const MIN_GAP_PERCENT = 0.6;
+    const lastXByLane = new Map<number, number>();
+    const kept: typeof all = [];
+    for (const dot of [...all].sort(
+      (a, b) => a.laneIndex - b.laneIndex || a.xPercent - b.xPercent,
+    )) {
+      const important = dot.item.kind === "bundle" || dot.item.id === selectedItemId;
+      const lastX = lastXByLane.get(dot.laneIndex);
+      if (!important && lastX !== undefined && dot.xPercent - lastX < MIN_GAP_PERCENT) {
+        continue;
+      }
+      lastXByLane.set(dot.laneIndex, dot.xPercent);
+      kept.push(dot);
+    }
+    return kept;
+  }, [items, range, selectedItemId]);
 
   if (placed.length === 0) return null;
 

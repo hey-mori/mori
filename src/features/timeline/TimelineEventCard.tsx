@@ -16,6 +16,11 @@ import {
   type BaseMenuItemSpec,
 } from "../../components/ui/BaseActionMenu";
 
+/** Below this width an accurate (short-duration) card has no room for its
+ *  icon + label, so it renders as a bare tone tick; the detail is in the hover
+ *  preview. */
+const NARROW_CARD_WIDTH = 30;
+
 export function TimelineEventCard({
   event,
   layout,
@@ -73,7 +78,7 @@ export function TimelineEventCard({
       <button
         className={`event-card card-${vm.tone} ${focusStateClassName(focusState)} ${densityClass}${
           event.openedByUser ? " is-request" : ""
-        }`}
+        }${layout.width < NARROW_CARD_WIDTH ? " is-narrow" : ""}`}
         onClick={() => onSelect(event.id)}
         onContextMenu={menuItems ? menu.onContextMenu : undefined}
         onKeyDown={menuItems ? menu.onKeyDown : undefined}

@@ -95,8 +95,9 @@ export function buildRequestSpans(events: readonly TimelineEvent[]): RequestSpan
 
 /** Height of the request-bar strip. */
 export const REQUEST_BAND_HEIGHT = 26;
-/** Top of the strip, just below the time axis. */
-export const REQUEST_BAND_TOP = 42;
+/** Top of the strip. Sits well below the 40px time axis so the axis labels
+ *  keep clear breathing room and are never crowded by the bars. */
+export const REQUEST_BAND_TOP = 54;
 /** Breathing room between the strip and the first lane. */
 export const REQUEST_BAND_BOTTOM_GAP = 8;
 /**

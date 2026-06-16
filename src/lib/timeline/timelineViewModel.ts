@@ -191,8 +191,13 @@ export function buildTimelineRenderModel(
     sources: sourceIndex,
   });
 
-  // 4. Display items. Bundles are now a high-threshold fallback; normal close
-  // events remain individual as compact one-row tokens.
+  // 4. Display items. Bundling is OFF: the user wants every event to stay its
+  // own card, never silently merged. In particular the density-overflow merge
+  // used to pair the closest events ("대화 턴 2개가 연속으로 이어진 구간") just to
+  // fit a per-lane cap, which read as arbitrary joins. Dense areas are carried
+  // by zoom and the cross-lane flow lines instead. The bundle engine and
+  // densityBundleTuning stay in place, so a finite threshold here re-enables it.
+  const NO_BUNDLING = Number.POSITIVE_INFINITY;
   const bundleTuning = densityBundleTuning(input.density);
   const visibleDisplayItems = createTimelineDisplayItems(
     visibleEvents,
@@ -200,24 +205,12 @@ export function buildTimelineRenderModel(
     {
       sources: input.view.sources,
       timeWindowMinutes: bundleTuning.timeWindowMinutes,
-      minEventsForBundle: bundleTuning.minEventsForBundle,
+      minEventsForBundle: NO_BUNDLING,
       preserveSelectedEventId: input.selectedEventId,
       preserveImportantEventIds: deriveImportantEventIds(visibleEvents, input.view.decisions),
-      maxVisibleItemsPerLane: bundleTuning.maxVisibleItemsPerLane,
+      maxVisibleItemsPerLane: NO_BUNDLING,
       laneDensity: input.density,
       decisions: input.view.decisions,
-      // A single Claude conversation packs every turn into the aiConversation
-      // lane. Bundling it with the lane-mix defaults buries readable turns in
-      // one giant blob, so this lane keeps a tighter window and a higher
-      // bundle threshold — individual turns stay visible, only genuinely
-      // rapid-fire runs cluster.
-      laneOverrides: {
-        conversation: {
-          timeWindowMinutes: bundleTuning.conversationTimeWindowMinutes,
-          minEventsForBundle: bundleTuning.conversationMinEventsForBundle,
-          maxVisibleItemsPerLane: bundleTuning.conversationMaxVisibleItemsPerLane,
-        },
-      },
     },
   );
 

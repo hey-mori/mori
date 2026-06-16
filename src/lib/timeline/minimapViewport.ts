@@ -25,9 +25,11 @@ export const FULL_MINIMAP_VIEWPORT: MinimapViewport = {
   widthPercent: 100,
 };
 
-/** Time-axis zoom bounds. 1 = whole span fits; MAX = most zoomed-in. */
+/** Time-axis zoom bounds. 1 = whole span fits; MAX = most zoomed-in. A high
+ *  ceiling lets a dense burst be spread far enough apart that its time-
+ *  positioned cards stop overlapping. */
 export const MIN_ZOOM = 1;
-export const MAX_ZOOM = 4;
+export const MAX_ZOOM = 40;
 
 /** The narrowest the minimap brush can get — the inverse of MAX_ZOOM. */
 export const MIN_BRUSH_FRACTION = 1 / MAX_ZOOM;

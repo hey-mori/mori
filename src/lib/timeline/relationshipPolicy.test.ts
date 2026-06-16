@@ -161,7 +161,14 @@ describe("buildVisibleConnectors", () => {
 });
 
 describe("defaultConnectorCap", () => {
-  it("uses a wider cap in Flow Focus", () => {
-    expect(defaultConnectorCap("flow")).toBeGreaterThan(defaultConnectorCap("timeline"));
+  it("gives both modes a positive cap", () => {
+    expect(defaultConnectorCap("flow")).toBeGreaterThan(0);
+    expect(defaultConnectorCap("timeline")).toBeGreaterThan(0);
+  });
+
+  it("lets the Timeline overview show the whole activity-flow map, not a handful", () => {
+    // The Timeline now draws the deterministic cross-lane flow lines in
+    // overview, so it needs more headroom than the focused Flow subgraph.
+    expect(defaultConnectorCap("timeline")).toBeGreaterThanOrEqual(defaultConnectorCap("flow"));
   });
 });
