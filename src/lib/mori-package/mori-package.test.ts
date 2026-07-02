@@ -395,6 +395,26 @@ describe(".mori package v0 — client-safe export filter", () => {
     expect(getPackageAuditTrail(safe).map((row) => row.id)).toEqual(["act-keep"]);
   });
 
+  it("strips raw transcript text from client-safe events", () => {
+    const secret = "sk-live-CLIENT-SAFE-LEAK-RAW-ONLY-12345";
+    const pkg = createMoriPackageFromSession(mockSession);
+    const eventWithRawTranscript = {
+      ...pkg.events[0],
+      requestText: `Please debug this private customer trace: ${secret}`,
+      responseText: `The private trace includes ${secret}`,
+    };
+    const unsafePkg = { ...pkg, events: [eventWithRawTranscript, ...pkg.events.slice(1)] };
+
+    const safe = buildClientSafeMoriPackage(unsafePkg);
+    const safeEvent = safe.events[0];
+
+    expect(safeEvent).not.toHaveProperty("requestText");
+    expect(safeEvent).not.toHaveProperty("responseText");
+    expect(serializeEventsJsonl(safe)).not.toContain(secret);
+    expect(unsafePkg.events[0]).toHaveProperty("requestText");
+    expect(unsafePkg.events[0]).toHaveProperty("responseText");
+  });
+
   it("marks the manifest client-safe and round-trips the marker", () => {
     const pkg = createMoriPackageFromSession(mockSession);
     expect(getPackageIsClientSafe(pkg)).toBe(false);
