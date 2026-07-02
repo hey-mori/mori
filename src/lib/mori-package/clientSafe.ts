@@ -19,19 +19,30 @@
  *   - the manifest is marked `clientSafeExport: true` so an importer
  *     can see the package was filtered.
  *
- * Every other slice (events, issues, …) is carried through unchanged —
- * the package format already holds no raw transcripts or local paths.
+ * Every other slice (issues, …) is carried through unchanged. Timeline
+ * events are copied with verbatim transcript fields stripped, because
+ * `requestText` / `responseText` may contain raw prompts, code, local paths,
+ * secrets, customer data, or other content that must not leave in a
+ * client-safe artifact.
  */
 import {
   getPackageAuditTrail,
   getPackageConsolidatedMemories,
 } from "./deserialize";
 import type { MoriPackageV0 } from "./types";
+import type { TimelineEvent } from "../../domain/types";
 
 /**
  * Produce a client-safe copy of a `.mori v0` package. Pure — the input
  * package is never mutated.
  */
+function stripClientUnsafeEventFields(event: TimelineEvent): TimelineEvent {
+  const safeEvent = { ...event };
+  delete safeEvent.requestText;
+  delete safeEvent.responseText;
+  return safeEvent;
+}
+
 export function buildClientSafeMoriPackage(pkg: MoriPackageV0): MoriPackageV0 {
   const memories = getPackageConsolidatedMemories(pkg).filter(
     (memory) =>
@@ -45,10 +56,12 @@ export function buildClientSafeMoriPackage(pkg: MoriPackageV0): MoriPackageV0 {
       row.targetMemoryIds.length > 0 &&
       row.targetMemoryIds.every((id) => survivingIds.has(id)),
   );
+  const events = pkg.events.map(stripClientUnsafeEventFields);
 
   return {
     ...pkg,
     manifest: { ...pkg.manifest, clientSafeExport: true },
+    events,
     consolidatedMemories: memories,
     auditTrail,
   };
