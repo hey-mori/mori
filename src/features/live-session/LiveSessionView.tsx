@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Pause, Play, Radio, Sparkles, User, Wrench } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -9,10 +9,11 @@ import { useLiveSessions } from "./useLiveSessions";
 
 /**
  * 라이브 세션: a live dashboard that tails every currently-active Claude Code
- * session at once and streams their work as one feed, newest request on top.
- * Each request is a block that grows as Claude works; a new request pops in at
- * the top and pushes older ones down. Reads only already-connected session logs,
- * foreground-only, and never writes memory.
+ * session at once and streams their work as one feed, ordered by each request's
+ * latest activity so the request being worked right now sits on top. Each
+ * request is a card: a horizontal strip of work-step icons with the selected
+ * step's detail below (following the newest step by default). Reads only
+ * already-connected session logs, foreground-only, and never writes memory.
  */
 export function LiveSessionView() {
   const available = isClaudeBridgeAvailable();
@@ -23,7 +24,7 @@ export function LiveSessionView() {
 
   if (!available) {
     return (
-      <PageShell>
+      <PageShell maxWidth="wide">
         <EmptyState
           icon={Radio}
           title="라이브 세션은 데스크톱 앱에서만 동작합니다"
@@ -34,7 +35,7 @@ export function LiveSessionView() {
   }
 
   return (
-    <PageShell>
+    <PageShell maxWidth="wide">
       <div className="lsv">
         <header className="lsv-head">
           <div className="lsv-title">
@@ -103,7 +104,7 @@ export function LiveSessionView() {
             title={watching ? "실시간 작업을 기다리는 중" : "일시정지됨"}
             description={
               watching
-                ? "실행 중인 Claude 세션에서 요청이 오가면, 새 요청이 맨 위에 나타나고 그 아래로 작업이 실시간으로 쌓입니다."
+                ? "실행 중인 Claude 세션에서 요청이 오가면, 활동 중인 요청이 맨 위로 올라오고 그 안에서 작업이 실시간으로 이어집니다."
                 : "재개를 누르면 다시 모든 활성 세션을 따라갑니다."
             }
           />
@@ -120,25 +121,59 @@ export function LiveSessionView() {
 }
 
 function RequestBlock({ request }: { request: LiveFeedRequest }) {
+  const items = request.items;
+  // null = follow the newest step; a set id pins that step until re-clicked.
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const stripRef = useRef<HTMLDivElement | null>(null);
+
+  const latest = items[items.length - 1];
+  const selected = (pinnedId ? items.find((item) => item.id === pinnedId) : undefined) ?? latest;
+
+  // While following the newest step, keep the strip scrolled to the end so the
+  // freshest work is always in view as it streams in.
+  useEffect(() => {
+    if (pinnedId === null && stripRef.current) {
+      stripRef.current.scrollLeft = stripRef.current.scrollWidth;
+    }
+  }, [items.length, pinnedId]);
+
   return (
     <article className="lsv-block">
       <header className="lsv-block-head">
         <span className="lsv-session" title={request.sessionKey}>
           {request.sessionLabel}
         </span>
-        <time className="lsv-time" dateTime={request.startedAt}>
-          {formatClaudeRelativeKo(request.startedAt)}
+        <time className="lsv-time" dateTime={request.updatedAt}>
+          {formatClaudeRelativeKo(request.updatedAt)}
         </time>
       </header>
       <h3 className="lsv-request" title={request.requestTitle}>
         {request.requestTitle}
       </h3>
-      {request.items.length > 0 ? (
-        <ol className="lsv-items">
-          {request.items.map((item) => (
-            <WorkItem key={item.id} item={item} />
-          ))}
-        </ol>
+      {items.length > 0 ? (
+        <>
+          <div className="lsv-strip" ref={stripRef} role="tablist" aria-label="작업 단계">
+            {items.map((item, index) => {
+              const Icon = actorIcon(item.actor);
+              const active = item.id === selected?.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`lsv-chip is-${item.actor} ${active ? "is-active" : ""}`}
+                  title={chipTitle(item, index)}
+                  onClick={() => setPinnedId((current) => (current === item.id ? null : item.id))}
+                >
+                  <Icon size={13} aria-hidden="true" />
+                  {item.repeatCount > 1 ? <span className="lsv-chip-x">×{item.repeatCount}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+          {selected ? <ItemDetail key={selected.id} item={selected} /> : null}
+        </>
       ) : (
         <p className="lsv-items-pending">작업을 기다리는 중…</p>
       )}
@@ -146,31 +181,26 @@ function RequestBlock({ request }: { request: LiveFeedRequest }) {
   );
 }
 
-function WorkItem({ item }: { item: LiveFeedItem }) {
-  const Icon = actorIcon(item.actor);
+function ItemDetail({ item }: { item: LiveFeedItem }) {
   return (
-    <li className={`lsv-item is-${item.actor}`}>
-      <span className="lsv-item-glyph" aria-hidden="true">
-        <Icon size={13} />
+    <div className={`lsv-detail is-${item.actor}`}>
+      <span className="lsv-detail-actor">
+        {actorLabel(item.actor)}
+        {item.toolName ? <span className="lsv-detail-tool"> · {item.toolName}</span> : null}
+        {item.repeatCount > 1 ? <span className="lsv-detail-repeat">{item.repeatCount}회 반복</span> : null}
       </span>
-      <div className="lsv-item-body">
-        <p className="lsv-item-text">
-          {item.toolName ? <span className="lsv-item-tool">{item.toolName}</span> : null}
-          {item.text}
-          {item.repeatCount > 1 ? <span className="lsv-item-repeat">×{item.repeatCount}</span> : null}
-        </p>
-        {item.fileTouches.length > 0 ? (
-          <span className="lsv-touches">
-            {item.fileTouches.slice(0, 4).map((touch, index) => (
-              <TouchChip key={`${touch.path}-${index}`} touch={touch} />
-            ))}
-            {item.fileTouches.length > 4 ? (
-              <span className="lsv-touch-more">+{item.fileTouches.length - 4}</span>
-            ) : null}
-          </span>
-        ) : null}
-      </div>
-    </li>
+      <p className="lsv-detail-text">{item.text}</p>
+      {item.fileTouches.length > 0 ? (
+        <div className="lsv-touches">
+          {item.fileTouches.slice(0, 6).map((touch, index) => (
+            <TouchChip key={`${touch.path}-${index}`} touch={touch} />
+          ))}
+          {item.fileTouches.length > 6 ? (
+            <span className="lsv-touch-more">+{item.fileTouches.length - 6}</span>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -193,6 +223,27 @@ function Diag({ label, value, tone }: { label: string; value: number; tone?: "go
       <span className="lsv-diag-label">{label}</span>
     </span>
   );
+}
+
+function chipTitle(item: LiveFeedItem, index: number): string {
+  const label = actorLabel(item.actor);
+  const head = item.toolName ? `${label} · ${item.toolName}` : label;
+  return `${index + 1}. ${head}`;
+}
+
+function actorLabel(actor: EventActor): string {
+  switch (actor) {
+    case "user":
+      return "요청";
+    case "assistant":
+      return "응답";
+    case "tool":
+      return "도구";
+    case "file":
+      return "파일";
+    default:
+      return "시스템";
+  }
 }
 
 function actorIcon(actor: EventActor) {

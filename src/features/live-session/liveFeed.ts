@@ -94,7 +94,14 @@ export function buildLiveFeed(
     }
   }
 
-  requests.sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt));
+  // Order by each request's latest activity, not its opening time, so the
+  // request being worked right now rises to the top even across several
+  // concurrent sessions. The whole request moves as one unit, so the feed does
+  // not shuffle item-by-item.
+  requests.sort((a, b) => {
+    const byActivity = Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
+    return byActivity !== 0 ? byActivity : Date.parse(b.startedAt) - Date.parse(a.startedAt);
+  });
   return requests.slice(0, limit);
 }
 

@@ -173,12 +173,10 @@
   flex-direction: column;
   gap: var(--base-space-3);
   width: 100%;
-  max-width: 780px;
-  margin: 0 auto;
 }
 
 .lsv-block {
-  padding: var(--base-space-4);
+  padding: var(--base-space-4) var(--base-space-5);
   background: var(--panel);
   border: 1px solid var(--card-border);
   border-radius: 12px;
@@ -188,7 +186,7 @@
 @keyframes lsv-pop {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.985);
+    transform: translateY(-8px) scale(0.99);
   }
 }
 
@@ -197,7 +195,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .lsv-session {
@@ -235,101 +233,152 @@
   overflow: hidden;
 }
 
-.lsv-items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
 .lsv-items-pending {
   margin: 0;
   font-size: 12.5px;
   color: var(--muted-2);
 }
 
-.lsv-item {
+/* ── work-step strip (horizontal icons) ─────────────────────────────────── */
+
+.lsv-strip {
   display: flex;
-  gap: 9px;
-  padding: 7px 10px;
-  background: var(--panel-soft);
-  border-radius: 9px;
-  animation: lsv-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 9px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
 }
 
-.lsv-item-glyph {
+.lsv-chip {
+  position: relative;
+  flex: none;
   display: inline-grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  flex: none;
-  border-radius: 7px;
+  width: 28px;
+  height: 28px;
   color: var(--muted-2);
-  background: color-mix(in srgb, var(--muted-2) 12%, transparent);
+  background: var(--panel-soft);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  cursor: pointer;
+  animation: lsv-chip-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
 }
 
-.lsv-item.is-user .lsv-item-glyph {
+.lsv-chip:hover {
+  transform: translateY(-1px);
+}
+
+.lsv-chip.is-user {
   color: var(--purple);
-  background: color-mix(in srgb, var(--purple) 12%, transparent);
 }
-
-.lsv-item.is-assistant .lsv-item-glyph {
+.lsv-chip.is-assistant {
   color: var(--blue);
-  background: color-mix(in srgb, var(--blue) 12%, transparent);
 }
-
-.lsv-item.is-tool .lsv-item-glyph {
+.lsv-chip.is-tool {
   color: var(--cyan);
-  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
-
-.lsv-item.is-file .lsv-item-glyph {
+.lsv-chip.is-file {
   color: var(--green);
-  background: color-mix(in srgb, var(--green) 14%, transparent);
 }
 
-.lsv-item-body {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-top: 2px;
+.lsv-chip.is-active {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 12%, var(--panel));
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 16%, transparent);
 }
 
-.lsv-item-text {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--text);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+@keyframes lsv-chip-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
 }
 
-.lsv-item-tool {
-  font-weight: 600;
-  color: var(--cyan);
-  margin-right: 6px;
-}
-
-.lsv-item-repeat {
-  margin-left: 6px;
-  padding: 0 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  background: color-mix(in srgb, var(--muted-2) 16%, transparent);
+.lsv-chip-x {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  color: var(--panel);
+  background: currentColor;
   border-radius: 999px;
   font-variant-numeric: tabular-nums;
+}
+
+/* ── selected-step detail ───────────────────────────────────────────────── */
+
+.lsv-detail {
+  padding: 10px 12px;
+  background: var(--panel-soft);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  animation: lsv-fade 0.2s ease;
+}
+
+@keyframes lsv-fade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+.lsv-detail-actor {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.lsv-detail.is-user .lsv-detail-actor {
+  color: var(--purple);
+}
+.lsv-detail.is-assistant .lsv-detail-actor {
+  color: var(--blue);
+}
+.lsv-detail.is-tool .lsv-detail-actor {
+  color: var(--cyan);
+}
+.lsv-detail.is-file .lsv-detail-actor {
+  color: var(--green);
+}
+
+.lsv-detail-tool {
+  font-weight: 600;
+}
+
+.lsv-detail-repeat {
+  margin-left: 8px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted-2);
+}
+
+.lsv-detail-text {
+  margin: 5px 0 0;
+  max-height: 190px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .lsv-touches {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 8px;
+  gap: 4px 10px;
+  margin-top: 8px;
 }
 
 .lsv-touch {
@@ -356,8 +405,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .lsv-block,
-  .lsv-item,
+  .lsv-chip,
+  .lsv-detail,
   .lsv-dot.is-watching {
     animation: none;
+  }
+  .lsv-strip {
+    scroll-behavior: auto;
   }
 }
