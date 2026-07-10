@@ -162,4 +162,45 @@ describe("buildImportCandidateFromClaudeCodeSession - turn titles", () => {
     expect(candidate.events[0].actor).toBe("tool");
     expect(candidate.events[0].openedByUser).toBe(true);
   });
+
+  it("does not open a request unit for a harness task-notification message", () => {
+    const detail = codeSession(
+      [
+        { id: "u1", role: "human", content: "리팩터해줘", createdAt: "2026-01-01T00:00:00Z" },
+        {
+          id: "m1",
+          role: "assistant",
+          content: "완료했습니다.",
+          createdAt: "2026-01-01T00:00:01Z",
+        },
+        {
+          id: "u2",
+          role: "human",
+          content:
+            "<task-notification>\n<task-id>add7f6b93c6b77605</task-id>\n<status>completed</status>\n</task-notification>",
+          createdAt: "2026-01-01T00:00:02Z",
+        },
+        {
+          id: "m2",
+          role: "assistant",
+          content: "이어서 진행하겠습니다.",
+          createdAt: "2026-01-01T00:00:03Z",
+        },
+      ],
+      [],
+    );
+
+    const candidate = buildImportCandidateFromClaudeCodeSession(detail, {
+      projectId: "proj",
+      sessionId: "sess",
+    });
+
+    // Only the real ask opens a request; the injected task-notification does not
+    // spawn a spurious request unit, and the notification text never becomes a
+    // turn title (the assistant reply is used instead).
+    expect(candidate.events[0].openedByUser).toBe(true);
+    expect(candidate.events[1].openedByUser).toBeUndefined();
+    expect(candidate.events[1].title).not.toContain("task-notification");
+    expect(candidate.events[1].title).toContain("이어서 진행");
+  });
 });

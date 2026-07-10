@@ -17,6 +17,13 @@ describe("sanitizeTitle", () => {
     expect(isAgentBoilerplateTitle("Wire the gateway routing table")).toBe(false);
   });
 
+  it("detects harness-injected system messages as not real titles", () => {
+    expect(isAgentBoilerplateTitle("<task-notification>\n<task-id>abc</task-id>")).toBe(true);
+    expect(isAgentBoilerplateTitle("[SYSTEM NOTIFICATION - NOT USER INPUT]")).toBe(true);
+    expect(isAgentBoilerplateTitle("<command-name>/model</command-name>")).toBe(true);
+    expect(isAgentBoilerplateTitle("<system-reminder>do the thing</system-reminder>")).toBe(true);
+  });
+
   it("cleanImportedTitle drops boilerplate and keeps real titles", () => {
     expect(cleanImportedTitle("This session is being continued from a previous conversation")).toBe("");
     expect(cleanImportedTitle("  ")).toBe("");

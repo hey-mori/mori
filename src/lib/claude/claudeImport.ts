@@ -397,9 +397,13 @@ function messageToTurn(
       : (human?.content ?? assistant?.content ?? "").trim();
   const summarySeed = (assistant?.content ?? human?.content ?? "").trim();
   const { actor, toolName } = classifyTurnActor(human, assistant);
-  // A real human prompt (not a tool-result envelope) opens a request unit — even
-  // when the same turn then runs a tool, so `actor` may be 'tool' here.
-  const openedByUser = human?.role === "human" && !humanIsToolResult;
+  // A real human prompt opens a request unit, even when the same turn then runs
+  // a tool (so `actor` may be 'tool' here). A tool-result envelope or an
+  // agent-injected boilerplate message (continuation notice, `<system-reminder>`,
+  // harness `<task-notification>`) is machine noise, not an ask, so it must not
+  // open a request unit and spawn a spurious request column.
+  const openedByUser =
+    human?.role === "human" && !humanIsToolResult && !humanIsBoilerplate;
   return {
     title: summarize(titleSeed || "Untitled Claude turn", 90),
     summary: summarize(summarySeed || "(no response captured)", 220),
