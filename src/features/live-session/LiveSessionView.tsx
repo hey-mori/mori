@@ -247,7 +247,6 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
   // manual toggle overrides that default.
   const [override, setOverride] = useState<boolean | null>(null);
   const expanded = override ?? request.status === "working";
-  const stagger = Math.max(6, Math.min(26, Math.round(360 / Math.max(items.length, 1))));
 
   // A one-shot light sweep the moment a request stops working, so a finish reads
   // as a small event rather than a card blinking shut.
@@ -285,9 +284,6 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
             </span>
           </span>
         ) : null}
-        <span className="lsv-head-title" title={request.requestTitle}>
-          {request.requestTitle}
-        </span>
         <span className="lsv-block-meta">
           {items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
         </span>
@@ -302,11 +298,18 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
         </button>
       </header>
 
+      <p
+        className={`lsv-request base-scroll ${expanded ? "is-full" : "is-clamped"}`}
+        title={request.requestTitle}
+      >
+        {request.requestTitle}
+      </p>
+
       <div className="lsv-body">
         <div className="lsv-body-inner">
           {items.length > 0 ? (
             <>
-              <div className="lsv-strip" key={items.length} role="tablist" aria-label="작업 단계">
+              <div className="lsv-strip" role="tablist" aria-label="작업 단계">
                 {items.map((item, index) => {
                   const Icon = iconForItem(item);
                   const active = item.id === selected?.id;
@@ -317,7 +320,6 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
                       type="button"
                       role="tab"
                       aria-selected={active}
-                      style={{ animationDelay: `${index * stagger}ms` }}
                       className={`lsv-chip is-${item.actor} ${active ? "is-active" : ""} ${isLatest ? "is-latest is-fresh" : ""}`}
                       title={chipTitle(item, index)}
                       onClick={() => setPinnedId((current) => (current === item.id ? null : item.id))}
