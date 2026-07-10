@@ -16,6 +16,7 @@ import {
   PanelLeftOpen,
   Pencil,
   Plus,
+  Radio,
   ScrollText,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -84,6 +85,7 @@ import type { SessionTab } from "../../app/store";
  *  those up instead so the user can always tell where they are. */
 const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
   { key: "home", label: "홈", icon: viewIcon.home ?? House },
+  { key: "liveSession", label: "라이브", icon: Radio },
   {
     key: "connections",
     label: "연동",

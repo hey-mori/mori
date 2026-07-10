@@ -1,4 +1,19 @@
-# Live Follow Lab · Request-Anchored Real-Time Session View
+# 라이브 세션 (was Live Follow Lab) · Request-Anchored Real-Time Session View
+
+> **Redesign (2026-07).** The palette-only dev "Live Follow Lab" graduated
+> into a real product surface, **라이브 세션**, on user direction. Key changes:
+> it now tails **every currently-active** Claude Code session at once (not one
+> picked session) and merges them into a single feed; the layout is a **vertical
+> feed, newest request on top** (a new request pops in at the top and pushes
+> older ones down; work items pop in under their request), not horizontal
+> columns; it is exposed as a **sidebar nav item** (라이브), not a hidden palette
+> route; and the dev parse-fidelity panel is folded behind a 진단 toggle. The
+> tail plumbing (delta read, `agentStoreFollow`) is unchanged and reused; the
+> new pieces are `features/live-session/` (`useLiveSessions` multi-session
+> poller, `liveFeed` merge builder, `LiveSessionView`). A new Rust
+> `ClaudeCodeSessionMeta.modified_at` field gives the honest "active right now"
+> signal for choosing which sessions to follow. The sections below are the
+> original single-session lab spec, kept as implementation history.
 
 Design spec for the development verification screen that follows a
 running Claude Code session in real time and lists, under each user

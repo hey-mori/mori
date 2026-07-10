@@ -78,7 +78,13 @@ export function classifyMessage(message: ClaudeMessage): "tool_result" | "tool_u
   }
   const trimmed = message.content.trimStart();
   if (message.role === "human") {
-    if (trimmed.startsWith("↳ 도구 결과") || trimmed.startsWith("↳ 도구 오류")) {
+    // "↳ 도구 결과 …" / "↳ 도구 오류 …" for real results, and "↳ (도구 결과 없음)"
+    // for an empty result — all are machine tool responses, not a user turn.
+    if (
+      trimmed.startsWith("↳ 도구 결과") ||
+      trimmed.startsWith("↳ 도구 오류") ||
+      trimmed.startsWith("↳ (도구 결과")
+    ) {
       return "tool_result";
     }
     return "";

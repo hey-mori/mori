@@ -71,9 +71,9 @@ const GraphView = lazy(() =>
     default: m.GraphView,
   })),
 );
-const LiveFollowLabView = lazy(() =>
-  import("../features/live-follow-lab/LiveFollowLabView").then((m) => ({
-    default: m.LiveFollowLabView,
+const LiveSessionView = lazy(() =>
+  import("../features/live-session/LiveSessionView").then((m) => ({
+    default: m.LiveSessionView,
   })),
 );
 export default function App() {
@@ -155,7 +155,7 @@ export default function App() {
             {currentView === "workspace" ? <WorkspaceView /> : null}
             {currentView === "project" ? <ProjectView /> : null}
             {currentView === "graph" ? <GraphView /> : null}
-            {currentView === "liveFollowLab" ? <LiveFollowLabView /> : null}
+            {currentView === "liveSession" ? <LiveSessionView /> : null}
           </Suspense>
         </ErrorBoundary>
       </AppShell>

@@ -54,6 +54,10 @@ pub struct ClaudeCodeSessionMeta {
     pub project_name: String,
     pub file_path: String,
     pub started_at: String,
+    /// Filesystem last-modified time (ISO). The honest "is this session active
+    /// right now" signal — `started_at` is the first message, which a resumed
+    /// long-running session keeps even while being worked on today.
+    pub modified_at: String,
     pub message_count: usize,
     pub title: String,
     pub token_usage: ClaudeTokenUsage,
@@ -294,6 +298,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 project_name: project_label,
                 file_path: session_path.to_string_lossy().to_string(),
                 started_at,
+                modified_at,
                 message_count: preview.message_count,
                 title,
                 token_usage: preview.token_usage,

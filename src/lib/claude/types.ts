@@ -96,6 +96,9 @@ export type ClaudeCodeSessionMeta = {
   projectName: string;
   filePath: string;
   startedAt: string;
+  /** Filesystem last-modified time (ISO). The "active right now" signal;
+   *  absent on older reads, so treat a missing value as `startedAt`. */
+  modifiedAt?: string;
   messageCount: number;
   /** Best-effort title — the first user message, truncated. */
   title: string;
