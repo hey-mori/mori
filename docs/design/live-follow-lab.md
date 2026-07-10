@@ -1,0 +1,193 @@
+# Live Follow Lab · Request-Anchored Real-Time Session View
+
+Design spec for the development verification screen that follows a
+running Claude Code session in real time and lists, under each user
+request, every piece of work the agent performed. This document is the
+audit-before-implementation record for the capability: it fixes the
+product decisions so the implementation slices stay small and
+principle-safe, and it defines the graduation path by which the lab's
+plumbing moves into the session 활동 tab once verified.
+
+Read [`../mori-project-goal.md`](../mori-project-goal.md) first
+(principles, non-goals, the A-vs-B surveillance line), then
+[`local-llm-understanding-and-live-follow.md`](local-llm-understanding-and-live-follow.md)
+§3.1 (the Live Follow doctrine this spec extends) and
+[`../references/agent-session-viewer-landscape.md`](../references/agent-session-viewer-landscape.md)
+(the external evidence this spec draws on).
+
+## 1. Motivation
+
+The user's direction: while working in Claude, Mori should pull the
+work in continuously, request by request, so that for every question
+asked there is a live, scrollable record of everything the agent did.
+Today the user imports sessions one at a time by hand, and the import
+is a one-shot snapshot. Two needs fall out:
+
+- **Verification first.** Before real-time capture reaches the session
+  surfaces, it needs a development screen where the pipeline can be
+  watched end to end: does every JSONL line arrive, parse, classify,
+  and land under the right request, while the session is still
+  running?
+- **A third reading of the stream.** The 타임라인 view is
+  time-proportional (gaps and density carry meaning) and the 원본 view
+  is a flat chronological list. Neither answers "what exactly did the
+  agent do for this request, right now". The missing shape is
+  order-proportional and request-anchored: time gaps ignored, work
+  listed densely beneath the request that caused it. The 2026 agent-UX
+  consensus (see the landscape synthesis §1.3) names this exact
+  separation: conversation as anchor, activity as stream.
+
+## 2. How this maps onto what already exists
+
+An extension of existing seams, not a new subsystem.
+
+| Need | Existing seam | Gap to build |
+| ---- | ------------- | ------------ |
+| Poll cadence, pause, error backoff | `src/lib/live-follow/` (followController reducer, followCadence 4s active to 30s idle, auto-stop), `useLiveFollow` foreground driver | None; reuse as-is |
+| Read new evidence incrementally | `read_connector_jsonl_file` covers the connector inbox only; `get_claude_code_session` re-reads the whole file with an 8 MB cap | An agent session-store **delta read**: `(path, byte_offset)` in, new events plus new offset out |
+| Follow-source identity | `followSource.ts` scopes new-event detection by connector source key; Claude Code imports carry no connector identity | A Claude-JSONL follow-source variant beside the connector one |
+| Request grouping | `openedByUser` / `turnId` stamped at import (`claudeImport.ts`), `buildRequestSpans` segments the stream per user request | Reuse; the delta path must run the same turn classification (`classifyTurnActor`) so live and imported results agree |
+| Work classification and labels | `activityModel.ts` (kinds, lanes, Korean labels) | Reuse for row rendering |
+| Session discovery | `discover_claude_code_sessions` lists the store with mtimes | Auto-select the most recently modified session as the default follow target |
+| Dev-surface routing | Palette-only views exist (graph, workbench pattern) | One new `ViewKey` reached from the command palette only |
+
+## 3. Product decisions (made)
+
+### 3.1 Follow source extends to the anchor agent's own session store
+
+The Live Follow doctrine
+([`local-llm-understanding-and-live-follow.md`](local-llm-understanding-and-live-follow.md)
+§3.1) was written against the connector inbox. This spec extends the
+follow source to the agent's own session store
+(`~/.claude/projects/*.jsonl`), which Mori already reads on explicit
+user action through the discovery readers. The extension stays inside
+the "B" surface of the surveillance line
+(`mori-project-goal.md` §6) because all three rails hold unchanged:
+
+1. **Scope.** Only the session stores of anchor agents the user
+   explicitly connected, and within a follow, only the one followed
+   session's file. Never the screen, never unconnected apps.
+2. **Review-before-apply.** Followed events render live and may be
+   sessionised, but durable memory still requires the user's review
+   and Apply. Following never writes memory.
+3. **Transparency.** Follow is explicit, per session, visibly on or
+   off, one tap to stop, foreground only (stops when the app closes).
+
+### 3.2 The lab is a verification harness, and it retires
+
+The lab is a development screen, routed from the command palette only,
+never in the sidebar. Its purpose is to prove the delta pipeline with
+real running sessions. Once the session 활동 tab hosts the same
+follow (the `FollowControl` mount point already exists in
+`TimelineHeader`), the lab is retired per the retire-don't-delete
+rule: unwired from the palette default list but kept reachable. The
+lab is therefore allowed developer-facing honesty that product
+surfaces are not: parse counters, byte offsets, poll timestamps.
+
+### 3.3 Order-proportional, request-anchored layout
+
+The lab renders **request columns appended left to right** (horizontal
+scroll, newest focused): one column per `openedByUser` boundary, the
+request title as the column header, and beneath it the agent's work
+rows in arrival order (tool runs, file touches with line deltas,
+commands, response summaries), classified and labelled by
+`activityModel`. New events append to their request's column; a new
+request opens a new column and auto-focuses it. This is deliberately
+not a replacement for any timeline view; it is the third reading named
+in §1, and it graduates as an additional reading mode, not a
+substitute.
+
+### 3.4 Parse fidelity is a first-class display
+
+The lab's reason to exist is trust in the pipeline, so it shows what
+product surfaces hide: raw line count vs parsed event count, skipped
+or unparseable lines, the current byte offset, last poll time, and
+poll cadence state. A mismatch here is a bug surfaced early; the
+first expected catch is drift between the delta path's turn
+classification and the import path's.
+
+### 3.5 The delta read is agent-generic from day one
+
+The Rust command takes a session-store path and byte offset and
+returns newly parsed events plus the new offset. Claude Code JSONL is
+the first implementation, but the command shape (and the Rust trait
+behind it) must not encode Claude specifics in its signature, so
+Codex / OpenCode tails become additional implementations rather than
+new plumbing. Reading only the delta also sidesteps the 8 MB
+whole-file cap for growing sessions: the cap remains for one-shot
+reads; a followed file is consumed incrementally.
+
+## 4. Data model sketch
+
+```
+Rust (src-tauri)                          Frontend
+----------------                          --------
+get_agent_session_delta(                  FollowSource variant "agentStore":
+  path, byte_offset)                        keys new-event detection by
+  -> { events: ClaudeCodeMessage[],         session path instead of
+       new_offset: u64,                     connector id
+       stats: { raw_lines,
+                parsed, skipped } }       Lab view model:
+                                            RequestColumn[] built by
+Guards: same path-traversal +               buildRequestSpans over the
+allowed-root checks as the                  accumulated live events;
+existing session readers;                   delta events run through the
+offset beyond EOF returns                   same classifyTurnActor /
+empty delta, not an error;                  activityModel path as import
+truncated trailing line is
+left unconsumed (offset stops             Fidelity panel:
+before it) for the next poll                rawLines, parsedEvents,
+                                            skippedLines, offset,
+                                            lastPollAt, cadence state
+```
+
+Invariants preserved: evidence is the source of truth; the live view
+is a projection, not storage; durable writes still pass review;
+capture stays explicit (follow reads what the connected agent already
+writes).
+
+## 5. Implementation slices (smallest first)
+
+1. **Rust delta read.** `get_agent_session_delta` with offset
+   tracking, partial-trailing-line safety, parse stats, and the same
+   path guards as the existing readers. Colocated Rust tests
+   (append-mid-poll, truncated line, offset-past-EOF, oversized
+   growth).
+2. **Frontend tail adapter.** The `agentStore` follow-source variant
+   plus a read adapter calling the delta command; wire into the
+   existing `followController` / `followCadence` / `useLiveFollow`
+   loop. Pure-helper tests for new-event detection and turn-boundary
+   agreement with `claudeImport`.
+3. **Lab view.** New palette-only `ViewKey`; session picker defaulting
+   to the most recently modified discovered session; request columns;
+   fidelity panel. Feature CSS in its own sheet per the frontend
+   architecture rules.
+4. **Raw stream virtualization.** Windowed rendering for the lab's
+   column lists and the 원본 chronological list, ahead of live growth
+   making it urgent.
+5. **Graduation.** Mount the same follow pipeline behind the session
+   활동 tab's `FollowControl` for sessions whose spine is a discovered
+   agent-store session; retire the lab from the default palette list.
+
+Each slice ships with green `npm run check:full`; slices 1 and 2 also
+run `cargo check` / `cargo test`. Slice 3 onward is verified against a
+real running Claude session, not fixtures alone, per the
+real-data-verification working rule.
+
+## 6. Non-goals (unchanged by this spec)
+
+- A watcher that runs while the app is closed (tray, autostart,
+  daemon). Foreground only, always.
+- Auto-durable memory from followed events. Review gates unchanged.
+- Driving the agent (starting, resuming, or scheduling Claude runs
+  from Mori).
+- Replacing the 타임라인 / 원본 / AI 흐름 readings. The
+  request-anchored list is an addition, and only after verification.
+- A standing sidebar surface for the lab.
+
+## 7. Status
+
+Designed, not implemented. Slice 1 (Rust delta read) is the approved
+next milestone. The external evidence base for the decisions here is
+recorded in
+[`../references/agent-session-viewer-landscape.md`](../references/agent-session-viewer-landscape.md).

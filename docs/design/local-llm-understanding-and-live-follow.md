@@ -265,3 +265,9 @@ Next: the Live Follow desktop shell (foreground session-scoped polling +
 incremental analysis + notification producer; needs the Tauri desktop
 app to build and verify), and deeper pillar 3 (per-task model routing, a
 model registry). Pillars 1 and 2 are complete.
+
+Follow-source extension: [`live-follow-lab.md`](live-follow-lab.md)
+extends the §3.1 follow source from the connector inbox to the anchor
+agent's own session store (delta read of `~/.claude/projects` JSONL),
+under the same three rails, verified first on a palette-only lab screen
+before graduating into the session 활동 tab.
