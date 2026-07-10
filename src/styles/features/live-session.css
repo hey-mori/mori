@@ -337,22 +337,14 @@
 
 /* Working: the request being worked right now, alive at the top with a slow
    breathing glow. */
+/* Working: a static purple glow (no pulsing). Crucially it sets NO `animation`,
+   so folding / status changes never re-fire the entrance and the card never
+   flashes; the entrance runs once on mount from `.lsv-block`. */
 .lsv-block.is-working {
   border-color: color-mix(in srgb, var(--purple) 42%, var(--card-border));
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--purple) 20%, transparent),
     0 12px 32px -14px color-mix(in srgb, var(--purple) 45%, transparent);
-  animation:
-    lsv-block-in 0.36s cubic-bezier(0.16, 1, 0.3, 1),
-    lsv-breathe 3.2s ease-in-out infinite;
-}
-
-@keyframes lsv-breathe {
-  50% {
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--purple) 40%, transparent),
-      0 16px 40px -14px color-mix(in srgb, var(--purple) 60%, transparent);
-  }
 }
 
 .lsv-block.is-recent {
@@ -360,11 +352,11 @@
 }
 
 /* Folded: same padding as open (so the box feel is consistent), just the header
-   row and a one-line request. The body has zero height so a folded card never
-   carries trailing whitespace. */
+   row and a one-line request. No `animation` override here, so toggling fold
+   never re-triggers the entrance animation. The body has zero height so a folded
+   card never carries trailing whitespace. */
 .lsv-block.is-collapsed {
   background: var(--panel-soft);
-  animation: none;
 }
 
 .lsv-block.is-collapsed .lsv-body-inner {
