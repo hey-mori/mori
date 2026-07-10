@@ -58,46 +58,156 @@
   }
 }
 
-.lsv-ctl {
+/* Status is a button that opens the session list; controls are icon-only. */
+.lsv-status-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
+  gap: 8px;
+  padding: 5px 10px;
   font-size: 12.5px;
-  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.lsv-status-btn:hover {
+  border-color: var(--card-border);
   color: var(--text);
+}
+
+.lsv-ctl-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--muted);
   background: var(--panel);
   border: 1px solid var(--card-border);
   border-radius: 8px;
   cursor: pointer;
 }
 
-.lsv-ctl:hover {
+.lsv-ctl-icon:hover {
+  color: var(--text);
   border-color: color-mix(in srgb, var(--purple) 40%, var(--card-border));
 }
 
-.lsv-ctl.is-ghost {
-  color: var(--muted);
-  background: transparent;
-}
-
-.lsv-ctl.is-ghost.is-on {
+.lsv-ctl-icon.is-on {
   color: var(--purple);
   border-color: color-mix(in srgb, var(--purple) 45%, transparent);
   background: color-mix(in srgb, var(--purple) 8%, transparent);
 }
 
-/* ── diagnostics (folded by default) ────────────────────────────────────── */
+/* ── floating popovers (session list / diagnostics) ─────────────────────── */
+
+.lsv-pop-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.lsv-pop-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.lsv-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 41;
+  min-width: 260px;
+  max-width: min(360px, 80vw);
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  animation: lsv-pop-open 0.16s ease;
+}
+
+.lsv-pop.is-start {
+  left: 0;
+}
+.lsv-pop.is-end {
+  right: 0;
+}
+
+@keyframes lsv-pop-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.lsv-pop-title {
+  padding: 2px 6px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.lsv-pop-empty {
+  margin: 0;
+  padding: 6px;
+  font-size: 12.5px;
+  color: var(--muted-2);
+}
+
+.lsv-sess-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lsv-sess-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 8px;
+}
+
+.lsv-sess-row:hover {
+  background: var(--panel-soft);
+}
+
+.lsv-sess-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lsv-sess-sub {
+  font-size: 11px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lsv-sess-badge {
+  margin-left: auto;
+  padding: 1px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
+  border-radius: 999px;
+}
+
+/* ── diagnostics (inside the info popover) ──────────────────────────────── */
 
 .lsv-diag {
   display: flex;
   align-items: center;
-  gap: var(--base-space-5);
-  padding: var(--base-space-3) var(--base-space-4);
-  background: var(--panel-soft);
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
+  gap: 16px;
   flex-wrap: wrap;
+  padding: 4px 6px;
 }
 
 .lsv-diag-stat {
@@ -127,8 +237,8 @@
 }
 
 .lsv-diag-cadence {
-  margin-left: auto;
-  font-size: 12px;
+  margin: 8px 6px 2px;
+  font-size: 11.5px;
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
@@ -193,25 +303,23 @@
   border-color: color-mix(in srgb, var(--purple) 18%, var(--card-border));
 }
 
-/* Done: folded to one quiet, clickable line so the past does not crowd the
-   present. */
+/* Folded: any request (even a working one) can fold to a compact one-line card
+   that shows only its header, so the past never crowds the present. */
 .lsv-block.is-collapsed {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 9px 16px;
-  text-align: left;
-  cursor: pointer;
+  padding: 8px 15px;
   background: var(--panel-soft);
   animation: none;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
 }
 
-.lsv-block.is-collapsed:hover {
-  border-color: color-mix(in srgb, var(--purple) 32%, var(--card-border));
+.lsv-block.is-collapsed .lsv-block-head {
+  margin-bottom: 0;
+}
+
+.lsv-block-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .lsv-collapsed-title {
@@ -225,28 +333,12 @@
   white-space: nowrap;
 }
 
-.lsv-collapsed-meta {
+.lsv-block-meta {
+  margin-left: auto;
   flex: none;
   font-size: 11.5px;
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
-}
-
-.lsv-collapsed-chevron {
-  flex: none;
-  color: var(--muted-2);
-  transform: rotate(-90deg);
-}
-
-.lsv-block-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-.lsv-block-head .lsv-time {
-  margin-left: auto;
 }
 
 .lsv-working {
@@ -296,6 +388,7 @@
   place-items: center;
   width: 26px;
   height: 26px;
+  flex: none;
   color: var(--muted-2);
   background: transparent;
   border: none;
@@ -303,9 +396,18 @@
   cursor: pointer;
 }
 
+.lsv-fold svg {
+  transform: rotate(-90deg);
+  transition: transform 0.18s ease;
+}
+
+.lsv-fold.is-open svg {
+  transform: rotate(0deg);
+}
+
 .lsv-fold:hover {
   color: var(--text);
-  background: var(--panel-soft);
+  background: var(--panel);
 }
 
 .lsv-session {

@@ -135,6 +135,12 @@ pub struct ClaudeCodeMessage {
     /// - `"tool_result"` — a `user` row that is actually a tool response
     /// - `"tool_use"` — an `assistant` row that starts with a tool invocation
     pub subkind: String,
+    /// The assistant message's `stop_reason` (`end_turn`, `tool_use`,
+    /// `stop_sequence`, `max_tokens`, …), empty for non-assistant messages.
+    /// `end_turn` / `stop_sequence` on the session's last message means the turn
+    /// finished and the agent is waiting for the user — the honest "not working"
+    /// signal that a time window cannot give.
+    pub stop_reason: String,
 }
 
 /// Line accounting for a delta read, so a live-follow surface can show parse
@@ -498,12 +504,14 @@ fn parse_jsonl_delta(
             .unwrap_or_else(|| format!("line-{index}"));
         let created_at = extract_timestamp(&value).unwrap_or_default();
         let subkind = classify_subkind(&role, &content);
+        let stop_reason = extract_stop_reason(&value);
         messages.push(ClaudeCodeMessage {
             id,
             role,
             content,
             created_at,
             subkind,
+            stop_reason,
         });
         stats.parsed += 1;
     }
@@ -691,12 +699,14 @@ fn parse_jsonl(text: &str) -> ParsedSession {
             .unwrap_or_else(|| format!("line-{index}"));
         let created_at = extract_timestamp(&value).unwrap_or_default();
         let subkind = classify_subkind(&role, &content);
+        let stop_reason = extract_stop_reason(&value);
         messages.push(ClaudeCodeMessage {
             id,
             role,
             content,
             created_at,
             subkind,
+            stop_reason,
         });
     }
     // Attach line counts to each touch from its correlated result. The result
@@ -1134,6 +1144,17 @@ fn extract_timestamp(value: &Value) -> Option<String> {
         }
     }
     None
+}
+
+/// The assistant `message.stop_reason` for a line, or "" when absent (every
+/// non-assistant line, and assistant chunks that carry no stop reason yet).
+fn extract_stop_reason(value: &Value) -> String {
+    value
+        .get("message")
+        .and_then(|message| message.get("stop_reason"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string()
 }
 
 fn extract_cwd(value: &Value) -> Option<String> {

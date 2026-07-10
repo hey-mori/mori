@@ -55,6 +55,14 @@ export type ClaudeMessage = {
   content: string;
   createdAt: string;
   subkind?: ClaudeMessageSubkind;
+  /**
+   * The assistant message's `stop_reason` (`end_turn`, `tool_use`,
+   * `stop_sequence`, …), empty / absent for non-assistant messages and older
+   * reads. `end_turn` / `stop_sequence` on a session's last message means the
+   * turn finished and the agent is idle, the precise "not working" signal a
+   * time window cannot give.
+   */
+  stopReason?: string;
 };
 
 export type ClaudeConversationDetail = ClaudeConversationMeta & {

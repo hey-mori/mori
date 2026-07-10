@@ -1,10 +1,10 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, type ReactNode } from "react";
 import {
   BookOpen,
   Bot,
   ChevronDown,
-  FileText,
   Globe,
+  Info,
   ListChecks,
   Pause,
   PenLine,
@@ -22,21 +22,28 @@ import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { isClaudeBridgeAvailable, formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { EventActor, FileTouch } from "../../domain/types";
-import { buildLiveFeed, type LiveFeedItem, type LiveFeedRequest } from "./liveFeed";
+import {
+  buildLiveFeed,
+  sessionShortLabel,
+  type LiveFeedItem,
+  type LiveFeedRequest,
+} from "./liveFeed";
 import { useLiveSessions } from "./useLiveSessions";
 
 /**
  * 라이브 세션: a mission-control view that tails every currently-active Claude
  * Code session at once and streams their work as one feed. Requests are ordered
- * by latest activity, the working ones pulse at the top with a live cursor, and
- * finished ones fold to a quiet line so the present stays in focus. Each step
- * keeps its full text (no truncation). Reads only already-connected session
- * logs, foreground-only, and never writes memory.
+ * by latest activity; a request is "working" only while its session is truly
+ * mid-turn (from the last message's stop_reason, not a time guess), so a
+ * finished answer stops pulsing at once. Working requests stay open at the top
+ * and push older ones to a folded line. Every step keeps its full text.
+ * Reads only already-connected session logs, foreground-only, never writes.
  */
 export function LiveSessionView() {
   const available = isClaudeBridgeAvailable();
   const [watching, setWatching] = useState(true);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
   const snapshot = useLiveSessions(watching && available);
   const feed = useMemo(
     () => buildLiveFeed(snapshot.sessions, { now: Date.now() }),
@@ -45,40 +52,113 @@ export function LiveSessionView() {
     [snapshot.sessions, snapshot.lastPolledAt],
   );
 
+  const workingKeys = useMemo(
+    () => new Set(feed.filter((r) => r.status === "working").map((r) => r.sessionKey)),
+    [feed],
+  );
+  const sessionRows = useMemo(
+    () =>
+      snapshot.sessions
+        .map((s) => {
+          const last = s.follow.messages[s.follow.messages.length - 1];
+          return {
+            key: s.meta.filePath,
+            label: sessionShortLabel(s.meta),
+            steps: s.follow.messages.length,
+            lastAt: last?.createdAt || s.meta.startedAt,
+            working: workingKeys.has(s.meta.filePath),
+          };
+        })
+        .sort((a, b) => Number(b.working) - Number(a.working) || (Date.parse(b.lastAt) || 0) - (Date.parse(a.lastAt) || 0)),
+    [snapshot.sessions, workingKeys],
+  );
+
   const statusEl = (
-    <span className="lsv-status">
-      <span className={`lsv-dot is-${watching ? snapshot.status : "idle"}`} aria-hidden="true" />
-      <span className="lsv-status-text">
-        {watching
-          ? snapshot.activeCount > 0
-            ? `${snapshot.activeCount}개 세션 실시간`
-            : "세션을 찾는 중"
-          : "일시정지됨"}
-        {snapshot.lastPolledAt && watching ? (
-          <span className="lsv-poll"> · {formatClaudeRelativeKo(snapshot.lastPolledAt)}</span>
-        ) : null}
-      </span>
-    </span>
+    <div className="lsv-pop-anchor">
+      <button
+        type="button"
+        className="lsv-status-btn"
+        onClick={() => setSessionsOpen((o) => !o)}
+        aria-expanded={sessionsOpen}
+      >
+        <span className={`lsv-dot is-${watching ? snapshot.status : "idle"}`} aria-hidden="true" />
+        <span className="lsv-status-text">
+          {watching
+            ? snapshot.activeCount > 0
+              ? `${snapshot.activeCount}개 세션 실시간`
+              : "세션을 찾는 중"
+            : "일시정지됨"}
+          {snapshot.lastPolledAt && watching ? (
+            <span className="lsv-poll"> · {formatClaudeRelativeKo(snapshot.lastPolledAt)}</span>
+          ) : null}
+        </span>
+      </button>
+      {sessionsOpen ? (
+        <Popover align="start" onClose={() => setSessionsOpen(false)}>
+          <div className="lsv-pop-title">실시간 세션 {snapshot.activeCount}</div>
+          {sessionRows.length === 0 ? (
+            <p className="lsv-pop-empty">활성 세션이 없습니다</p>
+          ) : (
+            <ul className="lsv-sess-list">
+              {sessionRows.map((s) => (
+                <li key={s.key} className="lsv-sess-row" title={s.key}>
+                  <span className={`lsv-dot is-${s.working ? "watching" : "idle"}`} aria-hidden="true" />
+                  <span className="lsv-sess-label">{s.label}</span>
+                  <span className="lsv-sess-sub">
+                    {s.steps.toLocaleString()}단계 · {formatClaudeRelativeKo(s.lastAt)}
+                  </span>
+                  {s.working ? <span className="lsv-sess-badge">작업 중</span> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Popover>
+      ) : null}
+    </div>
   );
 
   const controls = (
     <>
       <button
         type="button"
-        className="lsv-ctl"
+        className="lsv-ctl-icon"
         onClick={() => setWatching((on) => !on)}
         aria-label={watching ? "일시정지" : "재개"}
+        title={watching ? "일시정지" : "재개"}
       >
-        {watching ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
-        {watching ? "일시정지" : "재개"}
+        {watching ? <Pause size={15} aria-hidden="true" /> : <Play size={15} aria-hidden="true" />}
       </button>
-      <button
-        type="button"
-        className={`lsv-ctl is-ghost ${showDiagnostics ? "is-on" : ""}`}
-        onClick={() => setShowDiagnostics((on) => !on)}
-      >
-        진단
-      </button>
+      <div className="lsv-pop-anchor">
+        <button
+          type="button"
+          className={`lsv-ctl-icon ${diagOpen ? "is-on" : ""}`}
+          onClick={() => setDiagOpen((o) => !o)}
+          aria-label="진단"
+          title="진단"
+          aria-expanded={diagOpen}
+        >
+          <Info size={15} aria-hidden="true" />
+        </button>
+        {diagOpen ? (
+          <Popover align="end" onClose={() => setDiagOpen(false)}>
+            <div className="lsv-pop-title">파싱 충실도</div>
+            <div className="lsv-diag">
+              <Diag label="원본 줄" value={snapshot.aggregate.rawLines} />
+              <Diag label="이벤트" value={snapshot.aggregate.parsed} tone="good" />
+              <Diag label="건너뜀" value={snapshot.aggregate.skipped} />
+              <Diag
+                label="파싱 실패"
+                value={snapshot.aggregate.unparseable}
+                tone={snapshot.aggregate.unparseable > 0 ? "warn" : undefined}
+              />
+              <Diag label="세션" value={snapshot.activeCount} />
+            </div>
+            {snapshot.nextDelayMs != null ? (
+              <p className="lsv-diag-cadence">다음 폴링 {Math.round(snapshot.nextDelayMs / 1000)}초</p>
+            ) : null}
+          </Popover>
+        ) : null}
+      </div>
     </>
   );
 
@@ -100,23 +180,6 @@ export function LiveSessionView() {
       actionBar={<ActionBar label="라이브 세션 컨트롤" start={statusEl} end={controls} />}
     >
       <div className="lsv">
-        {showDiagnostics ? (
-          <div className="lsv-diag" aria-label="파싱 충실도">
-            <Diag label="원본 줄" value={snapshot.aggregate.rawLines} />
-            <Diag label="이벤트" value={snapshot.aggregate.parsed} tone="good" />
-            <Diag label="건너뜀" value={snapshot.aggregate.skipped} />
-            <Diag
-              label="파싱 실패"
-              value={snapshot.aggregate.unparseable}
-              tone={snapshot.aggregate.unparseable > 0 ? "warn" : undefined}
-            />
-            <Diag label="세션" value={snapshot.activeCount} />
-            {snapshot.nextDelayMs != null ? (
-              <span className="lsv-diag-cadence">다음 폴링 {Math.round(snapshot.nextDelayMs / 1000)}초</span>
-            ) : null}
-          </div>
-        ) : null}
-
         {snapshot.lastError ? (
           <div className="lsv-error" role="alert">
             {snapshot.lastError}
@@ -146,11 +209,29 @@ export function LiveSessionView() {
   );
 }
 
+/** A small click-dismissed floating panel: a backdrop closes it, so it overlays
+ *  the page instead of taking a layout region. */
+function Popover({
+  align,
+  onClose,
+  children,
+}: {
+  align: "start" | "end";
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      <div className="lsv-pop-backdrop" onClick={onClose} aria-hidden="true" />
+      <div className={`lsv-pop is-${align}`} role="dialog">
+        {children}
+      </div>
+    </>
+  );
+}
+
 const RequestBlock = memo(
   RequestBlockImpl,
-  // Only re-render a card when something a viewer would see changed. Most cards
-  // (finished, collapsed) are stable across polls, so the feed stays cheap even
-  // with dozens of sessions worth of history on screen.
   (prev, next) =>
     prev.request.id === next.request.id &&
     prev.request.status === next.request.status &&
@@ -161,37 +242,19 @@ const RequestBlock = memo(
 function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
   const items = request.items;
   const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  const collapsed = request.status === "done" && !expanded;
-  // Stagger the strip's cascade so the whole row floats in step-by-step and the
-  // newest step lands last; bounded so a long strip still resolves quickly.
+  // Every card can be folded / unfolded. Default: working stays open, everything
+  // else folds, so a new request pushes the previous one shut on its own. A
+  // manual toggle overrides that default.
+  const [override, setOverride] = useState<boolean | null>(null);
+  const expanded = override ?? request.status === "working";
   const stagger = Math.max(6, Math.min(26, Math.round(360 / Math.max(items.length, 1))));
-
-  if (collapsed) {
-    return (
-      <button
-        type="button"
-        className="lsv-block is-done is-collapsed"
-        onClick={() => setExpanded(true)}
-      >
-        <span className="lsv-session" title={request.sessionKey}>
-          {request.sessionLabel}
-        </span>
-        <span className="lsv-collapsed-title">{request.requestTitle}</span>
-        <span className="lsv-collapsed-meta">
-          {items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
-        </span>
-        <ChevronDown size={15} className="lsv-collapsed-chevron" aria-hidden="true" />
-      </button>
-    );
-  }
 
   const latest = items[items.length - 1];
   const selected = (pinnedId ? items.find((item) => item.id === pinnedId) : undefined) ?? latest;
   const showCursor = request.status === "working" && selected?.id === latest?.id;
 
   return (
-    <article className={`lsv-block is-${request.status}`}>
+    <article className={`lsv-block is-${request.status} ${expanded ? "" : "is-collapsed"}`}>
       <header className="lsv-block-head">
         <span className="lsv-session" title={request.sessionKey}>
           {request.sessionLabel}
@@ -206,59 +269,62 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
             </span>
           </span>
         ) : null}
-        <time className="lsv-time" dateTime={request.updatedAt}>
-          {formatClaudeRelativeKo(request.updatedAt)}
-        </time>
-        {request.status === "done" ? (
-          <button
-            type="button"
-            className="lsv-fold"
-            onClick={() => setExpanded(false)}
-            aria-label="접기"
-          >
-            <ChevronDown size={15} aria-hidden="true" />
-          </button>
-        ) : null}
+        {!expanded ? <span className="lsv-collapsed-title">{request.requestTitle}</span> : null}
+        <span className="lsv-block-meta">
+          {items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
+        </span>
+        <button
+          type="button"
+          className={`lsv-fold ${expanded ? "is-open" : ""}`}
+          onClick={() => setOverride(!expanded)}
+          aria-label={expanded ? "접기" : "펼치기"}
+          aria-expanded={expanded}
+        >
+          <ChevronDown size={15} aria-hidden="true" />
+        </button>
       </header>
 
-      <p className="lsv-request">{request.requestTitle}</p>
-
-      {items.length > 0 ? (
+      {expanded ? (
         <>
-          <div className="lsv-strip" key={items.length} role="tablist" aria-label="작업 단계">
-            {items.map((item, index) => {
-              const Icon = iconForItem(item);
-              const active = item.id === selected?.id;
-              const isLatest = index === items.length - 1;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  style={{ animationDelay: `${index * stagger}ms` }}
-                  className={`lsv-chip is-${item.actor} ${active ? "is-active" : ""} ${isLatest ? "is-latest is-fresh" : ""}`}
-                  title={chipTitle(item, index)}
-                  onClick={() => setPinnedId((current) => (current === item.id ? null : item.id))}
-                >
-                  <Icon size={13} aria-hidden="true" />
-                  {item.repeatCount > 1 ? <span className="lsv-chip-x">×{item.repeatCount}</span> : null}
-                </button>
-              );
-            })}
-          </div>
-          {selected ? <ItemDetail key={selected.id} item={selected} cursor={showCursor} /> : null}
+          <p className="lsv-request">{request.requestTitle}</p>
+          {items.length > 0 ? (
+            <>
+              <div className="lsv-strip" key={items.length} role="tablist" aria-label="작업 단계">
+                {items.map((item, index) => {
+                  const Icon = iconForItem(item);
+                  const active = item.id === selected?.id;
+                  const isLatest = index === items.length - 1;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      style={{ animationDelay: `${index * stagger}ms` }}
+                      className={`lsv-chip is-${item.actor} ${active ? "is-active" : ""} ${isLatest ? "is-latest is-fresh" : ""}`}
+                      title={chipTitle(item, index)}
+                      onClick={() => setPinnedId((current) => (current === item.id ? null : item.id))}
+                    >
+                      <Icon size={13} aria-hidden="true" />
+                      {item.repeatCount > 1 ? <span className="lsv-chip-x">×{item.repeatCount}</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+              {selected ? <ItemDetail key={selected.id} item={selected} cursor={showCursor} /> : null}
+            </>
+          ) : (
+            <p className="lsv-items-pending">
+              작업을 기다리는 중
+              <span className="lsv-typing" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+            </p>
+          )}
         </>
-      ) : (
-        <p className="lsv-items-pending">
-          작업을 기다리는 중
-          <span className="lsv-typing" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
-        </p>
-      )}
+      ) : null}
     </article>
   );
 }

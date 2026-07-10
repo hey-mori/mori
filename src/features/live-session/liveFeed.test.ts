@@ -28,8 +28,14 @@ function meta(id: string, projectName: string): ClaudeCodeSessionMeta {
   };
 }
 
-function msg(id: string, role: ClaudeMessage["role"], content: string, at: string): ClaudeMessage {
-  return { id, role, content, createdAt: at };
+function msg(
+  id: string,
+  role: ClaudeMessage["role"],
+  content: string,
+  at: string,
+  stopReason?: string,
+): ClaudeMessage {
+  return { id, role, content, createdAt: at, ...(stopReason ? { stopReason } : {}) };
 }
 
 describe("buildLiveFeed", () => {
@@ -60,27 +66,32 @@ describe("buildLiveFeed", () => {
     expect(feed[1].items[0].text).not.toContain("…");
   });
 
-  it("derives a live status from how recently the request was touched", () => {
+  it("uses stop_reason to tell a working turn from a just-finished one", () => {
     const now = Date.parse("2026-01-01T00:10:00Z");
+    // Mid-turn: the last message is a tool step awaiting its result -> working,
+    // even though it landed seconds ago.
     const working = {
       meta: meta("s1", "repo"),
       follow: state([
         msg("u1", "human", "지금 작업 중", "2026-01-01T00:09:30Z"),
-        msg("m1", "assistant", "진행 중", "2026-01-01T00:09:40Z"),
+        msg("m1", "assistant", "🔧 Bash: test", "2026-01-01T00:09:40Z", "tool_use"),
       ]),
     };
+    // Just finished a moment ago (end_turn) -> NOT working, but recent. This is
+    // the case a time window got wrong: a fresh reply that is actually done.
     const recent = {
       meta: meta("s2", "repo"),
       follow: state([
-        msg("u2", "human", "방금 끝남", "2026-01-01T00:06:00Z"),
-        msg("m2", "assistant", "끝", "2026-01-01T00:06:10Z"),
+        msg("u2", "human", "방금 끝남", "2026-01-01T00:09:45Z"),
+        msg("m2", "assistant", "끝났습니다", "2026-01-01T00:09:50Z", "end_turn"),
       ]),
     };
+    // Finished long ago -> done.
     const done = {
       meta: meta("s3", "repo"),
       follow: state([
         msg("u3", "human", "오래 전", "2026-01-01T00:00:00Z"),
-        msg("m3", "assistant", "완료", "2026-01-01T00:00:10Z"),
+        msg("m3", "assistant", "완료", "2026-01-01T00:00:10Z", "end_turn"),
       ]),
     };
     const feed = buildLiveFeed([working, recent, done], { now });

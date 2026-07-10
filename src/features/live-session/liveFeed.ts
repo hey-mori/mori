@@ -28,9 +28,10 @@ export type FollowedSession = {
 /** How live a request is, from how recently it was last touched. */
 export type LiveRequestStatus = "working" | "recent" | "done";
 
-/** Activity within this window means the request is actively being worked. */
-const WORKING_MS = 90_000;
-/** Activity within this window means the request just wrapped up. */
+/** A mid-turn session with no new activity for this long is treated as stalled,
+ *  not actively working, so a crashed run does not pulse forever. */
+const STALL_MS = 5 * 60_000;
+/** A finished request touched within this window stays surfaced as "recent". */
 const RECENT_MS = 6 * 60_000;
 
 export type LiveFeedItem = {
@@ -68,6 +69,8 @@ export function buildLiveFeed(
 ): LiveFeedRequest[] {
   const limit = opts.limit ?? 60;
   const requests: LiveFeedRequest[] = [];
+  // Ids of the requests whose session is genuinely mid-turn right now.
+  const workingIds = new Set<string>();
 
   for (const { meta, follow } of sessions) {
     if (follow.messages.length === 0) continue;
@@ -122,11 +125,21 @@ export function buildLiveFeed(
       }
       if (message.createdAt) current.updatedAt = message.createdAt;
     }
+
+    // The session's newest request is "working" only when the session is truly
+    // mid-turn (its last message is not a finished assistant turn).
+    if (current && isSessionWorking(follow.messages, opts.now)) {
+      workingIds.add(current.id);
+    }
   }
 
   for (const request of requests) {
+    if (workingIds.has(request.id)) {
+      request.status = "working";
+      continue;
+    }
     const age = opts.now - (Date.parse(request.updatedAt) || 0);
-    request.status = age <= WORKING_MS ? "working" : age <= RECENT_MS ? "recent" : "done";
+    request.status = age <= RECENT_MS ? "recent" : "done";
   }
 
   requests.sort((a, b) => {
@@ -134,6 +147,28 @@ export function buildLiveFeed(
     return byActivity !== 0 ? byActivity : (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0);
   });
   return requests.slice(0, limit);
+}
+
+/**
+ * Whether a session is genuinely working right now, from its last message.
+ * A finished assistant turn (`end_turn` / `stop_sequence`) means the agent is
+ * idle and waiting for the user, so the session is NOT working even if the reply
+ * just landed a second ago. Any open turn (a tool step awaiting its result, a
+ * tool result / request awaiting the reply, or a mid-stream message) is working
+ * while fresh; a long stall reads as not working so a crashed run stops pulsing.
+ * The `stop_reason` is the precise signal a time window alone cannot give.
+ */
+function isSessionWorking(messages: readonly ClaudeMessage[], now: number): boolean {
+  const last = messages[messages.length - 1];
+  if (!last) return false;
+  if (
+    last.role === "assistant" &&
+    (last.stopReason === "end_turn" || last.stopReason === "stop_sequence")
+  ) {
+    return false;
+  }
+  const age = now - (Date.parse(last.createdAt) || 0);
+  return age < STALL_MS;
 }
 
 /** Whether a message opens a request: a real human turn, not a tool result or
