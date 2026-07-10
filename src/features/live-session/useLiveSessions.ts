@@ -128,10 +128,12 @@ export function useLiveSessions(enabled: boolean): LiveSessionsSnapshot {
         if (newTotal > 0) lastActivity = Date.now();
 
         const sessions = [...entries.values()].map((e) => ({ meta: e.meta, follow: e.follow }));
-        const cadence = decideFollowCadence({
-          status: "following",
-          msSinceLastActivity: Date.now() - lastActivity,
-        });
+        const cadence = decideFollowCadence(
+          { status: "following", msSinceLastActivity: Date.now() - lastActivity },
+          // Poll briskly while work is flowing so new steps appear quickly and
+          // the live view actually feels live, not frozen between polls.
+          { activeIntervalMs: 2000 },
+        );
         const nextDelayMs = Math.min(cadence.nextDelayMs, MAX_POLL_MS);
         setSnapshot({
           status: "watching",

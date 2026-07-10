@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   BookOpen,
   Bot,
@@ -249,12 +249,28 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
   const expanded = override ?? request.status === "working";
   const stagger = Math.max(6, Math.min(26, Math.round(360 / Math.max(items.length, 1))));
 
+  // A one-shot light sweep the moment a request stops working, so a finish reads
+  // as a small event rather than a card blinking shut.
+  const [finished, setFinished] = useState(false);
+  const prevStatus = useRef(request.status);
+  useEffect(() => {
+    const was = prevStatus.current;
+    prevStatus.current = request.status;
+    if (was === "working" && request.status !== "working") {
+      setFinished(true);
+      const timer = setTimeout(() => setFinished(false), 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [request.status]);
+
   const latest = items[items.length - 1];
   const selected = (pinnedId ? items.find((item) => item.id === pinnedId) : undefined) ?? latest;
   const showCursor = request.status === "working" && selected?.id === latest?.id;
 
   return (
-    <article className={`lsv-block is-${request.status} ${expanded ? "" : "is-collapsed"}`}>
+    <article className={`lsv-block is-${request.status} ${expanded ? "is-open" : "is-collapsed"}`}>
+      {finished ? <span className="lsv-sweep" aria-hidden="true" /> : null}
       <header className="lsv-block-head">
         <span className="lsv-session" title={request.sessionKey}>
           {request.sessionLabel}
@@ -269,7 +285,7 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
             </span>
           </span>
         ) : null}
-        {!expanded ? <span className="lsv-collapsed-title">{request.requestTitle}</span> : null}
+        <span className="lsv-collapsed-title">{request.requestTitle}</span>
         <span className="lsv-block-meta">
           {items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
         </span>
@@ -284,8 +300,8 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
         </button>
       </header>
 
-      {expanded ? (
-        <>
+      <div className="lsv-body">
+        <div className="lsv-body-inner">
           <p className="lsv-request">{request.requestTitle}</p>
           {items.length > 0 ? (
             <>
@@ -323,8 +339,8 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
               </span>
             </p>
           )}
-        </>
-      ) : null}
+        </div>
+      </div>
     </article>
   );
 }

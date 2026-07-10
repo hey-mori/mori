@@ -101,6 +101,11 @@ export function buildLiveFeed(
       // owning request; drop it from the feed rather than invent a block.
       if (!current) continue;
 
+      // Injected noise (an interruption marker, a task notification, a reminder)
+      // is not a real step; skip it so it neither opens a request nor clutters
+      // one.
+      if (isAgentBoilerplateTitle(text)) continue;
+
       const actor = itemActor(message);
       const touches = (touchesByMessage.get(message.id) ?? []).map(toDomainTouch);
       const last = current.items[current.items.length - 1];

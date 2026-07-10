@@ -263,6 +263,8 @@
 }
 
 .lsv-block {
+  position: relative;
+  overflow: hidden;
   padding: 14px 18px;
   background: var(--panel);
   border: 1px solid var(--card-border);
@@ -270,6 +272,60 @@
   min-width: 0;
   max-width: 100%;
   animation: lsv-block-in 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth fold / unfold: the body animates its own height with a grid track, so
+   opening and closing glide instead of snapping. */
+.lsv-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lsv-block.is-collapsed .lsv-body {
+  grid-template-rows: 0fr;
+}
+
+.lsv-body-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The header carries a truncated title only while collapsed; the open body
+   shows the full request. */
+.lsv-block.is-open .lsv-collapsed-title {
+  display: none;
+}
+
+/* Completion sweep: a soft light passes across once, the moment a request stops
+   working, so finishing reads as a small event. */
+.lsv-sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.lsv-sweep::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 25%,
+    color-mix(in srgb, var(--green) 22%, transparent) 50%,
+    transparent 75%
+  );
+  transform: translateX(-100%);
+  animation: lsv-sweep 0.9s ease forwards;
+}
+
+@keyframes lsv-sweep {
+  to {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes lsv-block-in {
@@ -311,15 +367,11 @@
   animation: none;
 }
 
-.lsv-block.is-collapsed .lsv-block-head {
-  margin-bottom: 0;
-}
-
 .lsv-block-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 6px;
+  min-width: 0;
 }
 
 .lsv-collapsed-title {
@@ -434,7 +486,7 @@
 }
 
 .lsv-request {
-  margin: 2px 0 12px;
+  margin: 10px 0 12px;
   font-size: 14.5px;
   font-weight: 600;
   line-height: 1.5;
@@ -689,7 +741,11 @@
   .lsv-detail,
   .lsv-typing i,
   .lsv-cursor,
+  .lsv-sweep::before,
   .lsv-dot.is-watching {
     animation: none !important;
+  }
+  .lsv-body {
+    transition: none;
   }
 }

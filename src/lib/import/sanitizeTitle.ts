@@ -1,7 +1,7 @@
 /**
  * Title sanitisation for imported sessions.
  *
- * Agents inject boilerplate system messages that are not real titles — most
+ * Agents inject boilerplate system messages that are not real titles, most
  * visibly Claude's "This session is being continued from a previous
  * conversation that ran out of context …" compaction notice, which otherwise
  * becomes the session title in the sidebar and breadcrumb. These helpers detect
@@ -19,6 +19,8 @@ const AGENT_BOILERPLATE_TITLE_PREFIXES = [
   // they open spurious request columns / become session titles.
   "<task-notification>",
   "[system notification",
+  // A cancel, not a request: the agent writes this when the user interrupts.
+  "[request interrupted",
 ];
 
 /**
