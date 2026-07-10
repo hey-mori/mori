@@ -26,8 +26,9 @@ import type { FollowedSession } from "./liveFeed";
 const ACTIVE_WINDOW_MS = 30 * 60 * 1000;
 /** Most sessions to follow at once, most-recently-active first. */
 const MAX_SESSIONS = 8;
-/** Re-discover the active set every N polls (to catch newly-started sessions). */
-const REDISCOVER_EVERY = 3;
+/** Re-discover the active set every N polls (to catch newly-started or
+ *  newly-active sessions quickly). */
+const REDISCOVER_EVERY = 2;
 /** Cap the poll delay so a new session is picked up within a reasonable time. */
 const MAX_POLL_MS = 9_000;
 const HIDDEN_RECHECK_MS = 2_000;
