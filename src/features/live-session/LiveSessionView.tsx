@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { FileText, Pause, Play, Radio, Sparkles, User, Wrench } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
-import { PageHeader } from "../../components/layout/PageHeader";
+import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { isClaudeBridgeAvailable, formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { EventActor, FileTouch } from "../../domain/types";
@@ -23,21 +23,24 @@ export function LiveSessionView() {
   const snapshot = useLiveSessions(watching && available);
   const feed = useMemo(() => buildLiveFeed(snapshot.sessions), [snapshot.sessions]);
 
-  const headerActions = (
-    <div className="lsv-head-actions">
-      <span className="lsv-status">
-        <span className={`lsv-dot is-${watching ? snapshot.status : "idle"}`} aria-hidden="true" />
-        <span className="lsv-status-text">
-          {watching
-            ? snapshot.activeCount > 0
-              ? `${snapshot.activeCount}개 세션 실시간`
-              : "세션을 찾는 중"
-            : "일시정지됨"}
-          {snapshot.lastPolledAt && watching ? (
-            <span className="lsv-poll"> · {formatClaudeRelativeKo(snapshot.lastPolledAt)}</span>
-          ) : null}
-        </span>
+  const statusEl = (
+    <span className="lsv-status">
+      <span className={`lsv-dot is-${watching ? snapshot.status : "idle"}`} aria-hidden="true" />
+      <span className="lsv-status-text">
+        {watching
+          ? snapshot.activeCount > 0
+            ? `${snapshot.activeCount}개 세션 실시간`
+            : "세션을 찾는 중"
+          : "일시정지됨"}
+        {snapshot.lastPolledAt && watching ? (
+          <span className="lsv-poll"> · {formatClaudeRelativeKo(snapshot.lastPolledAt)}</span>
+        ) : null}
       </span>
+    </span>
+  );
+
+  const controls = (
+    <>
       <button
         type="button"
         className="lsv-ctl"
@@ -54,12 +57,12 @@ export function LiveSessionView() {
       >
         진단
       </button>
-    </div>
+    </>
   );
 
   if (!available) {
     return (
-      <PageShell maxWidth="wide" header={<PageHeader title="라이브 세션" subtitle="지금 진행 중인 작업" />}>
+      <PageShell maxWidth="full" actionBar={<ActionBar label="라이브 세션" start={statusEl} />}>
         <EmptyState
           icon={Radio}
           title="라이브 세션은 데스크톱 앱에서만 동작합니다"
@@ -71,8 +74,8 @@ export function LiveSessionView() {
 
   return (
     <PageShell
-      maxWidth="wide"
-      header={<PageHeader title="라이브 세션" subtitle="지금 진행 중인 작업" right={headerActions} />}
+      maxWidth="full"
+      actionBar={<ActionBar label="라이브 세션 컨트롤" start={statusEl} end={controls} />}
     >
       <div className="lsv">
         {showDiagnostics ? (
@@ -148,13 +151,14 @@ function RequestBlock({ request }: { request: LiveFeedRequest }) {
             {items.map((item, index) => {
               const Icon = actorIcon(item.actor);
               const active = item.id === selected?.id;
+              const isLatest = index === items.length - 1;
               return (
                 <button
                   key={item.id}
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  className={`lsv-chip is-${item.actor} ${active ? "is-active" : ""}`}
+                  className={`lsv-chip is-${item.actor} ${active ? "is-active" : ""} ${isLatest ? "is-latest" : ""}`}
                   title={chipTitle(item, index)}
                   onClick={() => setPinnedId((current) => (current === item.id ? null : item.id))}
                 >

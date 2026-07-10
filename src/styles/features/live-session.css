@@ -13,15 +13,7 @@
   min-height: 0;
 }
 
-/* ── header actions (rendered inside the shared PageHeader) ──────────────── */
-
-.lsv-head-actions {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+/* ── status + controls (rendered inside the shared ActionBar) ───────────── */
 
 .lsv-status {
   display: inline-flex;
@@ -241,12 +233,21 @@
   border: 1px solid var(--card-border);
   border-radius: 8px;
   cursor: pointer;
+  /* Past steps recede so the eye lands on the live tip; the latest / selected /
+     hovered step comes back to full strength. */
+  opacity: 0.42;
   animation: lsv-chip-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .lsv-chip:hover {
   transform: translateY(-1px);
+  opacity: 1;
 }
 
 .lsv-chip.is-user {
@@ -262,10 +263,21 @@
   color: var(--green);
 }
 
+/* The newest step in a request: the live tip, always full strength with a soft
+   glow so "what is happening now" is obvious at a glance. */
+.lsv-chip.is-latest {
+  opacity: 1;
+  border-color: color-mix(in srgb, currentColor 45%, var(--card-border));
+  background: color-mix(in srgb, currentColor 10%, var(--panel));
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* The selected step (default = latest): a firmer ring, distinct from the glow. */
 .lsv-chip.is-active {
+  opacity: 1;
   border-color: currentColor;
-  background: color-mix(in srgb, currentColor 12%, var(--panel));
-  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 16%, transparent);
+  background: color-mix(in srgb, currentColor 15%, var(--panel));
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 24%, transparent);
 }
 
 @keyframes lsv-chip-pop {
