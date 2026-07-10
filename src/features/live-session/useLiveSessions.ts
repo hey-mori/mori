@@ -31,6 +31,10 @@ const MAX_SESSIONS = 8;
 const REDISCOVER_EVERY = 2;
 /** Cap the poll delay so a new session is picked up within a reasonable time. */
 const MAX_POLL_MS = 9_000;
+/** When first following a session, start the tail this far from the end so a
+ *  huge (tens/hundreds of MB) history is not read whole; recent requests still
+ *  land, and the feed only cares about recent activity anyway. */
+const TAIL_BYTES = 2_000_000;
 const HIDDEN_RECHECK_MS = 2_000;
 const ERROR_BACKOFF_MS = 15_000;
 
@@ -97,8 +101,13 @@ export function useLiveSessions(enabled: boolean): LiveSessionsSnapshot {
       const keep = new Set(chosen.map((s) => s.meta.filePath));
       for (const { meta } of chosen) {
         const existing = entries.get(meta.filePath);
-        if (existing) existing.meta = meta;
-        else entries.set(meta.filePath, { meta, follow: initialAgentStoreFollowState() });
+        if (existing) {
+          existing.meta = meta;
+        } else {
+          const bytes = meta.fileBytes ?? 0;
+          const start = bytes > TAIL_BYTES ? bytes - TAIL_BYTES : 0;
+          entries.set(meta.filePath, { meta, follow: initialAgentStoreFollowState(start) });
+        }
       }
       for (const key of [...entries.keys()]) {
         if (!keep.has(key)) entries.delete(key);

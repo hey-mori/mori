@@ -55,9 +55,12 @@ pub struct ClaudeCodeSessionMeta {
     pub file_path: String,
     pub started_at: String,
     /// Filesystem last-modified time (ISO). The honest "is this session active
-    /// right now" signal — `started_at` is the first message, which a resumed
-    /// long-running session keeps even while being worked on today.
+    /// right now" signal (`started_at` is the first message, which a resumed
+    /// long-running session keeps even while being worked on today).
     pub modified_at: String,
+    /// File size in bytes. Live Follow uses this to start its tail near the end
+    /// of a huge session instead of reading the whole history.
+    pub file_bytes: u64,
     pub message_count: usize,
     pub title: String,
     pub token_usage: ClaudeTokenUsage,
@@ -260,12 +263,12 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 Ok(meta) => meta,
                 Err(_) => continue,
             };
-            if metadata.len() > MAX_FILE_BYTES {
-                // Skip oversize sessions rather than fail the whole listing —
-                // we surface the others and let the user open this one
-                // explicitly if they need to triage it.
-                continue;
-            }
+            // Oversize sessions are NOT skipped: an active, long-running session
+            // grows past the cap, and those are exactly the ones Live Follow must
+            // list so it can tail them. The preview below reads only the file's
+            // head (bounded), and Live Follow tails from near the end, so a huge
+            // file never gets read whole here.
+            let file_bytes = metadata.len();
             let modified_at = format_modified_iso(metadata
                 .modified()
                 .or_else(|_| metadata.created())
@@ -305,6 +308,7 @@ pub(crate) fn list_sessions_at(root: &Path) -> Result<Vec<ClaudeCodeSessionMeta>
                 file_path: session_path.to_string_lossy().to_string(),
                 started_at,
                 modified_at,
+                file_bytes,
                 message_count: preview.message_count,
                 title,
                 token_usage: preview.token_usage,
@@ -539,14 +543,23 @@ struct SessionPreview {
 
 fn preview_session(path: &Path) -> Option<SessionPreview> {
     use std::io::{BufRead, BufReader};
+    // Only the file's head is needed for the summary / title / first timestamp,
+    // so a multi-hundred-MB session is never read whole here. Counts past this
+    // budget are approximate, which is fine for a list preview.
+    const PREVIEW_BUDGET: usize = 1_000_000;
     let file = std::fs::File::open(path).ok()?;
     let reader = BufReader::new(file);
     let mut preview = SessionPreview::default();
     let mut tokens = TokenAccumulator::default();
+    let mut bytes_read = 0usize;
     for line_result in reader.lines() {
         let Ok(line) = line_result else {
             break;
         };
+        bytes_read += line.len() + 1;
+        if bytes_read > PREVIEW_BUDGET {
+            break;
+        }
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
