@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { FileText, Pause, Play, Radio, Sparkles, User, Wrench } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
+import { PageHeader } from "../../components/layout/PageHeader";
 import { EmptyState } from "../../components/layout/EmptyState";
 import { isClaudeBridgeAvailable, formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { EventActor, FileTouch } from "../../domain/types";
@@ -22,9 +23,43 @@ export function LiveSessionView() {
   const snapshot = useLiveSessions(watching && available);
   const feed = useMemo(() => buildLiveFeed(snapshot.sessions), [snapshot.sessions]);
 
+  const headerActions = (
+    <div className="lsv-head-actions">
+      <span className="lsv-status">
+        <span className={`lsv-dot is-${watching ? snapshot.status : "idle"}`} aria-hidden="true" />
+        <span className="lsv-status-text">
+          {watching
+            ? snapshot.activeCount > 0
+              ? `${snapshot.activeCount}개 세션 실시간`
+              : "세션을 찾는 중"
+            : "일시정지됨"}
+          {snapshot.lastPolledAt && watching ? (
+            <span className="lsv-poll"> · {formatClaudeRelativeKo(snapshot.lastPolledAt)}</span>
+          ) : null}
+        </span>
+      </span>
+      <button
+        type="button"
+        className="lsv-ctl"
+        onClick={() => setWatching((on) => !on)}
+        aria-label={watching ? "일시정지" : "재개"}
+      >
+        {watching ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
+        {watching ? "일시정지" : "재개"}
+      </button>
+      <button
+        type="button"
+        className={`lsv-ctl is-ghost ${showDiagnostics ? "is-on" : ""}`}
+        onClick={() => setShowDiagnostics((on) => !on)}
+      >
+        진단
+      </button>
+    </div>
+  );
+
   if (!available) {
     return (
-      <PageShell maxWidth="wide">
+      <PageShell maxWidth="wide" header={<PageHeader title="라이브 세션" subtitle="지금 진행 중인 작업" />}>
         <EmptyState
           icon={Radio}
           title="라이브 세션은 데스크톱 앱에서만 동작합니다"
@@ -35,45 +70,11 @@ export function LiveSessionView() {
   }
 
   return (
-    <PageShell maxWidth="wide">
+    <PageShell
+      maxWidth="wide"
+      header={<PageHeader title="라이브 세션" subtitle="지금 진행 중인 작업" right={headerActions} />}
+    >
       <div className="lsv">
-        <header className="lsv-head">
-          <div className="lsv-title">
-            <Radio size={17} className="lsv-live-glyph" aria-hidden="true" />
-            <span>라이브 세션</span>
-            <span className="lsv-sub">지금 진행 중인 작업</span>
-          </div>
-          <div className="lsv-status">
-            <span className={`lsv-dot is-${watching ? snapshot.status : "idle"}`} aria-hidden="true" />
-            <span className="lsv-status-text">
-              {watching
-                ? snapshot.activeCount > 0
-                  ? `${snapshot.activeCount}개 세션 실시간`
-                  : "세션을 찾는 중"
-                : "일시정지됨"}
-              {snapshot.lastPolledAt && watching ? (
-                <span className="lsv-poll"> · {formatClaudeRelativeKo(snapshot.lastPolledAt)}</span>
-              ) : null}
-            </span>
-            <button
-              type="button"
-              className="lsv-ctl"
-              onClick={() => setWatching((on) => !on)}
-              aria-label={watching ? "일시정지" : "재개"}
-            >
-              {watching ? <Pause size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
-              {watching ? "일시정지" : "재개"}
-            </button>
-            <button
-              type="button"
-              className={`lsv-ctl is-ghost ${showDiagnostics ? "is-on" : ""}`}
-              onClick={() => setShowDiagnostics((on) => !on)}
-            >
-              진단
-            </button>
-          </div>
-        </header>
-
         {showDiagnostics ? (
           <div className="lsv-diag" aria-label="파싱 충실도">
             <Diag label="원본 줄" value={snapshot.aggregate.rawLines} />
@@ -124,18 +125,9 @@ function RequestBlock({ request }: { request: LiveFeedRequest }) {
   const items = request.items;
   // null = follow the newest step; a set id pins that step until re-clicked.
   const [pinnedId, setPinnedId] = useState<string | null>(null);
-  const stripRef = useRef<HTMLDivElement | null>(null);
 
   const latest = items[items.length - 1];
   const selected = (pinnedId ? items.find((item) => item.id === pinnedId) : undefined) ?? latest;
-
-  // While following the newest step, keep the strip scrolled to the end so the
-  // freshest work is always in view as it streams in.
-  useEffect(() => {
-    if (pinnedId === null && stripRef.current) {
-      stripRef.current.scrollLeft = stripRef.current.scrollWidth;
-    }
-  }, [items.length, pinnedId]);
 
   return (
     <article className="lsv-block">
@@ -152,7 +144,7 @@ function RequestBlock({ request }: { request: LiveFeedRequest }) {
       </h3>
       {items.length > 0 ? (
         <>
-          <div className="lsv-strip" ref={stripRef} role="tablist" aria-label="작업 단계">
+          <div className="lsv-strip" role="tablist" aria-label="작업 단계">
             {items.map((item, index) => {
               const Icon = actorIcon(item.actor);
               const active = item.id === selected?.id;
