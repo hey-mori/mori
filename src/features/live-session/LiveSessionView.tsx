@@ -141,7 +141,7 @@ export function LiveSessionView() {
         </button>
         {diagOpen ? (
           <Popover align="end" onClose={() => setDiagOpen(false)}>
-            <div className="lsv-pop-title">파싱 충실도</div>
+            <div className="lsv-pop-title">읽어들인 데이터</div>
             <div className="lsv-diag">
               <Diag label="원본 줄" value={snapshot.aggregate.rawLines} />
               <Diag label="이벤트" value={snapshot.aggregate.parsed} tone="good" />
@@ -168,7 +168,7 @@ export function LiveSessionView() {
         <EmptyState
           icon={Radio}
           title="라이브 세션은 데스크톱 앱에서만 동작합니다"
-          description="실행 중인 Claude Code 세션 파일을 실시간으로 읽어야 하므로 Tauri 데스크톱 앱이 필요합니다. 브라우저 프로토타입에서는 세션 저장소에 접근할 수 없습니다."
+          description="실행 중인 세션 파일을 실시간으로 읽어야 하므로 데스크톱 앱이 필요합니다. 브라우저에서는 세션 저장소에 접근할 수 없습니다."
         />
       </PageShell>
     );
@@ -190,11 +190,11 @@ export function LiveSessionView() {
           <EmptyState
             compact
             icon={Radio}
-            title={watching ? "실시간 작업을 기다리는 중" : "일시정지됨"}
+            title={watching ? "실시간 요청을 기다리는 중" : "일시정지됨"}
             description={
               watching
-                ? "실행 중인 Claude 세션에서 요청이 오가면, 작업 중인 요청이 맨 위에서 살아 움직이고 그 안에서 단계가 실시간으로 이어집니다."
-                : "재개를 누르면 다시 모든 활성 세션을 따라갑니다."
+                ? "실행 중인 세션의 요청과 작업이 실시간으로 여기에 모입니다."
+                : "재개를 누르면 다시 실행 중인 세션을 따라갑니다."
             }
           />
         ) : (
@@ -285,7 +285,9 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
             </span>
           </span>
         ) : null}
-        <span className="lsv-collapsed-title">{request.requestTitle}</span>
+        <span className="lsv-head-title" title={request.requestTitle}>
+          {request.requestTitle}
+        </span>
         <span className="lsv-block-meta">
           {items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
         </span>
@@ -302,7 +304,6 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
 
       <div className="lsv-body">
         <div className="lsv-body-inner">
-          <p className="lsv-request">{request.requestTitle}</p>
           {items.length > 0 ? (
             <>
               <div className="lsv-strip" key={items.length} role="tablist" aria-label="작업 단계">
@@ -353,7 +354,7 @@ function ItemDetail({ item, cursor }: { item: LiveFeedItem; cursor: boolean }) {
         {item.toolName ? <span className="lsv-detail-tool"> · {item.toolName}</span> : null}
         {item.repeatCount > 1 ? <span className="lsv-detail-repeat">{item.repeatCount}회 반복</span> : null}
       </span>
-      <p className="lsv-detail-text">
+      <p className="lsv-detail-text base-scroll">
         {item.text}
         {cursor ? <span className="lsv-cursor" aria-hidden="true" /> : null}
       </p>

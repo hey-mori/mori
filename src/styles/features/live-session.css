@@ -289,12 +289,7 @@
 .lsv-body-inner {
   min-height: 0;
   overflow: hidden;
-}
-
-/* The header carries a truncated title only while collapsed; the open body
-   shows the full request. */
-.lsv-block.is-open .lsv-collapsed-title {
-  display: none;
+  padding-top: 12px;
 }
 
 /* Completion sweep: a soft light passes across once, the moment a request stops
@@ -374,11 +369,13 @@
   min-width: 0;
 }
 
-.lsv-collapsed-title {
+/* The request title lives in the header in every state, so folding never moves
+   it. One line, ellipsised; the full text is on hover and the steps below. */
+.lsv-head-title {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -483,20 +480,6 @@
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
   flex: none;
-}
-
-.lsv-request {
-  margin: 10px 0 12px;
-  font-size: 14.5px;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--text);
-  /* Full request, never truncated with an ellipsis; a very long paste scrolls
-     within a bounded height instead of being cut. */
-  max-height: 8.5em;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .lsv-items-pending {
