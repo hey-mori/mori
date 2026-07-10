@@ -11,6 +11,10 @@
   gap: var(--base-space-4);
   padding-bottom: var(--base-space-6);
   min-height: 0;
+  /* This is a grid item of `.page-shell-content` (min-width: auto by default),
+     so without this the wide work-step strip forces the column past the
+     viewport and everything clips on the right. Shrink to the column instead. */
+  min-width: 0;
 }
 
 /* ── status + controls (rendered inside the shared ActionBar) ───────────── */
@@ -145,6 +149,7 @@
   flex-direction: column;
   gap: 10px;
   width: 100%;
+  min-width: 0;
 }
 
 .lsv-block {
@@ -152,6 +157,8 @@
   background: var(--panel);
   border: 1px solid var(--card-border);
   border-radius: 14px;
+  min-width: 0;
+  max-width: 100%;
   animation: lsv-block-in 0.36s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
