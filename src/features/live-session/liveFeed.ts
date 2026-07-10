@@ -1,156 +1,188 @@
 /**
- * Live feed model: merge every followed session's accumulated work into one
- * time-ordered stream of request blocks, newest request on top. Pure derivation
- * over the same import + request-span path a session view uses, so what the live
- * feed shows matches what those sessions would show once imported.
+ * Live feed model: merge every followed session's raw messages into one
+ * time-ordered stream of request blocks, ordered by each request's latest
+ * activity so the request being worked right now sits on top.
  *
- * Each followed session is projected to events, segmented into requests
- * (`buildRequestSpans`), and every request across every session is merged and
- * sorted newest-first. Consecutive identical work items collapse into one with a
- * repeat count, so a burst of the same line (a repeated error, a rate-limit
- * notice) reads as "×N" instead of flooding the block.
+ * Unlike a timeline import, the live feed keeps the FULL text of every message
+ * (no summary truncation) and one item per message, because the point is to
+ * watch work happen, not to archive a tidy summary. Request boundaries reuse the
+ * same rule as import (`classifyMessage` + boilerplate detection) so what opens
+ * a request here matches an imported session. Each request carries a live status
+ * derived from how recently it was touched.
  */
-import { buildImportCandidateFromClaudeCodeSession } from "../../lib/claude/claudeImport";
-import type { ClaudeCodeSessionMeta } from "../../lib/claude/types";
-import { buildFollowSubject, type AgentStoreFollowState } from "../../lib/live-follow";
-import { buildRequestSpans } from "../../lib/timeline/requestSpans";
-import type { EventActor, FileTouch, TimelineEvent } from "../../domain/types";
+import { classifyMessage } from "../../lib/claude/conversationStats";
+import { isAgentBoilerplateTitle } from "../../lib/import/sanitizeTitle";
+import type {
+  ClaudeCodeSessionMeta,
+  ClaudeFileTouch,
+  ClaudeMessage,
+} from "../../lib/claude/types";
+import type { AgentStoreFollowState } from "../../lib/live-follow";
+import type { EventActor, FileTouch } from "../../domain/types";
 
 export type FollowedSession = {
   meta: ClaudeCodeSessionMeta;
   follow: AgentStoreFollowState;
 };
 
+/** How live a request is, from how recently it was last touched. */
+export type LiveRequestStatus = "working" | "recent" | "done";
+
+/** Activity within this window means the request is actively being worked. */
+const WORKING_MS = 90_000;
+/** Activity within this window means the request just wrapped up. */
+const RECENT_MS = 6 * 60_000;
+
 export type LiveFeedItem = {
   id: string;
   actor: EventActor;
+  /** Tool name for a tool step (e.g. "Bash", "Edit"), else undefined. */
   toolName?: string;
+  /** The full message text, never truncated. */
   text: string;
   fileTouches: FileTouch[];
-  /** >1 when consecutive identical items were collapsed. */
+  createdAt: string;
+  /** >1 when consecutive identical steps were collapsed. */
   repeatCount: number;
 };
 
 export type LiveFeedRequest = {
-  /** Stable id: session file + request span id. */
   id: string;
-  /** The session's file path, a stable session identity across polls. */
   sessionKey: string;
-  /** Short session label (project basename). */
   sessionLabel: string;
+  /** The full request text, never truncated. */
   requestTitle: string;
-  /** ISO start of the opening ask. */
   startedAt: string;
-  /** ISO of the latest activity in the request. */
   updatedAt: string;
+  status: LiveRequestStatus;
   items: LiveFeedItem[];
 };
 
 /**
- * Build the merged, newest-first live feed from every followed session. Requests
- * with no work yet are still shown (the ask landed, work is coming). Capped to
- * `limit` most-recent requests so the feed stays about what is happening now.
+ * Build the merged, newest-first live feed. `now` (ms) drives each request's
+ * live status; pass the poll time so status refreshes each poll.
  */
 export function buildLiveFeed(
   sessions: readonly FollowedSession[],
-  opts: { limit?: number } = {},
+  opts: { now: number; limit?: number },
 ): LiveFeedRequest[] {
   const limit = opts.limit ?? 60;
   const requests: LiveFeedRequest[] = [];
 
   for (const { meta, follow } of sessions) {
     if (follow.messages.length === 0) continue;
-    const subject = buildFollowSubject(follow, {
-      sessionId: meta.sessionId,
-      title: meta.title,
-      startedAt: meta.startedAt,
-      projectName: meta.projectName,
-      filePath: meta.filePath,
-      projectPath: meta.projectPath,
-      tokenUsage: meta.tokenUsage,
-    });
-    const { events } = buildImportCandidateFromClaudeCodeSession(subject, {
-      projectId: meta.filePath,
-      sessionId: meta.sessionId,
-      capturedAt: meta.startedAt,
-    });
-    const spans = buildRequestSpans(events);
-    const byId = new Map(events.map((event) => [event.id, event]));
+    const touchesByMessage = groupTouches(follow.fileTouches);
     const sessionLabel = sessionShortLabel(meta);
+    let current: LiveFeedRequest | null = null;
 
-    for (const span of spans) {
-      const spanEvents = span.eventIds
-        .map((id) => byId.get(id))
-        .filter((event): event is TimelineEvent => Boolean(event));
-      requests.push({
-        id: `${meta.filePath}::${span.id}`,
-        sessionKey: meta.filePath,
-        sessionLabel,
-        requestTitle: span.title,
-        startedAt: span.start,
-        updatedAt: span.end,
-        items: buildItems(spanEvents, span.title),
-      });
+    for (const message of follow.messages) {
+      const text = message.content.trim();
+      if (!text) continue;
+
+      if (isRequestOpener(message)) {
+        current = {
+          id: `${meta.filePath}::${message.id}`,
+          sessionKey: meta.filePath,
+          sessionLabel,
+          requestTitle: text,
+          startedAt: message.createdAt,
+          updatedAt: message.createdAt,
+          status: "done",
+          items: [],
+        };
+        requests.push(current);
+        continue;
+      }
+
+      // Work before the first real request (a resume tool-result, say) has no
+      // owning request; drop it from the feed rather than invent a block.
+      if (!current) continue;
+
+      const actor = itemActor(message);
+      const touches = (touchesByMessage.get(message.id) ?? []).map(toDomainTouch);
+      const last = current.items[current.items.length - 1];
+      if (
+        last &&
+        last.actor === actor &&
+        last.text === text &&
+        touches.length === 0 &&
+        last.fileTouches.length === 0
+      ) {
+        last.repeatCount += 1;
+      } else {
+        current.items.push({
+          id: message.id || `${current.id}-${current.items.length}`,
+          actor,
+          ...(actor === "tool" ? { toolName: parseToolName(text) ?? undefined } : {}),
+          text,
+          fileTouches: touches,
+          createdAt: message.createdAt,
+          repeatCount: 1,
+        });
+      }
+      if (message.createdAt) current.updatedAt = message.createdAt;
     }
   }
 
-  // Order by each request's latest activity, not its opening time, so the
-  // request being worked right now rises to the top even across several
-  // concurrent sessions. The whole request moves as one unit, so the feed does
-  // not shuffle item-by-item.
+  for (const request of requests) {
+    const age = opts.now - (Date.parse(request.updatedAt) || 0);
+    request.status = age <= WORKING_MS ? "working" : age <= RECENT_MS ? "recent" : "done";
+  }
+
   requests.sort((a, b) => {
-    const byActivity = Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-    return byActivity !== 0 ? byActivity : Date.parse(b.startedAt) - Date.parse(a.startedAt);
+    const byActivity = (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0);
+    return byActivity !== 0 ? byActivity : (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0);
   });
   return requests.slice(0, limit);
 }
 
-/**
- * Turn a request's events into display items: the assistant's reply text (not
- * the ask, which is already the block header), tool actions, and file touches,
- * with consecutive identical items collapsed into a repeat count.
- */
-function buildItems(events: readonly TimelineEvent[], requestTitle: string): LiveFeedItem[] {
-  const items: LiveFeedItem[] = [];
-  for (const event of events) {
-    const actor = event.actor ?? "system";
-    const text = displayText(event);
-    if (!text.trim()) continue;
-    // The opening ask is already the block header; don't repeat it as an item.
-    if (event.openedByUser && text === requestTitle) continue;
-    const touches = event.fileTouches ?? [];
-    const last = items[items.length - 1];
-    if (
-      last &&
-      last.actor === actor &&
-      last.text === text &&
-      touches.length === 0 &&
-      last.fileTouches.length === 0
-    ) {
-      last.repeatCount += 1;
-      continue;
-    }
-    items.push({
-      id: event.id,
-      actor,
-      ...(event.toolName ? { toolName: event.toolName } : {}),
-      text,
-      fileTouches: touches,
-      repeatCount: 1,
-    });
-  }
-  return items;
+/** Whether a message opens a request: a real human turn, not a tool result or
+ *  an agent-injected boilerplate / system message. Mirrors the import rule. */
+function isRequestOpener(message: ClaudeMessage): boolean {
+  return (
+    message.role === "human" &&
+    classifyMessage(message) !== "tool_result" &&
+    !isAgentBoilerplateTitle(message.content)
+  );
 }
 
-/**
- * The text to show for an event. For an assistant turn the title is the user's
- * ask; show the reply summary instead so the item is the work, not the ask.
- */
-function displayText(event: TimelineEvent): string {
-  if ((event.actor ?? "system") === "assistant") {
-    return event.summary?.trim() || event.title;
+function itemActor(message: ClaudeMessage): EventActor {
+  const kind = classifyMessage(message);
+  if (kind === "tool_use" || kind === "tool_result") return "tool";
+  if (message.role === "assistant") return "assistant";
+  if (message.role === "human") return "user";
+  return "system";
+}
+
+/** Best-effort tool name from a rendered tool step ("🔧 Bash: …" -> "Bash"). */
+function parseToolName(text: string): string | null {
+  const match = /^\s*🔧\s*([^:\n]+?)\s*(?::|$)/.exec(text);
+  const name = match?.[1]?.trim();
+  return name ? name : null;
+}
+
+function groupTouches(touches: readonly ClaudeFileTouch[]): Map<string, ClaudeFileTouch[]> {
+  const byMessage = new Map<string, ClaudeFileTouch[]>();
+  for (const touch of touches) {
+    if (!touch.messageId) continue;
+    const list = byMessage.get(touch.messageId);
+    if (list) list.push(touch);
+    else byMessage.set(touch.messageId, [touch]);
   }
-  return event.title;
+  return byMessage;
+}
+
+function toDomainTouch(touch: ClaudeFileTouch): FileTouch {
+  return {
+    path: touch.path,
+    tool: touch.tool,
+    changeKind: touch.changeKind,
+    at: touch.at,
+    additions: touch.additions,
+    deletions: touch.deletions,
+    messageId: touch.messageId,
+    diffPreview: touch.diffPreview,
+  };
 }
 
 /** Short session label: the project path's last segment ("C:/dev/mori" -> "mori"). */

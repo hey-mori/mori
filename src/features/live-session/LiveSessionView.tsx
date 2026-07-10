@@ -1,5 +1,22 @@
-import { useMemo, useState } from "react";
-import { FileText, Pause, Play, Radio, Sparkles, User, Wrench } from "lucide-react";
+import { memo, useMemo, useState } from "react";
+import {
+  BookOpen,
+  Bot,
+  ChevronDown,
+  FileText,
+  Globe,
+  ListChecks,
+  Pause,
+  PenLine,
+  Play,
+  Radio,
+  Search,
+  Sparkles,
+  Terminal,
+  User,
+  Wrench,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
@@ -9,19 +26,24 @@ import { buildLiveFeed, type LiveFeedItem, type LiveFeedRequest } from "./liveFe
 import { useLiveSessions } from "./useLiveSessions";
 
 /**
- * 라이브 세션: a live dashboard that tails every currently-active Claude Code
- * session at once and streams their work as one feed, ordered by each request's
- * latest activity so the request being worked right now sits on top. Each
- * request is a card: a horizontal strip of work-step icons with the selected
- * step's detail below (following the newest step by default). Reads only
- * already-connected session logs, foreground-only, and never writes memory.
+ * 라이브 세션: a mission-control view that tails every currently-active Claude
+ * Code session at once and streams their work as one feed. Requests are ordered
+ * by latest activity, the working ones pulse at the top with a live cursor, and
+ * finished ones fold to a quiet line so the present stays in focus. Each step
+ * keeps its full text (no truncation). Reads only already-connected session
+ * logs, foreground-only, and never writes memory.
  */
 export function LiveSessionView() {
   const available = isClaudeBridgeAvailable();
   const [watching, setWatching] = useState(true);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const snapshot = useLiveSessions(watching && available);
-  const feed = useMemo(() => buildLiveFeed(snapshot.sessions), [snapshot.sessions]);
+  const feed = useMemo(
+    () => buildLiveFeed(snapshot.sessions, { now: Date.now() }),
+    // Recompute each poll (lastPolledAt bumps) so live status stays fresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [snapshot.sessions, snapshot.lastPolledAt],
+  );
 
   const statusEl = (
     <span className="lsv-status">
@@ -108,7 +130,7 @@ export function LiveSessionView() {
             title={watching ? "실시간 작업을 기다리는 중" : "일시정지됨"}
             description={
               watching
-                ? "실행 중인 Claude 세션에서 요청이 오가면, 활동 중인 요청이 맨 위로 올라오고 그 안에서 작업이 실시간으로 이어집니다."
+                ? "실행 중인 Claude 세션에서 요청이 오가면, 작업 중인 요청이 맨 위에서 살아 움직이고 그 안에서 단계가 실시간으로 이어집니다."
                 : "재개를 누르면 다시 모든 활성 세션을 따라갑니다."
             }
           />
@@ -124,32 +146,88 @@ export function LiveSessionView() {
   );
 }
 
-function RequestBlock({ request }: { request: LiveFeedRequest }) {
+const RequestBlock = memo(
+  RequestBlockImpl,
+  // Only re-render a card when something a viewer would see changed. Most cards
+  // (finished, collapsed) are stable across polls, so the feed stays cheap even
+  // with dozens of sessions worth of history on screen.
+  (prev, next) =>
+    prev.request.id === next.request.id &&
+    prev.request.status === next.request.status &&
+    prev.request.updatedAt === next.request.updatedAt &&
+    prev.request.items.length === next.request.items.length,
+);
+
+function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
   const items = request.items;
-  // null = follow the newest step; a set id pins that step until re-clicked.
   const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const collapsed = request.status === "done" && !expanded;
+  // Stagger the strip's cascade so the whole row floats in step-by-step and the
+  // newest step lands last; bounded so a long strip still resolves quickly.
+  const stagger = Math.max(6, Math.min(26, Math.round(360 / Math.max(items.length, 1))));
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        className="lsv-block is-done is-collapsed"
+        onClick={() => setExpanded(true)}
+      >
+        <span className="lsv-session" title={request.sessionKey}>
+          {request.sessionLabel}
+        </span>
+        <span className="lsv-collapsed-title">{request.requestTitle}</span>
+        <span className="lsv-collapsed-meta">
+          {items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
+        </span>
+        <ChevronDown size={15} className="lsv-collapsed-chevron" aria-hidden="true" />
+      </button>
+    );
+  }
 
   const latest = items[items.length - 1];
   const selected = (pinnedId ? items.find((item) => item.id === pinnedId) : undefined) ?? latest;
+  const showCursor = request.status === "working" && selected?.id === latest?.id;
 
   return (
-    <article className="lsv-block">
+    <article className={`lsv-block is-${request.status}`}>
       <header className="lsv-block-head">
         <span className="lsv-session" title={request.sessionKey}>
           {request.sessionLabel}
         </span>
+        {request.status === "working" ? (
+          <span className="lsv-working">
+            작업 중
+            <span className="lsv-typing" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          </span>
+        ) : null}
         <time className="lsv-time" dateTime={request.updatedAt}>
           {formatClaudeRelativeKo(request.updatedAt)}
         </time>
+        {request.status === "done" ? (
+          <button
+            type="button"
+            className="lsv-fold"
+            onClick={() => setExpanded(false)}
+            aria-label="접기"
+          >
+            <ChevronDown size={15} aria-hidden="true" />
+          </button>
+        ) : null}
       </header>
-      <h3 className="lsv-request" title={request.requestTitle}>
-        {request.requestTitle}
-      </h3>
+
+      <p className="lsv-request">{request.requestTitle}</p>
+
       {items.length > 0 ? (
         <>
-          <div className="lsv-strip" role="tablist" aria-label="작업 단계">
+          <div className="lsv-strip" key={items.length} role="tablist" aria-label="작업 단계">
             {items.map((item, index) => {
-              const Icon = actorIcon(item.actor);
+              const Icon = iconForItem(item);
               const active = item.id === selected?.id;
               const isLatest = index === items.length - 1;
               return (
@@ -158,7 +236,8 @@ function RequestBlock({ request }: { request: LiveFeedRequest }) {
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  className={`lsv-chip is-${item.actor} ${active ? "is-active" : ""} ${isLatest ? "is-latest" : ""}`}
+                  style={{ animationDelay: `${index * stagger}ms` }}
+                  className={`lsv-chip is-${item.actor} ${active ? "is-active" : ""} ${isLatest ? "is-latest is-fresh" : ""}`}
                   title={chipTitle(item, index)}
                   onClick={() => setPinnedId((current) => (current === item.id ? null : item.id))}
                 >
@@ -168,16 +247,23 @@ function RequestBlock({ request }: { request: LiveFeedRequest }) {
               );
             })}
           </div>
-          {selected ? <ItemDetail key={selected.id} item={selected} /> : null}
+          {selected ? <ItemDetail key={selected.id} item={selected} cursor={showCursor} /> : null}
         </>
       ) : (
-        <p className="lsv-items-pending">작업을 기다리는 중…</p>
+        <p className="lsv-items-pending">
+          작업을 기다리는 중
+          <span className="lsv-typing" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </p>
       )}
     </article>
   );
 }
 
-function ItemDetail({ item }: { item: LiveFeedItem }) {
+function ItemDetail({ item, cursor }: { item: LiveFeedItem; cursor: boolean }) {
   return (
     <div className={`lsv-detail is-${item.actor}`}>
       <span className="lsv-detail-actor">
@@ -185,15 +271,15 @@ function ItemDetail({ item }: { item: LiveFeedItem }) {
         {item.toolName ? <span className="lsv-detail-tool"> · {item.toolName}</span> : null}
         {item.repeatCount > 1 ? <span className="lsv-detail-repeat">{item.repeatCount}회 반복</span> : null}
       </span>
-      <p className="lsv-detail-text">{item.text}</p>
+      <p className="lsv-detail-text">
+        {item.text}
+        {cursor ? <span className="lsv-cursor" aria-hidden="true" /> : null}
+      </p>
       {item.fileTouches.length > 0 ? (
         <div className="lsv-touches">
-          {item.fileTouches.slice(0, 6).map((touch, index) => (
+          {item.fileTouches.map((touch, index) => (
             <TouchChip key={`${touch.path}-${index}`} touch={touch} />
           ))}
-          {item.fileTouches.length > 6 ? (
-            <span className="lsv-touch-more">+{item.fileTouches.length - 6}</span>
-          ) : null}
         </div>
       ) : null}
     </div>
@@ -222,8 +308,7 @@ function Diag({ label, value, tone }: { label: string; value: number; tone?: "go
 }
 
 function chipTitle(item: LiveFeedItem, index: number): string {
-  const label = actorLabel(item.actor);
-  const head = item.toolName ? `${label} · ${item.toolName}` : label;
+  const head = item.toolName ? `${actorLabel(item.actor)} · ${item.toolName}` : actorLabel(item.actor);
   return `${index + 1}. ${head}`;
 }
 
@@ -242,19 +327,32 @@ function actorLabel(actor: EventActor): string {
   }
 }
 
-function actorIcon(actor: EventActor) {
-  switch (actor) {
-    case "user":
-      return User;
-    case "assistant":
-      return Sparkles;
-    case "tool":
-      return Wrench;
-    case "file":
-      return FileText;
-    default:
-      return Sparkles;
+/** Distinct icons per tool so a wall of steps reads as a story, not identical wrenches. */
+const TOOL_ICONS: Record<string, LucideIcon> = {
+  read: BookOpen,
+  edit: PenLine,
+  write: PenLine,
+  multiedit: PenLine,
+  notebookedit: PenLine,
+  bash: Terminal,
+  powershell: Terminal,
+  grep: Search,
+  glob: Search,
+  task: Bot,
+  agent: Bot,
+  webfetch: Globe,
+  websearch: Globe,
+  todowrite: ListChecks,
+};
+
+function iconForItem(item: LiveFeedItem): LucideIcon {
+  if (item.actor === "assistant") return Sparkles;
+  if (item.actor === "user") return User;
+  if (item.actor === "tool") {
+    const key = (item.toolName ?? "").toLowerCase().replace(/[^a-z]/g, "");
+    return TOOL_ICONS[key] ?? Wrench;
   }
+  return Sparkles;
 }
 
 function basename(path: string): string {

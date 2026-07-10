@@ -143,31 +143,162 @@
 .lsv-feed {
   display: flex;
   flex-direction: column;
-  gap: var(--base-space-3);
+  gap: 10px;
   width: 100%;
 }
 
 .lsv-block {
-  padding: var(--base-space-4) var(--base-space-5);
+  padding: 14px 18px;
   background: var(--panel);
   border: 1px solid var(--card-border);
-  border-radius: 12px;
-  animation: lsv-pop 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 14px;
+  animation: lsv-block-in 0.36s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes lsv-pop {
+@keyframes lsv-block-in {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.99);
+    transform: translateY(-10px) scale(0.99);
   }
+}
+
+/* Working: the request being worked right now, alive at the top with a slow
+   breathing glow. */
+.lsv-block.is-working {
+  border-color: color-mix(in srgb, var(--purple) 42%, var(--card-border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--purple) 20%, transparent),
+    0 12px 32px -14px color-mix(in srgb, var(--purple) 45%, transparent);
+  animation:
+    lsv-block-in 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+    lsv-breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes lsv-breathe {
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--purple) 40%, transparent),
+      0 16px 40px -14px color-mix(in srgb, var(--purple) 60%, transparent);
+  }
+}
+
+.lsv-block.is-recent {
+  border-color: color-mix(in srgb, var(--purple) 18%, var(--card-border));
+}
+
+/* Done: folded to one quiet, clickable line so the past does not crowd the
+   present. */
+.lsv-block.is-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 16px;
+  text-align: left;
+  cursor: pointer;
+  background: var(--panel-soft);
+  animation: none;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.lsv-block.is-collapsed:hover {
+  border-color: color-mix(in srgb, var(--purple) 32%, var(--card-border));
+}
+
+.lsv-collapsed-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lsv-collapsed-meta {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lsv-collapsed-chevron {
+  flex: none;
+  color: var(--muted-2);
+  transform: rotate(-90deg);
 }
 
 .lsv-block-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+}
+
+.lsv-block-head .lsv-time {
+  margin-left: auto;
+}
+
+.lsv-working {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--purple);
+}
+
+.lsv-typing {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.lsv-typing i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: lsv-typing 1.2s ease-in-out infinite;
+}
+
+.lsv-typing i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.lsv-typing i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes lsv-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.lsv-fold {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--muted-2);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.lsv-fold:hover {
+  color: var(--text);
+  background: var(--panel-soft);
 }
 
 .lsv-session {
@@ -194,18 +325,23 @@
 }
 
 .lsv-request {
-  margin: 0 0 10px;
+  margin: 2px 0 12px;
   font-size: 14.5px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.5;
   color: var(--text);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  /* Full request, never truncated with an ellipsis; a very long paste scrolls
+     within a bounded height instead of being cut. */
+  max-height: 8.5em;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .lsv-items-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   margin: 0;
   font-size: 12.5px;
   color: var(--muted-2);
@@ -236,13 +372,43 @@
   /* Past steps recede so the eye lands on the live tip; the latest / selected /
      hovered step comes back to full strength. */
   opacity: 0.42;
-  animation: lsv-chip-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Every step floats in with a stagger (delay set per-chip in JS) so a new
+     step whooshes the whole row in one-by-one; `both` holds each chip hidden
+     until its turn. */
+  animation: lsv-cascade 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
   transition:
     transform 0.12s ease,
     border-color 0.15s ease,
     background 0.15s ease,
     box-shadow 0.2s ease,
     opacity 0.2s ease;
+}
+
+@keyframes lsv-cascade {
+  from {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.5);
+  }
+}
+
+/* The newest step lands last and spins in, so each new step is a small reward. */
+.lsv-chip.is-fresh {
+  animation: lsv-spin-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes lsv-spin-in {
+  from {
+    opacity: 0;
+    transform: rotate(-220deg) scale(0.2);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(12deg) scale(1.14);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .lsv-chip:hover {
@@ -278,13 +444,6 @@
   border-color: currentColor;
   background: color-mix(in srgb, currentColor 15%, var(--panel));
   box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 24%, transparent);
-}
-
-@keyframes lsv-chip-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.55);
-  }
 }
 
 .lsv-chip-x {
@@ -355,13 +514,33 @@
 
 .lsv-detail-text {
   margin: 5px 0 0;
-  max-height: 190px;
+  /* Full step text; a very long one scrolls within a bounded height rather than
+     being cut with an ellipsis. */
+  max-height: 340px;
   overflow-y: auto;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--text);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Streaming caret on the live step, so a working request reads as still typing. */
+.lsv-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--purple);
+  border-radius: 1px;
+  animation: lsv-blink 1s steps(2, start) infinite;
+}
+
+@keyframes lsv-blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .lsv-touches {
@@ -395,9 +574,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .lsv-block,
+  .lsv-block.is-working,
   .lsv-chip,
+  .lsv-chip.is-fresh,
   .lsv-detail,
+  .lsv-typing i,
+  .lsv-cursor,
   .lsv-dot.is-watching {
-    animation: none;
+    animation: none !important;
   }
 }
