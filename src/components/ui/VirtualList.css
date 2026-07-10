@@ -1,0 +1,25 @@
+/*
+ * VirtualList · a measured-height windowed scroll container. Only the base
+ * scroll + spacer mechanics live here; callers style the rows and the container
+ * height / max-height through the class they pass in.
+ */
+
+.vlist {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Spacers stand in for the rows outside the window so the scrollbar reflects the
+   full list height. They must never intercept pointer events or add their own box. */
+.vlist-spacer {
+  flex: none;
+  width: 100%;
+  pointer-events: none;
+}
+
+/* Each rendered row is measured by `offsetHeight`, so any inter-row spacing must
+   live inside the row box (padding / border), never as a collapsing margin the
+   measurement would miss. */
+.vlist-row {
+  width: 100%;
+}

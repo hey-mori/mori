@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Radio, RefreshCw } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { EmptyState } from "../../components/layout/EmptyState";
+import { VirtualList } from "../../components/ui/VirtualList";
 import {
   discoverClaudeCodeSessions,
   isClaudeBridgeAvailable,
@@ -203,11 +204,16 @@ export function LiveFollowLabView() {
                   <span className="lfl-column-title">{column.title}</span>
                   <span className="lfl-column-count">{column.events.length}</span>
                 </div>
-                <div className="lfl-column-body">
-                  {column.events.map((event) => (
-                    <WorkRow key={event.id} event={event} />
-                  ))}
-                </div>
+                <VirtualList
+                  className="lfl-column-body"
+                  items={column.events}
+                  estimateHeight={64}
+                  overscan={8}
+                  getKey={(event) => event.id}
+                  renderItem={(event) => <WorkRow event={event} />}
+                  ariaLabel={`${column.title} 작업`}
+                  stickToBottom={column.kind === "request"}
+                />
               </div>
             ))}
           </div>

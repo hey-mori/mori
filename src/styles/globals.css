@@ -11,6 +11,7 @@
 @import "../components/ui/base-objects.css";
 @import "../components/ui/layout-components.css";
 @import "../components/ui/Modal.css";
+@import "../components/ui/VirtualList.css";
 /* Feature sheets load here in one deterministic order. They share selectors
    (e.g. .event-card-title, .lane, .tabs are defined in several sheets), so the
    cascade winner is order-dependent — CLAUDE.md: "source order is load-bearing".

@@ -192,9 +192,21 @@ writes).
    (`styles/features/live-follow-lab.css`). Verified in browser mode (honest
    desktop-required empty state, no console errors); the live column build
    is verified against a real running session in the Tauri app.
-4. **Raw stream virtualization.** Windowed rendering for the lab's
-   column lists and the 원본 chronological list, ahead of live growth
-   making it urgent.
+4. ~~**Raw stream virtualization.**~~ Lab shipped; production list
+   deferred. Added a dependency-free measured-height virtual list: the pure
+   windowing math (`lib/virtual/virtualWindow.ts`, `computeVirtualRange` +
+   `buildOffsets`, eight tests covering fixed / variable heights, overscan
+   clamping, and spacer-sum invariance) and the `VirtualList` component
+   (`components/ui/VirtualList.tsx`: estimate-then-measure heights, overscan,
+   optional stick-to-bottom for live tails). Wired into the lab column
+   bodies, where one request can accumulate hundreds of rows during a long
+   session. Verified in a real browser via a throwaway probe: 1000 rows
+   rendered only ~22 near the viewport (correct slice indices, full scroll
+   height honored, window shifts on scroll). The 원본 (`TimelineChronoList`)
+   migration is intentionally **not** done here: its rows are variable-height
+   with inline expand-in-place and `scrollIntoView`-on-select, so a naive
+   fixed-window pass would degrade a shared production surface; it is a
+   separate careful slice on the same primitive.
 5. **Graduation.** Mount the same follow pipeline behind the session
    활동 tab's `FollowControl` for sessions whose spine is a discovered
    agent-store session; retire the lab from the default palette list.
@@ -217,14 +229,16 @@ real-data-verification working rule.
 
 ## 7. Status
 
-Slices 1 to 3 are shipped: the Rust delta read
+Slices 1 to 4 are shipped: the Rust delta read
 (`get_claude_code_session_delta`), the pure `agentStoreFollow` accumulator
-with full-read turn-boundary parity proven, and the palette-only lab view
-(foreground driver + request columns + fidelity panel), verified in
-browser mode. What remains is slice 4 (raw-stream virtualization ahead of
-large live sessions) and slice 5 (graduating the same pipeline into the
-session 활동 tab, then retiring the lab from the default palette list).
-Running the live column build against a real growing Claude session in the
-Tauri desktop app is the remaining real-data verification.
+with full-read turn-boundary parity proven, the palette-only lab view
+(foreground driver + request columns + fidelity panel), and the
+dependency-free measured-height `VirtualList` (pure core tested, real-DOM
+windowing verified) wired into the lab columns. What remains is the 원본
+production-list migration onto the same primitive, and slice 5
+(graduating the pipeline into the session 활동 tab, then retiring the lab
+from the default palette list). Running the live column build against a
+real growing Claude session in the Tauri desktop app is the remaining
+real-data verification.
 The external evidence base for the decisions here is recorded in
 [`../references/agent-session-viewer-landscape.md`](../references/agent-session-viewer-landscape.md).

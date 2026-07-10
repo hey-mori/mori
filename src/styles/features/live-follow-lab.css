@@ -275,12 +275,14 @@
 }
 
 .lfl-column-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   padding: 10px;
   max-height: 60vh;
-  overflow-y: auto;
+}
+
+/* Virtualized: inter-row spacing lives inside the row box (padding, counted by
+   offsetHeight), not as a flex gap the windowing math cannot measure. */
+.lfl-column-body .vlist-row {
+  padding-bottom: 6px;
 }
 
 /* ── work rows ──────────────────────────────────────────────────────────── */
