@@ -1,0 +1,356 @@
+/*
+ * Live Follow Lab · a palette-only dev screen that tails a running Claude Code
+ * session by delta read and lists the work under each request as horizontal
+ * columns, with a parse-fidelity panel. Developer-facing on purpose (byte
+ * offsets, parse counters); it retires once the pipeline graduates into the
+ * session 활동 tab. Calm and dense to match the rest of the app.
+ */
+
+.lfl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-space-4);
+  padding: var(--base-space-5) var(--base-space-6) var(--base-space-6);
+  min-height: 0;
+}
+
+/* ── header · session picker + follow control ───────────────────────────── */
+
+.lfl-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--base-space-4);
+  flex-wrap: wrap;
+}
+
+.lfl-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lfl-live-glyph {
+  color: var(--purple);
+}
+
+.lfl-head-note {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted-2);
+}
+
+.lfl-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lfl-picker {
+  max-width: 320px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
+.lfl-refresh {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.lfl-refresh:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.lfl-refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.lfl-refresh .is-spinning {
+  animation: lfl-spin 0.9s linear infinite;
+}
+
+@keyframes lfl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lfl-follow-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.lfl-follow-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.lfl-follow-btn.is-on {
+  color: #fff;
+  background: var(--purple);
+  border-color: var(--purple);
+}
+
+/* ── fidelity panel ─────────────────────────────────────────────────────── */
+
+.lfl-fidelity {
+  display: flex;
+  align-items: center;
+  gap: var(--base-space-5);
+  padding: var(--base-space-3) var(--base-space-4);
+  background: var(--panel-soft);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.lfl-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 56px;
+}
+
+.lfl-stat-value {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.lfl-stat.is-good .lfl-stat-value {
+  color: var(--green);
+}
+
+.lfl-stat.is-warn .lfl-stat-value {
+  color: var(--red);
+}
+
+.lfl-stat-suffix {
+  margin-left: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-2);
+}
+
+.lfl-stat-label {
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+.lfl-fidelity-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.lfl-cadence {
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lfl-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+
+.lfl-status-dot.is-following {
+  background: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent);
+}
+
+.lfl-status-dot.is-stopped {
+  background: var(--muted-2);
+}
+
+.lfl-status-dot.is-unavailable {
+  background: var(--red);
+}
+
+.lfl-error {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 24%, transparent);
+  border-radius: 8px;
+}
+
+/* ── request columns ────────────────────────────────────────────────────── */
+
+.lfl-columns {
+  display: flex;
+  gap: var(--base-space-3);
+  overflow-x: auto;
+  padding-bottom: var(--base-space-3);
+  align-items: flex-start;
+  min-height: 0;
+}
+
+.lfl-column {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 300px;
+  max-width: 300px;
+  background: var(--panel);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.lfl-column.is-orphan {
+  flex-basis: 240px;
+  max-width: 240px;
+  background: var(--panel-soft);
+}
+
+.lfl-column-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.lfl-column-index {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lfl-column.is-orphan .lfl-column-index {
+  color: var(--muted-2);
+  background: color-mix(in srgb, var(--muted-2) 14%, transparent);
+}
+
+.lfl-column-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lfl-column-count {
+  font-size: 11px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.lfl-column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* ── work rows ──────────────────────────────────────────────────────────── */
+
+.lfl-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 9px;
+  background: var(--panel-soft);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  border-left: 2px solid var(--muted-2);
+}
+
+.lfl-row.is-user {
+  border-left-color: var(--purple);
+}
+
+.lfl-row.is-assistant {
+  border-left-color: var(--blue);
+}
+
+.lfl-row.is-tool {
+  border-left-color: var(--cyan);
+}
+
+.lfl-row-actor {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+
+.lfl-row-title {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lfl-row-touches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 2px;
+}
+
+.lfl-touch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lfl-add {
+  color: var(--green);
+}
+
+.lfl-del {
+  color: var(--red);
+}
+
+.lfl-touch-more {
+  font-size: 11px;
+  color: var(--muted-2);
+}

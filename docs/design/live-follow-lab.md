@@ -179,10 +179,19 @@ writes).
    identical `buildRequestSpans` output). Remaining for slice 3: the desktop
    interval effect (a `useLiveFollow` sibling reading the delta) and the lab
    view, both best built and verified against a real running session.
-3. **Lab view.** New palette-only `ViewKey`; session picker defaulting
-   to the most recently modified discovered session; request columns;
-   fidelity panel. Feature CSS in its own sheet per the frontend
-   architecture rules.
+3. ~~**Lab view.**~~ Shipped. Palette-only `liveFollowLab` `ViewKey`
+   (`domain/types.ts`, routed in `App.tsx`, command in `commandPalette.ts`),
+   the foreground driver (`features/live-follow-lab/useAgentStoreFollow.ts`:
+   own local state, adaptive cadence, hidden-tab pause, error backoff,
+   auto-stop), the view (`LiveFollowLabView.tsx`: session picker
+   auto-selecting the most recent discovered session, request columns built
+   through the shared import path + `buildRequestSpans`, a leading orphan
+   column so nothing read is dropped, and a fidelity panel showing
+   raw / parsed / skipped / unparseable / offset / cadence), the pure
+   `buildLabColumns` (colocated test), and the feature CSS sheet
+   (`styles/features/live-follow-lab.css`). Verified in browser mode (honest
+   desktop-required empty state, no console errors); the live column build
+   is verified against a real running session in the Tauri app.
 4. **Raw stream virtualization.** Windowed rendering for the lab's
    column lists and the 원본 chronological list, ahead of live growth
    making it urgent.
@@ -208,11 +217,14 @@ real-data-verification working rule.
 
 ## 7. Status
 
-Slice 1 (Rust delta read) is shipped and tested
-(`get_claude_code_session_delta` in `src-tauri/src/claude/code.rs`).
-Slice 2's pure core is shipped and tested (the command binding plus the
-`agentStoreFollow` accumulator, with full-read turn-boundary parity
-proven). What remains is the desktop interval glue and the lab view
-(slice 3), best built and verified against a real running Claude session.
+Slices 1 to 3 are shipped: the Rust delta read
+(`get_claude_code_session_delta`), the pure `agentStoreFollow` accumulator
+with full-read turn-boundary parity proven, and the palette-only lab view
+(foreground driver + request columns + fidelity panel), verified in
+browser mode. What remains is slice 4 (raw-stream virtualization ahead of
+large live sessions) and slice 5 (graduating the same pipeline into the
+session 활동 tab, then retiring the lab from the default palette list).
+Running the live column build against a real growing Claude session in the
+Tauri desktop app is the remaining real-data verification.
 The external evidence base for the decisions here is recorded in
 [`../references/agent-session-viewer-landscape.md`](../references/agent-session-viewer-landscape.md).

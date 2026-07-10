@@ -26,6 +26,9 @@ export type ViewKey =
   | "project"
   /** Experimental work-graph overview, reached from the command palette. */
   | "graph"
+  /** Live Follow Lab, a palette-only dev screen that tails a running Claude
+   *  Code session by delta read and lists the work under each request. */
+  | "liveFollowLab"
   | "profile"
   | "login"
   | "security"

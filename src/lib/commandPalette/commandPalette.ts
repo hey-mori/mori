@@ -47,6 +47,7 @@ const NAVIGATE_COMMANDS: ReadonlyArray<{ id: string; label: string; view: ViewKe
   { id: "nav-home", label: "홈 열기", view: "home", keywords: ["dashboard", "검색", "명령"] },
   { id: "nav-continue", label: "이어가기 열기", view: "continue", keywords: ["continue", "이어가기", "검토", "resume", "최근 작업"] },
   { id: "nav-graph", label: "작업 그래프 열기", view: "graph", keywords: ["graph", "그래프", "맵", "map", "관계"] },
+  { id: "nav-live-follow-lab", label: "Live Follow Lab 열기", view: "liveFollowLab", keywords: ["live", "follow", "실시간", "따라가기", "lab", "델타", "delta", "tail"] },
   { id: "nav-session", label: "프로젝트", view: "workspace", keywords: ["projects", "sessions", "프로젝트", "세션", "워크스페이스"] },
   { id: "nav-memory", label: "메모리", view: "memory" },
   { id: "nav-ask", label: "Mori에게 묻기", view: "ask", keywords: ["ask", "질문", "질의", "묻기", "메모리 검색"] },
