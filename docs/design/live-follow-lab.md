@@ -122,12 +122,13 @@ reads; a followed file is consumed incrementally.
 ```
 Rust (src-tauri)                          Frontend
 ----------------                          --------
-get_agent_session_delta(                  FollowSource variant "agentStore":
-  path, byte_offset)                        keys new-event detection by
+get_claude_code_session_delta(            FollowSource variant "agentStore":
+  session_path, byte_offset)                keys new-event detection by
   -> { events: ClaudeCodeMessage[],         session path instead of
-       new_offset: u64,                     connector id
-       stats: { raw_lines,
-                parsed, skipped } }       Lab view model:
+       file_touches: ClaudeFileTouch[],     connector id
+       new_offset: u64,
+       stats: { raw_lines, parsed,        Lab view model:
+                skipped, unparseable } }
                                             RequestColumn[] built by
 Guards: same path-traversal +               buildRequestSpans over the
 allowed-root checks as the                  accumulated live events;
@@ -148,11 +149,21 @@ writes).
 
 ## 5. Implementation slices (smallest first)
 
-1. **Rust delta read.** `get_agent_session_delta` with offset
-   tracking, partial-trailing-line safety, parse stats, and the same
-   path guards as the existing readers. Colocated Rust tests
-   (append-mid-poll, truncated line, offset-past-EOF, oversized
-   growth).
+1. ~~**Rust delta read.**~~ Shipped. `get_claude_code_session_delta`
+   (`src-tauri/src/claude/code.rs`): offset tracking, partial-trailing-line
+   safety (consumes only through the last newline, so `new_offset` never
+   lands mid-line and a torn UTF-8 tail is never decoded), `ClaudeDeltaStats`
+   (`raw_lines` / `parsed` / `skipped` / `unparseable`, with the
+   `raw_lines == parsed + skipped + unparseable` invariant), and the same
+   canonical-root + JSONL path guards as the existing readers. The byte-tailing
+   plumbing (`tail_new_complete_lines`) is agent-generic; only
+   `parse_jsonl_delta` is Claude-specific, and it reuses the same per-line
+   helpers as the full-read `parse_jsonl` so turn classification cannot drift.
+   Reading the delta sidesteps the whole-file `MAX_FILE_BYTES` cap. Eight
+   colocated Rust tests cover append-mid-poll, incomplete-trailing-line
+   (Korean / multi-byte), offset-at/past-EOF, stats accounting, full-read
+   parity, path rejection, and in-delta patch correlation. Command registered
+   in `main.rs`.
 2. **Frontend tail adapter.** The `agentStore` follow-source variant
    plus a read adapter calling the delta command; wire into the
    existing `followController` / `followCadence` / `useLiveFollow`
@@ -187,7 +198,12 @@ real-data-verification working rule.
 
 ## 7. Status
 
-Designed, not implemented. Slice 1 (Rust delta read) is the approved
-next milestone. The external evidence base for the decisions here is
-recorded in
+Slice 1 (Rust delta read) is shipped and tested
+(`get_claude_code_session_delta` in `src-tauri/src/claude/code.rs`).
+Slice 2 (the frontend `agentStore` follow-source variant + tail adapter
+wired into the existing `followController` / `followCadence` loop) is the
+next step; it needs the TypeScript command binding
+(`tauriCommands.ts` / `claudeTauri.ts`) and is best verified against a
+real running Claude session. The external evidence base for the
+decisions here is recorded in
 [`../references/agent-session-viewer-landscape.md`](../references/agent-session-viewer-landscape.md).

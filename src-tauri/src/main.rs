@@ -66,6 +66,7 @@ fn main() {
             claude::desktop::get_claude_desktop_conversation,
             claude::code::discover_claude_code_sessions,
             claude::code::get_claude_code_session,
+            claude::code::get_claude_code_session_delta,
             files::resolve_file_locations,
             files::reveal_path_in_os,
             llm_http::llm_http_request,

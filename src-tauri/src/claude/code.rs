@@ -133,6 +133,36 @@ pub struct ClaudeCodeMessage {
     pub subkind: String,
 }
 
+/// Line accounting for a delta read, so a live-follow surface can show parse
+/// fidelity (raw lines seen vs events produced) and spot silent drops. The
+/// invariant `raw_lines == parsed + skipped + unparseable` always holds.
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaudeDeltaStats {
+    /// Non-empty JSONL records in this delta.
+    pub raw_lines: usize,
+    /// Records that became a `ClaudeCodeMessage` event.
+    pub parsed: usize,
+    /// Valid JSON that was not a human/assistant message with content
+    /// (summary lines, token-only streaming chunks, system envelopes).
+    pub skipped: usize,
+    /// Records that did not parse as JSON at all.
+    pub unparseable: usize,
+}
+
+/// The result of reading a growing session's new complete lines since a byte
+/// offset. `new_offset` is where the next poll should resume; it never lands
+/// mid-line (a trailing in-progress write is left unconsumed).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaudeCodeSessionDelta {
+    pub file_path: String,
+    pub new_offset: u64,
+    pub events: Vec<ClaudeCodeMessage>,
+    pub file_touches: Vec<ClaudeFileTouch>,
+    pub stats: ClaudeDeltaStats,
+}
+
 #[tauri::command]
 pub fn discover_claude_code_sessions() -> Result<Vec<ClaudeCodeSessionMeta>, String> {
     let root = claude_code_projects_dir()?;
@@ -150,6 +180,26 @@ pub fn get_claude_code_session(session_path: String) -> Result<ClaudeCodeSession
     }
     let root = claude_code_projects_dir()?;
     read_session_at(&root, trimmed)
+}
+
+/// Read only the complete lines a session's JSONL gained since `byte_offset`,
+/// returning the new events plus the offset to resume from. This is the tail
+/// path Live Follow polls: because it consumes only the delta it sidesteps the
+/// whole-file `MAX_FILE_BYTES` cap that `get_claude_code_session` enforces, so a
+/// long-running session can be followed as it grows. Reading the delta is
+/// agent-generic plumbing (`tail_new_complete_lines`); only the line parser is
+/// Claude-specific, so a Codex / OpenCode tail reuses the same offset math.
+#[tauri::command]
+pub fn get_claude_code_session_delta(
+    session_path: String,
+    byte_offset: u64,
+) -> Result<ClaudeCodeSessionDelta, String> {
+    let trimmed = session_path.trim();
+    if trimmed.is_empty() {
+        return Err("sessionPath is required.".to_string());
+    }
+    let root = claude_code_projects_dir()?;
+    read_session_delta_at(&root, trimmed, byte_offset)
 }
 
 // ─── helpers ───────────────────────────────────────────────────────────────
@@ -331,6 +381,137 @@ pub(crate) fn read_session_at(
         file_touches: parsed.file_touches,
         messages: parsed.messages,
     })
+}
+
+pub(crate) fn read_session_delta_at(
+    root: &Path,
+    session_path: &str,
+    offset: u64,
+) -> Result<ClaudeCodeSessionDelta, String> {
+    let requested = PathBuf::from(session_path);
+    let canonical_root = fs::canonicalize(root)
+        .map_err(|error| format!("Failed to resolve {}: {error}", root.display()))?;
+    let canonical = fs::canonicalize(&requested)
+        .map_err(|error| format!("Failed to resolve {}: {error}", requested.display()))?;
+    if !canonical.starts_with(&canonical_root) {
+        return Err("Refused: session path is outside the Claude Code projects directory.".to_string());
+    }
+    if !is_jsonl(&canonical) {
+        return Err("Refused: file is not a Claude Code JSONL session.".to_string());
+    }
+
+    let (text, new_offset) = tail_new_complete_lines(&canonical, offset)?;
+    let (events, file_touches, stats) = parse_jsonl_delta(&text);
+    Ok(ClaudeCodeSessionDelta {
+        file_path: canonical.to_string_lossy().to_string(),
+        new_offset,
+        events,
+        file_touches,
+        stats,
+    })
+}
+
+/// Agent-generic tail: read only the complete lines a growing file gained since
+/// `offset`, and report where the next read should resume. Partial-line safe:
+/// bytes after the last newline are treated as an in-progress write and left
+/// unconsumed, so `new_offset` never lands mid-line and a torn multi-byte UTF-8
+/// sequence at the tail is never decoded (a `\n` byte never falls inside a
+/// UTF-8 sequence, so the consumed slice is always on a line boundary).
+fn tail_new_complete_lines(path: &Path, offset: u64) -> Result<(String, u64), String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let metadata = fs::metadata(path)
+        .map_err(|error| format!("Failed to stat {}: {error}", path.display()))?;
+    let len = metadata.len();
+    // Caught up (offset == len), or the file was truncated / rotated below our
+    // offset: nothing new to read. Rotation recovery (re-reading a shrunk file
+    // from its new start) is a later slice; we never read backwards here.
+    if offset >= len {
+        return Ok((String::new(), offset));
+    }
+    let mut file = fs::File::open(path)
+        .map_err(|error| format!("Failed to open {}: {error}", path.display()))?;
+    file.seek(SeekFrom::Start(offset))
+        .map_err(|error| format!("Failed to seek {}: {error}", path.display()))?;
+    let mut buffer = Vec::with_capacity((len - offset) as usize);
+    file.read_to_end(&mut buffer)
+        .map_err(|error| format!("Failed to read {}: {error}", path.display()))?;
+    // Consume only through the last newline; anything after it is an incomplete
+    // trailing line still being written by the agent.
+    let Some(end) = buffer.iter().rposition(|&byte| byte == b'\n') else {
+        // No complete line yet in this delta, leave the offset untouched.
+        return Ok((String::new(), offset));
+    };
+    let consumed = &buffer[..=end];
+    let new_offset = offset + consumed.len() as u64;
+    Ok((String::from_utf8_lossy(consumed).into_owned(), new_offset))
+}
+
+/// Parse a delta's worth of JSONL text into events + file touches + line stats.
+/// Reuses the same per-line helpers as `parse_jsonl` (so turn classification
+/// matches the full-read import path exactly) but skips the session-level
+/// concerns (title / cwd / summary / token totals) a tail does not need. Patch
+/// correlation is best-effort within the delta: a `tool_use` whose result lands
+/// in a later poll keeps the honest `0 / 0` line counts until then.
+fn parse_jsonl_delta(
+    text: &str,
+) -> (Vec<ClaudeCodeMessage>, Vec<ClaudeFileTouch>, ClaudeDeltaStats) {
+    let mut messages: Vec<ClaudeCodeMessage> = Vec::new();
+    let mut file_touches: Vec<ClaudeFileTouch> = Vec::new();
+    let mut touch_ids: Vec<Option<String>> = Vec::new();
+    let mut patches: std::collections::HashMap<String, (u32, u32, String)> =
+        std::collections::HashMap::new();
+    let mut stats = ClaudeDeltaStats::default();
+    for (index, line) in text.lines().enumerate() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        stats.raw_lines += 1;
+        let Ok(value) = serde_json::from_str::<Value>(trimmed) else {
+            stats.unparseable += 1;
+            continue;
+        };
+        collect_file_touches(&value, &mut file_touches, &mut touch_ids);
+        if let Some((id, counts)) = tool_result_patch(&value) {
+            patches.insert(id, counts);
+        }
+        let role = detect_role(&value);
+        if role != "human" && role != "assistant" {
+            stats.skipped += 1;
+            continue;
+        }
+        let content = extract_content(&value);
+        if content.trim().is_empty() {
+            stats.skipped += 1;
+            continue;
+        }
+        let id = value
+            .get("uuid")
+            .or_else(|| value.get("id"))
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("line-{index}"));
+        let created_at = extract_timestamp(&value).unwrap_or_default();
+        let subkind = classify_subkind(&role, &content);
+        messages.push(ClaudeCodeMessage {
+            id,
+            role,
+            content,
+            created_at,
+            subkind,
+        });
+        stats.parsed += 1;
+    }
+    for (index, id) in touch_ids.iter().enumerate() {
+        if let Some(id) = id {
+            if let Some((additions, deletions, preview)) = patches.get(id) {
+                file_touches[index].additions = *additions;
+                file_touches[index].deletions = *deletions;
+                file_touches[index].diff_preview = preview.clone();
+            }
+        }
+    }
+    (messages, file_touches, stats)
 }
 
 #[derive(Default)]
@@ -1666,5 +1847,196 @@ mod tests {
         let body = &detail.messages[0].content;
         assert!(body.contains("file1.rs"), "got: {body}");
         assert!(body.starts_with("↳ 도구 결과"), "got: {body}");
+    }
+
+    // ─── delta read ─────────────────────────────────────────────────────────
+
+    fn append(path: &Path, body: &str) {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new().append(true).open(path).unwrap();
+        file.write_all(body.as_bytes()).unwrap();
+    }
+
+    #[test]
+    fn delta_reads_only_lines_gained_since_the_offset() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori-delta");
+        let path = write_session(
+            &project,
+            "session-delta.jsonl",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"first\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"reply\"}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n",
+        );
+
+        // First read from the start sees both lines and reports EOF as the resume point.
+        let first = read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), 0).unwrap();
+        assert_eq!(first.events.len(), 2);
+        assert_eq!(first.events[0].content, "first");
+        let file_len = std::fs::metadata(&path).unwrap().len();
+        assert_eq!(first.new_offset, file_len);
+
+        // Nothing new yet: reading again from the same offset is empty.
+        let caught_up =
+            read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), first.new_offset)
+                .unwrap();
+        assert!(caught_up.events.is_empty());
+        assert_eq!(caught_up.new_offset, first.new_offset);
+
+        // Append a third line; the delta returns only that line.
+        append(
+            &path,
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"third\"},\"timestamp\":\"2026-01-01T00:00:02Z\"}\n",
+        );
+        let next =
+            read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), first.new_offset)
+                .unwrap();
+        assert_eq!(next.events.len(), 1);
+        assert_eq!(next.events[0].content, "third");
+        assert_eq!(next.new_offset, std::fs::metadata(&path).unwrap().len());
+    }
+
+    #[test]
+    fn delta_leaves_an_incomplete_trailing_line_unconsumed() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori-partial");
+        // A complete Korean line, then a partial line with no trailing newline —
+        // exactly what a mid-write poll sees. The partial line also carries a
+        // multi-byte char, so this guards the UTF-8 boundary too.
+        let path = write_session(
+            &project,
+            "session-partial.jsonl",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"한국어 요청\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"다음 줄",
+        );
+
+        let first = read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), 0).unwrap();
+        // Only the complete line becomes an event; the offset stops before the
+        // partial line, not at EOF.
+        assert_eq!(first.events.len(), 1);
+        assert_eq!(first.events[0].content, "한국어 요청");
+        let file_len = std::fs::metadata(&path).unwrap().len();
+        assert!(first.new_offset < file_len, "offset stopped before the partial tail");
+
+        // The writer finishes the line. Reading from the saved offset now yields
+        // the completed line and no duplicate of the first.
+        append(&path, "\"}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n");
+        let next =
+            read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), first.new_offset)
+                .unwrap();
+        assert_eq!(next.events.len(), 1);
+        assert!(next.events[0].content.contains("다음 줄"), "got: {}", next.events[0].content);
+        assert_eq!(next.new_offset, std::fs::metadata(&path).unwrap().len());
+    }
+
+    #[test]
+    fn delta_offset_at_or_past_eof_returns_empty() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori-eof");
+        let path = write_session(
+            &project,
+            "session-eof.jsonl",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"only\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n",
+        );
+        let len = std::fs::metadata(&path).unwrap().len();
+
+        let at_eof = read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), len).unwrap();
+        assert!(at_eof.events.is_empty());
+        assert_eq!(at_eof.new_offset, len);
+
+        // An offset past EOF (a truncated / rotated file) is not an error; it
+        // reports nothing new and leaves the offset where it was.
+        let past = read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), len + 999).unwrap();
+        assert!(past.events.is_empty());
+        assert_eq!(past.new_offset, len + 999);
+    }
+
+    #[test]
+    fn delta_stats_account_for_every_raw_line() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori-stats");
+        // One real user message (parsed), one summary line (valid JSON, non-event
+        // -> skipped), one broken line (unparseable), one thinking-only assistant
+        // (valid JSON, renders to empty content -> skipped).
+        let path = write_session(
+            &project,
+            "session-stats.jsonl",
+            "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"go\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"summary\",\"summary\":\"A title\",\"leafUuid\":\"x\"}\n\
+             {not valid json\n\
+             {\"type\":\"assistant\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"internal\"}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n",
+        );
+
+        let delta = read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), 0).unwrap();
+        assert_eq!(delta.stats.raw_lines, 4);
+        assert_eq!(delta.stats.parsed, 1);
+        assert_eq!(delta.stats.skipped, 2);
+        assert_eq!(delta.stats.unparseable, 1);
+        // The invariant the fidelity panel relies on.
+        assert_eq!(
+            delta.stats.raw_lines,
+            delta.stats.parsed + delta.stats.skipped + delta.stats.unparseable
+        );
+        assert_eq!(delta.events.len(), 1);
+    }
+
+    #[test]
+    fn delta_turn_classification_matches_the_full_read_path() {
+        // The spec's first expected bug: the delta path and the import (full
+        // read) path disagreeing on how a line classifies. Same body through
+        // both must yield the same events (id / role / subkind / content).
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori-parity");
+        let body = "{\"type\":\"user\",\"uuid\":\"u1\",\"message\":{\"role\":\"user\",\"content\":\"RAG 고쳐줘\"},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"assistant\",\"uuid\":\"a1\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls\"}}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n\
+             {\"type\":\"user\",\"uuid\":\"u2\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"t\",\"content\":\"ok\"}]},\"timestamp\":\"2026-01-01T00:00:02Z\"}\n";
+        let path = write_session(&project, "session-parity.jsonl", body);
+
+        let full = read_session_at(temp.path(), path.to_string_lossy().as_ref()).unwrap();
+        let delta = read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), 0).unwrap();
+
+        assert_eq!(delta.events.len(), full.messages.len());
+        for (d, f) in delta.events.iter().zip(full.messages.iter()) {
+            assert_eq!(d.id, f.id, "id drift");
+            assert_eq!(d.role, f.role, "role drift");
+            assert_eq!(d.subkind, f.subkind, "subkind drift");
+            assert_eq!(d.content, f.content, "content drift");
+        }
+    }
+
+    #[test]
+    fn delta_rejects_paths_outside_root_and_non_jsonl() {
+        let temp = TempDir::new().unwrap();
+        let outside = temp.path().join("escape.jsonl");
+        std::fs::write(&outside, "{}\n").unwrap();
+        let root = temp.path().join("scope");
+        std::fs::create_dir_all(&root).unwrap();
+        let err = read_session_delta_at(&root, outside.to_string_lossy().as_ref(), 0).unwrap_err();
+        assert!(err.contains("outside"), "error: {err}");
+
+        let not_jsonl = temp.path().join("notes.txt");
+        std::fs::write(&not_jsonl, "hi").unwrap();
+        let err = read_session_delta_at(temp.path(), not_jsonl.to_string_lossy().as_ref(), 0).unwrap_err();
+        assert!(err.contains("JSONL"), "error: {err}");
+    }
+
+    #[test]
+    fn delta_correlates_a_patch_within_the_same_read() {
+        let temp = TempDir::new().unwrap();
+        let project = temp.path().join("-tmp-mori-delta-patch");
+        let path = write_session(
+            &project,
+            "session-delta-patch.jsonl",
+            "{\"type\":\"assistant\",\"uuid\":\"a1\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"tu_1\",\"name\":\"Edit\",\"input\":{\"file_path\":\"/repo/a.ts\"}}]},\"timestamp\":\"2026-01-01T00:00:00Z\"}\n\
+             {\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"tu_1\"}]},\"toolUseResult\":{\"structuredPatch\":[{\"lines\":[\"-old\",\"+new\"]}]},\"timestamp\":\"2026-01-01T00:00:01Z\"}\n",
+        );
+
+        let delta = read_session_delta_at(temp.path(), path.to_string_lossy().as_ref(), 0).unwrap();
+        let touch = delta
+            .file_touches
+            .iter()
+            .find(|t| t.path == "/repo/a.ts")
+            .expect("touch recorded");
+        assert_eq!(touch.additions, 1);
+        assert_eq!(touch.deletions, 1);
     }
 }
