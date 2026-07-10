@@ -11,6 +11,7 @@
 import { isTauriRuntime } from "../desktop/environment";
 import { invokeTauriCommand } from "../desktop/tauriCommands";
 import type {
+  ClaudeCodeSessionDelta,
   ClaudeCodeSessionDetail,
   ClaudeCodeSessionMeta,
   ClaudeConversationDetail,
@@ -78,6 +79,33 @@ export async function getClaudeCodeSession(
     throw new ClaudeBridgeUnavailableError();
   }
   return invokeTauriCommand("get_claude_code_session", { sessionPath: trimmed });
+}
+
+/**
+ * Read only the complete lines a session's JSONL gained since `byteOffset`,
+ * returning the new events plus the offset to resume from. This is the tail
+ * Live Follow polls: passing back the previous call's `newOffset` yields the
+ * next delta, and because it consumes only the delta it sidesteps the
+ * whole-file size cap that {@link getClaudeCodeSession} enforces. Start a fresh
+ * follow at offset 0 to read the whole session, or at the session's current
+ * size to follow only what arrives next.
+ */
+export async function getClaudeCodeSessionDelta(
+  sessionPath: string,
+  byteOffset: number,
+): Promise<ClaudeCodeSessionDelta> {
+  const trimmed = sessionPath.trim();
+  if (!trimmed) {
+    throw new Error("sessionPath is required.");
+  }
+  const offset = Number.isFinite(byteOffset) && byteOffset > 0 ? Math.floor(byteOffset) : 0;
+  if (!isClaudeBridgeAvailable()) {
+    throw new ClaudeBridgeUnavailableError();
+  }
+  return invokeTauriCommand("get_claude_code_session_delta", {
+    sessionPath: trimmed,
+    byteOffset: offset,
+  });
 }
 
 // ─── Pure formatting helpers (tested independently) ────────────────────────

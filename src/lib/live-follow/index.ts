@@ -21,3 +21,14 @@ export {
   type FollowPollDeps,
   type FollowPollOutcome,
 } from "./followDriver";
+export {
+  appendDelta,
+  buildFollowSubject,
+  initialAgentStoreFollowState,
+  runAgentStoreFollowPoll,
+  type AgentStoreFollowState,
+  type AgentStoreFollowStats,
+  type AgentStoreFollowPollDeps,
+  type AgentStoreFollowPollOutcome,
+  type AppendDeltaResult,
+} from "./agentStoreFollow";

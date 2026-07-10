@@ -27,6 +27,7 @@ import type {
   SqliteSessionImportWriteResult,
 } from "../sqlite/sessionImportRows";
 import type {
+  ClaudeCodeSessionDelta,
   ClaudeCodeSessionDetail,
   ClaudeCodeSessionMeta,
   ClaudeConversationDetail,
@@ -98,6 +99,7 @@ export type TauriCommandName =
   | "get_claude_desktop_conversation"
   | "discover_claude_code_sessions"
   | "get_claude_code_session"
+  | "get_claude_code_session_delta"
   | "resolve_file_locations"
   | "reveal_path_in_os"
   | "llm_http_request"
@@ -277,6 +279,10 @@ export type TauriCommandMap = {
   get_claude_code_session: {
     input: { sessionPath: string };
     output: ClaudeCodeSessionDetail;
+  };
+  get_claude_code_session_delta: {
+    input: { sessionPath: string; byteOffset: number };
+    output: ClaudeCodeSessionDelta;
   };
   resolve_file_locations: {
     input: { paths: string[]; searchRoot?: string };

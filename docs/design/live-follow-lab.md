@@ -164,11 +164,21 @@ writes).
    (Korean / multi-byte), offset-at/past-EOF, stats accounting, full-read
    parity, path rejection, and in-delta patch correlation. Command registered
    in `main.rs`.
-2. **Frontend tail adapter.** The `agentStore` follow-source variant
-   plus a read adapter calling the delta command; wire into the
-   existing `followController` / `followCadence` / `useLiveFollow`
-   loop. Pure-helper tests for new-event detection and turn-boundary
-   agreement with `claudeImport`.
+2. ~~**Frontend tail adapter.**~~ Pure core shipped. The TypeScript
+   command binding (`getClaudeCodeSessionDelta` in `claudeTauri.ts`, typed
+   in `tauriCommands.ts` + `claude/types.ts`) and the pure agent-store
+   accumulator (`lib/live-follow/agentStoreFollow.ts`): `appendDelta`
+   (offset-monotonic fold, id-deduped events, composite-key-deduped touches,
+   summed stats), `buildFollowSubject` (projects the tail into the exact
+   `ClaudeCodeSessionDetail` the one-shot import consumes, so
+   `openedByUser` / `turnId` match), and `runAgentStoreFollowPoll`
+   (deps-injected read, append, react, reusing the generic
+   `followController` / `followCadence`). Six colocated tests cover
+   new-event detection, re-read dedup, offset monotonicity, and turn-boundary
+   parity with the full-read import path (asserting identical events AND
+   identical `buildRequestSpans` output). Remaining for slice 3: the desktop
+   interval effect (a `useLiveFollow` sibling reading the delta) and the lab
+   view, both best built and verified against a real running session.
 3. **Lab view.** New palette-only `ViewKey`; session picker defaulting
    to the most recently modified discovered session; request columns;
    fidelity panel. Feature CSS in its own sheet per the frontend
@@ -200,10 +210,9 @@ real-data-verification working rule.
 
 Slice 1 (Rust delta read) is shipped and tested
 (`get_claude_code_session_delta` in `src-tauri/src/claude/code.rs`).
-Slice 2 (the frontend `agentStore` follow-source variant + tail adapter
-wired into the existing `followController` / `followCadence` loop) is the
-next step; it needs the TypeScript command binding
-(`tauriCommands.ts` / `claudeTauri.ts`) and is best verified against a
-real running Claude session. The external evidence base for the
-decisions here is recorded in
+Slice 2's pure core is shipped and tested (the command binding plus the
+`agentStoreFollow` accumulator, with full-read turn-boundary parity
+proven). What remains is the desktop interval glue and the lab view
+(slice 3), best built and verified against a real running Claude session.
+The external evidence base for the decisions here is recorded in
 [`../references/agent-session-viewer-landscape.md`](../references/agent-session-viewer-landscape.md).

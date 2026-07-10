@@ -150,3 +150,41 @@ export type ClaudeCodeSessionDetail = ClaudeCodeSessionMeta & {
    */
   fileTouches?: ClaudeFileTouch[];
 };
+
+/**
+ * Line accounting for a delta read. Mirrors the Rust `ClaudeDeltaStats`.
+ * The invariant `rawLines === parsed + skipped + unparseable` always holds,
+ * so a live-follow fidelity surface can show how many raw JSONL records became
+ * events vs were dropped, and spot a silent parse regression.
+ */
+export type ClaudeDeltaStats = {
+  /** Non-empty JSONL records in this delta. */
+  rawLines: number;
+  /** Records that became a message event. */
+  parsed: number;
+  /** Valid JSON that was not a human/assistant message with content. */
+  skipped: number;
+  /** Records that did not parse as JSON at all. */
+  unparseable: number;
+};
+
+export const EMPTY_CLAUDE_DELTA_STATS: ClaudeDeltaStats = {
+  rawLines: 0,
+  parsed: 0,
+  skipped: 0,
+  unparseable: 0,
+};
+
+/**
+ * The result of tailing a growing session file since a byte offset. Mirrors the
+ * Rust `ClaudeCodeSessionDelta`. `newOffset` is where the next poll resumes; it
+ * never lands mid-line (an in-progress trailing write is left unconsumed), so
+ * feeding `newOffset` back on the next call never re-reads or splits a line.
+ */
+export type ClaudeCodeSessionDelta = {
+  filePath: string;
+  newOffset: number;
+  events: ClaudeMessage[];
+  fileTouches: ClaudeFileTouch[];
+  stats: ClaudeDeltaStats;
+};
