@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   BookOpen,
   Bot,
@@ -33,6 +33,40 @@ import { useLiveSessions } from "./useLiveSessions";
 /** A finished request folds into the past-work disclosure once it has been quiet
  *  this long, so the live feed stays about the present. */
 const PAST_AFTER_MS = 30 * 60 * 1000;
+
+/** Calm, non-status hues so each project reads as its own colour and several
+ *  concurrent sessions are scannable at a glance (green / red stay for status). */
+const BADGE_HUES = [265, 222, 194, 158, 42, 24, 330, 288];
+
+function sessionHue(label: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < label.length; i += 1) {
+    hash ^= label.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return BADGE_HUES[(hash >>> 0) % BADGE_HUES.length];
+}
+
+/** How long a working request has been running, as calm Korean relative text
+ *  ("3분째"). Kept coarse: seconds under a minute, then whole minutes. */
+function formatElapsed(startedAt: string): string | null {
+  const started = Date.parse(startedAt);
+  if (!Number.isFinite(started)) return null;
+  const seconds = Math.floor((Date.now() - started) / 1000);
+  if (seconds < 5) return null;
+  if (seconds < 60) return `${seconds}초째`;
+  return `${Math.floor(seconds / 60)}분째`;
+}
+
+/** A project badge, coloured per project so concurrent sessions stay scannable. */
+function SessionBadge({ label, sessionKey }: { label: string; sessionKey: string }) {
+  const style = { "--session-color": `hsl(${sessionHue(label)} 46% 56%)` } as CSSProperties;
+  return (
+    <span className="lsv-session" title={sessionKey} style={style}>
+      {label}
+    </span>
+  );
+}
 
 /**
  * 라이브 세션: a mission-control view that tails every currently-active Claude
@@ -290,16 +324,22 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
   const selected = (pinnedId ? items.find((item) => item.id === pinnedId) : undefined) ?? latest;
   const showCursor = request.status === "working" && selected?.id === latest?.id;
 
+  // A tool error somewhere in this request is worth a quiet flag in the header,
+  // so a run that hit a failure reads differently from a clean one at a glance.
+  const hasError = items.some((item) => item.text.startsWith("↳ 도구 오류"));
+
   return (
     <article className={`lsv-block is-${request.status} ${expanded ? "is-open" : "is-collapsed"}`}>
       {finished ? <span className="lsv-sweep" aria-hidden="true" /> : null}
       <header className="lsv-block-head">
-        <span className="lsv-session" title={request.sessionKey}>
-          {request.sessionLabel}
-        </span>
+        <SessionBadge label={request.sessionLabel} sessionKey={request.sessionKey} />
+        {hasError ? <span className="lsv-error-dot" title="도구 오류 발생" aria-hidden="true" /> : null}
         {request.status === "working" ? (
           <span className="lsv-working">
             작업 중
+            {formatElapsed(request.startedAt) ? (
+              <span className="lsv-elapsed">{formatElapsed(request.startedAt)}</span>
+            ) : null}
             <span className="lsv-typing" aria-hidden="true">
               <i />
               <i />
@@ -390,9 +430,7 @@ function PastSection({ requests }: { requests: LiveFeedRequest[] }) {
         <div className="lsv-past-list">
           {requests.map((request) => (
             <div key={request.id} className="lsv-past-row" title={request.requestTitle}>
-              <span className="lsv-session" title={request.sessionKey}>
-                {request.sessionLabel}
-              </span>
+              <SessionBadge label={request.sessionLabel} sessionKey={request.sessionKey} />
               <span className="lsv-past-title">{request.requestTitle}</span>
               <span className="lsv-past-meta">
                 {request.items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
@@ -413,7 +451,7 @@ function ItemDetail({ item, cursor }: { item: LiveFeedItem; cursor: boolean }) {
         {item.toolName ? <span className="lsv-detail-tool"> · {item.toolName}</span> : null}
         {item.repeatCount > 1 ? <span className="lsv-detail-repeat">{item.repeatCount}회 반복</span> : null}
       </span>
-      <p className="lsv-detail-text base-scroll">
+      <p className={`lsv-detail-text base-scroll${item.toolName ? " is-mono" : ""}`}>
         {item.text}
         {cursor ? <span className="lsv-cursor" aria-hidden="true" /> : null}
       </p>

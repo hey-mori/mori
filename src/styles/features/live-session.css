@@ -415,6 +415,22 @@
   color: var(--purple);
 }
 
+.lsv-elapsed {
+  font-weight: 500;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A quiet flag that a tool failed somewhere in this request. Semantic danger
+   colour, small, so it reads as a status without shouting. */
+.lsv-error-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--base-status-danger, var(--red));
+}
+
 .lsv-typing {
   display: inline-flex;
   gap: 3px;
@@ -483,8 +499,8 @@
   padding: 2px 9px;
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--purple);
-  background: color-mix(in srgb, var(--purple) 10%, transparent);
+  color: var(--session-color, var(--purple));
+  background: color-mix(in srgb, var(--session-color, var(--purple)) 12%, transparent);
   border-radius: 999px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -680,6 +696,15 @@
   color: var(--text);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Tool / terminal output reads as machine output: monospace, a touch smaller and
+   dimmer so it sits behind the prose steps rather than competing with them. */
+.lsv-detail-text.is-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 
 /* Streaming caret on the live step, so a working request reads as still typing. */
