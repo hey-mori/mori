@@ -29,6 +29,13 @@ import type {
 } from "../claude/types";
 import type { FollowReaction } from "./followController";
 
+/** Keep only the most recent N messages / touches per followed session. A live
+ *  dashboard is left open for hours, so unbounded accumulation would grow memory
+ *  and make every poll's dedup and feed rebuild slower over time. This is far
+ *  more than the recent requests a surface shows, and the byte offset (not this
+ *  list) is what resumes the tail, so trimming old entries is safe. */
+const MAX_ACCUMULATED = 4000;
+
 export type AgentStoreFollowStats = {
   rawLines: number;
   parsed: number;
@@ -93,15 +100,21 @@ export function appendDelta(
     freshTouches.push(touch);
   }
 
+  const nextMessages =
+    freshMessages.length > 0 ? [...state.messages, ...freshMessages] : state.messages;
+  const nextTouches =
+    freshTouches.length > 0 ? [...state.fileTouches, ...freshTouches] : state.fileTouches;
+
   return {
     state: {
       // The delta read is monotonic; never move the offset backwards even if a
       // stale delta reports a smaller `newOffset`.
       offset: Math.max(state.offset, delta.newOffset),
+      // Trim to the most recent window so a long-lived dashboard stays bounded.
       messages:
-        freshMessages.length > 0 ? [...state.messages, ...freshMessages] : state.messages,
+        nextMessages.length > MAX_ACCUMULATED ? nextMessages.slice(-MAX_ACCUMULATED) : nextMessages,
       fileTouches:
-        freshTouches.length > 0 ? [...state.fileTouches, ...freshTouches] : state.fileTouches,
+        nextTouches.length > MAX_ACCUMULATED ? nextTouches.slice(-MAX_ACCUMULATED) : nextTouches,
       stats: {
         rawLines: state.stats.rawLines + delta.stats.rawLines,
         parsed: state.stats.parsed + delta.stats.parsed,

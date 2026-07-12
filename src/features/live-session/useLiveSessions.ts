@@ -127,14 +127,21 @@ export function useLiveSessions(enabled: boolean): LiveSessionsSnapshot {
         }
         tick += 1;
 
-        let newTotal = 0;
-        for (const entry of entries.values()) {
-          const delta = await getClaudeCodeSessionDelta(entry.meta.filePath, entry.follow.offset);
-          if (cancelled) return;
-          const { state, newEventIds } = appendDelta(entry.follow, delta);
-          entry.follow = state;
-          newTotal += newEventIds.length;
-        }
+        // Poll every session in parallel (each tail is independent), and let a
+        // single failing session skip its turn instead of stalling the others.
+        const results = await Promise.allSettled(
+          [...entries.values()].map(async (entry) => {
+            const delta = await getClaudeCodeSessionDelta(entry.meta.filePath, entry.follow.offset);
+            const { state, newEventIds } = appendDelta(entry.follow, delta);
+            entry.follow = state;
+            return newEventIds.length;
+          }),
+        );
+        if (cancelled) return;
+        const newTotal = results.reduce(
+          (sum, r) => sum + (r.status === "fulfilled" ? r.value : 0),
+          0,
+        );
         if (newTotal > 0) lastActivity = Date.now();
 
         const sessions = [...entries.values()].map((e) => ({ meta: e.meta, follow: e.follow }));
