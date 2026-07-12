@@ -17,7 +17,40 @@ mod repositories;
 mod session;
 mod sqlite;
 
+/// Append Rust panics to `~/.mori/logs/panic.log` so a desktop crash leaves
+/// a local trace the user can attach to a bug report (local-first: no remote
+/// telemetry). Best-effort on purpose: the hook must never panic itself, and
+/// the default hook still runs afterwards so stderr behaviour is unchanged.
+fn install_panic_log_hook() {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        if let Some(dir) = agent_paths::home_dir().map(|home| home.join(".mori").join("logs")) {
+            if std::fs::create_dir_all(&dir).is_ok() {
+                let location = info
+                    .location()
+                    .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+                    .unwrap_or_else(|| "unknown location".to_string());
+                let timestamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs().to_string())
+                    .unwrap_or_else(|_| "0".to_string());
+                let line = format!("[{timestamp}] panic at {location}: {info}\n");
+                use std::io::Write;
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(dir.join("panic.log"))
+                {
+                    let _ = file.write_all(line.as_bytes());
+                }
+            }
+        }
+        default_hook(info);
+    }));
+}
+
 fn main() {
+    install_panic_log_hook();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())

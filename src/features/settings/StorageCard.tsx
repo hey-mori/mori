@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { FolderCog, FolderInput } from "lucide-react";
+import { FileDown, FolderCog, FolderInput } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useSqliteStore } from "../../app/sqliteStore";
+import {
+  buildDiagnosticsReport,
+  readDiagnosticsEntries,
+} from "../../lib/diagnostics/diagnosticsLog";
 import { isTauriRuntime, tauriCommands } from "../../lib/desktop";
 import { SettingsRow, SettingsSection } from "./SettingsPrimitives";
 
@@ -17,6 +21,15 @@ export function StorageCard() {
   });
   const [changing, setChanging] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Read once per mount; the log only grows on errors, and Settings is
+  // re-mounted on navigation, so a live subscription would be noise.
+  const [diagnosticsCount] = useState(
+    () => readDiagnosticsEntries(window.localStorage).length,
+  );
+
+  function handleExportDiagnostics() {
+    exportDiagnosticsReport();
+  }
   const refreshSqlite = useSqliteStore((state) => state.refresh);
   const isDesktop = isTauriRuntime();
 
@@ -105,9 +118,45 @@ export function StorageCard() {
             저장 위치를 확인하지 못했습니다. 예상 경로를 표시합니다: {storagePath.message}
           </p>
         ) : null}
+        <SettingsRow
+          compact
+          label="진단 로그"
+          meta={`오류 기록 ${diagnosticsCount}건 · 로컬에만 저장, 세션 내용은 담기지 않음`}
+          control={
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={FileDown}
+              disabled={diagnosticsCount === 0}
+              onClick={handleExportDiagnostics}
+            >
+              내보내기
+            </Button>
+          }
+        />
       </div>
     </SettingsSection>
   );
+}
+
+/** Serialise the diagnostics log and hand it to the user as a JSON download. */
+function exportDiagnosticsReport(): void {
+  const report = buildDiagnosticsReport({
+    entries: readDiagnosticsEntries(window.localStorage),
+    exportedAt: new Date().toISOString(),
+    appVersion: "0.1.0",
+    userAgent: navigator.userAgent,
+    platform: isTauriRuntime() ? "desktop" : "browser",
+  });
+  const blob = new Blob([JSON.stringify(report, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `mori-diagnostics-${report.exportedAt.slice(0, 10)}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function getExpectedAppDataPath(): string {
