@@ -96,6 +96,72 @@ describe("BrowserDraftRepository", () => {
     expect(repository.listSessionImports(draft.session.id)).toHaveLength(0);
   });
 
+  it("reads a legacy imports array and migrates it to per-entry keys on write", () => {
+    const storage = new MemoryKeyValueStorage();
+    const repository = new BrowserDraftRepository(storage);
+    const draft = repository.saveCurrentSessionDraft(
+      createSessionDraft({
+        sessionTitle: "Legacy import session",
+        projectName: "Import Project",
+        selectedSources: [],
+        recordingMode: "summary",
+        llmProvider: "ollama",
+        llmModel: "llama3.1:8b",
+        storageLocation: "~/Mori/Records",
+        now: "2026-05-12T13:00:00+09:00",
+      }),
+    );
+    const sessionId = draft.session.id;
+    const note = normalizeManualNote({
+      projectId: draft.project.id,
+      sessionId,
+      title: "Legacy note",
+      note: "Written before per-entry keys existed.",
+      capturedAt: "2026-05-12T13:05:00+09:00",
+    });
+    const legacyKey = `mori.sessionImports.${sessionId}`;
+    storage.setItem(
+      legacyKey,
+      JSON.stringify([
+        {
+          id: note.source.id,
+          sessionId,
+          source: note.source,
+          events: note.events,
+          savedAt: "2026-05-12T13:05:00+09:00",
+          adapter: "browser-local-storage",
+        },
+      ]),
+    );
+
+    // Read path: the legacy array is visible without any write happening.
+    expect(repository.listSessionImports(sessionId)).toHaveLength(1);
+    expect(storage.getItem(legacyKey)).not.toBeNull();
+
+    // Write path: the next add migrates the legacy row onto an entry key,
+    // removes the legacy array, and both entries stay listed.
+    const url = normalizeUrlSource({
+      projectId: draft.project.id,
+      sessionId,
+      title: "screenpipe",
+      url: "https://github.com/mediar-ai/screenpipe",
+      capturedAt: "2026-05-12T13:10:00+09:00",
+    });
+    repository.addSessionImport(sessionId, url);
+    expect(storage.getItem(legacyKey)).toBeNull();
+    const listed = repository.listSessionImports(sessionId);
+    expect(listed).toHaveLength(2);
+    expect(listed.map((entry) => entry.id)).toContain(note.source.id);
+    expect(listed.map((entry) => entry.id)).toContain(url.source.id);
+
+    // The migrated entry survives removing its sibling, and clear removes
+    // every per-entry key.
+    repository.removeSessionImport(sessionId, url.source.id);
+    expect(repository.listSessionImports(sessionId)).toHaveLength(1);
+    repository.clearSessionImports(sessionId);
+    expect(repository.listSessionImports(sessionId)).toHaveLength(0);
+  });
+
   it("persists, loads, and clears analysis results per session", async () => {
     const storage = new MemoryKeyValueStorage();
     const repository = new BrowserDraftRepository(storage);

@@ -35,6 +35,12 @@ const CURRENT_SESSION_KEY = "mori.currentSessionDraft";
 const SESSION_PREFIX = "mori.sessionDraft.";
 const PACKAGE_PREFIX = "mori.packageDraft.";
 const IMPORTS_PREFIX = "mori.sessionImports.";
+// One key per import entry (`mori.sessionImportEntry.<sessionId>.<importId>`),
+// mirroring the accepted-memory pattern, so adding an import writes one entry
+// instead of re-stringifying the session's whole imports array. The legacy
+// array under `IMPORTS_PREFIX + sessionId` is still merged on read and
+// migrated to entry keys on the next write.
+const IMPORT_ENTRY_PREFIX = "mori.sessionImportEntry.";
 const ANALYSIS_PREFIX = "mori.sessionAnalysis.";
 const ANALYSIS_HISTORY_PREFIX = "mori.sessionAnalysisHistory.";
 const MEMORY_PREFIX = "mori.sessionMemory.";
@@ -177,7 +183,7 @@ export class BrowserDraftRepository implements DraftRepository {
 
   clearStoredSession(sessionId: string): void {
     this.storage.removeItem(`${SESSION_PREFIX}${sessionId}`);
-    this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);
+    this.clearSessionImports(sessionId);
     this.storage.removeItem(`${ANALYSIS_PREFIX}${sessionId}`);
     this.storage.removeItem(`${ANALYSIS_HISTORY_PREFIX}${sessionId}`);
     this.storage.removeItem(`${MEMORY_PREFIX}${sessionId}`);
@@ -216,7 +222,6 @@ export class BrowserDraftRepository implements DraftRepository {
     candidate: NormalizedImportCandidate,
     options: { importSummary?: ConnectorSourceImportSummary } = {},
   ): StoredSessionImport {
-    const existing = this.listSessionImports(sessionId);
     const savedAt = new Date().toISOString();
     const stored: StoredSessionImport = {
       id: candidate.source.id,
@@ -232,51 +237,95 @@ export class BrowserDraftRepository implements DraftRepository {
       ...(options.importSummary ? { importSummary: options.importSummary } : {}),
     };
 
-    const deduped = existing.filter((entry) => entry.id !== stored.id);
-    deduped.push(stored);
-    // TODO(perf): this re-reads and re-stringifies the session's full imports
-    // array on every add. It is bounded to one session's imports (keyed by
-    // IMPORTS_PREFIX + sessionId), not the global set, so the cost stays small
-    // in practice. Eliminating the full re-stringify would require a schema
-    // change — e.g. one localStorage key per import entry, or an append-only
-    // log — which is higher risk and would ripple through listSessionImports,
-    // putSessionImports, and removeSessionImport. Left as-is intentionally.
-    this.write(`${IMPORTS_PREFIX}${sessionId}`, deduped);
+    // One write per add: the entry key is the dedupe (same import id
+    // overwrites in place), so adding the Nth import no longer re-stringifies
+    // the previous N-1.
+    this.migrateLegacySessionImports(sessionId);
+    this.write(this.importEntryKey(sessionId, stored.id), stored);
     return stored;
   }
 
   listSessionImports(sessionId: string): StoredSessionImport[] {
-    const raw = this.read<StoredSessionImport[]>(`${IMPORTS_PREFIX}${sessionId}`);
-    if (!Array.isArray(raw)) return [];
-    return raw.sort((a, b) => new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime());
+    // Merge the per-entry keys with any legacy array still on disk. Reading
+    // stays non-mutating (migration happens on the next write); an entry key
+    // wins over a legacy row with the same id because it is always newer.
+    const byId = new Map<string, StoredSessionImport>();
+    const legacy = this.read<StoredSessionImport[]>(`${IMPORTS_PREFIX}${sessionId}`);
+    if (Array.isArray(legacy)) {
+      for (const entry of legacy) {
+        if (entry && typeof entry.id === "string") byId.set(entry.id, entry);
+      }
+    }
+    const prefix = `${IMPORT_ENTRY_PREFIX}${sessionId}.`;
+    for (let index = 0; index < this.storage.length; index += 1) {
+      const key = this.storage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      const entry = this.read<StoredSessionImport>(key);
+      if (!entry || entry.sessionId !== sessionId) continue;
+      byId.set(entry.id, entry);
+    }
+    return [...byId.values()].sort(
+      (a, b) => new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime(),
+    );
   }
 
   putSessionImports(
     sessionId: string,
     imports: StoredSessionImport[],
   ): StoredSessionImport[] {
-    const existing = this.listSessionImports(sessionId);
-    const incomingIds = new Set(imports.map((entry) => entry.id));
-    const merged = existing.filter((entry) => !incomingIds.has(entry.id));
+    this.migrateLegacySessionImports(sessionId);
     for (const entry of imports) {
-      merged.push({ ...entry, sessionId, adapter: "browser-local-storage" });
+      const stored: StoredSessionImport = {
+        ...entry,
+        sessionId,
+        adapter: "browser-local-storage",
+      };
+      this.write(this.importEntryKey(sessionId, stored.id), stored);
     }
-    this.write(`${IMPORTS_PREFIX}${sessionId}`, merged);
     return this.listSessionImports(sessionId);
   }
 
   removeSessionImport(sessionId: string, importId: string): void {
-    const existing = this.listSessionImports(sessionId);
-    const next = existing.filter((entry) => entry.id !== importId);
-    if (next.length) {
-      this.write(`${IMPORTS_PREFIX}${sessionId}`, next);
-    } else {
-      this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);
-    }
+    this.migrateLegacySessionImports(sessionId);
+    this.storage.removeItem(this.importEntryKey(sessionId, importId));
   }
 
   clearSessionImports(sessionId: string): void {
     this.storage.removeItem(`${IMPORTS_PREFIX}${sessionId}`);
+    const prefix = `${IMPORT_ENTRY_PREFIX}${sessionId}.`;
+    // Collect first, then remove: mutating while iterating by index skips keys.
+    const removable: string[] = [];
+    for (let index = 0; index < this.storage.length; index += 1) {
+      const key = this.storage.key(index);
+      if (key?.startsWith(prefix)) removable.push(key);
+    }
+    for (const key of removable) {
+      this.storage.removeItem(key);
+    }
+  }
+
+  private importEntryKey(sessionId: string, importId: string): string {
+    return `${IMPORT_ENTRY_PREFIX}${sessionId}.${importId}`;
+  }
+
+  /**
+   * One-time move of a session's legacy imports array onto per-entry keys.
+   * Runs at the top of every write path; a no-op once the legacy key is gone.
+   * An existing entry key is not overwritten (it is always newer than the
+   * legacy row). If a write fails mid-way (quota), the legacy key is kept so
+   * the merged read still sees every entry: no data loss, retried next write.
+   */
+  private migrateLegacySessionImports(sessionId: string): void {
+    const legacyKey = `${IMPORTS_PREFIX}${sessionId}`;
+    const legacy = this.read<StoredSessionImport[]>(legacyKey);
+    if (!Array.isArray(legacy)) return;
+    for (const entry of legacy) {
+      if (!entry || typeof entry.id !== "string") continue;
+      const key = this.importEntryKey(sessionId, entry.id);
+      if (this.storage.getItem(key) !== null) continue;
+      this.write(key, entry);
+    }
+    this.storage.removeItem(legacyKey);
   }
 
   saveSessionAnalysis(sessionId: string, result: AnalysisResult): StoredSessionAnalysis {
