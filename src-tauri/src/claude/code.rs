@@ -1079,7 +1079,7 @@ fn render_content_block(item: &Value) -> Option<String> {
             .or(pattern)
             .or(prompt);
         return Some(match summary {
-            Some(text) => format!("🔧 {name}: {}", truncate(text, 140)),
+            Some(text) => format!("🔧 {name}: {}", cap_text(text, 500)),
             None => format!("🔧 {name}"),
         });
     }
@@ -1116,7 +1116,9 @@ fn render_content_block(item: &Value) -> Option<String> {
         }
         let is_error = item.get("is_error").and_then(Value::as_bool).unwrap_or(false);
         let prefix = if is_error { "↳ 도구 오류" } else { "↳ 도구 결과" };
-        return Some(format!("{prefix}: {}", truncate(&body, 200)));
+        // Keep a generous, newline-preserving slice so a live surface can show
+        // what the tool actually produced, not just a one-line snippet.
+        return Some(format!("{prefix}: {}", cap_text(&body, 1500)));
     }
 
     // Thinking — internal chain-of-thought. We deliberately drop it so it
@@ -1234,6 +1236,19 @@ fn decode_project_name(encoded: &str) -> String {
 
 fn truncate(input: &str, max: usize) -> String {
     let clean = input.replace('\n', " ").replace('\r', " ");
+    if clean.chars().count() <= max {
+        return clean;
+    }
+    let mut out: String = clean.chars().take(max).collect();
+    out.push_str("...");
+    out
+}
+
+/// Like `truncate` but preserves line breaks, so a tool's multi-line output
+/// reads as it was produced instead of collapsing to one line. Trailing `\r`
+/// from Windows tools is dropped; the `\n` structure is kept.
+fn cap_text(input: &str, max: usize) -> String {
+    let clean = input.replace('\r', "");
     if clean.chars().count() <= max {
         return clean;
     }

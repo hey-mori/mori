@@ -147,9 +147,12 @@ export function buildLiveFeed(
     request.status = age <= RECENT_MS ? "recent" : "done";
   }
 
+  // Order by when the user opened each request, not by latest activity, so a
+  // request stays put while it works and only a genuinely new request rises to
+  // the top. Sorting by activity would make the feed jump on every step.
   requests.sort((a, b) => {
-    const byActivity = (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0);
-    return byActivity !== 0 ? byActivity : (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0);
+    const byStart = (Date.parse(b.startedAt) || 0) - (Date.parse(a.startedAt) || 0);
+    return byStart !== 0 ? byStart : (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0);
   });
   return requests.slice(0, limit);
 }
