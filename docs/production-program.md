@@ -166,8 +166,15 @@ re-serialization fix remain open.
 Wire the existing tested `VirtualList` into the session lists (Home,
 sidebar, memory, workspace); define a stress fixture (500+ sessions)
 the way the timeline already has one.
-*Answers:* audit §3, landscape §3. *Status:* open; component already
-built, integration only.
+*Answers:* audit §3, landscape §3. *Status:* **pilot shipped
+2026-07-12** — the project session rail (`ProjectView`, the primary
+large session list) renders through `VirtualList`; browser-verified
+identical rendering, internal scroll, and row navigation. Follow-ups:
+the Workspace browser (`WorkspaceView`, highest total volume; needs a
+flattened header|row item model, its own pass) and the sidebar folders
+(nested folder/row/더보기 tree, "careful" per the scout). Home recents
+(capped at 6) and the memory list (collapsed in a `<details>`) do not
+need it.
 
 ### G3 · Competitive at first glance
 
