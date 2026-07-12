@@ -16,6 +16,7 @@ import { BaseObjectRow } from "../../components/ui/BaseObjectRow";
 import { BaseMetadataLine } from "../../components/ui/BaseMetadataLine";
 import { BaseSection } from "../../components/ui/BaseSection";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import { VirtualList } from "../../components/ui/VirtualList";
 import { useAppStore } from "../../app/store";
 import {
   loadStoredSessionSummariesWithMetrics,
@@ -414,16 +415,20 @@ export function ProjectView() {
               }
             />
           ) : (
-            <ul className="project-session-list base-scroll">
-              {filteredSessionRows.map((row) => (
+            <VirtualList
+              className="project-session-vlist base-scroll"
+              ariaLabel="이 프로젝트의 세션"
+              items={filteredSessionRows}
+              estimateHeight={52}
+              getKey={(row) => row.sessionId}
+              renderItem={(row) => (
                 <ProjectSessionRowItem
-                  key={row.sessionId}
                   row={row}
                   projectLabel={projectSessionLabel}
                   onOpen={() => openSessionId(row.sessionId)}
                 />
-              ))}
-            </ul>
+              )}
+            />
           )}
         </BaseSection>
 
@@ -518,23 +523,22 @@ function ProjectSessionRowItem({
   projectLabel: string;
   onOpen: () => void;
 }) {
+  // No <li> wrapper: VirtualList provides the `.vlist-row` container.
   return (
-    <li>
-      <BaseObjectRow
-        leading={<FolderKanban size={15} />}
-        title={row.title}
-        className="session-list-row"
-        meta={
-          <BaseMetadataLine
-            items={[projectLabel, spanLabel(row.timestamp, undefined)]}
-          />
-        }
-        onClick={onOpen}
-        ariaLabel={row.title}
-        density="compact"
-        trailing={<ArrowRight size={13} aria-hidden="true" />}
-      />
-    </li>
+    <BaseObjectRow
+      leading={<FolderKanban size={15} />}
+      title={row.title}
+      className="session-list-row"
+      meta={
+        <BaseMetadataLine
+          items={[projectLabel, spanLabel(row.timestamp, undefined)]}
+        />
+      }
+      onClick={onOpen}
+      ariaLabel={row.title}
+      density="compact"
+      trailing={<ArrowRight size={13} aria-hidden="true" />}
+    />
   );
 }
 

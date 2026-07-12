@@ -241,32 +241,31 @@
   color: var(--muted);
 }
 
-.project-session-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-auto-rows: min-content;
-  align-content: start;
-  gap: 0;
+/* The 세션 rail is a VirtualList: it owns its scroll container (`.vlist`), and
+   only the rows near the viewport are in the DOM, so a project with hundreds of
+   sessions renders a handful of rows. The bordered-card look and the uniform
+   row height move onto the vlist wrapper and its `.vlist-row` children. */
+.project-session-vlist {
   border: 1px solid var(--base-border);
   border-radius: var(--base-radius-md);
   background: var(--base-surface);
-  overflow: hidden;
 }
 
-.project-session-list > li + li {
+/* Rows are separated the way the old `> li + li` list was: no top border on the
+   list's first row, a divider between the rest. With overscan the top *visible*
+   row always has its divider rendered, so only row 0 of the whole list lacks one. */
+.project-session-vlist .vlist-row + .vlist-row {
   border-top: 1px solid var(--base-border);
 }
 
 /* Every session row keeps the same height regardless of available space, so
    the rail reads as a uniform list that scrolls, not rows that share height. */
-.project-session-list > li {
+.project-session-vlist .vlist-row {
   min-height: 52px;
   display: flex;
 }
 
-.project-session-list > li > * {
+.project-session-vlist .vlist-row > * {
   width: 100%;
 }
 
@@ -522,11 +521,11 @@
 
 /* The list sizes to its content (only as tall as the sessions it holds) but is
    capped at the section height: each row keeps a fixed height, and once the
-   sessions overflow the list scrolls with the shared `base-scroll` styling. */
-.project-sessions .project-session-list {
+   sessions overflow the vlist scrolls internally. `min-height: 0` lets it shrink
+   in the flex column so the ResizeObserver reads a real bounded viewport. */
+.project-sessions .project-session-vlist {
   min-height: 0;
   max-height: 100%;
-  overflow-y: auto;
 }
 
 /* Durable memory sits at its natural height below the sessions. */
@@ -619,7 +618,10 @@
     flex: 0 0 auto;
   }
 
-  .project-sessions .project-session-list {
+  /* At narrow widths the rail flows in the page scroll instead of its own
+     internal scroll; the vlist then measures the full content height and
+     renders every row (no windowing), which is fine at this small scale. */
+  .project-sessions .project-session-vlist {
     max-height: none;
     overflow: visible;
   }
