@@ -1,0 +1,163 @@
+/*
+ * First-run guide. Reuses `.settings-sheet-layer` / `.settings-sheet-scrim`
+ * (app-shell.css) for the full-bleed centered overlay and scrim; this sheet
+ * styles only the guide card and its calm, single-column content.
+ */
+
+.first-run {
+  position: relative;
+  width: min(520px, calc(100vw - 52px));
+  max-height: calc(100vh - 52px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px;
+  background: var(--base-surface);
+  border: 1px solid var(--base-border);
+  border-radius: 14px;
+  box-shadow: 0 26px 70px rgba(20, 25, 45, 0.26);
+  outline: none;
+}
+
+.first-run-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: pointer;
+}
+
+.first-run-close:hover {
+  background: var(--panel-soft);
+  color: var(--text);
+}
+
+.first-run-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.first-run-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--purple-50);
+  color: var(--purple);
+}
+
+.first-run-hero h1 {
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--text);
+  margin: 0;
+}
+
+.first-run-lead {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+
+.first-run-principles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.first-run-principles li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.first-run-principles svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--green);
+}
+
+.first-run-connect {
+  border-top: 1px solid var(--base-border);
+  padding-top: 16px;
+}
+
+.first-run-step-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.first-run-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.first-run-desktop-only {
+  border-top: 1px solid var(--base-border);
+  padding-top: 16px;
+}
+
+.first-run-agents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.first-run-agent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+}
+
+.first-run-agent-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.first-run-agent-name {
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text);
+}
+
+.first-run-agent-detail {
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
+.first-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}

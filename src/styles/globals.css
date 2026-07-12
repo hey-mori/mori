@@ -36,4 +36,5 @@
 @import "./features/graph.css";
 @import "./features/timeline-lab.css";
 @import "./features/live-session.css";
+@import "./features/onboarding.css";
 @import "./theme-application.css";

@@ -6,6 +6,8 @@ import { useSessionStore } from "./sessionStore";
 import { useRepositoryStore } from "./repositoryStore";
 import { useProfileStore } from "./profileStore";
 import { useThemeStore } from "./themeStore";
+import { useOnboardingStore } from "./onboardingStore";
+import { FirstRunGuide } from "../features/onboarding/FirstRunGuide";
 import { BaseTooltipProvider } from "../components/ui/BaseTooltip";
 import { isImportFlowView } from "../lib/session/importFlowView";
 // HomeView is the landing surface — stay eager so first paint never waits
@@ -86,6 +88,8 @@ export default function App() {
   const profileInitialized = useProfileStore((state) => state.initialized);
   const hydrateTheme = useThemeStore((state) => state.hydrate);
   const themeInitialized = useThemeStore((state) => state.initialized);
+  const hydrateOnboarding = useOnboardingStore((state) => state.hydrate);
+  const onboardingInitialized = useOnboardingStore((state) => state.initialized);
   const pendingNewSession = useSessionStore((state) => state.pendingNewSession);
   const abandonPendingNewSessionIfEmpty = useSessionStore(
     (state) => state.abandonPendingNewSessionIfEmpty,
@@ -118,6 +122,10 @@ export default function App() {
   useEffect(() => {
     if (!themeInitialized) hydrateTheme();
   }, [themeInitialized, hydrateTheme]);
+
+  useEffect(() => {
+    if (!onboardingInitialized) hydrateOnboarding();
+  }, [onboardingInitialized, hydrateOnboarding]);
 
   // Settings + profile no longer have a standing route — they live behind the
   // top-bar user button as a sheet (`SettingsSheet`, rendered inside AppShell).
@@ -159,6 +167,10 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </AppShell>
+      {/* First-run guide: a full-bleed overlay above the shell that shows only
+          on a truly empty first launch or when reopened. It renders null
+          otherwise, so it costs nothing on a returning user. */}
+      <FirstRunGuide />
     </BaseTooltipProvider>
   );
 }

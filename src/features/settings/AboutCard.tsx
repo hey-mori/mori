@@ -1,7 +1,11 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { useEffect, useMemo, useState } from "react";
+import { RotateCcw } from "lucide-react";
 import { isTauriRuntime } from "../../lib/desktop";
 import type { RuntimeMode } from "../../lib/settings/settingsStatus";
+import { Button } from "../../components/ui/Button";
+import { useAppStore } from "../../app/store";
+import { useOnboardingStore } from "../../app/onboardingStore";
 import { SettingsRow, SettingsSection } from "./SettingsPrimitives";
 
 const FALLBACK_APP_VERSION = "0.1.0";
@@ -20,6 +24,8 @@ export function AboutCard({
   sqliteSessionCount: number;
 }) {
   const desktopRuntime = useMemo(() => isTauriRuntime(), []);
+  const reopenOnboarding = useOnboardingStore((state) => state.reopen);
+  const closeSettingsSheet = useAppStore((state) => state.closeSettingsSheet);
   const [version, setVersion] = useState<VersionState>({
     status: "loading",
     version: FALLBACK_APP_VERSION,
@@ -79,6 +85,26 @@ export function AboutCard({
               <span className="settings-about-meta">
                 {mode === "tauri-desktop" ? "Desktop" : "Browser"}
               </span>
+            }
+          />
+          <SettingsRow
+            compact
+            label="시작 가이드"
+            meta="처음 실행 때 본 소개와 연결 안내를 다시 엽니다."
+            control={
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={RotateCcw}
+                onClick={() => {
+                  // Close the settings sheet first so the reopened guide is not
+                  // stacked behind it (both use the same overlay layer).
+                  closeSettingsSheet();
+                  reopenOnboarding();
+                }}
+              >
+                다시 보기
+              </Button>
             }
           />
         </div>
