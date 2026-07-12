@@ -128,7 +128,10 @@ Global `window.onerror` / `unhandledrejection` capture and a Rust
 panic hook, both writing to a **local** diagnostics log (local-first:
 no remote telemetry), plus a "진단 내보내기" action in Settings.
 Per-view error boundaries so one broken view does not blank the shell.
-*Answers:* audit §2. *Status:* open.
+*Answers:* audit §2. *Status:* **capture + export shipped 2026-07-12**
+(global listeners into a capped `mori.diagnostics.v1` log, Settings
+진단 로그 export row, Rust panic hook appending to
+`~/.mori/logs/panic.log`). Per-view error boundaries remain open.
 
 ### G2 · Trustworthy with real data
 
