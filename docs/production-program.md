@@ -116,12 +116,15 @@ and lands with W3.
 Apple Developer signing + notarization in the release workflow;
 `tauri-plugin-updater` with a release channel; pinned source-level
 `src-tauri/capabilities/` permissions as part of the same pass.
-*Answers:* audit §1, §6. *Status:* open. *Notes:* needs an Apple
-Developer account, a user-owned prerequisite. The updater signing
-keypair is a **custody-critical secret**: losing it strands every
-installed copy off the update channel; leaking it lets an attacker
-push updates. Key generation, storage, and backup are part of this
-workstream's definition of done.
+*Answers:* audit §1, §6. *Status:* **blocked (2026-07-12)**: the user
+has no Apple Developer account yet; revisit when one exists. Until
+then the unsigned `Mori.app` serves the author and hand-distributed
+beta testers (right-click → Open bypasses Gatekeeper once). The
+public launch checkpoint still requires this workstream. *Notes:* the
+updater signing keypair is a **custody-critical secret**: losing it
+strands every installed copy off the update channel; leaking it lets
+an attacker push updates. Key generation, storage, and backup are part
+of this workstream's definition of done.
 
 **W4 · Crash and error visibility.**
 Global `window.onerror` / `unhandledrejection` capture and a Rust
