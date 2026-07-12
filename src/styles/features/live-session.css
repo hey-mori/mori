@@ -166,8 +166,15 @@
   gap: 2px;
 }
 
+.lsv-sess-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .lsv-sess-row {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -177,6 +184,27 @@
   background: transparent;
   text-align: left;
   cursor: pointer;
+}
+
+/* The one-line terminal continuation: copy `claude --resume <id>`. */
+.lsv-sess-copy {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: pointer;
+}
+
+.lsv-sess-copy:hover {
+  background: var(--panel-soft);
+  color: var(--text);
 }
 
 .lsv-sess-row:hover {

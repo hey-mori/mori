@@ -2,7 +2,9 @@ import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type Re
 import {
   BookOpen,
   Bot,
+  Check,
   ChevronDown,
+  Copy,
   Globe,
   Info,
   ListChecks,
@@ -166,6 +168,7 @@ export function LiveSessionView() {
           const last = s.follow.messages[s.follow.messages.length - 1];
           return {
             key: s.meta.filePath,
+            sessionId: s.meta.sessionId,
             label: sessionShortLabel(s.meta),
             steps: s.follow.messages.length,
             lastAt: last?.createdAt || s.meta.startedAt,
@@ -175,6 +178,31 @@ export function LiveSessionView() {
         .sort((a, b) => Number(b.working) - Number(a.working) || (Date.parse(b.lastAt) || 0) - (Date.parse(a.lastAt) || 0)),
     [snapshot.sessions, workingKeys],
   );
+
+  // Per-session "resume 명령 복사": the cheap, direct continuation path. The
+  // rich reviewed handoff stays the Resume Prompt; this is the one-liner for
+  // picking the same conversation back up in a terminal.
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+    },
+    [],
+  );
+  function handleCopyResume(key: string, sessionId: string) {
+    void navigator.clipboard
+      .writeText(`claude --resume ${sessionId}`)
+      .then(() => {
+        setCopiedKey(key);
+        if (copyResetRef.current) clearTimeout(copyResetRef.current);
+        copyResetRef.current = setTimeout(
+          () => setCopiedKey((current) => (current === key ? null : current)),
+          1600,
+        );
+      })
+      .catch(() => {});
+  }
 
   const statusEl = (
     <div className="lsv-pop-anchor">
@@ -204,7 +232,7 @@ export function LiveSessionView() {
           ) : (
             <ul className="lsv-sess-list">
               {sessionRows.map((s) => (
-                <li key={s.key}>
+                <li key={s.key} className="lsv-sess-item">
                   <button
                     type="button"
                     className={`lsv-sess-row ${focusKey === s.key ? "is-focused" : ""}`}
@@ -220,6 +248,19 @@ export function LiveSessionView() {
                       {s.steps.toLocaleString()}단계 · {formatClaudeRelativeKo(s.lastAt)}
                     </span>
                     {s.working ? <span className="lsv-sess-badge">작업 중</span> : null}
+                  </button>
+                  <button
+                    type="button"
+                    className="lsv-sess-copy"
+                    title={copiedKey === s.key ? "복사됨" : "터미널 이어가기 명령 복사"}
+                    aria-label={`${s.label} 세션의 resume 명령 복사`}
+                    onClick={() => handleCopyResume(s.key, s.sessionId)}
+                  >
+                    {copiedKey === s.key ? (
+                      <Check size={13} aria-hidden="true" />
+                    ) : (
+                      <Copy size={13} aria-hidden="true" />
+                    )}
                   </button>
                 </li>
               ))}
