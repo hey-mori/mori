@@ -1,4 +1,5 @@
 pub mod accepted_memory;
+pub mod backup;
 pub mod connection;
 pub mod migrations;
 pub mod records;

@@ -794,6 +794,107 @@
   font-size: 12px;
 }
 
+/* Database recovery (broken-migration state only) */
+.db-recovery {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.db-recovery-alert {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--base-status-danger);
+  border-radius: var(--base-radius-md);
+  background: var(--base-status-danger-soft);
+  color: var(--base-status-danger);
+}
+
+.db-recovery-alert strong {
+  display: block;
+  font-size: 13px;
+}
+
+.db-recovery-alert p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.db-recovery-detail {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.db-recovery-backups-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.db-recovery-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.db-recovery-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--base-border);
+  border-radius: var(--base-radius-sm);
+}
+
+.db-recovery-item-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text);
+}
+
+.db-recovery-item-when {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.db-recovery-item-size {
+  font-size: 11.5px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.db-recovery-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.db-recovery-confirm {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.db-recovery-notice {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--purple-50);
+  color: var(--purple);
+  font-size: 12px;
+}
+
 /* About */
 
 .settings-about-grid {

@@ -14,6 +14,7 @@ import type {
   ListSessionsOutput,
   PersistSessionSnapshotOutput,
   PersistSqliteSnapshotInput,
+  SqliteBackupInfo,
 } from "../sqlite/repositoryContracts";
 import type { SqlitePersistenceSnapshot } from "../sqlite/records";
 import type {
@@ -78,6 +79,8 @@ export type TauriCommandName =
   | "list_session_import_rows"
   | "list_all_session_import_rows"
   | "clear_all_sqlite_data"
+  | "list_sqlite_backups"
+  | "restore_sqlite_backup"
   | "create_session"
   | "import_ai_conversation"
   | "import_git_diff"
@@ -226,6 +229,8 @@ export type TauriCommandMap = {
     output: SqliteSessionImportRow[];
   };
   clear_all_sqlite_data: { input: undefined; output: ClearAllSqliteDataResult };
+  list_sqlite_backups: { input: undefined; output: SqliteBackupInfo[] };
+  restore_sqlite_backup: { input: { backupPath: string }; output: null };
   create_session: { input: CreateSessionInput; output: Session };
   import_ai_conversation: { input: ImportSourceInput; output: SourceRef };
   import_git_diff: { input: ImportSourceInput; output: SourceRef };
@@ -437,6 +442,12 @@ export const tauriCommands = {
   },
   clearAllSqliteData(): Promise<ClearAllSqliteDataResult> {
     return invokeTauriCommand("clear_all_sqlite_data", undefined);
+  },
+  listSqliteBackups(): Promise<SqliteBackupInfo[]> {
+    return invokeTauriCommand("list_sqlite_backups", undefined);
+  },
+  restoreSqliteBackup(backupPath: string): Promise<null> {
+    return invokeTauriCommand("restore_sqlite_backup", { backupPath });
   },
   createSession(input: CreateSessionInput): Promise<Session> {
     return invokeTauriCommand("create_session", input);

@@ -1,0 +1,250 @@
+//! Automatic pre-migration backups and restore.
+//!
+//! Before a schema migration runs against an existing database, Mori writes a
+//! consistent snapshot into a `backups/` folder beside the live database, so a
+//! migration that fails (a checksum mismatch or a bad `apply`) has a restore
+//! point instead of a dead end. Snapshots use `VACUUM INTO`, which writes a
+//! single self-contained file from the live connection (no WAL/SHM sidecars to
+//! copy), and the folder is pruned to the most recent `MAX_BACKUPS`.
+//!
+//! The pure functions take an explicit backups directory so they are testable
+//! against a tempdir; the command layer resolves the real `backups_dir()`.
+
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use rusqlite::Connection;
+use serde::Serialize;
+
+use crate::package::default_storage_dir;
+
+/// How many pre-migration snapshots to keep. Older ones are pruned after each
+/// new backup so the folder never grows without bound.
+const MAX_BACKUPS: usize = 5;
+
+/// The automatic-backup directory, under the active storage dir.
+pub fn backups_dir() -> Result<PathBuf, String> {
+    Ok(default_storage_dir()?.join("backups"))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupInfo {
+    pub path: String,
+    pub file_name: String,
+    pub size_bytes: u64,
+    /// Filesystem modified time in Unix milliseconds (0 if unavailable).
+    pub modified_ms: u128,
+}
+
+/// Write a consistent snapshot of `conn` into `dir`, labelled for context, then
+/// prune old snapshots. Returns the created file path. On any failure the caller
+/// should abort the migration so the database is never changed without a
+/// restore point.
+pub fn backup_database(conn: &Connection, dir: &Path, label: &str) -> Result<PathBuf, String> {
+    std::fs::create_dir_all(dir)
+        .map_err(|error| format!("Failed to create backups dir: {error}"))?;
+    let file = dir.join(format!("mori-{}-{}.sqlite", sanitize(label), unix_millis()));
+    // VACUUM INTO fails if the target exists; the millisecond stamp keeps it
+    // unique. Escape any single quote in the path for the SQL string literal.
+    let target = file.to_string_lossy().replace('\'', "''");
+    conn.execute_batch(&format!("VACUUM INTO '{target}'"))
+        .map_err(|error| format!("Failed to write pre-migration backup: {error}"))?;
+    prune_backups(dir);
+    Ok(file)
+}
+
+/// List the snapshots in `dir`, newest first.
+pub fn list_backups_in(dir: &Path) -> Result<Vec<BackupInfo>, String> {
+    if !dir.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(dir).map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        let path = entry.path();
+        if !is_backup_file(&path) {
+            continue;
+        }
+        let meta = entry.metadata().map_err(|error| error.to_string())?;
+        out.push(BackupInfo {
+            path: path.to_string_lossy().to_string(),
+            file_name: file_name_of(&path),
+            size_bytes: meta.len(),
+            modified_ms: modified_ms(&meta),
+        });
+    }
+    out.sort_by(|a, b| b.modified_ms.cmp(&a.modified_ms));
+    Ok(out)
+}
+
+/// Restore `backup_path` over `target_db`, replacing the live database and
+/// dropping its stale WAL/SHM sidecars. `backup_path` must resolve to a file
+/// inside `dir`, so a caller cannot restore an arbitrary path. The caller must
+/// drop the cached connection first so the file is unlocked.
+pub fn restore_backup(backup_path: &Path, dir: &Path, target_db: &Path) -> Result<(), String> {
+    let canon_dir = std::fs::canonicalize(dir)
+        .map_err(|error| format!("Backups dir unavailable: {error}"))?;
+    let canon_backup = std::fs::canonicalize(backup_path)
+        .map_err(|error| format!("Backup not found: {error}"))?;
+    if !canon_backup.starts_with(&canon_dir) {
+        return Err("Refusing to restore a file outside the backups directory.".to_string());
+    }
+    if let Some(parent) = target_db.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    std::fs::copy(&canon_backup, target_db)
+        .map_err(|error| format!("Failed to restore backup: {error}"))?;
+    for suffix in ["-wal", "-shm"] {
+        let _ = std::fs::remove_file(sidecar(target_db, suffix));
+    }
+    Ok(())
+}
+
+fn prune_backups(dir: &Path) {
+    let read = match std::fs::read_dir(dir) {
+        Ok(read) => read,
+        Err(_) => return,
+    };
+    let mut entries: Vec<(u128, PathBuf)> = read
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| is_backup_file(path))
+        .filter_map(|path| {
+            let meta = path.metadata().ok()?;
+            Some((modified_ms(&meta), path))
+        })
+        .collect();
+    entries.sort_by(|a, b| b.0.cmp(&a.0));
+    for (_, path) in entries.into_iter().skip(MAX_BACKUPS) {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
+fn is_backup_file(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name.starts_with("mori-") && name.ends_with(".sqlite"))
+        .unwrap_or(false)
+}
+
+fn file_name_of(path: &Path) -> String {
+    path.file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
+fn modified_ms(meta: &std::fs::Metadata) -> u128 {
+    meta.modified()
+        .ok()
+        .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+        .map(|delta| delta.as_millis())
+        .unwrap_or(0)
+}
+
+fn unix_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|delta| delta.as_millis())
+        .unwrap_or(0)
+}
+
+/// Keep the label filesystem-safe (labels are internal, e.g. "pre-v7").
+fn sanitize(label: &str) -> String {
+    label
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+        .collect()
+}
+
+fn sidecar(db: &Path, suffix: &str) -> PathBuf {
+    let mut name = db.as_os_str().to_os_string();
+    name.push(suffix);
+    PathBuf::from(name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn seed_db(path: &Path) -> Connection {
+        let conn = Connection::open(path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE note (id INTEGER PRIMARY KEY, body TEXT);\
+             INSERT INTO note (body) VALUES ('hello'), ('world');",
+        )
+        .unwrap();
+        conn
+    }
+
+    #[test]
+    fn backs_up_into_a_valid_readable_snapshot() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        let backups = temp.path().join("backups");
+
+        let file = backup_database(&conn, &backups, "pre-v7").unwrap();
+        assert!(file.exists());
+        assert!(file_name_of(&file).starts_with("mori-pre-v7-"));
+
+        // The snapshot is a real database carrying the same rows.
+        let restored = Connection::open(&file).unwrap();
+        let count: i64 = restored
+            .query_row("SELECT COUNT(*) FROM note", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn prunes_to_the_most_recent_backups() {
+        let temp = TempDir::new().unwrap();
+        let backups = temp.path().join("backups");
+        std::fs::create_dir_all(&backups).unwrap();
+        // Pre-seed more than the cap with distinct modified times.
+        for i in 0..(MAX_BACKUPS + 3) {
+            let path = backups.join(format!("mori-old-{i:03}.sqlite"));
+            std::fs::write(&path, b"x").unwrap();
+        }
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        backup_database(&conn, &backups, "pre-v7").unwrap();
+
+        let listed = list_backups_in(&backups).unwrap();
+        assert_eq!(listed.len(), MAX_BACKUPS);
+    }
+
+    #[test]
+    fn restores_a_backup_over_the_live_db() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        let backups = temp.path().join("backups");
+        let snapshot = backup_database(&conn, &backups, "pre-v7").unwrap();
+
+        // Mutate the live DB after the snapshot, then restore.
+        conn.execute("DELETE FROM note", []).unwrap();
+        drop(conn);
+        restore_backup(&snapshot, &backups, &db).unwrap();
+
+        let conn = Connection::open(&db).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM note", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn refuses_to_restore_outside_the_backups_dir() {
+        let temp = TempDir::new().unwrap();
+        let backups = temp.path().join("backups");
+        std::fs::create_dir_all(&backups).unwrap();
+        let outside = temp.path().join("evil.sqlite");
+        std::fs::write(&outside, b"x").unwrap();
+        let db = temp.path().join("mori.sqlite");
+
+        let result = restore_backup(&outside, &backups, &db);
+        assert!(result.is_err());
+    }
+}

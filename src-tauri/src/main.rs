@@ -81,6 +81,8 @@ fn main() {
             sqlite::list_session_import_rows,
             sqlite::list_all_session_import_rows,
             sqlite::clear_all_sqlite_data,
+            sqlite::list_sqlite_backups,
+            sqlite::restore_sqlite_backup,
             git::diff::run_git_diff,
             git::verify::verify_repository_path,
             repositories::picker::pick_repository_directory,

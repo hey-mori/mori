@@ -247,9 +247,46 @@ fn with_connection<R>(
 }
 
 fn ensure_migrated(conn: &mut Connection) -> Result<(), String> {
+    // Before applying pending migrations against an *existing* database, snapshot
+    // it so a migration that fails leaves a restore point instead of a dead end.
+    // Skip on the common no-op run (DB already current) and on a fresh DB (no
+    // applied migrations yet: nothing to lose). A backup failure aborts the
+    // migration so the schema is never changed without a restore point.
+    let applied = applied_migrations(conn)?;
+    let pending = MIGRATIONS
+        .iter()
+        .any(|migration| !applied.iter().any(|record| record.version == migration.version));
+    if pending && !applied.is_empty() {
+        let label = format!("pre-v{}", applied.len());
+        let dir = crate::db::backup::backups_dir()?;
+        crate::db::backup::backup_database(conn, &dir, &label)?;
+    }
     // Idempotent: this only applies pending migrations, so calls during normal
     // command paths are cheap once the DB is current.
     apply_migrations(conn).map(|_| ())
+}
+
+/// List the automatic pre-migration backups, newest first.
+#[tauri::command]
+pub fn list_sqlite_backups() -> Result<Vec<crate::db::backup::BackupInfo>, String> {
+    crate::db::backup::list_backups_in(&crate::db::backup::backups_dir()?)
+}
+
+/// Restore a pre-migration backup over the live database. The cached connection
+/// is dropped first so the file unlocks; the next command reopens it. Only a
+/// file inside the backups directory can be restored.
+#[tauri::command]
+pub fn restore_sqlite_backup(
+    state: tauri::State<'_, SqliteState>,
+    backup_path: String,
+) -> Result<(), String> {
+    let target = database_path()?;
+    let dir = crate::db::backup::backups_dir()?;
+    {
+        let mut guard = state.0.lock().map_err(|error| error.to_string())?;
+        *guard = None;
+    }
+    crate::db::backup::restore_backup(Path::new(&backup_path), &dir, &target)
 }
 
 fn list_tables(conn: &Connection) -> Result<Vec<String>, String> {

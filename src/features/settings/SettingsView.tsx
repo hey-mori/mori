@@ -19,6 +19,7 @@ import { LocalAiCard } from "./LocalAiCard";
 import { StorageCard } from "./StorageCard";
 import { ThemeCard } from "./ThemeCard";
 import { DemoModeCard } from "./DemoModeCard";
+import { DatabaseRecoveryCard } from "./DatabaseRecoveryCard";
 import { NotificationsCard } from "./NotificationsCard";
 import { SettingsSection } from "./SettingsPrimitives";
 import { AboutCard } from "./AboutCard";
@@ -80,6 +81,7 @@ export function SettingsView() {
         ) : null}
         {activeTab === "storage" ? (
           <>
+            <DatabaseRecoveryCard />
             <DemoModeCard />
             <StorageCard />
             <SqliteLoadCard sessions={sqliteSessions} onLoad={loadDesktopSession} />

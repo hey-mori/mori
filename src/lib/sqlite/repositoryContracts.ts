@@ -64,6 +64,15 @@ export type ClearAllSqliteDataResult = {
   consolidatedMemoriesDeleted: number;
 };
 
+/** One automatic pre-migration backup file, as returned by list_sqlite_backups. */
+export type SqliteBackupInfo = {
+  path: string;
+  fileName: string;
+  sizeBytes: number;
+  /** Filesystem modified time in Unix milliseconds. */
+  modifiedMs: number;
+};
+
 export type SqliteRepository = {
   initializeDatabase: () => Promise<DatabaseStatus>;
   persistSessionSnapshot: (input: PersistSessionSnapshotInput) => Promise<PersistSessionSnapshotOutput>;
