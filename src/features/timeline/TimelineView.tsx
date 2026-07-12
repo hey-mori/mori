@@ -41,6 +41,9 @@ import { TimelineToolbar } from "./TimelineHeader";
 import { TimelineMiniMap } from "./TimelineMiniMap";
 import { FlowFocusHeader } from "../flow-focus/FlowFocusHeader";
 import { TracePanel } from "../flow-focus/TracePanel";
+import { UnderstandChip } from "../understand/UnderstandChip";
+import { UnderstandPanel } from "../understand/UnderstandPanel";
+import { clearTextSelection, useTextSelection } from "../understand/useTextSelection";
 import { CausalMapView } from "../timeline-lab/CausalMapView";
 import { AiWorkflowView } from "./AiWorkflowView";
 import type { WorkPhase } from "../../lib/session/workArc";
@@ -109,6 +112,13 @@ export function TimelineView({
   const setSessionTab = useAppStore((state) => state.setSessionTab);
   const timelineFocus = useAppStore((state) => state.timelineFocus);
   const clearTimelineFocus = useAppStore((state) => state.clearTimelineFocus);
+
+  // 이해하기: a text selection inside this view offers a floating chip; taking
+  // it opens the Understand panel in the inspector rail. Local state on
+  // purpose: the capability is view-scoped in L1, so the global selection rail
+  // (selectedEventId) stays untouched.
+  const textSelection = useTextSelection();
+  const [understandText, setUnderstandText] = useState<string | null>(null);
 
   // Selecting an item opens the inspector; clicking the same item again clears
   // the selection and folds the inspector away.
@@ -437,8 +447,12 @@ export function TimelineView({
   // is selected. Otherwise an "open" inspector with no selection is just an
   // empty band of whitespace. The full-width AI 흐름 / 연결 views reserve no
   // inspector band of their own.
+  const understandOpen = Boolean(understandText);
   const inspectorVisible =
-    !useCausalView && !useWorkflowView && !inspectorHidden && Boolean(selectedItem);
+    !useCausalView &&
+    !useWorkflowView &&
+    !inspectorHidden &&
+    (Boolean(selectedItem) || understandOpen);
 
   // Drill from an AI 흐름 phase into the 원본 stream: select the first event at
   // or after the phase start and switch to the stream, which auto-highlights and
@@ -473,7 +487,7 @@ export function TimelineView({
         mode === "flow" ? "flow-grid" : ""
       } ${inspectorVisible ? "" : "inspector-collapsed"}`}
     >
-      <section className="timeline-main">
+      <section className="timeline-main" data-understand-scope="true">
         {mode === "flow" ? (
           <FlowFocusHeader
             onShowTimeline={() => goToMode("timeline")}
@@ -557,7 +571,26 @@ export function TimelineView({
           </>
         )}
       </section>
-      {!inspectorVisible ? null : selectedItem && selectedItem.kind === "bundle" ? (
+      {textSelection && !understandOpen ? (
+        <UnderstandChip
+          selection={textSelection}
+          onUnderstand={(text) => {
+            setUnderstandText(text);
+            clearTextSelection();
+            // Taking the chip opens the inspector rail, exactly as selecting
+            // an event does; otherwise a collapsed rail would swallow the panel.
+            setInspectorCollapsed(false);
+          }}
+        />
+      ) : null}
+      {!inspectorVisible ? null : understandText ? (
+        <UnderstandPanel
+          key={understandText}
+          selection={understandText}
+          contextLabel={`${view.project.name} · ${view.session.title}`}
+          onClose={() => setUnderstandText(null)}
+        />
+      ) : selectedItem && selectedItem.kind === "bundle" ? (
         <TimelineBundleInspector
           bundle={selectedItem}
           session={view}
