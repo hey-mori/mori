@@ -2,7 +2,13 @@
 
 The roadmap for turning the current repo into a shippable, trustworthy,
 competitive product. This is the entry point for "what does Mori need
-to become a real product"; it sequences the work and defines done.
+to become a real product"; it sequences the work, names the open
+product decisions, and defines done. It covers both the app itself
+(gates G1–G4) and the **product shell** around it: web presence,
+distribution channels, licensing, legal floor, language strategy,
+release management, and the feedback loop, none of which live inside
+the binary but all of which decide whether the binary becomes a
+product.
 
 Inputs, both dated 2026-07-12 and kept as companions:
 
@@ -32,9 +38,11 @@ no counterpart in any surveyed product. Meanwhile:
 - the app produces no installer (`bundle.active: false`),
 - real user data sits in localStorage behind no quota guard,
 - a new user gets no guided path to connecting an agent,
-- and the table-stakes features users compare first (global search,
+- the table-stakes features users compare first (global search,
   resume command, token stats) are missing while same-stack
-  competitors ship them daily.
+  competitors ship them daily,
+- and nothing exists outside the binary: no website, no license, no
+  distribution channel, no release policy, no feedback loop.
 
 The market timing is favorable and closing: local-first has a famous
 proof point (Rewind's death), the community hand-rolls Mori's core
@@ -62,6 +70,17 @@ being real. A gate is passed when its exit criteria all hold.
 | **G3 · Competitive at first glance** | A user comparing Mori against the viewer family stays | Global search; resume command; token stats; diff rendering; guided first run; hardened 라이브 세션 |
 | **G4 · The moat is the headline** | Mori is chosen *for* memory + handoff, not despite lacking viewer features | Handoff flow is first-class; memory queryable by agents (design-gated); cross-tool reconstruction; weekly digest |
 
+**The launch checkpoint is separate from G1.** G1 produces a private,
+installable artifact for the author and beta testers. **Public launch
+is its own checkpoint** and requires: G1 and G2 complete, the
+product-shell floor in place (W19 web presence, W20 distribution, W21
+license, W22 legal floor), and the open decisions D1–D6 (Section 5)
+resolved. The sequencing reason is hard: promoting SQLite to the
+source of truth (W5) **before** strangers accumulate data in
+localStorage is a design task; doing it after is a user-data migration
+program. Launching between G1 and G2 would convert a cheap
+architecture change into permanent migration debt.
+
 ## 3. Workstreams
 
 Capability-named per project convention. Each carries: scope, the
@@ -80,15 +99,20 @@ Turn on bundling and make `tauri build` produce a real macOS app
 **W2 · Continuous integration.**
 A GitHub Actions (or equivalent) pipeline running `check:full`,
 `build`, `cargo check` / `cargo test`, `style:check`, and knip on every
-push; a release workflow producing signed artifacts.
+push; a release workflow producing signed artifacts. A macOS runner
+first; a Windows runner joins when W26 starts.
 *Answers:* audit §1. *Status:* open.
 
 **W3 · Signing, notarization, updater.**
 Apple Developer signing + notarization in the release workflow;
 `tauri-plugin-updater` with a release channel; pinned source-level
 `src-tauri/capabilities/` permissions as part of the same pass.
-*Answers:* audit §1, §6. *Status:* open. *Note:* needs an Apple
-Developer account, a user-owned prerequisite.
+*Answers:* audit §1, §6. *Status:* open. *Notes:* needs an Apple
+Developer account, a user-owned prerequisite. The updater signing
+keypair is a **custody-critical secret**: losing it strands every
+installed copy off the update channel; leaking it lets an attacker
+push updates. Key generation, storage, and backup are part of this
+workstream's definition of done.
 
 **W4 · Crash and error visibility.**
 Global `window.onerror` / `unhandledrejection` capture and a Rust
@@ -105,7 +129,8 @@ desktop SQLite from mirror to primary store for session drafts,
 imports, analysis, and memory bodies; demote localStorage to browser
 fallback + cache. Requires its own design doc (migration path from
 existing localStorage data, dual-write transition window, rollback
-story) and explicit user approval before build.
+story) and explicit user approval before build. Must land **before
+the public launch checkpoint** (Section 2).
 *Answers:* audit §3, §5. *Status:* open, design-gated.
 
 **W6 · Storage safety rails.**
@@ -205,6 +230,99 @@ decided, what is unresolved, with links. Distillation machinery
 exists; only the calm digest surface is missing.
 *Answers:* viewer synthesis §1.4, §4 P3. *Status:* open.
 
+### Product shell (beyond the app)
+
+These workstreams live outside the binary. The launch checkpoint
+(Section 2) requires W19–W22 at floor level; W23–W26 shape how far the
+product can reach after launch.
+
+**W19 · Web presence.**
+A static product site: landing page (positioning, screenshots, the
+local-first / evidence-linked story), download page wired to the
+release channel, changelog, docs (setup guides already written in-app
+can be mirrored), and the privacy policy (W22). Recommended as a
+**separate repository** (different deploy cadence and toolchain from
+the app; keeps this repo's validation contract clean); the brand
+identity reference governs its design. No accounts, no analytics
+beyond privacy-respecting page counts, no cloud features implied.
+*Status:* open; requires the naming decision (W18) first.
+
+**W20 · Distribution channels.**
+GitHub Releases as the canonical artifact host; the `latest.json`
+updater endpoint served from Releases (no server to run); a Homebrew
+cask once notarization lands (macOS developers, the first audience,
+live in `brew install`); winget / Scoop when W26 ships Windows.
+Checksums published per release.
+*Answers:* landscape §7.3 (durability signals). *Status:* open,
+depends on W1–W3.
+
+**W21 · Source posture and licensing.**
+Decide open-source vs closed vs delayed-open (**user decision, D1**),
+then execute: a LICENSE file (none exists today), filled
+`package.json` / `Cargo.toml` license + repository metadata, and
+third-party attribution (npm: fflate, lucide-react, react, zustand,
+tailwind; plus the Rust crate tree). Context for the decision: every
+product with traction in this category is open source; OSS is the
+distribution and trust engine here, and the moat is the reviewed
+memory model + execution pace, not the source secrecy. Closed source
+is viable but forfeits the category's main growth channel.
+*Status:* open, user decision required.
+
+**W22 · Legal and policy floor.**
+A privacy policy (short and honest: everything stays local, what the
+app reads, what the hook writes, what `.mori` export contains), and a
+written review of the third-party data-store boundary: reading the
+user's own Claude Code JSONL is the user reading their own files, but
+the Cursor `state.vscdb` exception and any future store should carry
+an explicit note per store; the 2026-04 ToS action against
+Agent-SDK-class tools is the precedent to monitor (Mori reads files
+and never drives the agent, which is the right side of that line, and
+the docs should say so). An EULA only if D1 lands closed-source.
+*Status:* open.
+
+**W23 · Language strategy.**
+Today the UI is Korean-first by principle, with **no i18n
+infrastructure** and hardcoded Korean strings across ~120 feature
+files; every commit deepens the retrofit cost. Decide (**D4**):
+(a) Korean-only launch, own the open Korean lane first, extract
+strings later when English demand is proven; (b) an extract-strings
+pass now (mechanical but large) so English can follow cheaply;
+(c) English-first flip, abandoning the Korean-lane thesis. The
+program recommends (a) with one amendment: any **new** surface built
+from now on routes copy through a single strings module for its
+feature, so the retrofit stops deepening without a big-bang pass.
+*Status:* open, user decision required.
+
+**W24 · Release management.**
+Semver policy and channels (stable + beta), release notes written per
+release and surfaced in-app ("새로운 기능" after update, calm and
+dismissible), a schema compatibility policy in writing (SQLite
+migrations stay forward-only with pre-migration backup per W6;
+`.mori v0` remains readable forever, any v1 must round-trip v0), and
+a support statement (which OS versions, which agent versions the
+readers track).
+*Status:* open.
+
+**W25 · Beta program and feedback loop.**
+G3's "competitive at first glance" cannot be judged without outside
+users. A small closed beta recruited from the communities where the
+pain is already visible (gpters `/handover` threads, Korean dev
+Slack/Discord groups), an in-app feedback affordance (opens a
+prefilled GitHub issue with the W4 diagnostics attached, explicit and
+user-visible, never automatic), and issue templates in the repo.
+Success metrics defined per gate (e.g. G3: a beta user connects an
+agent and finds a past session within the first sitting, unaided).
+*Status:* open, needs G1 first.
+
+**W26 · Windows support floor.**
+The connector layer already ships PowerShell wrappers and a
+USERPROFILE-aware path resolver, but no Windows build has ever been
+produced or tested. Scope: a Windows CI runner, WebView2 rendering
+pass, installer (NSIS / MSI via Tauri), path handling audit, and the
+Windows-specific hook installer paths. Windows is a large share of
+the Claude Code audience; sequenced after the macOS launch settles.
+*Status:* open, deliberately after G1–G2 on macOS.
+
 ### Cross-cutting (any time)
 
 **W17 · Housekeeping.**
@@ -216,9 +334,9 @@ fix the stale `README.md` icon-script reference; add knip to CI (W2).
 **W18 · Product identity and naming.**
 Resolve the naming collision with `fjwood69/mori` ("governed memory
 layer for AI coding agents", near-identical positioning language)
-before any public release: keep the name with distinct branding, or
-rename. A user decision; the program only flags that it must happen
-before G1's public artifact exists.
+before any public artifact exists: keep the name with distinct
+branding, or rename. A user decision (**D3**); W19 (site, domain) and
+W20 (release channel) both block on it.
 *Answers:* landscape §1.2, §7.3. *Status:* open, user decision.
 
 ## 4. Suggested execution order
@@ -229,40 +347,115 @@ Within the gate structure, the highest-leverage sequence:
    closes the likeliest active data-loss path today.
 2. **G1 as one arc** (W1 → W2 → W3 → W4): each is small; together
    they produce the first real artifact. W3's signing needs the
-   user-owned Apple Developer prerequisite early.
-3. **W5 design doc** in parallel with G1 implementation (it is a
-   writing task), so G2 can start the moment G1 ships.
-4. **W8 + W10** early in G3: first-run and cheap parity wins have the
-   highest impression-per-effort.
-5. **W13** as the first G4 item: it is promotion of existing
+   user-owned Apple Developer prerequisite early, and its updater
+   keypair custody plan is part of done.
+3. **W5 design doc + the D-decisions (Section 5) in parallel** with
+   G1 implementation: both are thinking / writing tasks, and D1 / D3
+   block the product-shell workstreams.
+4. **G2 (W5 build, W6 remainder, W7)** immediately after G1, before
+   any stranger installs the app: the launch checkpoint depends on it.
+5. **W19–W22 (product-shell floor)** alongside G2; W19 and W20 block
+   on D3 (naming).
+6. **W8 + W10** early in G3: first-run and cheap parity wins have the
+   highest impression-per-effort. **W25 (beta)** starts here; G3's
+   exit is judged by beta users, not by the author.
+7. **W13** as the first G4 item: it is promotion of existing
    machinery, not new capability.
+8. **W26 (Windows)** after the macOS launch settles.
 
 The autonomous loop may execute workstreams that are concrete and
-approved; W5 and W14 are explicitly design-gated and need user
-approval before any build, and W18 is a pure user decision.
+approved. The design-gated items (W5, W14) and every user decision
+(D1–D6, including W18 naming and W21 licensing) may not start without
+explicit approval.
 
-## 5. What this program does not change
+## 5. Open product decisions
+
+Decisions only the user can make. Each blocks the workstreams listed;
+the program's recommendation is stated, not presumed.
+
+| # | Decision | Blocks | Recommendation |
+| - | -------- | ------ | -------------- |
+| **D1** | Source posture: open-source, closed, or delayed-open; which license | W21, W19, W25 | Open source (MIT or Apache-2.0). Every winner in this category is OSS; the moat is the memory model and pace, not secrecy. |
+| **D2** | Monetization: free, donation, paid tier, or team tier later | W19 copy, long-term shape | Free while single-user; revisit a paid **team handoff** tier after G4 (Granola's proven step). No decision needed before launch beyond "free for now". |
+| **D3** | Naming: keep "Mori" with distinct branding, or rename | W18, W19, W20 | Investigate collision severity first (trademark, npm / crate / domain availability); rename only if discoverability is materially harmed. |
+| **D4** | Language strategy: Korean-only launch vs i18n extraction now | W23, W19 (site languages) | Korean-only launch + strings-module rule for new surfaces (W23 option a). |
+| **D5** | Browser-mode fate once SQLite is primary: demo / trial surface, or retired to a route | W5 design | Keep as an explicitly-labeled demo / trial surface (honest, zero-install trying), never described as a storage mode. |
+| **D6** | Launch shape: private beta first vs direct public launch | W25, launch checkpoint | Private beta (10–30 users from the Korean communities) between G2 and public launch. |
+
+## 6. Program risks
+
+Named so they are managed, not discovered.
+
+1. **Sequencing / migration debt.** Publicly distributing before W5
+   (SQLite promotion) converts an internal refactor into a user-data
+   migration program. Mitigation: the launch checkpoint in Section 2
+   is hard; G1 artifacts stay private / beta until G2 lands.
+2. **Solo bandwidth vs 26 workstreams.** The program is large for one
+   author plus an autonomous loop. Mitigation: gates force order;
+   every workstream splits into loop-sized slices; product-shell
+   items (site, policy) are mostly writing, parallelizable with app
+   work; nothing in G3 / G4 starts while G1 / G2 are open except
+   design docs.
+3. **Updater key custody.** Losing the updater keypair strands every
+   install; leaking it is a supply-chain hole. Mitigation: custody
+   plan is inside W3's definition of done (offline backup, documented
+   recovery).
+4. **Vendor format drift.** Mori's readers track other tools' private
+   formats (Claude JSONL, Codex, Cursor `state.vscdb`); any release of
+   theirs can break parsing. Mitigation: tolerant readers already
+   exist (unknown-kind preservation); add per-agent fixture contract
+   tests and a "reader health" surface in diagnostics (fold into W12).
+5. **ToS / policy drift at the vendors.** The 2026-04 action against
+   Agent-SDK-class tools shows the vendors police this space. Mori
+   reads the user's own local files and never drives the agent, which
+   is the defensible side of the line; W22 keeps the boundary written
+   down per store, and the Cursor exception stays narrow.
+6. **Native commoditization pace.** Anthropic ships continuity
+   features quarterly. Mitigation: the program front-loads what the
+   vendor will not build (cross-tool, evidence-gated, handoff, team);
+   G3 parity items are deliberately cheap, not deep.
+7. **Category-churn perception.** Users have watched opcode, sniffly,
+   Crystal, and Vibe Kanban stall. Mitigation: durability signals are
+   the launch story (signed installer, updater, data safety, an
+   explicit local-data guarantee), and the site says who maintains it.
+8. **Naming collision.** Unresolved, it degrades search and identity
+   from day one. Mitigation: D3 is resolved before any public
+   artifact (W18 blocks W19 / W20).
+9. **Korean-only ceiling.** The Korean lane is open but small; the
+   English market is where the category's users are. Mitigation: D4's
+   strings-module rule keeps the door open without paying the
+   retrofit now; revisit after beta signal.
+10. **Program staleness.** A 26-workstream document rots if it is not
+    the loop's actual source of slices. Mitigation: the autonomous
+    loop's next-slice section points here; status updates on ship are
+    part of each workstream's definition of done.
+
+## 7. What this program does not change
 
 - **Identity and non-goals.** Everything in
   `mori-project-goal.md` §6 and §14 binds every workstream: no
   invasive capture, no cloud sync, no account scraping, no unreviewed
   memory writes. W14 is an output surface and must be designed to stay
-  one.
+  one. The product site (W19) is static and implies no accounts or
+  cloud features.
 - **Review gates.** Import Review and Consolidation Review remain
   non-bypassable regardless of how frictionless capture becomes.
 - **The calm bar.** No gamification, no attention-seeking surfaces;
-  the digest and first-run flows follow the copy-diet and InfoHint
-  conventions.
+  the digest, first-run, and release-notes surfaces follow the
+  copy-diet and InfoHint conventions.
 - **Validation contract.** Every commit in every workstream passes
   `check:full`, `build`, `git diff --check`; `cargo check` /
   `cargo test` when `src-tauri` changes.
 
-## 6. Exit criteria for the program
+## 8. Exit criteria for the program
 
-The program is done when a stranger can: download a signed Mori,
-be guided to connect their agent in one sitting, watch a live session
-flow in, search everything they have ever done, lose nothing to a
-crash or a quota, and end a work session with a one-click reviewed
+The program is done when a stranger can: find Mori's website, read an
+honest privacy story, download a signed installer, be guided to
+connect their agent in one sitting, watch a live session flow in,
+search everything they have ever done, lose nothing to a crash, a
+quota, or an update, and end a work session with a one-click reviewed
 handoff that their next session (or teammate, or another agent)
-actually consumes. At that point Mori is a product, and the roadmap
-reverts to the capability buckets in `mori-project-goal.md` §13.
+actually consumes; and the author can ship a fix to that stranger
+through the updater the same week. At that point Mori is a product,
+and the roadmap reverts to the capability buckets in
+`mori-project-goal.md` §13.

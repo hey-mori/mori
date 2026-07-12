@@ -345,10 +345,13 @@ first glance) → G4 (The moat is the headline), built from
 [`references/competitive-landscape-2026-07.md`](references/competitive-landscape-2026-07.md).
 The loop should pick slices from the program's workstreams in gate
 order, honoring the design-gated items (W5 SQLite promotion, W14 MCP
-memory service) and the user-decision item (W18 naming), none of which
-may start without explicit approval. The product-maturity backlog
-below remains valid for calm-surface polish slices between program
-workstreams.
+memory service) and every open product decision (program §5, D1–D6:
+source posture, monetization, naming, language strategy, browser-mode
+fate, launch shape), none of which may start without explicit
+approval. The public launch checkpoint (program §2) is hard: no
+public artifact before G2 and the product-shell floor (W19–W22). The
+product-maturity backlog below remains valid for calm-surface polish
+slices between program workstreams.
 
 The loop is in a **Product Maturity** mode: auditing the running app
 surface-by-surface and hardening it into a coherent product, not
