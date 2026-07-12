@@ -188,7 +188,14 @@ from existing pieces (`detect_connector_status`, setup guides, 라이브
 세션 discovery); the missing part is the guided composition and a
 first-launch route into it.
 *Answers:* audit §4; the whole product depends on this connection.
-*Status:* open.
+*Status:* **shipped 2026-07-12.** `FirstRunGuide` shows on a truly
+empty first launch (durable `mori.onboarding` flag, hidden once any
+session exists or it is dismissed), detects + connects agents inline
+on desktop and states the desktop-only split honestly in the browser,
+routes the primary action into the records browser or 라이브, and is
+reopenable from Settings → 정보. Browser-verified show / dismiss /
+never-nag / reopen. Follow-up: replace Home's silent demo-fallback
+with a real zero-data entry to the guide.
 
 **W9 · Global search.**
 Cmd+K search across sessions (title + content), events, and accepted
