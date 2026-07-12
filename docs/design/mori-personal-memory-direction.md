@@ -1,223 +1,230 @@
 # Mori as a personal memory system · direction
 
-Status: **direction accepted 2026-07-13.** The user confirmed Mori should be
-able to grow beyond coding activity into a general personal memory system
-while the evidence-linked coding experience remains the strongest use case.
-Everything below the fold is the working model: sections are marked **fact**
-(verified in code), **accepted** (user-confirmed), or **proposal** (needs a
-decision, listed in §8). The v1 exploration lives in this file's git history;
-§7 records what v2 revised or rejected, including parts of v1 itself.
+Status: **broad direction accepted 2026-07-13** (register row 26); this
+revision (v3, same day) reframes the objective after the user clarified the
+real concern: not any missing feature, but **extensibility without
+fragmentation**. Mori must not be permanently constrained by its
+coding-session starting point, and must also not become an everything app.
+Sections are marked **fact** / **accepted** / **hypothesis**; §10 is the
+ledger. Prior revisions live in git history.
 
 Companion reading: [`mori-project-goal.md`](../mori-project-goal.md),
 [`memory-architecture.md`](../memory-architecture.md),
-[`memory-as-a-service.md`](memory-as-a-service.md),
-[`key-decisions-register.md`](key-decisions-register.md) (row 26).
+[`memory-as-a-service.md`](memory-as-a-service.md).
 
-## 1. Product definition (accepted)
+## 1. The product problem (restated)
 
-> Mori is a local-first personal memory system. It captures what you work on,
-> read, and learn (starting with AI-assisted coding work), turns it into
-> reviewed or reviewable provenance-linked memory, and recalls it when it
-> becomes useful.
+Mori today is structurally excellent at one thing: turning AI coding sessions
+into reviewed, provenance-linked memory. The risk is not that it lacks a
+Knowledge tab; the risk is that every schema, screen, and habit quietly
+assumes "evidence = an agent session in a repo", so that the first non-code
+source either gets forced into a fake session or triggers a rebuild. The
+opposite risk is designing a universal platform for sources that do not exist
+yet. The objective is a **small stable core that many source types can enter
+honestly**, plus discipline about what to build only when usage demands it.
 
-Mori stays **one product**. Code, Knowledge, and Language are not products,
-tracks, tabs, or databases. They are capability clusters over one shared
-foundation (§3).
+## 2. Identity and trajectory (accepted)
 
-## 2. What the repository provides (fact)
+> Mori is a local-first personal memory system that turns evidence from what
+> users work on, read, and learn into reusable, provenance-linked memory,
+> starting with AI-assisted software development.
 
-| Layer | State |
+Stages, each gated by validation rather than a roadmap date:
+
+1. **Now**: coding memory stays the wedge and keeps getting deeper.
+2. **Next**: prove one capability (Understand) and one non-session source
+   (small text/Markdown) can enter the same lifecycle honestly.
+3. **Later**: source-appropriate reading/organizing experiences where usage
+   shows the generic surfaces straining; generated topic views over memory.
+4. **Not a stage**: file manager, document editor, note app, wiki platform,
+   spaced-repetition system, OS-wide capture, everything app.
+
+## 3. Shared core · varying experience · visibility (hypothesis, load-bearing)
+
+What the user asked to distinguish, distinguished:
+
+| Layer | Contents | Varies by source? |
+| --- | --- | --- |
+| **Shared core** (one of each, never forked) | Evidence store + provenance/trust/retention · memory lifecycle + audit + governance · recall (search, Ask Mori, resume, reports) · scopes (§4) · engine seam | Never |
+| **Source-appropriate experience** | How evidence is captured, read, and navigated: sessions/timelines for agent work; document/source views for imported material later; live view for running agents | Yes, by design |
+| **Contextual capabilities** | Actions on content wherever it appears: 이해하기 (understand/translate), 정리하기 (distill), 기억하기 (remember), later 표현하기 (express) | Available everywhere text exists |
+| **Internal-only concepts** | Source kinds, memory kinds, lifecycle states, capture records, policy internals, storage adapters | Never user-facing vocabulary |
+
+The rule that prevents both silos and forced uniformity: **specialize at the
+content level, unify at the navigation level.** A document gets a
+document-shaped reading surface (when it exists) inside the same shell,
+contexts, memory, and recall as everything else. It never gets its own app,
+database, lifecycle, or brand.
+
+### Concept audit (fact: what is truly universal today)
+
+| Concept | Verdict |
 | --- | --- |
-| Memory spine (proposals, `StoredAcceptedProjectMemory` with 10-state lifecycle, audit + revert, confidence, sensitivity, evidenceRefs, consolidation + stale + contradiction review, Ask Mori, `.mori` export) | Domain-neutral, pure, tested. Reusable as-is |
-| Engine seam (규칙 기반 · Ollama · OpenAI 호환) | Decoupled from what is analyzed; `askMoriLlm.ts` is the adapter template for any new capability |
-| Event model | `EventType` already includes `documentNote`, `webResearch`, `artifact`; `SourceKind` reserves `docs`, `url`, `file`, `browser` |
-| Capture | Agent stores, connector JSONL, paste, git only. No file ingestion (no Markdown, no PDF) |
-| Scope | Memory API is per-`projectId`; cross-project enumeration now exists at the repository layer (`listAllAcceptedProjectMemories`, 2026-07-13) but no surface uses it yet |
-| Identity doctrine | `mori-project-goal.md` still says "one AI-agent work session" and bans PDF ingestion (§14); edits pending §8.4 |
+| Accepted memory, proposals, audit, lifecycle, recall, `.mori` | Universal now; reuse as-is |
+| Project | Universal container; only its *grouping copy* assumes repo paths |
+| Session | Honest only for agent work streams. Keep it that way; never fake one |
+| TimelineEvent | Generic core (title/summary/type/confidence) + code payload (fileTouches, toolName). Non-code events already have lanes (`documentNote`, `webResearch`) |
+| SourceRef | Generic except `sessionId` coupling: evidence currently requires a session. This is THE seam experiment K must settle (§7) |
+| Context Inspector, InfoHint, review surfaces | Universal interaction patterns; reuse |
+| Ask Mori / queryableMemory | Universal; needs provisional-status honesty when governance lands |
 
-## 3. The model: evidence + memory + recall, organized by projects, powered by capabilities (proposal)
+## 4. Scopes: where information lives (hypothesis)
 
-Three nouns, one container, and verbs:
+Four kinds of belonging, three mechanisms, no new container types:
 
-- **Evidence** 자료: what Mori saw. Original sources preserved with
-  provenance, trust, retention. Searchable but not asserted as knowledge.
-- **Memory** 메모리: what Mori keeps. Derived items with kind, status,
-  confidence, sensitivity, evidenceRefs, full audit. The only layer Mori
-  treats as true, and even then with honest status.
-- **Recall** 회상: search, Ask Mori, resume prompts, reports. Pull, not push.
-- **Project** 프로젝트: the one container. A repo is a project; a research
-  topic, a course, or a writing effort is also just a project. No new
-  "topic space" aggregate unless projects demonstrably fail (§7).
-- **Capabilities**: verbs applied to content, each riding the same engine
-  seam and producing proposals into the same memory store:
-  - **Code**: capture agent sessions, reconstruct, analyze. The deepest
-    capability today; unchanged.
-  - **Understand** (the Language idea): explain/translate any text the user
-    selects, in context; optionally remember expressions and corrections.
-  - **Distill** (the Knowledge idea): ingest a document/page, keep it as
-    evidence, derive only the few durable claims policy allows.
-
-Why this instead of v1's "source families × lenses × memory kinds × views":
-fewer concepts, verbs match how the user meets them, and "lens" stays
-reserved for the Reconstruction Lab's shipped timeline lenses instead of
-being overloaded into a product-wide abstraction.
-
-A session remains **the unit of agent work only**. A saved expression or an
-imported document attaches to a project directly; plumbing may use a
-lightweight capture record, but the UI never shows a fake "session".
-
-## 4. Memory governance (proposal · the core new design)
-
-Goal: avoid both review fatigue and silent AI truth. Model: one **memory
-policy** with three modes, small fixed exceptions, and a new `provisional`
-status. Smallest sufficient model; explicitly not a policy engine.
-
-Modes (global default; per-project override only if real use demands it):
-
-| Mode | Behavior |
+| Belonging | Mechanism |
 | --- | --- |
-| **항상 확인** (default, today's behavior) | Every durable-memory proposal waits in consolidation review |
-| **자동 저장** | Qualifying proposals land immediately as `provisional` memory; the rest go to the exception queue (the existing consolidation review surface, reused) |
-| **수집만** | Evidence only; no derivation runs |
+| Session-bound (agent work) | Session inside a project (today's model, unchanged) |
+| Project-bound (docs, decisions for a context) | Project. A user-named research topic is just a project the user creates deliberately; nothing forces it |
+| Personal (expressions, general facts, cross-context knowledge) | A reserved **personal scope**. Internally it can ride the existing `projectId` keying as a well-known id; user-facing it is 개인 메모리, never "a project named personal" |
+| Topic-bound across projects | Not a container now. Revisit trigger: real demand for one memory to live in several contexts at once (then consider links/tags, not new containers) |
 
-Qualifying for auto = ALL of: additive (creates new memory, does not touch
-existing), confidence high, sensitivity normal, no conflict with existing
-memory. Everything else asks. In particular these **always ask, in every
-mode**:
+This resolves "cross-project knowledge must not be forced into an arbitrary
+project" without a schema migration, and cross-scope recall already works
+(`listAllAcceptedProjectMemories`, shipped).
 
-- any mutation of existing memory (merge, supersede, markStale, resolve)
-- anything sensitive
-- anything that contradicts existing memory
+## 5. Jobs and information architecture (hypothesis)
 
-`provisional` (new status in the existing 10-state lifecycle):
+Users think in jobs, not source families. The shell should map to jobs; the
+current shell already mostly does:
 
-- fully recallable in personal surfaces (search, Ask Mori, resume prompt)
-  with an honest marker, e.g. 잠정
-- **never crosses an external boundary**: reports, `.mori` export, clientSafe
-  and team outputs include confirmed memory only
-- becomes confirmed only by explicit user action (confirm or edit); never by
-  time or silent use
-- audited like everything else, actor `auto-policy`, one-click revert via the
-  existing revert machinery
-- swept by the existing stale review when old, unconfirmed, and unused, so
-  the store cannot silently fill with noise
+| Job | Surface |
+| --- | --- |
+| 이어가기 · continue what I was doing | 홈 (command field, resume), project overview |
+| 지금 무슨 일이 일어나나 | 라이브 |
+| 가져오기 · save something useful | 연동 (agents, paste; document import lands here later) |
+| 맥락에서 일하기 | 프로젝트 (sessions for code; sources/memory for everything) |
+| 찾기 · ask across my material · 신뢰 관리 | **메모리** (new primary: 전체 검색 · 최근 · 확인 대기 · 잠정 · scope filter) |
+| 이해하기 · express | Contextual actions wherever text is, results in the Context Inspector |
 
-One sentence of doctrine that summarizes it: **automation may raise the floor
-of what Mori remembers for you; review remains the gate for what leaves the
-machine and for anything that rewrites what you already confirmed.**
+Consequences:
 
-## 5. Navigation and layout direction (proposal)
+- **No global `Code | Knowledge` navigation.** That is navigation by source
+  type; it reintroduces silos at the shell level and designs a workspace for
+  content that has never entered the product. Rejected for now with an
+  explicit revisit trigger (§10).
+- The Code experience is untouched; it is the project/session experience.
+- Progressive disclosure: a new user sees 홈, 연동, 프로젝트; 메모리 gains
+  meaning as memory accumulates; governance controls live in settings, not in
+  the shell.
+- Advanced internals (kinds, states, policies) never become navigation.
 
-Evaluated against the current shell (홈 · 라이브 · 연동 · 프로젝트 · 대시보드 ·
-워크벤치, sessions living under projects). Verdict: the shell survives; two
-moves, no redesign.
+## 6. Language: role and boundaries (hypothesis)
 
-1. **Projects generalize to any context.** No rename needed; the workspace
-   stops assuming a repo path is the only grouping. Coding projects keep
-   sessions; other projects hold evidence and memory without sessions.
-2. **메모리 becomes a primary surface** (global, cross-project):
-   - 전체 검색 across all memory (rides `listAllAcceptedProjectMemories`)
-   - 최근 메모리 stream
-   - 확인 대기: the provisional + exception queue (§4), one place to
-     confirm, correct, or discard
-   - collections by kind later (e.g. 표현 노트), as filters, not new screens
+Language is the same extensibility problem in miniature, and its first proof.
+Role: a **contextual capability, not a workspace**.
 
-```
-홈           command-first landing (unchanged)
-라이브        live agent sessions (coding capability surface)
-연동          capture: agents, connectors, paste, document import later
-프로젝트      contexts: repo projects with sessions · other projects without
-메모리        NEW primary: search all · recent · 확인 대기 · collections
-대시보드/워크벤치  unchanged (workbench already parked, register row 22)
-```
+- 이해하기 acts on any selected text (session transcript, evidence, later
+  documents): natural translation, what it actually means in this context,
+  useful expressions, grammar/nuance only when it adds value, link back to
+  the source.
+- Saved results become ordinary memory (kind `expression`/`correction`) in
+  the personal scope or the source's project, with provenance to the exact
+  event. They surface through recall and a 메모리 collection filter.
+- A dedicated Learn/review surface is justified only by usage (trigger:
+  saved expressions accumulate and repeat-lookup behavior appears). Until
+  then it is a filter, not a screen.
+- The result model carries detected `sourceLang`/`targetLang`; the polished
+  first path is EN↔KO but nothing hard-codes the pair.
 
-The Context Inspector doctrine holds: capability results (e.g. a selection
-explanation) render in the right-side inspector, never a second workspace.
+## 7. Validation sequence (accepted shape, hypothesis details)
 
-## 6. Validation plan (accepted direction, proposed sequence)
+Each experiment: hypothesis · flow · reuses · introduces · success ·
+decision informed · not built.
 
-Two small end-to-end experiments over one shared foundation. Neither builds a
-platform.
+**L1 · selection → 이해** (first; smallest, zero capture change)
+- Hypothesis: contextual capabilities can feel native inside existing
+  surfaces and deliver daily value before any new memory type exists.
+- Flow: select text in a session reading surface → 이해하기 → Context
+  Inspector shows translation + contextual meaning + expressions, honest
+  "엔진 없음" state without an LLM.
+- Reuses: Context Inspector, engine seam (`askMoriLlm` adapter pattern),
+  existing settings. Introduces: one selection affordance + one panel + a
+  pure understand lib. Not built: saving, OS capture, new nav.
+- Success: the user reaches for it during real work; explanation quality is
+  worth keeping. Informs: capability interaction pattern for everything
+  later.
 
-**Foundation (partly built)**
-- Cross-project memory enumeration: **shipped 2026-07-13** at the repository
-  layer (browser prefix scan + SQLite `list_all_accepted_project_memories` +
-  runtime routing, tested). Unblocks the 메모리 surface and global search.
-- `provisional` status + policy modes: build after §8.1 is decided.
-- Memory-kind extension (e.g. `expression`, `claim`): with the experiment
-  that first needs it; a deliberate union bump + consumer audit each time.
+**L2 · save expression** (after L1 proves quality)
+- Hypothesis: a non-session-derived memory can ride the existing lifecycle
+  unchanged.
+- Introduces: `expression` kind (deliberate union bump) + personal scope use.
+  Informs: governance surface for user-initiated memory (explicit selection
+  is a strong trust signal; likely auto-accept as confirmed, since the user
+  literally chose it).
 
-**Experiment L · Understand (first)**
-- L1: select text in a session transcript or evidence surface → 이해 action →
-  Context Inspector shows natural translation, contextual meaning, useful
-  expressions. Engine via the existing provider seam; deterministic fallback
-  is honest ("엔진 없음"), never a fake answer. No save, no OS capture.
-- L2: 저장 turns a result into an `expression` memory with provenance to the
-  exact event, entering through the §4 policy like any proposal.
-- Validates: capability pattern, inspector UX, first non-code memory kind,
-  daily EN↔KO value with zero new capture infrastructure.
+**K · small text/Markdown source** (after L2; the architectural one)
+- Hypothesis: a non-session source can enter honestly, share the lifecycle,
+  and be recalled with citations alongside coding memory.
+- Flow: paste/import small text → evidence with provenance in a chosen
+  project → sparse derivation under policy → Ask Mori answers from it with a
+  citation.
+- Decision checkpoint (the `SourceRef.sessionId` seam): implement a hidden
+  generic capture record ONLY if it does not masquerade as a session
+  anywhere user-visible; if honesty requires it, make the minimal
+  sessionless-evidence change instead. This decision is deliberately made
+  here, against implementation reality, not in advance.
+- Not built: PDF, collections, topic views, any Knowledge workspace.
 
-**Experiment K · Distill (second)**
-- Paste or import Markdown/plain text → evidence attached to a chosen
-  project → sparse distillation: propose only claims that connect to existing
-  memory or that the user highlighted; everything else stays searchable
-  evidence. Success check: Ask Mori answers a question from the document with
-  a citation, and the memory store gained only a handful of items.
-- Validates: non-session capture identity, extraction economics rule,
-  evidence-vs-memory boundary under the policy.
+**IA checkpoint (after K)**: only now decide whether document reading needs a
+source-appropriate surface beyond the evidence tab, and what it looks like,
+from observed friction.
 
-Order rationale: L first because it needs no capture-layer change and tests
-the governance surface with the lowest-stakes memory kind; K second because
-it depends on the non-session capture decision (§8.3) and its economics rule
-deserves a real-document trial, not speculation.
+## 8. Memory governance (hypothesis, refined)
 
-## 7. Rejected and deferred (so they are not re-litigated)
+Unchanged three-mode model (항상 확인 · 자동 저장 · 수집만) with the fixed
+always-ask exceptions (mutations of existing memory, sensitive items,
+contradictions) and `provisional` status. Added visibility requirements:
 
-- **Tracks / separate products / separate databases**: rejected. One store,
-  one lifecycle, one recall.
-- **v1's "lens" as the product-wide abstraction**: retired (self-revision).
-  Capabilities replace it; "lens" keeps its shipped Reconstruction Lab
-  meaning.
-- **Topic spaces as a new aggregate**: deferred; projects are the container
-  until a real use case breaks them.
-- **Document manager / wiki / standalone translator / spaced-repetition
-  system**: not building. Fragments of value they represent arrive as
-  capabilities + memory instead.
-- **OS-wide selection capture**: later, consent-gated, explicit-action-only;
-  clipboard watching and screen reading stay banned.
-- **Policy engine** (per-source × per-kind × per-integration matrices):
-  rejected; one mode + fixed exceptions is the whole model until proven
-  insufficient.
-- **Embeddings as source of truth**: still a non-goal; embeddings remain a
-  later option strictly over accepted memory.
-- **Time-based auto-confirmation of provisional memory**: rejected;
-  confirmation is always an explicit act.
+- provisional items are visibly marked wherever they appear
+- Ask Mori and search disclose when an answer depends on provisional memory
+- provisional ranks below confirmed and is filterable/excludable in recall
+- external outputs (reports, `.mori`, clientSafe) remain confirmed-only
+- auto-save must be easy to choose at setup even though 항상 확인 is default
+- explicit user selection (e.g. saving an expression) is itself a strong
+  trust signal and may confirm directly
 
-## 8. Decisions needed (user)
+Still deliberately not built: policy matrices per source/kind/integration,
+decay timers, recall-time revalidation. Extend only on evidence.
 
-1. **Governance**: approve the §4 model (three modes, always-ask exceptions,
-   `provisional` semantics, confirmed-only external outputs)?
-2. **IA**: approve promoting 메모리 to primary navigation with the 확인 대기
-   queue inside it?
-3. **Non-session capture identity** (needed before Experiment K): lightweight
-   hidden capture record vs project-level evidence without any session
-   object. Recommendation: hidden capture record, because every existing
-   evidence path hangs off a session id and this avoids a schema migration.
-4. **Doctrine edits**: with the direction accepted, `mori-project-goal.md`
-   §1 (identity), §2 (session doctrine), §14 (narrow the PDF non-goal to
-   image/audio/video) should be updated to match. Approve making those edits?
-5. **Naming**: keep "이해" (Understand) and "정리/증류" (Distill) as internal
-   capability names, with no user-facing "Mori Code/Knowledge/Language"
-   vocabulary. Confirm or rename.
+## 9. Boundaries (accepted)
 
-## 9. Open questions (not blocking the next step)
+What would make Mori too broad: authoring surfaces (editing documents,
+writing wiki pages), organizing surfaces that demand manual curation,
+becoming the system of record for files, source types without a recall
+story. Out of scope stays: image OCR / audio / video ingestion, cloud sync
+by default, autonomous daemons, embeddings as source of truth, multi-user
+(`.mori` export remains the sharing boundary).
 
-- Sparse-extraction gate for K: is "connects to existing memory or
-  user-highlighted" right? Decide from a real-document trial.
-- Where expressions live before the 메모리 surface exists: a global
-  pseudo-project vs the project the selection came from. Leaning: the source
-  project, since provenance already points there.
-- Bidirectionality of 이해 at L1: EN→KO comprehension first; KO→EN expression
-  as L1.5 if the first week of real use demands it.
-- Whether per-project policy overrides are ever needed, or the global mode
-  suffices permanently.
+## 10. Ledger
+
+- **Facts**: neutral memory spine; capture edge is code-only; evidence
+  requires a session today; cross-scope enumeration shipped (0618258).
+- **Accepted**: broad direction (row 26); identity sentence (§2); one
+  product, one core; experiments L before K; document-text ingestion will
+  enter scope via doctrine edit.
+- **Working hypotheses**: jobs-based IA with 메모리 primary (§5); scopes
+  model (§4); governance modes + provisional (§8); Language as capability
+  (§6).
+- **Deferred with triggers**: dedicated document/source reading surface
+  (trigger: K shows evidence-tab friction); Learn surface (trigger: saved
+  expressions + repeat lookups); topic linking (trigger: one memory needed
+  in several contexts); global source-type navigation (trigger: a second
+  mature source experience actually exists and job-based nav measurably
+  fails); per-project policy overrides.
+- **Rejected**: Code/Knowledge/Language as products, tabs, or databases;
+  fake sessions for documents; "Wiki" as a commitment (generated topic
+  summaries over memory remain a possible later output); preemptive memory
+  kind taxonomy; policy engine; time-based auto-confirmation.
+
+## 11. Decisions needed (user)
+
+1. Governance model incl. the §8 visibility additions: approve to build
+   (provisional status + modes) after L1?
+2. 메모리 primary navigation with 확인 대기 inside: approve?
+3. Personal scope as a reserved internal id (§4): approve the approach?
+4. Doctrine edits to `mori-project-goal.md` (§1 identity, §2 session
+   doctrine wording "sessions are for agent work; other evidence enters
+   without one", §14 non-goal narrowed to image/audio/video): approve?
+5. L2's trust rule (user-saved expressions confirm directly, skipping
+   provisional): approve?
