@@ -270,11 +270,11 @@ notes kept for traceability, not new architecture labels.
 | ----------------- | ---- | ------ |
 | Import and Evidence Foundation | Make explicit import reliable, auditable, evidence-linked. | ✅ landed |
 | Timeline and Review Experience | Make AI-derived reconstruction reviewable per item. | ✅ landed |
-| Project Memory Consolidation | Turn reviewed sessions into durable project memory through review-before-apply. | partially landed — see Controlled Project Memory Consolidation below |
-| Resume and Report Outputs | Generate continuation prompts and shareable reports from accepted memory only. | live aggregation landed; accepted-memory integration designed |
-| Optional Local Automation | Reduce friction while preserving explicit consent. | not started — opt-in only when added |
+| Project Memory Consolidation | Turn reviewed sessions into durable project memory through review-before-apply. | ✅ landed · full review surface, accepted-memory persistence (browser + SQLite V003), audit trail + revert, stale / contradiction review |
+| Resume and Report Outputs | Generate continuation prompts and shareable reports from accepted memory only. | ✅ landed · accepted-memory integration in Resume Prompt and Reports, real `.mori` zip export / import |
+| Optional Local Automation | Reduce friction while preserving explicit consent. | ✅ landed · opt-in background inbox watcher (off by default, review gate unchanged); see Phase 3 below |
 | Queryable Memory | Local cited search over accepted memory + evidence. | ✅ landed — accepted-memory + timeline / evidence / review-action search (helper + Memory Search card) |
-| Team / Shared Memory | Explicit `.mori v0` export/import only; no default cloud sync. | partially landed (`.mori v0` export) |
+| Team / Shared Memory | Explicit `.mori v0` export/import only; no default cloud sync. | partially landed · `.mori` zip export / import, client-safe filter + export UI, handoff workflow spec; live collaboration is a non-goal |
 
 Sub-capabilities within Project Memory Consolidation (mirroring
 the design in
@@ -350,12 +350,14 @@ Sub-phase status:
 | Accepted Memory Lifecycle Status | Explicit `stale` / `contradicted` statuses; accepting a lifecycle proposal transitions the referenced memory via `targetMemoryIds` | ✅ landed |
 | Queryable Memory | Local structured search over accepted memories + timeline / evidence / review-action references (`searchAcceptedMemories` / `searchProjectMemoryReferences` + Memory Search card); deterministic, evidence-ref cited, no embeddings | ✅ landed |
 
-### Phase 3 — Optional local daemon / watched inbox (Planned, opt-in)
+### Phase 3 — Optional local daemon / watched inbox (✅ Shipped, opt-in)
 
-Optional, explicit opt-in only. A local watcher (Tauri-side service
-or an installable CLI) loads new files from `~/.mori/connectors/`
-into a "pending review" tray. The user still has to walk each item
-through Import Review before it reaches Project Memory.
+Shipped as the opt-in background inbox watcher (`src/lib/background-watch/`,
+설정 → 분석 엔진 → "백그라운드 감지"): while the app is open it watches
+`~/.mori/connectors/`, surfaces new or grown files into the notification
+feed, and can run a headless Quick Pass whose result lands in the
+Evidence Hub for review. The user still walks each item through Import
+Review before it reaches Project Memory.
 
 Hard constraints:
 - Opt-in via Settings, off by default.

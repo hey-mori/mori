@@ -590,9 +590,10 @@ that is called out.
   labels, not a separate band or chart.
 - Workspace browser (`WorkspaceView`, `ViewKey: "workspace"`) listing
   all projects, session counts, and a "new project" action.
-- Primary navigation reduced to 홈 / 소스 / 프로젝트. 메모리 is no longer
-  a standing sidebar tab; durable project memory lives on each project
-  page. The memory overview and consolidation review remain routable
+- Primary navigation: 홈 / 라이브 / 연동 / 프로젝트 / 대시보드 /
+  워크벤치 (`src/components/layout/Sidebar.tsx`). 메모리 is not a
+  standing sidebar tab; durable project memory lives on each project
+  page, and the memory overview / consolidation review remain routable
   through a project's action and the command palette.
 
 If something in this list does not match repo reality, treat the

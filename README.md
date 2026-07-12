@@ -2,101 +2,92 @@
 
 Mori remembers how the work happened.
 
-Mori is a local-first AI work memory app. It records selected AI work sessions and reconstructs them into a Narrative Timeline, Flow Focus / Trace View, Review page (issues and decisions), Evidence view, Resume Prompt, Reports, and eventually `.mori` local work memory files.
+Mori is a local-first AI work memory app. It follows and imports AI
+coding sessions (Claude Code, Codex, OpenCode, and other anchor
+agents), reconstructs them into evidence-linked timelines, extracts
+issues / decisions / next actions for review, accumulates durable
+project memory through an explicit consolidation gate, and produces
+resume prompts, reports, and real `.mori` package files so work can
+continue across sessions, tools, and teammates.
 
-Mori is not a surveillance app, task manager, wiki, or autonomous work agent. It is a quiet work memory app that helps users understand and resume how their work happened.
+Mori is not a surveillance app, task manager, wiki, or autonomous work
+agent. It never captures in the background without explicit opt-in,
+never makes memory durable without user review, and never sends data
+anywhere: everything stays on the user's machine.
 
 ## App Structure
 
-Mori's primary navigation:
+Primary navigation (Korean-first UI):
 
-- **Start Session**: Configure recording scope and begin new work memory session
-- **Timeline**: Reconstructed narrative of how your work unfolded (main work reconstruction view)
-- **Evidence**: Sources and inputs Mori uses to reconstruct this session (import and source management)
-- **Review**: Issues, decisions, and next actions discovered in this session (extracted insights)
-- **Reports**: Resume prompts and shareable reports for this session (resume and export)
-- **Memory**: Long-term session history across this project (cross-session memory)
-- **Settings**: Privacy, local AI, repositories, and storage configuration
+- **홈**: activity overview · contribution heatmap, streaks, recent
+  sessions, companion signals
+- **라이브**: live feed tailing every currently-active Claude Code
+  session, request by request, while you work
+- **연동**: source hub · anchor-agent connections (기록에서 불러오기,
+  hook install, live connection status) and evidence imports
+- **프로젝트**: project workspaces · cross-session synthesis, accepted
+  project memory, session rail
+- **대시보드 / 워크벤치**: combined work surfaces over the active
+  session (timeline, evidence, review, analysis, reports)
+- **설정**: privacy, storage, AI engines, repositories, background
+  detection
 
-## Current Foundation
+A session opens into its own workspace: 개요, 활동 (swimlane
+timeline), 재구성 (five reconstruction lenses), 분석 (Quick Pass
+review), 공유 (resume prompt / reports / `.mori` export). 새 세션
+starts from a single AI-agent conversation (the anchor) with other
+evidence attached to it.
 
-This repository currently contains the frontend foundation for Mori:
+## Current State
 
-- React + TypeScript + Vite app
-- Tailwind-ready styling pipeline with Formal Theme CSS tokens
-- Zustand app state for selected view, selected timeline event, hover focus, filters, and search
-- Typed Mori domain model for projects, sessions, events, issues, decisions, relationships, sources, artifacts, summaries, and next actions
-- Realistic Mori planning mock session
-- Data-driven Narrative Timeline with timestamp-based horizontal positioning
-- Flow Focus relationship highlighting and Trace panel
-- Event Inspector with trust, confidence, evidence, related items, note, and correction placeholders
-- Review page with Issue Garden and Decision Log
-- Evidence Hub: Available-now and Planned-connector card grids backed by the source registry, embedded import flow that opens with the right tab + AI platform pre-selected, imported-sources list with badges, and a sticky right-side detail panel that exposes integration status, capture method, raw-data policy, privacy note, and related events for the selected source or integration
-- Resume Prompt and Report Export UI
-- Start Session setup flow
-- Settings / Privacy / Local AI
-- Pure utility functions prepared for Vitest coverage
-- `.mori` package v0 JSON serialization/deserialization
-- Browser draft repository for temporary local session/package persistence
-- Import normalizers for manual notes, URLs, and AI conversation text
-- Import MVP: in-app import panel that persists imports per session and renders them in Evidence and Timeline
-- Git diff import: paste a unified `git diff`, or in the Tauri desktop app run `git diff` against an explicitly-typed repo path/range through a sandboxed Rust command. Both paths share the same verified `gitDiff` source + `fileCode` event normalization
-- Repository settings: explicit user-added repo paths persisted through the existing storage repository, a native folder picker in Tauri (via `tauri-plugin-dialog`), and a Git Diff dropdown that fills the capture path from the saved default — no filesystem scanning, no background capture
-- On-demand repository verification: a `verify_repository_path` Tauri command runs `git rev-parse --show-toplevel`, `rev-parse HEAD`, `branch --show-current`, and `status --porcelain` against a user-chosen repo only when the user clicks Verify. Resulting branch, SHA, and dirty status persist alongside the repo entry and surface in both Settings and the Git Diff dropdown
-- Verification freshness: pure age/staleness helpers (24h default threshold) drive `Verified N hours ago` / `Stale · N days ago` badges, plus a `Re-verify` action label, in Settings and the Git Diff dropdown. After a successful explicit Git diff capture against a saved repo, Mori refreshes that repo's verification metadata using the same `verify_repository_path` path — failures are non-blocking and never erase prior verified records
-- Session view composition that switches between the demo mock session and a real persisted draft session
-- Local Quick Pass analysis: deterministic heuristic provider that extracts issues, decisions, relationships, and next actions from imported sources; results persist per session and render in Review and Reports
-- Ollama Quick Pass provider with configurable endpoint/model, settings UI, connection probe, and Quick Pass control provider selector (still experimental for output quality)
-- OpenAI-compatible Quick Pass provider for `/v1/chat/completions` endpoints, with configurable base URL/model/API key, a `/models` probe, and explicit external-data copy when a cloud URL is used
-- Optional deterministic fallback when an LLM-backed Quick Pass run fails, honestly labeled in the analysis result
-- Placeholder Tauri icon assets so `cargo check` can run against the Rust shell
-- Rust-native SQLite persistence: `rusqlite`-backed migration runner with checksum validation, real save/load of projects, sessions, sources, events, issues, decisions, relationships, artifacts, next actions, and summaries, Tauri command surface, and a Settings status panel
-- Runtime-aware persistence service that routes between browser localStorage and the Tauri SQLite bridge, prefers SQLite as the source of truth in desktop mode, and exposes Load actions for saved SQLite sessions; a "Browser Draft" vs "Desktop SQLite" badge in the Settings storage card (DemoModeCard) and the sidebar session card makes the active source explicit
-- Tauri v2 desktop shell foundation with native `.mori v0 JSON` save/open commands
-- SQLite migration catalog, normalized row snapshot mapping, validation, and desktop command boundaries
+The full product loop works end to end: capture / import → preview →
+import review → timeline / evidence → project memory → consolidation
+review → accepted memory (with an append-only audit trail and revert)
+→ resume prompt / reports / `.mori` zip package.
+
+Highlights (the verified, maintained inventory is
+[docs/mori-project-goal.md](docs/mori-project-goal.md) §4):
+
+- Seven anchor agents with read-only Rust discovery readers: Claude
+  Code, Codex, OpenCode, Antigravity, Continue, Cline, Cursor
+- 라이브 세션: delta-read tailing of active Claude Code sessions with
+  request-anchored work feeds
+- Import Review and Consolidation Review as non-bypassable gates;
+  evidence-linked provenance on every derived item
+- Quick Pass analysis with three providers (deterministic rule-based,
+  Ollama, OpenAI-compatible) and honest fallback labeling
+- Desktop SQLite (`rusqlite`, migrations V001–V007) mirroring the
+  browser store; real `.mori` zip export / import with native dialogs;
+  client-safe handoff filtering
+- Opt-in background inbox watcher (off by default, desktop-only,
+  review gate unchanged)
+- Tauri bundling produces `Mori.app` / `.dmg` (unsigned until the
+  signing workstream lands); CI validates web + Rust on every push
 
 ## Tech Stack
 
-- Frontend: React, TypeScript, Vite
-- Styling: Tailwind CSS pipeline plus local Formal Theme CSS tokens
-- State: Zustand
-- Icons: lucide-react
-- Tests: Vitest
-
-Planned stack:
-
-- Desktop: Tauri v2 foundation added under `src-tauri/`
-- Backend: Rust command shell now exists; Tokio is planned when async jobs are needed
-- Local DB: SQLite with FTS5
-- Local LLM: Ollama, LM Studio, OpenAI-compatible endpoints
-- Package format: `.mori` zip-like package
-- Export: Markdown first, PDF/HTML later
+- Frontend: React, TypeScript, Vite, Zustand, lucide-react
+- Styling: layered CSS (tokens → theme → components → feature sheets;
+  see [docs/frontend-architecture.md](docs/frontend-architecture.md))
+- Desktop: Tauri v2, Rust, `rusqlite` (bundled SQLite)
+- Packaging: `fflate` for `.mori` zip
+- Local LLM (optional): Ollama or any OpenAI-compatible endpoint
+- Tests: Vitest (web), `cargo test` (Rust)
 
 ## Run
 
 ```bash
 npm install
-npm run dev
-```
-
-## Run Desktop
-
-Requires Rust and platform-specific Tauri prerequisites.
-
-```bash
-npm run tauri:dev
+npm run dev          # browser dev server
+npm run tauri:dev    # desktop app (requires Rust toolchain)
+npm run tauri build  # desktop bundle: Mori.app + .dmg
 ```
 
 ## Architecture
 
 For the layer-by-layer map of Mori's memory model (capture → evidence
 → review → timeline → project memory → query / output → storage),
-see [docs/memory-architecture.md](docs/memory-architecture.md). For
-the comparison against external always-on-memory designs and the
-phased Memory Orchestrator roadmap, see
-[docs/references/memory-orchestrator-reference.md](docs/references/memory-orchestrator-reference.md)
-and the **Memory Orchestrator Roadmap** section of
-[docs/roadmap.md](docs/roadmap.md).
+see [docs/memory-architecture.md](docs/memory-architecture.md).
 
 ## Try the end-to-end flow
 
@@ -123,48 +114,61 @@ npm run test:changed   # git-aware test run
 npm run test:watch     # interactive watch mode
 ```
 
-The original commands (`npm run typecheck`, `npm test`, `npm run build`)
-still work and behave the same. See
-[docs/development-validation.md](docs/development-validation.md) for the
-full workflow and timing breakdown.
+If `src-tauri/` changes, also run `cargo check` and `cargo test` in
+that directory. See
+[docs/development-validation.md](docs/development-validation.md) for
+the full workflow.
 
 ## Current Limitations
 
-- Desktop SQLite persistence is real (`rusqlite` migrations V001–V004 with row-level save/load), but it mirrors the browser store rather than being the single source of truth; the promotion is planned (production program W5).
-- Real `.mori` zip packaging ships (`fflate`-backed export/import with validation); cross-device sync remains export/import only.
-- Quick Pass defaults to a deterministic local heuristic. Ollama and OpenAI-compatible providers are configurable from Settings (endpoint/base URL, model, timeout, fallback, and API key where needed), reachable via connection probes, and selectable from the Quick Pass control, but LLM output quality has not been validated by Mori tests.
-- SQLite persistence is the desktop source of truth for the active session (sessionStore prefers SQLite during hydrate in Tauri mode), but Quick Pass settings, package drafts, and import drafts still use localStorage until follow-up milestones migrate them. The desktop SQLite path runs end-to-end at the Rust repository level (`cargo test`) and through fake command bridges in TS tests; one live `tauri:dev` cycle confirmed the desktop window launches and renders, but the full click-through (Initialize → Save → Load) was not completed in the live window this milestone.
-- The Tauri icon assets in `src-tauri/icons` are generated by `scripts/generate-icons.cjs`; regenerate them whenever the brand mark changes.
-- Import MVP covers manual notes, URLs, AI conversation text, pasted Git diffs, and (in the Tauri desktop runtime) live `git diff` capture against an explicitly typed repo path; file watchers, automatic repo discovery, and browser extension capture are not implemented yet.
-- Browser localStorage is a temporary draft adapter and not final persistence.
-- Native file picker integration is not implemented yet; desktop save uses Mori's default storage directory.
+- Browser localStorage is still the primary store; desktop SQLite
+  mirrors it. The promotion to SQLite-as-source-of-truth is the
+  production program's W5 (design-gated). Quota failures on the
+  browser store now surface as a typed error plus a notification
+  instead of failing silently.
+- The desktop bundle is unsigned and un-notarized; signing,
+  notarization, and the updater land with program workstream W3.
+- LLM-backed Quick Pass output quality has not been validated by Mori
+  tests; the deterministic provider is the always-available floor.
+- 라이브 tails Claude Code only; the other anchor agents have
+  discovery readers but no live tail yet.
+- There is no first-run onboarding; connecting an agent starts from
+  연동. A guided first run is program workstream W8.
+- The Tauri icon assets in `src-tauri/icons` are generated by
+  `scripts/generate-icons.cjs`; regenerate them whenever the brand
+  mark changes.
 
 ## Documentation
 
-- [Product Spec](docs/product-spec.md)
-- [UX Reference](docs/ux-reference.md)
-- [Product Screen Reference](docs/product-screen-reference.md) — status, purpose, and implementation notes for every reference screen
-- [Product Screen Prompts](docs/product-screen-prompts.md) — original prompts behind the reference screenshots
-- [Timeline UX](docs/timeline-ux.md)
-- [Architecture](docs/architecture.md)
-- [Domain Model](docs/domain-model.md)
+Start here:
+
+- [Project Goal](docs/mori-project-goal.md) · canonical direction and
+  the verified implemented-capability inventory
+- [Production Program](docs/production-program.md) · the governing
+  roadmap: readiness gates G1–G4, product-shell workstreams, open
+  decisions
+- [Production Readiness Audit](docs/production-readiness-audit.md) ·
+  dimension-by-dimension audit (2026-07-12)
+- [Autonomous Loop](docs/mori-autonomous-loop.md) · how the
+  development loop runs
+
+Reference docs:
+
+- [Memory Architecture](docs/memory-architecture.md)
+- [Persistence](docs/persistence.md) · [SQLite Persistence](docs/sqlite-persistence.md) · [SQLite Migrations](docs/sqlite-migrations.md)
+- [Imports](docs/imports.md) · [Quick Pass Analysis](docs/quick-pass-analysis.md)
 - [Mori Package v0](docs/mori-package-v0.md)
-- [Persistence](docs/persistence.md)
-- [Quick Pass Analysis](docs/quick-pass-analysis.md)
-- [SQLite Persistence](docs/sqlite-persistence.md)
-- [Imports](docs/imports.md)
 - [Desktop Shell](docs/desktop-shell.md)
-- [SQLite Migrations](docs/sqlite-migrations.md)
-- [Roadmap](docs/roadmap.md)
-- [Development Notes](docs/development-notes.md)
+- [Domain Model](docs/domain-model.md) · [Architecture](docs/architecture.md)
+- [Roadmap](docs/roadmap.md) (historical phases; the production
+  program supersedes it for sequencing)
 
-## Next Milestones
+## Roadmap
 
-1. Complete the live `tauri:dev` click-through walkthrough (Initialize → Save → Load → restart) and capture it as a smoke checklist
-2. Auto write-through to SQLite after every Import and Quick Pass run in desktop mode, with a clear opt-out
-3. Migrate Quick Pass settings, analysis results, and package drafts off localStorage onto SQLite in desktop mode
-4. Validate Ollama Quick Pass output quality with real models and tune prompts
-5. Git diff import and native file picker for `.mori v0 JSON` save/open
-6. Zip-like `.mori` package bundling
-7. Markdown report export
-8. Real Mori branding for Tauri icon assets
+The governing roadmap is
+[docs/production-program.md](docs/production-program.md): four
+readiness gates (Installable → Trustworthy with real data →
+Competitive at first glance → The moat is the headline) plus the
+product-shell workstreams (web presence, distribution, licensing,
+release management). Open product decisions (source posture, naming,
+language strategy, launch shape) are tracked there as D1–D6.

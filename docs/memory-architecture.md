@@ -138,8 +138,9 @@ Secret-pattern detection runs at import time.
 - Tauri inbox unavailable → browser fallback message.
 
 **Next tasks:**
-- Optional opt-in watcher for `~/.mori/connectors/` that loads into a
-  "pending review" tray (Phase 3 — see roadmap).
+- ~~Optional opt-in watcher for `~/.mori/connectors/`~~ · shipped as
+  the opt-in background inbox watcher (`src/lib/background-watch/`,
+  off by default, review gate unchanged).
 - Real URL fetcher with redaction (deferred).
 
 ## Layer 2 — Evidence / Provenance
@@ -251,14 +252,14 @@ produces typed `MemoryProposal[]` from any `ProjectMemoryViewModel`.
 The Consolidation State layer
 ([`src/lib/project-memory/projectMemoryConsolidationState.ts`](../src/lib/project-memory/projectMemoryConsolidationState.ts))
 wraps it in a `ProjectMemoryConsolidationState` that the Memory page
-consumes alongside its view-model. The Memory page renders a
-"Planned" preview card — counts visible, button disabled — so the
-user can launch the Consolidation Review Surface to inspect and act on each proposal locally (no durable memory is written yet). The same data drives what the Surface will eventually
-surface without anything being written. The Review Surface,
-Accepted Memory Persistence, SQLite Accepted Memory Storage, Resume
-and Reports Memory Integration, and the Stale and Contradiction
-Review capability are tracked separately on the
-[roadmap](roadmap.md).
+consumes alongside its view-model. From there the user launches the
+Consolidation Review Surface, reviews each proposal (accept / edit /
+discard / keep-watching / defer), and clicks Apply; accepted
+proposals persist as durable `StoredAcceptedProjectMemory` rows with
+an append-only audit trail. The Review Surface, Accepted Memory
+Persistence (browser + SQLite V003), Resume and Reports Memory
+Integration, and Stale / Contradiction Review have all shipped; see
+the goal doc §4 for the verified inventory.
 
 ## Layer 5 — Project Memory / Consolidation
 
@@ -354,7 +355,7 @@ Where memory durably lives.
 | Backend | Status | File |
 | ------- | ------ | ---- |
 | Browser localStorage (drafts, imports, analysis, memory bodies, packages, settings) | ✅ Implemented | [`src/lib/storage/localStorageAdapter.ts`](../src/lib/storage/localStorageAdapter.ts) |
-| Desktop SQLite (active session snapshot) | ✅ Implemented (read + write); does not yet store `importSummary` or `memory body` rows | [`src/lib/sqlite/`](../src/lib/sqlite/), [`src-tauri/src/sqlite/`](../src-tauri/src/sqlite/) |
+| Desktop SQLite (active session snapshot + accepted memory + audit + session imports) | ✅ Implemented (read + write, migrations V001–V007; `importSummary` mirrors via the V004 `session_imports` table) | [`src/lib/sqlite/`](../src/lib/sqlite/), [`src-tauri/src/db/`](../src-tauri/src/db/) |
 | `.mori v0` JSON package (export / explicit cross-device transfer) | ✅ Implemented | [`src/lib/mori-package/`](../src/lib/mori-package/) |
 | Cloud sync | ❌ Out of scope | n/a |
 | Vector / embedding store | ❌ Out of scope | n/a |

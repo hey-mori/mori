@@ -166,7 +166,7 @@ Mori reconstructs work sessions from **explicitly imported sources**. Every sour
 
 ### 9. Quick Pass Analysis (`quickPass`)
 
-- **Status**: Implemented (deterministic heuristic + experimental Ollama)
+- **Status**: Implemented (three providers: deterministic rule-based, Ollama, OpenAI-compatible; optional deterministic fallback, honestly labeled)
 - **Capture Mode**: Manual trigger
 - **Trust Level**: Inferred (analysis output)
 - **Raw Data Policy**: Summary only (issues/decisions/relationships extracted)
@@ -279,13 +279,13 @@ poll buffers or watch the editor.
 
 ### 16. Codex Transcript (`codexTranscript`)
 
-- **Status**: Planned
-- **Capture Mode**: Manual input (planned)
+- **Status**: Implemented (anchor agent)
+- **Capture Mode**: Manual input (paste) + read-only session discovery (`~/.codex`, Rust reader) + connector-inbox fallback
 - **Trust Level**: Verified
 - **Raw Data Policy**: Summary only
-- **Privacy Note**: User would explicitly paste Codex conversation text. No API key access, OAuth, or automatic capture. Direct Codex API connector remains planned. Paste workflow not yet implemented.
+- **Privacy Note**: The user explicitly pastes Codex conversation text or picks a discovered local session record. No API key access, OAuth, or automatic capture; a direct Codex API connector remains a non-goal.
 
-**Future Usage**: User would open Import panel, select Codex from platform dropdown, paste conversation text, and save.
+**Usage**: 새 세션 → Codex anchor → 기록에서 불러오기 (desktop discovery) or 붙여넣기; also reachable from the 연동 hub's Codex tile. OpenCode / Antigravity / Continue / Cline / Cursor follow the same anchor-agent pattern (see `docs/connectors/connection-architecture.md`).
 
 ### 17. Documentation Reference (`docs`)
 

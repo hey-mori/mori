@@ -36,9 +36,11 @@ For the smoke flow below, the browser dev server is enough.
 
 ## Step 1 — Open Evidence Hub → Connector JSONL
 
-In the left nav, click **Evidence**. Inside Evidence Hub, choose the
-**Connector JSONL** tab (the tab that takes pasted connector events
-instead of an AI transcript or git diff).
+Open the active session's workspace and go to its evidence surface
+(자료 / Add Source; Evidence is no longer a standing left-nav tab).
+Inside the Evidence Hub, choose the **Connector JSONL** tab (the tab
+that takes pasted connector events instead of an AI transcript or git
+diff).
 
 ---
 
@@ -144,7 +146,9 @@ session and a warning explains why.
 
 ## Step 7 — Open Project Memory
 
-In the left nav, click **Memory**.
+Open the project's page (프로젝트 nav); durable project memory lives
+there, or reach the memory overview via the command palette (메모리 is
+no longer a standing left-nav tab).
 
 Expected result:
 

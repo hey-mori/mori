@@ -50,12 +50,20 @@ What is real:
 
 What is temporary:
 
-- Browser `localStorage` is only a development adapter.
-- Session drafts do not yet persist events from live capture.
-- `.mori` export is JSON, not zip-like.
+- Browser `localStorage` is still the primary store; desktop SQLite
+  mirrors it. Promoting SQLite to the source of truth is the
+  production program's W5 (design-gated). Quota-exceeded writes now
+  throw a typed `StorageQuotaError` and surface a notification
+  (`src/lib/storage/storageQuota.ts`).
+- Session drafts do not yet persist events from live capture (라이브
+  is a read-only tail; sessionising a live session goes through the
+  normal import path).
+- `.mori` export is a real zip (`fflate`-backed `zipMoriPackage` /
+  `unzipMoriPackage`) with native Save As / Open dialogs on desktop.
 - Tauri commands work only in the desktop runtime. In browser mode they throw clear desktop-required errors.
-- Native file picker path selection is still planned.
-- SQLite Tauri commands are registered, but database initialization and row writes still return explicit not-implemented errors until `rusqlite` is added.
+- SQLite persistence is real: `rusqlite` migrations V001–V007 with
+  checksum validation and row-level save / load across the full
+  session snapshot, accepted memory, and session imports.
 
 Cross-session connector duplicate detection scope:
 
@@ -191,21 +199,22 @@ the storage plan below is what the current adapter implements.
   action-type filtered. It reads the existing localStorage records
   only; no new storage backend. The surface never renders the
   `before` / `after` snapshots, so no raw evidence content leaves
-  storage. Undo / revert, SQLite-backed audit storage, and the
-  `.mori v0` `auditTrail` export remain planned.
+  storage. The reviewed revert flow, SQLite-backed audit storage
+  (V003 `consolidated_memory_audit`), and the `.mori v0` `auditTrail`
+  export slice have all since shipped (goal doc §4).
 
 No code change in this milestone — the keys, table names, and
 field sets are documented here so the implementation can be done
 against a stable contract.
 
-Expected replacement path:
+Replacement path (status as of 2026-07-12):
 
-1. Add Rust-native SQLite migration runner using `rusqlite`.
-2. Replace SQLite command stubs with real migration and row-write operations.
-3. Add native file picker support.
-4. Replace browser drafts with desktop persistence where appropriate.
-5. Add zip-like `.mori` package save/open in Rust.
-6. Keep the frontend using repository/command boundaries rather than direct filesystem access.
+1. ~~Add Rust-native SQLite migration runner using `rusqlite`.~~ Shipped (V001–V007, checksum-validated).
+2. ~~Replace SQLite command stubs with real migration and row-write operations.~~ Shipped.
+3. ~~Add native file picker support.~~ Shipped (`tauri-plugin-dialog`; Save As / Open for `.mori`).
+4. Replace browser drafts with desktop persistence where appropriate: **open**; this is the production program's W5 (SQLite as the source of truth), design-gated.
+5. ~~Add zip-like `.mori` package save/open in Rust.~~ Shipped (`fflate` zip on the TS side; `save_mori_package_zip_as` native dialog).
+6. Keep the frontend using repository/command boundaries rather than direct filesystem access: standing rule, holds today.
 
 Migration strategy:
 
