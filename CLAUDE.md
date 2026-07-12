@@ -8,6 +8,8 @@ Read these before changing code or committing.
   direction and what is implemented vs planned.
 - Read [`docs/mori-autonomous-loop.md`](docs/mori-autonomous-loop.md) for how
   the development loop runs.
+- Read [`docs/production-program.md`](docs/production-program.md) for the
+  governing production roadmap (readiness gates G1–G4 and workstreams).
 - Read [`docs/design/mori-brand-identity-reference.md`](docs/design/mori-brand-identity-reference.md)
   before any brand / icon / colour change.
 - Read [`docs/frontend-architecture.md`](docs/frontend-architecture.md) before

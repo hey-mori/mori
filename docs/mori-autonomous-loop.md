@@ -337,6 +337,19 @@ backlog with it.
 
 ## 8. Current Next Slice — Product Maturity Loop
 
+**Program note (2026-07-12).** The governing roadmap is now
+[`production-program.md`](production-program.md): readiness gates G1
+(Installable) → G2 (Trustworthy with real data) → G3 (Competitive at
+first glance) → G4 (The moat is the headline), built from
+[`production-readiness-audit.md`](production-readiness-audit.md) and
+[`references/competitive-landscape-2026-07.md`](references/competitive-landscape-2026-07.md).
+The loop should pick slices from the program's workstreams in gate
+order, honoring the design-gated items (W5 SQLite promotion, W14 MCP
+memory service) and the user-decision item (W18 naming), none of which
+may start without explicit approval. The product-maturity backlog
+below remains valid for calm-surface polish slices between program
+workstreams.
+
 The loop is in a **Product Maturity** mode: auditing the running app
 surface-by-surface and hardening it into a coherent product, not
 adding new capabilities. "Done" means a surface looks coherent, its

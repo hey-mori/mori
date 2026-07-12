@@ -958,6 +958,14 @@ guardrails, not preferences.
 
 ## 13. Near-Term Roadmap
 
+**The governing roadmap is now
+[production-program.md](production-program.md)** (2026-07-12): four
+readiness gates (Installable / Trustworthy with real data /
+Competitive at first glance / The moat is the headline) built from the
+production-readiness audit and the competitive-landscape synthesis.
+The capability buckets below remain valid but are sequenced behind the
+program's gates.
+
 Capability-based buckets. Order is suggested; the user has the final
 say. Each bucket should be verified against the current repo state
 before starting.
