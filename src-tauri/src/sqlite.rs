@@ -232,6 +232,51 @@ pub fn clear_all_sqlite_data(
     })
 }
 
+/// Recovery escape hatch: drop every table INCLUDING the migration ledger and
+/// re-migrate from scratch. This is the "처음부터 시작" action on the recovery
+/// card, and it deliberately does NOT call `ensure_migrated` first, because in
+/// the broken-migration state that is the failing path. Rebuilding the ledger
+/// clears a checksum mismatch that `clear_all_sqlite_data` (which keeps
+/// `_mori_migrations`) cannot. Destructive by design and confirm-gated in the UI.
+#[tauri::command]
+pub fn reset_sqlite_database(state: tauri::State<'_, SqliteState>) -> Result<(), String> {
+    with_connection(&state, |conn, _| reset_connection(conn))
+}
+
+/// Drop every table and view (including `_mori_migrations`), then re-migrate.
+/// Extracted so it can be tested against an in-memory database.
+fn reset_connection(conn: &mut Connection) -> Result<(), String> {
+    let objects = list_schema_objects(conn)?;
+    conn.execute_batch("PRAGMA foreign_keys = OFF;")
+        .map_err(|error| error.to_string())?;
+    for (name, kind) in &objects {
+        let drop_kind = if kind == "view" { "VIEW" } else { "TABLE" };
+        conn.execute_batch(&format!("DROP {drop_kind} IF EXISTS \"{name}\";"))
+            .map_err(|error| error.to_string())?;
+    }
+    conn.execute_batch("PRAGMA foreign_keys = ON;")
+        .map_err(|error| error.to_string())?;
+    apply_migrations(conn).map(|_| ())
+}
+
+/// Every non-internal table and view name plus its type, for a full reset.
+/// Unlike `list_tables`, this includes the `_mori_migrations` ledger.
+fn list_schema_objects(conn: &Connection) -> Result<Vec<(String, String)>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%'",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = stmt
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
+        .map_err(|error| error.to_string())?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(|error| error.to_string())?);
+    }
+    Ok(out)
+}
+
 fn with_connection<R>(
     state: &tauri::State<'_, SqliteState>,
     handler: impl FnOnce(&mut Connection, String) -> Result<R, String>,
@@ -412,8 +457,51 @@ fn sidecar_path(db: &Path, suffix: &str) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::{move_sqlite_files, sidecar_path};
+    use super::{list_schema_objects, move_sqlite_files, reset_connection, sidecar_path};
+    use crate::db::{apply_migrations, open_in_memory};
     use tempfile::TempDir;
+
+    #[test]
+    fn reset_clears_a_checksum_mismatch_and_re_migrates() {
+        let mut conn = open_in_memory().expect("open in-memory db");
+        apply_migrations(&mut conn).expect("initial migrate");
+
+        // Simulate a broken-migration state: corrupt a stored checksum so a
+        // normal apply_migrations would refuse (checksum mismatch).
+        conn.execute(
+            "UPDATE _mori_migrations SET checksum = 'tampered' WHERE version = (SELECT MIN(version) FROM _mori_migrations)",
+            [],
+        )
+        .unwrap();
+        assert!(
+            apply_migrations(&mut conn).is_err(),
+            "a tampered checksum must make the normal path fail"
+        );
+
+        // Reset drops the ledger and re-migrates from scratch, clearing the error.
+        reset_connection(&mut conn).expect("reset should succeed");
+        apply_migrations(&mut conn).expect("post-reset migrate is clean");
+
+        // The ledger is rebuilt and core tables exist again.
+        let objects = list_schema_objects(&conn).unwrap();
+        assert!(objects.iter().any(|(name, _)| name == "sessions"));
+        let ledger: i64 = conn
+            .query_row("SELECT COUNT(*) FROM _mori_migrations", [], |row| row.get(0))
+            .unwrap();
+        assert!(ledger > 0);
+    }
+
+    #[test]
+    fn list_schema_objects_includes_the_migration_ledger() {
+        let mut conn = open_in_memory().expect("open in-memory db");
+        apply_migrations(&mut conn).expect("migrate");
+        let names: Vec<String> = list_schema_objects(&conn)
+            .unwrap()
+            .into_iter()
+            .map(|(name, _)| name)
+            .collect();
+        assert!(names.iter().any(|n| n == "_mori_migrations"));
+    }
 
     #[test]
     fn sidecar_path_appends_the_wal_and_shm_suffixes() {

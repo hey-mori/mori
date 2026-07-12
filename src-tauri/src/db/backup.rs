@@ -44,7 +44,17 @@ pub struct BackupInfo {
 pub fn backup_database(conn: &Connection, dir: &Path, label: &str) -> Result<PathBuf, String> {
     std::fs::create_dir_all(dir)
         .map_err(|error| format!("Failed to create backups dir: {error}"))?;
-    let file = dir.join(format!("mori-{}-{}.sqlite", sanitize(label), unix_millis()));
+    let safe = sanitize(label);
+    // One snapshot per distinct pre-migration state. `ensure_migrated` runs on
+    // every command and migrations are not atomic across versions, so a batch
+    // that partially applies then fails would otherwise re-snapshot the same
+    // state on every retry, spamming full-DB VACUUMs and pruning the genuine
+    // earlier restore point away. If a backup for this label already exists,
+    // reuse it instead of writing another.
+    if let Some(existing) = find_backup_for_label(dir, &safe) {
+        return Ok(existing);
+    }
+    let file = dir.join(format!("mori-{}-{}.sqlite", safe, unix_millis()));
     // VACUUM INTO fails if the target exists; the millisecond stamp keeps it
     // unique. Escape any single quote in the path for the SQL string literal.
     let target = file.to_string_lossy().replace('\'', "''");
@@ -52,6 +62,20 @@ pub fn backup_database(conn: &Connection, dir: &Path, label: &str) -> Result<Pat
         .map_err(|error| format!("Failed to write pre-migration backup: {error}"))?;
     prune_backups(dir);
     Ok(file)
+}
+
+/// Find an existing snapshot for a label (`mori-<label>-<stamp>.sqlite`).
+fn find_backup_for_label(dir: &Path, safe_label: &str) -> Option<PathBuf> {
+    let prefix = format!("mori-{safe_label}-");
+    let read = std::fs::read_dir(dir).ok()?;
+    read.filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .find(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| name.starts_with(&prefix) && name.ends_with(".sqlite"))
+                .unwrap_or(false)
+        })
 }
 
 /// List the snapshots in `dir`, newest first.
@@ -195,6 +219,26 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM note", [], |row| row.get(0))
             .unwrap();
         assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn reuses_an_existing_snapshot_for_the_same_label() {
+        let temp = TempDir::new().unwrap();
+        let db = temp.path().join("mori.sqlite");
+        let conn = seed_db(&db);
+        let backups = temp.path().join("backups");
+
+        let first = backup_database(&conn, &backups, "pre-v7").unwrap();
+        // A second call for the same label must not write another file: a
+        // partially-applied, retrying migration would otherwise re-snapshot the
+        // same state on every command.
+        let second = backup_database(&conn, &backups, "pre-v7").unwrap();
+        assert_eq!(first, second);
+        assert_eq!(list_backups_in(&backups).unwrap().len(), 1);
+
+        // A distinct label (a further-applied state) does get its own snapshot.
+        backup_database(&conn, &backups, "pre-v9").unwrap();
+        assert_eq!(list_backups_in(&backups).unwrap().len(), 2);
     }
 
     #[test]

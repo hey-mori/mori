@@ -75,7 +75,10 @@ export function DatabaseRecoveryCard() {
     setBusy("clear");
     setNotice(null);
     try {
-      await tauriCommands.clearAllSqliteData();
+      // Reset (drop every table including the migration ledger, then re-migrate)
+      // rather than clear: clearing runs the failing migration path first and
+      // keeps the ledger, so it cannot recover a broken-migration state.
+      await tauriCommands.resetSqliteDatabase();
       await refresh();
       setConfirmingClear(false);
       setNotice("데이터베이스를 비우고 새로 시작했습니다.");

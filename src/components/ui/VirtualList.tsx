@@ -120,7 +120,10 @@ export function VirtualList<T>({
     if (item === undefined) continue;
     const key = getKey(item, index);
     rows.push(
-      <div key={key} className="vlist-row" ref={(el) => measure(key, el)}>
+      // role="listitem" so the windowed rows still count as items of the
+      // role="list" container; without it the aria-hidden spacers would leave
+      // the list advertising zero items to assistive tech.
+      <div key={key} className="vlist-row" role="listitem" ref={(el) => measure(key, el)}>
         {renderItem(item, index)}
       </div>,
     );

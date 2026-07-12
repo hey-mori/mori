@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Radio, ShieldCheck, Sparkles, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
+import { focusFirstElement, trapTabKey } from "../../components/ui/focusTrap";
 import { useAppStore } from "../../app/store";
 import { useOnboardingStore } from "../../app/onboardingStore";
 import { loadStoredSessionSummaries } from "../../app/sessionStore";
@@ -79,6 +80,8 @@ function FirstRunOverlay({
 }) {
   const [models, setModels] = useState<ConnectorStatusViewModel[] | null>(null);
   const [connecting, setConnecting] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const refreshStatus = useCallback(() => {
     if (!desktop) return;
@@ -90,6 +93,31 @@ function FirstRunOverlay({
   useEffect(() => {
     refreshStatus();
   }, [refreshStatus]);
+
+  // Modal behavior parity with the app's other dialogs (SettingsSheet /
+  // ConnectorInstallModal): the guide claims aria-modal, so it must trap Tab,
+  // close on Escape, take initial focus, and lock background scroll. On a truly
+  // empty first launch this is the only surface, so keyboard access matters.
+  useEffect(() => {
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      trapTabKey(event, dialogRef.current);
+    };
+    document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.requestAnimationFrame(() => focusFirstElement(dialogRef.current));
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+      previousFocusRef.current?.focus();
+    };
+  }, [onClose]);
 
   const detected = useMemo(
     () => (models ?? []).filter((model) => model.captureModel !== "planned"),
@@ -113,10 +141,12 @@ function FirstRunOverlay({
     <div className="settings-sheet-layer" role="presentation">
       <div className="settings-sheet-scrim" onClick={onClose} aria-hidden="true" />
       <div
+        ref={dialogRef}
         className="first-run"
         role="dialog"
         aria-modal="true"
         aria-labelledby="first-run-title"
+        tabIndex={-1}
       >
         <button
           type="button"

@@ -79,6 +79,7 @@ export type TauriCommandName =
   | "list_session_import_rows"
   | "list_all_session_import_rows"
   | "clear_all_sqlite_data"
+  | "reset_sqlite_database"
   | "list_sqlite_backups"
   | "restore_sqlite_backup"
   | "create_session"
@@ -229,6 +230,7 @@ export type TauriCommandMap = {
     output: SqliteSessionImportRow[];
   };
   clear_all_sqlite_data: { input: undefined; output: ClearAllSqliteDataResult };
+  reset_sqlite_database: { input: undefined; output: null };
   list_sqlite_backups: { input: undefined; output: SqliteBackupInfo[] };
   restore_sqlite_backup: { input: { backupPath: string }; output: null };
   create_session: { input: CreateSessionInput; output: Session };
@@ -442,6 +444,9 @@ export const tauriCommands = {
   },
   clearAllSqliteData(): Promise<ClearAllSqliteDataResult> {
     return invokeTauriCommand("clear_all_sqlite_data", undefined);
+  },
+  resetSqliteDatabase(): Promise<null> {
+    return invokeTauriCommand("reset_sqlite_database", undefined);
   },
   listSqliteBackups(): Promise<SqliteBackupInfo[]> {
     return invokeTauriCommand("list_sqlite_backups", undefined);
