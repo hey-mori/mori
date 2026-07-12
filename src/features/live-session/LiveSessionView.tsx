@@ -58,9 +58,31 @@ function formatElapsed(startedAt: string): string | null {
   return `${Math.floor(seconds / 60)}분째`;
 }
 
-/** A project badge, coloured per project so concurrent sessions stay scannable. */
-function SessionBadge({ label, sessionKey }: { label: string; sessionKey: string }) {
+/** A project badge, coloured per project so concurrent sessions stay scannable.
+ *  When `onFilter` is given, it doubles as the "only this session" control. */
+function SessionBadge({
+  label,
+  sessionKey,
+  onFilter,
+}: {
+  label: string;
+  sessionKey: string;
+  onFilter?: () => void;
+}) {
   const style = { "--session-color": `hsl(${sessionHue(label)} 46% 56%)` } as CSSProperties;
+  if (onFilter) {
+    return (
+      <button
+        type="button"
+        className="lsv-session is-button"
+        title={`${sessionKey}\n이 세션만 보기`}
+        style={style}
+        onClick={onFilter}
+      >
+        {label}
+      </button>
+    );
+  }
   return (
     <span className="lsv-session" title={sessionKey} style={style}>
       {label}
@@ -82,12 +104,35 @@ export function LiveSessionView() {
   const [watching, setWatching] = useState(true);
   const [diagOpen, setDiagOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(false);
+  // When set, the feed is narrowed to one session (a filePath key). Picked from a
+  // session row in the popover or a project badge on a card, so several
+  // concurrent sessions can be read one at a time without losing the merged view.
+  const [focusKey, setFocusKey] = useState<string | null>(null);
   const snapshot = useLiveSessions(watching && available);
-  const feed = useMemo(
+  const fullFeed = useMemo(
     () => buildLiveFeed(snapshot.sessions, { now: Date.now() }),
     // Recompute each poll (lastPolledAt bumps) so live status stays fresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [snapshot.sessions, snapshot.lastPolledAt],
+  );
+
+  // Drop a focus that no longer maps to a live session (it ended or aged out), so
+  // the filter never strands the feed empty with no way back but the clear button.
+  useEffect(() => {
+    if (focusKey && !snapshot.sessions.some((s) => s.meta.filePath === focusKey)) {
+      setFocusKey(null);
+    }
+  }, [focusKey, snapshot.sessions]);
+
+  const focusLabel = useMemo(() => {
+    if (!focusKey) return null;
+    const match = snapshot.sessions.find((s) => s.meta.filePath === focusKey);
+    return match ? sessionShortLabel(match.meta) : null;
+  }, [focusKey, snapshot.sessions]);
+
+  const feed = useMemo(
+    () => (focusKey ? fullFeed.filter((r) => r.sessionKey === focusKey) : fullFeed),
+    [fullFeed, focusKey],
   );
 
   // A finished request drops out of the live feed once it has been quiet a
@@ -157,13 +202,23 @@ export function LiveSessionView() {
           ) : (
             <ul className="lsv-sess-list">
               {sessionRows.map((s) => (
-                <li key={s.key} className="lsv-sess-row" title={s.key}>
-                  <span className={`lsv-dot is-${s.working ? "watching" : "idle"}`} aria-hidden="true" />
-                  <span className="lsv-sess-label">{s.label}</span>
-                  <span className="lsv-sess-sub">
-                    {s.steps.toLocaleString()}단계 · {formatClaudeRelativeKo(s.lastAt)}
-                  </span>
-                  {s.working ? <span className="lsv-sess-badge">작업 중</span> : null}
+                <li key={s.key}>
+                  <button
+                    type="button"
+                    className={`lsv-sess-row ${focusKey === s.key ? "is-focused" : ""}`}
+                    title={`${s.key}\n이 세션만 보기`}
+                    onClick={() => {
+                      setFocusKey((current) => (current === s.key ? null : s.key));
+                      setSessionsOpen(false);
+                    }}
+                  >
+                    <span className={`lsv-dot is-${s.working ? "watching" : "idle"}`} aria-hidden="true" />
+                    <span className="lsv-sess-label">{s.label}</span>
+                    <span className="lsv-sess-sub">
+                      {s.steps.toLocaleString()}단계 · {formatClaudeRelativeKo(s.lastAt)}
+                    </span>
+                    {s.working ? <span className="lsv-sess-badge">작업 중</span> : null}
+                  </button>
                 </li>
               ))}
             </ul>
@@ -242,6 +297,18 @@ export function LiveSessionView() {
           </div>
         ) : null}
 
+        {focusKey ? (
+          <div className="lsv-focus-bar">
+            <span className="lsv-focus-label">
+              <span className="lsv-focus-only">이 세션만</span>
+              {focusLabel ?? "선택한 세션"}
+            </span>
+            <button type="button" className="lsv-focus-clear" onClick={() => setFocusKey(null)}>
+              전체 보기
+            </button>
+          </div>
+        ) : null}
+
         {feed.length === 0 ? (
           <EmptyState
             compact
@@ -256,9 +323,9 @@ export function LiveSessionView() {
         ) : (
           <div className="lsv-feed">
             {active.map((request) => (
-              <RequestBlock key={request.id} request={request} />
+              <RequestBlock key={request.id} request={request} onFocus={setFocusKey} />
             ))}
-            {past.length > 0 ? <PastSection requests={past} /> : null}
+            {past.length > 0 ? <PastSection requests={past} onFocus={setFocusKey} /> : null}
           </div>
         )}
       </div>
@@ -296,7 +363,13 @@ const RequestBlock = memo(
     prev.request.items.length === next.request.items.length,
 );
 
-function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
+function RequestBlockImpl({
+  request,
+  onFocus,
+}: {
+  request: LiveFeedRequest;
+  onFocus: (key: string) => void;
+}) {
   const items = request.items;
   const [pinnedId, setPinnedId] = useState<string | null>(null);
   // Every card can be folded / unfolded. Default: working stays open, everything
@@ -332,7 +405,11 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
     <article className={`lsv-block is-${request.status} ${expanded ? "is-open" : "is-collapsed"}`}>
       {finished ? <span className="lsv-sweep" aria-hidden="true" /> : null}
       <header className="lsv-block-head">
-        <SessionBadge label={request.sessionLabel} sessionKey={request.sessionKey} />
+        <SessionBadge
+          label={request.sessionLabel}
+          sessionKey={request.sessionKey}
+          onFilter={() => onFocus(request.sessionKey)}
+        />
         {hasError ? <span className="lsv-error-dot" title="도구 오류 발생" aria-hidden="true" /> : null}
         {request.status === "working" ? (
           <span className="lsv-working">
@@ -413,7 +490,13 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
 
 /** Finished requests, folded into one disclosure. Each is a lightweight one-line
  *  row (no step strip / detail), so a long history stays cheap to render. */
-function PastSection({ requests }: { requests: LiveFeedRequest[] }) {
+function PastSection({
+  requests,
+  onFocus,
+}: {
+  requests: LiveFeedRequest[];
+  onFocus: (key: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className="lsv-past">
@@ -430,7 +513,11 @@ function PastSection({ requests }: { requests: LiveFeedRequest[] }) {
         <div className="lsv-past-list">
           {requests.map((request) => (
             <div key={request.id} className="lsv-past-row" title={request.requestTitle}>
-              <SessionBadge label={request.sessionLabel} sessionKey={request.sessionKey} />
+              <SessionBadge
+                label={request.sessionLabel}
+                sessionKey={request.sessionKey}
+                onFilter={() => onFocus(request.sessionKey)}
+              />
               <span className="lsv-past-title">{request.requestTitle}</span>
               <span className="lsv-past-meta">
                 {request.items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}

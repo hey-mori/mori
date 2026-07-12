@@ -167,15 +167,24 @@
 }
 
 .lsv-sess-row {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 7px 8px;
+  border: none;
   border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .lsv-sess-row:hover {
   background: var(--panel-soft);
+}
+
+.lsv-sess-row.is-focused {
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
 }
 
 .lsv-sess-label {
@@ -507,6 +516,65 @@
   white-space: nowrap;
 }
 
+/* The badge doubles as the "only this session" filter control. */
+.lsv-session.is-button {
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.lsv-session.is-button:hover {
+  background: color-mix(in srgb, var(--session-color, var(--purple)) 22%, transparent);
+}
+
+/* ── focus filter bar (feed narrowed to one session) ───────────────────── */
+.lsv-focus-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 7px 12px;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.lsv-focus-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lsv-focus-only {
+  padding: 1px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
+  border-radius: 999px;
+}
+
+.lsv-focus-clear {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+
+.lsv-focus-clear:hover {
+  color: var(--text);
+  border-color: var(--border-strong, var(--muted-2));
+}
+
 .lsv-time {
   font-size: 11.5px;
   color: var(--muted-2);
@@ -573,7 +641,7 @@
 }
 
 @keyframes lsv-spin-in {
-  from {
+  0% {
     opacity: 0;
     transform: rotate(-220deg) scale(0.2);
   }
@@ -581,7 +649,7 @@
     opacity: 1;
     transform: rotate(12deg) scale(1.14);
   }
-  to {
+  100% {
     opacity: 1;
     transform: none;
   }
