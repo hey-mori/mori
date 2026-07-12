@@ -729,6 +729,72 @@
   color: var(--muted-2);
 }
 
+/* ── past work (finished requests, folded into one disclosure) ──────────── */
+
+.lsv-past {
+  margin-top: 2px;
+}
+
+.lsv-past-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.lsv-past-toggle:hover {
+  color: var(--text);
+}
+
+.lsv-past-toggle svg {
+  transform: rotate(-90deg);
+  transition: transform 0.18s ease;
+}
+
+.lsv-past-toggle.is-open svg {
+  transform: rotate(0deg);
+}
+
+.lsv-past-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 4px;
+}
+
+.lsv-past-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 14px;
+  background: var(--panel-soft);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+}
+
+.lsv-past-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lsv-past-meta {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lsv-block,
   .lsv-block.is-working,

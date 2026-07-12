@@ -30,6 +30,10 @@ import {
 } from "./liveFeed";
 import { useLiveSessions } from "./useLiveSessions";
 
+/** A finished request folds into the past-work disclosure once it has been quiet
+ *  this long, so the live feed stays about the present. */
+const PAST_AFTER_MS = 30 * 60 * 1000;
+
 /**
  * 라이브 세션: a mission-control view that tails every currently-active Claude
  * Code session at once and streams their work as one feed. Requests are ordered
@@ -51,6 +55,24 @@ export function LiveSessionView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [snapshot.sessions, snapshot.lastPolledAt],
   );
+
+  // A finished request drops out of the live feed once it has been quiet a
+  // while, folding into a "past work" disclosure instead of piling up. The feed
+  // stays about the present, and nothing is lost (the record lives in the
+  // session). This also keeps the rendered feed small however long it sits open.
+  const { active, past } = useMemo(() => {
+    const cutoff = Date.now() - PAST_AFTER_MS;
+    const a: LiveFeedRequest[] = [];
+    const p: LiveFeedRequest[] = [];
+    for (const request of feed) {
+      if (request.status !== "working" && (Date.parse(request.updatedAt) || 0) < cutoff) {
+        p.push(request);
+      } else {
+        a.push(request);
+      }
+    }
+    return { active: a, past: p };
+  }, [feed]);
 
   const workingKeys = useMemo(
     () => new Set(feed.filter((r) => r.status === "working").map((r) => r.sessionKey)),
@@ -199,9 +221,10 @@ export function LiveSessionView() {
           />
         ) : (
           <div className="lsv-feed">
-            {feed.map((request) => (
+            {active.map((request) => (
               <RequestBlock key={request.id} request={request} />
             ))}
+            {past.length > 0 ? <PastSection requests={past} /> : null}
           </div>
         )}
       </div>
@@ -345,6 +368,40 @@ function RequestBlockImpl({ request }: { request: LiveFeedRequest }) {
         </div>
       </div>
     </article>
+  );
+}
+
+/** Finished requests, folded into one disclosure. Each is a lightweight one-line
+ *  row (no step strip / detail), so a long history stays cheap to render. */
+function PastSection({ requests }: { requests: LiveFeedRequest[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="lsv-past">
+      <button
+        type="button"
+        className={`lsv-past-toggle ${open ? "is-open" : ""}`}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <ChevronDown size={14} aria-hidden="true" />
+        지난 작업 {requests.length}개
+      </button>
+      {open ? (
+        <div className="lsv-past-list">
+          {requests.map((request) => (
+            <div key={request.id} className="lsv-past-row" title={request.requestTitle}>
+              <span className="lsv-session" title={request.sessionKey}>
+                {request.sessionLabel}
+              </span>
+              <span className="lsv-past-title">{request.requestTitle}</span>
+              <span className="lsv-past-meta">
+                {request.items.length}단계 · {formatClaudeRelativeKo(request.updatedAt)}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
