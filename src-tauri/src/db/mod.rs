@@ -7,9 +7,9 @@ pub mod repository;
 pub mod session_imports;
 
 pub use accepted_memory::{
-    append_memory_review_actions, list_accepted_memories, list_memory_review_actions,
-    save_accepted_memories, AcceptedMemoryRow, AcceptedMemoryWriteResult, MemoryReviewActionRow,
-    MemoryReviewActionWriteResult,
+    append_memory_review_actions, list_accepted_memories, list_all_accepted_memories,
+    list_memory_review_actions, save_accepted_memories, AcceptedMemoryRow,
+    AcceptedMemoryWriteResult, MemoryReviewActionRow, MemoryReviewActionWriteResult,
 };
 pub use session_imports::{
     list_all_session_imports, list_session_imports, save_session_imports, SessionImportRow,

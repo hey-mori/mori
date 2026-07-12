@@ -75,6 +75,7 @@ fn main() {
             sqlite::list_sqlite_sessions,
             sqlite::save_accepted_project_memories,
             sqlite::list_accepted_project_memories,
+            sqlite::list_all_accepted_project_memories,
             sqlite::append_memory_review_action_rows,
             sqlite::list_memory_review_action_rows,
             sqlite::persist_session_imports,

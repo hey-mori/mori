@@ -94,6 +94,28 @@ describe("BrowserDraftRepository — Accepted Project Memory", () => {
     expect(repo.listAcceptedProjectMemories("p1")).toEqual([]);
   });
 
+  it("listAllAcceptedProjectMemories reads across projects, most-recent first", () => {
+    const repo = new BrowserDraftRepository(new MemoryKeyValueStorage());
+    repo.saveAcceptedProjectMemories([
+      memory("m1", "p1", { acceptedAt: "2026-05-10T10:00:00Z" }),
+      memory("m2", "p2", { acceptedAt: "2026-05-15T10:00:00Z" }),
+      memory("m3", "p1", { acceptedAt: "2026-05-12T10:00:00Z" }),
+    ]);
+    const all = repo.listAllAcceptedProjectMemories();
+    expect(all.map((entry) => entry.id)).toEqual(["m2", "m3", "m1"]);
+    expect(all.map((entry) => entry.projectId)).toEqual(["p2", "p1", "p1"]);
+  });
+
+  it("listAllAcceptedProjectMemories skips unknown schema versions and returns empty when unsaved", () => {
+    const storage = new MemoryKeyValueStorage();
+    storage.setItem(
+      "mori.consolidatedMemory.p1.future",
+      JSON.stringify({ ...memory("future", "p1"), schemaVersion: 99 }),
+    );
+    const repo = new BrowserDraftRepository(storage);
+    expect(repo.listAllAcceptedProjectMemories()).toEqual([]);
+  });
+
   it("ignores stored records with an unknown schema version", () => {
     const storage = new MemoryKeyValueStorage();
     storage.setItem(

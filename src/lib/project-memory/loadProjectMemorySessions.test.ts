@@ -53,6 +53,7 @@ function stubRepository(overrides: Partial<DraftRepository> = {}): DraftReposito
     saveAcceptedProjectMemory: vi.fn() as unknown as DraftRepository["saveAcceptedProjectMemory"],
     saveAcceptedProjectMemories: vi.fn() as unknown as DraftRepository["saveAcceptedProjectMemories"],
     listAcceptedProjectMemories: () => [],
+    listAllAcceptedProjectMemories: () => [],
     getAcceptedProjectMemory: () => null,
     appendMemoryReviewAction: vi.fn() as unknown as DraftRepository["appendMemoryReviewAction"],
     listMemoryReviewActions: () => [],

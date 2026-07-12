@@ -10,7 +10,8 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::db::{
     append_memory_review_actions, apply_migrations, applied_migrations, clear_all_data,
-    database_path, list_accepted_memories, list_all_session_imports, list_memory_review_actions,
+    database_path, list_accepted_memories, list_all_accepted_memories, list_all_session_imports,
+    list_memory_review_actions,
     list_session_imports, list_sessions, load_session_snapshot, open_database,
     save_accepted_memories, save_session_imports, save_session_snapshot, AcceptedMemoryRow,
     AcceptedMemoryWriteResult, ClearAllDataResult, DatabaseStatus, MemoryReviewActionRow,
@@ -165,6 +166,19 @@ pub fn list_accepted_project_memories(
     with_connection(&state, |conn, _| {
         ensure_migrated(conn)?;
         list_accepted_memories(conn, &project_id)
+    })
+}
+
+/// List accepted memories across every project. Powers cross-project recall
+/// (global memory search, the 메모리 surface); per-project reads stay on
+/// `list_accepted_project_memories`.
+#[tauri::command]
+pub fn list_all_accepted_project_memories(
+    state: tauri::State<'_, SqliteState>,
+) -> Result<Vec<AcceptedMemoryRow>, String> {
+    with_connection(&state, |conn, _| {
+        ensure_migrated(conn)?;
+        list_all_accepted_memories(conn)
     })
 }
 

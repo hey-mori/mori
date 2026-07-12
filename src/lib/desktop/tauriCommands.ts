@@ -73,6 +73,7 @@ export type TauriCommandName =
   | "list_sqlite_sessions"
   | "save_accepted_project_memories"
   | "list_accepted_project_memories"
+  | "list_all_accepted_project_memories"
   | "append_memory_review_action_rows"
   | "list_memory_review_action_rows"
   | "persist_session_imports"
@@ -207,6 +208,10 @@ export type TauriCommandMap = {
   };
   list_accepted_project_memories: {
     input: { projectId: string };
+    output: SqliteAcceptedMemoryRow[];
+  };
+  list_all_accepted_project_memories: {
+    input: undefined;
     output: SqliteAcceptedMemoryRow[];
   };
   append_memory_review_action_rows: {
@@ -422,6 +427,9 @@ export const tauriCommands = {
   },
   listAcceptedProjectMemories(projectId: string): Promise<SqliteAcceptedMemoryRow[]> {
     return invokeTauriCommand("list_accepted_project_memories", { projectId });
+  },
+  listAllAcceptedProjectMemories(): Promise<SqliteAcceptedMemoryRow[]> {
+    return invokeTauriCommand("list_all_accepted_project_memories", undefined);
   },
   appendMemoryReviewActionRows(
     actions: SqliteMemoryReviewActionRow[],

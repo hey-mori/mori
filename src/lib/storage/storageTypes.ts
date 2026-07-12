@@ -376,6 +376,12 @@ export type DraftRepository = {
   saveAcceptedProjectMemories: (memories: StoredAcceptedProjectMemory[]) => StoredAcceptedProjectMemory[];
   /** Read every accepted memory for a project, most-recent first. */
   listAcceptedProjectMemories: (projectId: string) => StoredAcceptedProjectMemory[];
+  /**
+   * Read every accepted memory across every project, most-recent first.
+   * Powers cross-project recall (global memory search, the 메모리 surface);
+   * per-project reads stay on `listAcceptedProjectMemories`.
+   */
+  listAllAcceptedProjectMemories: () => StoredAcceptedProjectMemory[];
   /** Lookup by id; returns `null` when missing or schema-mismatched. */
   getAcceptedProjectMemory: (memoryId: string) => StoredAcceptedProjectMemory | null;
   /**

@@ -50,6 +50,7 @@ export type AcceptedMemoryResult<T> = {
 export type AcceptedMemoryDesktopCommands = {
   saveAcceptedProjectMemories: typeof tauriCommands.saveAcceptedProjectMemories;
   listAcceptedProjectMemories: typeof tauriCommands.listAcceptedProjectMemories;
+  listAllAcceptedProjectMemories: typeof tauriCommands.listAllAcceptedProjectMemories;
   appendMemoryReviewActionRows: typeof tauriCommands.appendMemoryReviewActionRows;
   listMemoryReviewActionRows: typeof tauriCommands.listMemoryReviewActionRows;
 };
@@ -75,6 +76,7 @@ export class AcceptedMemoryRepository {
     this.commands = options.commands ?? {
       saveAcceptedProjectMemories: tauriCommands.saveAcceptedProjectMemories,
       listAcceptedProjectMemories: tauriCommands.listAcceptedProjectMemories,
+      listAllAcceptedProjectMemories: tauriCommands.listAllAcceptedProjectMemories,
       appendMemoryReviewActionRows: tauriCommands.appendMemoryReviewActionRows,
       listMemoryReviewActionRows: tauriCommands.listMemoryReviewActionRows,
     };
@@ -129,6 +131,29 @@ export class AcceptedMemoryRepository {
       };
     } catch (error) {
       return fallbackResult(this.repository().listAcceptedProjectMemories(projectId), error);
+    }
+  }
+
+  /**
+   * List accepted memories across every project, newest acceptance first.
+   * Cross-project recall (global memory search, the 메모리 surface) reads
+   * here; per-project surfaces stay on `listAcceptedProjectMemories`.
+   */
+  async listAllAcceptedProjectMemories(): Promise<
+    AcceptedMemoryResult<StoredAcceptedProjectMemory[]>
+  > {
+    if (!this.isDesktop()) {
+      return browserResult(this.repository().listAllAcceptedProjectMemories());
+    }
+    try {
+      const rows = await this.commands.listAllAcceptedProjectMemories();
+      return {
+        data: rows.map(fromSqliteAcceptedMemoryRow),
+        source: "desktop-sqlite",
+        fellBack: false,
+      };
+    } catch (error) {
+      return fallbackResult(this.repository().listAllAcceptedProjectMemories(), error);
     }
   }
 

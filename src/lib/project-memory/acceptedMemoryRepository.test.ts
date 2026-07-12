@@ -84,6 +84,7 @@ function fakeDesktopCommands() {
     listAcceptedProjectMemories: vi.fn(async (projectId: string) =>
       memories.filter((row) => row.project_id === projectId),
     ),
+    listAllAcceptedProjectMemories: vi.fn(async () => [...memories]),
     appendMemoryReviewActionRows: vi.fn(async (rows) => {
       actions.push(...rows);
       return { actionsWritten: rows.length };
@@ -179,6 +180,24 @@ describe("AcceptedMemoryRepository — desktop mode", () => {
     // No duplicate write — localStorage stays empty.
     expect(fallback.listAcceptedProjectMemories("p-1")).toEqual([]);
   });
+
+  it("lists all memories across projects through the SQLite command bridge", async () => {
+    const { commands } = fakeDesktopCommands();
+    const repo = new AcceptedMemoryRepository({
+      runtime: "desktop",
+      repository: browserRepo(),
+      commands,
+    });
+
+    await repo.saveAcceptedProjectMemories("p-1", [memory("mem-1", "p-1")]);
+    await repo.saveAcceptedProjectMemories("p-2", [memory("mem-2", "p-2")]);
+
+    const all = await repo.listAllAcceptedProjectMemories();
+    expect(commands.listAllAcceptedProjectMemories).toHaveBeenCalledTimes(1);
+    expect(all.source).toBe("desktop-sqlite");
+    expect(all.data.map((row) => row.id).sort()).toEqual(["mem-1", "mem-2"]);
+    expect(all.data.map((row) => row.projectId).sort()).toEqual(["p-1", "p-2"]);
+  });
 });
 
 describe("AcceptedMemoryRepository — desktop fallback", () => {
@@ -211,6 +230,22 @@ describe("AcceptedMemoryRepository — desktop fallback", () => {
     expect(listed.fellBack).toBe(true);
     expect(listed.source).toBe("browser-local-storage");
     expect(listed.data.map((row) => row.id)).toEqual(["act-local"]);
+  });
+
+  it("falls back to the localStorage cross-project scan when the SQLite list-all fails", async () => {
+    const { commands } = fakeDesktopCommands();
+    commands.listAllAcceptedProjectMemories = vi.fn(async () => {
+      throw new Error("sqlite read error");
+    });
+    const fallback = browserRepo();
+    fallback.saveAcceptedProjectMemory(memory("mem-a", "p-1"));
+    fallback.saveAcceptedProjectMemory(memory("mem-b", "p-2"));
+    const repo = new AcceptedMemoryRepository({ runtime: "desktop", repository: fallback, commands });
+
+    const all = await repo.listAllAcceptedProjectMemories();
+    expect(all.fellBack).toBe(true);
+    expect(all.source).toBe("browser-local-storage");
+    expect(all.data.map((row) => row.id).sort()).toEqual(["mem-a", "mem-b"]);
   });
 
   it("never claims desktop-sqlite as the source after a fallback", async () => {

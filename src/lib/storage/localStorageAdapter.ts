@@ -533,6 +533,22 @@ export class BrowserDraftRepository implements DraftRepository {
     return out.sort((a, b) => new Date(b.acceptedAt).getTime() - new Date(a.acceptedAt).getTime());
   }
 
+  listAllAcceptedProjectMemories(): StoredAcceptedProjectMemory[] {
+    // Cross-project read: scan the whole accepted-memory prefix. Powers
+    // global recall (memory search, the 메모리 surface); per-project reads
+    // stay on listAcceptedProjectMemories.
+    const out: StoredAcceptedProjectMemory[] = [];
+    for (let index = 0; index < this.storage.length; index += 1) {
+      const key = this.storage.key(index);
+      if (!key?.startsWith(ACCEPTED_MEMORY_PREFIX)) continue;
+      const record = this.read<StoredAcceptedProjectMemory>(key);
+      if (!record) continue;
+      if (record.schemaVersion !== ACCEPTED_MEMORY_SCHEMA_VERSION) continue;
+      out.push(record);
+    }
+    return out.sort((a, b) => new Date(b.acceptedAt).getTime() - new Date(a.acceptedAt).getTime());
+  }
+
   getAcceptedProjectMemory(memoryId: string): StoredAcceptedProjectMemory | null {
     // Without a projectId we have to scan; accepted memory ids are
     // intentionally globally unique so this is safe even at scale.

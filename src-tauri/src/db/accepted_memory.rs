@@ -183,6 +183,63 @@ pub fn list_accepted_memories(
     Ok(out)
 }
 
+/// List accepted memories across every project, newest acceptance first.
+/// Powers cross-project recall (global memory search, the 메모리 surface);
+/// per-project reads stay on `list_accepted_memories`.
+pub fn list_all_accepted_memories(conn: &Connection) -> Result<Vec<AcceptedMemoryRow>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, project_id, kind, title, summary, status, importance, \
+                confidence_label, confidence_score, confidence_rationale, \
+                evidence_refs_json, source_session_ids_json, origin_proposal_ids_json, \
+                related_issue_ids_json, related_decision_ids_json, proposed_action, \
+                review_note, sensitivity, resume_eligible, report_eligibility, \
+                superseded_by, created_at, updated_at, accepted_at, accepted_by, \
+                review_action_ids_json, schema_version \
+             FROM consolidated_memories \
+             ORDER BY accepted_at DESC, id ASC",
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok(AcceptedMemoryRow {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                kind: row.get(2)?,
+                title: row.get(3)?,
+                summary: row.get(4)?,
+                status: row.get(5)?,
+                importance: row.get(6)?,
+                confidence_label: row.get(7)?,
+                confidence_score: row.get(8)?,
+                confidence_rationale: row.get(9)?,
+                evidence_refs_json: row.get(10)?,
+                source_session_ids_json: row.get(11)?,
+                origin_proposal_ids_json: row.get(12)?,
+                related_issue_ids_json: row.get(13)?,
+                related_decision_ids_json: row.get(14)?,
+                proposed_action: row.get(15)?,
+                review_note: row.get(16)?,
+                sensitivity: row.get(17)?,
+                resume_eligible: row.get(18)?,
+                report_eligibility: row.get(19)?,
+                superseded_by: row.get(20)?,
+                created_at: row.get(21)?,
+                updated_at: row.get(22)?,
+                accepted_at: row.get(23)?,
+                accepted_by: row.get(24)?,
+                review_action_ids_json: row.get(25)?,
+                schema_version: row.get(26)?,
+            })
+        })
+        .map_err(|error| error.to_string())?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(|error| error.to_string())?);
+    }
+    Ok(out)
+}
+
 /// Append memory review-action audit rows. Append-only; an id collision
 /// replaces the prior row so re-applying a pass is idempotent.
 pub fn append_memory_review_actions(
@@ -337,6 +394,35 @@ mod tests {
         let p2 = list_accepted_memories(&conn, "p-2").expect("list p-2");
         assert_eq!(p2.len(), 1);
         assert_eq!(p2[0].id, "mem-3");
+    }
+
+    #[test]
+    fn lists_all_accepted_memories_across_projects_newest_first() {
+        let mut conn = open_in_memory().expect("open");
+        apply_migrations(&mut conn).expect("migrate");
+
+        save_accepted_memories(
+            &mut conn,
+            &[
+                memory("mem-1", "p-1", "2026-05-12T10:00:00Z"),
+                memory("mem-2", "p-1", "2026-05-13T10:00:00Z"),
+                memory("mem-3", "p-2", "2026-05-14T10:00:00Z"),
+            ],
+        )
+        .expect("save");
+
+        let all = list_all_accepted_memories(&conn).expect("list all");
+        assert_eq!(all.len(), 3);
+        // Newest acceptance first, regardless of project.
+        assert_eq!(all[0].id, "mem-3");
+        assert_eq!(all[0].project_id, "p-2");
+        assert_eq!(all[1].id, "mem-2");
+        assert_eq!(all[2].id, "mem-1");
+
+        let empty = open_in_memory().expect("open empty");
+        let mut empty = empty;
+        apply_migrations(&mut empty).expect("migrate empty");
+        assert!(list_all_accepted_memories(&empty).expect("list empty").is_empty());
     }
 
     #[test]
