@@ -29,3 +29,12 @@ tempfile = "3"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+# The default dev profile uses full debuginfo (`debug = 2`), which on this Tauri
+# app produced ~240MB PDBs and a ~10GB target dir that overran a nearly-full
+# disk (LNK1318 "unexpected PDB error" is what a disk-full PDB write looks like).
+# Line-tables keep panic backtraces and file:line info while cutting the
+# debug-info bulk, so the dev build fits and links faster. Raise back to 2 if a
+# step-debugger with full locals is needed and disk space allows.
+[profile.dev]
+debug = "line-tables-only"
