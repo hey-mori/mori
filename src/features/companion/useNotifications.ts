@@ -20,6 +20,8 @@ import type {
   StoredSessionSummary,
 } from "../../lib/storage/storageTypes";
 import { useBackgroundWatchStore } from "../../app/backgroundWatchStore";
+import { useStorageHealthStore } from "../../app/storageHealthStore";
+import { buildStorageHealthNotifications } from "../../lib/notifications/storageHealthNotifications";
 import { useCompanionSignals } from "./useCompanionSignals";
 
 /**
@@ -122,6 +124,15 @@ export function useNotifications(): {
     [backgroundAnalysisResults],
   );
 
+  // Eighth producer: storage health — the most recent quota failure, i.e.
+  // "your last save did not complete". Risk-severity, state-grounded,
+  // routes to Settings where the storage surface lives.
+  const lastQuotaFailure = useStorageHealthStore((state) => state.lastQuotaFailure);
+  const storageHealthNotifications = useMemo<CompanionNotification[]>(
+    () => buildStorageHealthNotifications(lastQuotaFailure),
+    [lastQuotaFailure],
+  );
+
   // Compose order = compose-time dedupe priority (a notification raised by two
   // producers in one tick appears once, taking the earlier producer's copy).
   // The *display* order is recency — set below — so the feed reads as a stream.
@@ -129,6 +140,7 @@ export function useNotifications(): {
     () =>
       sortNotificationsByRecency(
         composeNotifications([
+          storageHealthNotifications,
           followNotifications,
           liveNotifications,
           memoryHealthNotifications,
@@ -140,6 +152,7 @@ export function useNotifications(): {
         ]),
       ),
     [
+      storageHealthNotifications,
       followNotifications,
       liveNotifications,
       importFinishedNotifications,

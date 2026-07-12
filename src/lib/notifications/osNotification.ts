@@ -50,6 +50,9 @@ export const OS_ELIGIBLE_KINDS: ReadonlySet<CompanionNotificationKind> = new Set
   "memory_contradiction_detected",
   "background_detection",
   "background_analysis_ready",
+  // A save just failed — a delayed in-app glance would miss the moment to
+  // free space before the next write fails too.
+  "storage_write_failure",
 ]);
 
 /** How old (ms) an eligible notice may be and still earn an OS ping. Beyond

@@ -25,6 +25,7 @@ export function notificationIcon(kind: CompanionNotificationKind): LucideIcon {
   switch (kind) {
     case "weak_evidence":
     case "memory_contradiction_detected":
+    case "storage_write_failure":
       return ShieldAlert;
     case "needs_review":
     case "unresolved_issue":

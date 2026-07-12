@@ -61,7 +61,8 @@ export type CompanionNotificationKind =
   | "package_export_ready"
   | "live_follow_update"
   | "background_detection"
-  | "background_analysis_ready";
+  | "background_analysis_ready"
+  | "storage_write_failure";
 
 export type CompanionNotificationSeverity = CompanionSignalSeverity;
 export type CompanionNotificationBasis = CompanionSignalBasis;

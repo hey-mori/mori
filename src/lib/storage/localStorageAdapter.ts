@@ -14,6 +14,7 @@ import type { RepositorySettings } from "../repositories";
 import { DEFAULT_REPOSITORY_SETTINGS, sanitizeRepositorySettings } from "../repositories";
 import type { ImportReviewDraft, ReviewDraftMeta } from "../review";
 import { deriveSessionSummaryMetrics } from "./sessionSummaryMetrics";
+import { StorageQuotaError, isQuotaExceededError, notifyQuotaFailure } from "./storageQuota";
 import type {
   ConnectorEventIdentitySnapshot,
   KeyValueStorage,
@@ -576,7 +577,17 @@ export class BrowserDraftRepository implements DraftRepository {
   }
 
   private write(key: string, value: unknown): void {
-    this.storage.setItem(key, JSON.stringify(value));
+    try {
+      this.storage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      if (isQuotaExceededError(error)) {
+        // Surface the failure to the app-level health observer first, then
+        // rethrow typed: a failed save must never look like a successful one.
+        notifyQuotaFailure({ key, at: new Date().toISOString() });
+        throw new StorageQuotaError(key, { cause: error });
+      }
+      throw error;
+    }
   }
 
   private read<T>(key: string): T | null {
