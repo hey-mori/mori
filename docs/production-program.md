@@ -212,9 +212,13 @@ The cheap, high-utility viewer features: per-session "resume 명령
 개요 and project pages (the Rust `TokenAccumulator` already parses
 them), and file-diff rendering from the stored `structuredPatch`.
 *Answers:* landscape §3; viewer synthesis §3.5-3.6, §4 P3.
-*Status:* resume-command copy shipped in the 라이브 sessions popover
-(2026-07-12); token statistics and diff rendering remain open, plus
-extending the copy action to discovered-session rows.
+*Status:* resume-command copy shipped in the 라이브 sessions popover;
+**session token statistics shipped** (2026-07-12): the 개요 scale
+strip carries a 토큰 metric rolled up from per-event usage, with the
+input / output / model breakdown on hover and honest hiding when no
+usage exists. Remaining: project-level token rollup, file-diff
+rendering from `structuredPatch`, and the resume-copy on
+discovered-session rows.
 
 **W11 · 라이브 세션 hardening.**
 Replace string-prefix error detection with a structural error flag on
