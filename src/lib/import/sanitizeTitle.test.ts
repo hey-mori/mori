@@ -24,6 +24,16 @@ describe("sanitizeTitle", () => {
     expect(isAgentBoilerplateTitle("<system-reminder>do the thing</system-reminder>")).toBe(true);
   });
 
+  it("detects slash-command wrappers and resume prompts as not real requests", () => {
+    expect(
+      isAgentBoilerplateTitle("<local-command-caveat>Caveat: The messages below were generated"),
+    ).toBe(true);
+    expect(isAgentBoilerplateTitle("<local-command-stdout>Set model to claude-fable-5")).toBe(true);
+    expect(isAgentBoilerplateTitle("Continue from where you left off.")).toBe(true);
+    // A genuine ask that merely mentions continuing is still a real title.
+    expect(isAgentBoilerplateTitle("계속 진행해줘")).toBe(false);
+  });
+
   it("cleanImportedTitle drops boilerplate and keeps real titles", () => {
     expect(cleanImportedTitle("This session is being continued from a previous conversation")).toBe("");
     expect(cleanImportedTitle("  ")).toBe("");
