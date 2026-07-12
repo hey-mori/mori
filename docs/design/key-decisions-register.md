@@ -65,6 +65,7 @@ unblock.
 | 21 | Flat JSON/CSV export next to `.mori` | **R: Low priority**; verify it does not muddy the one-package story. | product-improvement-plan |
 | 22 | Workbench: invest or park? | **R: Park** (least-developed, overlaps session views). | product-improvement-plan |
 | 23 | Reports HTML then PDF; OS-native notifications | **R: Planned, mostly engineering**; sequence after the connective wins. | product-improvement-plan |
+| 26 | Personal-memory direction | **Decided 2026-07-13: Mori grows beyond coding into a personal memory system; coding stays the strongest use case.** Governance, IA, and validation details remain proposals in the owner doc. | mori-personal-memory-direction |
 
 ---
 
