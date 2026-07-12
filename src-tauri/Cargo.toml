@@ -1,10 +1,12 @@
 [package]
 name = "mori"
 version = "0.1.0"
-description = "Mori desktop shell"
-authors = ["Mori"]
+description = "Local-first AI work memory: evidence-linked timelines and reviewed project memory from AI coding sessions"
+authors = ["swarea"]
+# License intentionally unset until the source-posture decision lands
+# (docs/production-program.md, D1 / W21). Not published to crates.io.
 license = ""
-repository = ""
+repository = "https://github.com/swarea/mori"
 edition = "2021"
 
 [build-dependencies]

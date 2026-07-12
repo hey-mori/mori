@@ -24,8 +24,12 @@
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
     "targets": "all",
+    "category": "Productivity",
+    "copyright": "© 2026 swarea",
+    "shortDescription": "Local-first AI work memory",
+    "longDescription": "Turns AI coding sessions into evidence-linked timelines and reviewed project memory. All data stays on the user's machine.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
