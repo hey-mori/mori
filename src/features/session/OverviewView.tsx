@@ -11,6 +11,7 @@ import {
 } from "../../app/sessionStore";
 import { useAppStore } from "../../app/store";
 import { buildSessionWorkSummary } from "../../lib/session/sessionWorkSummary";
+import { buildSessionTokenStats } from "../../lib/session/sessionTokenStats";
 import { getActivityLaneVisuals } from "../../lib/timeline/activityModel";
 import { formatSidebarRelative } from "../../lib/sidebar/sessionList";
 import type { ImportDigestLane } from "../../lib/import/importDigest";
@@ -77,6 +78,10 @@ export function OverviewView() {
       }),
     [view.issues, view.decisions, view.nextActions],
   );
+
+  // Session token usage, rolled up from the imported assistant events. Absent
+  // (not 0) when the session carries no usage records, so the metric hides.
+  const tokenStats = useMemo(() => buildSessionTokenStats(view.events), [view.events]);
 
   // The single most useful thing on reopen: where the work was left off. The
   // last user request (a human prompt that kicked off a unit of work) is the
@@ -156,6 +161,13 @@ export function OverviewView() {
             <OverviewMetric label="이슈" value={String(issueCount)} />
             <OverviewMetric label="결정" value={String(decisionCount)} />
             <OverviewMetric label="다음 액션" value={String(nextActionCount)} />
+            {tokenStats ? (
+              <OverviewMetric
+                label="토큰"
+                value={tokenStats.totalLabel}
+                title={tokenStats.detailLabel}
+              />
+            ) : null}
           </dl>
 
           <SessionFilesPanel sources={view.sources} />
@@ -194,9 +206,18 @@ export function OverviewView() {
   );
 }
 
-function OverviewMetric({ label, value }: { label: string; value: string }) {
+function OverviewMetric({
+  label,
+  value,
+  title,
+}: {
+  label: string;
+  value: string;
+  /** Optional hover detail (e.g. the token input/output/model breakdown). */
+  title?: string;
+}) {
   return (
-    <div className="overview-metric">
+    <div className="overview-metric" title={title}>
       <dt>{label}</dt>
       <dd>{value}</dd>
     </div>

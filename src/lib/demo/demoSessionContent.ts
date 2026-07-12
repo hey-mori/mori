@@ -189,6 +189,23 @@ function expandBlueprint(
     };
   });
 
+  // Stamp a deterministic token figure on the last AI turn, mirroring how a
+  // real Claude import attributes the session aggregate to the final assistant
+  // event. Scaled by beat count so each demo session carries its own plausible
+  // number, and the 개요 토큰 metric shows what real data looks like.
+  const lastAiEvent = [...events].reverse().find((event) => event.type === "aiConversation");
+  if (lastAiEvent) {
+    const beats = blueprint.beats.length;
+    const input = beats * 5_200;
+    const output = beats * 1_450;
+    lastAiEvent.tokenUsage = {
+      input,
+      output,
+      total: input + output,
+      model: "claude-opus-4-8",
+    };
+  }
+
   const eventAt = (i: number): TimelineEvent | undefined => events[Math.min(i, events.length - 1)];
 
   // ── Decisions (linked to a decision-beat when present, else spread).
