@@ -1,0 +1,53 @@
+# Continuous integration for the app repo (production program W2).
+#
+# Mirrors the local validation contract (docs/mori-autonomous-loop.md §5):
+# typecheck + full Vitest suite, production build, stylelint, knip, and the
+# Rust check/test pass when src-tauri is part of the tree. Release packaging
+# (signing, notarization, updater artifacts) is a separate workflow that
+# lands with W3.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: typecheck · test · build · style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:types
+      - run: npm test
+      - run: npm run build
+      - run: npm run style:check
+      # Unused-file inventory. Non-blocking by design (knip.json sets
+      # --no-exit-code via the npm script); the log is the audit surface.
+      - run: npm run unused
+
+  rust:
+    # macOS runner on purpose: it is the first shipping target and needs no
+    # extra system packages for tauri/wry, unlike ubuntu (gtk/webkit dev libs).
+    name: cargo check · test
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: cargo check --locked
+      - run: cargo test --locked
