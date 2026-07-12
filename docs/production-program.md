@@ -94,14 +94,23 @@ non-trivial slices, small validated commits, review gates untouched.
 Turn on bundling and make `tauri build` produce a real macOS app
 (Windows next). Real icons (brand identity reference governs), filled
 `Cargo.toml` metadata, committed `Cargo.lock`, bundle targets per OS.
-*Answers:* audit §1. *Status:* open.
+*Answers:* audit §1. *Status:* **shipped 2026-07-12.** `bundle.active`
+on with category / copyright / descriptions; the icon set was already
+real production art (`scripts/generate-icons.cjs`, zero drift on
+regenerate); Cargo metadata filled (license deliberately empty until
+D1); `Cargo.lock` committed. First artifacts verified locally:
+`Mori.app` + `Mori_0.1.0_aarch64.dmg`.
 
 **W2 · Continuous integration.**
 A GitHub Actions (or equivalent) pipeline running `check:full`,
 `build`, `cargo check` / `cargo test`, `style:check`, and knip on every
 push; a release workflow producing signed artifacts. A macOS runner
 first; a Windows runner joins when W26 starts.
-*Answers:* audit §1. *Status:* open.
+*Answers:* audit §1. *Status:* **validation CI shipped 2026-07-12**
+(`.github/workflows/ci.yml`: web job on ubuntu, rust job on macOS with
+`--locked`; activates on the next push). The mori-web repo carries its
+own build-must-pass workflow. The signed-release workflow remains open
+and lands with W3.
 
 **W3 · Signing, notarization, updater.**
 Apple Developer signing + notarization in the release workflow;
@@ -139,8 +148,13 @@ silent `QuotaExceededError`); automatic pre-migration backup of the
 SQLite file; a migration-failure recovery UI (restore backup / export
 / start fresh) instead of a hard dead end. Fix the known
 `addSessionImport` re-serialization cost.
-*Answers:* audit §2, §3, §5. *Status:* open. Deliverable even before
-W5 lands; the quota guard matters most while localStorage is primary.
+*Answers:* audit §2, §3, §5. *Status:* **quota guard shipped
+2026-07-12** — `BrowserDraftRepository.write()` detects quota errors,
+throws a typed `StorageQuotaError`, and notifies a process-wide
+observer feeding the storage-health store; a risk-severity,
+OS-eligible notification surfaces "마지막 저장이 완료되지 않았습니다".
+Pre-migration backup, the recovery UI, and the `addSessionImport`
+re-serialization fix remain open.
 
 **W7 · Scale rendering.**
 Wire the existing tested `VirtualList` into the session lists (Home,
@@ -342,7 +356,9 @@ the Claude Code audience; sequenced after the macOS launch settles.
 Delete or wire the 49 knip-unused files (decide per file; `VirtualList`
 is wired by W7); remove the 11 tracked `tmp-ui-*.png` scratch images;
 fix the stale `README.md` icon-script reference; add knip to CI (W2).
-*Answers:* audit §8. *Status:* open.
+*Answers:* audit §8. *Status:* scratch images removed, README
+icon-script reference fixed, knip runs in CI (all 2026-07-12); the
+unused-file inventory remains open.
 
 **W18 · Product identity and naming.**
 "Mori" is confirmed a **placeholder codename** (D3, 2026-07-12); the
