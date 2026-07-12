@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { StoredSessionSummary } from "../storage/storageTypes";
 import {
   buildCommands,
+  capBrowseCommands,
   filterCommands,
   groupCommands,
 } from "./commandPalette";
@@ -36,7 +37,7 @@ describe("buildCommands", () => {
     expect(cmds.find((c) => c.id === "nav-home")).toBeUndefined();
   });
 
-  it("includes sessions sorted most-recent-first and caps the list", () => {
+  it("includes every session sorted most-recent-first so search reaches all of them", () => {
     const sessions: StoredSessionSummary[] = Array.from({ length: 40 }).map(
       (_, index) =>
         summary({
@@ -47,8 +48,11 @@ describe("buildCommands", () => {
     );
     const cmds = buildCommands({ sessions });
     const sessionRows = cmds.filter((c) => c.group === "session");
-    expect(sessionRows.length).toBe(25);
+    expect(sessionRows.length).toBe(40);
     expect(sessionRows[0]!.label).toBe("세션 39");
+    // The oldest session is present, so a query can reach it even though it is
+    // far past the old 25-row browse cap.
+    expect(sessionRows.some((row) => row.label === "세션 0")).toBe(true);
   });
 
   it("emits at least one action and settings command", () => {
@@ -91,6 +95,50 @@ describe("filterCommands", () => {
 
   it("returns nothing when nothing matches", () => {
     expect(filterCommands(cmds, "xyzqqq")).toEqual([]);
+  });
+
+  it("finds a session far past the old browse cap", () => {
+    const sessions: StoredSessionSummary[] = Array.from({ length: 40 }).map(
+      (_, index) =>
+        summary({
+          sessionId: `sess-${index}`,
+          title: index === 39 ? "가장 오래된 인증 리팩터링" : `세션 ${index}`,
+          // index 39 is the OLDEST, so it sorts last, well beyond a 25-row cap.
+          savedAt: new Date(2026, 4, 40 - index).toISOString(),
+        }),
+    );
+    const cmds = buildCommands({ sessions });
+    const result = filterCommands(cmds, "인증 리팩터링");
+    expect(result.some((c) => c.id === "session:sess-39")).toBe(true);
+  });
+});
+
+describe("capBrowseCommands", () => {
+  function sessionsOf(count: number): StoredSessionSummary[] {
+    return Array.from({ length: count }).map((_, index) =>
+      summary({
+        sessionId: `sess-${index}`,
+        title: `세션 ${index}`,
+        savedAt: new Date(2026, 4, 1 + index).toISOString(),
+      }),
+    );
+  }
+
+  it("caps the session group for the browse view but keeps other groups whole", () => {
+    const cmds = buildCommands({ sessions: sessionsOf(30) });
+    const browsed = capBrowseCommands(cmds);
+    expect(browsed.filter((c) => c.group === "session").length).toBe(8);
+    // Non-session groups are untouched.
+    expect(browsed.filter((c) => c.group === "navigate").length).toBe(
+      cmds.filter((c) => c.group === "navigate").length,
+    );
+    // The freshest sessions are the ones kept.
+    expect(browsed.find((c) => c.group === "session")!.label).toBe("세션 29");
+  });
+
+  it("honours a custom session limit", () => {
+    const cmds = buildCommands({ sessions: sessionsOf(30) });
+    expect(capBrowseCommands(cmds, { sessionLimit: 3 }).filter((c) => c.group === "session").length).toBe(3);
   });
 });
 

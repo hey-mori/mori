@@ -17,6 +17,7 @@ import { useThemeStore } from "../../app/themeStore";
 import { mergeDemoSessionSummaries } from "../../lib/demo/demoSessionFixtures";
 import {
   buildCommands,
+  capBrowseCommands,
   filterCommands,
   groupCommands,
   type CommandEntry,
@@ -80,8 +81,10 @@ export function CommandPalette({
     () => buildCommands({ sessions, currentView, currentTheme }),
     [sessions, currentView, currentTheme],
   );
+  // A typed query searches the whole command set (every session included); an
+  // empty query shows a short browse menu so opening the palette stays calm.
   const filtered = useMemo(
-    () => filterCommands(commands, query),
+    () => (query.trim() ? filterCommands(commands, query) : capBrowseCommands(commands)),
     [commands, query],
   );
   const sections = useMemo(() => groupCommands(filtered), [filtered]);

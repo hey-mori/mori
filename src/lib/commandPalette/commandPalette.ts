@@ -118,13 +118,15 @@ export function buildCommands(input: BuildCommandsInput): CommandEntry[] {
     target: { kind: "navigate", view: cmd.view },
   }));
 
+  // Every session becomes a searchable entry (not just the recent few), so a
+  // typed query reaches the whole history. The renderer trims the *browse* list
+  // (empty query) with `capBrowseCommands`; searching sees them all.
   const sessions: CommandEntry[] = [...input.sessions]
     .sort(
       (a, b) =>
         new Date(b.startedAt || b.savedAt).getTime() -
         new Date(a.startedAt || a.savedAt).getTime(),
     )
-    .slice(0, 25)
     .map((summary) => ({
       id: `session:${summary.sessionId}`,
       group: "session",
@@ -185,6 +187,31 @@ export function filterCommands(
     if (score > 0) scored.push({ entry, score });
   }
   return scored.sort((a, b) => b.score - a.score).map((row) => row.entry);
+}
+
+/**
+ * Trim the *browse* list shown for an empty query so opening the palette is a
+ * short, calm menu rather than the whole session history. Only the unbounded
+ * groups (sessions) are capped; navigate / action / theme / settings are already
+ * small and pass through whole. Sessions are pre-sorted most-recent-first by
+ * `buildCommands`, so the cap keeps the freshest. A typed query bypasses this
+ * (the renderer calls `filterCommands` instead), so nothing is unsearchable.
+ */
+export function capBrowseCommands(
+  commands: ReadonlyArray<CommandEntry>,
+  options: { sessionLimit?: number } = {},
+): CommandEntry[] {
+  const sessionLimit = options.sessionLimit ?? 8;
+  let sessionsSeen = 0;
+  const out: CommandEntry[] = [];
+  for (const entry of commands) {
+    if (entry.group === "session") {
+      if (sessionsSeen >= sessionLimit) continue;
+      sessionsSeen += 1;
+    }
+    out.push(entry);
+  }
+  return out;
 }
 
 function scoreCommand(entry: CommandEntry, term: string): number {
