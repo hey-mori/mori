@@ -154,13 +154,16 @@ silent `QuotaExceededError`); automatic pre-migration backup of the
 SQLite file; a migration-failure recovery UI (restore backup / export
 / start fresh) instead of a hard dead end. Fix the known
 `addSessionImport` re-serialization cost.
-*Answers:* audit §2, §3, §5. *Status:* **quota guard shipped
-2026-07-12** — `BrowserDraftRepository.write()` detects quota errors,
-throws a typed `StorageQuotaError`, and notifies a process-wide
-observer feeding the storage-health store; a risk-severity,
-OS-eligible notification surfaces "마지막 저장이 완료되지 않았습니다".
-Pre-migration backup, the recovery UI, and the `addSessionImport`
-re-serialization fix remain open.
+*Answers:* audit §2, §3, §5. *Status:* **quota guard + pre-migration
+backup + recovery UI shipped 2026-07-12.** The quota guard throws a
+typed `StorageQuotaError` and notifies a storage-health observer.
+`ensure_migrated` now snapshots the DB (`VACUUM INTO`) before applying
+pending migrations against an existing database, keeping the newest
+five under a `backups/` folder; `list_sqlite_backups` /
+`restore_sqlite_backup` (path-guarded) back a `DatabaseRecoveryCard`
+that surfaces the previously invisible migration error with restore /
+retry / confirm-gated start-fresh. Remaining: the `addSessionImport`
+O(n) re-serialization (a perf cleanup, per-entry re-keying; TS-only).
 
 **W7 · Scale rendering.**
 Wire the existing tested `VirtualList` into the session lists (Home,
