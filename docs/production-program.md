@@ -162,8 +162,11 @@ pending migrations against an existing database, keeping the newest
 five under a `backups/` folder; `list_sqlite_backups` /
 `restore_sqlite_backup` (path-guarded) back a `DatabaseRecoveryCard`
 that surfaces the previously invisible migration error with restore /
-retry / confirm-gated start-fresh. Remaining: the `addSessionImport`
-O(n) re-serialization (a perf cleanup, per-entry re-keying; TS-only).
+retry / confirm-gated start-fresh (start-fresh resets the migration
+ledger via `reset_sqlite_database`, so it works in the broken state).
+The `addSessionImport` re-serialization is fixed too (per-entry
+`sessionImportEntry` keys with a legacy-array merge + one-time
+write-path migration). **W6 is complete.**
 
 **W7 · Scale rendering.**
 Wire the existing tested `VirtualList` into the session lists (Home,
