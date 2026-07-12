@@ -202,6 +202,13 @@ export type SessionState = {
    * feed. Ephemeral, in-memory, aged out by the feed's recency sort.
    */
   followNotifications: CompanionNotification[];
+  /**
+   * Completion notices from the 라이브 세션 dashboard: one per request that
+   * finished while the app was open. Same ephemeral, in-memory, recency-aged
+   * shape as `followNotifications`, kept separate because the live dashboard is
+   * a multi-session producer independent of the single-session Follow reducer.
+   */
+  liveNotifications: CompanionNotification[];
   source: SessionSource;
   /**
    * Bumped whenever a data reset wipes stored sessions
@@ -407,6 +414,12 @@ export type SessionState = {
   resumeFollow: () => void;
   stopFollow: () => void;
   setFollowError: (message: string, at?: string) => void;
+  /**
+   * Push one 라이브 세션 completion notice into the cross-session feed. Deduped
+   * by id (the request id), so a re-render never doubles a completion, and
+   * capped so a long-lived dashboard stays bounded.
+   */
+  pushLiveNotification: (notification: CompanionNotification) => void;
   updateAnalysisSettings: (patch: Partial<QuickPassAnalysisSettings>) => QuickPassAnalysisSettings;
   loadDesktopSession: (sessionId: string) => Promise<boolean>;
   /**
@@ -552,6 +565,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   requestDisclosureOverrides: {},
   follow: initialFollowState(),
   followNotifications: [],
+  liveNotifications: [],
   source: "demo",
   dataResetNonce: 0,
   dataSource: createStaticMockDataSource(demoView),
@@ -1232,6 +1246,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     });
     return reaction;
   },
+  pushLiveNotification: (notification) =>
+    set((state) => {
+      if (state.liveNotifications.some((existing) => existing.id === notification.id)) {
+        return state;
+      }
+      const next = [...state.liveNotifications, notification];
+      return { liveNotifications: next.length > 50 ? next.slice(-50) : next };
+    }),
   pauseFollow: () => set({ follow: followReducer(get().follow, { type: "pause" }) }),
   resumeFollow: () => set({ follow: followReducer(get().follow, { type: "resume" }) }),
   stopFollow: () => set({ follow: followReducer(get().follow, { type: "stop" }) }),

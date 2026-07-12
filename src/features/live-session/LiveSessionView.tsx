@@ -20,6 +20,8 @@ import type { LucideIcon } from "lucide-react";
 import { PageShell } from "../../components/layout/PageShell";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { EmptyState } from "../../components/layout/EmptyState";
+import { useSessionStore } from "../../app/sessionStore";
+import { buildLiveCompletionNotification } from "../../lib/notifications/liveSessionNotifications";
 import { isClaudeBridgeAvailable, formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { EventActor, FileTouch } from "../../domain/types";
 import {
@@ -379,7 +381,11 @@ function RequestBlockImpl({
   const expanded = override ?? request.status === "working";
 
   // A one-shot light sweep the moment a request stops working, so a finish reads
-  // as a small event rather than a card blinking shut.
+  // as a small event rather than a card blinking shut. The same transition also
+  // pushes a completion notice into the cross-session feed, so a run that
+  // finished while the user was elsewhere still surfaces (and, being an
+  // OS-eligible kind, fires a single fresh OS ping).
+  const pushLiveNotification = useSessionStore((state) => state.pushLiveNotification);
   const [finished, setFinished] = useState(false);
   const prevStatus = useRef(request.status);
   useEffect(() => {
@@ -387,10 +393,25 @@ function RequestBlockImpl({
     prevStatus.current = request.status;
     if (was === "working" && request.status !== "working") {
       setFinished(true);
+      pushLiveNotification(
+        buildLiveCompletionNotification({
+          requestId: request.id,
+          requestTitle: request.requestTitle,
+          stepCount: request.items.length,
+          hasError: request.items.some((item) => item.text.startsWith("↳ 도구 오류")),
+          sessionId: request.sessionKey,
+          sessionTitle: request.sessionLabel,
+          projectLabel: request.sessionLabel,
+          at: request.updatedAt,
+        }),
+      );
       const timer = setTimeout(() => setFinished(false), 1000);
       return () => clearTimeout(timer);
     }
     return undefined;
+    // Only react to the status transition; the other request fields are read
+    // from the closure at the moment of the change, which is exactly correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request.status]);
 
   const latest = items[items.length - 1];

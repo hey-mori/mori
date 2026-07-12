@@ -49,6 +49,7 @@ export function useNotifications(): {
   const { isDemo, acceptedMemories } = useCompanionSignals();
   const imports = useSessionStore((state) => state.imports);
   const followNotifications = useSessionStore((state) => state.followNotifications);
+  const liveNotifications = useSessionStore((state) => state.liveNotifications);
   const activeSessionId = useSessionStore(
     (state) => state.draft?.session.id ?? null,
   );
@@ -129,6 +130,7 @@ export function useNotifications(): {
       sortNotificationsByRecency(
         composeNotifications([
           followNotifications,
+          liveNotifications,
           memoryHealthNotifications,
           importFinishedNotifications,
           packageExportNotifications,
@@ -139,6 +141,7 @@ export function useNotifications(): {
       ),
     [
       followNotifications,
+      liveNotifications,
       importFinishedNotifications,
       memoryHealthNotifications,
       packageExportNotifications,

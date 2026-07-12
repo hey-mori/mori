@@ -80,6 +80,7 @@ function resetStore() {
     requestDisclosureOverrides: {},
     follow: initialFollowState(),
     followNotifications: [],
+    liveNotifications: [],
     source: "demo",
   });
 }
