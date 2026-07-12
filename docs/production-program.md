@@ -245,7 +245,15 @@ can be mirrored), and the privacy policy (W22). Recommended as a
 the app; keeps this repo's validation contract clean); the brand
 identity reference governs its design. No accounts, no analytics
 beyond privacy-respecting page counts, no cloud features implied.
-*Status:* open; requires the naming decision (W18) first.
+*Status:* open. A **private** site repo may start now under the
+codename (rename later is free while private); the public domain,
+org, and branding wait for the naming decision (D3). Repo-structure
+patterns verified 2026-07: Supabase keeps www / docs inside the app
+monorepo; PostHog keeps a domain-named separate site repo
+(`posthog.com`); Zed and Cal.com keep the marketing site private even
+with an open app. For Mori the separate-repo split is right: the site
+shares no toolchain with the app, deploys on its own cadence, and its
+visibility can differ from the app's (D1).
 
 **W20 · Distribution channels.**
 GitHub Releases as the canonical artifact host; the `latest.json`
@@ -257,16 +265,18 @@ Checksums published per release.
 depends on W1–W3.
 
 **W21 · Source posture and licensing.**
-Decide open-source vs closed vs delayed-open (**user decision, D1**),
-then execute: a LICENSE file (none exists today), filled
-`package.json` / `Cargo.toml` license + repository metadata, and
-third-party attribution (npm: fflate, lucide-react, react, zustand,
-tailwind; plus the Rust crate tree). Context for the decision: every
-product with traction in this category is open source; OSS is the
-distribution and trust engine here, and the moat is the reviewed
-memory model + execution pace, not the source secrecy. Closed source
-is viable but forfeits the category's main growth channel.
-*Status:* open, user decision required.
+Execute whatever D1 lands on: a LICENSE / EULA (no LICENSE file
+exists today), filled `package.json` / `Cargo.toml` license +
+repository metadata, and third-party attribution (npm: fflate,
+lucide-react, react, zustand, tailwind; plus the Rust crate tree),
+which is required regardless of posture. If D1 stays closed-free,
+this workstream also builds the **public shell** (Obsidian /
+Conductor pattern): a public `<name>-releases` repo carrying the
+updater feed and the public issue tracker, and public user docs; the
+app and site repos stay private. If D1 moves to fair-source, the FSL
+license text replaces the EULA and the app repo goes
+source-visible.
+*Status:* open; D1 leaning closed-free as of 2026-07-12.
 
 **W22 · Legal and policy floor.**
 A privacy policy (short and honest: everything stays local, what the
@@ -332,12 +342,19 @@ fix the stale `README.md` icon-script reference; add knip to CI (W2).
 *Answers:* audit §8. *Status:* open.
 
 **W18 · Product identity and naming.**
-Resolve the naming collision with `fjwood69/mori` ("governed memory
-layer for AI coding agents", near-identical positioning language)
-before any public artifact exists: keep the name with distinct
-branding, or rename. A user decision (**D3**); W19 (site, domain) and
-W20 (release channel) both block on it.
-*Answers:* landscape §1.2, §7.3. *Status:* open, user decision.
+"Mori" is confirmed a **placeholder codename** (D3, 2026-07-12); the
+real name arrives via a naming sprint before the launch checkpoint
+(candidates, domain / npm / crate / trademark availability, and the
+`fjwood69/mori` collision becomes moot on rename). Until then: no
+public investment under the codename; private repos keep it. Org
+strategy at launch, both verified-common patterns: a product-named
+org (`supabase`, `obsidianmd`) created fresh under the final name, or
+the existing company-style org (swarea, like `zed-industries` /
+`meltylabs`) going public with product-named repos; GitHub transfers
+carry stars / issues / redirects either way, so the choice can wait
+for the name.
+*Answers:* landscape §1.2, §7.3. *Status:* direction decided; naming
+sprint pending, blocks W19 public domain and W20.
 
 ## 4. Suggested execution order
 
@@ -375,9 +392,9 @@ the program's recommendation is stated, not presumed.
 
 | # | Decision | Blocks | Recommendation |
 | - | -------- | ------ | -------------- |
-| **D1** | Source posture: open-source, closed, or delayed-open; which license | W21, W19, W25 | Open source (MIT or Apache-2.0). Every winner in this category is OSS; the moat is the memory model and pace, not secrecy. |
-| **D2** | Monetization: free, donation, paid tier, or team tier later | W19 copy, long-term shape | Free while single-user; revisit a paid **team handoff** tier after G4 (Granola's proven step). No decision needed before launch beyond "free for now". |
-| **D3** | Naming: keep "Mori" with distinct branding, or rename | W18, W19, W20 | Investigate collision severity first (trademark, npm / crate / domain availability); rename only if discoverability is materially harmed. |
+| **D1** | Source posture: open-source, closed-free with a public shell, or fair-source (FSL, auto-opens after 2 years); which license | W21, W19, W25 | **Leaning closed-free (user direction, 2026-07-12).** Viable and proven in this exact category: Conductor ships closed-free with only a public `conductor-releases` shell (updater feed + issues); Obsidian is the canonical model (private app + public releases / help / api repos where the community produces artifacts). Fair Source (Sentry's FSL: source-visible, non-compete, auto-converts to Apache-2.0 after 2 years) is the middle path if source visibility ever becomes a trust requirement. Full OSS remains the max-distribution option; not required. |
+| **D2** | Monetization: free, donation, paid tier, or team tier later | W19 copy, long-term shape | **Decided (2026-07-12): free for now.** Revisit a paid **team handoff** tier after G4 (Granola's proven step). |
+| **D3** | Naming: keep "Mori" or rename | W18, W19, W20 | **Decided in direction (2026-07-12): "Mori" is a placeholder codename; the real name comes later, before any public artifact.** Consequences: zero public investment under the mori name (no domains, no public org, no branding); private repos may keep the codename since GitHub renames / transfers redirect web + git and carry stars (caveat: a redirect dies permanently if the old name is ever reused). A naming sprint (candidates, domain / npm / crate / trademark checks) is a launch-checkpoint prerequisite. |
 | **D4** | Language strategy: Korean-only launch vs i18n extraction now | W23, W19 (site languages) | Korean-only launch + strings-module rule for new surfaces (W23 option a). |
 | **D5** | Browser-mode fate once SQLite is primary: demo / trial surface, or retired to a route | W5 design | Keep as an explicitly-labeled demo / trial surface (honest, zero-install trying), never described as a storage mode. |
 | **D6** | Launch shape: private beta first vs direct public launch | W25, launch checkpoint | Private beta (10–30 users from the Korean communities) between G2 and public launch. |
