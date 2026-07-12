@@ -245,9 +245,12 @@ can be mirrored), and the privacy policy (W22). Recommended as a
 the app; keeps this repo's validation contract clean); the brand
 identity reference governs its design. No accounts, no analytics
 beyond privacy-respecting page counts, no cloud features implied.
-*Status:* open. A **private** site repo may start now under the
-codename (rename later is free while private); the public domain,
-org, and branding wait for the naming decision (D3). Repo-structure
+*Status:* **started 2026-07-12.** `swarea/mori-web` (private) is
+scaffolded and pushed: an Astro static site with landing / changelog /
+privacy-draft pages, Korean-first copy, honest unreleased states, the
+brand-token subset hand-synced from this repo, and
+`src/config/site.ts` as the single rename point. Deploy, the public
+domain, org, and branding wait for the naming decision (D3). Repo-structure
 patterns verified 2026-07: Supabase keeps www / docs inside the app
 monorepo; PostHog keeps a domain-named separate site repo
 (`posthog.com`); Zed and Cal.com keep the marketing site private even
