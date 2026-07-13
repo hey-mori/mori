@@ -10,7 +10,9 @@ ledger. Prior revisions live in git history.
 
 Companion reading: [`mori-project-goal.md`](../mori-project-goal.md),
 [`memory-architecture.md`](../memory-architecture.md),
-[`memory-as-a-service.md`](memory-as-a-service.md).
+[`memory-as-a-service.md`](memory-as-a-service.md). The ordered remaining work
+(Now / Next / Later, plus the legacy audit) lives in the execution roadmap,
+[`mori-memory-roadmap.md`](mori-memory-roadmap.md); this doc stays the model.
 
 ## 1. The product problem (restated)
 
