@@ -75,13 +75,14 @@ open a project's 프로젝트 메모리, confirm 메모리 hub 잠정 = confirme
 only and the key-evidence junk retired. Done when the hub is clean on real
 data. **Needs user** (only the user has the data).
 
-**N3 · Ask Mori + search disclose provisional.** Value: the governance
-visibility rule (provisional must be marked wherever it appears, and
-Ask Mori must disclose when an answer leaned on it). State: partial (hub marks
-it; Ask Mori and search do not). Smallest step: exclude/rank provisional in
-`queryableMemory` and add a "잠정 포함" disclosure to Ask Mori answers. Done
-when a provisional-derived answer is visibly flagged and filterable. Minor
-decision only.
+**N3 · Ask Mori discloses provisional. *(shipped, this pass)*** Ask Mori now
+carries a `provisional` flag per citation and a `containsProvisional` answer
+flag; the answer shows an up-front disclosure ("이 답변은 아직 확정되지 않은
+잠정 기억 N건을 참고했습니다") plus a 잠정 badge per provisional citation, and
+the grounded prompt marks 잠정 items so a local LLM hedges. Remaining: a
+"confirmed-only" filter toggle in the hub/search (provisional already ranks
+below confirmed via `isCurrent`), and the same disclosure on standalone memory
+search results; minor, deferred.
 
 **N4 · Governance mode as a real setting.** Value: the mode is a default-auto
 constant, not user-settable; reversibility should be a control, not a code
@@ -156,8 +157,8 @@ enumeration (shipped). Mostly falls out of X3.
 | --- | --- |
 | ~~Provisional shown as 관찰 중 in project MemoryView~~ (N1, fixed this pass) | **done** |
 | 5-button consolidation review vs exception queue (N5) | **migrate later** (needs decision) |
-| `featureStatus.ts` has no rows for provisional / auto-organize / memoryHub / Understand | **migrate later** (update registry) |
-| `roadmap.md` still describes the 4-tab 홈·소스·대시보드·워크벤치 nav (superseded by the shipped shell) | **fix** (mark superseded, point to shell-ia) |
+| ~~`featureStatus.ts` has no rows for provisional / auto-organize / memoryHub / Understand~~ (fixed this pass) | **done** |
+| ~~`roadmap.md` still describes the 4-tab nav~~ (marked historical this pass) | **done** |
 | `keyEvidence` still a valid `StoredAcceptedProjectMemory` kind (existing memories render; no new proposals) | **harmless compatibility** |
 | `unresolvedRisk` + `recurringIssue` can both fire for the same issue (review-queue redundancy) | **migrate later** |
 | Retired `EvidenceView` / `ReviewView` reachable via stale tab keys | **harmless compatibility** (retire-not-delete) |
