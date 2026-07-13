@@ -1,5 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { MemoryProposal } from "../../lib/project-memory/consolidationProposals";
+import { useAutoOrganizeMemory } from "./useAutoOrganizeMemory";
 import { ActionBar } from "../../components/layout/ActionBar";
 import { HelpDisclosure } from "../../components/layout/HelpDisclosure";
 import { NoticeBanner } from "../../components/layout/NoticeBanner";
@@ -65,6 +67,10 @@ import { KeyEvidenceCard } from "./KeyEvidenceCard";
 import { SavedReportsCard } from "./SavedReportsCard";
 import { ReimportHistoryCard } from "./ReimportHistoryCard";
 import { ConsolidationReviewView } from "./ConsolidationReviewView";
+
+/** Stable empty proposal list so the auto-organize effect's deps do not churn
+ *  before the consolidation preview is ready. */
+const EMPTY_PROPOSALS: readonly MemoryProposal[] = [];
 
 export function MemoryView() {
   // `navigate` routes legacy session-surface keys (timeline) into the unified
@@ -267,6 +273,19 @@ export function MemoryView() {
     () => buildProjectMemoryConsolidationState(viewModel, { acceptedMemories }),
     [viewModel, acceptedMemories],
   );
+
+  // Memory should accumulate as the user works, not wait behind a review
+  // queue. When this project's proposals are ready, the governance policy
+  // auto-organizes the safe, additive, high-confidence ones into provisional
+  // memory; only exceptions remain for review. Idempotent + reversible.
+  useAutoOrganizeMemory({
+    projectId,
+    proposals: consolidationState.preview?.proposals ?? EMPTY_PROPOSALS,
+    memoriesRevision: acceptedMemories.length,
+    onOrganized: () => {
+      void reloadMemory();
+    },
+  });
 
   // ─── legacy derivations (kept for the existing cards) ────────────────
   const primaryScope: ProjectMemoryDataScope = useMemo(() => {

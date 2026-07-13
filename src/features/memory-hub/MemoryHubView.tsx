@@ -47,13 +47,36 @@ import { shortProjectLabel } from "../../lib/sidebar/sessionList";
 import { formatClaudeRelativeKo } from "../../lib/claude/claudeTauri";
 import type { StoredAcceptedProjectMemory } from "../../lib/storage/storageTypes";
 
-const LIFECYCLE_SEGMENTS: Array<{ key: "all" | MemoryLifecycleGroup; label: string }> = [
+/** Segment keys: the four lifecycle groups plus `provisional` (a status, not
+ *  a lifecycle group) and `all`. 잠정 is deliberately its own segment, never
+ *  merged into 확인 필요: provisional memory is already in use (auto-created,
+ *  unconfirmed), whereas 확인 필요 is confirmed memory a review flagged. */
+type MemorySegmentKey = "all" | "provisional" | MemoryLifecycleGroup;
+
+const LIFECYCLE_SEGMENTS: Array<{ key: MemorySegmentKey; label: string }> = [
   { key: "all", label: "전체" },
   { key: "current", label: "현재" },
+  { key: "provisional", label: "잠정" },
   { key: "advisory", label: "관찰 중" },
   { key: "attention", label: "확인 필요" },
   { key: "archived", label: "보관됨" },
 ];
+
+/** A memory's segment: provisional is its own bucket; everything else falls to
+ *  its lifecycle group. */
+function memorySegment(memory: StoredAcceptedProjectMemory): MemorySegmentKey {
+  return memory.status === "provisional" ? "provisional" : classifyMemoryLifecycle(memory.status);
+}
+
+/** Honest status badge label + tone, treating provisional as its own state. */
+function memoryBadge(memory: StoredAcceptedProjectMemory): {
+  label: string;
+  tone: ReturnType<typeof memoryLifecycleGroupTone>;
+} {
+  if (memory.status === "provisional") return { label: "잠정", tone: "info" };
+  const group = classifyMemoryLifecycle(memory.status);
+  return { label: describeMemoryLifecycleGroup(group), tone: memoryLifecycleGroupTone(group) };
+}
 
 export function MemoryHubView() {
   const openAcceptedMemory = useAppStore((state) => state.openAcceptedMemory);
@@ -64,7 +87,7 @@ export function MemoryHubView() {
   const [loading, setLoading] = useState(true);
 
   const [query, setQuery] = useState("");
-  const [lifecycle, setLifecycle] = useState<"all" | MemoryLifecycleGroup>("all");
+  const [lifecycle, setLifecycle] = useState<MemorySegmentKey>("all");
   const [scope, setScope] = useState<"all" | string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -101,15 +124,16 @@ export function MemoryHubView() {
   }, [memories]);
 
   const lifecycleCounts = useMemo(() => {
-    const counts: Record<"all" | MemoryLifecycleGroup, number> = {
+    const counts: Record<MemorySegmentKey, number> = {
       all: memories.length,
+      provisional: 0,
       current: 0,
       advisory: 0,
       attention: 0,
       archived: 0,
     };
     for (const memory of memories) {
-      counts[classifyMemoryLifecycle(memory.status)] += 1;
+      counts[memorySegment(memory)] += 1;
     }
     return counts;
   }, [memories]);
@@ -118,7 +142,7 @@ export function MemoryHubView() {
     const scoped = memories.filter(
       (memory) =>
         (scope === "all" || memory.projectId === scope) &&
-        (lifecycle === "all" || classifyMemoryLifecycle(memory.status) === lifecycle),
+        (lifecycle === "all" || memorySegment(memory) === lifecycle),
     );
     const text = query.trim();
     if (!text) {
@@ -210,7 +234,7 @@ export function MemoryHubView() {
             ) : (
               <ul className="memhub-list">
                 {visible.map((memory) => {
-                  const group = classifyMemoryLifecycle(memory.status);
+                  const badge = memoryBadge(memory);
                   return (
                     <li key={memory.id}>
                       <button
@@ -223,9 +247,7 @@ export function MemoryHubView() {
                         <div className="memhub-row-head">
                           <span className="memhub-row-kind">{memoryKindLabel(memory.kind)}</span>
                           <span className="memhub-row-title">{memory.title}</span>
-                          <BaseStatusBadge tone={memoryLifecycleGroupTone(group)}>
-                            {describeMemoryLifecycleGroup(group)}
-                          </BaseStatusBadge>
+                          <BaseStatusBadge tone={badge.tone}>{badge.label}</BaseStatusBadge>
                         </div>
                         <p className="memhub-row-summary">{memory.summary}</p>
                         <div className="memhub-row-meta">
@@ -266,7 +288,8 @@ function MemoryProvenancePanel({
   onClose: () => void;
   onOpenInProject: () => void;
 }) {
-  const group = classifyMemoryLifecycle(memory.status);
+  const badge = memoryBadge(memory);
+  const provisional = memory.status === "provisional";
   return (
     <BaseInspectorPanel
       className="inspector"
@@ -274,15 +297,21 @@ function MemoryProvenancePanel({
       eyebrow={
         <>
           <span>{memoryKindLabel(memory.kind)}</span>
-          <BaseStatusBadge tone={memoryLifecycleGroupTone(group)}>
-            {describeMemoryLifecycleGroup(group)}
-          </BaseStatusBadge>
+          <BaseStatusBadge tone={badge.tone}>{badge.label}</BaseStatusBadge>
         </>
       }
       title={memory.title}
       meta={`${shortProjectLabel(memory.projectId)} · ${formatClaudeRelativeKo(memory.acceptedAt)}`}
       onClose={onClose}
     >
+      {provisional ? (
+        <InspectorSection>
+          <InspectorNote>
+            Mori가 자동으로 정리한 잠정 기억입니다. 검색과 답변에는 쓰이지만, 확정 전에는
+            리포트나 내보내기에 포함되지 않습니다. 프로젝트 메모리에서 확인하거나 되돌릴 수 있습니다.
+          </InspectorNote>
+        </InspectorSection>
+      ) : null}
       <InspectorSection title="요약">
         <InspectorCard>
           <p>{memory.summary}</p>

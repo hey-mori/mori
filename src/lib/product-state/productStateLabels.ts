@@ -72,6 +72,7 @@ export type ProductRuntimeState =
 export type ProductMemoryStatusState =
   | "accepted"
   | "edited"
+  | "provisional"
   | "watching"
   | "deferred"
   | "stale"
@@ -268,6 +269,11 @@ export const PRODUCT_MEMORY_STATUS_LABELS: Record<
     label: "편집",
     description: "사용자가 내용을 수정한 뒤 승인한 메모리입니다.",
     tone: "success",
+  },
+  provisional: {
+    label: "잠정",
+    description: "Mori가 자동으로 정리한 잠정 기억입니다. 검색과 답변에는 쓰이지만, 확정 전에는 리포트나 내보내기에 포함되지 않습니다.",
+    tone: "info",
   },
   watching: {
     label: "관찰",

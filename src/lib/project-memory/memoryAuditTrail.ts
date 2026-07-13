@@ -39,6 +39,7 @@ export const MEMORY_AUDIT_ACTION_TYPES: readonly MemoryAuditActionType[] = [
   "discard",
   "reset",
   "revert",
+  "autoOrganize",
 ];
 
 export type MemoryAuditActionFilter = MemoryAuditActionType | "all";
@@ -142,6 +143,7 @@ const ACTION_LABELS: Record<MemoryAuditActionType, string> = {
   discard: "Discarded",
   reset: "Reset",
   revert: "Reverted",
+  autoOrganize: "Auto-organized",
 };
 
 /** Readable label for an action type; tolerant of unknown legacy values. */
@@ -281,5 +283,5 @@ function isKnownActionType(value: string): value is MemoryAuditActionType {
 }
 
 function emptyActionTypeCounts(): Record<MemoryAuditActionType, number> {
-  return { apply: 0, accept: 0, edit: 0, watch: 0, defer: 0, discard: 0, reset: 0, revert: 0 };
+  return { apply: 0, accept: 0, edit: 0, watch: 0, defer: 0, discard: 0, reset: 0, revert: 0, autoOrganize: 0 };
 }

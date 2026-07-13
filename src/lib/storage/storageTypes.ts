@@ -421,7 +421,16 @@ export type StoredAcceptedProjectMemoryStatus =
   | "stale"
   | "contradicted"
   | "superseded"
-  | "retired";
+  | "retired"
+  /**
+   * Created automatically by the memory-governance policy (safe, additive,
+   * high-confidence) and not yet confirmed by the user. Recallable in
+   * personal surfaces with a 잠정 marker, but never resume- or
+   * report-eligible: provisional memory does not cross an external boundary
+   * until the user confirms it. Fully reversible; the audit row that created
+   * it carries actor `auto-policy`.
+   */
+  | "provisional";
 
 export type StoredAcceptedProjectMemorySensitivity =
   | "normal"
@@ -544,9 +553,12 @@ export type StoredMemoryReviewAction = {
     | "defer"
     | "apply"
     | "reset"
-    | "revert";
-  /** Single-user product today. */
-  actor: "local-user";
+    | "revert"
+    /** The governance policy created provisional memory automatically. */
+    | "autoOrganize";
+  /** `local-user` for a human action; `auto-policy` for a governance-driven
+   *  automatic change (provisional memory). */
+  actor: "local-user" | "auto-policy";
   timestamp: string;
   /** Proposal that produced the action, when applicable. */
   sourceProposalId?: string;
