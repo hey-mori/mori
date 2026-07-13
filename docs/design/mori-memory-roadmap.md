@@ -64,7 +64,7 @@ showed it as 관찰 중. Fixed: provisional is filtered out of the confirmed-mem
 card (list, count, strip, empty state), since 확정 = confirmed; provisional
 stays fully visible in the global hub under 잠정. Remaining edge: the detail
 drawer's lifecycle label still defaults provisional to 관찰 중 if a provisional
-memory is deep-linked (it no longer reaches the drawer from the card) — minor,
+memory is deep-linked (it no longer reaches the drawer from the card); minor,
 deferred.
 
 **N2 · Validate the memory hub + auto-organize on real SQLite.** Value: the
