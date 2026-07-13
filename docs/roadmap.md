@@ -1,5 +1,14 @@
 # Roadmap
 
+> **Historical / partially superseded (2026-07-13).** The personal-memory-era
+> execution plan and the current navigation live in
+> [`design/mori-memory-roadmap.md`](design/mori-memory-roadmap.md) (the canonical
+> execution roadmap) and [`design/mori-product-shell-ia.md`](design/mori-product-shell-ia.md).
+> In particular the four-tab nav (홈 · 소스 · 대시보드 · 워크벤치) described below
+> is superseded by the shipped shell (홈 · 라이브 · 연동 · 프로젝트 · 메모리 ·
+> 대시보드 · 워크벤치). This document is kept for its phase history and
+> screen-by-screen mapping; do not treat its sequencing as current.
+
 This roadmap is a practical development sequence. Each phase should produce something usable without pretending later capabilities already exist.
 
 The intended product surface, screen by screen, is catalogued in the
