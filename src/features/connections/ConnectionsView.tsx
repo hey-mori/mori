@@ -392,7 +392,7 @@ export function ConnectionsView() {
             onChange={setQuery}
             placeholder=""
             ariaLabel="AI 작업 세션 검색"
-            className="connections-search"
+            className="connections-search search-field-fixed"
           />
           {query && filteredSessions.length < sessions.sessions.length ? (
             <small className="connections-search-meta">

@@ -601,10 +601,6 @@
   gap: 10px;
 }
 
-.connections-search {
-  flex: 1;
-}
-
 .connections-search input::placeholder {
   color: var(--muted-2);
 }

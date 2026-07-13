@@ -182,6 +182,7 @@ export function WorkspaceView() {
               onChange={setQuery}
               placeholder=""
               ariaLabel="검색"
+              className="search-field-fixed"
             />
           }
           end={

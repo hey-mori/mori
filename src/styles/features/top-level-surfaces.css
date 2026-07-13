@@ -2047,12 +2047,6 @@
   min-width: 0;
 }
 
-/* Use the app's shared search field; just give it a comfortable toolbar width. */
-.workbench-search-field {
-  width: 240px;
-  max-width: 32vw;
-}
-
 /*
  * Type lens: filter every panel at once to one signal (issues / decisions /
  * code). Same segmented shell as the layout control, but the active chip

@@ -559,6 +559,14 @@
   padding: 0;
 }
 
+/* The embedded timeline toolbar carries its own 10px top padding for the
+   standalone view; inside a session tab the shared 16px pane inset already
+   provides the top space, so drop it here. This lines the 타임라인 / 원본
+   controls up with the first row of 개요 · 분석 · 공유 instead of 10px lower. */
+.content-grid.content-grid-embedded .timeline-toolbar {
+  padding-top: 0;
+}
+
 /* The Timeline inspector / Trace panel (`.inspector` / `.inspector.trace`)
    inside the embedded 흐름 tab scrolls inside the shell scroll region rather
    than against a page-level topbar, so relax the viewport-anchored max-height

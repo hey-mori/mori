@@ -318,6 +318,14 @@
   box-shadow: 0 0 0 3px var(--purple-50);
 }
 
+/* One shared width for every screen's primary search (메모리 · 프로젝트 · 연동
+   · 워크벤치) so the filter reads at the same size wherever it appears. */
+.base-search-field.search-field-fixed {
+  width: 240px;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
 .base-search-field input {
   flex: 1;
   height: 100%;

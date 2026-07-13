@@ -830,8 +830,7 @@ export function WorkbenchView() {
                   value={search}
                   onChange={setSearch}
                   ariaLabel="모든 패널에서 검색"
-                  placeholder="모든 패널 검색"
-                  className="workbench-search-field"
+                  className="search-field-fixed"
                 />
                 <span className="workbench-lens" role="group" aria-label="유형 렌즈 (모든 패널 필터)">
                   {LENS_OPTIONS.map((option) => (

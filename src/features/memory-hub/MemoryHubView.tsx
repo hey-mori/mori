@@ -161,8 +161,8 @@ export function MemoryHubView() {
     <ToolbarSearch
       value={query}
       onChange={setQuery}
-      placeholder="기억을 검색"
       ariaLabel="메모리 검색"
+      className="search-field-fixed"
     />
   ) : undefined;
 
