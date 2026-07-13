@@ -51,11 +51,19 @@ boundary**:
 └──────────────┴──────────────────────────────┴───────────────┘
 ```
 
-- **Zone 1 · global nav = jobs, never source types.** Small, fixed.
-- **Zone 2 · context navigator**: today it renders projects→sessions; its
-  contract is "recent things inside contexts", not "session tree". With K,
-  a project folder can grow non-session rows (문서) without touching the
-  shell; a different surface could later swap in a different navigator.
+- **Zone 1 · global nav = jobs.** Small, flat. Source-type destinations
+  (자료/라이브러리) are not forbidden forever, they are **unproven today**:
+  "browse what I saved" can become a genuine job once documents actually
+  flow; the §10 triggers decide, not a standing rule. The palette
+  supplements navigation, it never substitutes for discoverability: a
+  capability users should find stays visible, and an item leaves the nav
+  only because its job is redundant or contextual, never to keep a count.
+- **Zone 2 · context navigator**: the shell's slot for **source-appropriate
+  local navigation**. Today it hosts the project→session navigator; a
+  future surface may provide a different navigator (documents, sources,
+  scopes) behind the same boundary. It is not permanently "a recent list",
+  and none of those future navigators are built before their content
+  exists.
 - The Context Inspector stays a per-surface rail (existing doctrine: detail
   of the focused thing, never a second workspace).
 
@@ -66,26 +74,30 @@ source type, silo feel; also nothing to remove, it never shipped);
 project-first-only (no honest home for personal memory); memory-first-only
 (would bury the excellent Code loop).
 
-## 3. Primary navigation (proposal)
+## 3. Primary navigation (accepted 2026-07-13, shipped)
 
-Target set, still six items:
+Flat seven items, no labeled groups (grouping adds interpretation the
+current count does not need; a bottom management zone for 연동/설정 stays a
+later option if the list grows):
 
-| Item | Job | Change |
+| Item | Job | Status |
 | --- | --- | --- |
-| 홈 | 시작·이어가기·질문 | none |
-| 라이브 | 지금 무슨 일이 | none |
-| 연동 | 가져오기 (agents · paste · K's text/MD import later) | none now |
-| 프로젝트 | 맥락에서 일하기 | none |
-| **메모리** | 찾기 · 신뢰 관리 (global search · 최근 · 확인 대기 · scope) | **new** (pending decision) |
-| 대시보드 | 현황 개요 | keep; merge candidate later (§10) |
+| 홈 | 시작·이어가기·질문 | unchanged |
+| 라이브 | 지금 무슨 일이 | unchanged |
+| 연동 | 외부 시스템·에이전트 연결 관리 | unchanged; see the import note below |
+| 프로젝트 | 맥락에서 일하기 | unchanged |
+| **메모리** | 찾기 · 신뢰 관리 (global search · lifecycle · scope · provenance) | **shipped** |
+| 대시보드 | 현황 개요 | keep; merge candidate at stage 4 (§10) |
+| 워크벤치 | own evaluation pending | **stays visible**: a usable capability is not hidden to keep a count; it leaves only if its job proves redundant or contextual (evaluation criteria in §10) |
 
-- **워크벤치 leaves the nav** to pay for 메모리: it is officially parked
-  (decisions register row 22). Retire, do not delete: reachable via palette.
-- **Sources/자료 does not become global nav** now or at K. Capture lives in
-  연동; browsing a project's material lives on the project page. A global
-  source browser is a post-K decision with a trigger (§10).
+- **연동 ≠ 가져오기.** 연동 manages connected systems (agents, accounts,
+  folders). Direct capture (텍스트/Markdown 붙여넣기, file, URL) is a
+  **global action** surfaced contextually (홈, 프로젝트, ⌘K), with its own
+  user-facing language; it currently rides the 연동 paste tab technically,
+  but its copy and flow must read as 가져오기, not integration setup.
 - 그래프/새 세션 quick actions, palette-only surfaces (이어가기, Ask Mori,
-  통합 검토) stay as they are.
+  통합 검토) stay as they are. The 최근 작업 label + hairline visually
+  separates the context navigator from the global nav (shipped).
 
 ## 4. Screen hierarchy and responsibilities (proposal)
 
@@ -104,17 +116,26 @@ Target set, still six items:
 
 Per-screen contracts (only where something changes):
 
-**메모리 (global)** · job: find and trust what Mori knows
-- objects: accepted + provisional memories across every scope
-- left: global nav (no special navigator)
-- main: search field · scope chips (전체 · 프로젝트별 · 개인) · recency list
-  with kind/status chips (잠정 marker per governance) · 확인 대기 segment =
-  the existing consolidation review, now with the provisional queue
-- right inspector: provenance panel for the focused memory (evidence refs,
-  audit trail, confidence, source sessions)
-- actions: confirm · correct · retire · open source
+**메모리 (global)** · job: find and trust what Mori knows · **v1 shipped**
+- objects: accepted memories across every scope (provisional joins with the
+  governance build)
+- main (shipped): search (ranked by `searchAcceptedMemories`) · lifecycle
+  segments reusing the canonical vocabulary (전체 · 현재 · 관찰 중 · 확인
+  필요 · 보관됨) · scope chips per project (개인 joins with L2) · honest
+  storage-source note
+- right inspector (shipped): provenance panel (kind, lifecycle badge,
+  confidence + rationale, evidence-ref/source-session/audit counts, review
+  note) + deep link 프로젝트 메모리에서 열기
+- **확인 필요 and 잠정 are distinct states and stay distinct segments**:
+  확인 필요 = review outcomes on durable memory (stale · contradicted, and
+  later the always-ask exception queue); 잠정 = automation already created
+  it, unconfirmed. They are never merged into one queue, because "already
+  in use" and "not yet memory" must not read the same.
+- deferred to governance build: 잠정 segment, confirm/correct/revert
+  actions in place (today they deep-link to the project's consolidation
+  surface, read-only here)
 - deliberately absent: authoring, folders, manual organization, memory-kind
-  navigation
+  navigation, memory graphs
 
 **프로젝트 페이지** · job: everything about this context in one place
 - adds one section with K: **자료** (imported documents/pastes with
@@ -124,8 +145,11 @@ Per-screen contracts (only where something changes):
   reading until K proves more is needed)
 
 **개인 메모리** · job: what belongs to me, not to a project
-- not a screen: the 개인 scope chip inside 메모리 (saved expressions land
-  here via L2). A Learn surface only on its trigger (§10).
+- not a screen, but **not hidden either**: discoverable through the 메모리
+  scope chips, global search, the save-destination choice ("프로젝트에
+  연결하지 않음") when L2 lands, and palette search. Never presented as a
+  fake normal project; the reserved-scope implementation stays revisitable
+  after K. A Learn surface only on its trigger (§10).
 
 **Understand (shipped, fact)** · selection in a reading surface → floating
 이해하기 chip → result in the Context Inspector (번역 · 의미 · 표현 ·
@@ -182,11 +206,12 @@ section, navigator row contract, scope model. 15 Triggers: §10.
 
 | Stage | When | Work |
 | --- | --- | --- |
-| 0 | now | Extract the session tree into a `ContextNavigator` component (zero visual change); this document |
-| 1 | after decision + governance build | 메모리 surface (search all · 최근 · 확인 대기 · scope chips) on `listAllAcceptedProjectMemories`; swap 워크벤치 → 메모리 in nav; palette memory group |
-| 2 | with L2 | 기억하기 in the Understand panel; 개인 scope visible; expression filter |
-| 3 | with K | 연동 text/MD paste-import; project 자료 section; evidence detail hosts reading |
-| 4 | post-K review | Dedicated source navigation? 대시보드/홈 merge? second-rail? Decide from observed friction only |
+| 0 | **shipped** | `ContextNavigator` boundary (zero visual change); this document |
+| 1 | **shipped (v1)** | 메모리 in primary nav (워크벤치 kept, per the user's discoverability call); global memory surface on `listAllAcceptedProjectMemories` (search · lifecycle segments · scope chips · provenance inspector); 최근 작업 navigator label; palette 메모리/프로젝트 메모리 entries |
+| 1b | with governance build | 잠정 segment (distinct from 확인 필요) + in-place confirm/correct/revert; palette memory-search group |
+| 2 | with L2 | 기억하기 in the Understand panel; 개인 scope chip + save destination; expression filter |
+| 3 | with K | 가져오기 (text/MD paste-import, capture language distinct from 연동); project 자료 section; evidence detail hosts reading |
+| 4 | post-K review | Global source navigation? 대시보드/홈 merge? 워크벤치 verdict? second rail? Decide from observed friction only |
 
 ## 8. What is deliberately not done now
 
@@ -194,22 +219,33 @@ No 메모리 nav swap before the standing decision; no empty 자료 sections
 before K; no document reader, collections, topics, or Learn surface; no
 second rail; no Home redesign; no renaming of shipped Korean labels.
 
-## 9. Decisions needed (user)
+## 9. Decisions
 
-1. Approve the target primary nav: 워크벤치 out (palette-only), 메모리 in
-   (this operationalizes the standing 메모리 decision).
-2. Approve ProjectView 자료 as K's browsing location (vs a global sources
-   surface from day one).
-3. Approve 대시보드 staying for now with the merge question deferred to
-   stage 4 (vs merging into 홈 immediately).
+Decided 2026-07-13 (user): 메모리 joins primary navigation; **워크벤치 stays
+visible** (discoverability beats item count; it moves only on a job-based
+verdict); flat navigation, no labeled groups; project 자료 is K's first
+validation host, explicitly not a rejection of a global source experience;
+대시보드 stays with the merge question deferred to stage 4.
+
+Open: none blocking. The 워크벤치 verdict and the 대시보드/홈 distinction are
+stage-4 evaluations against real usage (§10).
 
 ## 10. Validation triggers (deferred choices)
 
-- **Global source browser**: user repeatedly hunts for documents across
-  projects after K.
-- **Navigator rows for documents**: 자료 section outgrows the page (large
-  counts, frequent switching).
+- **Global source/자료 experience** (post-K, several of): project-independent
+  sources appear often; the same source is used by several projects; users
+  want one place to browse all imported material; source volume outgrows
+  project-level navigation; importing/managing sources becomes a repeated
+  independent job.
+- **워크벤치 verdict**: does it host a recurring, distinct job no other
+  surface covers? If yes it stays; if its role is redundant with
+  프로젝트/대시보드 or purely contextual, it moves to the palette for that
+  reason.
+- **Navigator adapters** (documents, scopes): a surface actually needs a
+  non-session local navigation structure; build the adapter then, behind the
+  existing `ContextNavigator` boundary.
 - **Learn surface**: saved expressions accumulate + repeat-lookup behavior.
 - **Second rail / workspace switcher**: a third context type with its own
   navigator genuinely arrives.
-- **대시보드 merge**: 홈 modes absorb the overview cards without loss.
+- **대시보드 merge**: 홈 modes absorb the overview cards without loss, and
+  the 시작/현황 job distinction proves unclear in practice.
