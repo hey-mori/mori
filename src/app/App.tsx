@@ -78,6 +78,11 @@ const LiveSessionView = lazy(() =>
     default: m.LiveSessionView,
   })),
 );
+const MemoryHubView = lazy(() =>
+  import("../features/memory-hub/MemoryHubView").then((m) => ({
+    default: m.MemoryHubView,
+  })),
+);
 export default function App() {
   const currentView = useAppStore((state) => state.currentView);
   const hydrate = useSessionStore((state) => state.hydrate);
@@ -164,6 +169,7 @@ export default function App() {
             {currentView === "project" ? <ProjectView /> : null}
             {currentView === "graph" ? <GraphView /> : null}
             {currentView === "liveSession" ? <LiveSessionView /> : null}
+            {currentView === "memoryHub" ? <MemoryHubView /> : null}
           </Suspense>
         </ErrorBoundary>
       </AppShell>

@@ -225,6 +225,10 @@ export function ContextNavigator({
 
   return (
     <>
+      {/* A quiet label, not a collapsible group: it only tells the user the
+          region below is the context navigator, visually separating it from
+          the global nav above. */}
+      <p className="sidebar-context-label">최근 작업</p>
       <div className="sidebar-search-row">
         <SearchField
           className="sidebar-search"

@@ -152,6 +152,23 @@
   color: var(--purple);
 }
 
+/* Context-navigator label: a quiet divider between the global nav above and
+   the recent-work navigator below. A label + hairline, never a collapsible
+   group; hidden entirely on the collapsed icon rail. */
+.sidebar-context-label {
+  margin: 10px 4px 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted-2);
+}
+
+.sidebar.is-collapsed .sidebar-context-label {
+  display: none;
+}
+
 .sidebar-search-row {
   display: flex;
   align-items: center;

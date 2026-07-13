@@ -29,6 +29,10 @@ export type ViewKey =
   /** 라이브 세션 — a live dashboard that tails every currently-active agent
    *  session and streams their work, newest request on top. */
   | "liveSession"
+  /** 메모리 · the global memory surface: search, lifecycle segments, scope
+   *  filters, and provenance across every project (the per-project memory
+   *  overview stays on `memory`). */
+  | "memoryHub"
   | "profile"
   | "login"
   | "security"

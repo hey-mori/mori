@@ -1,4 +1,5 @@
 import {
+  Brain,
   FolderGit2,
   House,
   Layers,
@@ -55,19 +56,27 @@ const PRIMARY_NAV: Array<{ key: ViewKey; label: string; icon: LucideIcon }> = [
     label: "프로젝트",
     icon: viewIcon.workspace ?? FolderGit2,
   },
+  // 메모리 = the global memory surface (search · lifecycle · provenance across
+  // every scope). The per-project memory overview still lives on each project
+  // page and stays routable via its "메모리 통합" action and the palette.
+  {
+    key: "memoryHub",
+    label: "메모리",
+    icon: Brain,
+  },
   {
     key: "dashboard",
     label: "대시보드",
     icon: viewIcon.dashboard ?? LayoutDashboard,
   },
+  // 워크벤치 stays visible on its own merits pending a real role/overlap
+  // evaluation (see mori-product-shell-ia.md): a usable capability is not
+  // hidden into the palette just to keep the item count low.
   {
     key: "workbench",
     label: "워크벤치",
     icon: viewIcon.workbench ?? Layers,
   },
-  // 메모리 is no longer a standing tab: durable project memory lives on each
-  // project page (ProjectView). The memory overview / consolidation review stay
-  // routable through a project's "메모리 통합" action and the command palette.
 ];
 
 export function Sidebar({
