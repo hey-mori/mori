@@ -172,7 +172,7 @@ export function WorkspaceView() {
   return (
     <PageShell
       className="workspace-page"
-      maxWidth="wide"
+      maxWidth="full"
       actionBar={
         <ActionBar
           label="검색"

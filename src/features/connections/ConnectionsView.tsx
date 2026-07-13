@@ -306,7 +306,7 @@ export function ConnectionsView() {
 
   if (!bridgeAvailable) {
     return (
-      <PageShell className="connections-page" maxWidth="detail">
+      <PageShell className="connections-page" maxWidth="full">
         {controlCenter}
         <AdvancedBundleDisclosure />
         <ConnectionsBrowserHelp />
@@ -321,7 +321,7 @@ export function ConnectionsView() {
   return (
     <PageShell
       className="connections-page"
-      maxWidth="detail"
+      maxWidth="full"
       actionBar={
         <ActionBar
           start={

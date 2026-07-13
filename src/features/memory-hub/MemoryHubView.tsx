@@ -171,7 +171,7 @@ export function MemoryHubView() {
   ) : undefined;
 
   return (
-    <PageShell maxWidth="wide" actionBar={<ActionBar label="메모리" end={storageNote} />}>
+    <PageShell maxWidth="full" actionBar={<ActionBar label="메모리" end={storageNote} />}>
       {loading ? null : memories.length === 0 ? (
         <EmptyState
           icon={Brain}

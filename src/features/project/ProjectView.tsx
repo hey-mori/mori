@@ -279,7 +279,7 @@ export function ProjectView() {
 
   if (!projectKey || !overview) {
     return (
-      <PageShell className="project-page" maxWidth="wide">
+      <PageShell className="project-page" maxWidth="full">
         <EmptyState
           icon={FolderGit2}
           title="프로젝트를 선택하세요"
@@ -297,7 +297,7 @@ export function ProjectView() {
   const projectSessionLabel = displayName || overview.shortName;
 
   return (
-    <PageShell className="project-page" maxWidth="wide">
+    <PageShell className="project-page" maxWidth="full">
       <header
         className="project-hero"
         style={{

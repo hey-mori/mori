@@ -412,7 +412,7 @@ export function MemoryView() {
   return (
     <PageShell
       className="memory-page"
-      maxWidth="wide"
+      maxWidth="full"
       actionBar={
         memoryTab === "consolidation" ? undefined : (
           <ActionBar

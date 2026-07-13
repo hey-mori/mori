@@ -18,7 +18,11 @@
 }
 
 .page-shell {
-  --page-shell-inset: var(--base-space-9);
+  /* One horizontal inset for every page, header, and pane. A middle value:
+     roomy enough that content never crowds the edge on a small window, small
+     enough that it does not read as a huge gutter. Large-screen side space is
+     handled by the shared content max-width, not by growing this. */
+  --page-shell-inset: var(--base-space-10);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   height: 100%;

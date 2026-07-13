@@ -17,7 +17,7 @@ export function AskMoriView() {
   const setSelectedEventId = useAppStore((state) => state.setSelectedEventId);
 
   return (
-    <PageShell className="ask-mori-page" maxWidth="wide" actionBar={<ActionBar label="Mori에게 묻기" />}>
+    <PageShell className="ask-mori-page" maxWidth="full" actionBar={<ActionBar label="Mori에게 묻기" />}>
       <div className="ask-mori-standalone">
         <AskMoriCard
           input={input}

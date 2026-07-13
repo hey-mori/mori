@@ -358,7 +358,7 @@ export function SourcesView() {
   return (
     <PageShell
       className="sources-page"
-      maxWidth="detail"
+      maxWidth="full"
       actionBar={
         <ActionBar
           label="연동"

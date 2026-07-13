@@ -114,7 +114,7 @@ export function HomeContinuationView() {
   }
 
   return (
-    <PageShell className="home-page" maxWidth="wide">
+    <PageShell className="home-page" maxWidth="full">
       {overview.isEmpty || !focal ? (
         <EmptyState
           icon={Layers}
